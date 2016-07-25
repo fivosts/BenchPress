@@ -1,3 +1,4 @@
+<<<<<<< HEAD:deeplearning/clgen/data/include/opencl-shim.h
 // A shim header providing common definitions.
 //
 // Coarse grained control is provided over what is defined using include guards.
@@ -22,6 +23,21 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with clgen.  If not, see <https://www.gnu.org/licenses/>.
+=======
+// Enable OpenCL features and implementation.
+#define cl_clang_storage_class_specifiers
+#define cl_khr_fp64
+#include <clc/clc.h>
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+
+#define __CL_VERSION_1_0__
+#define __CL_VERSION_1_1__
+#define __CL_VERSION_1_2__
+#define __ENDIAN_LITTLE__
+#define __FAST_RELAXED_MATH__
+#define __IMAGE_SUPPORT__
+#define __OPENCL_VERSION__ 1
+>>>>>>> c37236d67... src/smith: Shim improvements:src/smith/smith/share/include/opencl-shim.h
 
 // Unsupported OpenCL storage classes and qualifiers.
 #ifndef CLGEN_OPENCL_SHIM_NO_UNSUPPORTED_STORAGE_CLASSES_AND_QUALIFIERS
