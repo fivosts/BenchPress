@@ -25,6 +25,7 @@
 // along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 =======
 // Enable OpenCL features and implementation.
+#ifndef SMITH_FEATURES
 #define cl_clang_storage_class_specifiers
 #define cl_khr_fp64
 #include <clc/clc.h>
@@ -37,7 +38,11 @@
 #define __FAST_RELAXED_MATH__
 #define __IMAGE_SUPPORT__
 #define __OPENCL_VERSION__ 1
+<<<<<<< HEAD:deeplearning/clgen/data/include/opencl-shim.h
 >>>>>>> c37236d67... src/smith: Shim improvements:src/smith/smith/share/include/opencl-shim.h
+=======
+#endif  /* SMITH_FEATURES */
+>>>>>>> 89cc26a51... src/smith: Shim updates:src/smith/smith/share/include/opencl-shim.h
 
 // Unsupported OpenCL storage classes and qualifiers.
 #ifndef CLGEN_OPENCL_SHIM_NO_UNSUPPORTED_STORAGE_CLASSES_AND_QUALIFIERS
@@ -46,6 +51,7 @@
 #define AS
 #endif  // CLGEN_OPENCL_SHIM_NO_UNSUPPORTED_STORAGE_CLASSES_AND_QUALIFIERS
 
+<<<<<<< HEAD:deeplearning/clgen/data/include/opencl-shim.h
 // Common types.
 #ifndef CLGEN_OPENCL_SHIM_NO_COMMON_TYPES
 #define CONVT float
@@ -86,6 +92,47 @@
 #define Pixel int3
 #define uint32_t unsigned int
 #endif  // CLGEN_OPENCL_SHIM_NO_COMMON_TYPES
+=======
+// Common typedefs
+typedef float CONVT;
+typedef float DATA_TYPE;
+typedef float DATATYPE;
+typedef float FLOAT_T;
+typedef float FLOAT_TYPE;
+typedef float FPTYPE;
+typedef float hmc_float;
+typedef float inType;
+typedef float outType;
+typedef float real;
+typedef float REAL;
+/* typedef float T; */
+typedef float Ty;
+typedef float TyOut;
+typedef float TYPE;
+typedef float VALTYPE;
+typedef float VALUE_TYPE;
+typedef float VECTYPE;
+typedef float WORKTYPE;
+typedef float2 hmc_complex;
+typedef float2 mixed2;
+typedef float2 real2;
+typedef float2 REAL2;
+typedef float3 mixed3;
+typedef float3 real3;
+typedef float3 REAL3;
+typedef float4 FPVECTYPE;
+typedef float4 mixed4;
+typedef float4 real4;
+typedef float4 REAL4;
+typedef float4 T4;
+typedef int BITMAP_INDEX_TYPE;
+typedef int INDEX_TYPE;
+typedef int Ix;
+typedef int KParam;
+typedef int Tp;
+typedef int3 Pixel;
+typedef unsigned int uint32_t;
+>>>>>>> 89cc26a51... src/smith: Shim updates:src/smith/smith/share/include/opencl-shim.h
 
 // Common constants
 #ifndef CLGEN_OPENCL_SHIM_NO_COMMON_CONSTANTS
@@ -197,7 +244,11 @@
 #define PADDINGX 4
 #define PADDINGY 2
 #define PI 3.14
+<<<<<<< HEAD:deeplearning/clgen/data/include/opencl-shim.h
 #define PRESCAN_THREADS 128 /* Used in parboil-0.2 histo */
+=======
+#define PRESCAN_THREADS 128  /* Used in parboil-0.2 histo */
+>>>>>>> 89cc26a51... src/smith: Shim updates:src/smith/smith/share/include/opencl-shim.h
 #define PULSELOCALOFFSET 8
 #define PULSEOFF 16
 #define QPEX 1
