@@ -190,7 +190,11 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
   std::string get_fn_rewrite(const std::string& name) {
     if (_fns.find(name) == _fns.end()) {
       // New function:
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
       auto replacement = get_next_name(_fns, name, fn_base_char, fn_prefix);
+=======
+      auto replacement = get_next_name(_fns, name, 'a');
+>>>>>>> 0d03e88e6... native: Rewite fns 'a, b, ...', vars 'A, B, ...':native/clgen-rewriter.cpp
       return replacement;
     } else {
       // Previously declared function:
@@ -205,7 +209,11 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
                               const std::string& prefix="") {
     if (rewrites.find(name) == rewrites.end()) {
       // New variable:
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
       auto replacement = get_next_name(rewrites, name, var_base_char, prefix);
+=======
+      auto replacement = get_next_name(_vars, name, 'A');
+>>>>>>> 0d03e88e6... native: Rewite fns 'a, b, ...', vars 'A, B, ...':native/clgen-rewriter.cpp
       return replacement;
     } else {
       // Previously declared variable:
