@@ -54,6 +54,7 @@
 // #define VERBOSE
 // Uncommend the following line for debug output:
 // #define DEBUG
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
 
 // debugging print out
 #ifdef DEBUG
@@ -91,7 +92,15 @@ const std::string gb_prefix = "gb_";
 #else
 #error "unknown rewrite style"
 #endif
+=======
+>>>>>>> ffef38882... native: Add conditional DEBUG printouts:native/clgen-rewriter.cpp
 
+// debugging print out
+#ifdef DEBUG
+# define DEBUG_OUT(x) llvm::errs() << x;
+#else
+# define DEBUG_OUT(x)
+#endif
 
 namespace rewriter {
 
@@ -314,12 +323,18 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
     if (isMainFile(func->getLocation())) {
       const auto name = func->getNameInfo().getName().getAsString();
 <<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
       const auto replacement = get_fn_rewrite(name);
       rewrite_fn_name(func, replacement);
       DEBUG_OUT("FunctionDecl " << name << " -> " << replacement << '\n');
 =======
       rewrite_fn_name(func, get_fn_rewrite(name));
 >>>>>>> f063de75d... native: Rewriter tidy up:native/clgen-rewriter.cpp
+=======
+      const auto replacement = get_fn_rewrite(name);
+      rewrite_fn_name(func, replacement);
+      DEBUG_OUT("FunctionDecl " << name << " -> " << replacement << '\n');
+>>>>>>> ffef38882... native: Add conditional DEBUG printouts:native/clgen-rewriter.cpp
     }
 
     return true;
@@ -355,9 +370,17 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
 
         // rewrite fn name
         const auto it = _fns.find(name);
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
         if (it != _fns.end())
           rewrite_fn_name(call, (*it).second);
 >>>>>>> f063de75d... native: Rewriter tidy up:native/clgen-rewriter.cpp
+=======
+        if (it != _fns.end()) {
+          const auto replacement = (*it).second;
+          rewrite_fn_name(call, replacement);
+          DEBUG_OUT("CallExpr " << name << " -> " << replacement << '\n');
+        }
+>>>>>>> ffef38882... native: Add conditional DEBUG printouts:native/clgen-rewriter.cpp
       }  // else not a direct callee (do we need to handle that?)
     }  // else not in main file
 
@@ -421,6 +444,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
 
         // rewrite variable name
         rewrite_var_name(decl, replacement);
+        DEBUG_OUT("VarDecl " << name << " -> " << replacement << '\n');
       } else if (auto fn = clang::dyn_cast<clang::FunctionDecl>(parent)) {
         // if it's in function scope, get the rewrite table
         auto& rewrite_table = get_fn_var_rewrite_table(fn);
@@ -428,6 +452,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
 
         // rewrite variable name
         rewrite_var_name(decl, replacement);
+        DEBUG_OUT("VarDecl " << name << " -> " << replacement << '\n');
       } else {
         // this shouldn't happen
         llvm::errs() << "warning: cannot determine scope of variable '"
@@ -473,8 +498,11 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
         const auto it = _global_vars.find(name);
 
         // rewrite
-        if (it != _global_vars.end())
-          rewrite_var_name(ref, (*it).second);
+        if (it != _global_vars.end()) {
+          const auto replacement = (*it).second;
+          rewrite_var_name(ref, replacement);
+          DEBUG_OUT("DeclRefExpr " << name << " -> " << replacement << '\n');
+        }
       } else if (auto fn = clang::dyn_cast<clang::FunctionDecl>(parent)) {
         // get rewrite name
         const auto& lookup_table = get_fn_var_rewrite_table(fn);
@@ -482,8 +510,11 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
         const auto it = lookup_table.find(name);
 
         // rewrite
-        if (it != lookup_table.end())
-          rewrite_var_name(ref, (*it).second);
+        if (it != lookup_table.end()) {
+          const auto replacement = (*it).second;
+          rewrite_var_name(ref, replacement);
+          DEBUG_OUT("DeclRefExpr " << name << " -> " << replacement << '\n');
+        }
       } else {
         llvm::errs() << "warning: cannot determine scope of variable '" << name << "'\n";
       }
