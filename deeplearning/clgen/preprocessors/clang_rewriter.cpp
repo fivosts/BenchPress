@@ -182,12 +182,21 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
  private:
   std::unique_ptr<clang::ASTContext> _context;  // additional AST info
 
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
   // identifier rewrite tables. There's one table to rewrite function names,
   // one table to rewrite global variables, and one table for each user
   // function:
   rewrite_table_t _fns;
   rewrite_table_t _global_vars;
   std::map<std::string, rewrite_table_t> _local_vars;
+=======
+  // function name rewriting
+  std::map<std::string, std::string> _fns;
+
+  // variable name rewriting
+  std::map<std::string, std::string> _global_vars;
+  std::map<std::string, std::map<std::string, std::string>> _local_vars;
+>>>>>>> e7fbc7c43... native: Use varibale name rewriter per-function:native/clgen-rewriter.cpp
 
   // accepts a function name, and returns the rewritten name.
   //
@@ -218,10 +227,14 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
     if (rewrites.find(name) == rewrites.end()) {
       // New variable:
 <<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
       auto replacement = get_next_name(rewrites, name, var_base_char, prefix);
 =======
       auto replacement = get_next_name(_vars, name, 'A');
 >>>>>>> 0d03e88e6... native: Rewite fns 'a, b, ...', vars 'A, B, ...':native/clgen-rewriter.cpp
+=======
+      auto replacement = get_next_name(rewrites, name, 'A', prefix);
+>>>>>>> e7fbc7c43... native: Use varibale name rewriter per-function:native/clgen-rewriter.cpp
       return replacement;
     } else {
       // Previously declared variable:
@@ -335,6 +348,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
       if (name.empty())
         return true;
 
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
       // get the parent function
       const auto* parent = d->getParentFunctionOrMethod();
       if (parent == nullptr) {
@@ -363,6 +377,31 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
         llvm::errs() << "warning: cannot determine scope of variable '"
                      << name << "'\n";
       }
+=======
+      std::string replacement;
+      const auto* parent = d->getParentFunctionOrMethod();
+      if (parent == nullptr) {
+          replacement = get_var_rewrite(_global_vars, name, "gb_");
+      } else if (auto func = clang::dyn_cast<clang::FunctionDecl>(parent)) {
+        // get function rewrite table
+        const auto fn_name = func->getNameInfo().getName().getAsString();
+        const auto fn_it = _local_vars.find(fn_name);
+        if (fn_it == _local_vars.end()) {
+          _local_vars[fn_name] = std::map<std::string, std::string>();
+          std::cerr << "adding lookup table for " << fn_name << '\n';
+        }
+
+        // get and set re-write
+        auto& lookup_table = _local_vars[fn_name];
+        replacement = get_var_rewrite(lookup_table, name);
+      } else {
+          llvm::errs() << "warning: cannot determine scope of variable '"
+                       << name << "'\n";
+      }
+
+      rewriter.ReplaceText(decl->getLocation(), replacement);
+      ++_var_decl_rewrites_counter;
+>>>>>>> e7fbc7c43... native: Use varibale name rewriter per-function:native/clgen-rewriter.cpp
     }
 
     return true;
@@ -377,8 +416,33 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
 
       const auto* parent = d->getParentFunctionOrMethod();
       if (parent == nullptr) {
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
         // get rewrite name
         const auto it = _global_vars.find(name);
+=======
+          const auto it = _global_vars.find(name);
+          if (it != _global_vars.end()) {
+            const auto replacement = (*it).second;
+            rewriter.ReplaceText(ref->getLocStart(), replacement);
+            ++_var_use_rewrites_counter;
+          }  // else variable name is externally defined
+      } else if (auto func = clang::dyn_cast<clang::FunctionDecl>(parent)) {
+        const auto fn_name = func->getNameInfo().getName().getAsString();
+        const auto& lookup_table = _local_vars[fn_name];
+        const auto it = lookup_table.find(name);
+        if (it != lookup_table.end()) {
+          const auto replacement = (*it).second;
+          rewriter.ReplaceText(ref->getLocStart(), replacement);
+          ++_var_use_rewrites_counter;
+        }  // else variable name is externally defined
+      } else {
+        llvm::errs() << "warning: cannot determine scope of variable '" << name << "'\n";
+      }
+    }  // else not in main file
+
+    return true;
+  }
+>>>>>>> e7fbc7c43... native: Use varibale name rewriter per-function:native/clgen-rewriter.cpp
 
         // rewrite
         if (it != _global_vars.end()) {
