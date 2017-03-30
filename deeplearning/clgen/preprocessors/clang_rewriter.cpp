@@ -142,7 +142,11 @@ typedef std::map<std::string, std::string> rewrite_table_t;
 //
 // Takes an existing rewrite table and inserts a.
 //
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
 std::string get_next_name(rewrite_table_t& rewrites,
+=======
+std::string get_next_name(std::map<std::string, std::string>& rewrites,
+>>>>>>> 7d72cd878... native: Prefix function name with 'fn_':native/clgen-rewriter.cpp
                           const std::string& name, const char& base_char,
                           const std::string& prefix = "") {
   auto i = rewrites.size();
@@ -191,10 +195,14 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
     if (_fns.find(name) == _fns.end()) {
       // New function:
 <<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
       auto replacement = get_next_name(_fns, name, fn_base_char, fn_prefix);
 =======
       auto replacement = get_next_name(_fns, name, 'a');
 >>>>>>> 0d03e88e6... native: Rewite fns 'a, b, ...', vars 'A, B, ...':native/clgen-rewriter.cpp
+=======
+      auto replacement = get_next_name(_fns, name, 'a', "fn_");
+>>>>>>> 7d72cd878... native: Prefix function name with 'fn_':native/clgen-rewriter.cpp
       return replacement;
     } else {
       // Previously declared function:
