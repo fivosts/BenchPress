@@ -1,44 +1,40 @@
 <h1>
-  gh-archiver
-  <a href="https://badge.fury.io/py/gh-archiver">
-    <img src="https://img.shields.io/pypi/v/gh-archiver.svg?colorB=green&style=flat">
+  lmk - let me know
+  <a href="https://badge.fury.io/py/lmk">
+    <img src="https://img.shields.io/pypi/v/lmk.svg?colorB=green&style=flat">
   </a> <a href="https://tldrlegal.com/license/mit-license" target="_blank">
     <img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat">
   </a>
 </h1>
 
-Clone and update a GitHub user's repositories locally:
+Email notifications from the command line.
+
+**Step 1** Wrap your long running job in `lmk`:
 
 ```sh
-$ gh-archiver ChrisCummins -o ~/src/GitHub/
-cloning atom
-cloning autoencoder
-updating chriscummins.cc
-...
+$ lmk 'bash ./experiments.sh'
+...  # command runs and outputs normally
+[lmk] chrisc.101@gmail.com notified
+```
+
+**Step 2** ☕
+
+**Step 3** Receive an email when it's done:
+
+![](demo.png)
+
+Alternatively, `lmk -` reads passively from stdin:
+
+```sh
+$ (./experiment1.sh; experiment2.py) 2>&1 | lmk -
+... # commands run and output normally
+[lmk] chrisc.101@gmail.com notified
 ```
 
 ## Installation
-
 ```sh
-$ pip install gh-archiver
+$ pip install lmk
 ```
-
-Requires Python >= 3.6.
-
-## Usage
-
-Create a credentials file `~/.githubrc` with your GitHub username and password:
-
-```sh
-$ cat <<EOF > ~/.githubrc
-[User]
-Username = YourUsername
-Password = password1234
-EOF
-$ chmod 0600 ~/.githubrc
-```
-
-Alternatively, use flag `--githubrc <path>` to specify an alternate path to the credentials file.
 
 ## License
 
