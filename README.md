@@ -1,44 +1,72 @@
-# Plausible Test Case Generation for Compiler and Runtime Bug Discovery
+<h1>
+  gh-archiver
+  <a href="https://badge.fury.io/py/gh-archiver">
+    <img src="https://img.shields.io/pypi/v/gh-archiver.svg?colorB=green&style=flat">
+  </a> <a href="https://tldrlegal.com/license/mit-license" target="_blank">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat">
+  </a>
+</h1>
 
+Clone and update a GitHub user's repositories locally:
 
-## Requirements
+```sh
+$ gh-archiver ChrisCummins -o ~/src/GitHub/
+cloning atom
+cloning autoencoder
+updating chriscummins.cc
+...
+```
 
-* Ubuntu 16.04
-* Python 3.6
-* OpenCL
-* ninja
+Or mirror to a [gogs](https://gogs.io) server:
 
-Optional, but recommended:
-
-* Nvidia GPU and CUDA
+```sh
+$ gh-archiver ChrisCummins -o ~/gogs/repos/ChrisCummins --gogs --gogs-uid 1
+mirring atom ... 201
+mirroring autoencoder ... 201
+mirroring chriscummins.cc ... 201
+...
+```
 
 ## Installation
 
-**Step 1:** Checkout the source.
+```sh
+$ pip install gh-archiver
+```
+
+Requires Python >= 3.6.
+
+**GitHub credentials**
+
+Create a credentials file `~/.githubrc` with your GitHub username and password:
 
 ```sh
-$ git submodule update --init --recursive
+$ cat <<EOF > ~/.githubrc
+[User]
+Username = YourUsername
+Password = password1234
+EOF
+$ chmod 0600 ~/.githubrc
 ```
 
-**Step 2:** Build the code.
+Alternatively, use flag `--githubrc <path>` to specify a path to the credentials file.
 
-If CUDA is available:
+**Gogs credentials**
+
+Create a credentials file `~/.gogsrc` with your Gogs server address and [token](https://github.com/gogits/go-gogs-client/wiki#access-token):
 
 ```sh
-$ make all
+$ cat <<EOF > ~/.gogsrc
+[Server]
+Address = http://example.com:3000
+
+[User]
+Token = 39bbdb529fed7fc4f373410518745446d9901450
+EOF
+$ chmod 0600 ~/.gogsrc
 ```
 
-If CUDA is *not* available:
+Alternatively, use flag `--gogsrc <path>` to specify a path to the credentials file.
 
-```sh
-$ NO_CUDA=1 make all
-```
+## License
 
-
-## Running the code
-
-Launch the Jupyter server:
-
-```
-$ make run
-```
+Made with ❤️ by [Chris Cummins](http://chriscummins.cc). Released under [MIT License](https://tldrlegal.com/license/mit-license).
