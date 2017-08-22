@@ -1,23 +1,15 @@
-# clgen sources and data glob.
-sh_library(
-    name = 'labm8',
+genrule(
+    name = "main",
     srcs = glob([
-        'labm8/*.py',
-        'make/**/*',
-        'Makefile',
-        'requirements.txt',
-        'setup.py',
-        'setup.cfg',
-        'tests/**/*',
+        "**/*.tex",
+        "eushield-normal.pdf",
+        "eushield-normal.sty",
+        "infthesis.cls",
+        "thesis-shield.pdf",
+        'eushield.sty',
+        'refs.bib',
     ]),
-    visibility = ['//visibility:public'],
-)
-
-# a script which sets up a virtualenv and runs the test suite.
-sh_test(
-    name = 'main',
-    srcs = ['tests/.runner.sh'],
-    args = ['src/labm8', 'python3.6'],
-    deps = [':labm8'],
-    timeout = 'eternal',
+    outs = ["main.pdf"],
+    cmd = "$(location //tools:autotex) thesis/thesis.tex $@",
+    tools = ["//tools:autotex"],
 )
