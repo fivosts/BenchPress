@@ -1,4 +1,1 @@
-numpy >= 1.12.1
-pycparser == 2.17
-pycparserext == 2016.2
-pyopencl >= 2016.2
+oauth2client==4.1.2
