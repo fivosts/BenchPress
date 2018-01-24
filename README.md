@@ -1,65 +1,99 @@
-# Me.csv [![Release 0.0.1.dev1](https://img.shields.io/badge/release-0.0.1.dev1-blue.svg?style=flat)](https://github.com/ChrisCummins/me.csv/releases) [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://opensource.org/licenses/MIT)
+# DeepSmith: Compiler Fuzzing through Deep Learning
+
+DeepSmith is a novel approach to automate and accelerate compiler validation which takes advantage of state-of-the-art deep learning techniques. It constructs a learned model of the structure of real world code based on a large corpus of example programs. Then, it uses the model to automatically generate tens of thousands of realistic programs. Finally, it applies established differential testing methodologies on them to expose bugs in compilers.
+
+## Requirements
+
+* GNU / Linux (we recommend Ubuntu 16.04).
+* OpenCL
+* MySQL
+* GNU Make
+
+Optional, but recommended:
+
+* Nvidia GPU with [CUDA Toolkit 8.0 and cuDNN v6](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/#axzz4VZnqTJ2A).
+
+## Installation
+
+**Step 1:** Configure the build.
+
+```sh
+$ ./configure
+```
+
+You will be asked a series of questions to customize the build.
+
+**Step 2:** Build the code.
+
+```sh
+$ make
+```
+
+Please note our software stack is pretty large, requiring around 7 GB of dependencies to be built. A clean build may take upwards of an hour.
+
+**Step 3 (optional):** Run the test suite.
+
+```sh
+$ make test
+```
+
+Please report any problems using the [issue tracker](https://github.com/ChrisCummins/dsmith/issues).
+
 
 ## Usage
 
-### Installation
+DeepSmith is installed in a virtual environment. Activate it using:
 
 ```sh
-$ virtualenv -p python3.6 build/me
-$ source build/me/bin/activate
-$ pip install -r requirements.txt
+$ source build/dsmith/bin/activate
 ```
 
-### Configuration
-
-Create file `~/.me.json`:
+Interactive prompt:
 
 ```
-{
-  "sources": {
-    "omnifocus": {
-      "of2_path": "/Applications/bin/of2"
-    },
-    "healthkit": {
-      "export_path": "~/Documents/Health/export.zip"
-    }
-  },
-  "exports": {
-    "csv": {
-      "path": "~/Documents/me.csv/"
-    },
-    "gsheet": {
-      "name": "me.csv",
-      "keypath": "~/google-service-key.json",
-      "share_with": "me@example.com"
-    }
-  }
-}
+(dsmith) $ dsmith
+Good evening. Type 'help' for available commands.
 ```
 
-#### Import from HealthKit
-
-1. Select "Export Health Data" on iPhone's Health app.
-2. Set path to `export.zip` in `~/.my.json` > "sources" > "healthkit" > "export_path".
-
-#### Import from OmniFocus
-
-1. Install [of2export](https://github.com/psidnell/ofexport2).
-2. Set path to `of2` in `~/.my.json` > "sources" > "omnifocus" > "of2_path".
-
-#### Export to Google Sheets
-
-1. [Obtain OAuth2 credentials from Google Developers Console](http://gspread.readthedocs.io/en/latest/oauth2.html).
-2. Set path to the service key file in `~/.my.json` > "exports" > "gsheet" > "keypath".
-3. Set the name of the spreadsheet to export to in `~/.my.json` > "exports" > "gsheet" > "name".
-4. Set the email address linked to your Drive account in `~/.my.json` > "exports" > "gsheet" > "share_with".
-
-<<<<<<< HEAD
-### Running
-=======
-Copyright 2016, 2017, 2018 Chris Cummins <chrisc.101@gmail.com>.
->>>>>>> 1bb095a06... Bump copyright to 2018
+**Step 1:** Generate programs:
 
 ```
-$ me.csv
+> make 1000 opencl programs using dsmith
 ```
+
+**Step 2:** Generate test cases:
+
+```
+> make opencl testcases
+```
+
+**Step 3:** Run test cases:
+
+```
+> describe available opencl testbeds
+```
+
+```
+> run opencl testcases on 1±
+```
+
+**Step 4:** Differential test results:
+
+```
+> difftest opencl results
+```
+
+When you are done using DeepSmith, exit the interactive prompt and deactivate the virtual environment using:
+
+```sh
+> exit
+God speed.
+(dsmith) $ deactivate
+```
+
+## License
+
+Copyright 2017, 2018 Chris Cummins <chrisc.101@gmail.com>.
+
+Released under the terms of the GPLv3 license. See [LICENSE.txt](/LICENSE.txt)
+for details.
