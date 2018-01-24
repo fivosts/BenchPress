@@ -15,6 +15,12 @@
 //
 // Prints the number of variable and function names that are rewritten. If
 // nothing is rewritten, exit with status code
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
+=======
+#define E_NO_INPUT 204
+//
+// Copyright 2016, 2017, 2018 Chris Cummins <chrisc.101@gmail.com>.
+>>>>>>> 1bb095a06... Bump copyright to 2018:native/clgen-rewriter.cpp
 //
 // Copyright (c) 2016, 2017, 2018, 2019 Chris Cummins.
 //
