@@ -54,7 +54,11 @@ Create file `~/.me.json`:
 3. Set the name of the spreadsheet to export to in `~/.my.json` > "exports" > "gsheet" > "name".
 4. Set the email address linked to your Drive account in `~/.my.json` > "exports" > "gsheet" > "share_with".
 
+<<<<<<< HEAD
 ### Running
+=======
+Copyright 2016, 2017, 2018 Chris Cummins <chrisc.101@gmail.com>.
+>>>>>>> 1bb095a06... Bump copyright to 2018
 
 ```
 $ me.csv
