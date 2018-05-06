@@ -18,7 +18,12 @@ import os.path
 import pathlib
 import re
 import shutil
+<<<<<<< HEAD:labm8/py/fs.py
 import tempfile
+=======
+
+import pathlib
+>>>>>>> a9faa39fb... Accept str or pathlib.Path arguments to lsfiles().:lib/labm8/fs.py
 import typing
 from glob import iglob
 
