@@ -13,11 +13,17 @@
 # limitations under the License.
 """Transient and persistent caching mechanisms."""
 import atexit
+<<<<<<< HEAD:labm8/py/cache.py
 import json
 import pathlib
 import re
 import typing
 
+=======
+
+import json
+import re
+>>>>>>> 430bf6988... Only read JSON cache if file contains something.:lib/labm8/cache.py
 import six
 
 from labm8.py import crypto
@@ -188,7 +194,11 @@ class JsonCache(TransientCache):
     super(JsonCache, self).__init__()
     self.path = fs.abspath(path)
 
+<<<<<<< HEAD:labm8/py/cache.py
     if fs.exists(self.path) and fs.Read(self.path):
+=======
+    if fs.exists(self.path) and fs.read_file(self.path):
+>>>>>>> 430bf6988... Only read JSON cache if file contains something.:lib/labm8/cache.py
       io.debug(("Loading cache '{0}'".format(self.path)))
       with open(self.path) as file:
         self._data = json.load(file)
