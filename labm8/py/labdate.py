@@ -25,6 +25,8 @@ import pytz
 UTC = pytz.UTC
 US_PACIFIC = pytz.timezone("US/Pacific")
 
+import typing
+
 
 def GetUtcMillisecondsNow() -> datetime.datetime:
   """Return the current date to millisecond precision.
@@ -42,8 +44,12 @@ def GetUtcMillisecondsNow() -> datetime.datetime:
 
 
 def MillisecondsTimestamp(
+<<<<<<< HEAD:labm8/py/labdate.py
   date: typing.Optional[datetime.datetime] = None,
 ) -> int:
+=======
+    date: typing.Optional[datetime.datetime] = None) -> int:
+>>>>>>> ac86e24fa... Fix type hint for optional parameter.:lib/labm8/labdate.py
   """Get the millisecond timestamp of a date.
 
   Args:
