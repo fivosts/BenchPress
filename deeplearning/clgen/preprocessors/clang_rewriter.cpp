@@ -45,6 +45,9 @@
 #include <string>
 
 <<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
+=======
+>>>>>>> 55d617346... Don't use system includes for LLVM headers.:native/clgen-rewriter.cpp
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -56,6 +59,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
 =======
 #include <clang/AST/AST.h>
 #include <clang/AST/ASTConsumer.h>
@@ -69,6 +73,8 @@
 #include <clang/Tooling/CommonOptionsParser.h>
 #include <clang/Tooling/Tooling.h>
 >>>>>>> 249792753... Flexible rewriter naming:native/clgen-rewriter.cpp
+=======
+>>>>>>> 55d617346... Don't use system includes for LLVM headers.:native/clgen-rewriter.cpp
 
 // Uncomment the following line for verbose output:
 // #define VERBOSE
