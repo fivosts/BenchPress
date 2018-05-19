@@ -17,7 +17,15 @@ import json
 import re
 import typing
 
+<<<<<<< HEAD:labm8/py/jsonutil.py
 from labm8.py import fs
+=======
+import json
+import typing
+>>>>>>> b5e037964... Move JSON type hint into jsonutil.:lib/labm8/jsonutil.py
+
+# A type alias for annotating methods which take or return JSON.
+JSON = typing.Union[typing.List[typing.Any], typing.Dict[str, typing.Any]]
 
 # A type alias for annotating methods which take or return JSON.
 JSON = typing.Union[typing.List[typing.Any], typing.Dict[str, typing.Any]]
