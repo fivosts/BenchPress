@@ -5,21 +5,15 @@
   },
   "corpus": {
     "language": "opencl",
-    "path": "corpus.tar.bz2",
-    "vocabulary": "greedy",
-    "seq_length": 1,
-    "batch_size": 1
+    "path": "corpus",
+    "vocabulary": "greedy"
   },
   "architecture": {
     "model_type": "lstm",
-    "rnn_size": 32,
+    "rnn_size": 8,
     "num_layers": 2
   },
   "train_opts": {
-<<<<<<< HEAD:deeplearning/clgen/tests/data/pico/model.json
     "epochs": 1
-=======
-    "epochs": 3
->>>>>>> e9b05c8c5... tests: Pico model size tweak:clgen/test/data/pico/model.json
   }
 }
