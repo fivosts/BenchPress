@@ -1,16 +1,14 @@
-# Testing utilities for //deeplearning/clgen.
+# Testing code and data for CLgen.
 
 py_library(
-    name = "fixtures",
+    name = "testlib",
     testonly = True,
-    srcs = ["fixtures.py"],
-    visibility = [
-        "//deeplearning/clgen:__subpackages__",
-        "//docs/2018_07_issta:__subpackages__",
-    ],
+    srcs = ["testlib.py"],
+    visibility = ["//deeplearning/clgen:__subpackages__"],
     deps = [
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:pbutil",
-        "//labm8/py:test",
+        "//deeplearning/clgen:config",
+        "//lib/labm8:fs",
+        "//lib/labm8:system",
+        "//lib/labm8:tar",
     ],
 )
