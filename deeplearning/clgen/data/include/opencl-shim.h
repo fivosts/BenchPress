@@ -1,31 +1,5 @@
-<<<<<<< HEAD:deeplearning/clgen/data/include/opencl-shim.h
-// A shim header providing common definitions.
-//
-// Coarse grained control is provided over what is defined using include guards.
-// To prevent the definition of unsupported storage classes and qualifiers:
-//   -DCLGEN_OPENCL_SHIM_NO_UNSUPPORTED_STORAGE_CLASSES_AND_QUALIFIERS
-// To prevent the definition of common types:
-//   -DCLGEN_OPENCL_SHIM_NO_COMMON_TYPES
-// To prevent the definition of common constants:
-//   -DCLGEN_OPENCL_SHIM_NO_COMMON_CONSTANTS
-//
-// Copyright (c) 2016-2020 Chris Cummins.
-//
-// clgen is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// clgen is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with clgen.  If not, see <https://www.gnu.org/licenses/>.
-=======
 // Enable OpenCL features and implementation.
-#ifndef SMITH_FEATURES
+#ifndef CLGEN_FEATURES
 #define cl_clang_storage_class_specifiers
 #define cl_khr_fp64
 #include <clc/clc.h>
@@ -38,61 +12,13 @@
 #define __FAST_RELAXED_MATH__
 #define __IMAGE_SUPPORT__
 #define __OPENCL_VERSION__ 1
-<<<<<<< HEAD:deeplearning/clgen/data/include/opencl-shim.h
->>>>>>> c37236d67... src/smith: Shim improvements:src/smith/smith/share/include/opencl-shim.h
-=======
-#endif  /* SMITH_FEATURES */
->>>>>>> 89cc26a51... src/smith: Shim updates:src/smith/smith/share/include/opencl-shim.h
+#endif  /* CLGEN_FEATURES */
 
 // Unsupported OpenCL storage classes and qualifiers.
-#ifndef CLGEN_OPENCL_SHIM_NO_UNSUPPORTED_STORAGE_CLASSES_AND_QUALIFIERS
 #define static
 #define generic
 #define AS
-#endif  // CLGEN_OPENCL_SHIM_NO_UNSUPPORTED_STORAGE_CLASSES_AND_QUALIFIERS
 
-<<<<<<< HEAD:deeplearning/clgen/data/include/opencl-shim.h
-// Common types.
-#ifndef CLGEN_OPENCL_SHIM_NO_COMMON_TYPES
-#define CONVT float
-#define DATA_TYPE float
-#define DATATYPE float
-#define FLOAT_T float
-#define FLOAT_TYPE float
-#define FPTYPE float
-#define hmc_float float
-#define inType float
-#define outType float
-#define real float
-#define REAL float
-#define Ty float
-#define TyOut float
-#define TYPE float
-#define VALTYPE float
-#define VALUE_TYPE float
-#define VECTYPE float
-#define WORKTYPE float
-#define hmc_complex float2
-#define mixed2 float2
-#define real2 float2
-#define REAL2 float2
-#define mixed3 float3
-#define real3 float3
-#define REAL3 float3
-#define FPVECTYPE float4
-#define mixed4 float4
-#define real4 float4
-#define REAL4 float4
-#define T4 float4
-#define BITMAP_INDEX_TYPE int
-#define INDEX_TYPE int
-#define Ix int
-#define KParam int
-#define Tp int
-#define Pixel int3
-#define uint32_t unsigned int
-#endif  // CLGEN_OPENCL_SHIM_NO_COMMON_TYPES
-=======
 // Common typedefs
 typedef float CONVT;
 typedef float DATA_TYPE;
@@ -132,16 +58,13 @@ typedef int KParam;
 typedef int Tp;
 typedef int3 Pixel;
 typedef unsigned int uint32_t;
->>>>>>> 89cc26a51... src/smith: Shim updates:src/smith/smith/share/include/opencl-shim.h
 
 // Common constants
-#ifndef CLGEN_OPENCL_SHIM_NO_COMMON_CONSTANTS
 #define ACCESSES 16
 #define AVER 2
 #define BETA 0.5
 #define BINS_PER_BLOCK 8
 #define BITMAP_SIZE 1024
-#define BLACK 0
 #define BLK_X 8
 #define BLK_Y 8
 #define BLOCK 32
@@ -221,7 +144,6 @@ typedef unsigned int uint32_t;
 #define MAXWORKY 8
 #define MERGE_WORKGROUP_SIZE 32
 #define MOD 16
-#define MT_RNG_COUNT 8
 #define MULT 4
 #define N_CELL_ENTRIES 128
 #define N_GP 8
@@ -244,11 +166,7 @@ typedef unsigned int uint32_t;
 #define PADDINGX 4
 #define PADDINGY 2
 #define PI 3.14
-<<<<<<< HEAD:deeplearning/clgen/data/include/opencl-shim.h
-#define PRESCAN_THREADS 128 /* Used in parboil-0.2 histo */
-=======
 #define PRESCAN_THREADS 128  /* Used in parboil-0.2 histo */
->>>>>>> 89cc26a51... src/smith: Shim updates:src/smith/smith/share/include/opencl-shim.h
 #define PULSELOCALOFFSET 8
 #define PULSEOFF 16
 #define QPEX 1
@@ -332,4 +250,3 @@ typedef unsigned int uint32_t;
 #define ZDIR 2
 #define ZERO 0
 #define ZSIZE 128
-#endif  // CLGEN_OPENCL_SHIM_NO_COMMON_CONSTANTS
