@@ -1,19 +1,4 @@
 // The file defines the protos for describing CLgen instances.
-//
-// Copyright (c) 2016, 2017, 2018, 2019 Chris Cummins.
-//
-// clgen is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// clgen is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 
 syntax = "proto2";
 package clgen;
@@ -24,22 +9,9 @@ import "deeplearning/clgen/proto/sampler.proto";
 // A CLgen instance encapsulates all of the settings for training and sampling
 // a language model.
 message Instance {
-  // The path to the clgen working directory. This directory stores persistent
-  // caches files, including the corpus, model checkpoints, and sampler outputs.
-  // If not provided, the default value of $HOME/.cache/clgen is used.
-  optional string working_dir = 1;
-  // The language model specification. Either the full description of a model,
-  // or the path to a pretrained_model, as created by --export_tf_model option
-  // of clgen.
-  oneof model_specification {
-    Model model = 2;
-    string pretrained_model = 4;
-  }
-  // The sampler specification.
-  optional Sampler sampler = 3;
-}
-
-// A collection of instances.
-message Instances {
-  repeated Instance instance = 1;
+  // The path to the clgen working directory on the host machine.
+  optional string working_dir = 2;
+  // The CLgen model and sampler configuration.
+  optional clgen.Model model = 3;
+  optional clgen.Sampler sampler = 4;
 }
