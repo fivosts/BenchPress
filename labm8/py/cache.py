@@ -14,6 +14,7 @@
 """Transient and persistent caching mechanisms."""
 import atexit
 <<<<<<< HEAD:labm8/py/cache.py
+<<<<<<< HEAD:labm8/py/cache.py
 import json
 import pathlib
 import re
@@ -21,9 +22,17 @@ import typing
 
 =======
 
+=======
+>>>>>>> ba3258224... Annotate cache return types.:lib/labm8/cache.py
 import json
+import pathlib
 import re
+<<<<<<< HEAD:labm8/py/cache.py
 >>>>>>> 430bf6988... Only read JSON cache if file contains something.:lib/labm8/cache.py
+=======
+import typing
+
+>>>>>>> ba3258224... Annotate cache return types.:lib/labm8/cache.py
 import six
 
 from labm8.py import crypto
