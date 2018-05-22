@@ -19,6 +19,7 @@ import pathlib
 import re
 import shutil
 <<<<<<< HEAD:labm8/py/fs.py
+<<<<<<< HEAD:labm8/py/fs.py
 import tempfile
 =======
 
@@ -27,6 +28,12 @@ import pathlib
 import typing
 from glob import iglob
 
+=======
+import typing
+from glob import iglob
+
+from humanize import naturalsize
+>>>>>>> 4d50b51ca... Add a directory_is_empty() function.:lib/labm8/fs.py
 from send2trash import send2trash
 
 from labm8.py import humanize
@@ -475,6 +482,7 @@ def read(*components, **kwargs):
 
     if rstrip:
       # Ignore comments, and right strip results.
+<<<<<<< HEAD:labm8/py/fs.py
       return [
         re.match(not_comment_re, line).group(0).rstrip()
         for line in lines
@@ -487,6 +495,14 @@ def read(*components, **kwargs):
         for line in lines
         if not re.match(comment_line_re, line)
       ]
+=======
+      return [re.match(not_comment_re, line).group(0).rstrip() for line in lines
+              if not re.match(comment_line_re, line)]
+    else:
+      # Ignore comments, and don't strip results.
+      return [re.match(not_comment_re, line).group(0) for line in lines if
+              not re.match(comment_line_re, line)]
+>>>>>>> 4d50b51ca... Add a directory_is_empty() function.:lib/labm8/fs.py
   elif rstrip:
     # No comments, and right strip results.
     return [line.rstrip() for line in lines]
@@ -564,6 +580,7 @@ def directory_is_empty(directory: pathlib.Path) -> bool:
     if subdirs or files:
       return False
   return True
+<<<<<<< HEAD:labm8/py/fs.py
 
 
 @contextlib.contextmanager
@@ -765,3 +782,5 @@ def TemporaryFileWithContents(contents: bytes, **kwargs):
   temporary_file.flush()
   yield temporary_file
   temporary_file.close()
+=======
+>>>>>>> 4d50b51ca... Add a directory_is_empty() function.:lib/labm8/fs.py
