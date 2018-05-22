@@ -32,7 +32,11 @@ def _checksum_list(hash_fn, *elems):
 
 
 def _checksum_file(hash_fn, path: typing.Union[str, pathlib.Path]):
+<<<<<<< HEAD:labm8/py/crypto.py
   with open(path, "rb") as infile:
+=======
+  with open(path, 'rb') as infile:
+>>>>>>> 0cc901c09... Type hint for X_file() functions.:lib/labm8/crypto.py
     ret = _checksum(hash_fn, infile.read())
   return ret
 
