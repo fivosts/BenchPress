@@ -252,7 +252,11 @@ class GreedyAtomizer(AtomizerBase):
       An atomizer instance.
     """
     if not atoms:
+<<<<<<< HEAD:deeplearning/clgen/corpuses/atomizers.py
       raise errors.UserError("No atoms specified")
+=======
+      raise errors.UserError('No atoms specified')
+>>>>>>> d1fe5eb48... Raise error if no atoms are provided.:deeplearning/clgen/atomizers.py
 
     # Instantiate a greedy atomizer using the full vocabulary.
     full_vocab = dict(zip(atoms, range(len(atoms))))
