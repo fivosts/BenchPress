@@ -223,9 +223,14 @@ def isdir(*components):
     return False
 
 
+<<<<<<< HEAD:labm8/py/fs.py
 def ls(
   root: typing.Union[str, pathlib.Path] = ".", abspaths=False, recursive=False,
 ):
+=======
+def ls(root: typing.Union[str, pathlib.Path] = ".", abspaths=False,
+       recursive=False):
+>>>>>>> 65a5cab7a... Add pathlib.Path to fs.ls() type annotation.:lib/labm8/fs.py
   """
   Return a list of files in directory.
 
