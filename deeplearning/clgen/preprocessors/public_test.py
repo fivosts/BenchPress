@@ -1,27 +1,15 @@
-# Copyright (c) 2016, 2017, 2018, 2019 Chris Cummins.
-#
-# clgen is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# clgen is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """Unit tests for //deeplearning/clgen/preprocessors/public.py."""
+import sys
 
 import pytest
+from absl import app
+from absl import flags
 
 from deeplearning.clgen import errors
 from deeplearning.clgen.preprocessors import public
-from labm8 import app
-from labm8 import test
 
-FLAGS = app.FLAGS
+
+FLAGS = flags.FLAGS
 
 
 def test_clgen_preprocessor_good():
@@ -38,7 +26,6 @@ def test_clgen_preprocessor_good():
 def test_clgen_preprocessor_missing_return_type():
   """Test clgen_preprocessor on a function missing a return type hint."""
   with pytest.raises(errors.InternalError):
-
     @public.clgen_preprocessor
     def MockPreprocessor(test: str):
       """Mock preprocessor with a missing return type hint."""
@@ -48,7 +35,6 @@ def test_clgen_preprocessor_missing_return_type():
 def test_clgen_preprocessor_missing_argument_type():
   """Test clgen_preprocessor on a function missing an argument type hint."""
   with pytest.raises(errors.InternalError):
-
     @public.clgen_preprocessor
     def MockPreprocessor(test) -> str:
       """Mock preprocessor with a missing argument type hint."""
@@ -58,12 +44,17 @@ def test_clgen_preprocessor_missing_argument_type():
 def test_clgen_preprocessor_incorrect_argument_name():
   """Test clgen_preprocessor on a function missing an argument type hint."""
   with pytest.raises(errors.InternalError):
-
     @public.clgen_preprocessor
     def MockPreprocessor(foo: str) -> str:
       """Mock preprocessor with a mis-named argument."""
       del foo
 
 
+def main(argv):
+  """Main entry point."""
+  del argv
+  sys.exit(pytest.main([__file__, '-v']))
+
+
 if __name__ == '__main__':
-  test.Main()
+  app.run(main)
