@@ -1,35 +1,18 @@
-# Copyright (c) 2016, 2017, 2018, 2019 Chris Cummins.
-#
-# clgen is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# clgen is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """Preprocessor passes for the OpenCL programming language."""
+import os
+import subprocess
+import tempfile
 import typing
 
+from absl import logging
+
+from deeplearning.clgen import errors
+from deeplearning.clgen import native
 from deeplearning.clgen.preprocessors import clang
-from deeplearning.clgen.preprocessors import normalizer
-from deeplearning.clgen.preprocessors import public
-from labm8 import app
-from labm8 import bazelutil
-
-FLAGS = app.FLAGS
-
-LIBCLC = bazelutil.DataPath('phd/third_party/libclc/generic/include')
-OPENCL_H = bazelutil.DataPath('phd/deeplearning/clgen/data/include/opencl.h')
-SHIMFILE = bazelutil.DataPath(
-    'phd/deeplearning/clgen/data/include/opencl-shim.h')
 
 
-def GetClangArgs(use_shim: bool) -> typing.List[str]:
+def GetClangArgs(use_shim: bool = False, error_limit: int = 0) -> typing.List[
+  str]:
   """Get the arguments to pass to clang for handling OpenCL.
 
   Args:
@@ -39,215 +22,137 @@ def GetClangArgs(use_shim: bool) -> typing.List[str]:
   Returns:
     A list of command line arguments to pass to Popen().
   """
-  args = [
-      '-I' + str(LIBCLC), '-include',
-      str(OPENCL_H), '-target', 'nvptx64-nvidia-nvcl', f'-ferror-limit=1',
-      '-xcl', '-Wno-ignored-pragmas', '-Wno-implicit-function-declaration',
-      '-Wno-incompatible-library-redeclaration', '-Wno-macro-redefined',
-      '-Wno-unused-parameter'
-  ]
+  # Clang warnings to disable.
+  disabled_warnings = ['ignored-pragmas', 'implicit-function-declaration',
+                       'incompatible-library-redeclaration',
+                       'macro-redefined', ]
+  args = ['-I' + str(native.LIBCLC), '-target', 'nvptx64-nvidia-nvcl',
+          f'-ferror-limit={error_limit}', '-xcl'] + ['-Wno-{}'.format(x) for x
+                                                     in disabled_warnings]
   if use_shim:
-    args += ['-include', str(SHIMFILE)]
+    args += ['-include', str(native.SHIMFILE)]
   return args
 
 
-def _ClangPreprocess(text: str, use_shim: bool) -> str:
-  """Private preprocess OpenCL source implementation.
+def ClangPreprocess(src: str, use_shim: bool = True) -> str:
+  """Preprocess OpenCL source.
 
   Inline macros, removes comments, etc.
 
   Args:
-    text: OpenCL source.
+    src: OpenCL source.
+    id: Name of OpenCL source.
     use_shim: Inject shim header.
 
   Returns:
     Preprocessed source.
   """
-  return clang.Preprocess(text, GetClangArgs(use_shim=use_shim))
+  return clang.Preprocess(src, GetClangArgs(use_shim=use_shim))
 
 
-@public.clgen_preprocessor
-def ClangPreprocess(text: str) -> str:
-  """Preprocessor OpenCL source.
-
-  Args:
-    text: OpenCL source to preprocess.
-
-  Returns:
-    Preprocessed source.
+def rewrite_cl(src: str, timeout_seconds: int = 60,
+               use_shim: bool = True) -> str:
   """
-  return _ClangPreprocess(text, False)
+  Rewrite OpenCL sources.
 
+  Renames all functions and variables with short, unique names.
 
-@public.clgen_preprocessor
-def ClangPreprocessWithShim(text: str) -> str:
-  """Preprocessor OpenCL source with OpenCL shim header injection.
+  Parameters
+  ----------
+  src : str
+      OpenCL source.
+  id : str, optional
+      OpenCL source name.
+  use_shim : bool, optional
+      Inject shim header.
 
-  Args:
-    text: OpenCL source to preprocess.
+  Returns
+  -------
+  str
+      Rewritten OpenCL source.
 
-  Returns:
-    Preprocessed source.
+  Raises
+  ------
+  RewriterException
+      If rewriter fails.
   """
-  return _ClangPreprocess(text, True)
+  # On Linux we must preload the clang library.
+  env = os.environ
+  if native.LIBCLANG_SO:
+    env = os.environ.copy()
+    env['LD_PRELOAD'] = native.LIBCLANG_SO
+
+  # Rewriter can't read from stdin.
+  with tempfile.NamedTemporaryFile('w', suffix='.cl') as tmp:
+    tmp.write(src)
+    tmp.flush()
+    cmd = (["timeout", "-s9", str(timeout_seconds), native.CLGEN_REWRITER,
+            tmp.name] + ['-extra-arg=' + x for x in
+                         GetClangArgs(use_shim=use_shim)] + ['--'])
+    logging.debug('$ %s', ' '.join(cmd))
+
+    process = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               universal_newlines=True, env=env)
+    stdout, stderr = process.communicate()
+    logging.debug(stderr)
+
+  # If there was nothing to rewrite, rewriter exits with error code:
+  EUGLY_CODE = 204
+  if process.returncode == EUGLY_CODE:
+    # Propagate the error:
+    raise errors.RewriterException(src)
+  # NOTE: the rewriter process can still fail because of some other
+  # compilation problem, e.g. for some reason the 'enable 64bit
+  # support' pragma which should be included in the shim isn't being
+  # propogated correctly to the rewriter. However, the rewriter will
+  # still correctly process the input, so we ignore all error codes
+  # except the one we care about (EUGLY_CODE).
+  return stdout
 
 
-@public.clgen_preprocessor
-def Compile(text: str) -> str:
-  """Check that the OpenCL source compiles.
-
-  This does not modify the input.
-
-  Args:
-    text: OpenCL source to check.
-
-  Returns:
-    Unmodified OpenCL source.
+def gpuverify(src: str, args: list, id: str = 'anon', timeout: int = 60) -> str:
   """
-  # We must override the flag -Wno-implicit-function-declaration from
-  # GetClangArgs() to ensure that undefined functions are treated as errors.
-  clang.CompileLlvmBytecode(
-      text, '.cl',
-      GetClangArgs(use_shim=False) + ['-Werror=implicit-function-declaration'])
-  return text
+  Run GPUverify over kernel.
 
+  Parameters
+  ----------
+  src : str
+      OpenCL source.
+  id : str, optional
+      OpenCL source name.
 
-@public.clgen_preprocessor
-def ClangFormat(text: str) -> str:
-  """Run clang-format on a source to enforce code style.
+  Returns
+  -------
+  str
+      OpenCL source.
 
-  Args:
-    text: The source code to run through clang-format.
-
-  Returns:
-    The output of clang-format.
-
-  Raises:
-    ClangFormatException: In case of an error.
-    ClangTimeout: If clang-format does not complete before timeout_seconds.
+  Raises
+  ------
+  GPUVerifyException
+      If GPUverify finds a bug.
+  InternalError
+      If GPUverify fails.
   """
-  return clang.ClangFormat(text, '.cl')
+  # TODO(cec): Re-enable GPUVerify support.
+  # from lib.labm8 import system
+  # if not system.is_linux():
+  #   raise errors.InternalError("GPUVerify only supported on Linux!")
+  #
+  # # GPUverify can't read from stdin.
+  # with tempfile.NamedTemporaryFile('w', suffix='.cl') as tmp:
+  #   tmp.write(src)
+  #   tmp.flush()
+  #   cmd = ['timeout', '-s9', str(timeout), native.GPUVERIFY, tmp.name] + args
+  #
+  #   process = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+  # stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  #   stdout, stderr = process.communicate()
+  #
+  # if process.returncode == -9:  # timeout signal
+  #   raise errors.GPUVerifyTimeoutException(
+  #     f"GPUveryify failed to complete with {timeout} seconds")
+  # elif process.returncode != 0:
+  #   raise errors.GPUVerifyException(stderr.decode('utf-8'))
 
-
-@public.clgen_preprocessor
-def NormalizeIdentifiers(text: str) -> str:
-  """Normalize identifiers in OpenCL source code.
-
-  Args:
-    text: The source code to rewrite.
-
-  Returns:
-    Source code with identifier names normalized.
-
-  Raises:
-    RewriterException: If rewriter found nothing to rewrite.
-    ClangTimeout: If rewriter fails to complete within timeout_seconds.
-  """
-  return normalizer.NormalizeIdentifiers(text, '.cl',
-                                         GetClangArgs(use_shim=False))
-
-
-# TODO(cec): Re-enable GPUVerify support.
-# def GpuVerify(src: str, args: list, id: str = 'anon', timeout: int = 60) ->
-#  str:
-#   """
-#   Run GPUverify over kernel.
-#
-#   Parameters
-#   ----------
-#   src : str
-#       OpenCL source.
-#   id : str, optional
-#       OpenCL source name.
-#
-#   Returns
-#   -------
-#   str
-#       OpenCL source.
-#
-#   Raises
-#   ------
-#   GPUVerifyException
-#       If GPUverify finds a bug.
-#   InternalError
-#       If GPUverify fails.
-#   """
-#   from labm8 import system
-#   if not system.is_linux():
-#     raise errors.InternalError("GPUVerify only supported on Linux!")
-#
-#   # GPUverify can't read from stdin.
-#   with tempfile.NamedTemporaryFile('w', suffix='.cl') as tmp:
-#     tmp.write(src)
-#     tmp.flush()
-#     cmd = ['timeout', '-s9', str(timeout), GPUVERIFY, tmp.name] + args
-#
-#     process = subprocess.Popen(cmd, stdin=subprocess.PIPE,
-#   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-#     stdout, stderr = process.communicate()
-#
-#   if process.returncode == -9:  # timeout signal
-#     raise errors.GPUVerifyTimeoutException(
-#       f"GPUveryify failed to complete with {timeout} seconds")
-#   elif process.returncode != 0:
-#     raise errors.GPUVerifyException(stderr.decode('utf-8'))
-#   return src
-
-
-@public.clgen_preprocessor
-def SanitizeKernelPrototype(text: str) -> str:
-  """Sanitize OpenCL prototype.
-
-  Ensures that OpenCL prototype fits on a single line.
-
-  Args:
-    text: OpenCL source.
-
-  Returns:
-    Source code with sanitized prototypes.
-  """
-  # Ensure that prototype is well-formed on a single line:
-  try:
-    prototype_end_idx = text.index('{') + 1
-    prototype = ' '.join(text[:prototype_end_idx].split())
-    return prototype + text[prototype_end_idx:]
-  except ValueError:
-    # Ok so erm... if the '{' character isn't found, a ValueError
-    # is thrown. Why would '{' not be found? Who knows, but
-    # whatever, if the source file got this far through the
-    # preprocessing pipeline then it's probably "good" code. It
-    # could just be that an empty file slips through the cracks or
-    # something.
-    return text
-
-
-@public.clgen_preprocessor
-def StripDoubleUnderscorePrefixes(text: str) -> str:
-  """Remove the optional __ qualifiers on OpenCL keywords.
-
-  The OpenCL spec allows __ prefix for OpenCL keywords, e.g. '__global' and
-  'global' are equivalent. This preprocessor removes the '__' prefix on those
-  keywords.
-
-  Args:
-    text: The OpenCL source to preprocess.
-
-  Returns:
-    OpenCL source with __ stripped from OpenCL keywords.
-  """
-  # List of keywords taken from the OpenCL 1.2. specification, page 169.
-  replacements = {
-      '__const': 'const',
-      '__constant': 'constant',
-      '__global': 'global',
-      '__kernel': 'kernel',
-      '__local': 'local',
-      '__private': 'private',
-      '__read_only': 'read_only',
-      '__read_write': 'read_write',
-      '__restrict': 'restrict',
-      '__write_only': 'write_only',
-  }
-  for old, new in replacements.items():
-    text = text.replace(old, new)
-  return text
+  return src
