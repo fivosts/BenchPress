@@ -1,28 +1,16 @@
-# Copyright (c) 2016, 2017, 2018, 2019 Chris Cummins.
-#
-# clgen is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# clgen is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """Unit tests for //deeplearning/clgen/preprocessors/normalizer.py."""
 import subprocess
+import sys
 
 import pytest
+from absl import app
+from absl import flags
 
 from deeplearning.clgen import errors
 from deeplearning.clgen.preprocessors import normalizer
-from labm8 import app
-from labm8 import test
 
-FLAGS = app.FLAGS
+
+FLAGS = flags.FLAGS
 
 
 class MockProcess():
@@ -36,7 +24,7 @@ class MockProcess():
 
 
 def test_NormalizeIdentifiers_process_command(mocker):
-  """Test the clang_rewriter comand which is run."""
+  """Test the clgen-rewriter comand which is run."""
   mock_Popen = mocker.patch('subprocess.Popen')
   mock_Popen.return_value = MockProcess(0)
   normalizer.NormalizeIdentifiers('', '.c', ['-foo'])
@@ -46,7 +34,7 @@ def test_NormalizeIdentifiers_process_command(mocker):
 
 
 def test_NormalizeIdentifiers_ClangTimeout(mocker):
-  """Test that ClangTimeout is raised if clang_rewriter returns with SIGKILL."""
+  """Test that ClangTimeout is raised if clgen-rewriter returns with SIGKILL."""
   mock_Popen = mocker.patch('subprocess.Popen')
   mock_Popen.return_value = MockProcess(9)
   with pytest.raises(errors.ClangTimeout):
@@ -57,7 +45,7 @@ def test_NormalizeIdentifiers_ClangTimeout(mocker):
 
 
 def test_NormalizeIdentifiers_RewriterException(mocker):
-  """Test that ClangException is raised if clang_rewriter returns 204."""
+  """Test that ClangException is raised if clgen-rewriter returns 204."""
   mock_Popen = mocker.patch('subprocess.Popen')
   mock_Popen.return_value = MockProcess(204)
   with pytest.raises(errors.RewriterException):
@@ -75,20 +63,19 @@ def test_NormalizeIdentifiers_empty_c_file():
 
 def test_NormalizeIdentifiers_small_c_program():
   """Test the output of a small program."""
-  assert normalizer.NormalizeIdentifiers(
-      """
+  assert normalizer.NormalizeIdentifiers("""
 int main(int argc, char** argv) {}
 """, '.c', []) == """
 int A(int a, char** b) {}
 """
 
 
+@pytest.mark.xfail(reason='TODO(cec): clgen-rewriter var scope', strict=True)
 def test_NormalizeIdentifiers_variable_names_function_scope():
   """Test that variable name sequence reset for each function."""
-  assert normalizer.NormalizeIdentifiers(
-      """
+  assert normalizer.NormalizeIdentifiers("""
 int foo(int bar, int car) { int blah = bar; }
-int foobar(int hello, int bar) { int test = bar; }
+int foo(int hello, int bar) { int test = bar; }
 """, '.c', []) == """
 int A(int a, int b) { int c = a; }
 int B(int a, int b) { int c = b; }
@@ -97,8 +84,7 @@ int B(int a, int b) { int c = b; }
 
 def test_NormalizeIdentifiers_small_cl_program():
   """Test the output of a small OpenCL program."""
-  assert normalizer.NormalizeIdentifiers(
-      """
+  assert normalizer.NormalizeIdentifiers("""
 kernel void foo(global int* bar) {}
 """, '.cl', []) == """
 kernel void A(global int* a) {}
@@ -112,8 +98,7 @@ def test_NormalizeIdentifiers_c_syntax_error():
 
 def test_NormalizeIdentifiers_printf_not_rewritten():
   """Test that a call to printf is not rewritten."""
-  assert normalizer.NormalizeIdentifiers(
-      """
+  assert normalizer.NormalizeIdentifiers("""
 #include <stdio.h>
 
 int main(int argc, char** argv) {
@@ -132,8 +117,7 @@ int A(int a, char** b) {
 
 def test_NormalizeIdentifiers_undefined_not_rewritten():
   """Test that undefined functions and variables are not rewritten."""
-  assert normalizer.NormalizeIdentifiers(
-      """
+  assert normalizer.NormalizeIdentifiers("""
 void main(int argc, char** argv) {
   undefined_function(undefined_variable);
 }
@@ -146,11 +130,9 @@ void A(int a, char** b) {
 
 # Benchmarks.
 
-
 def test_benchmark_NormalizeIdentifiers_c_hello_world(benchmark):
   """Benchmark NormalizeIdentifiers for a "hello world" C program."""
-  benchmark(
-      normalizer.NormalizeIdentifiers, """
+  benchmark(normalizer.NormalizeIdentifiers, """
 #include <stdio.h>
 
 int main(int argc, char** argv) {
@@ -160,5 +142,11 @@ int main(int argc, char** argv) {
 """, '.c', [])
 
 
+def main(argv):
+  """Main entry point."""
+  del argv
+  sys.exit(pytest.main([__file__, '-v']))
+
+
 if __name__ == '__main__':
-  test.Main()
+  app.run(main)
