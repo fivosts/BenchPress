@@ -41,6 +41,7 @@ CXX_PREPROCESSORS = [
 ]
 # A full preprocessing pipeline for the OpenCL programming language.
 OPENCL_PREPROCESSORS = [
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
     'deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim',
     'deeplearning.clgen.preprocessors.opencl:Compile',
     'deeplearning.clgen.preprocessors.opencl:NormalizeIdentifiers',
@@ -51,6 +52,17 @@ OPENCL_PREPROCESSORS = [
     'deeplearning.clgen.preprocessors.opencl:ClangFormat',
     'deeplearning.clgen.preprocessors.common:MinimumLineCount3',
 ]
+=======
+  'deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim',
+  'deeplearning.clgen.preprocessors.opencl:Compile',
+  'deeplearning.clgen.preprocessors.opencl:NormalizeIdentifiers',
+  'deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes',
+  'deeplearning.clgen.preprocessors.common:StripDuplicateEmptyLines',
+  'deeplearning.clgen.preprocessors.opencl:SanitizeKernelPrototype',
+  'deeplearning.clgen.preprocessors.common:StripTrailingWhitespace',
+  'deeplearning.clgen.preprocessors.opencl:ClangFormat',
+  'deeplearning.clgen.preprocessors.common:MinimumLineCount3', ]
+>>>>>>> 63feea4fe... Documentation and tidy up.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
 
 
 def _PreprocessBenchmarkInnerLoop(preprocessors_: typing.List[str],
