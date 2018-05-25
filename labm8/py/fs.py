@@ -14,6 +14,10 @@
 """High level filesystem interface.
 """
 import contextlib
+<<<<<<< HEAD:labm8/py/fs.py
+=======
+import os
+>>>>>>> a2a84227b... Add a lib.labm8.chdir() context manager.:lib/labm8/fs.py
 import os.path
 import pathlib
 import re
@@ -586,6 +590,9 @@ def directory_is_empty(directory: pathlib.Path) -> bool:
       return False
   return True
 <<<<<<< HEAD:labm8/py/fs.py
+<<<<<<< HEAD:labm8/py/fs.py
+=======
+>>>>>>> a2a84227b... Add a lib.labm8.chdir() context manager.:lib/labm8/fs.py
 
 
 @contextlib.contextmanager
@@ -608,6 +615,7 @@ def chdir(directory: typing.Union[str, pathlib.Path]) -> pathlib.Path:
     yield pathlib.Path(directory)
   finally:
     os.chdir(str(previous_directory))
+<<<<<<< HEAD:labm8/py/fs.py
 
 
 @contextlib.contextmanager
@@ -789,3 +797,5 @@ def TemporaryFileWithContents(contents: bytes, **kwargs):
   temporary_file.close()
 =======
 >>>>>>> 4d50b51ca... Add a directory_is_empty() function.:lib/labm8/fs.py
+=======
+>>>>>>> a2a84227b... Add a lib.labm8.chdir() context manager.:lib/labm8/fs.py
