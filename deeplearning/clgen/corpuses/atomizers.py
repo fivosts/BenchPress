@@ -21,13 +21,19 @@ import pickle
 import typing
 from collections import Counter
 
+import humanize
 import numpy as np
+from absl import logging
 
 from deeplearning.clgen import errors
+<<<<<<< HEAD:deeplearning/clgen/corpuses/atomizers.py
 from labm8 import app
 from labm8 import labdate
 
 FLAGS = app.FLAGS
+=======
+from lib.labm8 import labdate
+>>>>>>> cd45ae687... Log atomizing time.:deeplearning/clgen/atomizers.py
 
 
 class AtomizerBase(object):
@@ -252,6 +258,7 @@ class GreedyAtomizer(AtomizerBase):
     if not atoms:
       raise errors.UserError('No atoms specified')
 
+    start_time = labdate.MillisecondsTimestamp()
     # Instantiate a greedy atomizer using the full vocabulary.
     full_vocab = dict(zip(atoms, range(len(atoms))))
     c = GreedyAtomizer(full_vocab, determine_chars=True)
@@ -259,5 +266,11 @@ class GreedyAtomizer(AtomizerBase):
     tokens = sorted(list(set(c.TokenizeString(text))))
     vocab_subset = dict(zip(tokens, range(len(tokens))))
     end_time = labdate.MillisecondsTimestamp()
+<<<<<<< HEAD:deeplearning/clgen/corpuses/atomizers.py
+=======
+    logging.info('Derived vocabulary of size %s from %s tokens in %s',
+                 humanize.intcomma(len(tokens)), humanize.intcomma(len(atoms)),
+                 humanize.intcomma(end_time - start_time))
+>>>>>>> cd45ae687... Log atomizing time.:deeplearning/clgen/atomizers.py
     # Return a new atomizer using the subset vocabulary.
     return GreedyAtomizer(vocab_subset)
