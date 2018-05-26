@@ -1,222 +1,38 @@
 # This package implements the machine learning models for CLgen.
-#
-# Copyright (c) 2016, 2017, 2018, 2019 Chris Cummins.
-#
-# clgen is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# clgen is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with clgen.  If not, see <https://www.gnu.org/licenses/>.
-
-py_library(
-    name = "backends",
-    srcs = ["backends.py"],
-    deps = [
-        "//deeplearning/clgen:samplers",
-        "//deeplearning/clgen/corpuses:atomizers",
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8:app",
-        "//labm8:cache",
-        "//third_party/py/numpy",
-    ],
-)
-
-py_library(
-    name = "builders",
-    srcs = ["builders.py"],
-    deps = [
-        "//deeplearning/clgen:errors",
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8:app",
-        "//labm8:pbutil",
-        "//third_party/py/keras",
-        "//third_party/py/tensorflow",
-    ],
-)
-
-py_test(
-    name = "builders_test",
-    srcs = ["builders_test.py"],
-    deps = [
-        ":builders",
-        "//deeplearning/clgen:conftest",
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8:app",
-        "//labm8:test",
-    ],
-)
-
-py_library(
-    name = "data_generators",
-    srcs = ["data_generators.py"],
-    deps = [
-        "//deeplearning/clgen:errors",
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8:app",
-        "//labm8:humanize",
-        "//third_party/py/numpy",
-    ],
-)
-
-py_test(
-    name = "data_generators_test",
-    srcs = ["data_generators_test.py"],
-    deps = [
-        ":data_generators",
-        "//deeplearning/clgen:conftest",
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8:app",
-        "//labm8:test",
-    ],
-)
-
-py_library(
-    name = "keras_backend",
-    srcs = ["keras_backend.py"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":backends",
-        ":builders",
-        ":data_generators",
-        "//deeplearning/clgen:samplers",
-        "//deeplearning/clgen:telemetry",
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8:crypto",
-        "//labm8:humanize",
-        "//labm8:labdate",
-        "//labm8:logutil",
-        "//labm8:pbutil",
-        "//third_party/py/keras",
-        "//third_party/py/numpy",
-        "//third_party/py/tensorflow",
-    ],
-)
-
-py_test(
-    name = "keras_backend_test",
-    size = "enormous",
-    srcs = ["keras_backend_test.py"],
-    deps = [
-        ":keras_backend",
-        ":models",
-        "//deeplearning/clgen:conftest",
-        "//deeplearning/clgen:sample_observers",
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8:app",
-        "//labm8:crypto",
-        "//labm8:fs",
-        "//labm8:test",
-    ],
-)
 
 py_library(
     name = "models",
     srcs = ["models.py"],
     visibility = ["//visibility:public"],
     deps = [
-        ":builders",
-        ":keras_backend",
-        ":tensorflow_backend",
         "//deeplearning/clgen:cache",
+        "//deeplearning/clgen:corpuses",
         "//deeplearning/clgen:errors",
-        "//deeplearning/clgen:sample_observers",
+        "//deeplearning/clgen:languages",
         "//deeplearning/clgen:samplers",
-        "//deeplearning/clgen:telemetry",
-        "//deeplearning/clgen/corpuses",
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8:app",
-        "//labm8:crypto",
-        "//labm8:humanize",
-        "//labm8:lockfile",
-        "//labm8:pbutil",
-        "//third_party/py/numpy",
-    ],
-)
-
-py_library(
-    name = "pretrained",
-    srcs = ["pretrained.py"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":builders",
-        ":keras_backend",
-        ":tensorflow_backend",
-        "//deeplearning/clgen:cache",
-        "//deeplearning/clgen:errors",
-        "//deeplearning/clgen:sample_observers",
-        "//deeplearning/clgen:samplers",
-        "//deeplearning/clgen:telemetry",
-        "//deeplearning/clgen/corpuses:atomizers",
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8:app",
-        "//labm8:cache",
-        "//labm8:humanize",
-        "//labm8:labdate",
-        "//labm8:pbutil",
-        "//third_party/py/numpy",
+        "//deeplearning/clgen/proto:internal_py_pb2",
+        "//deeplearning/clgen/proto:model_py_pb2",
+        "//deeplearning/clgen/proto:sampler_py_pb2",
+        "//lib/labm8:cache",
+        "//lib/labm8:crypto",
+        "//lib/labm8:fs",
+        "//lib/labm8:labdate",
+        "//lib/labm8:labtypes",
+        "//lib/labm8:lockfile",
+        "//lib/labm8:pbutil",
     ],
 )
 
 py_test(
     name = "models_test",
     srcs = ["models_test.py"],
+    default_python_version = "PY3",
+    srcs_version = "PY3",
     deps = [
         ":models",
         "//deeplearning/clgen:conftest",
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8:app",
-        "//labm8:crypto",
-        "//labm8:fs",
-        "//labm8:test",
-    ],
-)
-
-py_library(
-    name = "tensorflow_backend",
-    srcs = [
-        "helper.py",
-        "tensorflow_backend.py",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":backends",
-        ":builders",
-        ":data_generators",
-        "//deeplearning/clgen:sample_observers",
-        "//deeplearning/clgen:samplers",
-        "//deeplearning/clgen:telemetry",
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8:app",
-        "//labm8:crypto",
-        "//labm8:humanize",
-        "//labm8:labdate",
-        "//labm8:logutil",
-        "//labm8:pbutil",
-        "//third_party/py/numpy",
-        "//third_party/py/progressbar",
-        "//third_party/py/tensorflow",
-    ],
-)
-
-py_test(
-    name = "tensorflow_backend_test",
-    timeout = "long",
-    srcs = ["tensorflow_backend_test.py"],
-    deps = [
-        ":models",
-        ":tensorflow_backend",
-        "//deeplearning/clgen:conftest",
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8:app",
-        "//labm8:crypto",
-        "//labm8:fs",
-        "//labm8:test",
+        "//deeplearning/clgen/proto:model_py_pb2",
+        "//lib/labm8:crypto",
+        "//lib/labm8:fs",
     ],
 )
