@@ -21,13 +21,19 @@ import pickle
 import typing
 from collections import Counter
 
+import humanize
 import numpy as np
+from absl import logging
 
 from deeplearning.clgen import errors
+<<<<<<< HEAD:deeplearning/clgen/corpuses/atomizers.py
 from labm8.py import app
 from labm8.py import labdate
 
 FLAGS = app.FLAGS
+=======
+from lib.labm8 import labdate
+>>>>>>> cd45ae687... Log atomizing time.:deeplearning/clgen/atomizers.py
 
 
 class AtomizerBase(object):
@@ -182,8 +188,12 @@ class GreedyAtomizer(AtomizerBase):
     multichars = set(k for k in self.atoms if len(k) > 1)
     first_chars = set(a[0] for a in multichars)
     self.lookup = dict(
+<<<<<<< HEAD:deeplearning/clgen/corpuses/atomizers.py
       (c, [a for a in multichars if a[0] == c]) for c in first_chars
     )
+=======
+        (c, [a for a in multichars if a[0] == c]) for c in first_chars)
+>>>>>>> cd45ae687... Log atomizing time.:deeplearning/clgen/atomizers.py
 
   def AtomizeString(self, text: str) -> np.array:
     """Atomize a text into an array of vocabulary indices.
@@ -258,6 +268,7 @@ class GreedyAtomizer(AtomizerBase):
       raise errors.UserError('No atoms specified')
 >>>>>>> d1fe5eb48... Raise error if no atoms are provided.:deeplearning/clgen/atomizers.py
 
+    start_time = labdate.MillisecondsTimestamp()
     # Instantiate a greedy atomizer using the full vocabulary.
     full_vocab = dict(zip(atoms, range(len(atoms))))
     c = GreedyAtomizer(full_vocab, determine_chars=True)
@@ -265,5 +276,11 @@ class GreedyAtomizer(AtomizerBase):
     tokens = sorted(list(set(c.TokenizeString(text))))
     vocab_subset = dict(zip(tokens, range(len(tokens))))
     end_time = labdate.MillisecondsTimestamp()
+<<<<<<< HEAD:deeplearning/clgen/corpuses/atomizers.py
+=======
+    logging.info('Derived vocabulary of size %s from %s tokens in %s',
+                 humanize.intcomma(len(tokens)), humanize.intcomma(len(atoms)),
+                 humanize.intcomma(end_time - start_time))
+>>>>>>> cd45ae687... Log atomizing time.:deeplearning/clgen/atomizers.py
     # Return a new atomizer using the subset vocabulary.
     return GreedyAtomizer(vocab_subset)
