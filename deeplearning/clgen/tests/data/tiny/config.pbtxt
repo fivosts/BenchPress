@@ -1,27 +1,12 @@
-# A tiny corpus of OpenCL kernels and a correspondingly small model.
-# It should take a few minutes to train on a reasonably powerful GPU.
 # File: //deeplearning/deepsmith/proto/clgen.proto
 # Proto: clgen.Instance
-#
-# Copyright (c) 2016, 2017, 2018, 2019 Chris Cummins.
-#
-# clgen is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# clgen is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with clgen.  If not, see <https://www.gnu.org/licenses/>.
-working_dir: "/tmp/phd/deeplearning/clgen/tiny"
+clgen_working_dir: "/var/phd/clgen/tiny"
 model {
   corpus {
-    local_tar_archive: "$PWD/corpus.tar.bz2"
+    language: "opencl"
+    path: "corpus.tar.bz2"
     ascii_character_atomizer: true
+    sequence_length: 50
     contentfile_separator: "\n\n"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
@@ -35,31 +20,26 @@ model {
     preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
   }
   architecture {
-    backend: TENSORFLOW
     neuron_type: LSTM
-    neurons_per_layer: 128
+    neurons_per_layer: 32
     num_layers: 2
-    post_layer_dropout_micros: 0  # = 0.0 real value
   }
   training {
-    num_epochs: 32
-    sequence_length: 64
+    num_epochs: 20
     batch_size: 64
-    shuffle_corpus_contentfiles_between_epochs: false
+    shuffle_corpus_contentfiles_between_epochs: true
     adam_optimizer {
-      initial_learning_rate_micros: 2000  # = 0.01 real value
-      learning_rate_decay_per_epoch_micros: 50000  # = 0.05 real value
-      beta_1_micros: 900000  # = 0.9 real value
-      beta_2_micros: 999000  # = 0.999 real value
-      normalized_gradient_clip_micros: 5000000  # = 5.0 real value
+      initial_learning_rate_micros: 2000  # 0.02
+      learning_rate_decay_per_epoch_micros: 5000  # 0.05
+      beta_1_micros: 900000 # 0.9
+      beta_2_micros: 999000 # 0.999
+      normalized_gradient_clip_micros: 5000000 # 5.0
     }
   }
 }
 sampler {
-  start_text: "kernel void A("
-  batch_size: 1
-  sequence_length: 64
-  temperature_micros: 800000  # = 0.8 real value
+  start_text: "kernel void "
+  batch_size: 64
   termination_criteria {
     symtok {
       depth_increase_token: "{"
@@ -68,7 +48,7 @@ sampler {
   }
   termination_criteria {
     maxlen {
-      maximum_tokens_in_sample: 500
+      maximum_tokens_in_sample: 1000
     }
   }
 }
