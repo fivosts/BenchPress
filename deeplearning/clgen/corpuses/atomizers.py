@@ -1,39 +1,14 @@
-# Copyright (c) 2016-2020 Chris Cummins.
-#
-# clgen is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# clgen is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """This file contains the definition of atomizers.
 
 An atomizer converts a block of text into a sequence of vocbulary tokens.
 """
-import pathlib
-import pickle
 import typing
 from collections import Counter
 
-import humanize
 import numpy as np
-from absl import logging
 
 from deeplearning.clgen import errors
-<<<<<<< HEAD:deeplearning/clgen/corpuses/atomizers.py
-from labm8.py import app
-from labm8.py import labdate
-
-FLAGS = app.FLAGS
-=======
 from lib.labm8 import labdate
->>>>>>> cd45ae687... Log atomizing time.:deeplearning/clgen/atomizers.py
 
 
 class AtomizerBase(object):
@@ -66,16 +41,16 @@ class AtomizerBase(object):
   def _UpdateVocabulary(self) -> None:
     """Private method which must be called if vocab is modified."""
     if not isinstance(self.vocab, dict):
-      raise TypeError("vocabulary must be a dict")
+      raise TypeError('vocabulary must be a dict')
 
     # Each atom and index must be unique to ensure deterministic encoding.
     if len(set(self.vocab.keys())) != len(self.vocab):
-      raise errors.InvalidVocab("all atoms must be unique")
+      raise errors.InvalidVocab('all atoms must be unique')
     if len(set(self.vocab.values())) != len(self.vocab):
-      raise errors.InvalidVocab("all indices must be unique")
+      raise errors.InvalidVocab('all indices must be unique')
 
     self.vocab_size = len(self.vocab)
-    self.decoder = {val: key for key, val in self.vocab.items()}
+    self.decoder = dict((val, key) for key, val in self.vocab.items())
 
   def AtomizeString(self, text: str) -> np.array:
     """Atomize a text into an array of vocabulary indices.
@@ -113,17 +88,12 @@ class AtomizerBase(object):
       The decoded text.
     """
     try:
-      return "".join(list(map(lambda x: self.decoder[x], encoded)))
+      return ''.join(list(map(lambda x: self.decoder[x], encoded)))
     except KeyError:
       raise errors.VocabError
 
-  def ToFile(self, path: pathlib.Path) -> None:
-    """Save an atomizer to file."""
-    with open(path, "wb") as f:
-      pickle.dump(self, f)
-
   @classmethod
-  def FromText(cls, text: str) -> "AtomizerBase":
+  def FromText(cls, text: str) -> 'AtomizerBase':
     """Instantiate and specialize an atomizer from a corpus text.
 
     Args:
@@ -133,12 +103,6 @@ class AtomizerBase(object):
       An atomizer instance.
     """
     raise NotImplementedError("abstract class")
-
-  @classmethod
-  def FromFile(cls, path: pathlib.Path) -> "AtomizerBase":
-    """Load an atomizer from file."""
-    with open(path, "rb") as infile:
-      return pickle.load(infile)
 
 
 class AsciiCharacterAtomizer(AtomizerBase):
@@ -159,10 +123,10 @@ class AsciiCharacterAtomizer(AtomizerBase):
       raise errors.VocabError
 
   def __repr__(self) -> str:
-    return f"AsciiCharacterAtomizer[{self.vocab_size} chars]"
+    return f'AsciiCharacterAtomizer[{self.vocab_size} chars]'
 
   @classmethod
-  def FromText(cls, text: str) -> "AsciiCharacterAtomizer":
+  def FromText(cls, text: str) -> 'AsciiCharacterAtomizer':
     """Instantiate and an atomizer from a corpus text.
 
     Args:
@@ -188,12 +152,7 @@ class GreedyAtomizer(AtomizerBase):
     multichars = set(k for k in self.atoms if len(k) > 1)
     first_chars = set(a[0] for a in multichars)
     self.lookup = dict(
-<<<<<<< HEAD:deeplearning/clgen/corpuses/atomizers.py
-      (c, [a for a in multichars if a[0] == c]) for c in first_chars
-    )
-=======
         (c, [a for a in multichars if a[0] == c]) for c in first_chars)
->>>>>>> cd45ae687... Log atomizing time.:deeplearning/clgen/atomizers.py
 
   def AtomizeString(self, text: str) -> np.array:
     """Atomize a text into an array of vocabulary indices.
@@ -219,8 +178,7 @@ class GreedyAtomizer(AtomizerBase):
       while i < len(text):
         if self.lookup.get(text[i]):
           if j <= len(text) and any(
-            x.startswith(text[i:j]) for x in self.lookup[text[i]]
-          ):
+              x.startswith(text[i:j]) for x in self.lookup[text[i]]):
             j += 1
           else:
             while j > i + 1:
@@ -248,10 +206,10 @@ class GreedyAtomizer(AtomizerBase):
     return np.array(indices, dtype=np.int32)
 
   def __repr__(self) -> str:
-    return f"GreedyAtomizer[{self.vocab_size} tokens]"
+    return f'GreedyAtomizer[{self.vocab_size} tokens]'
 
   @classmethod
-  def FromText(cls, text: str, atoms: typing.Set[str]) -> "GreedyAtomizer":
+  def FromText(cls, text: str, atoms: typing.Set[str]) -> 'GreedyAtomizer':
     """Instantiate and an atomizer from a corpus text.
 
     Args:
@@ -262,13 +220,8 @@ class GreedyAtomizer(AtomizerBase):
       An atomizer instance.
     """
     if not atoms:
-<<<<<<< HEAD:deeplearning/clgen/corpuses/atomizers.py
-      raise errors.UserError("No atoms specified")
-=======
       raise errors.UserError('No atoms specified')
->>>>>>> d1fe5eb48... Raise error if no atoms are provided.:deeplearning/clgen/atomizers.py
 
-    start_time = labdate.MillisecondsTimestamp()
     # Instantiate a greedy atomizer using the full vocabulary.
     full_vocab = dict(zip(atoms, range(len(atoms))))
     c = GreedyAtomizer(full_vocab, determine_chars=True)
@@ -276,11 +229,5 @@ class GreedyAtomizer(AtomizerBase):
     tokens = sorted(list(set(c.TokenizeString(text))))
     vocab_subset = dict(zip(tokens, range(len(tokens))))
     end_time = labdate.MillisecondsTimestamp()
-<<<<<<< HEAD:deeplearning/clgen/corpuses/atomizers.py
-=======
-    logging.info('Derived vocabulary of size %s from %s tokens in %s',
-                 humanize.intcomma(len(tokens)), humanize.intcomma(len(atoms)),
-                 humanize.intcomma(end_time - start_time))
->>>>>>> cd45ae687... Log atomizing time.:deeplearning/clgen/atomizers.py
     # Return a new atomizer using the subset vocabulary.
     return GreedyAtomizer(vocab_subset)
