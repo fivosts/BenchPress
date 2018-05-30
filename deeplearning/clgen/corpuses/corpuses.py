@@ -1,100 +1,39 @@
-# Copyright (c) 2016, 2017, 2018, 2019 Chris Cummins.
-#
-# clgen is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# clgen is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """This file defines the logic and training corpuses.
 
 A training corpus is a set of one or more "contentfiles", where each contentfile
 is a file containing text to train over.
 """
+import codecs
 import os
-import random
-import time
-
-import checksumdir
-import numpy as np
 import pathlib
+import pickle
+import re
 import subprocess
 import tempfile
+import time
 import typing
-from sqlalchemy.sql.expression import func
+from tempfile import NamedTemporaryFile
+
+import checksumdir
+import humanize
+import numpy as np
+from absl import logging
 
 from deeplearning.clgen import cache
+from deeplearning.clgen import dbutil
 from deeplearning.clgen import errors
-from deeplearning.clgen.corpuses import atomizers
-from deeplearning.clgen.corpuses import encoded
-from deeplearning.clgen.corpuses import preprocessed
+from deeplearning.clgen.corpuses import atomizers, features, fetch
 from deeplearning.clgen.preprocessors import preprocessors
 from deeplearning.clgen.proto import corpus_pb2
-from labm8 import app
-from labm8 import bazelutil
-from labm8 import crypto
-from labm8 import hashcache
-from labm8 import humanize
-from labm8 import lockfile
-from labm8 import pbutil
-from labm8 import prof
-from labm8 import sqlutil
-
-FLAGS = app.FLAGS
-
-app.DEFINE_string(
-    'clgen_local_path_prefix', None,
-    'An optional prefix to use when resolving the path to a local directory '
-    'or archive. For example, given a corpus which is configured for a '
-    'local_directory with value "foo/bar" and a --clgen_local_path_prefix of '
-    '"/tmp/", the absolute path of the corpus will resolve to "/tmp/foo/bar". '
-    'If the --clgen_local_path_prefix is a directory, the trailing slash must '
-    'not be omitted.')
-
-
-def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
-  """Assert that config proto is valid.
-
-  Args:
-    config: A Corpus proto.
-
-  Returns:
-    The Corpus proto.
-
-  Raises:
-    UserError: If the config is invalid.
-  """
-  try:
-    # Early-exit to support corpuses derived from databases of pre-encoded
-    # content files.
-    # TODO(github.com/ChrisCummins/phd/issues/46): Refactor after splitting
-    # Corpus class.
-    if config.HasField('pre_encoded_corpus_url'):
-      return config
-
-    pbutil.AssertFieldIsSet(config, 'contentfiles')
-    pbutil.AssertFieldIsSet(config, 'atomizer')
-    pbutil.AssertFieldIsSet(config, 'contentfile_separator')
-    # Check that the preprocessor pipeline resolves to preprocessor functions.
-    [preprocessors.GetPreprocessorFunction(p) for p in config.preprocessor]
-
-    if config.HasField('greedy_multichar_atomizer'):
-      if not config.greedy_multichar_atomizer.tokens:
-        raise errors.UserError('GreedyMulticharAtomizer.tokens is empty')
-      for atom in config.greedy_multichar_atomizer.tokens:
-        if not atom:
-          raise errors.UserError(
-              'Empty string found in GreedyMulticharAtomizer.tokens is empty')
-
-    return config
-  except pbutil.ProtoValueError as e:
-    raise errors.UserError(e)
+from deeplearning.clgen.proto import internal_pb2
+from lib.labm8 import crypto
+from lib.labm8 import fs
+from lib.labm8 import hashcache
+from lib.labm8 import lockfile
+from lib.labm8 import pbutil
+from lib.labm8 import prof
+from lib.labm8 import tar
+from lib.labm8 import text
 
 
 class Corpus(object):
@@ -127,121 +66,215 @@ class Corpus(object):
 
     # Make a local copy of the configuration.
     self.config = corpus_pb2.Corpus()
-    self.config.CopyFrom(AssertConfigIsValid(config))
-    self._atomizer = None
-    self._created = False
+    self.config.CopyFrom(config)
 
-    # An in-memory cache of the encoded contentfiles indices arrays.
-    # Set and used in GetTrainingData().
-    self._indices_arrays: typing.Optional[typing.List[np.array]] = None
+    cache.cachepath('corpus', 'preprocessed').mkdir(exist_ok=True, parents=True)
+    cache.cachepath('corpus', 'encoded').mkdir(exist_ok=True, parents=True)
 
-    cache.cachepath('corpus').mkdir(parents=True, exist_ok=True)
-    hc = hashcache.HashCache(cache.cachepath('hashcache.db'), 'sha1')
+    hc = hashcache.HashCache(
+        cache.cachepath('corpus/hashcache.db'), 'sha1')
     self.content_id = ResolveContentId(self.config, hc)
-    # Database of pre-processed files.
-    preprocessed_id = ResolvePreprocessedId(self.content_id, self.config)
-    cache.cachepath('corpus', 'preprocessed', preprocessed_id).mkdir(
-        exist_ok=True, parents=True)
-    preprocessed_db_path = cache.cachepath('corpus', 'preprocessed',
-                                           preprocessed_id, 'preprocessed.db')
-    if (self.config.HasField('content_id') and
-        not preprocessed_db_path.is_file()):
-      raise errors.UserError(f"Content ID not found: '{self.content_id}'")
-    self.preprocessed = preprocessed.PreprocessedContentFiles(
-        f'sqlite:///{preprocessed_db_path}')
-    # Create symlink to contentfiles.
-    symlink = pathlib.Path(
-        self.preprocessed.url[len('sqlite:///'):]).parent / 'contentfiles'
-    if not symlink.is_symlink():
-      if config.HasField('local_directory'):
-        os.symlink(
-            str(
-                ExpandConfigPath(
-                    config.local_directory,
-                    path_prefix=FLAGS.clgen_local_path_prefix)), symlink)
-      elif config.HasField('local_tar_archive'):
-        os.symlink(
-            str(
-                ExpandConfigPath(
-                    config.local_tar_archive,
-                    path_prefix=FLAGS.clgen_local_path_prefix)), symlink)
-    # Data of encoded pre-preprocessed files.
-    encoded_id = ResolveEncodedId(self.content_id, self.config)
-    cache.cachepath('corpus', 'encoded', encoded_id).mkdir(
-        exist_ok=True, parents=True)
-    db_path = cache.cachepath('corpus', 'encoded', encoded_id, 'encoded.db')
-    # TODO(github.com/ChrisCummins/phd/issues/46): Refactor this conditional
-    # logic by making Corpus an abstract class and creating concrete subclasses
-    # for the different types of corpus.
-    if self.config.HasField('pre_encoded_corpus_url'):
-      self.encoded = encoded.EncodedContentFiles(config.pre_encoded_corpus_url)
+    self.preprocessed_id = ResolvePreprocessedId(self.content_id, self.config)
+    # self.preprocessed = PreprocessedCorpus(
+    #     cache.cachepath('corpus', 'preprocessed', self.preprocessed_id,
+    #                     'preprocessed.db'))
+    self.encoded_id = ResolvePreprocessedId(self.content_id, self.config)
+    logging.info('Content ID: %s', self.content_id)
+    logging.info('Preprocessed corpus: %s', self.preprocessed_id)
+    logging.info('Encoded corpus: %s', self.encoded_id)
+
+    # Determine the corpus cache path. This will depend on whether a path or
+    # an id was specified.
+    path = None
+    if config.HasField('local_directory'):
+      path = pathlib.Path(os.path.expandvars(config.local_directory)).absolute()
+      path = UnpackDirectoryIfNeeded(path)
+      if not fs.isdir(path):
+        raise errors.UserError(
+            "Corpus path '{}' is not a directory".format(path))
+      if fs.directory_is_empty(path):
+        raise errors.EmptyCorpusException(
+            f"Contentfiles directory is empty: '{path}'")
+      hasher = hashcache.HashCache(cache.cachepath("dirhash.db"), 'sha1')
+      self.content_id = prof.profile(hasher.GetHash, path)
+    elif config.HasField('id'):
+      self.content_id = config.id
+      if not fs.isdir(
+          cache.cachepath("contentfiles", config.id)):
+        raise errors.UserError(f"Corpus not found: '{config.id}'")
     else:
-      self.encoded = encoded.EncodedContentFiles(f'sqlite:///{db_path}')
-    self.atomizer_path = cache.cachepath('corpus', 'encoded', encoded_id,
-                                         'atomizer.pkl')
-    # Create symlink to preprocessed files.
-    # TODO(github.com/ChrisCummins/phd/issues/46): Refactor this conditional
-    # logic after splitting Corpus class.
-    if not self.config.HasField('pre_encoded_corpus_url'):
-      symlink = pathlib.Path(
-          self.encoded.url[len('sqlite:///'):]).parent / 'preprocessed'
-      if not symlink.is_symlink():
-        os.symlink(
-            os.path.relpath(
-                pathlib.Path(self.preprocessed.url[len('sqlite:///'):]).parent,
-                pathlib.Path(self.encoded.url[len('sqlite:///'):]).parent),
-            symlink)
-    self.hash = encoded_id
-    self.cache = cache.mkcache('corpus', 'encoded', encoded_id)
+      raise errors.UserError('Must specify corpus id or path.')
+
+    self.contentfiles_cache = cache.mkcache("contentfiles", self.content_id)
+    self.kernels_db = self.contentfiles_cache.keypath('kernels.db')
+    self.hash = ResolveEncodedId(self.content_id, config)
+    self.cache = cache.mkcache("corpus", self.hash)
+
+    logging.debug('contentfiles %s', self.content_id)
+    logging.debug('corpus %s', self.hash)
+
+    # Validate metadata against cache.
+    if self.cache.get('META.pbtxt'):
+      cached_meta = pbutil.FromFile(pathlib.Path(self.cache['META.pbtxt']),
+                                    internal_pb2.CorpusMeta())
+      if config != cached_meta.config:
+        raise errors.InternalError('Metadata mismatch')
+      self.meta = cached_meta
+    else:
+      self.meta = internal_pb2.CorpusMeta()
+      self.meta.config.CopyFrom(self.config)
+      self._FlushMeta()
+
+    with path and self.lock.acquire(replace_stale=True):
+      self._CreateCorpusFiles(path)
 
   def Create(self) -> None:
-    """Create the corpus files.
+    """Create the corpus files."""
+    if not cache.cachepath('corpus', 'preprocessed',
+                           self.preprocessed_id).is_dir():
+      pass
 
-    Raises:
-      EmptyCorpusException: If there are no content files, or no successfully
-        pre-processed files.
+  def _FlushMeta(self):
+    pbutil.ToFile(self.meta, pathlib.Path(self.cache.keypath('META.pbtxt')))
+
+  def _CreateCorpusFiles(self, contentfiles_dir: pathlib.Path) -> None:
+    """Perform the initial creation of derived corpus files.
+
+    Args:
+      contentfiles_dir: The path to the corpus contentfiles directory.
     """
-    self._created = True
-    app.Log(1, 'Content ID: %s', self.content_id)
 
-    # Nothing to do for already-encoded databases.
-    # TODO(github.com/ChrisCummins/phd/issues/46): Refactor this after splitting
-    # out Corpus class.
-    if self.config.HasField('pre_encoded_corpus_url'):
-      return
+    def _Error(err: Exception, files_to_rm: typing.List[pathlib.Path]) -> None:
+      """Tidy up in case of error."""
+      logging.error('corpus creation failed. Deleting corpus files')
+      for path in files_to_rm:
+        if path.is_file():
+          logging.info('removing %s', path)
+          fs.rm(path)
+      raise err
 
-    preprocessed_lock_path = pathlib.Path(
-        self.preprocessed.url[len('sqlite:///'):]).parent / 'LOCK'
-    with lockfile.LockFile(preprocessed_lock_path):
-      self.preprocessed.Create(self.config)
-    if not self.preprocessed.size:
-      raise errors.EmptyCorpusException(
-          f"Pre-processed corpus contains no files: '{self.preprocessed.url}'")
-    encoded_lock_path = pathlib.Path(
-        self.encoded.url[len('sqlite:///'):]).parent / 'LOCK'
-    with lockfile.LockFile(encoded_lock_path):
-      start_time = time.time()
-      atomizer = self.atomizer
-      app.Log(1, '%s: %s tokens in %s ms',
-              type(atomizer).__name__, humanize.Commas(atomizer.vocab_size),
-              humanize.Commas(int((time.time() - start_time) * 1000)))
-      self.encoded.Create(self.preprocessed, atomizer,
-                          self.config.contentfile_separator)
+    # Create the kernels database if necessary.
+    try:
+      self.contentfiles_cache["kernels.db"]
+    except KeyError:
+      self._CreateKernelsDatabase(contentfiles_dir)
 
-  @property
-  def is_locked(self) -> bool:
-    """Return whether the corpus is locked."""
-    preprocessed_lock_path = pathlib.Path(
-        self.preprocessed.url[len('sqlite:///'):]).parent / 'LOCK'
-    if lockfile.LockFile(preprocessed_lock_path).islocked:
-      return True
-    encoded_lock_path = pathlib.Path(
-        self.encoded.url[len('sqlite:///'):]).parent / 'LOCK'
-    if lockfile.LockFile(encoded_lock_path).islocked:
-      return True
-    return False
+    # Preprocess the kernels database, if necessary.
+    modified = False
+    if self.config.preprocessor:
+      try:
+        preprocess_time = time.time()
+        if preprocessors.PreprocessDatabase(
+            pathlib.Path(self.contentfiles_cache["kernels.db"]),
+            self.config.preprocessor):
+          modified = True
+      except Exception as e:
+        _Error(e, [])
+    else:
+      # If we have no preprocessors to run, simply copy the ContentFiles over to
+      # PreprocessedFiles, rather than spooling up all of the preprocessors.
+      db = dbutil.connect(self.contentfiles_cache["kernels.db"])
+      c = db.cursor()
+      c.execute("""
+INSERT INTO PreprocessedFiles (id, contents, status)
+SELECT id, contents, 0
+FROM ContentFiles
+WHERE ContentFiles.id NOT IN (
+  SELECT id
+  FROM PreprocessedFiles
+)
+""")
+      db.commit()
+      c.close()
+      db.close()
 
-  def GetTextCorpus(self, shuffle: bool) -> str:
+    # TODO(cec): Raise an error if there are no preprocessed kernels with
+    # status 0.
+
+    if modified:
+      preprocess_time = time.time() - preprocess_time
+      self.meta.preprocess_time_ms += int(preprocess_time * 1000)
+      self._FlushMeta()
+
+    # Create the corpus text if it does not exist.
+    try:
+      try:
+        self.cache["corpus.txt"]
+      except KeyError:
+        self._CreateCorpusText()
+        assert self.cache["corpus.txt"]
+    except Exception as e:
+      _Error(e, [pathlib.Path(self.cache.keypath("corpus.txt"))])
+
+    # Create the atomizer if needed.
+    try:
+      try:
+        self._LoadAtomizer(pathlib.Path(self.cache["atomizer.pkl"]))
+      except KeyError:
+        self._CreateAtomizer()
+        assert self.cache["atomizer.pkl"]
+    except Exception as e:
+      _Error(e, [pathlib.Path(self.cache.keypath("atomizer.pkl"))])
+
+  def _CreateKernelsDatabase(self, path: pathlib.Path) -> None:
+    """creates and caches kernels.db"""
+    logging.debug('creating database')
+
+    # create a database and put it in the cache
+    tmppath = self.contentfiles_cache.keypath("kernels.db.tmp")
+    dbutil.create_db(tmppath)
+    self.contentfiles_cache["kernels.db"] = tmppath
+
+    # get a list of files in the corpus
+    filelist = [f for f in fs.ls(path, abspaths=True, recursive=True) if
+                fs.isfile(f)]
+
+    # import files into database
+    fetch.fetch(self.contentfiles_cache["kernels.db"], filelist)
+
+  def _CreateCorpusText(self) -> None:
+    """creates and caches corpus.txt"""
+    logging.debug('creating corpus')
+    with open(self.cache.keypath('corpus.txt'), 'w') as f:
+      f.write(self.ConcatenateTextCorpus(shuffle=True))
+
+  def _ReadCorpusTxt(self) -> str:
+    with codecs.open(self.cache["corpus.txt"], encoding="utf-8") as infile:
+      return infile.read()
+
+  def _CreateAtomizer(self) -> None:
+    """creates and caches atomizer.pkl"""
+
+    logging.debug('creating vocab file')
+    corpus_txt = self._ReadCorpusTxt()
+
+    if self.config.HasField('ascii_character_atomizer'):
+      self.atomizer = atomizers.AsciiCharacterAtomizer.FromText(corpus_txt)
+    elif self.config.HasField('greedy_multichar_atomizer'):
+      atoms = set(self.config.greedy_multichar_atomizer.tokens)
+      self.atomizer = atomizers.GreedyAtomizer.FromText(corpus_txt, atoms)
+    else:
+      raise errors.UserError('No atomizer specified')
+
+    self.atoms = self.atomizer.atoms
+    self.vocab_size = self.atomizer.vocab_size
+    self.vocab = self.atomizer.vocab
+
+    tmp_vocab_file = self.cache.keypath("atomizer.tmp.pkl")
+    with open(tmp_vocab_file, 'wb') as f:
+      pickle.dump(self.atomizer, f)
+
+    self.cache["atomizer.pkl"] = tmp_vocab_file
+
+  def _LoadAtomizer(self, atomizer_path: pathlib.Path) -> None:
+    with open(atomizer_path, 'rb') as infile:
+      self.atomizer = pickle.load(infile)
+
+    self.atoms = self.atomizer.atoms
+    self.vocab_size = self.atomizer.vocab_size
+    self.vocab = self.atomizer.vocab
+
+  def ConcatenateTextCorpus(self, shuffle: bool) -> str:
     """Concatenate the entire corpus into a string.
 
     Args:
@@ -250,94 +283,104 @@ class Corpus(object):
     Returns:
       A concatenated corpus string.
     """
-    with self.preprocessed.Session() as session:
-      query = session.query(preprocessed.PreprocessedContentFile.text).filter(
-          preprocessed.PreprocessedContentFile.preprocessing_succeeded == True)
-      if shuffle:
-        query = query.order_by(func.random())
-      return self.config.contentfile_separator.join([x[0] for x in query])
+    db = dbutil.connect(self.contentfiles_cache["kernels.db"])
+    c = db.cursor()
+    order_by = 'RANDOM()' if shuffle else 'LENGTH(contents) DESC'
+    c.execute('SELECT contents FROM PreprocessedFiles WHERE status=0 '
+              f'ORDER BY {order_by}')
+    sep = self.config.contentfile_separator or '\n\n'
+    return sep.join(row[0] for row in c.fetchall())
 
   def GetTrainingData(self, shuffle: bool) -> np.ndarray:
-    """Concatenate the entire encoded corpus into an array.
+    """Create batches for training.
 
     Args:
-      shuffle: If true, randomize order of encoded contentfiles.
+      shuffle: If true, randomize order of contentfiles.
 
     Returns:
       The encoded corpus.
     """
-    with prof.Profile('GetTrainingData()'):
-      # Load all indices from the database into memory, and keep them there.
-      # This is to remove the latency from reading the contents from a
-      # database.
-      #
-      # TODO(https://github.com/ChrisCummins/clgen/issues/128): Storing the
-      # entire corpus in memory like this prevents training on corpuses larger
-      # than system memory. Replace this method with an interface for streaming
-      # data from the encoded database.
-      if not self._indices_arrays:
-        with self.encoded.Session() as session:
-          query = session.query(encoded.EncodedContentFile)
-          self._indices_arrays = [x.indices_array for x in query]
-
-      if shuffle:
-        random.shuffle(self._indices_arrays)
-
-      return np.concatenate(self._indices_arrays)
-
-  def GetNumContentFiles(self) -> int:
-    """Get the number of contentfiles which were pre-processed."""
-    with self.preprocessed.Session() as session:
-      return session.query(preprocessed.PreprocessedContentFile).count()
-
-  def GetNumPreprocessedFiles(self) -> int:
-    """The number of succesfully pre-processed content files."""
-    with self.preprocessed.Session() as session:
-      return session.query(preprocessed.PreprocessedContentFile.text).filter(
-          preprocessed.PreprocessedContentFile.preprocessing_succeeded ==
-          True).count()
+    start_time = time.time()
+    # Generate a corpus by randomly shuffling the contentfiles.
+    corpus_text = self.ConcatenateTextCorpus(shuffle)
+    # Encode the corpus into an array of encoded tokens.
+    tokenized_corpus = self.atomizer.AtomizeString(corpus_text)
+    # Set the corpus size as the number of tokens.
+    num_tokens = len(tokenized_corpus)
+    self._size = num_tokens
+    logging.info('%s derived %s token corpus of length %s in %s ms',
+                 type(self.atomizer).__name__,
+                 humanize.intcomma(len(self.atomizer.vocab)),
+                 humanize.intcomma(len(tokenized_corpus)),
+                 humanize.intcomma(
+                     int(round((time.time() - start_time) * 1000))))
+    return tokenized_corpus
 
   @property
-  def atomizer(self) -> atomizers.AtomizerBase:
-    """Must call Create() first."""
-    if not self._created:
-      raise ValueError('Must call Create() before accessing atomizer property.')
-    if self._atomizer is None:
-      if self.atomizer_path.is_file():
-        self._atomizer = atomizers.AtomizerBase.FromFile(self.atomizer_path)
-      else:
-        self._atomizer = self._CreateAtomizer()
-    return self._atomizer
-
-  def _CreateAtomizer(self) -> atomizers.AtomizerBase:
-    """Creates and caches an atomizer."""
-    app.Log(1, 'Deriving atomizer from preprocessed corpus')
-    corpus_txt = self.GetTextCorpus(shuffle=False)
-
-    if self.config.HasField('ascii_character_atomizer'):
-      atomizer = atomizers.AsciiCharacterAtomizer.FromText(corpus_txt)
-    elif self.config.HasField('greedy_multichar_atomizer'):
-      atoms = set(self.config.greedy_multichar_atomizer.tokens)
-      atomizer = atomizers.GreedyAtomizer.FromText(corpus_txt, atoms)
-    elif self.config.HasField('pre_encoded_corpus_url'):
-      encoded_db = encoded.EncodedContentFiles(
-          self.config.pre_encoded_corpus_url)
-      atomizer = GreedyAtomizerFromEncodedDb(encoded_db)
-    else:
-      raise NotImplementedError
-
-    atomizer.ToFile(self.atomizer_path)
-    return atomizer
+  def shorthash(self):
+    return cache.ShortHash(self.hash, cache.cachepath("corpus"))
 
   @property
-  def vocab_size(self) -> int:
-    """Get the number of elements in the corpus vocabulary."""
-    return self.atomizer.vocab_size
+  def lock(self):
+    lockpath = self.cache.keypath("LOCK")
+    return lockfile.LockFile(lockpath)
+
+  @property
+  def vocabulary_size(self) -> int:
+    """The number of elements in the corpus vocabulary."""
+    return len(self.atomizer.vocab)
 
   @property
   def size(self) -> int:
-    """Return the size of the atomized corpus."""
-    return len(self.GetTrainingData(shuffle=False))
+    """
+    Return the atomized size of the corpus.
+    """
+    try:
+      return self._size
+    except AttributeError:
+      self.GetTrainingData(False)
+      return self._size
+
+  def GetPreprocessedKernels(self, status: int = 0) -> typing.Iterable[str]:
+    """
+    Return an iterator over all preprocessed kernels.
+
+    Parameters
+    ----------
+    status : int, optional
+        Pre-processed status, {0, 1, 2} for {good, bad, ugly}.
+
+    Returns
+    -------
+    typing.Iterable[str]
+        Sources.
+    """
+    db = dbutil.connect(self.contentfiles_cache["kernels.db"])
+    c = db.cursor()
+    query = c.execute(
+        f"SELECT Contents FROM PreprocessedFiles WHERE status={status}")
+    for row in query.fetchall():
+      yield row[0]
+
+  def GetContentFiles(self) -> typing.Iterable[str]:
+    """
+    Return an iterator over all un-processed samples.
+
+    Returns
+    -------
+    typing.Iterable[str]
+        Samples.
+    """
+    db = dbutil.connect(self.contentfiles_cache["kernels.db"])
+    c = db.cursor()
+    query = c.execute("SELECT Contents FROM ContentFiles")
+    for row in query.fetchall():
+      yield row[0]
+
+  def __repr__(self) -> str:
+    nf = dbutil.num_good_kernels(self.contentfiles_cache['kernels.db'])
+    return (f'corpus[{self.shorthash}]: {nf} files, {self.size} tokens '
+            f'using {self.atomizer}')
 
   def __eq__(self, rhs) -> bool:
     if not isinstance(rhs, Corpus):
@@ -348,128 +391,21 @@ class Corpus(object):
     return not self.__eq__(rhs)
 
 
-def GetVocabFromMetaTable(session: sqlutil.Session) -> typing.Dict[str, int]:
-  """Read a vocabulary dictionary from the 'Meta' table of a database."""
-  q = session.query(encoded.Meta.value).filter(encoded.Meta.key == 'vocab_size')
-  if not q.first():
-    return {}
-
-  vocab_size = int(q.one()[0])
-  q = session.query(encoded.Meta.value)
-  return {
-      q.filter(encoded.Meta.key == f'vocab_{i}').one()[0]: i
-      for i in range(vocab_size)
-  }
+def ExpandConfigPath(path: str) -> pathlib.Path:
+  return pathlib.Path(os.path.expandvars(path)).expanduser().absolute()
 
 
-def StoreVocabInMetaTable(session: sqlutil.Session,
-                          vocabulary: typing.Dict[str, int]):
-  """Store a vocabulary dictionary in the 'Meta' table of a database."""
-  q = session.query(encoded.Meta).filter(encoded.Meta.key.like('vocab_%'))
-  q.delete(synchronize_session=False)
-
-  session.add(encoded.Meta(key='vocab_size', value=str(len(vocabulary))))
-  session.add_all(
-      [encoded.Meta(key=f'vocab_{v}', value=k) for k, v in vocabulary.items()])
-
-
-def GreedyAtomizerFromEncodedDb(encoded_db: encoded.EncodedContentFiles):
-  """Create a greedy atomizer for the vocabulary of a given encoded_db."""
-  # TODO: This depends on the embeded "meta" table vocabulary from:
-  # //experimental/deeplearning/deepsmith/java_fuzz/encode_java_corpus.py
-  with encoded_db.Session() as s:
-    vocab = GetVocabFromMetaTable(s)
-  app.Log(1, 'Loaded vocabulary of %s tokens from meta table', len(vocab))
-  return atomizers.GreedyAtomizer(vocab)
-
-
-def ExpandConfigPath(path: str, path_prefix: str = None) -> pathlib.Path:
-  """Resolve an absolute path from a config proto string field.
-
-  This performs shell-style expansion of $VARS, and prefixes the
-  --clgen_local_path_prefix flag value, if it is set.
-
-  Args:
-    path: The string value as it appears in the proto.
-    path_prefix: An optional string to prepend to the resolved path.
-
-  Returns:
-    An absolute path.
-  """
-  # Set a useful variable for expansion.
-  if 'HOME' not in os.environ:
-    os.environ['HOME'] = str(pathlib.Path('~').expanduser())
-  os.environ['BAZEL_RUNFILES'] = str(bazelutil.DataPath('.'))
-  return pathlib.Path(
-      os.path.expandvars((path_prefix or '') + path)).expanduser().absolute()
-
-
-def ResolveContentId(config: corpus_pb2.Corpus,
-                     hc: typing.Optional[hashcache.HashCache] = None) -> str:
-  """Compute the hash of the input contentfiles.
-
-  This function resolves the unique sha1 checksum of a set of content files.
-
-  Args:
-    config: The corpus config proto.
-    hc: A hashcache database instance, used for resolving directory hashes. If
-      the corpus has pre_encoded_corpus_url field set, this may be omitted.
-
-  Returns:
-    A hex encoded sha1 string.
-  """
-  # We can take a massive shortcut if the content ID is already set in the
-  # config proto.
-  if config.HasField('content_id'):
-    # TODO(github.com/ChrisCummins/phd/issues/46): Refactor this after splitting
-    # out Corpus class.
-    return config.content_id
-  elif config.HasField('pre_encoded_corpus_url'):
-    # TODO(github.com/ChrisCummins/phd/issues/46): Refactor this after splitting
-    # out Corpus class.
-    return crypto.sha1_str(config.pre_encoded_corpus_url)
-
-  start_time = time.time()
+def ResolveContentId(config: corpus_pb2.Corpus, hc: hashcache.HashCache) -> str:
+  """Compute the hash of the input contentfiles."""
   if config.HasField('local_directory'):
-    local_directory = ExpandConfigPath(
-        config.local_directory, path_prefix=FLAGS.clgen_local_path_prefix)
-
-    # After the first time we compute the hash of a directory, we write it into
-    # a file. This is a shortcut to work around the fact that computing the
-    # directory checksum is O(n) with respect to the number of files in the
-    # directory (even if the directory is already cached by the hash cache).
-    # This means that it is the responsibility of the user to delete this cached
-    # file if the directory is changed.
-    hash_file_path = pathlib.Path(str(local_directory) + '.sha1.txt')
-    if hash_file_path.is_file():
-      app.Log(1, "Reading directory hash: '%s'.", hash_file_path)
-      with open(hash_file_path) as f:
-        content_id = f.read().rstrip()
-    else:
-      # No hash file, so compute the directory hash and create it.
-      try:
-        content_id = hc.GetHash(local_directory)
-      except FileNotFoundError as e:
-        raise errors.UserError(e)
-      # Create the hash file in the directory so that next time we don't need
-      # to reference the hash cache.
-      with open(hash_file_path, 'w') as f:
-        print(content_id, file=f)
-      app.Log(1, "Wrote directory hash: '%s'.", hash_file_path)
+    try:
+      return hc.GetHash(ExpandConfigPath(config.local_directory))
+    except FileNotFoundError as e:
+      raise errors.UserError(e)
   elif config.HasField('local_tar_archive'):
-    # This if not an efficient means of getting the hash, as it requires always
-    # unpacking the archive and reading the entire contents. It would be nicer
-    # to maintain a cache which maps the mtime of tarballs to their content ID,
-    # similart to how local_directory is implemented.
-    content_id = GetHashOfArchiveContents(
-        ExpandConfigPath(
-            config.local_tar_archive,
-            path_prefix=FLAGS.clgen_local_path_prefix))
+    return GetHashOfArchiveContents(ExpandConfigPath(config.local_tar_archive))
   else:
     raise NotImplementedError('Unsupported Corpus.contentfiles field value')
-  app.Log(2, 'Resolved Content ID %s in %s ms.', content_id,
-          humanize.Commas(int((time.time() - start_time) * 1000)))
-  return content_id
 
 
 def ResolvePreprocessedId(content_id: str, config: corpus_pb2.Corpus) -> str:
@@ -478,10 +414,6 @@ def ResolvePreprocessedId(content_id: str, config: corpus_pb2.Corpus) -> str:
   The hash is computed from the ID of the input files and the serialized
   representation of the preprocessor pipeline.
   """
-  # TODO(github.com/ChrisCummins/phd/issues/46): Refactor this after splitting
-  # out Corpus class.
-  if config.pre_encoded_corpus_url:
-    return 'null'
   return crypto.sha1_list(content_id, *config.preprocessor)
 
 
@@ -498,29 +430,118 @@ def ResolveEncodedId(content_id: str, config: corpus_pb2.Corpus) -> str:
   # files delivered through different means (e.g. two separate but identical
   # directories) have the same hash.
   config_without_contentfiles.ClearField('contentfiles')
-  return crypto.sha1_list(content_id,
-                          config_without_contentfiles.SerializeToString())
+  return crypto.sha1_list(
+      content_id, config_without_contentfiles.SerializeToString())
 
 
 def GetHashOfArchiveContents(archive: pathlib.Path) -> str:
-  """Compute the checksum of the contents of a directory.
+  with tempfile.TemporaryDirectory() as d:
+    cmd = ['tar', '-xf', str(archive), '-C', d]
+    subprocess.check_call(cmd)
+    return checksumdir(d, 'sha1')
+
+
+def UnpackDirectoryIfNeeded(path: pathlib.Path) -> pathlib.Path:
+  """Unpack a directory tarball and return its path.
+
+  If path is a tarball, unpack it. If path doesn't exist but there is a
+  tarball with the same name, unpack it.
 
   Args:
-    archive: Path of the archive.
+    path: Path to directory or tarball.
 
   Returns:
-    Checksum of the archive.
+    Path to directory.
 
   Raises:
-    UserError: If the requested archive does not exist, or cannot be unpacked.
+    clgen.InternalError: If unable to extract archive.
   """
-  if not archive.is_file():
-    raise errors.UserError(f"Archive not found: '{archive}'")
+  if path.is_dir():
+    return path
 
-  with tempfile.TemporaryDirectory(prefix='clgen_corpus_') as d:
-    cmd = ['tar', '-xf', str(archive), '-C', d]
-    try:
-      subprocess.check_call(cmd)
-    except subprocess.CalledProcessError:
-      raise errors.UserError(f"Archive unpack failed: '{archive}'")
-    return checksumdir.dirhash(d, 'sha1')
+  if path.is_file() and str(path).endswith(".tar.bz2"):
+    logging.info('unpacking %s', path)
+    tar.unpack_archive(path)
+    return pathlib.Path(re.sub(r'.tar.bz2$', '', str(path)))
+
+  if pathlib.Path(str(path) + ".tar.bz2").is_file():
+    logging.info('unpacking %s.tar.bz', path)
+    tar.unpack_archive(str(path) + ".tar.bz2")
+    return path
+
+  raise errors.InternalError(f"Cannot find path '{path}'")
+
+
+def GetKernelFeatures(code: str, **kwargs) -> np.array:
+  """Get features for code.
+
+  Args:
+    code: Source code.
+    **kwargs: Arguments to features.features()
+
+  Returns:
+    An array of feature values.
+
+  Raises:
+    FeaturesError: In case of error.
+  """
+  with NamedTemporaryFile() as outfile:
+    outfile.write(code.encode("utf-8"))
+    outfile.seek(0)
+    f = features.to_np_arrays([outfile.name], **kwargs)
+  if len(f) != 1:
+    logging.error('features: %s', f)
+    raise errors.FeaturesError("code contains more than one kernel")
+  return f[0]
+
+
+def GetClKernelEndIndex(src: str, start_idx: int = 0,
+                        max_len: int = 5000) -> int:
+  """Return the index of the character after the end of the OpenCL kernel.
+
+  Args:
+    src: OpenCL source.
+    start_idx: Start index.
+    max_len: Maximum kernel length.
+
+  Returns:
+    Index of end of OpenCL kernel.
+  """
+  i = src.find('{', start_idx) + 1
+  d = 1  # depth
+  while i < min(len(src), start_idx + max_len) and d > 0:
+    if src[i] == '{':
+      d += 1
+    elif src[i] == '}':
+      d -= 1
+    i += 1
+  return i
+
+
+def GetClKernel(src: str, start_idx: int, max_len: int = 5000) -> str:
+  """Return the OpenCL kernel.
+
+  Args:
+    src: OpenCL source.
+    start_idx: Start index.
+    max_len: Maximum kernel length.
+
+  Returns:
+    OpenCL kernel.
+  """
+  return src[start_idx:GetClKernelEndIndex(src, start_idx, max_len)]
+
+
+def GetClKernels(src: str) -> typing.List[str]:
+  """
+  Return OpenCL kernels.
+
+  Args:
+    src: OpenCL source.
+
+  Returns:
+    OpenCL kernels.
+  """
+  idxs = text.get_substring_idxs('__kernel', src)
+  kernels = [GetClKernel(src, i) for i in idxs]
+  return kernels
