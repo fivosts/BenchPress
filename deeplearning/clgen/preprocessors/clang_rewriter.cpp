@@ -18,6 +18,7 @@
 <<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
 =======
 #define E_NO_INPUT 204
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
 //
 // Copyright 2016, 2017, 2018 Chris Cummins <chrisc.101@gmail.com>.
 >>>>>>> 1bb095a06... Bump copyright to 2018:native/clgen-rewriter.cpp
@@ -37,6 +38,8 @@
 // You should have received a copy of the GNU General Public License
 // along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 #define E_NO_INPUT 204
+=======
+>>>>>>> f1ce9357e... Remove license headers.:deeplearning/clgen/native/clgen-rewriter.cpp
 
 #include <map>
 #include <memory>
