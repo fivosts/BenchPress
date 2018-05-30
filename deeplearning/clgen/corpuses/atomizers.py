@@ -1,39 +1,14 @@
-# Copyright (c) 2016, 2017, 2018, 2019 Chris Cummins.
-#
-# clgen is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# clgen is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """This file contains the definition of atomizers.
 
 An atomizer converts a block of text into a sequence of vocbulary tokens.
 """
-import pathlib
-import pickle
 import typing
 from collections import Counter
 
-import humanize
 import numpy as np
-from absl import logging
 
 from deeplearning.clgen import errors
-<<<<<<< HEAD:deeplearning/clgen/corpuses/atomizers.py
-from labm8 import app
-from labm8 import labdate
-
-FLAGS = app.FLAGS
-=======
 from lib.labm8 import labdate
->>>>>>> cd45ae687... Log atomizing time.:deeplearning/clgen/atomizers.py
 
 
 class AtomizerBase(object):
@@ -75,7 +50,7 @@ class AtomizerBase(object):
       raise errors.InvalidVocab('all indices must be unique')
 
     self.vocab_size = len(self.vocab)
-    self.decoder = {val: key for key, val in self.vocab.items()}
+    self.decoder = dict((val, key) for key, val in self.vocab.items())
 
   def AtomizeString(self, text: str) -> np.array:
     """Atomize a text into an array of vocabulary indices.
@@ -117,11 +92,6 @@ class AtomizerBase(object):
     except KeyError:
       raise errors.VocabError
 
-  def ToFile(self, path: pathlib.Path) -> None:
-    """Save an atomizer to file."""
-    with open(path, 'wb') as f:
-      pickle.dump(self, f)
-
   @classmethod
   def FromText(cls, text: str) -> 'AtomizerBase':
     """Instantiate and specialize an atomizer from a corpus text.
@@ -133,12 +103,6 @@ class AtomizerBase(object):
       An atomizer instance.
     """
     raise NotImplementedError("abstract class")
-
-  @classmethod
-  def FromFile(cls, path: pathlib.Path) -> 'AtomizerBase':
-    """Load an atomizer from file."""
-    with open(path, 'rb') as infile:
-      return pickle.load(infile)
 
 
 class AsciiCharacterAtomizer(AtomizerBase):
@@ -258,7 +222,6 @@ class GreedyAtomizer(AtomizerBase):
     if not atoms:
       raise errors.UserError('No atoms specified')
 
-    start_time = labdate.MillisecondsTimestamp()
     # Instantiate a greedy atomizer using the full vocabulary.
     full_vocab = dict(zip(atoms, range(len(atoms))))
     c = GreedyAtomizer(full_vocab, determine_chars=True)
@@ -266,11 +229,5 @@ class GreedyAtomizer(AtomizerBase):
     tokens = sorted(list(set(c.TokenizeString(text))))
     vocab_subset = dict(zip(tokens, range(len(tokens))))
     end_time = labdate.MillisecondsTimestamp()
-<<<<<<< HEAD:deeplearning/clgen/corpuses/atomizers.py
-=======
-    logging.info('Derived vocabulary of size %s from %s tokens in %s',
-                 humanize.intcomma(len(tokens)), humanize.intcomma(len(atoms)),
-                 humanize.intcomma(end_time - start_time))
->>>>>>> cd45ae687... Log atomizing time.:deeplearning/clgen/atomizers.py
     # Return a new atomizer using the subset vocabulary.
     return GreedyAtomizer(vocab_subset)
