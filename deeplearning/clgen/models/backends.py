@@ -1,29 +1,16 @@
-# Copyright (c) 2016, 2017, 2018, 2019 Chris Cummins.
-#
-# clgen is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# clgen is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """Neural network backends for CLgen models."""
 import typing
 
 import numpy as np
+from absl import flags
 
 from deeplearning.clgen import samplers
-from deeplearning.clgen.corpuses import atomizers
+from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.proto import model_pb2
-from labm8 import app
-from labm8 import cache
+from lib.labm8 import cache
 
-FLAGS = app.FLAGS
+
+FLAGS = flags.FLAGS
 
 
 class BackendBase(object):
@@ -33,27 +20,26 @@ class BackendBase(object):
   """
 
   def __init__(self, config: model_pb2.Model, fs_cache: cache.FSCache,
-               atomizer: atomizers.AtomizerBase):
+               corpus: corpuses.Corpus):
     self.config = config
     self.cache = fs_cache
-    self.atomizer = atomizer
+    self.corpus = corpus
 
-  def Train(self, corpus: 'Corpus', **extra_kwargs) -> None:
+  def Train(self) -> None:
     """Train the backend."""
     raise NotImplementedError
 
-  def InitSampling(self,
-                   sampler: samplers.Sampler,
-                   seed: typing.Optional[int] = None) -> None:
+  def InitSampling(self, sampler: samplers.Sampler,
+                   seed: typing.Optional[int] = None) -> int:
     """Initialize backend for sampling."""
     raise NotImplementedError
 
-  def InitSampleBatch(self, sampler: samplers.Sampler) -> None:
+  def InitSampleBatch(self, sampler: samplers.Sampler, batch_size: int) -> None:
     """Begin a new sampling batch. Only called after InitSampling()."""
     raise NotImplementedError
 
   def SampleNextIndices(self, sampler: samplers.Sampler,
-                        done: np.ndarray) -> np.ndarray:
+                        batch_size: int) -> np.ndarray:
     """Sample the next indices for the current sample batch.
 
     Returns:
