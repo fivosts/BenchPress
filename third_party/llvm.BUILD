@@ -2,7 +2,11 @@
 
 package(default_visibility = ["//visibility:public"])
 
+<<<<<<< HEAD:third_party/llvm.BUILD
 # Pre-compiled binary filegroups.
+=======
+# Pre-compiled binaries.
+>>>>>>> 266383c01... Auto BUILD format.:llvm.BUILD
 
 filegroup(
     name = "clang",
