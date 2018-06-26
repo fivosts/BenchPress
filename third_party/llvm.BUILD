@@ -42,6 +42,7 @@ filegroup(
 )
 
 filegroup(
+<<<<<<< HEAD:third_party/llvm.BUILD
     name = "llvm-as",
     srcs = [
         "bin/llvm-as",
@@ -56,6 +57,8 @@ filegroup(
 )
 
 filegroup(
+=======
+>>>>>>> dd9155c85... Add an llvm ld binary filegroup.:llvm.BUILD
     name = "opt",
     srcs = ["bin/opt"],
 )
