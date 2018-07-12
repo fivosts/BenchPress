@@ -78,7 +78,11 @@ filegroup(
 )
 
 filegroup(
+<<<<<<< HEAD:third_party/llvm.BUILD
     name = "libs_files",
+=======
+    name = "libs",
+>>>>>>> 05c5fe61f... Add a @llvm_{mac,linux}//:libs file group.:llvm.BUILD
     srcs = glob([
         "lib/**/*",
     ]),
