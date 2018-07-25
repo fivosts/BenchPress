@@ -1,14 +1,10 @@
 # CLSmith - A random generator of OpenCL C programs.
 # See: https://github.com/ChrisLidbury/CLSmith
-#
-# Note the genrules in this package require the 'm4' binary be in the system
-# $PATH. On Ubuntu, m4 is installed using: $ apt-get install m4
-
-package(default_visibility = ["//visibility:public"])
 
 cc_binary(
-    name = "CLSmith",
-    srcs = [
+  name = "CLSmith",
+  copts = ["-Iexternal/CLSmith/src", "-DPACKAGE_STRING=1"],
+  srcs = [
         "src/AbsExtension.cpp",
         "src/AbsExtension.h",
         "src/AbsProgramGenerator.cpp",
@@ -27,49 +23,6 @@ cc_binary(
         "src/CGContext.h",
         "src/CGOptions.cpp",
         "src/CGOptions.h",
-        "src/CLSmith/CLExpression.cpp",
-        "src/CLSmith/CLExpression.h",
-        "src/CLSmith/CLOptions.cpp",
-        "src/CLSmith/CLOptions.h",
-        "src/CLSmith/CLOutputMgr.cpp",
-        "src/CLSmith/CLOutputMgr.h",
-        "src/CLSmith/CLProgramGenerator.cpp",
-        "src/CLSmith/CLProgramGenerator.h",
-        "src/CLSmith/CLRandomProgramGenerator.cpp",
-        "src/CLSmith/CLStatement.cpp",
-        "src/CLSmith/CLStatement.h",
-        "src/CLSmith/CLVariable.cpp",
-        "src/CLSmith/CLVariable.h",
-        "src/CLSmith/Divergence.cpp",
-        "src/CLSmith/Divergence.h",
-        "src/CLSmith/ExpressionAtomic.cpp",
-        "src/CLSmith/ExpressionAtomic.h",
-        "src/CLSmith/ExpressionID.cpp",
-        "src/CLSmith/ExpressionID.h",
-        "src/CLSmith/ExpressionVector.cpp",
-        "src/CLSmith/ExpressionVector.h",
-        "src/CLSmith/FunctionInvocationBuiltIn.cpp",
-        "src/CLSmith/FunctionInvocationBuiltIn.h",
-        "src/CLSmith/Globals.cpp",
-        "src/CLSmith/Globals.h",
-        "src/CLSmith/MemoryBuffer.cpp",
-        "src/CLSmith/MemoryBuffer.h",
-        "src/CLSmith/StatementAtomicReduction.cpp",
-        "src/CLSmith/StatementAtomicReduction.h",
-        "src/CLSmith/StatementAtomicResult.cpp",
-        "src/CLSmith/StatementAtomicResult.h",
-        "src/CLSmith/StatementBarrier.cpp",
-        "src/CLSmith/StatementBarrier.h",
-        "src/CLSmith/StatementComm.cpp",
-        "src/CLSmith/StatementComm.h",
-        "src/CLSmith/StatementEMI.cpp",
-        "src/CLSmith/StatementEMI.h",
-        "src/CLSmith/StatementMessage.cpp",
-        "src/CLSmith/StatementMessage.h",
-        "src/CLSmith/Vector.cpp",
-        "src/CLSmith/Vector.h",
-        "src/CLSmith/Walker.cpp",
-        "src/CLSmith/Walker.h",
         "src/CVQualifiers.cpp",
         "src/CVQualifiers.h",
         "src/Common.h",
@@ -209,41 +162,81 @@ cc_binary(
         "src/random.h",
         "src/util.cpp",
         "src/util.h",
-    ],
-    copts = [
-        "-Iexternal/CLSmith/src",
-        "-DPACKAGE_STRING=1",
-    ],
-    linkopts = ["-ldl"] + select({
-        "//:darwin": [],
-        "//conditions:default": ["-pthread"],
-    }),
+        "src/CLSmith/CLExpression.h",
+        "src/CLSmith/CLOptions.h",
+        "src/CLSmith/CLOutputMgr.h",
+        "src/CLSmith/CLProgramGenerator.h",
+        "src/CLSmith/CLStatement.h",
+        "src/CLSmith/CLVariable.h",
+        "src/CLSmith/Divergence.h",
+        "src/CLSmith/ExpressionAtomic.h",
+        "src/CLSmith/ExpressionID.h",
+        "src/CLSmith/ExpressionVector.h",
+        "src/CLSmith/FunctionInvocationBuiltIn.h",
+        "src/CLSmith/Globals.h",
+        "src/CLSmith/MemoryBuffer.h",
+        "src/CLSmith/StatementAtomicReduction.h",
+        "src/CLSmith/StatementAtomicResult.h",
+        "src/CLSmith/StatementBarrier.h",
+        "src/CLSmith/StatementComm.h",
+        "src/CLSmith/StatementEMI.h",
+        "src/CLSmith/StatementMessage.h",
+        "src/CLSmith/Vector.h",
+        "src/CLSmith/Walker.h",
+        "src/CLSmith/CLOutputMgr.cpp",
+        "src/CLSmith/CLProgramGenerator.cpp",
+        "src/CLSmith/Globals.cpp",
+        "src/CLSmith/CLRandomProgramGenerator.cpp",
+        "src/CLSmith/Walker.cpp",
+        "src/CLSmith/Divergence.cpp",
+        "src/CLSmith/CLExpression.cpp",
+        "src/CLSmith/CLStatement.cpp",
+        "src/CLSmith/CLVariable.cpp",
+        "src/CLSmith/StatementBarrier.cpp",
+        "src/CLSmith/MemoryBuffer.cpp",
+        "src/CLSmith/Vector.cpp",
+        "src/CLSmith/CLOptions.cpp",
+        "src/CLSmith/ExpressionVector.cpp",
+        "src/CLSmith/ExpressionAtomic.cpp",
+        "src/CLSmith/StatementEMI.cpp",
+        "src/CLSmith/StatementAtomicResult.cpp",
+        "src/CLSmith/FunctionInvocationBuiltIn.cpp",
+        "src/CLSmith/ExpressionID.cpp",
+        "src/CLSmith/StatementComm.cpp",
+        "src/CLSmith/StatementAtomicReduction.cpp",
+        "src/CLSmith/StatementMessage.cpp",
+  ],
+  visibility = ["//visibility:public"],
 )
 
 config_setting(
     name = "darwin",
     values = {"cpu": "darwin"},
-)
-
-filegroup(
-    name = "cl_launcher_src",
-    srcs = ["src/CLSmith/cl_launcher.c"],
+    visibility = ["//visibility:public"],
 )
 
 cc_binary(
     name = "cl_launcher",
     srcs = ["src/CLSmith/cl_launcher.c"],
-    linkopts = select({
+    linkopts = ["-ldl"] + select({
         "//:darwin": ["-framework OpenCL"],
-        "//conditions:default": [
-            "-pthread",
-            "-ldl",
-            "-lOpenCL",
-        ],
+        "//conditions:default": [],
     }),
     deps = [
         "@opencl_220_headers//:headers",
-    ],
+    ] + select({
+        "//:darwin": [],
+        "//conditions:default": ["@libopencl//:libOpenCL"],
+    }),
+)
+
+filegroup(
+    name = "runtime_headers",
+    srcs = glob([
+        "runtime/*.h",
+        ":cl_safe_math_macros",
+        ":safe_math_macros",
+    ])
 )
 
 genrule(
@@ -260,7 +253,3 @@ genrule(
     cmd = "m4 $< > $@",
 )
 
-filegroup(
-    name = "runtime_headers",
-    srcs = glob(["runtime/*.h"]),
-)
