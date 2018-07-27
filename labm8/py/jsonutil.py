@@ -22,10 +22,15 @@ from labm8.py import fs
 =======
 import json
 import typing
+<<<<<<< HEAD:labm8/py/jsonutil.py
 >>>>>>> b5e037964... Move JSON type hint into jsonutil.:lib/labm8/jsonutil.py
 
 # A type alias for annotating methods which take or return JSON.
 JSON = typing.Union[typing.List[typing.Any], typing.Dict[str, typing.Any]]
+=======
+from phd.lib.labm8 import fs
+
+>>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/jsonutil.py
 
 # A type alias for annotating methods which take or return JSON.
 JSON = typing.Union[typing.List[typing.Any], typing.Dict[str, typing.Any]]

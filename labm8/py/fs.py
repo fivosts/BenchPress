@@ -35,14 +35,19 @@ from glob import iglob
 =======
 import typing
 from glob import iglob
-
 from humanize import naturalsize
+<<<<<<< HEAD:labm8/py/fs.py
 >>>>>>> 4d50b51ca... Add a directory_is_empty() function.:lib/labm8/fs.py
 from send2trash import send2trash
 
 from labm8.py import humanize
 from labm8.py import labtypes
 
+=======
+from phd.lib.labm8 import labtypes
+from send2trash import send2trash
+
+>>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/fs.py
 
 class Error(Exception):
   pass

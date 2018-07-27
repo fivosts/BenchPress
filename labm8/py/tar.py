@@ -15,7 +15,11 @@
 """
 import tarfile
 
+<<<<<<< HEAD:labm8/py/tar.py
 from labm8.py import fs
+=======
+from phd.lib.labm8 import fs
+>>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/tar.py
 
 
 def unpack_archive(*components, **kwargs) -> str:

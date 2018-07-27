@@ -21,9 +21,14 @@ import typing
 
 from absl import logging
 
+<<<<<<< HEAD:labm8/py/logutil.py
 from labm8.py import app
 from labm8.py import labdate
 from labm8.py.internal import logging_pb2
+=======
+from phd.lib.labm8 import labdate
+from phd.lib.labm8.proto import logging_pb2
+>>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/logutil.py
 
 FLAGS = app.FLAGS
 

@@ -29,8 +29,12 @@ import threading
 import typing
 from sys import platform
 
+<<<<<<< HEAD:labm8/py/system.py
 from labm8.py import app
 from labm8.py import fs
+=======
+from phd.lib.labm8 import fs
+>>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/system.py
 
 HOSTNAME = socket.gethostname()
 USERNAME = getpass.getuser()

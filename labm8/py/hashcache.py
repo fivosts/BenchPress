@@ -25,6 +25,7 @@ import typing
 
 import checksumdir
 import sqlalchemy as sql
+<<<<<<< HEAD:labm8/py/hashcache.py
 from sqlalchemy.ext import declarative
 
 from labm8.py import app
@@ -32,6 +33,15 @@ from labm8.py import crypto
 from labm8.py import fs
 from labm8.py import humanize
 from labm8.py import sqlutil
+=======
+from absl import flags
+from absl import logging
+from phd.lib.labm8 import crypto
+from phd.lib.labm8 import fs
+from phd.lib.labm8 import sqlutil
+from sqlalchemy.ext import declarative
+
+>>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/hashcache.py
 
 FLAGS = app.FLAGS
 
