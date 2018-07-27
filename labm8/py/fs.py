@@ -24,6 +24,7 @@ import re
 import shutil
 <<<<<<< HEAD:labm8/py/fs.py
 <<<<<<< HEAD:labm8/py/fs.py
+<<<<<<< HEAD:labm8/py/fs.py
 import tempfile
 =======
 
@@ -33,6 +34,9 @@ import typing
 from glob import iglob
 
 =======
+=======
+import tempfile
+>>>>>>> 583709888... Move TemporaryWorkingDir() into labm8.:lib/labm8/fs.py
 import typing
 from glob import iglob
 from humanize import naturalsize
@@ -621,10 +625,17 @@ def chdir(directory: typing.Union[str, pathlib.Path]) -> pathlib.Path:
   finally:
     os.chdir(str(previous_directory))
 <<<<<<< HEAD:labm8/py/fs.py
+<<<<<<< HEAD:labm8/py/fs.py
 
 
 @contextlib.contextmanager
 def TemporaryWorkingDir(prefix: str = "phd_") -> pathlib.Path:
+=======
+
+
+@contextlib.contextmanager
+def TemporaryWorkingDir(prefix: str = None) -> pathlib.Path:
+>>>>>>> 583709888... Move TemporaryWorkingDir() into labm8.:lib/labm8/fs.py
   """A context manager which provides a temporary working directory.
 
   This creates an empty temporary directory, and changes the current working
@@ -637,6 +648,7 @@ def TemporaryWorkingDir(prefix: str = "phd_") -> pathlib.Path:
   Returns:
     The directory which has been changed to.
   """
+<<<<<<< HEAD:labm8/py/fs.py
   # getcwd() will raise FileNotFoundError if the current workind directory
   # does not exist.
   old_directory = None
@@ -804,3 +816,10 @@ def TemporaryFileWithContents(contents: bytes, **kwargs):
 >>>>>>> 4d50b51ca... Add a directory_is_empty() function.:lib/labm8/fs.py
 =======
 >>>>>>> a2a84227b... Add a lib.labm8.chdir() context manager.:lib/labm8/fs.py
+=======
+  old_directory = os.getcwd()
+  with tempfile.TemporaryDirectory(prefix=prefix) as d:
+    os.chdir(d)
+    yield pathlib.Path(d)
+  os.chdir(old_directory)
+>>>>>>> 583709888... Move TemporaryWorkingDir() into labm8.:lib/labm8/fs.py
