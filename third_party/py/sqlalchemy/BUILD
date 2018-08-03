@@ -11,7 +11,5 @@ py_library(
     srcs = ["sqlalchemy.py"],
     deps = [
         requirement("sqlalchemy"),
-        # Implicit dependency when connecting to MySQL databases.
-        "//third_party/py/mysql",
     ],
 )
