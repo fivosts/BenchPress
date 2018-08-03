@@ -8,7 +8,7 @@ licenses(["notice"])  # BSD
 
 py_library(
     name = "protobuf",
-    srcs = ["//third_party/py:empty.py"],
+    srcs = ["protobuf.py"],
     deps = [
         requirement("protobuf"),
     ],

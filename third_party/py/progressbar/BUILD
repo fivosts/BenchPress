@@ -8,11 +8,8 @@ licenses(["notice"])  # BSD
 
 py_library(
     name = "progressbar",
-    srcs = ["//third_party/py:empty.py"],
+    srcs = ["progressbar.py"],
     deps = [
         requirement("progressbar2"),
-        # Progress bar has an undeclared dependency on python_utils.time module,
-        # see issue #27.
-        requirement("python-utils"),
     ],
 )

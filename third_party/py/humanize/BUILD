@@ -8,7 +8,7 @@ licenses(["notice"])  # MIT
 
 py_library(
     name = "humanize",
-    srcs = ["//third_party/py:empty.py"],
+    srcs = ["humanize.py"],
     deps = [
         requirement("humanize"),
     ],

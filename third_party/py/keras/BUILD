@@ -8,11 +8,8 @@ licenses(["notice"])  # MIT
 
 py_library(
     name = "keras",
-    srcs = ["//third_party/py:empty.py"],
+    srcs = ["keras.py"],
     deps = [
         requirement("keras"),
-        requirement("PyYAML"),  # Implicit dependency.
-        "//third_party/py/scipy",  # Implicit dependency.
-        "//third_party/py/tensorflow",
     ],
 )
