@@ -8,7 +8,7 @@ licenses(["notice"])  # BSD
 
 py_library(
     name = "scipy",
-    srcs = ["//third_party/py:empty.py"],
+    srcs = ["scipy.py"],
     deps = [
         requirement("scipy"),
     ],

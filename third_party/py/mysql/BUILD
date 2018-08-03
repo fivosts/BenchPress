@@ -8,7 +8,7 @@ licenses(["notice"])  # BSD
 
 py_library(
     name = "mysql",
-    srcs = ["//third_party/py:empty.py"],
+    srcs = ["mysql.py"],
     deps = [
         requirement("mysqlclient"),
     ],

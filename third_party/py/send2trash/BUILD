@@ -8,7 +8,7 @@ licenses(["notice"])  # BSD
 
 py_library(
     name = "send2trash",
-    srcs = ["//third_party/py:empty.py"],
+    srcs = ["send2trash.py"],
     deps = [
         requirement("send2trash"),
     ],

@@ -8,7 +8,7 @@ licenses(["notice"])  # MIT
 
 py_library(
     name = "checksumdir",
-    srcs = ["//third_party/py:empty.py"],
+    srcs = ["checksumdir.py"],
     deps = [
         requirement("checksumdir"),
     ],
