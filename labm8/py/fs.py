@@ -634,8 +634,12 @@ def TemporaryWorkingDir(prefix: str = "phd_") -> pathlib.Path:
 
 
 @contextlib.contextmanager
+<<<<<<< HEAD:labm8/py/fs.py
 def TemporaryWorkingDir(prefix: str = None) -> pathlib.Path:
 >>>>>>> 583709888... Move TemporaryWorkingDir() into labm8.:lib/labm8/fs.py
+=======
+def TemporaryWorkingDir(prefix: str = 'phd_') -> pathlib.Path:
+>>>>>>> 809f924cd... Set a default working directory prefix.:lib/labm8/fs.py
   """A context manager which provides a temporary working directory.
 
   This creates an empty temporary directory, and changes the current working
