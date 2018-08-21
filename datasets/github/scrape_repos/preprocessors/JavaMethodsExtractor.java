@@ -1,32 +1,9 @@
-/* Extract methods from Java source file and return a ListOfStrings proto.
- *
- * Usage:
- *     bazel run \
- *         //datasets/github/scrape_repos/preprocessors:JavaMethodsExtractor \
- *         < /path/to/file.java
- *
- * If environment variable $JAVA_METHOD_EXTRACTOR_STATIC_ONLY is set, only
- * static methods are returned.
- */
-// Copyright 2018, 2019 Chris Cummins <chrisc.101@gmail.com>.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/* Extract methods from Java source file. */
 package datasets.github.scrape_repos.preprocessors;
 
 import com.google.common.io.ByteStreams;
-import datasets.github.scrape_repos.ScrapeReposProtos.ListOfStrings;
+import datasets.github.scrape_repos.ScrapeReposProtos.MethodsList;
 import java.io.IOException;
-import java.lang.reflect.Modifier;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.ASTVisitor;
@@ -34,10 +11,12 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jface.text.Document;
 
-/** Extract methods from Java source code. */
+/**
+ * Extract methods from Java source code.
+ */
 public class JavaMethodsExtractor {
 
-  private ListOfStrings.Builder message;
+  private MethodsList.Builder message;
 
   /**
    * Get the compilation unit for a document.
@@ -51,6 +30,25 @@ public class JavaMethodsExtractor {
     return (CompilationUnit) parser.createAST(null);
   }
 
+  /**
+   * Extract all methods from a Java source.
+   *
+   * @param source A Java source string.
+   * @return A MethodsList proto instance.
+   */
+  private MethodsList ExtractMethods(String source) {
+    Document document = new Document(source);
+    CompilationUnit compilationUnit = GetCompilationUnit(document);
+    message = MethodsList.newBuilder();
+    compilationUnit.accept(new ASTVisitor() {
+      public boolean visit(MethodDeclaration node) {
+        message.addMethod(node.toString());
+        return true;
+      }
+    });
+    return message.build();
+  }
+
   public static void main(final String[] args) {
     JavaMethodsExtractor extractor = new JavaMethodsExtractor();
 
@@ -61,60 +59,5 @@ public class JavaMethodsExtractor {
       System.err.println("fatal: I/O error");
       System.exit(1);
     }
-  }
-
-  /**
-   * Return the string representation of a method declaration.
-   *
-   * <p>By default, a MethodDeclaration includes the JavaDoc comment. This strips that.
-   *
-   * @param method The method to stringify.
-   * @returns The string source code of the method.
-   */
-  private String MethodDeclarationToString(MethodDeclaration method) {
-    method.setJavadoc(null);
-    return method.toString();
-  }
-
-  /**
-   * Extract all methods from a Java source.
-   *
-   * @param source A Java source string.
-   * @return A ListOfStrings proto instance.
-   */
-  private ListOfStrings ExtractMethods(String source) {
-    Document document = new Document(source);
-    message = ListOfStrings.newBuilder();
-
-    final boolean staticOnly =
-        !(System.getenv("JAVA_METHOD_EXTRACTOR_STATIC_ONLY") == null
-            || System.getenv("JAVA_METHOD_EXTRACTOR_STATIC_ONLY").equals(""));
-
-    try {
-      CompilationUnit compilationUnit = GetCompilationUnit(document);
-
-      if (staticOnly) {
-        compilationUnit.accept(
-            new ASTVisitor() {
-              public boolean visit(MethodDeclaration node) {
-                if ((node.getModifiers() & Modifier.STATIC) != 0) {
-                  message.addString(MethodDeclarationToString(node));
-                }
-                return true;
-              }
-            });
-      } else {
-        compilationUnit.accept(
-            new ASTVisitor() {
-              public boolean visit(MethodDeclaration node) {
-                message.addString(MethodDeclarationToString(node));
-                return true;
-              }
-            });
-      }
-    } catch (IllegalArgumentException e) {
-      System.err.println("error: Failed to parse unit.");
-    }
-    return message.build();
   }
 }
