@@ -8,21 +8,9 @@ licenses(["notice"])  # BSD
 
 py_library(
     name = "flask",
-    srcs = ["//third_party/py:empty.py"],
+    srcs = ["flask.py"],
     deps = [
-        "//third_party/py/requests",
         requirement("Flask"),
-        requirement("Flask-Compress"),
         requirement("flask-cors"),
-        requirement("Flask-SQLalchemy"),
-        requirement("Werkzeug"),
-        requirement("jinja2"),
-        "//third_party/py/click",
-        "//third_party/py/sqlalchemy",
-        requirement("itsdangerous"),
-        requirement("chardet"),
-        requirement("certifi"),
-        requirement("retrying"),
-        requirement("MarkupSafe"),
     ],
 )
