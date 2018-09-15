@@ -68,8 +68,12 @@ def MillisecondsTimestamp(
 
 
 def DatetimeFromMillisecondsTimestamp(
+<<<<<<< HEAD:labm8/py/labdate.py
   timestamp: int = None,
 ) -> datetime.datetime:
+=======
+    timestamp: int = None) -> datetime.datetime:
+>>>>>>> 303e215d5... Add default arg to labdate function.:lib/labm8/labdate.py
   """Get the date of a millisecond timestamp.
 
   Args:
@@ -84,7 +88,11 @@ def DatetimeFromMillisecondsTimestamp(
     ValueError: If the argument is not a positive integer.
   """
   if not (isinstance(timestamp, int) or timestamp is None):
+<<<<<<< HEAD:labm8/py/labdate.py
     raise TypeError("Timestamp must be an integer")
+=======
+    raise TypeError('Timestamp must be an integer')
+>>>>>>> 303e215d5... Add default arg to labdate function.:lib/labm8/labdate.py
   if not timestamp:
     timestamp = MillisecondsTimestamp()
   if timestamp < 0:
