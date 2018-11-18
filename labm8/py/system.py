@@ -19,6 +19,13 @@ Variables:
   * `UID` (int) User ID.
   * `PID` (int) Process ID.
 """
+<<<<<<< HEAD:labm8/py/system.py
+=======
+from __future__ import print_function
+
+import os
+
+>>>>>>> c774253ad... Add a function to process a file in place.:lib/labm8/system.py
 import getpass
 import os
 import socket
@@ -27,6 +34,7 @@ import sys
 import tempfile
 import threading
 import typing
+<<<<<<< HEAD:labm8/py/system.py
 from sys import platform
 
 <<<<<<< HEAD:labm8/py/system.py
@@ -35,6 +43,11 @@ from labm8.py import fs
 =======
 from phd.lib.labm8 import fs
 >>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/system.py
+=======
+from phd.lib.labm8 import fs
+from sys import platform
+
+>>>>>>> c774253ad... Add a function to process a file in place.:lib/labm8/system.py
 
 HOSTNAME = socket.gethostname()
 USERNAME = getpass.getuser()
@@ -364,6 +377,7 @@ def ProcessFileAndReplace(
         os.unlink(tmp_path)
 
 
+<<<<<<< HEAD:labm8/py/system.py
 def CheckCallOrDie(cmd: typing.List[str]) -> None:
   """Run the given command and exit fatally on error."""
   try:
@@ -373,3 +387,41 @@ def CheckCallOrDie(cmd: typing.List[str]) -> None:
     app.FatalWithoutStackTrace(
       "Command: `%s` failed with error: %s", " ".join(cmd), e,
     )
+=======
+  Returns:
+      bool: True if Python >= 3, else False.
+  """
+  return sys.version_info >= (3, 0)
+
+
+def ProcessFileAndReplace(
+    path: str,
+    process_file_callback: typing.Callable[[str, str], None],
+    tempfile_prefix: str = 'phd_lib_labm8_system_',
+    tempfile_suffix: str = None) -> None:
+  """Process a file and replace with the generated file.
+
+  This function provides the functionality of inplace file modification for
+  functions which take an input file and produce an output file. It does this
+  by creating a temporary file which, if the function returns successfully (i.e.
+  without exception), will overwrite the original file.
+
+  Args:
+    path: The path of the file to process inplace.
+    process_file_callback: A function which takes two arguments - the path of
+      an input file, and the path of an output file.
+    tempfile_prefix: An optional name prefix for the temporary file.
+    tempfile_suffix: An optional name suffix for the temporary file.
+  """
+  with tempfile.NamedTemporaryFile(
+      prefix=tempfile_prefix,
+      suffix=tempfile_suffix,
+      delete=False) as f:
+    tmp_path = f.name
+    try:
+      process_file_callback(path, tmp_path)
+      os.rename(tmp_path, path)
+    finally:
+      if os.path.isfile(tmp_path):
+        os.unlink(tmp_path)
+>>>>>>> c774253ad... Add a function to process a file in place.:lib/labm8/system.py
