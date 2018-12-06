@@ -20,6 +20,7 @@ import sys
 import time
 import typing
 
+<<<<<<< HEAD:labm8/py/lockfile.py
 from labm8.py import app
 from labm8.py import humanize
 from labm8.py import labdate
@@ -37,6 +38,13 @@ app.DEFINE_float(
   10.0,
   "The number of seconds to block for when waiting for a lock file.",
 )
+=======
+from absl import logging
+from phd.lib.labm8 import labdate
+from phd.lib.labm8 import pbutil
+from phd.lib.labm8 import system
+from phd.lib.labm8.proto import lockfile_pb2
+>>>>>>> 1eed6e90b... Automated code format.:lib/labm8/lockfile.py
 
 
 class Error(Exception):

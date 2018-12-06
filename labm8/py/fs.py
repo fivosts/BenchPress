@@ -39,6 +39,7 @@ import tempfile
 >>>>>>> 583709888... Move TemporaryWorkingDir() into labm8.:lib/labm8/fs.py
 import typing
 from glob import iglob
+
 from humanize import naturalsize
 <<<<<<< HEAD:labm8/py/fs.py
 >>>>>>> 4d50b51ca... Add a directory_is_empty() function.:lib/labm8/fs.py

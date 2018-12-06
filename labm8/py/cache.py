@@ -19,6 +19,7 @@ import json
 import pathlib
 import re
 <<<<<<< HEAD:labm8/py/cache.py
+<<<<<<< HEAD:labm8/py/cache.py
 import typing
 
 =======
@@ -41,7 +42,11 @@ from labm8.py import fs
 from labm8.py import io
 =======
 import six
+=======
+>>>>>>> 1eed6e90b... Automated code format.:lib/labm8/cache.py
 import typing
+
+import six
 from phd.lib.labm8 import crypto
 from phd.lib.labm8 import fs
 from phd.lib.labm8 import io

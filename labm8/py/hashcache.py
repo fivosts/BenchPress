@@ -17,6 +17,11 @@ Checksums files and directories and cache results. If a file or directory has
 not been modified, subsequent hashes are cache hits. Hashes are recomputed
 lazily, when a directory (or any of its subdirectories) have been modified.
 """
+<<<<<<< HEAD:labm8/py/hashcache.py
+=======
+
+import collections
+>>>>>>> 1eed6e90b... Automated code format.:lib/labm8/hashcache.py
 import os
 import pathlib
 import subprocess
@@ -24,6 +29,10 @@ import time
 import typing
 
 import checksumdir
+<<<<<<< HEAD:labm8/py/hashcache.py
+=======
+import humanize
+>>>>>>> 1eed6e90b... Automated code format.:lib/labm8/hashcache.py
 import sqlalchemy as sql
 <<<<<<< HEAD:labm8/py/hashcache.py
 from sqlalchemy.ext import declarative

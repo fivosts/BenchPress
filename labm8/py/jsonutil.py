@@ -13,6 +13,7 @@
 # limitations under the License.
 """JSON parser which supports comments.
 """
+<<<<<<< HEAD:labm8/py/jsonutil.py
 import json
 import re
 import typing
@@ -20,14 +21,21 @@ import typing
 <<<<<<< HEAD:labm8/py/jsonutil.py
 from labm8.py import fs
 =======
+=======
+>>>>>>> 1eed6e90b... Automated code format.:lib/labm8/jsonutil.py
 import json
+import re
 import typing
+<<<<<<< HEAD:labm8/py/jsonutil.py
 <<<<<<< HEAD:labm8/py/jsonutil.py
 >>>>>>> b5e037964... Move JSON type hint into jsonutil.:lib/labm8/jsonutil.py
 
 # A type alias for annotating methods which take or return JSON.
 JSON = typing.Union[typing.List[typing.Any], typing.Dict[str, typing.Any]]
 =======
+=======
+
+>>>>>>> 1eed6e90b... Automated code format.:lib/labm8/jsonutil.py
 from phd.lib.labm8 import fs
 
 >>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/jsonutil.py

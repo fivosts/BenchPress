@@ -18,6 +18,14 @@ import json
 import pathlib
 import subprocess
 import typing
+<<<<<<< HEAD:labm8/py/pbutil.py
+=======
+
+import google.protobuf.json_format
+import google.protobuf.message
+import google.protobuf.text_format
+from phd.lib.labm8 import jsonutil
+>>>>>>> 1eed6e90b... Automated code format.:lib/labm8/pbutil.py
 
 import google.protobuf.json_format
 import google.protobuf.message

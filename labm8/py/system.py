@@ -23,9 +23,12 @@ Variables:
 =======
 from __future__ import print_function
 
+<<<<<<< HEAD:labm8/py/system.py
 import os
 
 >>>>>>> c774253ad... Add a function to process a file in place.:lib/labm8/system.py
+=======
+>>>>>>> 1eed6e90b... Automated code format.:lib/labm8/system.py
 import getpass
 import os
 import socket
@@ -34,6 +37,7 @@ import sys
 import tempfile
 import threading
 import typing
+<<<<<<< HEAD:labm8/py/system.py
 <<<<<<< HEAD:labm8/py/system.py
 from sys import platform
 
@@ -48,6 +52,12 @@ from phd.lib.labm8 import fs
 from sys import platform
 
 >>>>>>> c774253ad... Add a function to process a file in place.:lib/labm8/system.py
+=======
+from sys import platform
+
+from phd.lib.labm8 import fs
+
+>>>>>>> 1eed6e90b... Automated code format.:lib/labm8/system.py
 
 HOSTNAME = socket.gethostname()
 USERNAME = getpass.getuser()
