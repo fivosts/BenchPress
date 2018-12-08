@@ -651,11 +651,15 @@ py_library(
     srcs = ["sqlutil.py"],
     visibility = ["//visibility:public"],
     deps = [
+<<<<<<< HEAD:labm8/py/BUILD
         ":humanize",
         ":labdate",
         ":pbutil",
         ":progress",
         ":text",
+=======
+        ":pbutil",
+>>>>>>> 5e7765450... Add SQLAlchemy utility mixins.:labm8/BUILD
         "//third_party/py/absl",
         "//third_party/py/sqlalchemy",
     ],
@@ -675,6 +679,7 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":sqlutil",
+        "//labm8/proto:test_protos",
         "//third_party/py/absl",
         "//third_party/py/pytest",
 >>>>>>> 4a3afd109... Add a CreateEngine() function.:labm8/BUILD
