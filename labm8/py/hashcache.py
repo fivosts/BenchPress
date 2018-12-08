@@ -134,7 +134,12 @@ class HashCache(sqlutil.Database):
     Raises:
       ValueError: If hash_fn not recognized.
     """
+<<<<<<< HEAD:labm8/py/hashcache.py
     super(HashCache, self).__init__(f"sqlite:///{path.absolute()}", Base)
+=======
+    super(HashCache, self).__init__(
+        f'sqlite:///{path}', Base, create_if_not_exist=True)
+>>>>>>> bea7be482... Add MySQL and PostgreSQL to sqlutil.Database.:labm8/hashcache.py
     self.hash_fn_name = hash_fn
     if hash_fn == "md5":
       self.hash_fn_file = crypto.md5_file
