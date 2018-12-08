@@ -665,10 +665,19 @@ py_test(
     name = "sqlutil_test",
     size = "small",
     srcs = ["sqlutil_test.py"],
+<<<<<<< HEAD:labm8/py/BUILD
     deps = [
         ":sqlutil",
         ":test",
         "//labm8/py/test_data:test_protos_pb_py",
+=======
+    default_python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        ":sqlutil",
+        "//third_party/py/absl",
+        "//third_party/py/pytest",
+>>>>>>> 4a3afd109... Add a CreateEngine() function.:labm8/BUILD
     ],
 )
 
