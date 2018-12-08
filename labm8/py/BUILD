@@ -511,7 +511,43 @@ py_test(
         ":app",
         ":fs",
         ":make",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
+=======
+        "//third_party/py/absl",
+        "//third_party/py/pytest",
+    ],
+)
+
+# A Jupyter notebook launcher that includes a bunch of dependencies which I
+# find useful. If you would like to include extra dependencies, create a new
+# py_binary target with this file as the srcs, and add the dependencies, like
+# this:
+#
+#    py_binary(
+#      name = "notebooks",
+#      srcs = ["//labm8:notebooks"],
+#      deps = [
+#          # Your dependencies here.
+#      ],
+#    )
+py_binary(
+    name = "notebooks",
+    srcs = ["notebooks.py"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":bazelutil",
+        ":pbutil",
+        ":sqlutil",
+        ":viz",
+        "//third_party/py/absl",
+        "//third_party/py/bokeh",
+        "//third_party/py/jupyter",
+        "//third_party/py/matplotlib",
+        "//third_party/py/numpy",
+        "//third_party/py/pandas",
+        "//third_party/py/seaborn",
+>>>>>>> 31e381197... Add new third party python packages.:labm8/BUILD
     ],
 )
 
