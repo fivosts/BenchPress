@@ -537,6 +537,7 @@ py_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":bazelutil",
+        ":labdate",
         ":pbutil",
         ":sqlutil",
         ":viz",
