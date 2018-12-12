@@ -519,6 +519,7 @@ py_test(
     ],
 )
 
+<<<<<<< HEAD:labm8/py/BUILD
 # A Jupyter notebook launcher that includes a bunch of dependencies which I
 # find useful. If you would like to include extra dependencies, create a new
 # py_binary target with this file as the srcs, and add the dependencies, like
@@ -559,6 +560,8 @@ py_binary(
     ],
 )
 
+=======
+>>>>>>> 77bad6326... Move //labm8:notebooks to //notebooks.:labm8/BUILD
 py_library(
     name = "pbutil",
     srcs = ["pbutil.py"],
