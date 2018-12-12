@@ -543,12 +543,19 @@ py_binary(
         ":viz",
         "//third_party/py/absl",
         "//third_party/py/bokeh",
+        "//third_party/py/graph_nets",
         "//third_party/py/jupyter",
+        "//third_party/py/keras",
         "//third_party/py/matplotlib",
         "//third_party/py/numpy",
         "//third_party/py/pandas",
         "//third_party/py/seaborn",
+<<<<<<< HEAD:labm8/py/BUILD
 >>>>>>> 31e381197... Add new third party python packages.:labm8/BUILD
+=======
+        "//third_party/py/sonnet",
+        "//third_party/py/tensorflow",
+>>>>>>> 8f8ba2553... Add ML packages to labm8 notebook server.:labm8/BUILD
     ],
 )
 
