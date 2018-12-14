@@ -570,7 +570,10 @@ class ProtoBackedMixin(object):
   Attributes:
     proto_t: The protocol buffer class that backs instances of this class.
   """
+<<<<<<< HEAD:labm8/py/pbutil.py
 
+=======
+>>>>>>> 223437295... Add ProtoBackedMixin for classes.:labm8/pbutil.py
   # Inheritinc classes must set this attribute to the Protocol Buffer class.
   proto_t = None
 
@@ -585,11 +588,18 @@ class ProtoBackedMixin(object):
     """
     # ABSTRACT METHOD. Inheriting classes must implement!
     raise NotImplementedError(
+<<<<<<< HEAD:labm8/py/pbutil.py
       f"{type(self).__name__}.SetProto() not implemented",
     )
 
   @classmethod
   def FromProto(cls, proto: ProtocolBuffer) -> "ProtoBackedMixin":
+=======
+        f'{type(self).__name__}.SetProto() not implemented')
+
+  @classmethod
+  def FromProto(cls, proto: ProtocolBuffer) -> 'ProtoBackednMixin':
+>>>>>>> 223437295... Add ProtoBackedMixin for classes.:labm8/pbutil.py
     """Return an instance of the class from proto.
 
     It is the responsibility of the inheriting class to ensure that all required
@@ -603,8 +613,12 @@ class ProtoBackedMixin(object):
     """
     # ABSTRACT METHOD. Inheriting classes must implement!
     raise NotImplementedError(
+<<<<<<< HEAD:labm8/py/pbutil.py
       f"{type(self).__name__}.FromProto() not implemented",
     )
+=======
+        f'{type(self).__name__}.FromProto() not implemented')
+>>>>>>> 223437295... Add ProtoBackedMixin for classes.:labm8/pbutil.py
 
   def ToProto(self) -> ProtocolBuffer:
     """Serialize the instance to protocol buffer.
@@ -620,7 +634,11 @@ class ProtoBackedMixin(object):
     return proto
 
   @classmethod
+<<<<<<< HEAD:labm8/py/pbutil.py
   def FromProtoFile(cls, path: pathlib.Path) -> "ProtoBackedMixin":
+=======
+  def FromProtoFile(cls, path: pathlib.Path) -> 'ProtoBackedMixin':
+>>>>>>> 223437295... Add ProtoBackedMixin for classes.:labm8/pbutil.py
     """Return an instance of the class from serialized proto file.
 
     Args:
