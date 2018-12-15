@@ -598,8 +598,12 @@ class ProtoBackedMixin(object):
         f'{type(self).__name__}.SetProto() not implemented')
 
   @classmethod
+<<<<<<< HEAD:labm8/py/pbutil.py
   def FromProto(cls, proto: ProtocolBuffer) -> 'ProtoBackednMixin':
 >>>>>>> 223437295... Add ProtoBackedMixin for classes.:labm8/pbutil.py
+=======
+  def FromProto(cls, proto: ProtocolBuffer) -> 'ProtoBackedMixin':
+>>>>>>> ba73bbf7a... Fix typo in type annotation.:labm8/pbutil.py
     """Return an instance of the class from proto.
 
     It is the responsibility of the inheriting class to ensure that all required
