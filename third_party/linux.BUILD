@@ -5,21 +5,16 @@ package(default_visibility = ["//visibility:public"])
 # Linux sources as filegroups.
 
 filegroup(
-    name = "srcs",
-    srcs = glob(["**/*.c"]),
+    name = "kernel_c_srcs",
+    srcs = glob(["kernel/**/*.c"]),
 )
 
 filegroup(
-    name = "hdrs",
-    srcs = glob(["**/*.h"]),
+    name = "kernel_c_hdrs",
+    srcs = glob(["kernel/**/*.h"]),
 )
 
 filegroup(
     name = "includes",
-    srcs = glob([
-        "include/**/*",
-        "arch/x86/include/**/*",
-        "arch/ia64/include/**/*",
-        "tools/include/**/*",
-    ]),
+    srcs = glob(["include/**/*"]),
 )
