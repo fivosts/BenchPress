@@ -100,7 +100,11 @@ class Archive(object):
       The path of the directory containing the uncompressed archive.
     """
     assert not self._uncompressed_path
+<<<<<<< HEAD:labm8/py/archive.py
     self._uncompressed_path = pathlib.Path(tempfile.mkdtemp(prefix="phd_"))
+=======
+    self._uncompressed_path = pathlib.Path(tempfile.mkdtemp(prefix='phd_'))
+>>>>>>> 0c7d6c0f1... Add ExtractAll() method to Archive.:labm8/archive.py
     return self.ExtractAll(self._uncompressed_path)
 
   def __exit__(self, *args):
