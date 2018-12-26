@@ -49,7 +49,13 @@ py_test(
 py_library(
     name = "archive",
     srcs = ["archive.py"],
+<<<<<<< HEAD:labm8/py/BUILD
     visibility = ["//visibility:public"],
+=======
+    deps = [
+        "//third_party/py/absl",
+    ],
+>>>>>>> bd678d383... Auto BUILD format.:labm8/BUILD
 )
 
 py_test(
@@ -58,7 +64,12 @@ py_test(
     deps = [
         ":app",
         ":archive",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
+=======
+        "//third_party/py/absl",
+        "//third_party/py/pytest",
+>>>>>>> bd678d383... Auto BUILD format.:labm8/BUILD
     ],
 )
 
