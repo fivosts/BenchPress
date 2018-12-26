@@ -68,7 +68,11 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
         ":archive",
+<<<<<<< HEAD:labm8/py/BUILD
         ":fs",
+=======
+        "//config:getconfig",
+>>>>>>> 0e24e1d99... Add a labm8.bazelutil.DataArchive class.:labm8/BUILD
     ],
 )
 
