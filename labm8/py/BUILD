@@ -65,11 +65,16 @@ py_test(
         ":app",
         ":archive",
 <<<<<<< HEAD:labm8/py/BUILD
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
 =======
         "//third_party/py/absl",
         "//third_party/py/pytest",
 >>>>>>> bd678d383... Auto BUILD format.:labm8/BUILD
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -96,7 +101,12 @@ py_test(
         ":app",
         ":bazelutil",
         ":fs",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -120,7 +130,12 @@ py_test(
         ":app",
         ":cache",
         ":fs",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -141,7 +156,12 @@ py_test(
     deps = [
         ":app",
         ":crypto",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -177,6 +197,7 @@ py_test(
     deps = [
         ":app",
         ":hashcache",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
     ],
 )
@@ -199,6 +220,10 @@ py_test(
         ":humanize",
         ":labdate",
         ":test",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -219,8 +244,13 @@ py_test(
     deps = [
         ":app",
         ":decorators",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
         "//third_party/py/pytest",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -276,7 +306,12 @@ py_test(
         ":app",
         ":fs",
         ":system",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -298,6 +333,7 @@ py_test(
     deps = [
         ":app",
         ":fmt",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
     ],
 )
@@ -332,6 +368,10 @@ py_test(
     deps = [
         ":gpu_scheduler",
         ":test",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -353,7 +393,12 @@ py_test(
         ":app",
         ":io",
         ":system",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -373,7 +418,12 @@ py_test(
         ":fs",
         ":jsonutil",
         ":system",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -393,7 +443,12 @@ py_test(
     deps = [
         ":app",
         ":labdate",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -415,7 +470,12 @@ py_test(
     deps = [
         ":app",
         ":labmath",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -432,7 +492,12 @@ py_test(
     deps = [
         ":app",
         ":labtypes",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -453,7 +518,12 @@ py_test(
     deps = [
         ":app",
         ":latex",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -479,8 +549,14 @@ py_test(
         ":lockfile",
         #        ":fs",
         ":pbutil",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
         # "//labm8/py/internal:lockfile_pb_py",
+=======
+        "//labm8:test",
+        "//labm8/proto:lockfile_py_pb2",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -503,7 +579,12 @@ py_test(
     deps = [
         ":app",
         ":logutil",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -527,10 +608,13 @@ py_test(
         ":fs",
         ":make",
 <<<<<<< HEAD:labm8/py/BUILD
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
 =======
+=======
+        "//labm8:test",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
         "//third_party/py/absl",
-        "//third_party/py/pytest",
     ],
 )
 
@@ -591,6 +675,7 @@ py_test(
     srcs = ["pbutil_test.py"],
     deps = [
         ":pbutil",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
         "//labm8/py/test_data:test_protos_pb_py",
     ],
@@ -616,6 +701,11 @@ py_test(
         ":sqlutil",
         ":test",
         "//third_party/py/sqlalchemy",
+=======
+        "//labm8:test",
+        "//labm8/proto:test_protos",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -642,8 +732,14 @@ py_test(
     ],
     deps = [
         ":ppar",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
         "//labm8/py/test_data/ppar:protos_pb_py",
+=======
+        "//labm8:test",
+        "//labm8/data/test/ppar:protos_py_pb2",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
         "//third_party/py/progressbar",
     ],
 )
@@ -668,6 +764,7 @@ py_test(
     deps = [
         ":app",
         ":prof",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
     ],
 )
@@ -690,6 +787,11 @@ py_test(
     deps = [
         ":progress",
         ":test",
+=======
+        ":system",
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -741,10 +843,14 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":sqlutil",
+        "//labm8:test",
         "//labm8/proto:test_protos",
         "//third_party/py/absl",
+<<<<<<< HEAD:labm8/py/BUILD
         "//third_party/py/pytest",
 >>>>>>> 4a3afd109... Add a CreateEngine() function.:labm8/BUILD
+=======
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -766,7 +872,12 @@ py_test(
         ":app",
         ":fs",
         ":system",
+<<<<<<< HEAD:labm8/py/BUILD
         ":test",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -783,8 +894,13 @@ py_library(
     srcs = ["test.py"],
     visibility = ["//visibility:public"],
     deps = [
+<<<<<<< HEAD:labm8/py/BUILD
         ":app",
         "//labm8/py/internal:pytest_plugin",
+=======
+        "//:conftest",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
         "//third_party/py/pytest",
     ],
 )
@@ -816,6 +932,11 @@ py_test(
         ":app",
         ":test",
         ":text",
+<<<<<<< HEAD:labm8/py/BUILD
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
 
@@ -839,10 +960,16 @@ py_test(
         ":app",
         ":test",
         ":viz",
+<<<<<<< HEAD:labm8/py/BUILD
         "//third_party/py/matplotlib",
         "//third_party/py/numpy",
         "//third_party/py/pandas",
         "//third_party/py/pytest",
         "//third_party/py/seaborn",
+=======
+        "//labm8:test",
+        "//third_party/py/absl",
+        "//third_party/py/matplotlib",
+>>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
