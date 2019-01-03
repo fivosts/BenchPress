@@ -14,6 +14,7 @@
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """Benchmarks for the preprocessing pipeline."""
 import pytest
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
 import typing
 
 from deeplearning.clgen import errors
@@ -24,6 +25,17 @@ from labm8 import test
 FLAGS = app.FLAGS
 
 MODULE_UNDER_TEST = 'deeplearning.clgen'
+=======
+from absl import app
+from absl import logging
+
+from deeplearning.clgen import errors
+from deeplearning.clgen.preprocessors import preprocessors
+from labm8 import test
+from absl import flags
+FLAGS = flags.FLAGS
+>>>>>>> ad2622a47... Port tests to //labm8:test.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
+
 
 # A full preprocessing pipeline for the C++ programming language.
 CXX_PREPROCESSORS = [
