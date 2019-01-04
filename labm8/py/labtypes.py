@@ -224,6 +224,7 @@ def AllSubclassesOfClass(cls: typing.Type) -> typing.Set[typing.Type]:
     A set of class types.
   """
   return set(cls.__subclasses__()).union(
+<<<<<<< HEAD:labm8/py/labtypes.py
     [s for c in cls.__subclasses__() for s in AllSubclassesOfClass(c)],
   )
 
@@ -261,3 +262,6 @@ def DeleteKeys(d, keys):
     if key in d:
       del d[key]
   return d
+=======
+      [s for c in cls.__subclasses__() for s in AllSubclassesOfClass(c)])
+>>>>>>> 8a82495b7... Add labm8.labtypes.AllSubclassesOfClass() method.:labm8/labtypes.py
