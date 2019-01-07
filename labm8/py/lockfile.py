@@ -339,8 +339,22 @@ class AutoLockFile(LockFile):
     """
 =======
       self,
+<<<<<<< HEAD:labm8/py/lockfile.py
       root: typing.Union[str, pathlib.Path] = '/tmp/phd/labm8/autolockfiles'):
 >>>>>>> 15940e205... Add an auto lock file class.:labm8/lockfile.py
+=======
+      root: typing.Union[str, pathlib.Path] = '/tmp/phd/labm8/autolockfiles',
+      granularity: str = 'line'):
+    """Constructor
+
+    Args:
+      root: The directory to place the lock file in.
+      granularity: The granularity of the lock, one of {line,function,module}.
+        'line' means that the lock is unique to the calling line. 'function'
+        means that the lock is unique to the calling function. 'module' means
+        that the lock is unique to the calling module.
+    """
+>>>>>>> de8b1f1ff... Support different granularities of autolockfile.:labm8/lockfile.py
     root = pathlib.Path(root)
 
     # Unlike the regular LockFile, an AutoLockFile will create the necessary
@@ -353,6 +367,7 @@ class AutoLockFile(LockFile):
     function_name = frame.function
     lineno = frame.lineno
 
+<<<<<<< HEAD:labm8/py/lockfile.py
 <<<<<<< HEAD:labm8/py/lockfile.py
     if granularity == "line":
       path = root / f"{module_name}_{function_name}_{lineno}.pbtxt"
@@ -369,4 +384,17 @@ class AutoLockFile(LockFile):
 =======
     path = root / f'{module_name}_{function_name}_{lineno}.pbtxt'
 >>>>>>> 15940e205... Add an auto lock file class.:labm8/lockfile.py
+=======
+    if granularity == 'line':
+      path = root / f'{module_name}_{function_name}_{lineno}.pbtxt'
+    elif granularity == 'function':
+      path = root / f'{module_name}_{function_name}.pbtxt'
+    elif granularity == 'module':
+      path = root / f'{module_name}.pbtxt'
+    else:
+      raise TypeError(
+          f"Invalid granularity '{granularity}'. Must be one of: "
+          f"{{line,function,module}}")
+
+>>>>>>> de8b1f1ff... Support different granularities of autolockfile.:labm8/lockfile.py
     super(AutoLockFile, self).__init__(path)
