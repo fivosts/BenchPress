@@ -283,12 +283,17 @@ class LockFile:
     """
     path = pathlib.Path(path)
     if path.is_file():
+<<<<<<< HEAD:labm8/py/lockfile.py
       try:
         return pbutil.FromFile(
           path, lockfile_pb2.LockFile(), assume_filename="LOCK.pbtxt",
         )
       except pbutil.DecodeError:
         raise MalformedLockfileError(path)
+=======
+      return pbutil.FromFile(
+          path, lockfile_pb2.LockFile(), assume_filename='LOCK.pbtxt')
+>>>>>>> 78ad17309... Tiny code format fix.:labm8/lockfile.py
     else:
       return lockfile_pb2.LockFile()
 
