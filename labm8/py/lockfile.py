@@ -318,6 +318,7 @@ class AutoLockFile(LockFile):
   """
 
   def __init__(
+<<<<<<< HEAD:labm8/py/lockfile.py
     self,
     root: typing.Union[str, pathlib.Path] = "/tmp/phd/labm8/autolockfiles",
     granularity: str = "line",
@@ -331,6 +332,10 @@ class AutoLockFile(LockFile):
         means that the lock is unique to the calling function. 'module' means
         that the lock is unique to the calling module.
     """
+=======
+      self,
+      root: typing.Union[str, pathlib.Path] = '/tmp/phd/labm8/autolockfiles'):
+>>>>>>> 15940e205... Add an auto lock file class.:labm8/lockfile.py
     root = pathlib.Path(root)
 
     # Unlike the regular LockFile, an AutoLockFile will create the necessary
@@ -343,6 +348,7 @@ class AutoLockFile(LockFile):
     function_name = frame.function
     lineno = frame.lineno
 
+<<<<<<< HEAD:labm8/py/lockfile.py
     if granularity == "line":
       path = root / f"{module_name}_{function_name}_{lineno}.pbtxt"
     elif granularity == "function":
@@ -355,4 +361,7 @@ class AutoLockFile(LockFile):
         f"{{line,function,module}}",
       )
 
+=======
+    path = root / f'{module_name}_{function_name}_{lineno}.pbtxt'
+>>>>>>> 15940e205... Add an auto lock file class.:labm8/lockfile.py
     super(AutoLockFile, self).__init__(path)
