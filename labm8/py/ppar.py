@@ -271,6 +271,7 @@ def MapNativeProcessingBinaries(
 WorkUnitType = typing.Callable[[typing.List[typing.Any]], typing.Any]
 WorkUnitArgGenerator = typing.Callable[[typing.Any], typing.Any]
 ResultCallback = typing.Callable[[typing.Any], None]
+<<<<<<< HEAD:labm8/py/ppar.py
 BatchCallback = typing.Callable[[int], None]
 
 
@@ -286,6 +287,22 @@ def MapDatabaseRowBatchProcessor(
   start_at: int = 0,
   pool: typing.Optional[multiprocessing.Pool] = None,
 ) -> None:
+=======
+BatchCallback = typing.Callable[[], None]
+
+
+def MapDatabaseRowBatchProcessor(
+    work_unit: WorkUnitType,
+    query: sqlutil.Query,
+    generate_work_unit_args: WorkUnitArgGenerator = lambda rows: rows,
+    work_unit_result_callback: ResultCallback = lambda result: None,
+    end_of_batch_callback: BatchCallback = lambda: None,
+    batch_size: int = 256, rows_per_work_unit: int = 5,
+    start_at: int = 0, query_row_count: int = None,
+    pool: typing.Optional[multiprocessing.Pool] = None,
+    input_rows_name: str = 'rows',
+    output_rows_name: str = 'rows') -> None:
+>>>>>>> 06406b3a3... Work in progress on db map.:labm8/ppar.py
   """Execute a database row-processesing function in parallel.
 
   Use this function to orchestrate the parallel execution of a function that
@@ -307,16 +324,33 @@ def MapDatabaseRowBatchProcessor(
     batch_size:
     rows_per_work_unit:
     start_at:
+<<<<<<< HEAD:labm8/py/ppar.py
     pool:
+=======
+    query_row_count: The total number of rows in the query.
+    pool:
+    input_rows_name:
+    output_rows_name:
+>>>>>>> 06406b3a3... Work in progress on db map.:labm8/ppar.py
 
   Returns:
     Foo.
   """
 
+<<<<<<< HEAD:labm8/py/ppar.py
+=======
+  def _MaxSuffix(i: int) -> str:
+    if query_row_count:
+      return f' {humanize.intcomma(query_row_count)} ({i/query_row_count:.1%})'
+    else:
+      return ''
+
+>>>>>>> 06406b3a3... Work in progress on db map.:labm8/ppar.py
   pool = pool or multiprocessing.Pool()
 
   i = start_at
   row_batches = sqlutil.OffsetLimitBatchedQuery(query, batch_size=batch_size)
+<<<<<<< HEAD:labm8/py/ppar.py
 
   for batch in row_batches:
     rows_batch = batch.rows
@@ -324,6 +358,18 @@ def MapDatabaseRowBatchProcessor(
 
     work_unit_args = [
       generate_work_unit_args(rows_batch[i : i + rows_per_work_unit])
+=======
+
+  logging.info('Starting at row %s%s', humanize.intcomma(start_at),
+               _MaxSuffix(i))
+
+  for rows_batch in row_batches:
+    logging.info('Processing batch of %d %s -> %s, %s%s',
+                 len(rows_batch), input_rows_name, output_rows_name,
+                 humanize.intcomma(i), _MaxSuffix(i))
+    work_unit_args = [
+      generate_work_unit_args(rows_batch[i:i + rows_per_work_unit])
+>>>>>>> 06406b3a3... Work in progress on db map.:labm8/ppar.py
       for i in range(0, len(rows_batch), rows_per_work_unit)
     ]
 
@@ -332,6 +378,7 @@ def MapDatabaseRowBatchProcessor(
 
     i += len(rows_batch)
 
+<<<<<<< HEAD:labm8/py/ppar.py
     end_of_batch_callback(i)
 
 
@@ -433,3 +480,6 @@ class ThreadedIterator:
         return self.value
       else:
         raise self.error
+=======
+    end_of_batch_callback()
+>>>>>>> 06406b3a3... Work in progress on db map.:labm8/ppar.py
