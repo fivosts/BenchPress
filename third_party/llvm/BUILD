@@ -119,7 +119,14 @@ sh_binary(
     }),
     visibility = ["//visibility:public"],
     deps = [
+<<<<<<< HEAD:third_party/llvm/BUILD
         "//labm8/sh:app",
+=======
+        ":feature_extractor",
+        "//labm8:test",
+        "//third_party/py/absl",
+        "//third_party/py/pytest",
+>>>>>>> dec37b744... Auto format BUILD file.:gpu/portable_mapping_of_data_parallel_programs_to_opencl/BUILD
     ],
 )
 
