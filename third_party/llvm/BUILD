@@ -26,6 +26,7 @@ bats_test(
         ":clang",
         "//labm8/sh:test",
     ],
+<<<<<<< HEAD:third_party/llvm/BUILD
 )
 
 sh_binary(
@@ -39,6 +40,8 @@ sh_binary(
             "@llvm_linux//:clang-format",
         ],
     }),
+=======
+>>>>>>> 7f3f24544... Set feature extractor as public.:gpu/portable_mapping_of_data_parallel_programs_to_opencl/BUILD
     visibility = ["//visibility:public"],
     deps = [
         "//labm8/sh:app",
