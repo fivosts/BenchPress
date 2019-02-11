@@ -63,7 +63,11 @@ class Archive(object):
 
     if suffixes[-1] == ".zip":
       self._open_function = zipfile.ZipFile
+<<<<<<< HEAD:labm8/py/archive.py
     elif suffixes[-2:] == [".tar", ".bz2"]:
+=======
+    elif suffixes[-2:] == ['.tar', '.bz2']:
+>>>>>>> ee0eceb12... Add support for .tar.bz2 data archives.:labm8/archive.py
       self._open_function = lambda f: tarfile.open(f, "r:bz2")
       # TODO(cec): Add support for .tar, and .tar.gz.
     else:
