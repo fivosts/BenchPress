@@ -23,12 +23,15 @@ import threading
 import typing
 
 <<<<<<< HEAD:labm8/py/ppar.py
+<<<<<<< HEAD:labm8/py/ppar.py
 from labm8.py import app
 from labm8.py import bazelutil
 from labm8.py import pbutil
 from labm8.py import sqlutil
 =======
 import humanize
+=======
+>>>>>>> e7d7b2684... Batched query returns named tuple.:labm8/ppar.py
 from absl import flags
 >>>>>>> 09956bade... Parallel execution fixes.:labm8/ppar.py
 
@@ -382,7 +385,8 @@ def MapDatabaseRowBatchProcessor(
       generate_work_unit_args(rows_batch[i : i + rows_per_work_unit])
 =======
 
-  for rows_batch in row_batches:
+  for batch in row_batches:
+    rows_batch = batch.rows
     start_of_batch_callback(i)
 
     work_unit_args = [
