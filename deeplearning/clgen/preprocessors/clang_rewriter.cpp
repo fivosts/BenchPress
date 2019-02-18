@@ -15,15 +15,8 @@
 //
 // Prints the number of variable and function names that are rewritten. If
 // nothing is rewritten, exit with status code
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-=======
-#define E_NO_INPUT 204
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
 //
-// Copyright 2016, 2017, 2018 Chris Cummins <chrisc.101@gmail.com>.
->>>>>>> 1bb095a06... Bump copyright to 2018:native/clgen-rewriter.cpp
-//
-// Copyright (c) 2016-2020 Chris Cummins.
+// Copyright (c) 2016, 2017, 2018, 2019 Chris Cummins.
 //
 // clgen is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -38,8 +31,6 @@
 // You should have received a copy of the GNU General Public License
 // along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 #define E_NO_INPUT 204
-=======
->>>>>>> f1ce9357e... Remove license headers.:deeplearning/clgen/native/clgen-rewriter.cpp
 
 #include <map>
 #include <memory>
@@ -47,10 +38,6 @@
 #include <sstream>
 #include <string>
 
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-=======
->>>>>>> 55d617346... Don't use system includes for LLVM headers.:native/clgen-rewriter.cpp
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -62,22 +49,6 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-=======
-#include <clang/AST/AST.h>
-#include <clang/AST/ASTConsumer.h>
-#include <clang/AST/ASTContext.h>
-#include <clang/AST/RecursiveASTVisitor.h>
-#include <clang/Driver/Options.h>
-#include <clang/Frontend/ASTConsumers.h>
-#include <clang/Frontend/CompilerInstance.h>
-#include <clang/Frontend/FrontendActions.h>
-#include <clang/Rewrite/Core/Rewriter.h>
-#include <clang/Tooling/CommonOptionsParser.h>
-#include <clang/Tooling/Tooling.h>
->>>>>>> 249792753... Flexible rewriter naming:native/clgen-rewriter.cpp
-=======
->>>>>>> 55d617346... Don't use system includes for LLVM headers.:native/clgen-rewriter.cpp
 
 // Uncomment the following line for verbose output:
 // #define VERBOSE
@@ -86,44 +57,9 @@
 
 // debugging print out
 #ifdef DEBUG
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-#define DEBUG_OUT(x) llvm::errs() << x;
-#else
-#define DEBUG_OUT(x)
-#endif
-
-#ifndef REWRITE_STYLE
-#warning "use -DREWRITE_STYLE to define a rewrite style"
-#define REWRITE_STYLE 0
-#endif
-
-#if REWRITE_STYLE == 0
-//
-// function names
-const std::string fn_prefix = "";
-const char fn_base_char = 'A';
-// variable names
-const char var_base_char = 'a';
-const std::string var_prefix = "";
-const std::string gb_prefix = "G";
-//
-#elif REWRITE_STYLE == 1
-//
-// function names
-const std::string fn_prefix = "fn_";
-const char fn_base_char = 'A';
-// variable names
-const char var_base_char = 'a';
-const std::string var_prefix = "";
-const std::string gb_prefix = "gb_";
-//
-#else
-#error "unknown rewrite style"
-=======
 # define DEBUG_OUT(x) llvm::errs() << x;
 #else
 # define DEBUG_OUT(x)
->>>>>>> ffef38882... native: Add conditional DEBUG printouts:native/clgen-rewriter.cpp
 #endif
 
 
@@ -172,6 +108,7 @@ static unsigned int _fn_call_rewrites_counter = 0;
 static unsigned int _var_decl_rewrites_counter = 0;
 static unsigned int _var_use_rewrites_counter = 0;
 
+
 // determine if rewriter has done any rewriting
 //
 static bool isRewritten() {
@@ -181,6 +118,7 @@ static bool isRewritten() {
           rewriter::_var_use_rewrites_counter);
 }
 
+
 // character types
 enum ctype { AZ, az };
 
@@ -188,9 +126,14 @@ enum ctype { AZ, az };
 // are many reserved words, but we select only the short ones, which are
 // plausible to occur in the real world.
 //
-std::set<std::string> reserved_names{"do", "if", "abs", "for", "int"};
+std::set<std::string> reserved_names {
+  "do",
+  "if",
+  "abs",
+  "for",
+  "int"
+};
 
-typedef std::map<std::string, std::string> rewrite_table_t;
 
 typedef std::map<std::string, std::string> rewrite_table_t;
 
@@ -199,13 +142,8 @@ typedef std::map<std::string, std::string> rewrite_table_t;
 //
 // Takes an existing rewrite table and inserts a.
 //
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-std::string get_next_name(rewrite_table_t& rewrites, const std::string& name,
-                          const char& base_char,
-=======
 std::string get_next_name(rewrite_table_t& rewrites,
                           const std::string& name, const char& base_char,
->>>>>>> f063de75d... native: Rewriter tidy up:native/clgen-rewriter.cpp
                           const std::string& prefix = "") {
   auto i = rewrites.size();
 
@@ -235,6 +173,7 @@ std::string get_next_name(rewrite_table_t& rewrites,
   return s;
 }
 
+
 class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
  private:
   std::unique_ptr<clang::ASTContext> _context;  // additional AST info
@@ -263,7 +202,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
   //
   std::string get_var_rewrite(rewrite_table_t& rewrites,
                               const std::string& name,
-                              const std::string& prefix = "") {
+                              const std::string& prefix="") {
     if (rewrites.find(name) == rewrites.end()) {
       // New variable:
       auto replacement = get_next_name(rewrites, name, var_base_char, prefix);
@@ -281,12 +220,8 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
     const auto fn_it = _local_vars.find(fn_name);
 
     // if there's no existing table, create one
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-    if (fn_it == _local_vars.end()) _local_vars[fn_name] = rewrite_table_t();
-=======
     if (fn_it == _local_vars.end())
       _local_vars[fn_name] = rewrite_table_t();
->>>>>>> f063de75d... native: Rewriter tidy up:native/clgen-rewriter.cpp
 
     return _local_vars[fn_name];
   }
@@ -301,7 +236,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
   }
 
  public:
-  explicit RewriterVisitor(clang::CompilerInstance* ci)
+  explicit RewriterVisitor(clang::CompilerInstance *ci)
       : _context(&(ci->getASTContext())) {
     rewriter.setSourceMgr(_context->getSourceManager(),
                           _context->getLangOpts());
@@ -309,21 +244,6 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
 
   virtual ~RewriterVisitor() {}
 
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-  void rewrite_fn_name(clang::FunctionDecl* const func,
-                       const std::string& replacement) {
-    rewriter.ReplaceText(func->getLocation(), replacement);
-    ++_fn_call_rewrites_counter;
-  }
-
-  void rewrite_fn_name(clang::CallExpr* const call,
-                       const std::string& replacement) {
-    rewriter.ReplaceText(call->getLocStart(), replacement);
-    ++_fn_call_rewrites_counter;
-  }
-
-  void rewrite_var_name(clang::DeclRefExpr* const ref,
-=======
   void rewrite_fn_name(clang::FunctionDecl *const func,
                        const std::string& replacement) {
    rewriter.ReplaceText(func->getLocation(), replacement);
@@ -337,17 +257,12 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
   }
 
   void rewrite_var_name(clang::DeclRefExpr *const ref,
->>>>>>> f063de75d... native: Rewriter tidy up:native/clgen-rewriter.cpp
                         const std::string& replacement) {
     rewriter.ReplaceText(ref->getLocStart(), replacement);
     ++_var_use_rewrites_counter;
   }
 
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-  void rewrite_var_name(clang::VarDecl* const decl,
-=======
   void rewrite_var_name(clang::VarDecl *const decl,
->>>>>>> f063de75d... native: Rewriter tidy up:native/clgen-rewriter.cpp
                         const std::string& replacement) {
     rewriter.ReplaceText(decl->getLocation(), replacement);
     ++_var_decl_rewrites_counter;
@@ -355,52 +270,17 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
 
   // rewrite function declarations
   //
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-  bool VisitFunctionDecl(clang::FunctionDecl* func) {
-    // only re-write functions declared in the main file
-    if (isMainFile(func->getLocation())) {
-      const auto name = func->getNameInfo().getName().getAsString();
-      const auto replacement = get_fn_rewrite(name);
-      rewrite_fn_name(func, replacement);
-      DEBUG_OUT("FunctionDecl " << name << " -> " << replacement << '\n');
-=======
   bool VisitFunctionDecl(clang::FunctionDecl *func) {
     // only re-write functions declared in the main file
     if (isMainFile(func->getLocation())) {
       const auto name = func->getNameInfo().getName().getAsString();
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-      rewrite_fn_name(func, get_fn_rewrite(name));
->>>>>>> f063de75d... native: Rewriter tidy up:native/clgen-rewriter.cpp
-=======
       const auto replacement = get_fn_rewrite(name);
       rewrite_fn_name(func, replacement);
       DEBUG_OUT("FunctionDecl " << name << " -> " << replacement << '\n');
->>>>>>> ffef38882... native: Add conditional DEBUG printouts:native/clgen-rewriter.cpp
     }
 
     return true;
   }
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-
-  // rewrite function calls
-  //
-  bool VisitCallExpr(clang::CallExpr* call) {
-    if (isMainFile(call->getLocStart())) {
-      // rewrite function calls
-      const auto callee = call->getDirectCallee();
-      if (callee) {
-        const auto name = callee->getNameInfo().getName().getAsString();
-
-        // rewrite fn name
-        const auto it = _fns.find(name);
-        if (it != _fns.end()) {
-          const auto replacement = (*it).second;
-          rewrite_fn_name(call, replacement);
-          DEBUG_OUT("CallExpr " << name << " -> " << replacement << '\n');
-        }
-      }  // else not a direct callee (do we need to handle that?)
-    }    // else not in main file
-=======
 
   // rewrite function calls
   //
@@ -420,73 +300,33 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
         }
       }  // else not a direct callee (do we need to handle that?)
     }  // else not in main file
->>>>>>> f063de75d... native: Rewriter tidy up:native/clgen-rewriter.cpp
 
     return true;
   }
 
   // rewrite variable declarations
   //
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-  bool VisitVarDecl(clang::VarDecl* decl) {
-    // only re-write variables declared in the main file
-    if (!isMainFile(decl->getLocation())) return true;
-=======
   bool VisitVarDecl(clang::VarDecl *decl) {
     // only re-write variables declared in the main file
     if (!isMainFile(decl->getLocation()))
       return true;
->>>>>>> f063de75d... native: Rewriter tidy up:native/clgen-rewriter.cpp
 
     if (auto d = clang::dyn_cast<clang::NamedDecl>(decl)) {
       const auto name = d->getNameAsString();
 
       // variables can be declared without a name (e.g. in function
       // declarations). Do not rewrite these
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-      if (name.empty()) return true;
-=======
       if (name.empty())
         return true;
->>>>>>> f063de75d... native: Rewriter tidy up:native/clgen-rewriter.cpp
 
       // get the parent function
       const auto* parent = d->getParentFunctionOrMethod();
       if (parent == nullptr) {
         // if there's no parent, then it's a global variable
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-        const auto replacement =
-            get_var_rewrite(_global_vars,  // rewrite table
-                            name,          // original name
-                            gb_prefix);    // prefix for new name
-
-        // rewrite variable name
-        rewrite_var_name(decl, replacement);
-        DEBUG_OUT("VarDecl " << name << " -> " << replacement << '\n');
-      } else if (auto fn = clang::dyn_cast<clang::FunctionDecl>(parent)) {
-        // if it's in function scope, get the rewrite table
-        auto& rewrite_table = get_fn_var_rewrite_table(fn);
-        const auto replacement =
-            get_var_rewrite(rewrite_table,  // rewrite table
-                            name,           // original name
-                            var_prefix);    // prefix for new name
-
-        // rewrite variable name
-        rewrite_var_name(decl, replacement);
-        DEBUG_OUT("VarDecl " << name << " -> " << replacement << '\n');
-      } else {
-        // this shouldn't happen
-        llvm::errs() << "warning: cannot determine scope of variable '" << name
-                     << "'\n";
-=======
-        const auto replacement = get_var_rewrite(_global_vars, name, "gb_");
-=======
         const auto replacement = get_var_rewrite(
             _global_vars,  // rewrite table
             name,  // original name
             gb_prefix);  // prefix for new name
->>>>>>> 249792753... Flexible rewriter naming:native/clgen-rewriter.cpp
 
         // rewrite variable name
         rewrite_var_name(decl, replacement);
@@ -506,7 +346,6 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
         // this shouldn't happen
         llvm::errs() << "warning: cannot determine scope of variable '"
                      << name << "'\n";
->>>>>>> f063de75d... native: Rewriter tidy up:native/clgen-rewriter.cpp
       }
     }
 
@@ -526,47 +365,24 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
         const auto it = _global_vars.find(name);
 
         // rewrite
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-=======
->>>>>>> ffef38882... native: Add conditional DEBUG printouts:native/clgen-rewriter.cpp
         if (it != _global_vars.end()) {
           const auto replacement = (*it).second;
           rewrite_var_name(ref, replacement);
           DEBUG_OUT("DeclRefExpr " << name << " -> " << replacement << '\n');
         }
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-=======
-        if (it != _global_vars.end())
-          rewrite_var_name(ref, (*it).second);
->>>>>>> f063de75d... native: Rewriter tidy up:native/clgen-rewriter.cpp
-=======
->>>>>>> ffef38882... native: Add conditional DEBUG printouts:native/clgen-rewriter.cpp
       } else if (auto fn = clang::dyn_cast<clang::FunctionDecl>(parent)) {
         // get rewrite name
         const auto& lookup_table = get_fn_var_rewrite_table(fn);
         const auto it = lookup_table.find(name);
 
         // rewrite
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-=======
->>>>>>> ffef38882... native: Add conditional DEBUG printouts:native/clgen-rewriter.cpp
         if (it != lookup_table.end()) {
           const auto replacement = (*it).second;
           rewrite_var_name(ref, replacement);
           DEBUG_OUT("DeclRefExpr " << name << " -> " << replacement << '\n');
         }
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/clang_rewriter.cpp
-=======
-        if (it != lookup_table.end())
-          rewrite_var_name(ref, (*it).second);
->>>>>>> f063de75d... native: Rewriter tidy up:native/clgen-rewriter.cpp
-=======
->>>>>>> ffef38882... native: Add conditional DEBUG printouts:native/clgen-rewriter.cpp
       } else {
-        llvm::errs() << "warning: cannot determine scope of variable '" << name
-                     << "'\n";
+        llvm::errs() << "warning: cannot determine scope of variable '" << name << "'\n";
       }
     }  // else not in main file
 
@@ -574,22 +390,25 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
   }
 };
 
+
 class RewriterASTConsumer : public clang::ASTConsumer {
  private:
-  RewriterVisitor* visitor;
+  RewriterVisitor *visitor;
 
  public:
   // override the constructor in order to pass CI
-  explicit RewriterASTConsumer(clang::CompilerInstance* ci)
-      : visitor(new RewriterVisitor(ci)) {}
+  explicit RewriterASTConsumer(clang::CompilerInstance *ci)
+      : visitor(new RewriterVisitor(ci))
+  { }
 
   // override this to call our RewriterVisitor on the entire source file
-  virtual void HandleTranslationUnit(clang::ASTContext& Context) {
+  virtual void HandleTranslationUnit(clang::ASTContext &Context) {
     // use ASTContext to get the TranslationUnitDecl, which is
     // a single Decl that collectively represents the entire source file
     visitor->TraverseDecl(Context.getTranslationUnitDecl());
   }
 };
+
 
 class RewriterFrontendAction : public clang::ASTFrontendAction {
  public:
@@ -599,7 +418,9 @@ class RewriterFrontendAction : public clang::ASTFrontendAction {
   }
 };
 
+
 }  // namespace rewriter
+
 
 // let's get shit done!
 //
@@ -607,9 +428,9 @@ int main(int argc, const char** argv) {
   clang::tooling::CommonOptionsParser op(argc, argv, rewriter::_tool_category);
   clang::tooling::ClangTool tool(op.getCompilations(), op.getSourcePathList());
 
-  const auto result = tool.run(clang::tooling::newFrontendActionFactory<
-                                   rewriter::RewriterFrontendAction>()
-                                   .get());
+  const auto result = tool.run(
+      clang::tooling::newFrontendActionFactory<
+        rewriter::RewriterFrontendAction>().get());
 
   const auto& id = rewriter::rewriter.getSourceMgr().getMainFileID();
 
@@ -627,8 +448,9 @@ int main(int argc, const char** argv) {
                << " variable declarations\n"
                << "Rewrote " << rewriter::_var_use_rewrites_counter
                << " variable uses\n";
-#else   // not VERBOSE
-  if (!rewriter::isRewritten()) return E_NO_INPUT;
+#else  // not VERBOSE
+  if (!rewriter::isRewritten())
+    return E_NO_INPUT;
 #endif  // VERBOSE
 
   rewriter::rewriter.getEditBuffer(id).write(llvm::outs());
