@@ -18,19 +18,18 @@ macos: brew install sdl2
 macos: brew install wget
 macos: brew install ffmpeg
 linux: # Install bazel:
-linux: curl -L -o /tmp/bazel.sh https://github.com/bazelbuild/bazel/releases/download/2.0.0/bazel-2.0.0-installer-linux-x86_64.sh && sudo bash /tmp/bazel.sh && rm /tmp/bazel.sh
+linux: curl -L -o /tmp/bazel.sh https://github.com/bazelbuild/bazel/releases/download/0.14.1/bazel-0.14.1-installer-linux-x86_64.sh
+linux: sudo bash /tmp/bazel.sh && rm /tmp/bazel.sh
 linux: # Update package index:
 linux: sudo apt-get update
 linux: sudo apt install -y --no-install-recommends ca-certificates
 linux: sudo apt install -y --no-install-recommends curl
-linux: sudo apt install -y --no-install-recommends wget
 linux: sudo apt install -y --no-install-recommends g++
 linux: sudo apt install -y --no-install-recommends git
-linux: sudo apt install -y --no-install-recommends ocl-icd-opencl-dev  # Needed for -lOpenCL
-linux: sudo apt install -y --no-install-recommends opencl-c-headers  # Needed for #include <CL/cl.h>
+linux: sudo apt install -y --no-install-recommends ocl-icd-opencl-dev
 linux: sudo apt install -y --no-install-recommends pkg-config
 linux: sudo apt install -y --no-install-recommends python
-linux: sudo apt install -y --no-install-recommends python-dev  # Python headers needed for pybind
+linux: sudo apt install -y --no-install-recommends python-dev
 linux: sudo apt install -y --no-install-recommends python3.6
 linux: sudo apt install -y --no-install-recommends python3.6-dev
 linux: sudo apt install -y --no-install-recommends python3-distutils
@@ -41,6 +40,7 @@ linux: sudo apt install -y --no-install-recommends openjdk-11-jdk
 linux: sudo apt install -y --no-install-recommends m4
 linux: sudo apt install -y --no-install-recommends libexempi-dev
 linux: sudo apt install -y --no-install-recommends rsync
+linux: sudo apt install -y --no-install-recommends texlive-full
 linux: sudo apt install -y --no-install-recommends python3-numpy
 linux: sudo apt install -y --no-install-recommends build-essential
 linux: sudo apt install -y --no-install-recommends libsdl2-dev
@@ -57,7 +57,3 @@ linux: sudo apt install -y --no-install-recommends timidity
 linux: sudo apt install -y --no-install-recommends libwildmidi-dev
 linux: sudo apt install -y --no-install-recommends libboost-all-dev
 linux: sudo apt install -y --no-install-recommends libsdl2-dev
-linux: # Required by bazel workspace rules:
-linux: sudo apt install -y --no-install-recommends patch
-# Required for building pyopencl:
-all: python -m pip install 'pybind11==2.4.3'
