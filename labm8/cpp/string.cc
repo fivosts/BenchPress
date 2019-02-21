@@ -100,6 +100,7 @@ string CopyAndReplaceSubstr(const string &s, const string &src,
   return boost::replace_all_copy(s, src, dst);
 }
 
+<<<<<<< HEAD:labm8/cpp/string.cc
 void TruncateWithEllipsis(string &s, const size_t &n) {
   if (n <= 3) {
     return;
@@ -114,3 +115,6 @@ void TruncateWithEllipsis(string &s, const size_t &n) {
 }
 
 }  // namespace labm8
+=======
+} // namespace phd
+>>>>>>> 7d69c03c4... Add Google utility code.:phd/string.cc
