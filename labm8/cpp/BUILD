@@ -137,8 +137,11 @@ cc_library(
         ":port",
         ":string",
         ":stringpiece",
+<<<<<<< HEAD:labm8/cpp/BUILD
         "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/time",
+=======
+>>>>>>> 946613116... Fixes for Google logging port.:phd/BUILD
     ],
 )
 
