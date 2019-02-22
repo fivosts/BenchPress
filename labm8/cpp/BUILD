@@ -138,10 +138,15 @@ cc_library(
         ":string",
         ":stringpiece",
 <<<<<<< HEAD:labm8/cpp/BUILD
+<<<<<<< HEAD:labm8/cpp/BUILD
         "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/time",
 =======
 >>>>>>> 946613116... Fixes for Google logging port.:phd/BUILD
+=======
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/time",
+>>>>>>> 86760c837... Use same logging formatting in C++ as Python.:phd/BUILD
     ],
 )
 
