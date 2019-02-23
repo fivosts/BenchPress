@@ -251,7 +251,11 @@ cc_test(
     srcs = ["statusor_test.cc"],
     deps = [
         ":statusor",
+<<<<<<< HEAD:labm8/cpp/BUILD
         "//labm8/cpp:test",
+=======
+        "//phd:test",
+>>>>>>> 19ba8b861... Add statusor tests.:phd/BUILD
     ],
 )
 
