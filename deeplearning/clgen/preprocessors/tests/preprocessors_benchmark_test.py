@@ -22,6 +22,7 @@ from deeplearning.clgen.preprocessors import preprocessors
 from labm8.py import app
 from labm8.py import test
 
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
 FLAGS = app.FLAGS
 
 MODULE_UNDER_TEST = "deeplearning.clgen"
@@ -53,6 +54,40 @@ OPENCL_PREPROCESSORS = [
 def _PreprocessBenchmarkInnerLoop(
   preprocessors_: typing.List[str], code_in: str, code_out: str
 ):
+=======
+FLAGS = flags.FLAGS
+
+# A full preprocessing pipeline for the C++ programming language.
+CXX_PREPROCESSORS = [
+    'deeplearning.clgen.preprocessors.cxx:ClangPreprocess',
+    'deeplearning.clgen.preprocessors.cxx:Compile',
+    'deeplearning.clgen.preprocessors.cxx'
+    ':NormalizeIdentifiers',
+    'deeplearning.clgen.preprocessors.common'
+    ':StripDuplicateEmptyLines',
+    'deeplearning.clgen.preprocessors.common'
+    ':MinimumLineCount3',
+    'deeplearning.clgen.preprocessors.common'
+    ':StripTrailingWhitespace',
+    'deeplearning.clgen.preprocessors.cxx:ClangFormat',
+]
+# A full preprocessing pipeline for the OpenCL programming language.
+OPENCL_PREPROCESSORS = [
+    'deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim',
+    'deeplearning.clgen.preprocessors.opencl:Compile',
+    'deeplearning.clgen.preprocessors.opencl:NormalizeIdentifiers',
+    'deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes',
+    'deeplearning.clgen.preprocessors.common:StripDuplicateEmptyLines',
+    'deeplearning.clgen.preprocessors.opencl:SanitizeKernelPrototype',
+    'deeplearning.clgen.preprocessors.common:StripTrailingWhitespace',
+    'deeplearning.clgen.preprocessors.opencl:ClangFormat',
+    'deeplearning.clgen.preprocessors.common:MinimumLineCount3',
+]
+
+
+def _PreprocessBenchmarkInnerLoop(preprocessors_: typing.List[str],
+                                  code_in: str, code_out: str):
+>>>>>>> 3333e1db6... Auto format files.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
   """Benchmark inner loop for code with expected output."""
   assert preprocessors.Preprocess(code_in, preprocessors_) == code_out
 

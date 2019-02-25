@@ -22,10 +22,16 @@ from deeplearning.clgen.proto import clgen_pb2
 from deeplearning.clgen.proto import corpus_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
+<<<<<<< HEAD:deeplearning/clgen/tests/fixtures.py
 from labm8.py import pbutil
 from labm8.py import test
 
 FLAGS = test.FLAGS
+=======
+from labm8 import pbutil
+
+FLAGS = flags.FLAGS
+>>>>>>> 3333e1db6... Auto format files.:deeplearning/clgen/conftest.py
 
 
 @test.Fixture(scope="function")
@@ -83,10 +89,16 @@ def abc_corpus_archive(abc_corpus) -> str:
 def abc_corpus_config(abc_corpus):
   """The proto config for a simple Corpus."""
   return corpus_pb2.Corpus(
+<<<<<<< HEAD:deeplearning/clgen/tests/fixtures.py
     local_directory=abc_corpus,
     ascii_character_atomizer=True,
     contentfile_separator="\n\n",
   )
+=======
+      local_directory=abc_corpus,
+      ascii_character_atomizer=True,
+      contentfile_separator='\n\n')
+>>>>>>> 3333e1db6... Auto format files.:deeplearning/clgen/conftest.py
 
 
 @test.Fixture(scope="function")
@@ -108,6 +120,7 @@ def abc_model_config(abc_corpus_config):
     normalized_gradient_clip_micros=5000000,
   )
   training = model_pb2.TrainingOptions(
+<<<<<<< HEAD:deeplearning/clgen/tests/fixtures.py
     num_epochs=1,
     sequence_length=10,
     batch_size=5,
@@ -120,11 +133,24 @@ def abc_model_config(abc_corpus_config):
 
 
 @test.Fixture(scope="function")
+=======
+      num_epochs=1,
+      sequence_length=10,
+      batch_size=5,
+      shuffle_corpus_contentfiles_between_epochs=False,
+      adam_optimizer=optimizer)
+  return model_pb2.Model(
+      corpus=abc_corpus_config, architecture=architecture, training=training)
+
+
+@pytest.fixture(scope='function')
+>>>>>>> 3333e1db6... Auto format files.:deeplearning/clgen/conftest.py
 def abc_sampler_config():
   """The sampler config for a simple Sampler."""
   maxlen = sampler_pb2.MaxTokenLength(maximum_tokens_in_sample=5)
   sample_stop = [sampler_pb2.SampleTerminationCriterion(maxlen=maxlen)]
   return sampler_pb2.Sampler(
+<<<<<<< HEAD:deeplearning/clgen/tests/fixtures.py
     start_text="a",
     batch_size=5,
     sequence_length=10,
@@ -143,6 +169,22 @@ def abc_instance_config(
     model=abc_model_config,
     sampler=abc_sampler_config,
   )
+=======
+      start_text='a',
+      batch_size=5,
+      termination_criteria=sample_stop,
+      temperature_micros=1000000)
+
+
+@pytest.fixture(scope='function')
+def abc_instance_config(clgen_cache_dir, abc_model_config,
+                        abc_sampler_config) -> clgen_pb2.Instance:
+  """A test fixture that returns an Instance config proto."""
+  return clgen_pb2.Instance(
+      working_dir=clgen_cache_dir,
+      model=abc_model_config,
+      sampler=abc_sampler_config)
+>>>>>>> 3333e1db6... Auto format files.:deeplearning/clgen/conftest.py
 
 
 @test.Fixture(scope="function")
