@@ -46,7 +46,6 @@ FLAGS = flags.FLAGS
 =======
 >>>>>>> 1c758426a... Automated python code format.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
 
-
 FLAGS = flags.FLAGS
 
 # A full preprocessing pipeline for the C++ programming language.
@@ -66,6 +65,9 @@ CXX_PREPROCESSORS = [
 # A full preprocessing pipeline for the OpenCL programming language.
 OPENCL_PREPROCESSORS = [
 <<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
+=======
+>>>>>>> 3333e1db6... Auto format files.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
     'deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim',
     'deeplearning.clgen.preprocessors.opencl:Compile',
     'deeplearning.clgen.preprocessors.opencl:NormalizeIdentifiers',
@@ -76,6 +78,7 @@ OPENCL_PREPROCESSORS = [
     'deeplearning.clgen.preprocessors.opencl:ClangFormat',
     'deeplearning.clgen.preprocessors.common:MinimumLineCount3',
 ]
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
 =======
   'deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim',
   'deeplearning.clgen.preprocessors.opencl:Compile',
@@ -87,6 +90,8 @@ OPENCL_PREPROCESSORS = [
   'deeplearning.clgen.preprocessors.opencl:ClangFormat',
   'deeplearning.clgen.preprocessors.common:MinimumLineCount3', ]
 >>>>>>> 63feea4fe... Documentation and tidy up.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
+=======
+>>>>>>> 3333e1db6... Auto format files.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
 
 
 def _PreprocessBenchmarkInnerLoop(preprocessors_: typing.List[str],
