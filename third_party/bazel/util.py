@@ -14,11 +14,19 @@
 from os import path
 
 REPO_ROOTS = {
+<<<<<<< HEAD:third_party/bazel/util.py
   "GERRIT": "http://gerrit-maven.storage.googleapis.com",
   "GERRIT_API": "https://gerrit-api.commondatastorage.googleapis.com/release",
   "MAVEN_CENTRAL": "http://central.maven.org/maven2",
   "MAVEN_LOCAL": "file://" + path.expanduser("~/.m2/repository"),
   "MAVEN_SNAPSHOT": "https://oss.sonatype.org/content/repositories/snapshots",
+=======
+    'GERRIT': 'http://gerrit-maven.storage.googleapis.com',
+    'GERRIT_API': 'https://gerrit-api.commondatastorage.googleapis.com/release',
+    'MAVEN_CENTRAL': 'http://central.maven.org/maven2',
+    'MAVEN_LOCAL': 'file://' + path.expanduser('~/.m2/repository'),
+    'MAVEN_SNAPSHOT': 'https://oss.sonatype.org/content/repositories/snapshots',
+>>>>>>> 5fb74eaea... Auto format files.:tools/util.py
 }
 
 
