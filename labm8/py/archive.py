@@ -6,6 +6,13 @@ import tempfile
 import typing
 import zipfile
 
+<<<<<<< HEAD:labm8/py/archive.py
+=======
+from absl import flags
+
+FLAGS = flags.FLAGS
+
+>>>>>>> 105797fd4... Auto format files.:labm8/archive.py
 
 class UnsupportedArchiveFormat(ValueError):
   """Raised in case an archive has an unsupported file format."""
@@ -29,10 +36,16 @@ class Archive(object):
   """
 
   def __init__(
+<<<<<<< HEAD:labm8/py/archive.py
     self,
     path: typing.Union[str, pathlib.Path],
     assume_filename: typing.Optional[typing.Union[str, pathlib.Path]] = None,
   ):
+=======
+      self,
+      path: typing.Union[str, pathlib.Path],
+      assume_filename: typing.Optional[typing.Union[str, pathlib.Path]] = None):
+>>>>>>> 105797fd4... Auto format files.:labm8/archive.py
     """Create an archive.
 
     Will determine the type of the archive from the suffix, e.g. if path is
