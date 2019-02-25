@@ -23,8 +23,13 @@ bats_test(
     name = "clang_smoke_test",
     srcs = ["clang_smoke_test.bats"],
     data = [
+<<<<<<< HEAD:third_party/llvm/BUILD
         ":clang",
         "//labm8/sh:test",
+=======
+        ":feature_extractor_binary",
+        "//third_party/opencl/inlined",
+>>>>>>> d9e584789... Move inlined header.:research/grewe_2013_cgo/BUILD
     ],
 <<<<<<< HEAD:third_party/llvm/BUILD
 )
@@ -140,6 +145,7 @@ bats_test(
         ":llvm-link",
         "//labm8/sh:test",
     ],
+<<<<<<< HEAD:third_party/llvm/BUILD
 )
 
 sh_binary(
@@ -172,6 +178,8 @@ bats_test(
 # want to use the LLVM headers and library.
 cc_library(
     name = "llvm",
+=======
+>>>>>>> d9e584789... Move inlined header.:research/grewe_2013_cgo/BUILD
     data = select({
         "//:darwin": ["@llvm_mac//:libdir"],
         "//conditions:default": ["@llvm_linux//:libdir"],
