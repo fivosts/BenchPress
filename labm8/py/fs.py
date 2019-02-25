@@ -238,11 +238,16 @@ def isdir(*components):
 
 
 <<<<<<< HEAD:labm8/py/fs.py
+<<<<<<< HEAD:labm8/py/fs.py
 def ls(
   root: typing.Union[str, pathlib.Path] = ".", abspaths=False, recursive=False,
 ):
 =======
 def ls(root: typing.Union[str, pathlib.Path] = ".", abspaths=False,
+=======
+def ls(root: typing.Union[str, pathlib.Path] = ".",
+       abspaths=False,
+>>>>>>> 150d66672... Auto format files.:labm8/fs.py
        recursive=False):
 >>>>>>> 65a5cab7a... Add pathlib.Path to fs.ls() type annotation.:lib/labm8/fs.py
   """
@@ -279,9 +284,14 @@ def ls(root: typing.Union[str, pathlib.Path] = ".", abspaths=False,
 
   def _expand_subdirs(file):
     if isdir(path(root, file)):
+<<<<<<< HEAD:labm8/py/fs.py
       return [file,] + [
         path(file, x) for x in ls(path(root, file), recursive=True)
       ]
+=======
+      return [file
+             ] + [path(file, x) for x in ls(path(root, file), recursive=True)]
+>>>>>>> 150d66672... Auto format files.:labm8/fs.py
     else:
       return [file]
 
@@ -502,6 +512,7 @@ def read(*components, **kwargs):
     if rstrip:
       # Ignore comments, and right strip results.
 <<<<<<< HEAD:labm8/py/fs.py
+<<<<<<< HEAD:labm8/py/fs.py
       return [
         re.match(not_comment_re, line).group(0).rstrip()
         for line in lines
@@ -522,6 +533,20 @@ def read(*components, **kwargs):
       return [re.match(not_comment_re, line).group(0) for line in lines if
               not re.match(comment_line_re, line)]
 >>>>>>> 4d50b51ca... Add a directory_is_empty() function.:lib/labm8/fs.py
+=======
+      return [
+          re.match(not_comment_re, line).group(0).rstrip()
+          for line in lines
+          if not re.match(comment_line_re, line)
+      ]
+    else:
+      # Ignore comments, and don't strip results.
+      return [
+          re.match(not_comment_re, line).group(0)
+          for line in lines
+          if not re.match(comment_line_re, line)
+      ]
+>>>>>>> 150d66672... Auto format files.:labm8/fs.py
   elif rstrip:
     # No comments, and right strip results.
     return [line.rstrip() for line in lines]

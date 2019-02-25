@@ -50,6 +50,7 @@ from phd.lib.labm8 import fs
 from phd.lib.labm8 import sqlutil
 from sqlalchemy.ext import declarative
 
+<<<<<<< HEAD:labm8/py/hashcache.py
 >>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/hashcache.py
 
 FLAGS = app.FLAGS
@@ -66,6 +67,20 @@ class InMemoryCacheKey(typing.NamedTuple):
   path: str
 
 
+=======
+from labm8 import crypto
+from labm8 import fs
+from labm8 import sqlutil
+
+FLAGS = flags.FLAGS
+
+Base = declarative.declarative_base()
+
+# An in-memory cache which is optionally shared amongst all HashCache instances.
+# The in-memory cache omits timestamps from records.
+InMemoryCacheKey = collections.namedtuple('InMemoryCacheKey',
+                                          ['hash_fn', 'path'])
+>>>>>>> 150d66672... Auto format files.:labm8/hashcache.py
 IN_MEMORY_CACHE: typing.Dict[InMemoryCacheKey, str] = {}
 
 
@@ -109,18 +124,33 @@ def GetDirectoryMTime(path: pathlib.Path) -> int:
   #    /usr/local/opt/findutils/libexec/gnubin
   #    /usr/local/opt/coreutils/libexec/gnubin
   output = subprocess.check_output(
+<<<<<<< HEAD:labm8/py/hashcache.py
     f"find '{path}' -type f | xargs -d'\n' stat -c '%Y:%n' | sort -t: -n | "
     "tail -1 | cut -d: -f1",
     universal_newlines=True,
     shell=True,
   )
+=======
+      f"find '{path}' -type f | xargs -d'\n' stat -c '%Y:%n' | sort -t: -n | "
+      "tail -1 | cut -d: -f1",
+      universal_newlines=True,
+      shell=True)
+>>>>>>> 150d66672... Auto format files.:labm8/hashcache.py
   return int(output)
 
 
 class HashCache(sqlutil.Database):
+<<<<<<< HEAD:labm8/py/hashcache.py
   def __init__(
     self, path: pathlib.Path, hash_fn: str, keep_in_memory: bool = False,
   ):
+=======
+
+  def __init__(self,
+               path: pathlib.Path,
+               hash_fn: str,
+               keep_in_memory: bool = False):
+>>>>>>> 150d66672... Auto format files.:labm8/hashcache.py
     """Instantiate a hash cache.
 
     Args:
@@ -201,10 +231,15 @@ class HashCache(sqlutil.Database):
     else:
       last_modified_fn = lambda path: GetDirectoryMTime(path)
     return self._InMemoryWrapper(
+<<<<<<< HEAD:labm8/py/hashcache.py
       absolute_path,
       last_modified_fn,
       lambda x: checksumdir.dirhash(x, self.hash_fn_name),
     )
+=======
+        absolute_path,
+        last_modified_fn, lambda x: checksumdir.dirhash(x, self.hash_fn_name))
+>>>>>>> 150d66672... Auto format files.:labm8/hashcache.py
 
   def _HashFile(self, absolute_path: pathlib.Path) -> str:
     return self._InMemoryWrapper(
@@ -225,19 +260,29 @@ class HashCache(sqlutil.Database):
       if in_memory_key in IN_MEMORY_CACHE:
         app.Log(2, "In-memory cache hit: '%s'", absolute_path)
         return IN_MEMORY_CACHE[in_memory_key]
+<<<<<<< HEAD:labm8/py/hashcache.py
     hash_ = self._DoHash(
       absolute_path, last_modified_fn(absolute_path), hash_fn,
     )
+=======
+    hash_ = self._DoHash(absolute_path, last_modified_fn(absolute_path),
+                         hash_fn)
+>>>>>>> 150d66672... Auto format files.:labm8/hashcache.py
     if self.keep_in_memory:
       IN_MEMORY_CACHE[in_memory_key] = hash_
     return hash_
 
+<<<<<<< HEAD:labm8/py/hashcache.py
   def _DoHash(
     self,
     absolute_path: pathlib.Path,
     last_modified: int,
     hash_fn: typing.Callable[[pathlib.Path], str],
   ) -> str:
+=======
+  def _DoHash(self, absolute_path: pathlib.Path, last_modified: int,
+              hash_fn: typing.Callable[[pathlib.Path], str]) -> str:
+>>>>>>> 150d66672... Auto format files.:labm8/hashcache.py
     with self.Session() as session:
       cached_entry = (
         session.query(HashCacheRecord)

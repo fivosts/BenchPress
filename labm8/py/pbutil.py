@@ -27,9 +27,13 @@ import google.protobuf.text_format
 from phd.lib.labm8 import jsonutil
 >>>>>>> 1eed6e90b... Automated code format.:lib/labm8/pbutil.py
 
+<<<<<<< HEAD:labm8/py/pbutil.py
 import google.protobuf.json_format
 import google.protobuf.message
 import google.protobuf.text_format
+=======
+from labm8 import jsonutil
+>>>>>>> 150d66672... Auto format files.:labm8/pbutil.py
 
 # A type alias for annotating methods which take or return protocol buffers.
 ProtocolBuffer = typing.Any
@@ -56,6 +60,7 @@ class DecodeError(ProtoValueError):
   pass
 
 
+<<<<<<< HEAD:labm8/py/pbutil.py
 class ProtoWorkerTimeoutError(subprocess.CalledProcessError):
   """Raised is a protobuf worker binary times out."""
 
@@ -77,6 +82,11 @@ class ProtoWorkerTimeoutError(subprocess.CalledProcessError):
 def FromString(
   string: str, message: ProtocolBuffer, uninitialized_okay: bool = False,
 ) -> ProtocolBuffer:
+=======
+def FromString(string: str,
+               message: ProtocolBuffer,
+               uninitialized_okay: bool = False) -> ProtocolBuffer:
+>>>>>>> 150d66672... Auto format files.:labm8/pbutil.py
   """Read a text format protocol buffer from a string.
 
   Args:
@@ -105,11 +115,18 @@ def FromString(
 
 
 def FromFile(
+<<<<<<< HEAD:labm8/py/pbutil.py
   path: pathlib.Path,
   message: ProtocolBuffer,
   assume_filename: typing.Optional[typing.Union[str, pathlib.Path]] = None,
   uninitialized_okay: bool = False,
 ) -> ProtocolBuffer:
+=======
+    path: pathlib.Path,
+    message: ProtocolBuffer,
+    assume_filename: typing.Optional[typing.Union[str, pathlib.Path]] = None,
+    uninitialized_okay: bool = False) -> ProtocolBuffer:
+>>>>>>> 150d66672... Auto format files.:labm8/pbutil.py
   """Read a protocol buffer from a file.
 
   This method uses attempts to guess the encoding from the path suffix,
@@ -185,10 +202,17 @@ def FromFile(
 
 
 def ToFile(
+<<<<<<< HEAD:labm8/py/pbutil.py
   message: ProtocolBuffer,
   path: pathlib.Path,
   exist_ok: bool = True,
   assume_filename: typing.Optional[typing.Union[str, pathlib.Path]] = None,
+=======
+    message: ProtocolBuffer,
+    path: pathlib.Path,
+    exist_ok: bool = True,
+    assume_filename: typing.Optional[typing.Union[str, pathlib.Path]] = None
+>>>>>>> 150d66672... Auto format files.:labm8/pbutil.py
 ) -> ProtocolBuffer:
   """Write a protocol buffer to a file.
 
@@ -251,12 +275,19 @@ def ToFile(
   with open_function(path, mode) as f:
     if suffix == ".txt" or suffix == ".pbtxt":
       f.write(google.protobuf.text_format.MessageToString(message))
+<<<<<<< HEAD:labm8/py/pbutil.py
     elif suffix == ".json":
       f.write(
         google.protobuf.json_format.MessageToJson(
           message, preserving_proto_field_name=True,
         ),
       )
+=======
+    elif suffix == '.json':
+      f.write(
+          google.protobuf.json_format.MessageToJson(
+              message, preserving_proto_field_name=True))
+>>>>>>> 150d66672... Auto format files.:labm8/pbutil.py
     else:
       f.write(message.SerializeToString())
 
@@ -293,9 +324,14 @@ def _TruncatedString(string: str, n: int = 80) -> str:
     return string
 
 
+<<<<<<< HEAD:labm8/py/pbutil.py
 def _TruncateDictionaryStringValues(
   data: "jsonutil.JSON", n: int = 62,
 ) -> "jsonutil.JSON":
+=======
+def _TruncateDictionaryStringValues(data: jsonutil.JSON,
+                                    n: int = 62) -> jsonutil.JSON:
+>>>>>>> 150d66672... Auto format files.:labm8/pbutil.py
   """Truncate all string values in a nested dictionary.
 
   Args:
@@ -327,10 +363,16 @@ def PrettyPrintJson(message: ProtocolBuffer, truncate: int = 52) -> str:
   """
   data = ToJson(message)
   return json.dumps(
+<<<<<<< HEAD:labm8/py/pbutil.py
     _TruncateDictionaryStringValues(data) if truncate else data,
     indent=2,
     sort_keys=True,
   )
+=======
+      _TruncateDictionaryStringValues(data) if truncate else data,
+      indent=2,
+      sort_keys=True)
+>>>>>>> 150d66672... Auto format files.:labm8/pbutil.py
 
 
 def RaiseIfNotSet(
@@ -376,9 +418,15 @@ def ProtoIsReadable(
     return False
 
 
+<<<<<<< HEAD:labm8/py/pbutil.py
 def AssertFieldIsSet(
   proto: ProtocolBuffer, field_name: str, fail_message: str = None,
 ) -> typing.Optional[typing.Any]:
+=======
+def AssertFieldIsSet(proto: ProtocolBuffer,
+                     field_name: str,
+                     fail_message: str = None) -> typing.Optional[typing.Any]:
+>>>>>>> 150d66672... Auto format files.:labm8/pbutil.py
   """Assert that protocol buffer field is set.
 
   Args:
@@ -399,18 +447,30 @@ def AssertFieldIsSet(
   """
   if not proto.HasField(field_name):
     proto_class_name = type(proto).__name__
+<<<<<<< HEAD:labm8/py/pbutil.py
     raise ProtoValueError(
       fail_message or f"Field not set: '{proto_class_name}.{field_name}'",
     )
+=======
+    raise ProtoValueError(fail_message or
+                          f"Field not set: '{proto_class_name}.{field_name}'")
+>>>>>>> 150d66672... Auto format files.:labm8/pbutil.py
   return getattr(proto, field_name) if hasattr(proto, field_name) else None
 
 
 def AssertFieldConstraint(
+<<<<<<< HEAD:labm8/py/pbutil.py
   proto: ProtocolBuffer,
   field_name: str,
   constraint: typing.Callable[[typing.Any], bool] = lambda x: True,
   fail_message: str = None,
 ) -> typing.Any:
+=======
+    proto: ProtocolBuffer,
+    field_name: str,
+    constraint: typing.Callable[[typing.Any], bool] = lambda x: True,
+    fail_message: str = None) -> typing.Any:
+>>>>>>> 150d66672... Auto format files.:labm8/pbutil.py
   """Assert a constraint on the value of a protocol buffer field.
 
   Args:
@@ -467,12 +527,16 @@ def RunProcessMessage(
     CalledProcessError: If the command terminates with a non-zero returncode.
   """
   # Run the C++ worker process, capturing it's output.
+<<<<<<< HEAD:labm8/py/pbutil.py
   process = subprocess.Popen(
     ["timeout", "-s9", str(timeout_seconds)] + cmd,
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
     env=env,
   )
+=======
+  process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+>>>>>>> 150d66672... Auto format files.:labm8/pbutil.py
   # Send the input proto to the C++ worker process.
   stdout, _ = process.communicate(input_proto.SerializeToString())
 
@@ -524,6 +588,7 @@ def RunProcessMessageToProto(
   return output_proto
 
 
+<<<<<<< HEAD:labm8/py/pbutil.py
 def RunProcessMessageInPlace(
   cmd: typing.List[str],
   input_proto: ProtocolBuffer,
@@ -531,6 +596,15 @@ def RunProcessMessageInPlace(
   env: typing.Dict[str, str] = None,
 ) -> ProtocolBuffer:
   """Run the given command, modifying a protocol buffer inplace.
+=======
+def RunProcessMessageInPlace(cmd: typing.List[str],
+                             input_proto: ProtocolBuffer):
+  # Run the C++ worker process, capturing it's output.
+  process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+  # Send the input proto to the C++ worker process.
+  # TODO: Add timeout.
+  stdout, _ = process.communicate(input_proto.SerializeToString())
+>>>>>>> 150d66672... Auto format files.:labm8/pbutil.py
 
   Args:
     cmd: The command to execute.

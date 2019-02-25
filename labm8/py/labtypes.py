@@ -125,9 +125,14 @@ def get_class_that_defined_method(meth):
       meth = meth.__func__  # fallback to __qualname__ parsing
     if inspect.isfunction(meth):
       cls = getattr(
+<<<<<<< HEAD:labm8/py/labtypes.py
         inspect.getmodule(meth),
         meth.__qualname__.split(".<locals>", 1)[0].rsplit(".", 1)[0],
       )
+=======
+          inspect.getmodule(meth),
+          meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0])
+>>>>>>> 150d66672... Auto format files.:labm8/labtypes.py
       if isinstance(cls, type):
         return cls
   else:
@@ -165,9 +170,14 @@ class ReprComparable(object):
     return str(self) >= str(other)
 
 
+<<<<<<< HEAD:labm8/py/labtypes.py
 def PairwiseIterator(
   iterable: typing.Iterator[typing.Any],
 ) -> typing.Iterator[typing.Tuple[typing.Any, typing.Any]]:
+=======
+def PairwiseIterator(iterable: typing.Iterator[typing.Any]
+                    ) -> typing.Iterator[typing.Tuple[typing.Any, typing.Any]]:
+>>>>>>> 150d66672... Auto format files.:labm8/labtypes.py
   """Construct a pairwise iterator for a input generator.
 
   Given an iterator, produces an iterator of overlapping pairs from the input:

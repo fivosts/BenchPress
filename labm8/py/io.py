@@ -33,8 +33,13 @@ def printf(colour, *args, **kwargs):
 
 def pprint(data, **kwargs):
   print(
+<<<<<<< HEAD:labm8/py/io.py
     json.dumps(data, sort_keys=True, indent=2, separators=(",", ": ")), **kwargs
   )
+=======
+      json.dumps(data, sort_keys=True, indent=2, separators=(",", ": ")),
+      **kwargs)
+>>>>>>> 150d66672... Auto format files.:labm8/io.py
 
 
 def info(*args, **kwargs):
