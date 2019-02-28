@@ -518,6 +518,7 @@ def AssertFieldConstraint(
 
 
 <<<<<<< HEAD:labm8/py/pbutil.py
+<<<<<<< HEAD:labm8/py/pbutil.py
 def RunProcessMessage(
   cmd: typing.List[str],
   input_proto: ProtocolBuffer,
@@ -548,6 +549,11 @@ def RunProcessMessageBinary(cmd: typing.List[str],
                             output_proto: ProtocolBuffer,
                             timeout_seconds: int = 360):
 >>>>>>> 8c6ea2b4d... Add timeout support for cldrive.:labm8/pbutil.py
+=======
+def RunProcessMessage(cmd: typing.List[str],
+                      input_proto: ProtocolBuffer,
+                      timeout_seconds: int = 360) -> str:
+>>>>>>> 7b7ab9b19... Work in progress on CSV output.:labm8/pbutil.py
   # Run the C++ worker process, capturing it's output.
 <<<<<<< HEAD:labm8/py/pbutil.py
   process = subprocess.Popen(
@@ -610,6 +616,7 @@ def RunProcessMessageToProto(
     raise subprocess.CalledProcessError(process.returncode, cmd)
 >>>>>>> 8c6ea2b4d... Add timeout support for cldrive.:labm8/pbutil.py
 
+<<<<<<< HEAD:labm8/py/pbutil.py
   Raises;
     ProtoWorkerTimeoutError: If timeout_seconds elapses without the command
       terminating.
@@ -632,8 +639,16 @@ def RunProcessMessageInPlace(
   """Run the given command, modifying a protocol buffer inplace.
 =======
 def RunProcessMessageInPlace(cmd: typing.List[str],
+=======
+  return stdout
+
+
+def RunProcessMessageToProto(cmd: typing.List[str],
+>>>>>>> 7b7ab9b19... Work in progress on CSV output.:labm8/pbutil.py
                              input_proto: ProtocolBuffer,
+                             output_proto: ProtocolBuffer,
                              timeout_seconds: int = 360):
+<<<<<<< HEAD:labm8/py/pbutil.py
   # Run the C++ worker process, capturing it's output.
   process = subprocess.Popen(
       ['timeout', '-s9', str(timeout_seconds)] + cmd,
@@ -678,6 +693,18 @@ def RunProcessMessageInPlace(cmd: typing.List[str],
       cmd, input_proto, timeout_seconds=timeout_seconds, env=env,
     ),
   )
+=======
+  output_proto.ParseFromString(
+      RunProcessMessage(cmd, input_proto, timeout_seconds=timeout_seconds))
+  return output_proto
+
+
+def RunProcessMessageInPlace(cmd: typing.List[str],
+                             input_proto: ProtocolBuffer,
+                             timeout_seconds: int = 360):
+  input_proto.ParseFromString(
+      RunProcessMessage(cmd, input_proto, timeout_seconds=timeout_seconds))
+>>>>>>> 7b7ab9b19... Work in progress on CSV output.:labm8/pbutil.py
   return input_proto
 
 
