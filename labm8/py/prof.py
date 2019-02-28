@@ -238,7 +238,11 @@ class AutoCsvProfiler(object):
     # Create the name of the logfile now, so that is timestamped to the start of
     # execution.
     timestamp = labdate.MillisecondsTimestamp()
+<<<<<<< HEAD:labm8/py/prof.py
     log_name = ".".join([self._name, system.HOSTNAME, str(timestamp), "csv"])
+=======
+    log_name = '.'.join([self._name, system.HOSTNAME, str(timestamp), 'csv'])
+>>>>>>> 13ff42e29... Fix member variable.:labm8/prof.py
     self._path = self._directory / log_name
 
     with self._writer() as writer:
