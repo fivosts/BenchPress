@@ -247,8 +247,12 @@ class AutoCsvProfiler(object):
 
     with self._writer() as writer:
       writer.writerow(
+<<<<<<< HEAD:labm8/py/prof.py
         ("Start Time (ms since UNIX epoch)", "Elapsed Time (ms)", "Event"),
       )
+=======
+          ('Start Time (ms since UNIX epoch)', 'Elapsed Time (ms)', 'Event'))
+>>>>>>> 20c7c2304... Fix CSV writer.:labm8/prof.py
 
   @contextlib.contextmanager
   def Profile(self, event_name: str = ""):
