@@ -90,7 +90,7 @@ class ProtoWorkerTimeoutError(subprocess.CalledProcessError):
 
   def __init__(self, cmd: typing.List[str], timeout_seconds: int):
     self.cmd = cmd
-    self.timeout_seconds
+    self.timeout_seconds = timeout_seconds
 
   def __repr__(self) -> str:
     return (f"Proto worker timeout after {self.timeout_seconds} "
@@ -563,6 +563,7 @@ def RunProcessMessageBinary(cmd: typing.List[str],
   stdout, _ = process.communicate(input_proto.SerializeToString())
 
 <<<<<<< HEAD:labm8/py/pbutil.py
+<<<<<<< HEAD:labm8/py/pbutil.py
   # TODO: Check signal value, not hardcoded a hardcoded kill signal.
   if process.returncode == -9 or process.returncode == 9:
     raise ProtoWorkerTimeoutError(
@@ -600,6 +601,10 @@ def RunProcessMessageToProto(
     stdout of the command.
 =======
   if process.returncode == 9:
+=======
+  # TODO: Check signal value, not hardcoded int.
+  if process.returncode == -9 or process.returncode == 9:
+>>>>>>> 08f3dae64... Fix timeouts.:labm8/pbutil.py
     raise ProtoWorkerTimeoutError(cmd=cmd, timeout_seconds=timeout_seconds)
   elif process.returncode:
     raise subprocess.CalledProcessError(process.returncode, cmd)
@@ -649,11 +654,15 @@ def RunProcessMessageInPlace(cmd: typing.List[str],
     env: A map of environment variables to set, overriding the default
       environment.
 
+<<<<<<< HEAD:labm8/py/pbutil.py
   Returns:
     The same protocol buffer as input_proto, with the values produced by the
     stdout of the command.
 =======
   if process.returncode == 9:
+=======
+  if process.returncode == -9:
+>>>>>>> 08f3dae64... Fix timeouts.:labm8/pbutil.py
     raise ProtoWorkerTimeoutError(cmd=cmd, timeout_seconds=timeout_seconds)
   elif process.returncode:
     raise subprocess.CalledProcessError(process.returncode, cmd)
