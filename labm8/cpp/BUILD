@@ -401,8 +401,11 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":app",
+<<<<<<< HEAD:labm8/cpp/BUILD
         "@boost//:filesystem",
         "@com_github_gflags_gflags//:gflags",
+=======
+>>>>>>> b17425a78... InitApp() in TEST_MAIN():phd/BUILD
         "@com_github_google_benchmark//:benchmark",
         "@gtest",
     ],
