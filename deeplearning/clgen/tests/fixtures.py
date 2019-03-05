@@ -172,6 +172,7 @@ def abc_instance_config(
 =======
       start_text='a',
       batch_size=5,
+      sequence_length=10,
       termination_criteria=sample_stop,
       temperature_micros=1000000)
 
