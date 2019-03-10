@@ -18,6 +18,7 @@ Using the methods defined in this file to create and convert dates ensures
 equivalency when converting between timestamp and datetime formats.
 """
 import datetime
+<<<<<<< HEAD:labm8/py/labdate.py
 import typing
 
 import pytz
@@ -25,7 +26,14 @@ import pytz
 UTC = pytz.UTC
 US_PACIFIC = pytz.timezone("US/Pacific")
 
+=======
+>>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/labdate.py
 import typing
+
+import pytz
+
+UTC = pytz.UTC
+US_PACIFIC = pytz.timezone('US/Pacific')
 
 
 def GetUtcMillisecondsNow() -> datetime.datetime:

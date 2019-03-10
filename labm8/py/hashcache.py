@@ -30,9 +30,12 @@ import typing
 
 import checksumdir
 <<<<<<< HEAD:labm8/py/hashcache.py
+<<<<<<< HEAD:labm8/py/hashcache.py
 =======
 import humanize
 >>>>>>> 1eed6e90b... Automated code format.:lib/labm8/hashcache.py
+=======
+>>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/hashcache.py
 import sqlalchemy as sql
 <<<<<<< HEAD:labm8/py/hashcache.py
 from sqlalchemy.ext import declarative
@@ -70,6 +73,7 @@ class InMemoryCacheKey(typing.NamedTuple):
 =======
 from labm8 import crypto
 from labm8 import fs
+from labm8 import humanize
 from labm8 import sqlutil
 
 FLAGS = flags.FLAGS
@@ -297,12 +301,17 @@ class HashCache(sqlutil.Database):
         session.delete(cached_entry)
       start_time = time.time()
       checksum = hash_fn(absolute_path)
+<<<<<<< HEAD:labm8/py/hashcache.py
       app.Log(
         2,
         "New cache entry '%s' in %s ms.",
         absolute_path,
         humanize.Commas(int((time.time() - start_time) * 1000)),
       )
+=======
+      logging.debug("New cache entry '%s' in %s ms.", absolute_path,
+                    humanize.Commas(int((time.time() - start_time) * 1000)))
+>>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/hashcache.py
       new_entry = HashCacheRecord(
         absolute_path=str(absolute_path),
         last_modified=last_modified,

@@ -40,6 +40,7 @@ import tempfile
 import typing
 from glob import iglob
 
+<<<<<<< HEAD:labm8/py/fs.py
 from humanize import naturalsize
 <<<<<<< HEAD:labm8/py/fs.py
 >>>>>>> 4d50b51ca... Add a directory_is_empty() function.:lib/labm8/fs.py
@@ -51,6 +52,12 @@ from labm8.py import labtypes
 =======
 from phd.lib.labm8 import labtypes
 from send2trash import send2trash
+=======
+from send2trash import send2trash
+
+from labm8 import humanize
+from labm8 import labtypes
+>>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/fs.py
 
 >>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/fs.py
 
@@ -575,7 +582,11 @@ def du(*components, **kwargs):
     raise Error("file '{}' not found".format(_path))
   size = os.stat(_path).st_size
   if human_readable:
+<<<<<<< HEAD:labm8/py/fs.py
     return humanize.BinaryPrefix(size, "B")
+=======
+    return humanize.BinaryPrefix(size, 'B')
+>>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/fs.py
   else:
     return size
 

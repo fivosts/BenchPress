@@ -24,11 +24,20 @@ import time
 import typing
 from typing import Optional
 
+<<<<<<< HEAD:labm8/py/prof.py
 from labm8.py import app
 from labm8.py import humanize
 from labm8.py import labdate
 from labm8.py import labtypes
 from labm8.py import system
+=======
+from absl import logging
+
+from labm8 import humanize
+from labm8 import labdate
+from labm8 import labtypes
+from labm8 import system
+>>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/prof.py
 
 _TIMERS = {}
 
@@ -186,6 +195,7 @@ def Profile(
       argument.
     print_to: The function to print the result to.
   """
+<<<<<<< HEAD:labm8/py/prof.py
   name = name or "completed"
   timer = ProfileTimer()
   yield timer
@@ -193,6 +203,13 @@ def Profile(
   if callable(name):
     name = name(timer.elapsed)
   print_to(f"{name} in {timer}")
+=======
+  name = name or 'completed'
+  start_time = time.time()
+  yield
+  elapsed = time.time() - start_time
+  print_to(f"{name} in {humanize.Duration(elapsed)}")
+>>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/prof.py
 
 
 @contextlib.contextmanager
@@ -246,6 +263,7 @@ class AutoCsvProfiler(object):
     self._path = self._directory / log_name
 
     with self._writer() as writer:
+<<<<<<< HEAD:labm8/py/prof.py
       writer.writerow(
 <<<<<<< HEAD:labm8/py/prof.py
         ("Start Time (ms since UNIX epoch)", "Elapsed Time (ms)", "Event"),
@@ -253,6 +271,10 @@ class AutoCsvProfiler(object):
 =======
           ('Start Time (ms since UNIX epoch)', 'Elapsed Time (ms)', 'Event'))
 >>>>>>> 20c7c2304... Fix CSV writer.:labm8/prof.py
+=======
+      writer.writerow(('Start Time (ms since UNIX epoch)', 'Elapsed Time (ms)',
+                       'Event'))
+>>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/prof.py
 
   @contextlib.contextmanager
   def Profile(self, event_name: str = ""):
