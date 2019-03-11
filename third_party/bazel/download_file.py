@@ -32,11 +32,15 @@ from util import hash_file
 from util import resolve_url
 
 <<<<<<< HEAD:third_party/bazel/download_file.py
+<<<<<<< HEAD:third_party/bazel/download_file.py
 
 GERRIT_HOME = path.expanduser("~/.gerritcodereview")
 CACHE_DIR = path.join(GERRIT_HOME, "bazel-cache", "downloaded-artifacts")
 LOCAL_PROPERTIES = "local.properties"
 =======
+=======
+
+>>>>>>> 7ba69fee7... XXX:tools/download_file.py
 GERRIT_HOME = path.expanduser('~/.gerritcodereview')
 CACHE_DIR = path.join(GERRIT_HOME, 'bazel-cache', 'downloaded-artifacts')
 LOCAL_PROPERTIES = 'local.properties'
