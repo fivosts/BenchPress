@@ -50,7 +50,10 @@ import datetime
 import math
 import re
 from typing import Optional
+<<<<<<< HEAD:labm8/py/humanize.py
 from typing import Union
+=======
+>>>>>>> dd3ef9301... allow Commas(None).:labm8/humanize.py
 
 <<<<<<< HEAD:labm8/py/humanize.py
 import humanize as humanize_lib
@@ -86,7 +89,11 @@ def Commas(value: Optional[int]):
     A string.
   """
   if value is None:
+<<<<<<< HEAD:labm8/py/humanize.py
     return "0"
+=======
+    return '0'
+>>>>>>> dd3ef9301... allow Commas(None).:labm8/humanize.py
   if value < 0:
     sign = "-"
     value = -value
