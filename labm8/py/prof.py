@@ -189,6 +189,7 @@ class ProfileTimer(object):
 @app.skip_log_prefix
 @contextlib.contextmanager
 <<<<<<< HEAD:labm8/py/prof.py
+<<<<<<< HEAD:labm8/py/prof.py
 def Profile(
   name: typing.Union[str, typing.Callable[[int], str]] = "",
   print_to: typing.Callable[[str], None] = lambda msg: app.Log(1, msg),
@@ -196,6 +197,11 @@ def Profile(
 =======
 def Profile(name: str = '', print_to: typing.Callable[[str], None] = app.Debug):
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/prof.py
+=======
+def Profile(
+    name: str = '',
+    print_to: typing.Callable[[str], None] = lambda msg: app.Log(1, msg)):
+>>>>>>> 070523b92... Fix refences to app.Debug and app.Info.:labm8/prof.py
   """A context manager which prints the elapsed time upon exit.
 
   Args:
