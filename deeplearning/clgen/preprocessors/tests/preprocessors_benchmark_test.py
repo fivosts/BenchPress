@@ -33,11 +33,15 @@ from absl import logging
 import typing
 
 import pytest
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
 from absl import flags
 >>>>>>> 1c758426a... Automated python code format.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
+=======
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
 
 from deeplearning.clgen import errors
 from deeplearning.clgen.preprocessors import preprocessors
+from labm8 import app
 from labm8 import test
 <<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
 from absl import flags
@@ -46,7 +50,7 @@ FLAGS = flags.FLAGS
 =======
 >>>>>>> 1c758426a... Automated python code format.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
 
-FLAGS = flags.FLAGS
+FLAGS = app.FLAGS
 
 # A full preprocessing pipeline for the C++ programming language.
 CXX_PREPROCESSORS = [
