@@ -19,6 +19,7 @@ import pytest
 
 from deeplearning.clgen import errors
 from deeplearning.clgen.preprocessors import preprocessors
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
 from labm8.py import app
 from labm8.py import test
 
@@ -56,6 +57,12 @@ def _PreprocessBenchmarkInnerLoop(
 ):
 =======
 FLAGS = flags.FLAGS
+=======
+from labm8 import app
+from labm8 import test
+
+FLAGS = app.FLAGS
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
 
 # A full preprocessing pipeline for the C++ programming language.
 CXX_PREPROCESSORS = [

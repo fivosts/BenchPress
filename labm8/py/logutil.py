@@ -22,6 +22,7 @@ import typing
 from absl import logging
 
 <<<<<<< HEAD:labm8/py/logutil.py
+<<<<<<< HEAD:labm8/py/logutil.py
 from labm8.py import app
 from labm8.py import labdate
 from labm8.py.internal import logging_pb2
@@ -35,6 +36,13 @@ FLAGS = app.FLAGS
 =======
 FLAGS = flags.FLAGS
 >>>>>>> 150d66672... Auto format files.:labm8/logutil.py
+=======
+from labm8 import app
+from labm8 import labdate
+from labm8.proto import logging_pb2
+
+FLAGS = app.FLAGS
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/logutil.py
 
 # A regular expression to match the components of an absl logging prefix. See:
 # https://github.com/abseil/abseil-py/blob/e69e200f680a20c50e0e2cd9e74e9850ff69b856/absl/logging/__init__.py#L554-L583

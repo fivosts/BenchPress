@@ -49,6 +49,7 @@ sh_binary(
 >>>>>>> 7f3f24544... Set feature extractor as public.:gpu/portable_mapping_of_data_parallel_programs_to_opencl/BUILD
     visibility = ["//visibility:public"],
     deps = [
+<<<<<<< HEAD:third_party/llvm/BUILD
         "//labm8/sh:app",
     ],
 )
@@ -102,6 +103,10 @@ sh_binary(
     visibility = ["//visibility:public"],
     deps = [
         "//labm8/sh:app",
+=======
+        "//labm8:app",
+        "//labm8:bazelutil",
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:research/grewe_2013_cgo/BUILD
     ],
 )
 
@@ -131,8 +136,8 @@ sh_binary(
         "//labm8/sh:app",
 =======
         ":feature_extractor",
+        "//labm8:app",
         "//labm8:test",
-        "//third_party/py/absl",
         "//third_party/py/pytest",
 >>>>>>> dec37b744... Auto format BUILD file.:gpu/portable_mapping_of_data_parallel_programs_to_opencl/BUILD
     ],

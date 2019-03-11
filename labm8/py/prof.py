@@ -22,6 +22,7 @@ import pathlib
 import sys
 import time
 import typing
+<<<<<<< HEAD:labm8/py/prof.py
 from typing import Optional
 
 <<<<<<< HEAD:labm8/py/prof.py
@@ -33,6 +34,10 @@ from labm8.py import system
 =======
 from absl import logging
 
+=======
+
+from labm8 import app
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/prof.py
 from labm8 import humanize
 from labm8 import labdate
 from labm8 import labtypes
@@ -183,10 +188,14 @@ class ProfileTimer(object):
 
 @app.skip_log_prefix
 @contextlib.contextmanager
+<<<<<<< HEAD:labm8/py/prof.py
 def Profile(
   name: typing.Union[str, typing.Callable[[int], str]] = "",
   print_to: typing.Callable[[str], None] = lambda msg: app.Log(1, msg),
 ) -> ProfileTimer:
+=======
+def Profile(name: str = '', print_to: typing.Callable[[str], None] = app.Debug):
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/prof.py
   """A context manager which prints the elapsed time upon exit.
 
   Args:

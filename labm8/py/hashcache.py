@@ -38,6 +38,7 @@ import humanize
 >>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/hashcache.py
 import sqlalchemy as sql
 <<<<<<< HEAD:labm8/py/hashcache.py
+<<<<<<< HEAD:labm8/py/hashcache.py
 from sqlalchemy.ext import declarative
 
 from labm8.py import app
@@ -71,12 +72,17 @@ class InMemoryCacheKey(typing.NamedTuple):
 
 
 =======
+=======
+from sqlalchemy.ext import declarative
+
+from labm8 import app
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/hashcache.py
 from labm8 import crypto
 from labm8 import fs
 from labm8 import humanize
 from labm8 import sqlutil
 
-FLAGS = flags.FLAGS
+FLAGS = app.FLAGS
 
 Base = declarative.declarative_base()
 
@@ -227,7 +233,11 @@ class HashCache(sqlutil.Database):
     IN_MEMORY_CACHE.clear()
     with self.Session(commit=True) as session:
       session.query(HashCacheRecord).delete()
+<<<<<<< HEAD:labm8/py/hashcache.py
     app.Log(2, "Emptied cache")
+=======
+    app.Debug('Emptied cache')
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/hashcache.py
 
   def _HashDirectory(self, absolute_path: pathlib.Path) -> str:
     if fs.directory_is_empty(absolute_path):
@@ -262,7 +272,11 @@ class HashCache(sqlutil.Database):
     if self.keep_in_memory:
       in_memory_key = InMemoryCacheKey(self.hash_fn_name, absolute_path)
       if in_memory_key in IN_MEMORY_CACHE:
+<<<<<<< HEAD:labm8/py/hashcache.py
         app.Log(2, "In-memory cache hit: '%s'", absolute_path)
+=======
+        app.Debug("In-memory cache hit: '%s'", absolute_path)
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/hashcache.py
         return IN_MEMORY_CACHE[in_memory_key]
 <<<<<<< HEAD:labm8/py/hashcache.py
     hash_ = self._DoHash(
@@ -294,6 +308,7 @@ class HashCache(sqlutil.Database):
         .first()
       )
       if cached_entry and cached_entry.last_modified == last_modified:
+<<<<<<< HEAD:labm8/py/hashcache.py
         app.Log(2, "Cache hit: '%s'", absolute_path)
         return cached_entry.hash
       elif cached_entry:
@@ -312,6 +327,17 @@ class HashCache(sqlutil.Database):
       logging.debug("New cache entry '%s' in %s ms.", absolute_path,
                     humanize.Commas(int((time.time() - start_time) * 1000)))
 >>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/hashcache.py
+=======
+        app.Debug("Cache hit: '%s'", absolute_path)
+        return cached_entry.hash
+      elif cached_entry:
+        app.Debug("Cache miss: '%s'", absolute_path)
+        session.delete(cached_entry)
+      start_time = time.time()
+      checksum = hash_fn(absolute_path)
+      app.Debug("New cache entry '%s' in %s ms.", absolute_path,
+                humanize.Commas(int((time.time() - start_time) * 1000)))
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/hashcache.py
       new_entry = HashCacheRecord(
         absolute_path=str(absolute_path),
         last_modified=last_modified,

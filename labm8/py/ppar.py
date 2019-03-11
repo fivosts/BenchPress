@@ -24,6 +24,7 @@ import typing
 
 <<<<<<< HEAD:labm8/py/ppar.py
 <<<<<<< HEAD:labm8/py/ppar.py
+<<<<<<< HEAD:labm8/py/ppar.py
 from labm8.py import app
 from labm8.py import bazelutil
 from labm8.py import pbutil
@@ -38,12 +39,19 @@ from absl import flags
 <<<<<<< HEAD:labm8/py/ppar.py
 FLAGS = app.FLAGS
 =======
+=======
+from labm8 import app
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/ppar.py
 from labm8 import bazelutil
 from labm8 import pbutil
 from labm8 import sqlutil
 
+<<<<<<< HEAD:labm8/py/ppar.py
 FLAGS = flags.FLAGS
 >>>>>>> 150d66672... Auto format files.:labm8/ppar.py
+=======
+FLAGS = app.FLAGS
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/ppar.py
 
 
 class MapWorkerError(EnvironmentError):

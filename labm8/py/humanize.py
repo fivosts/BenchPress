@@ -52,10 +52,19 @@ import re
 from typing import Optional
 from typing import Union
 
+<<<<<<< HEAD:labm8/py/humanize.py
 import humanize as humanize_lib
 
 SIBILANT_ENDINGS = frozenset(["sh", "ss", "tch", "ax", "ix", "ex"])
 DIGIT_SPLITTER = re.compile(r"\d+|\D+").findall
+=======
+from labm8 import app
+
+FLAGS = app.FLAGS
+
+SIBILANT_ENDINGS = frozenset(['sh', 'ss', 'tch', 'ax', 'ix', 'ex'])
+DIGIT_SPLITTER = re.compile(r'\d+|\D+').findall
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/humanize.py
 
 # These are included because they are common technical terms.
 SPECIAL_PLURALS = {

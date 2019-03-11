@@ -22,6 +22,7 @@ import typing
 
 <<<<<<< HEAD:labm8/py/lockfile.py
 <<<<<<< HEAD:labm8/py/lockfile.py
+<<<<<<< HEAD:labm8/py/lockfile.py
 from labm8.py import app
 from labm8.py import humanize
 from labm8.py import labdate
@@ -50,10 +51,17 @@ from phd.lib.labm8 import pbutil
 from phd.lib.labm8 import system
 from phd.lib.labm8.proto import lockfile_pb2
 >>>>>>> 1eed6e90b... Automated code format.:lib/labm8/lockfile.py
+=======
+from labm8 import app
+from labm8 import labdate
+from labm8 import pbutil
+from labm8 import system
+from labm8.proto import lockfile_pb2
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/lockfile.py
 
-FLAGS = flags.FLAGS
+FLAGS = app.FLAGS
 
-flags.DEFINE_float(
+app.DEFINE_float(
     'lockfile_block_seconds', 10.0,
     'The number of seconds to block for when waiting for a lock '
     'files.')
@@ -250,6 +258,7 @@ class LockFile:
           raise UnableToAcquireLockError(self)
         # Block and try again later.
 <<<<<<< HEAD:labm8/py/lockfile.py
+<<<<<<< HEAD:labm8/py/lockfile.py
         app.Log(
           1,
           "Blocking on lockfile %s for %s seconds",
@@ -260,6 +269,10 @@ class LockFile:
         logging.info('Blocking on lockfile %s for %f seconds', self.path,
                      FLAGS.lockfile_block_seconds)
 >>>>>>> c802d0078... Add a --lockfile_block_seconds flag.:labm8/lockfile.py
+=======
+        app.Info('Blocking on lockfile %s for %f seconds', self.path,
+                 FLAGS.lockfile_block_seconds)
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/lockfile.py
         time.sleep(FLAGS.lockfile_block_seconds)
       else:  # new lock
         _create_lock()

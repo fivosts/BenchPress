@@ -7,10 +7,14 @@ import typing
 import zipfile
 
 <<<<<<< HEAD:labm8/py/archive.py
+<<<<<<< HEAD:labm8/py/archive.py
 =======
 from absl import flags
+=======
+from labm8 import app
+>>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/archive.py
 
-FLAGS = flags.FLAGS
+FLAGS = app.FLAGS
 
 >>>>>>> 105797fd4... Auto format files.:labm8/archive.py
 
