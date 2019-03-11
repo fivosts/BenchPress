@@ -591,6 +591,33 @@ def du(*components, **kwargs):
     return size
 
 
+<<<<<<< HEAD:labm8/py/fs.py
+=======
+def write_file(path, contents):
+  """
+  Write string to file.
+
+  Arguments:
+      path (str): Destination.
+      contents (str): Contents.
+  """
+  with mkopen(path, 'w') as outfile:
+    outfile.write(contents)
+
+
+def read_file(path: typing.Union[str, pathlib.Path]):
+  """
+  Read file to string.
+
+  Arguments:
+      path (str): Source.
+  """
+  with open(must_exist(path)) as infile:
+    r = infile.read()
+  return r
+
+
+>>>>>>> a52f8ef5b... Work in progress on report generator.:labm8/fs.py
 def files_from_list(*paths):
   """
   Return a list of all file paths from a list of files or directories.
