@@ -82,6 +82,7 @@ from labm8 import fs
 from labm8 import humanize
 from labm8 import sqlutil
 
+
 FLAGS = app.FLAGS
 
 Base = declarative.declarative_base()
@@ -234,10 +235,14 @@ class HashCache(sqlutil.Database):
     with self.Session(commit=True) as session:
       session.query(HashCacheRecord).delete()
 <<<<<<< HEAD:labm8/py/hashcache.py
+<<<<<<< HEAD:labm8/py/hashcache.py
     app.Log(2, "Emptied cache")
 =======
     app.Debug('Emptied cache')
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/hashcache.py
+=======
+    app.Log(2, 'Emptied cache')
+>>>>>>> 79a426895... Update logging API and implement --vmodule.:labm8/hashcache.py
 
   def _HashDirectory(self, absolute_path: pathlib.Path) -> str:
     if fs.directory_is_empty(absolute_path):
@@ -273,10 +278,14 @@ class HashCache(sqlutil.Database):
       in_memory_key = InMemoryCacheKey(self.hash_fn_name, absolute_path)
       if in_memory_key in IN_MEMORY_CACHE:
 <<<<<<< HEAD:labm8/py/hashcache.py
+<<<<<<< HEAD:labm8/py/hashcache.py
         app.Log(2, "In-memory cache hit: '%s'", absolute_path)
 =======
         app.Debug("In-memory cache hit: '%s'", absolute_path)
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/hashcache.py
+=======
+        app.Log(2, "In-memory cache hit: '%s'", absolute_path)
+>>>>>>> 79a426895... Update logging API and implement --vmodule.:labm8/hashcache.py
         return IN_MEMORY_CACHE[in_memory_key]
 <<<<<<< HEAD:labm8/py/hashcache.py
     hash_ = self._DoHash(
@@ -309,6 +318,7 @@ class HashCache(sqlutil.Database):
       )
       if cached_entry and cached_entry.last_modified == last_modified:
 <<<<<<< HEAD:labm8/py/hashcache.py
+<<<<<<< HEAD:labm8/py/hashcache.py
         app.Log(2, "Cache hit: '%s'", absolute_path)
         return cached_entry.hash
       elif cached_entry:
@@ -329,13 +339,16 @@ class HashCache(sqlutil.Database):
 >>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/hashcache.py
 =======
         app.Debug("Cache hit: '%s'", absolute_path)
+=======
+        app.Log(2, "Cache hit: '%s'", absolute_path)
+>>>>>>> 79a426895... Update logging API and implement --vmodule.:labm8/hashcache.py
         return cached_entry.hash
       elif cached_entry:
-        app.Debug("Cache miss: '%s'", absolute_path)
+        app.Log(2, "Cache miss: '%s'", absolute_path)
         session.delete(cached_entry)
       start_time = time.time()
       checksum = hash_fn(absolute_path)
-      app.Debug("New cache entry '%s' in %s ms.", absolute_path,
+      app.Log(2, "New cache entry '%s' in %s ms.", absolute_path,
                 humanize.Commas(int((time.time() - start_time) * 1000)))
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/hashcache.py
       new_entry = HashCacheRecord(

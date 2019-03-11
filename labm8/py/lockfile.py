@@ -259,6 +259,7 @@ class LockFile:
         # Block and try again later.
 <<<<<<< HEAD:labm8/py/lockfile.py
 <<<<<<< HEAD:labm8/py/lockfile.py
+<<<<<<< HEAD:labm8/py/lockfile.py
         app.Log(
           1,
           "Blocking on lockfile %s for %s seconds",
@@ -271,6 +272,9 @@ class LockFile:
 >>>>>>> c802d0078... Add a --lockfile_block_seconds flag.:labm8/lockfile.py
 =======
         app.Info('Blocking on lockfile %s for %f seconds', self.path,
+=======
+        app.Log(1, 'Blocking on lockfile %s for %f seconds', self.path,
+>>>>>>> 79a426895... Update logging API and implement --vmodule.:labm8/lockfile.py
                  FLAGS.lockfile_block_seconds)
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/lockfile.py
         time.sleep(FLAGS.lockfile_block_seconds)
