@@ -217,10 +217,14 @@ class JsonCache(TransientCache):
     self.path = fs.abspath(path)
 
 <<<<<<< HEAD:labm8/py/cache.py
+<<<<<<< HEAD:labm8/py/cache.py
     if fs.exists(self.path) and fs.Read(self.path):
 =======
     if fs.exists(self.path) and fs.read_file(self.path):
 >>>>>>> 430bf6988... Only read JSON cache if file contains something.:lib/labm8/cache.py
+=======
+    if fs.exists(self.path) and fs.Read(self.path):
+>>>>>>> 4a549fc58... New methods for fs module.:labm8/cache.py
       io.debug(("Loading cache '{0}'".format(self.path)))
       with open(self.path) as file:
         self._data = json.load(file)
