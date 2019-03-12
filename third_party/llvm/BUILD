@@ -106,6 +106,7 @@ sh_binary(
 =======
         "//labm8:app",
         "//labm8:bazelutil",
+<<<<<<< HEAD:third_party/llvm/BUILD
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:research/grewe_2013_cgo/BUILD
     ],
 )
@@ -116,6 +117,9 @@ bats_test(
     data = [
         ":llvm-dis",
         "//labm8/sh:test",
+=======
+        "//labm8:fs",
+>>>>>>> fa81e4ed1... Tidy up and convenience function.:research/grewe_2013_cgo/BUILD
     ],
 )
 
