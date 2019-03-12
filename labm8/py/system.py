@@ -427,6 +427,7 @@ def exit(status=0):
   sys.exit(status)
 
 
+<<<<<<< HEAD:labm8/py/system.py
 def ProcessFileAndReplace(
   path: str,
   process_file_callback: typing.Callable[[str, str], None],
@@ -476,6 +477,8 @@ def CheckCallOrDie(cmd: typing.List[str]) -> None:
   return sys.version_info >= (3, 0)
 
 
+=======
+>>>>>>> 3c71c9838... Remove python 3 checks.:labm8/system.py
 def ProcessFileAndReplace(
     path: str,
     process_file_callback: typing.Callable[[str, str], None],
