@@ -15,6 +15,10 @@ py_library(
 =======
         requirement("GitPython"),
         requirement("gitdb2"),
+<<<<<<< HEAD:third_party/py/decorator/BUILD
 >>>>>>> 3f95f099d... Add implicit gitdb dep.:third_party/py/git/BUILD
+=======
+        requirement("smmap2"),
+>>>>>>> f7931b20d... Add implicit dependency.:third_party/py/git/BUILD
     ],
 )
