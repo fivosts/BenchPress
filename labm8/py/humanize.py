@@ -489,9 +489,15 @@ def Duration(duration, separator=" "):
       else:
         return "<1ns"
     elif duration > 1:
+<<<<<<< HEAD:labm8/py/humanize.py
       if unit != "s":
         # Append sub-second component to string.
         delta_str += f" {int(value)}{unit}"
+=======
+      if unit != 's':
+        # Append sub-second component to string.
+        delta_str += f' {int(value)}{unit}'
+>>>>>>> 5b03fc7d7... Fix for float time.:labm8/humanize.py
     else:
       return f"{int(value)}{unit}"
   return delta_str
