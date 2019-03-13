@@ -10,7 +10,14 @@ py_library(
     name = "detect_secrets",
     srcs = ["//third_party/py:empty.py"],
     deps = [
+<<<<<<< HEAD:third_party/py/detect_secrets/BUILD
         requirement("detect-secrets"),
         requirement("PyYAML"),
+=======
+        requirement("dash"),
+        requirement("plotly"),
+        requirement("Click"),
+        "//third_party/py/flask",
+>>>>>>> b6c05513a... Add implicit dependency.:third_party/py/dash/BUILD
     ],
 )
