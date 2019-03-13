@@ -56,11 +56,16 @@ from typing import Union
 >>>>>>> dd3ef9301... allow Commas(None).:labm8/humanize.py
 
 <<<<<<< HEAD:labm8/py/humanize.py
+<<<<<<< HEAD:labm8/py/humanize.py
 import humanize as humanize_lib
 
 SIBILANT_ENDINGS = frozenset(["sh", "ss", "tch", "ax", "ix", "ex"])
 DIGIT_SPLITTER = re.compile(r"\d+|\D+").findall
 =======
+=======
+import humanize as humanize_lib
+
+>>>>>>> c1fe202df... Work in progress on test viewer.:labm8/humanize.py
 from labm8 import app
 
 FLAGS = app.FLAGS
@@ -642,3 +647,11 @@ def AddOrdinalSuffix(value):
       suffix = "th"
 
   return str(value) + suffix
+
+
+def Delta(delta):
+  return humanize_lib.naturaldelta(delta)
+
+
+def Time(delta):
+  return humanize_lib.naturaltime(delta)
