@@ -18,6 +18,7 @@ py_library(
         requirement("plotly"),
         requirement("Click"),
         requirement("itsdangerous"),
+        requirement("requests"),
         "//third_party/py/flask",
 >>>>>>> b6c05513a... Add implicit dependency.:third_party/py/dash/BUILD
     ],
