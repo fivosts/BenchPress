@@ -19,6 +19,7 @@ py_library(
         requirement("Click"),
         requirement("itsdangerous"),
         requirement("requests"),
+        requirement("urllib3"),
         "//third_party/py/flask",
 >>>>>>> b6c05513a... Add implicit dependency.:third_party/py/dash/BUILD
     ],
