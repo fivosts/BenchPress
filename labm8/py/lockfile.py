@@ -53,6 +53,7 @@ from phd.lib.labm8.proto import lockfile_pb2
 >>>>>>> 1eed6e90b... Automated code format.:lib/labm8/lockfile.py
 =======
 from labm8 import app
+from labm8 import humanize
 from labm8 import labdate
 from labm8 import pbutil
 from labm8 import system
@@ -260,6 +261,7 @@ class LockFile:
 <<<<<<< HEAD:labm8/py/lockfile.py
 <<<<<<< HEAD:labm8/py/lockfile.py
 <<<<<<< HEAD:labm8/py/lockfile.py
+<<<<<<< HEAD:labm8/py/lockfile.py
         app.Log(
           1,
           "Blocking on lockfile %s for %s seconds",
@@ -277,6 +279,10 @@ class LockFile:
 >>>>>>> 79a426895... Update logging API and implement --vmodule.:labm8/lockfile.py
                  FLAGS.lockfile_block_seconds)
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/lockfile.py
+=======
+        app.Log(1, 'Blocking on lockfile %s for %s seconds', self.path,
+                humanize.Duration(FLAGS.lockfile_block_seconds))
+>>>>>>> 839ee2b14... Nicer lockfile message.:labm8/lockfile.py
         time.sleep(FLAGS.lockfile_block_seconds)
       else:  # new lock
         _create_lock()
