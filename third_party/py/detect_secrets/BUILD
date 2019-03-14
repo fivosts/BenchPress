@@ -22,7 +22,7 @@ py_library(
         requirement("urllib3"),
         requirement("chardet"),
         requirement("certifi"),
-        requirement("retrying")
+        requirement("retrying"),
         "//third_party/py/flask",
 >>>>>>> b6c05513a... Add implicit dependency.:third_party/py/dash/BUILD
     ],
