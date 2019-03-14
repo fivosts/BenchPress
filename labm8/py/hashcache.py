@@ -1,4 +1,8 @@
+<<<<<<< HEAD:labm8/py/hashcache.py
 # Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
+=======
+# Copyright 2014-2019 Chris Cummins <chrisc.101@gmail.com>.
+>>>>>>> 77b550945... Relicense labm8 under Apache 2.0.:labm8/hashcache.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,7 +85,6 @@ from labm8 import crypto
 from labm8 import fs
 from labm8 import humanize
 from labm8 import sqlutil
-
 
 FLAGS = app.FLAGS
 
@@ -349,8 +352,12 @@ class HashCache(sqlutil.Database):
       start_time = time.time()
       checksum = hash_fn(absolute_path)
       app.Log(2, "New cache entry '%s' in %s ms.", absolute_path,
+<<<<<<< HEAD:labm8/py/hashcache.py
                 humanize.Commas(int((time.time() - start_time) * 1000)))
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/hashcache.py
+=======
+              humanize.Commas(int((time.time() - start_time) * 1000)))
+>>>>>>> 77b550945... Relicense labm8 under Apache 2.0.:labm8/hashcache.py
       new_entry = HashCacheRecord(
         absolute_path=str(absolute_path),
         last_modified=last_modified,

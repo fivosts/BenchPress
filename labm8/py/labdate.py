@@ -1,4 +1,8 @@
+<<<<<<< HEAD:labm8/py/labdate.py
 # Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
+=======
+# Copyright 2014-2019 Chris Cummins <chrisc.101@gmail.com>.
+>>>>>>> 77b550945... Relicense labm8 under Apache 2.0.:labm8/labdate.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
