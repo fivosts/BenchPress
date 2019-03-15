@@ -53,11 +53,15 @@ HumanReadableInt in strings/human_readable.h.
 import datetime
 import math
 import re
+<<<<<<< HEAD:labm8/py/humanize.py
 from typing import Optional
 <<<<<<< HEAD:labm8/py/humanize.py
 from typing import Union
 =======
 >>>>>>> dd3ef9301... allow Commas(None).:labm8/humanize.py
+=======
+from typing import Optional, Union
+>>>>>>> 505ade885... Humanize tidy up.:labm8/humanize.py
 
 <<<<<<< HEAD:labm8/py/humanize.py
 <<<<<<< HEAD:labm8/py/humanize.py
@@ -528,7 +532,11 @@ def LowPrecisionDuration(duration: Union[datetime.timedelta, int, float]):
   return humanize_lib.naturaldelta(duration)
 
 
+<<<<<<< HEAD:labm8/py/humanize.py
 def TimeDelta(delta, separator=" "):
+=======
+def TimeDelta(delta, separator=' '):
+>>>>>>> 505ade885... Humanize tidy up.:labm8/humanize.py
   """Format a datetime.timedelta into a human-readable string.
 
   Args:
@@ -651,11 +659,3 @@ def AddOrdinalSuffix(value):
       suffix = "th"
 
   return str(value) + suffix
-
-
-def Delta(delta):
-  return humanize_lib.naturaldelta(delta)
-
-
-def Time(delta):
-  return humanize_lib.naturaltime(delta)
