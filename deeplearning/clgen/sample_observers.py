@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2020 Chris Cummins.
+# Copyright (c) 2016, 2017, 2018, 2019 Chris Cummins.
 #
 # clgen is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,10 +16,10 @@
 import pathlib
 
 from deeplearning.clgen.proto import model_pb2
-from labm8.py import app
-from labm8.py import crypto
-from labm8.py import fs
-from labm8.py import pbutil
+from labm8 import app
+from labm8 import crypto
+from labm8 import fs
+from labm8 import pbutil
 
 FLAGS = app.FLAGS
 
@@ -66,10 +66,9 @@ class MaxSampleCountObserver(SampleObserver):
   """An observer that terminates sampling after a finite number of samples."""
 
   def __init__(self, min_sample_count: int):
-    if min_sample_count <= 0:
+    if self._min_sample_count <= 0:
       raise ValueError(
-        f"min_sample_count must be >= 1. Received: {min_sample_count}"
-      )
+          f"min_sample_count must be >= 1. Received: {min_sample_count}")
 
     self._sample_count = 0
     self._min_sample_count = min_sample_count
@@ -77,7 +76,7 @@ class MaxSampleCountObserver(SampleObserver):
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback. Returns True if sampling should continue."""
     self._sample_count += 1
-    return self._sample_count < self._min_sample_count
+    return self._sample_count >= self._min_sample_count
 
 
 class SaveSampleTextObserver(SampleObserver):
@@ -90,42 +89,13 @@ class SaveSampleTextObserver(SampleObserver):
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback. Returns True if sampling should continue."""
     sample_id = crypto.sha256_str(sample.text)
-    path = self.path / f"{sample_id}.txt"
-    fs.Write(path, sample.text.encode("utf-8"))
+    path = self.path / f'{sample_id}.pbtxt'
+    fs.Write(path, sample.text.encode('utf-8'))
     return True
 
 
-class PrintSampleObserver(SampleObserver):
-  """An observer that prints the text of each sample that is generated."""
-
-  def OnSample(self, sample: model_pb2.Sample) -> bool:
-    """Sample receive callback. Returns True if sampling should continue."""
-    print(f"=== CLGEN SAMPLE ===\n\n{sample.text}\n")
-    return True
-
-
-class InMemorySampleSaver(SampleObserver):
-  """An observer that saves all samples in-memory."""
-
-  def __init__(self):
-    self.samples = []
-
-  def OnSample(self, sample: model_pb2.Sample) -> bool:
-    """Sample receive callback. Returns True if sampling should continue."""
-    self.samples.append(sample)
-    return True
-
-
-class LegacySampleCacheObserver(SampleObserver):
-  """Backwards compatability implementation of the old sample caching behavior.
-
-  In previous versions of CLgen, model sampling would silently (and always)
-  create sample protobufs in the sampler cache, located at:
-
-    CLGEN_CACHE/models/MODEL/samples/SAMPLER
-
-  This sample observer provides equivalent behavior.
-  """
+class ProtobufCacheSampleObserver(SampleObserver):
+  """An observer that creates a sample protobuf for each sample."""
 
   def __init__(self):
     self.cache_path = None
@@ -138,6 +108,27 @@ class LegacySampleCacheObserver(SampleObserver):
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback. Returns True if sampling should continue."""
     sample_id = crypto.sha256_str(sample.text)
-    sample_path = self.cache_path / f"{sample_id}.pbtxt"
+    sample_path = self.cache_path / f'{sample_id}.pbtxt'
     pbutil.ToFile(sample, sample_path)
+    return True
+
+
+class PrintSampleObserver(SampleObserver):
+  """An observer that prints the text of each sample that is generated."""
+
+  def OnSample(self, sample: model_pb2.Sample) -> bool:
+    """Sample receive callback. Returns True if sampling should continue."""
+    print(f'=== CLGEN SAMPLE ===\n\n{sample.text}\n')
+    return True
+
+
+class InMemorySampleSaver(SampleObserver):
+  """An observer that saves all samples in-memory."""
+
+  def __init__(self):
+    self.samples = []
+
+  def OnSample(self, sample: model_pb2.Sample) -> bool:
+    """Sample receive callback. Returns True if sampling should continue."""
+    self.samples.append(sample)
     return True
