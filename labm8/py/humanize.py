@@ -67,6 +67,7 @@ from typing import Optional, Union
 <<<<<<< HEAD:labm8/py/humanize.py
 import humanize as humanize_lib
 
+<<<<<<< HEAD:labm8/py/humanize.py
 SIBILANT_ENDINGS = frozenset(["sh", "ss", "tch", "ax", "ix", "ex"])
 DIGIT_SPLITTER = re.compile(r"\d+|\D+").findall
 =======
@@ -78,6 +79,8 @@ from labm8 import app
 
 FLAGS = app.FLAGS
 
+=======
+>>>>>>> 0d1a1e3b1... Add --version flag to all phd builds.:labm8/humanize.py
 SIBILANT_ENDINGS = frozenset(['sh', 'ss', 'tch', 'ax', 'ix', 'ex'])
 DIGIT_SPLITTER = re.compile(r'\d+|\D+').findall
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/humanize.py
