@@ -560,6 +560,7 @@ def RunProcessMessage(cmd: typing.List[str],
 >>>>>>> 7b7ab9b19... Work in progress on CSV output.:labm8/pbutil.py
   # Run the C++ worker process, capturing it's output.
 <<<<<<< HEAD:labm8/py/pbutil.py
+<<<<<<< HEAD:labm8/py/pbutil.py
   process = subprocess.Popen(
     ["timeout", "-s9", str(timeout_seconds)] + cmd,
     stdin=subprocess.PIPE,
@@ -569,6 +570,12 @@ def RunProcessMessage(cmd: typing.List[str],
 =======
   process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 >>>>>>> 150d66672... Auto format files.:labm8/pbutil.py
+=======
+  process = subprocess.Popen(
+      ['timeout', '-s9', str(timeout_seconds)] + cmd,
+      stdin=subprocess.PIPE,
+      stdout=subprocess.PIPE)
+>>>>>>> 46c11566f... Actually enforce timeout.:labm8/pbutil.py
   # Send the input proto to the C++ worker process.
   stdout, _ = process.communicate(input_proto.SerializeToString())
 
