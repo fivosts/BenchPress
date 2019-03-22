@@ -402,10 +402,14 @@ cc_library(
     deps = [
         ":app",
 <<<<<<< HEAD:labm8/cpp/BUILD
+<<<<<<< HEAD:labm8/cpp/BUILD
         "@boost//:filesystem",
         "@com_github_gflags_gflags//:gflags",
 =======
 >>>>>>> b17425a78... InitApp() in TEST_MAIN():phd/BUILD
+=======
+        "@com_github_gflags_gflags//:gflags",
+>>>>>>> 07f69503f... Add compatability test flag.:phd/BUILD
         "@com_github_google_benchmark//:benchmark",
         "@gtest",
     ],
