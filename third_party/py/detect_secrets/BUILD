@@ -17,6 +17,10 @@ py_library(
         requirement("dash"),
         requirement("plotly"),
         "//third_party/py/flask",
+<<<<<<< HEAD:third_party/py/detect_secrets/BUILD
 >>>>>>> b6c05513a... Add implicit dependency.:third_party/py/dash/BUILD
+=======
+        "//third_party/py/requests",
+>>>>>>> 9ef956645... Add explicit requests dependency.:third_party/py/dash/BUILD
     ],
 )
