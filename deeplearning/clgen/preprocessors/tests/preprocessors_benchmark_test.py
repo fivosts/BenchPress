@@ -64,6 +64,8 @@ from labm8 import test
 FLAGS = app.FLAGS
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
 
+MODULE_UNDER_TEST = 'deeplearning.clgen'
+
 # A full preprocessing pipeline for the C++ programming language.
 CXX_PREPROCESSORS = [
     'deeplearning.clgen.preprocessors.cxx:ClangPreprocess',
