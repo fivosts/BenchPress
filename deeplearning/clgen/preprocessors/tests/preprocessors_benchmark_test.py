@@ -52,6 +52,8 @@ FLAGS = flags.FLAGS
 
 FLAGS = app.FLAGS
 
+MODULE_UNDER_TEST = 'deeplearning.clgen'
+
 # A full preprocessing pipeline for the C++ programming language.
 CXX_PREPROCESSORS = [
     'deeplearning.clgen.preprocessors.cxx:ClangPreprocess',
