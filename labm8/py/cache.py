@@ -246,6 +246,7 @@ class JsonCache(TransientCache):
     """
     io.debug("Storing cache '{0}'".format(self.path))
     with open(self.path, "w") as file:
+<<<<<<< HEAD:labm8/py/cache.py
       json.dump(
 <<<<<<< HEAD:labm8/py/cache.py
         self._data, file, sort_keys=True, indent=2, separators=(",", ": "),
@@ -253,6 +254,13 @@ class JsonCache(TransientCache):
 =======
           self._data, file, sort_keys=True, indent=2, separators=(',', ': '))
 >>>>>>> 105797fd4... Auto format files.:labm8/cache.py
+=======
+      json.dump(self._data,
+                file,
+                sort_keys=True,
+                indent=2,
+                separators=(',', ': '))
+>>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/cache.py
 
 
 def hash_key(key):

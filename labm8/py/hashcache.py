@@ -357,12 +357,18 @@ class HashCache(sqlutil.Database):
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/hashcache.py
 =======
               humanize.Commas(int((time.time() - start_time) * 1000)))
+<<<<<<< HEAD:labm8/py/hashcache.py
 >>>>>>> 77b550945... Relicense labm8 under Apache 2.0.:labm8/hashcache.py
       new_entry = HashCacheRecord(
         absolute_path=str(absolute_path),
         last_modified=last_modified,
         hash=checksum,
       )
+=======
+      new_entry = HashCacheRecord(absolute_path=str(absolute_path),
+                                  last_modified=last_modified,
+                                  hash=checksum)
+>>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/hashcache.py
       session.add(new_entry)
       session.commit()
       return new_entry.hash

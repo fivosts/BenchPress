@@ -16,12 +16,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Lock file mechanism."""
-import datetime
-import inspect
+<<<<<<< HEAD:labm8/py/lockfile.py
+=======
 import os
-import pathlib
 import sys
 import time
+
+# Use absolute paths for imports so as to prevent a conflict with the
+# system "time" module.
+>>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/lockfile.py
+import datetime
+import inspect
+import pathlib
 import typing
 
 <<<<<<< HEAD:labm8/py/lockfile.py
@@ -61,8 +67,12 @@ from labm8 import humanize
 from labm8 import labdate
 from labm8 import pbutil
 from labm8 import system
+<<<<<<< HEAD:labm8/py/lockfile.py
 from labm8.proto import lockfile_pb2
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/lockfile.py
+=======
+from labm8.internal import lockfile_pb2
+>>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/lockfile.py
 
 FLAGS = app.FLAGS
 
@@ -349,8 +359,9 @@ class LockFile:
 >>>>>>> 78ad17309... Tiny code format fix.:labm8/lockfile.py
 =======
       try:
-        return pbutil.FromFile(
-            path, lockfile_pb2.LockFile(), assume_filename='LOCK.pbtxt')
+        return pbutil.FromFile(path,
+                               lockfile_pb2.LockFile(),
+                               assume_filename='LOCK.pbtxt')
       except pbutil.DecodeError:
         raise MalformedLockfileError(path)
 >>>>>>> d285837bd... Add malformed lockfile errors.:labm8/lockfile.py

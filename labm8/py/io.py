@@ -36,6 +36,7 @@ def printf(colour, *args, **kwargs):
 
 
 def pprint(data, **kwargs):
+<<<<<<< HEAD:labm8/py/io.py
   print(
 <<<<<<< HEAD:labm8/py/io.py
     json.dumps(data, sort_keys=True, indent=2, separators=(",", ": ")), **kwargs
@@ -44,6 +45,10 @@ def pprint(data, **kwargs):
       json.dumps(data, sort_keys=True, indent=2, separators=(",", ": ")),
       **kwargs)
 >>>>>>> 150d66672... Auto format files.:labm8/io.py
+=======
+  print(json.dumps(data, sort_keys=True, indent=2, separators=(",", ": ")),
+        **kwargs)
+>>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/io.py
 
 
 def info(*args, **kwargs):

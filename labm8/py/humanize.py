@@ -249,6 +249,7 @@ def DecimalPrefix(
     required precision, possibly followed by a space, the appropriate multiplier
     and the unit.
   """
+<<<<<<< HEAD:labm8/py/humanize.py
   return _Prefix(
     quantity,
     unit,
@@ -258,6 +259,14 @@ def DecimalPrefix(
     min_scale=min_scale,
     max_scale=max_scale,
   ).rstrip()
+=======
+  return _Prefix(quantity,
+                 unit,
+                 precision,
+                 DecimalScale,
+                 min_scale=min_scale,
+                 max_scale=max_scale)
+>>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/humanize.py
 
 
 def BinaryPrefix(quantity, unit, precision=1, separator=" "):

@@ -283,6 +283,7 @@ class AutoCsvProfiler(object):
 
     with self._writer() as writer:
 <<<<<<< HEAD:labm8/py/prof.py
+<<<<<<< HEAD:labm8/py/prof.py
       writer.writerow(
 <<<<<<< HEAD:labm8/py/prof.py
         ("Start Time (ms since UNIX epoch)", "Elapsed Time (ms)", "Event"),
@@ -294,6 +295,10 @@ class AutoCsvProfiler(object):
       writer.writerow(('Start Time (ms since UNIX epoch)', 'Elapsed Time (ms)',
                        'Event'))
 >>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/prof.py
+=======
+      writer.writerow(
+          ('Start Time (ms since UNIX epoch)', 'Elapsed Time (ms)', 'Event'))
+>>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/prof.py
 
   @contextlib.contextmanager
   def Profile(self, event_name: str = ""):

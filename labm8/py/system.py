@@ -28,19 +28,26 @@ Variables:
 from __future__ import print_function
 
 <<<<<<< HEAD:labm8/py/system.py
+<<<<<<< HEAD:labm8/py/system.py
 import os
 
 >>>>>>> c774253ad... Add a function to process a file in place.:lib/labm8/system.py
 =======
 >>>>>>> 1eed6e90b... Automated code format.:lib/labm8/system.py
 import getpass
+=======
+>>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/system.py
 import os
+import sys
+from sys import platform
+
+import getpass
 import socket
 import subprocess
-import sys
 import tempfile
 import threading
 import typing
+<<<<<<< HEAD:labm8/py/system.py
 <<<<<<< HEAD:labm8/py/system.py
 <<<<<<< HEAD:labm8/py/system.py
 from sys import platform
@@ -59,6 +66,8 @@ from sys import platform
 >>>>>>> c774253ad... Add a function to process a file in place.:lib/labm8/system.py
 =======
 from sys import platform
+=======
+>>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/system.py
 
 from phd.lib.labm8 import fs
 
@@ -172,6 +181,7 @@ class Subprocess(object):
     """
 
     def target():
+<<<<<<< HEAD:labm8/py/system.py
       self.process = subprocess.Popen(
 <<<<<<< HEAD:labm8/py/system.py
         self.cmd,
@@ -185,6 +195,12 @@ class Subprocess(object):
           stderr=self.stderr_dest,
           shell=self.shell)
 >>>>>>> 150d66672... Auto format files.:labm8/system.py
+=======
+      self.process = subprocess.Popen(self.cmd,
+                                      stdout=self.stdout_dest,
+                                      stderr=self.stderr_dest,
+                                      shell=self.shell)
+>>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/system.py
       stdout, stderr = self.process.communicate()
 
       # Decode output if the user wants, and if there is any.
@@ -351,6 +367,7 @@ def which(program, path=None):
 
 
 <<<<<<< HEAD:labm8/py/system.py
+<<<<<<< HEAD:labm8/py/system.py
 =======
 def scp(host, src, dst, user=None, path=None):
   """
@@ -399,6 +416,8 @@ def scp(host, src, dst, user=None, path=None):
 
 
 >>>>>>> 150d66672... Auto format files.:labm8/system.py
+=======
+>>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/system.py
 def isprocess(pid, error=False):
   """
   Check that a process is running.
@@ -502,8 +521,9 @@ def ProcessFileAndReplace(
     tempfile_prefix: An optional name prefix for the temporary file.
     tempfile_suffix: An optional name suffix for the temporary file.
   """
-  with tempfile.NamedTemporaryFile(
-      prefix=tempfile_prefix, suffix=tempfile_suffix, delete=False) as f:
+  with tempfile.NamedTemporaryFile(prefix=tempfile_prefix,
+                                   suffix=tempfile_suffix,
+                                   delete=False) as f:
     tmp_path = f.name
     try:
       process_file_callback(path, tmp_path)
