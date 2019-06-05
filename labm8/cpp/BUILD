@@ -238,7 +238,11 @@ cc_test(
     deps = [
         ":pbutil",
         ":test",
+<<<<<<< HEAD:labm8/cpp/BUILD
         "//labm8/cpp/test:protos_pb_cc",
+=======
+        "//phd/test:protos_pb_cc",
+>>>>>>> ffe0ea053... Update //phd/…:phd/BUILD
     ],
 )
 
