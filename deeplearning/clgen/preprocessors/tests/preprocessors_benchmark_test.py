@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2020 Chris Cummins.
+# Copyright (c) 2016, 2017, 2018, 2019 Chris Cummins.
 #
 # clgen is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,56 +13,15 @@
 # You should have received a copy of the GNU General Public License
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """Benchmarks for the preprocessing pipeline."""
-import typing
-
 import pytest
+import typing
 
 from deeplearning.clgen import errors
 from deeplearning.clgen.preprocessors import preprocessors
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
-from labm8.py import app
-from labm8.py import test
-
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
-FLAGS = app.FLAGS
-
-MODULE_UNDER_TEST = "deeplearning.clgen"
-
-# A full preprocessing pipeline for the C++ programming language.
-CXX_PREPROCESSORS = [
-  "deeplearning.clgen.preprocessors.cxx:ClangPreprocess",
-  "deeplearning.clgen.preprocessors.cxx:Compile",
-  "deeplearning.clgen.preprocessors.cxx" ":NormalizeIdentifiers",
-  "deeplearning.clgen.preprocessors.common" ":StripDuplicateEmptyLines",
-  "deeplearning.clgen.preprocessors.common" ":MinimumLineCount3",
-  "deeplearning.clgen.preprocessors.common" ":StripTrailingWhitespace",
-  "deeplearning.clgen.preprocessors.cxx:ClangFormat",
-]
-# A full preprocessing pipeline for the OpenCL programming language.
-OPENCL_PREPROCESSORS = [
-  "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim",
-  "deeplearning.clgen.preprocessors.opencl:Compile",
-  "deeplearning.clgen.preprocessors.opencl:NormalizeIdentifiers",
-  "deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes",
-  "deeplearning.clgen.preprocessors.common:StripDuplicateEmptyLines",
-  "deeplearning.clgen.preprocessors.opencl:SanitizeKernelPrototype",
-  "deeplearning.clgen.preprocessors.common:StripTrailingWhitespace",
-  "deeplearning.clgen.preprocessors.opencl:ClangFormat",
-  "deeplearning.clgen.preprocessors.common:MinimumLineCount3",
-]
-
-
-def _PreprocessBenchmarkInnerLoop(
-  preprocessors_: typing.List[str], code_in: str, code_out: str
-):
-=======
-FLAGS = flags.FLAGS
-=======
 from labm8 import app
 from labm8 import test
 
 FLAGS = app.FLAGS
->>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
 
 MODULE_UNDER_TEST = 'deeplearning.clgen'
 
@@ -96,16 +55,14 @@ OPENCL_PREPROCESSORS = [
 
 def _PreprocessBenchmarkInnerLoop(preprocessors_: typing.List[str],
                                   code_in: str, code_out: str):
->>>>>>> 3333e1db6... Auto format files.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
   """Benchmark inner loop for code with expected output."""
   assert preprocessors.Preprocess(code_in, preprocessors_) == code_out
 
 
-def _PreprocessBenchmarkInnerLoopBadCode(
-  preprocessors_: typing.List[str], code_in
-):
+def _PreprocessBenchmarkInnerLoopBadCode(preprocessors_: typing.List[str],
+                                         code_in):
   """Benchmark inner loop for bad code."""
-  with test.Raises(errors.BadCodeException):
+  with pytest.raises(errors.BadCodeException):
     preprocessors.Preprocess(code_in, preprocessors_)
 
 
@@ -131,9 +88,8 @@ int B(int a, char** b) {
 
 def test_benchmark_cxx_invalid_syntax(benchmark):
   """Benchmark preprocessing a C++ program with syntax errors."""
-  benchmark(
-    _PreprocessBenchmarkInnerLoopBadCode, CXX_PREPROCESSORS, "inva@asd!!!"
-  )
+  benchmark(_PreprocessBenchmarkInnerLoopBadCode, CXX_PREPROCESSORS,
+            'inva@asd!!!')
 
 
 def test_benchmark_opencl_small_program(benchmark):
@@ -152,17 +108,15 @@ kernel void A(global float* a, const int b) {
     a[c] = 0;
 }\
 """
-  benchmark(
-    _PreprocessBenchmarkInnerLoop, OPENCL_PREPROCESSORS, code_in, code_out
-  )
+  benchmark(_PreprocessBenchmarkInnerLoop, OPENCL_PREPROCESSORS, code_in,
+            code_out)
 
 
 def test_benchmark_opencl_invalid_syntax(benchmark):
   """Benchmark preprocessing an OpenCL program with syntax errors."""
-  benchmark(
-    _PreprocessBenchmarkInnerLoopBadCode, OPENCL_PREPROCESSORS, "inva@asd!!!"
-  )
+  benchmark(_PreprocessBenchmarkInnerLoopBadCode, OPENCL_PREPROCESSORS,
+            'inva@asd!!!')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   test.Main()
