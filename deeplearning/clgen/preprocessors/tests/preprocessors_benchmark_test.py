@@ -13,42 +13,13 @@
 # You should have received a copy of the GNU General Public License
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """Benchmarks for the preprocessing pipeline."""
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
 import pytest
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
 import typing
 
 from deeplearning.clgen import errors
 from deeplearning.clgen.preprocessors import preprocessors
 from labm8 import app
 from labm8 import test
-
-FLAGS = app.FLAGS
-
-MODULE_UNDER_TEST = 'deeplearning.clgen'
-=======
-from absl import app
-from absl import logging
-=======
-import typing
-
-import pytest
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
-from absl import flags
->>>>>>> 1c758426a... Automated python code format.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
-=======
->>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
-
-from deeplearning.clgen import errors
-from deeplearning.clgen.preprocessors import preprocessors
-from labm8 import app
-from labm8 import test
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
-from absl import flags
-FLAGS = flags.FLAGS
->>>>>>> ad2622a47... Port tests to //labm8:test.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
-=======
->>>>>>> 1c758426a... Automated python code format.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
 
 FLAGS = app.FLAGS
 
@@ -70,10 +41,6 @@ CXX_PREPROCESSORS = [
 ]
 # A full preprocessing pipeline for the OpenCL programming language.
 OPENCL_PREPROCESSORS = [
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
-=======
->>>>>>> 3333e1db6... Auto format files.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
     'deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim',
     'deeplearning.clgen.preprocessors.opencl:Compile',
     'deeplearning.clgen.preprocessors.opencl:NormalizeIdentifiers',
@@ -84,20 +51,6 @@ OPENCL_PREPROCESSORS = [
     'deeplearning.clgen.preprocessors.opencl:ClangFormat',
     'deeplearning.clgen.preprocessors.common:MinimumLineCount3',
 ]
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/tests/preprocessors_benchmark_test.py
-=======
-  'deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim',
-  'deeplearning.clgen.preprocessors.opencl:Compile',
-  'deeplearning.clgen.preprocessors.opencl:NormalizeIdentifiers',
-  'deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes',
-  'deeplearning.clgen.preprocessors.common:StripDuplicateEmptyLines',
-  'deeplearning.clgen.preprocessors.opencl:SanitizeKernelPrototype',
-  'deeplearning.clgen.preprocessors.common:StripTrailingWhitespace',
-  'deeplearning.clgen.preprocessors.opencl:ClangFormat',
-  'deeplearning.clgen.preprocessors.common:MinimumLineCount3', ]
->>>>>>> 63feea4fe... Documentation and tidy up.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
-=======
->>>>>>> 3333e1db6... Auto format files.:deeplearning/clgen/preprocessors/tests/benchmark_test.py
 
 
 def _PreprocessBenchmarkInnerLoop(preprocessors_: typing.List[str],
