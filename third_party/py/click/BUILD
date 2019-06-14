@@ -14,7 +14,12 @@ py_library(
         requirement("click"),
 =======
         requirement("PyGithub"),
+<<<<<<< HEAD:third_party/py/click/BUILD
         requirement("jwt"),
 >>>>>>> 723c493e3... Add implicit dependency.:third_party/py/github/BUILD
+=======
+        requirement("jwt"),  # Implicit dependency.
+        requirement("cryptography"),  # Implicit dependency.
+>>>>>>> fc3608193... Add missing implicit dependency.:third_party/py/github/BUILD
     ],
 )
