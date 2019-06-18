@@ -62,7 +62,7 @@ def RejectSecrets(import_root: pathlib.Path, file_relpath: str, text: str,
     A list of method implementations.
 
   Raises:
-    TextContainsSecret: In case text contains secrets.
+    ValueError: In case method extraction fails.
   """
   del import_root
   del file_relpath
