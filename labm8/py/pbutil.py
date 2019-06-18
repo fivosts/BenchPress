@@ -580,8 +580,13 @@ def RunProcessMessageBinary(cmd: typing.List[str],
 =======
 def RunProcessMessage(cmd: typing.List[str],
                       input_proto: ProtocolBuffer,
+<<<<<<< HEAD:labm8/py/pbutil.py
                       timeout_seconds: int = 360) -> str:
 >>>>>>> 7b7ab9b19... Work in progress on CSV output.:labm8/pbutil.py
+=======
+                      timeout_seconds: int = 360,
+                      env: typing.Dict[str, str] = None) -> str:
+>>>>>>> 19647f430... Switch to batched corpus export.:labm8/pbutil.py
   # Run the C++ worker process, capturing it's output.
 <<<<<<< HEAD:labm8/py/pbutil.py
 <<<<<<< HEAD:labm8/py/pbutil.py
@@ -598,8 +603,13 @@ def RunProcessMessage(cmd: typing.List[str],
   process = subprocess.Popen(
       ['timeout', '-s9', str(timeout_seconds)] + cmd,
       stdin=subprocess.PIPE,
+<<<<<<< HEAD:labm8/py/pbutil.py
       stdout=subprocess.PIPE)
 >>>>>>> 46c11566f... Actually enforce timeout.:labm8/pbutil.py
+=======
+      stdout=subprocess.PIPE,
+      env=env)
+>>>>>>> 19647f430... Switch to batched corpus export.:labm8/pbutil.py
   # Send the input proto to the C++ worker process.
   stdout, _ = process.communicate(input_proto.SerializeToString())
 
@@ -682,6 +692,7 @@ def RunProcessMessageToProto(cmd: typing.List[str],
 >>>>>>> 7b7ab9b19... Work in progress on CSV output.:labm8/pbutil.py
                              input_proto: ProtocolBuffer,
                              output_proto: ProtocolBuffer,
+<<<<<<< HEAD:labm8/py/pbutil.py
                              timeout_seconds: int = 360):
 <<<<<<< HEAD:labm8/py/pbutil.py
   # Run the C++ worker process, capturing it's output.
@@ -731,15 +742,32 @@ def RunProcessMessageToProto(cmd: typing.List[str],
 =======
   output_proto.ParseFromString(
       RunProcessMessage(cmd, input_proto, timeout_seconds=timeout_seconds))
+=======
+                             timeout_seconds: int = 360,
+                             env: typing.Dict[str, str] = None):
+  stdout = RunProcessMessage(cmd,
+                             input_proto,
+                             timeout_seconds=timeout_seconds,
+                             env=env)
+  output_proto.ParseFromString(stdout)
+>>>>>>> 19647f430... Switch to batched corpus export.:labm8/pbutil.py
   return output_proto
 
 
 def RunProcessMessageInPlace(cmd: typing.List[str],
                              input_proto: ProtocolBuffer,
-                             timeout_seconds: int = 360):
+                             timeout_seconds: int = 360,
+                             env: typing.Dict[str, str] = None):
   input_proto.ParseFromString(
+<<<<<<< HEAD:labm8/py/pbutil.py
       RunProcessMessage(cmd, input_proto, timeout_seconds=timeout_seconds))
 >>>>>>> 7b7ab9b19... Work in progress on CSV output.:labm8/pbutil.py
+=======
+      RunProcessMessage(cmd,
+                        input_proto,
+                        timeout_seconds=timeout_seconds,
+                        env=env))
+>>>>>>> 19647f430... Switch to batched corpus export.:labm8/pbutil.py
   return input_proto
 
 
