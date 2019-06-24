@@ -16,8 +16,8 @@
 
 #include "deeplearning/clgen/proto/internal.pb.h"
 
-#include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
+#include "absl/container/flat_hash_map.h"
 
 #include "phd/string.h"
 #include "phd/test.h"
@@ -62,41 +62,6 @@ TEST(HasPrefix, StringPrefixDoesNotMatchMultiElementSet) {
   ASSERT_FALSE(HasPrefix(vocab, "c"));
 }
 
-TEST(HasMatch, EmptyVocabDoesNotMatchString) {
-  absl::flat_hash_set<string> vocab;
-  ASSERT_FALSE(HasMatch(vocab, "a"));
-}
-
-TEST(HasMatch, SingleCharInputAndVocab) {
-  absl::flat_hash_set<string> vocab;
-  vocab.insert("a");
-  ASSERT_TRUE(HasMatch(vocab, "a"));
-}
-
-TEST(HasMatch, SingleCharInputAndMultiElementSet) {
-  absl::flat_hash_set<string> vocab;
-  vocab.insert("a");
-  vocab.insert("b");
-  vocab.insert("c");
-  ASSERT_TRUE(HasMatch(vocab, "a"));
-}
-
-TEST(HasMatch, SubstringInputAndMultiElementSet) {
-  absl::flat_hash_set<string> vocab;
-  vocab.insert("abc");
-  vocab.insert("bcd");
-  vocab.insert("def");
-  ASSERT_FALSE(HasMatch(vocab, "ab"));
-}
-
-TEST(HasMatch, MultiCharInputAndMultiElementSet) {
-  absl::flat_hash_set<string> vocab;
-  vocab.insert("abc");
-  vocab.insert("bcd");
-  vocab.insert("def");
-  ASSERT_TRUE(HasMatch(vocab, "bcd"));
-}
-
 absl::flat_hash_map<int, string> GetReverseVocab(
     const absl::flat_hash_map<string, int>& vocab) {
   absl::flat_hash_map<int, string> rvocab;
@@ -132,9 +97,9 @@ TEST(TokenizeInput, SingleCharInputAndVocab) {
   auto tokenized = TokenizeInput("aaba", candidate_vocab, &vocab);
   auto rvocab = GetReverseVocab(vocab);
 
+  ASSERT_EQ(2, vocab.size());
   ASSERT_NE(vocab.end(), vocab.find("ab"));
   ASSERT_NE(vocab.end(), vocab.find("a"));
-  ASSERT_EQ(2, vocab.size());
 
   ASSERT_EQ(3, tokenized.size());
   ASSERT_EQ("a", rvocab.find(tokenized[0])->second);
@@ -178,29 +143,6 @@ TEST(TokenizeInput, GreedyVocabMatches) {
   ASSERT_EQ("f", rvocab.find(tokenized[3])->second);
 }
 
-TEST(TokenizeInput, BackupOnVocabMiss) {
-  // Test to show that lexer "backs up" when it no longer matches a prefix in
-  // the candidate vocabulary.
-  absl::flat_hash_set<string> candidate_vocab;
-  candidate_vocab.insert("abcd");
-  candidate_vocab.insert("abce");
-  absl::flat_hash_map<string, int> vocab;
-  auto tokenized = TokenizeInput("abcf", candidate_vocab, &vocab);
-  auto rvocab = GetReverseVocab(vocab);
-
-  ASSERT_NE(vocab.end(), vocab.find("a"));
-  ASSERT_NE(vocab.end(), vocab.find("b"));
-  ASSERT_NE(vocab.end(), vocab.find("c"));
-  ASSERT_NE(vocab.end(), vocab.find("f"));
-  ASSERT_EQ(4, vocab.size());
-
-  ASSERT_EQ(4, tokenized.size());
-  ASSERT_EQ("a", rvocab.find(tokenized[0])->second);
-  ASSERT_EQ("b", rvocab.find(tokenized[1])->second);
-  ASSERT_EQ("c", rvocab.find(tokenized[2])->second);
-  ASSERT_EQ("f", rvocab.find(tokenized[3])->second);
-}
-
 TEST(TokenizeInput, SmallCProgram) {
   absl::flat_hash_set<string> candidate_vocab;
   candidate_vocab.insert("int");
@@ -209,8 +151,8 @@ TEST(TokenizeInput, SmallCProgram) {
   candidate_vocab.insert("float");  // unused
   candidate_vocab.insert("return");
   absl::flat_hash_map<string, int> vocab;
-  auto tokenized =
-      TokenizeInput("int void main() { return 0; }", candidate_vocab, &vocab);
+  auto tokenized = TokenizeInput("int void main() { return 0; }",
+                                 candidate_vocab, &vocab);
   auto rvocab = GetReverseVocab(vocab);
 
   ASSERT_EQ(11, vocab.size());

@@ -26,16 +26,6 @@ bool HasPrefix(const absl::flat_hash_set<string>& strings,
   return false;
 }
 
-bool HasMatch(const absl::flat_hash_set<string>& strings,
-              const std::string& match) {
-  for (auto& s : strings) {
-    if (s == match) {
-      return true;
-    }
-  }
-  return false;
-}
-
 int GetOrInsertToken(const string& token,
                      absl::flat_hash_map<string, int>* vocabulary) {
   auto encoded = vocabulary->find(token);
@@ -51,48 +41,19 @@ std::vector<int> TokenizeInput(
     const std::string& input,
     const absl::flat_hash_set<string>& candidate_vocabulary,
     absl::flat_hash_map<string, int>* vocabulary) {
-  // Given an input of length n and candidate_vocabulary of size m, this is a
-  // O(n*m) algorithm that is hard to reason about. There are presumably nicer
-  // and more elegant algorithms for performing this task, so consider a
-  // reimplementation at some point.
   std::vector<int> tokenized;
   int i = 0;
   int j = 2;
-  // Proceed through the text using two iterators to isolate a substring
-  // input[i:j].
   while (i < input.size()) {
-    if (j <= input.size() &&
-        HasPrefix(candidate_vocabulary, input.substr(i, j - i))) {
-      // input[i:j] prefixes an element in the candidate vocabulary, so advance
-      // to include another character.
+    const string candidate_token = input.substr(i, j - i);
+    if (j <= input.size() && HasPrefix(candidate_vocabulary, candidate_token)) {
       ++j;
     } else {
-      // input[i:j] doesn't match any prefixes in the vocabulary.
-      while (j > i + 1) {
-        // input[i:j] has advanced past a single character, so backtrack 'j' to
-        // the last point where input[i:j] _fully_ matched a string in the
-        // candidate vocabulary.
-        if (HasMatch(candidate_vocabulary, input.substr(i, j - i))) {
-          const int encoded =
-              GetOrInsertToken(input.substr(i, j - i), vocabulary);
-          tokenized.push_back(encoded);
-          i = j;
-          j = i + 2;
-          break;
-        } else {
-          // Continue backtracking.
-          --j;
-        }
-      }
-      if (j == i + 1) {
-        // We reached the point where input[i:j] is a single character without
-        // finding a match in the vocabulary, so add the single character to the
-        // vocabulary and move on.
-        const int encoded = GetOrInsertToken(input.substr(i, 1), vocabulary);
-        tokenized.push_back(encoded);
-        i += 1;
-        j += 2;
-      }
+      const string token = input.substr(i, j - i - 1);
+      const int encoded = GetOrInsertToken(token, vocabulary);
+      tokenized.push_back(encoded);
+      i = j - 1;
+      j = i + 2;
     }
   }
 
@@ -102,8 +63,8 @@ std::vector<int> TokenizeInput(
 void ProcessLexerJob(LexerJob* input,
                      const absl::flat_hash_set<string>& candidate_vocabulary,
                      absl::flat_hash_map<string, int>* vocabulary) {
-  auto tokenized =
-      TokenizeInput(input->string(), candidate_vocabulary, vocabulary);
+  auto tokenized = TokenizeInput(
+      input->string(), candidate_vocabulary, vocabulary);
   for (int j = 0; j < tokenized.size(); ++j) {
     input->add_token(tokenized[j]);
   }
@@ -113,8 +74,8 @@ void ProcessLexerJob(LexerJob* input,
 void ProcessLexerBatchJobOrDie(LexerBatchJob* proto) {
   // Initialize vocabulary.
   absl::flat_hash_map<string, int> vocabulary;
-  for (auto it = proto->vocabulary().begin(); it != proto->vocabulary().end();
-       ++it) {
+  for (auto it = proto->vocabulary().begin();
+       it != proto->vocabulary().end(); ++it) {
     vocabulary.insert({it->first, it->second});
   }
 

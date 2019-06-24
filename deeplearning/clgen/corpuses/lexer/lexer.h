@@ -18,8 +18,8 @@
 
 #include "deeplearning/clgen/proto/internal.pb.h"
 
-#include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
+#include "absl/container/flat_hash_map.h"
 
 #include "phd/string.h"
 
@@ -30,14 +30,7 @@ namespace clgen {
 bool HasPrefix(const absl::flat_hash_set<string>& strings,
                const std::string& prefix);
 
-// Determine if any of a s et of strings matches a string.
-// This assumes that strings set and match are note empty.
-bool HasMatch(const absl::flat_hash_set<string>& strings,
-              const std::string& match);
-
-// Tokenize a string into a list of tokens, where candidate_vocabulary is the
-// set of multi-character tokens, and vocabulary is a dictionary of mappings
-// from token to indices array.
+// Tokenize a string into a list of tokens.
 std::vector<int> TokenizeInput(
     const std::string& input,
     const absl::flat_hash_set<string>& candidate_vocabulary,
