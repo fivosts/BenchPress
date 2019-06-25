@@ -284,7 +284,11 @@ public final class JavaPreprocessor {
     // Re-run compilation. We already checked if the code compiles prior to
     // re-writing. Checking that the code compiles again is a safeguard against
     // shortcomings in the re-writer where code can "break" after re-writing.
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
     if (!CompilesWithoutError(WrapMethodInClassWithShim(contents))) {
+=======
+    if (!CompilesWithoutError(WrapMethodInClass(contents))) {
+>>>>>>> 5bf8a3e7b... Re-run compilation after Java rewriting.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
       message.setStatus(PreprocessorWorkerJobOutcome.Status.DOES_NOT_COMPILE);
       message.setContents("Failed to compile after re-writing");
       return message.build();
