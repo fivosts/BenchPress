@@ -35,11 +35,15 @@ public final class JavaPreprocessor {
 
   // Configuration options.
 <<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
   private static final int MIN_CHAR_COUNT = 50;
   private static final int MIN_LINE_COUNT = 4;
   private static final int PREPROCESS_TIMEOUT_SECONDS = 60;
 =======
   private static final int MIN_CHAR_COUNT = 100;
+=======
+  private static final int MIN_CHAR_COUNT = 50;
+>>>>>>> a5bdb1145... Reduce minimum charcount.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
   private static final int MIN_LINE_COUNT = 4;
 >>>>>>> 8587b528a... Tiny tweaks.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
   // End of configuration options.
