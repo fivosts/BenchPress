@@ -83,6 +83,7 @@ public final class JavaPreprocessor {
    * @param methodSrc The method to wrap.
    * @return The method, embedded in a class "A".
    */
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
   public String WrapMethodInClassWithShim(final String methodSrc) {
     // Template:
     //     import java.io.*;
@@ -100,6 +101,14 @@ public final class JavaPreprocessor {
         + "import java.nio.file.*;\n"
         + "import java.time.format.*;\n"
         + "import java.util.*;\n"
+=======
+  protected String WrapMethodInClassWithShim(final String methodSrc) {
+    return ("import java.io.*;\n"
+        + "import java.nio.charset.*;\n"
+        + "import java.nio.file.*;\n"
+        + "import java.util.*;\n"
+        + "import java.time.format.*;\n"
+>>>>>>> e10558cbb... Use shim imports to test compilation.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
         + "public class A{"
         + methodSrc
         + "}");
@@ -285,10 +294,14 @@ public final class JavaPreprocessor {
     // re-writing. Checking that the code compiles again is a safeguard against
     // shortcomings in the re-writer where code can "break" after re-writing.
 <<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
     if (!CompilesWithoutError(WrapMethodInClassWithShim(contents))) {
 =======
     if (!CompilesWithoutError(WrapMethodInClass(contents))) {
 >>>>>>> 5bf8a3e7b... Re-run compilation after Java rewriting.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
+=======
+    if (!CompilesWithoutError(WrapMethodInClassWithShim(contents))) {
+>>>>>>> e10558cbb... Use shim imports to test compilation.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
       message.setStatus(PreprocessorWorkerJobOutcome.Status.DOES_NOT_COMPILE);
       message.setContents("Failed to compile after re-writing");
       return message.build();
