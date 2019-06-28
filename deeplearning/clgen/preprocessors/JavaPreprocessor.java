@@ -108,11 +108,15 @@ public final class JavaPreprocessor {
 =======
   protected String WrapMethodInClassWithShim(final String methodSrc) {
     return ("import java.io.*;\n"
+        + "import java.math.*;\n"
         + "import java.nio.charset.*;\n"
         + "import java.nio.file.*;\n"
-        + "import java.util.*;\n"
         + "import java.time.format.*;\n"
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
 >>>>>>> e10558cbb... Use shim imports to test compilation.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
+=======
+        + "import java.util.*;\n"
+>>>>>>> 89773fa1e... Add java.math.* to Java shim imports.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
         + "public class A{"
         + methodSrc
         + "}");
