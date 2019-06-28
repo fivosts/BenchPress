@@ -191,6 +191,7 @@ public final class JavaPreprocessor {
     // Assumes that class is named "A".
     final String[] resources = {"A.java"};
     JavaCompilerSettings settings = compiler.createDefaultSettings();
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
 
     try {
       final CompilationResult result =
@@ -215,6 +216,12 @@ public final class JavaPreprocessor {
       //     ...
       return false;
     }
+=======
+    System.err.println("Settings: " + settings.toString());
+
+    final CompilationResult result = compiler.compile(resources, input, unusedOutput, classloader);
+    return result.getErrors().length == 0;
+>>>>>>> 59842848e... Set Java compiler version.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
   }
 
   /**
