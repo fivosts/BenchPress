@@ -222,9 +222,35 @@ public final class JavaPreprocessor {
 =======
 >>>>>>> 458eaaa8f... Remove debugging printout.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
 
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
     final CompilationResult result = compiler.compile(resources, input, unusedOutput, classloader);
     return result.getErrors().length == 0;
 >>>>>>> 59842848e... Set Java compiler version.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
+=======
+    try {
+      final CompilationResult result =
+          compiler.compile(resources, input, unusedOutput, classloader);
+      return result.getErrors().length == 0;
+    } catch (NullPointerException e) {
+      // A bug in compiler raised this error:
+      //
+      //     Exception in thread "main" java.lang.NullPointerException
+      //     at
+      // org.eclipse.jdt.internal.compiler.ast.QualifiedNameReference.optimizedBooleanConstant(QualifiedNameReference.java:926)
+      //     at
+      // org.eclipse.jdt.internal.compiler.ast.CastExpression.optimizedBooleanConstant(CastExpression.java:553)
+      //     at
+      // org.eclipse.jdt.internal.compiler.ast.UnaryExpression.resolveType(UnaryExpression.java:299)
+      //     at org.eclipse.jdt.internal.compiler.ast.Assignment.resolveType(Assignment.java:211)
+      //     at org.eclipse.jdt.internal.compiler.ast.Expression.resolve(Expression.java:1031)
+      //     at org.eclipse.jdt.internal.compiler.ast.Block.resolve(Block.java:122)
+      //     at org.eclipse.jdt.internal.compiler.ast.IfStatement.resolve(IfStatement.java:280)
+      //     at org.eclipse.jdt.internal.compiler.ast.Block.resolve(Block.java:122)
+      //     at org.eclipse.jdt.internal.compiler.ast.IfStatement.resolve(IfStatement.java:280)
+      //     ...
+      return false;
+    }
+>>>>>>> 5f6d67c80... Catch NullPointerException bug during compilation.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
   }
 
   /**
