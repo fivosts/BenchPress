@@ -166,9 +166,14 @@ public final class JavaPreprocessor {
   protected String RewriteSource(final String methodSrc)
       throws TimeoutException, ExecutionException, InterruptedException {
     final String wrappedSrc = WrapMethodInClass(methodSrc);
+<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
     final String rewrittenSrc =
         new JavaRewriter().RewriteSource(wrappedSrc, "A.java", PREPROCESS_TIMEOUT_SECONDS);
     return UnwrapMethodInClassOr(rewrittenSrc);
+=======
+    final String rewrittenSrc = new JavaRewriter().RewriteSource(wrappedSrc, "A.java");
+    return UnwrapMethodInClassOrDie(rewrittenSrc);
+>>>>>>> 78b5b8485... Fix RewriteSource() usage.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
   }
 
   /**
