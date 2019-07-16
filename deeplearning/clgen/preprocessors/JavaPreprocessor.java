@@ -8,13 +8,6 @@ import deeplearning.clgen.InternalProtos.PreprocessorWorkerJobOutcomes;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import org.apache.commons.jci.compilers.CompilationResult;
 import org.apache.commons.jci.compilers.EclipseJavaCompiler;
 import org.apache.commons.jci.compilers.EclipseJavaCompilerSettings;
@@ -34,18 +27,8 @@ import org.eclipse.jface.text.Document;
 public final class JavaPreprocessor {
 
   // Configuration options.
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
   private static final int MIN_CHAR_COUNT = 50;
   private static final int MIN_LINE_COUNT = 4;
-  private static final int PREPROCESS_TIMEOUT_SECONDS = 60;
-=======
-  private static final int MIN_CHAR_COUNT = 100;
-=======
-  private static final int MIN_CHAR_COUNT = 50;
->>>>>>> a5bdb1145... Reduce minimum charcount.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
-  private static final int MIN_LINE_COUNT = 4;
->>>>>>> 8587b528a... Tiny tweaks.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
   // End of configuration options.
 
   /** Construct a preprocessor. */
@@ -87,7 +70,6 @@ public final class JavaPreprocessor {
    * @param methodSrc The method to wrap.
    * @return The method, embedded in a class "A".
    */
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
   public String WrapMethodInClassWithShim(final String methodSrc) {
     // Template:
     //     import java.io.*;
@@ -105,28 +87,6 @@ public final class JavaPreprocessor {
         + "import java.nio.file.*;\n"
         + "import java.time.format.*;\n"
         + "import java.util.*;\n"
-=======
-  protected String WrapMethodInClassWithShim(final String methodSrc) {
-    // Template:
-    //     import java.io.*;
-    //     import java.math.*;
-    //     import java.nio.charset.*;
-    //     import java.nio.file.*;
-    //     import java.time.format.*;
-    //     import java.util.*;
-    //     public class A {
-    //       /* METHOD GOES HERE */
-    //     }
-    return ("import java.io.*;\n"
-        + "import java.math.*;\n"
-        + "import java.nio.charset.*;\n"
-        + "import java.nio.file.*;\n"
-        + "import java.time.format.*;\n"
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
->>>>>>> e10558cbb... Use shim imports to test compilation.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
-=======
-        + "import java.util.*;\n"
->>>>>>> 89773fa1e... Add java.math.* to Java shim imports.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
         + "public class A{"
         + methodSrc
         + "}");
@@ -144,7 +104,7 @@ public final class JavaPreprocessor {
     return (CompilationUnit) parser.createAST(null);
   }
 
-  protected String UnwrapMethodInClassOr(final String src) {
+  protected String UnwrapMethodInClassOrDie(final String src) {
     Document document = new Document(src);
     CompilationUnit compilationUnit = GetCompilationUnit(document);
 
@@ -159,31 +119,16 @@ public final class JavaPreprocessor {
           }
         });
     if (method[0] == null) {
-      throw new IllegalArgumentException("Could not unwrap method in class: " + src);
+      System.err.println("fatal: Could not unwrap method in class: " + src);
+      System.exit(1);
     }
     return method[0];
   }
 
-  /**
-   * Rewrite a Java method.
-   *
-   * @param methodSrc The method source string.
-   * @return The rewritten method.
-   * @throws TimeoutException
-   * @throws ExecutionException
-   * @throws InterruptedException
-   */
-  protected String RewriteSource(final String methodSrc)
-      throws TimeoutException, ExecutionException, InterruptedException {
+  protected String RewriteSource(final String methodSrc) {
     final String wrappedSrc = WrapMethodInClass(methodSrc);
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
-    final String rewrittenSrc =
-        new JavaRewriter().RewriteSource(wrappedSrc, "A.java", PREPROCESS_TIMEOUT_SECONDS);
-    return UnwrapMethodInClassOr(rewrittenSrc);
-=======
     final String rewrittenSrc = new JavaRewriter().RewriteSource(wrappedSrc, "A.java");
     return UnwrapMethodInClassOrDie(rewrittenSrc);
->>>>>>> 78b5b8485... Fix RewriteSource() usage.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
   }
 
   /**
@@ -206,8 +151,6 @@ public final class JavaPreprocessor {
     // Assumes that class is named "A".
     final String[] resources = {"A.java"};
     JavaCompilerSettings settings = compiler.createDefaultSettings();
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
 
     try {
       final CompilationResult result =
@@ -232,40 +175,6 @@ public final class JavaPreprocessor {
       //     ...
       return false;
     }
-=======
-    System.err.println("Settings: " + settings.toString());
-=======
->>>>>>> 458eaaa8f... Remove debugging printout.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
-
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
-    final CompilationResult result = compiler.compile(resources, input, unusedOutput, classloader);
-    return result.getErrors().length == 0;
->>>>>>> 59842848e... Set Java compiler version.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
-=======
-    try {
-      final CompilationResult result =
-          compiler.compile(resources, input, unusedOutput, classloader);
-      return result.getErrors().length == 0;
-    } catch (NullPointerException e) {
-      // A bug in compiler raised this error:
-      //
-      //     Exception in thread "main" java.lang.NullPointerException
-      //     at
-      // org.eclipse.jdt.internal.compiler.ast.QualifiedNameReference.optimizedBooleanConstant(QualifiedNameReference.java:926)
-      //     at
-      // org.eclipse.jdt.internal.compiler.ast.CastExpression.optimizedBooleanConstant(CastExpression.java:553)
-      //     at
-      // org.eclipse.jdt.internal.compiler.ast.UnaryExpression.resolveType(UnaryExpression.java:299)
-      //     at org.eclipse.jdt.internal.compiler.ast.Assignment.resolveType(Assignment.java:211)
-      //     at org.eclipse.jdt.internal.compiler.ast.Expression.resolve(Expression.java:1031)
-      //     at org.eclipse.jdt.internal.compiler.ast.Block.resolve(Block.java:122)
-      //     at org.eclipse.jdt.internal.compiler.ast.IfStatement.resolve(IfStatement.java:280)
-      //     at org.eclipse.jdt.internal.compiler.ast.Block.resolve(Block.java:122)
-      //     at org.eclipse.jdt.internal.compiler.ast.IfStatement.resolve(IfStatement.java:280)
-      //     ...
-      return false;
-    }
->>>>>>> 5f6d67c80... Catch NullPointerException bug during compilation.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
   }
 
   /**
@@ -292,34 +201,13 @@ public final class JavaPreprocessor {
     return false;
   }
 
-  public PreprocessorWorkerJobOutcome PreprocessSourceOrDie(
-      final String src, final int timeoutSeconds) {
-    try {
-      ExecutorService executor = Executors.newCachedThreadPool();
-      Callable<PreprocessorWorkerJobOutcome> task =
-          new Callable<PreprocessorWorkerJobOutcome>() {
-            public PreprocessorWorkerJobOutcome call() {
-              return PreprocessSourceOrDie(src);
-            }
-          };
-
-      Future<PreprocessorWorkerJobOutcome> future = executor.submit(task);
-      return future.get(timeoutSeconds, TimeUnit.SECONDS);
-    } catch (Exception e) {
-      PreprocessorWorkerJobOutcome.Builder message = PreprocessorWorkerJobOutcome.newBuilder();
-      message.setStatus(PreprocessorWorkerJobOutcome.Status.DOES_NOT_COMPILE);
-      message.setContents("Preprocess timeout");
-      return message.build();
-    }
-  }
-
   /**
    * Preprocess a single Java source text.
    *
    * @param src The source to preprocess.
    * @return A PreprocessorWorkerJobOutcome message with the results of preprocessing.
    */
-  public PreprocessorWorkerJobOutcome PreprocessSourceOrDie(final String src) {
+  private PreprocessorWorkerJobOutcome PreprocessSourceOrDie(final String src) {
     PreprocessorWorkerJobOutcome.Builder message = PreprocessorWorkerJobOutcome.newBuilder();
     String contents = src;
 
@@ -352,15 +240,7 @@ public final class JavaPreprocessor {
     // Re-run compilation. We already checked if the code compiles prior to
     // re-writing. Checking that the code compiles again is a safeguard against
     // shortcomings in the re-writer where code can "break" after re-writing.
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
-<<<<<<< HEAD:deeplearning/clgen/preprocessors/JavaPreprocessor.java
     if (!CompilesWithoutError(WrapMethodInClassWithShim(contents))) {
-=======
-    if (!CompilesWithoutError(WrapMethodInClass(contents))) {
->>>>>>> 5bf8a3e7b... Re-run compilation after Java rewriting.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
-=======
-    if (!CompilesWithoutError(WrapMethodInClassWithShim(contents))) {
->>>>>>> e10558cbb... Use shim imports to test compilation.:experimental/deeplearning/deepsmith/java_fuzz/JavaPreprocessor.java
       message.setStatus(PreprocessorWorkerJobOutcome.Status.DOES_NOT_COMPILE);
       message.setContents("Failed to compile after re-writing");
       return message.build();
@@ -382,9 +262,7 @@ public final class JavaPreprocessor {
 
     for (int i = 0; i < srcs.getStringCount(); ++i) {
       final long startTime = System.currentTimeMillis();
-      PreprocessorWorkerJobOutcome outcome =
-          PreprocessSourceOrDie(srcs.getString(i), PREPROCESS_TIMEOUT_SECONDS);
-      message.addOutcome(outcome);
+      message.addOutcome(PreprocessSourceOrDie(srcs.getString(i)));
       message.addPreprocessTimeMs(System.currentTimeMillis() - startTime);
     }
 
