@@ -106,12 +106,16 @@ py_library(
         ":archive",
 <<<<<<< HEAD:labm8/py/BUILD
 <<<<<<< HEAD:labm8/py/BUILD
+<<<<<<< HEAD:labm8/py/BUILD
         ":fs",
 =======
         "//config:getconfig",
 >>>>>>> 0e24e1d99... Add a labm8.bazelutil.DataArchive class.:labm8/BUILD
 =======
 >>>>>>> 996b7e72c... Move config and build_info to top level package.:labm8/BUILD
+=======
+        ":fs",
+>>>>>>> 7851b2a76... Add extra dependencies on //labm8:fs.:labm8/BUILD
     ],
 )
 
@@ -960,10 +964,14 @@ py_library(
     name = "system",
     srcs = ["system.py"],
     visibility = ["//visibility:public"],
+<<<<<<< HEAD:labm8/py/BUILD
     deps = [
         ":app",
         ":fs",
     ],
+=======
+    deps = [":fs", ":app"],
+>>>>>>> 7851b2a76... Add extra dependencies on //labm8:fs.:labm8/BUILD
 )
 
 py_test(
