@@ -69,7 +69,12 @@ from sys import platform
 =======
 >>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/system.py
 
+<<<<<<< HEAD:labm8/py/system.py
 from phd.lib.labm8 import fs
+=======
+from labm8 import app
+from labm8 import fs
+>>>>>>> 49db6d347... Add a CheckCallOrDie() utility function.:labm8/system.py
 
 >>>>>>> 1eed6e90b... Automated code format.:lib/labm8/system.py
 
@@ -531,4 +536,17 @@ def ProcessFileAndReplace(
     finally:
       if os.path.isfile(tmp_path):
         os.unlink(tmp_path)
+<<<<<<< HEAD:labm8/py/system.py
 >>>>>>> c774253ad... Add a function to process a file in place.:lib/labm8/system.py
+=======
+
+
+def CheckCallOrDie(cmd: typing.List[str]) -> None:
+  """Run the given command and exit fatally on error."""
+  try:
+    app.Log(2, '$ %s', ' '.join(cmd))
+    subprocess.check_call(cmd)
+  except subprocess.CalledProcessError as e:
+    app.FatalWithoutStackTrace(
+        "Command: `%s` failed with error: %s", ' '.join(cmd), e)
+>>>>>>> 49db6d347... Add a CheckCallOrDie() utility function.:labm8/system.py
