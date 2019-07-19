@@ -11,9 +11,14 @@ import subprocess
 import sys
 import typing
 
+<<<<<<< HEAD:labm8/py/bazelutil.py
 from labm8.py import app
 from labm8.py import archive
 from labm8.py import fs
+=======
+from labm8 import archive
+from labm8 import fs
+>>>>>>> a4e1bff54... Auto-format code.:labm8/bazelutil.py
 
 # Regular expression to everything in a path up until the '*.runfiles'
 # directory, e.g. for the path '/private/var/bazel/foo/bar.runfiles/a/b/c',
@@ -155,12 +160,19 @@ class Workspace(object):
   def workspace_root(self) -> pathlib.Path:
     return self._root
 
+<<<<<<< HEAD:labm8/py/bazelutil.py
   def BazelQuery(
     self,
     args: typing.List[str],
     timeout_seconds: int = 360,
     **subprocess_kwargs,
   ):
+=======
+  def BazelQuery(self,
+                 args: typing.List[str],
+                 timeout_seconds: int = 360,
+                 **subprocess_kwargs):
+>>>>>>> a4e1bff54... Auto-format code.:labm8/bazelutil.py
     """Run bazel query with the specified args in the workspace.
 
     Args:
@@ -189,11 +201,20 @@ class Workspace(object):
     ] + args
     app.Log(2, "$ %s", " ".join(cmd))
     with fs.chdir(self.workspace_root):
+<<<<<<< HEAD:labm8/py/bazelutil.py
       return subprocess.Popen(cmd, **subprocess_kwargs)
 
   def MaybeTargetToPath(
     self, fully_qualified_target: str,
   ) -> typing.Optional[pathlib.Path]:
+=======
+      return subprocess.Popen(
+          ['timeout', '-s9',
+           str(timeout_seconds), 'bazel', 'query'] + args, **subprocess_kwargs)
+
+  def MaybeTargetToPath(
+      self, fully_qualified_target: str) -> typing.Optional[pathlib.Path]:
+>>>>>>> a4e1bff54... Auto-format code.:labm8/bazelutil.py
     """Determine if a bazel target refers to a file, and if so return the path.
 
     Args:
@@ -221,9 +242,13 @@ class Workspace(object):
         f"{fully_qualified_target}",
       )
 
+<<<<<<< HEAD:labm8/py/bazelutil.py
   def GetDependentFiles(
     self, target: str, excluded_targets: typing.Iterable[str],
   ) -> typing.List[pathlib.Path]:
+=======
+  def GetDependentFiles(self, target: str) -> typing.List[pathlib.Path]:
+>>>>>>> a4e1bff54... Auto-format code.:labm8/bazelutil.py
     """Get the file dependencies of the target.
 
     Args:

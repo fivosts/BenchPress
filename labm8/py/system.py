@@ -547,6 +547,11 @@ def CheckCallOrDie(cmd: typing.List[str]) -> None:
     app.Log(2, '$ %s', ' '.join(cmd))
     subprocess.check_call(cmd)
   except subprocess.CalledProcessError as e:
+<<<<<<< HEAD:labm8/py/system.py
     app.FatalWithoutStackTrace(
         "Command: `%s` failed with error: %s", ' '.join(cmd), e)
 >>>>>>> 49db6d347... Add a CheckCallOrDie() utility function.:labm8/system.py
+=======
+    app.FatalWithoutStackTrace("Command: `%s` failed with error: %s",
+                               ' '.join(cmd), e)
+>>>>>>> a4e1bff54... Auto-format code.:labm8/system.py

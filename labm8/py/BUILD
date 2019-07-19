@@ -965,13 +965,19 @@ py_library(
     srcs = ["system.py"],
     visibility = ["//visibility:public"],
 <<<<<<< HEAD:labm8/py/BUILD
+<<<<<<< HEAD:labm8/py/BUILD
+=======
+>>>>>>> a4e1bff54... Auto-format code.:labm8/BUILD
     deps = [
         ":app",
         ":fs",
     ],
+<<<<<<< HEAD:labm8/py/BUILD
 =======
     deps = [":fs", ":app"],
 >>>>>>> 7851b2a76... Add extra dependencies on //labm8:fs.:labm8/BUILD
+=======
+>>>>>>> a4e1bff54... Auto-format code.:labm8/BUILD
 )
 
 py_test(

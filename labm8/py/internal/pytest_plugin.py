@@ -21,8 +21,11 @@ import typing
 
 import pytest
 
+<<<<<<< HEAD:labm8/py/internal/pytest_plugin.py
 from labm8.py import app
 
+=======
+>>>>>>> a4e1bff54... Auto-format code.:conftest.py
 # *WARNING* Flags used in this file are not defined here! They are declared in
 # //labm8/py:test.
 FLAGS = app.FLAGS
