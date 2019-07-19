@@ -324,12 +324,17 @@ class Workspace(object):
 =======
 
     targets = stdout.rstrip().split('\n')
+<<<<<<< HEAD:labm8/py/bazelutil.py
     paths = [
         self.MaybeTargetToPath(target)
         for target in targets
         if target not in excluded_targets
 >>>>>>> cf0d9248e... Add support for excluded targets.:labm8/bazelutil.py
     ]
+=======
+    targets = [target for target in targets if target not in excluded_targets]
+    paths = [self.MaybeTargetToPath(target) for target in targets]
+>>>>>>> d0acf9c9d... Tiny refactor.:labm8/bazelutil.py
     return [path for path in paths if path]
 
   def GetBuildFiles(self, target: str) -> typing.List[pathlib.Path]:
