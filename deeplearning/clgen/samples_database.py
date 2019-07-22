@@ -29,16 +29,17 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
   proto_t = model_pb2.Sample
 
   id: int = sql.Column(sql.Integer, primary_key=True)
-  text: str = sql.Column(
-      sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable=False)
+  text: str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(),
+                         nullable=False)
   # Checksum of the sample text.
   sha256: str = sql.Column(sql.String(64), nullable=False, index=True)
   num_tokens: int = sql.Column(sql.Integer, nullable=False)
   sample_time_ms: int = sql.Column(sql.Integer, nullable=False)
   wall_time_ms: int = sql.Column(sql.Integer, nullable=False)
   sample_date: datetime.datetime = sql.Column(sql.DateTime, nullable=False)
-  date_added: datetime.datetime = sql.Column(
-      sql.DateTime, nullable=False, default=datetime.datetime.utcnow)
+  date_added: datetime.datetime = sql.Column(sql.DateTime,
+                                             nullable=False,
+                                             default=datetime.datetime.utcnow)
 
   def SetProto(self, proto: model_pb2.Sample) -> None:
     proto.text = self.text
@@ -69,8 +70,8 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
 class SamplesDatabase(sqlutil.Database):
   """A database of CLgen samples."""
 
-  def __init__(self, url: str, must_exist: bool = False):
-    super(SamplesDatabase, self).__init__(url, Base, must_exist=must_exist)
+  def __init__(self, *args, **kwargs):
+    super(SamplesDatabase, self).__init__(*args, Base, **kwargs)
 
   @contextlib.contextmanager
   def Observer(self) -> sample_observers.SampleObserver:
@@ -89,21 +90,31 @@ class SamplesDatabaseObserver(sample_observers.SampleObserver):
 
   def __init__(self,
                db: SamplesDatabase,
-               flush_secs: int = 30,
+               commit_seconds_frequency: int = 30,
                commit_sample_frequency: int = 1024):
-    self._writer = sqlutil.BufferedDatabaseWriter(
-        db,
-        flush_secs=flush_secs,
-        max_queue=commit_sample_frequency)
+    self._db = db
+    self._last_commit = time.time()
+    self._to_commit = []
+    self._commit_seconds_frequency = commit_seconds_frequency
+    self._commit_sample_frequency = commit_sample_frequency
 
   def __del__(self):
     self.Flush()
 
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback."""
-    self._writer.AddOne(Sample(**Sample.FromProto(sample)))
+    self._to_commit.append(Sample(**Sample.FromProto(sample)))
+
+    # Commit records if required.
+    if (len(self._to_commit) > self._commit_sample_frequency or
+        (time.time() - self._last_commit) > self._commit_seconds_frequency):
+      self.Flush()
+
     return True
 
   def Flush(self) -> None:
     """Commit all pending records to database."""
-    self._writer.Flush()
+    with self._db.Session(commit=True) as session:
+      session.add_all(self._to_commit)
+    self._to_commit = []
+    self._last_commit = time.time()
