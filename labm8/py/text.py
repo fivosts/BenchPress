@@ -17,10 +17,14 @@
 # limitations under the License.
 """Text utilities.
 """
-import re
-import typing
+<<<<<<< HEAD:labm8/py/text.py
+=======
+from __future__ import division
 
 import networkx as nx
+>>>>>>> b755b03e9... Add a method for stripping comments.:labm8/text.py
+import re
+import typing
 
 
 class Error(Exception):
@@ -295,4 +299,25 @@ def StripSingleLineComments(
   components = re.findall('[A-Z][^A-Z]*', camel_caps_str)
   assert components
   return '_'.join(x.lower() for x in components)
+<<<<<<< HEAD:labm8/py/text.py
 >>>>>>> 13a6740d9... Restructure static features and add dynamic.:labm8/text.py
+=======
+
+
+def StripSingleLineComments(string: str,
+                            start_comment_re: str = '(#|//)') -> str:
+  """Strip line comments from a string.
+
+  Args:
+    string: The string to strip the comments of.
+    start_comment_re: The regular expression to match the start of a line
+      comment. By default, this matches Bash-style '#' and C-style '//'
+      comments.
+
+  Returns:
+    The string.
+  """
+  comment_re = re.compile(f'{start_comment_re}.*')
+  lines = [comment_re.sub('', line) for line in string.split('\n')]
+  return '\n'.join(lines)
+>>>>>>> b755b03e9... Add a method for stripping comments.:labm8/text.py
