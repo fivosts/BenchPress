@@ -101,9 +101,12 @@ def FromString(
 class ProtoWorkerTimeoutError(subprocess.CalledProcessError):
   """Raised is a protobuf worker binary times out."""
 
-  def __init__(self, cmd: typing.List[str], timeout_seconds: int):
+  def __init__(self, cmd: typing.List[str], timeout_seconds: int,
+               returncode: int):
     self.cmd = cmd
     self.timeout_seconds = timeout_seconds
+    # subprocess.CalledProcessError.str() requires a returncode attribute.
+    self.returncode = returncode
 
   def __repr__(self) -> str:
     return (f"Proto worker timeout after {self.timeout_seconds} "
@@ -400,6 +403,7 @@ def PrettyPrintJson(message: ProtocolBuffer, truncate: int = 52) -> str:
   """
   data = ToJson(message)
 <<<<<<< HEAD:labm8/py/pbutil.py
+<<<<<<< HEAD:labm8/py/pbutil.py
   return json.dumps(
 <<<<<<< HEAD:labm8/py/pbutil.py
     _TruncateDictionaryStringValues(data) if truncate else data,
@@ -416,6 +420,12 @@ def PrettyPrintJson(message: ProtocolBuffer, truncate: int = 52) -> str:
                     indent=2,
                     sort_keys=True)
 >>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/pbutil.py
+=======
+  return json.dumps(
+      _TruncateDictionaryStringValues(data) if truncate else data,
+      indent=2,
+      sort_keys=True)
+>>>>>>> fddfd9315... Add a returncode attribute.:labm8/pbutil.py
 
 
 def RaiseIfNotSet(
@@ -655,8 +665,13 @@ def RunProcessMessageToProto(
 =======
   # TODO: Check signal value, not hardcoded int.
   if process.returncode == -9 or process.returncode == 9:
+<<<<<<< HEAD:labm8/py/pbutil.py
 >>>>>>> 08f3dae64... Fix timeouts.:labm8/pbutil.py
     raise ProtoWorkerTimeoutError(cmd=cmd, timeout_seconds=timeout_seconds)
+=======
+    raise ProtoWorkerTimeoutError(
+        cmd=cmd, timeout_seconds=timeout_seconds, returncode=process.returncode)
+>>>>>>> fddfd9315... Add a returncode attribute.:labm8/pbutil.py
   elif process.returncode:
     raise subprocess.CalledProcessError(process.returncode, cmd)
 >>>>>>> 8c6ea2b4d... Add timeout support for cldrive.:labm8/pbutil.py
@@ -745,10 +760,8 @@ def RunProcessMessageToProto(cmd: typing.List[str],
 =======
                              timeout_seconds: int = 360,
                              env: typing.Dict[str, str] = None):
-  stdout = RunProcessMessage(cmd,
-                             input_proto,
-                             timeout_seconds=timeout_seconds,
-                             env=env)
+  stdout = RunProcessMessage(
+      cmd, input_proto, timeout_seconds=timeout_seconds, env=env)
   output_proto.ParseFromString(stdout)
 >>>>>>> 19647f430... Switch to batched corpus export.:labm8/pbutil.py
   return output_proto
@@ -760,6 +773,7 @@ def RunProcessMessageInPlace(cmd: typing.List[str],
                              env: typing.Dict[str, str] = None):
   input_proto.ParseFromString(
 <<<<<<< HEAD:labm8/py/pbutil.py
+<<<<<<< HEAD:labm8/py/pbutil.py
       RunProcessMessage(cmd, input_proto, timeout_seconds=timeout_seconds))
 >>>>>>> 7b7ab9b19... Work in progress on CSV output.:labm8/pbutil.py
 =======
@@ -768,6 +782,10 @@ def RunProcessMessageInPlace(cmd: typing.List[str],
                         timeout_seconds=timeout_seconds,
                         env=env))
 >>>>>>> 19647f430... Switch to batched corpus export.:labm8/pbutil.py
+=======
+      RunProcessMessage(
+          cmd, input_proto, timeout_seconds=timeout_seconds, env=env))
+>>>>>>> fddfd9315... Add a returncode attribute.:labm8/pbutil.py
   return input_proto
 
 
