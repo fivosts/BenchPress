@@ -1,10 +1,4 @@
-brew "coreutils"
-brew "findutils"
-brew "gnu-sed"
-brew "python"
-brew "mysql"
-brew "pybind11"
-brew "zlib"
+update
 tap "homebrew/cask-versions"
 cask "java8"
 tap "bazelbuild/tap", pin:true
