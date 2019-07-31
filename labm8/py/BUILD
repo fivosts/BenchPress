@@ -25,6 +25,7 @@ licenses(["notice"])  # Apache 2.0
 exports_files([
     "LICENSE",
     "README.md",
+    "CNAME",
 ])
 >>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/BUILD
 
