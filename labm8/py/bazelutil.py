@@ -202,6 +202,7 @@ class Workspace(object):
     app.Log(2, "$ %s", " ".join(cmd))
     with fs.chdir(self.workspace_root):
 <<<<<<< HEAD:labm8/py/bazelutil.py
+<<<<<<< HEAD:labm8/py/bazelutil.py
       return subprocess.Popen(cmd, **subprocess_kwargs)
 
   def MaybeTargetToPath(
@@ -211,6 +212,12 @@ class Workspace(object):
       return subprocess.Popen(
           ['timeout', '-s9',
            str(timeout_seconds), 'bazel', 'query'] + args, **subprocess_kwargs)
+=======
+      return subprocess.Popen([
+          'timeout', '-s9',
+          str(timeout_seconds), 'bazel', 'query', '--noshow_progress'
+      ] + args, **subprocess_kwargs)
+>>>>>>> c22954d10... Don't show progress in bazel query.:labm8/bazelutil.py
 
   def MaybeTargetToPath(
       self, fully_qualified_target: str) -> typing.Optional[pathlib.Path]:
