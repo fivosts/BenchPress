@@ -181,6 +181,7 @@ class Workspace(object):
       subprocess_kwargs: Additional arguments to pass to Popen().
     """
     return self.Bazel(
+<<<<<<< HEAD:labm8/py/bazelutil.py
       "query", args, timeout_seconds=timeout_seconds, **subprocess_kwargs
     )
 
@@ -200,6 +201,15 @@ class Workspace(object):
       "--noshow_progress",
     ] + args
     app.Log(2, "$ %s", " ".join(cmd))
+=======
+        'query', args, timeout_seconds=timeout_seconds, **subprocess_kwargs)
+
+  def Bazel(self,
+            command: str,
+            args: typing.List[str],
+            timeout_seconds: int = 360,
+            **subprocess_kwargs):
+>>>>>>> 90ade5621... Add a Bazel() method.:labm8/bazelutil.py
     with fs.chdir(self.workspace_root):
 <<<<<<< HEAD:labm8/py/bazelutil.py
 <<<<<<< HEAD:labm8/py/bazelutil.py
@@ -215,7 +225,7 @@ class Workspace(object):
 =======
       return subprocess.Popen([
           'timeout', '-s9',
-          str(timeout_seconds), 'bazel', 'query', '--noshow_progress'
+          str(timeout_seconds), 'bazel', command, '--noshow_progress'
       ] + args, **subprocess_kwargs)
 >>>>>>> c22954d10... Don't show progress in bazel query.:labm8/bazelutil.py
 
