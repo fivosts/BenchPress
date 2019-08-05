@@ -1,74 +1,18 @@
-<<<<<<< HEAD:labm8/cpp/BUILD
-# Core C++ libraries.
-#
-# Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
-=======
 # Core C++ libraries for the phd repo.
 #
 # Copyright 2019 Chris Cummins <chrisc.101@gmail.com>.
->>>>>>> 902aaa8a5... Add copyright header to BUILD file.:phd/BUILD
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-<<<<<<< HEAD:labm8/cpp/BUILD
-#    http://www.apache.org/licenses/LICENSE-2.0
-=======
 #     http://www.apache.org/licenses/LICENSE-2.0
->>>>>>> 902aaa8a5... Add copyright header to BUILD file.:phd/BUILD
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-<<<<<<< HEAD:labm8/cpp/BUILD
-
-cc_library(
-    name = "app",
-    srcs = ["app.cc"],
-    hdrs = ["app.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "@com_github_gflags_gflags//:gflags",
-    ],
-)
-
-cc_test(
-    name = "app_test",
-    srcs = ["app_test.cc"],
-    deps = [
-        ":app",
-        ":test",
-    ],
-)
-
-cc_library(
-    name = "bazelutil",
-    srcs = ["bazelutil.cc"],
-    hdrs = ["bazelutil.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":logging",
-        ":status",
-        ":statusor",
-        ":string",
-        "@boost//:filesystem",
-    ],
-)
-
-cc_test(
-    name = "bazelutil_test",
-    srcs = ["bazelutil_test.cc"],
-    data = ["//labm8/cpp/test:data_file"],
-    deps = [
-        ":bazelutil",
-        ":test",
-    ],
-)
-=======
->>>>>>> 902aaa8a5... Add copyright header to BUILD file.:phd/BUILD
 
 cc_library(
     name = "app",
@@ -184,23 +128,14 @@ cc_library(
     name = "logging",
     srcs = ["logging.cc"],
     hdrs = ["logging.h"],
-    linkopts = ["-pthread"],
     visibility = ["//visibility:public"],
     deps = [
         ":macros",
         ":port",
         ":string",
         ":stringpiece",
-<<<<<<< HEAD:labm8/cpp/BUILD
-<<<<<<< HEAD:labm8/cpp/BUILD
         "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/time",
-=======
->>>>>>> 946613116... Fixes for Google logging port.:phd/BUILD
-=======
-        "@com_google_absl//absl/strings:str_format",
-        "@com_google_absl//absl/time",
->>>>>>> 86760c837... Use same logging formatting in C++ as Python.:phd/BUILD
     ],
 )
 
@@ -238,11 +173,7 @@ cc_test(
     deps = [
         ":pbutil",
         ":test",
-<<<<<<< HEAD:labm8/cpp/BUILD
-        "//labm8/cpp/test:protos_pb_cc",
-=======
         "//phd/test:protos_pb_cc",
->>>>>>> ffe0ea053... Update //phd/…:phd/BUILD
     ],
 )
 
@@ -309,11 +240,7 @@ cc_test(
     srcs = ["statusor_test.cc"],
     deps = [
         ":statusor",
-<<<<<<< HEAD:labm8/cpp/BUILD
         "//labm8/cpp:test",
-=======
-        "//phd:test",
->>>>>>> 19ba8b861... Add statusor tests.:phd/BUILD
     ],
 )
 
@@ -413,20 +340,11 @@ cc_library(
 
 cc_library(
     name = "test",
-    srcs = ["test.cc"],
     hdrs = ["test.h"],
     visibility = ["//visibility:public"],
     deps = [
         ":app",
-<<<<<<< HEAD:labm8/cpp/BUILD
-<<<<<<< HEAD:labm8/cpp/BUILD
-        "@boost//:filesystem",
         "@com_github_gflags_gflags//:gflags",
-=======
->>>>>>> b17425a78... InitApp() in TEST_MAIN():phd/BUILD
-=======
-        "@com_github_gflags_gflags//:gflags",
->>>>>>> 07f69503f... Add compatability test flag.:phd/BUILD
         "@com_github_google_benchmark//:benchmark",
         "@gtest",
     ],

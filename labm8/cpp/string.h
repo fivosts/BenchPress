@@ -32,8 +32,6 @@ bool EndsWith(const string &full_string, const string &suffix);
 // to CamelCase. E.g. "hello world" -> "HelloWorld".
 string ToCamelCase(const string &full_string);
 
-<<<<<<< HEAD:labm8/cpp/string.h
-<<<<<<< HEAD:labm8/cpp/string.h
 string ReplaceChar(string &s, const char src, const char dst);
 
 string CopyAndReplaceChar(const string &s, const char src, const char dst);
@@ -42,28 +40,5 @@ string ReplaceSubstr(string &s, const string &src, const string &dst);
 
 string CopyAndReplaceSubstr(const string &s, const string &src,
                             const string &dst);
-
-// If the string `s` has great than `n` characters, truncate the string to
-// n-3 and append an ellipsis.
-void TruncateWithEllipsis(string &s, const size_t &n);
 
 }  // namespace labm8
-=======
-string ReplaceChar(string& s, const char src, const char dst);
-=======
-string ReplaceChar(string &s, const char src, const char dst);
->>>>>>> 7d69c03c4... Add Google utility code.:phd/string.h
-
-string CopyAndReplaceChar(const string &s, const char src, const char dst);
-
-string ReplaceSubstr(string &s, const string &src, const string &dst);
-
-string CopyAndReplaceSubstr(const string &s, const string &src,
-                            const string &dst);
-
-<<<<<<< HEAD:labm8/cpp/string.h
-}  // namespace phd
->>>>>>> 4b6716a60... Add utility functions to replace char/substr.:phd/string.h
-=======
-} // namespace phd
->>>>>>> 7d69c03c4... Add Google utility code.:phd/string.h
