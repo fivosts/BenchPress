@@ -180,6 +180,7 @@ class Workspace(object):
       timeout_seconds: The number of seconds before failing.
       subprocess_kwargs: Additional arguments to pass to Popen().
     """
+<<<<<<< HEAD:labm8/py/bazelutil.py
     return self.Bazel(
 <<<<<<< HEAD:labm8/py/bazelutil.py
       "query", args, timeout_seconds=timeout_seconds, **subprocess_kwargs
@@ -203,6 +204,12 @@ class Workspace(object):
     app.Log(2, "$ %s", " ".join(cmd))
 =======
         'query', args, timeout_seconds=timeout_seconds, **subprocess_kwargs)
+=======
+    return self.Bazel('query',
+                      args,
+                      timeout_seconds=timeout_seconds,
+                      **subprocess_kwargs)
+>>>>>>> 6d5f13a15... Resolve dependencies for each target in turn.:labm8/bazelutil.py
 
   def Bazel(self,
             command: str,
@@ -288,18 +295,26 @@ class Workspace(object):
     """
     # First run through bazel query to expand globs.
     bazel = self.BazelQuery([target], stdout=subprocess.PIPE)
+<<<<<<< HEAD:labm8/py/bazelutil.py
     grep = subprocess.Popen(
       ["grep", "^/"],
       stdout=subprocess.PIPE,
       stdin=bazel.stdout,
       universal_newlines=True,
     )
+=======
+    grep = subprocess.Popen(['grep', '^/'],
+                            stdout=subprocess.PIPE,
+                            stdin=bazel.stdout,
+                            universal_newlines=True)
+>>>>>>> 6d5f13a15... Resolve dependencies for each target in turn.:labm8/bazelutil.py
 
     stdout, _ = grep.communicate()
     if bazel.returncode:
       raise OSError("bazel query failed")
     if grep.returncode:
       raise OSError("grep of bazel query output failed")
+<<<<<<< HEAD:labm8/py/bazelutil.py
 <<<<<<< HEAD:labm8/py/bazelutil.py
     targets = stdout.rstrip().split("\n")
 
@@ -349,7 +364,28 @@ class Workspace(object):
 >>>>>>> cf0d9248e... Add support for excluded targets.:labm8/bazelutil.py
     ]
 =======
+=======
+    targets = stdout.rstrip().split('\n')
+
+    # Now get the transitive dependencies of each target.
+>>>>>>> 6d5f13a15... Resolve dependencies for each target in turn.:labm8/bazelutil.py
     targets = [target for target in targets if target not in excluded_targets]
+    for target in targets:
+      bazel = self.BazelQuery([f'deps({target})'], stdout=subprocess.PIPE)
+      grep = subprocess.Popen(['grep', '^/'],
+                              stdout=subprocess.PIPE,
+                              stdin=bazel.stdout,
+                              universal_newlines=True)
+
+      stdout, _ = grep.communicate()
+      if bazel.returncode:
+        raise OSError("bazel query failed")
+      if grep.returncode:
+        raise OSError("grep of bazel query output failed")
+
+      deps = stdout.rstrip().split('\n')
+      targets += [target for target in deps if target not in excluded_targets]
+
     paths = [self.MaybeTargetToPath(target) for target in targets]
 >>>>>>> d0acf9c9d... Tiny refactor.:labm8/bazelutil.py
     return [path for path in paths if path]
