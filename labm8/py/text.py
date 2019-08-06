@@ -21,10 +21,15 @@
 =======
 from __future__ import division
 
+<<<<<<< HEAD:labm8/py/text.py
 import networkx as nx
 >>>>>>> b755b03e9... Add a method for stripping comments.:labm8/text.py
+=======
+>>>>>>> 93b9e9242... Re-order python imports.:labm8/text.py
 import re
 import typing
+
+import networkx as nx
 
 
 class Error(Exception):
