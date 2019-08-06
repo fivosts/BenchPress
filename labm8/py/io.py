@@ -27,7 +27,7 @@ from phd.lib.labm8 import system
 
 
 def colourise(colour, *args):
-  return "".join([colour] + list(args) + [Colours.RESET])
+  return ''.join([colour] + list(args) + [Colours.RESET])
 
 
 def printf(colour, *args, **kwargs):
@@ -36,6 +36,7 @@ def printf(colour, *args, **kwargs):
 
 
 def pprint(data, **kwargs):
+<<<<<<< HEAD:labm8/py/io.py
 <<<<<<< HEAD:labm8/py/io.py
   print(
 <<<<<<< HEAD:labm8/py/io.py
@@ -47,29 +48,32 @@ def pprint(data, **kwargs):
 >>>>>>> 150d66672... Auto format files.:labm8/io.py
 =======
   print(json.dumps(data, sort_keys=True, indent=2, separators=(",", ": ")),
+=======
+  print(json.dumps(data, sort_keys=True, indent=2, separators=(',', ': ')),
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/io.py
         **kwargs)
 >>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/io.py
 
 
 def info(*args, **kwargs):
-  print("[INFO  ]", *args, **kwargs)
+  print('[INFO  ]', *args, **kwargs)
 
 
 def debug(*args, **kwargs):
-  print("[DEBUG ]", *args, **kwargs)
+  print('[DEBUG ]', *args, **kwargs)
 
 
 def warn(*args, **kwargs):
-  print("[WARN  ]", *args, **kwargs)
+  print('[WARN  ]', *args, **kwargs)
 
 
 def error(*args, **kwargs):
-  print("[ERROR ]", *args, **kwargs)
+  print('[ERROR ]', *args, **kwargs)
 
 
 def fatal(*args, **kwargs):
-  returncode = kwargs.pop("status", 1)
-  error("fatal:", *args, **kwargs)
+  returncode = kwargs.pop('status', 1)
+  error('fatal:', *args, **kwargs)
   system.exit(returncode)
 
 
@@ -84,7 +88,7 @@ def prof(*args, **kwargs):
 
       *args, **kwargs: Message payload.
   """
-  print("[PROF  ]", *args, **kwargs)
+  print('[PROF  ]', *args, **kwargs)
 
 
 class Colours:

@@ -52,11 +52,16 @@ def is_seq(obj):
   """
   Check if an object is a sequence.
   """
+<<<<<<< HEAD:labm8/py/labtypes.py
   return (
     not is_str(obj)
     and not is_dict(obj)
     and (hasattr(obj, "__getitem__") or hasattr(obj, "__iter__"))
   )
+=======
+  return (not is_str(obj) and not is_dict(obj) and
+          (hasattr(obj, '__getitem__') or hasattr(obj, '__iter__')))
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/labtypes.py
 
 
 def flatten(lists):
@@ -135,8 +140,13 @@ def get_class_that_defined_method(meth):
       )
 =======
           inspect.getmodule(meth),
+<<<<<<< HEAD:labm8/py/labtypes.py
           meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0])
 >>>>>>> 150d66672... Auto format files.:labm8/labtypes.py
+=======
+          meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0],
+      )
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/labtypes.py
       if isinstance(cls, type):
         return cls
   else:
@@ -175,11 +185,15 @@ class ReprComparable(object):
 
 
 <<<<<<< HEAD:labm8/py/labtypes.py
+<<<<<<< HEAD:labm8/py/labtypes.py
 def PairwiseIterator(
   iterable: typing.Iterator[typing.Any],
 ) -> typing.Iterator[typing.Tuple[typing.Any, typing.Any]]:
 =======
 def PairwiseIterator(iterable: typing.Iterator[typing.Any]
+=======
+def PairwiseIterator(iterable: typing.Iterator[typing.Any],
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/labtypes.py
                     ) -> typing.Iterator[typing.Tuple[typing.Any, typing.Any]]:
 >>>>>>> 150d66672... Auto format files.:labm8/labtypes.py
   """Construct a pairwise iterator for a input generator.
@@ -203,7 +217,12 @@ def PairwiseIterator(iterable: typing.Iterator[typing.Any]
 
 
 def SetDiff(
+<<<<<<< HEAD:labm8/py/labtypes.py
   a: typing.Iterator[typing.Any], b: typing.Iterator[typing.Any],
+=======
+    a: typing.Iterator[typing.Any],
+    b: typing.Iterator[typing.Any],
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/labtypes.py
 ) -> typing.List[typing.Any]:
   """Return the set difference between two sequences.
 
@@ -238,6 +257,7 @@ def AllSubclassesOfClass(cls: typing.Type) -> typing.Set[typing.Type]:
     A set of class types.
   """
   return set(cls.__subclasses__()).union(
+<<<<<<< HEAD:labm8/py/labtypes.py
 <<<<<<< HEAD:labm8/py/labtypes.py
     [s for c in cls.__subclasses__() for s in AllSubclassesOfClass(c)],
   )
@@ -279,3 +299,6 @@ def DeleteKeys(d, keys):
 =======
       [s for c in cls.__subclasses__() for s in AllSubclassesOfClass(c)])
 >>>>>>> 8a82495b7... Add labm8.labtypes.AllSubclassesOfClass() method.:labm8/labtypes.py
+=======
+      [s for c in cls.__subclasses__() for s in AllSubclassesOfClass(c)],)
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/labtypes.py

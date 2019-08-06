@@ -75,7 +75,7 @@ def read_file(*components, **kwargs):
       File404: If path does not exist, and must_exist is True.
       InvalidFile: If JSON is malformed.
   """
-  must_exist = kwargs.get("must_exist", True)
+  must_exist = kwargs.get('must_exist', True)
 
   if must_exist:
     path = fs.must_exist(*components)
@@ -87,10 +87,17 @@ def read_file(*components, **kwargs):
       return loads(infile.read())
   except ValueError as e:
     raise ValueError(
+<<<<<<< HEAD:labm8/py/jsonutil.py
       "malformed JSON file '{path}'. Message from parser: {err}".format(
         path=fs.basename(path), err=str(e),
       ),
     )
+=======
+        "malformed JSON file '{path}'. Message from parser: {err}".format(
+            path=fs.basename(path),
+            err=str(e),
+        ),)
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/jsonutil.py
   except IOError as e:
     if not must_exist:
       return {}
@@ -142,8 +149,13 @@ def loads(text, **kwargs):
 
   for index, line in enumerate(lines):
     if re.search(regex, line):
+<<<<<<< HEAD:labm8/py/jsonutil.py
       if re.search(r"^" + regex, line, re.IGNORECASE):
         lines[index] = ""
+=======
+      if re.search(r'^' + regex, line, re.IGNORECASE):
+        lines[index] = ''
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/jsonutil.py
       elif re.search(regex_inline, line):
         lines[index] = re.sub(regex_inline, r"\1", line)
 

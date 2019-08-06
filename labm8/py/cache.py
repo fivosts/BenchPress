@@ -245,6 +245,7 @@ class JsonCache(TransientCache):
     Write contents of cache to disk.
     """
     io.debug("Storing cache '{0}'".format(self.path))
+<<<<<<< HEAD:labm8/py/cache.py
     with open(self.path, "w") as file:
 <<<<<<< HEAD:labm8/py/cache.py
       json.dump(
@@ -261,6 +262,16 @@ class JsonCache(TransientCache):
                 indent=2,
                 separators=(',', ': '))
 >>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/cache.py
+=======
+    with open(self.path, 'w') as file:
+      json.dump(
+          self._data,
+          file,
+          sort_keys=True,
+          indent=2,
+          separators=(',', ': '),
+      )
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/cache.py
 
 
 def hash_key(key):

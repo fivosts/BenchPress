@@ -52,15 +52,15 @@ _TIMERS = {}
 
 
 def is_enabled():
-  return os.environ.get("PROFILE") is not None
+  return os.environ.get('PROFILE') is not None
 
 
 def enable():
-  os.environ["PROFILE"] = "1"
+  os.environ['PROFILE'] = '1'
 
 
 def disable():
-  os.environ.pop("PROFILE", None)
+  os.environ.pop('PROFILE', None)
 
 
 def isrunning(name):
@@ -127,7 +127,7 @@ def stop(name, file=sys.stderr):
       elapsed_str = "{:.1f} ms".format(elapsed * 1000)
 
     del _TIMERS[name]
-    print("[prof]", name, elapsed_str, file=file)
+    print('[prof]', name, elapsed_str, file=file)
   return is_enabled()
 
 
@@ -135,7 +135,7 @@ def profile(fun, *args, **kwargs):
   """
   Profile a function.
   """
-  timer_name = kwargs.pop("prof_name", None)
+  timer_name = kwargs.pop('prof_name', None)
 
   if not timer_name:
     module = inspect.getmodule(fun)
@@ -144,7 +144,7 @@ def profile(fun, *args, **kwargs):
     if parentclass:
       c.append(parentclass.__name__)
     c.append(fun.__name__)
-    timer_name = ".".join(c)
+    timer_name = '.'.join(c)
 
   start(timer_name)
   ret = fun(*args, **kwargs)
@@ -204,8 +204,13 @@ def Profile(name: str = '', print_to: typing.Callable[[str], None] = app.Debug):
 =======
 def Profile(
     name: str = '',
+<<<<<<< HEAD:labm8/py/prof.py
     print_to: typing.Callable[[str], None] = lambda msg: app.Log(1, msg)):
 >>>>>>> 070523b92... Fix refences to app.Debug and app.Info.:labm8/prof.py
+=======
+    print_to: typing.Callable[[str], None] = lambda msg: app.Log(1, msg),
+):
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/prof.py
   """A context manager which prints the elapsed time upon exit.
 
   Args:
@@ -227,8 +232,12 @@ def Profile(
   start_time = time.time()
   yield
   elapsed = time.time() - start_time
+<<<<<<< HEAD:labm8/py/prof.py
   print_to(f"{name} in {humanize.Duration(elapsed)}")
 >>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/prof.py
+=======
+  print_to(f'{name} in {humanize.Duration(elapsed)}')
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/prof.py
 
 
 @contextlib.contextmanager
@@ -268,7 +277,7 @@ class AutoCsvProfiler(object):
   def __init__(self, directory: pathlib.Path, name: str = "profile"):
     self._directory = pathlib.Path(directory)
     if not self._directory.is_dir():
-      raise ValueError(f"Directory not found: {directory}")
+      raise ValueError(f'Directory not found: {directory}')
     self._name = name
 
     # Create the name of the logfile now, so that is timestamped to the start of
@@ -297,8 +306,12 @@ class AutoCsvProfiler(object):
 >>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/prof.py
 =======
       writer.writerow(
+<<<<<<< HEAD:labm8/py/prof.py
           ('Start Time (ms since UNIX epoch)', 'Elapsed Time (ms)', 'Event'))
 >>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/prof.py
+=======
+          ('Start Time (ms since UNIX epoch)', 'Elapsed Time (ms)', 'Event'),)
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/prof.py
 
   @contextlib.contextmanager
   def Profile(self, event_name: str = ""):

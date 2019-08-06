@@ -22,8 +22,11 @@ not been modified, subsequent hashes are cache hits. Hashes are recomputed
 lazily, when a directory (or any of its subdirectories) have been modified.
 """
 <<<<<<< HEAD:labm8/py/hashcache.py
+<<<<<<< HEAD:labm8/py/hashcache.py
 =======
 
+=======
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/hashcache.py
 import collections
 >>>>>>> 1eed6e90b... Automated code format.:lib/labm8/hashcache.py
 import os
@@ -92,9 +95,16 @@ Base = declarative.declarative_base()
 
 # An in-memory cache which is optionally shared amongst all HashCache instances.
 # The in-memory cache omits timestamps from records.
+<<<<<<< HEAD:labm8/py/hashcache.py
 InMemoryCacheKey = collections.namedtuple('InMemoryCacheKey',
                                           ['hash_fn', 'path'])
 >>>>>>> 150d66672... Auto format files.:labm8/hashcache.py
+=======
+InMemoryCacheKey = collections.namedtuple(
+    'InMemoryCacheKey',
+    ['hash_fn', 'path'],
+)
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/hashcache.py
 IN_MEMORY_CACHE: typing.Dict[InMemoryCacheKey, str] = {}
 
 
@@ -146,10 +156,15 @@ def GetDirectoryMTime(path: pathlib.Path) -> int:
   )
 =======
       f"find '{path}' -type f | xargs -d'\n' stat -c '%Y:%n' | sort -t: -n | "
-      "tail -1 | cut -d: -f1",
+      'tail -1 | cut -d: -f1',
       universal_newlines=True,
+<<<<<<< HEAD:labm8/py/hashcache.py
       shell=True)
 >>>>>>> 150d66672... Auto format files.:labm8/hashcache.py
+=======
+      shell=True,
+  )
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/hashcache.py
   return int(output)
 
 
@@ -160,11 +175,20 @@ class HashCache(sqlutil.Database):
   ):
 =======
 
+<<<<<<< HEAD:labm8/py/hashcache.py
   def __init__(self,
                path: pathlib.Path,
                hash_fn: str,
                keep_in_memory: bool = False):
 >>>>>>> 150d66672... Auto format files.:labm8/hashcache.py
+=======
+  def __init__(
+      self,
+      path: pathlib.Path,
+      hash_fn: str,
+      keep_in_memory: bool = False,
+  ):
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/hashcache.py
     """Instantiate a hash cache.
 
     Args:
@@ -260,6 +284,7 @@ class HashCache(sqlutil.Database):
     )
 =======
         absolute_path,
+<<<<<<< HEAD:labm8/py/hashcache.py
         last_modified_fn, lambda x: checksumdir.dirhash(x, self.hash_fn_name))
 >>>>>>> 150d66672... Auto format files.:labm8/hashcache.py
 
@@ -275,6 +300,24 @@ class HashCache(sqlutil.Database):
     absolute_path: pathlib.Path,
     last_modified_fn: typing.Callable[[pathlib.Path], int],
     hash_fn: typing.Callable[[pathlib.Path], str],
+=======
+        last_modified_fn,
+        lambda x: checksumdir.dirhash(x, self.hash_fn_name),
+    )
+
+  def _HashFile(self, absolute_path: pathlib.Path) -> str:
+    return self._InMemoryWrapper(
+        absolute_path,
+        lambda path: int(os.path.getmtime(path)),
+        self.hash_fn_file,
+    )
+
+  def _InMemoryWrapper(
+      self,
+      absolute_path: pathlib.Path,
+      last_modified_fn: typing.Callable[[pathlib.Path], int],
+      hash_fn: typing.Callable[[pathlib.Path], str],
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/hashcache.py
   ) -> str:
     """A wrapper around the persistent hashing to support in-memory cache."""
     if self.keep_in_memory:
@@ -291,6 +334,7 @@ class HashCache(sqlutil.Database):
 >>>>>>> 79a426895... Update logging API and implement --vmodule.:labm8/hashcache.py
         return IN_MEMORY_CACHE[in_memory_key]
 <<<<<<< HEAD:labm8/py/hashcache.py
+<<<<<<< HEAD:labm8/py/hashcache.py
     hash_ = self._DoHash(
       absolute_path, last_modified_fn(absolute_path), hash_fn,
     )
@@ -298,10 +342,18 @@ class HashCache(sqlutil.Database):
     hash_ = self._DoHash(absolute_path, last_modified_fn(absolute_path),
                          hash_fn)
 >>>>>>> 150d66672... Auto format files.:labm8/hashcache.py
+=======
+    hash_ = self._DoHash(
+        absolute_path,
+        last_modified_fn(absolute_path),
+        hash_fn,
+    )
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/hashcache.py
     if self.keep_in_memory:
       IN_MEMORY_CACHE[in_memory_key] = hash_
     return hash_
 
+<<<<<<< HEAD:labm8/py/hashcache.py
 <<<<<<< HEAD:labm8/py/hashcache.py
   def _DoHash(
     self,
@@ -319,6 +371,17 @@ class HashCache(sqlutil.Database):
         .filter(HashCacheRecord.absolute_path == str(absolute_path),)
         .first()
       )
+=======
+  def _DoHash(
+      self,
+      absolute_path: pathlib.Path,
+      last_modified: int,
+      hash_fn: typing.Callable[[pathlib.Path], str],
+  ) -> str:
+    with self.Session() as session:
+      cached_entry = session.query(HashCacheRecord).filter(
+          HashCacheRecord.absolute_path == str(absolute_path),).first()
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/hashcache.py
       if cached_entry and cached_entry.last_modified == last_modified:
 <<<<<<< HEAD:labm8/py/hashcache.py
 <<<<<<< HEAD:labm8/py/hashcache.py
@@ -351,6 +414,7 @@ class HashCache(sqlutil.Database):
         session.delete(cached_entry)
       start_time = time.time()
       checksum = hash_fn(absolute_path)
+<<<<<<< HEAD:labm8/py/hashcache.py
       app.Log(2, "New cache entry '%s' in %s ms.", absolute_path,
 <<<<<<< HEAD:labm8/py/hashcache.py
                 humanize.Commas(int((time.time() - start_time) * 1000)))
@@ -369,6 +433,19 @@ class HashCache(sqlutil.Database):
                                   last_modified=last_modified,
                                   hash=checksum)
 >>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/hashcache.py
+=======
+      app.Log(
+          2,
+          "New cache entry '%s' in %s ms.",
+          absolute_path,
+          humanize.Commas(int((time.time() - start_time) * 1000)),
+      )
+      new_entry = HashCacheRecord(
+          absolute_path=str(absolute_path),
+          last_modified=last_modified,
+          hash=checksum,
+      )
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/hashcache.py
       session.add(new_entry)
       session.commit()
       return new_entry.hash

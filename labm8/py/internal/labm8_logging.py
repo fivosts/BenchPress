@@ -24,6 +24,7 @@ from absl import logging as absl_logging
 FLAGS = absl_flags.FLAGS
 
 absl_flags.DEFINE_list(
+<<<<<<< HEAD:labm8/py/internal/labm8_logging.py
   "vmodule",
   [],
   "Per-module verbose level. The argument has to contain a comma-separated "
@@ -32,6 +33,14 @@ absl_flags.DEFINE_list(
   "filename base (that is, name ignoring .py). <log level> overrides any "
   "value given by --v.",
 )
+=======
+    'vmodule', [],
+    'Per-module verbose level. The argument has to contain a comma-separated '
+    'list of <module name>=<log level>. <module name> is a glob pattern (e.g., '
+    "gfs* for all modules whose name starts with \"gfs\"), matched against the "
+    'filename base (that is, name ignoring .py). <log level> overrides any '
+    'value given by --v.')
+>>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/internal/logging.py
 
 # Logging functions.
 
