@@ -12,10 +12,14 @@ import sys
 import typing
 
 <<<<<<< HEAD:labm8/py/bazelutil.py
+<<<<<<< HEAD:labm8/py/bazelutil.py
 from labm8.py import app
 from labm8.py import archive
 from labm8.py import fs
 =======
+=======
+from labm8 import app
+>>>>>>> 6901f306f... Fix transitive dep resolving.:labm8/bazelutil.py
 from labm8 import archive
 from labm8 import fs
 >>>>>>> a4e1bff54... Auto-format code.:labm8/bazelutil.py
@@ -226,6 +230,7 @@ class Workspace(object):
             args: typing.List[str],
             timeout_seconds: int = 360,
             **subprocess_kwargs):
+<<<<<<< HEAD:labm8/py/bazelutil.py
 >>>>>>> 90ade5621... Add a Bazel() method.:labm8/bazelutil.py
     with fs.chdir(self.workspace_root):
 <<<<<<< HEAD:labm8/py/bazelutil.py
@@ -249,6 +254,19 @@ class Workspace(object):
           '--noshow_progress',
       ] + args, **subprocess_kwargs)
 >>>>>>> c22954d10... Don't show progress in bazel query.:labm8/bazelutil.py
+=======
+    cmd = [
+        'timeout',
+        '-s9',
+        str(timeout_seconds),
+        'bazel',
+        command,
+        '--noshow_progress',
+    ] + args
+    app.Log(2, '$ %s', ' '.join(cmd))
+    with fs.chdir(self.workspace_root):
+      return subprocess.Popen(cmd, **subprocess_kwargs)
+>>>>>>> 6901f306f... Fix transitive dep resolving.:labm8/bazelutil.py
 
   def MaybeTargetToPath(
 <<<<<<< HEAD:labm8/py/bazelutil.py
@@ -410,7 +428,10 @@ class Workspace(object):
     # Now get the transitive dependencies of each target.
 >>>>>>> 6d5f13a15... Resolve dependencies for each target in turn.:labm8/bazelutil.py
     targets = [target for target in targets if target not in excluded_targets]
-    for target in targets:
+    all_targets = targets.copy()
+    for i, target in enumerate(targets):
+      app.Log(1, 'Collecting transitive deps for target %d of %d: %s', i + 1,
+              len(targets), target)
       bazel = self.BazelQuery([f'deps({target})'], stdout=subprocess.PIPE)
       grep = subprocess.Popen(
           ['grep', '^/'],
@@ -426,10 +447,16 @@ class Workspace(object):
         raise OSError('grep of bazel query output failed')
 
       deps = stdout.rstrip().split('\n')
-      targets += [target for target in deps if target not in excluded_targets]
+      all_targets += [
+          target for target in deps if target not in excluded_targets
+      ]
 
+<<<<<<< HEAD:labm8/py/bazelutil.py
     paths = [self.MaybeTargetToPath(target) for target in targets]
 >>>>>>> d0acf9c9d... Tiny refactor.:labm8/bazelutil.py
+=======
+    paths = [self.MaybeTargetToPath(target) for target in all_targets]
+>>>>>>> 6901f306f... Fix transitive dep resolving.:labm8/bazelutil.py
     return [path for path in paths if path]
 
   def GetBuildFiles(self, target: str) -> typing.List[pathlib.Path]:
