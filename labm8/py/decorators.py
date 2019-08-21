@@ -16,8 +16,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Useful function decorators."""
-import contextlib
 import functools
+
+import contextlib
 import signal
 import time
 import typing
@@ -129,6 +130,7 @@ def run_once(f):
 
   wrapper.has_run = False
   return wrapper
+<<<<<<< HEAD:labm8/py/decorators.py
 
 
 def loop_for(seconds: int = 0, min_iteration_count=1):
@@ -165,3 +167,5 @@ def loop_for(seconds: int = 0, min_iteration_count=1):
     return InnerLoop
 
   return WrappedLoopFor
+=======
+>>>>>>> 8656e495e... Add a @run_once decorator.:labm8/decorators.py
