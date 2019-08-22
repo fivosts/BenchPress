@@ -221,9 +221,18 @@ def AddIndefiniteArticle(noun):
     return "a " + noun
 
 
+<<<<<<< HEAD:labm8/py/humanize.py
 def DecimalPrefix(
   quantity, unit, precision=1, min_scale=0, max_scale=None, separator=" "
 ):
+=======
+def DecimalPrefix(quantity,
+                  unit,
+                  precision=1,
+                  min_scale=0,
+                  max_scale=None,
+                  separator=' '):
+>>>>>>> 8d2c9ddfa... Add a separator argument.:labm8/humanize.py
   """Formats an integer and a unit into a string, using decimal prefixes.
 
   The unit will be prefixed with an appropriate multiplier such that
@@ -278,6 +287,7 @@ def DecimalPrefix(
       quantity,
       unit,
       precision,
+      separator,
       DecimalScale,
       min_scale=min_scale,
       max_scale=max_scale,
@@ -285,7 +295,11 @@ def DecimalPrefix(
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/humanize.py
 
 
+<<<<<<< HEAD:labm8/py/humanize.py
 def BinaryPrefix(quantity, unit, precision=1, separator=" "):
+=======
+def BinaryPrefix(quantity, unit, precision=1, separator=' '):
+>>>>>>> 8d2c9ddfa... Add a separator argument.:labm8/humanize.py
   """Formats an integer and a unit into a string, using binary prefixes.
 
   The unit will be prefixed with an appropriate multiplier such that
