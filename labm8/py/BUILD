@@ -845,6 +845,28 @@ py_test(
 )
 
 py_library(
+    name = "pdutil",
+    srcs = ["pdutil.py"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":app",
+        ":sqlutil",
+        "//third_party/py/pandas",
+    ],
+)
+
+py_test(
+    name = "pdutil_test",
+    srcs = ["pdutil_test.py"],
+    deps = [
+        ":pdutil",
+        ":sqlutil",
+        ":test",
+        "//third_party/py/sqlalchemy",
+    ],
+)
+
+py_library(
     name = "ppar",
     srcs = ["ppar.py"],
     visibility = ["//visibility:public"],
