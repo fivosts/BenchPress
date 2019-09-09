@@ -76,10 +76,14 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
 <<<<<<< HEAD:labm8/py/BUILD
+<<<<<<< HEAD:labm8/py/BUILD
         ":shell",
         "//labm8/py/internal:flags_parsers",
         "//labm8/py/internal:labm8_logging",
 =======
+=======
+        ":shell",
+>>>>>>> 13ac44cd6... Add missing shell module.:labm8/BUILD
         "//:build_info",
         "//labm8/internal:flags_parsers",
         "//labm8/internal:logging",
@@ -940,11 +944,14 @@ py_library(
     name = "progress",
     srcs = ["progress.py"],
     visibility = ["//visibility:public"],
+<<<<<<< HEAD:labm8/py/BUILD
     deps = [
         ":app",
         ":prof",
         "//third_party/py/tqdm",
     ],
+=======
+>>>>>>> 13ac44cd6... Add missing shell module.:labm8/BUILD
 )
 
 py_test(

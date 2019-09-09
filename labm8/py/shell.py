@@ -18,6 +18,10 @@
 """Utility code for working with shells."""
 import os
 
+<<<<<<< HEAD:labm8/py/shell.py
+=======
+
+>>>>>>> 13ac44cd6... Add missing shell module.:labm8/shell.py
 
 class ShellEscapeCodes(object):
   """Shell escape codes for pretty-printing."""
