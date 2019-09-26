@@ -83,6 +83,7 @@ absl_flags.DEFINE_boolean(
 absl_flags.DEFINE_boolean(
   "dump_flags", False, "Print the defined flags and their values and exit."
 )
+<<<<<<< HEAD:labm8/py/app.py
 absl_flags.DEFINE_boolean(
   "dump_flags_to_json",
   False,
@@ -113,6 +114,10 @@ ARCH = workspace_status.STABLE_ARCH
 #   def LogFoo():
 #     app.Log(1, "Foo")
 skip_log_prefix = absl_logging.skip_log_prefix
+=======
+absl_flags.DEFINE_boolean('log_colors', True,
+                          'Whether to colorize logging output.')
+>>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
 
 
 class UsageError(absl_app.UsageError):
@@ -238,6 +243,7 @@ def Log(level: int, msg, *args, **kwargs):
     "filename base (that is, name ignoring .py). <log level> overrides any "
     "value given by --v."
   """
+<<<<<<< HEAD:labm8/py/app.py
   logging.Log(
     logging.GetCallingModuleName(),
     level,
@@ -250,6 +256,14 @@ def Log(level: int, msg, *args, **kwargs):
     ),
     **kwargs,
   )
+=======
+  calling_module = logging.GetCallingModuleName()
+  logging.Log(
+      calling_module, level,
+      _MaybeColorizeLog(
+          shell.ShellEscapeCodes.YELLOW
+          if level > 1 else shell.ShellEscapeCodes.CYAN, msg, *args), **kwargs)
+>>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
 
 
 @skip_log_prefix
@@ -261,9 +275,14 @@ def LogIf(level: int, condition, msg, *args, **kwargs):
 @skip_log_prefix
 def Fatal(msg, *args, **kwargs):
   """Logs a fatal message."""
+<<<<<<< HEAD:labm8/py/app.py
   logging.Fatal(
     _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
   )
+=======
+  logging.Fatal(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
+                **kwargs)
+>>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
 
 
 @skip_log_prefix
@@ -276,17 +295,27 @@ def FatalWithoutStackTrace(msg, *args, returncode: int = 1, **kwargs):
 @skip_log_prefix
 def Error(msg, *args, **kwargs):
   """Logs an error message."""
+<<<<<<< HEAD:labm8/py/app.py
   logging.Error(
     _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
   )
+=======
+  logging.Error(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
+                **kwargs)
+>>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
 
 
 @skip_log_prefix
 def Warning(msg, *args, **kwargs):
   """Logs a warning message."""
+<<<<<<< HEAD:labm8/py/app.py
   logging.Warning(
     _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
   )
+=======
+  logging.Warning(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
+                  **kwargs)
+>>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
 
 
 def FlushLogs():
