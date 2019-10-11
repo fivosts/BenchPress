@@ -301,4 +301,25 @@ def DeleteKeys(d, keys):
 >>>>>>> 8a82495b7... Add labm8.labtypes.AllSubclassesOfClass() method.:labm8/labtypes.py
 =======
       [s for c in cls.__subclasses__() for s in AllSubclassesOfClass(c)],)
+<<<<<<< HEAD:labm8/py/labtypes.py
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/labtypes.py
+=======
+
+
+def Chunkify(iterable: typing.Iterable[typing.Any],
+             chunk_size: int) -> typing.Iterable[typing.List[typing.Any]]:
+  """Split an iterable into chunks of a given size.
+
+  Args:
+    iterable: The iterable to split into chunks.
+    chunk_size: The size of the chunks to return.
+
+  Returns:
+    An iterator over chunks of the input iterable.
+  """
+  i = iter(iterable)
+  piece = list(itertools.islice(i, chunk_size))
+  while piece:
+    yield piece
+    piece = list(itertools.islice(i, chunk_size))
+>>>>>>> 8e1930394... Add labtypes.Chunkify() function.:labm8/labtypes.py
