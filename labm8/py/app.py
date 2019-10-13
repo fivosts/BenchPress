@@ -276,6 +276,7 @@ def LogIf(level: int, condition, msg, *args, **kwargs):
 def Fatal(msg, *args, **kwargs):
   """Logs a fatal message."""
 <<<<<<< HEAD:labm8/py/app.py
+<<<<<<< HEAD:labm8/py/app.py
   logging.Fatal(
     _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
   )
@@ -283,6 +284,10 @@ def Fatal(msg, *args, **kwargs):
   logging.Fatal(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
                 **kwargs)
 >>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
+=======
+  logging.Fatal(
+      _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs)
+>>>>>>> 9c6d42506... Add an app.LogToDirectory() function.:labm8/app.py
 
 
 @skip_log_prefix
@@ -296,6 +301,7 @@ def FatalWithoutStackTrace(msg, *args, returncode: int = 1, **kwargs):
 def Error(msg, *args, **kwargs):
   """Logs an error message."""
 <<<<<<< HEAD:labm8/py/app.py
+<<<<<<< HEAD:labm8/py/app.py
   logging.Error(
     _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
   )
@@ -303,11 +309,16 @@ def Error(msg, *args, **kwargs):
   logging.Error(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
                 **kwargs)
 >>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
+=======
+  logging.Error(
+      _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs)
+>>>>>>> 9c6d42506... Add an app.LogToDirectory() function.:labm8/app.py
 
 
 @skip_log_prefix
 def Warning(msg, *args, **kwargs):
   """Logs a warning message."""
+<<<<<<< HEAD:labm8/py/app.py
 <<<<<<< HEAD:labm8/py/app.py
   logging.Warning(
     _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
@@ -316,6 +327,10 @@ def Warning(msg, *args, **kwargs):
   logging.Warning(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
                   **kwargs)
 >>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
+=======
+  logging.Warning(
+      _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs)
+>>>>>>> 9c6d42506... Add an app.LogToDirectory() function.:labm8/app.py
 
 
 def FlushLogs():
@@ -739,9 +754,14 @@ def RegisterFlagValidator(
   absl_flags.register_validator(flag_name, checker, message)
 
 
+<<<<<<< HEAD:labm8/py/app.py
 def LogToDirectory(
   logdir: Union[str, pathlib.Path], name="info"
 ) -> pathlib.Path:
+=======
+def LogToDirectory(logdir: typing.Union[str, pathlib.Path],
+                   name='info') -> pathlib.Path:
+>>>>>>> 9c6d42506... Add an app.LogToDirectory() function.:labm8/app.py
   """Write logs to a directory.
 
   This disables printing of logs to stderr, unless the --alsologtostderr flag
@@ -754,6 +774,7 @@ def LogToDirectory(
   """
   logdir = pathlib.Path(logdir)
   logdir.mkdir(exist_ok=True, parents=True)
+<<<<<<< HEAD:labm8/py/app.py
   absl_logging.get_absl_handler().use_absl_log_file(str(name), str(logdir))
   return logdir
 
@@ -811,3 +832,7 @@ def FormatLongBuildDescription(html: bool = False) -> str:
 
 # Get the thread ID as an unsigned integer.
 UnsignedThreadId = logging.UnsignedThreadId
+=======
+  absl_logging.get_absl_handler().use_absl_log_file(name, logdir)
+  return logdir
+>>>>>>> 9c6d42506... Add an app.LogToDirectory() function.:labm8/app.py
