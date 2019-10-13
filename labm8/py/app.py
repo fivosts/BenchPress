@@ -755,11 +755,15 @@ def RegisterFlagValidator(
 
 
 <<<<<<< HEAD:labm8/py/app.py
+<<<<<<< HEAD:labm8/py/app.py
 def LogToDirectory(
   logdir: Union[str, pathlib.Path], name="info"
 ) -> pathlib.Path:
 =======
 def LogToDirectory(logdir: typing.Union[str, pathlib.Path],
+=======
+def LogToDirectory(logdir: Union[str, pathlib.Path],
+>>>>>>> 760ec3427... Fix LogToDirectory() implementation.:labm8/app.py
                    name='info') -> pathlib.Path:
 >>>>>>> 9c6d42506... Add an app.LogToDirectory() function.:labm8/app.py
   """Write logs to a directory.
@@ -774,6 +778,7 @@ def LogToDirectory(logdir: typing.Union[str, pathlib.Path],
   """
   logdir = pathlib.Path(logdir)
   logdir.mkdir(exist_ok=True, parents=True)
+<<<<<<< HEAD:labm8/py/app.py
 <<<<<<< HEAD:labm8/py/app.py
   absl_logging.get_absl_handler().use_absl_log_file(str(name), str(logdir))
   return logdir
@@ -834,5 +839,8 @@ def FormatLongBuildDescription(html: bool = False) -> str:
 UnsignedThreadId = logging.UnsignedThreadId
 =======
   absl_logging.get_absl_handler().use_absl_log_file(name, logdir)
+=======
+  absl_logging.get_absl_handler().use_absl_log_file(str(name), str(logdir))
+>>>>>>> 760ec3427... Fix LogToDirectory() implementation.:labm8/app.py
   return logdir
 >>>>>>> 9c6d42506... Add an app.LogToDirectory() function.:labm8/app.py
