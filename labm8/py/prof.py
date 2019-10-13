@@ -203,11 +203,15 @@ def Profile(name: str = '', print_to: typing.Callable[[str], None] = app.Debug):
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/prof.py
 =======
 def Profile(
+<<<<<<< HEAD:labm8/py/prof.py
     name: str = '',
 <<<<<<< HEAD:labm8/py/prof.py
     print_to: typing.Callable[[str], None] = lambda msg: app.Log(1, msg)):
 >>>>>>> 070523b92... Fix refences to app.Debug and app.Info.:labm8/prof.py
 =======
+=======
+    name: typing.Union[str, typing.Callable[[int], str]] = '',
+>>>>>>> f94e1dba7... Add support for profile label callbacks.:labm8/prof.py
     print_to: typing.Callable[[str], None] = lambda msg: app.Log(1, msg),
 ):
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/prof.py
@@ -233,9 +237,14 @@ def Profile(
   yield
   elapsed = time.time() - start_time
 <<<<<<< HEAD:labm8/py/prof.py
+<<<<<<< HEAD:labm8/py/prof.py
   print_to(f"{name} in {humanize.Duration(elapsed)}")
 >>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/prof.py
 =======
+=======
+  if callable(name):
+    name = name(elapsed)
+>>>>>>> f94e1dba7... Add support for profile label callbacks.:labm8/prof.py
   print_to(f'{name} in {humanize.Duration(elapsed)}')
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/prof.py
 
