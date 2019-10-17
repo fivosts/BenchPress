@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+<<<<<<< HEAD:labm8/py/app.py
 """This module provides common functionality for writing python applications.
 
 For executable scripts, the app.Run() method provides the necessary entry point
@@ -49,6 +50,14 @@ Example Usage:
   if __name__ == "__main__":
     app.Run(Main)
   EOF
+=======
+"""A wrapper around absl's app and logging modules.
+
+See: <https://github.com/abseil/abseil-py>
+"""
+import json
+import sys
+>>>>>>> cdc791774... Add --dump_flags and --dump_flags_to_json flags.:labm8/app.py
 
   $ python foo.py
   INFO: Hello, world! This is 20.01.30 speaking
@@ -81,6 +90,7 @@ absl_flags.DEFINE_boolean(
   "version", False, "Print version information and exit.",
 )
 absl_flags.DEFINE_boolean(
+<<<<<<< HEAD:labm8/py/app.py
   "dump_flags", False, "Print the defined flags and their values and exit."
 )
 <<<<<<< HEAD:labm8/py/app.py
@@ -115,6 +125,15 @@ ARCH = workspace_status.STABLE_ARCH
 #     app.Log(1, "Foo")
 skip_log_prefix = absl_logging.skip_log_prefix
 =======
+=======
+    'dump_flags',
+    False,
+    'Print the defined flags and their values and exit.')
+absl_flags.DEFINE_boolean(
+    'dump_flags_to_json',
+    False,
+    'Print the defined flags and their values to JSON and exit.')
+>>>>>>> cdc791774... Add --dump_flags and --dump_flags_to_json flags.:labm8/app.py
 absl_flags.DEFINE_boolean('log_colors', True,
                           'Whether to colorize logging output.')
 >>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
@@ -175,11 +194,25 @@ def RunWithArgs(
       print(FlagsToString())
       sys.exit(0)
     elif FLAGS.dump_flags_to_json:
+<<<<<<< HEAD:labm8/py/app.py
       print(
         json.dumps(
           FlagsToDict(), sort_keys=True, indent=2, separators=(",", ": ")
         )
       )
+=======
+      flags_dict = FlagsToDict()
+      # Flags values can have non-serializable types, so try each one and
+      # stringify those that require it. An alternative would be to stringify
+      # all values, but this would lose type information on ints/floats/etc.
+      for flag in flags_dict:
+        try:
+          json.dumps(flags_dict[flag])
+        except TypeError:
+          flags_dict[flag] = str(flags_dict[flag])
+      print(json.dumps(flags_dict, sort_keys=True, indent=2,
+                       separators=(',', ': ')))
+>>>>>>> cdc791774... Add --dump_flags and --dump_flags_to_json flags.:labm8/app.py
       sys.exit(0)
     main(argv)
 
