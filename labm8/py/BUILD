@@ -993,7 +993,11 @@ py_library(
         ":humanize",
         ":labdate",
         ":pbutil",
+<<<<<<< HEAD:labm8/py/BUILD
         ":progress",
+=======
+        ":humanize",
+>>>>>>> ae1df45af... Add a pluralized table name generator.:labm8/BUILD
         ":text",
 =======
         ":pbutil",
