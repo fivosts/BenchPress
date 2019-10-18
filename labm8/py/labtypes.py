@@ -322,4 +322,22 @@ def Chunkify(iterable: typing.Iterable[typing.Any],
   while piece:
     yield piece
     piece = list(itertools.islice(i, chunk_size))
+<<<<<<< HEAD:labm8/py/labtypes.py
 >>>>>>> 8e1930394... Add labtypes.Chunkify() function.:labm8/labtypes.py
+=======
+
+def DeleteKeys(d, keys):
+  """Delete the keys from the given dictionary, if present.
+
+  Args:
+    d: The dictionary to remove the keys from.
+    keys: The list of keys to remove.
+
+  Returns:
+    The dictionary.
+  """
+  for key in keys:
+    if key in d:
+      del d[key]
+  return d
+>>>>>>> 4f357866c... Add two utility functions.:labm8/labtypes.py

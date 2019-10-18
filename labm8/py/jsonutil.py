@@ -162,6 +162,11 @@ def loads(text, **kwargs):
   return json.loads("\n".join(lines), **kwargs)
 
 
+<<<<<<< HEAD:labm8/py/jsonutil.py
+=======
+  return json.loads('\n'.join(lines), **kwargs)
+
+>>>>>>> 4f357866c... Add two utility functions.:labm8/jsonutil.py
 def JsonSerializable(val):
   """Return a JSON-serializable version of the object.
 
