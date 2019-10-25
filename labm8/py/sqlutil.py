@@ -55,6 +55,13 @@ absl_flags.DEFINE_boolean(
   '"server has gone away" errors. See:'
   "<https://docs.sqlalchemy.org/en/13/core/pooling.html#disconnect-handling-pessimistic>",
 )
+absl_flags.DEFINE_boolean(
+    'sqlutil_pool_pre_ping', True,
+    'Enable pessimistic pre-ping to check that database connections are '
+    'alive. This adds some overhead, but reduces the risk of '
+    '"server has gone away" errors. See:'
+    '<https://docs.sqlalchemy.org/en/13/core/pooling.html#disconnect-handling-pessimistic>'
+)
 absl_flags.DEFINE_integer(
   "mysql_engine_pool_size",
   5,
@@ -306,12 +313,20 @@ def CreateEngine(url: str, must_exist: bool = False) -> sql.engine.Engine:
 
   # Create the engine.
   engine = sql.create_engine(
+<<<<<<< HEAD:labm8/py/sqlutil.py
     url,
     encoding="utf-8",
     echo=FLAGS.sqlutil_echo,
     pool_pre_ping=FLAGS.sqlutil_pool_pre_ping,
     **engine_args,
   )
+=======
+      url,
+      encoding='utf-8',
+      echo=FLAGS.sqlutil_echo,
+      pool_pre_ping=FLAGS.sqlutil_pool_pre_ping,
+      **engine_args)
+>>>>>>> 671bc9471... Add database pre-ping by default.:labm8/sqlutil.py
 
   # Create and immediately close a connection. This is because SQLAlchemy engine
   # is lazily instantiated, so for connections such as SQLite, this line
