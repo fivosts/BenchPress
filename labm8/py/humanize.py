@@ -128,7 +128,7 @@ def Commas(value: Optional[int]):
   return sign + ",".join(reversed(result))
 
 
-def Plural(quantity, singular, plural=None):
+def Plural(quantity, singular, plural=None, commas=False):
   """Formats an integer and a string into a single pluralized string.
 
   Args:
@@ -140,10 +140,15 @@ def Plural(quantity, singular, plural=None):
   Returns:
     A string.
   """
+<<<<<<< HEAD:labm8/py/humanize.py
   return "%s %s" % (
     Commas(quantity) if quantity else quantity,
     PluralWord(quantity, singular, plural),
   )
+=======
+  return '%s %s' % (Commas(quantity) if quantity else quantity,
+                    PluralWord(quantity, singular, plural))
+>>>>>>> 750c12b5c... Add a commas option to humanize.Plural().:labm8/humanize.py
 
 
 def PluralWord(quantity, singular, plural=None):
