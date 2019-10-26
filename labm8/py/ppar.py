@@ -20,7 +20,12 @@
 The goal of the module is to provide easy to use implementations of typical
 parallel workloads, such as data parallel map operations.
 """
+<<<<<<< HEAD:labm8/py/ppar.py
 import multiprocessing.pool
+=======
+import multiprocessing
+
+>>>>>>> 59ed3425b... Add a threaded iterator.:labm8/ppar.py
 import queue
 import subprocess
 import threading
@@ -642,4 +647,31 @@ class ThreadedIterator:
 >>>>>>> 06406b3a3... Work in progress on db map.:labm8/ppar.py
 =======
     end_of_batch_callback(i)
+<<<<<<< HEAD:labm8/py/ppar.py
 >>>>>>> 09956bade... Parallel execution fixes.:labm8/ppar.py
+=======
+
+
+class ThreadedIterator:
+  """An iterator object that computes its elements in a parallel thread to be
+  ready to be consumed."""
+
+  def __init__(self,
+               iterator: typing.Iterable[typing.Any],
+               max_queue_size: int = 2):
+    self._queue = queue.Queue(maxsize=max_queue_size)
+    self._thread = threading.Thread(target=lambda: self.worker(iterator))
+    self._thread.start()
+
+  def worker(self, iterator):
+    for element in iterator:
+      self._queue.put(element, block=True)
+    self._queue.put(None, block=True)
+
+  def __iter__(self):
+    next_element = self._queue.get(block=True)
+    while next_element is not None:
+      yield next_element
+      next_element = self._queue.get(block=True)
+    self._thread.join()
+>>>>>>> 59ed3425b... Add a threaded iterator.:labm8/ppar.py
