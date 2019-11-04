@@ -24,8 +24,11 @@ parallel workloads, such as data parallel map operations.
 import multiprocessing.pool
 =======
 import multiprocessing
+<<<<<<< HEAD:labm8/py/ppar.py
 
 >>>>>>> 59ed3425b... Add a threaded iterator.:labm8/ppar.py
+=======
+>>>>>>> d17696a8f... Propagate errors in threaded iterators.:labm8/ppar.py
 import queue
 import subprocess
 import threading
@@ -653,8 +656,11 @@ class ThreadedIterator:
 
 
 class ThreadedIterator:
-  """An iterator object that computes its elements in a parallel thread to be
-  ready to be consumed."""
+  """An iterator that computes its elements in a parallel thread to be ready to
+  be consumed.
+
+  Exceptions raised by the threaded iterator are propagated to consumer.
+  """
 
   def __init__(self,
                iterator: typing.Iterable[typing.Any],
@@ -664,14 +670,39 @@ class ThreadedIterator:
     self._thread.start()
 
   def worker(self, iterator):
-    for element in iterator:
-      self._queue.put(element, block=True)
-    self._queue.put(None, block=True)
+    try:
+      for element in iterator:
+        self._queue.put(self._ValueOrError(value=element), block=True)
+    except Exception as e:
+      # Propagate an error in the iterator.
+      self._queue.put(self._ValueOrError(error=e))
+    # Mark that the iterator is done.
+    self._queue.put(self._EndOfIterator(), block=True)
 
   def __iter__(self):
     next_element = self._queue.get(block=True)
-    while next_element is not None:
-      yield next_element
+    while not isinstance(next_element, self._EndOfIterator):
+      value = next_element.GetOrRaise()
+      yield value
       next_element = self._queue.get(block=True)
     self._thread.join()
+<<<<<<< HEAD:labm8/py/ppar.py
 >>>>>>> 59ed3425b... Add a threaded iterator.:labm8/ppar.py
+=======
+
+  class _EndOfIterator(object):
+    """Tombstone marker object for iterators."""
+    pass
+
+  class _ValueOrError(typing.NamedTuple):
+    """A tuple which represents the union of either a value or an error."""
+    value: typing.Any = None
+    error: Exception = None
+
+    def GetOrRaise(self) -> typing.Any:
+      """Return the value or raise the exception."""
+      if self.error is None:
+        return self.value
+      else:
+        raise self.error
+>>>>>>> d17696a8f... Propagate errors in threaded iterators.:labm8/ppar.py
