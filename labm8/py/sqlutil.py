@@ -12,9 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Utility code for working with sqlalchemy."""
+<<<<<<< HEAD:labm8/py/sqlutil.py
+=======
+import collections
+>>>>>>> 5f35cfa11... Add a Database.Close() method.:labm8/sqlutil.py
 import contextlib
 import os
 import pathlib
+<<<<<<< HEAD:labm8/py/sqlutil.py
 import queue
 import sqlite3
 import sys
@@ -38,6 +43,22 @@ from labm8.py import pbutil
 from labm8.py import progress
 from labm8.py import text
 from labm8.py.internal import labm8_logging as logging
+=======
+import time
+import typing
+
+import sqlalchemy as sql
+from absl import flags as absl_flags
+from labm8 import humanize
+from labm8 import labdate
+from labm8 import pbutil
+from labm8 import text
+from labm8.internal import logging
+from sqlalchemy import func
+from sqlalchemy import orm
+from sqlalchemy.dialects import mysql
+from sqlalchemy.ext import declarative
+>>>>>>> 5f35cfa11... Add a Database.Close() method.:labm8/sqlutil.py
 
 FLAGS = absl_flags.FLAGS
 
@@ -312,6 +333,7 @@ def CreateEngine(url: str, must_exist: bool = False) -> sql.engine.Engine:
     raise ValueError(f"Unsupported database URL='{url}'")
 
   # Create the engine.
+<<<<<<< HEAD:labm8/py/sqlutil.py
   engine = sql.create_engine(
 <<<<<<< HEAD:labm8/py/sqlutil.py
     url,
@@ -327,6 +349,13 @@ def CreateEngine(url: str, must_exist: bool = False) -> sql.engine.Engine:
       pool_pre_ping=FLAGS.sqlutil_pool_pre_ping,
       **engine_args)
 >>>>>>> 671bc9471... Add database pre-ping by default.:labm8/sqlutil.py
+=======
+  engine = sql.create_engine(url,
+                             encoding='utf-8',
+                             echo=FLAGS.sqlutil_echo,
+                             pool_pre_ping=FLAGS.sqlutil_pool_pre_ping,
+                             **engine_args)
+>>>>>>> 5f35cfa11... Add a Database.Close() method.:labm8/sqlutil.py
 
   # Create and immediately close a connection. This is because SQLAlchemy engine
   # is lazily instantiated, so for connections such as SQLite, this line
