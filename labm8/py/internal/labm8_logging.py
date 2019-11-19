@@ -116,7 +116,11 @@ def Log(calling_module_name: str, level: int, msg, *args, **kwargs):
   """
   module_level = GetModuleVerbosity(calling_module_name)
   if level <= module_level:
+<<<<<<< HEAD:labm8/py/internal/labm8_logging.py
     print_context = kwargs.pop("print_context", None)
+=======
+    print_context = kwargs.pop('print_context', None)
+>>>>>>> 35fd6a724... Add `print_context` kwarg to core logger.:labm8/internal/logging.py
     if print_context:
       with print_context():
         absl_logging.info(msg, *args, **kwargs)
