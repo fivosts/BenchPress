@@ -7,7 +7,11 @@ package(default_visibility = ["//visibility:public"])
 licenses(["notice"])  # BSD
 
 py_library(
+<<<<<<< HEAD:third_party/py/click/BUILD
     name = "click",
+=======
+    name = "github",
+>>>>>>> 10d0bba21... Remove the empty python library files.:third_party/py/github/BUILD
     srcs = ["//third_party/py:empty.py"],
     deps = [
 <<<<<<< HEAD:third_party/py/click/BUILD
