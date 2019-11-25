@@ -49,16 +49,24 @@ import typing
 
 import sqlalchemy as sql
 from absl import flags as absl_flags
+from sqlalchemy import func
+from sqlalchemy import orm
+from sqlalchemy.dialects import mysql
+from sqlalchemy.ext import declarative
+
 from labm8 import humanize
 from labm8 import labdate
 from labm8 import pbutil
 from labm8 import text
 from labm8.internal import logging
+<<<<<<< HEAD:labm8/py/sqlutil.py
 from sqlalchemy import func
 from sqlalchemy import orm
 from sqlalchemy.dialects import mysql
 from sqlalchemy.ext import declarative
 >>>>>>> 5f35cfa11... Add a Database.Close() method.:labm8/sqlutil.py
+=======
+>>>>>>> 6b5b3e1d6... Replace collections.namedtuple with classes.:labm8/sqlutil.py
 
 FLAGS = absl_flags.FLAGS
 
@@ -734,7 +742,10 @@ class ProtoBackedMixin(object):
 
 class OffsetLimitQueryResultsBatch(typing.NamedTuple):
   """The results of an offset-limit batched query."""
+<<<<<<< HEAD:labm8/py/sqlutil.py
 
+=======
+>>>>>>> 6b5b3e1d6... Replace collections.namedtuple with classes.:labm8/sqlutil.py
   # The current batch number.
   batch_num: int
   # Offset into the results set.

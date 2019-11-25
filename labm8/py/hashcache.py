@@ -93,6 +93,7 @@ FLAGS = app.FLAGS
 
 Base = declarative.declarative_base()
 
+<<<<<<< HEAD:labm8/py/hashcache.py
 # An in-memory cache which is optionally shared amongst all HashCache instances.
 # The in-memory cache omits timestamps from records.
 <<<<<<< HEAD:labm8/py/hashcache.py
@@ -105,6 +106,17 @@ InMemoryCacheKey = collections.namedtuple(
     ['hash_fn', 'path'],
 )
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/hashcache.py
+=======
+
+class InMemoryCacheKey(typing.NamedTuple):
+  """An in-memory cache which is optionally shared amongst all HashCache
+  instances. The in-memory cache omits timestamps from records.
+  """
+  hash_fn: str
+  path: str
+
+
+>>>>>>> 6b5b3e1d6... Replace collections.namedtuple with classes.:labm8/hashcache.py
 IN_MEMORY_CACHE: typing.Dict[InMemoryCacheKey, str] = {}
 
 
