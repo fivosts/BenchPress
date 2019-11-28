@@ -34,6 +34,10 @@ FLAGS = app.FLAGS
 
 # Note that @pytest.fixture is used here in place of @test.Fixture to break
 # a circular dependency between this file and //labm8/py:test.
+<<<<<<< HEAD:labm8/py/internal/pytest_plugin.py
+=======
+
+>>>>>>> 8434bf4d8... Add //labm8/py:test wrappers for pytest functions.:conftest.py
 
 <<<<<<< HEAD:labm8/py/internal/pytest_plugin.py
 
@@ -190,7 +194,11 @@ def pytest_report_header(config) -> typing.Union[str, typing.List[str]]:
   https://docs.pytest.org/en/latest/example/simple.html#adding-info-to-test-report-header
   """
   del config
+<<<<<<< HEAD:labm8/py/internal/pytest_plugin.py
   return (
     f"version: {app.VERSION} {app.ARCH}\n"
     f"{app.FormatShortBuildDescription()}"
   )
+=======
+  return f"phd: {build_info.FormatShortBuildDescription()}"
+>>>>>>> 8434bf4d8... Add //labm8/py:test wrappers for pytest functions.:conftest.py

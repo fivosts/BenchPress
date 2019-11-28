@@ -112,6 +112,7 @@ def abc_corpus_config(abc_corpus):
     ascii_character_atomizer=True,
     contentfile_separator="\n\n",
   )
+<<<<<<< HEAD:deeplearning/clgen/tests/fixtures.py
 =======
       local_directory=abc_corpus,
       ascii_character_atomizer=True,
@@ -122,6 +123,8 @@ def abc_corpus_config(abc_corpus):
                            ascii_character_atomizer=True,
                            contentfile_separator='\n\n')
 >>>>>>> 1ae6d8129... Update //deeplearning/clgen/...:deeplearning/clgen/conftest.py
+=======
+>>>>>>> 8434bf4d8... Add //labm8/py:test wrappers for pytest functions.:deeplearning/clgen/conftest.py
 
 
 @test.Fixture(scope="function")
@@ -170,6 +173,7 @@ def abc_model_config(abc_corpus_config):
 
 
 @test.Fixture(scope="function")
+<<<<<<< HEAD:deeplearning/clgen/tests/fixtures.py
 =======
       num_epochs=1,
       sequence_length=10,
@@ -183,6 +187,8 @@ def abc_model_config(abc_corpus_config):
 
 @pytest.fixture(scope='function')
 >>>>>>> 3333e1db6... Auto format files.:deeplearning/clgen/conftest.py
+=======
+>>>>>>> 8434bf4d8... Add //labm8/py:test wrappers for pytest functions.:deeplearning/clgen/conftest.py
 def abc_sampler_config():
   """The sampler config for a simple Sampler."""
   maxlen = sampler_pb2.MaxTokenLength(maximum_tokens_in_sample=5)
@@ -208,6 +214,7 @@ def abc_instance_config(
     model=abc_model_config,
     sampler=abc_sampler_config,
   )
+<<<<<<< HEAD:deeplearning/clgen/tests/fixtures.py
 =======
       start_text='a',
       batch_size=5,
@@ -238,6 +245,8 @@ def abc_instance_config(clgen_cache_dir, abc_model_config,
                             model=abc_model_config,
                             sampler=abc_sampler_config)
 >>>>>>> 1ae6d8129... Update //deeplearning/clgen/...:deeplearning/clgen/conftest.py
+=======
+>>>>>>> 8434bf4d8... Add //labm8/py:test wrappers for pytest functions.:deeplearning/clgen/conftest.py
 
 
 @test.Fixture(scope="function")
