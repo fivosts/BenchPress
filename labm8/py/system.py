@@ -79,6 +79,7 @@ from sys import platform
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/system.py
 
 <<<<<<< HEAD:labm8/py/system.py
+<<<<<<< HEAD:labm8/py/system.py
 from phd.lib.labm8 import fs
 =======
 from labm8 import app
@@ -86,6 +87,10 @@ from labm8 import fs
 >>>>>>> 49db6d347... Add a CheckCallOrDie() utility function.:labm8/system.py
 
 >>>>>>> 1eed6e90b... Automated code format.:lib/labm8/system.py
+=======
+from labm8.py import app
+from labm8.py import fs
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/system.py
 
 =======
 >>>>>>> 150d66672... Auto format files.:labm8/system.py

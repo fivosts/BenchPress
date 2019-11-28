@@ -73,6 +73,7 @@ sh_binary(
     visibility = ["//visibility:public"],
     deps = [
 <<<<<<< HEAD:third_party/llvm/BUILD
+<<<<<<< HEAD:third_party/llvm/BUILD
         "//labm8/sh:app",
     ],
 )
@@ -143,6 +144,11 @@ bats_test(
 =======
         "//labm8:fs",
 >>>>>>> fa81e4ed1... Tidy up and convenience function.:research/grewe_2013_cgo/BUILD
+=======
+        "//labm8/py:app",
+        "//labm8/py:bazelutil",
+        "//labm8/py:fs",
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:research/grewe_2013_cgo/BUILD
     ],
 )
 
@@ -163,8 +169,8 @@ sh_binary(
         "//labm8/sh:app",
 =======
         ":feature_extractor",
-        "//labm8:app",
-        "//labm8:test",
+        "//labm8/py:app",
+        "//labm8/py:test",
         "//third_party/py/pytest",
 >>>>>>> dec37b744... Auto format BUILD file.:gpu/portable_mapping_of_data_parallel_programs_to_opencl/BUILD
     ],

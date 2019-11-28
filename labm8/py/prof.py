@@ -40,6 +40,7 @@ from absl import logging
 
 =======
 
+<<<<<<< HEAD:labm8/py/prof.py
 from labm8 import app
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/prof.py
 from labm8 import humanize
@@ -47,6 +48,13 @@ from labm8 import labdate
 from labm8 import labtypes
 from labm8 import system
 >>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/prof.py
+=======
+from labm8.py import app
+from labm8.py import humanize
+from labm8.py import labdate
+from labm8.py import labtypes
+from labm8.py import system
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/prof.py
 
 _TIMERS = {}
 

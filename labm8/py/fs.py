@@ -62,9 +62,14 @@ from send2trash import send2trash
 =======
 from send2trash import send2trash
 
+<<<<<<< HEAD:labm8/py/fs.py
 from labm8 import humanize
 from labm8 import labtypes
 >>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/fs.py
+=======
+from labm8.py import humanize
+from labm8.py import labtypes
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/fs.py
 
 >>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/fs.py
 
@@ -75,20 +80,22 @@ class Error(Exception):
 class File404(Error):
   pass
 
+
 # A list of file names that frequently appear in file systems that are not
 # "useful".
 COMMONLY_IGNORED_FILE_NAMES = set([
-  "._.DS_Store",
-  ".com.apple.timemachine.donotpresent",
-  ".com.apple.timemachine.supported",
-  ".DS_Store",
-  ".sync.ffs_db",
-  ".sync_timestamp.txt",
-  ".VolumeIcon.icns",
-  ".VolumeIcon.ico",
-  "autorun.inf",
+    "._.DS_Store",
+    ".com.apple.timemachine.donotpresent",
+    ".com.apple.timemachine.supported",
+    ".DS_Store",
+    ".sync.ffs_db",
+    ".sync_timestamp.txt",
+    ".VolumeIcon.icns",
+    ".VolumeIcon.ico",
+    "autorun.inf",
 ])
 
+<<<<<<< HEAD:labm8/py/fs.py
 # A list of file names that frequently appear in file systems that are not
 # "useful".
 COMMONLY_IGNORED_FILE_NAMES = set(
@@ -105,6 +112,8 @@ COMMONLY_IGNORED_FILE_NAMES = set(
   ]
 )
 
+=======
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/fs.py
 
 def path(*components):
   """

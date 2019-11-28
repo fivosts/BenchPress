@@ -20,10 +20,14 @@
 import json
 
 <<<<<<< HEAD:labm8/py/io.py
+<<<<<<< HEAD:labm8/py/io.py
 from labm8.py import system
 =======
 from phd.lib.labm8 import system
 >>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/io.py
+=======
+from labm8.py import system
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/io.py
 
 
 def colourise(colour, *args):

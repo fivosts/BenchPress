@@ -19,6 +19,7 @@ import re
 import typing
 
 <<<<<<< HEAD:labm8/py/jsonutil.py
+<<<<<<< HEAD:labm8/py/jsonutil.py
 from labm8.py import fs
 =======
 =======
@@ -39,6 +40,9 @@ JSON = typing.Union[typing.List[typing.Any], typing.Dict[str, typing.Any]]
 from phd.lib.labm8 import fs
 
 >>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/jsonutil.py
+=======
+from labm8.py import fs
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/jsonutil.py
 
 # A type alias for annotating methods which take or return JSON.
 JSON = typing.Union[typing.List[typing.Any], typing.Dict[str, typing.Any]]
@@ -166,7 +170,11 @@ def loads(text, **kwargs):
 =======
   return json.loads('\n'.join(lines), **kwargs)
 
+<<<<<<< HEAD:labm8/py/jsonutil.py
 >>>>>>> 4f357866c... Add two utility functions.:labm8/jsonutil.py
+=======
+
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/jsonutil.py
 def JsonSerializable(val):
   """Return a JSON-serializable version of the object.
 

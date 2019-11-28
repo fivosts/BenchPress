@@ -13,9 +13,12 @@
 # limitations under the License.
 """Utility code for working with sqlalchemy."""
 <<<<<<< HEAD:labm8/py/sqlutil.py
+<<<<<<< HEAD:labm8/py/sqlutil.py
 =======
 import collections
 >>>>>>> 5f35cfa11... Add a Database.Close() method.:labm8/sqlutil.py
+=======
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/sqlutil.py
 import contextlib
 import os
 import pathlib
@@ -54,6 +57,7 @@ from sqlalchemy import orm
 from sqlalchemy.dialects import mysql
 from sqlalchemy.ext import declarative
 
+<<<<<<< HEAD:labm8/py/sqlutil.py
 from labm8 import humanize
 from labm8 import labdate
 from labm8 import pbutil
@@ -67,6 +71,13 @@ from sqlalchemy.ext import declarative
 >>>>>>> 5f35cfa11... Add a Database.Close() method.:labm8/sqlutil.py
 =======
 >>>>>>> 6b5b3e1d6... Replace collections.namedtuple with classes.:labm8/sqlutil.py
+=======
+from labm8.py import humanize
+from labm8.py import labdate
+from labm8.py import pbutil
+from labm8.py import text
+from labm8.py.internal import logging
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/sqlutil.py
 
 FLAGS = absl_flags.FLAGS
 

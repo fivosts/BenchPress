@@ -37,8 +37,13 @@ python_proto_library(
 )
 
 py_library(
+<<<<<<< HEAD:labm8/py/internal/BUILD
     name = "labm8_logging",
     srcs = ["labm8_logging.py"],
+=======
+    name = "logging",
+    srcs = ["logging.py"],
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/internal/BUILD
     visibility = ["//labm8/py:__subpackages__"],
     deps = [
         "//third_party/py/absl",

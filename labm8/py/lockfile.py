@@ -39,12 +39,16 @@ import typing
 <<<<<<< HEAD:labm8/py/lockfile.py
 <<<<<<< HEAD:labm8/py/lockfile.py
 <<<<<<< HEAD:labm8/py/lockfile.py
+<<<<<<< HEAD:labm8/py/lockfile.py
+=======
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/lockfile.py
 from labm8.py import app
 from labm8.py import humanize
 from labm8.py import labdate
 from labm8.py import pbutil
 from labm8.py import system
 from labm8.py.internal import lockfile_pb2
+<<<<<<< HEAD:labm8/py/lockfile.py
 =======
 from absl import flags
 from absl import logging
@@ -81,6 +85,8 @@ from labm8.internal import lockfile_pb2
 <<<<<<< HEAD:labm8/py/lockfile.py
 >>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/lockfile.py
 =======
+=======
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/lockfile.py
 # Use absolute paths for imports so as to prevent a conflict with the
 # system "time" module.
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/lockfile.py

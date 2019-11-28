@@ -42,7 +42,7 @@ exports_repo(
         "labm8/LICENSE": "LICENSE",
         "labm8/travis.yml": ".travis.yml",
     },
-    targets = ["//labm8:all"],
+    targets = ["//labm8/..."],
 )
 
 exports_pip(
@@ -65,9 +65,10 @@ exports_pip(
         "protobuf",
     ],
     license = "Apache License, Version 2.0",
-    long_description_file = "//labm8:README.md",
+    long_description_file = "//labm8/py:README.md",
     package_root = "//labm8",
 )
+<<<<<<< HEAD:labm8/py/BUILD
 
 py_library(
     name = "app",
@@ -1175,3 +1176,5 @@ py_test(
 >>>>>>> ad2622a47... Port tests to //labm8:test.:labm8/BUILD
     ],
 )
+=======
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/BUILD

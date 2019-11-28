@@ -21,8 +21,11 @@ import os
 <<<<<<< HEAD:labm8/py/shell.py
 =======
 
+<<<<<<< HEAD:labm8/py/shell.py
 >>>>>>> 13ac44cd6... Add missing shell module.:labm8/shell.py
 
+=======
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/shell.py
 class ShellEscapeCodes(object):
   """Shell escape codes for pretty-printing."""
 <<<<<<< HEAD:labm8/py/shell.py

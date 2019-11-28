@@ -16,15 +16,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Useful function decorators."""
-import functools
-
 import contextlib
+import functools
 import signal
 import time
 import typing
 
 from labm8.py import app
+<<<<<<< HEAD:labm8/py/decorators.py
 from labm8.py import humanize
+=======
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/decorators.py
 
 FLAGS = app.FLAGS
 

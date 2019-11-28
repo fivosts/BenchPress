@@ -27,6 +27,7 @@ from absl import logging
 
 <<<<<<< HEAD:labm8/py/logutil.py
 <<<<<<< HEAD:labm8/py/logutil.py
+<<<<<<< HEAD:labm8/py/logutil.py
 from labm8.py import app
 from labm8.py import labdate
 from labm8.py.internal import logging_pb2
@@ -44,6 +45,11 @@ FLAGS = flags.FLAGS
 from labm8 import app
 from labm8 import labdate
 from labm8.internal import logging_pb2
+=======
+from labm8.py import app
+from labm8.py import labdate
+from labm8.py.internal import logging_pb2
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/logutil.py
 
 FLAGS = app.FLAGS
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/logutil.py

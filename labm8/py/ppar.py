@@ -37,10 +37,14 @@ import typing
 <<<<<<< HEAD:labm8/py/ppar.py
 <<<<<<< HEAD:labm8/py/ppar.py
 <<<<<<< HEAD:labm8/py/ppar.py
+<<<<<<< HEAD:labm8/py/ppar.py
+=======
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/ppar.py
 from labm8.py import app
 from labm8.py import bazelutil
 from labm8.py import pbutil
 from labm8.py import sqlutil
+<<<<<<< HEAD:labm8/py/ppar.py
 =======
 import humanize
 =======
@@ -57,6 +61,8 @@ from labm8 import app
 from labm8 import bazelutil
 from labm8 import pbutil
 from labm8 import sqlutil
+=======
+>>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/ppar.py
 
 <<<<<<< HEAD:labm8/py/ppar.py
 FLAGS = flags.FLAGS
