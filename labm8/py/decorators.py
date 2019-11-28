@@ -1,8 +1,4 @@
-<<<<<<< HEAD:labm8/py/decorators.py
-# Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
-=======
 # Copyright 2014-2019 Chris Cummins <chrisc.101@gmail.com>.
->>>>>>> 77b550945... Relicense labm8 under Apache 2.0.:labm8/decorators.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,10 +19,7 @@ import time
 import typing
 
 from labm8.py import app
-<<<<<<< HEAD:labm8/py/decorators.py
 from labm8.py import humanize
-=======
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/decorators.py
 
 FLAGS = app.FLAGS
 
@@ -132,10 +125,9 @@ def run_once(f):
 
   wrapper.has_run = False
   return wrapper
-<<<<<<< HEAD:labm8/py/decorators.py
 
 
-def loop_for(seconds: int = 0, min_iteration_count=1):
+def loop_for(seconds: int = 5, min_iteration_count=1):
   """Run the wrapped function until a given number of seconds have elapsed.
 
   Args:
@@ -145,29 +137,20 @@ def loop_for(seconds: int = 0, min_iteration_count=1):
   """
 
   def WrappedLoopFor(function):
-    """A decorator which runs a function for a given number of seconds."""
-
     @functools.wraps(function)
     def InnerLoop(*args, **kwargs):
-      """The decorator inner loop."""
-      start = time.time()
-      end = start + seconds
+      end = time.time() + seconds
       iteration_count = 0
       while time.time() < end or iteration_count < min_iteration_count:
         iteration_count += 1
         function(*args, **kwargs)
-      # Print the number of iterations if we were limited by time.
-      app.LogIf(
-        seconds,
+      app.Log(
         2,
-        "Ran %s of `%s` (%s /iteration)",
+        "Ran %s of `%s`",
         humanize.Plural(iteration_count, "iteration"),
         function.__name__,
-        humanize.Duration(max(time.time() - start, 1e-7) / iteration_count),
       )
 
     return InnerLoop
 
   return WrappedLoopFor
-=======
->>>>>>> 8656e495e... Add a @run_once decorator.:labm8/decorators.py
