@@ -143,7 +143,7 @@ class ScpError(Error):
     self.err = stderr
 
   def __repr__(self):
-    return self.out + '\n' + self.err
+    return self.out + "\n" + self.err
 
   def __str__(self):
     return self.__repr__()
@@ -176,12 +176,12 @@ class Subprocess(object):
 >>>>>>> 150d66672... Auto format files.:labm8/system.py
 =======
   def __init__(
-      self,
-      cmd,
-      shell=False,
-      stdout=subprocess.PIPE,
-      stderr=subprocess.PIPE,
-      decode_out=True,
+    self,
+    cmd,
+    shell=False,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    decode_out=True,
   ):
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/system.py
     """
@@ -234,10 +234,10 @@ class Subprocess(object):
 >>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/system.py
 =======
       self.process = subprocess.Popen(
-          self.cmd,
-          stdout=self.stdout_dest,
-          stderr=self.stderr_dest,
-          shell=self.shell,
+        self.cmd,
+        stdout=self.stdout_dest,
+        stderr=self.stderr_dest,
+        shell=self.shell,
       )
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/system.py
       stdout, stderr = self.process.communicate()
@@ -245,9 +245,9 @@ class Subprocess(object):
       # Decode output if the user wants, and if there is any.
       if self.decode_out:
         if stdout:
-          self.stdout = stdout.decode('utf-8')
+          self.stdout = stdout.decode("utf-8")
         if stderr:
-          self.stderr = stderr.decode('utf-8')
+          self.stderr = stderr.decode("utf-8")
 
     thread = threading.Thread(target=target)
     thread.start()
@@ -258,6 +258,7 @@ class Subprocess(object):
         self.process.terminate()
         thread.join()
         raise SubprocessError(
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/system.py
 <<<<<<< HEAD:labm8/py/system.py
           ("Reached timeout after {t} seconds".format(t=timeout)),
@@ -268,6 +269,10 @@ class Subprocess(object):
 =======
             ('Reached timeout after {t} seconds'.format(t=timeout)),)
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/system.py
+=======
+          ("Reached timeout after {t} seconds".format(t=timeout)),
+        )
+>>>>>>> 4242aed2a... Automated code format.
     else:
       thread.join()
 
@@ -275,15 +280,15 @@ class Subprocess(object):
 
 
 def is_linux():
-  return platform == 'linux' or platform == 'linux2'
+  return platform == "linux" or platform == "linux2"
 
 
 def is_mac():
-  return platform == 'darwin'
+  return platform == "darwin"
 
 
 def is_windows():
-  return platform == 'win32'
+  return platform == "win32"
 
 
 def run(command, num_retries=1, timeout=-1, **kwargs):
@@ -320,7 +325,7 @@ def run(command, num_retries=1, timeout=-1, **kwargs):
   raise last_error
 
 
-def sed(match, replacement, path, modifiers=''):
+def sed(match, replacement, path, modifiers=""):
   """Perform sed text substitution.
 
   This requires GNU sed. On MacOS, install it using:
@@ -336,7 +341,7 @@ def sed(match, replacement, path, modifiers=''):
   process = Subprocess(cmd, shell=True)
   ret, out, err = process.run(timeout=60)
   if ret:
-    raise SubprocessError('Sed command failed!')
+    raise SubprocessError("Sed command failed!")
 
 
 def echo(*args, **kwargs):
@@ -349,13 +354,13 @@ def echo(*args, **kwargs):
   """
   msg = args[:-1]
   path = fs.path(args[-1])
-  append = kwargs.pop('append', False)
+  append = kwargs.pop("append", False)
 
   if append:
-    with open(path, 'a') as file:
+    with open(path, "a") as file:
       print(*msg, file=file, **kwargs)
   else:
-    with open(fs.path(path), 'w') as file:
+    with open(fs.path(path), "w") as file:
       print(*msg, file=file, **kwargs)
 
 
@@ -393,7 +398,7 @@ def which(program, path=None):
      str: Full path to program if found, else None.
   """
   # If path is not given, read the $PATH environment variable.
-  path = path or os.environ['PATH'].split(os.pathsep)
+  path = path or os.environ["PATH"].split(os.pathsep)
   abspath = True if os.path.split(program)[0] else False
   if abspath:
     if fs.isexe(program):
@@ -487,9 +492,9 @@ def exit(status=0):
   Terminate the program with the given status code.
   """
   if status == 0:
-    print('Done.', file=sys.stderr)
+    print("Done.", file=sys.stderr)
   else:
-    print('Error {0}'.format(status), file=sys.stderr)
+    print("Error {0}".format(status), file=sys.stderr)
   sys.exit(status)
 
 
@@ -546,6 +551,7 @@ def CheckCallOrDie(cmd: typing.List[str]) -> None:
 =======
 >>>>>>> 3c71c9838... Remove python 3 checks.:labm8/system.py
 def ProcessFileAndReplace(
+<<<<<<< HEAD
     path: str,
     process_file_callback: typing.Callable[[str, str], None],
 <<<<<<< HEAD:labm8/py/system.py
@@ -554,6 +560,12 @@ def ProcessFileAndReplace(
 =======
     tempfile_prefix: str = 'labm8_system_',
     tempfile_suffix: str = None,
+=======
+  path: str,
+  process_file_callback: typing.Callable[[str, str], None],
+  tempfile_prefix: str = "labm8_system_",
+  tempfile_suffix: str = None,
+>>>>>>> 4242aed2a... Automated code format.
 ) -> None:
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/system.py
   """Process a file and replace with the generated file.
@@ -571,9 +583,7 @@ def ProcessFileAndReplace(
     tempfile_suffix: An optional name suffix for the temporary file.
   """
   with tempfile.NamedTemporaryFile(
-      prefix=tempfile_prefix,
-      suffix=tempfile_suffix,
-      delete=False,
+    prefix=tempfile_prefix, suffix=tempfile_suffix, delete=False,
   ) as f:
     tmp_path = f.name
     try:
@@ -590,7 +600,7 @@ def ProcessFileAndReplace(
 def CheckCallOrDie(cmd: typing.List[str]) -> None:
   """Run the given command and exit fatally on error."""
   try:
-    app.Log(2, '$ %s', ' '.join(cmd))
+    app.Log(2, "$ %s", " ".join(cmd))
     subprocess.check_call(cmd)
   except subprocess.CalledProcessError as e:
 <<<<<<< HEAD:labm8/py/system.py
@@ -604,8 +614,6 @@ def CheckCallOrDie(cmd: typing.List[str]) -> None:
 >>>>>>> a4e1bff54... Auto-format code.:labm8/system.py
 =======
     app.FatalWithoutStackTrace(
-        'Command: `%s` failed with error: %s',
-        ' '.join(cmd),
-        e,
+      "Command: `%s` failed with error: %s", " ".join(cmd), e,
     )
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/system.py

@@ -83,7 +83,8 @@ class File404(Error):
 
 # A list of file names that frequently appear in file systems that are not
 # "useful".
-COMMONLY_IGNORED_FILE_NAMES = set([
+COMMONLY_IGNORED_FILE_NAMES = set(
+  [
     "._.DS_Store",
     ".com.apple.timemachine.donotpresent",
     ".com.apple.timemachine.supported",
@@ -93,7 +94,8 @@ COMMONLY_IGNORED_FILE_NAMES = set([
     ".VolumeIcon.icns",
     ".VolumeIcon.ico",
     "autorun.inf",
-])
+  ]
+)
 
 <<<<<<< HEAD:labm8/py/fs.py
 # A list of file names that frequently appear in file systems that are not
@@ -289,9 +291,7 @@ def ls(root: typing.Union[str, pathlib.Path] = ".",
 >>>>>>> 65a5cab7a... Add pathlib.Path to fs.ls() type annotation.:lib/labm8/fs.py
 =======
 def ls(
-    root: typing.Union[str, pathlib.Path] = '.',
-    abspaths=False,
-    recursive=False,
+  root: typing.Union[str, pathlib.Path] = ".", abspaths=False, recursive=False,
 ):
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/fs.py
   """
@@ -328,6 +328,7 @@ def ls(
 
   def _expand_subdirs(file):
     if isdir(path(root, file)):
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/fs.py
 <<<<<<< HEAD:labm8/py/fs.py
       return [file,] + [
@@ -342,6 +343,11 @@ def ls(
           file,
       ] + [path(file, x) for x in ls(path(root, file), recursive=True)]
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/fs.py
+=======
+      return [file,] + [
+        path(file, x) for x in ls(path(root, file), recursive=True)
+      ]
+>>>>>>> 4242aed2a... Automated code format.
     else:
       return [file]
 
@@ -363,7 +369,7 @@ def ls(
     return list(sorted(os.listdir(root)))
 
 
-def lsdirs(root='.', **kwargs):
+def lsdirs(root=".", **kwargs):
   """
   Return only subdirectories from a directory listing.
 
@@ -386,7 +392,7 @@ def lsdirs(root='.', **kwargs):
   return [_path for _path in paths if isdir(path(root, _path))]
 
 
-def lsfiles(root: typing.Union[str, pathlib.Path] = '.', **kwargs):
+def lsfiles(root: typing.Union[str, pathlib.Path] = ".", **kwargs):
   """
   Return only files from a directory listing.
 
@@ -428,7 +434,7 @@ def rm(*components, **kwargs):
         paths (default: True).
   """
   _path = path(*components)
-  glob = kwargs.get('glob', True)
+  glob = kwargs.get("glob", True)
   paths = iglob(_path) if glob else [_path]
 
   for file in paths:
@@ -545,8 +551,8 @@ def read(*components, **kwargs):
 
       IOError: if reading path fails
   """
-  rstrip = kwargs.get('rstrip', True)
-  comment_char = kwargs.get('comment_char', None)
+  rstrip = kwargs.get("rstrip", True)
+  comment_char = kwargs.get("comment_char", None)
 
   ignore_comments = comment_char is not None
 
@@ -556,6 +562,7 @@ def read(*components, **kwargs):
 
   # Multiple definitions to handle all cases.
   if ignore_comments:
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/fs.py
     comment_line_re = re.compile(r"^\s*{char}".format(char=comment_char))
     not_comment_re = re.compile(r"[^{char}]+".format(char=comment_char))
@@ -563,6 +570,10 @@ def read(*components, **kwargs):
     comment_line_re = re.compile('^\s*{char}'.format(char=comment_char))
     not_comment_re = re.compile('[^{char}]+'.format(char=comment_char))
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/fs.py
+=======
+    comment_line_re = re.compile("^\s*{char}".format(char=comment_char))
+    not_comment_re = re.compile("[^{char}]+".format(char=comment_char))
+>>>>>>> 4242aed2a... Automated code format.
 
     if rstrip:
       # Ignore comments, and right strip results.
@@ -590,16 +601,16 @@ def read(*components, **kwargs):
 >>>>>>> 4d50b51ca... Add a directory_is_empty() function.:lib/labm8/fs.py
 =======
       return [
-          re.match(not_comment_re, line).group(0).rstrip()
-          for line in lines
-          if not re.match(comment_line_re, line)
+        re.match(not_comment_re, line).group(0).rstrip()
+        for line in lines
+        if not re.match(comment_line_re, line)
       ]
     else:
       # Ignore comments, and don't strip results.
       return [
-          re.match(not_comment_re, line).group(0)
-          for line in lines
-          if not re.match(comment_line_re, line)
+        re.match(not_comment_re, line).group(0)
+        for line in lines
+        if not re.match(comment_line_re, line)
       ]
 >>>>>>> 150d66672... Auto format files.:labm8/fs.py
   elif rstrip:
@@ -623,18 +634,22 @@ def du(*components, **kwargs):
   Returns:
       int or str: If "human_readble" kwarg is True, return str, else int.
   """
-  human_readable = kwargs.get('human_readable', True)
+  human_readable = kwargs.get("human_readable", True)
 
   _path = path(*components)
   if not exists(_path):
     raise Error("file '{}' not found".format(_path))
   size = os.stat(_path).st_size
   if human_readable:
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/fs.py
     return humanize.BinaryPrefix(size, "B")
 =======
     return humanize.BinaryPrefix(size, 'B')
 >>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/fs.py
+=======
+    return humanize.BinaryPrefix(size, "B")
+>>>>>>> 4242aed2a... Automated code format.
   else:
     return size
 
@@ -749,12 +764,16 @@ def TemporaryWorkingDir(prefix: str = "phd_") -> pathlib.Path:
 
 
 @contextlib.contextmanager
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/fs.py
 def TemporaryWorkingDir(prefix: str = None) -> pathlib.Path:
 >>>>>>> 583709888... Move TemporaryWorkingDir() into labm8.:lib/labm8/fs.py
 =======
 def TemporaryWorkingDir(prefix: str = 'phd_') -> pathlib.Path:
 >>>>>>> 809f924cd... Set a default working directory prefix.:lib/labm8/fs.py
+=======
+def TemporaryWorkingDir(prefix: str = "phd_") -> pathlib.Path:
+>>>>>>> 4242aed2a... Automated code format.
   """A context manager which provides a temporary working directory.
 
   This creates an empty temporary directory, and changes the current working
@@ -965,11 +984,11 @@ def Read(filename: typing.Union[str, pathlib.Path]) -> str:
 
 
 def Write(
-    filename: typing.Union[str, pathlib.Path],
-    contents: bytes,
-    overwrite_existing: bool = True,
-    mode: int = 0o0666,
-    gid: int = None,
+  filename: typing.Union[str, pathlib.Path],
+  contents: bytes,
+  overwrite_existing: bool = True,
+  mode: int = 0o0666,
+  gid: int = None,
 ) -> pathlib.Path:
   """Create a file 'filename' with 'contents', with the mode given in 'mode'.
 
@@ -1013,10 +1032,10 @@ def Write(
 
 
 def AtomicWrite(
-    filename: typing.Union[str, pathlib.Path],
-    contents: bytes,
-    mode: int = 0o0666,
-    gid: int = None,
+  filename: typing.Union[str, pathlib.Path],
+  contents: bytes,
+  mode: int = 0o0666,
+  gid: int = None,
 ) -> None:
   """Create a file 'filename' with 'contents' atomically.
 
@@ -1060,7 +1079,7 @@ def AtomicWrite(
     try:
       os.remove(tmp_filename)
     except OSError as e:
-      exc = OSError('%s. Additional errors cleaning up: %s' % (exc, e))
+      exc = OSError("%s. Additional errors cleaning up: %s" % (exc, e))
     raise exc
 
 
@@ -1098,8 +1117,8 @@ def TemporaryFileWithContents(contents: bytes, **kwargs):
   # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   # See the License for the specific language governing permissions and
   # limitations under the License.
-  if not kwargs.get('prefix'):
-    kwargs['prefix'] = 'phd_tempfile_with_contents_'
+  if not kwargs.get("prefix"):
+    kwargs["prefix"] = "phd_tempfile_with_contents_"
   temporary_file = tempfile.NamedTemporaryFile(**kwargs)
   temporary_file.write(contents)
   temporary_file.flush()

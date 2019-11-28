@@ -86,6 +86,7 @@ absl_flags.DEFINE_boolean(
   False,
   "If True, the Engine will log all statements as well as a repr() of their "
   "parameter lists to the engines logger, which defaults to sys.stdout.",
+<<<<<<< HEAD
 )
 absl_flags.DEFINE_boolean(
   "sqlutil_pool_pre_ping",
@@ -94,13 +95,16 @@ absl_flags.DEFINE_boolean(
   "alive. This adds some overhead, but reduces the risk of "
   '"server has gone away" errors. See:'
   "<https://docs.sqlalchemy.org/en/13/core/pooling.html#disconnect-handling-pessimistic>",
+=======
+>>>>>>> 4242aed2a... Automated code format.
 )
 absl_flags.DEFINE_boolean(
-    'sqlutil_pool_pre_ping', True,
-    'Enable pessimistic pre-ping to check that database connections are '
-    'alive. This adds some overhead, but reduces the risk of '
-    '"server has gone away" errors. See:'
-    '<https://docs.sqlalchemy.org/en/13/core/pooling.html#disconnect-handling-pessimistic>'
+  "sqlutil_pool_pre_ping",
+  True,
+  "Enable pessimistic pre-ping to check that database connections are "
+  "alive. This adds some overhead, but reduces the risk of "
+  '"server has gone away" errors. See:'
+  "<https://docs.sqlalchemy.org/en/13/core/pooling.html#disconnect-handling-pessimistic>",
 )
 absl_flags.DEFINE_integer(
   "mysql_engine_pool_size",
@@ -114,6 +118,7 @@ absl_flags.DEFINE_integer(
   "The number of connections to allow in connection pool “overflow”, that "
   "is connections that can be opened above and beyond the "
   "--mysql_engine_pool_size setting",
+<<<<<<< HEAD
 )
 absl_flags.DEFINE_boolean(
   "mysql_assume_utf8_charset",
@@ -126,6 +131,8 @@ absl_flags.DEFINE_boolean(
   "Enable foreign key support for SQLite. This enforces foreign key "
   "constraints, and enables cascaded update/delete statements. See: "
   "https://docs.sqlalchemy.org/en/13/dialects/sqlite.html#foreign-key-support",
+=======
+>>>>>>> 4242aed2a... Automated code format.
 )
 
 # The Query type is returned by Session.query(). This is a convenience for type
@@ -352,15 +359,20 @@ def CreateEngine(url: str, must_exist: bool = False) -> sql.engine.Engine:
     raise ValueError(f"Unsupported database URL='{url}'")
 
   # Create the engine.
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/sqlutil.py
   engine = sql.create_engine(
 <<<<<<< HEAD:labm8/py/sqlutil.py
+=======
+  engine = sql.create_engine(
+>>>>>>> 4242aed2a... Automated code format.
     url,
     encoding="utf-8",
     echo=FLAGS.sqlutil_echo,
     pool_pre_ping=FLAGS.sqlutil_pool_pre_ping,
     **engine_args,
   )
+<<<<<<< HEAD
 =======
       url,
       encoding='utf-8',
@@ -375,6 +387,8 @@ def CreateEngine(url: str, must_exist: bool = False) -> sql.engine.Engine:
                              pool_pre_ping=FLAGS.sqlutil_pool_pre_ping,
                              **engine_args)
 >>>>>>> 5f35cfa11... Add a Database.Close() method.:labm8/sqlutil.py
+=======
+>>>>>>> 4242aed2a... Automated code format.
 
   # Create and immediately close a connection. This is because SQLAlchemy engine
   # is lazily instantiated, so for connections such as SQLite, this line
@@ -424,6 +438,7 @@ def ResolveUrl(url: str, use_flags: bool = True):
     ValueError: If the file path is invalid.
     FileNotFoundError: IF the file path does not exist.
   """
+<<<<<<< HEAD
   # Substitute shell variables.
   url = os.path.expandvars(url)
 
@@ -440,6 +455,20 @@ def ResolveUrl(url: str, use_flags: bool = True):
 
     if not path.is_file():
       raise FileNotFoundError(f"File '{path}' not found")
+=======
+  if not url.startswith("file://"):
+    return url
+
+  # Split the URL into the file path, and the optional suffix.
+  components = url.split("?")
+  path, suffix = components[0], "?".join(components[1:])
+
+  # Strip the file:// prefix from the path.
+  path = pathlib.Path(path[len("file://") :])
+
+  if not path.is_absolute():
+    raise ValueError("Relative path to file:// is not allowed")
+>>>>>>> 4242aed2a... Automated code format.
 
     # Read the contents of the file, ignoring lines starting with '#'.
     with open(path) as f:
@@ -447,8 +476,16 @@ def ResolveUrl(url: str, use_flags: bool = True):
         x for x in f.read().split("\n") if not x.lstrip().startswith("#")
       ).strip()
 
+<<<<<<< HEAD
     # Append the suffix.
     url += suffix
+=======
+  # Read the contents of the file, ignoring lines starting with '#'.
+  with open(path) as f:
+    file_url = "\n".join(
+      x for x in f.read().split("\n") if not x.lstrip().startswith("#")
+    ).strip()
+>>>>>>> 4242aed2a... Automated code format.
 
   if (
     use_flags and url.startswith("mysql://") and FLAGS.mysql_assume_utf8_charset
@@ -563,18 +600,29 @@ class Database(object):
     if self.url.startswith("mysql://"):
       engine = sql.create_engine("/".join(self.url.split("/")[:-1]))
       database = self.url.split("/")[-1].split("?")[0]
+<<<<<<< HEAD
       logging.Log(logging.GetCallingModuleName(), 1, "database %s", database)
       engine.execute(f"DROP DATABASE IF EXISTS `{database}`")
     elif self.url == "sqlite://":
       # In-memory databases do not dropping.
       pass
     elif self.url.startswith("sqlite:///"):
+=======
+      engine.execute(
+        sql.text("DROP DATABASE IF EXISTS :database"), database=database,
+      )
+    elif self.url.startswith("sqlite://"):
+>>>>>>> 4242aed2a... Automated code format.
       path = pathlib.Path(self.url[len("sqlite:///") :])
       assert path.is_file()
       path.unlink()
     else:
       raise NotImplementedError(
+<<<<<<< HEAD
         f"Unsupported operation DROP for database: '{self.url}'",
+=======
+        "Unsupported operation DROP for database: '{self.url}'",
+>>>>>>> 4242aed2a... Automated code format.
       )
 
   @property
@@ -753,10 +801,14 @@ class ProtoBackedMixin(object):
 
 class OffsetLimitQueryResultsBatch(typing.NamedTuple):
   """The results of an offset-limit batched query."""
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/sqlutil.py
 
 =======
 >>>>>>> 6b5b3e1d6... Replace collections.namedtuple with classes.:labm8/sqlutil.py
+=======
+
+>>>>>>> 4242aed2a... Automated code format.
   # The current batch number.
   batch_num: int
   # Offset into the results set.
@@ -834,6 +886,7 @@ class ColumnTypes(object):
       A column type.
     """
     return sql.Binary(length).with_variant(mysql.BINARY(length), "mysql")
+<<<<<<< HEAD
 
   @staticmethod
   def LargeBinary():
@@ -843,6 +896,8 @@ class ColumnTypes(object):
       A column type.
     """
     return sql.LargeBinary().with_variant(sql.LargeBinary(2 ** 31), "mysql")
+=======
+>>>>>>> 4242aed2a... Automated code format.
 
   @staticmethod
   def LargeBinary():
@@ -851,7 +906,7 @@ class ColumnTypes(object):
     Returns:
       A column type.
     """
-    return sql.LargeBinary().with_variant(sql.LargeBinary(2**31), 'mysql')
+    return sql.LargeBinary().with_variant(sql.LargeBinary(2 ** 31), "mysql")
 
   @staticmethod
   def UnboundedUnicodeText():
@@ -1024,9 +1079,15 @@ class BufferedDatabaseWriter(threading.Thread):
     self.max_buffer_size = max_buffer_size
     self.max_buffer_length = max_buffer_length
 
+<<<<<<< HEAD
     # Counters.
     self.flush_count = 0
     self.error_count = 0
+=======
+  @contextlib.contextmanager
+  def Session(self) -> "BufferedDatabaseWriter":
+    """Yields a context manager which calls Flush() at the end of the scope.
+>>>>>>> 4242aed2a... Automated code format.
 
     self._buffer = []
     self.buffer_size = 0
@@ -1074,6 +1135,7 @@ class BufferedDatabaseWriter(threading.Thread):
     for mapped, size in zip(mappeds, sizes):
       self._queue.put((mapped, size))
 
+<<<<<<< HEAD
   def AddLambdaOp(self, callback: Callable[[Database.SessionType], None]):
     self._queue.put(BufferedDatabaseWriter.LambdaOp(callback))
 
@@ -1177,6 +1239,25 @@ class BufferedDatabaseWriter(threading.Thread):
       or (
         self.max_seconds_since_flush
         and self.seconds_since_last_flush >= self.max_seconds_since_flush
+=======
+  def MaybeFlush(self) -> None:
+    """Determine if the buffer should be flushed, and if so, flush it."""
+    if (
+      len(self._to_commit) > self._max_queue
+      or (time.time() - self._last_commit) > self._flush_secs
+    ):
+      self.Flush()
+
+  def Flush(self) -> None:
+    """Commit all buffered mapped objects to database."""
+    failures = ResilientAddManyAndCommit(self._db, self._to_commit)
+    if len(failures):
+      logging.Log(
+        logging.GetCallingModuleName(),
+        1,
+        "BufferedDatabaseWriter failed to commit %d objects",
+        len(failures),
+>>>>>>> 4242aed2a... Automated code format.
       )
     ):
       self._Flush()

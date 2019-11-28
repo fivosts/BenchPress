@@ -31,16 +31,20 @@ def _checksum_str(hash_fn, string, encoding="utf-8"):
 
 
 def _checksum_list(hash_fn, *elems):
-  string = ''.join(sorted(str(x) for x in elems))
+  string = "".join(sorted(str(x) for x in elems))
   return _checksum_str(hash_fn, string)
 
 
 def _checksum_file(hash_fn, path: typing.Union[str, pathlib.Path]):
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/crypto.py
   with open(path, "rb") as infile:
 =======
   with open(path, 'rb') as infile:
 >>>>>>> 0cc901c09... Type hint for X_file() functions.:lib/labm8/crypto.py
+=======
+  with open(path, "rb") as infile:
+>>>>>>> 4242aed2a... Automated code format.
     ret = _checksum(hash_fn, infile.read())
   return ret
 

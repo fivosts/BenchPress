@@ -15,11 +15,15 @@ from os import path
 
 REPO_ROOTS = {
 <<<<<<< HEAD:third_party/bazel/util.py
+<<<<<<< HEAD:third_party/bazel/util.py
+=======
+>>>>>>> 4242aed2a... Automated code format.:tools/util.py
   "GERRIT": "http://gerrit-maven.storage.googleapis.com",
   "GERRIT_API": "https://gerrit-api.commondatastorage.googleapis.com/release",
   "MAVEN_CENTRAL": "http://central.maven.org/maven2",
   "MAVEN_LOCAL": "file://" + path.expanduser("~/.m2/repository"),
   "MAVEN_SNAPSHOT": "https://oss.sonatype.org/content/repositories/snapshots",
+<<<<<<< HEAD:third_party/bazel/util.py
 =======
     'GERRIT': 'http://gerrit-maven.storage.googleapis.com',
     'GERRIT_API': 'https://gerrit-api.commondatastorage.googleapis.com/release',
@@ -27,6 +31,8 @@ REPO_ROOTS = {
     'MAVEN_LOCAL': 'file://' + path.expanduser('~/.m2/repository'),
     'MAVEN_SNAPSHOT': 'https://oss.sonatype.org/content/repositories/snapshots',
 >>>>>>> 5fb74eaea... Auto format files.:tools/util.py
+=======
+>>>>>>> 4242aed2a... Automated code format.:tools/util.py
 }
 
 

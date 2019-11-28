@@ -28,7 +28,10 @@ import os
 >>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/shell.py
 class ShellEscapeCodes(object):
   """Shell escape codes for pretty-printing."""
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/shell.py
+=======
+>>>>>>> 4242aed2a... Automated code format.
 
   PURPLE = "\033[95m"
   CYAN = "\033[96m"
@@ -40,6 +43,7 @@ class ShellEscapeCodes(object):
   BOLD = "\033[1m"
   UNDERLINE = "\033[4m"
   END = "\033[0m"
+<<<<<<< HEAD
 =======
   PURPLE = '\033[95m'
   CYAN = '\033[96m'
@@ -52,6 +56,8 @@ class ShellEscapeCodes(object):
   UNDERLINE = '\033[4m'
   END = '\033[0m'
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/shell.py
+=======
+>>>>>>> 4242aed2a... Automated code format.
 
 
 def ShellEscapeList(words):

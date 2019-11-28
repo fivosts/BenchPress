@@ -9,7 +9,11 @@ def _maven_release(ctx, parts):
   if len(parts) not in [3, 4]:
     fail(
       '%s:\nexpected id="groupId:artifactId:version[:classifier]"'
+<<<<<<< HEAD:third_party/bazel/maven_jar.bzl
       % ctx.attr.artifact,
+=======
+      % ctx.attr.artifact
+>>>>>>> 4242aed2a... Automated code format.:tools/bzl/maven_jar.bzl
     )
   if len(parts) == 4:
     group, artifact, version, classifier = parts
@@ -25,7 +29,11 @@ def _maven_release(ctx, parts):
       artifact,
       version,
       artifact + "-" + file_version,
+<<<<<<< HEAD:third_party/bazel/maven_jar.bzl
     ],
+=======
+    ]
+>>>>>>> 4242aed2a... Automated code format.:tools/bzl/maven_jar.bzl
   )
   return jar, url
 
@@ -105,7 +113,11 @@ java_import(
     jars = ['{srcjar}'],
 )
 """.format(
+<<<<<<< HEAD:third_party/bazel/maven_jar.bzl
       srcjar=srcjar,
+=======
+      srcjar=srcjar
+>>>>>>> 4242aed2a... Automated code format.:tools/bzl/maven_jar.bzl
     )
   ctx.file("%s/BUILD" % ctx.path("jar"), contents, False)
 
@@ -118,7 +130,11 @@ alias(
     actual = "@{rule_name}//jar",
 )
 \n""".format(
+<<<<<<< HEAD:third_party/bazel/maven_jar.bzl
     rule_name=ctx.name, header=header,
+=======
+    rule_name=ctx.name, header=header
+>>>>>>> 4242aed2a... Automated code format.:tools/bzl/maven_jar.bzl
   )
   ctx.file("BUILD", contents, False)
 
@@ -166,9 +182,13 @@ maven_jar = repository_rule(
     "artifact": attr.string(mandatory=True),
     "sha1": attr.string(),
     "src_sha1": attr.string(),
+<<<<<<< HEAD:third_party/bazel/maven_jar.bzl
     "_download_script": attr.label(
       default=Label("//third_party/bazel:download_file.py")
     ),
+=======
+    "_download_script": attr.label(default=Label("//tools:download_file.py")),
+>>>>>>> 4242aed2a... Automated code format.:tools/bzl/maven_jar.bzl
     "repository": attr.string(default=MAVEN_CENTRAL),
     "attach_source": attr.bool(default=True),
     "unsign": attr.bool(default=False),

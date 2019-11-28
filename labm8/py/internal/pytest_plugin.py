@@ -35,7 +35,10 @@ FLAGS = app.FLAGS
 # Note that @pytest.fixture is used here in place of @test.Fixture to break
 # a circular dependency between this file and //labm8/py:test.
 
+<<<<<<< HEAD:labm8/py/internal/pytest_plugin.py
 
+=======
+>>>>>>> 4242aed2a... Automated code format.:conftest.py
 @pytest.fixture(scope="function")
 def tempdir() -> pathlib.Path:
   """A test fixture which yields a temporary directory."""
@@ -112,6 +115,7 @@ def pytest_collection_modifyitems(config, items):
   this_platform = sys.platform
   this_host = socket.gethostname()
   slow_skip_marker = pytest.mark.skip(reason="Use --notest_skip_slow to run")
+<<<<<<< HEAD:labm8/py/internal/pytest_plugin.py
 
   # Rewrite the file path determined by the pytest collector from the default
   # relpath to an absolute path.
@@ -131,6 +135,8 @@ def pytest_collection_modifyitems(config, items):
   # unexpected sideffects for bits of pytest that depend on the location. In
   # my experience so far, this rewriting has not caused any problems.
   rewriten_path = os.path.abspath(items[0].location[0])
+=======
+>>>>>>> 4242aed2a... Automated code format.:conftest.py
 
   for item in items:
     # TODO(cec): Skip benchmarks by default.

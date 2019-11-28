@@ -95,6 +95,7 @@ FLAGS = absl_flags.FLAGS
 
 absl_flags.DEFINE_boolean(
   "version", False, "Print version information and exit.",
+<<<<<<< HEAD
 )
 absl_flags.DEFINE_boolean(
 <<<<<<< HEAD:labm8/py/app.py
@@ -151,6 +152,20 @@ absl_flags.DEFINE_boolean(
 absl_flags.DEFINE_boolean('log_colors', True,
                           'Whether to colorize logging output.')
 >>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
+=======
+)
+absl_flags.DEFINE_boolean(
+  "dump_flags", False, "Print the defined flags and their values and exit."
+)
+absl_flags.DEFINE_boolean(
+  "dump_flags_to_json",
+  False,
+  "Print the defined flags and their values to JSON and exit.",
+)
+absl_flags.DEFINE_boolean(
+  "log_colors", True, "Whether to colorize logging output."
+)
+>>>>>>> 4242aed2a... Automated code format.
 
 
 class UsageError(absl_app.UsageError):
@@ -192,21 +207,30 @@ def GetVersionInformationString() -> str:
   # version information.
   try:
     import build_info
-    version = '\n'.join([
-        build_info.FormatVersion(),
-        build_info.FormatShortBuildDescription(),
-    ])
+
+    version = "\n".join(
+      [build_info.FormatVersion(), build_info.FormatShortBuildDescription(),]
+    )
     url = build_info.GetGithubCommitUrl()
   except ModuleNotFoundError:
     import pkg_resources
+
     version = f'version: {pkg_resources.get_distribution("labm8").version}'
-    url = 'https://github.com/ChrisCummins/labm8'
-  return '\n'.join([
+    url = "https://github.com/ChrisCummins/labm8"
+  return "\n".join(
+    [
       version,
+<<<<<<< HEAD
       'Copyright (C) 2014-2019 Chris Cummins <chrisc.101@gmail.com>',
       f'<{url}>',
   ])
 >>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/app.py
+=======
+      "Copyright (C) 2014-2019 Chris Cummins <chrisc.101@gmail.com>",
+      f"<{url}>",
+    ]
+  )
+>>>>>>> 4242aed2a... Automated code format.
 
 
 def RunWithArgs(
@@ -257,11 +281,18 @@ def RunWithArgs(
 >>>>>>> cdc791774... Add --dump_flags and --dump_flags_to_json flags.:labm8/app.py
 =======
       print(
+<<<<<<< HEAD
           json.dumps(FlagsToDict(),
                      sort_keys=True,
                      indent=2,
                      separators=(',', ': ')))
 >>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/app.py
+=======
+        json.dumps(
+          FlagsToDict(), sort_keys=True, indent=2, separators=(",", ": ")
+        )
+      )
+>>>>>>> 4242aed2a... Automated code format.
       sys.exit(0)
     main(argv)
 
@@ -341,11 +372,25 @@ def Log(level: int, msg, *args, **kwargs):
 =======
   calling_module = logging.GetCallingModuleName()
   logging.Log(
+<<<<<<< HEAD
       calling_module, level,
       _MaybeColorizeLog(
           shell.ShellEscapeCodes.YELLOW
           if level > 1 else shell.ShellEscapeCodes.CYAN, msg, *args), **kwargs)
 >>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
+=======
+    calling_module,
+    level,
+    _MaybeColorizeLog(
+      shell.ShellEscapeCodes.YELLOW
+      if level > 1
+      else shell.ShellEscapeCodes.CYAN,
+      msg,
+      *args,
+    ),
+    **kwargs,
+  )
+>>>>>>> 4242aed2a... Automated code format.
 
 
 @skip_log_prefix
@@ -357,6 +402,7 @@ def LogIf(level: int, condition, msg, *args, **kwargs):
 @skip_log_prefix
 def Fatal(msg, *args, **kwargs):
   """Logs a fatal message."""
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/app.py
 <<<<<<< HEAD:labm8/py/app.py
 <<<<<<< HEAD:labm8/py/app.py
@@ -375,6 +421,11 @@ def Fatal(msg, *args, **kwargs):
   logging.Fatal(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
                 **kwargs)
 >>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/app.py
+=======
+  logging.Fatal(
+    _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
+  )
+>>>>>>> 4242aed2a... Automated code format.
 
 
 @skip_log_prefix
@@ -387,6 +438,7 @@ def FatalWithoutStackTrace(msg, *args, returncode: int = 1, **kwargs):
 @skip_log_prefix
 def Error(msg, *args, **kwargs):
   """Logs an error message."""
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/app.py
 <<<<<<< HEAD:labm8/py/app.py
 <<<<<<< HEAD:labm8/py/app.py
@@ -405,11 +457,17 @@ def Error(msg, *args, **kwargs):
   logging.Error(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
                 **kwargs)
 >>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/app.py
+=======
+  logging.Error(
+    _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
+  )
+>>>>>>> 4242aed2a... Automated code format.
 
 
 @skip_log_prefix
 def Warning(msg, *args, **kwargs):
   """Logs a warning message."""
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/app.py
 <<<<<<< HEAD:labm8/py/app.py
 <<<<<<< HEAD:labm8/py/app.py
@@ -428,6 +486,11 @@ def Warning(msg, *args, **kwargs):
   logging.Warning(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
                   **kwargs)
 >>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/app.py
+=======
+  logging.Warning(
+    _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
+  )
+>>>>>>> 4242aed2a... Automated code format.
 
 
 def FlushLogs():
@@ -527,11 +590,15 @@ def FlagsToDict(json_safe: bool = False) -> Dict[str, Any]:
   flattened_flags_dict = {}
   for module in flags_dict:
     for flag in flags_dict[module]:
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/app.py
       flattened_flags_dict[f"{module}.{flag.name}"] = flag.value
 =======
       flattened_flags_dict[f'{module}.{flag.name}'] = flag.value
 >>>>>>> 6c0de7d86... Add a json_safe arg to FlagsToJson().:labm8/app.py
+=======
+      flattened_flags_dict[f"{module}.{flag.name}"] = flag.value
+>>>>>>> 4242aed2a... Automated code format.
 
   if json_safe:
     # Flags values can have non-serializable types, so try each one and
@@ -781,6 +848,7 @@ def DEFINE_database(
     absl_flags.FLAGS,
     serializer,
     module_name=get_calling_module_name(),
+<<<<<<< HEAD
   )
   if validator:
     RegisterFlagValidator(name, validator)
@@ -820,6 +888,8 @@ def DEFINE_enum(
     absl_flags.FLAGS,
     serializer,
     module_name=get_calling_module_name(),
+=======
+>>>>>>> 4242aed2a... Automated code format.
   )
   if validator:
     RegisterFlagValidator(name, validator)
@@ -855,6 +925,7 @@ def RegisterFlagValidator(
   absl_flags.register_validator(flag_name, checker, message)
 
 
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/app.py
 <<<<<<< HEAD:labm8/py/app.py
 def LogToDirectory(
@@ -867,6 +938,11 @@ def LogToDirectory(logdir: Union[str, pathlib.Path],
 >>>>>>> 760ec3427... Fix LogToDirectory() implementation.:labm8/app.py
                    name='info') -> pathlib.Path:
 >>>>>>> 9c6d42506... Add an app.LogToDirectory() function.:labm8/app.py
+=======
+def LogToDirectory(
+  logdir: Union[str, pathlib.Path], name="info"
+) -> pathlib.Path:
+>>>>>>> 4242aed2a... Automated code format.
   """Write logs to a directory.
 
   This disables printing of logs to stderr, unless the --alsologtostderr flag

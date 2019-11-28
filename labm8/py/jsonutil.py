@@ -58,9 +58,13 @@ def format_json(data, default=None):
   Returns:
       str: Formatted JSON
   """
+<<<<<<< HEAD
   return json.dumps(
     data, sort_keys=True, indent=2, separators=(",", ": "), default=default
   )
+=======
+  return json.dumps(data, sort_keys=True, indent=2, separators=(",", ": "))
+>>>>>>> 4242aed2a... Automated code format.
 
 
 def read_file(*components, **kwargs):
@@ -79,7 +83,7 @@ def read_file(*components, **kwargs):
       File404: If path does not exist, and must_exist is True.
       InvalidFile: If JSON is malformed.
   """
-  must_exist = kwargs.get('must_exist', True)
+  must_exist = kwargs.get("must_exist", True)
 
   if must_exist:
     path = fs.must_exist(*components)
@@ -91,17 +95,23 @@ def read_file(*components, **kwargs):
       return loads(infile.read())
   except ValueError as e:
     raise ValueError(
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/jsonutil.py
+=======
+>>>>>>> 4242aed2a... Automated code format.
       "malformed JSON file '{path}'. Message from parser: {err}".format(
         path=fs.basename(path), err=str(e),
       ),
     )
+<<<<<<< HEAD
 =======
         "malformed JSON file '{path}'. Message from parser: {err}".format(
             path=fs.basename(path),
             err=str(e),
         ),)
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/jsonutil.py
+=======
+>>>>>>> 4242aed2a... Automated code format.
   except IOError as e:
     if not must_exist:
       return {}
@@ -153,6 +163,7 @@ def loads(text, **kwargs):
 
   for index, line in enumerate(lines):
     if re.search(regex, line):
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/jsonutil.py
       if re.search(r"^" + regex, line, re.IGNORECASE):
         lines[index] = ""
@@ -169,6 +180,14 @@ def loads(text, **kwargs):
 <<<<<<< HEAD:labm8/py/jsonutil.py
 =======
   return json.loads('\n'.join(lines), **kwargs)
+=======
+      if re.search(r"^" + regex, line, re.IGNORECASE):
+        lines[index] = ""
+      elif re.search(regex_inline, line):
+        lines[index] = re.sub(regex_inline, r"\1", line)
+
+  return json.loads("\n".join(lines), **kwargs)
+>>>>>>> 4242aed2a... Automated code format.
 
 <<<<<<< HEAD:labm8/py/jsonutil.py
 >>>>>>> 4f357866c... Add two utility functions.:labm8/jsonutil.py

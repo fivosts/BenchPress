@@ -52,16 +52,22 @@ def is_seq(obj):
   """
   Check if an object is a sequence.
   """
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/labtypes.py
+=======
+>>>>>>> 4242aed2a... Automated code format.
   return (
     not is_str(obj)
     and not is_dict(obj)
     and (hasattr(obj, "__getitem__") or hasattr(obj, "__iter__"))
   )
+<<<<<<< HEAD
 =======
   return (not is_str(obj) and not is_dict(obj) and
           (hasattr(obj, '__getitem__') or hasattr(obj, '__iter__')))
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/labtypes.py
+=======
+>>>>>>> 4242aed2a... Automated code format.
 
 
 def flatten(lists):
@@ -134,6 +140,7 @@ def get_class_that_defined_method(meth):
       meth = meth.__func__  # fallback to __qualname__ parsing
     if inspect.isfunction(meth):
       cls = getattr(
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/labtypes.py
         inspect.getmodule(meth),
         meth.__qualname__.split(".<locals>", 1)[0].rsplit(".", 1)[0],
@@ -145,6 +152,10 @@ def get_class_that_defined_method(meth):
 >>>>>>> 150d66672... Auto format files.:labm8/labtypes.py
 =======
           meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0],
+=======
+        inspect.getmodule(meth),
+        meth.__qualname__.split(".<locals>", 1)[0].rsplit(".", 1)[0],
+>>>>>>> 4242aed2a... Automated code format.
       )
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/labtypes.py
       if isinstance(cls, type):
@@ -184,6 +195,7 @@ class ReprComparable(object):
     return str(self) >= str(other)
 
 
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/labtypes.py
 <<<<<<< HEAD:labm8/py/labtypes.py
 def PairwiseIterator(
@@ -196,6 +208,11 @@ def PairwiseIterator(iterable: typing.Iterator[typing.Any],
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/labtypes.py
                     ) -> typing.Iterator[typing.Tuple[typing.Any, typing.Any]]:
 >>>>>>> 150d66672... Auto format files.:labm8/labtypes.py
+=======
+def PairwiseIterator(
+  iterable: typing.Iterator[typing.Any],
+) -> typing.Iterator[typing.Tuple[typing.Any, typing.Any]]:
+>>>>>>> 4242aed2a... Automated code format.
   """Construct a pairwise iterator for a input generator.
 
   Given an iterator, produces an iterator of overlapping pairs from the input:
@@ -217,12 +234,16 @@ def PairwiseIterator(iterable: typing.Iterator[typing.Any],
 
 
 def SetDiff(
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/labtypes.py
   a: typing.Iterator[typing.Any], b: typing.Iterator[typing.Any],
 =======
     a: typing.Iterator[typing.Any],
     b: typing.Iterator[typing.Any],
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/labtypes.py
+=======
+  a: typing.Iterator[typing.Any], b: typing.Iterator[typing.Any],
+>>>>>>> 4242aed2a... Automated code format.
 ) -> typing.List[typing.Any]:
   """Return the set difference between two sequences.
 
@@ -257,6 +278,7 @@ def AllSubclassesOfClass(cls: typing.Type) -> typing.Set[typing.Type]:
     A set of class types.
   """
   return set(cls.__subclasses__()).union(
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/labtypes.py
 <<<<<<< HEAD:labm8/py/labtypes.py
     [s for c in cls.__subclasses__() for s in AllSubclassesOfClass(c)],
@@ -304,10 +326,15 @@ def DeleteKeys(d, keys):
 <<<<<<< HEAD:labm8/py/labtypes.py
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/labtypes.py
 =======
+=======
+    [s for c in cls.__subclasses__() for s in AllSubclassesOfClass(c)],
+  )
+>>>>>>> 4242aed2a... Automated code format.
 
 
-def Chunkify(iterable: typing.Iterable[typing.Any],
-             chunk_size: int) -> typing.Iterable[typing.List[typing.Any]]:
+def Chunkify(
+  iterable: typing.Iterable[typing.Any], chunk_size: int
+) -> typing.Iterable[typing.List[typing.Any]]:
   """Split an iterable into chunks of a given size.
 
   Args:
