@@ -1,4 +1,4 @@
-# Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
+# Copyright 2014-2019 Chris Cummins <chrisc.101@gmail.com>.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,41 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Utility code for working with sqlalchemy."""
-<<<<<<< HEAD:labm8/py/sqlutil.py
-<<<<<<< HEAD:labm8/py/sqlutil.py
-=======
-import collections
->>>>>>> 5f35cfa11... Add a Database.Close() method.:labm8/sqlutil.py
-=======
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/sqlutil.py
 import contextlib
-import os
 import pathlib
-<<<<<<< HEAD:labm8/py/sqlutil.py
-import queue
-import sqlite3
-import sys
-import threading
-import time
-import typing
-from typing import Callable
-from typing import List
-from typing import Optional
-
-import sqlalchemy as sql
-from absl import flags as absl_flags
-from sqlalchemy import func
-from sqlalchemy import orm
-from sqlalchemy.dialects import mysql
-from sqlalchemy.ext import declarative
-
-from labm8.py import humanize
-from labm8.py import labdate
-from labm8.py import pbutil
-from labm8.py import progress
-from labm8.py import text
-from labm8.py.internal import labm8_logging as logging
-=======
 import time
 import typing
 
@@ -57,27 +24,11 @@ from sqlalchemy import orm
 from sqlalchemy.dialects import mysql
 from sqlalchemy.ext import declarative
 
-<<<<<<< HEAD:labm8/py/sqlutil.py
-from labm8 import humanize
-from labm8 import labdate
-from labm8 import pbutil
-from labm8 import text
-from labm8.internal import logging
-<<<<<<< HEAD:labm8/py/sqlutil.py
-from sqlalchemy import func
-from sqlalchemy import orm
-from sqlalchemy.dialects import mysql
-from sqlalchemy.ext import declarative
->>>>>>> 5f35cfa11... Add a Database.Close() method.:labm8/sqlutil.py
-=======
->>>>>>> 6b5b3e1d6... Replace collections.namedtuple with classes.:labm8/sqlutil.py
-=======
 from labm8.py import humanize
 from labm8.py import labdate
 from labm8.py import pbutil
 from labm8.py import text
 from labm8.py.internal import logging
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/sqlutil.py
 
 FLAGS = absl_flags.FLAGS
 
@@ -86,17 +37,6 @@ absl_flags.DEFINE_boolean(
   False,
   "If True, the Engine will log all statements as well as a repr() of their "
   "parameter lists to the engines logger, which defaults to sys.stdout.",
-<<<<<<< HEAD
-)
-absl_flags.DEFINE_boolean(
-  "sqlutil_pool_pre_ping",
-  True,
-  "Enable pessimistic pre-ping to check that database connections are "
-  "alive. This adds some overhead, but reduces the risk of "
-  '"server has gone away" errors. See:'
-  "<https://docs.sqlalchemy.org/en/13/core/pooling.html#disconnect-handling-pessimistic>",
-=======
->>>>>>> 4242aed2a... Automated code format.
 )
 absl_flags.DEFINE_boolean(
   "sqlutil_pool_pre_ping",
@@ -118,21 +58,11 @@ absl_flags.DEFINE_integer(
   "The number of connections to allow in connection pool “overflow”, that "
   "is connections that can be opened above and beyond the "
   "--mysql_engine_pool_size setting",
-<<<<<<< HEAD
 )
 absl_flags.DEFINE_boolean(
   "mysql_assume_utf8_charset",
   True,
   "Default to adding the '?charset=utf8' suffix to MySQL database URLs.",
-)
-absl_flags.DEFINE_boolean(
-  "sqlite_enable_foreign_keys",
-  True,
-  "Enable foreign key support for SQLite. This enforces foreign key "
-  "constraints, and enables cascaded update/delete statements. See: "
-  "https://docs.sqlalchemy.org/en/13/dialects/sqlite.html#foreign-key-support",
-=======
->>>>>>> 4242aed2a... Automated code format.
 )
 
 # The Query type is returned by Session.query(). This is a convenience for type
@@ -359,36 +289,13 @@ def CreateEngine(url: str, must_exist: bool = False) -> sql.engine.Engine:
     raise ValueError(f"Unsupported database URL='{url}'")
 
   # Create the engine.
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/sqlutil.py
   engine = sql.create_engine(
-<<<<<<< HEAD:labm8/py/sqlutil.py
-=======
-  engine = sql.create_engine(
->>>>>>> 4242aed2a... Automated code format.
     url,
     encoding="utf-8",
     echo=FLAGS.sqlutil_echo,
     pool_pre_ping=FLAGS.sqlutil_pool_pre_ping,
     **engine_args,
   )
-<<<<<<< HEAD
-=======
-      url,
-      encoding='utf-8',
-      echo=FLAGS.sqlutil_echo,
-      pool_pre_ping=FLAGS.sqlutil_pool_pre_ping,
-      **engine_args)
->>>>>>> 671bc9471... Add database pre-ping by default.:labm8/sqlutil.py
-=======
-  engine = sql.create_engine(url,
-                             encoding='utf-8',
-                             echo=FLAGS.sqlutil_echo,
-                             pool_pre_ping=FLAGS.sqlutil_pool_pre_ping,
-                             **engine_args)
->>>>>>> 5f35cfa11... Add a Database.Close() method.:labm8/sqlutil.py
-=======
->>>>>>> 4242aed2a... Automated code format.
 
   # Create and immediately close a connection. This is because SQLAlchemy engine
   # is lazily instantiated, so for connections such as SQLite, this line
@@ -398,24 +305,7 @@ def CreateEngine(url: str, must_exist: bool = False) -> sql.engine.Engine:
   return engine
 
 
-@sql.event.listens_for(sql.engine.Engine, "connect")
-def EnableSqliteForeignKeysCallback(dbapi_connection, connection_record):
-  """Enable foreign key constraints for SQLite databases.
-
-  See --sqlite_enable_foreign_keys for details.
-  """
-  del connection_record
-  # This callback listens for *all* database connections, not just SQLite. Check
-  # the type before trying to run an SQLite-specific pragma.
-  if FLAGS.sqlite_enable_foreign_keys and isinstance(
-    dbapi_connection, sqlite3.Connection
-  ):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-def ResolveUrl(url: str, use_flags: bool = True):
+def ResolveUrl(url: str):
   """Resolve the URL of a database.
 
   The following modifications are supported:
@@ -423,13 +313,9 @@ def ResolveUrl(url: str, use_flags: bool = True):
       contents of the file.
     * If --mysql_assume_utf8_charset is set, then '?charset=utf8' suffix is
       appended to URLs which begin with mysql://.
-    * Shell variables are expanded.
 
   Args:
     url: The URL to expand, e.g. `file://path/to/file.txt?arg'
-    use_flags: Determine whether behaviour is dictated by the FLAGS variables.
-      Set this to False only when resolving database URLs before flags parsing,
-      e.g. in enumerating test fixtures.
 
   Returns:
     The URL as interpreted by reading any URL file.
@@ -438,10 +324,6 @@ def ResolveUrl(url: str, use_flags: bool = True):
     ValueError: If the file path is invalid.
     FileNotFoundError: IF the file path does not exist.
   """
-<<<<<<< HEAD
-  # Substitute shell variables.
-  url = os.path.expandvars(url)
-
   if url.startswith("file://"):
     # Split the URL into the file path, and the optional suffix.
     components = url.split("?")
@@ -455,20 +337,6 @@ def ResolveUrl(url: str, use_flags: bool = True):
 
     if not path.is_file():
       raise FileNotFoundError(f"File '{path}' not found")
-=======
-  if not url.startswith("file://"):
-    return url
-
-  # Split the URL into the file path, and the optional suffix.
-  components = url.split("?")
-  path, suffix = components[0], "?".join(components[1:])
-
-  # Strip the file:// prefix from the path.
-  path = pathlib.Path(path[len("file://") :])
-
-  if not path.is_absolute():
-    raise ValueError("Relative path to file:// is not allowed")
->>>>>>> 4242aed2a... Automated code format.
 
     # Read the contents of the file, ignoring lines starting with '#'.
     with open(path) as f:
@@ -476,20 +344,10 @@ def ResolveUrl(url: str, use_flags: bool = True):
         x for x in f.read().split("\n") if not x.lstrip().startswith("#")
       ).strip()
 
-<<<<<<< HEAD
     # Append the suffix.
     url += suffix
-=======
-  # Read the contents of the file, ignoring lines starting with '#'.
-  with open(path) as f:
-    file_url = "\n".join(
-      x for x in f.read().split("\n") if not x.lstrip().startswith("#")
-    ).strip()
->>>>>>> 4242aed2a... Automated code format.
 
-  if (
-    use_flags and url.startswith("mysql://") and FLAGS.mysql_assume_utf8_charset
-  ):
+  if url.startswith("mysql://") and FLAGS.mysql_assume_utf8_charset:
     url += "?charset=utf8"
 
   return url
@@ -600,29 +458,16 @@ class Database(object):
     if self.url.startswith("mysql://"):
       engine = sql.create_engine("/".join(self.url.split("/")[:-1]))
       database = self.url.split("/")[-1].split("?")[0]
-<<<<<<< HEAD
-      logging.Log(logging.GetCallingModuleName(), 1, "database %s", database)
-      engine.execute(f"DROP DATABASE IF EXISTS `{database}`")
-    elif self.url == "sqlite://":
-      # In-memory databases do not dropping.
-      pass
-    elif self.url.startswith("sqlite:///"):
-=======
       engine.execute(
         sql.text("DROP DATABASE IF EXISTS :database"), database=database,
       )
     elif self.url.startswith("sqlite://"):
->>>>>>> 4242aed2a... Automated code format.
       path = pathlib.Path(self.url[len("sqlite:///") :])
       assert path.is_file()
       path.unlink()
     else:
       raise NotImplementedError(
-<<<<<<< HEAD
-        f"Unsupported operation DROP for database: '{self.url}'",
-=======
         "Unsupported operation DROP for database: '{self.url}'",
->>>>>>> 4242aed2a... Automated code format.
       )
 
   @property
@@ -631,28 +476,16 @@ class Database(object):
     return self._url
 
   @contextlib.contextmanager
-  def Session(
-    self, commit: bool = False, session: Optional[Session] = None
-  ) -> Session:
+  def Session(self, commit: bool = False) -> Session:
     """Provide a transactional scope around a session.
-
-    The optional session argument may be used for cases where you want to
-    optionally re-use an existing session, rather than always creating a new
-    session, e.g.:
-
-      class MyDatabase(sqlutil.Database):
-        def DoAThing(self, session=None):
-          with self.Session(session=session, commit=True):
-            # go nuts ...
 
     Args:
       commit: If true, commit session at the end of scope.
-      session: An existing session object to re-use.
 
     Returns:
       A database session.
     """
-    session = session or self.MakeSession()
+    session = self.MakeSession()
     try:
       yield session
       if commit:
@@ -801,14 +634,7 @@ class ProtoBackedMixin(object):
 
 class OffsetLimitQueryResultsBatch(typing.NamedTuple):
   """The results of an offset-limit batched query."""
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/sqlutil.py
 
-=======
->>>>>>> 6b5b3e1d6... Replace collections.namedtuple with classes.:labm8/sqlutil.py
-=======
-
->>>>>>> 4242aed2a... Automated code format.
   # The current batch number.
   batch_num: int
   # Offset into the results set.
@@ -886,18 +712,6 @@ class ColumnTypes(object):
       A column type.
     """
     return sql.Binary(length).with_variant(mysql.BINARY(length), "mysql")
-<<<<<<< HEAD
-
-  @staticmethod
-  def LargeBinary():
-    """Return a fixed size binary array column type.
-
-    Returns:
-      A column type.
-    """
-    return sql.LargeBinary().with_variant(sql.LargeBinary(2 ** 31), "mysql")
-=======
->>>>>>> 4242aed2a... Automated code format.
 
   @staticmethod
   def LargeBinary():
@@ -1014,16 +828,8 @@ def ResilientAddManyAndCommit(db: Database, mapped: typing.Iterable[Base]):
   return failures
 
 
-def QueryToString(query) -> str:
-  """Compile the query to inline literals in place of '?' placeholders.
-
-  See: https://stackoverflow.com/a/23835766
-  """
-  return str(query.statement.compile(compile_kwargs={"literal_binds": True}))
-
-
-class BufferedDatabaseWriter(threading.Thread):
-  """A buffered writer for adding objects to a database.
+class BufferedDatabaseWriter(object):
+  """A buffer for adding objects to a session with frequent commits.
 
   Use this class for cases when you are producing lots of mapped objects that
   you would like to commit to a database, but don't require them to be committed
@@ -1031,215 +837,58 @@ class BufferedDatabaseWriter(threading.Thread):
   minimises the number of SQL statements that are executed, and is faster than
   creating and committing a session for every object.
 
-  This object spawns a separate thread for asynchronously performing database
-  writes. Use AddOne() and AddMany() methods to add objects to the write buffer.
-  Note that because this is a multithreaded implementation, in-memory SQLite
-  databases are not supported.
+  The Flush() method commits the contents of the buffer. The user is responsible
+  for calling Flush() once the object reaches the end of its use. Alternatively,
+  the Session() method creates a context which automatically calls Flush() at
+  the end of its scope.
 
-  The user is responsible for calling Close() to flush the contents of the
-  buffer and terminate the thread. Alternatively, use this class as a context
-  manager to automatically flush the buffer and terminate the thread:
+  Example usage:
 
-    with BufferedDatabaseWriter(db, max_buffer_length=128) as writer:
+    with BufferedDatabaseWriter(db).Session() as writer:
       for chunk in chunks_to_process:
         objs = ProcessChunk(chunk)
         writer.AddMany(objs)
   """
 
-  def __init__(
-    self,
-    db: Database,
-    max_buffer_size: Optional[int] = None,
-    max_buffer_length: Optional[int] = None,
-    max_seconds_since_flush: Optional[float] = None,
-    log_level: int = 2,
-    ctx: progress.ProgressContext = progress.NullContext,
-  ):
-    """Constructor.
+  def __init__(self, db: Database, flush_secs: int = 30, max_queue: int = 1024):
+    """Create a BufferedDatabaseWriter.
 
     Args:
-      db: The database to write to.
-      max_buffer_size: The maximum size of the buffer before flushing, in bytes.
-        The buffer size is the sum of the elements in the write buffer. The size
-        of elements is determined using sys.getsizeof(), and has all the caveats
-        of this method.
-      max_buffer_length: The maximum number of items in the write buffer before
-        flushing.
-      max_seconds_since_flush: The maximum number of elapsed seconds between
-        flushes.
-      ctx: progress.ProgressContext = progress.NullContext,
-      log_level: The logging level for logging output.
+      db: The Database instance that this writer will add to.
+      flush_secs: The number of seconds between commits.
+      max_queue: The maximum size of the buffer between commits.
     """
-    super(BufferedDatabaseWriter, self).__init__()
-    self.db = db
-    self.ctx = ctx
-    self.log_level = log_level
+    self._db = db
+    self._last_commit = time.time()
+    self._to_commit = []
+    self._flush_secs = flush_secs
+    self._max_queue = max_queue
 
-    self.max_seconds_since_flush = max_seconds_since_flush
-    self.max_buffer_size = max_buffer_size
-    self.max_buffer_length = max_buffer_length
+  def __del__(self):
+    self.Flush()
 
-<<<<<<< HEAD
-    # Counters.
-    self.flush_count = 0
-    self.error_count = 0
-=======
   @contextlib.contextmanager
   def Session(self) -> "BufferedDatabaseWriter":
     """Yields a context manager which calls Flush() at the end of the scope.
->>>>>>> 4242aed2a... Automated code format.
 
-    self._buffer = []
-    self.buffer_size = 0
-    self._last_flush = time.time()
-
-    # Limit the size of the queue so that calls to AddOne() or AddMany() will
-    # block if the calling code is too far ahead of the writer.
-    queue_size = self.max_buffer_length * 2 if self.max_buffer_length else 1000
-    self._queue = queue.Queue(maxsize=queue_size)
-
-    self.start()
-
-  def __enter__(self) -> "Buff":
-    """Enter a scoped writer context closes at the end."""
-    return self
-
-  def __exit__(self, exc_type, exc_val, exc_tb):
-    """Exit a scoped writer context closes at the end."""
-    del exc_type
-    del exc_val
-    del exc_tb
-    self.Close()
-
-  def AddOne(self, mapped, size: Optional[int] = None) -> None:
-    """Add a mapped object.
-
-    Args:
-      mapped: The mapped object to write to the database.
-      size: The object sizes to use to update the total buffer size. If not
-        provided, sys.getsizeof() is used to determine the size.
+    Returns:
+      The `self` instance.
     """
-    size = size or sys.getsizeof(mapped)
-    self._queue.put((mapped, size))
+    try:
+      yield self
+    finally:
+      self.Flush()
 
-  def AddMany(self, mappeds, sizes: Optional[List[int]] = None) -> None:
-    """Add many mapped objects.
+  def AddOne(self, mapped: Base) -> None:
+    """Record a mapped object."""
+    self._to_commit.append(mapped)
+    self.MaybeFlush()
 
-    Args:
-      mappeds: The mapped objects to write to the database.
-      sizes: A list of mapped object sizes to use to calculate the buffer size.
-        If not provided, sys.getsizeof() is used to determine the size.
-    """
-    sizes = sizes or [sys.getsizeof(item) for item in mappeds]
+  def AddMany(self, objects: typing.List[Base]) -> None:
+    """Record multiple mapped objects."""
+    self._to_commit += objects
+    self.MaybeFlush()
 
-    for mapped, size in zip(mappeds, sizes):
-      self._queue.put((mapped, size))
-
-<<<<<<< HEAD
-  def AddLambdaOp(self, callback: Callable[[Database.SessionType], None]):
-    self._queue.put(BufferedDatabaseWriter.LambdaOp(callback))
-
-  def Flush(self) -> None:
-    """Flush the buffer.
-
-    This method blocks until the flush has completed.
-
-    In normal use, you can rely on the automated flushing mechanisms to flush
-    the write buffer, rather than calling this by hand.
-    """
-    self._queue.put(BufferedDatabaseWriter.FlushMarker())
-    self._queue.join()
-
-  def Close(self):
-    """Close the writer thread.
-
-    This method blocks until the buffer has been flushed and the thread
-    terminates.
-    """
-    if not self.is_alive():
-      raise TypeError("Close() called on dead BufferedDatabaseWriter")
-    self._queue.put(BufferedDatabaseWriter.CloseMarker())
-    self._queue.join()
-    self.join()
-
-  @property
-  def buffer_length(self) -> int:
-    """Get the current length of the buffer, in range [0, max_buffer_length]."""
-    return len(self._buffer)
-
-  @property
-  def seconds_since_last_flush(self) -> float:
-    """Get the number of seconds since the buffer was last flushed."""
-    return time.time() - self._last_flush
-
-  ##############################################################################
-  # Private methods.
-  ##############################################################################
-
-  class CloseMarker(object):
-    """An object to append to _queue to close the thread."""
-
-    pass
-
-  class FlushMarker(object):
-    """An object to append to _queue to flush the buffer."""
-
-    pass
-
-  class LambdaOp(object):
-    def __init__(self, callback):
-      self.callback = callback
-
-    def __call__(self, session: Database.SessionType):
-      self.callback(session)
-
-  def run(self):
-    """The thread loop."""
-    while True:
-      # Block until there is something on the queue. Use max_seconds_since_flush
-      # as a timeout to ensure that flushes still occur when the writer is not
-      # being used.
-      try:
-        item = self._queue.get(timeout=self.max_seconds_since_flush)
-      except queue.Empty:
-        self._Flush()
-        continue
-
-      if isinstance(item, BufferedDatabaseWriter.CloseMarker):
-        # End of queue. Break out of the loop.
-        break
-      elif isinstance(item, BufferedDatabaseWriter.FlushMarker):
-        # Force a flush.
-        self._Flush()
-      elif isinstance(item, BufferedDatabaseWriter.LambdaOp):
-        # Handle delete op.
-        self._buffer.append(item)
-        self._MaybeFlush()
-      else:
-        # Add the object to the buffer.
-        mapped, size = item
-        self._buffer.append(mapped)
-        self.buffer_size += size
-        self._MaybeFlush()
-
-      # Register that the item has been processed. This is used by join() to
-      # signal to stop blocking.
-      self._queue.task_done()
-
-    # Register that the end-of-queue marker has been processed.
-    self._Flush()
-    self._queue.task_done()
-
-  def _MaybeFlush(self) -> None:
-    if (
-      (self.max_buffer_size and self.buffer_size >= self.max_buffer_size)
-      or (
-        self.max_buffer_length and self.buffer_length >= self.max_buffer_length
-      )
-      or (
-        self.max_seconds_since_flush
-        and self.seconds_since_last_flush >= self.max_seconds_since_flush
-=======
   def MaybeFlush(self) -> None:
     """Determine if the buffer should be flushed, and if so, flush it."""
     if (
@@ -1257,45 +906,6 @@ class BufferedDatabaseWriter(threading.Thread):
         1,
         "BufferedDatabaseWriter failed to commit %d objects",
         len(failures),
->>>>>>> 4242aed2a... Automated code format.
       )
-    ):
-      self._Flush()
-
-  def _AddMapped(self, mapped) -> None:
-    """Add and commit a list of mapped objects."""
-    if not mapped:
-      return
-
-    failures = ResilientAddManyAndCommit(self.db, mapped)
-    if failures:
-      self.ctx.Error("Logger failed to commit %d objects", len(failures))
-    self.error_count += len(failures)
-
-  def _Flush(self):
-    """Flush the buffer."""
-    if not self._buffer:
-      return
-
-    with self.ctx.Profile(
-      self.log_level,
-      f"Committed {self.buffer_length} rows "
-      f"({humanize.BinaryPrefix(self.buffer_size, 'B')}) to {self.db.url}",
-    ), self.db.Session() as session:
-      # Iterate through the buffer and handle any lambda ops.
-      start_i, end_i = 0, 0
-      for end_i, item in enumerate(self._buffer):
-        if isinstance(item, BufferedDatabaseWriter.LambdaOp):
-          # If we have a lambda op, we flush the contents of the current buffer,
-          # then execute the op and continue.
-          self._AddMapped(self._buffer[start_i:end_i])
-          self._buffer[end_i](session)
-          session.commit()
-          start_i = end_i + 1
-      # Add any remaining mapped objects from the buffer.
-      self._AddMapped(self._buffer[start_i:])
-
-      self._buffer = []
-      self._last_flush = time.time()
-      self.buffer_size = 0
-      self.flush_count += 1
+    self._to_commit = []
+    self._last_commit = time.time()
