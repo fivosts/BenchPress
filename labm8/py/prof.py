@@ -1,8 +1,4 @@
-<<<<<<< HEAD:labm8/py/prof.py
-# Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
-=======
 # Copyright 2014-2019 Chris Cummins <chrisc.101@gmail.com>.
->>>>>>> 77b550945... Relicense labm8 under Apache 2.0.:labm8/prof.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,42 +15,18 @@
 """
 import contextlib
 import csv
-import datetime
 import inspect
 import os
 import pathlib
 import sys
 import time
 import typing
-<<<<<<< HEAD:labm8/py/prof.py
-from typing import Optional
 
-<<<<<<< HEAD:labm8/py/prof.py
 from labm8.py import app
 from labm8.py import humanize
 from labm8.py import labdate
 from labm8.py import labtypes
 from labm8.py import system
-=======
-from absl import logging
-
-=======
-
-<<<<<<< HEAD:labm8/py/prof.py
-from labm8 import app
->>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/prof.py
-from labm8 import humanize
-from labm8 import labdate
-from labm8 import labtypes
-from labm8 import system
->>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/prof.py
-=======
-from labm8.py import app
-from labm8.py import humanize
-from labm8.py import labdate
-from labm8.py import labtypes
-from labm8.py import system
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/prof.py
 
 _TIMERS = {}
 
@@ -171,61 +143,12 @@ def timers():
     yield name
 
 
-class ProfileTimer(object):
-  """A profiling timer."""
-
-  def __init__(self):
-    self.start: datetime.datetime = datetime.datetime.utcnow()
-    self.end: Optional[datetime.datetime] = None
-
-  def Stop(self):
-    if self.end:
-      return
-    self.end = datetime.datetime.utcnow()
-
-  @property
-  def elapsed(self) -> float:
-    if self.end:
-      return (self.end - self.start).total_seconds()
-    else:
-      return (datetime.datetime.utcnow() - self.start).total_seconds()
-
-  @property
-  def elapsed_ms(self) -> int:
-    return int(round(self.elapsed * 1000))
-
-  def __repr__(self):
-    return humanize.Duration(self.elapsed)
-
-
-@app.skip_log_prefix
+# @app.skip_log_prefix
 @contextlib.contextmanager
-<<<<<<< HEAD:labm8/py/prof.py
-<<<<<<< HEAD:labm8/py/prof.py
 def Profile(
   name: typing.Union[str, typing.Callable[[int], str]] = "",
   print_to: typing.Callable[[str], None] = lambda msg: app.Log(1, msg),
-<<<<<<< HEAD
-) -> ProfileTimer:
-=======
-def Profile(name: str = '', print_to: typing.Callable[[str], None] = app.Debug):
->>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/prof.py
-=======
-def Profile(
-<<<<<<< HEAD:labm8/py/prof.py
-    name: str = '',
-<<<<<<< HEAD:labm8/py/prof.py
-    print_to: typing.Callable[[str], None] = lambda msg: app.Log(1, msg)):
->>>>>>> 070523b92... Fix refences to app.Debug and app.Info.:labm8/prof.py
-=======
-=======
-    name: typing.Union[str, typing.Callable[[int], str]] = '',
->>>>>>> f94e1dba7... Add support for profile label callbacks.:labm8/prof.py
-    print_to: typing.Callable[[str], None] = lambda msg: app.Log(1, msg),
-=======
->>>>>>> 4242aed2a... Automated code format.
 ):
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/prof.py
   """A context manager which prints the elapsed time upon exit.
 
   Args:
@@ -234,38 +157,13 @@ def Profile(
       argument.
     print_to: The function to print the result to.
   """
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/prof.py
   name = name or "completed"
-  timer = ProfileTimer()
-  yield timer
-  timer.Stop()
-  if callable(name):
-    name = name(timer.elapsed)
-  print_to(f"{name} in {timer}")
-=======
-  name = name or 'completed'
-=======
-  name = name or "completed"
->>>>>>> 4242aed2a... Automated code format.
   start_time = time.time()
   yield
   elapsed = time.time() - start_time
-<<<<<<< HEAD:labm8/py/prof.py
-<<<<<<< HEAD:labm8/py/prof.py
-  print_to(f"{name} in {humanize.Duration(elapsed)}")
->>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/prof.py
-=======
-=======
   if callable(name):
     name = name(elapsed)
-<<<<<<< HEAD
->>>>>>> f94e1dba7... Add support for profile label callbacks.:labm8/prof.py
-  print_to(f'{name} in {humanize.Duration(elapsed)}')
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/prof.py
-=======
   print_to(f"{name} in {humanize.Duration(elapsed)}")
->>>>>>> 4242aed2a... Automated code format.
 
 
 @contextlib.contextmanager
@@ -311,44 +209,13 @@ class AutoCsvProfiler(object):
     # Create the name of the logfile now, so that is timestamped to the start of
     # execution.
     timestamp = labdate.MillisecondsTimestamp()
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/prof.py
     log_name = ".".join([self._name, system.HOSTNAME, str(timestamp), "csv"])
-=======
-    log_name = '.'.join([self._name, system.HOSTNAME, str(timestamp), 'csv'])
->>>>>>> 13ff42e29... Fix member variable.:labm8/prof.py
-=======
-    log_name = ".".join([self._name, system.HOSTNAME, str(timestamp), "csv"])
->>>>>>> 4242aed2a... Automated code format.
     self._path = self._directory / log_name
 
     with self._writer() as writer:
-<<<<<<< HEAD:labm8/py/prof.py
-<<<<<<< HEAD:labm8/py/prof.py
       writer.writerow(
-<<<<<<< HEAD:labm8/py/prof.py
         ("Start Time (ms since UNIX epoch)", "Elapsed Time (ms)", "Event"),
       )
-=======
-          ('Start Time (ms since UNIX epoch)', 'Elapsed Time (ms)', 'Event'))
->>>>>>> 20c7c2304... Fix CSV writer.:labm8/prof.py
-=======
-      writer.writerow(('Start Time (ms since UNIX epoch)', 'Elapsed Time (ms)',
-                       'Event'))
->>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/prof.py
-=======
-      writer.writerow(
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/prof.py
-          ('Start Time (ms since UNIX epoch)', 'Elapsed Time (ms)', 'Event'))
->>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/prof.py
-=======
-          ('Start Time (ms since UNIX epoch)', 'Elapsed Time (ms)', 'Event'),)
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/prof.py
-=======
-        ("Start Time (ms since UNIX epoch)", "Elapsed Time (ms)", "Event"),
-      )
->>>>>>> 4242aed2a... Automated code format.
 
   @contextlib.contextmanager
   def Profile(self, event_name: str = ""):
