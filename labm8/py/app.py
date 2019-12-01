@@ -1,4 +1,4 @@
-# Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
+# Copyright 2014-2019 Chris Cummins <chrisc.101@gmail.com>.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,61 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-<<<<<<< HEAD:labm8/py/app.py
-"""This module provides common functionality for writing python applications.
-
-For executable scripts, the app.Run() method provides the necessary entry point
-to handle app initialization. Once within the environment set up by this
-function, the app.FLAGS namespace provides access to global flag values, and
-a standardised logging methodology is available through app.Log(), app.Warn(),
-app.Error, and app.FatalWithoutStackTrace().
-
-Attributes:
-
-  FLAGS (namespace): The namespace for accessing global flag values.
-  VERSION (str): The project version string, in the form YY.MM.DD.
-  GIT_URL (str): The clone URL of the git repo used for this build.
-  GIT_COMMIT (str): The checksum of the git commit used for this build.
-  GIT_DIRTY (bool): Whether the git working tree was dirty during the build.
-  TIMESTAMP (datetime.datetime): The timestamp (rounded to the nearest second)
-    of the build.
-  BUILT_BY (str): A string identifying the source of the build in the form
-    <user>@<host>. This may not be the same as the user or host that is
-    currently running this process.
-  ARCH (str): The host target architecture of the build. One of:
-    {linux_amd64, darwin_amd64}.
-
-Example Usage:
-
-  $ cat <<EOF >foo.py
-  from labm8.py import app
-
-  FLAGS = app.FLAGS
-
-  app.DEFINE_string("name", "world", "Who to say hello to.")
-
-  def Main():
-    app.Log(1, "Hello, {FLAGS.name}! This is {app.VERSION} speaking")
-
-  if __name__ == "__main__":
-    app.Run(Main)
-  EOF
-=======
 """A wrapper around absl's app and logging modules.
 
 See: <https://github.com/abseil/abseil-py>
 """
-<<<<<<< HEAD:labm8/py/app.py
-import json
-import sys
->>>>>>> cdc791774... Add --dump_flags and --dump_flags_to_json flags.:labm8/app.py
-
-  $ python foo.py
-  INFO: Hello, world! This is 20.01.30 speaking
-"""
-import datetime
-=======
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/app.py
 import functools
 import json
 import pathlib
@@ -84,25 +33,16 @@ from absl import logging as absl_logging
 
 from labm8.py import shell
 from labm8.py.internal import flags_parsers
-<<<<<<< HEAD:labm8/py/app.py
-from labm8.py.internal import labm8_logging as logging
-from labm8.py.internal import workspace_status
-=======
 from labm8.py.internal import logging
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/app.py
 
 FLAGS = absl_flags.FLAGS
 
 absl_flags.DEFINE_boolean(
   "version", False, "Print version information and exit.",
-<<<<<<< HEAD
 )
 absl_flags.DEFINE_boolean(
-<<<<<<< HEAD:labm8/py/app.py
   "dump_flags", False, "Print the defined flags and their values and exit."
 )
-<<<<<<< HEAD:labm8/py/app.py
-<<<<<<< HEAD:labm8/py/app.py
 absl_flags.DEFINE_boolean(
   "dump_flags_to_json",
   False,
@@ -111,19 +51,6 @@ absl_flags.DEFINE_boolean(
 absl_flags.DEFINE_boolean(
   "log_colors", True, "Whether to colorize logging output."
 )
-
-# Expose some of the variables produced by //tools:workspace_status.sh, see the
-# module docstring for details:
-VERSION = workspace_status.STABLE_VERSION
-GIT_URL = workspace_status.STABLE_GIT_URL
-GIT_COMMIT = workspace_status.STABLE_GIT_COMMIT
-GIT_DIRTY = workspace_status.STABLE_GIT_DIRTY
-TIMESTAMP = datetime.datetime.fromtimestamp(
-  int(workspace_status.BUILD_TIMESTAMP)
-)
-BUILT_BY = f"{workspace_status.BUILD_USER}@{workspace_status.BUILD_HOST}"
-ARCH = workspace_status.STABLE_ARCH
-
 
 # A decorator to mark a function as ignored when computing the log prefix.
 #
@@ -133,39 +60,6 @@ ARCH = workspace_status.STABLE_ARCH
 #   def LogFoo():
 #     app.Log(1, "Foo")
 skip_log_prefix = absl_logging.skip_log_prefix
-=======
-=======
-    'dump_flags',
-    False,
-    'Print the defined flags and their values and exit.')
-absl_flags.DEFINE_boolean(
-    'dump_flags_to_json',
-    False,
-=======
-absl_flags.DEFINE_boolean('dump_flags', False,
-                          'Print the defined flags and their values and exit.')
-absl_flags.DEFINE_boolean(
-    'dump_flags_to_json', False,
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/app.py
-    'Print the defined flags and their values to JSON and exit.')
->>>>>>> cdc791774... Add --dump_flags and --dump_flags_to_json flags.:labm8/app.py
-absl_flags.DEFINE_boolean('log_colors', True,
-                          'Whether to colorize logging output.')
->>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
-=======
-)
-absl_flags.DEFINE_boolean(
-  "dump_flags", False, "Print the defined flags and their values and exit."
-)
-absl_flags.DEFINE_boolean(
-  "dump_flags_to_json",
-  False,
-  "Print the defined flags and their values to JSON and exit.",
-)
-absl_flags.DEFINE_boolean(
-  "log_colors", True, "Whether to colorize logging output."
-)
->>>>>>> 4242aed2a... Automated code format.
 
 
 class UsageError(absl_app.UsageError):
@@ -191,16 +85,6 @@ def AssertOrRaise(
 
 def GetVersionInformationString() -> str:
   """Return a string of version information, as printed by --version flag."""
-<<<<<<< HEAD:labm8/py/app.py
-  return "\n".join(
-    [
-      f"version: {VERSION} {ARCH}",
-      FormatShortBuildDescription(),
-      "Copyright (C) 2014-2020 Chris Cummins <chrisc.101@gmail.com>",
-      f"<{GetGithubCommitUrl()}>",
-    ]
-  )
-=======
   # If this is a bazel environment, then the //:build_info package will be
   # available. However, if this is a labm8 pip package install, then
   # //:build_info will not be available, so use pkg_resources to get the
@@ -220,17 +104,10 @@ def GetVersionInformationString() -> str:
   return "\n".join(
     [
       version,
-<<<<<<< HEAD
-      'Copyright (C) 2014-2019 Chris Cummins <chrisc.101@gmail.com>',
-      f'<{url}>',
-  ])
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/app.py
-=======
       "Copyright (C) 2014-2019 Chris Cummins <chrisc.101@gmail.com>",
       f"<{url}>",
     ]
   )
->>>>>>> 4242aed2a... Automated code format.
 
 
 def RunWithArgs(
@@ -255,44 +132,11 @@ def RunWithArgs(
       print(FlagsToString())
       sys.exit(0)
     elif FLAGS.dump_flags_to_json:
-<<<<<<< HEAD:labm8/py/app.py
-<<<<<<< HEAD:labm8/py/app.py
-<<<<<<< HEAD:labm8/py/app.py
       print(
         json.dumps(
           FlagsToDict(), sort_keys=True, indent=2, separators=(",", ": ")
         )
       )
-=======
-      flags_dict = FlagsToDict()
-      # Flags values can have non-serializable types, so try each one and
-      # stringify those that require it. An alternative would be to stringify
-      # all values, but this would lose type information on ints/floats/etc.
-      for flag in flags_dict:
-        try:
-          json.dumps(flags_dict[flag])
-        except TypeError:
-          flags_dict[flag] = str(flags_dict[flag])
-      print(json.dumps(flags_dict, sort_keys=True, indent=2,
-=======
-      print(json.dumps(FlagsToDict(), sort_keys=True, indent=2,
->>>>>>> 6c0de7d86... Add a json_safe arg to FlagsToJson().:labm8/app.py
-                       separators=(',', ': ')))
->>>>>>> cdc791774... Add --dump_flags and --dump_flags_to_json flags.:labm8/app.py
-=======
-      print(
-<<<<<<< HEAD
-          json.dumps(FlagsToDict(),
-                     sort_keys=True,
-                     indent=2,
-                     separators=(',', ': ')))
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/app.py
-=======
-        json.dumps(
-          FlagsToDict(), sort_keys=True, indent=2, separators=(",", ": ")
-        )
-      )
->>>>>>> 4242aed2a... Automated code format.
       sys.exit(0)
     main(argv)
 
@@ -356,7 +200,6 @@ def Log(level: int, msg, *args, **kwargs):
     "filename base (that is, name ignoring .py). <log level> overrides any "
     "value given by --v."
   """
-<<<<<<< HEAD:labm8/py/app.py
   logging.Log(
     logging.GetCallingModuleName(),
     level,
@@ -369,128 +212,44 @@ def Log(level: int, msg, *args, **kwargs):
     ),
     **kwargs,
   )
-=======
-  calling_module = logging.GetCallingModuleName()
-  logging.Log(
-<<<<<<< HEAD
-      calling_module, level,
-      _MaybeColorizeLog(
-          shell.ShellEscapeCodes.YELLOW
-          if level > 1 else shell.ShellEscapeCodes.CYAN, msg, *args), **kwargs)
->>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
-=======
-    calling_module,
-    level,
-    _MaybeColorizeLog(
-      shell.ShellEscapeCodes.YELLOW
-      if level > 1
-      else shell.ShellEscapeCodes.CYAN,
-      msg,
-      *args,
-    ),
-    **kwargs,
-  )
->>>>>>> 4242aed2a... Automated code format.
 
 
 @skip_log_prefix
 def LogIf(level: int, condition, msg, *args, **kwargs):
   if condition:
+    calling_module = logging.GetCallingModuleName()
     Log(level, msg, *args, **kwargs)
 
 
 @skip_log_prefix
 def Fatal(msg, *args, **kwargs):
   """Logs a fatal message."""
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/app.py
-<<<<<<< HEAD:labm8/py/app.py
-<<<<<<< HEAD:labm8/py/app.py
   logging.Fatal(
     _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
   )
-=======
-  logging.Fatal(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
-                **kwargs)
->>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
-=======
-  logging.Fatal(
-      _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs)
->>>>>>> 9c6d42506... Add an app.LogToDirectory() function.:labm8/app.py
-=======
-  logging.Fatal(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
-                **kwargs)
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/app.py
-=======
-  logging.Fatal(
-    _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
-  )
->>>>>>> 4242aed2a... Automated code format.
 
 
 @skip_log_prefix
-def FatalWithoutStackTrace(msg, *args, returncode: int = 1, **kwargs):
+def FatalWithoutStackTrace(msg, *args, **kwargs):
   """Logs a fatal message without stacktrace."""
   Error(msg, *args, **kwargs)
-  sys.exit(returncode)
+  sys.exit(1)
 
 
 @skip_log_prefix
 def Error(msg, *args, **kwargs):
   """Logs an error message."""
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/app.py
-<<<<<<< HEAD:labm8/py/app.py
-<<<<<<< HEAD:labm8/py/app.py
   logging.Error(
     _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
   )
-=======
-  logging.Error(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
-                **kwargs)
->>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
-=======
-  logging.Error(
-      _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs)
->>>>>>> 9c6d42506... Add an app.LogToDirectory() function.:labm8/app.py
-=======
-  logging.Error(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
-                **kwargs)
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/app.py
-=======
-  logging.Error(
-    _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
-  )
->>>>>>> 4242aed2a... Automated code format.
 
 
 @skip_log_prefix
 def Warning(msg, *args, **kwargs):
   """Logs a warning message."""
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/app.py
-<<<<<<< HEAD:labm8/py/app.py
-<<<<<<< HEAD:labm8/py/app.py
   logging.Warning(
     _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
   )
-=======
-  logging.Warning(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
-                  **kwargs)
->>>>>>> 9864ff073... Stringify first argument to log calls.:labm8/app.py
-=======
-  logging.Warning(
-      _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs)
->>>>>>> 9c6d42506... Add an app.LogToDirectory() function.:labm8/app.py
-=======
-  logging.Warning(_MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args),
-                  **kwargs)
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/app.py
-=======
-  logging.Warning(
-    _MaybeColorizeLog(shell.ShellEscapeCodes.RED, msg, *args), **kwargs
-  )
->>>>>>> 4242aed2a... Automated code format.
 
 
 def FlushLogs():
@@ -590,15 +349,7 @@ def FlagsToDict(json_safe: bool = False) -> Dict[str, Any]:
   flattened_flags_dict = {}
   for module in flags_dict:
     for flag in flags_dict[module]:
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/app.py
       flattened_flags_dict[f"{module}.{flag.name}"] = flag.value
-=======
-      flattened_flags_dict[f'{module}.{flag.name}'] = flag.value
->>>>>>> 6c0de7d86... Add a json_safe arg to FlagsToJson().:labm8/app.py
-=======
-      flattened_flags_dict[f"{module}.{flag.name}"] = flag.value
->>>>>>> 4242aed2a... Automated code format.
 
   if json_safe:
     # Flags values can have non-serializable types, so try each one and
@@ -848,48 +599,6 @@ def DEFINE_database(
     absl_flags.FLAGS,
     serializer,
     module_name=get_calling_module_name(),
-<<<<<<< HEAD
-  )
-  if validator:
-    RegisterFlagValidator(name, validator)
-
-
-def DEFINE_enum(
-  name: str,
-  enum_class,
-  default,
-  help: str,
-  validator: Callable[[Any], bool] = None,
-):
-  """Registers a flag whose value is an enum.Enum class.
-
-  Unlike other DEFINE_* functions, the value produced by this flag is not an
-  instance of the value, but a lambda that will instantiate a database of the
-  requested type. This flag value must be called (with no arguments) in order
-  to instantiate an enum.
-
-  Args:
-    name: The name of the flag.
-    enum_class: The subclass of enum.Enum which is to be instantiated when this
-      value is called.
-    default: The default value of the enum. Either the string name or an enum
-      value.
-    help: The help string.
-    must_exist: If True, require that the database exists. Else, the database is
-      created if it does not exist.
-  """
-  parser = flags_parsers.EnumParser(enum_class)
-  serializer = absl_flags.ArgumentSerializer()
-  absl_flags.DEFINE(
-    parser,
-    name,
-    default,
-    help,
-    absl_flags.FLAGS,
-    serializer,
-    module_name=get_calling_module_name(),
-=======
->>>>>>> 4242aed2a... Automated code format.
   )
   if validator:
     RegisterFlagValidator(name, validator)
@@ -925,24 +634,9 @@ def RegisterFlagValidator(
   absl_flags.register_validator(flag_name, checker, message)
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/app.py
-<<<<<<< HEAD:labm8/py/app.py
 def LogToDirectory(
   logdir: Union[str, pathlib.Path], name="info"
 ) -> pathlib.Path:
-=======
-def LogToDirectory(logdir: typing.Union[str, pathlib.Path],
-=======
-def LogToDirectory(logdir: Union[str, pathlib.Path],
->>>>>>> 760ec3427... Fix LogToDirectory() implementation.:labm8/app.py
-                   name='info') -> pathlib.Path:
->>>>>>> 9c6d42506... Add an app.LogToDirectory() function.:labm8/app.py
-=======
-def LogToDirectory(
-  logdir: Union[str, pathlib.Path], name="info"
-) -> pathlib.Path:
->>>>>>> 4242aed2a... Automated code format.
   """Write logs to a directory.
 
   This disables printing of logs to stderr, unless the --alsologtostderr flag
@@ -955,76 +649,9 @@ def LogToDirectory(
   """
   logdir = pathlib.Path(logdir)
   logdir.mkdir(exist_ok=True, parents=True)
-<<<<<<< HEAD:labm8/py/app.py
-<<<<<<< HEAD:labm8/py/app.py
   absl_logging.get_absl_handler().use_absl_log_file(str(name), str(logdir))
   return logdir
 
 
-def ToJson() -> Dict[str, Any]:
-  """Return build information as a JSON dictionary."""
-  return {
-    "version": VERSION,
-    "git_commit": GIT_COMMIT,
-    "git_dirty": GIT_DIRTY,
-    "git_url": GIT_URL,
-    "timestamp": str(int(TIMESTAMP.timestamp())),
-    "built_by": BUILT_BY,
-  }
-
-
-def GetGithubCommitUrl(
-  remote_url: Optional[str] = None, commit_hash: Optional[str] = None,
-) -> Optional[str]:
-  """Calculate the GitHub URL for a commit."""
-  remote_url = remote_url or GIT_URL
-  commit_hash = commit_hash or GIT_COMMIT
-
-  m = re.match(f"git@github\.com:([^/]+)/(.+)\.git", remote_url)
-  if not m:
-    return None
-  return f"https://github.com/{m.group(1)}/{m.group(2)}/commit/{commit_hash}"
-
-
-def FormatShortRevision(html: bool = False) -> str:
-  """Get a shortened revision string."""
-  dirty_suffix = "*" if GIT_DIRTY else ""
-  short_hash = f"{GIT_COMMIT[:7]}{dirty_suffix}"
-  if html:
-    return f'<a href="{GetGithubCommitUrl()}">{short_hash}</a>'
-  else:
-    return short_hash
-
-
-def FormatShortBuildDescription(html: bool = False) -> str:
-  """Get build string in the form: 'build SHORT_HASH on DATE by USER@HOST'."""
-  natural_date = TIMESTAMP.strftime("%Y-%m-%d")
-  revision = FormatShortRevision(html)
-  return f"build: {revision} on {natural_date} by {BUILT_BY}"
-
-
-def FormatLongBuildDescription(html: bool = False) -> str:
-  """Get long multi-line build string."""
-  natural_datetime = TIMESTAMP.strftime("%Y-%m-%d %H:%M:%S")
-  revision = FormatShortRevision(html=html)
-  return (
-    f"Built by {BUILT_BY} at {natural_datetime}.\n" f"Revision: {revision}."
-  )
-
-
 # Get the thread ID as an unsigned integer.
 UnsignedThreadId = logging.UnsignedThreadId
-=======
-  absl_logging.get_absl_handler().use_absl_log_file(name, logdir)
-=======
-  absl_logging.get_absl_handler().use_absl_log_file(str(name), str(logdir))
->>>>>>> 760ec3427... Fix LogToDirectory() implementation.:labm8/app.py
-  return logdir
-<<<<<<< HEAD
->>>>>>> 9c6d42506... Add an app.LogToDirectory() function.:labm8/app.py
-=======
-
-
-# Get the thread ID as an unsigned integer.
-UnsignedThreadId = logging.UnsignedThreadId
->>>>>>> a504b5a97... Expose a function to get the unsigned thread ID.
