@@ -1,6 +1,5 @@
 """This module aims to help evaluate the progress of long-running jobs."""
 import threading
-import time
 from typing import Callable
 from typing import Optional
 from typing import Union
@@ -16,29 +15,14 @@ FLAGS = app.FLAGS
 class Progress(threading.Thread):
   """A job with intermediate progress and a progress bar."""
 
-  def __init__(
-    self,
-    name: str,
-    i: int,
-    n: Optional[int] = None,
-    unit: str = "",
-    vertical_position: int = 0,
-    leave: Optional[bool] = None,
-  ):
+  def __init__(self, *args, **kwargs):
     """Instantiate a long-running job.
 
     Args:
-      args: Arguments for ProgressBarContext().
-      kwargs: Keyword arguments for ProgressBarContext().
+      args: Arguments for ProgressContext().
+      kwargs: Keyword arguments for ProgressContext().
     """
-    self.ctx = ProgressBarContext(
-      name=name,
-      i=i,
-      n=n,
-      unit=unit,
-      vertical_position=vertical_position,
-      leave=leave,
-    )
+    self.ctx = ProgressContext(*args, **kwargs)
     super(Progress, self).__init__()
 
     self.run = self.Run
@@ -50,82 +34,17 @@ class Progress(threading.Thread):
     raise NotImplementedError("abstract class")
 
 
-def Run(
-  progress: Progress, refresh_time: float = 0.2, patience: int = 0
-) -> Progress:
-  """Run the given progress job until completion, updating the progress bar.
-
-  Args:
-    progress: The job to run.
-    refresh_time: The number of seconds between updates to the progress bar.
-    patience: If a positive value, this is the maximum allowed seconds to run
-      without a change to the progress before raising an error.
-
-  Raises:
-    OSError: If patience is set, and no progress has been made within the given
-      number of seconds.
-  """
+def Run(progress: Progress, refresh_time: float = 0.2) -> Progress:
+  """Run the given progress job until completion, updating the progress bar."""
   progress.Start()
-  last_i = progress.ctx.i
-  last_progress = time.time()
-
   while progress.is_alive():
-    current_time = time.time()
-    if progress.ctx.i != last_i:
-      last_i = progress.ctx.i
-      last_progress = current_time
-    elif patience and (current_time - last_progress) > patience:
-      raise OSError(
-        f"Failed to make progress after "
-        f"{current_time - last_progress:.0f} seconds"
-      )
     progress.ctx.Refresh()
     progress.join(refresh_time)
   progress.ctx.Refresh()
-  progress.ctx.bar.close()
   return progress
 
 
 class ProgressContext(object):
-  """A context for logging and profiling."""
-
-  def __init__(self, print_context):
-    """Constructor.
-
-    Args:
-      print_context: A context for printing.
-    """
-    self.print_context = print_context
-
-  @app.skip_log_prefix
-  def Log(self, *args, **kwargs):
-    """Log a message."""
-    app.Log(*args, **kwargs, print_context=self.print_context)
-
-  @app.skip_log_prefix
-  def Warning(self, *args, **kwargs):
-    """Log a warning."""
-    app.Warning(*args, **kwargs, print_context=self.print_context)
-
-  @app.skip_log_prefix
-  def Error(self, *args, **kwargs):
-    """Log an error."""
-    app.Error(*args, **kwargs, print_context=self.print_context)
-
-  @app.skip_log_prefix
-  def Profile(self, level: int, msg: Union[str, Callable[[int], str]] = ""):
-    """Return a profiling context."""
-    return prof.Profile(msg, print_to=lambda x: self.Log(level, "%s", x),)
-
-  def print(self, *args, **kwargs):
-    with self.print_context():
-      print(*args, **kwargs)
-
-
-NullContext = ProgressContext(None)
-
-
-class ProgressBarContext(ProgressContext):
   """The context for logging and profiling with a progress bar."""
 
   def __init__(
@@ -135,7 +54,6 @@ class ProgressBarContext(ProgressContext):
     n: Optional[int] = None,
     unit: str = "",
     vertical_position: int = 0,
-    leave: Optional[bool] = None,
   ):
     """Construct a new progress.
 
@@ -165,20 +83,27 @@ class ProgressBarContext(ProgressContext):
       total=self.n,
       unit=unit,
       position=self.vertical_position,
-      leave=leave,
     )
     self.print_context = self.bar.external_write_mode
-
-  def ToProgressContext(self) -> ProgressContext:
-    """Construct a progress context from the given progress context with bar.
-
-    This method is useful for sending the progress context to worker processes
-    during multimprocessing. By removing self.bar attribute, we need only
-    serialize the logging context.
-    """
-    return ProgressContext(self.print_context)
 
   def Refresh(self):
     """Refresh the progress bar."""
     self.bar.n = self.i
     self.bar.refresh()
+
+  @app.skip_log_prefix
+  def Log(self, *args, **kwargs):
+    """Log a message."""
+    app.Log(*args, **kwargs, print_context=self.print_context)
+
+  def Warning(self, *args, **kwargs):
+    """Log a warning."""
+    app.Warning(*args, **kwargs, print_context=self.print_context)
+
+  def Error(self, *args, **kwargs):
+    """Log an error."""
+    app.Error(*args, **kwargs, print_context=self.print_context)
+
+  def Profile(self, level: int, msg: Union[str, Callable[[int], str]] = ""):
+    """Return a profiling context."""
+    return prof.Profile(msg, print_to=lambda x: self.Log(level, x),)
