@@ -223,6 +223,9 @@ def _MyLoggingPrefix(record):
 
 # Swap out absl's logging formatter for my own.
 absl_logging.get_absl_log_prefix = _MyLoggingPrefix
+<<<<<<< HEAD:labm8/py/internal/labm8_logging.py
 
 # A function that computes the thread ID.
 UnsignedThreadId = absl_logging._get_thread_id
+=======
+>>>>>>> 581124adc... Truncate logging prefix.:labm8/py/internal/logging.py
