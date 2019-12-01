@@ -1020,4 +1020,11 @@ UnsignedThreadId = logging.UnsignedThreadId
   absl_logging.get_absl_handler().use_absl_log_file(str(name), str(logdir))
 >>>>>>> 760ec3427... Fix LogToDirectory() implementation.:labm8/app.py
   return logdir
+<<<<<<< HEAD
 >>>>>>> 9c6d42506... Add an app.LogToDirectory() function.:labm8/app.py
+=======
+
+
+# Get the thread ID as an unsigned integer.
+UnsignedThreadId = logging.UnsignedThreadId
+>>>>>>> a504b5a97... Expose a function to get the unsigned thread ID.
