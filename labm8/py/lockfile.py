@@ -1,8 +1,4 @@
-<<<<<<< HEAD:labm8/py/lockfile.py
-# Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
-=======
 # Copyright 2014-2019 Chris Cummins <chrisc.101@gmail.com>.
->>>>>>> 77b550945... Relicense labm8 under Apache 2.0.:labm8/lockfile.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,18 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Lock file mechanism."""
-<<<<<<< HEAD:labm8/py/lockfile.py
-<<<<<<< HEAD:labm8/py/lockfile.py
-=======
-import os
-import sys
-import time
-
-# Use absolute paths for imports so as to prevent a conflict with the
-# system "time" module.
->>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/lockfile.py
-=======
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/lockfile.py
 import datetime
 import inspect
 import os
@@ -36,26 +20,12 @@ import sys
 import time
 import typing
 
-<<<<<<< HEAD:labm8/py/lockfile.py
-<<<<<<< HEAD:labm8/py/lockfile.py
-<<<<<<< HEAD:labm8/py/lockfile.py
-<<<<<<< HEAD:labm8/py/lockfile.py
-=======
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/lockfile.py
 from labm8.py import app
 from labm8.py import humanize
 from labm8.py import labdate
 from labm8.py import pbutil
 from labm8.py import system
 from labm8.py.internal import lockfile_pb2
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/lockfile.py
-=======
-from absl import flags
-from absl import logging
->>>>>>> c802d0078... Add a --lockfile_block_seconds flag.:labm8/lockfile.py
-=======
->>>>>>> 4242aed2a... Automated code format.
 
 # Use absolute paths for imports so as to prevent a conflict with the
 # system "time" module.
@@ -65,46 +35,7 @@ FLAGS = app.FLAGS
 app.DEFINE_float(
   "lockfile_block_seconds",
   10.0,
-<<<<<<< HEAD
   "The number of seconds to block for when waiting for a lock file.",
-)
-=======
-from absl import logging
-from phd.lib.labm8 import labdate
-from phd.lib.labm8 import pbutil
-from phd.lib.labm8 import system
-from phd.lib.labm8.proto import lockfile_pb2
->>>>>>> 1eed6e90b... Automated code format.:lib/labm8/lockfile.py
-=======
-from labm8 import app
-from labm8 import humanize
-from labm8 import labdate
-from labm8 import pbutil
-from labm8 import system
-<<<<<<< HEAD:labm8/py/lockfile.py
-from labm8.proto import lockfile_pb2
->>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/lockfile.py
-=======
-from labm8.internal import lockfile_pb2
-<<<<<<< HEAD:labm8/py/lockfile.py
->>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/lockfile.py
-=======
-=======
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/lockfile.py
-# Use absolute paths for imports so as to prevent a conflict with the
-# system "time" module.
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/lockfile.py
-
-FLAGS = app.FLAGS
-
-app.DEFINE_float(
-    'lockfile_block_seconds',
-    10.0,
-    'The number of seconds to block for when waiting for a lock '
-    'files.',
-=======
-  "The number of seconds to block for when waiting for a lock " "files.",
->>>>>>> 4242aed2a... Automated code format.
 )
 
 
@@ -187,19 +118,10 @@ class LockFile:
     """The date that the lock was acquired. Value is None if lock is unclaimed.
     """
     lockfile = self.read(self.path)
-    if lockfile.date_acquired_unix_epoch_ms:
+    if lockfile.date_acquired_utc_epoch_ms:
       return labdate.DatetimeFromMillisecondsTimestamp(
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/lockfile.py
-        lockfile.date_acquired_unix_epoch_ms,
-      )
-=======
-          lockfile.date_acquired_utc_epoch_ms,)
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/lockfile.py
-=======
         lockfile.date_acquired_utc_epoch_ms,
       )
->>>>>>> 4242aed2a... Automated code format.
     else:
       return None
 
@@ -233,8 +155,6 @@ class LockFile:
     """
     return self.hostname == system.HOSTNAME and self.pid == os.getpid()
 
-<<<<<<< HEAD:labm8/py/lockfile.py
-<<<<<<< HEAD:labm8/py/lockfile.py
   def acquire(
     self,
     replace_stale: bool = False,
@@ -242,31 +162,6 @@ class LockFile:
     pid: int = None,
     block: bool = False,
   ) -> "LockFile":
-=======
-  def acquire(self,
-              replace_stale: bool = False,
-              force: bool = False,
-              pid: int = None,
-              block: bool = False) -> 'LockFile':
->>>>>>> 150d66672... Auto format files.:labm8/lockfile.py
-=======
-  def acquire(
-<<<<<<< HEAD
-      self,
-      replace_stale: bool = False,
-      force: bool = False,
-      pid: int = None,
-      block: bool = False,
-  ) -> 'LockFile':
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/lockfile.py
-=======
-    self,
-    replace_stale: bool = False,
-    force: bool = False,
-    pid: int = None,
-    block: bool = False,
-  ) -> "LockFile":
->>>>>>> 4242aed2a... Automated code format.
     """Acquire the lock.
 
     A lock can be claimed if any of these conditions are true:
@@ -297,37 +192,15 @@ class LockFile:
 
     def _create_lock():
       lockfile = lockfile_pb2.LockFile(
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/lockfile.py
-        owner_process_id=os.getpid() if pid is None else pid,
-        owner_process_argv=" ".join(sys.argv),
-        date_acquired_unix_epoch_ms=labdate.MillisecondsTimestamp(
-=======
         owner_process_id=os.getpid() if pid is None else pid,
         owner_process_argv=" ".join(sys.argv),
         date_acquired_utc_epoch_ms=labdate.MillisecondsTimestamp(
->>>>>>> 4242aed2a... Automated code format.
           labdate.GetUtcMillisecondsNow(),
         ),
         owner_hostname=system.HOSTNAME,
         owner_user=system.USERNAME,
-<<<<<<< HEAD
       )
       pbutil.ToFile(lockfile, self.path, assume_filename="LOCK.pbtxt")
-=======
-          owner_process_id=os.getpid() if pid is None else pid,
-          owner_process_argv=' '.join(sys.argv),
-          date_acquired_utc_epoch_ms=labdate.MillisecondsTimestamp(
-              labdate.GetUtcMillisecondsNow(),),
-          owner_hostname=system.HOSTNAME,
-          owner_user=system.USERNAME,
-      )
-      pbutil.ToFile(lockfile, self.path, assume_filename='LOCK.pbtxt')
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/lockfile.py
-=======
-      )
-      pbutil.ToFile(lockfile, self.path, assume_filename="LOCK.pbtxt")
->>>>>>> 4242aed2a... Automated code format.
 
     while True:
       if self.islocked:
@@ -348,40 +221,12 @@ class LockFile:
         elif not block:
           raise UnableToAcquireLockError(self)
         # Block and try again later.
-<<<<<<< HEAD:labm8/py/lockfile.py
-<<<<<<< HEAD:labm8/py/lockfile.py
-<<<<<<< HEAD:labm8/py/lockfile.py
-<<<<<<< HEAD:labm8/py/lockfile.py
-<<<<<<< HEAD:labm8/py/lockfile.py
         app.Log(
           1,
           "Blocking on lockfile %s for %s seconds",
           self.path,
           humanize.Duration(FLAGS.lockfile_block_seconds),
         )
-=======
-        logging.info('Blocking on lockfile %s for %f seconds', self.path,
-                     FLAGS.lockfile_block_seconds)
->>>>>>> c802d0078... Add a --lockfile_block_seconds flag.:labm8/lockfile.py
-=======
-        app.Info('Blocking on lockfile %s for %f seconds', self.path,
-=======
-        app.Log(1, 'Blocking on lockfile %s for %f seconds', self.path,
->>>>>>> 79a426895... Update logging API and implement --vmodule.:labm8/lockfile.py
-                 FLAGS.lockfile_block_seconds)
->>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/lockfile.py
-=======
-        app.Log(1, 'Blocking on lockfile %s for %s seconds', self.path,
-                humanize.Duration(FLAGS.lockfile_block_seconds))
->>>>>>> 839ee2b14... Nicer lockfile message.:labm8/lockfile.py
-=======
-        app.Log(
-          1,
-          "Blocking on lockfile %s for %s seconds",
-          self.path,
-          humanize.Duration(FLAGS.lockfile_block_seconds),
-        )
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/lockfile.py
         time.sleep(FLAGS.lockfile_block_seconds)
       else:  # new lock
         _create_lock()
@@ -430,26 +275,12 @@ class LockFile:
     """
     path = pathlib.Path(path)
     if path.is_file():
-<<<<<<< HEAD:labm8/py/lockfile.py
-<<<<<<< HEAD:labm8/py/lockfile.py
       try:
         return pbutil.FromFile(
           path, lockfile_pb2.LockFile(), assume_filename="LOCK.pbtxt",
         )
       except pbutil.DecodeError:
         raise MalformedLockfileError(path)
-=======
-      return pbutil.FromFile(
-          path, lockfile_pb2.LockFile(), assume_filename='LOCK.pbtxt')
->>>>>>> 78ad17309... Tiny code format fix.:labm8/lockfile.py
-=======
-      try:
-        return pbutil.FromFile(
-          path, lockfile_pb2.LockFile(), assume_filename="LOCK.pbtxt",
-        )
-      except pbutil.DecodeError:
-        raise MalformedLockfileError(path)
->>>>>>> d285837bd... Add malformed lockfile errors.:labm8/lockfile.py
     else:
       return lockfile_pb2.LockFile()
 
@@ -479,8 +310,6 @@ class AutoLockFile(LockFile):
   """
 
   def __init__(
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/lockfile.py
     self,
     root: typing.Union[str, pathlib.Path] = "/tmp/phd/labm8/autolockfiles",
     granularity: str = "line",
@@ -494,30 +323,6 @@ class AutoLockFile(LockFile):
         means that the lock is unique to the calling function. 'module' means
         that the lock is unique to the calling module.
     """
-=======
-      self,
-<<<<<<< HEAD:labm8/py/lockfile.py
-      root: typing.Union[str, pathlib.Path] = '/tmp/phd/labm8/autolockfiles'):
->>>>>>> 15940e205... Add an auto lock file class.:labm8/lockfile.py
-=======
-      root: typing.Union[str, pathlib.Path] = '/tmp/phd/labm8/autolockfiles',
-      granularity: str = 'line',
-=======
-    self,
-    root: typing.Union[str, pathlib.Path] = "/tmp/phd/labm8/autolockfiles",
-    granularity: str = "line",
->>>>>>> 4242aed2a... Automated code format.
-  ):
-    """Constructor
-
-    Args:
-      root: The directory to place the lock file in.
-      granularity: The granularity of the lock, one of {line,function,module}.
-        'line' means that the lock is unique to the calling line. 'function'
-        means that the lock is unique to the calling function. 'module' means
-        that the lock is unique to the calling module.
-    """
->>>>>>> de8b1f1ff... Support different granularities of autolockfile.:labm8/lockfile.py
     root = pathlib.Path(root)
 
     # Unlike the regular LockFile, an AutoLockFile will create the necessary
@@ -530,41 +335,16 @@ class AutoLockFile(LockFile):
     function_name = frame.function
     lineno = frame.lineno
 
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/lockfile.py
-<<<<<<< HEAD:labm8/py/lockfile.py
-=======
->>>>>>> 4242aed2a... Automated code format.
     if granularity == "line":
       path = root / f"{module_name}_{function_name}_{lineno}.pbtxt"
     elif granularity == "function":
       path = root / f"{module_name}_{function_name}.pbtxt"
     elif granularity == "module":
       path = root / f"{module_name}.pbtxt"
-<<<<<<< HEAD
     else:
       raise TypeError(
         f"Invalid granularity '{granularity}'. Must be one of: "
         f"{{line,function,module}}",
       )
 
-=======
-    path = root / f'{module_name}_{function_name}_{lineno}.pbtxt'
->>>>>>> 15940e205... Add an auto lock file class.:labm8/lockfile.py
-=======
-    if granularity == 'line':
-      path = root / f'{module_name}_{function_name}_{lineno}.pbtxt'
-    elif granularity == 'function':
-      path = root / f'{module_name}_{function_name}.pbtxt'
-    elif granularity == 'module':
-      path = root / f'{module_name}.pbtxt'
-=======
->>>>>>> 4242aed2a... Automated code format.
-    else:
-      raise TypeError(
-        f"Invalid granularity '{granularity}'. Must be one of: "
-        f"{{line,function,module}}",
-      )
-
->>>>>>> de8b1f1ff... Support different granularities of autolockfile.:labm8/lockfile.py
     super(AutoLockFile, self).__init__(path)
