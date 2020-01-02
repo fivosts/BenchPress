@@ -59,21 +59,10 @@ class DockerImageRunContext(object):
     entrypoint_args = ["--entrypoint", entrypoint] if entrypoint else []
     volume_args = [f"-v{src}:{dst}" for src, dst in (volumes or {}).items()]
     flags_args = labtypes.flatten(
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/dockerutil.py
-      [[f"--{k}", str(v)] for k, v in (flags or {}).items()],
-    )
-=======
-        [[f'--{k}', str(v)] for k, v in (flags or {}).items()],)
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/dockerutil.py
-    return _Docker(
-      ["run", "--rm"]
-=======
       [[f"--{k}", str(v)] for k, v in (flags or {}).items()],
     )
     return _Docker(
       ["run"]
->>>>>>> 4242aed2a... Automated code format.
       + entrypoint_args
       + volume_args
       + [self.image_name]
@@ -162,30 +151,15 @@ class BazelPy3Image(object):
     self.image_name = f'bazel/{"/".join(components[:-1])}:{components[-1]}'
 
   def _TemporaryImageName(self) -> str:
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/dockerutil.py
-=======
->>>>>>> 4242aed2a... Automated code format.
     basename = self.data_path.split("/")[-1]
     random_suffix = "".join(
       random.choice("0123456789abcdef") for _ in range(32)
     )
     return f"phd_{basename}_tmp_{random_suffix}"
-<<<<<<< HEAD
-=======
-    basename = self.data_path.split('/')[-1]
-    random_suffix = ''.join(
-        random.choice('0123456789abcdef') for _ in range(32))
-    return f'phd_{basename}_tmp_{random_suffix}'
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/dockerutil.py
-=======
->>>>>>> 4242aed2a... Automated code format.
 
   @contextlib.contextmanager
   def RunContext(self) -> DockerImageRunContext:
     subprocess.check_call(
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/dockerutil.py
       _Docker(["load", "-i", str(self.tar_path)], timeout=600),
     )
     tmp_name = self._TemporaryImageName()
@@ -195,22 +169,6 @@ class BazelPy3Image(object):
     subprocess.check_call(
       _Docker(["rmi", "--force", self.image_name], timeout=60)
     )
-=======
-        _Docker(['load', '-i', str(self.tar_path)], timeout=600),)
-    tmp_name = self._TemporaryImageName()
-    subprocess.check_call(
-        _Docker(['tag', self.image_name, tmp_name], timeout=60),)
-    subprocess.check_call(_Docker(['rmi', self.image_name], timeout=60))
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/dockerutil.py
-=======
-      _Docker(["load", "-i", str(self.tar_path)], timeout=600),
-    )
-    tmp_name = self._TemporaryImageName()
-    subprocess.check_call(
-      _Docker(["tag", self.image_name, tmp_name], timeout=60),
-    )
-    subprocess.check_call(_Docker(["rmi", self.image_name], timeout=60))
->>>>>>> 4242aed2a... Automated code format.
     yield DockerImageRunContext(tmp_name)
     # FIXME(cec): Using the --force flag here is almost certainly the wrong
     # thing, but I'm getting strange errors when trying to untag the image
