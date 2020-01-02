@@ -19,14 +19,18 @@ import tarfile
 import tempfile
 
 <<<<<<< HEAD:deeplearning/clgen/tests/fixtures.py
+<<<<<<< HEAD:deeplearning/clgen/tests/fixtures.py
 =======
 import pytest
 
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:deeplearning/clgen/conftest.py
+=======
+>>>>>>> d490c17a7... Fix conftest.:deeplearning/clgen/conftest.py
 from deeplearning.clgen.proto import clgen_pb2
 from deeplearning.clgen.proto import corpus_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
+<<<<<<< HEAD:deeplearning/clgen/tests/fixtures.py
 <<<<<<< HEAD:deeplearning/clgen/tests/fixtures.py
 <<<<<<< HEAD:deeplearning/clgen/tests/fixtures.py
 <<<<<<< HEAD:deeplearning/clgen/tests/fixtures.py
@@ -49,6 +53,12 @@ from labm8.py import pbutil
 
 FLAGS = app.FLAGS
 >>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:deeplearning/clgen/conftest.py
+=======
+from labm8.py import pbutil
+from labm8.py import test
+
+FLAGS = test.FLAGS
+>>>>>>> d490c17a7... Fix conftest.:deeplearning/clgen/conftest.py
 
 
 @test.Fixture(scope="function")
