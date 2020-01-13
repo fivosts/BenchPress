@@ -14,7 +14,6 @@ github.com/bazelbuild/rules_python/issues/71
 """
 import importlib
 import pathlib
-import site
 import sys
 
 try:
@@ -22,29 +21,26 @@ try:
   # github.com/bazelbuild/rules_python/issues/71 is fixed.
   import tensorflow
 except (ImportError, ModuleNotFoundError):
-  # That failed, so see if there is a version of the package elsewhere on the
-  # system that we can force python into loading.
-  extra_site_packages = [
-    "/usr/local/lib/python3.7/site-packages",
-  ]
-  for path in extra_site_packages:
-    tensorflow_site_package = pathlib.Path(path) / "tensorflow"
-    if tensorflow_site_package.is_dir():
-      # Add the additional packages location to the python path.
-      sys.path.insert(0, path)
-      try:
-        import tensorflow
+  # That failed, so see if there is a system install of Tensorflow that we
+  # can trick python into importing. This should succeed in the
+  # chriscummins/phd_base_tf_cpu docker image.
+  PYTHON_SITE_PACKAGES = pathlib.Path("/usr/local/lib/python3.7/site-packages")
 
-        break
-      except (ImportError, ModuleNotFoundError):
-        pass
-      finally:
-        # Restore python path.
-        del sys.path[0]
+  try:
+    if pathlib.Path(PYTHON_SITE_PACKAGES / "tensorflow").is_dir():
+      sys.path.insert(0, "/usr/local/lib/python3.7/site-packages")
 
-# Import Tensorflow into this module's namespace. If the above import attempts
-# failed, this will raise an error.
+      import tensorflow
+    else:
+      raise ModuleNotFoundError
+  except (ImportError, ModuleNotFoundError):
+    # That failed, so a final hail mary let's try importing the module directly.
+    tensorflow = importlib.import_module(
+      "tensorflow", PYTHON_SITE_PACKAGES / "tensorflow",
+    )
+
+# Import Tensorflow into this module's namespace.
 from tensorflow import *
 
-# Spoof that we've imported the package generically.
+# Pretend that we've imported the regular Tensorflow.
 __file__ = tensorflow.__file__
