@@ -1,8 +1,4 @@
-<<<<<<< HEAD:labm8/py/logutil.py
-# Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
-=======
 # Copyright 2014-2019 Chris Cummins <chrisc.101@gmail.com>.
->>>>>>> 77b550945... Relicense labm8 under Apache 2.0.:labm8/logutil.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,94 +21,34 @@ import typing
 
 from absl import logging
 
-<<<<<<< HEAD:labm8/py/logutil.py
-<<<<<<< HEAD:labm8/py/logutil.py
-<<<<<<< HEAD:labm8/py/logutil.py
 from labm8.py import app
 from labm8.py import labdate
 from labm8.py.internal import logging_pb2
-=======
-from phd.lib.labm8 import labdate
-from phd.lib.labm8.proto import logging_pb2
->>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/logutil.py
-
-<<<<<<< HEAD:labm8/py/logutil.py
-FLAGS = app.FLAGS
-=======
-FLAGS = flags.FLAGS
->>>>>>> 150d66672... Auto format files.:labm8/logutil.py
-=======
-from labm8 import app
-from labm8 import labdate
-from labm8.internal import logging_pb2
-=======
-from labm8.py import app
-from labm8.py import labdate
-from labm8.py.internal import logging_pb2
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/logutil.py
 
 FLAGS = app.FLAGS
->>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/logutil.py
 
 # A regular expression to match the components of an absl logging prefix. See:
 # https://github.com/abseil/abseil-py/blob/e69e200f680a20c50e0e2cd9e74e9850ff69b856/absl/logging/__init__.py#L554-L583
 ABSL_LOGGING_LINE_RE = re.compile(
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/logutil.py
-=======
->>>>>>> 4242aed2a... Automated code format.
   r"(?P<lvl>[IWEF])(?P<timestamp>\d\d\d\d \d\d:\d\d:\d\d.\d\d\d\d\d\d) "
   r"(?P<thread_id>\d+) (?P<filename>[^:]+):(?P<lineno>\d+)] "
   r"(?P<contents>.*)",
 )
-<<<<<<< HEAD
-=======
-    r'(?P<lvl>[IWEF])(?P<timestamp>\d\d\d\d \d\d:\d\d:\d\d.\d\d\d\d\d\d) '
-    r'(?P<thread_id>\d+) (?P<filename>[^:]+):(?P<lineno>\d+)] '
-    r'(?P<contents>.*)',)
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/logutil.py
-=======
->>>>>>> 4242aed2a... Automated code format.
 
 # Convert a single letter absl logging prefix to a LogRecord.LogLevel. Since
 # absl logging uses the same prefix for logging.DEBUG and logging.INFO, this
 # conversion is lossy, as LogRecord.DEBUG is never returned.
 ABSL_LEVEL_TO_LOG_RECORD_LEVEL = {
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/logutil.py
-=======
->>>>>>> 4242aed2a... Automated code format.
   "I": logging_pb2.LogRecord.INFO,
   "W": logging_pb2.LogRecord.WARNING,
   "E": logging_pb2.LogRecord.ERROR,
   "F": logging_pb2.LogRecord.FATAL,
-<<<<<<< HEAD
 }
 
 
 def DatetimeFromAbslTimestamp(
   timestamp: str, year: int = datetime.datetime.utcnow().year,
 ) -> datetime.datetime:
-=======
-    'I': logging_pb2.LogRecord.INFO,
-    'W': logging_pb2.LogRecord.WARNING,
-    'E': logging_pb2.LogRecord.ERROR,
-    'F': logging_pb2.LogRecord.FATAL,
-=======
->>>>>>> 4242aed2a... Automated code format.
-}
-
-
-<<<<<<< HEAD:labm8/py/logutil.py
-def DatetimeFromAbslTimestamp(timestamp: str,
-                              year: int = datetime.datetime.utcnow().year
-                             ) -> datetime.datetime:
->>>>>>> 150d66672... Auto format files.:labm8/logutil.py
-=======
-def DatetimeFromAbslTimestamp(
-  timestamp: str, year: int = datetime.datetime.utcnow().year,
-) -> datetime.datetime:
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/logutil.py
   """Convert absl logging timestamp to datetime.
 
   WARNING: Absl logs do not include the year, so if parsing logs from previous
@@ -130,21 +66,9 @@ def DatetimeFromAbslTimestamp(
   return dt
 
 
-<<<<<<< HEAD:labm8/py/logutil.py
-<<<<<<< HEAD:labm8/py/logutil.py
 def ConertAbslLogToProtos(
   logs: str, year: int = datetime.datetime.utcnow().year,
 ) -> typing.List[logging_pb2.LogRecord]:
-=======
-def ConertAbslLogToProtos(logs: str,
-                          year: int = datetime.datetime.utcnow().year
-                         ) -> typing.List[logging_pb2.LogRecord]:
->>>>>>> 150d66672... Auto format files.:labm8/logutil.py
-=======
-def ConertAbslLogToProtos(
-  logs: str, year: int = datetime.datetime.utcnow().year,
-) -> typing.List[logging_pb2.LogRecord]:
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/logutil.py
   """Convert the output of logging with absl logging to LogRecord protos.
 
   WARNING: Absl logs do not include the year, so if parsing logs from previous
@@ -165,8 +89,6 @@ def ConertAbslLogToProtos(
   def ConvertOne() -> logging_pb2.LogRecord:
     """Convert the current starting_match and lines_buffer into a LogRecord."""
     if starting_match:
-<<<<<<< HEAD:labm8/py/logutil.py
-<<<<<<< HEAD:labm8/py/logutil.py
       records.append(
         logging_pb2.LogRecord(
           level=ABSL_LEVEL_TO_LOG_RECORD_LEVEL[starting_match.group("lvl")],
@@ -185,61 +107,6 @@ def ConertAbslLogToProtos(
       )
 
   for line in logs.split("\n"):
-=======
-      records.append(logging_pb2.LogRecord(
-          level=ABSL_LEVEL_TO_LOG_RECORD_LEVEL[starting_match.group('lvl')],
-          date_utc_epoch_ms=labdate.MillisecondsTimestamp(
-              DatetimeFromAbslTimestamp(
-                  starting_match.group('timestamp'), year=year)),
-          thread_id=int(starting_match.group('thread_id')),
-          file_name=starting_match.group('filename'),
-          line_number=int(starting_match.group('lineno')),
-          message='\n'.join(
-              [starting_match.group('contents')] + lines_buffer).rstrip()))
-=======
-      records.append(
-<<<<<<< HEAD
-          logging_pb2.LogRecord(
-              level=ABSL_LEVEL_TO_LOG_RECORD_LEVEL[starting_match.group('lvl')],
-              date_utc_epoch_ms=labdate.MillisecondsTimestamp(
-                  DatetimeFromAbslTimestamp(
-                      starting_match.group('timestamp'),
-                      year=year,
-                  ),),
-              thread_id=int(starting_match.group('thread_id')),
-              file_name=starting_match.group('filename'),
-              line_number=int(starting_match.group('lineno')),
-<<<<<<< HEAD:labm8/py/logutil.py
-              message='\n'.join([starting_match.group('contents')] +
-                                lines_buffer).rstrip()))
->>>>>>> 150d66672... Auto format files.:labm8/logutil.py
-=======
-              message='\n'.join(
-                  [starting_match.group('contents')] + lines_buffer,).rstrip(),
-          ),)
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/logutil.py
-
-  for line in logs.split('\n'):
->>>>>>> 620197b9a... Fix year on logutil.:labm8/logutil.py
-=======
-        logging_pb2.LogRecord(
-          level=ABSL_LEVEL_TO_LOG_RECORD_LEVEL[starting_match.group("lvl")],
-          date_utc_epoch_ms=labdate.MillisecondsTimestamp(
-            DatetimeFromAbslTimestamp(
-              starting_match.group("timestamp"), year=year,
-            ),
-          ),
-          thread_id=int(starting_match.group("thread_id")),
-          file_name=starting_match.group("filename"),
-          line_number=int(starting_match.group("lineno")),
-          message="\n".join(
-            [starting_match.group("contents")] + lines_buffer,
-          ).rstrip(),
-        ),
-      )
-
-  for line in logs.split("\n"):
->>>>>>> 4242aed2a... Automated code format.
     m = ABSL_LOGGING_LINE_RE.match(line)
     if m:
       ConvertOne()
@@ -254,25 +121,11 @@ def ConertAbslLogToProtos(
   return records
 
 
-<<<<<<< HEAD:labm8/py/logutil.py
-<<<<<<< HEAD:labm8/py/logutil.py
 def StartTeeLogsToFile(
   program_name: str = None,
   log_dir: str = None,
   file_log_level: int = logging.DEBUG,
 ) -> None:
-=======
-def StartTeeLogsToFile(program_name: str = None,
-                       log_dir: str = None,
-                       file_log_level: int = logging.DEBUG) -> None:
->>>>>>> 150d66672... Auto format files.:labm8/logutil.py
-=======
-def StartTeeLogsToFile(
-  program_name: str = None,
-  log_dir: str = None,
-  file_log_level: int = logging.DEBUG,
-) -> None:
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/logutil.py
   """Log messages to file as well as stderr.
 
   Args:
@@ -302,25 +155,11 @@ def StopTeeLogsToFile():
 
 
 @contextlib.contextmanager
-<<<<<<< HEAD:labm8/py/logutil.py
-<<<<<<< HEAD:labm8/py/logutil.py
 def TeeLogsToFile(
   program_name: str = None,
   log_dir: str = None,
   file_log_level: int = logging.DEBUG,
 ):
-=======
-def TeeLogsToFile(program_name: str = None,
-                  log_dir: str = None,
-                  file_log_level: int = logging.DEBUG):
->>>>>>> 150d66672... Auto format files.:labm8/logutil.py
-=======
-def TeeLogsToFile(
-  program_name: str = None,
-  log_dir: str = None,
-  file_log_level: int = logging.DEBUG,
-):
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/logutil.py
   """Temporarily enable logging to file.
 
   Args:
