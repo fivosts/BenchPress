@@ -1,27 +1,4 @@
-<<<<<<< HEAD:third_party/llvm/BUILD
 # LLVM package.
-=======
-# This is an implementation of the feature extractor from:
-#
-#     ﻿Grewe, D., Wang, Z., & O’Boyle, M. (2013). Portable Mapping of Data
-#     Parallel Programs to OpenCL for Heterogeneous Systems. In CGO. IEEE.
-#     https://doi.org/10.1109/CGO.2013.6494993
-#
-# Copyright 2017, 2018, 2019 Chris Cummins <chrisc.101@gmail.com>.
-#
-# This file is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
->>>>>>> e0d1223cb... Add license headers to //research.:research/grewe_2013_cgo/BUILD
 
 load("@com_github_chriscummins_rules_bats//:bats.bzl", "bats_test")
 
@@ -46,15 +23,9 @@ bats_test(
     name = "clang_smoke_test",
     srcs = ["clang_smoke_test.bats"],
     data = [
-<<<<<<< HEAD:third_party/llvm/BUILD
         ":clang",
         "//labm8/sh:test",
-=======
-        ":feature_extractor_binary",
-        "//third_party/opencl/inlined",
->>>>>>> d9e584789... Move inlined header.:research/grewe_2013_cgo/BUILD
     ],
-<<<<<<< HEAD:third_party/llvm/BUILD
 )
 
 sh_binary(
@@ -68,12 +39,8 @@ sh_binary(
             "@llvm_linux//:clang-format",
         ],
     }),
-=======
->>>>>>> 7f3f24544... Set feature extractor as public.:gpu/portable_mapping_of_data_parallel_programs_to_opencl/BUILD
     visibility = ["//visibility:public"],
     deps = [
-<<<<<<< HEAD:third_party/llvm/BUILD
-<<<<<<< HEAD:third_party/llvm/BUILD
         "//labm8/sh:app",
     ],
 )
@@ -127,11 +94,6 @@ sh_binary(
     visibility = ["//visibility:public"],
     deps = [
         "//labm8/sh:app",
-=======
-        "//labm8:app",
-        "//labm8:bazelutil",
-<<<<<<< HEAD:third_party/llvm/BUILD
->>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:research/grewe_2013_cgo/BUILD
     ],
 )
 
@@ -141,14 +103,6 @@ bats_test(
     data = [
         ":llvm-dis",
         "//labm8/sh:test",
-=======
-        "//labm8:fs",
->>>>>>> fa81e4ed1... Tidy up and convenience function.:research/grewe_2013_cgo/BUILD
-=======
-        "//labm8/py:app",
-        "//labm8/py:bazelutil",
-        "//labm8/py:fs",
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:research/grewe_2013_cgo/BUILD
     ],
 )
 
@@ -165,14 +119,7 @@ sh_binary(
     }),
     visibility = ["//visibility:public"],
     deps = [
-<<<<<<< HEAD:third_party/llvm/BUILD
         "//labm8/sh:app",
-=======
-        ":feature_extractor",
-        "//labm8/py:app",
-        "//labm8/py:test",
-        "//third_party/py/pytest",
->>>>>>> dec37b744... Auto format BUILD file.:gpu/portable_mapping_of_data_parallel_programs_to_opencl/BUILD
     ],
 )
 
@@ -183,7 +130,6 @@ bats_test(
         ":llvm-link",
         "//labm8/sh:test",
     ],
-<<<<<<< HEAD:third_party/llvm/BUILD
 )
 
 sh_binary(
@@ -216,8 +162,6 @@ bats_test(
 # want to use the LLVM headers and library.
 cc_library(
     name = "llvm",
-=======
->>>>>>> d9e584789... Move inlined header.:research/grewe_2013_cgo/BUILD
     data = select({
         "//:darwin": ["@llvm_mac//:libdir"],
         "//conditions:default": ["@llvm_linux//:libdir"],
