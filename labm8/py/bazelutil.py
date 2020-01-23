@@ -8,27 +8,11 @@ import pathlib
 import pkgutil
 import re
 import subprocess
-import sys
 import typing
 
-<<<<<<< HEAD:labm8/py/bazelutil.py
-<<<<<<< HEAD:labm8/py/bazelutil.py
-<<<<<<< HEAD:labm8/py/bazelutil.py
 from labm8.py import app
 from labm8.py import archive
 from labm8.py import fs
-=======
-=======
-from labm8 import app
->>>>>>> 6901f306f... Fix transitive dep resolving.:labm8/bazelutil.py
-from labm8 import archive
-from labm8 import fs
->>>>>>> a4e1bff54... Auto-format code.:labm8/bazelutil.py
-=======
-from labm8.py import app
-from labm8.py import archive
-from labm8.py import fs
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/bazelutil.py
 
 # Regular expression to everything in a path up until the '*.runfiles'
 # directory, e.g. for the path '/private/var/bazel/foo/bar.runfiles/a/b/c',
@@ -54,16 +38,7 @@ def FindRunfilesDirectory() -> typing.Optional[pathlib.Path]:
 
 
 def DataPath(
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/bazelutil.py
   path: typing.Union[str, pathlib.Path], must_exist: bool = True,
-=======
-    path: typing.Union[str, pathlib.Path],
-    must_exist: bool = True,
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/bazelutil.py
-=======
-  path: typing.Union[str, pathlib.Path], must_exist: bool = True,
->>>>>>> 4242aed2a... Automated code format.
 ) -> pathlib.Path:
   """Return the absolute path to a data file.
 
@@ -172,42 +147,19 @@ class Workspace(object):
       OSError: If the root is not a workspace.
     """
     self._root = root
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/bazelutil.py
     if not (self._root / "WORKSPACE").is_file():
       raise OSError(f"`{self._root}/WORKSPACE` not found")
-=======
-    if not (self._root / 'WORKSPACE').is_file():
-      raise OSError(f'`{self._root}/WORKSPACE` not found')
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/bazelutil.py
-=======
-    if not (self._root / "WORKSPACE").is_file():
-      raise OSError(f"`{self._root}/WORKSPACE` not found")
->>>>>>> 4242aed2a... Automated code format.
 
   @property
   def workspace_root(self) -> pathlib.Path:
     return self._root
 
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/bazelutil.py
-=======
->>>>>>> 4242aed2a... Automated code format.
   def BazelQuery(
     self,
     args: typing.List[str],
     timeout_seconds: int = 360,
     **subprocess_kwargs,
   ):
-<<<<<<< HEAD
-=======
-  def BazelQuery(self,
-                 args: typing.List[str],
-                 timeout_seconds: int = 360,
-                 **subprocess_kwargs):
->>>>>>> a4e1bff54... Auto-format code.:labm8/bazelutil.py
-=======
->>>>>>> 4242aed2a... Automated code format.
     """Run bazel query with the specified args in the workspace.
 
     Args:
@@ -215,13 +167,7 @@ class Workspace(object):
       timeout_seconds: The number of seconds before failing.
       subprocess_kwargs: Additional arguments to pass to Popen().
     """
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/bazelutil.py
     return self.Bazel(
-<<<<<<< HEAD:labm8/py/bazelutil.py
-=======
-    return self.Bazel(
->>>>>>> 4242aed2a... Automated code format.
       "query", args, timeout_seconds=timeout_seconds, **subprocess_kwargs
     )
 
@@ -232,57 +178,6 @@ class Workspace(object):
     timeout_seconds: int = 360,
     **subprocess_kwargs,
   ):
-<<<<<<< HEAD
-    cmd = [
-      "timeout",
-      "-s9",
-      str(timeout_seconds),
-      "bazel",
-      command,
-      "--noshow_progress",
-    ] + args
-    app.Log(2, "$ %s", " ".join(cmd))
-=======
-        'query', args, timeout_seconds=timeout_seconds, **subprocess_kwargs)
-=======
-    return self.Bazel('query',
-                      args,
-                      timeout_seconds=timeout_seconds,
-                      **subprocess_kwargs)
->>>>>>> 6d5f13a15... Resolve dependencies for each target in turn.:labm8/bazelutil.py
-
-  def Bazel(self,
-            command: str,
-            args: typing.List[str],
-            timeout_seconds: int = 360,
-            **subprocess_kwargs):
-<<<<<<< HEAD:labm8/py/bazelutil.py
->>>>>>> 90ade5621... Add a Bazel() method.:labm8/bazelutil.py
-    with fs.chdir(self.workspace_root):
-<<<<<<< HEAD:labm8/py/bazelutil.py
-<<<<<<< HEAD:labm8/py/bazelutil.py
-      return subprocess.Popen(cmd, **subprocess_kwargs)
-
-  def MaybeTargetToPath(
-    self, fully_qualified_target: str,
-  ) -> typing.Optional[pathlib.Path]:
-=======
-      return subprocess.Popen(
-          ['timeout', '-s9',
-           str(timeout_seconds), 'bazel', 'query'] + args, **subprocess_kwargs)
-=======
-      return subprocess.Popen([
-          'timeout',
-          '-s9',
-          str(timeout_seconds),
-          'bazel',
-          command,
-          '--noshow_progress',
-      ] + args, **subprocess_kwargs)
->>>>>>> c22954d10... Don't show progress in bazel query.:labm8/bazelutil.py
-=======
-=======
->>>>>>> 4242aed2a... Automated code format.
     cmd = [
       "timeout",
       "-s9",
@@ -294,21 +189,10 @@ class Workspace(object):
     app.Log(2, "$ %s", " ".join(cmd))
     with fs.chdir(self.workspace_root):
       return subprocess.Popen(cmd, **subprocess_kwargs)
->>>>>>> 6901f306f... Fix transitive dep resolving.:labm8/bazelutil.py
 
   def MaybeTargetToPath(
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/bazelutil.py
-      self, fully_qualified_target: str) -> typing.Optional[pathlib.Path]:
->>>>>>> a4e1bff54... Auto-format code.:labm8/bazelutil.py
-=======
-      self,
-      fully_qualified_target: str,
-=======
     self, fully_qualified_target: str,
->>>>>>> 4242aed2a... Automated code format.
   ) -> typing.Optional[pathlib.Path]:
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/bazelutil.py
     """Determine if a bazel target refers to a file, and if so return the path.
 
     Args:
@@ -332,42 +216,13 @@ class Workspace(object):
       return RelpathIfExists(fully_qualified_target[2:].replace(":", "/"))
     else:
       raise ValueError(
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/bazelutil.py
-        "Target is not fully qualified (does not begin with `//`): "
-        f"{fully_qualified_target}",
-      )
-
-<<<<<<< HEAD:labm8/py/bazelutil.py
-  def GetDependentFiles(
-    self, target: str, excluded_targets: typing.Iterable[str],
-  ) -> typing.List[pathlib.Path]:
-=======
-  def GetDependentFiles(self, target: str) -> typing.List[pathlib.Path]:
->>>>>>> a4e1bff54... Auto-format code.:labm8/bazelutil.py
-=======
-          'Target is not fully qualified (does not begin with `//`): '
-          f'{fully_qualified_target}',)
-
-  def GetDependentFiles(
-<<<<<<< HEAD:labm8/py/bazelutil.py
-      self, target: str,
-      excluded_targets: typing.Iterable[str]) -> typing.List[pathlib.Path]:
->>>>>>> cf0d9248e... Add support for excluded targets.:labm8/bazelutil.py
-=======
-      self,
-      target: str,
-      excluded_targets: typing.Iterable[str],
-=======
         "Target is not fully qualified (does not begin with `//`): "
         f"{fully_qualified_target}",
       )
 
   def GetDependentFiles(
     self, target: str, excluded_targets: typing.Iterable[str],
->>>>>>> 4242aed2a... Automated code format.
   ) -> typing.List[pathlib.Path]:
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/bazelutil.py
     """Get the file dependencies of the target.
 
     Args:
@@ -381,38 +236,18 @@ class Workspace(object):
     """
     # First run through bazel query to expand globs.
     bazel = self.BazelQuery([target], stdout=subprocess.PIPE)
-<<<<<<< HEAD:labm8/py/bazelutil.py
-<<<<<<< HEAD:labm8/py/bazelutil.py
     grep = subprocess.Popen(
       ["grep", "^/"],
       stdout=subprocess.PIPE,
       stdin=bazel.stdout,
       universal_newlines=True,
     )
-=======
-    grep = subprocess.Popen(['grep', '^/'],
-                            stdout=subprocess.PIPE,
-                            stdin=bazel.stdout,
-                            universal_newlines=True)
->>>>>>> 6d5f13a15... Resolve dependencies for each target in turn.:labm8/bazelutil.py
-=======
-    grep = subprocess.Popen(
-      ["grep", "^/"],
-      stdout=subprocess.PIPE,
-      stdin=bazel.stdout,
-      universal_newlines=True,
-    )
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/bazelutil.py
 
     stdout, _ = grep.communicate()
     if bazel.returncode:
       raise OSError("bazel query failed")
     if grep.returncode:
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/bazelutil.py
       raise OSError("grep of bazel query output failed")
-<<<<<<< HEAD:labm8/py/bazelutil.py
-<<<<<<< HEAD:labm8/py/bazelutil.py
     targets = stdout.rstrip().split("\n")
 
     # Now get the transitive dependencies of each target.
@@ -425,10 +260,7 @@ class Workspace(object):
         f"\r\033[KCollecting transitive dependencies ({len(all_targets)}): {target}",
         end="",
       )
-      sys.stdout.flush()
-      bazel = self.BazelQuery(
-        [f"deps({target})"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
-      )
+      bazel = self.BazelQuery([f"deps({target})"], stdout=subprocess.PIPE)
       grep = subprocess.Popen(
         ["grep", "^/"],
         stdout=subprocess.PIPE,
@@ -450,64 +282,7 @@ class Workspace(object):
       self.MaybeTargetToPath(target)
       for target in all_targets
       if not target in excluded_targets
-=======
-
-    targets = stdout.rstrip().split('\n')
-<<<<<<< HEAD:labm8/py/bazelutil.py
-    paths = [
-        self.MaybeTargetToPath(target)
-        for target in targets
-        if target not in excluded_targets
->>>>>>> cf0d9248e... Add support for excluded targets.:labm8/bazelutil.py
     ]
-=======
-=======
-=======
-      raise OSError('grep of bazel query output failed')
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/bazelutil.py
-    targets = stdout.rstrip().split('\n')
-=======
-      raise OSError("grep of bazel query output failed")
-    targets = stdout.rstrip().split("\n")
->>>>>>> 4242aed2a... Automated code format.
-
-    # Now get the transitive dependencies of each target.
->>>>>>> 6d5f13a15... Resolve dependencies for each target in turn.:labm8/bazelutil.py
-    targets = [target for target in targets if target not in excluded_targets]
-    all_targets = targets.copy()
-    for i, target in enumerate(targets):
-      app.Log(
-        1,
-        "Collecting transitive deps for target %d of %d: %s",
-        i + 1,
-        len(targets),
-        target,
-      )
-      bazel = self.BazelQuery([f"deps({target})"], stdout=subprocess.PIPE)
-      grep = subprocess.Popen(
-        ["grep", "^/"],
-        stdout=subprocess.PIPE,
-        stdin=bazel.stdout,
-        universal_newlines=True,
-      )
-
-      stdout, _ = grep.communicate()
-      if bazel.returncode:
-        raise OSError("bazel query failed")
-      if grep.returncode:
-        raise OSError("grep of bazel query output failed")
-
-      deps = stdout.rstrip().split("\n")
-      all_targets += [
-        target for target in deps if target not in excluded_targets
-      ]
-
-<<<<<<< HEAD:labm8/py/bazelutil.py
-    paths = [self.MaybeTargetToPath(target) for target in targets]
->>>>>>> d0acf9c9d... Tiny refactor.:labm8/bazelutil.py
-=======
-    paths = [self.MaybeTargetToPath(target) for target in all_targets]
->>>>>>> 6901f306f... Fix transitive dep resolving.:labm8/bazelutil.py
     return [path for path in paths if path]
 
   def GetBuildFiles(self, target: str) -> typing.List[pathlib.Path]:
@@ -517,8 +292,6 @@ class Workspace(object):
       OSError: If bazel query fails.
     """
     bazel = self.BazelQuery(
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/bazelutil.py
       [f"buildfiles(deps({target}))"], stdout=subprocess.PIPE,
     )
     cut = subprocess.Popen(
@@ -529,29 +302,6 @@ class Workspace(object):
       stdout=subprocess.PIPE,
       stdin=cut.stdout,
       universal_newlines=True,
-=======
-        [f'buildfiles(deps({target}))'],
-        stdout=subprocess.PIPE,
-=======
-      [f"buildfiles(deps({target}))"], stdout=subprocess.PIPE,
->>>>>>> 4242aed2a... Automated code format.
-    )
-    cut = subprocess.Popen(
-      ["cut", "-f1", "-d:"], stdout=subprocess.PIPE, stdin=bazel.stdout,
-    )
-    grep = subprocess.Popen(
-<<<<<<< HEAD
-        ['grep', '^/'],
-        stdout=subprocess.PIPE,
-        stdin=cut.stdout,
-        universal_newlines=True,
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/bazelutil.py
-=======
-      ["grep", "^/"],
-      stdout=subprocess.PIPE,
-      stdin=cut.stdout,
-      universal_newlines=True,
->>>>>>> 4242aed2a... Automated code format.
     )
 
     stdout, _ = grep.communicate()
