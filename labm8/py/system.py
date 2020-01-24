@@ -23,6 +23,7 @@ Variables:
   * `UID` (int) User ID.
   * `PID` (int) Process ID.
 """
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/system.py
 =======
 from __future__ import print_function
@@ -44,6 +45,8 @@ from sys import platform
 
 =======
 >>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/system.py
+=======
+>>>>>>> e3a5064b0... Auomatically format the codebase.
 import getpass
 import os
 import socket

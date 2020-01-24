@@ -17,6 +17,7 @@
 # limitations under the License.
 """Text utilities.
 """
+<<<<<<< HEAD
 <<<<<<< HEAD:labm8/py/text.py
 =======
 from __future__ import division
@@ -26,6 +27,8 @@ import networkx as nx
 >>>>>>> b755b03e9... Add a method for stripping comments.:labm8/text.py
 =======
 >>>>>>> 93b9e9242... Re-order python imports.:labm8/text.py
+=======
+>>>>>>> e3a5064b0... Auomatically format the codebase.
 import re
 import typing
 
