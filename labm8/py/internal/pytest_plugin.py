@@ -1,18 +1,4 @@
-# Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 """This module defines a pytest plugin for labm8."""
-import os
 import pathlib
 import socket
 import sys
@@ -21,11 +7,9 @@ import typing
 
 import pytest
 
-<<<<<<< HEAD:labm8/py/internal/pytest_plugin.py
+import build_info
 from labm8.py import app
 
-=======
->>>>>>> a4e1bff54... Auto-format code.:conftest.py
 # *WARNING* Flags used in this file are not defined here! They are declared in
 # //labm8/py:test.
 FLAGS = app.FLAGS
@@ -34,15 +18,8 @@ FLAGS = app.FLAGS
 
 # Note that @pytest.fixture is used here in place of @test.Fixture to break
 # a circular dependency between this file and //labm8/py:test.
-<<<<<<< HEAD:labm8/py/internal/pytest_plugin.py
-=======
 
->>>>>>> 8434bf4d8... Add //labm8/py:test wrappers for pytest functions.:conftest.py
 
-<<<<<<< HEAD:labm8/py/internal/pytest_plugin.py
-
-=======
->>>>>>> 4242aed2a... Automated code format.:conftest.py
 @pytest.fixture(scope="function")
 def tempdir() -> pathlib.Path:
   """A test fixture which yields a temporary directory."""
@@ -86,24 +63,9 @@ PLATFORM_NAMES = set("darwin linux win32".split())
 HOST_NAMES = set("diana florence".split())
 
 
-def pytest_configure(config):
-  """Programatic configuration of pytest."""
-  # Register the custom markers used by labm8.
-  config.addinivalue_line("markers", "slow")
-  config.addinivalue_line("markers", "darwin")
-  config.addinivalue_line("markers", "linux")
-  config.addinivalue_line("markers", "win32")
-  config.addinivalue_line("markers", "diana")
-  config.addinivalue_line("markers", "florence")
-
-
 def pytest_collection_modifyitems(config, items):
   """A pytest hook to modify the configuration and items to run."""
   del config
-
-  # Exit early if we have nothing to do.
-  if not items:
-    return
 
   # Fail early and verbosely if the flags cannot be accessed. This is a sign
   # that this file is being used incorrectly. To use this file, you must
@@ -119,33 +81,9 @@ def pytest_collection_modifyitems(config, items):
   this_platform = sys.platform
   this_host = socket.gethostname()
   slow_skip_marker = pytest.mark.skip(reason="Use --notest_skip_slow to run")
-<<<<<<< HEAD:labm8/py/internal/pytest_plugin.py
-
-  # Rewrite the file path determined by the pytest collector from the default
-  # relpath to an absolute path.
-  #
-  # The reason for rewriting the file path is that bazel's containerized test
-  # execution means that the location of the pytest root directory is not the
-  # same as the root directory of the sources being tested. This makes the
-  # relpaths used by pytest hard to interpret, e.g. ../../../../../phd/foo.py.
-  # Further, I don't want to set --root_dir to the real workspace root as that
-  # seems too invasive of a change to bazel's testing strategy.
-  #
-  # NOTE: Since this plugin is intended to be used only by labm8.py.test.Main(),
-  # it is assumed that all test items come from the same location, so we need
-  # only determine the "real" location of a single item.
-  #
-  # WARNING: It is unclear to me whether rewriting the location will have some
-  # unexpected sideffects for bits of pytest that depend on the location. In
-  # my experience so far, this rewriting has not caused any problems.
-  rewriten_path = os.path.abspath(items[0].location[0])
-=======
->>>>>>> 4242aed2a... Automated code format.:conftest.py
 
   for item in items:
     # TODO(cec): Skip benchmarks by default.
-
-    item.location = (rewriten_path, *item.location[1:])
 
     # Skip tests if they been marked for an incompatible platform. To mark a
     # test for a platform, wrap the test function with a decorator. Example:
@@ -158,7 +96,7 @@ def pytest_collection_modifyitems(config, items):
     supported_platforms = PLATFORM_NAMES.intersection(item.keywords)
     if supported_platforms and this_platform not in supported_platforms:
       skip_msg = f"Skipping `{item.name}` for platforms: {supported_platforms}"
-      print(skip_msg)
+      app.Log(1, skip_msg)
       item.add_marker(pytest.mark.skip(reason=skip_msg))
       continue
 
@@ -166,7 +104,7 @@ def pytest_collection_modifyitems(config, items):
     supported_hosts = HOST_NAMES.intersection(item.keywords)
     if supported_hosts and this_host not in supported_hosts:
       skip_msg = f"Skipping `{item.name}` for hosts: {supported_hosts}"
-      print(skip_msg)
+      app.Log(1, skip_msg)
       item.add_marker(pytest.mark.skip(reason=skip_msg))
       continue
 
@@ -194,11 +132,4 @@ def pytest_report_header(config) -> typing.Union[str, typing.List[str]]:
   https://docs.pytest.org/en/latest/example/simple.html#adding-info-to-test-report-header
   """
   del config
-<<<<<<< HEAD:labm8/py/internal/pytest_plugin.py
-  return (
-    f"version: {app.VERSION} {app.ARCH}\n"
-    f"{app.FormatShortBuildDescription()}"
-  )
-=======
   return f"phd: {build_info.FormatShortBuildDescription()}"
->>>>>>> 8434bf4d8... Add //labm8/py:test wrappers for pytest functions.:conftest.py
