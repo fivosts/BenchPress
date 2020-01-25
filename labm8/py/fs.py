@@ -1,8 +1,4 @@
-<<<<<<< HEAD:labm8/py/fs.py
-# Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
-=======
 # Copyright 2014-2019 Chris Cummins <chrisc.101@gmail.com>.
->>>>>>> 77b550945... Relicense labm8 under Apache 2.0.:labm8/fs.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,60 +14,19 @@
 """High level filesystem interface.
 """
 import contextlib
-<<<<<<< HEAD:labm8/py/fs.py
-<<<<<<< HEAD:labm8/py/fs.py
-=======
-import os
->>>>>>> a2a84227b... Add a lib.labm8.chdir() context manager.:lib/labm8/fs.py
-=======
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/fs.py
 import os.path
 import pathlib
 import re
 import shutil
-<<<<<<< HEAD:labm8/py/fs.py
-<<<<<<< HEAD:labm8/py/fs.py
-<<<<<<< HEAD:labm8/py/fs.py
 import tempfile
-=======
-
-import pathlib
->>>>>>> a9faa39fb... Accept str or pathlib.Path arguments to lsfiles().:lib/labm8/fs.py
 import typing
 from glob import iglob
 
-=======
-=======
-import tempfile
->>>>>>> 583709888... Move TemporaryWorkingDir() into labm8.:lib/labm8/fs.py
-import typing
-from glob import iglob
-
-<<<<<<< HEAD:labm8/py/fs.py
-from humanize import naturalsize
-<<<<<<< HEAD:labm8/py/fs.py
->>>>>>> 4d50b51ca... Add a directory_is_empty() function.:lib/labm8/fs.py
 from send2trash import send2trash
 
 from labm8.py import humanize
 from labm8.py import labtypes
 
-=======
-from phd.lib.labm8 import labtypes
-from send2trash import send2trash
-=======
-from send2trash import send2trash
-
-<<<<<<< HEAD:labm8/py/fs.py
-from labm8 import humanize
-from labm8 import labtypes
->>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/fs.py
-=======
-from labm8.py import humanize
-from labm8.py import labtypes
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/fs.py
-
->>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/fs.py
 
 class Error(Exception):
   pass
@@ -97,25 +52,6 @@ COMMONLY_IGNORED_FILE_NAMES = set(
   ]
 )
 
-<<<<<<< HEAD:labm8/py/fs.py
-# A list of file names that frequently appear in file systems that are not
-# "useful".
-COMMONLY_IGNORED_FILE_NAMES = set(
-  [
-    "._.DS_Store",
-    ".com.apple.timemachine.donotpresent",
-    ".com.apple.timemachine.supported",
-    ".DS_Store",
-    ".sync.ffs_db",
-    ".sync_timestamp.txt",
-    ".VolumeIcon.icns",
-    ".VolumeIcon.ico",
-    "autorun.inf",
-  ]
-)
-
-=======
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/fs.py
 
 def path(*components):
   """
@@ -275,25 +211,9 @@ def isdir(*components):
     return False
 
 
-<<<<<<< HEAD:labm8/py/fs.py
-<<<<<<< HEAD:labm8/py/fs.py
-<<<<<<< HEAD:labm8/py/fs.py
 def ls(
   root: typing.Union[str, pathlib.Path] = ".", abspaths=False, recursive=False,
 ):
-=======
-def ls(root: typing.Union[str, pathlib.Path] = ".", abspaths=False,
-=======
-def ls(root: typing.Union[str, pathlib.Path] = ".",
-       abspaths=False,
->>>>>>> 150d66672... Auto format files.:labm8/fs.py
-       recursive=False):
->>>>>>> 65a5cab7a... Add pathlib.Path to fs.ls() type annotation.:lib/labm8/fs.py
-=======
-def ls(
-  root: typing.Union[str, pathlib.Path] = ".", abspaths=False, recursive=False,
-):
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/fs.py
   """
   Return a list of files in directory.
 
@@ -328,26 +248,9 @@ def ls(
 
   def _expand_subdirs(file):
     if isdir(path(root, file)):
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/fs.py
-<<<<<<< HEAD:labm8/py/fs.py
       return [file,] + [
         path(file, x) for x in ls(path(root, file), recursive=True)
       ]
-=======
-      return [file
-             ] + [path(file, x) for x in ls(path(root, file), recursive=True)]
->>>>>>> 150d66672... Auto format files.:labm8/fs.py
-=======
-      return [
-          file,
-      ] + [path(file, x) for x in ls(path(root, file), recursive=True)]
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/fs.py
-=======
-      return [file,] + [
-        path(file, x) for x in ls(path(root, file), recursive=True)
-      ]
->>>>>>> 4242aed2a... Automated code format.
     else:
       return [file]
 
@@ -562,23 +465,11 @@ def read(*components, **kwargs):
 
   # Multiple definitions to handle all cases.
   if ignore_comments:
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/fs.py
     comment_line_re = re.compile(r"^\s*{char}".format(char=comment_char))
     not_comment_re = re.compile(r"[^{char}]+".format(char=comment_char))
-=======
-    comment_line_re = re.compile('^\s*{char}'.format(char=comment_char))
-    not_comment_re = re.compile('[^{char}]+'.format(char=comment_char))
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/fs.py
-=======
-    comment_line_re = re.compile("^\s*{char}".format(char=comment_char))
-    not_comment_re = re.compile("[^{char}]+".format(char=comment_char))
->>>>>>> 4242aed2a... Automated code format.
 
     if rstrip:
       # Ignore comments, and right strip results.
-<<<<<<< HEAD:labm8/py/fs.py
-<<<<<<< HEAD:labm8/py/fs.py
       return [
         re.match(not_comment_re, line).group(0).rstrip()
         for line in lines
@@ -591,28 +482,6 @@ def read(*components, **kwargs):
         for line in lines
         if not re.match(comment_line_re, line)
       ]
-=======
-      return [re.match(not_comment_re, line).group(0).rstrip() for line in lines
-              if not re.match(comment_line_re, line)]
-    else:
-      # Ignore comments, and don't strip results.
-      return [re.match(not_comment_re, line).group(0) for line in lines if
-              not re.match(comment_line_re, line)]
->>>>>>> 4d50b51ca... Add a directory_is_empty() function.:lib/labm8/fs.py
-=======
-      return [
-        re.match(not_comment_re, line).group(0).rstrip()
-        for line in lines
-        if not re.match(comment_line_re, line)
-      ]
-    else:
-      # Ignore comments, and don't strip results.
-      return [
-        re.match(not_comment_re, line).group(0)
-        for line in lines
-        if not re.match(comment_line_re, line)
-      ]
->>>>>>> 150d66672... Auto format files.:labm8/fs.py
   elif rstrip:
     # No comments, and right strip results.
     return [line.rstrip() for line in lines]
@@ -641,49 +510,11 @@ def du(*components, **kwargs):
     raise Error("file '{}' not found".format(_path))
   size = os.stat(_path).st_size
   if human_readable:
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/fs.py
     return humanize.BinaryPrefix(size, "B")
-=======
-    return humanize.BinaryPrefix(size, 'B')
->>>>>>> 5feb1d004... Replace third party humanize with own module.:labm8/fs.py
-=======
-    return humanize.BinaryPrefix(size, "B")
->>>>>>> 4242aed2a... Automated code format.
   else:
     return size
 
 
-<<<<<<< HEAD:labm8/py/fs.py
-<<<<<<< HEAD:labm8/py/fs.py
-=======
-def write_file(path, contents):
-  """
-  Write string to file.
-
-  Arguments:
-      path (str): Destination.
-      contents (str): Contents.
-  """
-  with mkopen(path, 'w') as outfile:
-    outfile.write(contents)
-
-
-def read_file(path: typing.Union[str, pathlib.Path]):
-  """
-  Read file to string.
-
-  Arguments:
-      path (str): Source.
-  """
-  with open(must_exist(path)) as infile:
-    r = infile.read()
-  return r
-
-
->>>>>>> a52f8ef5b... Work in progress on report generator.:labm8/fs.py
-=======
->>>>>>> 4a549fc58... New methods for fs module.:labm8/fs.py
 def files_from_list(*paths):
   """
   Return a list of all file paths from a list of files or directories.
@@ -728,10 +559,6 @@ def directory_is_empty(directory: pathlib.Path) -> bool:
     if subdirs or files:
       return False
   return True
-<<<<<<< HEAD:labm8/py/fs.py
-<<<<<<< HEAD:labm8/py/fs.py
-=======
->>>>>>> a2a84227b... Add a lib.labm8.chdir() context manager.:lib/labm8/fs.py
 
 
 @contextlib.contextmanager
@@ -754,26 +581,10 @@ def chdir(directory: typing.Union[str, pathlib.Path]) -> pathlib.Path:
     yield pathlib.Path(directory)
   finally:
     os.chdir(str(previous_directory))
-<<<<<<< HEAD:labm8/py/fs.py
-<<<<<<< HEAD:labm8/py/fs.py
 
 
 @contextlib.contextmanager
 def TemporaryWorkingDir(prefix: str = "phd_") -> pathlib.Path:
-=======
-
-
-@contextlib.contextmanager
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/fs.py
-def TemporaryWorkingDir(prefix: str = None) -> pathlib.Path:
->>>>>>> 583709888... Move TemporaryWorkingDir() into labm8.:lib/labm8/fs.py
-=======
-def TemporaryWorkingDir(prefix: str = 'phd_') -> pathlib.Path:
->>>>>>> 809f924cd... Set a default working directory prefix.:lib/labm8/fs.py
-=======
-def TemporaryWorkingDir(prefix: str = "phd_") -> pathlib.Path:
->>>>>>> 4242aed2a... Automated code format.
   """A context manager which provides a temporary working directory.
 
   This creates an empty temporary directory, and changes the current working
@@ -786,10 +597,6 @@ def TemporaryWorkingDir(prefix: str = "phd_") -> pathlib.Path:
   Returns:
     The directory which has been changed to.
   """
-<<<<<<< HEAD:labm8/py/fs.py
-<<<<<<< HEAD:labm8/py/fs.py
-=======
->>>>>>> 7ab76a6e5... Catch error when changing to a temporary dir.:lib/labm8/fs.py
   # getcwd() will raise FileNotFoundError if the current workind directory
   # does not exist.
   old_directory = None
@@ -798,7 +605,6 @@ def TemporaryWorkingDir(prefix: str = "phd_") -> pathlib.Path:
   except FileNotFoundError:
     pass
   # Create a temporary directory, change to it, and return the path to the user.
-<<<<<<< HEAD:labm8/py/fs.py
   with tempfile.TemporaryDirectory(prefix=prefix) as d:
     os.chdir(d)
     yield pathlib.Path(d)
@@ -954,174 +760,3 @@ def TemporaryFileWithContents(contents: bytes, **kwargs):
   temporary_file.flush()
   yield temporary_file
   temporary_file.close()
-=======
->>>>>>> 4d50b51ca... Add a directory_is_empty() function.:lib/labm8/fs.py
-=======
->>>>>>> a2a84227b... Add a lib.labm8.chdir() context manager.:lib/labm8/fs.py
-=======
-  old_directory = os.getcwd()
-  with tempfile.TemporaryDirectory(prefix=prefix) as d:
-    os.chdir(d)
-    yield pathlib.Path(d)
-  os.chdir(old_directory)
->>>>>>> 583709888... Move TemporaryWorkingDir() into labm8.:lib/labm8/fs.py
-=======
-  with tempfile.TemporaryDirectory(prefix=prefix) as d:
-    os.chdir(d)
-    yield pathlib.Path(d)
-  # Return to previous working directory, if there was one.
-  if old_directory:
-    os.chdir(old_directory)
-<<<<<<< HEAD:labm8/py/fs.py
->>>>>>> 7ab76a6e5... Catch error when changing to a temporary dir.:lib/labm8/fs.py
-=======
-
-
-def Read(filename: typing.Union[str, pathlib.Path]) -> str:
-  """Read entire contents of file with name 'filename'."""
-  with open(filename) as fp:
-    return fp.read()
-
-
-def Write(
-  filename: typing.Union[str, pathlib.Path],
-  contents: bytes,
-  overwrite_existing: bool = True,
-  mode: int = 0o0666,
-  gid: int = None,
-) -> pathlib.Path:
-  """Create a file 'filename' with 'contents', with the mode given in 'mode'.
-
-  The 'mode' is modified by the umask, as in open(2).  If
-  'overwrite_existing' is False, the file will be opened in O_EXCL mode.
-  An optional gid can be specified.
-
-  Args:
-    filename: the name of the file
-    contents: the data to write to the file
-    overwrite_existing: whether or not to allow the write if the file
-      already exists
-    mode: permissions with which to create the file (default is 0666 octal)
-    gid: group id with which to create the file
-  """
-  # Adapted from <https://github.com/google/google-apputils>.
-  # Copyright 2007 Google Inc. All Rights Reserved.
-  #
-  # Licensed under the Apache License, Version 2.0 (the "License");
-  # you may not use this file except in compliance with the License.
-  # You may obtain a copy of the License at
-  #
-  #      http://www.apache.org/licenses/LICENSE-2.0
-  #
-  # Unless required by applicable law or agreed to in writing, software
-  # distributed under the License is distributed on an "AS-IS" BASIS,
-  # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  # See the License for the specific language governing permissions and
-  # limitations under the License.
-  flags = os.O_WRONLY | os.O_TRUNC | os.O_CREAT
-  if not overwrite_existing:
-    flags |= os.O_EXCL
-  fd = os.open(filename, flags, mode)
-  try:
-    os.write(fd, contents)
-  finally:
-    os.close(fd)
-  if gid is not None:
-    os.chown(filename, -1, gid)
-  return pathlib.Path(filename)
-
-
-def AtomicWrite(
-  filename: typing.Union[str, pathlib.Path],
-  contents: bytes,
-  mode: int = 0o0666,
-  gid: int = None,
-) -> None:
-  """Create a file 'filename' with 'contents' atomically.
-
-  As in Write, 'mode' is modified by the umask.  This creates and moves
-  a temporary file, and errors doing the above will be propagated normally,
-  though it will try to clean up the temporary file in that case.
-  This is very similar to the prodlib function with the same name.
-  An optional gid can be specified.
-
-  Args:
-    filename: the name of the file
-    contents: the data to write to the file
-    mode: permissions with which to create the file (default is 0666 octal)
-    gid: group id with which to create the file
-  """
-  # Adapted from <https://github.com/google/google-apputils>.
-  # Copyright 2007 Google Inc. All Rights Reserved.
-  #
-  # Licensed under the Apache License, Version 2.0 (the "License");
-  # you may not use this file except in compliance with the License.
-  # You may obtain a copy of the License at
-  #
-  #      http://www.apache.org/licenses/LICENSE-2.0
-  #
-  # Unless required by applicable law or agreed to in writing, software
-  # distributed under the License is distributed on an "AS-IS" BASIS,
-  # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  # See the License for the specific language governing permissions and
-  # limitations under the License.
-  fd, tmp_filename = tempfile.mkstemp(dir=os.path.dirname(filename))
-  try:
-    os.write(fd, contents)
-  finally:
-    os.close(fd)
-  try:
-    os.chmod(tmp_filename, mode)
-    if gid is not None:
-      os.chown(tmp_filename, -1, gid)
-    os.rename(tmp_filename, filename)
-  except OSError as exc:
-    try:
-      os.remove(tmp_filename)
-    except OSError as e:
-      exc = OSError("%s. Additional errors cleaning up: %s" % (exc, e))
-    raise exc
-
-
-@contextlib.contextmanager
-def TemporaryFileWithContents(contents: bytes, **kwargs):
-  """A contextmanager that writes out a string to a file on disk.
-
-  This is useful whenever you need to call a function or command that expects a
-  file on disk with some contents that you have in memory. The context manager
-  abstracts the writing, flushing, and deletion of the temporary file. This is a
-  common idiom that boils down to a single with statement.
-  Note:  if you need a temporary file-like object for calling an internal
-  function, you should use a StringIO as a file-like object and not this.
-  Temporary files should be avoided unless you need a file name or contents in a
-  file on disk to be read by some other function or program.
-
-  Args:
-    contents: a string with the contents to write to the file.
-    **kwargs: Optional arguments passed on to tempfile.NamedTemporaryFile.
-
-  Yields:
-    The temporary file object, opened in 'w' mode.
-  """
-  # Adapted from <https://github.com/google/google-apputils>.
-  # Copyright 2007 Google Inc. All Rights Reserved.
-  #
-  # Licensed under the Apache License, Version 2.0 (the "License");
-  # you may not use this file except in compliance with the License.
-  # You may obtain a copy of the License at
-  #
-  #      http://www.apache.org/licenses/LICENSE-2.0
-  #
-  # Unless required by applicable law or agreed to in writing, software
-  # distributed under the License is distributed on an "AS-IS" BASIS,
-  # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  # See the License for the specific language governing permissions and
-  # limitations under the License.
-  if not kwargs.get("prefix"):
-    kwargs["prefix"] = "phd_tempfile_with_contents_"
-  temporary_file = tempfile.NamedTemporaryFile(**kwargs)
-  temporary_file.write(contents)
-  temporary_file.flush()
-  yield temporary_file
-  temporary_file.close()
->>>>>>> 6bd7b82fb... Add fs.TemporaryFileWithContents().:labm8/fs.py
