@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import print_function
+
 import shutil
 from hashlib import sha1
 from optparse import OptionParser
@@ -29,23 +31,10 @@ from zipfile import ZipFile
 from util import hash_file
 from util import resolve_url
 
-<<<<<<< HEAD:third_party/bazel/download_file.py
-<<<<<<< HEAD:third_party/bazel/download_file.py
 
 GERRIT_HOME = path.expanduser("~/.gerritcodereview")
 CACHE_DIR = path.join(GERRIT_HOME, "bazel-cache", "downloaded-artifacts")
 LOCAL_PROPERTIES = "local.properties"
-<<<<<<< HEAD:third_party/bazel/download_file.py
-=======
-=======
-
->>>>>>> 7ba69fee7... XXX:tools/download_file.py
-GERRIT_HOME = path.expanduser('~/.gerritcodereview')
-CACHE_DIR = path.join(GERRIT_HOME, 'bazel-cache', 'downloaded-artifacts')
-LOCAL_PROPERTIES = 'local.properties'
->>>>>>> 5fb74eaea... Auto format files.:tools/download_file.py
-=======
->>>>>>> 4242aed2a... Automated code format.:tools/download_file.py
 
 
 def safe_mkdirs(d):
@@ -112,34 +101,15 @@ if not path.exists(cache_ent):
     safe_mkdirs(path.dirname(cache_ent))
   except OSError as err:
     print(
-<<<<<<< HEAD:third_party/bazel/download_file.py
-<<<<<<< HEAD:third_party/bazel/download_file.py
       "error creating directory %s: %s" % (path.dirname(cache_ent), err),
       file=stderr,
     )
-=======
-        'error creating directory %s: %s' % (path.dirname(cache_ent), err),
-        file=stderr)
->>>>>>> 5fb74eaea... Auto format files.:tools/download_file.py
-=======
-      "error creating directory %s: %s" % (path.dirname(cache_ent), err),
-      file=stderr,
-    )
->>>>>>> 4242aed2a... Automated code format.:tools/download_file.py
     exit(1)
   print("Download %s" % src_url, file=stderr)
   try:
     check_call(["curl", "--proxy-anyauth", "-ksSfLo", cache_ent, src_url])
   except OSError as err:
-<<<<<<< HEAD:third_party/bazel/download_file.py
-<<<<<<< HEAD:third_party/bazel/download_file.py
     print("could not invoke curl: %s\nis curl installed?" % err, file=stderr)
-=======
-    print('could not invoke curl: %s\nis curl installed?' % err, file=stderr)
->>>>>>> 5fb74eaea... Auto format files.:tools/download_file.py
-=======
-    print("could not invoke curl: %s\nis curl installed?" % err, file=stderr)
->>>>>>> 4242aed2a... Automated code format.:tools/download_file.py
     exit(1)
   except CalledProcessError as err:
     print("error using curl: %s" % err, file=stderr)
@@ -148,20 +118,9 @@ if args.v:
   have = hash_file(sha1(), cache_ent).hexdigest()
   if args.v != have:
     print(
-<<<<<<< HEAD:third_party/bazel/download_file.py
-<<<<<<< HEAD:third_party/bazel/download_file.py
       ("%s:\n" + "expected %s\n" + "received %s\n") % (src_url, args.v, have),
       file=stderr,
     )
-=======
-        ('%s:\n' + 'expected %s\n' + 'received %s\n') % (src_url, args.v, have),
-        file=stderr)
->>>>>>> 5fb74eaea... Auto format files.:tools/download_file.py
-=======
-      ("%s:\n" + "expected %s\n" + "received %s\n") % (src_url, args.v, have),
-      file=stderr,
-    )
->>>>>>> 4242aed2a... Automated code format.:tools/download_file.py
     try:
       remove(cache_ent)
     except OSError as err:
@@ -184,15 +143,7 @@ if args.unsign:
   try:
     with ZipFile(cache_ent, "r") as zf:
       for n in zf.namelist():
-<<<<<<< HEAD:third_party/bazel/download_file.py
-<<<<<<< HEAD:third_party/bazel/download_file.py
         if n.endswith(".RSA") or n.endswith(".SF") or n.endswith(".LIST"):
-=======
-        if (n.endswith('.RSA') or n.endswith('.SF') or n.endswith('.LIST')):
->>>>>>> 5fb74eaea... Auto format files.:tools/download_file.py
-=======
-        if n.endswith(".RSA") or n.endswith(".SF") or n.endswith(".LIST"):
->>>>>>> 4242aed2a... Automated code format.:tools/download_file.py
           exclude.append(n)
   except (BadZipfile, LargeZipFile) as err:
     print("error opening %s: %s" % (cache_ent, err), file=stderr)
