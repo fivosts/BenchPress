@@ -1,8 +1,4 @@
-<<<<<<< HEAD:labm8/py/crypto.py
 # Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
-=======
-# Copyright 2014-2019 Chris Cummins <chrisc.101@gmail.com>.
->>>>>>> 77b550945... Relicense labm8 under Apache 2.0.:labm8/crypto.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,15 +32,7 @@ def _checksum_list(hash_fn, *elems):
 
 
 def _checksum_file(hash_fn, path: typing.Union[str, pathlib.Path]):
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/crypto.py
   with open(path, "rb") as infile:
-=======
-  with open(path, 'rb') as infile:
->>>>>>> 0cc901c09... Type hint for X_file() functions.:lib/labm8/crypto.py
-=======
-  with open(path, "rb") as infile:
->>>>>>> 4242aed2a... Automated code format.
     ret = _checksum(hash_fn, infile.read())
   return ret
 

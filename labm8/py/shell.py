@@ -1,8 +1,4 @@
-<<<<<<< HEAD:labm8/py/shell.py
 # Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
-=======
-# Copyright 2014-2019 Chris Cummins <chrisc.101@gmail.com>.
->>>>>>> 77b550945... Relicense labm8 under Apache 2.0.:labm8/shell.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,20 +14,9 @@
 """Utility code for working with shells."""
 import os
 
-<<<<<<< HEAD:labm8/py/shell.py
-=======
 
-<<<<<<< HEAD:labm8/py/shell.py
->>>>>>> 13ac44cd6... Add missing shell module.:labm8/shell.py
-
-=======
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/shell.py
 class ShellEscapeCodes(object):
   """Shell escape codes for pretty-printing."""
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/shell.py
-=======
->>>>>>> 4242aed2a... Automated code format.
 
   PURPLE = "\033[95m"
   CYAN = "\033[96m"
@@ -43,21 +28,6 @@ class ShellEscapeCodes(object):
   BOLD = "\033[1m"
   UNDERLINE = "\033[4m"
   END = "\033[0m"
-<<<<<<< HEAD
-=======
-  PURPLE = '\033[95m'
-  CYAN = '\033[96m'
-  DARKCYAN = '\033[36m'
-  BLUE = '\033[94m'
-  GREEN = '\033[92m'
-  YELLOW = '\033[93m'
-  RED = '\033[91m'
-  BOLD = '\033[1m'
-  UNDERLINE = '\033[4m'
-  END = '\033[0m'
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/shell.py
-=======
->>>>>>> 4242aed2a... Automated code format.
 
 
 def ShellEscapeList(words):

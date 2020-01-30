@@ -1,8 +1,4 @@
-<<<<<<< HEAD:labm8/py/cache.py
 # Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
-=======
-# Copyright 2014-2019 Chris Cummins <chrisc.101@gmail.com>.
->>>>>>> 77b550945... Relicense labm8 under Apache 2.0.:labm8/cache.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,47 +13,16 @@
 # limitations under the License.
 """Transient and persistent caching mechanisms."""
 import atexit
-<<<<<<< HEAD:labm8/py/cache.py
-<<<<<<< HEAD:labm8/py/cache.py
 import json
 import pathlib
 import re
-<<<<<<< HEAD:labm8/py/cache.py
-<<<<<<< HEAD:labm8/py/cache.py
 import typing
 
-=======
-
-=======
->>>>>>> ba3258224... Annotate cache return types.:lib/labm8/cache.py
-import json
-import pathlib
-import re
-<<<<<<< HEAD:labm8/py/cache.py
->>>>>>> 430bf6988... Only read JSON cache if file contains something.:lib/labm8/cache.py
-=======
-import typing
-
->>>>>>> ba3258224... Annotate cache return types.:lib/labm8/cache.py
 import six
 
 from labm8.py import crypto
 from labm8.py import fs
 from labm8.py import io
-<<<<<<< HEAD:labm8/py/cache.py
-=======
-import six
-=======
->>>>>>> 1eed6e90b... Automated code format.:lib/labm8/cache.py
-import typing
-
-import six
-from phd.lib.labm8 import crypto
-from phd.lib.labm8 import fs
-from phd.lib.labm8 import io
->>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/cache.py
-=======
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/cache.py
 
 
 # TODO(cec): Remove type hints on base Cache, place them on FSCache.
@@ -223,15 +188,7 @@ class JsonCache(TransientCache):
     super(JsonCache, self).__init__()
     self.path = fs.abspath(path)
 
-<<<<<<< HEAD:labm8/py/cache.py
-<<<<<<< HEAD:labm8/py/cache.py
     if fs.exists(self.path) and fs.Read(self.path):
-=======
-    if fs.exists(self.path) and fs.read_file(self.path):
->>>>>>> 430bf6988... Only read JSON cache if file contains something.:lib/labm8/cache.py
-=======
-    if fs.exists(self.path) and fs.Read(self.path):
->>>>>>> 4a549fc58... New methods for fs module.:labm8/cache.py
       io.debug(("Loading cache '{0}'".format(self.path)))
       with open(self.path) as file:
         self._data = json.load(file)
@@ -248,33 +205,10 @@ class JsonCache(TransientCache):
     Write contents of cache to disk.
     """
     io.debug("Storing cache '{0}'".format(self.path))
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/cache.py
     with open(self.path, "w") as file:
-<<<<<<< HEAD:labm8/py/cache.py
-      json.dump(
-<<<<<<< HEAD:labm8/py/cache.py
-        self._data, file, sort_keys=True, indent=2, separators=(",", ": "),
-      )
-=======
-          self._data, file, sort_keys=True, indent=2, separators=(',', ': '))
->>>>>>> 105797fd4... Auto format files.:labm8/cache.py
-=======
-      json.dump(self._data,
-                file,
-                sort_keys=True,
-                indent=2,
-                separators=(',', ': '))
->>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/cache.py
-=======
-    with open(self.path, 'w') as file:
-=======
-    with open(self.path, "w") as file:
->>>>>>> 4242aed2a... Automated code format.
       json.dump(
         self._data, file, sort_keys=True, indent=2, separators=(",", ": "),
       )
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/cache.py
 
 
 def hash_key(key):

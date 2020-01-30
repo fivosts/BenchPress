@@ -1,8 +1,4 @@
-<<<<<<< HEAD:labm8/py/text.py
 # Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
-=======
-# Copyright 2014-2019 Chris Cummins <chrisc.101@gmail.com>.
->>>>>>> 77b550945... Relicense labm8 under Apache 2.0.:labm8/text.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,18 +13,6 @@
 # limitations under the License.
 """Text utilities.
 """
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/text.py
-=======
-from __future__ import division
-
-<<<<<<< HEAD:labm8/py/text.py
-import networkx as nx
->>>>>>> b755b03e9... Add a method for stripping comments.:labm8/text.py
-=======
->>>>>>> 93b9e9242... Re-order python imports.:labm8/text.py
-=======
->>>>>>> e3a5064b0... Auomatically format the codebase.
 import re
 import typing
 
@@ -92,15 +76,7 @@ def truncate(string, maxchar):
   if len(string) <= maxchar:
     return string
   else:
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/text.py
     return string[: maxchar - 3] + "..."
-=======
-    return string[:maxchar - 3] + '...'
->>>>>>> 71f0f800d... Replace double quotes with single.:labm8/text.py
-=======
-    return string[: maxchar - 3] + "..."
->>>>>>> 4242aed2a... Automated code format.
 
 
 def levenshtein(s1, s2):
@@ -288,8 +264,6 @@ def AutoCompletePrefix(prefix: str, trie: nx.DiGraph) -> typing.Set[str]:
 
 
 def CamelCapsToUnderscoreSeparated(camel_caps_str: str):
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/text.py
   components = re.findall("[A-Z][^A-Z]*", camel_caps_str)
   assert components
   return "_".join(x.lower() for x in components)
@@ -312,41 +286,3 @@ def StripSingleLineComments(
   comment_re = re.compile(f"{start_comment_re}.*")
   lines = [comment_re.sub("", line) for line in string.split("\n")]
   return "\n".join(lines)
-=======
-  components = re.findall('[A-Z][^A-Z]*', camel_caps_str)
-  assert components
-  return '_'.join(x.lower() for x in components)
-<<<<<<< HEAD:labm8/py/text.py
->>>>>>> 13a6740d9... Restructure static features and add dynamic.:labm8/text.py
-=======
-=======
-  components = re.findall("[A-Z][^A-Z]*", camel_caps_str)
-  assert components
-  return "_".join(x.lower() for x in components)
->>>>>>> 4242aed2a... Automated code format.
-
-
-def StripSingleLineComments(
-  string: str, start_comment_re: str = "(#|//)",
-) -> str:
-  """Strip line comments from a string.
-
-  Args:
-    string: The string to strip the comments of.
-    start_comment_re: The regular expression to match the start of a line
-      comment. By default, this matches Bash-style '#' and C-style '//'
-      comments.
-
-  Returns:
-    The string.
-  """
-<<<<<<< HEAD
-  comment_re = re.compile(f'{start_comment_re}.*')
-  lines = [comment_re.sub('', line) for line in string.split('\n')]
-  return '\n'.join(lines)
->>>>>>> b755b03e9... Add a method for stripping comments.:labm8/text.py
-=======
-  comment_re = re.compile(f"{start_comment_re}.*")
-  lines = [comment_re.sub("", line) for line in string.split("\n")]
-  return "\n".join(lines)
->>>>>>> 4242aed2a... Automated code format.

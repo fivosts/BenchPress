@@ -1,8 +1,4 @@
-<<<<<<< HEAD:labm8/py/system.py
 # Copyright 2014-2020 Chris Cummins <chrisc.101@gmail.com>.
-=======
-# Copyright 2014-2019 Chris Cummins <chrisc.101@gmail.com>.
->>>>>>> 77b550945... Relicense labm8 under Apache 2.0.:labm8/system.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,30 +19,6 @@ Variables:
   * `UID` (int) User ID.
   * `PID` (int) Process ID.
 """
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/system.py
-=======
-from __future__ import print_function
-
-<<<<<<< HEAD:labm8/py/system.py
-<<<<<<< HEAD:labm8/py/system.py
-<<<<<<< HEAD:labm8/py/system.py
-import os
-
->>>>>>> c774253ad... Add a function to process a file in place.:lib/labm8/system.py
-=======
->>>>>>> 1eed6e90b... Automated code format.:lib/labm8/system.py
-import getpass
-=======
->>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/system.py
-import os
-import sys
-from sys import platform
-
-=======
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/system.py
-=======
->>>>>>> e3a5064b0... Auomatically format the codebase.
 import getpass
 import os
 import socket
@@ -55,48 +27,11 @@ import sys
 import tempfile
 import threading
 import typing
-<<<<<<< HEAD:labm8/py/system.py
-<<<<<<< HEAD:labm8/py/system.py
-<<<<<<< HEAD:labm8/py/system.py
-<<<<<<< HEAD:labm8/py/system.py
 from sys import platform
 
-<<<<<<< HEAD:labm8/py/system.py
 from labm8.py import app
 from labm8.py import fs
-=======
-from phd.lib.labm8 import fs
->>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/system.py
-=======
-from phd.lib.labm8 import fs
-from sys import platform
 
-<<<<<<< HEAD:labm8/py/system.py
->>>>>>> c774253ad... Add a function to process a file in place.:lib/labm8/system.py
-=======
-from sys import platform
-=======
->>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/system.py
-=======
-from sys import platform
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/system.py
-
-<<<<<<< HEAD:labm8/py/system.py
-<<<<<<< HEAD:labm8/py/system.py
-from phd.lib.labm8 import fs
-=======
-from labm8 import app
-from labm8 import fs
->>>>>>> 49db6d347... Add a CheckCallOrDie() utility function.:labm8/system.py
-
->>>>>>> 1eed6e90b... Automated code format.:lib/labm8/system.py
-=======
-from labm8.py import app
-from labm8.py import fs
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/system.py
-
-=======
->>>>>>> 150d66672... Auto format files.:labm8/system.py
 HOSTNAME = socket.gethostname()
 USERNAME = getpass.getuser()
 UID = os.getuid()
@@ -159,8 +94,6 @@ class Subprocess(object):
   force a timeout after a number of seconds have elapsed.
   """
 
-<<<<<<< HEAD:labm8/py/system.py
-<<<<<<< HEAD:labm8/py/system.py
   def __init__(
     self,
     cmd,
@@ -169,24 +102,6 @@ class Subprocess(object):
     stderr=subprocess.PIPE,
     decode_out=True,
   ):
-=======
-  def __init__(self,
-               cmd,
-               shell=False,
-               stdout=subprocess.PIPE,
-               stderr=subprocess.PIPE,
-               decode_out=True):
->>>>>>> 150d66672... Auto format files.:labm8/system.py
-=======
-  def __init__(
-    self,
-    cmd,
-    shell=False,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    decode_out=True,
-  ):
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/system.py
     """
     Create a new subprocess.
     """
@@ -214,35 +129,12 @@ class Subprocess(object):
     """
 
     def target():
-<<<<<<< HEAD:labm8/py/system.py
-<<<<<<< HEAD:labm8/py/system.py
-      self.process = subprocess.Popen(
-<<<<<<< HEAD:labm8/py/system.py
-        self.cmd,
-        stdout=self.stdout_dest,
-        stderr=self.stderr_dest,
-        shell=self.shell,
-      )
-=======
-          self.cmd,
-          stdout=self.stdout_dest,
-          stderr=self.stderr_dest,
-          shell=self.shell)
->>>>>>> 150d66672... Auto format files.:labm8/system.py
-=======
-      self.process = subprocess.Popen(self.cmd,
-                                      stdout=self.stdout_dest,
-                                      stderr=self.stderr_dest,
-                                      shell=self.shell)
->>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/system.py
-=======
       self.process = subprocess.Popen(
         self.cmd,
         stdout=self.stdout_dest,
         stderr=self.stderr_dest,
         shell=self.shell,
       )
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/system.py
       stdout, stderr = self.process.communicate()
 
       # Decode output if the user wants, and if there is any.
@@ -261,21 +153,8 @@ class Subprocess(object):
         self.process.terminate()
         thread.join()
         raise SubprocessError(
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/system.py
-<<<<<<< HEAD:labm8/py/system.py
           ("Reached timeout after {t} seconds".format(t=timeout)),
         )
-=======
-            ("Reached timeout after {t} seconds".format(t=timeout)))
->>>>>>> 150d66672... Auto format files.:labm8/system.py
-=======
-            ('Reached timeout after {t} seconds'.format(t=timeout)),)
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/system.py
-=======
-          ("Reached timeout after {t} seconds".format(t=timeout)),
-        )
->>>>>>> 4242aed2a... Automated code format.
     else:
       thread.join()
 
@@ -417,58 +296,6 @@ def which(program, path=None):
   return None
 
 
-<<<<<<< HEAD:labm8/py/system.py
-<<<<<<< HEAD:labm8/py/system.py
-=======
-def scp(host, src, dst, user=None, path=None):
-  """
-  Copy a file or directory from a remote location.
-
-  A thin wrapper around the scp (1) system command.
-
-  If the destination already exists, this will attempt to overwrite
-  it.
-
-  Arguments:
-
-      host (str): name of the host
-      src (str): path to the source file or directory.
-      dst (str): path to the destination file or directory.
-      user (str, optional): Alternative username for remote access.
-        If not provided, the default scp behaviour is used.
-      path (str, optional): Directory containing scp command. If not
-        provided, attempt to locate scp using which().
-
-  Raises:
-
-      CommandNotFoundError: If scp binary not found.
-      IOError: if transfer fails.
-  """
-  # Create the first argument.
-  if user is None:
-    arg = "{host}:{path}".format(host=host, path=src)
-  else:
-    arg = "{user}@{host}:{path}".format(user=user, host=host, path=src)
-
-  # Get path to scp binary.
-  scp_bin = which("scp", path=(path,))
-  if scp_bin is None:
-    raise CommandNotFoundError("Could not find scp in '{0}'".format(path))
-
-  # Run system "scp" command.
-  ret, out, err = run([
-      scp_bin, "-o", "StrictHostKeyChecking=no", "-o",
-      "UserKnownHostsFile=/dev/null", arg, dst
-  ])
-
-  # Check return code for error.
-  if ret:
-    raise ScpError(out, err)
-
-
->>>>>>> 150d66672... Auto format files.:labm8/system.py
-=======
->>>>>>> bb562b8d7... Refresh labm8 for new deps.:labm8/system.py
 def isprocess(pid, error=False):
   """
   Check that a process is running.
@@ -501,7 +328,6 @@ def exit(status=0):
   sys.exit(status)
 
 
-<<<<<<< HEAD:labm8/py/system.py
 def ProcessFileAndReplace(
   path: str,
   process_file_callback: typing.Callable[[str, str], None],
@@ -534,7 +360,6 @@ def ProcessFileAndReplace(
         os.unlink(tmp_path)
 
 
-<<<<<<< HEAD:labm8/py/system.py
 def CheckCallOrDie(cmd: typing.List[str]) -> None:
   """Run the given command and exit fatally on error."""
   try:
@@ -544,79 +369,3 @@ def CheckCallOrDie(cmd: typing.List[str]) -> None:
     app.FatalWithoutStackTrace(
       "Command: `%s` failed with error: %s", " ".join(cmd), e,
     )
-=======
-  Returns:
-      bool: True if Python >= 3, else False.
-  """
-  return sys.version_info >= (3, 0)
-
-
-=======
->>>>>>> 3c71c9838... Remove python 3 checks.:labm8/system.py
-def ProcessFileAndReplace(
-<<<<<<< HEAD
-    path: str,
-    process_file_callback: typing.Callable[[str, str], None],
-<<<<<<< HEAD:labm8/py/system.py
-    tempfile_prefix: str = 'phd_lib_labm8_system_',
-    tempfile_suffix: str = None) -> None:
-=======
-    tempfile_prefix: str = 'labm8_system_',
-    tempfile_suffix: str = None,
-=======
-  path: str,
-  process_file_callback: typing.Callable[[str, str], None],
-  tempfile_prefix: str = "labm8_system_",
-  tempfile_suffix: str = None,
->>>>>>> 4242aed2a... Automated code format.
-) -> None:
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/system.py
-  """Process a file and replace with the generated file.
-
-  This function provides the functionality of inplace file modification for
-  functions which take an input file and produce an output file. It does this
-  by creating a temporary file which, if the function returns successfully (i.e.
-  without exception), will overwrite the original file.
-
-  Args:
-    path: The path of the file to process inplace.
-    process_file_callback: A function which takes two arguments - the path of
-      an input file, and the path of an output file.
-    tempfile_prefix: An optional name prefix for the temporary file.
-    tempfile_suffix: An optional name suffix for the temporary file.
-  """
-  with tempfile.NamedTemporaryFile(
-    prefix=tempfile_prefix, suffix=tempfile_suffix, delete=False,
-  ) as f:
-    tmp_path = f.name
-    try:
-      process_file_callback(path, tmp_path)
-      os.rename(tmp_path, path)
-    finally:
-      if os.path.isfile(tmp_path):
-        os.unlink(tmp_path)
-<<<<<<< HEAD:labm8/py/system.py
->>>>>>> c774253ad... Add a function to process a file in place.:lib/labm8/system.py
-=======
-
-
-def CheckCallOrDie(cmd: typing.List[str]) -> None:
-  """Run the given command and exit fatally on error."""
-  try:
-    app.Log(2, "$ %s", " ".join(cmd))
-    subprocess.check_call(cmd)
-  except subprocess.CalledProcessError as e:
-<<<<<<< HEAD:labm8/py/system.py
-<<<<<<< HEAD:labm8/py/system.py
-    app.FatalWithoutStackTrace(
-        "Command: `%s` failed with error: %s", ' '.join(cmd), e)
->>>>>>> 49db6d347... Add a CheckCallOrDie() utility function.:labm8/system.py
-=======
-    app.FatalWithoutStackTrace("Command: `%s` failed with error: %s",
-                               ' '.join(cmd), e)
->>>>>>> a4e1bff54... Auto-format code.:labm8/system.py
-=======
-    app.FatalWithoutStackTrace(
-      "Command: `%s` failed with error: %s", " ".join(cmd), e,
-    )
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/system.py
