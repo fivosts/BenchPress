@@ -201,5 +201,3 @@ absl_logging.get_absl_log_prefix = _MyLoggingPrefix
 
 # A function that computes the thread ID.
 UnsignedThreadId = absl_logging._get_thread_id
-
-
