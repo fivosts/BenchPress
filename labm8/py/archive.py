@@ -6,20 +6,10 @@ import tempfile
 import typing
 import zipfile
 
-<<<<<<< HEAD:labm8/py/archive.py
-<<<<<<< HEAD:labm8/py/archive.py
-<<<<<<< HEAD:labm8/py/archive.py
-=======
-from absl import flags
-=======
+# from absl import flags
 from labm8 import app
->>>>>>> 89b790ba9... Merge absl logging, app, and flags modules.:labm8/archive.py
 
-FLAGS = app.FLAGS
-
->>>>>>> 105797fd4... Auto format files.:labm8/archive.py
-=======
->>>>>>> d97a0b31a... Populate BuildInfo protobuf during build stamping.:labm8/archive.py
+FLAGS = app.FLAG
 
 class UnsupportedArchiveFormat(ValueError):
   """Raised in case an archive has an unsupported file format."""
@@ -43,27 +33,10 @@ class Archive(object):
   """
 
   def __init__(
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/archive.py
     self,
     path: typing.Union[str, pathlib.Path],
     assume_filename: typing.Optional[typing.Union[str, pathlib.Path]] = None,
   ):
-=======
-      self,
-      path: typing.Union[str, pathlib.Path],
-<<<<<<< HEAD:labm8/py/archive.py
-      assume_filename: typing.Optional[typing.Union[str, pathlib.Path]] = None):
->>>>>>> 105797fd4... Auto format files.:labm8/archive.py
-=======
-      assume_filename: typing.Optional[typing.Union[str, pathlib.Path]] = None,
-=======
-    self,
-    path: typing.Union[str, pathlib.Path],
-    assume_filename: typing.Optional[typing.Union[str, pathlib.Path]] = None,
->>>>>>> 4242aed2a... Automated code format.
-  ):
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/archive.py
     """Create an archive.
 
     Will determine the type of the archive from the suffix, e.g. if path is
@@ -89,38 +62,13 @@ class Archive(object):
 
     if not suffixes:
       raise UnsupportedArchiveFormat(
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/archive.py
         f"Archive '{path_to_determine_type.name}' has no extension",
       )
-=======
           f"Archive '{path_to_determine_type.name}' has no extension",)
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/archive.py
 
     if suffixes[-1] == ".zip":
       self._open_function = zipfile.ZipFile
-<<<<<<< HEAD:labm8/py/archive.py
-    elif suffixes[-2:] == [".tar", ".bz2"]:
-=======
     elif suffixes[-2:] == ['.tar', '.bz2']:
-<<<<<<< HEAD:labm8/py/archive.py
->>>>>>> ee0eceb12... Add support for .tar.bz2 data archives.:labm8/archive.py
-      self._open_function = lambda f: tarfile.open(f, "r:bz2")
-      # TODO(cec): Add support for .tar, and .tar.gz.
-    else:
-      raise UnsupportedArchiveFormat(
-        f"Unsupported file extension '{suffixes[-1]}' for archive "
-        f"'{path_to_determine_type.name}'",
-      )
-=======
-      self._open_function = lambda f: tarfile.open(f, 'r:bz2')
-      # TODO(cec): Add support for .tar, and .tar.gz.
-    else:
-      raise UnsupportedArchiveFormat(
-          f"Unsupported file extension '{suffixes[-1]}' for archive "
-          f"'{path_to_determine_type.name}'",)
->>>>>>> 49340dc00... Auto-format labm8 python files.:labm8/archive.py
-=======
         f"Archive '{path_to_determine_type.name}' has no extension",
       )
 
@@ -134,7 +82,6 @@ class Archive(object):
         f"Unsupported file extension '{suffixes[-1]}' for archive "
         f"'{path_to_determine_type.name}'",
       )
->>>>>>> 4242aed2a... Automated code format.
 
     # Set in __enter__().
     self._uncompressed_path: typing.Optional[pathlib.Path] = None
@@ -164,15 +111,7 @@ class Archive(object):
       The path of the directory containing the uncompressed archive.
     """
     assert not self._uncompressed_path
-<<<<<<< HEAD
-<<<<<<< HEAD:labm8/py/archive.py
     self._uncompressed_path = pathlib.Path(tempfile.mkdtemp(prefix="phd_"))
-=======
-    self._uncompressed_path = pathlib.Path(tempfile.mkdtemp(prefix='phd_'))
->>>>>>> 0c7d6c0f1... Add ExtractAll() method to Archive.:labm8/archive.py
-=======
-    self._uncompressed_path = pathlib.Path(tempfile.mkdtemp(prefix="phd_"))
->>>>>>> 4242aed2a... Automated code format.
     return self.ExtractAll(self._uncompressed_path)
 
   def __exit__(self, *args):
@@ -183,3 +122,4 @@ class Archive(object):
     assert self._uncompressed_path
     shutil.rmtree(self._uncompressed_path)
     self._uncompressed_path = None
+

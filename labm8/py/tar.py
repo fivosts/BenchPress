@@ -14,16 +14,7 @@
 """Tarball util.
 """
 import tarfile
-
-<<<<<<< HEAD:labm8/py/tar.py
-<<<<<<< HEAD:labm8/py/tar.py
 from labm8.py import fs
-=======
-from phd.lib.labm8 import fs
->>>>>>> 386c66354... Add 'phd' prefix to labm8 imports.:lib/labm8/tar.py
-=======
-from labm8.py import fs
->>>>>>> 8be094257... Move //labm8 to //labm8/py.:labm8/py/tar.py
 
 
 def unpack_archive(*components, **kwargs) -> str:
@@ -50,3 +41,4 @@ def unpack_archive(*components, **kwargs) -> str:
   fs.cdpop()
 
   return dir
+
