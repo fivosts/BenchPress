@@ -122,15 +122,7 @@ def Log(calling_module_name: str, level: int, msg, *args, **kwargs):
   """
   module_level = GetModuleVerbosity(calling_module_name)
   if level <= module_level:
-<<<<<<< HEAD:labm8/py/internal/labm8_logging.py
-<<<<<<< HEAD:labm8/py/internal/labm8_logging.py
     print_context = kwargs.pop("print_context", None)
-=======
-    print_context = kwargs.pop('print_context', None)
->>>>>>> 35fd6a724... Add `print_context` kwarg to core logger.:labm8/internal/logging.py
-=======
-    print_context = kwargs.pop("print_context", None)
->>>>>>> 4242aed2a... Automated code format.:labm8/py/internal/logging.py
     if print_context:
       with print_context():
         absl_logging.info(msg, *args, **kwargs)
@@ -223,15 +215,7 @@ def _MyLoggingPrefix(record):
 
 # Swap out absl's logging formatter for my own.
 absl_logging.get_absl_log_prefix = _MyLoggingPrefix
-<<<<<<< HEAD:labm8/py/internal/labm8_logging.py
-<<<<<<< HEAD:labm8/py/internal/labm8_logging.py
 
 # A function that computes the thread ID.
 UnsignedThreadId = absl_logging._get_thread_id
-=======
->>>>>>> 581124adc... Truncate logging prefix.:labm8/py/internal/logging.py
-=======
 
-# A function that computes the thread ID.
-UnsignedThreadId = absl_logging._get_thread_id
->>>>>>> a504b5a97... Expose a function to get the unsigned thread ID.:labm8/py/internal/logging.py
