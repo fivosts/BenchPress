@@ -52,9 +52,9 @@ http_archive(
 
 # Python config. Needed by pybind11_bazel.
 
-load("//third_party/py:python_configure.bzl", "python_configure")
+# load("//third_party/py:python_configure.bzl", "python_configure")
 
-python_configure(name = "local_config_python")
+# python_configure(name = "local_config_python")
 
 # Pybind11.
 
@@ -69,14 +69,14 @@ http_archive(
 # Boost C++ library.
 # See: https://github.com/nelhage/rules_boost
 
-http_archive(
-    name = "com_github_nelhage_rules_boost",
-    sha256 = "391c6988d9f7822176fb9cf7da8930ef4474b0b35b4f24c78973cb6075fd17e4",
-    strip_prefix = "rules_boost-417642961150e987bc1ac78c7814c617566ffdaa",
-    url = "https://github.com/nelhage/rules_boost/archive/417642961150e987bc1ac78c7814c617566ffdaa.tar.gz",
-)
+#http_archive(
+#    name = "com_github_nelhage_rules_boost",
+#    sha256 = "391c6988d9f7822176fb9cf7da8930ef4474b0b35b4f24c78973cb6075fd17e4",
+#    strip_prefix = "rules_boost-417642961150e987bc1ac78c7814c617566ffdaaa",
+#    url = "https://github.com/nelhage/rules_boost/archive/417642961150e987bc1ac78c7814c617566ffdaa.tar.gz",
+#)
 
-load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
+load("//:third_party/boost.bzl", "boost_deps")
 
 boost_deps()
 
@@ -95,9 +95,9 @@ bats_deps()
 
 # Python config. Needed by pybind11_bazel.
 
-load("//third_party/py:python_configure.bzl", "python_configure")
+## load("//third_party/py:python_configure.bzl", "python_configure")
 
-python_configure(name = "local_config_python")
+# python_configure(name = "local_config_python")
 
 # Pybind11.
 
