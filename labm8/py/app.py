@@ -94,7 +94,7 @@ absl_flags.DEFINE_boolean(
 
 # Expose some of the variables produced by //tools:workspace_status.sh, see the
 # module docstring for details:
-VERSION = workspace_status.STABLE_VERSION
+# VERSION = workspace_status.STABLE_VERSION
 GIT_URL = workspace_status.STABLE_GIT_URL
 GIT_COMMIT = workspace_status.STABLE_GIT_COMMIT
 GIT_DIRTY = workspace_status.STABLE_GIT_DIRTY
