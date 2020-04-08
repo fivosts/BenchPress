@@ -57,6 +57,8 @@ linux: sudo apt install -y --no-install-recommends timidity
 linux: sudo apt install -y --no-install-recommends libwildmidi-dev
 linux: sudo apt install -y --no-install-recommends libboost-all-dev
 linux: sudo apt install -y --no-install-recommends libsdl2-dev
+apt-get install mysql-server
+sudo apt-get install libmysqlclient-dev
 linux: # Required by bazel workspace rules:
 linux: sudo apt install -y --no-install-recommends patch
 # Required for building pyopencl:
