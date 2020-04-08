@@ -31,8 +31,8 @@ linux: sudo apt install -y --no-install-recommends opencl-c-headers  # Needed fo
 linux: sudo apt install -y --no-install-recommends pkg-config
 linux: sudo apt install -y --no-install-recommends python
 linux: sudo apt install -y --no-install-recommends python-dev  # Python headers needed for pybind
-linux: sudo apt install -y --no-install-recommends python3.6
-linux: sudo apt install -y --no-install-recommends python3.6-dev
+linux: sudo apt install -y --no-install-recommends python3.7
+linux: sudo apt install -y --no-install-recommends python3.7-dev
 linux: sudo apt install -y --no-install-recommends python3-distutils
 linux: sudo apt install -y --no-install-recommends unzip
 linux: sudo apt install -y --no-install-recommends zip
