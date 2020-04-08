@@ -13,4 +13,5 @@ WORKDIR /home/clgen
 RUN bash apt_deps.sh
 RUN bazel build //deeplearning/clgen
 
+# Run a simple example
 CMD bazel-bin/deeplearning/clgen/clgen --config $PWD/deeplearning/clgen/tests/data/tiny/config.pbtxt
