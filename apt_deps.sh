@@ -45,4 +45,4 @@ libmysqlclient-dev \
 # Install bazel:
 curl -L -o /tmp/bazel.sh https://github.com/bazelbuild/bazel/releases/download/2.0.0/bazel-2.0.0-installer-linux-x86_64.sh && bash /tmp/bazel.sh && rm /tmp/bazel.sh
 
-all: python -m pip install 'pybind11==2.4.3'
+python3 -m pip install 'pybind11==2.4.3'
