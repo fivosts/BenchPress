@@ -6,10 +6,6 @@ import tempfile
 import typing
 import zipfile
 
-# from absl import flags
-from labm8 import app
-
-FLAGS = app.FLAG
 
 class UnsupportedArchiveFormat(ValueError):
   """Raised in case an archive has an unsupported file format."""
@@ -62,13 +58,6 @@ class Archive(object):
 
     if not suffixes:
       raise UnsupportedArchiveFormat(
-        f"Archive '{path_to_determine_type.name}' has no extension",
-      )
-          f"Archive '{path_to_determine_type.name}' has no extension",)
-
-    if suffixes[-1] == ".zip":
-      self._open_function = zipfile.ZipFile
-    elif suffixes[-2:] == ['.tar', '.bz2']:
         f"Archive '{path_to_determine_type.name}' has no extension",
       )
 
