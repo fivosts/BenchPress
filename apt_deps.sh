@@ -51,4 +51,5 @@ ln -s /usr/bin/python3.7 /usr/bin/python3
 curl -L -o /tmp/bazel.sh https://github.com/bazelbuild/bazel/releases/download/2.0.0/bazel-2.0.0-installer-linux-x86_64.sh && bash /tmp/bazel.sh && rm /tmp/bazel.sh
 
 python3 -m pip install 'pybind11==2.4.3'
-python3 -m pip install tensorflow==1.14.0
+python3 -m pip install tensorflow==2.1.0
+
