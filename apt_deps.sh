@@ -45,7 +45,7 @@ libmysqlclient-dev \
 
 ##
 rm /usr/bin/python3
-ln -s /usr/bin/python3.6 /usr/bin/python3
+ln -s /usr/bin/python3.7 /usr/bin/python3
 
 # Install bazel:
 curl -L -o /tmp/bazel.sh https://github.com/bazelbuild/bazel/releases/download/2.0.0/bazel-2.0.0-installer-linux-x86_64.sh && bash /tmp/bazel.sh && rm /tmp/bazel.sh
