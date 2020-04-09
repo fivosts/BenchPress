@@ -192,7 +192,7 @@ sqlparse==0.3.0
 statistics==1.0.3.5
 subprocess32==3.5.0
 tabulate==0.8.5
-tensorflow==2.1.0  # NOTE: Must be installed manually with `pip install`.
+# tensorflow==2.1.0  # NOTE: Must be installed manually with `pip install`.
 terminado==0.8.1
 testpath==0.3.1
 TogglPy==0.1.1
