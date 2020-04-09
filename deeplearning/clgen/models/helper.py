@@ -1,3 +1,5 @@
+import tensorflow_addons as tfa
+
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops.distributions import categorical
 from tensorflow.python.util import nest
@@ -5,7 +7,7 @@ from tensorflow.python.util import nest
 from third_party.py.tensorflow import tf
 
 
-class CustomInferenceHelper(tf.contrib.seq2seq.TrainingHelper):
+class CustomInferenceHelper(tfa.seq2seq.TrainingHelper):
   """An inference helper that takes a seed text"""
 
   def __init__(

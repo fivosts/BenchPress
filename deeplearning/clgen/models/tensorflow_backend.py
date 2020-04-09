@@ -22,6 +22,8 @@ import typing
 import numpy as np
 import progressbar
 
+import tensorflow_addons as tfa
+
 from deeplearning.clgen import samplers
 from deeplearning.clgen import telemetry
 from deeplearning.clgen.dashboard import dashboard_db
@@ -180,17 +182,17 @@ class TensorFlowBackend(backends.BackendBase):
         inputs, self.lengths, self.seed_length, embedding, self.temperature
       )
     else:
-      decode_helper = tf.contrib.seq2seq.TrainingHelper(
+      decode_helper = tfa.seq2seq.TrainingHelper(
         inputs, self.lengths, time_major=False
       )
 
-    decoder = tf.contrib.seq2seq.BasicDecoder(
+    decoder = tfa.seq2seq.BasicDecoder(
       cell,
       decode_helper,
       self.initial_state,
       tf.compat.v1.layers.Dense(vocab_size),
     )
-    outputs, self.final_state, _ = tf.contrib.seq2seq.dynamic_decode(
+    outputs, self.final_state, _ = tfa.seq2seq.dynamic_decode(
       decoder,
       output_time_major=False,
       impute_finished=True,
@@ -202,7 +204,7 @@ class TensorFlowBackend(backends.BackendBase):
     self.logits = outputs.rnn_output
 
     sequence_weigths = tf.ones([batch_size, sequence_length])
-    self.loss = tf.contrib.seq2seq.sequence_loss(
+    self.loss = tfa.seq2seq.sequence_loss(
       self.logits, self.targets, sequence_weigths
     )
 
