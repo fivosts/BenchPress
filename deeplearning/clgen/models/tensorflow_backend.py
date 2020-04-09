@@ -95,9 +95,8 @@ class TensorFlowBackend(backends.BackendBase):
       "Using tensorboard to log training progress. View progress using:\n"
       f"    $ tensorboard --logdir='{tensorboard_dir}'",
     )
-    self.summary_writer = tf.compat.v1.summary.FileWriter(
-      tensorboard_dir, graph=None
-    )
+    print(tf)
+    self.summary_writer = tf.summary.create_file_writer(tensorboard_dir)
 
   def InitTfGraph(
     self, sampler: typing.Optional[samplers.Sampler] = None
