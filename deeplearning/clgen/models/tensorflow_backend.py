@@ -532,7 +532,7 @@ class TensorFlowBackend(backends.BackendBase):
       self.FormatCodeAsMarkdown(sample) for sample in samples
     ]
     samples_tensor = tf.convert_to_tensor(samples_as_markdown, dtype=tf.string)
-    summary_op = tf.summary.text("samples", samples_tensor)
+    summary_op = tf.compat.v1.summary.text("samples", samples_tensor)
     summary = self.inference_sess.run(summary_op)
     self.summary_writer.add_summary(summary, step)
 
