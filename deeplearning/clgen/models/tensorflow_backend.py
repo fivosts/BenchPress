@@ -129,9 +129,9 @@ class TensorFlowBackend(backends.BackendBase):
     from deeplearning.clgen.models import helper
 
     cell_type = {
-      model_pb2.NetworkArchitecture.LSTM: tf.contrib.rnn.LSTMBlockCell,
-      model_pb2.NetworkArchitecture.GRU: tf.contrib.rnn.GRUBlockCellV2,
-      model_pb2.NetworkArchitecture.RNN: tf.contrib.rnn.BasicRNNCell,
+      model_pb2.NetworkArchitecture.LSTM: tf.keras.layers.LSTMCell,
+      model_pb2.NetworkArchitecture.GRU: tf.keras.layers.GRUCell,
+      model_pb2.NetworkArchitecture.RNN: tf.keras.layers.SimpleRNNCell,
     }.get(self.config.architecture.neuron_type, None)
     if cell_type is None:
       raise NotImplementedError
@@ -673,3 +673,4 @@ class TensorFlowBackend(backends.BackendBase):
     ]
     epoch_nums = [int(x.split("-")[-1]) for x in checkpoint_files]
     return self.config.training.num_epochs in epoch_nums
+
