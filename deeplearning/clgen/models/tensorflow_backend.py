@@ -170,7 +170,7 @@ class TensorFlowBackend(backends.BackendBase):
     scope_name = "rnnlm"
     with tf.compat.v1.variable_scope(scope_name):
       with tf.device("/cpu:0"):
-        embedding = tf.compat.v1.get_variable(
+        embedding = tf.Variable(
           "embedding", [vocab_size, self.config.architecture.neurons_per_layer]
         )
         inputs = tf.nn.embedding_lookup(embedding, self.input_data)
