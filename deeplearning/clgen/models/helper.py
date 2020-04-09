@@ -7,7 +7,7 @@ from tensorflow.python.util import nest
 from third_party.py.tensorflow import tf
 
 
-class CustomInferenceHelper(tfa.seq2seq.TrainingHelper):
+class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
   """An inference helper that takes a seed text"""
 
   def __init__(
