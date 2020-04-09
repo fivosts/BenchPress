@@ -150,9 +150,7 @@ class TensorFlowBackend(backends.BackendBase):
     cells_lst = []
     for _ in range(self.config.architecture.num_layers):
       cells_lst.append(cell_type(self.config.architecture.neurons_per_layer))
-    self.cell = cell = tf.contrib.rnn.MultiRNNCell(
-      cells_lst, state_is_tuple=True
-    )
+    self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
 
     self.input_data = tf.compat.v1.placeholder(
       tf.int32, [batch_size, sequence_length]
