@@ -35,7 +35,6 @@ import os
 import pathlib
 import shutil
 import sys
-import traceback
 import typing
 
 from deeplearning.clgen import errors
