@@ -175,7 +175,7 @@ class TensorFlowBackend(backends.BackendBase):
     scope_name = "rnnlm"
     with tf.compat.v1.variable_scope(scope_name):
       with tf.device("/cpu:0"):
-        embedding = tf.Variable(
+        embedding = tf.compat.v1.get_variable(
           "embedding", [vocab_size, self.config.architecture.neurons_per_layer]
         )
         inputs = tf.nn.embedding_lookup(embedding, self.input_data)
@@ -185,15 +185,13 @@ class TensorFlowBackend(backends.BackendBase):
         inputs, self.lengths, self.seed_length, embedding, self.temperature
       )
     else:
-      decode_helper = tfa.seq2seq.TrainingHelper(
-        inputs, self.lengths, time_major=False
-      )
+      decode_helper = tfa.seq2seq.sampler.TrainingSampler(time_major=False)
 
     decoder = tfa.seq2seq.BasicDecoder(
       cell,
       decode_helper,
-      self.initial_state,
       tf.compat.v1.layers.Dense(vocab_size),
+      self.initial_state,
     )
     outputs, self.final_state, _ = tfa.seq2seq.dynamic_decode(
       decoder,
