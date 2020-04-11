@@ -191,7 +191,6 @@ class TensorFlowBackend(backends.BackendBase):
       cell,
       decode_helper,
       tf.compat.v1.layers.Dense(vocab_size),
-      # self.initial_state,
       dtype = tf.float32,
     )
     outputs, self.final_state, _ = tfa.seq2seq.dynamic_decode(
