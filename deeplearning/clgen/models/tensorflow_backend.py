@@ -191,10 +191,15 @@ class TensorFlowBackend(backends.BackendBase):
       cell,
       decode_helper,
       tf.compat.v1.layers.Dense(vocab_size),
-      self.initial_state,
+      # self.initial_state,
+      dtype = tf.float32,
     )
     outputs, self.final_state, _ = tfa.seq2seq.dynamic_decode(
       decoder,
+      decoder_init_input = inputs,
+      decoder_init_kwargs = {
+                              'initial_state': self.initial_state,
+                            },
       output_time_major=False,
       impute_finished=True,
       swap_memory=True,
