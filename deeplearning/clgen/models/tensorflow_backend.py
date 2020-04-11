@@ -381,7 +381,7 @@ class TensorFlowBackend(backends.BackendBase):
 
       # Keep all checkpoints.
       saver = tf.compat.v1.train.Saver(
-        tf.global_variables(), max_to_keep=100, save_relative_paths=True
+        tf.compat.v1.global_variables(), max_to_keep=100, save_relative_paths=True
       )
 
       # restore model from closest checkpoint.
