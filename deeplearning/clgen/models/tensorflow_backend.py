@@ -153,8 +153,8 @@ class TensorFlowBackend(backends.BackendBase):
     cells_lst = []
     for _ in range(self.config.architecture.num_layers):
       cells_lst.append(cell_type(self.config.architecture.neurons_per_layer))
-    # self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
-    self.cell = cell = tf.compat.v1.nn.rnn_cell.MultiRNNCell(cells_lst)
+    self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
+    # self.cell = cell = tf.compat.v1.nn.rnn_cell.MultiRNNCell(cells_lst)
     tf.compat.v1.disable_eager_execution()
     self.input_data = tf.compat.v1.placeholder(
       tf.int32, [batch_size, sequence_length]
@@ -163,7 +163,7 @@ class TensorFlowBackend(backends.BackendBase):
       tf.int32, [batch_size, sequence_length]
     )
     # self.initial_state = self.cell.get_initial_state(batch_size = batch_size, dtype = tf.float32)
-    self.initial_state = self.cell.zero_state(batch_size, tf.float32)
+    self.initial_state = self.cell.get_initial_state(batch_size = batch_size, dtype = tf.float32)
     self.temperature = tf.Variable(1.0, trainable=False)
     self.seed_length = tf.Variable(32, trainable=False)
 
