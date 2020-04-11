@@ -129,9 +129,12 @@ class TensorFlowBackend(backends.BackendBase):
     from deeplearning.clgen.models import helper
 
     cell_type = {
-      model_pb2.NetworkArchitecture.LSTM: tf.keras.layers.LSTMCell,
-      model_pb2.NetworkArchitecture.GRU: tf.keras.layers.GRUCell,
-      model_pb2.NetworkArchitecture.RNN: tf.keras.layers.SimpleRNNCell,
+      # model_pb2.NetworkArchitecture.LSTM: tf.keras.layers.LSTMCell,
+      # model_pb2.NetworkArchitecture.GRU: tf.keras.layers.GRUCell,
+      # model_pb2.NetworkArchitecture.RNN: tf.keras.layers.SimpleRNNCell,
+      model_pb2.NetworkArchitecture.LSTM: tf.compat.v1.nn.rnn_cell.LSTMCell,
+      model_pb2.NetworkArchitecture.GRU: tf.compat.v1.nn.rnn_cell.GRUCell,
+      model_pb2.NetworkArchitecture.RNN: tf.compat.v1.nn.rnn_cell.BasicRNNCell,
     }.get(self.config.architecture.neuron_type, None)
     if cell_type is None:
       raise NotImplementedError
@@ -150,7 +153,8 @@ class TensorFlowBackend(backends.BackendBase):
     cells_lst = []
     for _ in range(self.config.architecture.num_layers):
       cells_lst.append(cell_type(self.config.architecture.neurons_per_layer))
-    self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
+    # self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
+    self.cell = cell = tf.compat.v1.nn.rnn_cell.MultiRNNCell(cells_lst)
     tf.compat.v1.disable_eager_execution()
     self.input_data = tf.compat.v1.placeholder(
       tf.int32, [batch_size, sequence_length]
@@ -158,7 +162,8 @@ class TensorFlowBackend(backends.BackendBase):
     self.targets = tf.compat.v1.placeholder(
       tf.int32, [batch_size, sequence_length]
     )
-    self.initial_state = self.cell.get_initial_state(batch_size = batch_size, dtype = tf.float32)
+    # self.initial_state = self.cell.get_initial_state(batch_size = batch_size, dtype = tf.float32)
+    self.initial_state = self.cell.zero_state(batch_size, tf.float32)
     self.temperature = tf.Variable(1.0, trainable=False)
     self.seed_length = tf.Variable(32, trainable=False)
 
@@ -564,7 +569,8 @@ class TensorFlowBackend(backends.BackendBase):
     # is reset at the beginning of every sample batch. Else, this is the only
     # place it is initialized.
     self.inference_state = self.inference_sess.run(
-      self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
+      # self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
+      self.cell.zero_state(sampler.batch_size, self.inference_tf.float32)
     )
 
     self.inference_tf.compat.v1.global_variables_initializer().run(
@@ -592,7 +598,8 @@ class TensorFlowBackend(backends.BackendBase):
   def InitSampleBatch(self, sampler: samplers.Sampler) -> None:
     if FLAGS.clgen_tf_backend_reset_inference_state_between_batches:
       self.inference_state = self.inference_sess.run(
-        self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
+        # self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
+        self.cell.zero_state(sampler.batch_size, self.inference_tf.float32)
       )
     self.inference_indices = np.tile(
       sampler.encoded_start_text, [sampler.batch_size, 1]
