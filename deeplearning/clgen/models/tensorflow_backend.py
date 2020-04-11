@@ -571,8 +571,8 @@ class TensorFlowBackend(backends.BackendBase):
     # is reset at the beginning of every sample batch. Else, this is the only
     # place it is initialized.
     self.inference_state = self.inference_sess.run(
-      # self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
-      self.cell.zero_state(sampler.batch_size, self.inference_tf.float32)
+      self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
+      # self.cell.zero_state(sampler.batch_size, self.inference_tf.float32)
     )
 
     self.inference_tf.compat.v1.global_variables_initializer().run(
@@ -600,8 +600,8 @@ class TensorFlowBackend(backends.BackendBase):
   def InitSampleBatch(self, sampler: samplers.Sampler) -> None:
     if FLAGS.clgen_tf_backend_reset_inference_state_between_batches:
       self.inference_state = self.inference_sess.run(
-        # self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
-        self.cell.zero_state(sampler.batch_size, self.inference_tf.float32)
+        self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
+        # self.cell.zero_state(sampler.batch_size, self.inference_tf.float32)
       )
     self.inference_indices = np.tile(
       sampler.encoded_start_text, [sampler.batch_size, 1]
