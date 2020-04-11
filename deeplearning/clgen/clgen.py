@@ -229,39 +229,6 @@ Please report bugs at <https://github.com/ChrisCummins/phd/issues>\
   )
   sys.exit(1)
 
-
-def LogExceptionWithStackTrace(exception: Exception):
-  """Log an error with a stack trace."""
-
-  # get limited stack trace
-  def _msg(i, x):
-    n = i + 1
-    filename, lineno, fnname, _ = x
-    # TODO(github.com/ChrisCummins/clgen/issues/131): Report filename relative
-    # to PhD root.
-    loc = f"{filename}:{lineno}"
-    return f"      #{n}  {loc: <18} {fnname}()"
-
-  _, _, tb = sys.exc_info()
-  NUM_ROWS = 5  # number of rows in traceback
-  trace = reversed(traceback.extract_tb(tb, limit=NUM_ROWS + 1)[1:])
-  message = "\n".join(_msg(*r) for r in enumerate(trace))
-  app.Error(
-    """\
-%s (%s)
-
-  stacktrace:
-%s
-
-Please report bugs at <https://github.com/ChrisCummins/phd/issues>\
-""",
-    exception,
-    type(exception).__name__,
-    message,
-  )
-  sys.exit(1)
-
-
 def RunWithErrorHandling(
   function_to_run: typing.Callable, *args, **kwargs
 ) -> typing.Any:
@@ -286,16 +253,16 @@ def RunWithErrorHandling(
     cgitb.enable(format="text")
     return function_to_run(*args, **kwargs)
 
+  def RunContext():
+    """Run the function with arguments."""
+    return function_to_run(*args, **kwargs)
+
   try:
-
-    def RunContext():
-      """Run the function with arguments."""
-      return function_to_run(*args, **kwargs)
-
     if prof.is_enabled():
       return cProfile.runctx("RunContext()", None, locals(), sort="tottime")
     else:
       return RunContext()
+
   except app.UsageError as err:
     # UsageError is handled by the call to app.RunWithArgs(), not here.
     raise err
@@ -310,11 +277,6 @@ def RunWithErrorHandling(
     Flush()
     LogException(e)
     sys.exit(1)
-  except Exception as e:
-    Flush()
-    LogExceptionWithStackTrace(e)
-    sys.exit(1)
-
 
 def ConfigFromFlags() -> clgen_pb2.Instance:
   config_path = pathlib.Path(FLAGS.config)
