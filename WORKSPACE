@@ -350,11 +350,6 @@ load(
     "pip_repositories",
 )
 
-load(
-    "//third_party/py/pip:pip.bzl",
-    "pip_install_reqs",
-)
-
 pip_repositories()
 
 pip3_import(
