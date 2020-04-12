@@ -1,1 +1,1 @@
-sudo docker build --tag clgen --network host --no-cache .
+sudo docker build --tag clgen --network host --force-rm --no-cache .
