@@ -336,18 +336,23 @@ http_archive(
 
 # Python requirements.
 
-# I use my own rules_python fork which adds a timeout arg to pip_import.
 git_repository(
     name = "rules_python",
-    commit = "2cc99237d0cc767dc53d3137fabb2679c60f5e67",
-    remote = "https://github.com/ChrisCummins/rules_python.git",
-    shallow_since = "1578538415 +0000",
+    commit = "a0fbf98d4e3a232144df4d0d80b577c7a693b570",
+    remote = "https://github.com/bazelbuild/rules_python.git",
+    shallow_since = "1586444447 +0200",
+
 )
 
 load(
     "@rules_python//python:pip.bzl",
     "pip3_import",
     "pip_repositories",
+)
+
+load(
+    "//third_party/py/pip:pip.bzl",
+    "pip_install_reqs",
 )
 
 pip_repositories()

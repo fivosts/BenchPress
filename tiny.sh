@@ -1,1 +1,1 @@
-bazel-bin/deeplearning/clgen/clgen --config /home/fivosts/clgen/deeplearning/clgen/tests/data/tiny/config.pbtxt
+bazel-bin/deeplearning/clgen/clgen --config deeplearning/clgen/tests/data/tiny/config.pbtxt
