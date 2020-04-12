@@ -182,7 +182,8 @@ class TensorFlowBackend(backends.BackendBase):
 
     if sampler:
       decode_helper = helper.CustomInferenceHelper(
-        inputs, self.lengths, self.seed_length, embedding, self.temperature
+        # inputs, self.lengths, 
+        self.seed_length, embedding, self.temperature
       )
     else:
       decode_helper = tfa.seq2seq.sampler.TrainingSampler(time_major=False)
@@ -195,9 +196,11 @@ class TensorFlowBackend(backends.BackendBase):
     )
     outputs, self.final_state, _ = tfa.seq2seq.dynamic_decode(
       decoder,
+      # sequence_length = self.lengths,
       decoder_init_input = inputs,
       decoder_init_kwargs = {
                               'initial_state': self.initial_state,
+                              'sequence_length': self.lengths,
                             },
       output_time_major=False,
       impute_finished=True,
@@ -397,7 +400,7 @@ class TensorFlowBackend(backends.BackendBase):
       current_epoch = sess.run(self.epoch) + 1
       max_epoch = self.config.training.num_epochs + 1
 
-      @tf.function
+      # @tf.function
       def train_step(epoch_num):
 
         state = sess.run(self.initial_state)
@@ -422,21 +425,21 @@ class TensorFlowBackend(backends.BackendBase):
             # of the epoch, when the checkpoint is created.
             now = time.time()
             duration_ns = int((now - last_log_time) * 1e6)
-            dbs.add(
-              dashboard_db.TrainingTelemetry(
-                model_id=self.dashboard_model_id,
-                epoch=epoch_num,
-                step=step,
-                training_loss=loss,
-                learning_rate=new_learning_rate,
-                ns_per_batch=int(duration_ns)
-                / FLAGS.clgen_tf_backend_tensorboard_summary_step_count,
-              )
-            )
+            # dbs.add(
+            #   dashboard_db.TrainingTelemetry(
+            #     model_id=self.dashboard_model_id,
+            #     epoch=epoch_num,
+            #     step=step,
+            #     training_loss=loss,
+            #     learning_rate=new_learning_rate,
+            #     ns_per_batch=int(duration_ns)
+            #     / FLAGS.clgen_tf_backend_tensorboard_summary_step_count,
+            #   )
+            # )
 
             last_log_time = now
             ## This function below hangs
-            dbs.commit()
+            # dbs.commit()
         return summary, loss, state, step
         # End of Epoch
 
@@ -456,7 +459,6 @@ class TensorFlowBackend(backends.BackendBase):
         app.Log(1, "Epoch %d/%d:", epoch_num, self.config.training.num_epochs)
 
         summary, loss, state, step = train_step(epoch_num)
-
         # Log the loss and delta.
         app.Log(1, "Loss: %.6f.", loss)
 
