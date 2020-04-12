@@ -90,6 +90,7 @@ class TensorFlowBackend(backends.BackendBase):
     # Create the summary writer, shared between Train() and
     # _EndOfEpochTestSample().
     from third_party.py.tensorflow import tf
+    tf.compat.v1.disable_eager_execution()
 
     tensorboard_dir = f"{self.cache.path}/tensorboard"
     app.Log(
@@ -97,7 +98,7 @@ class TensorFlowBackend(backends.BackendBase):
       "Using tensorboard to log training progress. View progress using:\n"
       f"    $ tensorboard --logdir='{tensorboard_dir}'",
     )
-    self.summary_writer = tf.summary.create_file_writer(tensorboard_dir)
+    self.summary_writer = tf.compat.v1.summary.FileWriter(tensorboard_dir)
 
   def InitTfGraph(
     self, sampler: typing.Optional[samplers.Sampler] = None
@@ -125,6 +126,7 @@ class TensorFlowBackend(backends.BackendBase):
 
     # Deferred importing of TensorFlow.
     from third_party.py.tensorflow import tf
+    tf.compat.v1.disable_eager_execution()
     from deeplearning.clgen.models import helper
 
     cell_type = {
@@ -154,7 +156,6 @@ class TensorFlowBackend(backends.BackendBase):
       cells_lst.append(cell_type(self.config.architecture.neurons_per_layer))
     self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
     # self.cell = cell = tf.compat.v1.nn.rnn_cell.MultiRNNCell(cells_lst)
-    tf.compat.v1.disable_eager_execution()
     self.input_data = tf.compat.v1.placeholder(
       tf.int32, [batch_size, sequence_length]
     )
@@ -416,9 +417,7 @@ class TensorFlowBackend(backends.BackendBase):
           # Periodically write progress to tensorboard.
           if i % FLAGS.clgen_tf_backend_tensorboard_summary_step_count == 0:
             step = (epoch_num - 1) * data_generator.num_batches + i
-            # self.summary_writer.add_summary(summary, step)
-            with self.summary_writer.as_default():
-              tf.summary.text("summary", summary, step = step)
+            self.summary_writer.add_summary(summary, step)
             # Add telemetry database entry. This isn't committed until the end
             # of the epoch, when the checkpoint is created.
             now = time.time()
@@ -502,6 +501,7 @@ class TensorFlowBackend(backends.BackendBase):
   ):
     """Run sampler"""
     from third_party.py.tensorflow import tf
+    tf.compat.v1.disable_eager_execution()
 
     atomizer = corpus.atomizer
     sampler.Specialize(atomizer)
@@ -564,6 +564,7 @@ class TensorFlowBackend(backends.BackendBase):
   ) -> None:
     """Initialize model for sampling."""
     from third_party.py.tensorflow import tf
+    tf.compat.v1.disable_eager_execution()
 
     # Delete any previous sampling session.
     if self.inference_tf:
@@ -643,6 +644,7 @@ class TensorFlowBackend(backends.BackendBase):
 
   def RandomizeSampleState(self) -> None:
     from third_party.py.tensorflow import tf
+    tf.compat.v1.disable_eager_execution()
 
     self.inference_state = [
       tf.nn.rnn_cell.LSTMStateTuple(
