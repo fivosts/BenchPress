@@ -595,7 +595,7 @@ class TensorFlowBackend(backends.BackendBase):
     )
     # Restore trained model weights.
     saver = self.inference_tf.compat.v1.train.Saver(
-      self.inference_tf.global_variables()
+      self.inference_tf.compat.v1.global_variables()
     )
     checkpoint_state = self.inference_tf.train.get_checkpoint_state(
       self.cache.path / "checkpoints"
