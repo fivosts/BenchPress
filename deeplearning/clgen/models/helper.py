@@ -49,7 +49,7 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
       [
         (all_finished, lambda: self.zero_inputs),
         (
-          tf.logical_not(seed_done),
+          tf.math.logical_not(seed_done),
           lambda: nest.map_structure(read_from_ta, self.input_tas),
         ),
       ],
