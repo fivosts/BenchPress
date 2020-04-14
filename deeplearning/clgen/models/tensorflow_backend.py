@@ -182,7 +182,8 @@ class TensorFlowBackend(backends.BackendBase):
 
     if sampler:
       decode_helper = helper.CustomInferenceHelper(
-        # inputs, self.lengths, 
+        # inputs, 
+        # self.lengths, 
         self.seed_length, embedding, self.temperature
       )
     else:
