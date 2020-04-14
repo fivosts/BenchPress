@@ -48,7 +48,7 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
         (all_finished, lambda: self.zero_inputs),
         (
           tf.math.logical_not(seed_done),
-          lambda: tf.nest.map_structure(lambda inp: inp.read(0), self.input_tas),
+          lambda: tf.nest.map_structure(lambda inp: inp.read(next_time), self.input_tas),
         ),
       ],
       default=lambda: tf.stop_gradient(
