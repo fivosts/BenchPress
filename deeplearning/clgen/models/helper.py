@@ -19,7 +19,7 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
     self.softmax_temperature = temperature
 
   def initialize(self, inputs, sequence_length, name=None):
-    self._sequence_length = sequence_length
+    self.sequence_length = sequence_length
     return super(CustomInferenceHelper, self).initialize(inputs = inputs,
                                                          sequence_length = sequence_length,
                                                          mask = None
@@ -38,7 +38,7 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
   def next_inputs(self, time, outputs, state, sample_ids):
     # with tf.name_scope(name, "CIHNextInputs", [time, outputs, state]):
     next_time = time + 1
-    finished = next_time >= self._sequence_length
+    finished = next_time >= self.sequence_length
     all_finished = math_ops.reduce_all(finished)
     seed_done = next_time >= self._seed_length
 
