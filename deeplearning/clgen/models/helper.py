@@ -16,7 +16,7 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
 
     self._seed_length = seed_length
     self._xlate = embedding
-    self._softmax_temperature = temperature
+    self.softmax_temperature = temperature
 
   def initialize(self, inputs, sequence_length, name=None):
     self._sequence_length = sequence_length
@@ -27,8 +27,8 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
 
   # def sample(self, time, outputs, state, name=None):
   def sample(self, time, outputs, state):
-    if self._softmax_temperature is not None:
-      outputs = outputs / self._softmax_temperature
+    if self.softmax_temperature is not None:
+      outputs = outputs / self.softmax_temperature
 
     sampler = categorical.Categorical(logits=outputs)
     sample_ids = sampler.sample()
