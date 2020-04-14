@@ -40,15 +40,15 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
     all_finished = tf.reduce_all(finished)
     seed_done = next_time >= self._seed_length
 
-    def read_from_ta(inp):
-      return inp.read(next_time)
+    # def read_from_ta(inp):
+    #   return inp.read(next_time)
 
     next_inputs = tf.case(  ## tf.case maybe deprecated
       [
         (all_finished, lambda: self.zero_inputs),
         (
           tf.math.logical_not(seed_done),
-          lambda: tf.nest.map_structure(read_from_ta, self.input_tas),
+          lambda: tf.nest.map_structure(lambda inp: inp.read(0), self.input_tas),
         ),
       ],
       default=lambda: tf.stop_gradient(
