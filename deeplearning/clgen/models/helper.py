@@ -1,8 +1,6 @@
 import tensorflow_addons as tfa
 
 from tensorflow.python.ops.distributions import categorical
-from tensorflow.python.util import nest
-
 from third_party.py.tensorflow import tf
 
 
@@ -50,7 +48,7 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
         (all_finished, lambda: self.zero_inputs),
         (
           tf.math.logical_not(seed_done),
-          lambda: nest.map_structure(read_from_ta, self.input_tas),
+          lambda: tf.nest.map_structure(read_from_ta, self.input_tas),
         ),
       ],
       default=lambda: tf.stop_gradient(
