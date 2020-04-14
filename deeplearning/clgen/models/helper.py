@@ -47,10 +47,10 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
 
     next_inputs = tf.case(
       [
-        (all_finished, lambda: self._zero_inputs),
+        (all_finished, lambda: self.zero_inputs),
         (
           tf.logical_not(seed_done),
-          lambda: nest.map_structure(read_from_ta, self._input_tas),
+          lambda: nest.map_structure(read_from_ta, self.input_tas),
         ),
       ],
       default=lambda: tf.stop_gradient(
