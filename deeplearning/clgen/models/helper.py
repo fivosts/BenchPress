@@ -34,6 +34,7 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
     sample_ids = sampler.sample()
     return sample_ids
 
+  ## Only this function requires refactoring
   # def next_inputs(self, time, outputs, state, sample_ids, name = "CIHNextInputs"):
   def next_inputs(self, time, outputs, state, sample_ids):
     # with tf.name_scope(name, "CIHNextInputs", [time, outputs, state]):
@@ -45,7 +46,7 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
     def read_from_ta(inp):
       return inp.read(next_time)
 
-    next_inputs = tf.case(
+    next_inputs = tf.case(  ## tf.case maybe deprecated
       [
         (all_finished, lambda: self.zero_inputs),
         (
