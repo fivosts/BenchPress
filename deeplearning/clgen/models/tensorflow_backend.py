@@ -401,14 +401,68 @@ class TensorFlowBackend(backends.BackendBase):
       current_epoch = sess.run(self.epoch) + 1
       max_epoch = self.config.training.num_epochs + 1
 
-      # @tf.function
-      def train_step(epoch_num):
+      # # @tf.function
+      # def train_step(epoch_num):
+
+      #   state = sess.run(self.initial_state)
+      #   # Per-batch inner loop.
+      #   bar = progressbar.ProgressBar(max_value=data_generator.num_batches)
+      #   last_log_time = time.time()
+
+      #   for i in bar(range(data_generator.num_batches)):
+      #     x, y = data_generator.NextBatch()
+      #     feed = {self.input_data: x, self.targets: y}
+      #     for j, (c, h) in enumerate(self.initial_state):
+      #       feed[c], feed[h] = state[j].c, state[j].h
+      #     summary, loss, state, _ = sess.run(
+      #       [merged, self.loss, self.final_state, self.train_op], feed
+      #     )
+
+      #     # Periodically write progress to tensorboard.
+      #     if i % FLAGS.clgen_tf_backend_tensorboard_summary_step_count == 0:
+      #       step = (epoch_num - 1) * data_generator.num_batches + i
+      #       self.summary_writer.add_summary(summary, step)
+      #       # Add telemetry database entry. This isn't committed until the end
+      #       # of the epoch, when the checkpoint is created.
+      #       now = time.time()
+      #       duration_ns = int((now - last_log_time) * 1e6)
+      #       # dbs.add(
+      #       #   dashboard_db.TrainingTelemetry(
+      #       #     model_id=self.dashboard_model_id,
+      #       #     epoch=epoch_num,
+      #       #     step=step,
+      #       #     training_loss=loss,
+      #       #     learning_rate=new_learning_rate,
+      #       #     ns_per_batch=int(duration_ns)
+      #       #     / FLAGS.clgen_tf_backend_tensorboard_summary_step_count,
+      #       #   )
+      #       # )
+
+      #       last_log_time = now
+      #       ## This function below hangs
+      #       # dbs.commit()
+      #   return summary, loss, state, step
+      #   # End of Epoch
+
+      # Per-epoch training loop.
+      for epoch_num in range(current_epoch, max_epoch):
+        logger.EpochBeginCallback()
+
+        # decay and set learning rate
+        new_learning_rate = initial_learning_rate * (
+          (float(100 - decay_rate) / 100.0) ** (epoch_num - 1)
+        )
+        sess.run(tf.compat.v1.assign(self.learning_rate, new_learning_rate))
+        sess.run(tf.compat.v1.assign(self.epoch, epoch_num))
+
+        # TODO(cec): refactor data generator to a Python generator.
+        data_generator.CreateBatches()
+        app.Log(1, "Epoch %d/%d:", epoch_num, self.config.training.num_epochs)
 
         state = sess.run(self.initial_state)
         # Per-batch inner loop.
         bar = progressbar.ProgressBar(max_value=data_generator.num_batches)
         last_log_time = time.time()
-
         for i in bar(range(data_generator.num_batches)):
           x, y = data_generator.NextBatch()
           feed = {self.input_data: x, self.targets: y}
@@ -426,40 +480,20 @@ class TensorFlowBackend(backends.BackendBase):
             # of the epoch, when the checkpoint is created.
             now = time.time()
             duration_ns = int((now - last_log_time) * 1e6)
-            # dbs.add(
-            #   dashboard_db.TrainingTelemetry(
-            #     model_id=self.dashboard_model_id,
-            #     epoch=epoch_num,
-            #     step=step,
-            #     training_loss=loss,
-            #     learning_rate=new_learning_rate,
-            #     ns_per_batch=int(duration_ns)
-            #     / FLAGS.clgen_tf_backend_tensorboard_summary_step_count,
-            #   )
-            # )
-
+            dbs.add(
+              dashboard_db.TrainingTelemetry(
+                model_id=self.dashboard_model_id,
+                epoch=epoch_num,
+                step=step,
+                training_loss=loss,
+                learning_rate=new_learning_rate,
+                ns_per_batch=int(duration_ns)
+                / FLAGS.clgen_tf_backend_tensorboard_summary_step_count,
+              )
+            )
             last_log_time = now
-            ## This function below hangs
-            # dbs.commit()
-        return summary, loss, state, step
-        # End of Epoch
+            dbs.commit()
 
-      # Per-epoch training loop.
-      for epoch_num in range(current_epoch, max_epoch):
-        logger.EpochBeginCallback()
-
-        # decay and set learning rate
-        new_learning_rate = initial_learning_rate * (
-          (float(100 - decay_rate) / 100.0) ** (epoch_num - 1)
-        )
-        sess.run(tf.compat.v1.assign(self.learning_rate, new_learning_rate))
-        sess.run(tf.compat.v1.assign(self.epoch, epoch_num))
-
-        # TODO(cec): refactor data generator to a Python generator.
-        data_generator.CreateBatches()
-        app.Log(1, "Epoch %d/%d:", epoch_num, self.config.training.num_epochs)
-
-        summary, loss, state, step = train_step(epoch_num)
         # Log the loss and delta.
         app.Log(1, "Loss: %.6f.", loss)
 
