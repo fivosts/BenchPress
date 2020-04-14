@@ -1,6 +1,5 @@
 import tensorflow_addons as tfa
 
-from tensorflow.python.ops import math_ops
 from tensorflow.python.ops.distributions import categorical
 from tensorflow.python.util import nest
 
@@ -40,7 +39,7 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
     # with tf.name_scope(name, "CIHNextInputs", [time, outputs, state]):
     next_time = time + 1
     finished = next_time >= self.sequence_length
-    all_finished = math_ops.reduce_all(finished)
+    all_finished = tf.reduce_all(finished)
     seed_done = next_time >= self._seed_length
 
     def read_from_ta(inp):
