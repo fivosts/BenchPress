@@ -16,7 +16,6 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
     self.softmax_temperature = temperature
 
   def initialize(self, inputs, sequence_length, name=None):
-    self.sequence_length = sequence_length
     return super(CustomInferenceHelper, self).initialize(inputs = inputs,
                                                          sequence_length = sequence_length,
                                                          mask = None
