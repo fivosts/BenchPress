@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Update package index:
-apt-get update
-apt-get install -y \
+sudo apt-get update
+sudo apt-get install -y \
 ca-certificates \
 curl \
 wget \
@@ -42,8 +42,8 @@ mysql-server \
 libmysqlclient-dev \
 
 ##
-rm /usr/bin/python3
-ln -s /usr/bin/python3.7 /usr/bin/python3
+sudo rm /usr/bin/python3
+sudo ln -s /usr/bin/python3.7 /usr/bin/python3
 
 # Install bazel:
 curl -L -o /tmp/bazel.sh https://github.com/bazelbuild/bazel/releases/download/3.0.0/bazel-3.0.0-installer-linux-x86_64.sh && bash /tmp/bazel.sh && rm /tmp/bazel.sh
