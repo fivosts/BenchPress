@@ -1,8 +1,7 @@
 import tensorflow_addons as tfa
 
 from tensorflow.python.ops.distributions import categorical
-from third_party.py.tensorflow import tf
-
+import tensorflow as tf
 
 class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
   """An inference helper that takes a seed text"""

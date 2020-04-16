@@ -89,7 +89,7 @@ class TensorFlowBackend(backends.BackendBase):
 
     # Create the summary writer, shared between Train() and
     # _EndOfEpochTestSample().
-    from third_party.py.tensorflow import tf
+    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
 
     tensorboard_dir = f"{self.cache.path}/tensorboard"
@@ -125,7 +125,7 @@ class TensorFlowBackend(backends.BackendBase):
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
     # Deferred importing of TensorFlow.
-    from third_party.py.tensorflow import tf
+    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
     from deeplearning.clgen.models import helper
 
@@ -504,7 +504,7 @@ class TensorFlowBackend(backends.BackendBase):
     self, corpus, sampler: samplers.Sampler, step: int, epoch_num: int
   ):
     """Run sampler"""
-    from third_party.py.tensorflow import tf
+    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
 
     atomizer = corpus.atomizer
@@ -567,7 +567,7 @@ class TensorFlowBackend(backends.BackendBase):
     self, sampler: samplers.Sampler, seed: typing.Optional[int] = None
   ) -> None:
     """Initialize model for sampling."""
-    from third_party.py.tensorflow import tf
+    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
 
     # Delete any previous sampling session.
@@ -647,7 +647,7 @@ class TensorFlowBackend(backends.BackendBase):
     return generated
 
   def RandomizeSampleState(self) -> None:
-    from third_party.py.tensorflow import tf
+    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
 
     self.inference_state = [
