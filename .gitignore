@@ -1,0 +1,5 @@
+bazel-bin
+bazel-clgen
+bazel-out
+bazel-testlogs
+*__pycache__*
