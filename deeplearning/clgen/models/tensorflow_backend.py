@@ -159,7 +159,7 @@ class TensorFlowBackend(backends.BackendBase):
       def __init__(self, cells):
         super(myMultiRNN, self).__init__(cells, state_is_tuple = True)
         return
-      def __call__(self, inputs, state, training):
+      def __call__(self, inputs, state, training = None):
         return super (myMultiRNN, self).__call__(inputs, state)
 
 	## compat.v1.nn.rnn_cell.MultiRNNCell does not work on TF2 because it does not know
