@@ -11,8 +11,7 @@ services:
   - mysql
 
 install:
-  - sudo apt-get update
-  - sudo bash apt_deps.sh
+  - bash apt_deps.sh
   - bazel build //deeplearning/clgen
 
 before_script:
