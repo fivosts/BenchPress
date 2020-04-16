@@ -12,7 +12,7 @@ services:
 
 install:
   - sudo apt-get update
-  - bash apt_deps.sh
+  - sudo bash apt_deps.sh
   - bazel build //deeplearning/clgen
 
 before_script:
