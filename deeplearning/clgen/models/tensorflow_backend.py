@@ -154,7 +154,19 @@ class TensorFlowBackend(backends.BackendBase):
     cells_lst = []
     for _ in range(self.config.architecture.num_layers):
       cells_lst.append(cell_type(self.config.architecture.neurons_per_layer))
-    self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
+    # self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
+    class myMultiRNN(tf.compat.v1.nn.rnn_cell.MultiRNNCell):
+      def __init__(self, cells):
+        super(myMultiRNN, self).__init__(cells, state_is_tuple = True)
+        return
+      def __call__(self, inputs, state, training):
+        return super (myMultiRNN, self).__call__(inputs, state)
+
+	## compat.v1.nn.rnn_cell.MultiRNNCell does not work on TF2 because it does not know
+	## what 'training' argument is when __call__ is called. Create a temp wrapper to fix this up
+	## Will be replaced by StackedRNNCell once generation is fixed.
+    self.cell = cell = myMultiRNN(cells_lst)   
+    # self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
     # self.cell = cell = tf.compat.v1.nn.rnn_cell.MultiRNNCell(cells_lst)
     self.input_data = tf.compat.v1.placeholder(
       tf.int32, [batch_size, sequence_length]
@@ -162,8 +174,8 @@ class TensorFlowBackend(backends.BackendBase):
     self.targets = tf.compat.v1.placeholder(
       tf.int32, [batch_size, sequence_length]
     )
+    self.initial_state = self.cell.zero_state(batch_size, tf.float32)
     # self.initial_state = self.cell.get_initial_state(batch_size = batch_size, dtype = tf.float32)
-    self.initial_state = self.cell.get_initial_state(batch_size = batch_size, dtype = tf.float32)
     self.temperature = tf.Variable(1.0, trainable=False)
     self.seed_length = tf.Variable(32, trainable=False)
 
@@ -401,49 +413,6 @@ class TensorFlowBackend(backends.BackendBase):
       current_epoch = sess.run(self.epoch) + 1
       max_epoch = self.config.training.num_epochs + 1
 
-      # # @tf.function
-      # def train_step(epoch_num):
-
-      #   state = sess.run(self.initial_state)
-      #   # Per-batch inner loop.
-      #   bar = progressbar.ProgressBar(max_value=data_generator.num_batches)
-      #   last_log_time = time.time()
-
-      #   for i in bar(range(data_generator.num_batches)):
-      #     x, y = data_generator.NextBatch()
-      #     feed = {self.input_data: x, self.targets: y}
-      #     for j, (c, h) in enumerate(self.initial_state):
-      #       feed[c], feed[h] = state[j].c, state[j].h
-      #     summary, loss, state, _ = sess.run(
-      #       [merged, self.loss, self.final_state, self.train_op], feed
-      #     )
-
-      #     # Periodically write progress to tensorboard.
-      #     if i % FLAGS.clgen_tf_backend_tensorboard_summary_step_count == 0:
-      #       step = (epoch_num - 1) * data_generator.num_batches + i
-      #       self.summary_writer.add_summary(summary, step)
-      #       # Add telemetry database entry. This isn't committed until the end
-      #       # of the epoch, when the checkpoint is created.
-      #       now = time.time()
-      #       duration_ns = int((now - last_log_time) * 1e6)
-      #       # dbs.add(
-      #       #   dashboard_db.TrainingTelemetry(
-      #       #     model_id=self.dashboard_model_id,
-      #       #     epoch=epoch_num,
-      #       #     step=step,
-      #       #     training_loss=loss,
-      #       #     learning_rate=new_learning_rate,
-      #       #     ns_per_batch=int(duration_ns)
-      #       #     / FLAGS.clgen_tf_backend_tensorboard_summary_step_count,
-      #       #   )
-      #       # )
-
-      #       last_log_time = now
-      #       ## This function below hangs
-      #       # dbs.commit()
-      #   return summary, loss, state, step
-      #   # End of Epoch
-
       # Per-epoch training loop.
       for epoch_num in range(current_epoch, max_epoch):
         logger.EpochBeginCallback()
@@ -458,7 +427,6 @@ class TensorFlowBackend(backends.BackendBase):
         # TODO(cec): refactor data generator to a Python generator.
         data_generator.CreateBatches()
         app.Log(1, "Epoch %d/%d:", epoch_num, self.config.training.num_epochs)
-
         state = sess.run(self.initial_state)
         # Per-batch inner loop.
         bar = progressbar.ProgressBar(max_value=data_generator.num_batches)
@@ -525,7 +493,6 @@ class TensorFlowBackend(backends.BackendBase):
         # This is confusing logic! Consider a refactor to simplify things.
         if test_sampler:
           break
-        ## End of epoch
       else:
         return
 
@@ -621,8 +588,8 @@ class TensorFlowBackend(backends.BackendBase):
     # is reset at the beginning of every sample batch. Else, this is the only
     # place it is initialized.
     self.inference_state = self.inference_sess.run(
-      self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
-      # self.cell.zero_state(sampler.batch_size, self.inference_tf.float32)
+      # self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
+      self.cell.zero_state(sampler.batch_size, self.inference_tf.float32)
     )
 
     self.inference_tf.compat.v1.global_variables_initializer().run(
@@ -650,8 +617,8 @@ class TensorFlowBackend(backends.BackendBase):
   def InitSampleBatch(self, sampler: samplers.Sampler) -> None:
     if FLAGS.clgen_tf_backend_reset_inference_state_between_batches:
       self.inference_state = self.inference_sess.run(
-        self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
-        # self.cell.zero_state(sampler.batch_size, self.inference_tf.float32)
+        # self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
+        self.cell.zero_state(sampler.batch_size, self.inference_tf.float32)
       )
     self.inference_indices = np.tile(
       sampler.encoded_start_text, [sampler.batch_size, 1]
