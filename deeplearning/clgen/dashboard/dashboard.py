@@ -285,9 +285,7 @@ def samples(corpus_id: int, model_id: int, epoch: int):
 def Launch(debug: bool = False):
   """Launch dashboard in a separate thread."""
   port = FLAGS.clgen_dashboard_port or portpicker.pick_unused_port()
-  app.Log(
-    1, "Launching CLgen dashboard on http://127.0.0.1:%d", port,
-  )
+  l.getLogger().info("Launching CLgen dashboard on http://127.0.0.1:{}".format(port))
   kwargs = {
     "port": port,
     # Debugging must be disabled when run in a separate thread.
