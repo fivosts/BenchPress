@@ -23,8 +23,9 @@ from labm8.py import decorators
 from labm8.py import labdate
 from labm8.py import sqlutil
 
-FLAGS = app.FLAGS
+from eupy.native import logger as l
 
+FLAGS = app.FLAGS
 Base = sqlutil.Base()
 
 
@@ -132,5 +133,5 @@ class TrainingSample(Base):
 @decorators.run_once
 def GetDatabase() -> DashboardDatabase:
   db: DashboardDatabase = FLAGS.clgen_dashboard_db()
-  app.Log(1, "Created dashboard database %s", db.url)
+  l.getLogger().info("Created dashboard database {}".format(db.url))
   return db
