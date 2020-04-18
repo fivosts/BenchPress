@@ -14,6 +14,8 @@ from labm8.py import app
 from labm8.py import bazelutil
 from labm8.py import humanize
 
+from eupy.native import logger as l
+
 FLAGS = app.FLAGS
 
 # Disable flask banner on load.
