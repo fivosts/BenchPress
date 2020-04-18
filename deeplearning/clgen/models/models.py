@@ -42,6 +42,8 @@ from labm8.py import logutil
 from labm8.py import pbutil
 from labm8.py import system
 
+from eupy.native import logger as l
+
 FLAGS = app.FLAGS
 
 
@@ -210,13 +212,14 @@ class Model(object):
     telemetry_logs = self.TrainingTelemetry()[: self.config.training.num_epochs]
     final_loss = telemetry_logs[-1].loss
     total_time_ms = sum(t.epoch_wall_time_ms for t in telemetry_logs)
-    app.Log(
-      1,
-      "Trained model for %d epochs in %s ms (%s). " "Training loss: %f.",
-      self.config.training.num_epochs,
-      humanize.Commas(total_time_ms),
-      humanize.Duration(total_time_ms / 1000),
-      final_loss,
+    l.getLogger().info(
+      "Trained model for {} epochs in {} ms ({}). " "Training loss: {}."
+        .format(
+          self.config.training.num_epochs,
+          humanize.Commas(total_time_ms),
+          humanize.Duration(total_time_ms / 1000),
+          final_loss,
+          )
     )
     return self
 
@@ -262,7 +265,7 @@ class Model(object):
     with logutil.TeeLogsToFile(
       f"sampler_{sampler.hash}", self.cache.path / "logs"
     ):
-      app.Log(1, "Sampling: '%s'", sampler.start_text)
+      l.getLogger().info("Sampling: '%s'", sampler.start_text)
 
       atomizer = self.corpus.atomizer
       sampler.Specialize(atomizer)
@@ -274,8 +277,7 @@ class Model(object):
         batch_count += 1
 
       time_now = labdate.MillisecondsTimestamp()
-      app.Log(
-        1,
+      l.getLogger().info(
         "Produced %s sample batches at a rate of %s ms / batch.",
         humanize.Commas(batch_count),
         humanize.Commas(

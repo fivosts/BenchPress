@@ -34,6 +34,8 @@ from labm8.py import app
 from labm8.py import gpu_scheduler
 from labm8.py import humanize
 
+from eupy.native import logger as l
+
 FLAGS = app.FLAGS
 
 app.DEFINE_boolean(
@@ -93,8 +95,7 @@ class TensorFlowBackend(backends.BackendBase):
     tf.compat.v1.disable_eager_execution()
 
     tensorboard_dir = f"{self.cache.path}/tensorboard"
-    app.Log(
-      1,
+    l.getLogger().info(
       "Using tensorboard to log training progress. View progress using:\n"
       f"    $ tensorboard --logdir='{tensorboard_dir}'",
     )
@@ -250,11 +251,12 @@ class TensorFlowBackend(backends.BackendBase):
     num_trainable_params = int(
       np.sum([np.prod(v.shape) for v in tf.compat.v1.trainable_variables()])
     )
-    app.Log(
-      1,
-      "Instantiated TensorFlow graph with %s trainable parameters " "in %s ms.",
-      humanize.Commas(num_trainable_params),
-      humanize.Commas(int((time.time() - start_time) * 1000)),
+    l.getLogger().info(
+      "Instantiated TensorFlow graph with {} trainable parameters " "in {} ms."
+        .format(
+          humanize.Commas(num_trainable_params),
+          humanize.Commas(int((time.time() - start_time) * 1000)),
+          )
     )
 
     return tf
@@ -402,7 +404,7 @@ class TensorFlowBackend(backends.BackendBase):
 
       # restore model from closest checkpoint.
       if ckpt_path:
-        app.Log(1, "Restoring checkpoint {}".format(ckpt_path))
+        l.getLogger().info("Restoring checkpoint {}".format(ckpt_path))
         saver.restore(sess, ckpt_path)
 
       # make sure we don't lose track of other checkpoints
@@ -426,7 +428,7 @@ class TensorFlowBackend(backends.BackendBase):
 
         # TODO(cec): refactor data generator to a Python generator.
         data_generator.CreateBatches()
-        app.Log(1, "Epoch %d/%d:", epoch_num, self.config.training.num_epochs)
+        l.getLogger().info("Epoch {}/{}:".format(epoch_num, self.config.training.num_epochs))
         state = sess.run(self.initial_state)
         # Per-batch inner loop.
         bar = progressbar.ProgressBar(max_value=data_generator.num_batches)
@@ -463,7 +465,7 @@ class TensorFlowBackend(backends.BackendBase):
             dbs.commit()
 
         # Log the loss and delta.
-        app.Log(1, "Loss: %.6f.", loss)
+        l.getLogger().info("Loss: {:.6f}.".format(loss))
 
         # Save after every epoch.
         start_time = time.time()
@@ -472,11 +474,12 @@ class TensorFlowBackend(backends.BackendBase):
         checkpoint_path = saver.save(
           sess, checkpoint_prefix, global_step=global_step
         )
-        app.Log(
-          1,
-          "Saved checkpoint %s in %s ms.",
-          checkpoint_path,
-          humanize.Commas(int((time.time() - start_time) * 1000)),
+        l.getLogger().info(
+          "Saved checkpoint {} in {} ms."
+            .format(
+              checkpoint_path,
+              humanize.Commas(int((time.time() - start_time) * 1000)),
+              )
         )
         dbs.query(dashboard_db.TrainingTelemetry).filter(
           dashboard_db.TrainingTelemetry.pending == True
