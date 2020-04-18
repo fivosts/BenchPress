@@ -23,8 +23,9 @@ from labm8.py import decorators
 from labm8.py import labdate
 from labm8.py import sqlutil
 
-FLAGS = app.FLAGS
+from eupy.native import logger as l
 
+FLAGS = app.FLAGS
 Base = sqlutil.Base()
 
 
