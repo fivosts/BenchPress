@@ -67,6 +67,7 @@ py_binary(
         "//deeplearning/clgen/models",
         "//deeplearning/clgen/models:pretrained",
         "//deeplearning/clgen/proto:clgen_pb_py",
+        "//third_party/py/eupy",
         "//labm8/py:app",
         "//labm8/py:pbutil",
         "//labm8/py:prof",
