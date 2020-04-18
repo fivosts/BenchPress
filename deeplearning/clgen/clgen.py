@@ -50,6 +50,9 @@ from labm8.py import app
 from labm8.py import pbutil
 from labm8.py import prof
 
+from eupy.native import logger as l
+import argparse
+
 FLAGS = app.FLAGS
 
 app.DEFINE_string(
@@ -207,6 +210,23 @@ class Instance(object):
   def FromFile(cls, path: pathlib.Path) -> "Instance":
     return cls(pbutil.FromFile(path, clgen_pb2.Instance()))
 
+def parseArgs():
+
+  parser = argparse.ArgumentParser(description = "OpenCL kernel ML generator")
+
+  logging_args = parser.add_argument_group("Logging Arguments")
+  logging_args.add_argument('-lvl', '--level', default = l.INFO, 
+                            choices = [l.DEBUG, l.INFO, l.WARNING, l.ERROR, l.CRITICAL],
+                            required = False, help = "Define logging level of logger")
+  logging_args.add_argument('-cl', '--color', default = True, action = 'store_true',
+                            required = False, help = "Colorize or not, logging messages")
+  logging_args.add_argument('-st', '--step', default = False, action = 'store_true',
+                            required = False, help = "Enable step execution on debug logs (debug level must be selected)")
+
+  clgen = parser.add_argument_group("Main CLgen Arguments")
+  clgen.add_argument('--config', required = True, help = "Path to a clgen.Instance proto file (config.pbtxt).")
+
+  return parser.parse_args()
 
 def Flush():
   """Flush logging and stout/stderr outputs."""
@@ -217,15 +237,20 @@ def Flush():
 
 def LogException(exception: Exception):
   """Log an error."""
-  app.Error(
-    f"""\
+  l.getLogger().error(f"""\
 %s (%s)
 
 Please report bugs at <https://github.com/ChrisCummins/phd/issues>\
-""",
-    exception,
-    type(exception).__name__,
-  )
+""", exception, type(exception).__name__)
+#   app.Error(
+#     f"""\
+# %s (%s)
+
+# Please report bugs at <https://github.com/ChrisCummins/phd/issues>\
+# """,
+#     exception,
+#     type(exception).__name__,
+#   )
   sys.exit(1)
 
 def RunWithErrorHandling(
@@ -266,7 +291,7 @@ def RunWithErrorHandling(
     # UsageError is handled by the call to app.RunWithArgs(), not here.
     raise err
   except errors.UserError as err:
-    app.Error("%s (%s)", err, type(err).__name__)
+    l.getLogger.error("{} ({})".format(err, type(err).__name))
     sys.exit(1)
   except KeyboardInterrupt:
     Flush()
@@ -278,7 +303,9 @@ def RunWithErrorHandling(
     sys.exit(1)
 
 def ConfigFromFlags() -> clgen_pb2.Instance:
-  config_path = pathlib.Path(FLAGS.config)
+
+  log = l.initLogger(name = "clgen", lvl = arguments.level, colorize = arguments.color, step = arguments.step)
+  config_path = pathlib.Path(arguments.config)
   if not config_path.is_file():
     raise app.UsageError(f"CLgen --config file not found: '{config_path}'")
   config = pbutil.FromFile(config_path, clgen_pb2.Instance())
@@ -356,7 +383,7 @@ def DoFlagsAction(
       instance.model.corpus.Create()
     elif FLAGS.stop_after == "train":
       instance.Train()
-      app.Log(1, "Model: %s", instance.model.cache.path)
+      l.getLogger.info("Model: {}".format(instance.model.cache.path))
     elif FLAGS.stop_after:
       raise app.UsageError(
         f"Invalid --stop_after argument: '{FLAGS.stop_after}'"
@@ -366,6 +393,7 @@ def DoFlagsAction(
     else:
       instance.Sample(sample_observers)
 
+arguments = parseArgs()
 
 def main():
   """Main entry point."""
