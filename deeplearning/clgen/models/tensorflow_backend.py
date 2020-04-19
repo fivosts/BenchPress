@@ -643,7 +643,7 @@ class TensorFlowBackend(backends.BackendBase):
       sampler.encoded_start_text, [sampler.batch_size, 1]
     )
 
-  def SampleNextIndices(self, sampler: samplers.Sampler, done: np.ndarray):
+  def SampleNextIndices(self, sampler: samplers.Sampler, done: np.ndarray, atomizer = None):
     l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.SampleNextIndices()")
     length = self.inference_indices.shape[1]
     assert length < sampler.sequence_length
@@ -661,7 +661,13 @@ class TensorFlowBackend(backends.BackendBase):
     generated, self.inference_state = self.inference_sess.run(
       [self.generated, self.final_state], feed
     )
-    l.getLogger().warning(generated)
+    if atomizer:
+        l.getLogger().info("Length: {}".format(length))
+        l.getLogger().info("sequence_length: {}".format(sampler.sequence_length))
+        l.getLogger().warning("generated: {}".format(generated))
+        l.getLogger().warning("True generated: {}".format(generated[:, length - 1 :]))
+        l.getLogger().warning("Input Seed: |" + "".join([atomizer.decoder[x] for x in expanded_indices[0]]))
+        l.getLogger().warning("True generated output: |" + "".join([atomizer.decoder[x] for x in generated[:, length - 1 :][0]]))
     self.inference_indices = generated[:, -1].reshape((sampler.batch_size, 1))
     if length > 1:
       generated = generated[:, length - 1 :]
