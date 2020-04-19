@@ -96,8 +96,8 @@ class TensorFlowBackend(backends.BackendBase):
     import tensorflow as tf
     l.getLogger().debug("Tensorflow path: {}".format(tf))
     l.getLogger().debug("Tensorflow version: {}".format(tf.__version__))
-    l.getLogger().debug("TF Addons path: {}".format(tf))
-    l.getLogger().debug("TF Addons version: {}".format(tf.__version__))
+    l.getLogger().debug("TF Addons path: {}".format(tfa))
+    l.getLogger().debug("TF Addons version: {}".format(tfa.__version__))
     tf.compat.v1.disable_eager_execution()
 
     tensorboard_dir = f"{self.cache.path}/tensorboard"
