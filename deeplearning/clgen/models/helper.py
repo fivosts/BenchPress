@@ -1,5 +1,7 @@
 import tensorflow_addons as tfa
 
+from eupy.native import logger as l
+
 from tensorflow.python.ops.distributions import categorical
 import tensorflow as tf
 
@@ -7,7 +9,7 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
   """An inference helper that takes a seed text"""
 
   def __init__(self, seed_length, embedding, temperature):
-
+    l.getLogger().debug("deeplearning.clgen.models.helper.CustomInferenceHelper.__init__()")
     super(CustomInferenceHelper, self).__init__(time_major=False)
 
     self._seed_length = seed_length
@@ -15,6 +17,7 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
     self.softmax_temperature = temperature
 
   def initialize(self, inputs, sequence_length, name=None):
+    l.getLogger().debug("deeplearning.clgen.models.helper.CustomInferenceHelper.initialize()")
     return super(CustomInferenceHelper, self).initialize(inputs = inputs,
                                                          sequence_length = sequence_length,
                                                          mask = None
@@ -22,6 +25,7 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
 
   # def sample(self, time, outputs, state, name=None):
   def sample(self, time, outputs, state):
+    l.getLogger().debug("deeplearning.clgen.models.helper.CustomInferenceHelper.sample()")
     if self.softmax_temperature is not None:
       outputs = outputs / self.softmax_temperature
 
@@ -32,6 +36,7 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
   ## Only this function requires refactoring
   # def next_inputs(self, time, outputs, state, sample_ids, name = "CIHNextInputs"):
   def next_inputs(self, time, outputs, state, sample_ids):
+    l.getLogger().debug("deeplearning.clgen.models.helper.CustomInferenceHelper.next_inputs()")
     # with tf.name_scope(name, "CIHNextInputs", [time, outputs, state]):
     next_time = time + 1
     finished = next_time >= self.sequence_length
