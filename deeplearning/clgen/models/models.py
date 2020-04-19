@@ -66,6 +66,7 @@ class Model(object):
       TypeError: If the config argument is not a Model proto.
       UserError: In case on an invalid config.
     """
+    l.getLogger().debug("deeplearning.clgen.models.Model.__init__()")
     # Error early, so that a cache isn't created.
     if not isinstance(config, model_pb2.Model):
       t = type(config).__name__
@@ -137,6 +138,7 @@ class Model(object):
     }[config.architecture.backend](self.config, self.cache, self.corpus)
 
   def GetShortSummary(self) -> str:
+    l.getLogger().debug("deeplearning.clgen.models.Model.GetShortSummary()")
     return self.backend.GetShortSummary()
 
   @staticmethod
@@ -157,6 +159,7 @@ class Model(object):
     Returns:
       The unique model ID.
     """
+    l.getLogger().debug("deeplearning.clgen.models.Model._ComputeHash()")
     config_to_hash = model_pb2.Model()
     config_to_hash.CopyFrom(config)
     config_to_hash.ClearField("corpus")
@@ -164,6 +167,7 @@ class Model(object):
     return crypto.sha1_list(corpus_.hash, config_to_hash.SerializeToString())
 
   def Create(self) -> bool:
+    l.getLogger().debug("deeplearning.clgen.models.Model.Create()")
     if self._created:
       return False
     self._created = True
@@ -192,6 +196,7 @@ class Model(object):
 
   @property
   def dashboard_db_id(self) -> int:
+    l.getLogger().debug("deeplearning.clgen.models.Model.dashboard_db_id()")
     if not self._created:
       raise TypeError("Cannot access dashboard_db_id before Create() called")
     return self._dashboard_db_id
@@ -206,6 +211,7 @@ class Model(object):
       UnableToAcquireLockError: If the model is locked (i.e. there is another
         process currently modifying the model).
     """
+    l.getLogger().debug("deeplearning.clgen.models.Model.Train()")
     self.Create()
     with self.training_lock.acquire():
       self.backend.Train(self.corpus, **kwargs)
@@ -255,6 +261,7 @@ class Model(object):
       InvalidSymtokTokens: If the sampler symmetrical depth tokens cannot be
         encoded.
     """
+    l.getLogger().debug("deeplearning.clgen.models.Model._Sample()")
     if not sample_observers:
       raise errors.UserError("Cannot sample without any observers")
 
@@ -291,6 +298,7 @@ class Model(object):
     sample_observers: typing.List[sample_observers_lib.SampleObserver],
   ) -> bool:
     """Run a single iteration of the batched sample inner-loop."""
+    l.getLogger().debug("deeplearning.clgen.models.Model._SampleBatch()")
     samples_in_progress = [
       sampler.tokenized_start_text.copy() for _ in range(sampler.batch_size)
     ]
@@ -348,13 +356,16 @@ class Model(object):
       A path to a directory. Note that this directory may not exist - it is
       created only after a call to Sample().
     """
+    l.getLogger().debug("deeplearning.clgen.models.Model.SamplerCache()")
     return self.cache.path / "samples" / sampler.hash
 
   def _WriteMetafile(self) -> None:
+    l.getLogger().debug("deeplearning.clgen.models.Model._WriteMetafile()")
     pbutil.ToFile(self.meta, pathlib.Path(self.cache.keypath("META.pbtxt")))
 
   def TrainingTelemetry(self) -> typing.List[telemetry_pb2.ModelEpochTelemetry]:
     """Get the training telemetry data."""
+    l.getLogger().debug("deeplearning.clgen.models.Model.TrainingTelemetry()")
     return telemetry.TrainingLogger(self.cache.path / "logs").EpochTelemetry()
 
   def InferenceManifest(self) -> typing.List[pathlib.Path]:
@@ -363,6 +374,7 @@ class Model(object):
     Returns:
       A list of absolute paths.
     """
+    l.getLogger().debug("deeplearning.clgen.models.Model.InferenceManifest()")
     return sorted(
       [self.cache.path / "atomizer", self.cache.path / "META.pbtxt",]
       + self.backend.InferenceManifest()
@@ -370,25 +382,31 @@ class Model(object):
 
   @property
   def atomizer(self) -> atomizers.AtomizerBase:
+    l.getLogger().debug("deeplearning.clgen.models.Model.atomizer()")
     return self.corpus.atomizer
 
   @property
   def training_lock(self) -> lockfile.LockFile:
+    l.getLogger().debug("deeplearning.clgen.models.Model.training_lock()")
     """A lockfile for exclusive training."""
     return lockfile.LockFile(self.cache.keypath("LOCK"))
 
   @property
   def is_trained(self) -> bool:
+    l.getLogger().debug("deeplearning.clgen.models.Model.is_trained()")
     return self.backend.is_trained
 
   def __repr__(self) -> str:
     """String representation."""
+    l.getLogger().debug("deeplearning.clgen.models.Model.__repr__()")
     return f"model[{self.hash}]"
 
   def __eq__(self, rhs) -> bool:
+    l.getLogger().debug("deeplearning.clgen.models.Model.__eq__()")
     if not isinstance(rhs, Model):
       return False
     return rhs.hash == self.hash
 
   def __ne__(self, rhs) -> bool:
+    l.getLogger().debug("deeplearning.clgen.models.Model.__ne__()")
     return not self.__eq__(rhs)
