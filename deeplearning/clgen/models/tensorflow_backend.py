@@ -644,6 +644,7 @@ class TensorFlowBackend(backends.BackendBase):
     )
 
   def SampleNextIndices(self, sampler: samplers.Sampler, done: np.ndarray):
+    l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.SampleNextIndices()")
     length = self.inference_indices.shape[1]
     assert length < sampler.sequence_length
     expanded_indices = np.zeros((sampler.batch_size, sampler.sequence_length))
