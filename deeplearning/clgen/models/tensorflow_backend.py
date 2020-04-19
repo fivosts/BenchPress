@@ -661,6 +661,7 @@ class TensorFlowBackend(backends.BackendBase):
     generated, self.inference_state = self.inference_sess.run(
       [self.generated, self.final_state], feed
     )
+    l.getLogger().warning(generated)
     self.inference_indices = generated[:, -1].reshape((sampler.batch_size, 1))
     if length > 1:
       generated = generated[:, length - 1 :]
