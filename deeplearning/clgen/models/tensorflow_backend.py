@@ -19,6 +19,8 @@ import pathlib
 import time
 import typing
 
+from eupy.native import logger as l
+
 import numpy as np
 import progressbar
 
@@ -34,7 +36,6 @@ from labm8.py import app
 from labm8.py import gpu_scheduler
 from labm8.py import humanize
 
-from eupy.native import logger as l
 
 FLAGS = app.FLAGS
 
@@ -66,6 +67,7 @@ class TensorFlowBackend(backends.BackendBase):
       args: Arguments to be passed to BackendBase.__init__().
       kwargs: Arguments to be passed to BackendBase.__init__().
     """
+    l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.__init__()")
     super(TensorFlowBackend, self).__init__(*args, **kwargs)
 
     # Attributes that will be lazily set.
@@ -92,6 +94,10 @@ class TensorFlowBackend(backends.BackendBase):
     # Create the summary writer, shared between Train() and
     # _EndOfEpochTestSample().
     import tensorflow as tf
+    l.getLogger().debug("Tensorflow path: {}".format(tf))
+    l.getLogger().debug("Tensorflow version: {}".format(tf.__version__))
+    l.getLogger().debug("TF Addons path: {}".format(tf))
+    l.getLogger().debug("TF Addons version: {}".format(tf.__version__))
     tf.compat.v1.disable_eager_execution()
 
     tensorboard_dir = f"{self.cache.path}/tensorboard"
@@ -116,6 +122,7 @@ class TensorFlowBackend(backends.BackendBase):
     Returns:
       The imported TensorFlow module.
     """
+    l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.InitTfGraph()")
     # Lock exclusive access to a GPU, if present.
     gpu_scheduler.LockExclusiveProcessGpuAccess()
 
@@ -158,14 +165,16 @@ class TensorFlowBackend(backends.BackendBase):
     # self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
     class myMultiRNN(tf.compat.v1.nn.rnn_cell.MultiRNNCell):
       def __init__(self, cells):
+        l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.InitTfGraph.myMultiRNN.__init__()")
         super(myMultiRNN, self).__init__(cells, state_is_tuple = True)
         return
       def __call__(self, inputs, state, training = None):
+        l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.InitTfGraph.myMultiRNN.__call__()")
         return super (myMultiRNN, self).__call__(inputs, state)
 
-	## compat.v1.nn.rnn_cell.MultiRNNCell does not work on TF2 because it does not know
-	## what 'training' argument is when __call__ is called. Create a temp wrapper to fix this up
-	## Will be replaced by StackedRNNCell once generation is fixed.
+    ## compat.v1.nn.rnn_cell.MultiRNNCell does not work on TF2 because it does not know
+    ## what 'training' argument is when __call__ is called. Create a temp wrapper to fix this up
+    ## Will be replaced by StackedRNNCell once generation is fixed.
     self.cell = cell = myMultiRNN(cells_lst)   
     # self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
     # self.cell = cell = tf.compat.v1.nn.rnn_cell.MultiRNNCell(cells_lst)
@@ -262,6 +271,7 @@ class TensorFlowBackend(backends.BackendBase):
     return tf
 
   def GetShortSummary(self) -> str:
+    l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.GetShortSummary()")
     return (
       f"{self.config.architecture.neurons_per_layer}×"
       f"{self.config.architecture.num_layers} "
@@ -279,6 +289,7 @@ class TensorFlowBackend(backends.BackendBase):
     Returns:
       A mapping of epoch numbers to paths.
     """
+    l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.epoch_checkpoints()")
     if not (self.cache.path / "checkpoints" / "checkpoints"):
       # No saver file means no checkpoints.
       return {}
@@ -298,6 +309,7 @@ class TensorFlowBackend(backends.BackendBase):
   ) -> typing.Tuple[typing.Optional[str], typing.List[str]]:
     """Return path to checkpoint closest to target num of epochs."""
     # Checkpoints are saved with relative path, so we must prepend cache paths.
+    l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.GetParamsPath()")
     paths = [
       str(self.cache.path / "checkpoints" / p)
       for p in checkpoint_state.all_model_checkpoint_paths
@@ -316,6 +328,7 @@ class TensorFlowBackend(backends.BackendBase):
       A list of absolute paths.
     """
     # The TensorFlow save file.
+    l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.InferenceManifest()")
     paths = [
       self.cache.path / "checkpoints" / "checkpoint",
     ]
@@ -355,6 +368,7 @@ class TensorFlowBackend(backends.BackendBase):
 
     This method must only be called when the model is locked.
     """
+    l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.Train()")
     del unused_kwargs
 
     if self.is_trained:
@@ -564,6 +578,7 @@ class TensorFlowBackend(backends.BackendBase):
 
   @staticmethod
   def FormatCodeAsMarkdown(text: str) -> str:
+    l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.FormatCodeAsMarkdown()")
     return f"<pre>{text.strip()}</pre>"
 
   def InitSampling(
@@ -618,6 +633,7 @@ class TensorFlowBackend(backends.BackendBase):
     )
 
   def InitSampleBatch(self, sampler: samplers.Sampler) -> None:
+    l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.InitSampleBatch()")
     if FLAGS.clgen_tf_backend_reset_inference_state_between_batches:
       self.inference_state = self.inference_sess.run(
         # self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
@@ -650,6 +666,7 @@ class TensorFlowBackend(backends.BackendBase):
     return generated
 
   def RandomizeSampleState(self) -> None:
+    l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.RandomizeSampleState()")
     import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
 
@@ -662,10 +679,12 @@ class TensorFlowBackend(backends.BackendBase):
     ]
 
   def ResetSampleState(self, sampler: samplers.Sampler, state, seed) -> None:
+    l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.ResetSampleState()")
     self.inference_state = copy.deepcopy(state)
     self.inference_indices = np.tile(seed, [sampler.batch_size, 1])
 
   def EvaluateSampleState(self, sampler: samplers.Sampler):
+    l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.EvaluateSampleState()")
     length = self.inference_indices.shape[1] - 1
     if length == 0:
       return
@@ -694,6 +713,7 @@ class TensorFlowBackend(backends.BackendBase):
   def is_trained(self) -> bool:
     """Determine if model has been trained."""
     # Count the number of checkpoint files which TensorFlow has created.
+    l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.is_trained()")
     checkpoint_files = [
       f.stem
       for f in (self.cache.path / "checkpoints").iterdir()
