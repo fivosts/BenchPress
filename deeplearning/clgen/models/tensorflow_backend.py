@@ -657,7 +657,7 @@ class TensorFlowBackend(backends.BackendBase):
       self.lengths: synthesized_lengths,
       self.seed_length: length,
     }
-
+    l.getLogger().enable_step
     generated, self.inference_state = self.inference_sess.run(
       [self.generated, self.final_state], feed
     )
