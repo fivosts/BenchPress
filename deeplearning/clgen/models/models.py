@@ -265,7 +265,7 @@ class Model(object):
     with logutil.TeeLogsToFile(
       f"sampler_{sampler.hash}", self.cache.path / "logs"
     ):
-      l.getLogger().info("Sampling: '%s'", sampler.start_text)
+      l.getLogger().info("Sampling: '{}'".format(sampler.start_text))
 
       atomizer = self.corpus.atomizer
       sampler.Specialize(atomizer)
@@ -277,12 +277,11 @@ class Model(object):
         batch_count += 1
 
       time_now = labdate.MillisecondsTimestamp()
-      l.getLogger().info(
-        "Produced %s sample batches at a rate of %s ms / batch.",
-        humanize.Commas(batch_count),
-        humanize.Commas(
-          int((time_now - sample_start_time) / max(batch_count, 1))
-        ),
+      l.getLogger().info( "Produced {} sample batches at a rate of {} ms / batch."
+                          .format(
+                            humanize.Commas(batch_count),
+                            humanize.Commas(int((time_now - sample_start_time) / max(batch_count, 1)))
+                          )
       )
 
   def _SampleBatch(
