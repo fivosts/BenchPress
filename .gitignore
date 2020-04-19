@@ -6,5 +6,5 @@ bazel-testlogs
 
 # Build folders
 *__pycache__*
-build/
+*build/
 
