@@ -30,6 +30,7 @@ from deeplearning.clgen.preprocessors import preprocessors
 from deeplearning.clgen.proto import internal_pb2
 from labm8.py import app
 from labm8.py import humanize
+from eupy.native import logger as l
 
 FLAGS = app.FLAGS
 app.DEFINE_input_path(
@@ -57,12 +58,12 @@ def Preprocess(
   relpaths = {f.name for f in contentfiles.iterdir()}
   done = {f.name for f in outdir.iterdir()}
   todo = relpaths - done
-  app.Log(
-    1,
-    "Preprocessing %s of %s content files",
-    humanize.Commas(len(todo)),
-    humanize.Commas(len(relpaths)),
-  )
+  l.getLogger().info("Preprocessing {} of {} content files"
+                          .format(
+                              humanize.Commas(len(todo)),
+                              humanize.Commas(len(relpaths))
+                            )
+                    )
   jobs = [
     internal_pb2.PreprocessorWorker(
       contentfile_root=str(contentfiles),
@@ -85,14 +86,13 @@ def Preprocess(
       with open(outdir / preprocessed_cf.input_relpath, "w") as f:
         f.write(preprocessed_cf.text)
 
-  app.Log(
-    1,
-    "Successfully preprocessed %s of %s files (%.2f %%)",
-    humanize.Commas(succeeded_count),
-    humanize.Commas(len(todo)),
-    (succeeded_count / min(len(todo), 1)) * 100,
-  )
-
+  l.getLogger().info("Successfully preprocessed {} of {} files ({.2f} %%)"
+                          .format(
+                              humanize.Commas(succeeded_count),
+                              humanize.Commas(len(todo)),
+                              (succeeded_count / min(len(todo), 1)) * 100,
+                            )
+                    )
 
 def main():
   """Main entry point."""
