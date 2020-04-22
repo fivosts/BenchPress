@@ -46,6 +46,7 @@ from labm8.py import lockfile
 from labm8.py import pbutil
 from labm8.py import prof
 from labm8.py import sqlutil
+from eupy.native import logger as l
 
 FLAGS = app.FLAGS
 
@@ -235,7 +236,7 @@ class Corpus(object):
         pre-processed files.
     """
     self._created = True
-    app.Log(1, "Content ID: %s", self.content_id)
+    l.getLogger().info("Content ID: {}".format(self.content_id))
 
     # Nothing to do for already-encoded databases.
     # TODO(github.com/ChrisCummins/clgen/issues/130): Refactor this after
@@ -276,12 +277,12 @@ class Corpus(object):
     with lockfile.LockFile(encoded_lock_path):
       start_time = time.time()
       atomizer = self.atomizer
-      app.Log(
-        1,
-        "%s: %s tokens in %s ms",
-        type(atomizer).__name__,
-        humanize.Commas(atomizer.vocab_size),
-        humanize.Commas(int((time.time() - start_time) * 1000)),
+      l.getLogger().info(
+        "{}: {} tokens in {} ms".format(
+            type(atomizer).__name__,
+            humanize.Commas(atomizer.vocab_size),
+            humanize.Commas(int((time.time() - start_time) * 1000)),
+          )
       )
       self.encoded.Create(
         self.preprocessed, atomizer, self.config.contentfile_separator
@@ -403,7 +404,7 @@ class Corpus(object):
 
   def _CreateAtomizer(self) -> atomizers.AtomizerBase:
     """Creates and caches an atomizer."""
-    app.Log(1, "Deriving atomizer from preprocessed corpus")
+    l.getLogger().info("Deriving atomizer from preprocessed corpus")
     corpus_txt = self.GetTextCorpus(shuffle=False)
 
     if self.config.HasField("ascii_character_atomizer"):
@@ -462,7 +463,7 @@ def GreedyAtomizerFromEncodedDb(encoded_db: encoded.EncodedContentFiles):
   # a concrete `DatabaseCorpus` class.
   with encoded_db.Session() as s:
     vocab = GetVocabFromMetaTable(s)
-  app.Log(1, "Loaded vocabulary of %s tokens from meta table", len(vocab))
+  l.getLogger().info("Loaded vocabulary of {} tokens from meta table".format(len(vocab)))
   return atomizers.GreedyAtomizer(vocab)
 
 
@@ -530,7 +531,7 @@ def ResolveContentId(
     # file if the directory is changed.
     hash_file_path = pathlib.Path(str(local_directory) + ".sha1.txt")
     if hash_file_path.is_file():
-      app.Log(1, "Reading directory hash: '%s'.", hash_file_path)
+      l.getLogger().info("Reading directory hash: '{}'.".format(hash_file_path))
       with open(hash_file_path) as f:
         content_id = f.read().rstrip()
     else:
@@ -543,7 +544,7 @@ def ResolveContentId(
       # to reference the hash cache.
       with open(hash_file_path, "w") as f:
         print(content_id, file=f)
-      app.Log(1, "Wrote directory hash: '%s'.", hash_file_path)
+      l.getLogger().info("Wrote directory hash: '{}'.".format(hash_file_path))
   elif config.HasField("local_tar_archive"):
     # This if not an efficient means of getting the hash, as it requires always
     # unpacking the archive and reading the entire contents. It would be nicer
@@ -556,11 +557,11 @@ def ResolveContentId(
     )
   else:
     raise NotImplementedError("Unsupported Corpus.contentfiles field value")
-  app.Log(
-    2,
-    "Resolved Content ID %s in %s ms.",
-    content_id,
-    humanize.Commas(int((time.time() - start_time) * 1000)),
+  l.getLogger().warning(
+    "Resolved Content ID {} in {} ms.".format(
+          content_id,
+          humanize.Commas(int((time.time() - start_time) * 1000)),
+        )
   )
   return content_id
 
