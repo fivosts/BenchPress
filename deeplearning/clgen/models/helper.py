@@ -48,8 +48,11 @@ class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
 
     next_inputs = tf.case(  ## tf.case maybe deprecated
       [
-        (all_finished, lambda: self.zero_inputs),
-        (
+        ( 
+          all_finished,
+          lambda: self.zero_inputs
+        ),
+        ( 
           tf.math.logical_not(seed_done),
           lambda: tf.nest.map_structure(lambda inp: inp.read(next_time), self.input_tas),
         ),
