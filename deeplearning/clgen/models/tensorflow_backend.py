@@ -670,7 +670,7 @@ class TensorFlowBackend(backends.BackendBase):
     tf.compat.v1.disable_eager_execution()
 
     self.inference_state = [
-      tf.nn.rnn_cell.LSTMStateTuple(
+      tf.compat.v1.nn.rnn_cell.LSTMStateTuple(
         st1 + np.random.normal(scale=0.2, size=np.shape(st1)),
         st2 + np.random.normal(scale=0.2, size=np.shape(st2)),
       )
