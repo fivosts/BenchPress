@@ -12,7 +12,8 @@ services:
 
 install:
   - bash apt_deps.sh
-  - sudo ln -s apt_pkg.cpython-{36m,37m}-x86_64-linux-gnu.so
+  - sudo cp /usr/lib/python3/dist-packages/apt_pkg.cpython-{36m,37m}-x86_64-linux-gnu.so
+  - sudo cp /usr/lib/python3/dist-packages/apt_inst.cpython-{36m,37m}-x86_64-linux-gnu.so
   - bazel build //deeplearning/clgen
 
 before_script:
