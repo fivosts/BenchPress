@@ -158,30 +158,15 @@ class TensorFlowBackend(backends.BackendBase):
     cells_lst = []
     for _ in range(self.config.architecture.num_layers):
       cells_lst.append(cell_type(self.config.architecture.neurons_per_layer))
-    # self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
-    class myMultiRNN(tf.compat.v1.nn.rnn_cell.MultiRNNCell):
-      def __init__(self, cells):
-        l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.InitTfGraph.myMultiRNN.__init__()")
-        super(myMultiRNN, self).__init__(cells, state_is_tuple = True)
-        return
-      def __call__(self, inputs, state, training = None):
-        l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.InitTfGraph.myMultiRNN.__call__()")
-        return super (myMultiRNN, self).__call__(inputs, state)
+    self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
 
-    ## compat.v1.nn.rnn_cell.MultiRNNCell does not work on TF2 because it does not know
-    ## what 'training' argument is when __call__ is called. Create a temp wrapper to fix this up
-    ## Will be replaced by StackedRNNCell once generation is fixed.
-    self.cell = cell = myMultiRNN(cells_lst)   
-    # self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
-    # self.cell = cell = tf.compat.v1.nn.rnn_cell.MultiRNNCell(cells_lst)
     self.input_data = tf.compat.v1.placeholder(
       tf.int32, [batch_size, sequence_length]
     )
     self.targets = tf.compat.v1.placeholder(
       tf.int32, [batch_size, sequence_length]
     )
-    self.initial_state = self.cell.zero_state(batch_size, tf.float32)
-    # self.initial_state = self.cell.get_initial_state(batch_size = batch_size, dtype = tf.float32)
+    self.initial_state = self.cell.get_initial_state(batch_size = batch_size, dtype = tf.float32)
     self.temperature = tf.Variable(1.0, trainable=False)
     # self.seed_length = tf.Variable(32, trainable=False)
     self.seed_length = tf.compat.v1.placeholder(name = "seed_length", dtype = tf.int32, shape = ())
@@ -603,8 +588,7 @@ class TensorFlowBackend(backends.BackendBase):
     # is reset at the beginning of every sample batch. Else, this is the only
     # place it is initialized.
     self.inference_state = self.inference_sess.run(
-      # self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
-      self.cell.zero_state(sampler.batch_size, self.inference_tf.float32)
+      self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
     )
 
     self.inference_tf.compat.v1.global_variables_initializer().run(
@@ -633,8 +617,7 @@ class TensorFlowBackend(backends.BackendBase):
     l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.InitSampleBatch()")
     if FLAGS.clgen_tf_backend_reset_inference_state_between_batches:
       self.inference_state = self.inference_sess.run(
-        # self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
-        self.cell.zero_state(sampler.batch_size, self.inference_tf.float32)
+        self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
       )
     self.inference_indices = np.tile(
       sampler.encoded_start_text, [sampler.batch_size, 1]
