@@ -27,7 +27,7 @@ from deeplearning.clgen.models import data_generators
 from labm8.py import app
 from labm8.py import humanize
 from labm8.py import logutil
-
+from eupy.native import logger as l
 FLAGS = app.FLAGS
 
 
@@ -88,7 +88,7 @@ class KerasBackend(backends.BackendBase):
     # Print a model summary.
     buf = io.StringIO()
     model.summary(print_fn=lambda x: buf.write(x + "\n"))
-    app.Log(1, "Model summary:\n%s", buf.getvalue())
+    l.getLogger().info("Model summary:\n{}".format(buf.getvalue()))
 
     # TODO(cec): Add an atomizer.CreateVocabularyFile() method, with frequency
     # counts for a given corpus.
@@ -117,8 +117,10 @@ class KerasBackend(backends.BackendBase):
     if len(epoch_checkpoints) >= target_num_epochs:
       # We have already trained a model to at least this number of epochs, so
       # simply the weights from that epoch and call it a day.
-      app.Log(
-        1, "Loading weights from %s", epoch_checkpoints[target_num_epochs - 1]
+      l.getLogger().info( "Loading weights from {}"
+                          .format(
+                              epoch_checkpoints[target_num_epochs - 1]
+                            )
       )
       model.load_weights(epoch_checkpoints[target_num_epochs - 1])
       return model
@@ -133,7 +135,7 @@ class KerasBackend(backends.BackendBase):
         # We have already trained a model at least part of the way to our target
         # number of epochs, so load the most recent one.
         starting_epoch = len(epoch_checkpoints)
-        app.Log(1, "Resuming training from epoch %d.", starting_epoch)
+        l.getLogger().info("Resuming training from epoch {}.".format(starting_epoch))
         model.load_weights(epoch_checkpoints[-1])
 
       callbacks = [
@@ -158,12 +160,13 @@ class KerasBackend(backends.BackendBase):
       steps_per_epoch = (corpus.encoded.token_count - 1) // (
         self.config.training.batch_size * self.config.training.sequence_length
       )
-      app.Log(
-        1,
-        "Step counts: %s per epoch, %s left to do, %s total",
-        humanize.Commas(steps_per_epoch),
-        humanize.Commas((target_num_epochs - starting_epoch) * steps_per_epoch),
-        humanize.Commas(target_num_epochs * steps_per_epoch),
+      l.getLogger().info(
+        "Step counts: {} per epoch, {} left to do, {} total"
+              .format(
+                  humanize.Commas(steps_per_epoch),
+                  humanize.Commas((target_num_epochs - starting_epoch) * steps_per_epoch),
+                  humanize.Commas(target_num_epochs * steps_per_epoch),
+              )
       )
       model.fit_generator(
         generator,
@@ -183,10 +186,10 @@ class KerasBackend(backends.BackendBase):
     # TensorFlow backend every time we import this module.
     import keras
 
-    app.Log(1, "Building inference model.")
+    l.getLogger().info("Building inference model.")
     model = self.GetTrainingModel()
     config = model.get_config()
-    app.Log(1, "Sampling with batch size %d", sampler.batch_size)
+    l.getLogger().info("Sampling with batch size {}".format(sampler.batch_size))
     config[0]["config"]["batch_input_shape"] = (sampler.batch_size, 1)
     inference_model = keras.models.Sequential.from_config(config)
     inference_model.trainable = False
