@@ -6,7 +6,7 @@ install:
   - sudo apt-get -qq install -y python3.7 python3-distutils
   - curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
   - python3.7 get-pip.py
-  - bash apt_deps.sh
+  - bash apt_deps.sh > /dev/null
   - bazel build //deeplearning/clgen
 
 before_script:
