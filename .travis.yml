@@ -12,6 +12,7 @@ services:
 
 install:
   - bash apt_deps.sh
+  - sudo apt-get install python3-apt
   - bazel build //deeplearning/clgen
 
 before_script:
@@ -19,7 +20,7 @@ before_script:
   - python --version
   - bazel --version
   - gcc --version
-  - python -m pip list tensorflow
+  - python -m pip list tensorflow | grep tensorflow
 
 script:
   - bazel-bin/deeplearning/clgen/clgen --min_samples 5 --config deeplearning/clgen/tests/data/tiny/config.pbtxt
