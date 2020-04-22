@@ -12,7 +12,6 @@ services:
 
 install:
   - bash apt_deps.sh
-  - sudo apt-get install python3-apt
   - bazel build //deeplearning/clgen
 
 before_script:
