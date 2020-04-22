@@ -37,6 +37,7 @@ from labm8.py import app
 from labm8.py import fs
 from labm8.py import humanize
 from labm8.py import sqlutil
+from eupy.native import logger as l
 
 FLAGS = app.FLAGS
 
@@ -169,32 +170,32 @@ class PreprocessedContentFiles(sqlutil.Database):
         .filter(PreprocessedContentFile.preprocessing_succeeded == True)
         .first()
       )
-    app.Log(
-      1,
-      "Content files: %s chars, %s lines, %s files.",
-      humanize.Commas(input_chars),
-      humanize.Commas(input_lines),
-      humanize.Commas(num_input_files),
+    l.getLogger().info(
+      "Content files: {} chars, {} lines, {} files.".format(
+              humanize.Commas(input_chars),
+              humanize.Commas(input_lines),
+              humanize.Commas(num_input_files),
+            )
     )
-    app.Log(
-      1,
-      "Pre-processed %s files in %s (%.2fx speedup).",
-      humanize.Commas(num_input_files),
-      humanize.Duration((total_walltime or 0) / 1000),
-      (total_time or 1) / (total_walltime or 1),
+    l.getLogger().info(
+      "Pre-processed {} files in {} ({.2f}x speedup).".format(
+              humanize.Commas(num_input_files),
+              humanize.Duration((total_walltime or 0) / 1000),
+              (total_time or 1) / (total_walltime or 1),
+          )
     )
-    app.Log(
-      1,
-      "Pre-processing discard rate: %.1f%% (%s files).",
-      (1 - (num_files / max(num_input_files, 1))) * 100,
-      humanize.Commas(num_input_files - num_files),
+    l.getLogger().info(
+      "Pre-processing discard rate: {.1f}%% ({} files).".format(
+              (1 - (num_files / max(num_input_files, 1))) * 100,
+              humanize.Commas(num_input_files - num_files),
+          )
     )
-    app.Log(
-      1,
-      "Pre-processed corpus: %s chars, %s lines, %s files.",
-      humanize.Commas(char_count),
-      humanize.Commas(line_count),
-      humanize.Commas(num_files),
+    l.getLogger().info(
+      "Pre-processed corpus: {} chars, {} lines, {} files.".format(
+              humanize.Commas(char_count),
+              humanize.Commas(line_count),
+              humanize.Commas(num_files),
+          )
     )
 
   def IsDone(self, session: sqlutil.Session):
@@ -213,11 +214,11 @@ class PreprocessedContentFiles(sqlutil.Database):
         [x[0] for x in session.query(PreprocessedContentFile.input_relpath)]
       )
       todo = relpaths - done
-      app.Log(
-        1,
-        "Preprocessing %s of %s content files",
-        humanize.Commas(len(todo)),
-        humanize.Commas(len(relpaths)),
+      l.getLogger().info(
+        "Preprocessing {} of {} content files".format(
+                humanize.Commas(len(todo)),
+                humanize.Commas(len(relpaths)),
+            )
       )
       jobs = [
         internal_pb2.PreprocessorWorker(
@@ -269,11 +270,11 @@ class PreprocessedContentFiles(sqlutil.Database):
           d,
         ]
         subprocess.check_call(cmd)
-        app.Log(
-          1,
-          "Unpacked %s in %s ms",
-          ExpandConfigPath(config.local_tar_archive).name,
-          humanize.Commas(int((time.time() - start_time) * 1000)),
+        l.getLogger().info(
+          "Unpacked {} in {} ms".format(
+                  ExpandConfigPath(config.local_tar_archive).name,
+                  humanize.Commas(int((time.time() - start_time) * 1000)),
+              )
         )
         yield pathlib.Path(d)
     else:
