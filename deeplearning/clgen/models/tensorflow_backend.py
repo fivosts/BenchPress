@@ -134,9 +134,6 @@ class TensorFlowBackend(backends.BackendBase):
     from deeplearning.clgen.models import helper
 
     cell_type = {
-      # model_pb2.NetworkArchitecture.LSTM: tf.keras.layers.LSTMCell,
-      # model_pb2.NetworkArchitecture.GRU: tf.keras.layers.GRUCell,
-      # model_pb2.NetworkArchitecture.RNN: tf.keras.layers.SimpleRNNCell,
       model_pb2.NetworkArchitecture.LSTM: tf.compat.v1.nn.rnn_cell.LSTMCell,
       model_pb2.NetworkArchitecture.GRU: tf.compat.v1.nn.rnn_cell.GRUCell,
       model_pb2.NetworkArchitecture.RNN: tf.compat.v1.nn.rnn_cell.BasicRNNCell,
