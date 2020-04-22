@@ -165,7 +165,6 @@ class TensorFlowBackend(backends.BackendBase):
     )
     self.initial_state = self.cell.get_initial_state(batch_size = batch_size, dtype = tf.float32)
     self.temperature = tf.Variable(1.0, trainable=False)
-    # self.seed_length = tf.Variable(32, trainable=False)
     self.seed_length = tf.compat.v1.placeholder(name = "seed_length", dtype = tf.int32, shape = ())
 
     if sampler:
