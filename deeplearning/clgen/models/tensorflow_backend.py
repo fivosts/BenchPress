@@ -182,8 +182,6 @@ class TensorFlowBackend(backends.BackendBase):
 
     if sampler:
       decode_helper = helper.CustomInferenceHelper(
-        # inputs, 
-        # self.lengths, 
         self.seed_length, embedding, self.temperature
       )
     else:
@@ -197,7 +195,6 @@ class TensorFlowBackend(backends.BackendBase):
     )
     outputs, self.final_state, _ = tfa.seq2seq.dynamic_decode(
       decoder,
-      # sequence_length = self.lengths,
       decoder_init_input = inputs,
       decoder_init_kwargs = {
                               'initial_state': self.initial_state,
