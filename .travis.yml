@@ -14,7 +14,6 @@ install:
   - sudo ln -s apt_pkg.cpython-36m-x86_64-linux-gnu.so apt_pkg.cpython-37m-x86_64-linux-gnu.so
   - sudo ln -s apt_inst.cpython-36m-x86_64-linux-gnu.so apt_inst.cpython-37m-x86_64-linux-gnu.so
   - bash apt_deps.sh
-  - sudo cp /usr/lib/python3/dist-packages/ /usr/lib/python3/dist-packages
   - bazel build //deeplearning/clgen
 
 before_script:
