@@ -25,6 +25,7 @@ from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import public
 from labm8.py import app
 from labm8.py import bazelutil
+from eupy.native import logger as l
 
 FLAGS = app.FLAGS
 
@@ -75,7 +76,7 @@ def Javac(
     with open(path, "w") as f:
       f.write(text)
     cmd = ["timeout", "-s9", str(timeout_seconds), "javac", f.name] + cflags
-    app.Log(2, "$ %s", " ".join(cmd))
+    l.getLogger().warning("$ {}".format(" ".join(cmd)))
     process = subprocess.Popen(
       cmd,
       stdout=subprocess.PIPE,
@@ -187,7 +188,7 @@ def JavaRewrite(text: str) -> str:
     stderr=subprocess.PIPE,
     universal_newlines=True,
   )
-  app.Log(2, "$ %s", " ".join(cmd))
+  l.getLogger().warning("$ {}".format(" ".join(cmd)))
   stdout, stderr = process.communicate(text)
   if process.returncode == 9:
     raise errors.RewriterException("JavaRewriter failed to complete after 60s")
