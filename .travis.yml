@@ -2,8 +2,8 @@ os: linux
 dist: bionic
 
 install:
-  - sudo apt-get update
-  - sudo apt-get install -y python3.7 python3-distutils
+  - sudo apt-get -qq update
+  - sudo apt-get -qq install -y python3.7 python3-distutils
   - curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
   - python3.7 get-pip.py
   - bash apt_deps.sh
