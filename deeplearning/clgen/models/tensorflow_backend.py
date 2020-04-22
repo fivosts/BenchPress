@@ -94,10 +94,6 @@ class TensorFlowBackend(backends.BackendBase):
     # Create the summary writer, shared between Train() and
     # _EndOfEpochTestSample().
     import tensorflow as tf
-    l.getLogger().debug("Tensorflow path: {}".format(tf))
-    l.getLogger().debug("Tensorflow version: {}".format(tf.__version__))
-    l.getLogger().debug("TF Addons path: {}".format(tfa))
-    l.getLogger().debug("TF Addons version: {}".format(tfa.__version__))
     tf.compat.v1.disable_eager_execution()
 
     tensorboard_dir = f"{self.cache.path}/tensorboard"
@@ -644,7 +640,7 @@ class TensorFlowBackend(backends.BackendBase):
       sampler.encoded_start_text, [sampler.batch_size, 1]
     )
 
-  def SampleNextIndices(self, sampler: samplers.Sampler, done: np.ndarray, atomizer = None):
+  def SampleNextIndices(self, sampler: samplers.Sampler, done: np.ndarray):
     l.getLogger().debug("deeplearning.clgen.models.tensorflow_backend.TensorFlowBackend.SampleNextIndices()")
     length = self.inference_indices.shape[1]
     assert length < sampler.sequence_length
@@ -658,17 +654,11 @@ class TensorFlowBackend(backends.BackendBase):
       self.lengths: synthesized_lengths,
       self.seed_length: length,
     }
-    l.getLogger().enable_step
+
     generated, self.inference_state = self.inference_sess.run(
       [self.generated, self.final_state], feed
     )
-    if atomizer:
-        l.getLogger().info("Length: {}".format(length))
-        l.getLogger().info("sequence_length: {}".format(sampler.sequence_length))
-        l.getLogger().warning("generated: {}".format(generated))
-        l.getLogger().warning("True generated: {}".format(generated[:, length - 1 :]))
-        l.getLogger().warning("Input Seed: |" + "".join([atomizer.decoder[x] for x in expanded_indices[0]]))
-        l.getLogger().warning("True generated output: |" + "".join([atomizer.decoder[x] for x in generated[:, length - 1 :][0]]))
+
     self.inference_indices = generated[:, -1].reshape((sampler.batch_size, 1))
     if length > 1:
       generated = generated[:, length - 1 :]

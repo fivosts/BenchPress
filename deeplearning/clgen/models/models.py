@@ -314,7 +314,7 @@ class Model(object):
 
     # Sampling loop. Continues until all samples in the batch are done.
     while not done.all():
-      indices = self.backend.SampleNextIndices(sampler, done, atomizer)
+      indices = self.backend.SampleNextIndices(sampler, done)
 
       # Iterate over all samples in batch to determine whether they're
       # done.
