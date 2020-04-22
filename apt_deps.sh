@@ -49,4 +49,5 @@ curl -L -o /tmp/bazel.sh https://github.com/bazelbuild/bazel/releases/download/3
 python3 -m pip install 'pybind11==2.4.3'
 python3 -m pip install tensorflow==2.1.0
 python3 -m pip install tensorflow_addons==0.9.0
+python3 -m pip install tensorflow_probability==0.2.2
 python3 -m pip install eupy
