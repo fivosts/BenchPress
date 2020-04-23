@@ -72,14 +72,14 @@ def NormalizeIdentifiers(
       + ["-extra-arg=" + x for x in cflags]
       + ["--"]
     )
-    l.getLogger().warning("$ {}{}".format(
+    l.getLogger().debug("$ {}{}".format(
                     f'LD_PRELOAD={CLGEN_REWRITER_ENV["LD_PRELOAD"]} '
                     if "LD_PRELOAD" in CLGEN_REWRITER_ENV
                     else "",
                     " ".join(cmd),
       ),
-
     )
+    
     process = subprocess.Popen(
       cmd,
       stdin=subprocess.PIPE,
@@ -89,7 +89,7 @@ def NormalizeIdentifiers(
       env=CLGEN_REWRITER_ENV,
     )
     stdout, stderr = process.communicate()
-    l.getLogger().warning(stderr)
+    l.getLogger().debug(stderr)
   # If there was nothing to rewrite, the rewriter exits with error code:
   EUGLY_CODE = 204
   if process.returncode == EUGLY_CODE:
