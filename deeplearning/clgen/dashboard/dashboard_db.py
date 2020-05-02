@@ -31,6 +31,7 @@ Base = sqlutil.Base()
 
 class DashboardDatabase(sqlutil.Database):
   def __init__(self, url: str, must_exist: bool):
+    l.getLogger().debug("deeplearning.clgen.dashboard.dashboard_db.DashboardDatabase.__init__()")
     super(DashboardDatabase, self).__init__(url, Base, must_exist=must_exist)
 
 
@@ -132,6 +133,7 @@ class TrainingSample(Base):
 
 @decorators.run_once
 def GetDatabase() -> DashboardDatabase:
+  l.getLogger().debug("deeplearning.clgen.dashboard.dashboard_db.GetDatabase()")
   db: DashboardDatabase = FLAGS.clgen_dashboard_db()
   l.getLogger().info("Created dashboard database {}".format(db.url))
   return db
