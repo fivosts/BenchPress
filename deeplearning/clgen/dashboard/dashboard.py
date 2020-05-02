@@ -50,6 +50,7 @@ db = flask_sqlalchemy.SQLAlchemy(flask_app)
 
 
 def GetBaseTemplateArgs():
+  l.getLogger().debug("deeplearning.clgen.dashboard.GetBaseTemplateArgs()")
   return {
     "urls": {
       "cache_tag": str(int(app.TIMESTAMP.timestamp())),
@@ -67,6 +68,7 @@ def GetBaseTemplateArgs():
 
 @flask_app.route("/")
 def index():
+  l.getLogger().debug("deeplearning.clgen.dashboard.index()")
   corpuses = db.session.query(
     dashboard_db.Corpus.id,
     dashboard_db.Corpus.encoded_url,
@@ -99,6 +101,7 @@ def index():
 
 @flask_app.route("/corpus/<int:corpus_id>/model/<int:model_id>/")
 def report(corpus_id: int, model_id: int):
+  l.getLogger().debug("deeplearning.clgen.dashboard.report()")
   corpus, corpus_config_proto, preprocessed_url, encoded_url = (
     db.session.query(
       dashboard_db.Corpus.summary,
@@ -191,6 +194,7 @@ def report(corpus_id: int, model_id: int):
 
 @flask_app.route("/corpus/<int:corpus_id>/encoded/random/")
 def random_encoded_contentfile(corpus_id: int):
+  l.getLogger().debug("deeplearning.clgen.dashboard.random_encoded_contentfile()")
   (encoded_url,) = (
     db.session.query(dashboard_db.Corpus.encoded_url)
     .filter(dashboard_db.Corpus.id == corpus_id)
@@ -212,6 +216,7 @@ def random_encoded_contentfile(corpus_id: int):
 
 @flask_app.route("/corpus/<int:corpus_id>/encoded/<int:encoded_id>/")
 def encoded_contentfile(corpus_id: int, encoded_id: int):
+  l.getLogger().debug("deeplearning.clgen.dashboard.encoded_contentfile()")
   (encoded_url,) = (
     db.session.query(dashboard_db.Corpus.encoded_url)
     .filter(dashboard_db.Corpus.id == corpus_id)
@@ -259,6 +264,7 @@ def encoded_contentfile(corpus_id: int, encoded_id: int):
   "/corpus/<int:corpus_id>/model/<int:model_id>/samples/<int:epoch>"
 )
 def samples(corpus_id: int, model_id: int, epoch: int):
+  l.getLogger().debug("deeplearning.clgen.dashboard.samples()")
   samples = (
     db.session.query(
       dashboard_db.TrainingSample.sample,
@@ -285,6 +291,7 @@ def samples(corpus_id: int, model_id: int, epoch: int):
 
 
 def Launch(debug: bool = False):
+  l.getLogger().debug("deeplearning.clgen.dashboard.Launch()")
   """Launch dashboard in a separate thread."""
   port = FLAGS.clgen_dashboard_port or portpicker.pick_unused_port()
   l.getLogger().info("Launching CLgen dashboard on http://127.0.0.1:{}".format(port))
