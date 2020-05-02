@@ -91,6 +91,7 @@ class PreprocessedContentFile(Base):
     preprocessors_: typing.List[str],
   ) -> "PreprocessedContentFile":
     """Instantiate a PreprocessedContentFile."""
+    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFile.FromContentFile()")
     start_time = time.time()
     input_text = ""
     preprocessing_succeeded = False
@@ -129,6 +130,7 @@ def PreprocessorWorker(
   job: internal_pb2.PreprocessorWorker,
 ) -> PreprocessedContentFile:
   """The inner loop of a parallelizable pre-processing job."""
+  l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFile.PreprocessorWorker()")
   return PreprocessedContentFile.FromContentFile(
     pathlib.Path(job.contentfile_root), job.relpath, job.preprocessors
   )
@@ -138,11 +140,13 @@ class PreprocessedContentFiles(sqlutil.Database):
   """A database of pre-processed contentfiles."""
 
   def __init__(self, url: str, must_exist: bool = False):
+    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFiles.__init__()")
     super(PreprocessedContentFiles, self).__init__(
       url, Base, must_exist=must_exist
     )
 
   def Create(self, config: corpus_pb2.Corpus):
+    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFiles.Create()")
     with self.Session() as session:
       if not self.IsDone(session):
         self.Import(session, config)
@@ -199,15 +203,18 @@ class PreprocessedContentFiles(sqlutil.Database):
     )
 
   def IsDone(self, session: sqlutil.Session):
+    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFiles.IsDone()")
     if session.query(Meta).filter(Meta.key == "done").first():
       return True
     else:
       return False
 
   def SetDone(self, session: sqlutil.Session):
+    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFiles.SetDone()")
     session.add(Meta(key="done", value="yes"))
 
   def Import(self, session: sqlutil.Session, config: corpus_pb2.Corpus) -> None:
+    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFiles.Import()")
     with self.GetContentFileRoot(config) as contentfile_root:
       relpaths = set(self.GetImportRelpaths(contentfile_root))
       done = set(
@@ -257,6 +264,7 @@ class PreprocessedContentFiles(sqlutil.Database):
     Returns:
       The path of a directory containing content files.
     """
+    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFiles.GetContentFileRoot()")
     if config.HasField("local_directory"):
       yield pathlib.Path(ExpandConfigPath(config.local_directory))
     elif config.HasField("local_tar_archive"):
@@ -286,6 +294,7 @@ class PreprocessedContentFiles(sqlutil.Database):
 
     This excludes contentfiles which did not pre-process successfully.
     """
+    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFiles.size()")
     with self.Session() as session:
       return (
         session.query(PreprocessedContentFile)
@@ -299,6 +308,7 @@ class PreprocessedContentFiles(sqlutil.Database):
 
     This *includes* contentfiles which did not pre-process successfully.
     """
+    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFiles.input_size()")
     with self.Session() as session:
       return session.query(PreprocessedContentFile).count()
 
@@ -308,6 +318,7 @@ class PreprocessedContentFiles(sqlutil.Database):
 
     This excludes contentfiles which did not pre-process successfully.
     """
+    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFiles.char_count()")
     with self.Session() as session:
       return (
         session.query(func.sum(PreprocessedContentFile.charcount))
@@ -321,6 +332,7 @@ class PreprocessedContentFiles(sqlutil.Database):
 
     This excludes contentfiles which did not pre-process successfully.
     """
+    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFiles.line_count()")
     with self.Session() as session:
       return (
         session.query(func.sum(PreprocessedContentFile.linecount))
@@ -331,6 +343,7 @@ class PreprocessedContentFiles(sqlutil.Database):
   @property
   def input_char_count(self) -> int:
     """Get the total number of characters in the input content files."""
+    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFiles.input_char_count()")
     with self.Session() as session:
       return session.query(
         func.sum(PreprocessedContentFile.input_charcount)
@@ -339,6 +352,7 @@ class PreprocessedContentFiles(sqlutil.Database):
   @property
   def input_line_count(self) -> int:
     """Get the total number of characters in the input content files."""
+    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFiles.input_line_count()")
     with self.Session() as session:
       return session.query(
         func.sum(PreprocessedContentFile.input_linecount)
@@ -358,6 +372,7 @@ class PreprocessedContentFiles(sqlutil.Database):
     Raises:
       EmptyCorpusException: If the content files directory is empty.
     """
+    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFiles.GetImportRelpaths()")
     with fs.chdir(contentfile_root):
       find_output = (
         subprocess.check_output(["find", ".", "-type", "f"])
@@ -372,9 +387,11 @@ class PreprocessedContentFiles(sqlutil.Database):
 
 
 def ExpandConfigPath(path: str) -> pathlib.Path:
+  l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.ExpandConfigPath()")
   return pathlib.Path(os.path.expandvars(path)).expanduser().absolute()
 
 
 def GetFileSha256(path: pathlib.Path) -> str:
+  l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.GetFileSha256()")
   with open(path, "rb") as f:
     return hashlib.sha256(f.read()).hexdigest()
