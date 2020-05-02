@@ -63,6 +63,7 @@ app.DEFINE_string(
 
 
 def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
+  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.AssertConfigIsValid()")
   """Assert that config proto is valid.
 
   Args:
@@ -112,6 +113,7 @@ class Corpus(object):
   """
 
   def __init__(self, config: corpus_pb2.Corpus):
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.__init__()")
     """Instantiate a corpus from a proto config.
 
     If this is a new corpus, a number of files will be created, which may
@@ -221,6 +223,7 @@ class Corpus(object):
     self.cache = cache.mkcache("corpus", "encoded", encoded_id)
 
   def GetShortSummary(self) -> str:
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.GetShortSummary()")
     corpus_size = humanize.DecimalPrefix(
       self.encoded.token_count, "", separator=""
     )
@@ -229,6 +232,7 @@ class Corpus(object):
     )
 
   def Create(self) -> None:
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.Create()")
     """Create the corpus files.
 
     Raises:
@@ -310,12 +314,14 @@ class Corpus(object):
 
   @property
   def dashboard_db_id(self) -> int:
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.dashboard_db_id()")
     if not self._created:
       raise TypeError("Cannot access dashboard_db_id before Create() called")
     return self._dashboard_db_id
 
   @property
   def is_locked(self) -> bool:
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.is_locked()")
     """Return whether the corpus is locked."""
     preprocessed_lock_path = (
       pathlib.Path(self.preprocessed.url[len("sqlite:///") :]).parent / "LOCK"
@@ -330,6 +336,7 @@ class Corpus(object):
     return False
 
   def GetTextCorpus(self, shuffle: bool) -> str:
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.GetTextCorpus()")
     """Concatenate the entire corpus into a string.
 
     Args:
@@ -347,6 +354,7 @@ class Corpus(object):
       return self.config.contentfile_separator.join([x[0] for x in query])
 
   def GetTrainingData(self, shuffle: bool) -> np.ndarray:
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.GetTrainingData()")
     """Concatenate the entire encoded corpus into an array.
 
     Args:
@@ -375,11 +383,13 @@ class Corpus(object):
       return np.concatenate(self._indices_arrays)
 
   def GetNumContentFiles(self) -> int:
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.GetNumContentFiles()")
     """Get the number of contentfiles which were pre-processed."""
     with self.preprocessed.Session() as session:
       return session.query(preprocessed.PreprocessedContentFile).count()
 
   def GetNumPreprocessedFiles(self) -> int:
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.GetNumPreprocessedFiles()")
     """The number of succesfully pre-processed content files."""
     with self.preprocessed.Session() as session:
       return (
@@ -392,6 +402,7 @@ class Corpus(object):
 
   @property
   def atomizer(self) -> atomizers.AtomizerBase:
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.atomizer()")
     """Must call Create() first."""
     if not self._created:
       raise ValueError("Must call Create() before accessing atomizer property.")
@@ -403,6 +414,7 @@ class Corpus(object):
     return self._atomizer
 
   def _CreateAtomizer(self) -> atomizers.AtomizerBase:
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus._CreateAtomizer()")
     """Creates and caches an atomizer."""
     l.getLogger().info("Deriving atomizer from preprocessed corpus")
     corpus_txt = self.GetTextCorpus(shuffle=False)
@@ -425,11 +437,13 @@ class Corpus(object):
 
   @property
   def vocab_size(self) -> int:
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.vocab_size()")
     """Get the number of elements in the corpus vocabulary."""
     return self.atomizer.vocab_size
 
   @property
   def size(self) -> int:
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.size()")
     """Return the size of the atomized corpus."""
     with self.encoded.Session() as session:
       return session.query(
@@ -437,20 +451,24 @@ class Corpus(object):
       ).one()
 
   def __eq__(self, rhs) -> bool:
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.__eq__()")
     if not isinstance(rhs, Corpus):
       return False
     return rhs.hash == self.hash
 
   def __ne__(self, rhs) -> bool:
+    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.__ne__()")
     return not self.__eq__(rhs)
 
 
 def GetVocabFromMetaTable(session: sqlutil.Session) -> typing.Dict[str, int]:
+  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.GetVocabFromMetaTable()")
   """Read a vocabulary dictionary from the 'Meta' table of a database."""
   return encoded.EncodedContentFiles.GetVocabFromMetaTable(session)
 
 
 def StoreVocabInMetaTable(
+  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.StoreVocabInMetaTable()")
   session: sqlutil.Session, vocabulary: typing.Dict[str, int]
 ) -> None:
   """Store a vocabulary dictionary in the 'Meta' table of a database."""
@@ -458,6 +476,7 @@ def StoreVocabInMetaTable(
 
 
 def GreedyAtomizerFromEncodedDb(encoded_db: encoded.EncodedContentFiles):
+  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.GreedyAtomizerFromEncodedDb()")
   """Create a greedy atomizer for the vocabulary of a given encoded_db."""
   # TODO(github.com/ChrisCummins/clgen/issues/130): This should be a method of
   # a concrete `DatabaseCorpus` class.
@@ -468,6 +487,7 @@ def GreedyAtomizerFromEncodedDb(encoded_db: encoded.EncodedContentFiles):
 
 
 def ExpandConfigPath(path: str, path_prefix: str = None) -> pathlib.Path:
+  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.ExpandConfigPath()")
   """Resolve an absolute path from a config proto string field.
 
   This performs shell-style expansion of $VARS, and prefixes the
@@ -492,6 +512,7 @@ def ExpandConfigPath(path: str, path_prefix: str = None) -> pathlib.Path:
 
 
 def ResolveContentId(
+  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.ResolveContentId()")
   config: corpus_pb2.Corpus, hc: typing.Optional[hashcache.HashCache] = None
 ) -> str:
   """Compute the hash of the input contentfiles.
@@ -567,6 +588,7 @@ def ResolveContentId(
 
 
 def ResolvePreprocessedId(content_id: str, config: corpus_pb2.Corpus) -> str:
+  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.ResolvePreprocessedId()")
   """Compute the hash of a corpus of preprocessed contentfiles.
 
   The hash is computed from the ID of the input files and the serialized
@@ -580,6 +602,7 @@ def ResolvePreprocessedId(content_id: str, config: corpus_pb2.Corpus) -> str:
 
 
 def ResolveEncodedId(content_id: str, config: corpus_pb2.Corpus) -> str:
+  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.ResolveEncodedId()")
   """Compute the hash of a corpus of preprocessed and encoded contentfiles.
 
   The hash is computed from the ID of the input files and the serialized
@@ -598,6 +621,7 @@ def ResolveEncodedId(content_id: str, config: corpus_pb2.Corpus) -> str:
 
 
 def GetHashOfArchiveContents(archive: pathlib.Path) -> str:
+  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.GetHashOfArchiveContents()")
   """Compute the checksum of the contents of a directory.
 
   Args:
