@@ -27,6 +27,8 @@ from deeplearning.clgen import errors
 from labm8.py import app
 from labm8.py import labdate
 
+from eupy.native import logger
+
 FLAGS = app.FLAGS
 
 
@@ -34,6 +36,7 @@ class AtomizerBase(object):
   """The base class for implementing atomizers."""
 
   def __init__(self, vocab: typing.Dict[str, int]):
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.__init__()")
     """Instantiate an atomizer.
 
     Args:
@@ -49,15 +52,18 @@ class AtomizerBase(object):
 
   @property
   def atoms(self) -> typing.List[str]:
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.atoms()")
     """A list of atoms in the vocabulary."""
     return list(sorted(self.vocab.keys()))
 
   @property
   def indices(self) -> typing.List[int]:
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.indices()")
     """A list of vocabulary indices."""
     return list(sorted(self.vocab.values()))
 
   def _UpdateVocabulary(self) -> None:
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase._UpdateVocabulary()")
     """Private method which must be called if vocab is modified."""
     if not isinstance(self.vocab, dict):
       raise TypeError("vocabulary must be a dict")
@@ -72,6 +78,7 @@ class AtomizerBase(object):
     self.decoder = {val: key for key, val in self.vocab.items()}
 
   def AtomizeString(self, text: str) -> np.array:
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.AtomizeString()")
     """Atomize a text into an array of vocabulary indices.
 
     Args:
@@ -86,6 +93,7 @@ class AtomizerBase(object):
     raise NotImplementedError("abstract class")
 
   def TokenizeString(self, text: str) -> typing.List[str]:
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.TokenizeString()")
     """Split the text into atoms, but do not encode to indices.
 
     Args:
@@ -98,6 +106,7 @@ class AtomizerBase(object):
     return list(map(lambda x: self.decoder[x], indices))
 
   def DeatomizeIndices(self, encoded: np.array) -> str:
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.DeatomizeIndices()")
     """Translate atomized code back into a string.
 
     Args:
@@ -112,12 +121,14 @@ class AtomizerBase(object):
       raise errors.VocabError
 
   def ToFile(self, path: pathlib.Path) -> None:
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.ToFile()")
     """Save an atomizer to file."""
     with open(path, "wb") as f:
       pickle.dump(self, f)
 
   @classmethod
   def FromText(cls, text: str) -> "AtomizerBase":
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.FromText()")
     """Instantiate and specialize an atomizer from a corpus text.
 
     Args:
@@ -130,6 +141,7 @@ class AtomizerBase(object):
 
   @classmethod
   def FromFile(cls, path: pathlib.Path) -> "AtomizerBase":
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.FromFile()")
     """Load an atomizer from file."""
     with open(path, "rb") as infile:
       return pickle.load(infile)
@@ -139,6 +151,7 @@ class AsciiCharacterAtomizer(AtomizerBase):
   """An atomizer for character-level syntactic modelling."""
 
   def AtomizeString(self, text: str) -> np.array:
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AsciiCharacterAtomizer.AtomizeString()")
     """Atomize a text into an array of vocabulary indices.
 
     Args:
@@ -153,10 +166,12 @@ class AsciiCharacterAtomizer(AtomizerBase):
       raise errors.VocabError
 
   def __repr__(self) -> str:
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AsciiCharacterAtomizer.__repr__()")
     return f"AsciiCharacterAtomizer[{self.vocab_size} chars]"
 
   @classmethod
   def FromText(cls, text: str) -> "AsciiCharacterAtomizer":
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AsciiCharacterAtomizer.FromText()")
     """Instantiate and an atomizer from a corpus text.
 
     Args:
@@ -176,6 +191,7 @@ class GreedyAtomizer(AtomizerBase):
   """A greedy atomizer supports multi-character tokens."""
 
   def __init__(self, vocab: typing.Dict[str, int], determine_chars=False):
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.GreedyAtomizer.__init__()")
     self.determine_chars = determine_chars
     super(GreedyAtomizer, self).__init__(vocab)
 
@@ -186,6 +202,7 @@ class GreedyAtomizer(AtomizerBase):
     )
 
   def AtomizeString(self, text: str) -> np.array:
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.GreedyAtomizer.AtomizeString()")
     """Atomize a text into an array of vocabulary indices.
 
     Args:
@@ -196,6 +213,7 @@ class GreedyAtomizer(AtomizerBase):
     """
 
     def _AddToVocab(token: str) -> int:
+      l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.GreedyAtomizer._AddToVocab()")
       """Add a token to the vocabulary and return its index."""
       if self.determine_chars and token not in self.vocab:
         max_index = max(self.vocab.values())
@@ -238,10 +256,12 @@ class GreedyAtomizer(AtomizerBase):
     return np.array(indices, dtype=np.int32)
 
   def __repr__(self) -> str:
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.GreedyAtomizer.__repr__()")
     return f"GreedyAtomizer[{self.vocab_size} tokens]"
 
   @classmethod
   def FromText(cls, text: str, atoms: typing.Set[str]) -> "GreedyAtomizer":
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.GreedyAtomizer.FromText()")
     """Instantiate and an atomizer from a corpus text.
 
     Args:
