@@ -33,6 +33,8 @@ from labm8.py import app
 from labm8.py import humanize
 from labm8.py import sqlutil
 
+from eupy.native import logger
+
 FLAGS = app.FLAGS
 
 Base = declarative.declarative_base()
@@ -74,21 +76,25 @@ class EncodedContentFile(Base):
 
   @staticmethod
   def DataStringToNumpyArray(data: str) -> np.ndarray:
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFile.DataStringToNumpyArray()")
     """Convert the 'data' string to a numpy array."""
     return np.array([int(x) for x in data.split(".")], dtype=np.int32)
 
   @staticmethod
   def NumpyArrayToDataString(array: np.ndarray) -> str:
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFile.NumpyArrayToDataString()")
     """Convert the 'data' string to a numpy array."""
     return ".".join(str(x) for x in array)
 
   @property
   def indices_array(self) -> np.ndarray:
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFile.indices_array()")
     """The numpy array of the encoded data."""
     return self.DataStringToNumpyArray(self.data)
 
   @classmethod
   def FromPreprocessed(
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFile.FromPreprocessed()")
     cls,
     preprocessed_cf: preprocessed.PreprocessedContentFile,
     atomizer: atomizers.AtomizerBase,
@@ -124,6 +130,7 @@ class EncodedContentFile(Base):
 
 
 def EncoderWorker(
+  l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncoderWorker()")
   job: internal_pb2.EncoderWorker,
 ) -> typing.Optional[EncodedContentFile]:
   """Encode a single content file."""
@@ -145,9 +152,11 @@ class EncodedContentFiles(sqlutil.Database):
   """A database of encoded pre-processed contentfiles."""
 
   def __init__(self, url: str, must_exist: bool = False):
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.__init__()")
     super(EncodedContentFiles, self).__init__(url, Base, must_exist=must_exist)
 
   def Create(
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.Create()")
     self,
     p: preprocessed.PreprocessedContentFiles,
     atomizer: atomizers.AtomizerBase,
@@ -196,12 +205,14 @@ class EncodedContentFiles(sqlutil.Database):
 
   @property
   def size(self):
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.size()")
     """Return the total number of files in the encoded corpus."""
     with self.Session() as session:
       return session.query(EncodedContentFile).count()
 
   @property
   def token_count(self) -> int:
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.token_count()")
     """Return the total number of tokens in the encoded corpus.
 
     This excludes the EOF markers which are appended to each encoded text.
@@ -210,15 +221,18 @@ class EncodedContentFiles(sqlutil.Database):
       return session.query(func.sum(EncodedContentFile.tokencount)).scalar()
 
   def IsDone(self, session: sqlutil.Session):
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.IsDone()")
     if session.query(Meta).filter(Meta.key == "done").first():
       return True
     else:
       return False
 
   def SetDone(self, session: sqlutil.Session):
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.SetDone()")
     session.add(Meta(key="done", value="yes"))
 
   def Import(
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.Import()")
     self,
     session: sqlutil.Session,
     preprocessed_db: preprocessed.PreprocessedContentFiles,
@@ -278,6 +292,7 @@ class EncodedContentFiles(sqlutil.Database):
 
   @staticmethod
   def GetVocabFromMetaTable(session) -> typing.Dict[str, int]:
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.GetVocabFromMetaTable()")
     """Read a vocabulary dictionary from the 'Meta' table of a database."""
     q = session.query(Meta.value).filter(Meta.key == "vocab_size")
     if not q.first():
@@ -291,6 +306,7 @@ class EncodedContentFiles(sqlutil.Database):
 
   @staticmethod
   def StoreVocabInMetaTable(
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.StoreVocabInMetaTable()")
     session: sqlutil.Session, vocabulary: typing.Dict[str, int]
   ) -> None:
     """Store a vocabulary dictionary in the 'Meta' table of a database."""
