@@ -94,7 +94,6 @@ class EncodedContentFile(Base):
 
   @classmethod
   def FromPreprocessed(
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFile.FromPreprocessed()")
     cls,
     preprocessed_cf: preprocessed.PreprocessedContentFile,
     atomizer: atomizers.AtomizerBase,
@@ -110,6 +109,7 @@ class EncodedContentFile(Base):
     Returns:
       An EncodedContentFile instance.
     """
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFile.FromPreprocessed()")
     start_time = time.time()
     data = atomizer.AtomizeString(preprocessed_cf.text)
     encoding_time_ms = int((time.time() - start_time) * 1000)
@@ -130,7 +130,6 @@ class EncodedContentFile(Base):
 
 
 def EncoderWorker(
-  l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncoderWorker()")
   job: internal_pb2.EncoderWorker,
 ) -> typing.Optional[EncodedContentFile]:
   """Encode a single content file."""
@@ -138,6 +137,7 @@ def EncoderWorker(
   # derived atomizer is not always capable of encoding the preprocessed files.
   # Once this has been fixed, there is no need to catch the VocabError here,
   # and EncoderWorker can always return an EncodedContentFile instance.
+  l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncoderWorker()")
   try:
     return EncodedContentFile.FromPreprocessed(
       preprocessed.PreprocessedContentFile(id=job.id, text=job.text),
@@ -156,7 +156,6 @@ class EncodedContentFiles(sqlutil.Database):
     super(EncodedContentFiles, self).__init__(url, Base, must_exist=must_exist)
 
   def Create(
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.Create()")
     self,
     p: preprocessed.PreprocessedContentFiles,
     atomizer: atomizers.AtomizerBase,
@@ -176,6 +175,7 @@ class EncodedContentFiles(sqlutil.Database):
       EmptyCorpusException: If the PreprocessedContentFiles database has
         no files.
     """
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.Create()")
     with self.Session() as session:
       if not self.IsDone(session):
         self.Import(session, p, atomizer, contentfile_separator)
@@ -212,11 +212,11 @@ class EncodedContentFiles(sqlutil.Database):
 
   @property
   def token_count(self) -> int:
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.token_count()")
     """Return the total number of tokens in the encoded corpus.
 
     This excludes the EOF markers which are appended to each encoded text.
     """
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.token_count()")
     with self.Session() as session:
       return session.query(func.sum(EncodedContentFile.tokencount)).scalar()
 
@@ -232,13 +232,13 @@ class EncodedContentFiles(sqlutil.Database):
     session.add(Meta(key="done", value="yes"))
 
   def Import(
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.Import()")
     self,
     session: sqlutil.Session,
     preprocessed_db: preprocessed.PreprocessedContentFiles,
     atomizer: atomizers.AtomizerBase,
     contentfile_separator: str,
   ) -> None:
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.Import()")
     with preprocessed_db.Session() as p_session:
       query = p_session.query(preprocessed.PreprocessedContentFile).filter(
         preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
@@ -306,10 +306,10 @@ class EncodedContentFiles(sqlutil.Database):
 
   @staticmethod
   def StoreVocabInMetaTable(
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.StoreVocabInMetaTable()")
     session: sqlutil.Session, vocabulary: typing.Dict[str, int]
   ) -> None:
     """Store a vocabulary dictionary in the 'Meta' table of a database."""
+    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.StoreVocabInMetaTable()")
     q = session.query(encoded.Meta).filter(encoded.Meta.key.like("vocab_%"))
     q.delete(synchronize_session=False)
 
