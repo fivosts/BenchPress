@@ -27,7 +27,7 @@ from deeplearning.clgen import errors
 from labm8.py import app
 from labm8.py import labdate
 
-from eupy.native import logger
+from eupy.native import logger as l
 
 FLAGS = app.FLAGS
 
