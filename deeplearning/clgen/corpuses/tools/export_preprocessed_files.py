@@ -15,6 +15,8 @@ from labm8.py import humanize
 from labm8.py import ppar
 from labm8.py import sqlutil
 
+from eupy.native import logger
+
 FLAGS = app.FLAGS
 
 app.DEFINE_database(
@@ -66,6 +68,7 @@ def ExportPreprocessedFiles(
     batch_size: The size of batches of texts to export.
     archive_batches: Create a .tar.bz2 archive of each batch of files.
   """
+  l.getLogger().debug("deeplearning.clgen.corpuses.tools.export_preprocessed_files.ExportPreprocessedFiles()")
   outdir.mkdir(parents=True, exist_ok=True)
 
   # Compute the number of files there are to export.
@@ -125,6 +128,7 @@ def ExportPreprocessedFiles(
 
 def Main():
   """Main entry point."""
+  l.getLogger().debug("deeplearning.clgen.corpuses.tools.export_preprocessed_files.Main()")
   if not FLAGS.db:
     raise app.UsageError("Flag is required: --db")
   if not FLAGS.outdir:
