@@ -33,7 +33,7 @@ from labm8.py import app
 from labm8.py import humanize
 from labm8.py import sqlutil
 
-from eupy.native import logger
+from eupy.native import logger as l
 
 FLAGS = app.FLAGS
 
