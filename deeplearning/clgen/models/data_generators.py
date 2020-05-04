@@ -56,6 +56,7 @@ def AutoGenerator(
   Returns:
     A generator suitable for use by a model's fit_generator() method.
   """
+  l.getLogger().debug("deeplearning.clgen.models.data_generators.AutoGenerator()")
   return BatchGenerator(corpus, training_opts)
 
 
@@ -76,6 +77,7 @@ def BatchGenerator(
   Returns:
     A generator suitable for use by a model's fit_generator() method.
   """
+  l.getLogger().debug("deeplearning.clgen.models.data_generators.BatchGenerator()")
   x, y, steps_per_epoch = GetTrainingCorpus(corpus, training_opts)
 
   # Per-epoch outer loop.
@@ -105,6 +107,7 @@ class TensorflowBatchGenerator(object):
   def __init__(
     self, corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
   ):
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.TensorflowBatchGenerator.__init__()")
     self.corpus = corpus
     self.training_opts = training_opts
 
@@ -119,6 +122,7 @@ class TensorflowBatchGenerator(object):
     )
 
   def CreateBatches(self) -> None:
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.TensorflowBatchGenerator.CreateBatches()")
     start_time = time.time()
 
     # generate a kernel corpus
@@ -173,6 +177,7 @@ class TensorflowBatchGenerator(object):
     Returns:
       X, Y DataBatch.
     """
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.TensorflowBatchGenerator.NextBatch()")
     batch = self.batches[self.i]
     self.i += 1
     assert 0 <= self.i <= self.num_batches
@@ -195,6 +200,7 @@ def GetTrainingCorpus(
     UserError: If batch_size and sequence_length are too large for the corpus,
       yielding no batches.
   """
+  l.getLogger().debug("deeplearning.clgen.models.data_generators.GetTrainingCorpus()")
   start_time = time.time()
   encoded_corpus = corpus.GetTrainingData(
     shuffle=training_opts.shuffle_corpus_contentfiles_between_epochs
@@ -243,6 +249,7 @@ def OneHotEncode(indices: np.ndarray, vocabulary_size: int):
     Returns:
       A 2D array of one-hot encoded tokens.
     """
+  l.getLogger().debug("deeplearning.clgen.models.data_generators.OneHotEncode()")
   return np.eye(vocabulary_size)[indices]
 
 
@@ -250,6 +257,7 @@ def LogBatchTelemetry(
   batch: DataBatch, steps_per_epoch: int, num_epochs: int
 ) -> None:
   """Log analytics about the batch."""
+  l.getLogger().debug("deeplearning.clgen.models.data_generators.LogBatchTelemetry()")
   l.getLogger().info("Step shape: X: {}, y" ": {}.".format(batch.X.shape, batch.y.shape))
   # sys.getsizeof() includes only the memory required for an object, not any
   # objects it refernces, so we must manually sum the X and y arrays.
