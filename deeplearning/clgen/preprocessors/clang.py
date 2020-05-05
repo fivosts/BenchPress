@@ -65,6 +65,7 @@ def StripPreprocessorLines(src: str) -> str:
   Returns:
     The output with preprocessor output stripped.
   """
+  l.getLogger().debug("deeplearning.clgen.preprocessors.clang.StripPreprocessorLines()")
   lines = src.split("\n")
   # Determine when the final included file ends.
   for i in range(len(lines) - 1, -1, -1):
@@ -100,6 +101,7 @@ def Preprocess(
     ClangException: In case of an error.
     ClangTimeout: If clang does not complete before timeout_seconds.
   """
+  l.getLogger().debug("deeplearning.clgen.preprocessors.clang.Preprocess()")
   cmd = [
     "timeout",
     "-s9",
@@ -151,6 +153,7 @@ def CompileLlvmBytecode(
     ClangException: In case of an error.
     ClangTimeout: If clang does not complete before timeout_seconds.
   """
+  l.getLogger().debug("deeplearning.clgen.preprocessors.clang.CompileLlvmBytecode()")
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
   with tempfile.NamedTemporaryFile(
     "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
@@ -193,6 +196,7 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
     ClangFormatException: In case of an error.
     ClangTimeout: If clang-format does not complete before timeout_seconds.
   """
+  l.getLogger().debug("deeplearning.clgen.preprocessors.clang.ClangFormat()")
   try:
     return clang_format.Exec(
       text,
