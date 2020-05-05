@@ -32,7 +32,7 @@ import typing
 from compilers.llvm import llvm
 from labm8.py import app
 from labm8.py import bazelutil
-
+from eupy.native import logger as l
 FLAGS = app.FLAGS
 
 app.DEFINE_integer(
@@ -78,6 +78,7 @@ def ValidateOptimizationLevel(opt: str) -> str:
   Raises:
     ValueError: If optimization level is not valid.
   """
+  l.getLogger().debug("compilers.llvm.clang.ValidateOptimizationLevel()")
   if opt in OPTIMIZATION_LEVELS:
     return opt
   raise ValueError(
@@ -108,6 +109,7 @@ def Exec(
   Raises:
     LlvmTimeout: If clang does not complete before timeout_seconds.
   """
+  l.getLogger().debug("compilers.llvm.clang.Exec()")
   cmd = ["timeout", "-s9", str(timeout_seconds), str(CLANG)] + args
   if log:
     app.Log(3, "$ %s", " ".join(cmd))
@@ -155,6 +157,7 @@ def Compile(
     LlvmTimeout: If the compiler times out.
     ClangException: If the compilation fails.
   """
+  l.getLogger().debug("compilers.llvm.clang.Compile()")
   copts = copts or []
   # Validate the input srcs.
   for src in srcs:
@@ -197,6 +200,7 @@ def Preprocess(
     ClangException: In case of an error.
     ClangTimeout: If clang does not complete before timeout_seconds.
   """
+  l.getLogger().debug("compilers.llvm.clang.Preprocess()")
   copts = copts or []
   cmd = ["-E", "-c", "-", "-o", "-"] + copts
   app.Log(3, "$ %s", " ".join(cmd))
@@ -226,6 +230,7 @@ def ClangBisectMessageToInvocation(line: str) -> OptPassRunInvocation:
   Raises:
     ClangException: If the line cannot be parsed.
   """
+  l.getLogger().debug("compilers.llvm.clang.ClangBisectMessageToInvocation()")
   m = _CLANG_BISECT_MESSAGE_RE.match(line)
   if not m:
     raise ClangException(msg=f"Cannot interpret line: {line}")
@@ -251,6 +256,7 @@ def GetOptPasses(
   Returns:
     A list of passes.
   """
+  l.getLogger().debug("compilers.llvm.clang.GetOptPasses()")
   cflags = cflags or ["-O0"]
   process = Exec(
     cflags + ["-mllvm", "-opt-bisect-limit=-1", f"-x{language}", "-"],
@@ -268,6 +274,7 @@ def GetOptPasses(
 
 def main(argv):
   """Main entry point."""
+  l.getLogger().debug("compilers.llvm.clang.main()")
   try:
     proc = Exec(argv[1:], timeout_seconds=FLAGS.clang_timeout_seconds)
     if proc.stdout:
