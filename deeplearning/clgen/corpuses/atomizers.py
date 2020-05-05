@@ -283,3 +283,6 @@ class GreedyAtomizer(AtomizerBase):
     end_time = labdate.MillisecondsTimestamp()
     # Return a new atomizer using the subset vocabulary.
     return GreedyAtomizer(vocab_subset)
+
+
+## TODO Add atomizer subclass here if Wordpiece vocab is implemented.
