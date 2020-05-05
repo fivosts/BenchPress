@@ -30,6 +30,7 @@ from compilers.llvm import clang_format
 from compilers.llvm import llvm
 from deeplearning.clgen import errors
 from labm8.py import app
+from eupy.native import  logger as l
 
 FLAGS = app.FLAGS
 
