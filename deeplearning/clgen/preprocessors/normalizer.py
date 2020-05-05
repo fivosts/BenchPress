@@ -64,6 +64,7 @@ def NormalizeIdentifiers(
     RewriterException: If rewriter found nothing to rewrite.
     ClangTimeout: If rewriter fails to complete within timeout_seconds.
   """
+  l.getLogger().debug("deeplearning.clgen.preprocessors.normalizer.NormalizeIdentifiers()")
   with tempfile.NamedTemporaryFile("w", suffix=suffix) as f:
     f.write(text)
     f.flush()
