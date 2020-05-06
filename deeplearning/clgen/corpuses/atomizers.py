@@ -105,7 +105,7 @@ class AtomizerBase(object):
     indices = self.AtomizeString(text)
     return list(map(lambda x: self.decoder[x], indices))
 
-  def DeatomizeIndices(self, encoded: np.array) -> str:
+  def DeatomizeIndices(self, encoded: np.array):
     """Translate atomized code back into a string.
 
     Args:
@@ -113,10 +113,17 @@ class AtomizerBase(object):
 
     Returns:
       The decoded text.
+      Returns string if nparray is one-dimensional.
+      Else returns list for each extra dimension of strings.
     """
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.DeatomizeIndices()")
     try:
-      return "".join(list(map(lambda x: self.decoder[x], encoded)))
+      if np.ndim(encoded) > 1:
+        return [ self.DeatomizeIndices(x) for x in encoded ]
+      elif np.ndim(encoded) == 1:
+        return "".join(list(map(lambda x: self.decoder[x], encoded)))
+      else:
+        raise UserError("Wrong encoded array specified")
     except KeyError:
       raise errors.VocabError
 
