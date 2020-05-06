@@ -22,6 +22,7 @@ from datasets.github.scrape_repos.preprocessors import secrets
 from deeplearning.clgen import errors
 from deeplearning.clgen.preprocessors import public
 from labm8.py import app
+from eupy.native import logger as l
 
 FLAGS = app.FLAGS
 
@@ -31,6 +32,7 @@ PreprocessorFunction = public.PreprocessorFunction
 
 def _ImportPreprocessorFromFile(module_path: pathlib.Path, function_name: str):
   """Import module from an absolute path to file, e.g. '/foo/bar.py'."""
+  l.getLogger().debug("deeplearning.clgen.preprocessors.preprocessors._ImportPreprocessorFromFile()")
   if not module_path.is_file():
     raise errors.UserError(f"File not found: {module_path}")
   try:
@@ -48,6 +50,7 @@ def _ImportPreprocessorFromFile(module_path: pathlib.Path, function_name: str):
 
 def _ImportPreprocessorFromModule(module_name: str, function_name: str):
   """Import module from a fully qualified module name, e.g. 'foo.bar'."""
+  l.getLogger().debug("deeplearning.clgen.preprocessors.preprocessors._ImportPreprocessorFromModule()")
   try:
     module = importlib.import_module(module_name)
   except (ModuleNotFoundError, AttributeError):
@@ -86,6 +89,7 @@ def GetPreprocessorFunction(name: str) -> public.PreprocessorFunction:
     UserError: If the requested name cannot be found or is not a
       @clgen_preprocessor decorated function.
   """
+  l.getLogger().debug("deeplearning.clgen.preprocessors.preprocessors.GetPreprocessorFunction()")
   components = name.split(":")
   if len(components) != 2:
     raise errors.UserError(f"Invalid preprocessor name {name}")
@@ -117,6 +121,7 @@ def Preprocess(text: str, preprocessors: typing.List[str]) -> str:
     BadCodeException: If one of the preprocessors rejects the input.
     InternalException: In case of some other error.
   """
+  l.getLogger().debug("deeplearning.clgen.preprocessors.preprocessors.Preprocess()")
   preprocessor_functions = [GetPreprocessorFunction(p) for p in preprocessors]
   for preprocessor in preprocessor_functions:
     text = preprocessor(text)
@@ -144,6 +149,7 @@ def PreprocessFile(
     BadCodeException: If one of the preprocessors rejects the input.
     InternalException: In case of some other error.
   """
+  l.getLogger().debug("deeplearning.clgen.preprocessors.preprocessors.PreprocessFile()")
   with open(path) as infile:
     contents = infile.read()
   preprocessed = Preprocess(contents, preprocessors)
@@ -166,6 +172,7 @@ def RejectSecrets(text: str) -> str:
   Raises:
     BadCodeException: In case the text contains secrets.
   """
+  l.getLogger().debug("deeplearning.clgen.preprocessors.preprocessors.RejectSecrets()")
   try:
     secrets.ScanForSecrets(text)
     return text
