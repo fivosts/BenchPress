@@ -90,7 +90,8 @@ def NormalizeIdentifiers(
       env=CLGEN_REWRITER_ENV,
     )
     stdout, stderr = process.communicate()
-    l.getLogger().debug(stderr)
+    l.getLogger().debug("stdout: {}".format(stdout))
+    l.getLogger().debug("stderr: {}".format(stderr))
   # If there was nothing to rewrite, the rewriter exits with error code:
   EUGLY_CODE = 204
   if process.returncode == EUGLY_CODE:
