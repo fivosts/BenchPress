@@ -59,7 +59,7 @@ def AutoGenerator(
   l.getLogger().debug("deeplearning.clgen.models.data_generators.AutoGenerator()")
   return BatchGenerator(corpus, training_opts)
 
-
+## Deprecated
 def BatchGenerator(
   corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
 ) -> typing.Generator[DataBatch, typing.Any, None]:
