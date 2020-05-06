@@ -76,7 +76,7 @@ class EncodedContentFile(Base):
 
   @staticmethod
   def DataStringToNumpyArray(data: str) -> np.ndarray:
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFile.DataStringToNumpyArray()")
+    # l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFile.DataStringToNumpyArray()")
     """Convert the 'data' string to a numpy array."""
     return np.array([int(x) for x in data.split(".")], dtype=np.int32)
 
@@ -88,7 +88,7 @@ class EncodedContentFile(Base):
 
   @property
   def indices_array(self) -> np.ndarray:
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFile.indices_array()")
+    # l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFile.indices_array()")
     """The numpy array of the encoded data."""
     return self.DataStringToNumpyArray(self.data)
 
