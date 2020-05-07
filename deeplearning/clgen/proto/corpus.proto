@@ -63,13 +63,7 @@ message GreedyMulticharAtomizer {
 
 message MaskLMAtomizer {
   // MASK LM decoding attributes as described in BERT
-  // Maximum number of masked LM predictions per sequence.
-  repeated int32 max_predictions_per_seq = 2;
-  // Number of times to duplicate the input data (with different masks).
-  repeated int32 dupe_factor = 3;
-  // Masked LM probability.
-  repeated float masked_lm_prob = 4;
   // Use Wordpiece to tokenize sequence
-  repeated bool wordpiece_tokenization = 5;
+  repeated bool wordpiece_tokenization = 1;
 
 }
