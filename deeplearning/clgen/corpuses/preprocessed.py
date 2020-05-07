@@ -189,7 +189,7 @@ class PreprocessedContentFiles(sqlutil.Database):
           )
     )
     l.getLogger().info(
-      "Pre-processing discard rate: {:.1f}%% ({} files).".format(
+      "Pre-processing discard rate: {:.1f}% ({} files).".format(
               (1 - (num_files / max(num_input_files, 1))) * 100,
               humanize.Commas(num_input_files - num_files),
           )
