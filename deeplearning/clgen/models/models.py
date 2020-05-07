@@ -71,11 +71,9 @@ class Model(object):
     if not isinstance(config, model_pb2.Model):
       t = type(config).__name__
       raise TypeError(f"Config must be a Model proto. Received: '{t}'")
-    # Validate config options.
-    if config.training.sequence_length < 1:
-      raise errors.UserError("TrainingOptions.sequence_length must be >= 1")
 
     self.config = model_pb2.Model()
+    # Validate config options.
     self.config.CopyFrom(builders.AssertIsBuildable(config))
     self.corpus = corpuses.Corpus(config.corpus)
     self.hash = self._ComputeHash(self.corpus, self.config)
