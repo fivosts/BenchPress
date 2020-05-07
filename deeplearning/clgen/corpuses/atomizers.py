@@ -291,5 +291,53 @@ class GreedyAtomizer(AtomizerBase):
     # Return a new atomizer using the subset vocabulary.
     return GreedyAtomizer(vocab_subset)
 
+class MaskLMAtomizer(AtomizerBase):
+  """MaskLM corpus atomizer, as implemented in BERT model."""
 
-## TODO Add atomizer subclass here if Wordpiece vocab is implemented.
+  def AtomizeString(self, text: str) -> np.array:
+    """Atomize a text into an array of vocabulary indices.
+
+    Args:
+      text: Input text.
+
+    Returns:
+      An array of indices into vocabulary for all atoms in text.
+    """
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.AtomizeString()")
+    try:
+      return np.array(list(map(lambda x: self.vocab[x], text)), dtype=np.int32)
+    except KeyError:
+      raise errors.VocabError
+
+  def __repr__(self) -> str:
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.__repr__()")
+    return f"MaskLMAtomizer[{self.vocab_size} chars]"
+
+  @classmethod
+  def FromText(cls, 
+               text: str,
+               max_predictions_per_seq: int,
+               masked_lm_prob: float,
+               wordpiece_tokenization: bool
+               ) -> "MaskLMAtomizer":
+    """Instantiate and an atomizer from a corpus text.
+
+    Args:
+      text: Text corpus.
+
+    Returns:
+      An atomizer instance.
+    """
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.FromText()")
+    
+    self.max_predictions_per_seq = max_predictions_per_seq
+    self.masked_lm_prob = masked_lm_prob
+    self.wordpiece_tokenization = wordpiece_tokenization
+
+    ## Ok, now I need to run this spot.
+
+    counter = Counter(text)
+    count_pairs = sorted(counter.items(), key=lambda x: -x[1])
+    atoms, _ = zip(*count_pairs)
+    vocab = dict(zip(atoms, range(len(atoms))))
+    return MaskLMAtomizer(vocab)
