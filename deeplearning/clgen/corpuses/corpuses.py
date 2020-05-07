@@ -439,7 +439,7 @@ class Corpus(object):
                                                   tok_opts.max_predictions_per_seq,
                                                   tok_opts.dupe_factor,
                                                   tok_opts.masked_lm_prob,
-                                                  top_opts.wordpiece_tokenization)
+                                                  tok_opts.wordpiece_tokenization)
     elif self.config.HasField("pre_encoded_corpus_url"):
       encoded_db = encoded.EncodedContentFiles(
         self.config.pre_encoded_corpus_url
