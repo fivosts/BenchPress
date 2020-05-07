@@ -70,6 +70,6 @@ message MaskLMAtomizer {
   // Masked LM probability.
   repeated float masked_lm_prob = 4;
   // Use Wordpiece to tokenize sequence
-  repeated bool wordpiece_tokens = 5;
+  repeated bool wordpiece_tokenization = 5;
 
 }
