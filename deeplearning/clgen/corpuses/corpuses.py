@@ -428,17 +428,8 @@ class Corpus(object):
       atoms = set(self.config.greedy_multichar_atomizer.tokens)
       atomizer = atomizers.GreedyAtomizer.FromText(corpus_txt, atoms)
     elif self.config.HasField("maskLM_atomizer"):
-      max_predictions_per_seq = set(self.config.maskLM_atomizer.max_predictions_per_seq).pop()
-      dupe_factor             = set(self.config.maskLM_atomizer.dupe_factor).pop()
-      masked_lm_prob          = set(self.config.maskLM_atomizer.masked_lm_prob).pop()
       wordpiece_tokenization  = set(self.config.maskLM_atomizer.wordpiece_tokenization).pop()
-
-      atomizer = atomizers.MaskLMAtomizer.FromText(corpus_txt,
-                                                  max_predictions_per_seq,
-                                                  dupe_factor,
-                                                  masked_lm_prob,
-                                                  wordpiece_tokenization
-                                                  )
+      atomizer = atomizers.MaskLMAtomizer.FromText(corpus_txt, wordpiece_tokenization)
     elif self.config.HasField("pre_encoded_corpus_url"):
       encoded_db = encoded.EncodedContentFiles(
         self.config.pre_encoded_corpus_url
