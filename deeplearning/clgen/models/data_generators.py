@@ -60,7 +60,7 @@ def AutoGenerator(
   return BatchGenerator(corpus, training_opts)
 
 ## Deprecated
-def BatchGenerator(
+def _BatchGenerator(
   corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
 ) -> typing.Generator[DataBatch, typing.Any, None]:
   """A batch generator which lazily one-hot encodes the y vectors.
@@ -184,7 +184,7 @@ class TensorflowBatchGenerator(object):
     return batch
 
 
-def GetTrainingCorpus(
+def _GetTrainingCorpus(
   corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
 ) -> typing.Tuple[np.ndarray, np.ndarray, int]:
   """Get the corpus to train over.
