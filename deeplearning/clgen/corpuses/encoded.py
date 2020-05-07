@@ -189,20 +189,21 @@ class EncodedContentFiles(sqlutil.Database):
         func.sum(EncodedContentFile.wall_time_ms),
         func.sum(EncodedContentFile.encoding_time_ms),
       ).first()
-    app.Log(
-      1,
-      "Encoded %s files in %s ms (%.2fx speedup).",
-      humanize.Commas(num_files),
-      humanize.Commas(total_walltime),
-      total_time / total_walltime,
-    )
-    app.Log(
-      1,
-      "Encoded corpus: %s tokens, %s files.",
-      humanize.Commas(token_count),
-      humanize.Commas(num_files),
-    )
-
+    l.getLogger().info("Encoded {} files in {} ms ({.2f}x speedup)"
+                        .format(
+                            humanize.Commas(num_files),
+                            humanize.Commas(total_walltime),
+                            total_time / total_walltime,
+                          )
+                      )
+    l.getLogger().info("Encoded corpus: {} tokens, {} files."
+                        .format(
+                            humanize.Commas(token_count),
+                            humanize.Commas(num_files),
+                          )
+                      )
+    return
+    
   @property
   def size(self):
     l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.size()")
