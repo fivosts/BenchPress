@@ -294,6 +294,20 @@ class GreedyAtomizer(AtomizerBase):
 class MaskLMAtomizer(AtomizerBase):
   """MaskLM corpus atomizer, as implemented in BERT model."""
 
+  def __init__(self, 
+               vocab: typing.Dict[str, int],
+               max_predictions_per_seq: int,
+               dupe_factor: int,
+               masked_lm_prob: float,
+               wordpiece_tokenization: bool
+               ):
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.__init__()")
+    self.max_predictions_per_seq = max_predictions_per_seq
+    self.masked_lm_prob = masked_lm_prob
+    self.dupe_factor = dupe_factor
+    self.wordpiece_tokenization = wordpiece_tokenization
+    super(MaskLMAtomizer, self).__init__(vocab)
+
   def AtomizeString(self, text: str) -> np.array:
     """Atomize a text into an array of vocabulary indices.
 
@@ -331,15 +345,10 @@ class MaskLMAtomizer(AtomizerBase):
     """
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.FromText()")
     
-    self.max_predictions_per_seq = max_predictions_per_seq
-    self.masked_lm_prob = masked_lm_prob
-    self.dupe_factor = dupe_factor
-    self.wordpiece_tokenization = wordpiece_tokenization
-
-    ## Ok, now I need to run this spot.
-
     counter = Counter(text)
     count_pairs = sorted(counter.items(), key=lambda x: -x[1])
     atoms, _ = zip(*count_pairs)
     vocab = dict(zip(atoms, range(len(atoms))))
-    return MaskLMAtomizer(vocab)
+    return MaskLMAtomizer(
+        vocab, max_predictions_per_seq, 
+          dupe_factor, masked_lm_prob, wordpiece_tokenization)
