@@ -21,7 +21,12 @@ working_dir: "/tmp/phd/deeplearning/clgen/tiny"
 model {
   corpus {
     local_tar_archive: "$PWD/corpus.tar.bz2"
-    maskLM_atomizer: true
+    maskLM_atomizer {
+      max_predictions_per_seq: 20
+      dupe_factor: 10
+      masked_lm_prob: 0.15
+      wordpiece_tokenization: false
+    }
     contentfile_separator: "\n\n"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
@@ -35,8 +40,8 @@ model {
     preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
   }
   architecture {
-    backend: BERT
-    # neuron_type: LSTM
+    backend: TENSORFLOW
+    neuron_type: LSTM
     neurons_per_layer: 128
     num_layers: 2
     post_layer_dropout_micros: 0  # = 0.0 real value
