@@ -48,6 +48,7 @@ message Corpus {
   oneof atomizer {
     bool ascii_character_atomizer = 20;
     GreedyMulticharAtomizer greedy_multichar_atomizer = 21;
+    MaskLMAtomizer maskLM_atomizer = 22;
   }
   // A list of preprocessor passes to run on each contentfile in the corpus
   // prior to training, in the order in which they are run.
@@ -58,4 +59,14 @@ message Corpus {
 message GreedyMulticharAtomizer {
   // A list of multi-character tokens.
   repeated string tokens = 1;
+}
+
+message MaskLMAtomizer {
+  // MASK LM decoding attributes as described in BERT
+  // Maximum number of masked LM predictions per sequence.
+  repeated int32 max_predictions_per_seq = 2;
+  // Number of times to duplicate the input data (with different masks).
+  repeated int32 dupe_factor = 3;
+  // Masked LM probability.
+  repeated float masked_lm_prob = 4;
 }
