@@ -203,7 +203,7 @@ class EncodedContentFiles(sqlutil.Database):
                           )
                       )
     return
-    
+
   @property
   def size(self):
     l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.size()")
@@ -261,18 +261,17 @@ class EncodedContentFiles(sqlutil.Database):
           "Pre-processed corpus contains no files: " f"'{preprocessed_db.url}'"
         )
 
-      app.Log(
-        1,
-        "Encoding %s of %s preprocessed files",
-        humanize.Commas(query.count()),
-        humanize.Commas(
-          p_session.query(preprocessed.PreprocessedContentFile)
-          .filter(
-            preprocessed.PreprocessedContentFile.preprocessing_succeeded == True
-          )
-          .count()
-        ),
-      )
+      l.getLogger().info("Encoding {} of {} preprocessed files"
+                          .format(
+                              humanize.Commas(query.count()),
+                              humanize.Commas(
+                                p_session.query(preprocessed.PreprocessedContentFile)
+                                .filter(preprocessed.PreprocessedContentFile.preprocessing_succeeded == True)
+                                .count()
+                              )
+                          )
+                        )
+
       pool = multiprocessing.Pool()
       bar = progressbar.ProgressBar(max_value=len(jobs))
       last_commit = time.time()
