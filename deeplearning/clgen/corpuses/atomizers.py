@@ -317,6 +317,7 @@ class MaskLMAtomizer(AtomizerBase):
   def FromText(cls, 
                text: str,
                max_predictions_per_seq: int,
+               dupe_factor: int,
                masked_lm_prob: float,
                wordpiece_tokenization: bool
                ) -> "MaskLMAtomizer":
@@ -332,6 +333,7 @@ class MaskLMAtomizer(AtomizerBase):
     
     self.max_predictions_per_seq = max_predictions_per_seq
     self.masked_lm_prob = masked_lm_prob
+    self.dupe_factor = dupe_factor
     self.wordpiece_tokenization = wordpiece_tokenization
 
     ## Ok, now I need to run this spot.
