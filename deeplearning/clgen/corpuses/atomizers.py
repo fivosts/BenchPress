@@ -296,15 +296,9 @@ class MaskLMAtomizer(AtomizerBase):
 
   def __init__(self, 
                vocab: typing.Dict[str, int],
-               max_predictions_per_seq: int,
-               dupe_factor: int,
-               masked_lm_prob: float,
                wordpiece_tokenization: bool
                ):
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.__init__()")
-    self.max_predictions_per_seq = max_predictions_per_seq
-    self.masked_lm_prob = masked_lm_prob
-    self.dupe_factor = dupe_factor
     self.wordpiece_tokenization = wordpiece_tokenization
     super(MaskLMAtomizer, self).__init__(vocab)
 
@@ -330,9 +324,6 @@ class MaskLMAtomizer(AtomizerBase):
   @classmethod
   def FromText(cls, 
                text: str,
-               max_predictions_per_seq: int,
-               dupe_factor: int,
-               masked_lm_prob: float,
                wordpiece_tokenization: bool
                ) -> "MaskLMAtomizer":
     """Instantiate and an atomizer from a corpus text.
@@ -354,6 +345,4 @@ class MaskLMAtomizer(AtomizerBase):
     atoms = metaTokens + atoms
     vocab = dict(zip(atoms, range(len(atoms))))
 
-    return MaskLMAtomizer(
-        vocab, max_predictions_per_seq, 
-          dupe_factor, masked_lm_prob, wordpiece_tokenization)
+    return MaskLMAtomizer(vocab, wordpiece_tokenization)
