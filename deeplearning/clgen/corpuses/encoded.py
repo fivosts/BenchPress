@@ -189,7 +189,7 @@ class EncodedContentFiles(sqlutil.Database):
         func.sum(EncodedContentFile.wall_time_ms),
         func.sum(EncodedContentFile.encoding_time_ms),
       ).first()
-    l.getLogger().info("Encoded {} files in {} ms ({.2f}x speedup)"
+    l.getLogger().info("Encoded {} files in {} ms ({:.2f}x speedup)"
                         .format(
                             humanize.Commas(num_files),
                             humanize.Commas(total_walltime),
