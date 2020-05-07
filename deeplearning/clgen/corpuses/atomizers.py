@@ -345,10 +345,15 @@ class MaskLMAtomizer(AtomizerBase):
     """
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.FromText()")
     
+    ## Account for MetaTokens. CLS and SEP or START might need to be added.
+    metaTokens = ('[MASK]',)
+
     counter = Counter(text)
     count_pairs = sorted(counter.items(), key=lambda x: -x[1])
     atoms, _ = zip(*count_pairs)
+    atoms = metaTokens + atoms
     vocab = dict(zip(atoms, range(len(atoms))))
+
     return MaskLMAtomizer(
         vocab, max_predictions_per_seq, 
           dupe_factor, masked_lm_prob, wordpiece_tokenization)
