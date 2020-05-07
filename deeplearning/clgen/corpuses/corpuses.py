@@ -104,6 +104,8 @@ def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
         raise errors.UserError("Empty string found in maskLM_atomizer: dupe_factor is empty")
       if not config.maskLM_atomizer.masked_lm_prob:
         raise errors.UserError("Empty string found in maskLM_atomizer: masked_lm_prob is empty")
+      if not config.wordpiece_tokenization:
+        raise errors.UserError("Empty string found in maskLM_atomizer: wordpiece_tokenization is empty")
 
     return config
   except pbutil.ProtoValueError as e:
