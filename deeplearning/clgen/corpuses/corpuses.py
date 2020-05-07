@@ -97,6 +97,13 @@ def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
           raise errors.UserError(
             "Empty string found in GreedyMulticharAtomizer.tokens is empty"
           )
+    if config.HasField("maskLM_atomizer"):
+      if not config.maskLM_atomizer.max_predictions_per_seq:
+        raise errors.UserError("Empty string found in maskLM_atomizer: max_predictions_per_seq is empty")
+      if not config.maskLM_atomizer.dupe_factor:
+        raise errors.UserError("Empty string found in maskLM_atomizer: dupe_factor is empty")
+      if not config.maskLM_atomizer.masked_lm_prob:
+        raise errors.UserError("Empty string found in maskLM_atomizer: masked_lm_prob is empty")
 
     return config
   except pbutil.ProtoValueError as e:
