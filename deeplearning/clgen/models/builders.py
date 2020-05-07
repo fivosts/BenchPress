@@ -74,6 +74,25 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
       lambda x: 0 < x,
       "TrainingOptions.num_epochs must be > 0",
     )
+    pbutil.AssertFieldConstraint(
+      config.training,
+      "sequence_length",
+      lambda x: 1 <= x,
+      "TrainingOptions.sequence_length must be >= 1",
+    )
+    if config.corpus.maskLM_atomizer:
+      pbutil.AssertFieldIsSet(
+        config.training,
+        "max_predictions_per_seq",
+      )
+      pbutil.AssertFieldIsSet(
+        config.training,
+        "dupe_factor",
+      )
+      pbutil.AssertFieldIsSet(
+        config.training,
+        "masked_lm_prob",
+      )
     pbutil.AssertFieldIsSet(
       config.training, "shuffle_corpus_contentfiles_between_epochs"
     )
