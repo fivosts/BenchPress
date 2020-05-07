@@ -424,6 +424,8 @@ class Corpus(object):
     elif self.config.HasField("greedy_multichar_atomizer"):
       atoms = set(self.config.greedy_multichar_atomizer.tokens)
       atomizer = atomizers.GreedyAtomizer.FromText(corpus_txt, atoms)
+    elif self.config.HasField("maskLM_atomizer"):
+      atomizer = atomizers.MaskLMAtomizer(corpus_txt)
     elif self.config.HasField("pre_encoded_corpus_url"):
       encoded_db = encoded.EncodedContentFiles(
         self.config.pre_encoded_corpus_url
