@@ -78,6 +78,8 @@ message TrainingOptions {
   optional int32 dupe_factor = 4;
   // Masked LM probability.
   optional float masked_lm_prob = 5;
+  // Random seed for data generation.
+  optional int32 random_seed = 6;
   // If true, shuffle the order of contentfiles in the corpus between each
   // training epoch.
   optional bool shuffle_corpus_contentfiles_between_epochs = 6;
