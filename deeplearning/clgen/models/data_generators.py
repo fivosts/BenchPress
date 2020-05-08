@@ -43,7 +43,7 @@ class DataBatch(typing.NamedTuple):
 class KerasBatchGenerator():
 
   def AutoGenerator(
-    corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
+    self, corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
   ) -> typing.Generator[DataBatch, typing.Any, None]:
     """Determine and construct what we believe to be the best data generator.
 
@@ -58,11 +58,10 @@ class KerasBatchGenerator():
       A generator suitable for use by a model's fit_generator() method.
     """
     l.getLogger().debug("deeplearning.clgen.models.data_generators.KerasBatchGenerator.AutoGenerator()")
-    return BatchGenerator(corpus, training_opts)
+    return self.BatchGenerator(corpus, training_opts)
 
-  ## Deprecated
   def BatchGenerator(
-    corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
+    self, corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
   ) -> typing.Generator[DataBatch, typing.Any, None]:
     """A batch generator which lazily one-hot encodes the y vectors.
 
@@ -79,14 +78,14 @@ class KerasBatchGenerator():
       A generator suitable for use by a model's fit_generator() method.
     """
     l.getLogger().debug("deeplearning.clgen.models.data_generators.KerasBatchGenerator.BatchGenerator()")
-    x, y, steps_per_epoch = GetTrainingCorpus(corpus, training_opts)
+    x, y, steps_per_epoch = self.GetTrainingCorpus(corpus, training_opts)
 
     # Per-epoch outer loop.
     epoch_num = 0
     while True:
       # Re-shuffle corpus if needed.
       if epoch_num and training_opts.shuffle_corpus_contentfiles_between_epochs:
-        x, y, steps_per_epoch = GetTrainingCorpus(corpus, training_opts)
+        x, y, steps_per_epoch = self.GetTrainingCorpus(corpus, training_opts)
 
       # Roll so that we don't need to reset model states over epochs.
       x_epoch = np.split(np.roll(x, -epoch_num, axis=0), steps_per_epoch, axis=1)
@@ -96,7 +95,7 @@ class KerasBatchGenerator():
         batch = DataBatch(
           X=x_epoch[batch_num],
           # Lazy one-hot encoding.
-          y=OneHotEncode(y_epoch[batch_num], corpus.vocab_size),
+          y=self.OneHotEncode(y_epoch[batch_num], corpus.vocab_size),
         )
         if not batch_num and not epoch_num:
           LogBatchTelemetry(batch, steps_per_epoch, training_opts.num_epochs)
@@ -104,7 +103,7 @@ class KerasBatchGenerator():
       epoch_num += 1
 
   def GetTrainingCorpus(
-    corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
+    self, corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
   ) -> typing.Tuple[np.ndarray, np.ndarray, int]:
     """Get the corpus to train over.
 
@@ -158,7 +157,7 @@ class KerasBatchGenerator():
     return x, y, steps_per_epoch
 
 
-  def OneHotEncode(indices: np.ndarray, vocabulary_size: int):
+  def OneHotEncode(self, indices: np.ndarray, vocabulary_size: int):
     """One-hot encode an array of vocabulary indices.
 
       Args:
