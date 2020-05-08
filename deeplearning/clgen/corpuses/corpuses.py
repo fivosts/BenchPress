@@ -378,12 +378,12 @@ class Corpus(object):
       if not self._indices_arrays:
         with self.encoded.Session() as session:
           query = session.query(encoded.EncodedContentFile)
-          self._indices_arrays = [x.indices_array for x in query]
+          self._indices_arrays = np.array([x.indices_array for x in query])
 
       if shuffle:
         random.shuffle(self._indices_arrays)
 
-      return np.concatenate(self._indices_arrays)
+      return self._indices_arrays
 
   def GetNumContentFiles(self) -> int:
     l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.GetNumContentFiles()")
