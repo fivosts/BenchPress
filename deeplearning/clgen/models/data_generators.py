@@ -40,67 +40,136 @@ class DataBatch(typing.NamedTuple):
   X: np.array
   y: np.array
 
+class KerasBatchGenerator():
 
-def AutoGenerator(
-  corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
-) -> typing.Generator[DataBatch, typing.Any, None]:
-  """Determine and construct what we believe to be the best data generator.
+  def AutoGenerator(
+    corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
+  ) -> typing.Generator[DataBatch, typing.Any, None]:
+    """Determine and construct what we believe to be the best data generator.
 
-  The optimum generator will depend on the corpus, the amount of memory
-  available, and the vocabulary encoding.
+    The optimum generator will depend on the corpus, the amount of memory
+    available, and the vocabulary encoding.
 
-  Args:
-    corpus: A Corpus instance.
-    training_opts: A TrainingOptions proto.
+    Args:
+      corpus: A Corpus instance.
+      training_opts: A TrainingOptions proto.
 
-  Returns:
-    A generator suitable for use by a model's fit_generator() method.
-  """
-  l.getLogger().debug("deeplearning.clgen.models.data_generators.AutoGenerator()")
-  return BatchGenerator(corpus, training_opts)
+    Returns:
+      A generator suitable for use by a model's fit_generator() method.
+    """
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.KerasBatchGenerator.AutoGenerator()")
+    return BatchGenerator(corpus, training_opts)
 
-## Deprecated
-def BatchGenerator(
-  corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
-) -> typing.Generator[DataBatch, typing.Any, None]:
-  """A batch generator which lazily one-hot encodes the y vectors.
+  ## Deprecated
+  def BatchGenerator(
+    corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
+  ) -> typing.Generator[DataBatch, typing.Any, None]:
+    """A batch generator which lazily one-hot encodes the y vectors.
 
-  This reduces the memory overhead by only one-hot encoding the y vectors on a
-  per-batch basis. This is of course slower than one-hot encoding the entire
-  y corpus, but that requires more memory than is available on many systems for
-  a reasonable corpus.
+    This reduces the memory overhead by only one-hot encoding the y vectors on a
+    per-batch basis. This is of course slower than one-hot encoding the entire
+    y corpus, but that requires more memory than is available on many systems for
+    a reasonable corpus.
 
-  Args:
-    corpus: A Corpus instance.
-    training_opts: A TrainingOptions proto.
+    Args:
+      corpus: A Corpus instance.
+      training_opts: A TrainingOptions proto.
 
-  Returns:
-    A generator suitable for use by a model's fit_generator() method.
-  """
-  l.getLogger().debug("deeplearning.clgen.models.data_generators.BatchGenerator()")
-  x, y, steps_per_epoch = GetTrainingCorpus(corpus, training_opts)
+    Returns:
+      A generator suitable for use by a model's fit_generator() method.
+    """
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.KerasBatchGenerator.BatchGenerator()")
+    x, y, steps_per_epoch = GetTrainingCorpus(corpus, training_opts)
 
-  # Per-epoch outer loop.
-  epoch_num = 0
-  while True:
-    # Re-shuffle corpus if needed.
-    if epoch_num and training_opts.shuffle_corpus_contentfiles_between_epochs:
-      x, y, steps_per_epoch = GetTrainingCorpus(corpus, training_opts)
+    # Per-epoch outer loop.
+    epoch_num = 0
+    while True:
+      # Re-shuffle corpus if needed.
+      if epoch_num and training_opts.shuffle_corpus_contentfiles_between_epochs:
+        x, y, steps_per_epoch = GetTrainingCorpus(corpus, training_opts)
 
-    # Roll so that we don't need to reset model states over epochs.
-    x_epoch = np.split(np.roll(x, -epoch_num, axis=0), steps_per_epoch, axis=1)
-    y_epoch = np.split(np.roll(y, -epoch_num, axis=0), steps_per_epoch, axis=1)
-    # Per-batch inner loop.
-    for batch_num in range(steps_per_epoch):
-      batch = DataBatch(
-        X=x_epoch[batch_num],
-        # Lazy one-hot encoding.
-        y=OneHotEncode(y_epoch[batch_num], corpus.vocab_size),
+      # Roll so that we don't need to reset model states over epochs.
+      x_epoch = np.split(np.roll(x, -epoch_num, axis=0), steps_per_epoch, axis=1)
+      y_epoch = np.split(np.roll(y, -epoch_num, axis=0), steps_per_epoch, axis=1)
+      # Per-batch inner loop.
+      for batch_num in range(steps_per_epoch):
+        batch = DataBatch(
+          X=x_epoch[batch_num],
+          # Lazy one-hot encoding.
+          y=OneHotEncode(y_epoch[batch_num], corpus.vocab_size),
+        )
+        if not batch_num and not epoch_num:
+          LogBatchTelemetry(batch, steps_per_epoch, training_opts.num_epochs)
+        yield batch
+      epoch_num += 1
+
+  def GetTrainingCorpus(
+    corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
+  ) -> typing.Tuple[np.ndarray, np.ndarray, int]:
+    """Get the corpus to train over.
+
+    Args:
+      corpus: A Corpus instance.
+      training_opts: A TrainingOptions proto.
+
+    Returns:
+      An X, y pair of data for an epoch, and the number of steps in the epoch.
+
+    Raises:
+      UserError: If batch_size and sequence_length are too large for the corpus,
+        yielding no batches.
+    """
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.KerasBatchGenerator.GetTrainingCorpus()")
+    start_time = time.time()
+    encoded_corpus = corpus.GetTrainingData(
+      shuffle=training_opts.shuffle_corpus_contentfiles_between_epochs
+    )
+    corpus_length = len(encoded_corpus)
+    steps_per_epoch = (corpus_length - 1) // (
+      training_opts.batch_size * training_opts.sequence_length
+    )
+    if not steps_per_epoch:
+      raise errors.UserError(
+        f"Requested batch size ({training_opts.batch_size}) and "
+        f"sequence length ({training_opts.sequence_length}) are too large for "
+        f"corpus of size {corpus_length}."
       )
-      if not batch_num and not epoch_num:
-        LogBatchTelemetry(batch, steps_per_epoch, training_opts.num_epochs)
-      yield batch
-    epoch_num += 1
+
+    clipped_corpus_length = (
+      steps_per_epoch * training_opts.batch_size * training_opts.sequence_length
+    )
+
+    x = np.reshape(
+      encoded_corpus[:clipped_corpus_length],
+      [training_opts.batch_size, steps_per_epoch * training_opts.sequence_length],
+    )
+    y = np.reshape(
+      encoded_corpus[1 : clipped_corpus_length + 1],
+      [training_opts.batch_size, steps_per_epoch * training_opts.sequence_length],
+    )
+
+    l.getLogger().info(
+      "Encoded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
+              humanize.Commas(clipped_corpus_length),
+              humanize.Commas(corpus_length - clipped_corpus_length),
+              humanize.Commas(int((time.time() - start_time) * 1000)),
+          )
+    )
+    return x, y, steps_per_epoch
+
+
+  def OneHotEncode(indices: np.ndarray, vocabulary_size: int):
+    """One-hot encode an array of vocabulary indices.
+
+      Args:
+        indices: A 1D array of vocabulary indices.
+        vocabulary_size: The size of the vocabulary.
+
+      Returns:
+        A 2D array of one-hot encoded tokens.
+      """
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.KerasBatchGenerator.OneHotEncode()")
+    return np.eye(vocabulary_size)[indices]
 
 
 class TensorflowBatchGenerator(object):
@@ -183,74 +252,87 @@ class TensorflowBatchGenerator(object):
     assert 0 <= self.i <= self.num_batches
     return batch
 
+class MaskLMBatchGenerator(object):
+  def __init__(
+    self, corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
+  ):
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.__init__()")
+    self.corpus = corpus
+    self.training_opts = training_opts
 
-def GetTrainingCorpus(
-  corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
-) -> typing.Tuple[np.ndarray, np.ndarray, int]:
-  """Get the corpus to train over.
+    # Lazily instantiated.
+    self.encoded_corpus = None
+    self.num_batches = 0
+    self.batches = None
+    self.CreateBatches()
 
-  Args:
-    corpus: A Corpus instance.
-    training_opts: A TrainingOptions proto.
-
-  Returns:
-    An X, y pair of data for an epoch, and the number of steps in the epoch.
-
-  Raises:
-    UserError: If batch_size and sequence_length are too large for the corpus,
-      yielding no batches.
-  """
-  l.getLogger().debug("deeplearning.clgen.models.data_generators.GetTrainingCorpus()")
-  start_time = time.time()
-  encoded_corpus = corpus.GetTrainingData(
-    shuffle=training_opts.shuffle_corpus_contentfiles_between_epochs
-  )
-  corpus_length = len(encoded_corpus)
-  steps_per_epoch = (corpus_length - 1) // (
-    training_opts.batch_size * training_opts.sequence_length
-  )
-  if not steps_per_epoch:
-    raise errors.UserError(
-      f"Requested batch size ({training_opts.batch_size}) and "
-      f"sequence length ({training_opts.sequence_length}) are too large for "
-      f"corpus of size {corpus_length}."
+    LogBatchTelemetry(
+      self.batches[0], self.num_batches, self.training_opts.num_epochs
     )
 
-  clipped_corpus_length = (
-    steps_per_epoch * training_opts.batch_size * training_opts.sequence_length
-  )
+  def CreateBatches(self) -> None:
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.CreateBatches()")
+    start_time = time.time()
 
-  x = np.reshape(
-    encoded_corpus[:clipped_corpus_length],
-    [training_opts.batch_size, steps_per_epoch * training_opts.sequence_length],
-  )
-  y = np.reshape(
-    encoded_corpus[1 : clipped_corpus_length + 1],
-    [training_opts.batch_size, steps_per_epoch * training_opts.sequence_length],
-  )
+    # generate a kernel corpus
+    self.i = 0
+    if (
+      self.encoded_corpus is None
+      or self.training_opts.shuffle_corpus_contentfiles_between_epochs
+    ):
+      self.encoded_corpus = self.corpus.GetTrainingData(
+        shuffle=self.training_opts.shuffle_corpus_contentfiles_between_epochs
+      )
 
-  l.getLogger().info(
-    "Encoded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
-            humanize.Commas(clipped_corpus_length),
-            humanize.Commas(corpus_length - clipped_corpus_length),
-            humanize.Commas(int((time.time() - start_time) * 1000)),
-        )
-  )
-  return x, y, steps_per_epoch
+    batch_size = self.training_opts.batch_size
+    sequence_length = self.training_opts.sequence_length
 
+    # set corpus size and number of batches
+    self.num_batches = int(
+      len(self.encoded_corpus) / (batch_size * sequence_length)
+    )
+    if self.num_batches == 0:
+      raise errors.UserError(
+        "Not enough data. Use a smaller sequence_length and batch_size"
+      )
 
-def OneHotEncode(indices: np.ndarray, vocabulary_size: int):
-  """One-hot encode an array of vocabulary indices.
+    # split into batches
+    clipped_corpus_length = self.num_batches * batch_size * sequence_length
+    clipped_corpus = self.encoded_corpus[:clipped_corpus_length]
+    xdata = clipped_corpus
+    ydata = np.copy(clipped_corpus)
 
-    Args:
-      indices: A 1D array of vocabulary indices.
-      vocabulary_size: The size of the vocabulary.
+    # Wrap-around.
+    ydata[:-1] = xdata[1:]
+    ydata[-1] = xdata[0]
+    self.batches = [
+      DataBatch(x, y)
+      for x, y in zip(
+        np.split(xdata.reshape(batch_size, -1), self.num_batches, 1),
+        np.split(ydata.reshape(batch_size, -1), self.num_batches, 1),
+      )
+    ]
+    l.getLogger().info(
+      "Encoded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
+                humanize.Commas(clipped_corpus_length),
+                humanize.Commas(len(self.encoded_corpus) - clipped_corpus_length),
+                humanize.Commas(int((time.time() - start_time) * 1000)),
+            )
+    )
+
+  def NextBatch(self) -> DataBatch:
+    """Fetch next batch.
 
     Returns:
-      A 2D array of one-hot encoded tokens.
+      X, Y DataBatch.
     """
-  l.getLogger().debug("deeplearning.clgen.models.data_generators.OneHotEncode()")
-  return np.eye(vocabulary_size)[indices]
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.NextBatch()")
+    batch = self.batches[self.i]
+    self.i += 1
+    assert 0 <= self.i <= self.num_batches
+    return batch
+
+
 
 
 def LogBatchTelemetry(
