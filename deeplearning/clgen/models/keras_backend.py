@@ -156,7 +156,7 @@ class KerasBackend(backends.BackendBase):
         telemetry.TrainingLogger(self.cache.path / "logs").KerasCallback(keras),
       ]
 
-      generator = data_generators.AutoGenerator(corpus, self.config.training)
+      generator = data_generators.KerasBatchGenerator()
       steps_per_epoch = (corpus.encoded.token_count - 1) // (
         self.config.training.batch_size * self.config.training.sequence_length
       )
@@ -169,7 +169,7 @@ class KerasBackend(backends.BackendBase):
               )
       )
       model.fit_generator(
-        generator,
+        generator.AutoGenerator(corpus, self.config.training),
         steps_per_epoch=steps_per_epoch,
         callbacks=callbacks,
         initial_epoch=starting_epoch,
