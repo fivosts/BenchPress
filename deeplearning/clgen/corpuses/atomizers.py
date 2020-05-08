@@ -324,7 +324,7 @@ class MaskLMAtomizer(AtomizerBase):
 
   @property
   def maskToken(self):
-    return self.TokenizeString(self._maskLabel)
+    return self.vocab[self._maskLabel]
 
   @property
   def maskLabel(self):
@@ -346,7 +346,7 @@ class MaskLMAtomizer(AtomizerBase):
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.FromText()")
     
     ## Account for MetaTokens. CLS and SEP or START might need to be added.
-    metaTokens = (self._maskLabel,)
+    metaTokens = ('[MASK]',)
 
     counter = Counter(text)
     count_pairs = sorted(counter.items(), key=lambda x: -x[1])
