@@ -33,6 +33,12 @@ from eupy.native import logger as l
 
 FLAGS = app.FLAGS
 
+class DataBatch(typing.NamedTuple):
+  """An <X,y> data tuple used for training one batch."""
+
+  X: np.array
+  y: np.array
+
 def LogBatchTelemetry(
   batch: DataBatch, steps_per_epoch: int, num_epochs: int
 ) -> None:
@@ -49,12 +55,6 @@ def LogBatchTelemetry(
             humanize.BinaryPrefix(batch_size * steps_per_epoch * num_epochs, "B"),
         )
   )
-
-class DataBatch(typing.NamedTuple):
-  """An <X,y> data tuple used for training one batch."""
-
-  X: np.array
-  y: np.array
 
 class KerasBatchGenerator():
 
@@ -137,9 +137,9 @@ class KerasBatchGenerator():
     """
     l.getLogger().debug("deeplearning.clgen.models.data_generators.KerasBatchGenerator.GetTrainingCorpus()")
     start_time = time.time()
-    encoded_corpus = corpus.GetTrainingData(
-      shuffle=training_opts.shuffle_corpus_contentfiles_between_epochs
-    )
+    encoded_corpus = np.concatenate(corpus.GetTrainingData(
+          shuffle=training_opts.shuffle_corpus_contentfiles_between_epochs
+        ))
     corpus_length = len(encoded_corpus)
     steps_per_epoch = (corpus_length - 1) // (
       training_opts.batch_size * training_opts.sequence_length
@@ -217,9 +217,9 @@ class TensorflowBatchGenerator(object):
       self.encoded_corpus is None
       or self.training_opts.shuffle_corpus_contentfiles_between_epochs
     ):
-      self.encoded_corpus = self.corpus.GetTrainingData(
-        shuffle=self.training_opts.shuffle_corpus_contentfiles_between_epochs
-      )
+      self.encoded_corpus = np.concatenate(self.corpus.GetTrainingData(
+              shuffle=self.training_opts.shuffle_corpus_contentfiles_between_epochs
+            ))
 
     batch_size = self.training_opts.batch_size
     sequence_length = self.training_opts.sequence_length
@@ -289,6 +289,14 @@ class MaskLMBatchGenerator(object):
     )
     return
 
+
+  # // Maximum number of masked LM predictions per sequence.
+  # optional int32 max_predictions_per_seq = 3;
+  # // Number of times to duplicate the input data (with different masks).
+  # optional int32 dupe_factor = 4;
+  # // Masked LM probability.
+  # optional float masked_lm_prob = 5;
+
   def CreateBatches(self) -> None:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.CreateBatches()")
     start_time = time.time()
@@ -302,6 +310,9 @@ class MaskLMBatchGenerator(object):
       self.encoded_corpus = self.corpus.GetTrainingData(
         shuffle=self.training_opts.shuffle_corpus_contentfiles_between_epochs
       )
+
+    l.getLogger().warning(self.corpus.atomizer.DeatomizeIndices(self.encoded_corpus[:200]))
+    l.getLogger().warning(self.encoded_corpus.shape)
 
     batch_size = self.training_opts.batch_size
     sequence_length = self.training_opts.sequence_length
@@ -321,6 +332,10 @@ class MaskLMBatchGenerator(object):
     xdata = clipped_corpus
     ydata = np.copy(clipped_corpus)
 
+    ## 1. dupe_factor:
+    ## 2. masked_lm_prob: def createMasks and mask->keep labels etc.
+    ## 3. max_predictions_per_seq: 
+
     # Wrap-around.
     ydata[:-1] = xdata[1:]
     ydata[-1] = xdata[0]
@@ -338,6 +353,7 @@ class MaskLMBatchGenerator(object):
                 humanize.Commas(int((time.time() - start_time) * 1000)),
             )
     )
+    exit()
     return
 
   def NextBatch(self) -> DataBatch:
