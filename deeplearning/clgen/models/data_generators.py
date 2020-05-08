@@ -306,8 +306,8 @@ class MaskLMBatchGenerator(object):
         shuffle=self.training_opts.shuffle_corpus_contentfiles_between_epochs
       )
 
-    if training_opts.shuffle_corpus_contentfiles_between_epochs:
-      if training_opts.random_seed:
+    if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
+      if self.training_opts.random_seed:
         rngen = random.Random(training_opts.random_seed)
       else:
         rngen = random.Random()

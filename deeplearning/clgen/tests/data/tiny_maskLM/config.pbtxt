@@ -50,6 +50,7 @@ model {
     max_predictions_per_seq: 20
     dupe_factor: 10
     masked_lm_prob: 0.15
+    random_seed: 12345
     shuffle_corpus_contentfiles_between_epochs: false
     adam_optimizer {
       initial_learning_rate_micros: 2000  # = 0.02 real value

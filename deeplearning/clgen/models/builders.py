@@ -91,11 +91,11 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
       )
       pbutil.AssertFieldIsSet(
         config.training,
-        "random_seed",
+        "masked_lm_prob",
       )
       pbutil.AssertFieldConstraint(
         config.training,
-        "batch_size",
+        "random_seed",
         lambda x: 0 <= x,
         "TrainingOptions.random_seed must be >= 0",
       )
