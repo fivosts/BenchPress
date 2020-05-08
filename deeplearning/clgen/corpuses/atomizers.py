@@ -300,6 +300,7 @@ class MaskLMAtomizer(AtomizerBase):
                ):
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.__init__()")
     self.wordpiece_tokenization = wordpiece_tokenization
+    self._maskLabel = "[MASK]"
     super(MaskLMAtomizer, self).__init__(vocab)
 
   def AtomizeString(self, text: str) -> np.array:
@@ -321,6 +322,14 @@ class MaskLMAtomizer(AtomizerBase):
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.__repr__()")
     return f"MaskLMAtomizer[{self.vocab_size} chars]"
 
+  @property
+  def maskToken(self):
+    return self.TokenizeString(self._maskLabel)
+
+  @property
+  def maskLabel(self):
+    return self._maskLabel
+  
   @classmethod
   def FromText(cls, 
                text: str,
@@ -337,7 +346,7 @@ class MaskLMAtomizer(AtomizerBase):
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.FromText()")
     
     ## Account for MetaTokens. CLS and SEP or START might need to be added.
-    metaTokens = ('[MASK]',)
+    metaTokens = (self._maskLabel,)
 
     counter = Counter(text)
     count_pairs = sorted(counter.items(), key=lambda x: -x[1])
