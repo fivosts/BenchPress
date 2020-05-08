@@ -22,6 +22,7 @@ fit_generator() method to stream batches of training data.
 import sys
 import time
 import typing
+import random
 
 import numpy as np
 
@@ -197,6 +198,7 @@ class TensorflowBatchGenerator(object):
     self.training_opts = training_opts
 
     # Lazily instantiated.
+    self.original_encoded_corpus = None
     self.encoded_corpus = None
     self.num_batches = 0
     self.batches = None
@@ -211,16 +213,11 @@ class TensorflowBatchGenerator(object):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.TensorflowBatchGenerator.CreateBatches()")
     start_time = time.time()
 
-    # generate a kernel corpus
     self.i = 0
-    if (
-      self.encoded_corpus is None
-      or self.training_opts.shuffle_corpus_contentfiles_between_epochs
-    ):
-      self.encoded_corpus = np.concatenate(self.corpus.GetTrainingData(
-              shuffle=self.training_opts.shuffle_corpus_contentfiles_between_epochs
-            ))
+    if self.original_encoded_corpus is None:
+      self.original_encoded_corpus = self.corpus.GetTrainingData()
 
+    self.encoded_corpus = np.concatenate(self.original_encoded_corpus)
     batch_size = self.training_opts.batch_size
     sequence_length = self.training_opts.sequence_length
 
@@ -279,6 +276,7 @@ class MaskLMBatchGenerator(object):
     self.training_opts = training_opts
 
     # Lazily instantiated.
+    self.original_encoded_corpus = None
     self.encoded_corpus = None
     self.num_batches = 0
     self.batches = None
@@ -303,17 +301,19 @@ class MaskLMBatchGenerator(object):
 
     # generate a kernel corpus
     self.i = 0
-    if (
-      self.encoded_corpus is None
-      or self.training_opts.shuffle_corpus_contentfiles_between_epochs
-    ):
-      self.encoded_corpus = self.corpus.GetTrainingData(
+    if self.original_encoded_corpus is None:
+      self.original_encoded_corpus = self.corpus.GetTrainingData(
         shuffle=self.training_opts.shuffle_corpus_contentfiles_between_epochs
       )
 
-    l.getLogger().warning(self.corpus.atomizer.DeatomizeIndices(self.encoded_corpus[:200]))
-    l.getLogger().warning(self.encoded_corpus.shape)
+    if training_opts.shuffle_corpus_contentfiles_between_epochs:
+      if training_opts.random_seed:
+        rngen = random.Random(training_opts.random_seed)
+      else:
+        rngen = random.Random()
+      rngen.shuffle(self.original_encoded_corpus)
 
+    self.encoded_corpus = np.concatenate(self.original_encoded_corpus)
     batch_size = self.training_opts.batch_size
     sequence_length = self.training_opts.sequence_length
 
