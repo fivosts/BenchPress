@@ -375,7 +375,7 @@ class Corpus(object):
       # entire corpus in memory like this prevents training on corpuses larger
       # than system memory. Replace this method with an interface for streaming
       # data from the encoded database.
-      if not self._indices_arrays:
+      if self._indices_arrays is None:
         with self.encoded.Session() as session:
           query = session.query(encoded.EncodedContentFile)
           self._indices_arrays = np.array([x.indices_array for x in query])
