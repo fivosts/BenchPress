@@ -33,6 +33,22 @@ from eupy.native import logger as l
 
 FLAGS = app.FLAGS
 
+def LogBatchTelemetry(
+  batch: DataBatch, steps_per_epoch: int, num_epochs: int
+) -> None:
+  """Log analytics about the batch."""
+  l.getLogger().debug("deeplearning.clgen.models.data_generators.LogBatchTelemetry()")
+  l.getLogger().info("Step shape: X: {}, y" ": {}.".format(batch.X.shape, batch.y.shape))
+  # sys.getsizeof() includes only the memory required for an object, not any
+  # objects it refernces, so we must manually sum the X and y arrays.
+  batch_size = sys.getsizeof(batch) + batch.X.nbytes + batch.y.nbytes
+  l.getLogger().info(
+    "Memory: {} per batch, {} per epoch, {} total.".format(
+            humanize.BinaryPrefix(batch_size, "B"),
+            humanize.BinaryPrefix(batch_size * steps_per_epoch, "B"),
+            humanize.BinaryPrefix(batch_size * steps_per_epoch * num_epochs, "B"),
+        )
+  )
 
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
@@ -101,6 +117,7 @@ class KerasBatchGenerator():
           LogBatchTelemetry(batch, steps_per_epoch, training_opts.num_epochs)
         yield batch
       epoch_num += 1
+    return
 
   def GetTrainingCorpus(
     self, corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
@@ -188,6 +205,7 @@ class TensorflowBatchGenerator(object):
     LogBatchTelemetry(
       self.batches[0], self.num_batches, self.training_opts.num_epochs
     )
+    return
 
   def CreateBatches(self) -> None:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.TensorflowBatchGenerator.CreateBatches()")
@@ -238,6 +256,7 @@ class TensorflowBatchGenerator(object):
                 humanize.Commas(int((time.time() - start_time) * 1000)),
             )
     )
+    return
 
   def NextBatch(self) -> DataBatch:
     """Fetch next batch.
@@ -268,6 +287,7 @@ class MaskLMBatchGenerator(object):
     LogBatchTelemetry(
       self.batches[0], self.num_batches, self.training_opts.num_epochs
     )
+    return
 
   def CreateBatches(self) -> None:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.CreateBatches()")
@@ -318,6 +338,7 @@ class MaskLMBatchGenerator(object):
                 humanize.Commas(int((time.time() - start_time) * 1000)),
             )
     )
+    return
 
   def NextBatch(self) -> DataBatch:
     """Fetch next batch.
@@ -330,23 +351,3 @@ class MaskLMBatchGenerator(object):
     self.i += 1
     assert 0 <= self.i <= self.num_batches
     return batch
-
-
-
-
-def LogBatchTelemetry(
-  batch: DataBatch, steps_per_epoch: int, num_epochs: int
-) -> None:
-  """Log analytics about the batch."""
-  l.getLogger().debug("deeplearning.clgen.models.data_generators.LogBatchTelemetry()")
-  l.getLogger().info("Step shape: X: {}, y" ": {}.".format(batch.X.shape, batch.y.shape))
-  # sys.getsizeof() includes only the memory required for an object, not any
-  # objects it refernces, so we must manually sum the X and y arrays.
-  batch_size = sys.getsizeof(batch) + batch.X.nbytes + batch.y.nbytes
-  l.getLogger().info(
-    "Memory: {} per batch, {} per epoch, {} total.".format(
-            humanize.BinaryPrefix(batch_size, "B"),
-            humanize.BinaryPrefix(batch_size * steps_per_epoch, "B"),
-            humanize.BinaryPrefix(batch_size * steps_per_epoch * num_epochs, "B"),
-        )
-  )
