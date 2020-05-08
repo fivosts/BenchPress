@@ -91,7 +91,13 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
       )
       pbutil.AssertFieldIsSet(
         config.training,
-        "masked_lm_prob",
+        "random_seed",
+      )
+      pbutil.AssertFieldConstraint(
+        config.training,
+        "batch_size",
+        lambda x: 0 <= x,
+        "TrainingOptions.random_seed must be >= 0",
       )
     pbutil.AssertFieldIsSet(
       config.training, "shuffle_corpus_contentfiles_between_epochs"
