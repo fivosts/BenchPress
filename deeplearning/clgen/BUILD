@@ -74,9 +74,9 @@ py_binary(
 )
 
 py_test(
-    name = "clgen_test",
+    name = "test_clgen",
     size = "enormous",
-    srcs = ["clgen_test.py"],
+    srcs = ["test_clgen.py"],
     data = [
         "//deeplearning/clgen/tests/data:pico",
         "//deeplearning/clgen/tests/data:tiny",
@@ -127,8 +127,8 @@ py_binary(
 )
 
 py_test(
-    name = "preprocess_test",
-    srcs = ["preprocess_test.py"],
+    name = "test_preprocess",
+    srcs = ["test_preprocess.py"],
     deps = [
         ":preprocess",
         "//labm8/py:test",
@@ -164,8 +164,8 @@ py_library(
 )
 
 py_test(
-    name = "sample_observers_test",
-    srcs = ["sample_observers_test.py"],
+    name = "test_sample_observers",
+    srcs = ["test_sample_observers.py"],
     deps = [
         ":sample_observers",
         "//deeplearning/clgen/proto:clgen_pb_py",
@@ -192,8 +192,8 @@ py_library(
 )
 
 py_test(
-    name = "samplers_test",
-    srcs = ["samplers_test.py"],
+    name = "test_samplers",
+    srcs = ["test_samplers.py"],
     deps = [
         ":errors",
         ":samplers",
@@ -219,8 +219,8 @@ py_library(
 )
 
 py_test(
-    name = "samples_database_test",
-    srcs = ["samples_database_test.py"],
+    name = "test_samples_database",
+    srcs = ["test_samples_database.py"],
     deps = [
         ":samples_database",
         "//deeplearning/clgen/proto:clgen_pb_py",
@@ -243,8 +243,8 @@ py_library(
 )
 
 py_test(
-    name = "telemetry_test",
-    srcs = ["telemetry_test.py"],
+    name = "test_telemetry",
+    srcs = ["test_telemetry.py"],
     deps = [
         ":telemetry",
         "//labm8/py:app",
