@@ -280,20 +280,16 @@ class MaskLMBatchGenerator(object):
     self.encoded_corpus = None
     self.num_batches = 0
     self.batches = None
+    if self.training_opts.random_seed:
+      self.rngen = random.Random(training_opts.random_seed)
+    else:
+      self.rngen = random.Random()
     self.CreateBatches()
 
     LogBatchTelemetry(
       self.batches[0], self.num_batches, self.training_opts.num_epochs
     )
     return
-
-
-  # // Maximum number of masked LM predictions per sequence.
-  # optional int32 max_predictions_per_seq = 3;
-  # // Number of times to duplicate the input data (with different masks).
-  # optional int32 dupe_factor = 4;
-  # // Masked LM probability.
-  # optional float masked_lm_prob = 5;
 
   def CreateBatches(self) -> None:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.CreateBatches()")
@@ -306,55 +302,126 @@ class MaskLMBatchGenerator(object):
         shuffle=self.training_opts.shuffle_corpus_contentfiles_between_epochs
       )
 
-    if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
-      if self.training_opts.random_seed:
-        rngen = random.Random(training_opts.random_seed)
-      else:
-        rngen = random.Random()
-      rngen.shuffle(self.original_encoded_corpus)
+      if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
+        self.rngen.shuffle(self.original_encoded_corpus)
 
-    self.encoded_corpus = np.concatenate(self.original_encoded_corpus)
-    batch_size = self.training_opts.batch_size
-    sequence_length = self.training_opts.sequence_length
+      self.encoded_corpus = np.concatenate(self.original_encoded_corpus)
+      batch_size = self.training_opts.batch_size
+      sequence_length = self.training_opts.sequence_length
 
-    # set corpus size and number of batches
-    self.num_batches = int(
-      len(self.encoded_corpus) / (batch_size * sequence_length)
-    )
-    if self.num_batches == 0:
-      raise errors.UserError(
-        "Not enough data. Use a smaller sequence_length and batch_size"
+      # set corpus size and number of batches
+      self.num_batches = int(
+        len(self.encoded_corpus) / (batch_size * sequence_length)
       )
+      if self.num_batches == 0:
+        raise errors.UserError(
+          "Not enough data. Use a smaller sequence_length and batch_size"
+        )
 
-    # split into batches
-    clipped_corpus_length = self.num_batches * batch_size * sequence_length
-    clipped_corpus = self.encoded_corpus[:clipped_corpus_length]
-    xdata = clipped_corpus
-    ydata = np.copy(clipped_corpus)
+      # split into batches
+      clipped_corpus_length = self.num_batches * batch_size * sequence_length
+      clipped_corpus = self.encoded_corpus[:clipped_corpus_length]
 
-    ## 1. dupe_factor:
-    ## 2. masked_lm_prob: def createMasks and mask->keep labels etc.
-    ## 3. max_predictions_per_seq: 
+      shaped_corpus = np.split(clipped_corpus.reshape(batch_size, -1), self.num_batches, 1)
+      self.batches = self.MaskCorpus(shaped_corpus)
+      self.num_batches = self.num_batches * int(self.training_opts.dupe_factor)
 
-    # Wrap-around.
-    ydata[:-1] = xdata[1:]
-    ydata[-1] = xdata[0]
-    self.batches = [
-      DataBatch(x, y)
-      for x, y in zip(
-        np.split(xdata.reshape(batch_size, -1), self.num_batches, 1),
-        np.split(ydata.reshape(batch_size, -1), self.num_batches, 1),
+      l.getLogger().info(
+        "Encoded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
+                  humanize.Commas(clipped_corpus_length),
+                  humanize.Commas(len(self.encoded_corpus) - clipped_corpus_length),
+                  humanize.Commas(int((time.time() - start_time) * 1000)),
+              )
       )
-    ]
-    l.getLogger().info(
-      "Encoded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
-                humanize.Commas(clipped_corpus_length),
-                humanize.Commas(len(self.encoded_corpus) - clipped_corpus_length),
-                humanize.Commas(int((time.time() - start_time) * 1000)),
-            )
-    )
-    exit()
+    else:
+      if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
+        self.rngen.shuffle(self.batches)
+
     return
+
+  def MaskCorpus(self, 
+                 corpus: np.array
+                )-> DataBatch:
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.MaskCorpus()")
+
+    masked_corpus = []
+    X, Y = [], []
+    for i in range(self.training_opts.dupe_factor):
+
+      for en, batch in enumerate(corpus):
+        batch_x, batch_y = [], []
+
+        for en2, seq in enumerate(batch):
+          x, y = self.maskSequence(seq)
+          batch_x.append(x)
+          batch_y.append(y)
+        X.append(batch_x)
+        Y.append(batch_y)
+
+    return [DataBatch(i, j) for i, j in zip(np.asarray(X), np.asarray(Y))]
+
+  def maskSequence(self,
+                   seq: np.array,
+                  ) -> DataBatch:
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.maskSequence()")
+    if seq.ndim != 1:
+      raise ValueError("Input for masking is not a single dimensional array!")
+
+    cand_indexes = np.arange(len(seq))
+    self.rngen.shuffle(cand_indexes)
+
+    masks_to_predict = min(self.training_opts.max_predictions_per_seq,
+                            max(1, int(round(len(seq) * self.training_opts.masked_lm_prob))))
+
+    output_tokens = np.copy(seq)
+    masked_lms = []
+
+    for pos_index in cand_indexes:
+      if len(masked_lms) >= masks_to_predict:
+        break
+
+      # 80% of the time, replace with [MASK]
+      if self.rngen.random() < 0.8:
+        output_tokens[pos_index] = self.corpus.atomizer.maskToken
+      # The else block below is debatable for this use case. So comment out for now
+      # else:
+      #   # 10% of the time, keep original
+      #   if self.rngen.random() < 0.5:
+      #     pass
+      #   # 10% of the time, replace with random word
+      #   else:
+      #     output_tokens[pos_index] = self.rngen.randint(0, self.corpus.atomizer.vocab_size - 1)
+
+      class MaskedLmInstance(typing.NamedTuple):
+        pos_index: int
+        token_id: int
+
+      masked_lms.append(MaskedLmInstance(pos_index=pos_index, token_id=seq[pos_index]))
+
+    assert len(masked_lms) <= masks_to_predict
+    masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
+
+    masked_lm_positions = []
+    masked_lm_tokens = []
+    for p in masked_lms:
+      masked_lm_positions.append(p.pos_index)
+      masked_lm_tokens.append(p.token_id)
+
+
+    # l.getLogger().info("original: {}\noutput: {} \npositions: {}\nlabels of masks: {}"
+    #                 .format(
+    #                       self.corpus.atomizer.DeatomizeIndices(seq),
+    #                       self.corpus.atomizer.DeatomizeIndices(output_tokens), 
+    #                       masked_lm_positions, 
+    #                       self.corpus.atomizer.DeatomizeIndices(masked_lm_tokens)))
+
+    # return (output_tokens, masked_lm_positions, masked_lm_tokens)
+    ydata = np.copy(output_tokens)
+    ydata[:-1] = output_tokens[1:]
+    ydata[-1] = output_tokens[0]
+
+    # return DataBatch(output_tokens, ydata)
+    return output_tokens, ydata
 
   def NextBatch(self) -> DataBatch:
     """Fetch next batch.
