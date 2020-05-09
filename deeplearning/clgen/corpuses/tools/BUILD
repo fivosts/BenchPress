@@ -30,8 +30,8 @@ py_binary(
 )
 
 py_test(
-    name = "export_preprocessed_files_test",
-    srcs = ["export_preprocessed_files_test.py"],
+    name = "test_export_preprocessed_files",
+    srcs = ["test_export_preprocessed_files.py"],
     deps = [
         ":export_preprocessed_files",
         "//deeplearning/clgen/corpuses:preprocessed",
