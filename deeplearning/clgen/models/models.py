@@ -132,7 +132,7 @@ class Model(object):
 
     self.backend = {
       model_pb2.NetworkArchitecture.TENSORFLOW_SEQ: tf_sequential.tfSequential,
-      model_pb2.NetworkArchitecture.KERAS_SEQ: keras_sequential.KerasBackend,
+      model_pb2.NetworkArchitecture.KERAS_SEQ: keras_sequential.kerasSequential,
     }[config.architecture.backend](self.config, self.cache, self.corpus)
 
   def GetShortSummary(self) -> str:

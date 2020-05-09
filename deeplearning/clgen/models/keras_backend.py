@@ -31,7 +31,7 @@ from eupy.native import logger as l
 FLAGS = app.FLAGS
 
 
-class KerasBackend(backends.BackendBase):
+class kerasSequential(backends.BackendBase):
   """A model with an embedding layer, using a keras backend."""
 
   def __init__(self, *args, **kwargs):
@@ -41,7 +41,7 @@ class KerasBackend(backends.BackendBase):
       args: Arguments to be passed to BackendBase.__init__().
       kwargs: Arguments to be passed to BackendBase.__init__().
     """
-    super(KerasBackend, self).__init__(*args, **kwargs)
+    super(kerasSequential, self).__init__(*args, **kwargs)
 
     # Create the necessary cache directories.
     (self.cache.path / "embeddings").mkdir(exist_ok=True)

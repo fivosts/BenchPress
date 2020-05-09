@@ -65,10 +65,10 @@ def abc_keras_model_config(abc_model_config: model_pb2.Model):
   return abc_model_config
 
 
-# KerasBackend tests.
+# kerasSequential tests.
 
 
-def test_KerasBackend_directories(clgen_cache_dir, abc_keras_model_config):
+def test_kerasSequential_directories(clgen_cache_dir, abc_keras_model_config):
   """A newly instantiated model's cache has checkpoint and sample dirs."""
   del clgen_cache_dir
   m = models.Model(abc_keras_model_config)
@@ -76,7 +76,7 @@ def test_KerasBackend_directories(clgen_cache_dir, abc_keras_model_config):
   assert not list((m.cache.path / "embeddings").iterdir())
 
 
-def test_KerasBackend_epoch_checkpoints_untrained(
+def test_kerasSequential_epoch_checkpoints_untrained(
   clgen_cache_dir, abc_keras_model_config
 ):
   """Test that an untrained model has no checkpoint files."""
@@ -86,7 +86,7 @@ def test_KerasBackend_epoch_checkpoints_untrained(
 
 
 @test.XFail(reason="Need to refactor Keras model to new API")
-def test_KerasBackend_is_trained(clgen_cache_dir, abc_keras_model_config):
+def test_kerasSequential_is_trained(clgen_cache_dir, abc_keras_model_config):
   """Test that is_trained changes to True when model is trained."""
   del clgen_cache_dir
   m = models.Model(abc_keras_model_config)
@@ -96,7 +96,7 @@ def test_KerasBackend_is_trained(clgen_cache_dir, abc_keras_model_config):
 
 
 @test.XFail(reason="Need to refactor Keras model to new API")
-def test_KerasBackend_is_trained_new_instance(
+def test_kerasSequential_is_trained_new_instance(
   clgen_cache_dir, abc_keras_model_config
 ):
   """Test that is_trained is True on a new instance of a trained model."""
@@ -107,11 +107,11 @@ def test_KerasBackend_is_trained_new_instance(
   assert m2.is_trained
 
 
-# KerasBackend.Train() tests.
+# kerasSequential.Train() tests.
 
 
 @test.XFail(reason="Need to refactor Keras model to new API")
-def test_KerasBackend_Train_epoch_checkpoints(
+def test_kerasSequential_Train_epoch_checkpoints(
   clgen_cache_dir, abc_keras_model_config
 ):
   """Test that a trained model generates weight checkpoints."""
@@ -125,7 +125,7 @@ def test_KerasBackend_Train_epoch_checkpoints(
 
 
 @test.XFail(reason="Need to refactor Keras model to new API")
-def test_KerasBackend_Train_telemetry(clgen_cache_dir, abc_keras_model_config):
+def test_kerasSequential_Train_telemetry(clgen_cache_dir, abc_keras_model_config):
   """Test that model training produced telemetry files."""
   del clgen_cache_dir
   abc_keras_model_config.training.num_epochs = 2
@@ -138,7 +138,7 @@ def test_KerasBackend_Train_telemetry(clgen_cache_dir, abc_keras_model_config):
 
 
 @test.XFail(reason="Need to refactor Keras model to new API")
-def test_KerasBackend_Train_twice(clgen_cache_dir, abc_keras_model_config):
+def test_kerasSequential_Train_twice(clgen_cache_dir, abc_keras_model_config):
   """Test that TensorFlow checkpoint does not change after training twice."""
   del clgen_cache_dir
   abc_keras_model_config.training.num_epochs = 1
@@ -155,11 +155,11 @@ def test_KerasBackend_Train_twice(clgen_cache_dir, abc_keras_model_config):
 
 # TODO(cec): Add tests on incrementally trained model predictions and losses.
 
-# KerasBackend.Sample() tests.
+# kerasSequential.Sample() tests.
 
 
 @test.XFail(reason="Need to refactor Keras model to new API")
-def test_KerasBackend_Sample_implicit_train(
+def test_kerasSequential_Sample_implicit_train(
   clgen_cache_dir, abc_keras_model_config
 ):
   """Test that Sample() implicitly trains the model."""
@@ -171,7 +171,7 @@ def test_KerasBackend_Sample_implicit_train(
 
 
 @test.XFail(reason="Need to refactor Keras model to new API")
-def test_KerasBackend_Sample_return_value_matches_cached_sample(
+def test_kerasSequential_Sample_return_value_matches_cached_sample(
   clgen_cache_dir, abc_keras_model_config
 ):
   """Test that Sample() returns Sample protos."""
@@ -202,7 +202,7 @@ def test_KerasBackend_Sample_return_value_matches_cached_sample(
 
 
 @test.XFail(reason="Need to refactor Keras model to new API")
-def test_KerasBackend_Sample_exact_multiple_of_batch_size(
+def test_kerasSequential_Sample_exact_multiple_of_batch_size(
   clgen_cache_dir, abc_keras_model_config
 ):
   """Test that min_num_samples are returned when a multiple of batch_size."""
@@ -223,7 +223,7 @@ def test_KerasBackend_Sample_exact_multiple_of_batch_size(
 
 
 @test.XFail(reason="Need to refactor Keras model to new API")
-def test_KerasBackend_GetInferenceModel_predict_output_shape(
+def test_kerasSequential_GetInferenceModel_predict_output_shape(
   clgen_cache_dir, abc_keras_model_config
 ):
   """Test that predict() on inference model is one-hot encoded."""
@@ -247,7 +247,7 @@ def test_WeightedPick_output_range():
 
 
 @test.XFail(reason="Need to refactor Keras model to new API")
-def test_benchmark_KerasBackend_Train_already_trained(
+def test_benchmark_kerasSequential_Train_already_trained(
   clgen_cache_dir, abc_keras_model_config, benchmark
 ):
   """Benchmark the Train() method on an already-trained model."""
