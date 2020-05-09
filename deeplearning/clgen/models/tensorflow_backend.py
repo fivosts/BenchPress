@@ -418,14 +418,14 @@ class TensorFlowBackend(backends.BackendBase):
         sess.run(tf.compat.v1.assign(self.epoch, epoch_num))
 
         # TODO(cec): refactor data generator to a Python generator.
-        data_generator.CreateBatches()
+        self.data_generator.CreateBatches()
         l.getLogger().info("Epoch {}/{}:".format(epoch_num, self.config.training.num_epochs))
         state = sess.run(self.initial_state)
         # Per-batch inner loop.
-        bar = progressbar.ProgressBar(max_value=data_generator.num_batches)
+        bar = progressbar.ProgressBar(max_value=self.data_generator.num_batches)
         last_log_time = time.time()
-        for i in bar(range(data_generator.num_batches)):
-          x, y = data_generator.NextBatch()
+        for i in bar(range(self.data_generator.num_batches)):
+          x, y = self.data_generator.NextBatch()
           feed = {self.input_data: x, self.targets: y}
           for j, (c, h) in enumerate(self.initial_state):
             feed[c], feed[h] = state[j].c, state[j].h
@@ -435,7 +435,7 @@ class TensorFlowBackend(backends.BackendBase):
 
           # Periodically write progress to tensorboard.
           if i % FLAGS.clgen_tf_backend_tensorboard_summary_step_count == 0:
-            step = (epoch_num - 1) * data_generator.num_batches + i
+            step = (epoch_num - 1) * self.data_generator.num_batches + i
             self.summary_writer.add_summary(summary, step)
             # Add telemetry database entry. This isn't committed until the end
             # of the epoch, when the checkpoint is created.
