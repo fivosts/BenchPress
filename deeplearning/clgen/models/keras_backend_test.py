@@ -12,12 +12,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
-"""Unit tests for //deeplearning/clgen/models/keras_backend.py."""
+"""Unit tests for //deeplearning/clgen/models/keras_sequential.py."""
 import checksumdir
 import numpy as np
 
 from deeplearning.clgen import sample_observers
-from deeplearning.clgen.models import keras_backend
+from deeplearning.clgen.models import keras_sequential
 from deeplearning.clgen.models import models
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import telemetry_pb2
@@ -240,7 +240,7 @@ def test_KerasBackend_GetInferenceModel_predict_output_shape(
 def test_WeightedPick_output_range():
   """Test that WeightedPick() returns an integer index into array"""
   a = [1, 2, 3, 4]
-  assert 0 <= keras_backend.WeightedPick(np.array(a), 1.0) <= len(a)
+  assert 0 <= keras_sequential.WeightedPick(np.array(a), 1.0) <= len(a)
 
 
 # Benchmarks.

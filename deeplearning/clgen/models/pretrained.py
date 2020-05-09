@@ -23,7 +23,7 @@ from deeplearning.clgen import sample_observers as sample_observers_lib
 from deeplearning.clgen import samplers
 from deeplearning.clgen import telemetry
 from deeplearning.clgen.corpuses import atomizers
-from deeplearning.clgen.models import keras_backend
+from deeplearning.clgen.models import keras_sequential
 from deeplearning.clgen.models import tf_sequential
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.proto import model_pb2
@@ -50,7 +50,7 @@ class PreTrainedModel(object):
     self.atomizer = atomizers.AtomizerBase.FromFile(self.path / "atomizer")
     self.backend = {
       model_pb2.NetworkArchitecture.TENSORFLOW_SEQ: tf_sequential.tfSequential,
-      model_pb2.NetworkArchitecture.KERAS_SEQ: keras_backend.KerasBackend,
+      model_pb2.NetworkArchitecture.KERAS_SEQ: keras_sequential.KerasBackend,
     }[self.config.architecture.backend](
       self.config, self.cache, self.atomizer
     )

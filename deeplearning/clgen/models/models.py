@@ -28,7 +28,7 @@ from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.models import builders
-from deeplearning.clgen.models import keras_backend
+from deeplearning.clgen.models import keras_sequential
 from deeplearning.clgen.models import tf_sequential
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.proto import model_pb2
@@ -132,7 +132,7 @@ class Model(object):
 
     self.backend = {
       model_pb2.NetworkArchitecture.TENSORFLOW_SEQ: tf_sequential.tfSequential,
-      model_pb2.NetworkArchitecture.KERAS_SEQ: keras_backend.KerasBackend,
+      model_pb2.NetworkArchitecture.KERAS_SEQ: keras_sequential.KerasBackend,
     }[config.architecture.backend](self.config, self.cache, self.corpus)
 
   def GetShortSummary(self) -> str:

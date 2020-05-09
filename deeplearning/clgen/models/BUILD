@@ -80,8 +80,8 @@ py_test(
 )
 
 py_library(
-    name = "keras_backend",
-    srcs = ["keras_backend.py"],
+    name = "keras_sequential",
+    srcs = ["keras_sequential.py"],
     visibility = ["//visibility:public"],
     deps = [
         ":backends",
@@ -102,11 +102,11 @@ py_library(
 )
 
 py_test(
-    name = "keras_backend_test",
+    name = "keras_sequential_test",
     size = "enormous",
-    srcs = ["keras_backend_test.py"],
+    srcs = ["keras_sequential_test.py"],
     deps = [
-        ":keras_backend",
+        ":keras_sequential",
         ":models",
         "//deeplearning/clgen:sample_observers",
         "//deeplearning/clgen/proto:clgen_pb_py",
@@ -124,7 +124,7 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
         ":builders",
-        ":keras_backend",
+        ":keras_sequential",
         ":tf_sequential",
         "//deeplearning/clgen:cache",
         "//deeplearning/clgen:errors",
@@ -150,7 +150,7 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
         ":builders",
-        ":keras_backend",
+        ":keras_sequential",
         ":tf_sequential",
         "//deeplearning/clgen:cache",
         "//deeplearning/clgen:errors",
