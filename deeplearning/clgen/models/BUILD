@@ -45,7 +45,7 @@ py_library(
 
 py_test(
     name = "builders_test",
-    srcs = ["builders_test.py"],
+    srcs = ["test_builders.py"],
     deps = [
         ":builders",
         "//deeplearning/clgen/proto:clgen_pb_py",
@@ -69,7 +69,7 @@ py_library(
 
 py_test(
     name = "data_generators_test",
-    srcs = ["data_generators_test.py"],
+    srcs = ["test_data_generators.py"],
     deps = [
         ":data_generators",
         "//deeplearning/clgen/proto:clgen_pb_py",
@@ -104,7 +104,7 @@ py_library(
 py_test(
     name = "keras_sequential_test",
     size = "enormous",
-    srcs = ["keras_sequential_test.py"],
+    srcs = ["test_keras_sequential"],
     deps = [
         ":keras_sequential",
         ":models",
@@ -170,7 +170,7 @@ py_library(
 
 py_test(
     name = "models_test",
-    srcs = ["models_test.py"],
+    srcs = ["test_models.py"],
     deps = [
         ":models",
         "//deeplearning/clgen/proto:clgen_pb_py",
@@ -214,7 +214,7 @@ py_library(
 py_test(
     name = "tf_sequential_test",
     timeout = "long",
-    srcs = ["tf_sequential_test.py"],
+    srcs = ["test_tf_sequential.py"],
     deps = [
         ":models",
         ":tf_sequential",
