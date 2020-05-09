@@ -351,7 +351,7 @@ class TensorFlowBackend(backends.BackendBase):
       return
 
     if self.data_generator is None:
-      self.data_generator = data_generators.MaskLMBatchGenerator(
+      self.data_generator = data_generators.TensorflowBatchGenerator(
         corpus, self.config.training
       )
     tf = self.InitTfGraph()
