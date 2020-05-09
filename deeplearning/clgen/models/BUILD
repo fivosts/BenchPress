@@ -125,7 +125,7 @@ py_library(
     deps = [
         ":builders",
         ":keras_backend",
-        ":tensorflow_backend",
+        ":tf_sequential",
         "//deeplearning/clgen:cache",
         "//deeplearning/clgen:errors",
         "//deeplearning/clgen:sample_observers",
@@ -151,7 +151,7 @@ py_library(
     deps = [
         ":builders",
         ":keras_backend",
-        ":tensorflow_backend",
+        ":tf_sequential",
         "//deeplearning/clgen:cache",
         "//deeplearning/clgen:errors",
         "//deeplearning/clgen:sample_observers",
@@ -183,10 +183,10 @@ py_test(
 )
 
 py_library(
-    name = "tensorflow_backend",
+    name = "tf_sequential",
     srcs = [
         "helper.py",
-        "tensorflow_backend.py",
+        "tf_sequential.py",
     ],
     visibility = ["//visibility:public"],
     deps = [
@@ -212,12 +212,12 @@ py_library(
 )
 
 py_test(
-    name = "tensorflow_backend_test",
+    name = "tf_sequential_test",
     timeout = "long",
-    srcs = ["tensorflow_backend_test.py"],
+    srcs = ["tf_sequential_test.py"],
     deps = [
         ":models",
-        ":tensorflow_backend",
+        ":tf_sequential",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//deeplearning/clgen/tests:fixtures",
         "//labm8/py:app",

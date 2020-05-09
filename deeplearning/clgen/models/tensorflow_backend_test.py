@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
-"""Unit tests for //deeplearning/clgen/models/tensorflow_backend.py."""
+"""Unit tests for //deeplearning/clgen/models/tf_sequential.py."""
 import checksumdir
 import numpy as np
 
