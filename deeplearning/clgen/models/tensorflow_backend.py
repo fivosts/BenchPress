@@ -85,6 +85,7 @@ class TensorFlowBackend(backends.BackendBase):
     self.learning_rate = None
     self.epoch = None
     self.train_op = None
+    self.data_generator = None
 
     self.inference_tf = None
     self.inference_sess = None
@@ -349,9 +350,10 @@ class TensorFlowBackend(backends.BackendBase):
     if self.is_trained:
       return
 
-    data_generator = data_generators.TensorflowBatchGenerator(
-      corpus, self.config.training
-    )
+    if self.data_generator is None:
+      self.data_generator = data_generators.MaskLMBatchGenerator(
+        corpus, self.config.training
+      )
     tf = self.InitTfGraph()
 
     logger = telemetry.TrainingLogger(self.cache.path / "logs")
