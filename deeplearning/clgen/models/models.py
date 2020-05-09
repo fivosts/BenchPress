@@ -131,7 +131,7 @@ class Model(object):
       self._WriteMetafile()
 
     self.backend = {
-      model_pb2.NetworkArchitecture.TENSORFLOW_SEQ: tf_sequential.TensorFlowBackend,
+      model_pb2.NetworkArchitecture.TENSORFLOW_SEQ: tf_sequential.tfSequential,
       model_pb2.NetworkArchitecture.KERAS_SEQ: keras_backend.KerasBackend,
     }[config.architecture.backend](self.config, self.cache, self.corpus)
 

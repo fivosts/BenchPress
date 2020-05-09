@@ -65,10 +65,10 @@ def abc_tensorflow_model_config(abc_model_config: model_pb2.Model):
   return abc_model_config
 
 
-# TensorFlowBackend.GetShortSummary()
+# tfSequential.GetShortSummary()
 
 
-def test_TensorFlowBackend_Train_GetShortSummary(
+def test_tfSequential_Train_GetShortSummary(
   clgen_cache_dir, abc_tensorflow_model_config
 ):
   """Test that model training produced telemetry files."""
@@ -78,10 +78,10 @@ def test_TensorFlowBackend_Train_GetShortSummary(
   assert m.GetShortSummary() == "4×1 LSTM network"
 
 
-# TensorFlowBackend.Train() tests.
+# tfSequential.Train() tests.
 
 
-def test_TensorFlowBackend_Train_telemetry(
+def test_tfSequential_Train_telemetry(
   clgen_cache_dir, abc_tensorflow_model_config
 ):
   """Test that model training produced telemetry files."""
@@ -95,7 +95,7 @@ def test_TensorFlowBackend_Train_telemetry(
     assert isinstance(telemetry, telemetry_pb2.ModelEpochTelemetry)
 
 
-def test_TensorFlowBackend_Train_twice(
+def test_tfSequential_Train_twice(
   clgen_cache_dir, abc_tensorflow_model_config
 ):
   """Test that TensorFlow checkpoint does not change after training twice."""
@@ -112,7 +112,7 @@ def test_TensorFlowBackend_Train_twice(
   assert f1b == f2b
 
 
-def test_TensorFlowBackend_Train_epoch_checkpoints(
+def test_tfSequential_Train_epoch_checkpoints(
   clgen_cache_dir, abc_tensorflow_model_config
 ):
   """Test that epoch_checkpoints returns a <int, str> dict."""
@@ -127,7 +127,7 @@ def test_TensorFlowBackend_Train_epoch_checkpoints(
   assert 2 in epoch_checkpoints
 
 
-def test_TensorFlowBackend_Train_missing_intermediate_checkpoints(
+def test_tfSequential_Train_missing_intermediate_checkpoints(
   clgen_cache_dir, abc_tensorflow_model_config
 ):
   """Test that a missing intermediate checkpoint does not affect training."""
@@ -158,7 +158,7 @@ def test_TensorFlowBackend_Train_missing_intermediate_checkpoints(
   assert f1a == f1b
 
 
-def test_TensorFlowBackend_Train_is_trained(
+def test_tfSequential_Train_is_trained(
   clgen_cache_dir, abc_tensorflow_model_config
 ):
   """Test that is_trained is initially false until trained."""
@@ -169,7 +169,7 @@ def test_TensorFlowBackend_Train_is_trained(
   assert m.is_trained
 
 
-def test_TensorFlowBackend_Train_with_sample_callback(
+def test_tfSequential_Train_with_sample_callback(
   clgen_cache_dir, abc_tensorflow_model_config
 ):
   """Test that sampling during training does not blow up."""
@@ -185,10 +185,10 @@ def test_TensorFlowBackend_Train_with_sample_callback(
 
 # TODO(cec): Add tests on incrementally trained model predictions and losses.
 
-# TensorFlowBackend.Sample() tests.
+# tfSequential.Sample() tests.
 
 
-def test_TensorFlowBackend_Sample_implicit_train(
+def test_tfSequential_Sample_implicit_train(
   clgen_cache_dir, abc_tensorflow_model_config
 ):
   """Test that Sample() implicitly trains the model."""
@@ -199,7 +199,7 @@ def test_TensorFlowBackend_Sample_implicit_train(
   assert m.is_trained
 
 
-def test_TensorFlowBackend_Sample_return_value_matches_cached_sample(
+def test_tfSequential_Sample_return_value_matches_cached_sample(
   clgen_cache_dir, abc_tensorflow_model_config
 ):
   """Test that Sample() returns Sample protos."""
@@ -235,7 +235,7 @@ def test_TensorFlowBackend_Sample_return_value_matches_cached_sample(
   )
 
 
-def test_TensorFlowBackend_Sample_exact_multiple_of_batch_size(
+def test_tfSequential_Sample_exact_multiple_of_batch_size(
   clgen_cache_dir, abc_tensorflow_model_config
 ):
   """Test that min_num_samples are returned when a multiple of batch_size."""
@@ -256,7 +256,7 @@ def test_TensorFlowBackend_Sample_exact_multiple_of_batch_size(
   assert len(sample_observer.samples) == 4
 
 
-def test_TensorFlowBackend_Sample_inexact_multiple_of_batch_size(
+def test_tfSequential_Sample_inexact_multiple_of_batch_size(
   clgen_cache_dir, abc_tensorflow_model_config
 ):
   """Test that min_num_samples are returned when a multiple of batch_size."""

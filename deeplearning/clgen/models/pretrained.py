@@ -49,7 +49,7 @@ class PreTrainedModel(object):
     ).config
     self.atomizer = atomizers.AtomizerBase.FromFile(self.path / "atomizer")
     self.backend = {
-      model_pb2.NetworkArchitecture.TENSORFLOW_SEQ: tf_sequential.TensorFlowBackend,
+      model_pb2.NetworkArchitecture.TENSORFLOW_SEQ: tf_sequential.tfSequential,
       model_pb2.NetworkArchitecture.KERAS_SEQ: keras_backend.KerasBackend,
     }[self.config.architecture.backend](
       self.config, self.cache, self.atomizer
