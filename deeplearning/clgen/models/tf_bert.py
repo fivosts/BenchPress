@@ -71,6 +71,7 @@ class tfBert(backends.BackendBase):
     super(tfBert, self).__init__(*args, **kwargs)
 
     # Attributes that will be lazily set.
+    ## TODO: Change the variables for BERT as in modelling:BertConfig.__init__
     self.cell = None
     self.input_data = None
     self.targets = None
@@ -104,6 +105,7 @@ class tfBert(backends.BackendBase):
     )
     self.summary_writer = tf.compat.v1.summary.FileWriter(tensorboard_dir)
 
+  ## TODO change this function as in modelling:BertModel.__init__
   def InitTfGraph(
     self, sampler: typing.Optional[samplers.Sampler] = None
   ) -> "tf":
@@ -328,6 +330,7 @@ class tfBert(backends.BackendBase):
     ]
     return sorted(paths)
 
+  ## TODO: Change this as in (run_pretraining || run_classifier):main
   def Train(
     self,
     corpus,
