@@ -16,8 +16,8 @@
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 
 py_test(
-    name = "preprocessors_benchmark_test",
-    srcs = ["preprocessors_benchmark_test.py"],
+    name = "test_preprocessors_benchmark",
+    srcs = ["test_preprocessors_benchmark.py"],
     deps = [
         "//deeplearning/clgen:errors",
         "//deeplearning/clgen/preprocessors",
