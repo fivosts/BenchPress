@@ -20,8 +20,8 @@ py3_image(
 )
 
 py_test(
-    name = "clgen_preprocess_test",
-    srcs = ["clgen_preprocess_test.py"],
+    name = "test_clgen_preprocess",
+    srcs = ["test_clgen_preprocess.py"],
     data = [
         ":clgen_preprocess.tar",
     ],
@@ -45,8 +45,8 @@ py_binary(
 )
 
 py_test(
-    name = "export_pretrained_model_test",
-    srcs = ["export_pretrained_model_test.py"],
+    name = "test_export_pretrained_model",
+    srcs = ["test_export_pretrained_model.py"],
     deps = [
         ":export_pretrained_model",
         "//deeplearning/clgen",
