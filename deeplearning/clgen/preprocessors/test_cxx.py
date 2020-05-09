@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
-"""Unit tests for :cxx_test.py."""
+"""Unit tests for :test_cxx.py."""
 import pytest
 
 from deeplearning.clgen import errors

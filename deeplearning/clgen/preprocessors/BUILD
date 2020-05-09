@@ -39,8 +39,8 @@ py_library(
 )
 
 py_test(
-    name = "clang_test",
-    srcs = ["clang_test.py"],
+    name = "test_clang",
+    srcs = ["test_clangt.py"],
     deps = [
         ":clang",
         "//labm8/py:app",
@@ -261,8 +261,8 @@ py_library(
 )
 
 py_test(
-    name = "common_test",
-    srcs = ["common_test.py"],
+    name = "test_common",
+    srcs = ["test_common.py"],
     deps = [
         ":common",
         "//deeplearning/clgen:errors",
@@ -294,8 +294,8 @@ py_library(
 )
 
 py_test(
-    name = "cxx_test",
-    srcs = ["cxx_test.py"],
+    name = "test_cxx",
+    srcs = ["test_cxx.py"],
     deps = [
         ":cxx",
         "//deeplearning/clgen:errors",
@@ -303,21 +303,6 @@ py_test(
         "//labm8/py:test",
     ],
 )
-
-# FIXME(cec): py3_image is not a test rule, but //labm8/py:test is marked
-# test-only.
-# py3_image(
-#     name = "cxx_test_image",
-#     srcs = ["cxx_test.py"],
-#     base = "@phd_base//image",
-#     main = "cxx_test.py",
-#     deps = [
-#         ":cxx",
-#         "//deeplearning/clgen:errors",
-#         "//labm8/py:test",
-#         "//labm8/py:app",
-#     ],
-# )
 
 py_library(
     name = "java",
@@ -335,8 +320,8 @@ py_library(
 )
 
 py_test(
-    name = "java_test",
-    srcs = ["java_test.py"],
+    name = "test_java",
+    srcs = ["test_java.py"],
     deps = [
         ":java",
         "//deeplearning/clgen:errors",
@@ -473,8 +458,8 @@ py_library(
 )
 
 py_test(
-    name = "normalizer_test",
-    srcs = ["normalizer_test.py"],
+    name = "test_normalizer",
+    srcs = ["test_normalizer.py"],
     deps = [
         ":normalizer",
         "//deeplearning/clgen:errors",
@@ -501,8 +486,8 @@ py_library(
 )
 
 py_test(
-    name = "opencl_test",
-    srcs = ["opencl_test.py"],
+    name = "test_opencl",
+    srcs = ["test_opencl.py"],
     data = ["//deeplearning/clgen/data/include:opencl-shim"],
     deps = [
         ":clang",
@@ -539,8 +524,8 @@ py_library(
 )
 
 py_test(
-    name = "preprocessors_test",
-    srcs = ["preprocessors_test.py"],
+    name = "test_preprocessors",
+    srcs = ["test_preprocessors.py"],
     deps = [
         ":preprocessors",
         ":public",
@@ -562,8 +547,8 @@ py_library(
 )
 
 py_test(
-    name = "public_test",
-    srcs = ["public_test.py"],
+    name = "test_public",
+    srcs = ["test_public.py"],
     deps = [
         ":public",
         "//deeplearning/clgen:errors",
