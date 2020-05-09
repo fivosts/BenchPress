@@ -28,8 +28,8 @@ py_library(
 )
 
 py_test(
-    name = "atomizers_test",
-    srcs = ["atomizers_test.py"],
+    name = "test_atomizers",
+    srcs = ["test_atomizers.py"],
     data = [":token_lists"],
     deps = [
         ":atomizers",
@@ -68,8 +68,8 @@ py_library(
 )
 
 py_test(
-    name = "corpuses_test",
-    srcs = ["corpuses_test.py"],
+    name = "test_corpuses",
+    srcs = ["test_corpuses.py"],
     deps = [
         ":corpuses",
         ":encoded",
@@ -105,8 +105,8 @@ py_library(
 )
 
 py_test(
-    name = "encoded_test",
-    srcs = ["encoded_test.py"],
+    name = "test_encoded",
+    srcs = ["test_encoded.py"],
     deps = [
         ":atomizers",
         ":encoded",
