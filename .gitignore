@@ -8,3 +8,6 @@ bazel-testlogs
 *__pycache__*
 *build/
 *env/
+
+# Build files
+*pyc
