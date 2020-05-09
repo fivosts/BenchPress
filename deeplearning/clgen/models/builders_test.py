@@ -59,8 +59,8 @@ def test_AssertIsBuildable_no_training(abc_model_config):
 
 def test_AssertIsBuildable_architecture_embedding_size(abc_model_config):
   """UserError is raised if architecture.embedding_size field invalid."""
-  # embedding_size is ignored unless backend == KERAS.
-  abc_model_config.architecture.backend = model_pb2.NetworkArchitecture.KERAS
+  # embedding_size is ignored unless backend == KERAS_SEQ.
+  abc_model_config.architecture.backend = model_pb2.NetworkArchitecture.KERAS_SEQ
   abc_model_config.architecture.ClearField("embedding_size")
   with test.Raises(errors.UserError) as e_info:
     builders.AssertIsBuildable(abc_model_config)

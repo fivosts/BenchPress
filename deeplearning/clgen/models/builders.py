@@ -42,7 +42,7 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
     pbutil.AssertFieldIsSet(config, "training")
     pbutil.AssertFieldIsSet(config.architecture, "backend")
     pbutil.AssertFieldIsSet(config.architecture, "neuron_type")
-    if config.architecture.backend == model_pb2.NetworkArchitecture.KERAS:
+    if config.architecture.backend == model_pb2.NetworkArchitecture.KERAS_SEQ:
       pbutil.AssertFieldConstraint(
         config.architecture,
         "embedding_size",

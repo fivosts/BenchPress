@@ -61,7 +61,7 @@ class MockSampler(object):
 @test.Fixture(scope="function")
 def abc_keras_model_config(abc_model_config: model_pb2.Model):
   """A test fixture for a simple model with a Keras backend."""
-  abc_model_config.architecture.backend = model_pb2.NetworkArchitecture.KERAS
+  abc_model_config.architecture.backend = model_pb2.NetworkArchitecture.KERAS_SEQ
   return abc_model_config
 
 

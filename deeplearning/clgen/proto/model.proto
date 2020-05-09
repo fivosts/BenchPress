@@ -42,8 +42,9 @@ message Model {
 // The specification of a CLgen language model.
 message NetworkArchitecture {
   enum Backend {
-    TENSORFLOW = 0;
-    KERAS = 1;
+    TENSORFLOW_SEQ = 0;
+    TENSORFLOW_BERT = 1;
+    KERAS_SEQ = 2;
   }
   enum NeuronType {
     LSTM = 0;
@@ -51,7 +52,7 @@ message NetworkArchitecture {
     GRU = 2;
   }
   optional Backend backend = 1;
-  // The size of the input embedding layer. Only required if backend == KERAS.
+  // The size of the input embedding layer. Only required if backend == KERAS_SEQ.
   // Must be > 0.
   optional int32 embedding_size = 2;
   // The type of neuron. Valid options are: {"lstm","rnn","gru"}.

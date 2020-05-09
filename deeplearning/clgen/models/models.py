@@ -131,8 +131,8 @@ class Model(object):
       self._WriteMetafile()
 
     self.backend = {
-      model_pb2.NetworkArchitecture.TENSORFLOW: tensorflow_backend.TensorFlowBackend,
-      model_pb2.NetworkArchitecture.KERAS: keras_backend.KerasBackend,
+      model_pb2.NetworkArchitecture.TENSORFLOW_SEQ: tensorflow_backend.TensorFlowBackend,
+      model_pb2.NetworkArchitecture.KERAS_SEQ: keras_backend.KerasBackend,
     }[config.architecture.backend](self.config, self.cache, self.corpus)
 
   def GetShortSummary(self) -> str:

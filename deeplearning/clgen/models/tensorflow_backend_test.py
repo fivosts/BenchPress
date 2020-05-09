@@ -60,7 +60,7 @@ class MockSampler(object):
 def abc_tensorflow_model_config(abc_model_config: model_pb2.Model):
   """A test fixture for a simple model with a TensorFlow backend."""
   abc_model_config.architecture.backend = (
-    model_pb2.NetworkArchitecture.TENSORFLOW
+    model_pb2.NetworkArchitecture.TENSORFLOW_SEQ
   )
   return abc_model_config
 
