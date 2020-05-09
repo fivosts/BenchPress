@@ -17,7 +17,7 @@ app.DEFINE_string(
 )
 app.DEFINE_string(
   "docker_base_image",
-  "chriscummins/clgen:latest",
+  "ubuntu:latest",
   "The name of the base docker image to build using.",
 )
 
