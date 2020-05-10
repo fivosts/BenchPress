@@ -72,10 +72,56 @@ class tfBert(backends.BackendBase):
 
     # Attributes that will be lazily set.
     ## TODO: Change the variables for BERT as in modelling:BertConfig.__init__
+
+    """
+      vocab_size: Vocabulary size of `inputs_ids` in `BertModel`.
+      hidden_size: Size of the encoder layers and the pooler layer.
+      num_hidden_layers: Number of hidden layers in the Transformer encoder.
+      num_attention_heads: Number of attention heads for each attention layer in
+        the Transformer encoder.
+      intermediate_size: The size of the "intermediate" (i.e., feed-forward)
+        layer in the Transformer encoder.
+      hidden_act: The non-linear activation function (function or string) in the
+        encoder and pooler.
+      hidden_dropout_prob: The dropout probability for all fully connected
+        layers in the embeddings, encoder, and pooler.
+      attention_probs_dropout_prob: The dropout ratio for the attention
+        probabilities.
+      max_position_embeddings: The maximum sequence length that this model might
+        ever be used with. Typically set this to something large just in case
+        (e.g., 512 or 1024 or 2048). Makes sense on fine-tuning.
+      type_vocab_size: The vocabulary size of the `token_type_ids` passed into
+        `BertModel`.
+      initializer_range: The stdev of the truncated_normal_initializer for
+        initializing all weight matrices.
+    """
+    self.vocab_size = None
+    self.hidden_size = None
+    self.num_hidden_layers = None
+    self.num_attention_heads = None
+    self.hidden_act = None
+    self.intermediate_size = None
+    self.hidden_dropout_prob = None
+    self.attention_probs_dropout_prob = None
+    self.max_position_embeddings = None
+    """
+    token_type_ids, as I understood, is a generalization for segment_id. 
+    It's quite intuitive to add some information to words of the 
+    second sequence (e.g. answer) to make the model, somehow, 
+    aware that this word belongs to the second sequence. 
+    So, for tasks like the question answering, token_type_ids 
+    are 0 for words in the question and 1 for words in the answer. 
+    One might also imagine a task which has more than two types 
+    of token which makes token_type_ids quite handy.
+    """
+    self.type_vocab_size = None
+    self.initializer_range = None
+
+    ## Old attributes
     self.cell = None
     self.input_data = None
     self.targets = None
-    self.lengths = None
+    self.tf_sequence_length = None
     self.seed_length = None
     self.temperature = None
     self.initial_state = None
@@ -171,9 +217,9 @@ class tfBert(backends.BackendBase):
     self.seed_length = tf.compat.v1.placeholder(name = "seed_length", dtype = tf.int32, shape = ())
 
     if sampler:
-      self.lengths = tf.compat.v1.placeholder(tf.int32, [batch_size])
+      self.tf_sequence_length = tf.compat.v1.placeholder(tf.int32, [batch_size])
     else:
-      self.lengths = tf.fill([batch_size], sequence_length)
+      self.tf_sequence_length = tf.fill([batch_size], sequence_length)
 
     scope_name = "rnnlm"
     with tf.compat.v1.variable_scope(scope_name):
@@ -201,7 +247,7 @@ class tfBert(backends.BackendBase):
       decoder_init_input = inputs,
       decoder_init_kwargs = {
                               'initial_state': self.initial_state,
-                              'sequence_length': self.lengths,
+                              'sequence_length': self.tf_sequence_length,
                             },
       output_time_major=False,
       impute_finished=True,
@@ -632,7 +678,7 @@ class tfBert(backends.BackendBase):
     feed = {
       self.initial_state: self.inference_state,
       self.input_data: expanded_indices,
-      self.lengths: synthesized_lengths,
+      self.tf_sequence_length: synthesized_lengths,
       self.seed_length: length,
     }
 
@@ -678,7 +724,7 @@ class tfBert(backends.BackendBase):
     feed = {
       self.initial_state: self.inference_state,
       self.input_data: expanded_indices,
-      self.lengths: synthesized_lengths,
+      self.tf_sequence_length: synthesized_lengths,
       self.seed_length: length,
     }
 
