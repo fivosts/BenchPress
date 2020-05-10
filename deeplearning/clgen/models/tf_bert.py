@@ -161,8 +161,6 @@ class tfBert(backends.BackendBase):
 
     Args:
       config: `BertConfig` instance.
-      is_training: bool. true for training model, false for eval model. Controls
-        whether dropout will be applied.
       input_ids: int32 Tensor of shape [batch_size, seq_length].
       input_mask: (optional) int32 Tensor of shape [batch_size, seq_length].
       token_type_ids: (optional) int32 Tensor of shape [batch_size, seq_length].
@@ -176,9 +174,9 @@ class tfBert(backends.BackendBase):
     """
     import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
-    
+
     config = copy.deepcopy(config)
-    if not is_training:
+    if sampler:
       config.hidden_dropout_prob = 0.0
       config.attention_probs_dropout_prob = 0.0
 
