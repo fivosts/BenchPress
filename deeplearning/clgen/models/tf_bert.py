@@ -155,142 +155,243 @@ class tfBert(backends.BackendBase):
   def InitTfGraph(
     self, sampler: typing.Optional[samplers.Sampler] = None
   ) -> "tf":
-    """Instantiate a TensorFlow graph for training or inference.
 
-    The tensorflow graph is different for training and inference, so must be
-    reset when switching between modes.
+
+    """Constructor for BertModel.
 
     Args:
-      sampler: If set, initialize the model for inference using the given
-        sampler. If not set, initialize model for training.
+      config: `BertConfig` instance.
+      is_training: bool. true for training model, false for eval model. Controls
+        whether dropout will be applied.
+      input_ids: int32 Tensor of shape [batch_size, seq_length].
+      input_mask: (optional) int32 Tensor of shape [batch_size, seq_length].
+      token_type_ids: (optional) int32 Tensor of shape [batch_size, seq_length].
+      use_one_hot_embeddings: (optional) bool. Whether to use one-hot word
+        embeddings or tf.embedding_lookup() for the word embeddings.
+      scope: (optional) variable scope. Defaults to "bert".
 
-    Returns:
-      The imported TensorFlow module.
+    Raises:
+      ValueError: The config is invalid or one of the input tensor shapes
+        is invalid.
     """
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfBert.InitTfGraph()")
-    # Lock exclusive access to a GPU, if present.
-    gpu_scheduler.LockExclusiveProcessGpuAccess()
-
-    start_time = time.time()
-
-    # Quiet tensorflow.
-    # See: https://github.com/tensorflow/tensorflow/issues/1258
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-
-    # Deferred importing of TensorFlow.
     import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
-    from deeplearning.clgen.models import helper
+    
+    config = copy.deepcopy(config)
+    if not is_training:
+      config.hidden_dropout_prob = 0.0
+      config.attention_probs_dropout_prob = 0.0
 
-    cell_type = {
-      model_pb2.NetworkArchitecture.LSTM: tf.compat.v1.nn.rnn_cell.LSTMCell,
-      model_pb2.NetworkArchitecture.GRU: tf.compat.v1.nn.rnn_cell.GRUCell,
-      model_pb2.NetworkArchitecture.RNN: tf.compat.v1.nn.rnn_cell.BasicRNNCell,
-    }.get(self.config.architecture.neuron_type, None)
-    if cell_type is None:
-      raise NotImplementedError
+    input_shape = get_shape_list(input_ids, expected_rank=2)
+    batch_size = input_shape[0]
+    seq_length = input_shape[1]
 
-    # Reset the graph when switching between training and inference.
-    tf.compat.v1.reset_default_graph()
+    if input_mask is None:
+      input_mask = tf.ones(shape=[batch_size, seq_length], dtype=tf.int32)
 
-    if sampler:
-      sequence_length = sampler.sequence_length
-      batch_size = sampler.batch_size
-    else:
-      sequence_length = self.config.training.sequence_length
-      batch_size = self.config.training.batch_size
-    vocab_size = self.atomizer.vocab_size
+    if token_type_ids is None:
+      token_type_ids = tf.zeros(shape=[batch_size, seq_length], dtype=tf.int32)
 
-    cells_lst = []
-    for _ in range(self.config.architecture.num_layers):
-      cells_lst.append(cell_type(self.config.architecture.neurons_per_layer))
-    self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
+    with tf.variable_scope(scope, default_name="bert"):
+      with tf.variable_scope("embeddings"):
+        # Perform embedding lookup on the word ids.
+        (self.embedding_output, self.embedding_table) = embedding_lookup(
+            input_ids=input_ids,
+            vocab_size=config.vocab_size,
+            embedding_size=config.hidden_size,
+            initializer_range=config.initializer_range,
+            word_embedding_name="word_embeddings",
+            use_one_hot_embeddings=use_one_hot_embeddings)
 
-    self.input_data = tf.compat.v1.placeholder(
-      tf.int32, [batch_size, sequence_length]
-    )
-    self.targets = tf.compat.v1.placeholder(
-      tf.int32, [batch_size, sequence_length]
-    )
-    self.initial_state = self.cell.get_initial_state(batch_size = batch_size, dtype = tf.float32)
-    self.temperature = tf.Variable(1.0, trainable=False)
-    self.seed_length = tf.compat.v1.placeholder(name = "seed_length", dtype = tf.int32, shape = ())
+        # Add positional embeddings and token type embeddings, then layer
+        # normalize and perform dropout.
+        self.embedding_output = embedding_postprocessor(
+            input_tensor=self.embedding_output,
+            use_token_type=True,
+            token_type_ids=token_type_ids,
+            token_type_vocab_size=config.type_vocab_size,
+            token_type_embedding_name="token_type_embeddings",
+            use_position_embeddings=True,
+            position_embedding_name="position_embeddings",
+            initializer_range=config.initializer_range,
+            max_position_embeddings=config.max_position_embeddings,
+            dropout_prob=config.hidden_dropout_prob)
 
-    if sampler:
-      self.tf_sequence_length = tf.compat.v1.placeholder(tf.int32, [batch_size])
-    else:
-      self.tf_sequence_length = tf.fill([batch_size], sequence_length)
+      with tf.variable_scope("encoder"):
+        # This converts a 2D mask of shape [batch_size, seq_length] to a 3D
+        # mask of shape [batch_size, seq_length, seq_length] which is used
+        # for the attention scores.
+        attention_mask = create_attention_mask_from_input_mask(
+            input_ids, input_mask)
 
-    scope_name = "rnnlm"
-    with tf.compat.v1.variable_scope(scope_name):
-      with tf.device("/cpu:0"):
-        embedding = tf.compat.v1.get_variable(
-          "embedding", [vocab_size, self.config.architecture.neurons_per_layer]
-        )
-        inputs = tf.nn.embedding_lookup(embedding, self.input_data)
+        # Run the stacked transformer.
+        # `sequence_output` shape = [batch_size, seq_length, hidden_size].
+        self.all_encoder_layers = transformer_model(
+            input_tensor=self.embedding_output,
+            attention_mask=attention_mask,
+            hidden_size=config.hidden_size,
+            num_hidden_layers=config.num_hidden_layers,
+            num_attention_heads=config.num_attention_heads,
+            intermediate_size=config.intermediate_size,
+            intermediate_act_fn=get_activation(config.hidden_act),
+            hidden_dropout_prob=config.hidden_dropout_prob,
+            attention_probs_dropout_prob=config.attention_probs_dropout_prob,
+            initializer_range=config.initializer_range,
+            do_return_all_layers=True)
 
-    if sampler:
-      decode_helper = helper.CustomInferenceHelper(
-        self.seed_length, embedding, self.temperature
-      )
-    else:
-      decode_helper = tfa.seq2seq.sampler.TrainingSampler(time_major=False)
+      self.sequence_output = self.all_encoder_layers[-1]
+      # The "pooler" converts the encoded sequence tensor of shape
+      # [batch_size, seq_length, hidden_size] to a tensor of shape
+      # [batch_size, hidden_size]. This is necessary for segment-level
+      # (or segment-pair-level) classification tasks where we need a fixed
+      # dimensional representation of the segment.
+      with tf.variable_scope("pooler"):
+        # We "pool" the model by simply taking the hidden state corresponding
+        # to the first token. We assume that this has been pre-trained
+        first_token_tensor = tf.squeeze(self.sequence_output[:, 0:1, :], axis=1)
+        self.pooled_output = tf.layers.dense(
+            first_token_tensor,
+            config.hidden_size,
+            activation=tf.tanh,
+            kernel_initializer=create_initializer(config.initializer_range))
 
-    decoder = tfa.seq2seq.BasicDecoder(
-      cell,
-      decode_helper,
-      tf.compat.v1.layers.Dense(vocab_size),
-      dtype = tf.float32,
-    )
-    outputs, self.final_state, _ = tfa.seq2seq.dynamic_decode(
-      decoder,
-      decoder_init_input = inputs,
-      decoder_init_kwargs = {
-                              'initial_state': self.initial_state,
-                              'sequence_length': self.tf_sequence_length,
-                            },
-      output_time_major=False,
-      impute_finished=True,
-      swap_memory=True,
-      scope=scope_name,
-    )
 
-    self.generated = outputs.sample_id
-    self.logits = outputs.rnn_output
+    # """Instantiate a TensorFlow graph for training or inference.
 
-    sequence_weigths = tf.ones([batch_size, sequence_length])
-    self.loss = tfa.seq2seq.sequence_loss(
-      self.logits, self.targets, sequence_weigths
-    )
+    # The tensorflow graph is different for training and inference, so must be
+    # reset when switching between modes.
 
-    self.learning_rate = tf.Variable(0.0, trainable=False)
-    self.epoch = tf.Variable(0, trainable=False)
-    trainable_variables = tf.compat.v1.trainable_variables()
+    # Args:
+    #   sampler: If set, initialize the model for inference using the given
+    #     sampler. If not set, initialize model for training.
 
-    # TODO(cec): Support non-adam optimizers.
-    grads, _ = tf.clip_by_global_norm(
-      tf.gradients(self.loss, trainable_variables, aggregation_method=2),
-      self.config.training.adam_optimizer.normalized_gradient_clip_micros / 1e6,
-    )
-    optimizer = tf.compat.v1.train.AdamOptimizer(self.learning_rate)
-    self.train_op = optimizer.apply_gradients(zip(grads, trainable_variables))
+    # Returns:
+    #   The imported TensorFlow module.
+    # """
+    # l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfBert.InitTfGraph()")
+    # # Lock exclusive access to a GPU, if present.
+    # gpu_scheduler.LockExclusiveProcessGpuAccess()
 
-    if not sampler:
-      # Create tensorboard summary writers for training progress.
-      tf.compat.v1.summary.scalar("loss", self.loss)
-      tf.compat.v1.summary.scalar("learning_rate", self.learning_rate)
-      tf.compat.v1.summary.scalar("epoch_num", self.epoch)
+    # start_time = time.time()
 
-    num_trainable_params = int(
-      np.sum([np.prod(v.shape) for v in tf.compat.v1.trainable_variables()])
-    )
-    l.getLogger().info(
-      "Instantiated TensorFlow graph with {} trainable parameters " "in {} ms."
-        .format(
-          humanize.Commas(num_trainable_params),
-          humanize.Commas(int((time.time() - start_time) * 1000)),
-          )
-    )
+    # # Quiet tensorflow.
+    # # See: https://github.com/tensorflow/tensorflow/issues/1258
+    # os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
+    # # Deferred importing of TensorFlow.
+    # import tensorflow as tf
+    # tf.compat.v1.disable_eager_execution()
+    # from deeplearning.clgen.models import helper
+
+    # cell_type = {
+    #   model_pb2.NetworkArchitecture.LSTM: tf.compat.v1.nn.rnn_cell.LSTMCell,
+    #   model_pb2.NetworkArchitecture.GRU: tf.compat.v1.nn.rnn_cell.GRUCell,
+    #   model_pb2.NetworkArchitecture.RNN: tf.compat.v1.nn.rnn_cell.BasicRNNCell,
+    # }.get(self.config.architecture.neuron_type, None)
+    # if cell_type is None:
+    #   raise NotImplementedError
+
+    # # Reset the graph when switching between training and inference.
+    # tf.compat.v1.reset_default_graph()
+
+    # if sampler:
+    #   sequence_length = sampler.sequence_length
+    #   batch_size = sampler.batch_size
+    # else:
+    #   sequence_length = self.config.training.sequence_length
+    #   batch_size = self.config.training.batch_size
+    # vocab_size = self.atomizer.vocab_size
+
+    # cells_lst = []
+    # for _ in range(self.config.architecture.num_layers):
+    #   cells_lst.append(cell_type(self.config.architecture.neurons_per_layer))
+    # self.cell = cell = tf.keras.layers.StackedRNNCells(cells_lst)
+
+    # self.input_data = tf.compat.v1.placeholder(
+    #   tf.int32, [batch_size, sequence_length]
+    # )
+    # self.targets = tf.compat.v1.placeholder(
+    #   tf.int32, [batch_size, sequence_length]
+    # )
+    # self.initial_state = self.cell.get_initial_state(batch_size = batch_size, dtype = tf.float32)
+    # self.temperature = tf.Variable(1.0, trainable=False)
+    # self.seed_length = tf.compat.v1.placeholder(name = "seed_length", dtype = tf.int32, shape = ())
+
+    # if sampler:
+    #   self.tf_sequence_length = tf.compat.v1.placeholder(tf.int32, [batch_size])
+    # else:
+    #   self.tf_sequence_length = tf.fill([batch_size], sequence_length)
+
+    # scope_name = "rnnlm"
+    # with tf.compat.v1.variable_scope(scope_name):
+    #   with tf.device("/cpu:0"):
+    #     embedding = tf.compat.v1.get_variable(
+    #       "embedding", [vocab_size, self.config.architecture.neurons_per_layer]
+    #     )
+    #     inputs = tf.nn.embedding_lookup(embedding, self.input_data)
+
+    # if sampler:
+    #   decode_helper = helper.CustomInferenceHelper(
+    #     self.seed_length, embedding, self.temperature
+    #   )
+    # else:
+    #   decode_helper = tfa.seq2seq.sampler.TrainingSampler(time_major=False)
+
+    # decoder = tfa.seq2seq.BasicDecoder(
+    #   cell,
+    #   decode_helper,
+    #   tf.compat.v1.layers.Dense(vocab_size),
+    #   dtype = tf.float32,
+    # )
+    # outputs, self.final_state, _ = tfa.seq2seq.dynamic_decode(
+    #   decoder,
+    #   decoder_init_input = inputs,
+    #   decoder_init_kwargs = {
+    #                           'initial_state': self.initial_state,
+    #                           'sequence_length': self.tf_sequence_length,
+    #                         },
+    #   output_time_major=False,
+    #   impute_finished=True,
+    #   swap_memory=True,
+    #   scope=scope_name,
+    # )
+
+    # self.generated = outputs.sample_id
+    # self.logits = outputs.rnn_output
+
+    # sequence_weigths = tf.ones([batch_size, sequence_length])
+    # self.loss = tfa.seq2seq.sequence_loss(
+    #   self.logits, self.targets, sequence_weigths
+    # )
+
+    # self.learning_rate = tf.Variable(0.0, trainable=False)
+    # self.epoch = tf.Variable(0, trainable=False)
+    # trainable_variables = tf.compat.v1.trainable_variables()
+
+    # # TODO(cec): Support non-adam optimizers.
+    # grads, _ = tf.clip_by_global_norm(
+    #   tf.gradients(self.loss, trainable_variables, aggregation_method=2),
+    #   self.config.training.adam_optimizer.normalized_gradient_clip_micros / 1e6,
+    # )
+    # optimizer = tf.compat.v1.train.AdamOptimizer(self.learning_rate)
+    # self.train_op = optimizer.apply_gradients(zip(grads, trainable_variables))
+
+    # if not sampler:
+    #   # Create tensorboard summary writers for training progress.
+    #   tf.compat.v1.summary.scalar("loss", self.loss)
+    #   tf.compat.v1.summary.scalar("learning_rate", self.learning_rate)
+    #   tf.compat.v1.summary.scalar("epoch_num", self.epoch)
+
+    # num_trainable_params = int(
+    #   np.sum([np.prod(v.shape) for v in tf.compat.v1.trainable_variables()])
+    # )
+    # l.getLogger().info(
+    #   "Instantiated TensorFlow graph with {} trainable parameters " "in {} ms."
+    #     .format(
+    #       humanize.Commas(num_trainable_params),
+    #       humanize.Commas(int((time.time() - start_time) * 1000)),
+    #       )
+    # )
 
     return tf
 
