@@ -482,6 +482,89 @@ class tfBert(backends.BackendBase):
     test_sampler: typing.Optional[samplers.Sampler] = None,
     **unused_kwargs,
   ) -> None:
+
+
+  if not FLAGS.do_train and not FLAGS.do_eval:
+    raise ValueError("At least one of `do_train` or `do_eval` must be True.")
+
+  bert_config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
+
+  tf.gfile.MakeDirs(FLAGS.output_dir)
+
+  input_files = []
+  for input_pattern in FLAGS.input_file.split(","):
+    input_files.extend(tf.gfile.Glob(input_pattern))
+
+  tf.logging.info("*** Input Files ***")
+  for input_file in input_files:
+    tf.logging.info("  %s" % input_file)
+
+  tpu_cluster_resolver = None
+  if FLAGS.use_tpu and FLAGS.tpu_name:
+    tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
+        FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
+
+  is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
+  run_config = tf.contrib.tpu.RunConfig(
+      cluster=tpu_cluster_resolver,
+      master=FLAGS.master,
+      model_dir=FLAGS.output_dir,
+      save_checkpoints_steps=FLAGS.save_checkpoints_steps,
+      tpu_config=tf.contrib.tpu.TPUConfig(
+          iterations_per_loop=FLAGS.iterations_per_loop,
+          num_shards=FLAGS.num_tpu_cores,
+          per_host_input_for_training=is_per_host))
+
+  model_fn = model_fn_builder(
+      bert_config=bert_config,
+      init_checkpoint=FLAGS.init_checkpoint,
+      learning_rate=FLAGS.learning_rate,
+      num_train_steps=FLAGS.num_train_steps,
+      num_warmup_steps=FLAGS.num_warmup_steps,
+      use_tpu=FLAGS.use_tpu,
+      use_one_hot_embeddings=FLAGS.use_tpu)
+
+  # If TPU is not available, this will fall back to normal Estimator on CPU
+  # or GPU.
+  estimator = tf.contrib.tpu.TPUEstimator(
+      use_tpu=FLAGS.use_tpu,
+      model_fn=model_fn,
+      config=run_config,
+      train_batch_size=FLAGS.train_batch_size,
+      eval_batch_size=FLAGS.eval_batch_size)
+
+  if FLAGS.do_train:
+    tf.logging.info("***** Running training *****")
+    tf.logging.info("  Batch size = %d", FLAGS.train_batch_size)
+    train_input_fn = input_fn_builder(
+        input_files=input_files,
+        max_seq_length=FLAGS.max_seq_length,
+        max_predictions_per_seq=FLAGS.max_predictions_per_seq,
+        is_training=True)
+    estimator.train(input_fn=train_input_fn, max_steps=FLAGS.num_train_steps)
+
+  if FLAGS.do_eval:
+    tf.logging.info("***** Running evaluation *****")
+    tf.logging.info("  Batch size = %d", FLAGS.eval_batch_size)
+
+    eval_input_fn = input_fn_builder(
+        input_files=input_files,
+        max_seq_length=FLAGS.max_seq_length,
+        max_predictions_per_seq=FLAGS.max_predictions_per_seq,
+        is_training=False)
+
+    result = estimator.evaluate(
+        input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
+
+    output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
+    with tf.gfile.GFile(output_eval_file, "w") as writer:
+      tf.logging.info("***** Eval results *****")
+      for key in sorted(result.keys()):
+        tf.logging.info("  %s = %s", key, str(result[key]))
+        writer.write("%s = %s\n" % (key, str(result[key])))
+
+        
+
     """Locked training.
 
     If there are cached epoch checkpoints, the one closest to the target number
