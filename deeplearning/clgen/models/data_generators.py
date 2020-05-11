@@ -51,26 +51,30 @@ def LogBatchTelemetry(
 ) -> None:
   """Log analytics about the batch."""
   l.getLogger().debug("deeplearning.clgen.models.data_generators.LogBatchTelemetry()")
-  if isinstance(batch) == DataBatch:
+  sizeof_batch = 0
+  if isinstance(batch, DataBatch):
     l.getLogger().info("Step shape: X: {}, y" ": {}.".format(batch.X.shape, batch.y.shape))
     # sys.getsizeof() includes only the memory required for an object, not any
     # objects it refernces, so we must manually sum the X and y arrays.
-    batch_size = sys.getsizeof(batch) + batch.X.nbytes + batch.y.nbytes
-  elif isinstance(batch) == MaskBatch:
+    sizeof_batch = sys.getsizeof(batch) + batch.X.nbytes + batch.y.nbytes
+  elif isinstance(batch, MaskBatch):
     l.getLogger().info("Step shape: Input_ids: {}, masked_lm_positions: {}, masked_lm_ids: "
                         .format(
                                 batch.input_ids.shape, 
                                 batch.masked_lm_positions.shape, 
                                 batch.masked_lm_ids.shape))
-    batch_size = sys.getsizeof(batch) 
-                + batch.input_ids.nbytes 
-                + batch.masked_lm_positions.nbytes
-                + batch.masked_lm_ids.nbytes
+    sizeof_batch = (sys.getsizeof(batch) +
+                    batch.input_ids.nbytes +
+                    batch.masked_lm_positions.nbytes +
+                    batch.masked_lm_ids.nbytes
+                  )
+  else:
+    raise errors.UserError("Unrecognized Data Batch type: {}".format(type(batch)))
   l.getLogger().info(
     "Memory: {} per batch, {} per epoch, {} total.".format(
-            humanize.BinaryPrefix(batch_size, "B"),
-            humanize.BinaryPrefix(batch_size * steps_per_epoch, "B"),
-            humanize.BinaryPrefix(batch_size * steps_per_epoch * num_epochs, "B"),
+            humanize.BinaryPrefix(sizeof_batch, "B"),
+            humanize.BinaryPrefix(sizeof_batch * steps_per_epoch, "B"),
+            humanize.BinaryPrefix(sizeof_batch * steps_per_epoch * num_epochs, "B"),
         )
   )
 
@@ -435,8 +439,8 @@ class MaskLMBatchGenerator(object):
 
         for en2, seq in enumerate(batch):
           x, ypos, ytok = self.maskSequence(seq)
-          training_batch.append(MaskBatch(x, ypos, ytok))
-        masked_corpus.append(training_batch)
+          training_batch.append((x, ypos, ytok))
+        masked_corpus.extend(MaskBatch(training_batch)) #smh
     return masked_corpus
 
   def maskSequence(self,
