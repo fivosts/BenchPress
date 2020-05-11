@@ -150,9 +150,9 @@ class tfBert(backends.BackendBase):
     def model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
       """The `model_fn` for TPUEstimator."""
 
-      tf.logging.info("*** Features ***")
+      l.getLogger().info("*** Features ***")
       for name in sorted(features.keys()):
-        tf.logging.info("  name = %s, shape = %s" % (name, features[name].shape))
+        l.getLogger().info("  name = %s, shape = %s" % (name, features[name].shape))
 
       input_ids = features["input_ids"]
       input_mask = features["input_mask"]
@@ -200,12 +200,12 @@ class tfBert(backends.BackendBase):
         else:
           tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
-      tf.logging.info("**** Trainable Variables ****")
+      l.getLogger().info("**** Trainable Variables ****")
       for var in tvars:
         init_string = ""
         if var.name in initialized_variable_names:
           init_string = ", *INIT_FROM_CKPT*"
-        tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
+        l.getLogger().info("  name = %s, shape = %s%s", var.name, var.shape,
                         init_string)
 
       output_spec = None
@@ -380,10 +380,6 @@ class tfBert(backends.BackendBase):
       assert checkpoint_state.model_checkpoint_path
       ckpt_path, ckpt_paths = self.GetParamsPath(checkpoint_state)
 
-    tf.logging.info("*** Input Files ***")
-    for input_file in input_files:
-      tf.logging.info("  %s" % input_file)
-
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
       tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
@@ -419,8 +415,8 @@ class tfBert(backends.BackendBase):
         eval_batch_size=FLAGS.eval_batch_size)
 
     if FLAGS.do_train:
-      tf.logging.info("***** Running training *****")
-      tf.logging.info("  Batch size = %d", FLAGS.train_batch_size)
+      l.getLogger().info("***** Running training *****")
+      l.getLogger().info("  Batch size = %d", FLAGS.train_batch_size)
       train_input_fn = data_generator.generateTfDataset(
           tf = tf,
           max_seq_length=self.sequence_length,
@@ -429,8 +425,8 @@ class tfBert(backends.BackendBase):
       estimator.train(input_fn=train_input_fn, max_steps=FLAGS.num_train_steps)
 
     if FLAGS.do_eval:
-      tf.logging.info("***** Running evaluation *****")
-      tf.logging.info("  Batch size = %d", FLAGS.eval_batch_size)
+      l.getLogger().info("***** Running evaluation *****")
+      l.getLogger().info("  Batch size = %d", FLAGS.eval_batch_size)
 
       eval_input_fn = data_generator.generateTfDataset(
           tf = tf,
@@ -443,9 +439,9 @@ class tfBert(backends.BackendBase):
 
       # output_eval_file = os.path.join(logfile_path, "eval_results.txt")
       # with tf.gfile.GFile(output_eval_file, "w") as writer:
-      #   tf.logging.info("***** Eval results *****")
+      #   l.getLogger().info("***** Eval results *****")
       #   for key in sorted(result.keys()):
-      #     tf.logging.info("  %s = %s", key, str(result[key]))
+      #     l.getLogger().info("  %s = %s", key, str(result[key]))
       #     writer.write("%s = %s\n" % (key, str(result[key])))
 
   def GetShortSummary(self) -> str:
