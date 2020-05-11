@@ -18,6 +18,7 @@
 py_library(
     name = "backends",
     srcs = ["backends.py"],
+    visibility = ["//visibility:public"],
     deps = [
         "//deeplearning/clgen:samplers",
         "//deeplearning/clgen/corpuses:atomizers",
@@ -33,6 +34,7 @@ py_library(
 py_library(
     name = "builders",
     srcs = ["builders.py"],
+    visibility = ["//visibility:public"],
     deps = [
         "//deeplearning/clgen:errors",
         "//deeplearning/clgen/proto:clgen_pb_py",
@@ -58,6 +60,7 @@ py_test(
 py_library(
     name = "data_generators",
     srcs = ["data_generators.py"],
+    visibility = ["//visibility:public"],
     deps = [
         "//deeplearning/clgen:errors",
         "//deeplearning/clgen/proto:clgen_pb_py",
