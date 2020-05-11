@@ -82,25 +82,26 @@ class tfBert(backends.BackendBase):
     super(tfBert, self).__init__(*args, **kwargs)
     self.bertConfig = {
           "vocab_size"                      : self.atomizer.vocab_size,
-          "hidden_size"                     : self.config.training.hidden_size,
-          "num_hidden_layers"               : self.config.training.hidden_layers,
-          "num_attention_layers"            : self.config.training.num_attention_layers,
-          "intermediate_size"               : self.config.training.intermediate_size,
-          "hidden_act"                      : self.config.training.hidden_act,
-          "hidden_dropout_prob"             : self.config.training.hidden_dropout_prob,
-          "attention_probs_dropout_prob"    : self.config.training.attention_probs_dropout_prob,
-          "max_position_embeddings"         : self.config.training.max_position_embeddings,
-          "type_vocab_size"                 : self.config.training.type_vocab_size,
-          "initializer_range"               : self.config.training.initializer_range,
+          "hidden_size"                     : self.config.architecture.hidden_size,
+          "num_hidden_layers"               : self.config.architecture.num_hidden_layers,
+          "num_attention_layers"            : self.config.architecture.num_attention_layers,
+          "intermediate_size"               : self.config.architecture.intermediate_size,
+          "hidden_act"                      : self.config.architecture.hidden_act,
+          "hidden_dropout_prob"             : self.config.architecture.hidden_dropout_prob,
+          "attention_probs_dropout_prob"    : self.config.architecture.attention_probs_dropout_prob,
+          "max_position_embeddings"         : self.config.architecture.max_position_embeddings,
+          "type_vocab_size"                 : self.config.architecture.type_vocab_size,
+          "initializer_range"               : self.config.architecture.initializer_range,
     }
 
-    self.learning_rate                      = self.config.training.learning_rate
-    self.num_train_steps                    = self.config.training.num_train_steps
-    self.num_warmup_steps                   = self.config.training.num_warmup_steps
+    self.num_epochs                         = self.config.training.num_epochs
+    self.max_seq_length                     = self.config.training.sequence_length
     self.train_batch_size                   = self.config.training.batch_size
     self.eval_batch_size                    = self.config.training.batch_size
-    self.max_seq_length                     = self.config.training.sequence_length
     self.max_predictions_per_seq            = self.config.training.max_predictions_per_seq
+    self.learning_rate                      = self.config.training.learning_rate_micros / 1e6
+    self.num_train_steps                    = self.config.training.num_train_steps
+    self.num_warmup_steps                   = self.config.training.num_warmup_steps
     return
 
   def model_fn_builder(bert_config, 
