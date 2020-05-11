@@ -519,3 +519,14 @@ class tfBert(backends.BackendBase):
           tf.logging.info("  %s = %s", key, str(result[key]))
           writer.write("%s = %s\n" % (key, str(result[key])))
 
+  def GetShortSummary(self) -> str:
+    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.GetShortSummary()")
+    return (
+      f"h_s: {self.hidden_size}, "
+      f"#h_l: {self.num_hidden_layers}, "
+      f"#att_h: {self.num_attention_heads}, "
+      f"imd_s: {self.intermediate_size}, "
+      f"h_act: {self.hidden_act}, "
+      f"{model_pb2.NetworkArchitecture.NeuronType.Name(self.config.architecture.backend)} "
+      "network"
+    )
