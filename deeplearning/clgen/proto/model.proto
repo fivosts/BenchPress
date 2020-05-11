@@ -86,7 +86,7 @@ message NetworkArchitecture {
   // The vocabulary size of the `token_type_ids` passed into `BertModel`.
   optional int32 type_vocab_size = 15;
   // The stdev of the truncated_normal_initializer for initializing all weight matrices.
-  optional int32 initializer_range = 16;
+  optional float initializer_range = 16;
 }
 
 // Options used for training a CLgen language model.
