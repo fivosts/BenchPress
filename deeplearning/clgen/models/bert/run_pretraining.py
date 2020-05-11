@@ -27,45 +27,18 @@ flags = tf.flags
 
 FLAGS = flags.FLAGS
 
-## Required parameters
-flags.DEFINE_string(
-    "bert_config_file", None,
-    "The config json file corresponding to the pre-trained BERT model. "
-    "This specifies the model architecture.")
-
-flags.DEFINE_string(
-    "input_file", None,
-    "Input TF example files (can be a glob or comma separated).")
+# flags.DEFINE_string(
+#     "input_file", None,
+#     "Input TF example files (can be a glob or comma separated).")
 
 ## Other parameters
 flags.DEFINE_string(
     "init_checkpoint", None,
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
-flags.DEFINE_integer(
-    "max_seq_length", 128,
-    "The maximum total input sequence length after WordPiece tokenization. "
-    "Sequences longer than this will be truncated, and sequences shorter "
-    "than this will be padded. Must match data generation.")
-
-flags.DEFINE_integer(
-    "max_predictions_per_seq", 20,
-    "Maximum number of masked LM predictions per sequence. "
-    "Must match data generation.")
-
 flags.DEFINE_bool("do_train", False, "Whether to run training.")
 
 flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
-
-flags.DEFINE_integer("train_batch_size", 32, "Total batch size for training.")
-
-flags.DEFINE_integer("eval_batch_size", 8, "Total batch size for eval.")
-
-flags.DEFINE_float("learning_rate", 5e-5, "The initial learning rate for Adam.")
-
-flags.DEFINE_integer("num_train_steps", 100000, "Number of training steps.")
-
-flags.DEFINE_integer("num_warmup_steps", 10000, "Number of warmup steps.")
 
 flags.DEFINE_integer("save_checkpoints_steps", 1000,
                      "How often to save the model checkpoint.")
@@ -109,7 +82,6 @@ class tfBert(backends.BackendBase):
     super(tfBert, self).__init__(*args, **kwargs)
     self.bertConfig = {
           "vocab_size"                      : self.atomizer.vocab_size,
-          "sequence_length"                 : self.config.training.sequence_length
           "hidden_size"                     : self.config.training.hidden_size,
           "num_hidden_layers"               : self.config.training.hidden_layers,
           "num_attention_layers"            : self.config.training.num_attention_layers,
@@ -121,6 +93,14 @@ class tfBert(backends.BackendBase):
           "type_vocab_size"                 : self.config.training.type_vocab_size,
           "initializer_range"               : self.config.training.initializer_range,
     }
+
+    self.learning_rate            = self.config.training.learning_rate
+    self.num_train_steps          = self.config.training.num_train_steps
+    self.num_warmup_steps         = self.config.training.num_warmup_steps
+    self.train_batch_size         = self.config.training.batch_size
+    self.eval_batch_size          = self.config.training.batch_size
+    self.max_seq_length           = self.config.training.sequence_length
+    self.max_predictions_per_seq  = self.config.training.max_predictions_per_seq
     return
 
   def model_fn_builder(bert_config, 
@@ -482,7 +462,7 @@ class tfBert(backends.BackendBase):
       tf.logging.info("  Batch size = %d", FLAGS.train_batch_size)
       train_input_fn = input_fn_builder(
           input_files=input_files,
-          max_seq_length=self.bertConfig['sequence_length'],
+          max_seq_length=self.sequence_length,
           max_predictions_per_seq=FLAGS.max_predictions_per_seq,
           is_training=True)
       estimator.train(input_fn=train_input_fn, max_steps=FLAGS.num_train_steps)
@@ -493,7 +473,7 @@ class tfBert(backends.BackendBase):
 
       eval_input_fn = input_fn_builder(
           input_files=input_files,
-          max_seq_length=self.bertConfig['sequence_length'],
+          max_seq_length=self.sequence_length,
           max_predictions_per_seq=FLAGS.max_predictions_per_seq,
           is_training=False)
 
