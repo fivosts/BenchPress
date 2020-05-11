@@ -113,7 +113,7 @@ class tfBert(backends.BackendBase):
           "vocab_size"                      : self.atomizer.vocab_size,
           "hidden_size"                     : self.config.architecture.hidden_size,
           "num_hidden_layers"               : self.config.architecture.num_hidden_layers,
-          "num_attention_layers"            : self.config.architecture.num_attention_layers,
+          "num_attention_heads"             : self.config.architecture.num_attention_heads,
           "intermediate_size"               : self.config.architecture.intermediate_size,
           "hidden_act"                      : self.config.architecture.hidden_act,
           "hidden_dropout_prob"             : self.config.architecture.hidden_dropout_prob,
