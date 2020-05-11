@@ -26,6 +26,8 @@ from deeplearning.clgen.models.tf_bert import model
 from deeplearning.clgen.models.tf_bert import optimizer
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.proto import model_pb2
+from deeplearning.clgen import telemetry
+
 from eupy.native import logger as l
 from labm8.py import app
 
@@ -440,14 +442,18 @@ class tfBert(backends.BackendBase):
 
     del unused_kwargs
 
+    ## Initialize params and data generator
     self.ConfigModelParams()
+    self.data_generator = data_generator.MaskLMBatchGenerator(corpus, self.config.training)
 
+    ## Generate BERT Model from dict params
     bert_config = model.BertConfig.from_dict(self.bertConfig)
 
+    ## Enable training logger
     logger = telemetry.TrainingLogger(self.cache.path / "logs")
     logfile_path    = self.cache.path / "logs"
 
-    # # resume from prior checkpoint
+    ## Initialize checkpoint paths
     ckpt_path, ckpt_paths = None, None
     if (self.cache.path / "checkpoints" / "checkpoint").exists():
       checkpoint_state = tf.train.get_checkpoint_state(self.cache.path / "checkpoints")
@@ -455,7 +461,10 @@ class tfBert(backends.BackendBase):
       assert checkpoint_state.model_checkpoint_path
       ckpt_path, ckpt_paths = self.GetParamsPath(checkpoint_state)
 
+    ## Prepare the data
+    self.data_generator.CreateBatches()
     input_files = []
+    ## You need the input data here
     for input_pattern in FLAGS.input_file.split(","):
       input_files.extend(tf.gfile.Glob(input_pattern))
 
