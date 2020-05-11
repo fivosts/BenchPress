@@ -175,10 +175,21 @@ class tfBert(backends.BackendBase):
     import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
 
-    config = copy.deepcopy(config)
+    self.vocab_size               = self.atomizer.vocab_size
+    self.hidden_size              = self.config.training.hidden_size
+    self.num_hidden_layers        = self.config.training.num_hidden_layers
+    self.num_attention_heads      = self.config.training.num_attention_heads
+    self.hidden_act               = self.config.training.hidden_act
+    self.intermediate_size        = self.config.training.intermediate_size
     if sampler:
-      config.hidden_dropout_prob = 0.0
-      config.attention_probs_dropout_prob = 0.0
+      self.hidden_dropout_prob          = 0.0
+      self.attention_probs_dropout_prob = 0.0
+    else:
+      self.hidden_dropout_prob          = self.config.training.hidden_dropout_prob
+      self.attention_probs_dropout_prob = self.config.training.attention_probs_dropout_prob
+
+    self.max_position_embeddings  = self.config.training.max_position_embeddings
+    self.initializer_range        = self.config.training.initializer_range    
 
     input_shape = get_shape_list(input_ids, expected_rank=2)
     batch_size = input_shape[0]
