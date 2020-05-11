@@ -1,7 +1,7 @@
 py_library(
     name = "tf_bert",
     srcs = [
-        "processor.py",
+        "tf_bert.py",
         "model.py",
         "optimizer.py"
     ],
