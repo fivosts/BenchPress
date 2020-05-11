@@ -30,6 +30,7 @@ from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.models import builders
 from deeplearning.clgen.models.keras_sequential import keras_sequential
 from deeplearning.clgen.models.tf_sequential import tf_sequential
+from deeplearning.clgen.models.tf_bert import tf_bert
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import telemetry_pb2
