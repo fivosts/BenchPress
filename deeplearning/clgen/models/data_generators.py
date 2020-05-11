@@ -293,7 +293,7 @@ class MaskLMBatchGenerator(object):
     )
     return
 
-  def CreateTfDataset(self,
+  def generateTfDataset(self,
                       tf,
                       max_seq_length,
                       is_training,
