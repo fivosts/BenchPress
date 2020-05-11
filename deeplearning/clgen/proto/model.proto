@@ -65,6 +65,28 @@ message NetworkArchitecture {
   // with probability post_alyer_drop_micros / 1000000. E.g. a value of 2000
   // would insert a dropout with probability of 0.2.
   optional int32 post_layer_dropout_micros = 6;
+  //Size of the encoder layers and the pooler layer.
+  optional int32 hidden_size = 7;
+  // The messages below correspong to BERT parameters.
+  // Number of hidden layers in the Transformer encoder.
+  optional int32 num_hidden_layers = 8;
+  // Number of attention heads for each attention layer in the Transformer encoder.
+  optional int32 num_attention_heads = 9;
+  // The size of the "intermediate" (i.e., feed-forward) layer in the Transformer encoder.
+  optional int32 intermediate_size = 10;
+  // The non-linear activation function (function or string) in the encoder and pooler.
+  optional string hidden_act = 11;
+  // The dropout probability for all fully connected layers in the embeddings, encoder, and pooler.
+  optional float hidden_dropout_prob = 12;
+  // The dropout ratio for the attention probabilities.
+  optional float attention_probs_dropout_prob = 13;
+  // The maximum sequence length that this model might ever be used with. 
+  // Typically set this to something large just in case (e.g., 512 or 1024 or 2048).
+  optional int32 max_position_embeddings = 14;
+  // The vocabulary size of the `token_type_ids` passed into `BertModel`.
+  optional int32 type_vocab_size = 15;
+  // The stdev of the truncated_normal_initializer for initializing all weight matrices.
+  optional int32 initializer_range = 16;
 }
 
 // Options used for training a CLgen language model.
