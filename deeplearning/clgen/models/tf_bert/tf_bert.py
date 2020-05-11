@@ -19,10 +19,10 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-import modeling
-import optimizer
 import tensorflow as tf
 
+from deeplearning.clgen.models.tf_bert import model
+from deeplearning.clgen.models.tf_bert import optimizer
 from deeplearning.clgen.models import backends
 
 flags = tf.flags
