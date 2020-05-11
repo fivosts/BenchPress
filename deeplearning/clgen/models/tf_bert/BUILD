@@ -3,7 +3,7 @@ py_library(
     srcs = [
         "processor.py",
         "model.py",
-        "optimization.py"
+        "optimizer.py"
     ],
     visibility = ["//visibility:public"],
     deps = [
