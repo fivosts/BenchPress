@@ -343,24 +343,27 @@ class MaskLMBatchGenerator(object):
 
   def MaskCorpus(self, 
                  corpus: np.array
-                )-> DataBatch:
+                )-> list:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.MaskCorpus()")
 
     masked_corpus = []
-    X, Y = [], []
     for i in range(self.training_opts.dupe_factor):
 
       for en, batch in enumerate(corpus):
-        batch_x, batch_y = [], []
+        batch_x, batch_ypos = [], []
 
         for en2, seq in enumerate(batch):
-          x, y = self.maskSequence(seq)
-          batch_x.append(x)
-          batch_y.append(y)
-        X.append(batch_x)
-        Y.append(batch_y)
+          x, ypos, ytok = self.maskSequence(seq)
+          batch.append({
+                        'input_ids': x,
+                        'masked_lm_positions': ypos, 
+                        'masked_lm_ids': ytok
+                        }
+                      )
+        masked_corpus.append(batch)
 
-    return [DataBatch(i, j) for i, j in zip(np.asarray(X), np.asarray(Y))]
+    # return [DataBatch(i, j) for i, j in zip(np.asarray(X), np.asarray(Y))]
+    return masked_corpus
 
   def maskSequence(self,
                    seq: np.array,
@@ -409,21 +412,7 @@ class MaskLMBatchGenerator(object):
       masked_lm_positions.append(p.pos_index)
       masked_lm_tokens.append(p.token_id)
 
-
-    # l.getLogger().info("original: {}\noutput: {} \npositions: {}\nlabels of masks: {}"
-    #                 .format(
-    #                       self.corpus.atomizer.DeatomizeIndices(seq),
-    #                       self.corpus.atomizer.DeatomizeIndices(output_tokens), 
-    #                       masked_lm_positions, 
-    #                       self.corpus.atomizer.DeatomizeIndices(masked_lm_tokens)))
-
-    # return (output_tokens, masked_lm_positions, masked_lm_tokens)
-    ydata = np.copy(output_tokens)
-    ydata[:-1] = output_tokens[1:]
-    ydata[-1] = output_tokens[0]
-
-    # return DataBatch(output_tokens, ydata)
-    return output_tokens, ydata
+    return (output_tokens, masked_lm_positions, masked_lm_tokens)
 
   def NextBatch(self) -> DataBatch:
     """Fetch next batch.
