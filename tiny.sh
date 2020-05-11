@@ -1,3 +1,2 @@
-bazel-bin/deeplearning/clgen/clgen --config
-deeplearning/clgen/tests/data/tiny/config.pbtxt --level 20 --step --min_samples
+bazel-bin/deeplearning/clgen/clgen --config deeplearning/clgen/tests/data/tiny/config.pbtxt --level 20 --step --min_samples 10
 
