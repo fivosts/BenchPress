@@ -94,27 +94,31 @@ message TrainingOptions {
   // The number of epochs to train the network for.
   optional int32 num_epochs = 1;
   // The length of training sequences.
-  optional int32 sequence_length = 2;
+  optional int32 num_train_steps = 2;
+  // BERT only. Number of training steps.
+  optional int32 num_warmup_steps = 3;
+  // BERT only. Number of warmup steps.
+  optional int32 sequence_length = 4;
   // Maximum number of masked LM predictions per sequence.
-  optional int32 max_predictions_per_seq = 3;
+  optional int32 max_predictions_per_seq = 5;
   // Number of times to duplicate the input data (with different masks).
-  optional int32 dupe_factor = 4;
+  optional int32 dupe_factor = 6;
   // Masked LM probability.
-  optional float masked_lm_prob = 5;
+  optional float masked_lm_prob = 7;
   // Random seed for data generation.
-  optional int32 random_seed = 6;
+  optional int32 random_seed = 8;
   // If true, shuffle the order of contentfiles in the corpus between each
   // training epoch.
-  optional bool shuffle_corpus_contentfiles_between_epochs = 7;
+  optional bool shuffle_corpus_contentfiles_between_epochs = 9;
   // The training batch size. Note that this is only a *requested* batch size,
   // there may be cases where the runtime decides to modify this value. For
   // example, when the corpus size is smaller than the batch size. Any changes
   // to this value at runtime will be logged as errors.
-  optional int32 batch_size = 8;
+  optional int32 batch_size = 10;
   // The optimizer configuration.
   oneof optimizer {
-    AdamOptimizer adam_optimizer = 10;
-    RmsPropOptimizer rmsprop_optimizer = 11;
+    AdamOptimizer adam_optimizer = 11;
+    RmsPropOptimizer rmsprop_optimizer = 12;
   }
 }
 

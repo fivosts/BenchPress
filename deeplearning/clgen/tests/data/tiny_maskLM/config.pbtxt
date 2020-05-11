@@ -51,6 +51,8 @@ model {
   }
   training {
     num_epochs: 32
+    num_train_steps: 10000
+    num_warmup_steps: 5000
     sequence_length: 64
     batch_size: 64
     max_predictions_per_seq: 20

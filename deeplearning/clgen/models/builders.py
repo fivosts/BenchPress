@@ -115,6 +115,14 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
       )
       pbutil.AssertFieldIsSet(
         config.training,
+        "num_train_steps",
+      )
+      pbutil.AssertFieldIsSet(
+        config.training,
+        "num_warmup_steps",
+      )
+      pbutil.AssertFieldIsSet(
+        config.training,
         "dupe_factor",
       )
       pbutil.AssertFieldIsSet(
