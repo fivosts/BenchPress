@@ -20,6 +20,7 @@ from __future__ import print_function
 
 import os
 import tensorflow as tf
+import typing
 
 from deeplearning.clgen.models.tf_bert import model
 from deeplearning.clgen.models.tf_bert import optimizer
@@ -441,12 +442,18 @@ class tfBert(backends.BackendBase):
 
     self.ConfigModelParams()
 
-    bert_config = modeling.BertConfig.from_dict(self.bertConfig)
+    bert_config = model.BertConfig.from_dict(self.bertConfig)
 
-    checkpoint_path = self.cache.path / "checkpoints"
+    logger = telemetry.TrainingLogger(self.cache.path / "logs")
     logfile_path    = self.cache.path / "logs"
 
-    tf.gfile.MakeDirs(checkpoint_path)
+    # # resume from prior checkpoint
+    ckpt_path, ckpt_paths = None, None
+    if (self.cache.path / "checkpoints" / "checkpoint").exists():
+      checkpoint_state = tf.train.get_checkpoint_state(self.cache.path / "checkpoints")
+      assert checkpoint_state
+      assert checkpoint_state.model_checkpoint_path
+      ckpt_path, ckpt_paths = self.GetParamsPath(checkpoint_state)
 
     input_files = []
     for input_pattern in FLAGS.input_file.split(","):
@@ -465,7 +472,7 @@ class tfBert(backends.BackendBase):
     run_config = tf.contrib.tpu.RunConfig(
         cluster=tpu_cluster_resolver,
         master=FLAGS.master,
-        model_dir=checkpoint_path,
+        model_dir=ckpt_path,
         save_checkpoints_steps=FLAGS.save_checkpoints_steps,
         tpu_config=tf.contrib.tpu.TPUConfig(
             iterations_per_loop=FLAGS.iterations_per_loop,
@@ -513,12 +520,12 @@ class tfBert(backends.BackendBase):
       result = estimator.evaluate(
           input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
 
-      output_eval_file = os.path.join(logfile_path, "eval_results.txt")
-      with tf.gfile.GFile(output_eval_file, "w") as writer:
-        tf.logging.info("***** Eval results *****")
-        for key in sorted(result.keys()):
-          tf.logging.info("  %s = %s", key, str(result[key]))
-          writer.write("%s = %s\n" % (key, str(result[key])))
+      # output_eval_file = os.path.join(logfile_path, "eval_results.txt")
+      # with tf.gfile.GFile(output_eval_file, "w") as writer:
+      #   tf.logging.info("***** Eval results *****")
+      #   for key in sorted(result.keys()):
+      #     tf.logging.info("  %s = %s", key, str(result[key]))
+      #     writer.write("%s = %s\n" % (key, str(result[key])))
 
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.GetShortSummary()")
@@ -531,3 +538,20 @@ class tfBert(backends.BackendBase):
       f"{model_pb2.NetworkArchitecture.NeuronType.Name(self.config.architecture.backend)} "
       "network"
     )
+
+  def GetParamsPath(
+    self, checkpoint_state
+  ) -> typing.Tuple[typing.Optional[str], typing.List[str]]:
+    """Return path to checkpoint closest to target num of epochs."""
+    # Checkpoints are saved with relative path, so we must prepend cache paths.
+    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.GetParamsPath()")
+    paths = [
+      str(self.cache.path / "checkpoints" / p)
+      for p in checkpoint_state.all_model_checkpoint_paths
+    ]
+    # The checkpoint paths are appended with the epoch number.
+    epoch_nums = [int(x.split("-")[-1]) for x in paths]
+    diffs = [self.config.training.num_epochs - e for e in epoch_nums]
+    pairs = zip(paths, diffs)
+    positive_only = [p for p in pairs if p[1] >= 0]
+    return min(positive_only, key=lambda x: x[1])[0], paths
