@@ -107,7 +107,7 @@ class tfBert(backends.BackendBase):
     self.num_warmup_steps                   = None
     return
 
-  def ConfigModelParams():
+  def ConfigModelParams(self):
 
     self.bertConfig = {
           "vocab_size"                      : self.atomizer.vocab_size,
