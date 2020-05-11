@@ -24,7 +24,8 @@ import tensorflow as tf
 from deeplearning.clgen.models.tf_bert import model
 from deeplearning.clgen.models.tf_bert import optimizer
 from deeplearning.clgen.models import backends
-
+from deeplearning.clgen.proto import model_pb2
+from eupy.native import logger as l
 from labm8.py import app
 
 FLAGS = app.FLAGS
@@ -86,7 +87,7 @@ class tfBert(backends.BackendBase):
           "vocab_size"                      : None,
           "hidden_size"                     : None,
           "num_hidden_layers"               : None,
-          "num_attention_layers"            : None,
+          "num_attention_heads"             : None,
           "intermediate_size"               : None,
           "hidden_act"                      : None,
           "hidden_dropout_prob"             : None,
@@ -522,11 +523,11 @@ class tfBert(backends.BackendBase):
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.GetShortSummary()")
     return (
-      f"h_s: {self.hidden_size}, "
-      f"#h_l: {self.num_hidden_layers}, "
-      f"#att_h: {self.num_attention_heads}, "
-      f"imd_s: {self.intermediate_size}, "
-      f"h_act: {self.hidden_act}, "
+      f"h_s: {self.bertConfig['hidden_size']}, "
+      f"#h_l: {self.bertConfig['num_hidden_layers']}, "
+      f"#att_h: {self.bertConfig['num_attention_heads']}, "
+      f"imd_s: {self.bertConfig['intermediate_size']}, "
+      f"h_act: {self.bertConfig['hidden_act']}, "
       f"{model_pb2.NetworkArchitecture.NeuronType.Name(self.config.architecture.backend)} "
       "network"
     )
