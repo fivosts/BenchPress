@@ -132,7 +132,7 @@ class tfSequential(backends.BackendBase):
     # Deferred importing of TensorFlow.
     import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
-    from deeplearning.clgen.models import helper
+    from deeplearning.clgen.models.tf_sequential import helper
 
     cell_type = {
       model_pb2.NetworkArchitecture.LSTM: tf.compat.v1.nn.rnn_cell.LSTMCell,
