@@ -94,13 +94,13 @@ class tfBert(backends.BackendBase):
           "initializer_range"               : self.config.training.initializer_range,
     }
 
-    self.learning_rate            = self.config.training.learning_rate
-    self.num_train_steps          = self.config.training.num_train_steps
-    self.num_warmup_steps         = self.config.training.num_warmup_steps
-    self.train_batch_size         = self.config.training.batch_size
-    self.eval_batch_size          = self.config.training.batch_size
-    self.max_seq_length           = self.config.training.sequence_length
-    self.max_predictions_per_seq  = self.config.training.max_predictions_per_seq
+    self.learning_rate                      = self.config.training.learning_rate
+    self.num_train_steps                    = self.config.training.num_train_steps
+    self.num_warmup_steps                   = self.config.training.num_warmup_steps
+    self.train_batch_size                   = self.config.training.batch_size
+    self.eval_batch_size                    = self.config.training.batch_size
+    self.max_seq_length                     = self.config.training.sequence_length
+    self.max_predictions_per_seq            = self.config.training.max_predictions_per_seq
     return
 
   def model_fn_builder(bert_config, 
