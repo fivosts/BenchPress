@@ -80,7 +80,7 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
       lambda x: 1 <= x,
       "TrainingOptions.sequence_length must be >= 1",
     )
-    if config.corpus.maskLM_atomizer:
+    if config.corpus.HasField("maskLM_atomizer"):
       pbutil.AssertFieldIsSet(
         config.training,
         "max_predictions_per_seq",
