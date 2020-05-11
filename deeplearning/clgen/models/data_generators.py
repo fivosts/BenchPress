@@ -58,7 +58,7 @@ def LogBatchTelemetry(
     # objects it refernces, so we must manually sum the X and y arrays.
     sizeof_batch = sys.getsizeof(batch) + batch.X.nbytes + batch.y.nbytes
   elif isinstance(batch, MaskBatch):
-    l.getLogger().info("Step shape: Input_ids: {}, masked_lm_positions: {}, masked_lm_ids: "
+    l.getLogger().info("Step shape: Input_ids: {}, masked_lm_positions: {}, masked_lm_ids: {}"
                         .format(
                                 batch.input_ids.shape, 
                                 batch.masked_lm_positions.shape, 
@@ -435,12 +435,24 @@ class MaskLMBatchGenerator(object):
     for i in range(self.training_opts.dupe_factor):
 
       for en, batch in enumerate(corpus):
-        training_batch = []
+        training_batch = {
+                          'input_ids'           : [], 
+                          'masked_lm_positions' : [],
+                          'masked_lm_ids'       : [],
+                          }
 
         for en2, seq in enumerate(batch):
           x, ypos, ytok = self.maskSequence(seq)
-          training_batch.append((x, ypos, ytok))
-        masked_corpus.extend(MaskBatch(training_batch)) #smh
+          training_batch['input_ids'].append(x)
+          training_batch['masked_lm_positions'].append(ypos)
+          training_batch['masked_lm_ids'].append(ytok)
+
+        masked_corpus.append(MaskBatch(
+                                      np.asarray(training_batch['input_ids']),
+                                      np.asarray(training_batch['masked_lm_positions']),
+                                      np.asarray(training_batch['masked_lm_ids'])
+                                      )
+                            )
     return masked_corpus
 
   def maskSequence(self,
