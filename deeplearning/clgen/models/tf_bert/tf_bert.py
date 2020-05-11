@@ -428,9 +428,9 @@ class tfBert(backends.BackendBase):
       tf.logging.info("***** Running training *****")
       tf.logging.info("  Batch size = %d", FLAGS.train_batch_size)
       train_input_fn = data_generator.generateTfDataset(
-          input_files=input_files,
+          tf = tf,
           max_seq_length=self.sequence_length,
-          max_predictions_per_seq=FLAGS.max_predictions_per_seq,
+          num_cpu_threads = 8,
           is_training=True)
       estimator.train(input_fn=train_input_fn, max_steps=FLAGS.num_train_steps)
 
@@ -439,9 +439,9 @@ class tfBert(backends.BackendBase):
       tf.logging.info("  Batch size = %d", FLAGS.eval_batch_size)
 
       eval_input_fn = data_generator.generateTfDataset(
-          input_files=input_files,
+          tf = tf,
           max_seq_length=self.sequence_length,
-          max_predictions_per_seq=FLAGS.max_predictions_per_seq,
+          num_cpu_threads = 8,
           is_training=False)
 
       result = estimator.evaluate(
