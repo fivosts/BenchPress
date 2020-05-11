@@ -41,8 +41,8 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
     pbutil.AssertFieldIsSet(config, "architecture")
     pbutil.AssertFieldIsSet(config, "training")
     pbutil.AssertFieldIsSet(config.architecture, "backend")
-    pbutil.AssertFieldIsSet(config.architecture, "neuron_type")
     if config.architecture.backend == model_pb2.NetworkArchitecture.KERAS_SEQ:
+      pbutil.AssertFieldIsSet(config.architecture, "neuron_type")
       pbutil.AssertFieldConstraint(
         config.architecture,
         "embedding_size",
@@ -50,6 +50,7 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         "NetworkArchitecture.embedding_size must be > 0",
       )
     elif config.architecture.backend == model_pb2.NetworkArchitecture.TENSORFLOW_SEQ:
+      pbutil.AssertFieldIsSet(config.architecture, "neuron_type")
       pbutil.AssertFieldConstraint(
         config.architecture,
         "neurons_per_layer",
@@ -70,6 +71,7 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         "must be >= 0 and <= 1000000",
       )
     elif config.architecture.backend == model_pb2.NetworkArchitecture.TENSORFLOW_BERT:
+      ## .architecture params
       pbutil.AssertFieldIsSet(
         config.architecture,
         "hidden_size",
@@ -100,17 +102,13 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
       )
       pbutil.AssertFieldIsSet(
         config.architecture,
-        "max_predictions_per_seq",
-      )
-      pbutil.AssertFieldIsSet(
-        config.architecture,
         "type_vocab_size",
       )
       pbutil.AssertFieldIsSet(
         config.architecture,
         "initializer_range",
       )
-
+      ## .training params
       pbutil.AssertFieldIsSet(
         config.training,
         "max_predictions_per_seq",
