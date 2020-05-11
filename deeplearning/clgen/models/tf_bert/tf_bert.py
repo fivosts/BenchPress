@@ -128,7 +128,7 @@ class tfBert(backends.BackendBase):
     self.train_batch_size                   = self.config.training.batch_size
     self.eval_batch_size                    = self.config.training.batch_size
     self.max_predictions_per_seq            = self.config.training.max_predictions_per_seq
-    self.learning_rate                      = self.config.training.learning_rate_micros / 1e6
+    self.learning_rate                      = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
     self.num_train_steps                    = self.config.training.num_train_steps
     self.num_warmup_steps                   = self.config.training.num_warmup_steps
 
