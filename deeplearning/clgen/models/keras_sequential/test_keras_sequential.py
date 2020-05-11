@@ -17,7 +17,7 @@ import checksumdir
 import numpy as np
 
 from deeplearning.clgen import sample_observers
-from deeplearning.clgen.models import keras_sequential
+from deeplearning.clgen.models.keras_sequential import keras_sequential
 from deeplearning.clgen.models import models
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import telemetry_pb2
