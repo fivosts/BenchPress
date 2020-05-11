@@ -23,6 +23,8 @@ import modeling
 import optimization
 import tensorflow as tf
 
+from deeplearning.clgen.models import backends
+
 flags = tf.flags
 
 FLAGS = flags.FLAGS
