@@ -215,7 +215,9 @@ class TensorflowBatchGenerator(object):
 
     self.i = 0
     if self.original_encoded_corpus is None:
-      self.original_encoded_corpus = self.corpus.GetTrainingData()
+      self.original_encoded_corpus = self.corpus.GetTrainingData(
+          shuffle=training_opts.shuffle_corpus_contentfiles_between_epochs
+        )
 
     self.encoded_corpus = np.concatenate(self.original_encoded_corpus)
     batch_size = self.training_opts.batch_size
