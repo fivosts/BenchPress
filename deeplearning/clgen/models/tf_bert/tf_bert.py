@@ -83,6 +83,32 @@ class tfBert(backends.BackendBase):
 
     super(tfBert, self).__init__(*args, **kwargs)
     self.bertConfig = {
+          "vocab_size"                      : None,
+          "hidden_size"                     : None,
+          "num_hidden_layers"               : None,
+          "num_attention_layers"            : None,
+          "intermediate_size"               : None,
+          "hidden_act"                      : None,
+          "hidden_dropout_prob"             : None,
+          "attention_probs_dropout_prob"    : None,
+          "max_position_embeddings"         : None,
+          "type_vocab_size"                 : None,
+          "initializer_range"               : None,
+    }
+
+    self.num_epochs                         = None
+    self.max_seq_length                     = None
+    self.train_batch_size                   = None
+    self.eval_batch_size                    = None
+    self.max_predictions_per_seq            = None
+    self.learning_rate                      = None
+    self.num_train_steps                    = None
+    self.num_warmup_steps                   = None
+    return
+
+  def ConfigModelParams():
+
+    self.bertConfig = {
           "vocab_size"                      : self.atomizer.vocab_size,
           "hidden_size"                     : self.config.architecture.hidden_size,
           "num_hidden_layers"               : self.config.architecture.num_hidden_layers,
@@ -104,6 +130,7 @@ class tfBert(backends.BackendBase):
     self.learning_rate                      = self.config.training.learning_rate_micros / 1e6
     self.num_train_steps                    = self.config.training.num_train_steps
     self.num_warmup_steps                   = self.config.training.num_warmup_steps
+
     return
 
   def model_fn_builder(bert_config, 
@@ -410,6 +437,8 @@ class tfBert(backends.BackendBase):
   def Train(self, corpus, **unused_kwargs) -> None:
 
     del unused_kwargs
+
+    self.ConfigModelParams()
 
     bert_config = modeling.BertConfig.from_dict(self.bertConfig)
 
