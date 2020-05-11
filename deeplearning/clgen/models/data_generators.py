@@ -313,7 +313,7 @@ class MaskLMBatchGenerator(object):
         example[name] = t
 
       return example
-      
+
     def input_fn(params):
 
       batch_size = params["batch_size"]
@@ -409,7 +409,7 @@ class MaskLMBatchGenerator(object):
                  corpus: np.array
                 )-> list:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.MaskCorpus()")
-
+    ## TODO add progress bar here
     masked_corpus = []
     for i in range(self.training_opts.dupe_factor):
 

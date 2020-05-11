@@ -25,6 +25,7 @@ import typing
 from deeplearning.clgen.models.tf_bert import model
 from deeplearning.clgen.models.tf_bert import optimizer
 from deeplearning.clgen.models import backends
+from deeplearning.clgen.models import data_generators
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen import telemetry
 
@@ -362,7 +363,7 @@ class tfBert(backends.BackendBase):
 
     ## Initialize params and data generator
     self.ConfigModelParams()
-    self.data_generator = data_generator.MaskLMBatchGenerator(corpus, self.config.training)
+    self.data_generator = data_generators.MaskLMBatchGenerator(corpus, self.config.training)
 
     ## Generate BERT Model from dict params
     bert_config = model.BertConfig.from_dict(self.bertConfig)
