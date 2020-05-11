@@ -34,45 +34,45 @@ FLAGS = app.FLAGS
 #     "Input TF example files (can be a glob or comma separated).")
 
 ## Other parameters
-FLAGS.DEFINE_string(
+app.DEFINE_string(
     "init_checkpoint", None,
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
-FLAGS.DEFINE_bool("do_train", False, "Whether to run training.")
+app.DEFINE_bool("do_train", False, "Whether to run training.")
 
-FLAGS.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
+app.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
 
-FLAGS.DEFINE_integer("save_checkpoints_steps", 1000,
+app.DEFINE_integer("save_checkpoints_steps", 1000,
                      "How often to save the model checkpoint.")
 
-FLAGS.DEFINE_integer("iterations_per_loop", 1000,
+app.DEFINE_integer("iterations_per_loop", 1000,
                      "How many steps to make in each estimator call.")
 
-FLAGS.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
+app.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
 
-FLAGS.DEFINE_bool("use_tpu", False, "Whether to use TPU or GPU/CPU.")
+app.DEFINE_bool("use_tpu", False, "Whether to use TPU or GPU/CPU.")
 
-FLAGS.DEFINE_string(
+app.DEFINE_string(
     "tpu_name", None,
     "The Cloud TPU to use for training. This should be either the name "
     "used when creating the Cloud TPU, or a grpc://ip.address.of.tpu:8470 "
     "url.")
 
-FLAGS.DEFINE_string(
+app.DEFINE_string(
     "tpu_zone", None,
     "[Optional] GCE zone where the Cloud TPU is located in. If not "
     "specified, we will attempt to automatically detect the GCE project from "
     "metadata.")
 
-FLAGS.DEFINE_string(
+app.DEFINE_string(
     "gcp_project", None,
     "[Optional] Project name for the Cloud TPU-enabled project. If not "
     "specified, we will attempt to automatically detect the GCE project from "
     "metadata.")
 
-FLAGS.DEFINE_string("master", None, "[Optional] TensorFlow master URL.")
+app.DEFINE_string("master", None, "[Optional] TensorFlow master URL.")
 
-FLAGS.DEFINE_integer(
+app.DEFINE_integer(
     "num_tpu_cores", 8,
     "Only used if `use_tpu` is True. Total number of TPU cores to use.")
 
