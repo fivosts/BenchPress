@@ -49,38 +49,68 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         lambda x: 0 < x,
         "NetworkArchitecture.embedding_size must be > 0",
       )
-    pbutil.AssertFieldConstraint(
-      config.architecture,
-      "neurons_per_layer",
-      lambda x: 0 < x,
-      "NetworkArchitecture.neurons_per_layer must be > 0",
-    )
-    pbutil.AssertFieldConstraint(
-      config.architecture,
-      "num_layers",
-      lambda x: 0 < x,
-      "NetworkArchitecture.num_layers must be > 0",
-    )
-    pbutil.AssertFieldConstraint(
-      config.architecture,
-      "post_layer_dropout_micros",
-      lambda x: 0 <= x <= 1000000,
-      "NetworkArchitecture.post_layer_dropout_micros "
-      "must be >= 0 and <= 1000000",
-    )
-    pbutil.AssertFieldConstraint(
-      config.training,
-      "num_epochs",
-      lambda x: 0 < x,
-      "TrainingOptions.num_epochs must be > 0",
-    )
-    pbutil.AssertFieldConstraint(
-      config.training,
-      "sequence_length",
-      lambda x: 1 <= x,
-      "TrainingOptions.sequence_length must be >= 1",
-    )
-    if config.corpus.HasField("maskLM_atomizer"):
+    elif config.architecture.backend == model_pb2.NetworkArchitecture.TENSORFLOW_SEQ:
+      pbutil.AssertFieldConstraint(
+        config.architecture,
+        "neurons_per_layer",
+        lambda x: 0 < x,
+        "NetworkArchitecture.neurons_per_layer must be > 0",
+      )
+      pbutil.AssertFieldConstraint(
+        config.architecture,
+        "num_layers",
+        lambda x: 0 < x,
+        "NetworkArchitecture.num_layers must be > 0",
+      )
+      pbutil.AssertFieldConstraint(
+        config.architecture,
+        "post_layer_dropout_micros",
+        lambda x: 0 <= x <= 1000000,
+        "NetworkArchitecture.post_layer_dropout_micros "
+        "must be >= 0 and <= 1000000",
+      )
+    elif config.architecture.backend == model_pb2.NetworkArchitecture.TENSORFLOW_BERT:
+      pbutil.AssertFieldIsSet(
+        config.architecture,
+        "hidden_size",
+      )
+      pbutil.AssertFieldIsSet(
+        config.architecture,
+        "num_hidden_layers",
+      )
+      pbutil.AssertFieldIsSet(
+        config.architecture,
+        "num_attention_heads",
+      )
+      pbutil.AssertFieldIsSet(
+        config.architecture,
+        "intermediate_size",
+      )
+      pbutil.AssertFieldIsSet(
+        config.architecture,
+        "hidden_act",
+      )
+      pbutil.AssertFieldIsSet(
+        config.architecture,
+        "hidden_dropout_prob",
+      )
+      pbutil.AssertFieldIsSet(
+        config.architecture,
+        "attention_probs_dropout_prob",
+      )
+      pbutil.AssertFieldIsSet(
+        config.architecture,
+        "max_predictions_per_seq",
+      )
+      pbutil.AssertFieldIsSet(
+        config.architecture,
+        "type_vocab_size",
+      )
+      pbutil.AssertFieldIsSet(
+        config.architecture,
+        "initializer_range",
+      )
+
       pbutil.AssertFieldIsSet(
         config.training,
         "max_predictions_per_seq",
@@ -99,6 +129,18 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         lambda x: 0 <= x,
         "TrainingOptions.random_seed must be >= 0",
       )
+    pbutil.AssertFieldConstraint(
+      config.training,
+      "num_epochs",
+      lambda x: 0 < x,
+      "TrainingOptions.num_epochs must be > 0",
+    )
+    pbutil.AssertFieldConstraint(
+      config.training,
+      "sequence_length",
+      lambda x: 1 <= x,
+      "TrainingOptions.sequence_length must be >= 1",
+    )
     pbutil.AssertFieldIsSet(
       config.training, "shuffle_corpus_contentfiles_between_epochs"
     )
