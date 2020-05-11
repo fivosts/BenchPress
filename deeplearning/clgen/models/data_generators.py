@@ -281,63 +281,62 @@ class MaskLMBatchGenerator(object):
     self.original_encoded_corpus = None
     self.encoded_corpus = None
     self.num_batches = 0
-    self.batches = None
+    self.masked_corpus = None
     if self.training_opts.random_seed:
       self.rngen = random.Random(training_opts.random_seed)
     else:
       self.rngen = random.Random()
-    self.CreateBatches()
+    self.CreateCorpus()
 
     LogBatchTelemetry(
-      self.batches[0], self.num_batches, self.training_opts.num_epochs
+      self.masked_corpus[0], self.num_batches, self.training_opts.num_epochs
     )
     return
 
-  def CreateBatches(self) -> None:
+  def CreateTfDataset() -> "tf.Dataset":
+
+    import tensorflow as tf
+    
+
+    return
+
+  def CreateCorpus(self) -> None:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.CreateBatches()")
     start_time = time.time()
 
     # generate a kernel corpus
-    self.i = 0
-    if self.original_encoded_corpus is None:
-      self.original_encoded_corpus = self.corpus.GetTrainingData(
-        shuffle=self.training_opts.shuffle_corpus_contentfiles_between_epochs
+    self.original_encoded_corpus = self.corpus.GetTrainingData(
+      shuffle=self.training_opts.shuffle_corpus_contentfiles_between_epochs
+    )
+
+    self.encoded_corpus = np.concatenate(self.original_encoded_corpus)
+    batch_size = self.training_opts.batch_size
+    sequence_length = self.training_opts.sequence_length
+
+    # set corpus size and number of batches
+    self.num_batches = int(
+      len(self.encoded_corpus) / (batch_size * sequence_length)
+    )
+    if self.num_batches == 0:
+      raise errors.UserError(
+        "Not enough data. Use a smaller sequence_length and batch_size"
       )
 
-      if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
-        self.rngen.shuffle(self.original_encoded_corpus)
+    # split into batches
+    clipped_corpus_length = self.num_batches * batch_size * sequence_length
+    clipped_corpus = self.encoded_corpus[:clipped_corpus_length]
 
-      self.encoded_corpus = np.concatenate(self.original_encoded_corpus)
-      batch_size = self.training_opts.batch_size
-      sequence_length = self.training_opts.sequence_length
+    shaped_corpus = np.split(clipped_corpus.reshape(batch_size, -1), self.num_batches, 1)
+    self.masked_corpus = self.MaskCorpus(shaped_corpus)
+    self.num_batches = self.num_batches * int(self.training_opts.dupe_factor)
 
-      # set corpus size and number of batches
-      self.num_batches = int(
-        len(self.encoded_corpus) / (batch_size * sequence_length)
-      )
-      if self.num_batches == 0:
-        raise errors.UserError(
-          "Not enough data. Use a smaller sequence_length and batch_size"
-        )
-
-      # split into batches
-      clipped_corpus_length = self.num_batches * batch_size * sequence_length
-      clipped_corpus = self.encoded_corpus[:clipped_corpus_length]
-
-      shaped_corpus = np.split(clipped_corpus.reshape(batch_size, -1), self.num_batches, 1)
-      self.batches = self.MaskCorpus(shaped_corpus)
-      self.num_batches = self.num_batches * int(self.training_opts.dupe_factor)
-
-      l.getLogger().info(
-        "Encoded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
-                  humanize.Commas(clipped_corpus_length),
-                  humanize.Commas(len(self.encoded_corpus) - clipped_corpus_length),
-                  humanize.Commas(int((time.time() - start_time) * 1000)),
-              )
-      )
-    else:
-      if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
-        self.rngen.shuffle(self.batches)
+    l.getLogger().info(
+      "Masked corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
+                humanize.Commas(clipped_corpus_length),
+                humanize.Commas(len(self.encoded_corpus) - clipped_corpus_length),
+                humanize.Commas(int((time.time() - start_time) * 1000)),
+            )
+    )
 
     return
 
@@ -361,8 +360,6 @@ class MaskLMBatchGenerator(object):
                         }
                       )
         masked_corpus.append(batch)
-
-    # return [DataBatch(i, j) for i, j in zip(np.asarray(X), np.asarray(Y))]
     return masked_corpus
 
   def maskSequence(self,
@@ -413,15 +410,3 @@ class MaskLMBatchGenerator(object):
       masked_lm_tokens.append(p.token_id)
 
     return (output_tokens, masked_lm_positions, masked_lm_tokens)
-
-  def NextBatch(self) -> DataBatch:
-    """Fetch next batch.
-
-    Returns:
-      X, Y DataBatch.
-    """
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.NextBatch()")
-    batch = self.batches[self.i]
-    self.i += 1
-    assert 0 <= self.i <= self.num_batches
-    return batch
