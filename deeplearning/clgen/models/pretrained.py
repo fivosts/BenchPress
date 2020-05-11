@@ -52,7 +52,7 @@ class PreTrainedModel(object):
     self.backend = {
       model_pb2.NetworkArchitecture.TENSORFLOW_SEQ: tf_sequential.tfSequential,
       model_pb2.NetworkArchitecture.KERAS_SEQ: keras_sequential.kerasSequential,
-      model_pb2.NetworkArchitecture.KERAS_SEQ: tf_bert.tfBert,
+      model_pb2.NetworkArchitecture.TENSORFLOW_BERT: tf_bert.tfBert,
     }[self.config.architecture.backend](
       self.config, self.cache, self.atomizer
     )
