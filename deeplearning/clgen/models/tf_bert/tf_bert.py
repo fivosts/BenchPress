@@ -38,9 +38,9 @@ app.DEFINE_string(
     "init_checkpoint", None,
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
-app.DEFINE_bool("do_train", False, "Whether to run training.")
+app.DEFINE_boolean("do_train", False, "Whether to run training.")
 
-app.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
+app.DEFINE_boolean("do_eval", False, "Whether to run eval on the dev set.")
 
 app.DEFINE_integer("save_checkpoints_steps", 1000,
                      "How often to save the model checkpoint.")
@@ -50,7 +50,7 @@ app.DEFINE_integer("iterations_per_loop", 1000,
 
 app.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
 
-app.DEFINE_bool("use_tpu", False, "Whether to use TPU or GPU/CPU.")
+app.DEFINE_boolean("use_tpu", False, "Whether to use TPU or GPU/CPU.")
 
 app.DEFINE_string(
     "tpu_name", None,
