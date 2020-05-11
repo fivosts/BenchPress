@@ -414,17 +414,17 @@ class MaskLMBatchGenerator(object):
     for i in range(self.training_opts.dupe_factor):
 
       for en, batch in enumerate(corpus):
-        batch_x, batch_ypos = [], []
+        training_batch = []
 
         for en2, seq in enumerate(batch):
           x, ypos, ytok = self.maskSequence(seq)
-          batch.append({
+          training_batch.append({
                         'input_ids': x,
                         'masked_lm_positions': ypos, 
                         'masked_lm_ids': ytok
                         }
                       )
-        masked_corpus.append(batch)
+        masked_corpus.append(training_batch)
     return masked_corpus
 
   def maskSequence(self,
