@@ -20,7 +20,7 @@ from __future__ import print_function
 
 import os
 import modeling
-import optimization
+import optimizer
 import tensorflow as tf
 
 from deeplearning.clgen.models import backends
