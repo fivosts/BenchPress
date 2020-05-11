@@ -379,13 +379,6 @@ class tfBert(backends.BackendBase):
       assert checkpoint_state.model_checkpoint_path
       ckpt_path, ckpt_paths = self.GetParamsPath(checkpoint_state)
 
-    ## Prepare the data
-    self.data_generator.CreateBatches()
-    input_files = []
-    ## You need the input data here
-    for input_pattern in FLAGS.input_file.split(","):
-      input_files.extend(tf.gfile.Glob(input_pattern))
-
     tf.logging.info("*** Input Files ***")
     for input_file in input_files:
       tf.logging.info("  %s" % input_file)
