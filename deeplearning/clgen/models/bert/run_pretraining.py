@@ -123,9 +123,13 @@ class tfBert(backends.BackendBase):
     }
     return
 
-  def model_fn_builder(bert_config, init_checkpoint, learning_rate,
-                       num_train_steps, num_warmup_steps, use_tpu,
-                       use_one_hot_embeddings):
+  def model_fn_builder(bert_config, 
+                      init_checkpoint, 
+                      learning_rate,
+                      num_train_steps,
+                      num_warmup_steps,
+                      use_tpu,
+                      use_one_hot_embeddings):
     """Returns `model_fn` closure for TPUEstimator."""
 
     def model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
