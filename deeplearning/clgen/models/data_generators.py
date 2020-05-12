@@ -414,6 +414,7 @@ class MaskLMBatchGenerator(object):
 
     shaped_corpus = np.split(clipped_corpus.reshape(batch_size, -1), self.num_batches, 1)
     self.masked_corpus = self.MaskCorpus(shaped_corpus)
+    self.saveMaskedCorpus()
     self.num_batches = self.num_batches * int(self.training_opts.dupe_factor)
 
     l.getLogger().info(
@@ -431,6 +432,7 @@ class MaskLMBatchGenerator(object):
                 )-> list:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.MaskCorpus()")
     ## TODO add progress bar here
+    l.getLogger().warn("Masking Corpus is a slow process. Assign multiple threads to it")
     masked_corpus = []
     for i in range(self.training_opts.dupe_factor):
 
@@ -503,3 +505,8 @@ class MaskLMBatchGenerator(object):
       masked_lm_tokens.append(p.token_id)
 
     return (output_tokens, masked_lm_positions, masked_lm_tokens)
+
+  def saveMaskedCorpus(self) -> None:
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.saveMaskedCorpus()")
+    l.getLogger().warning("saveMaskedCorpus is not implemented!")
+    return
