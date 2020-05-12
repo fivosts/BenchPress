@@ -213,7 +213,7 @@ class tfBert(backends.BackendBase):
         train_op = optimizer.create_optimizer(
             total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
 
-        output_spec = tf.contrib.tpu.TPUEstimatorSpec(
+        output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
             mode=mode,
             loss=total_loss,
             train_op=train_op,
@@ -260,7 +260,7 @@ class tfBert(backends.BackendBase):
             masked_lm_weights, next_sentence_example_loss,
             next_sentence_log_probs, next_sentence_labels
         ])
-        output_spec = tf.contrib.tpu.TPUEstimatorSpec(
+        output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
             mode=mode,
             loss=total_loss,
             eval_metrics=eval_metrics,
@@ -382,32 +382,32 @@ class tfBert(backends.BackendBase):
 
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
-      tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
+      tpu_cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
           FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
 
-    is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
-    run_config = tf.contrib.tpu.RunConfig(
-        cluster=tpu_cluster_resolver,
-        master=FLAGS.master,
-        model_dir=ckpt_path,
-        save_checkpoints_steps=FLAGS.save_checkpoints_steps,
-        tpu_config=tf.contrib.tpu.TPUConfig(
-            iterations_per_loop=FLAGS.iterations_per_loop,
-            num_shards=FLAGS.num_tpu_cores,
-            per_host_input_for_training=is_per_host))
+    is_per_host = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
+    run_config = tf.compat.v1.estimator.tpu.RunConfig(
+        cluster = tpu_cluster_resolver,
+        master = FLAGS.master,
+        model_dir = ckpt_path,
+        save_checkpoints_steps = FLAGS.save_checkpoints_steps,
+        tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
+            iterations_per_loop = FLAGS.iterations_per_loop,
+            num_shards = FLAGS.num_tpu_cores,
+            per_host_input_for_training = is_per_host))
 
-    model_fn = model_fn_builder(
-        bert_config=bert_config,
-        init_checkpoint=FLAGS.init_checkpoint,
-        learning_rate=FLAGS.learning_rate,
-        num_train_steps=FLAGS.num_train_steps,
-        num_warmup_steps=FLAGS.num_warmup_steps,
-        use_tpu=FLAGS.use_tpu,
-        use_one_hot_embeddings=FLAGS.use_tpu)
+    model_fn = self.model_fn_builder(
+        bert_config = bert_config,
+        init_checkpoint = app.init_checkpoint,
+        learning_rate = FLAGS.learning_rate,
+        num_train_steps = FLAGS.num_train_steps,
+        num_warmup_steps = FLAGS.num_warmup_steps,
+        use_tpu = FLAGS.use_tpu,
+        use_one_hot_embeddings = FLAGS.use_tpu)
 
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
-    estimator = tf.contrib.tpu.TPUEstimator(
+    estimator = tf.compat.v1.estimator.tpu.TPUEstimator(
         use_tpu=FLAGS.use_tpu,
         model_fn=model_fn,
         config=run_config,
