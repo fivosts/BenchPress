@@ -23,6 +23,7 @@ import sys
 import time
 import typing
 import random
+import progressbar
 
 import numpy as np
 
@@ -431,30 +432,32 @@ class MaskLMBatchGenerator(object):
                  corpus: np.array
                 )-> list:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.MaskCorpus()")
-    ## TODO add progress bar here
     l.getLogger().warn("Masking Corpus is a slow process. Assign multiple threads to it")
+
     masked_corpus = []
-    for i in range(self.training_opts.dupe_factor):
+    with progressbar.ProgressBar(max_value = self.training_opts.dupe_factor * len(corpus)) as bar:
+      for idxd in range(self.training_opts.dupe_factor):
 
-      for en, batch in enumerate(corpus):
-        training_batch = {
-                          'input_ids'           : [], 
-                          'masked_lm_positions' : [],
-                          'masked_lm_ids'       : [],
-                          }
+        for idxk, kernel in enumerate(corpus):
+          training_batch = {
+                            'input_ids'           : [], 
+                            'masked_lm_positions' : [],
+                            'masked_lm_ids'       : [],
+                            }
 
-        for en2, seq in enumerate(batch):
-          x, ypos, ytok = self.maskSequence(seq)
-          training_batch['input_ids'].append(x)
-          training_batch['masked_lm_positions'].append(ypos)
-          training_batch['masked_lm_ids'].append(ytok)
+          for seq in kernel:
+            x, ypos, ytok = self.maskSequence(seq)
+            training_batch['input_ids'].append(x)
+            training_batch['masked_lm_positions'].append(ypos)
+            training_batch['masked_lm_ids'].append(ytok)
 
-        masked_corpus.append(MaskBatch(
-                                      np.asarray(training_batch['input_ids']),
-                                      np.asarray(training_batch['masked_lm_positions']),
-                                      np.asarray(training_batch['masked_lm_ids'])
-                                      )
-                            )
+          masked_corpus.append(MaskBatch(
+                                        np.asarray(training_batch['input_ids']),
+                                        np.asarray(training_batch['masked_lm_positions']),
+                                        np.asarray(training_batch['masked_lm_ids'])
+                                        )
+                              )
+          bar.update(idxd * len(corpus) + idxk)
     return masked_corpus
 
   def maskSequence(self,
