@@ -398,21 +398,21 @@ class tfBert(backends.BackendBase):
 
     model_fn = self.model_fn_builder(
         bert_config = bert_config,
-        init_checkpoint = app.init_checkpoint,
-        learning_rate = FLAGS.learning_rate,
-        num_train_steps = FLAGS.num_train_steps,
-        num_warmup_steps = FLAGS.num_warmup_steps,
+        init_checkpoint = FLAGS.init_checkpoint,
+        learning_rate = self.learning_rate,
+        num_train_steps = self.num_train_steps,
+        num_warmup_steps = self.num_warmup_steps,
         use_tpu = FLAGS.use_tpu,
         use_one_hot_embeddings = FLAGS.use_tpu)
 
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
     estimator = tf.compat.v1.estimator.tpu.TPUEstimator(
-        use_tpu=FLAGS.use_tpu,
-        model_fn=model_fn,
-        config=run_config,
-        train_batch_size=FLAGS.train_batch_size,
-        eval_batch_size=FLAGS.eval_batch_size)
+        use_tpu = FLAGS.use_tpu,
+        model_fn = model_fn,
+        config = run_config,
+        train_batch_size = self..train_batch_size,
+        eval_batch_size = self.eval_batch_size)
 
     if FLAGS.do_train:
       l.getLogger().info("***** Running training *****")
