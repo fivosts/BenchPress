@@ -46,9 +46,10 @@ class DataBatch(typing.NamedTuple):
   y: np.array
 
 class MaskBatch(typing.NamedTuple):
-  input_ids             : np.array
-  masked_lm_positions   : np.array
-  masked_lm_ids         : np.array
+  input_ids                 : np.array
+  masked_lm_positions       : np.array
+  masked_lm_ids             : np.array
+  masked_lm_weights         : np.array
 
 def LogBatchTelemetry(
   batch, steps_per_epoch: int, num_epochs: int
@@ -361,6 +362,8 @@ class MaskLMBatchGenerator(object):
               self.tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], self.tf.int64),
           "masked_lm_ids":
               self.tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], self.tf.int64),
+          "masked_lm_weights":
+              self.tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], self.tf.float32),
       }
 
       # For training, we want a lot of parallel reading and shuffling.
@@ -471,8 +474,13 @@ class MaskLMBatchGenerator(object):
 
     out_batch = []
     for seq in batch:
-      x, ypos, ytok = self.maskSequence(seq)
-      out_batch.append(MaskBatch(np.asarray(x), np.asarray(ypos), np.asarray(ytok)))
+      x, ypos, ytok, ywei = self.maskSequence(seq)
+      out_batch.append(MaskBatch(np.asarray(x), 
+                                 np.asarray(ypos), 
+                                 np.asarray(ytok), 
+                                 np.asarray(ywei)
+                                 )
+                      )
       # training_batch['input_ids'].append(x)
       # training_batch['masked_lm_positions'].append(ypos)
       # training_batch['masked_lm_ids'].append(ytok)
@@ -528,14 +536,18 @@ class MaskLMBatchGenerator(object):
 
     masked_lm_positions = []
     masked_lm_ids = []
+    masked_lm_weights = []
+
     for p in masked_lms:
       masked_lm_positions.append(p.pos_index)
       masked_lm_ids.append(p.token_id)
+      masked_lm_weights = [1.0]
     while len(masked_lm_positions) < self.training_opts.max_predictions_per_seq:
         masked_lm_positions.append(0)
         masked_lm_ids.append(0)
+        masked_lm_weights.append(0.0)
 
-    return (output_tokens, masked_lm_positions, masked_lm_ids)
+    return (output_tokens, masked_lm_positions, masked_lm_ids, masked_lm_weights)
 
   def saveMaskedCorpus(self) -> None:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.saveMaskedCorpus()")
@@ -568,7 +580,11 @@ class MaskLMBatchGenerator(object):
                                                                 value = list(masked_lm_ids)
                                                                 )
                                             )
-
+      features["masked_lm_weights"] = self.tf.train.Feature(
+                                            float_list=tf.train.FloatList(
+                                                                value=list(masked_lm_weights)
+                                                                )
+                                            )
       tf_example = self.tf.train.Example(features=self.tf.train.Features(feature=features))
       writer.write(tf_example.SerializeToString())
       total_written += 1
