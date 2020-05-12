@@ -50,6 +50,7 @@ class MaskBatch(typing.NamedTuple):
   masked_lm_positions       : np.array
   masked_lm_ids             : np.array
   masked_lm_weights         : np.array
+  next_sentence_label       : np.int32
 
 def LogBatchTelemetry(
   batch, steps_per_epoch: int, num_epochs: int
@@ -364,6 +365,8 @@ class MaskLMBatchGenerator(object):
               self.tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], self.tf.int64),
           "masked_lm_weights":
               self.tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], self.tf.float32),
+          "next_sentence_labels":
+              self.tf.io.FixedLenFeature([1], self.tf.int64),
       }
 
       # For training, we want a lot of parallel reading and shuffling.
