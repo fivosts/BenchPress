@@ -344,7 +344,9 @@ class MaskLMBatchGenerator(object):
       for name in list(example.keys()):
         t = example[name]
         if t.dtype == self.tf.int64:
-          t = self.tf.to_int32(t)
+          # t = self.tf.compat.v1.to_int32(t)
+          t = self.tf.cast(t, dtype = self.tf.int32)
+
         example[name] = t
 
       return example
