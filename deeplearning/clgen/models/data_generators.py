@@ -304,25 +304,25 @@ class MaskLMBatchGenerator(object):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.__init__()")
     self.corpus = corpus
     self.training_opts = training_opts
-    self.cache_path = cache_path
-    self.tfRecord = "maskedDataset.tf_record"
+    self.tfRecord = cache_path / "dataset" / "maskedDataset.tf_record"
     self.tf = tf
 
     # Lazily instantiated.
-    self.original_encoded_corpus = None
-    self.encoded_corpus = None
+    self._masked_corpus = None
+    self._original_encoded_corpus = None
+    self._encoded_corpus = None
     self.num_batches = 0
-    self.masked_corpus = None
     self.sequence_length = self.training_opts.sequence_length
+
     if self.training_opts.random_seed:
       self.rngen = random.Random(training_opts.random_seed)
     else:
       self.rngen = random.Random()
-    self.CreateCorpus()
 
-    LogBatchTelemetry(
-      self.masked_corpus[0], self.num_batches, self.training_opts.num_epochs
-    )
+    if not self.tfRecord.exists():
+      self.CreateCorpus()
+    else:
+      pass ## TODO ?
     return
 
   def generateTfDataset(self,
@@ -353,11 +353,11 @@ class MaskLMBatchGenerator(object):
       batch_size = params["batch_size"]
       name_to_features = {
           "input_ids":
-              tf.FixedLenFeature([max_seq_length], tf.int64),
+              self.tf.FixedLenFeature([max_seq_length], tf.int64),
           "masked_lm_positions":
-              tf.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
+              self.tf.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
           "masked_lm_ids":
-              tf.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
+              self.tf.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
       }
 
       # For training, we want a lot of parallel reading and shuffling.
@@ -404,16 +404,16 @@ class MaskLMBatchGenerator(object):
     start_time = time.time()
 
     # generate a kernel corpus
-    self.original_encoded_corpus = self.corpus.GetTrainingData(
+    self._original_encoded_corpus = self.corpus.GetTrainingData(
       shuffle=self.training_opts.shuffle_corpus_contentfiles_between_epochs
     )
 
-    self.encoded_corpus = np.concatenate(self.original_encoded_corpus)
+    self._encoded_corpus = np.concatenate(self._original_encoded_corpus)
     batch_size = self.training_opts.batch_size
 
     # set corpus size and number of batches
     self.num_batches = int(
-      len(self.encoded_corpus) / (batch_size * self.sequence_length)
+      len(self._encoded_corpus) / (batch_size * self.sequence_length)
     )
     if self.num_batches == 0:
       raise errors.UserError(
@@ -421,21 +421,25 @@ class MaskLMBatchGenerator(object):
       )
     # split into batches
     clipped_corpus_length = self.num_batches * batch_size * self.sequence_length
-    clipped_corpus = self.encoded_corpus[:clipped_corpus_length]
+    clipped_corpus = self._encoded_corpus[:clipped_corpus_length]
 
     shaped_corpus = np.split(clipped_corpus.reshape(batch_size, -1), self.num_batches, 1)
-    self.masked_corpus = self.MaskCorpus(shaped_corpus)
+    
+    self._masked_corpus = self.MaskCorpus(shaped_corpus)
     self.saveMaskedCorpus()
+    
     self.num_batches = self.num_batches * int(self.training_opts.dupe_factor)
 
     l.getLogger().info(
       "Masked corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
                 humanize.Commas(clipped_corpus_length),
-                humanize.Commas(len(self.encoded_corpus) - clipped_corpus_length),
+                humanize.Commas(len(self._encoded_corpus) - clipped_corpus_length),
                 humanize.Commas(int((time.time() - start_time) * 1000)),
             )
     )
-
+    LogBatchTelemetry(
+      self._masked_corpus[0], self.num_batches, self.training_opts.num_epochs
+    )
     return
 
   def MaskCorpus(self, 
@@ -533,14 +537,11 @@ class MaskLMBatchGenerator(object):
   def saveMaskedCorpus(self) -> None:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.saveMaskedCorpus()")
      
-    maskPath = cache.cachepath(self.cache_path, "corpus", "maskedTF")
-    maskPath.mkdir(exist_ok = True, parents = True)
-
-    self.tfRecord = str(maskPath / self.tfRecord)
-    writer = self.tf.io.TFRecordWriter(self.tfRecord)
+    self.tfRecord.parent.mkdir(exist_ok = True, parents = True)
+    writer = self.tf.io.TFRecordWriter(str(self.tfRecord))
 
     total_written = 0
-    for (inst_index, instance) in enumerate(self.masked_corpus):
+    for (inst_index, instance) in enumerate(self._masked_corpus):
       input_ids = instance.input_ids
 
       assert len(input_ids) == self.sequence_length
@@ -570,5 +571,5 @@ class MaskLMBatchGenerator(object):
       total_written += 1
 
     writer.close()
-    l.getLogger().info("Wrote {} total instances to {}".format(total_written, self.tfRecord))
+    l.getLogger().info("Wrote {} instances to {}".format(total_written, self.tfRecord))
     return
