@@ -161,27 +161,27 @@ class tfBert(backends.BackendBase):
       # segment_ids = features["segment_ids"]
       masked_lm_positions = features["masked_lm_positions"]
       masked_lm_ids = features["masked_lm_ids"]
-      # masked_lm_weights = features["masked_lm_weights"]
-      # next_sentence_labels = features["next_sentence_labels"]
+      masked_lm_weights = features["masked_lm_weights"]
+      next_sentence_labels = features["next_sentence_labels"]
 
       is_training = (mode == tf.compat.v1.estimator.ModeKeys.TRAIN)
 
-      model = modeling.BertModel(
+      bert_model = model.BertModel(
           config=bert_config,
           is_training=is_training,
           input_ids=input_ids,
-          input_mask=input_mask,
-          token_type_ids=segment_ids,
+          # input_mask=input_mask, # You CAN ignore. Used for padding. 0s after real sequence. Now all 1s.
+          # token_type_ids=segment_ids, # You can ignore. Used for double sentences (sA -> 0, sB ->1). Now all will be zero
           use_one_hot_embeddings=use_one_hot_embeddings)
 
       (masked_lm_loss,
        masked_lm_example_loss, masked_lm_log_probs) = self.get_masked_lm_output(
-           bert_config, model.get_sequence_output(), model.get_embedding_table(),
+           bert_config, bert_model.get_sequence_output(), bert_model.get_embedding_table(),
            masked_lm_positions, masked_lm_ids, masked_lm_weights)
 
       (next_sentence_loss, next_sentence_example_loss,
        next_sentence_log_probs) = self.get_next_sentence_output(
-           bert_config, model.get_pooled_output(), next_sentence_labels)
+           bert_config, bert_model.get_pooled_output(), next_sentence_labels)
 
       total_loss = masked_lm_loss + next_sentence_loss
 
@@ -191,7 +191,7 @@ class tfBert(backends.BackendBase):
       scaffold_fn = None
       if init_checkpoint:
         (assignment_map, initialized_variable_names
-        ) = modeling.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
+        ) = model.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
         if use_tpu:
 
           def tpu_scaffold():
@@ -293,10 +293,10 @@ class tfBert(backends.BackendBase):
         input_tensor = tf.layers.dense(
             input_tensor,
             units=bert_config.hidden_size,
-            activation=modeling.get_activation(bert_config.hidden_act),
-            kernel_initializer=modeling.create_initializer(
+            activation=model.get_activation(bert_config.hidden_act),
+            kernel_initializer=model.create_initializer(
                 bert_config.initializer_range))
-        input_tensor = modeling.layer_norm(input_tensor)
+        input_tensor = model.layer_norm(input_tensor)
 
       # The output weights are the same as the input embeddings, but there is
       # an output-only bias for each token.
@@ -339,7 +339,7 @@ class tfBert(backends.BackendBase):
       output_weights = tf.get_variable(
           "output_weights",
           shape=[2, bert_config.hidden_size],
-          initializer=modeling.create_initializer(bert_config.initializer_range))
+          initializer=model.create_initializer(bert_config.initializer_range))
       output_bias = tf.get_variable(
           "output_bias", shape=[2], initializer=tf.zeros_initializer())
 
@@ -355,7 +355,7 @@ class tfBert(backends.BackendBase):
 
   def gather_indexes(sequence_tensor, positions):
     """Gathers the vectors at the specific positions over a minibatch."""
-    sequence_shape = modeling.get_shape_list(sequence_tensor, expected_rank=3)
+    sequence_shape = model.get_shape_list(sequence_tensor, expected_rank=3)
     batch_size = sequence_shape[0]
     seq_length = sequence_shape[1]
     width = sequence_shape[2]
