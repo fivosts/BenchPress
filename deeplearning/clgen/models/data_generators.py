@@ -435,30 +435,36 @@ class MaskLMBatchGenerator(object):
     l.getLogger().warn("Masking Corpus is a slow process. Assign multiple threads to it")
 
     masked_corpus = []
-    with progressbar.ProgressBar(max_value = self.training_opts.dupe_factor * len(corpus)) as bar:
-      for idxd in range(self.training_opts.dupe_factor):
+    flattened_corpus = []
+    for _ in range(self.training_opts.dupe_factor): # This enables multiprocessing
+      flattened_corpus.extend(corpus)
 
-        for idxk, kernel in enumerate(corpus):
-          training_batch = {
-                            'input_ids'           : [], 
-                            'masked_lm_positions' : [],
-                            'masked_lm_ids'       : [],
-                            }
-
-          for seq in kernel:
-            x, ypos, ytok = self.maskSequence(seq)
-            training_batch['input_ids'].append(x)
-            training_batch['masked_lm_positions'].append(ypos)
-            training_batch['masked_lm_ids'].append(ytok)
-
-          masked_corpus.append(MaskBatch(
-                                        np.asarray(training_batch['input_ids']),
-                                        np.asarray(training_batch['masked_lm_positions']),
-                                        np.asarray(training_batch['masked_lm_ids'])
-                                        )
-                              )
-          bar.update(idxd * len(corpus) + idxk)
+    with progressbar.ProgressBar(max_value = len(flattened_corpus)) as bar:
+        for idx, batch in enumerate(flattened_corpus):
+          masked_corpus.append(self.maskBatch(batch))
+          bar.update(idx)
     return masked_corpus
+
+  def maskBatch(self, batch):
+    training_batch = {
+                      'input_ids'           : [], 
+                      'masked_lm_positions' : [],
+                      'masked_lm_ids'       : [],
+                      }
+
+    for seq in batch:
+      x, ypos, ytok = self.maskSequence(seq)
+      training_batch['input_ids'].append(x)
+      training_batch['masked_lm_positions'].append(ypos)
+      training_batch['masked_lm_ids'].append(ytok)
+
+    batch = MaskBatch(
+                np.asarray(training_batch['input_ids']),
+                np.asarray(training_batch['masked_lm_positions']),
+                np.asarray(training_batch['masked_lm_ids'])
+              )
+                        
+    return batch
 
   def maskSequence(self,
                    seq: np.array,
