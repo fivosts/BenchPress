@@ -437,9 +437,6 @@ class MaskLMBatchGenerator(object):
                 humanize.Commas(int((time.time() - start_time) * 1000)),
             )
     )
-    LogBatchTelemetry(
-      self._masked_corpus[0], self.num_batches, self.training_opts.num_epochs
-    )
     return
 
   def MaskCorpus(self, 
