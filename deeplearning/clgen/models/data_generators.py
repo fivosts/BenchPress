@@ -321,8 +321,9 @@ class MaskLMBatchGenerator(object):
 
     if not self.tfRecord.exists():
       self.CreateCorpus()
-    else:
-      pass ## TODO ?
+
+    self.dataset = self.LoadCorpus()
+
     return
 
   def generateTfDataset(self,
@@ -353,33 +354,33 @@ class MaskLMBatchGenerator(object):
       batch_size = params["batch_size"]
       name_to_features = {
           "input_ids":
-              self.tf.FixedLenFeature([max_seq_length], tf.int64),
+              self.tf.io.FixedLenFeature([max_seq_length], self.tf.int64),
           "masked_lm_positions":
-              self.tf.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
+              self.tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], self.tf.int64),
           "masked_lm_ids":
-              self.tf.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
+              self.tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], self.tf.int64),
       }
 
       # For training, we want a lot of parallel reading and shuffling.
       # For eval, we want no shuffling and parallel reading doesn't matter.
       if is_training:
-        d = tf.data.Dataset.from_tensor_slices(tf.constant("""Insert here the tfRecord file"""))
+        d = self.tf.data.Dataset.from_tensor_slices(self.tf.constant(self.dataset))
         d = d.repeat()
-        d = d.shuffle(buffer_size=len("""The input file"""))
+        d = d.shuffle(buffer_size=len(self.dataset))
 
         # `cycle_length` is the number of parallel files that get read.
-        cycle_length = min(num_cpu_threads, len("""The input file"""))
+        cycle_length = min(num_cpu_threads, len(self.dataset))
 
         # `sloppy` mode means that the interleaving is not exact. This adds
         # even more randomness to the training pipeline.
         d = d.apply(
-            tf.data.experimental.parallel_interleave(
-                tf.data.TFRecordDataset,
+            self.tf.data.experimental.parallel_interleave(
+                self.tf.data.TFRecordDataset,
                 sloppy=is_training,
                 cycle_length=cycle_length))
         d = d.shuffle(buffer_size=100)
       else:
-        d = tf.data.TFRecordDataset("""The input file""")
+        d = self.tf.data.TFRecordDataset(self.dataset)
         # Since we evaluate for a fixed number of steps we don't want to encounter
         # out-of-range exceptions.
         d = d.repeat()
@@ -389,7 +390,7 @@ class MaskLMBatchGenerator(object):
       # and we *don't* want to drop the remainder, otherwise we wont cover
       # every sample.
       d = d.apply(
-          tf.data.experimental.map_and_batch(
+          self.tf.data.experimental.map_and_batch(
               lambda record: _decode_record(record, name_to_features),
               batch_size=batch_size,
               num_parallel_batches=num_cpu_threads,
@@ -438,6 +439,9 @@ class MaskLMBatchGenerator(object):
             )
     )
     return
+
+  def LoadCorpus(self):
+    return self.tf.io.gfile.glob(str(self.tfRecord))
 
   def MaskCorpus(self, 
                  corpus: np.array
