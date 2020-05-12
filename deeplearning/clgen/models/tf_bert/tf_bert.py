@@ -138,7 +138,8 @@ class tfBert(backends.BackendBase):
 
     return
 
-  def model_fn_builder(bert_config, 
+  def model_fn_builder(self,
+                      bert_config, 
                       init_checkpoint, 
                       learning_rate,
                       num_train_steps,
@@ -173,12 +174,12 @@ class tfBert(backends.BackendBase):
           use_one_hot_embeddings=use_one_hot_embeddings)
 
       (masked_lm_loss,
-       masked_lm_example_loss, masked_lm_log_probs) = get_masked_lm_output(
+       masked_lm_example_loss, masked_lm_log_probs) = self.get_masked_lm_output(
            bert_config, model.get_sequence_output(), model.get_embedding_table(),
            masked_lm_positions, masked_lm_ids, masked_lm_weights)
 
       (next_sentence_loss, next_sentence_example_loss,
-       next_sentence_log_probs) = get_next_sentence_output(
+       next_sentence_log_probs) = self.get_next_sentence_output(
            bert_config, model.get_pooled_output(), next_sentence_labels)
 
       total_loss = masked_lm_loss + next_sentence_loss
@@ -273,8 +274,14 @@ class tfBert(backends.BackendBase):
     return model_fn
 
 
-  def get_masked_lm_output(bert_config, input_tensor, output_weights, positions,
-                           label_ids, label_weights):
+  def get_masked_lm_output(self, 
+                           bert_config,
+                           input_tensor, 
+                           output_weights, 
+                           positions, 
+                           label_ids,
+                           label_weights
+                           ):
     """Get loss and log probs for the masked LM."""
     input_tensor = gather_indexes(input_tensor, positions)
 
@@ -318,7 +325,11 @@ class tfBert(backends.BackendBase):
     return (loss, per_example_loss, log_probs)
 
 
-  def get_next_sentence_output(bert_config, input_tensor, labels):
+  def get_next_sentence_output(self, 
+                               bert_config,
+                               input_tensor,
+                               labels
+                              ):
     """Get loss and log probs for the next sentence prediction."""
 
     # Simple binary classification. Note that 0 is "next sentence" and 1 is
@@ -367,7 +378,7 @@ class tfBert(backends.BackendBase):
 
     ## Generate BERT Model from dict params
     bert_config = model.BertConfig.from_dict(self.bertConfig)
-
+    l.getLogger().critical(bert_config)
     ## Enable training logger
     logger = telemetry.TrainingLogger(self.cache.path / "logs")
     logfile_path    = self.cache.path / "logs"
@@ -411,7 +422,7 @@ class tfBert(backends.BackendBase):
         use_tpu = FLAGS.use_tpu,
         model_fn = model_fn,
         config = run_config,
-        train_batch_size = self..train_batch_size,
+        train_batch_size = self.train_batch_size,
         eval_batch_size = self.eval_batch_size)
 
     if FLAGS.do_train:
