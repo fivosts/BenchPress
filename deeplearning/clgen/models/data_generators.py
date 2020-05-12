@@ -24,13 +24,16 @@ import time
 import typing
 import random
 import progressbar
+import collections
 
 import numpy as np
 
+from deeplearning.clgen import cache
 from deeplearning.clgen import errors
 from deeplearning.clgen.proto import model_pb2
 from labm8.py import app
 from labm8.py import humanize
+
 from eupy.native import logger as l
 
 FLAGS = app.FLAGS
@@ -292,18 +295,25 @@ class TensorflowBatchGenerator(object):
     return batch
 
 class MaskLMBatchGenerator(object):
-  def __init__(
-    self, corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
+  def __init__(self,
+               corpus: "corpuses.Corpus",
+               training_opts: model_pb2.TrainingOptions,
+               cache_path,
+               tf, 
   ):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.__init__()")
     self.corpus = corpus
     self.training_opts = training_opts
+    self.cache_path = cache_path
+    self.tfRecord = "maskedDataset.tf_record"
+    self.tf = tf
 
     # Lazily instantiated.
     self.original_encoded_corpus = None
     self.encoded_corpus = None
     self.num_batches = 0
     self.masked_corpus = None
+    self.sequence_length = self.training_opts.sequence_length
     if self.training_opts.random_seed:
       self.rngen = random.Random(training_opts.random_seed)
     else:
@@ -316,22 +326,24 @@ class MaskLMBatchGenerator(object):
     return
 
   def generateTfDataset(self,
-                      tf,
                       max_seq_length,
                       is_training,
                       num_cpu_threads,
                       ) -> "tf.Dataset":
 
-    def _decode_record(self, record, name_to_features):
+    def _decode_record(record, name_to_features):
       """Decodes a record to a TensorFlow example."""
-      example = tf.parse_single_example(record, name_to_features)
+      ## This function assumes record is still a file (expressed as TF dataset)
+      ## It decodes this record to tf scalars.
+      ## You already have them so this will be skipped
+      example = self.tf.io.parse_single_example(record, name_to_features)
 
       # tf.Example only supports tf.int64, but the TPU only supports tf.int32.
       # So cast all int64 to int32.
       for name in list(example.keys()):
         t = example[name]
-        if t.dtype == tf.int64:
-          t = tf.to_int32(t)
+        if t.dtype == self.tf.int64:
+          t = self.tf.to_int32(t)
         example[name] = t
 
       return example
@@ -351,23 +363,23 @@ class MaskLMBatchGenerator(object):
       # For training, we want a lot of parallel reading and shuffling.
       # For eval, we want no shuffling and parallel reading doesn't matter.
       if is_training:
-        d = tf.data.Dataset.from_tensor_slices(tf.constant(self.masked_corpus))
+        d = tf.data.Dataset.from_tensor_slices(tf.constant("""Insert here the tfRecord file"""))
         d = d.repeat()
-        d = d.shuffle(buffer_size=len(self.masked_corpus))
+        d = d.shuffle(buffer_size=len("""The input file"""))
 
         # `cycle_length` is the number of parallel files that get read.
-        cycle_length = min(num_cpu_threads, len(self.masked_corpus))
+        cycle_length = min(num_cpu_threads, len("""The input file"""))
 
         # `sloppy` mode means that the interleaving is not exact. This adds
         # even more randomness to the training pipeline.
         d = d.apply(
-            tf.contrib.data.parallel_interleave(
+            tf.data.experimental.parallel_interleave(
                 tf.data.TFRecordDataset,
                 sloppy=is_training,
                 cycle_length=cycle_length))
         d = d.shuffle(buffer_size=100)
       else:
-        d = tf.data.TFRecordDataset(self.masked_corpus)
+        d = tf.data.TFRecordDataset("""The input file""")
         # Since we evaluate for a fixed number of steps we don't want to encounter
         # out-of-range exceptions.
         d = d.repeat()
@@ -377,8 +389,8 @@ class MaskLMBatchGenerator(object):
       # and we *don't* want to drop the remainder, otherwise we wont cover
       # every sample.
       d = d.apply(
-          tf.contrib.data.map_and_batch(
-              lambda record: self._decode_record(record, name_to_features),
+          tf.data.experimental.map_and_batch(
+              lambda record: _decode_record(record, name_to_features),
               batch_size=batch_size,
               num_parallel_batches=num_cpu_threads,
               drop_remainder=True))
@@ -398,19 +410,17 @@ class MaskLMBatchGenerator(object):
 
     self.encoded_corpus = np.concatenate(self.original_encoded_corpus)
     batch_size = self.training_opts.batch_size
-    sequence_length = self.training_opts.sequence_length
 
     # set corpus size and number of batches
     self.num_batches = int(
-      len(self.encoded_corpus) / (batch_size * sequence_length)
+      len(self.encoded_corpus) / (batch_size * self.sequence_length)
     )
     if self.num_batches == 0:
       raise errors.UserError(
         "Not enough data. Use a smaller sequence_length and batch_size"
       )
-
     # split into batches
-    clipped_corpus_length = self.num_batches * batch_size * sequence_length
+    clipped_corpus_length = self.num_batches * batch_size * self.sequence_length
     clipped_corpus = self.encoded_corpus[:clipped_corpus_length]
 
     shaped_corpus = np.split(clipped_corpus.reshape(batch_size, -1), self.num_batches, 1)
@@ -441,30 +451,32 @@ class MaskLMBatchGenerator(object):
 
     with progressbar.ProgressBar(max_value = len(flattened_corpus)) as bar:
         for idx, batch in enumerate(flattened_corpus):
-          masked_corpus.append(self.maskBatch(batch))
+          masked_corpus.extend(self.maskBatch(batch))
           bar.update(idx)
     return masked_corpus
 
   def maskBatch(self, batch):
-    training_batch = {
-                      'input_ids'           : [], 
-                      'masked_lm_positions' : [],
-                      'masked_lm_ids'       : [],
-                      }
+    # training_batch = {
+    #                   'input_ids'           : [], 
+    #                   'masked_lm_positions' : [],
+    #                   'masked_lm_ids'       : [],
+    #                   }
 
+    out_batch = []
     for seq in batch:
       x, ypos, ytok = self.maskSequence(seq)
-      training_batch['input_ids'].append(x)
-      training_batch['masked_lm_positions'].append(ypos)
-      training_batch['masked_lm_ids'].append(ytok)
+      out_batch.append(MaskBatch(np.asarray(x), np.asarray(ypos), np.asarray(ytok)))
+      # training_batch['input_ids'].append(x)
+      # training_batch['masked_lm_positions'].append(ypos)
+      # training_batch['masked_lm_ids'].append(ytok)
 
-    batch = MaskBatch(
-                np.asarray(training_batch['input_ids']),
-                np.asarray(training_batch['masked_lm_positions']),
-                np.asarray(training_batch['masked_lm_ids'])
-              )
-                        
-    return batch
+    # batch = MaskBatch(
+    #             np.asarray(training_batch['input_ids']),
+    #             np.asarray(training_batch['masked_lm_positions']),
+    #             np.asarray(training_batch['masked_lm_ids'])
+    #           )
+                 
+    return out_batch
 
   def maskSequence(self,
                    seq: np.array,
@@ -508,14 +520,55 @@ class MaskLMBatchGenerator(object):
     masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
 
     masked_lm_positions = []
-    masked_lm_tokens = []
+    masked_lm_ids = []
     for p in masked_lms:
       masked_lm_positions.append(p.pos_index)
-      masked_lm_tokens.append(p.token_id)
+      masked_lm_ids.append(p.token_id)
+    while len(masked_lm_positions) < self.training_opts.max_predictions_per_seq:
+        masked_lm_positions.append(0)
+        masked_lm_ids.append(0)
 
-    return (output_tokens, masked_lm_positions, masked_lm_tokens)
+    return (output_tokens, masked_lm_positions, masked_lm_ids)
 
   def saveMaskedCorpus(self) -> None:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.saveMaskedCorpus()")
-    l.getLogger().warning("saveMaskedCorpus is not implemented!")
+     
+    maskPath = cache.cachepath(self.cache_path, "corpus", "maskedTF")
+    maskPath.mkdir(exist_ok = True, parents = True)
+
+    self.tfRecord = str(maskPath / self.tfRecord)
+    writer = self.tf.io.TFRecordWriter(self.tfRecord)
+
+    total_written = 0
+    for (inst_index, instance) in enumerate(self.masked_corpus):
+      input_ids = instance.input_ids
+
+      assert len(input_ids) == self.sequence_length
+
+      masked_lm_positions = instance.masked_lm_positions
+      masked_lm_ids = instance.masked_lm_ids
+
+      features = collections.OrderedDict()
+      features["input_ids"] = self.tf.train.Feature(
+                                            int64_list = self.tf.train.Int64List(
+                                                                value = list(input_ids)
+                                                                )
+                                            )
+      features["masked_lm_positions"] = self.tf.train.Feature(
+                                            int64_list = self.tf.train.Int64List(
+                                                                value = list(masked_lm_positions)
+                                                                )
+                                            )
+      features["masked_lm_ids"] = self.tf.train.Feature(
+                                            int64_list = self.tf.train.Int64List(
+                                                                value = list(masked_lm_ids)
+                                                                )
+                                            )
+
+      tf_example = self.tf.train.Example(features=self.tf.train.Features(feature=features))
+      writer.write(tf_example.SerializeToString())
+      total_written += 1
+
+    writer.close()
+    l.getLogger().info("Wrote {} total instances to {}".format(total_written, self.tfRecord))
     return
