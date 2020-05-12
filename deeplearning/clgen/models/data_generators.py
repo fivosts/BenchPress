@@ -568,5 +568,6 @@ class MaskLMBatchGenerator(object):
       total_written += 1
 
     writer.close()
+    ## TODO print num_batches x batch_size (a.k.a. 185 * 64) instead of 11840
     l.getLogger().info("Wrote {} instances to {}".format(total_written, self.tfRecord))
     return
