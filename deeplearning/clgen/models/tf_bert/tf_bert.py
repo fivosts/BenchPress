@@ -20,6 +20,7 @@ from __future__ import print_function
 
 import os
 import tensorflow as tf
+tf.compat.v1.disable_eager_execution()
 import typing
 
 from deeplearning.clgen.models.tf_bert import model
@@ -43,7 +44,7 @@ app.DEFINE_string(
     "init_checkpoint", None,
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
-app.DEFINE_boolean("do_train", False, "Whether to run training.")
+app.DEFINE_boolean("do_train", True, "Whether to run training.")
 
 app.DEFINE_boolean("do_eval", False, "Whether to run eval on the dev set.")
 
@@ -156,14 +157,14 @@ class tfBert(backends.BackendBase):
         l.getLogger().info("  name = %s, shape = %s" % (name, features[name].shape))
 
       input_ids = features["input_ids"]
-      input_mask = features["input_mask"]
-      segment_ids = features["segment_ids"]
+      # input_mask = features["input_mask"]
+      # segment_ids = features["segment_ids"]
       masked_lm_positions = features["masked_lm_positions"]
       masked_lm_ids = features["masked_lm_ids"]
-      masked_lm_weights = features["masked_lm_weights"]
-      next_sentence_labels = features["next_sentence_labels"]
+      # masked_lm_weights = features["masked_lm_weights"]
+      # next_sentence_labels = features["next_sentence_labels"]
 
-      is_training = (mode == tf.estimator.ModeKeys.TRAIN)
+      is_training = (mode == tf.compat.v1.estimator.ModeKeys.TRAIN)
 
       model = modeling.BertModel(
           config=bert_config,
@@ -210,7 +211,7 @@ class tfBert(backends.BackendBase):
                         init_string)
 
       output_spec = None
-      if mode == tf.estimator.ModeKeys.TRAIN:
+      if mode == tf.compat.v1.estimator.ModeKeys.TRAIN:
         train_op = optimizer.create_optimizer(
             total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
 
@@ -219,7 +220,7 @@ class tfBert(backends.BackendBase):
             loss=total_loss,
             train_op=train_op,
             scaffold_fn=scaffold_fn)
-      elif mode == tf.estimator.ModeKeys.EVAL:
+      elif mode == tf.compat.v1.estimator.ModeKeys.EVAL:
 
         def metric_fn(masked_lm_example_loss, masked_lm_log_probs, masked_lm_ids,
                       masked_lm_weights, next_sentence_example_loss,
@@ -374,7 +375,9 @@ class tfBert(backends.BackendBase):
 
     ## Initialize params and data generator
     self.ConfigModelParams()
-    self.data_generator = data_generators.MaskLMBatchGenerator(corpus, self.config.training)
+    self.data_generator = data_generators.MaskLMBatchGenerator(
+                                          corpus, self.config.training, self.cache.path, tf
+                                          )
 
     ## Generate BERT Model from dict params
     bert_config = model.BertConfig.from_dict(self.bertConfig)
@@ -427,21 +430,20 @@ class tfBert(backends.BackendBase):
 
     if FLAGS.do_train:
       l.getLogger().info("***** Running training *****")
-      l.getLogger().info("  Batch size = %d", FLAGS.train_batch_size)
-      train_input_fn = data_generator.generateTfDataset(
-          tf = tf,
-          max_seq_length=self.sequence_length,
+      l.getLogger().info("  Batch size = {}".format(self.train_batch_size))
+      train_input_fn = self.data_generator.generateTfDataset(
+          max_seq_length = self.max_seq_length,
           num_cpu_threads = 8,
-          is_training=True)
-      estimator.train(input_fn=train_input_fn, max_steps=FLAGS.num_train_steps)
+          is_training = True)
+      estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
 
     if FLAGS.do_eval:
       l.getLogger().info("***** Running evaluation *****")
       l.getLogger().info("  Batch size = %d", FLAGS.eval_batch_size)
 
-      eval_input_fn = data_generator.generateTfDataset(
+      eval_input_fn = self.data_generator.generateTfDataset(
           tf = tf,
-          max_seq_length=self.sequence_length,
+          max_seq_length=self.max_seq_length,
           num_cpu_threads = 8,
           is_training=False)
 
