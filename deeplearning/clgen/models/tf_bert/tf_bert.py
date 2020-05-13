@@ -435,6 +435,7 @@ class tfBert(backends.BackendBase):
           num_cpu_threads = 8,
           is_training = True)
       estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
+      l.getLogger().critical(estimator.loss)
 
     if FLAGS.do_eval:
       l.getLogger().info("***** Running evaluation *****")
