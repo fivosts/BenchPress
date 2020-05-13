@@ -284,7 +284,7 @@ class tfBert(backends.BackendBase):
                            label_weights
                            ):
     """Get loss and log probs for the masked LM."""
-    input_tensor = gather_indexes(input_tensor, positions)
+    input_tensor = self.gather_indexes(input_tensor, positions)
 
     with tf.variable_scope("cls/predictions"):
       # We apply one more non-linear transformation before the output layer.
@@ -353,7 +353,7 @@ class tfBert(backends.BackendBase):
       return (loss, per_example_loss, log_probs)
 
 
-  def gather_indexes(sequence_tensor, positions):
+  def gather_indexes(self, sequence_tensor, positions):
     """Gathers the vectors at the specific positions over a minibatch."""
     sequence_shape = model.get_shape_list(sequence_tensor, expected_rank=3)
     batch_size = sequence_shape[0]
