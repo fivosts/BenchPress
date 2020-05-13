@@ -185,7 +185,7 @@ class tfBert(backends.BackendBase):
 
       total_loss = masked_lm_loss + next_sentence_loss
 
-      tvars = tf.trainable_variables()
+      tvars = tf.compat.v1.trainable_variables()
 
       initialized_variable_names = {}
       scaffold_fn = None
@@ -207,8 +207,7 @@ class tfBert(backends.BackendBase):
         init_string = ""
         if var.name in initialized_variable_names:
           init_string = ", *INIT_FROM_CKPT*"
-        l.getLogger().info("  name = %s, shape = %s%s", var.name, var.shape,
-                        init_string)
+        l.getLogger().info("  name = {}, shape = {}{}".format(var.name, var.shape, init_string))
 
       output_spec = None
       if mode == tf.compat.v1.estimator.ModeKeys.TRAIN:
@@ -286,11 +285,11 @@ class tfBert(backends.BackendBase):
     """Get loss and log probs for the masked LM."""
     input_tensor = self.gather_indexes(input_tensor, positions)
 
-    with tf.variable_scope("cls/predictions"):
+    with tf.compat.v1.variable_scope("cls/predictions"):
       # We apply one more non-linear transformation before the output layer.
       # This matrix is not used after pre-training.
-      with tf.variable_scope("transform"):
-        input_tensor = tf.layers.dense(
+      with tf.compat.v1.variable_scope("transform"):
+        input_tensor = tf.compat.v1.layers.dense(
             input_tensor,
             units=bert_config.hidden_size,
             activation=model.get_activation(bert_config.hidden_act),
@@ -300,7 +299,7 @@ class tfBert(backends.BackendBase):
 
       # The output weights are the same as the input embeddings, but there is
       # an output-only bias for each token.
-      output_bias = tf.get_variable(
+      output_bias = tf.compat.v1.get_variable(
           "output_bias",
           shape=[bert_config.vocab_size],
           initializer=tf.zeros_initializer())
@@ -335,12 +334,12 @@ class tfBert(backends.BackendBase):
 
     # Simple binary classification. Note that 0 is "next sentence" and 1 is
     # "random sentence". This weight matrix is not used after pre-training.
-    with tf.variable_scope("cls/seq_relationship"):
-      output_weights = tf.get_variable(
+    with tf.compat.v1.variable_scope("cls/seq_relationship"):
+      output_weights = tf.compat.v1.get_variable(
           "output_weights",
           shape=[2, bert_config.hidden_size],
           initializer=model.create_initializer(bert_config.initializer_range))
-      output_bias = tf.get_variable(
+      output_bias = tf.compat.v1.get_variable(
           "output_bias", shape=[2], initializer=tf.zeros_initializer())
 
       logits = tf.matmul(input_tensor, output_weights, transpose_b=True)
