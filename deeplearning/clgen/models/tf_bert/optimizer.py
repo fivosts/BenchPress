@@ -74,14 +74,10 @@ def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu):
   # This is how the model was pre-trained.
   (grads, _) = tf.clip_by_global_norm(grads, clip_norm=1.0)
 
-  train_op = optimizer.apply_gradients(
+  train_op, global_step = optimizer.apply_gradients(
       zip(grads, tvars), global_step=global_step)
 
-  # Normally the global step update is done inside of `apply_gradients`.
-  # However, `AdamWeightDecayOptimizer` doesn't do this. But if you use
-  # a different optimizer, you should probably take this line out.
-  new_global_step = global_step + 1
-  train_op = tf.group(train_op, [global_step.assign(new_global_step)])
+  train_op = tf.group(train_op, [global_step])
   return train_op
 
 
@@ -108,6 +104,10 @@ class AdamWeightDecayOptimizer(tf.compat.v1.train.Optimizer):
 
   def apply_gradients(self, grads_and_vars, global_step=None, name=None):
     """See base class."""
+    if global_step is None:
+      global_step = tf.compat.v1.get_global_step()
+    global_step = tf.compat.v1.assign(global_step, global_step + 1)
+
     assignments = []
     for (grad, param) in grads_and_vars:
       if grad is None or param is None:
@@ -155,7 +155,7 @@ class AdamWeightDecayOptimizer(tf.compat.v1.train.Optimizer):
           [param.assign(next_param),
            m.assign(next_m),
            v.assign(next_v)])
-    return tf.group(*assignments, name=name)
+    return tf.group(*assignments, name=name), global_step
 
   def _do_use_weight_decay(self, param_name):
     """Whether to use L2 weight decay for `param_name`."""
