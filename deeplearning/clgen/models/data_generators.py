@@ -558,6 +558,8 @@ class MaskLMBatchGenerator(object):
 
       masked_lm_positions = instance.masked_lm_positions
       masked_lm_ids = instance.masked_lm_ids
+      masked_lm_weights = instance.masked_lm_weights
+      next_sentence_label = instance.next_sentence_label
 
       features = collections.OrderedDict()
       features["input_ids"] = self.tf.train.Feature(
@@ -578,6 +580,11 @@ class MaskLMBatchGenerator(object):
       features["masked_lm_weights"] = self.tf.train.Feature(
                                             float_list=tf.train.FloatList(
                                                                 value=list(masked_lm_weights)
+                                                                )
+                                            )
+      features["next_sentence_labels"] = self.tf.train.Feature(
+                                            int64_list = self.tf.train.Int64List(
+                                                                value = list([next_sentence_label])
                                                                 )
                                             )
       tf_example = self.tf.train.Example(features=self.tf.train.Features(feature=features))
