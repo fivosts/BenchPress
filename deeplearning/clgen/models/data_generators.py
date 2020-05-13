@@ -50,7 +50,7 @@ class MaskBatch(typing.NamedTuple):
   masked_lm_positions       : np.array
   masked_lm_ids             : np.array
   masked_lm_weights         : np.array
-  next_sentence_label       : np.int32
+  next_sentence_label       : np.int32 ## TODO
 
 def LogBatchTelemetry(
   batch, steps_per_epoch: int, num_epochs: int
@@ -469,12 +469,6 @@ class MaskLMBatchGenerator(object):
     return masked_corpus
 
   def maskBatch(self, batch):
-    # training_batch = {
-    #                   'input_ids'           : [], 
-    #                   'masked_lm_positions' : [],
-    #                   'masked_lm_ids'       : [],
-    #                   }
-
     out_batch = []
     for seq in batch:
       x, ypos, ytok, ywei = self.maskSequence(seq)
@@ -484,16 +478,6 @@ class MaskLMBatchGenerator(object):
                                  np.asarray(ywei)
                                  )
                       )
-      # training_batch['input_ids'].append(x)
-      # training_batch['masked_lm_positions'].append(ypos)
-      # training_batch['masked_lm_ids'].append(ytok)
-
-    # batch = MaskBatch(
-    #             np.asarray(training_batch['input_ids']),
-    #             np.asarray(training_batch['masked_lm_positions']),
-    #             np.asarray(training_batch['masked_lm_ids'])
-    #           )
-                 
     return out_batch
 
   def maskSequence(self,
