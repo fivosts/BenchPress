@@ -578,7 +578,7 @@ class MaskLMBatchGenerator(object):
                                                                 )
                                             )
       features["masked_lm_weights"] = self.tf.train.Feature(
-                                            float_list=tf.train.FloatList(
+                                            float_list = self.tf.train.FloatList(
                                                                 value=list(masked_lm_weights)
                                                                 )
                                             )
