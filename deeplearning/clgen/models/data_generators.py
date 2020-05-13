@@ -524,10 +524,12 @@ class MaskLMBatchGenerator(object):
     masked_lm_positions = []
     masked_lm_ids = []
     masked_lm_weights = []
-    next_sentence_label = np.int32(1)
-    ## Related to next_sentence_label: Fix it to 1 for now, as no next_sentence prediction
+    next_sentence_label = np.int32(0)
+    ## Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
     ## is intended on kernels. In any other case, check bert's create_instances_from_document
     ## to see how next_sentence_labels are calculated.
+    ## Setting this to 0 means that next sentence is NOT random.
+    ## Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.
 
     for p in masked_lms:
       masked_lm_positions.append(p.pos_index)
