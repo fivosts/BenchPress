@@ -471,11 +471,12 @@ class MaskLMBatchGenerator(object):
   def maskBatch(self, batch):
     out_batch = []
     for seq in batch:
-      x, ypos, ytok, ywei = self.maskSequence(seq)
+      x, mask_pos, mask_tok, mask_wei, next_sentence_label = self.maskSequence(seq)
       out_batch.append(MaskBatch(np.asarray(x), 
-                                 np.asarray(ypos), 
-                                 np.asarray(ytok), 
-                                 np.asarray(ywei)
+                                 np.asarray(mask_pos), 
+                                 np.asarray(mask_tok), 
+                                 np.asarray(mask_wei),
+                                 next_sentence_label
                                  )
                       )
     return out_batch
