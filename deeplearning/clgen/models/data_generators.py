@@ -314,7 +314,6 @@ class MaskLMBatchGenerator(object):
     self._original_encoded_corpus = None
     self.shaped_corpus = None
     self.num_batches = None
-    self.corpus_length = None
     self.sequence_length = self.training_opts.sequence_length
 
     if self.training_opts.random_seed:
@@ -455,8 +454,6 @@ class MaskLMBatchGenerator(object):
     flattened_corpus = []
     for _ in range(self.training_opts.dupe_factor): # This enables multiprocessing
       flattened_corpus.extend(corpus)
-
-    self.corpus_length = len(flattened_corpus)
 
     with progressbar.ProgressBar(max_value = len(flattened_corpus)) as bar:
         for idx, batch in enumerate(flattened_corpus):
