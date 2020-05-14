@@ -70,6 +70,12 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         "NetworkArchitecture.post_layer_dropout_micros "
         "must be >= 0 and <= 1000000",
       )
+      pbutil.AssertFieldConstraint(
+        config.training,
+        "num_epochs",
+        lambda x: 0 < x,
+        "TrainingOptions.num_epochs must be > 0",
+      )
     elif config.architecture.backend == model_pb2.NetworkArchitecture.TENSORFLOW_BERT:
       ## .architecture params
       pbutil.AssertFieldIsSet(
@@ -135,12 +141,7 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         lambda x: 0 <= x,
         "TrainingOptions.random_seed must be >= 0",
       )
-    pbutil.AssertFieldConstraint(
-      config.training,
-      "num_epochs",
-      lambda x: 0 < x,
-      "TrainingOptions.num_epochs must be > 0",
-    )
+
     pbutil.AssertFieldConstraint(
       config.training,
       "sequence_length",
@@ -164,30 +165,32 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         lambda x: 0 <= x,
         "AdamOptimizer.initial_learning_rate_micros must be >= 0",
       )
-      pbutil.AssertFieldConstraint(
-        config.training.adam_optimizer,
-        "learning_rate_decay_per_epoch_micros",
-        lambda x: 0 <= x,
-        "AdamOptimizer.learning_rate_decay_per_epoch_micros must be >= 0",
-      )
-      pbutil.AssertFieldConstraint(
-        config.training.adam_optimizer,
-        "beta_1_micros",
-        lambda x: 0 <= x <= 1000000,
-        "AdamOptimizer.beta_1_micros must be >= 0 and <= 1000000",
-      )
-      pbutil.AssertFieldConstraint(
-        config.training.adam_optimizer,
-        "beta_2_micros",
-        lambda x: 0 <= x <= 1000000,
-        "AdamOptimizer.beta_2_micros must be >= 0 and <= 1000000",
-      )
-      pbutil.AssertFieldConstraint(
-        config.training.adam_optimizer,
-        "normalized_gradient_clip_micros",
-        lambda x: 0 <= x,
-        "AdamOptimizer.normalized_gradient_clip_micros must be >= 0",
-      )
+      if config.architecture.backend == model_pb2.NetworkArchitecture.KERAS_SEQ or
+         config.architecture.backend == model_pb2.NetworkArchitecture.TENSORFLOW_SEQ:
+        pbutil.AssertFieldConstraint(
+          config.training.adam_optimizer,
+          "learning_rate_decay_per_epoch_micros",
+          lambda x: 0 <= x,
+          "AdamOptimizer.learning_rate_decay_per_epoch_micros must be >= 0",
+        )
+        pbutil.AssertFieldConstraint(
+          config.training.adam_optimizer,
+          "beta_1_micros",
+          lambda x: 0 <= x <= 1000000,
+          "AdamOptimizer.beta_1_micros must be >= 0 and <= 1000000",
+        )
+        pbutil.AssertFieldConstraint(
+          config.training.adam_optimizer,
+          "beta_2_micros",
+          lambda x: 0 <= x <= 1000000,
+          "AdamOptimizer.beta_2_micros must be >= 0 and <= 1000000",
+        )
+        pbutil.AssertFieldConstraint(
+          config.training.adam_optimizer,
+          "normalized_gradient_clip_micros",
+          lambda x: 0 <= x,
+          "AdamOptimizer.normalized_gradient_clip_micros must be >= 0",
+        )
     elif config.training.HasField("rmsprop_optimizer"):
       pbutil.AssertFieldConstraint(
         config.training.rmsprop_optimizer,
