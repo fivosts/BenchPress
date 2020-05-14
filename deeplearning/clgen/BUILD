@@ -251,3 +251,11 @@ py_test(
         "//labm8/py:test",
     ],
 )
+
+py_library(
+    name = "tf",
+    srcs = ["tf.py"],
+    visibility = ["//visibility:public"],
+    deps = [
+    ],
+)
