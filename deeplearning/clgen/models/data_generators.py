@@ -310,9 +310,9 @@ class MaskLMBatchGenerator(object):
     self.tf = tf
 
     # Lazily instantiated.
-    self._masked_corpus = None
+    self.masked_corpus = None
     self._original_encoded_corpus = None
-    self._encoded_corpus = None
+    self.shaped_corpus = None
     self.num_batches = None
     self.corpus_length = None
     self.sequence_length = self.training_opts.sequence_length
@@ -322,12 +322,11 @@ class MaskLMBatchGenerator(object):
     else:
       self.rngen = random.Random()
 
-
+    self.CreateCorpus()
 
     if not self.tfRecord.exists():
-      self.CreateCorpus()
-
-    self.dataset = self.LoadCorpus()
+      self.masked_corpus = self.MaskCorpus(shaped_corpus)
+      self.saveMaskedCorpus()
 
     return
 
@@ -420,12 +419,12 @@ class MaskLMBatchGenerator(object):
       shuffle=self.training_opts.shuffle_corpus_contentfiles_between_epochs
     )
 
-    self._encoded_corpus = np.concatenate(self._original_encoded_corpus)
+    encoded_corpus = np.concatenate(self._original_encoded_corpus)
     batch_size = self.training_opts.batch_size
 
     # set corpus size and number of batches
     self.num_batches = int(
-      len(self._encoded_corpus) / (batch_size * self.sequence_length)
+      len(encoded_corpus) / (batch_size * self.sequence_length)
     )
     if self.num_batches == 0:
       raise errors.UserError(
@@ -433,34 +432,26 @@ class MaskLMBatchGenerator(object):
       )
     # split into batches
     clipped_corpus_length = self.num_batches * batch_size * self.sequence_length
-    clipped_corpus = self._encoded_corpus[:clipped_corpus_length]
+    clipped_corpus = encoded_corpus[:clipped_corpus_length]
     ## TODO remove clipping
-    shaped_corpus = np.split(clipped_corpus.reshape(batch_size, -1), self.num_batches, 1)
-    
-    self._masked_corpus = self.MaskCorpus(shaped_corpus)
-    self.saveMaskedCorpus()
-    
+    self.shaped_corpus = np.split(clipped_corpus.reshape(batch_size, -1), self.num_batches, 1)
     self.num_batches = self.num_batches * int(self.training_opts.dupe_factor)
 
     l.getLogger().info(
-      "Masked corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
+      "Loaded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
                 humanize.Commas(clipped_corpus_length),
-                humanize.Commas(len(self._encoded_corpus) - clipped_corpus_length),
+                humanize.Commas(len(encoded_corpus) - clipped_corpus_length),
                 humanize.Commas(int((time.time() - start_time) * 1000)),
             )
     )
     return
 
-  def LoadCorpus(self):
-    return self.tf.io.gfile.glob(str(self.tfRecord))
-
   def MaskCorpus(self, 
                  corpus: np.array
-                )-> list:
+                )-> None:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.MaskCorpus()")
     l.getLogger().warn("Masking Corpus is a slow process. Assign multiple threads to it")
 
-    masked_corpus = []
     flattened_corpus = []
     for _ in range(self.training_opts.dupe_factor): # This enables multiprocessing
       flattened_corpus.extend(corpus)
@@ -469,9 +460,9 @@ class MaskLMBatchGenerator(object):
 
     with progressbar.ProgressBar(max_value = len(flattened_corpus)) as bar:
         for idx, batch in enumerate(flattened_corpus):
-          masked_corpus.extend(self.maskBatch(batch))
+          self.masked_corpus.extend(self.maskBatch(batch))
           bar.update(idx)
-    return masked_corpus
+    return
 
   def maskBatch(self, batch):
     out_batch = []
@@ -556,7 +547,7 @@ class MaskLMBatchGenerator(object):
     writer = self.tf.io.TFRecordWriter(str(self.tfRecord))
 
     total_written = 0
-    for (inst_index, instance) in enumerate(self._masked_corpus):
+    for (inst_index, instance) in enumerate(self.masked_corpus):
       input_ids = instance.input_ids
 
       assert len(input_ids) == self.sequence_length
