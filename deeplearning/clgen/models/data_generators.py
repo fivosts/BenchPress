@@ -310,7 +310,7 @@ class MaskLMBatchGenerator(object):
     self.tf = tf
 
     # Lazily instantiated.
-    self.masked_corpus = None
+    self._masked_corpus = None
     self._original_encoded_corpus = None
     self.shaped_corpus = None
     self.num_batches = None
@@ -324,7 +324,7 @@ class MaskLMBatchGenerator(object):
     self.CreateCorpus()
 
     if not self.tfRecord.exists():
-      self.masked_corpus = self.MaskCorpus(shaped_corpus)
+      self.MaskCorpus(self.shaped_corpus)
       self.saveMaskedCorpus()
 
     return
@@ -370,15 +370,16 @@ class MaskLMBatchGenerator(object):
               self.tf.io.FixedLenFeature([1], self.tf.int64),
       }
 
+      dataset = self.tf.io.gfile.glob(str(self.tfRecord))
       # For training, we want a lot of parallel reading and shuffling.
       # For eval, we want no shuffling and parallel reading doesn't matter.
       if is_training:
-        d = self.tf.data.Dataset.from_tensor_slices(self.tf.constant(self.dataset))
+        d = self.tf.data.Dataset.from_tensor_slices(self.tf.constant(dataset))
         d = d.repeat()
-        d = d.shuffle(buffer_size=len(self.dataset))
+        d = d.shuffle(buffer_size=len(dataset))
 
         # `cycle_length` is the number of parallel files that get read.
-        cycle_length = min(num_cpu_threads, len(self.dataset))
+        cycle_length = min(num_cpu_threads, len(dataset))
 
         # `sloppy` mode means that the interleaving is not exact. This adds
         # even more randomness to the training pipeline.
@@ -389,7 +390,7 @@ class MaskLMBatchGenerator(object):
                 cycle_length=cycle_length))
         d = d.shuffle(buffer_size=100)
       else:
-        d = self.tf.data.TFRecordDataset(self.dataset)
+        d = self.tf.data.TFRecordDataset(dataset)
         # Since we evaluate for a fixed number of steps we don't want to encounter
         # out-of-range exceptions.
         d = d.repeat()
@@ -451,13 +452,14 @@ class MaskLMBatchGenerator(object):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.MaskCorpus()")
     l.getLogger().warn("Masking Corpus is a slow process. Assign multiple threads to it")
 
+    self._masked_corpus = []
     flattened_corpus = []
     for _ in range(self.training_opts.dupe_factor): # This enables multiprocessing
       flattened_corpus.extend(corpus)
 
     with progressbar.ProgressBar(max_value = len(flattened_corpus)) as bar:
         for idx, batch in enumerate(flattened_corpus):
-          self.masked_corpus.extend(self.maskBatch(batch))
+          self._masked_corpus.extend(self.maskBatch(batch))
           bar.update(idx)
     return
 
@@ -544,7 +546,7 @@ class MaskLMBatchGenerator(object):
     writer = self.tf.io.TFRecordWriter(str(self.tfRecord))
 
     total_written = 0
-    for (inst_index, instance) in enumerate(self.masked_corpus):
+    for (inst_index, instance) in enumerate(self._masked_corpus):
       input_ids = instance.input_ids
 
       assert len(input_ids) == self.sequence_length
