@@ -322,6 +322,8 @@ class MaskLMBatchGenerator(object):
     else:
       self.rngen = random.Random()
 
+
+
     if not self.tfRecord.exists():
       self.CreateCorpus()
 
@@ -432,7 +434,7 @@ class MaskLMBatchGenerator(object):
     # split into batches
     clipped_corpus_length = self.num_batches * batch_size * self.sequence_length
     clipped_corpus = self._encoded_corpus[:clipped_corpus_length]
-
+    ## TODO remove clipping
     shaped_corpus = np.split(clipped_corpus.reshape(batch_size, -1), self.num_batches, 1)
     
     self._masked_corpus = self.MaskCorpus(shaped_corpus)
