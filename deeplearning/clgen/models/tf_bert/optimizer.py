@@ -1,17 +1,3 @@
-# coding=utf-8
-# Copyright 2018 The Google AI Language Team Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 """Functions and classes related to optimization (weight updates)."""
 
 from __future__ import absolute_import
@@ -21,8 +7,6 @@ from __future__ import print_function
 import re
 import tensorflow as tf
 tf.compat.v1.disable_eager_execution()
-# for gpu in tf.config.experimental.list_physical_devices('GPU'):
-#     tf.config.experimental.set_memory_growth(gpu, True)
 
 def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu):
   """Creates an optimizer training op."""
