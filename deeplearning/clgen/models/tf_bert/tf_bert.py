@@ -128,7 +128,7 @@ class tfBert(backends.BackendBase):
           "initializer_range"               : self.config.architecture.initializer_range,
     }
 
-    self.num_epochs                         = self._getNumEpochs(self.config.training.num_train_steps)
+    self.num_epochs                         = 1 + (self.config.training.num_train_steps / corpus_len)
     self.max_seq_length                     = self.config.training.sequence_length
     self.train_batch_size                   = self.config.training.batch_size
     self.eval_batch_size                    = self.config.training.batch_size
@@ -147,7 +147,7 @@ class tfBert(backends.BackendBase):
     self.data_generator = data_generators.MaskLMBatchGenerator(
                                           corpus, self.config.training, self.cache.path, tf
                                           )
-    self._ConfigModelParams(corpus)
+    self._ConfigModelParams(self.data_generator.corpus_length)
 
     ## Generate BERT Model from dict params
     bert_config = model.BertConfig.from_dict(self.bertConfig)
@@ -205,8 +205,14 @@ class tfBert(backends.BackendBase):
           max_seq_length = self.max_seq_length,
           num_cpu_threads = 8,
           is_training = True)
-      estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
-      l.getLogger().critical(estimator.loss)
+
+      for i in range(1, self.num_epochs + 1):
+        l.getLogger("Epoch: {}".format(i))
+        steps = min(self.data_generator.corpus_length, self.num_train_steps - ((i - 1) * self.data_generator.corpus_length))
+        estimator.train(input_fn=train_input_fn, steps = steps)
+      
+
+      # l.getLogger().critical(estimator.loss)
 
     if FLAGS.do_eval:
       l.getLogger().info("***** Running evaluation *****")
@@ -485,7 +491,3 @@ class tfBert(backends.BackendBase):
                                       [batch_size * seq_length, width])
     output_tensor = tf.gather(flat_sequence_tensor, flat_positions)
     return output_tensor
-
-  def _getNumEpochs(self, num_steps):
-
-    return
