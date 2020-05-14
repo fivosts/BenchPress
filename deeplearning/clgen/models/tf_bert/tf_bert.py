@@ -19,8 +19,6 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-import tensorflow as tf
-tf.compat.v1.disable_eager_execution()
 import typing
 
 from deeplearning.clgen.models.tf_bert import model
@@ -29,24 +27,20 @@ from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import data_generators
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen import telemetry
+from deeplearning.clgen.tf import tf
 
 from eupy.native import logger as l
 from labm8.py import app
 
 FLAGS = app.FLAGS
 
-# FLAGS.DEFINE_string(
-#     "input_file", None,
-#     "Input TF example files (can be a glob or comma separated).")
-
-## Other parameters
 app.DEFINE_string(
     "init_checkpoint", None,
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
 app.DEFINE_boolean("do_train", True, "Whether to run training.")
 
-app.DEFINE_boolean("do_eval", False, "Whether to run eval on the dev set.")
+app.DEFINE_boolean("do_eval", True, "Whether to run eval on the dev set.")
 
 app.DEFINE_integer("save_checkpoints_steps", 1000,
                      "How often to save the model checkpoint.")
@@ -102,7 +96,6 @@ class tfBert(backends.BackendBase):
           "initializer_range"               : None,
     }
 
-    self.num_epochs                         = None
     self.max_seq_length                     = None
     self.train_batch_size                   = None
     self.eval_batch_size                    = None
@@ -112,7 +105,7 @@ class tfBert(backends.BackendBase):
     self.num_warmup_steps                   = None
     return
 
-  def _ConfigModelParams(self, corpus_len):
+  def _ConfigModelParams(self):
 
     self.bertConfig = {
           "vocab_size"                      : self.atomizer.vocab_size,
@@ -128,7 +121,6 @@ class tfBert(backends.BackendBase):
           "initializer_range"               : self.config.architecture.initializer_range,
     }
 
-    self.num_epochs                         = 1 + (self.config.training.num_train_steps / corpus_len)
     self.max_seq_length                     = self.config.training.sequence_length
     self.train_batch_size                   = self.config.training.batch_size
     self.eval_batch_size                    = self.config.training.batch_size
@@ -144,10 +136,10 @@ class tfBert(backends.BackendBase):
     del unused_kwargs
 
     ## Initialize params and data generator
+    self._ConfigModelParams()
     self.data_generator = data_generators.MaskLMBatchGenerator(
                                           corpus, self.config.training, self.cache.path, tf
                                           )
-    self._ConfigModelParams(self.data_generator.corpus_length)
 
     ## Generate BERT Model from dict params
     bert_config = model.BertConfig.from_dict(self.bertConfig)
@@ -164,6 +156,7 @@ class tfBert(backends.BackendBase):
       assert checkpoint_state.model_checkpoint_path
       ckpt_path, ckpt_paths = self.GetParamsPath(checkpoint_state)
 
+    l.getLogger().info("Checkpoint paths: \n{}\n{}".format(ckpt_path, ckpt_paths))
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
       tpu_cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
@@ -182,7 +175,7 @@ class tfBert(backends.BackendBase):
 
     model_fn = self._model_fn_builder(
         bert_config = bert_config,
-        init_checkpoint = FLAGS.init_checkpoint,
+        init_checkpoint = FLAGS.init_checkpoint, ## Fix this to be assigned automatically
         learning_rate = self.learning_rate,
         num_train_steps = self.num_train_steps,
         num_warmup_steps = self.num_warmup_steps,
@@ -206,20 +199,14 @@ class tfBert(backends.BackendBase):
           num_cpu_threads = 8,
           is_training = True)
 
-      for i in range(1, self.num_epochs + 1):
-        l.getLogger("Epoch: {}".format(i))
-        steps = min(self.data_generator.corpus_length, self.num_train_steps - ((i - 1) * self.data_generator.corpus_length))
-        estimator.train(input_fn=train_input_fn, steps = steps)
-      
-
-      # l.getLogger().critical(estimator.loss)
+      l.getLogger().info("Running model for {} steps".format(self.num_train_steps))
+      estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
 
     if FLAGS.do_eval:
       l.getLogger().info("***** Running evaluation *****")
-      l.getLogger().info("  Batch size = %d", FLAGS.eval_batch_size)
+      l.getLogger().info("  Batch size = {}".format(self.eval_batch_size))
 
       eval_input_fn = self.data_generator.generateTfDataset(
-          tf = tf,
           max_seq_length=self.max_seq_length,
           num_cpu_threads = 8,
           is_training=False)
@@ -227,12 +214,12 @@ class tfBert(backends.BackendBase):
       result = estimator.evaluate(
           input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
 
-      # output_eval_file = os.path.join(logfile_path, "eval_results.txt")
-      # with tf.gfile.GFile(output_eval_file, "w") as writer:
-      #   l.getLogger().info("***** Eval results *****")
-      #   for key in sorted(result.keys()):
-      #     l.getLogger().info("  %s = %s", key, str(result[key]))
-      #     writer.write("%s = %s\n" % (key, str(result[key])))
+      output_eval_file = os.path.join(logfile_path, "eval_results.txt")
+      with tf.io.gfile.GFile(output_eval_file, "w") as writer:
+        l.getLogger().info("***** Eval results *****")
+        for key in sorted(result.keys()):
+          l.getLogger().info("  {} = {}".format(key, str(result[key])))
+          writer.write("%s = %s\n" % (key, str(result[key])))
 
 
   def GetShortSummary(self) -> str:
@@ -277,9 +264,9 @@ class tfBert(backends.BackendBase):
     def _model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
       """The `model_fn` for TPUEstimator."""
 
-      l.getLogger().info("*** Features ***")
-      for name in sorted(features.keys()):
-        l.getLogger().info("  name = %s, shape = %s" % (name, features[name].shape))
+      # l.getLogger().info("*** Features ***")
+      # for name in sorted(features.keys()):
+      #   l.getLogger().info("  name = %s, shape = %s" % (name, features[name].shape))
 
       input_ids = features["input_ids"]
       # input_mask = features["input_mask"]
@@ -309,7 +296,8 @@ class tfBert(backends.BackendBase):
            bert_config, bert_model.get_pooled_output(), next_sentence_labels)
 
       total_loss = masked_lm_loss + next_sentence_loss
-
+      # print_op = tf.print(total_loss)
+      # with tf.control_dependencies([print_op]):
       tvars = tf.compat.v1.trainable_variables()
 
       initialized_variable_names = {}
@@ -327,23 +315,25 @@ class tfBert(backends.BackendBase):
         else:
           tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
-      l.getLogger().info("**** Trainable Variables ****")
-      for var in tvars:
-        init_string = ""
-        if var.name in initialized_variable_names:
-          init_string = ", *INIT_FROM_CKPT*"
-        l.getLogger().info("  name = {}, shape = {}{}".format(var.name, var.shape, init_string))
+      # l.getLogger().info("**** Trainable Variables ****")
+      # for var in tvars:
+      #   init_string = ""
+      #   if var.name in initialized_variable_names:
+      #     init_string = ", *INIT_FROM_CKPT*"
+      #   l.getLogger().info("  name = {}, shape = {}{}".format(var.name, var.shape, init_string))
 
       output_spec = None
       if mode == tf.compat.v1.estimator.ModeKeys.TRAIN:
         train_op = optimizer.create_optimizer(
             total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
 
+        loss_log_hook = tf.estimator.LoggingTensorHook({"loss": total_loss}, at_end = True)
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
-            mode=mode,
-            loss=total_loss,
-            train_op=train_op,
-            scaffold_fn=scaffold_fn)
+            mode = mode,
+            loss = total_loss,
+            train_op = train_op,
+            training_hooks = [loss_log_hook],
+            scaffold_fn = scaffold_fn)
       elif mode == tf.compat.v1.estimator.ModeKeys.EVAL:
 
         def _metric_fn(masked_lm_example_loss, masked_lm_log_probs, masked_lm_ids,
@@ -357,11 +347,11 @@ class tfBert(backends.BackendBase):
           masked_lm_example_loss = tf.reshape(masked_lm_example_loss, [-1])
           masked_lm_ids = tf.reshape(masked_lm_ids, [-1])
           masked_lm_weights = tf.reshape(masked_lm_weights, [-1])
-          masked_lm_accuracy = tf.metrics.accuracy(
+          masked_lm_accuracy = tf.compat.v1.metrics.accuracy(
               labels=masked_lm_ids,
               predictions=masked_lm_predictions,
               weights=masked_lm_weights)
-          masked_lm_mean_loss = tf.metrics.mean(
+          masked_lm_mean_loss = tf.compat.v1.metrics.mean(
               values=masked_lm_example_loss, weights=masked_lm_weights)
 
           next_sentence_log_probs = tf.reshape(
@@ -369,9 +359,9 @@ class tfBert(backends.BackendBase):
           next_sentence_predictions = tf.argmax(
               next_sentence_log_probs, axis=-1, output_type=tf.int32)
           next_sentence_labels = tf.reshape(next_sentence_labels, [-1])
-          next_sentence_accuracy = tf.metrics.accuracy(
+          next_sentence_accuracy = tf.compat.v1.metrics.accuracy(
               labels=next_sentence_labels, predictions=next_sentence_predictions)
-          next_sentence_mean_loss = tf.metrics.mean(
+          next_sentence_mean_loss = tf.compat.v1.metrics.mean(
               values=next_sentence_example_loss)
 
           return {
@@ -389,6 +379,7 @@ class tfBert(backends.BackendBase):
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
             mode=mode,
             loss=total_loss,
+            ## TODO check eval metrics!
             eval_metrics=eval_metrics,
             scaffold_fn=scaffold_fn)
       else:
