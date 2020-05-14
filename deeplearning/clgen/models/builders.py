@@ -165,7 +165,7 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         lambda x: 0 <= x,
         "AdamOptimizer.initial_learning_rate_micros must be >= 0",
       )
-      if config.architecture.backend == model_pb2.NetworkArchitecture.KERAS_SEQ or
+      if config.architecture.backend == model_pb2.NetworkArchitecture.KERAS_SEQ or \
          config.architecture.backend == model_pb2.NetworkArchitecture.TENSORFLOW_SEQ:
         pbutil.AssertFieldConstraint(
           config.training.adam_optimizer,
