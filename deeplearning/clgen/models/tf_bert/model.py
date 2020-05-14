@@ -25,8 +25,7 @@ import math
 import re
 import numpy as np
 import six
-import tensorflow as tf
-tf.compat.v1.disable_eager_execution()
+from deeplearning.clgen.tf import tf
 
 class BertConfig(object):
   """Configuration for `BertModel`."""
