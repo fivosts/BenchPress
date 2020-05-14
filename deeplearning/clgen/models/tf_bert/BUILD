@@ -12,6 +12,7 @@ py_library(
         "//deeplearning/clgen:sample_observers",
         "//deeplearning/clgen:samplers",
         "//deeplearning/clgen:telemetry",
+        "//deeplearning/clgen:tf",
         "//deeplearning/clgen/dashboard:dashboard_db",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//labm8/py:app",
@@ -23,6 +24,5 @@ py_library(
         "//labm8/py:pbutil",
         "//third_party/py/numpy",
         "//third_party/py/progressbar",
-        "//third_party/py/tensorflow",
     ],
 )
