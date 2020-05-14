@@ -21,7 +21,8 @@ from __future__ import print_function
 import re
 import tensorflow as tf
 tf.compat.v1.disable_eager_execution()
-
+# for gpu in tf.config.experimental.list_physical_devices('GPU'):
+#     tf.config.experimental.set_memory_growth(gpu, True)
 
 def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu):
   """Creates an optimizer training op."""
