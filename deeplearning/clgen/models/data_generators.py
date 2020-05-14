@@ -376,7 +376,8 @@ class MaskLMBatchGenerator(object):
       if is_training:
         d = self.tf.data.Dataset.from_tensor_slices(self.tf.constant(dataset))
         d = d.repeat()
-        d = d.shuffle(buffer_size=len(dataset))
+        if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
+          d = d.shuffle(buffer_size=len(dataset))
 
         # `cycle_length` is the number of parallel files that get read.
         cycle_length = min(num_cpu_threads, len(dataset))
@@ -388,7 +389,8 @@ class MaskLMBatchGenerator(object):
                 self.tf.data.TFRecordDataset,
                 sloppy=is_training,
                 cycle_length=cycle_length))
-        d = d.shuffle(buffer_size=100)
+        if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
+          d = d.shuffle(buffer_size=100)
       else:
         d = self.tf.data.TFRecordDataset(dataset)
         # Since we evaluate for a fixed number of steps we don't want to encounter
