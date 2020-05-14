@@ -215,13 +215,13 @@ class Model(object):
     self.Create()
     with self.training_lock.acquire():
       self.backend.Train(self.corpus, **kwargs)
-    telemetry_logs = self.TrainingTelemetry()[: self.config.training.num_epochs]
+    telemetry_logs = self.TrainingTelemetry()[: self.backend.num_epochs]
     final_loss = telemetry_logs[-1].loss
     total_time_ms = sum(t.epoch_wall_time_ms for t in telemetry_logs)
     l.getLogger().info(
       "Trained model for {} epochs in {} ms ({}). " "Training loss: {}."
         .format(
-          self.config.training.num_epochs,
+          self.backend.num_epochs,
           humanize.Commas(total_time_ms),
           humanize.Duration(total_time_ms / 1000),
           final_loss,
