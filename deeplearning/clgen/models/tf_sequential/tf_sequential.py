@@ -463,7 +463,7 @@ class tfSequential(backends.BackendBase):
         global_step = epoch_num
         checkpoint_prefix = self.cache.path / "checkpoints" / "checkpoint"
         checkpoint_path = saver.save(
-          sess, checkpoint_prefix, global_step=global_step
+          sess, str(checkpoint_prefix), global_step=global_step
         )
         l.getLogger().info(
           "Saved checkpoint {} in {} ms."
