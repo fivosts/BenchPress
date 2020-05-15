@@ -150,14 +150,15 @@ class tfBert(backends.BackendBase):
     logfile_path    = self.cache.path / "logs"
 
     ## Initialize checkpoint paths
-    ckpt_path, ckpt_paths = None, None
-    if (self.cache.path / "checkpoints" / "checkpoint").exists():
-      checkpoint_state = tf.train.get_checkpoint_state(self.cache.path / "checkpoints")
-      assert checkpoint_state
-      assert checkpoint_state.model_checkpoint_path
-      ckpt_path, ckpt_paths = self.GetParamsPath(checkpoint_state)
+    # ckpt_path, ckpt_paths = None, None
+    # if (self.cache.path / "checkpoints" / "checkpoint").exists():
+    #   checkpoint_state = tf.train.get_checkpoint_state(self.cache.path / "checkpoints")
+    #   assert checkpoint_state
+    #   assert checkpoint_state.model_checkpoint_path
+    #   ckpt_path, ckpt_paths = self.GetParamsPath(checkpoint_state)
 
-    l.getLogger().info("Checkpoint paths: \n{}\n{}".format(ckpt_path, ckpt_paths))
+    self.ckpt_path = str(self.cache.path / "checkpoints")
+    l.getLogger().info("Checkpoint path: \n{}".format(self.ckpt_path))
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
       tpu_cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
@@ -167,16 +168,19 @@ class tfBert(backends.BackendBase):
     run_config = tf.compat.v1.estimator.tpu.RunConfig(
         cluster = tpu_cluster_resolver,
         master = FLAGS.master,
-        model_dir = ckpt_path,
+        model_dir = self.ckpt_path,
         save_checkpoints_steps = FLAGS.save_checkpoints_steps,
+        save_summary_steps = FLAGS.save_checkpoints_steps,
+        keep_checkpoint_max = 0,
+        log_step_count_steps = FLAGS.save_checkpoints_steps,
         tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
-            iterations_per_loop = FLAGS.iterations_per_loop,
+            iterations_per_loop = FLAGS.iterations_per_loop, ## TODO what is this ?
             num_shards = FLAGS.num_tpu_cores,
             per_host_input_for_training = is_per_host))
 
     model_fn = self._model_fn_builder(
         bert_config = bert_config,
-        init_checkpoint = FLAGS.init_checkpoint, ## Fix this to be assigned automatically
+        init_checkpoint = FLAGS.init_checkpoint, ## TODO Fix this to be assigned automatically
         learning_rate = self.learning_rate,
         num_train_steps = self.num_train_steps,
         num_warmup_steps = self.num_warmup_steps,
@@ -329,12 +333,20 @@ class tfBert(backends.BackendBase):
         train_op = optimizer.create_optimizer(
             total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
 
-        loss_log_hook = tf.estimator.LoggingTensorHook({"loss": total_loss}, at_end = True)
+        # loss_log_hook = tf.estimator.LoggingTensorHook({"loss": total_loss}, at_end = True)
+        sum_loss = tf.compat.v1.summary.scalar("loss", total_loss)
+        sum_lr = tf.compat.v1.summary.scalar("learning_rate", learning_rate)
+
+        summary_writer = tf.estimator.SummarySaverHook(save_steps = FLAGS.save_checkpoints_steps,
+                                                       output_dir = self.ckpt_path,
+                                                       summary_op = [sum_loss, sum_lr]
+                                                       )
+        step_counter = tf.estimator.StepCounterHook(every_n_steps = FLAGS.save_checkpoints_steps, every_n_secs = None, output_dir = self.ckpt_path)
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
             mode = mode,
             loss = total_loss,
             train_op = train_op,
-            training_hooks = [loss_log_hook],
+            training_hooks = [summary_writer, step_counter],
             scaffold_fn = scaffold_fn)
       elif mode == tf.compat.v1.estimator.ModeKeys.EVAL:
 
