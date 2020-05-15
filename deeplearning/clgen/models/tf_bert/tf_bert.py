@@ -35,6 +35,7 @@ from labm8.py import app
 FLAGS = app.FLAGS
 
 app.DEFINE_string(
+    # "init_checkpoint", "/home/fivosts/test/model.ckpt-3000.index",
     "init_checkpoint", None,
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
@@ -42,7 +43,7 @@ app.DEFINE_boolean("do_train", True, "Whether to run training.")
 
 app.DEFINE_boolean("do_eval", True, "Whether to run eval on the dev set.")
 
-app.DEFINE_integer("save_checkpoints_steps", 1000,
+app.DEFINE_integer("save_checkpoints_steps", 500,
                      "How often to save the model checkpoint.")
 
 app.DEFINE_integer("iterations_per_loop", 1000,
@@ -308,12 +309,13 @@ class tfBert(backends.BackendBase):
         if use_tpu:
 
           def _tpu_scaffold():
-            tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+            tf.compat.v1.train.init_from_checkpoint(init_checkpoint, assignment_map)
             return tf.train.Scaffold()
 
           scaffold_fn = _tpu_scaffold
         else:
-          tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+          l.getLogger().info("Loading model checkpoint from: {}".format(init_checkpoint))
+          tf.compat.v1.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
       # l.getLogger().info("**** Trainable Variables ****")
       # for var in tvars:
