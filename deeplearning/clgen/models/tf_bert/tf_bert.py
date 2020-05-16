@@ -146,9 +146,6 @@ class tfBert(backends.BackendBase):
     ## Generate BERT Model from dict params
     bert_config = model.BertConfig.from_dict(self.bertConfig)
     l.getLogger().critical(bert_config)
-    ## Enable training logger
-    logger = telemetry.TrainingLogger(self.cache.path / "logs")
-    logfile_path    = self.cache.path / "logs"
 
     ## Initialize checkpoint paths
     # ckpt_path, ckpt_paths = None, None
@@ -159,7 +156,11 @@ class tfBert(backends.BackendBase):
     #   ckpt_path, ckpt_paths = self.GetParamsPath(checkpoint_state)
 
     self.ckpt_path = str(self.cache.path / "checkpoints")
+    self.logfile_path = str(self.cache_path / "logs")
+
     l.getLogger().info("Checkpoint path: \n{}".format(self.ckpt_path))
+    l.getLogger().info("Logging path: \n{}".format(self.logfile_path))
+    
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
       tpu_cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
@@ -170,10 +171,10 @@ class tfBert(backends.BackendBase):
         cluster = tpu_cluster_resolver,
         master = FLAGS.master,
         model_dir = self.ckpt_path,
-        save_checkpoints_steps = FLAGS.save_checkpoints_steps,
-        save_summary_steps = FLAGS.save_checkpoints_steps,
+        save_checkpoints_steps = self.num_epochs,
+        save_summary_steps = self.num_epochs,
         keep_checkpoint_max = 0,
-        log_step_count_steps = FLAGS.save_checkpoints_steps,
+        log_step_count_steps = self.num_epochs,
         tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
             iterations_per_loop = FLAGS.iterations_per_loop, ## TODO what is this ?
             num_shards = FLAGS.num_tpu_cores,
@@ -206,7 +207,14 @@ class tfBert(backends.BackendBase):
           is_training = True)
 
       l.getLogger().info("Running model for {} steps".format(self.num_train_steps))
+
+      ## Enable training logger. For now this logger will only count one epoch
+      ## This logger cannot work with estimator, unless it is converted to 
+      ## a training hook for TPUEstimatorSpec
+      logger = telemetry.TrainingLogger(self.cache.path / "logs")
+      logger.EpochBeginCallback()
       estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
+      logger.EpochEndCallback(self.num_epochs, loss)
 
     if FLAGS.do_eval:
       l.getLogger().info("***** Running evaluation *****")
@@ -220,7 +228,7 @@ class tfBert(backends.BackendBase):
       result = estimator.evaluate(
           input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
 
-      output_eval_file = os.path.join(logfile_path, "eval_results.txt")
+      output_eval_file = os.path.join(self.logfile_path, "eval_results.txt")
       with tf.io.gfile.GFile(output_eval_file, "w") as writer:
         l.getLogger().info("***** Eval results *****")
         for key in sorted(result.keys()):
@@ -317,8 +325,8 @@ class tfBert(backends.BackendBase):
         train_op = optimizer.create_optimizer(
             total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
 
-        training_hooks = self.GetSummaryHooks(save_steps = self.num_epochs,
-                                              output_dir = self.ckpt_path,
+        training_hooks = self._GetSummaryHooks(save_steps = self.num_epochs,
+                                              output_dir = self.logfile_path,
                                               masked_lm_loss = masked_lm_loss,
                                               next_sentence_loss = next_sentence_loss,
                                               total_loss = total_loss,
@@ -488,4 +496,3 @@ class tfBert(backends.BackendBase):
                                                         ]
                                           )
            ]
-           
