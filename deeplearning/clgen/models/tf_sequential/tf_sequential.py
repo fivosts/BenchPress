@@ -356,7 +356,7 @@ class tfSequential(backends.BackendBase):
       )
     tf = self.InitTfGraph()
 
-    logger = telemetry.TrainingLogger(self.cache.path / "logs")
+    self.telemetry = telemetry.TrainingLogger(self.cache.path / "logs")
 
     # Create and merge the tensorboard summary ops.
     merged = tf.compat.v1.summary.merge_all()
@@ -408,7 +408,7 @@ class tfSequential(backends.BackendBase):
 
       # Per-epoch training loop.
       for epoch_num in range(current_epoch, max_epoch):
-        logger.EpochBeginCallback()
+        self.telemetry.EpochBeginCallback()
 
         # decay and set learning rate
         new_learning_rate = initial_learning_rate * (
@@ -481,7 +481,7 @@ class tfSequential(backends.BackendBase):
         ).is_file()
         assert pathlib.Path(f"{checkpoint_prefix}-{global_step}.meta").is_file()
 
-        logger.EpochEndCallback(epoch_num, loss)
+        self.telemetry.EpochEndCallback(epoch_num, loss)
         # If we have a sampler that we can use at the end of epochs, then
         # break now to run the test sampler.
         # This is confusing logic! Consider a refactor to simplify things.

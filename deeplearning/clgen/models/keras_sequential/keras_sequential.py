@@ -153,7 +153,7 @@ class kerasSequential(backends.BackendBase):
             "embedding_1": str(self.cache.path / "embeddings" / "metadata.tsv"),
           },
         ),
-        telemetry.TrainingLogger(self.cache.path / "logs").KerasCallback(keras),
+        self.telemetry.TrainingLogger(self.cache.path / "logs").KerasCallback(keras),
       ]
 
       generator = data_generators.KerasBatchGenerator()
