@@ -1,17 +1,3 @@
-# Copyright (c) 2016-2020 Chris Cummins.
-#
-# clgen is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# clgen is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """This file defines telemetry data gathers."""
 import pathlib
 import re
@@ -83,18 +69,19 @@ class TrainingLogger(object):
 
     self.telemetry = []
     for (indx, (wt, l)) in enumerate(zip(wall_time, loss)):
+      round_wt = int(round(wt, 0))
       if indx == 0:
-        current_time = wt
+        current_time = round_wt
         continue
       else:
         self.telemetry.append(telemetry_pb2.ModelEpochTelemetry(
-                                  timestamp_unix_epoch = wt,
+                                  timestamp_unix_epoch_ms = round_wt,
                                   epoch_num = indx,
-                                  epoch_wall_time_ms = wt - current_time,
-                                  loss = l
+                                  epoch_wall_time_ms = round_wt - current_time,
+                                  loss = l,
                               )
           )
-        current_time = wt
+        current_time = round_wt
 
   def EpochTelemetry(self) -> typing.List[telemetry_pb2.ModelEpochTelemetry]:
     """Return the epoch telemetry files."""
