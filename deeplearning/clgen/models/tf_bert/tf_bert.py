@@ -39,13 +39,6 @@ app.DEFINE_string(
     "init_checkpoint", None,
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
-app.DEFINE_boolean("do_train", True, "Whether to run training.")
-
-app.DEFINE_boolean("do_eval", True, "Whether to run eval on the dev set.")
-
-app.DEFINE_integer("save_checkpoints_steps", 500,
-                     "How often to save the model checkpoint.")
-
 app.DEFINE_integer("iterations_per_loop", 1000,
                      "How many steps to make in each estimator call.")
 
@@ -191,41 +184,39 @@ class tfBert(backends.BackendBase):
         train_batch_size = self.train_batch_size,
         eval_batch_size = self.eval_batch_size)
 
-    if FLAGS.do_train:
-      l.getLogger().info("***** Running training *****")
-      l.getLogger().info("  Batch size = {}".format(self.train_batch_size))
-      train_input_fn = self.data_generator.generateTfDataset(
-          max_seq_length = self.max_seq_length,
-          num_cpu_threads = 8,
-          is_training = True)
+    l.getLogger().info("***** Running training *****")
+    l.getLogger().info("  Batch size = {}".format(self.train_batch_size))
+    train_input_fn = self.data_generator.generateTfDataset(
+        max_seq_length = self.max_seq_length,
+        num_cpu_threads = 8,
+        is_training = True)
 
-      l.getLogger().info("Running model for {} steps".format(self.num_train_steps))
-      l.getLogger().info("Splitting {} steps into {} equivalent epochs, {} steps each".format(
-                                        self.num_train_steps, self.num_epochs, self.num_steps_per_epoch
-                                        )
-                        )
+    l.getLogger().info("Running model for {} steps".format(self.num_train_steps))
+    l.getLogger().info("Splitting {} steps into {} equivalent epochs, {} steps each".format(
+                                      self.num_train_steps, self.num_epochs, self.num_steps_per_epoch
+                                      )
+                      )
 
-      estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
-      self.telemetry.TfRecordEpochs()
+    estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
+    self.telemetry.TfRecordEpochs()
 
-    if FLAGS.do_eval:
-      l.getLogger().info("***** Running evaluation *****")
-      l.getLogger().info("  Batch size = {}".format(self.eval_batch_size))
+    l.getLogger().info("***** Running evaluation *****")
+    l.getLogger().info("  Batch size = {}".format(self.eval_batch_size))
 
-      eval_input_fn = self.data_generator.generateTfDataset(
-          max_seq_length=self.max_seq_length,
-          num_cpu_threads = 8,
-          is_training=False)
+    eval_input_fn = self.data_generator.generateTfDataset(
+        max_seq_length=self.max_seq_length,
+        num_cpu_threads = 8,
+        is_training=False)
 
-      result = estimator.evaluate(
-          input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
+    result = estimator.evaluate(
+        input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
 
-      output_eval_file = os.path.join(self.logfile_path, "eval_results.txt")
-      with tf.io.gfile.GFile(output_eval_file, "w") as writer:
-        l.getLogger().info("***** Eval results *****")
-        for key in sorted(result.keys()):
-          l.getLogger().info("  {} = {}".format(key, str(result[key])))
-          writer.write("%s = %s\n" % (key, str(result[key])))
+    output_eval_file = os.path.join(self.logfile_path, "eval_results.txt")
+    with tf.io.gfile.GFile(output_eval_file, "w") as writer:
+      l.getLogger().info("***** Eval results *****")
+      for key in sorted(result.keys()):
+        l.getLogger().info("  {} = {}".format(key, str(result[key])))
+        writer.write("%s = %s\n" % (key, str(result[key])))
 
 
   def GetShortSummary(self) -> str:
