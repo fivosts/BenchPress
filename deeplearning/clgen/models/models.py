@@ -215,7 +215,16 @@ class Model(object):
     self.Create()
     with self.training_lock.acquire():
       self.backend.Train(self.corpus, **kwargs)
-    telemetry_logs = self.TrainingTelemetry()[: self.backend.num_epochs]
+    # telemetry_logs = self.TrainingTelemetry()[: self.backend.num_epochs]
+    telemetry_logs = self.backend.telemetry.EpochTelemetry()
+
+    if len(telemetry_logs) != self.backend.num_epochs:
+      raise errors.UserError("Epoch telemetry logs contain {} epoch entries, but model has {} epochs!"
+                              .format(
+                                  len(telemetry_logs),
+                                  self.backend.num_epochs,
+                                )
+                              )
     final_loss = telemetry_logs[-1].loss
     total_time_ms = sum(t.epoch_wall_time_ms for t in telemetry_logs)
     l.getLogger().info(
