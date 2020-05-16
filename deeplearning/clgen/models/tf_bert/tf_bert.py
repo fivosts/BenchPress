@@ -141,6 +141,7 @@ class tfBert(backends.BackendBase):
     self.data_generator = data_generators.MaskLMBatchGenerator(
                                           corpus, self.config.training, self.cache.path, tf
                                           )
+    self.num_epochs = 1 + int(self.num_train_steps / self.data_generator.num_batches)
 
     ## Generate BERT Model from dict params
     bert_config = model.BertConfig.from_dict(self.bertConfig)
@@ -239,23 +240,6 @@ class tfBert(backends.BackendBase):
       "network"
     )
 
-  def GetParamsPath(
-    self, checkpoint_state
-  ) -> typing.Tuple[typing.Optional[str], typing.List[str]]:
-    """Return path to checkpoint closest to target num of epochs."""
-    # Checkpoints are saved with relative path, so we must prepend cache paths.
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.GetParamsPath()")
-    paths = [
-      str(self.cache.path / "checkpoints" / p)
-      for p in checkpoint_state.all_model_checkpoint_paths
-    ]
-    # The checkpoint paths are appended with the epoch number.
-    epoch_nums = [int(x.split("-")[-1]) for x in paths]
-    diffs = [self.config.training.num_epochs - e for e in epoch_nums]
-    pairs = zip(paths, diffs)
-    positive_only = [p for p in pairs if p[1] >= 0]
-    return min(positive_only, key=lambda x: x[1])[0], paths
-
   def _model_fn_builder(self,
                       bert_config, 
                       init_checkpoint, 
@@ -333,20 +317,19 @@ class tfBert(backends.BackendBase):
         train_op = optimizer.create_optimizer(
             total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
 
-        # loss_log_hook = tf.estimator.LoggingTensorHook({"loss": total_loss}, at_end = True)
-        sum_loss = tf.compat.v1.summary.scalar("loss", total_loss)
-        sum_lr = tf.compat.v1.summary.scalar("learning_rate", learning_rate)
+        training_hooks = self.GetSummaryHooks(save_steps = self.num_epochs,
+                                              output_dir = self.ckpt_path,
+                                              masked_lm_loss = masked_lm_loss,
+                                              next_sentence_loss = next_sentence_loss,
+                                              total_loss = total_loss,
+                                              learning_rate = learning_rate
+                                              )
 
-        summary_writer = tf.estimator.SummarySaverHook(save_steps = FLAGS.save_checkpoints_steps,
-                                                       output_dir = self.ckpt_path,
-                                                       summary_op = [sum_loss, sum_lr]
-                                                       )
-        step_counter = tf.estimator.StepCounterHook(every_n_steps = FLAGS.save_checkpoints_steps, every_n_secs = None, output_dir = self.ckpt_path)
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
             mode = mode,
             loss = total_loss,
             train_op = train_op,
-            training_hooks = [summary_writer, step_counter],
+            training_hooks = training_hooks,
             scaffold_fn = scaffold_fn)
       elif mode == tf.compat.v1.estimator.ModeKeys.EVAL:
 
@@ -496,3 +479,13 @@ class tfBert(backends.BackendBase):
                                       [batch_size * seq_length, width])
     output_tensor = tf.gather(flat_sequence_tensor, flat_positions)
     return output_tensor
+
+  def _GetSummaryHooks(self, save_steps, output_dir, **kwargs):
+    return [tf.estimator.SummarySaverHook(save_steps = save_steps,
+                                          output_dir = output_dir,
+                                          summary_op = [ tf.compat.v1.summary.scalar(name, value) 
+                                                          for name, value in kwargs.items()
+                                                        ]
+                                          )
+           ]
+           
