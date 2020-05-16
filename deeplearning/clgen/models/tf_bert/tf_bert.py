@@ -122,6 +122,15 @@ class tfBert(backends.BackendBase):
     self.learning_rate                      = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
     self.num_train_steps                    = self.config.training.num_train_steps
     self.num_warmup_steps                   = self.config.training.num_warmup_steps
+    self.ckpt_path                          = str(self.cache.path / "checkpoints")
+    self.logfile_path                       = str(self.cache.path / "logs")
+    self.telemetry                          = telemetry.TrainingLogger(self.logfile_path)
+
+    self.data_generators                    = data_generators.MaskLMBatchGenerator(
+                                                  corpus, self.config.training, self.cache.path, tf
+                                              )
+    self.num_steps_per_epoch                = self.data_generator.num_batches
+    self.num_epochs                         = int(self.num_train_steps / self.num_steps_per_epoch)
 
     return
 
@@ -131,15 +140,6 @@ class tfBert(backends.BackendBase):
 
     ## Initialize params and data generator
     self._ConfigModelParams()
-    self.data_generator = data_generators.MaskLMBatchGenerator(
-                                          corpus, self.config.training, self.cache.path, tf
-                                          )
-    self.num_steps_per_epoch = self.data_generator.num_batches
-    self.num_epochs = int(self.num_train_steps / self.num_steps_per_epoch)
-    self.ckpt_path = str(self.cache.path / "checkpoints")
-    self.logfile_path = str(self.cache.path / "logs")
-
-    self.telemetry = telemetry.TrainingLogger(self.logfile_path)
 
     ## Generate BERT Model from dict params
     bert_config = model.BertConfig.from_dict(self.bertConfig)
@@ -220,7 +220,7 @@ class tfBert(backends.BackendBase):
 
 
   def GetShortSummary(self) -> str:
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.GetShortSummary()")
+    l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
     return (
       f"h_s: {self.bertConfig['hidden_size']}, "
       f"#h_l: {self.bertConfig['num_hidden_layers']}, "
@@ -230,6 +230,17 @@ class tfBert(backends.BackendBase):
       f"{model_pb2.NetworkArchitecture.NeuronType.Name(self.config.architecture.backend)} "
       "network"
     )
+
+  def InferenceManifest(self) -> typing.List[pathlib.Path]:
+    """Return the list of files which are required for model inference.
+    Returns:
+      A list of absolute paths.
+    """
+    # The TensorFlow save file.
+    l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.InferenceManifest()")
+    paths = [ path.absolute() for path in (self.cache.path / "checkpoints").iterdir() ]
+    paths += [ path.absolute() for path in (self.cache.path / "logs").iterdir() ]
+    return sorted(paths)
 
   def _model_fn_builder(self,
                       bert_config, 
