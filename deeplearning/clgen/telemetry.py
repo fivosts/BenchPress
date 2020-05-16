@@ -9,7 +9,6 @@ from labm8.py import jsonutil
 from labm8.py import labdate
 from labm8.py import pbutil
 
-
 FLAGS = app.FLAGS
 
 
@@ -68,7 +67,7 @@ class TrainingLogger(object):
     assert len(step_nums) == len(loss)
 
     self.telemetry = []
-    for (indx, (wt, l)) in enumerate(zip(wall_time, loss)):
+    for (indx, (wt, ls)) in enumerate(zip(wall_time, loss)):
       round_wt = int(round(wt, 0))
       if indx == 0:
         current_time = round_wt
@@ -78,7 +77,7 @@ class TrainingLogger(object):
                                   timestamp_unix_epoch_ms = round_wt,
                                   epoch_num = indx,
                                   epoch_wall_time_ms = round_wt - current_time,
-                                  loss = l,
+                                  loss = ls,
                               )
           )
         current_time = round_wt
