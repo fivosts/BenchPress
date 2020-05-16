@@ -141,6 +141,7 @@ class tfBert(backends.BackendBase):
     self.data_generator = data_generators.MaskLMBatchGenerator(
                                           corpus, self.config.training, self.cache.path, tf
                                           )
+    logger = telemetry.TrainingLogger(self.cache.path / "logs")
     self.num_epochs = 1 + int(self.num_train_steps / self.data_generator.num_batches)
 
     ## Generate BERT Model from dict params
@@ -211,14 +212,9 @@ class tfBert(backends.BackendBase):
       ## Enable training logger. For now this logger will only count one epoch
       ## This logger cannot work with estimator, unless it is converted to 
       ## a training hook for TPUEstimatorSpec
-      logger = telemetry.TrainingLogger(self.cache.path / "logs")
       logger.EpochBeginCallback()
       estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
-      a, b, c = self._getSummaryEpochLoss()
-      l.getLogger().warn(a)
-      l.getLogger().warn(b)
-      l.getLogger().warn(c)
-      logger.EpochEndCallback(self.num_epochs, loss)
+      logger.TfRecordEpochs()
 
     if FLAGS.do_eval:
       l.getLogger().info("***** Running evaluation *****")
@@ -500,12 +496,3 @@ class tfBert(backends.BackendBase):
                                                         ]
                                           )
            ]
-
-  def _getSummaryEpochLoss(self):
-    from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
-    event_acc = EventAccumulator(self.logfile_path)
-    event_acc.Reload()
-    print(event_acc.Tags())
-    w_times, step_nums, vals = zip(*event_acc.Scalars('total_loss'))
-    ## Returns the wall time, step number and values
-    return w_times, step_nums, vals
