@@ -23,6 +23,7 @@ from labm8.py import jsonutil
 from labm8.py import labdate
 from labm8.py import pbutil
 
+
 FLAGS = app.FLAGS
 
 
@@ -38,6 +39,7 @@ class TrainingLogger(object):
   def __init__(self, logdir: pathlib.Path):
     self.logdir = logdir
     self.last_epoch_begin_timestamp = None
+    self.telemetry = None
 
   def EpochBeginCallback(self) -> None:
     self.last_epoch_begin_timestamp = labdate.MillisecondsTimestamp()
@@ -71,10 +73,36 @@ class TrainingLogger(object):
       on_epoch_end=self.KerasEpochEndCallback,
     )
 
+  def TfRecordEpochs(self):
+    from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+    event_acc = EventAccumulator(self.logdir)
+    event_acc.Reload()
+    wall_time, step_nums, loss = zip(*event_acc.Scalars('total_loss'))
+    assert len(wall_time) == len(step_nums)
+    assert len(step_nums) == len(loss)
+
+    self.telemetry = []
+    for (indx, (wt, l)) in enumerate(zip(wall_time, loss)):
+      if indx == 0:
+        current_time = wt
+        continue
+      else:
+        self.telemetry.append(telemetry_pb2.ModelEpochTelemetry(
+                                  timestamp_unix_epoch = wt,
+                                  epoch_num = indx,
+                                  epoch_wall_time_ms = wt - current_time,
+                                  loss = l
+                              )
+          )
+        current_time = wt
+
   def EpochTelemetry(self) -> typing.List[telemetry_pb2.ModelEpochTelemetry]:
     """Return the epoch telemetry files."""
-    return [
-      pbutil.FromFile(self.logdir / p, telemetry_pb2.ModelEpochTelemetry())
-      for p in sorted(self.logdir.iterdir())
-      if re.match(r"epoch_\d\d+_telemetry\.pbtxt", str(p.name))
-    ]
+    if self.telemetry is None:
+      return [
+        pbutil.FromFile(self.logdir / p, telemetry_pb2.ModelEpochTelemetry())
+        for p in sorted(self.logdir.iterdir())
+        if re.match(r"epoch_\d\d+_telemetry\.pbtxt", str(p.name))
+      ]
+    else:
+      return self.telemetry
