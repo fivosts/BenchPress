@@ -141,23 +141,15 @@ class tfBert(backends.BackendBase):
     self.data_generator = data_generators.MaskLMBatchGenerator(
                                           corpus, self.config.training, self.cache.path, tf
                                           )
-    logger = telemetry.TrainingLogger(self.cache.path / "logs")
-    self.num_epochs = 1 + int(self.num_train_steps / self.data_generator.num_batches)
+    self.num_steps_per_epoch = self.data_generator.num_batches
+    self.num_epochs = int(self.num_train_steps / self.num_steps_per_epoch)
+    self.ckpt_path = str(self.cache.path / "checkpoints")
+    self.logfile_path = str(self.cache.path / "logs")
+
+    self.telemetry = telemetry.TrainingLogger(self.logfile_path)
 
     ## Generate BERT Model from dict params
     bert_config = model.BertConfig.from_dict(self.bertConfig)
-    l.getLogger().critical(bert_config)
-
-    ## Initialize checkpoint paths
-    # ckpt_path, ckpt_paths = None, None
-    # if (self.cache.path / "checkpoints" / "checkpoint").exists():
-    #   checkpoint_state = tf.train.get_checkpoint_state(self.cache.path / "checkpoints")
-    #   assert checkpoint_state
-    #   assert checkpoint_state.model_checkpoint_path
-    #   ckpt_path, ckpt_paths = self.GetParamsPath(checkpoint_state)
-
-    self.ckpt_path = str(self.cache.path / "checkpoints")
-    self.logfile_path = str(self.cache.path / "logs")
 
     l.getLogger().info("Checkpoint path: \n{}".format(self.ckpt_path))
     l.getLogger().info("Logging path: \n{}".format(self.logfile_path))
@@ -172,10 +164,10 @@ class tfBert(backends.BackendBase):
         cluster = tpu_cluster_resolver,
         master = FLAGS.master,
         model_dir = self.ckpt_path,
-        save_checkpoints_steps = self.num_epochs,
-        save_summary_steps = self.num_epochs,
+        save_checkpoints_steps = self.num_steps_per_epoch,
+        save_summary_steps = self.num_steps_per_epoch,
         keep_checkpoint_max = 0,
-        log_step_count_steps = self.num_epochs,
+        log_step_count_steps = self.num_steps_per_epoch,
         tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
             iterations_per_loop = FLAGS.iterations_per_loop, ## TODO what is this ?
             num_shards = FLAGS.num_tpu_cores,
@@ -208,13 +200,13 @@ class tfBert(backends.BackendBase):
           is_training = True)
 
       l.getLogger().info("Running model for {} steps".format(self.num_train_steps))
+      l.getLogger().info("Splitting {} steps into {} equivalent epochs, {} steps each".format(
+                                        self.num_train_steps, self.num_epochs, self.num_steps_per_epoch
+                                        )
+                        )
 
-      ## Enable training logger. For now this logger will only count one epoch
-      ## This logger cannot work with estimator, unless it is converted to 
-      ## a training hook for TPUEstimatorSpec
-      logger.EpochBeginCallback()
       estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
-      logger.TfRecordEpochs()
+      self.telemetry.TfRecordEpochs()
 
     if FLAGS.do_eval:
       l.getLogger().info("***** Running evaluation *****")
@@ -325,7 +317,7 @@ class tfBert(backends.BackendBase):
         train_op = optimizer.create_optimizer(
             total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
 
-        training_hooks = self._GetSummaryHooks(save_steps = self.num_epochs,
+        training_hooks = self._GetSummaryHooks(save_steps = self.num_steps_per_epoch,
                                               output_dir = self.logfile_path,
                                               masked_lm_loss = masked_lm_loss,
                                               next_sentence_loss = next_sentence_loss,
@@ -491,6 +483,7 @@ class tfBert(backends.BackendBase):
   def _GetSummaryHooks(self, save_steps, output_dir, **kwargs):
     return [tf.estimator.SummarySaverHook(save_steps = save_steps,
                                           output_dir = output_dir,
+                                          at_end = True,
                                           summary_op = [ tf.compat.v1.summary.scalar(name, value) 
                                                           for name, value in kwargs.items()
                                                         ]
