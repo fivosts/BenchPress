@@ -156,7 +156,7 @@ class tfBert(backends.BackendBase):
     #   ckpt_path, ckpt_paths = self.GetParamsPath(checkpoint_state)
 
     self.ckpt_path = str(self.cache.path / "checkpoints")
-    self.logfile_path = str(self.cache_path / "logs")
+    self.logfile_path = str(self.cache.path / "logs")
 
     l.getLogger().info("Checkpoint path: \n{}".format(self.ckpt_path))
     l.getLogger().info("Logging path: \n{}".format(self.logfile_path))
@@ -214,6 +214,10 @@ class tfBert(backends.BackendBase):
       logger = telemetry.TrainingLogger(self.cache.path / "logs")
       logger.EpochBeginCallback()
       estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
+      a, b, c = self._getSummaryEpochLoss()
+      l.getLogger().warn(a)
+      l.getLogger().warn(b)
+      l.getLogger().warn(c)
       logger.EpochEndCallback(self.num_epochs, loss)
 
     if FLAGS.do_eval:
@@ -496,3 +500,12 @@ class tfBert(backends.BackendBase):
                                                         ]
                                           )
            ]
+
+  def _getSummaryEpochLoss(self):
+    from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+    event_acc = EventAccumulator(self.logfile_path)
+    event_acc.Reload()
+    print(event_acc.Tags())
+    w_times, step_nums, vals = zip(*event_acc.Scalars('total_loss'))
+    ## Returns the wall time, step number and values
+    return w_times, step_nums, vals
