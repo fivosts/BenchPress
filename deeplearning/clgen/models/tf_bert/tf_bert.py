@@ -189,8 +189,9 @@ class tfBert(backends.BackendBase):
         train_batch_size = self.train_batch_size,
         eval_batch_size = self.eval_batch_size)
 
-    l.getLogger().info("***** Running training *****")
-    l.getLogger().info("  Batch size = {}".format(self.train_batch_size))
+    l.getLogger().info("BERT Training initialization")
+    ## TODO print short summary of model and/or dataset features
+
     train_input_fn = self.data_generator.generateTfDataset(
         max_seq_length = self.max_seq_length,
         num_cpu_threads = 8,
@@ -207,8 +208,8 @@ class tfBert(backends.BackendBase):
     self.telemetry.TfRecordEpochs()
 
     if not self.is_validated:
-      l.getLogger().info("Validation set run")
-      l.getLogger().info("Batch size = {}".format(self.eval_batch_size))
+      l.getLogger().info("BERT Validation")
+      ## TODO print short summary of model and/or dataset features
 
       eval_input_fn = self.data_generator.generateTfDataset(
           max_seq_length=self.max_seq_length,
