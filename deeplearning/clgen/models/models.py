@@ -269,7 +269,7 @@ class Model(object):
       InvalidSymtokTokens: If the sampler symmetrical depth tokens cannot be
         encoded.
     """
-    l.getLogger().debug("deeplearning.clgen.models.Model._Sample()")
+    l.getLogger().debug("deeplearning.clgen.models.Model.Sample()")
     if not sample_observers:
       raise errors.UserError("Cannot sample without any observers")
 
