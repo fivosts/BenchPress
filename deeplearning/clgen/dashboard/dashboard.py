@@ -39,7 +39,7 @@ flask_app = flask.Flask(
 # Defaults to /tmp/phd/deeplearning/clgen/dashboard.db. If $CLGEN_DASHBOARD
 # is set, use this URL. Else if $TEST_TMPDIR is set (as set by bazel test
 # environment), create a dashboard in there.
-_dashboard_uri = "sqlite:////tmp/phd/deeplearning/clgen/dashboard.db"
+_dashboard_uri = "sqlite:///{}/dashboard.db".format(FLAGS.workspace_dir)
 if os.environ.get("CLGEN_DASHBOARD"):
   _dashboard_uri = os.environ["CLGEN_DASHBOARD"]
 elif os.environ.get("TEST_TMPDIR"):
