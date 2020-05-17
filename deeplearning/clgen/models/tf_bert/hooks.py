@@ -23,6 +23,9 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
     self.log_steps = log_steps
     self.at_end = at_end
     self.tensors = tensors
+    self.global_step = tf.compat.v1.train.get_or_create_global_step()
+    self.step_tensor = { self.global_step: self.global_step }
+    self._current_epoch = 0
 
     if self.tensors is not None:
 
@@ -42,11 +45,6 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
       self._timer = (
           tf.compat.v1.train.SecondOrStepTimer(every_steps=max_length) if only_log_at_end
           else tf.compat.v1.train.SecondOrStepTimer(every_steps=log_steps))
-    else:
-      self.tensors = {tf.compat.v1.get_or_create_global_step(): 
-                 tf.compat.v1.get_or_create_global_step()
-                }
-
 
   def begin(self):
     """
@@ -56,17 +54,21 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
     :param coord:
         unused
     """
-    self._current_step = 0
+    self._trigger_step = 0
     self._timer.reset()
 
     self.bar = progressbar.ProgressBar(max_value = self.max_length)
 
+    self.step_tensor = {
+        tag: self._as_graph_element(tensor)
+        for (tag, tensor) in self.step_tensor.items()
+        }
     if self.tensors is not None:
       self._current_tensors = {
           tag: self._as_graph_element(tensor)
           for (tag, tensor) in self.tensors.items()
       }
-get_or_create_global_step
+
   def before_run(self, run_context):
     """
       Called before session.run()
@@ -74,46 +76,46 @@ get_or_create_global_step
       returns None or SessionRunArgs()
     """
     if self.tensors is not None:
-      self._should_trigger = self._timer.should_trigger_for_step(self._current_step)
-      if self._should_trigger:
-        return tf.estimator.SessionRunArgs(self._current_tensors)
-    return None
+      if self._timer.should_trigger_for_step(self._trigger_step):
+        return tf.estimator.SessionRunArgs([self.step_tensor, self._current_tensors])
+
+    return tf.estimator.SessionRunArgs([self.step_tensor])
 
   def after_run(self, run_context, run_values):
     """
       Requested tensors are evaluated and their values are available
     """
-    self.bar.update(self._current_step)
+    ##  0th element is always global_step, see how list is ordered in SessionRunArgs
+    self._current_step = run_values.results[0][self.global_step]
+    self._current_epoch = 1 + int(self._current_step / self.log_steps)
 
-    if self.tensors is not None:
-      _ = run_context
-      if self._should_trigger:
-        self._log_tensors(run_values.results)
+    self.bar.update(self._current_step) 
 
-    self._current_step += 1
+    _ = run_context
+    if len(run_values.results) > 1:
+      self._log_tensors(run_values.results[1])
+
+    self._trigger_step += 1
 
   def end(self, session):
     """
       Called at the end of session
     """
-    self._current_step = 0
     if self.at_end:
       values = session.run(self._current_tensors)
       self._log_tensors(values)
 
   def _log_tensors(self, tensor_values):
 
-    elapsed_secs, _ = self._timer.update_last_triggered_step(self._current_step)
+    elapsed_secs, _ = self._timer.update_last_triggered_step(self._trigger_step)
     stats = []
 
     for tag in self._tag_order:
-      stats.append("{}: {}".format(tag, tensor_values[tag]))
+      stats.append("{}: {:.5f}".format(tag, tensor_values[tag]))
     if elapsed_secs is not None:
-      # l.getLogger().info("Epoch {} ({:3f} sec)".format(", ".join(stats), elapsed_secs))
-      print("Epoch {} ({:3f} sec)".format(", ".join(stats), elapsed_secs), end = "", flush = True)
+      l.getLogger().info("Epoch {} {} - {:.3f} sec".format(self._current_epoch, ", ".join(stats), elapsed_secs))
     else:
-      # l.getLogger().info("Epoch {}".format(", ".join(stats)))
-      print("Epoch {}".format(", ".join(stats)), end = "", flush = True)
+      l.getLogger().info("Epoch {} {}".format(self._current_epoch, ", ".join(stats)))
 
   def _as_graph_element(self, obj):
     """Retrieves Graph element."""
