@@ -40,7 +40,7 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
         self._tag_order = sorted(tensors.keys())
 
       self._timer = (
-          NeverTriggerTimer() if only_log_at_end
+          tf.compat.v1.train.SecondOrStepTimer(every_steps=max_length) if only_log_at_end
           else tf.compat.v1.train.SecondOrStepTimer(every_steps=log_steps))
 
   def begin(self):
@@ -130,49 +130,3 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
                          "as this `Operation` has multiple outputs "
                          "(at least 2)." % obj)
     return element
-
-class _HookTimer(object):
-  """Base timer for determining when Hooks should trigger.
-  Should not be instantiated directly.
-  """
-
-  def __init__(self):
-    pass
-
-  def reset(self):
-    """Resets the timer."""
-    pass
-
-  def should_trigger_for_step(self, step):
-    """Return true if the timer should trigger for the specified step."""
-    raise NotImplementedError
-
-  def update_last_triggered_step(self, step):
-    """Update the last triggered time and step number.
-    Args:
-      step: The current step.
-    Returns:
-      A pair `(elapsed_time, elapsed_steps)`, where `elapsed_time` is the number
-      of seconds between the current trigger and the last one (a float), and
-      `elapsed_steps` is the number of steps between the current trigger and
-      the last one. Both values will be set to `None` on the first trigger.
-    """
-    raise NotImplementedError
-
-  def last_triggered_step(self):
-    """Returns the last triggered time step or None if never triggered."""
-    raise NotImplementedError
-
-class NeverTriggerTimer(_HookTimer):
-  """Timer that never triggers."""
-
-  def should_trigger_for_step(self, step):
-    _ = step
-    return False
-
-  def update_last_triggered_step(self, step):
-    _ = step
-    return (None, None)
-
-  def last_triggered_step(self):
-    return None
