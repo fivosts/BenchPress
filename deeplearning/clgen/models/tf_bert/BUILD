@@ -3,7 +3,8 @@ py_library(
     srcs = [
         "tf_bert.py",
         "model.py",
-        "optimizer.py"
+        "optimizer.py",
+        "hooks.py"
     ],
     visibility = ["//visibility:public"],
     deps = [
