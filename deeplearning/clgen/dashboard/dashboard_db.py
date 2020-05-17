@@ -19,15 +19,6 @@ class DashboardDatabase(sqlutil.Database):
     l.getLogger().debug("deeplearning.clgen.dashboard.dashboard_db.DashboardDatabase.__init__()")
     super(DashboardDatabase, self).__init__(url, Base, must_exist=must_exist)
 
-
-app.DEFINE_database(
-  "clgen_dashboard_db",
-  DashboardDatabase,
-  "sqlite:///{}/dashboard.db".format(FLAGS.workspace_dir),
-  "URL of the dashboard database.",
-)
-
-
 class Corpus(Base):
   __tablename__ = "corpuses"
 
@@ -119,6 +110,8 @@ class TrainingSample(Base):
 @decorators.run_once
 def GetDatabase() -> DashboardDatabase:
   l.getLogger().debug("deeplearning.clgen.dashboard.dashboard_db.GetDatabase()")
-  db: DashboardDatabase = FLAGS.clgen_dashboard_db()
+  db: DashboardDatabase = DashboardDatabase(
+          url = "sqlite:///{}/dashboard.db".format(FLAGS.workspace_dir), must_exist = False
+          )
   l.getLogger().info("Created dashboard database {}".format(db.url))
   return db

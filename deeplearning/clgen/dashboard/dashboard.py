@@ -33,8 +33,7 @@ flask_app = flask.Flask(
   ),
   static_folder=bazelutil.DataPath("phd/deeplearning/clgen/dashboard/static"),
 )
-# Get URI of the the dashboard database.
-flask_app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///{}/dashboard.db".format(FLAGS.workspace_dir)
+
 db = flask_sqlalchemy.SQLAlchemy(flask_app)
 
 def GetBaseTemplateArgs():
@@ -50,7 +49,7 @@ def GetBaseTemplateArgs():
       "html": app.FormatShortBuildDescription(html=True),
       "version": app.VERSION,
     },
-    "dashboard_info": {"db": flask_app.config["SQLALCHEMY_DATABASE_URI"],},
+    "dashboard_info": {"db": "sqlite:///{}/dashboard.db".format(FLAGS.workspace_dir),},
   }
 
 
