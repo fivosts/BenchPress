@@ -94,6 +94,8 @@ class tfBert(backends.BackendBase):
     self.learning_rate                      = None
     self.num_train_steps                    = None
     self.num_warmup_steps                   = None
+    self.is_trained                         = False
+
     return
 
   def _ConfigModelParams(self):
@@ -131,6 +133,9 @@ class tfBert(backends.BackendBase):
   def Train(self, corpus, **unused_kwargs) -> None:
 
     del unused_kwargs
+
+    if self.is_trained:
+      return
 
     ## Initialize params and data generator
     self.data_generator = data_generators.MaskLMBatchGenerator(
@@ -195,6 +200,7 @@ class tfBert(backends.BackendBase):
                       )
 
     estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
+    self.is_trained = True
     self.telemetry.TfRecordEpochs()
 
     l.getLogger().info("Validation set run")
