@@ -49,7 +49,7 @@ def GetBaseTemplateArgs():
       "html": app.FormatShortBuildDescription(html=True),
       "version": app.VERSION,
     },
-    "dashboard_info": {"db": "sqlite:///{}/dashboard.db".format(FLAGS.workspace_dir),},
+    "dashboard_info": {"db": "sqlite:///{}/dashboard.db".format(os.path.abspath(FLAGS.workspace_dir)),},
   }
 
 

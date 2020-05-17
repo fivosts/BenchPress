@@ -1,4 +1,5 @@
 import datetime
+import os
 
 import sqlalchemy as sql
 from sqlalchemy.dialects import mysql
@@ -111,7 +112,7 @@ class TrainingSample(Base):
 def GetDatabase() -> DashboardDatabase:
   l.getLogger().debug("deeplearning.clgen.dashboard.dashboard_db.GetDatabase()")
   db: DashboardDatabase = DashboardDatabase(
-          url = "sqlite:///{}/dashboard.db".format(FLAGS.workspace_dir), must_exist = False
+          url = "sqlite:///{}/dashboard.db".format(os.path.abspath(FLAGS.workspace_dir)), must_exist = False
           )
   l.getLogger().info("Created dashboard database {}".format(db.url))
   return db
