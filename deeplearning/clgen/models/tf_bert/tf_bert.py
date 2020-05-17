@@ -24,6 +24,7 @@ import pathlib
 
 from deeplearning.clgen.models.tf_bert import model
 from deeplearning.clgen.models.tf_bert import optimizer
+from deeplearning.clgen.models.tf_bert import hooks
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import data_generators
 from deeplearning.clgen.proto import model_pb2
@@ -127,9 +128,6 @@ class tfBert(backends.BackendBase):
     self.logfile_path                       = str(self.cache.path / "logs")
     self.telemetry                          = telemetry.TrainingLogger(self.logfile_path)
 
-    self.data_generators                    = data_generators.MaskLMBatchGenerator(
-                                                  corpus, self.config.training, self.cache.path, tf
-                                              )
     self.num_steps_per_epoch                = self.data_generator.num_batches
     self.num_epochs                         = int(self.num_train_steps / self.num_steps_per_epoch)
 
@@ -140,6 +138,9 @@ class tfBert(backends.BackendBase):
     del unused_kwargs
 
     ## Initialize params and data generator
+    self.data_generator = data_generators.MaskLMBatchGenerator(
+                              corpus, self.config.training, self.cache.path, tf
+                           )
     self._ConfigModelParams()
 
     ## Generate BERT Model from dict params
@@ -241,6 +242,7 @@ class tfBert(backends.BackendBase):
     l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.InferenceManifest()")
     paths = [ path.absolute() for path in (self.cache.path / "checkpoints").iterdir() ]
     paths += [ path.absolute() for path in (self.cache.path / "logs").iterdir() ]
+    paths += [ self.data_generator.tfRecord ]
     return sorted(paths)
 
   def _model_fn_builder(self,
@@ -327,6 +329,11 @@ class tfBert(backends.BackendBase):
                                               total_loss = total_loss,
                                               learning_rate = learning_rate
                                               )
+
+        training_hooks += self._GetProgressBarHooks(max_length = self.num_train_steps,
+                                                    tensors = ["total_loss"],
+                                                    log_steps = self.num_steps_per_epoch
+                                                    )
 
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
             mode = mode,
@@ -483,12 +490,26 @@ class tfBert(backends.BackendBase):
     output_tensor = tf.gather(flat_sequence_tensor, flat_positions)
     return output_tensor
 
-  def _GetSummaryHooks(self, save_steps, output_dir, **kwargs):
+  def _GetSummaryHooks(self, 
+                       save_steps: int, 
+                       output_dir: str, 
+                       **kwargs
+                       ) -> list[tf.estimator.SummarySaverHook]:
     return [tf.estimator.SummarySaverHook(save_steps = save_steps,
                                           output_dir = output_dir,
-                                          at_end = True,
                                           summary_op = [ tf.compat.v1.summary.scalar(name, value) 
                                                           for name, value in kwargs.items()
                                                         ]
                                           )
            ]
+
+  def _GetProgressBarHooks(self, 
+                           max_length: int, 
+                           tensors: list[str],
+                           log_steps: int
+                           ) -> list[hooks.tfProgressBar]:
+    return hooks.tfProgressBar(
+                max_length = max_length,
+                tensors = tensors,
+                log_steps = log_steps,
+              )    
