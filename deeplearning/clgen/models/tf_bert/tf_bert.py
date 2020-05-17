@@ -206,9 +206,9 @@ class tfBert(backends.BackendBase):
     self.is_trained = True
     self.telemetry.TfRecordEpochs()
 
-    if not self._isValidated():
+    if not self.is_validated:
       l.getLogger().info("Validation set run")
-      l.getLogger().info("  Batch size = {}".format(self.eval_batch_size))
+      l.getLogger().info("Batch size = {}".format(self.eval_batch_size))
 
       eval_input_fn = self.data_generator.generateTfDataset(
           max_seq_length=self.max_seq_length,
@@ -524,8 +524,15 @@ class tfBert(backends.BackendBase):
                 is_training = is_training,
               )
             ]    
-
-  def _isValidated(self):
+  @property
+  def is_trained(self):
+    if self.is_trained is None:
+      return False
+    else:
+      return self.is_trained
+  
+  @property
+  def is_validated(self):
     if os.path.exists(self.validation_results_path):
       return True
     return False
