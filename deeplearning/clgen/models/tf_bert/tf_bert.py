@@ -533,7 +533,7 @@ class tfBert(backends.BackendBase):
     return False
 
   def _writeValidation(self,
-                       results
+                       result
                        ) -> None:
     with tf.io.gfile.GFile(self.validation_results_path, "w") as writer:
       l.getLogger().info("Validation set result summary")
