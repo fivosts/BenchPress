@@ -24,7 +24,7 @@ app.DEFINE_string(
   None,
   "The URL of the database to export files from.",
 )
-app.DEFINE_output_path(
+app.DEFINE_string(
   "outdir", None, "The output directory to export files to."
 )
 app.DEFINE_string(
@@ -135,7 +135,7 @@ def Main():
 
   ExportPreprocessedFiles(
     preprocessed.PreprocessedContentFiles(url = FLAGS.db_url),
-    FLAGS.outdir,
+    pathlib.Path(FLAGS.outdir),
     file_suffix=FLAGS.file_suffix,
     only_successfully_preprocessed=FLAGS.only_successfully_preprocessed,
     batch_size=FLAGS.batch_size,
