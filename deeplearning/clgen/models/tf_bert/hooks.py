@@ -52,7 +52,6 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
         unused
     """
     self._current_step = 0
-    self._iter_count = 0
     self._timer.reset()
 
     self.bar = progressbar.ProgressBar(max_value = self.max_length)
@@ -69,9 +68,8 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
       Any tensor/op should be declared here in order to be evaluated
       returns None or SessionRunArgs()
     """
-    self._current_step += 1
     if self.tensors is not None:
-      self._should_trigger = self._timer.should_trigger_for_step(self._iter_count)
+      self._should_trigger = self._timer.should_trigger_for_step(self._current_step)
       if self._should_trigger:
         return tf.estimator.SessionRunArgs(self._current_tensors)
     return None
@@ -87,7 +85,7 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
       if self._should_trigger:
         self._log_tensors(run_values.results)
 
-    self._iter_count += 1
+    self._current_step += 1
 
   def end(self, session):
     """
@@ -100,7 +98,7 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
 
   def _log_tensors(self, tensor_values):
 
-    elapsed_secs, _ = self._timer.update_last_triggered_step(self._iter_count)
+    elapsed_secs, _ = self._timer.update_last_triggered_step(self._current_step)
     stats = []
 
     for tag in self._tag_order:
