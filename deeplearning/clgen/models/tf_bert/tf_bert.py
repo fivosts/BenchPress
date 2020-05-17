@@ -232,6 +232,19 @@ class tfBert(backends.BackendBase):
     l.getLogger().warning("Empty Function!")
     return 
 
+  def InitSampleBatch(self,
+                   sampler: samplers.Sampler, 
+                   ) -> None:
+
+    l.getLogger().warning("Empty Function!")
+    return 
+
+  def SampleNextIndices(self, sampler: samplers.Sampler, done):
+    l.getLogger().warning("Empty Function!")
+
+    return []
+
+
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
     return (
