@@ -33,21 +33,9 @@ flask_app = flask.Flask(
   ),
   static_folder=bazelutil.DataPath("phd/deeplearning/clgen/dashboard/static"),
 )
-
 # Get URI of the the dashboard database.
-#
-# Defaults to /tmp/phd/deeplearning/clgen/dashboard.db. If $CLGEN_DASHBOARD
-# is set, use this URL. Else if $TEST_TMPDIR is set (as set by bazel test
-# environment), create a dashboard in there.
-_dashboard_uri = "sqlite:///{}/dashboard.db".format(FLAGS.workspace_dir)
-if os.environ.get("CLGEN_DASHBOARD"):
-  _dashboard_uri = os.environ["CLGEN_DASHBOARD"]
-elif os.environ.get("TEST_TMPDIR"):
-  _dashboard_uri = f"sqlite:///{os.environ['TEST_TMPDIR']}/dashboard.db"
-flask_app.config["SQLALCHEMY_DATABASE_URI"] = _dashboard_uri
-
+flask_app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///{}/dashboard.db".format(FLAGS.workspace_dir)
 db = flask_sqlalchemy.SQLAlchemy(flask_app)
-
 
 def GetBaseTemplateArgs():
   l.getLogger().debug("deeplearning.clgen.dashboard.GetBaseTemplateArgs()")
