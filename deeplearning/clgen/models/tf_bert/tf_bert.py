@@ -22,14 +22,15 @@ import os
 import typing
 import pathlib
 
+from deeplearning.clgen import samplers
+from deeplearning.clgen import telemetry
+from deeplearning.clgen.tf import tf
+from deeplearning.clgen.proto import model_pb2
+from deeplearning.clgen.models import backends
+from deeplearning.clgen.models import data_generators
 from deeplearning.clgen.models.tf_bert import model
 from deeplearning.clgen.models.tf_bert import optimizer
 from deeplearning.clgen.models.tf_bert import hooks
-from deeplearning.clgen.models import backends
-from deeplearning.clgen.models import data_generators
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen import telemetry
-from deeplearning.clgen.tf import tf
 
 from eupy.native import logger as l
 from labm8.py import app
@@ -223,6 +224,13 @@ class tfBert(backends.BackendBase):
 
     return
 
+  def InitSampling(self,
+                   sampler: samplers.Sampler, 
+                   seed: typing.Optional[int] = None
+                   ) -> None:
+
+    l.getLogger().warning("Empty Function!")
+    return 
 
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
