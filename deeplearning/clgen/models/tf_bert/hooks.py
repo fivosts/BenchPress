@@ -12,7 +12,8 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
                max_length: int,
                tensors = None,
                log_steps = None,
-               at_end = None
+               at_end = None,
+               is_training = True,
                ):
     """
     Set class variables
@@ -20,14 +21,20 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
         Upper threshold of progressbar
     """
     self.max_length = max_length
+    self.tensors = tensors
     self.log_steps = log_steps
     self.at_end = at_end
-    self.tensors = tensors
+    self.is_training = is_training
+
     self.global_step = tf.compat.v1.train.get_or_create_global_step()
-    self.step_tensor = { self.global_step: self.global_step }
-    self._current_epoch = 0
+
+    if self.is_training:
+      self.step_tensor = { self.global_step: self.global_step }
+      self._current_epoch = 0
+      raise ValueError
 
     if self.tensors is not None:
+      raise ValueError
 
       only_log_at_end = False
       if self.log_steps is None:
@@ -55,15 +62,18 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
         unused
     """
     self._trigger_step = 0
-    self._timer.reset()
-
     self.bar = progressbar.ProgressBar(max_value = self.max_length)
 
-    self.step_tensor = {
-        tag: self._as_graph_element(tensor)
-        for (tag, tensor) in self.step_tensor.items()
-        }
+    if self.is_training:
+      raise ValueError
+      self.step_tensor = {
+          tag: self._as_graph_element(tensor)
+          for (tag, tensor) in self.step_tensor.items()
+          }
+    
     if self.tensors is not None:
+      raise ValueError
+      self._timer.reset()
       self._current_tensors = {
           tag: self._as_graph_element(tensor)
           for (tag, tensor) in self.tensors.items()
@@ -76,24 +86,47 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
       returns None or SessionRunArgs()
     """
     if self.tensors is not None:
+      raise ValueError
       if self._timer.should_trigger_for_step(self._trigger_step):
-        return tf.estimator.SessionRunArgs([self.step_tensor, self._current_tensors])
+        if self.is_training:
+          self.session_dict = {
+            'step_tensor': 0,
+            'value_tensor': 1,
+          }
+          return tf.estimator.SessionRunArgs([self.step_tensor, self._current_tensors])
+        else:
+          self.session_dict = {
+            'value_tensor': 0,
+          }
+          return tf.estimator.SessionRunArgs([self._current_tensors])
 
-    return tf.estimator.SessionRunArgs([self.step_tensor])
+    if self.is_training:
+      raise ValueError
+      self.session_dict = {
+        'step_tensor': 0,
+      }
+      return tf.estimator.SessionRunArgs([self.step_tensor])
+    else:
+      self.session_dict = {}
+      return None
 
   def after_run(self, run_context, run_values):
     """
       Requested tensors are evaluated and their values are available
     """
     ##  0th element is always global_step, see how list is ordered in SessionRunArgs
-    self._current_step = run_values.results[0][self.global_step]
-    self._current_epoch = int(self._current_step / self.log_steps)
+
+    if 'step_tensor' in self.session_dict:
+      self._current_step = run_values.results[self.session_dict['step_tensor']][self.global_step]
+      self._current_epoch = int(self._current_step / self.log_steps)
+    else:
+      self._current_step = self._trigger_step
 
     self.bar.update(self._current_step) 
 
     _ = run_context
-    if len(run_values.results) > 1:
-      self._log_tensors(run_values.results[1])
+    if 'value_tensor' in self.session_dict:
+      self._log_tensors(run_values.results[self.session_dict['value_tensor']])
 
     self._trigger_step += 1
 
@@ -101,7 +134,8 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
     """
       Called at the end of session
     """
-    if self.at_end:
+    if self.tensors is not None and self.at_end:
+      raise ValueError
       values = session.run(self._current_tensors)
       self._log_tensors(values)
 
