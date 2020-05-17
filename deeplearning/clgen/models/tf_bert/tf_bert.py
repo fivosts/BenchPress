@@ -525,12 +525,6 @@ class tfBert(backends.BackendBase):
                 is_training = is_training,
               )
             ]    
-  @property
-  def is_trained(self):
-    if self.is_trained is None:
-      return False
-    else:
-      return self.is_trained
   
   @property
   def is_validated(self):
