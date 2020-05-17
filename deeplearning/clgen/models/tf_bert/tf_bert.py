@@ -128,6 +128,9 @@ class tfBert(backends.BackendBase):
     self.num_steps_per_epoch                = self.data_generator.num_batches
     self.num_epochs                         = int(self.num_train_steps / self.num_steps_per_epoch)
 
+    self.validation_results_file            = "val_results.txt"
+    self.validation_results_path            = os.path.join(self.logfile_path, self.validation_results_file)
+
     return
 
   def Train(self, corpus, **unused_kwargs) -> None:
@@ -203,23 +206,21 @@ class tfBert(backends.BackendBase):
     self.is_trained = True
     self.telemetry.TfRecordEpochs()
 
-    l.getLogger().info("Validation set run")
-    l.getLogger().info("  Batch size = {}".format(self.eval_batch_size))
+    if not self._isValidated():
+      l.getLogger().info("Validation set run")
+      l.getLogger().info("  Batch size = {}".format(self.eval_batch_size))
 
-    eval_input_fn = self.data_generator.generateTfDataset(
-        max_seq_length=self.max_seq_length,
-        num_cpu_threads = 8,
-        is_training=False)
+      eval_input_fn = self.data_generator.generateTfDataset(
+          max_seq_length=self.max_seq_length,
+          num_cpu_threads = 8,
+          is_training=False)
 
-    result = estimator.evaluate(
-        input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
+      result = estimator.evaluate(
+          input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
 
-    output_eval_file = os.path.join(self.logfile_path, "validation_results.txt")
-    with tf.io.gfile.GFile(output_eval_file, "w") as writer:
-      l.getLogger().info("Validation set result summary")
-      for key in sorted(result.keys()):
-        l.getLogger().info("{}: {}".format(key, str(result[key])))
-        writer.write("{}: {}\n".format(key, str(result[key])))
+      self._writeValidation(results)
+
+    return
 
 
   def GetShortSummary(self) -> str:
@@ -523,3 +524,18 @@ class tfBert(backends.BackendBase):
                 is_training = is_training,
               )
             ]    
+
+  def _isValidated(self):
+    if os.path.exists(self.validation_results_path):
+      return True
+    return False
+
+  def _writeValidation(self,
+                       results
+                       ) -> None:
+    with tf.io.gfile.GFile(self.validation_results_path, "w") as writer:
+      l.getLogger().info("Validation set result summary")
+      for key in sorted(result.keys()):
+        l.getLogger().info("{}: {}".format(key, str(result[key])))
+        writer.write("{}: {}\n".format(key, str(result[key])))
+    return 
