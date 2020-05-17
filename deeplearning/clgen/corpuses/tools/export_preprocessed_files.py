@@ -19,9 +19,8 @@ from eupy.native import logger as l
 
 FLAGS = app.FLAGS
 
-app.DEFINE_database(
-  "db",
-  preprocessed.PreprocessedContentFiles,
+app.DEFINE_string(
+  "db_url",
   None,
   "The URL of the database to export files from.",
 )
@@ -135,7 +134,7 @@ def Main():
     raise app.UsageError("Flag is required: --outdir")
 
   ExportPreprocessedFiles(
-    FLAGS.db(),
+    preprocessed.PreprocessedContentFiles(url = FLAGS.db_url),
     FLAGS.outdir,
     file_suffix=FLAGS.file_suffix,
     only_successfully_preprocessed=FLAGS.only_successfully_preprocessed,
