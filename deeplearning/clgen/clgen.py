@@ -153,7 +153,7 @@ class Instance(object):
     self.working_dir = None
     if config.HasField("working_dir"):
       self.working_dir: pathlib.Path = pathlib.Path(
-        os.path.expandvars(config.working_dir)
+        FLAGS.workspace_dir + os.path.expandvars(config.working_dir)
       ).expanduser().absolute()
     # Enter a session so that the cache paths are set relative to any requested
     # working directory.
