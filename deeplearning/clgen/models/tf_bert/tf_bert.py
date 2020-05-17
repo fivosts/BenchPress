@@ -33,6 +33,7 @@ from deeplearning.clgen.tf import tf
 
 from eupy.native import logger as l
 from labm8.py import app
+from labm8.py import gpu_scheduler
 
 FLAGS = app.FLAGS
 
@@ -134,75 +135,77 @@ class tfBert(backends.BackendBase):
 
     del unused_kwargs
 
-    if self.is_trained:
-      return
+    if not self.is_trained:
 
-    ## Initialize params and data generator
-    self.data_generator = data_generators.MaskLMBatchGenerator(
-                              corpus, self.config.training, self.cache.path, tf
-                           )
-    self._ConfigModelParams()
+      ## Acquire GPU Lock before anything else is done
+      gpu_scheduler.LockExclusiveProcessGpuAccess()
 
-    ## Generate BERT Model from dict params
-    bert_config = model.BertConfig.from_dict(self.bertConfig)
+      ## Initialize params and data generator
+      self.data_generator = data_generators.MaskLMBatchGenerator(
+                                corpus, self.config.training, self.cache.path, tf
+                             )
+      self._ConfigModelParams()
 
-    l.getLogger().info("Checkpoint path: \n{}".format(self.ckpt_path))
-    l.getLogger().info("Logging path: \n{}".format(self.logfile_path))
-    
-    tpu_cluster_resolver = None
-    if FLAGS.use_tpu and FLAGS.tpu_name:
-      tpu_cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
-          FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
+      ## Generate BERT Model from dict params
+      bert_config = model.BertConfig.from_dict(self.bertConfig)
 
-    is_per_host = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
-    run_config = tf.compat.v1.estimator.tpu.RunConfig(
-        cluster = tpu_cluster_resolver,
-        master = FLAGS.master,
-        model_dir = self.ckpt_path,
-        save_checkpoints_steps = self.num_steps_per_epoch,
-        save_summary_steps = self.num_steps_per_epoch,
-        keep_checkpoint_max = 0,
-        log_step_count_steps = self.num_steps_per_epoch,
-        tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
-            iterations_per_loop = self.num_steps_per_epoch,
-            num_shards = FLAGS.num_tpu_cores,
-            per_host_input_for_training = is_per_host))
+      l.getLogger().info("Checkpoint path: \n{}".format(self.ckpt_path))
+      l.getLogger().info("Logging path: \n{}".format(self.logfile_path))
+      
+      tpu_cluster_resolver = None
+      if FLAGS.use_tpu and FLAGS.tpu_name:
+        tpu_cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
+            FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
 
-    model_fn = self._model_fn_builder(
-        bert_config = bert_config,
-        init_checkpoint = None,
-        learning_rate = self.learning_rate,
-        num_train_steps = self.num_train_steps,
-        num_warmup_steps = self.num_warmup_steps,
-        use_tpu = FLAGS.use_tpu,
-        use_one_hot_embeddings = FLAGS.use_tpu)
+      is_per_host = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
+      run_config = tf.compat.v1.estimator.tpu.RunConfig(
+          cluster = tpu_cluster_resolver,
+          master = FLAGS.master,
+          model_dir = self.ckpt_path,
+          save_checkpoints_steps = self.num_steps_per_epoch,
+          save_summary_steps = self.num_steps_per_epoch,
+          keep_checkpoint_max = 0,
+          log_step_count_steps = self.num_steps_per_epoch,
+          tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
+              iterations_per_loop = self.num_steps_per_epoch,
+              num_shards = FLAGS.num_tpu_cores,
+              per_host_input_for_training = is_per_host))
 
-    # If TPU is not available, this will fall back to normal Estimator on CPU
-    # or GPU.
-    estimator = tf.compat.v1.estimator.tpu.TPUEstimator(
-        use_tpu = FLAGS.use_tpu,
-        model_fn = model_fn,
-        config = run_config,
-        train_batch_size = self.train_batch_size,
-        eval_batch_size = self.eval_batch_size)
+      model_fn = self._model_fn_builder(
+          bert_config = bert_config,
+          init_checkpoint = None,
+          learning_rate = self.learning_rate,
+          num_train_steps = self.num_train_steps,
+          num_warmup_steps = self.num_warmup_steps,
+          use_tpu = FLAGS.use_tpu,
+          use_one_hot_embeddings = FLAGS.use_tpu)
 
-    l.getLogger().info("BERT Training initialization")
-    ## TODO print short summary of model and/or dataset features
+      # If TPU is not available, this will fall back to normal Estimator on CPU
+      # or GPU.
+      estimator = tf.compat.v1.estimator.tpu.TPUEstimator(
+          use_tpu = FLAGS.use_tpu,
+          model_fn = model_fn,
+          config = run_config,
+          train_batch_size = self.train_batch_size,
+          eval_batch_size = self.eval_batch_size)
 
-    train_input_fn = self.data_generator.generateTfDataset(
-        max_seq_length = self.max_seq_length,
-        num_cpu_threads = 8,
-        is_training = True)
+      l.getLogger().info("BERT Training initialization")
+      ## TODO print short summary of model and/or dataset features
 
-    l.getLogger().info("Running model for {} steps".format(self.num_train_steps))
-    l.getLogger().info("Splitting {} steps into {} equivalent epochs, {} steps each".format(
-                                      self.num_train_steps, self.num_epochs, self.num_steps_per_epoch
-                                      )
-                      )
+      train_input_fn = self.data_generator.generateTfDataset(
+          max_seq_length = self.max_seq_length,
+          num_cpu_threads = 8,
+          is_training = True)
 
-    estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
-    self.is_trained = True
-    self.telemetry.TfRecordEpochs()
+      l.getLogger().info("Running model for {} steps".format(self.num_train_steps))
+      l.getLogger().info("Splitting {} steps into {} equivalent epochs, {} steps each".format(
+                                        self.num_train_steps, self.num_epochs, self.num_steps_per_epoch
+                                        )
+                        )
+
+      estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
+      self.is_trained = True
+      self.telemetry.TfRecordEpochs()
 
     if not self.is_validated:
       l.getLogger().info("BERT Validation")
