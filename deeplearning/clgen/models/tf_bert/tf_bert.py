@@ -36,9 +36,6 @@ from labm8.py import app
 
 FLAGS = app.FLAGS
 
-app.DEFINE_integer("iterations_per_loop", 1000,
-                     "How many steps to make in each estimator call.")
-
 app.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
 
 app.DEFINE_boolean("use_tpu", False, "Whether to use TPU or GPU/CPU.")
@@ -167,7 +164,7 @@ class tfBert(backends.BackendBase):
         keep_checkpoint_max = 0,
         log_step_count_steps = self.num_steps_per_epoch,
         tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
-            iterations_per_loop = FLAGS.iterations_per_loop, ## TODO what is this ?
+            iterations_per_loop = self.num_steps_per_epoch,
             num_shards = FLAGS.num_tpu_cores,
             per_host_input_for_training = is_per_host))
 
