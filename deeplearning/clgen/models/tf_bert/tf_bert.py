@@ -331,7 +331,7 @@ class tfBert(backends.BackendBase):
                                               )
 
         training_hooks += self._GetProgressBarHooks(max_length = self.num_train_steps,
-                                                    tensors = {'total_loss': total_loss},
+                                                    tensors = {'Loss': total_loss},
                                                     log_steps = self.num_steps_per_epoch,
                                                     at_end = True,
                                                     )
