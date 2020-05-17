@@ -331,8 +331,9 @@ class tfBert(backends.BackendBase):
                                               )
 
         training_hooks += self._GetProgressBarHooks(max_length = self.num_train_steps,
-                                                    tensors = ["total_loss"],
-                                                    log_steps = self.num_steps_per_epoch
+                                                    tensors = {'total_loss': total_loss},
+                                                    log_steps = self.num_steps_per_epoch,
+                                                    at_end = True,
                                                     )
 
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
@@ -494,7 +495,7 @@ class tfBert(backends.BackendBase):
                        save_steps: int, 
                        output_dir: str, 
                        **kwargs
-                       ) -> list[tf.estimator.SummarySaverHook]:
+                       ) -> typing.List[tf.estimator.SummarySaverHook]:
     return [tf.estimator.SummarySaverHook(save_steps = save_steps,
                                           output_dir = output_dir,
                                           summary_op = [ tf.compat.v1.summary.scalar(name, value) 
@@ -505,11 +506,14 @@ class tfBert(backends.BackendBase):
 
   def _GetProgressBarHooks(self, 
                            max_length: int, 
-                           tensors: list[str],
-                           log_steps: int
-                           ) -> list[hooks.tfProgressBar]:
-    return hooks.tfProgressBar(
+                           tensors: dict,
+                           log_steps: int,
+                           at_end: int,
+                           ) -> typing.List[hooks.tfProgressBar]:
+    return [hooks.tfProgressBar(
                 max_length = max_length,
                 tensors = tensors,
                 log_steps = log_steps,
-              )    
+                at_end = at_end
+              )
+            ]    
