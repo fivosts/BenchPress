@@ -71,6 +71,12 @@ app.DEFINE_boolean(
 app.DEFINE_string(
   "config", "/clgen/config.pbtxt", "Path to a clgen.Instance proto file."
 )
+app.DEFINE_string(
+  "workspace_dir",
+  "/tmp/clgen",
+  "Root path of the working space directory. Corpus, dataset, model and all meta files"
+  "will be stored here. Default value is /tmp folder.",
+)
 app.DEFINE_integer(
   "min_samples",
   0,
