@@ -228,11 +228,10 @@ class Model(object):
     final_loss = telemetry_logs[-1].loss
     total_time_ms = sum(t.epoch_wall_time_ms for t in telemetry_logs)
     l.getLogger().info(
-      "Trained model for {} epochs in {} ms ({}). " "Training loss: {}."
+      "Trained model for {} epochs in {} ms. " "Training loss: {}."
         .format(
           self.backend.num_epochs,
           humanize.Commas(total_time_ms),
-          humanize.Duration(total_time_ms / 1000),
           final_loss,
           )
     )
