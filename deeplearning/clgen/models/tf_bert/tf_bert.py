@@ -197,7 +197,7 @@ class tfBert(backends.BackendBase):
     estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
     self.telemetry.TfRecordEpochs()
 
-    l.getLogger().info("***** Running evaluation *****")
+    l.getLogger().info("Validation set run")
     l.getLogger().info("  Batch size = {}".format(self.eval_batch_size))
 
     eval_input_fn = self.data_generator.generateTfDataset(
@@ -208,12 +208,12 @@ class tfBert(backends.BackendBase):
     result = estimator.evaluate(
         input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
 
-    output_eval_file = os.path.join(self.logfile_path, "eval_results.txt")
+    output_eval_file = os.path.join(self.logfile_path, "validation_results.txt")
     with tf.io.gfile.GFile(output_eval_file, "w") as writer:
-      l.getLogger().info("***** Eval results *****")
+      l.getLogger().info("Validation set result summary")
       for key in sorted(result.keys()):
-        l.getLogger().info("  {} = {}".format(key, str(result[key])))
-        writer.write("%s = %s\n" % (key, str(result[key])))
+        l.getLogger().info("{}: {}".format(key, str(result[key])))
+        writer.write("{}: {}\n".format(key, str(result[key])))
 
 
   def GetShortSummary(self) -> str:
@@ -329,6 +329,7 @@ class tfBert(backends.BackendBase):
                                                     tensors = {'Loss': total_loss},
                                                     log_steps = self.num_steps_per_epoch,
                                                     at_end = True,
+                                                    is_training = True,
                                                     )
 
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
@@ -379,10 +380,12 @@ class tfBert(backends.BackendBase):
             masked_lm_weights, next_sentence_example_loss,
             next_sentence_log_probs, next_sentence_labels
         ])
+
+        evaluation_hooks = self._GetProgressBarHooks(max_length = FLAGS.max_eval_steps, is_training = False)
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
             mode=mode,
             loss=total_loss,
-            ## TODO check eval metrics!
+            evaluation_hooks = evaluation_hooks,
             eval_metrics=eval_metrics,
             scaffold_fn=scaffold_fn)
       else:
@@ -501,14 +504,16 @@ class tfBert(backends.BackendBase):
 
   def _GetProgressBarHooks(self, 
                            max_length: int, 
-                           tensors: dict,
-                           log_steps: int,
-                           at_end: int,
+                           tensors = None,
+                           log_steps = None,
+                           at_end = None,
+                           is_training = True,
                            ) -> typing.List[hooks.tfProgressBar]:
     return [hooks.tfProgressBar(
                 max_length = max_length,
                 tensors = tensors,
                 log_steps = log_steps,
-                at_end = at_end
+                at_end = at_end,
+                is_training = is_training,
               )
             ]    
