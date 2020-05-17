@@ -20,6 +20,7 @@ from __future__ import print_function
 
 import os
 import typing
+import pathlib
 
 from deeplearning.clgen.models.tf_bert import model
 from deeplearning.clgen.models.tf_bert import optimizer
