@@ -219,7 +219,7 @@ class tfBert(backends.BackendBase):
       result = estimator.evaluate(
           input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
 
-      self._writeValidation(results)
+      self._writeValidation(result)
 
     return
 
