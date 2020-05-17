@@ -36,11 +36,6 @@ from labm8.py import app
 
 FLAGS = app.FLAGS
 
-app.DEFINE_string(
-    # "init_checkpoint", "/home/fivosts/test/model.ckpt-3000.index",
-    "init_checkpoint", None,
-    "Initial checkpoint (usually from a pre-trained BERT model).")
-
 app.DEFINE_integer("iterations_per_loop", 1000,
                      "How many steps to make in each estimator call.")
 
@@ -170,7 +165,7 @@ class tfBert(backends.BackendBase):
 
     model_fn = self._model_fn_builder(
         bert_config = bert_config,
-        init_checkpoint = FLAGS.init_checkpoint, ## TODO Fix this to be assigned automatically
+        init_checkpoint = None,
         learning_rate = self.learning_rate,
         num_train_steps = self.num_train_steps,
         num_warmup_steps = self.num_warmup_steps,
