@@ -24,7 +24,7 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
     self.at_end = at_end
     self.tensors = tensors
 
-    if tensors is not None:
+    if self.tensors is not None:
 
       only_log_at_end = False
       if self.log_steps is None:
@@ -33,15 +33,20 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
         else:
           only_log_at_end = True
 
-      if not isinstance(tensors, dict):
-        self._tag_order = tensors
-        tensors = {item: item for item in tensors}
+      if not isinstance(self.tensors, dict):
+        self._tag_order = self.tensors
+        self.tensors = {item: item for item in self.tensors}
       else:
-        self._tag_order = sorted(tensors.keys())
+        self._tag_order = sorted(self.tensors.keys())
 
       self._timer = (
           tf.compat.v1.train.SecondOrStepTimer(every_steps=max_length) if only_log_at_end
           else tf.compat.v1.train.SecondOrStepTimer(every_steps=log_steps))
+    else:
+      self.tensors = {tf.compat.v1.get_or_create_global_step(): 
+                 tf.compat.v1.get_or_create_global_step()
+                }
+
 
   def begin(self):
     """
@@ -61,7 +66,7 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
           tag: self._as_graph_element(tensor)
           for (tag, tensor) in self.tensors.items()
       }
-
+get_or_create_global_step
   def before_run(self, run_context):
     """
       Called before session.run()
@@ -104,9 +109,11 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
     for tag in self._tag_order:
       stats.append("{}: {}".format(tag, tensor_values[tag]))
     if elapsed_secs is not None:
-      l.getLogger().info("Epoch {} ({:3f} sec)".format(", ".join(stats), elapsed_secs))
+      # l.getLogger().info("Epoch {} ({:3f} sec)".format(", ".join(stats), elapsed_secs))
+      print("Epoch {} ({:3f} sec)".format(", ".join(stats), elapsed_secs), end = "", flush = True)
     else:
-      l.getLogger().info("Epoch {}".format(", ".join(stats)))
+      # l.getLogger().info("Epoch {}".format(", ".join(stats)))
+      print("Epoch {}".format(", ".join(stats)), end = "", flush = True)
 
   def _as_graph_element(self, obj):
     """Retrieves Graph element."""
