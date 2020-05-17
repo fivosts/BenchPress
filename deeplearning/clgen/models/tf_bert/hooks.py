@@ -87,7 +87,7 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
     """
     ##  0th element is always global_step, see how list is ordered in SessionRunArgs
     self._current_step = run_values.results[0][self.global_step]
-    self._current_epoch = 1 + int(self._current_step / self.log_steps)
+    self._current_epoch = int(self._current_step / self.log_steps)
 
     self.bar.update(self._current_step) 
 
@@ -115,7 +115,7 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
     if elapsed_secs is not None:
       l.getLogger().info("Epoch {} {} - {:.3f} sec".format(self._current_epoch, ", ".join(stats), elapsed_secs))
     else:
-      l.getLogger().info("Epoch {} {}".format(self._current_epoch, ", ".join(stats)))
+      l.getLogger().info("Starting values: {}".format(", ".join(stats)))
 
   def _as_graph_element(self, obj):
     """Retrieves Graph element."""
