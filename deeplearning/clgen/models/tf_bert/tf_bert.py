@@ -229,18 +229,122 @@ class tfBert(backends.BackendBase):
                    seed: typing.Optional[int] = None
                    ) -> None:
 
-    l.getLogger().warning("Empty Function!")
+    l.getLogger().warning("Init Sampling: Called once, sets model")
+
+    processors = {
+        "cola": ColaProcessor,
+        "mnli": MnliProcessor,
+        "mrpc": MrpcProcessor,
+        "xnli": XnliProcessor,
+    }
+
+    tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
+                                                  FLAGS.init_checkpoint)
+
+    if not FLAGS.do_train and not FLAGS.do_eval and not FLAGS.do_predict:
+      raise ValueError(
+          "At least one of `do_train`, `do_eval` or `do_predict' must be True.")
+
+    bert_config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
+
+    if FLAGS.max_seq_length > bert_config.max_position_embeddings:
+      raise ValueError(
+          "Cannot use sequence length %d because the BERT model "
+          "was only trained up to sequence length %d" %
+          (FLAGS.max_seq_length, bert_config.max_position_embeddings))
+
+    tf.gfile.MakeDirs(FLAGS.output_dir)
+
+    task_name = FLAGS.task_name.lower()
+
+    if task_name not in processors:
+      raise ValueError("Task not found: %s" % (task_name))
+
+    processor = processors[task_name]()
+
+    label_list = processor.get_labels()
+
+    tokenizer = tokenization.FullTokenizer(
+        vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
+
+    tpu_cluster_resolver = None
+    if FLAGS.use_tpu and FLAGS.tpu_name:
+      tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
+          FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
+
+    is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
+    run_config = tf.contrib.tpu.RunConfig(
+        cluster=tpu_cluster_resolver,
+        master=FLAGS.master,
+        model_dir=FLAGS.output_dir,
+        save_checkpoints_steps=FLAGS.save_checkpoints_steps,
+        tpu_config=tf.contrib.tpu.TPUConfig(
+            iterations_per_loop=FLAGS.iterations_per_loop,
+            num_shards=FLAGS.num_tpu_cores,
+            per_host_input_for_training=is_per_host))
+
+    train_examples = None
+    num_train_steps = None
+    num_warmup_steps = None
+
+    if FLAGS.do_predict:
+      predict_examples = processor.get_test_examples(FLAGS.data_dir)
+      num_actual_predict_examples = len(predict_examples)
+      if FLAGS.use_tpu:
+        # TPU requires a fixed batch size for all batches, therefore the number
+        # of examples must be a multiple of the batch size, or else examples
+        # will get dropped. So we pad with fake examples which are ignored
+        # later on.
+        while len(predict_examples) % FLAGS.predict_batch_size != 0:
+          predict_examples.append(PaddingInputExample())
+
+      predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
+      file_based_convert_examples_to_features(predict_examples, label_list,
+                                              FLAGS.max_seq_length, tokenizer,
+                                              predict_file)
+
+      tf.logging.info("***** Running prediction*****")
+      tf.logging.info("  Num examples = %d (%d actual, %d padding)",
+                      len(predict_examples), num_actual_predict_examples,
+                      len(predict_examples) - num_actual_predict_examples)
+      tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
+
+      predict_drop_remainder = True if FLAGS.use_tpu else False
+      predict_input_fn = file_based_input_fn_builder(
+          input_file=predict_file,
+          seq_length=FLAGS.max_seq_length,
+          is_training=False,
+          drop_remainder=predict_drop_remainder)
+
+      result = estimator.predict(input_fn=predict_input_fn)
+
+      output_predict_file = os.path.join(FLAGS.output_dir, "test_results.tsv")
+      with tf.gfile.GFile(output_predict_file, "w") as writer:
+        num_written_lines = 0
+        tf.logging.info("***** Predict results *****")
+        for (i, prediction) in enumerate(result):
+          probabilities = prediction["probabilities"]
+          if i >= num_actual_predict_examples:
+            break
+          output_line = "\t".join(
+              str(class_probability)
+              for class_probability in probabilities) + "\n"
+          writer.write(output_line)
+          num_written_lines += 1
+      assert num_written_lines == num_actual_predict_examples
+
+
     return 
 
   def InitSampleBatch(self,
                    sampler: samplers.Sampler, 
                    ) -> None:
 
-    l.getLogger().warning("Empty Function!")
+    l.getLogger().warning("Called while batches are not done. Sets up batch")
     return 
 
   def SampleNextIndices(self, sampler: samplers.Sampler, done):
-    l.getLogger().warning("Empty Function!")
+    l.getLogger().warning("Within a batch, called for each i/o step")
 
     return []
 
