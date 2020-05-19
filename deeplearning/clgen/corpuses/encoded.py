@@ -25,7 +25,7 @@ import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from sqlalchemy.sql import func
 
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.proto import internal_pb2

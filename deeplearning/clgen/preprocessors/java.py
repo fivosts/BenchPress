@@ -20,7 +20,7 @@ import tempfile
 import typing
 
 from datasets.github.scrape_repos.preprocessors import extractors
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import public
 from labm8.py import app

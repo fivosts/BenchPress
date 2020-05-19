@@ -18,7 +18,7 @@ import subprocess
 import tempfile
 import typing
 
-from deeplearning.clgen import errors
+
 from labm8.py import app
 from labm8.py import bazelutil
 from eupy.native import logger as l

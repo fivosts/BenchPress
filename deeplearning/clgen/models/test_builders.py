@@ -15,7 +15,7 @@
 """Unit tests for //deeplearning/clgen/models/builders.py."""
 import pytest
 
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.models import builders
 from deeplearning.clgen.proto import model_pb2
 from labm8.py import app

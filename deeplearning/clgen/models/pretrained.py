@@ -18,7 +18,7 @@ import typing
 
 import numpy as np
 
-from deeplearning.clgen import errors
+
 from deeplearning.clgen import sample_observers as sample_observers_lib
 from deeplearning.clgen import samplers
 from deeplearning.clgen import telemetry

@@ -15,7 +15,7 @@
 """Unit tests for //deeplearning/clgen/models/models.py."""
 import pathlib
 
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.models import models
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.proto import model_pb2

@@ -15,7 +15,7 @@
 """Unit tests for ///test_common.py."""
 import pytest
 
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.preprocessors import common
 from labm8.py import app
 from labm8.py import test

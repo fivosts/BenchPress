@@ -15,7 +15,7 @@
 """This file defines the decorator for marking a CLgen preprocessor function."""
 import typing
 
-from deeplearning.clgen import errors
+
 from labm8.py import app
 
 FLAGS = app.FLAGS

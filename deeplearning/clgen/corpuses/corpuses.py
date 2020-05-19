@@ -30,7 +30,7 @@ import numpy as np
 from sqlalchemy.sql.expression import func
 
 from deeplearning.clgen import cache
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.corpuses import preprocessed

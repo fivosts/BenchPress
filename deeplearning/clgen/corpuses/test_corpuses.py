@@ -18,7 +18,7 @@ import os
 import pathlib
 import tempfile
 
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.corpuses import preprocessed

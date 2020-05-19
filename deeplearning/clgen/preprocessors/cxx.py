@@ -18,7 +18,7 @@ import sys
 
 from compilers.llvm import clang as clanglib
 from compilers.llvm import llvm
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import normalizer
 from deeplearning.clgen.preprocessors import public

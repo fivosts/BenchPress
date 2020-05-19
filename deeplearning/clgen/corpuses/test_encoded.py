@@ -18,7 +18,7 @@ import tempfile
 
 import numpy as np
 
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.corpuses import preprocessed

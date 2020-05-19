@@ -15,7 +15,7 @@
 """Unit tests for //deeplearning/clgen/preprocessors/public.py."""
 import pytest
 
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.preprocessors import public
 from labm8.py import app
 from labm8.py import test

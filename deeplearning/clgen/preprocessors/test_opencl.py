@@ -18,7 +18,7 @@ import subprocess
 import pytest
 
 import deeplearning.clgen
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.preprocessors import opencl
 from labm8.py import app
 from labm8.py import bazelutil

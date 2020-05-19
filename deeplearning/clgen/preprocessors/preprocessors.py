@@ -5,7 +5,7 @@ import typing
 from importlib import util as importlib_util
 
 from datasets.github.scrape_repos.preprocessors import secrets
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.preprocessors import public
 from labm8.py import app
 from eupy.native import logger as l

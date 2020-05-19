@@ -23,7 +23,7 @@ from collections import Counter
 
 import numpy as np
 
-from deeplearning.clgen import errors
+
 from labm8.py import app
 from labm8.py import labdate
 

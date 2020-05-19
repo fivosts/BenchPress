@@ -29,7 +29,7 @@ import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from sqlalchemy.sql import func
 
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.preprocessors import preprocessors
 from deeplearning.clgen.proto import corpus_pb2
 from deeplearning.clgen.proto import internal_pb2

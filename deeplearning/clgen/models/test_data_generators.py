@@ -15,7 +15,7 @@
 """Unit tests for //deeplearning/clgen/models/data_generators.py."""
 import numpy as np
 
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.models import data_generators
 from labm8.py import app
 from labm8.py import test

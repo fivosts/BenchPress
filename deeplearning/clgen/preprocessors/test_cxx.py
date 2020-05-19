@@ -15,7 +15,7 @@
 """Unit tests for :test_cxx.py."""
 import pytest
 
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.preprocessors import cxx
 from labm8.py import app
 from labm8.py import test

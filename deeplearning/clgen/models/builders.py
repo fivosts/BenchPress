@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """This file builds Keras models from CLgen Model config protos."""
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.proto import model_pb2
 from labm8.py import app
 from labm8.py import pbutil

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """Common preprocessor passes."""
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.preprocessors import public
 from labm8.py import app
 from eupy.native import logger as l

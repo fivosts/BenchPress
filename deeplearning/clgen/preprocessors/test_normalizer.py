@@ -17,7 +17,7 @@ import subprocess
 
 import pytest
 
-from deeplearning.clgen import errors
+
 from deeplearning.clgen.preprocessors import normalizer
 from labm8.py import app
 from labm8.py import test
