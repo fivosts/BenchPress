@@ -145,8 +145,8 @@ class tfBert(backends.BackendBase):
       gpu_scheduler.LockExclusiveProcessGpuAccess()
 
       ## Initialize params and data generator
-      self.data_generator = data_generators.MaskLMBatchGenerator(
-                                corpus, self.config.training, self.cache.path, tf
+      self.data_generator = data_generators.TrainMaskLMBatchGenerator(
+                                corpus, self.config.training, self.cache.path
                              )
       self._ConfigModelParams()
 
@@ -351,7 +351,7 @@ class tfBert(backends.BackendBase):
           writer.write(output_line)
           num_written_lines += 1
       assert num_written_lines == num_actual_predict_examples
-      
+
     return []
 
 
