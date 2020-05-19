@@ -70,9 +70,9 @@ class AtomizerBase(object):
 
     # Each atom and index must be unique to ensure deterministic encoding.
     if len(set(self.vocab.keys())) != len(self.vocab):
-      raise errors.InvalidVocab("all atoms must be unique")
+      raise ValueError("all atoms must be unique")
     if len(set(self.vocab.values())) != len(self.vocab):
-      raise errors.InvalidVocab("all indices must be unique")
+      raise ValueError("all indices must be unique")
 
     self.vocab_size = len(self.vocab)
     self.decoder = {val: key for key, val in self.vocab.items()}
