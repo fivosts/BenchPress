@@ -98,7 +98,7 @@ def NormalizeIdentifiers(
     # Propagate the error:
     raise errors.RewriterException(stderr)
   elif process.returncode == 9:
-    raise errors.ClangTimeout(
+    raise RuntimeError(
       f"clang_rewriter failed to complete after {timeout_seconds}s"
     )
   # The rewriter process can still fail because of some other compilation

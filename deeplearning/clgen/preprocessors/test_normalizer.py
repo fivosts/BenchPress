@@ -49,10 +49,10 @@ def test_NormalizeIdentifiers_ClangTimeout(mocker):
   """Test that ClangTimeout is raised if clang_rewriter returns with SIGKILL."""
   mock_Popen = mocker.patch("subprocess.Popen")
   mock_Popen.return_value = MockProcess(9)
-  with test.Raises(errors.ClangTimeout):
+  with test.Raises(RuntimeError):
     normalizer.NormalizeIdentifiers("", ".c", [])
   # ClangTimeout inherits from ClangException.
-  with test.Raises(errors.ClangException):
+  with test.Raises(RuntimeError):
     normalizer.NormalizeIdentifiers("", ".c", [])
 
 
@@ -63,7 +63,7 @@ def test_NormalizeIdentifiers_RewriterException(mocker):
   with test.Raises(errors.RewriterException):
     normalizer.NormalizeIdentifiers("", ".c", [])
   # RewriterException inherits from ClangException.
-  with test.Raises(errors.ClangException):
+  with test.Raises(RuntimeError):
     normalizer.NormalizeIdentifiers("", ".c", [])
 
 

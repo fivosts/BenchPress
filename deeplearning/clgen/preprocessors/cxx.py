@@ -73,7 +73,7 @@ def ClangPreprocess(text: str) -> str:
   try:
     return clang.StripPreprocessorLines(clanglib.Preprocess(text, CLANG_ARGS))
   except llvm.LlvmError as e:
-    raise errors.ClangException(str(e.stderr[:1024]))
+    raise RuntimeError(str(e.stderr[:1024]))
 
 
 @public.clgen_preprocessor

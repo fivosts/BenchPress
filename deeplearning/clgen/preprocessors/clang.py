@@ -124,11 +124,11 @@ def Preprocess(
   )
   stdout, stderr = process.communicate(src)
   if process.returncode == 9:
-    raise errors.ClangTimeout(
+    raise RuntimeError(
       f"Clang preprocessor timed out after {timeout_seconds}s"
     )
   elif process.returncode != 0:
-    raise errors.ClangException(stderr)
+    raise RuntimeError(stderr)
   if strip_preprocessor_lines:
     return StripPreprocessorLines(stdout)
   else:
@@ -175,9 +175,9 @@ def CompileLlvmBytecode(
     )
     stdout, stderr = process.communicate()
   if process.returncode == 9:
-    raise errors.ClangTimeout(f"Clang timed out after {timeout_seconds}s")
+    raise RuntimeError(f"Clang timed out after {timeout_seconds}s")
   elif process.returncode != 0:
-    raise errors.ClangException(stderr)
+    raise RuntimeError(stderr)
   return stdout
 
 
@@ -206,8 +206,8 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
       timeout_seconds,
     )
   except llvm.LlvmTimeout:
-    raise errors.ClangTimeout(
+    raise RuntimeError(
       f"Clang-format timed out after {timeout_seconds}s"
     )
   except clang_format.ClangFormatException as e:
-    raise errors.ClangFormatException(str(e))
+    raise RuntimeError(str(e))
