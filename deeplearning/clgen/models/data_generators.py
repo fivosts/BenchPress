@@ -15,8 +15,9 @@ import collections
 import numpy as np
 
 from deeplearning.clgen import cache
-
+from deeplearning.clgen import tf
 from deeplearning.clgen.proto import model_pb2
+
 from labm8.py import app
 from labm8.py import humanize
 
@@ -293,37 +294,46 @@ class TensorflowBatchGenerator(object):
     return batch
 
 class MaskLMBatchGenerator(object):
-  def __init__(self,
-               corpus: "corpuses.Corpus",
-               training_opts: model_pb2.TrainingOptions,
-               cache_path,
-               tf, 
-  ):
+  def __init__():
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.__init__()")
-    self.corpus = corpus
-    self.training_opts = training_opts
-    self.tfRecord = cache_path / "dataset" / "maskedDataset.tf_record"
-    self.tf = tf
+    return
+
+  @classmethod
+  def TrainMaskLMBatchGenerator(cls,
+                               corpus: "corpuses.Corpus",
+                               training_opts: model_pb2.TrainingOptions,
+                               cache_path) -> "data_generators.MaskLMBatchGenerator":
+    d = MaskLMBatchGenerator()
+    d.corpus = corpus
+    d.training_opts = training_opts
+    tfRecord = cache_path / "dataset" / "maskedDataset.tf_record"
+    tf = tf
 
     # Lazily instantiated.
-    self._masked_corpus = None
-    self._original_encoded_corpus = None
-    self.shaped_corpus = None
-    self.num_batches = None
-    self.sequence_length = self.training_opts.sequence_length
+    d._masked_corpus = None
+    d._original_encoded_corpus = None
+    d.shaped_corpus = None
+    d.num_batches = None
+    d.sequence_length = d.training_opts.sequence_length
 
-    if self.training_opts.random_seed:
-      self.rngen = random.Random(training_opts.random_seed)
+    if d.training_opts.random_seed:
+      d.rngen = random.Random(training_opts.random_seed)
     else:
-      self.rngen = random.Random()
+      d.rngen = random.Random()
 
-    self.CreateCorpus()
+    d.CreateCorpus()
 
-    if not self.tfRecord.exists():
-      self.MaskCorpus(self.shaped_corpus)
-      self.saveMaskedCorpus()
+    if not tfRecord.exists():
+      d.MaskCorpus(d.shaped_corpus)
+      d.saveMaskedCorpus()
 
-    return
+    return d
+
+  @classmethod
+  def SampleMaskLMBatchGenerator(cls) -> "data_generators.MaskLMBatchGenerator":
+    d = MaskLMBatchGenerator()
+    ## TODO
+    return d
 
   def generateTfDataset(self,
                       max_seq_length,
@@ -336,15 +346,15 @@ class MaskLMBatchGenerator(object):
       ## This function assumes record is still a file (expressed as TF dataset)
       ## It decodes this record to tf scalars.
       ## You already have them so this will be skipped
-      example = self.tf.io.parse_single_example(record, name_to_features)
+      example = tf.io.parse_single_example(record, name_to_features)
 
       # tf.Example only supports tf.int64, but the TPU only supports tf.int32.
       # So cast all int64 to int32.
       for name in list(example.keys()):
         t = example[name]
-        if t.dtype == self.tf.int64:
-          # t = self.tf.compat.v1.to_int32(t)
-          t = self.tf.cast(t, dtype = self.tf.int32)
+        if t.dtype == tf.int64:
+          # t = tf.compat.v1.to_int32(t)
+          t = tf.cast(t, dtype = tf.int32)
 
         example[name] = t
 
@@ -355,22 +365,22 @@ class MaskLMBatchGenerator(object):
       batch_size = params["batch_size"]
       name_to_features = {
           "input_ids":
-              self.tf.io.FixedLenFeature([max_seq_length], self.tf.int64),
+              tf.io.FixedLenFeature([max_seq_length], tf.int64),
           "masked_lm_positions":
-              self.tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], self.tf.int64),
+              tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
           "masked_lm_ids":
-              self.tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], self.tf.int64),
+              tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
           "masked_lm_weights":
-              self.tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], self.tf.float32),
+              tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.float32),
           "next_sentence_labels":
-              self.tf.io.FixedLenFeature([1], self.tf.int64),
+              tf.io.FixedLenFeature([1], tf.int64),
       }
 
-      dataset = self.tf.io.gfile.glob(str(self.tfRecord))
+      dataset = tf.io.gfile.glob(str(tfRecord))
       # For training, we want a lot of parallel reading and shuffling.
       # For eval, we want no shuffling and parallel reading doesn't matter.
       if is_training:
-        d = self.tf.data.Dataset.from_tensor_slices(self.tf.constant(dataset))
+        d = tf.data.Dataset.from_tensor_slices(tf.constant(dataset))
         d = d.repeat()
         if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
           d = d.shuffle(buffer_size=len(dataset))
@@ -381,14 +391,14 @@ class MaskLMBatchGenerator(object):
         # `sloppy` mode means that the interleaving is not exact. This adds
         # even more randomness to the training pipeline.
         d = d.apply(
-            self.tf.data.experimental.parallel_interleave(
-                self.tf.data.TFRecordDataset,
+            tf.data.experimental.parallel_interleave(
+                tf.data.TFRecordDataset,
                 sloppy=is_training,
                 cycle_length=cycle_length))
         if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
           d = d.shuffle(buffer_size=100)
       else:
-        d = self.tf.data.TFRecordDataset(dataset)
+        d = tf.data.TFRecordDataset(dataset)
         # Since we evaluate for a fixed number of steps we don't want to encounter
         # out-of-range exceptions.
         d = d.repeat()
@@ -398,7 +408,7 @@ class MaskLMBatchGenerator(object):
       # and we *don't* want to drop the remainder, otherwise we wont cover
       # every sample.
       d = d.apply(
-          self.tf.data.experimental.map_and_batch(
+          tf.data.experimental.map_and_batch(
               lambda record: _decode_record(record, name_to_features),
               batch_size=batch_size,
               num_parallel_batches=num_cpu_threads,
@@ -540,8 +550,8 @@ class MaskLMBatchGenerator(object):
   def saveMaskedCorpus(self) -> None:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.saveMaskedCorpus()")
      
-    self.tfRecord.parent.mkdir(exist_ok = True, parents = True)
-    writer = self.tf.io.TFRecordWriter(str(self.tfRecord))
+    tfRecord.parent.mkdir(exist_ok = True, parents = True)
+    writer = tf.io.TFRecordWriter(str(tfRecord))
 
     total_written = 0
     for (inst_index, instance) in enumerate(self._masked_corpus):
@@ -555,36 +565,36 @@ class MaskLMBatchGenerator(object):
       next_sentence_label = instance.next_sentence_label
 
       features = collections.OrderedDict()
-      features["input_ids"] = self.tf.train.Feature(
-                                            int64_list = self.tf.train.Int64List(
+      features["input_ids"] = tf.train.Feature(
+                                            int64_list = tf.train.Int64List(
                                                                 value = list(input_ids)
                                                                 )
                                             )
-      features["masked_lm_positions"] = self.tf.train.Feature(
-                                            int64_list = self.tf.train.Int64List(
+      features["masked_lm_positions"] = tf.train.Feature(
+                                            int64_list = tf.train.Int64List(
                                                                 value = list(masked_lm_positions)
                                                                 )
                                             )
-      features["masked_lm_ids"] = self.tf.train.Feature(
-                                            int64_list = self.tf.train.Int64List(
+      features["masked_lm_ids"] = tf.train.Feature(
+                                            int64_list = tf.train.Int64List(
                                                                 value = list(masked_lm_ids)
                                                                 )
                                             )
-      features["masked_lm_weights"] = self.tf.train.Feature(
-                                            float_list = self.tf.train.FloatList(
+      features["masked_lm_weights"] = tf.train.Feature(
+                                            float_list = tf.train.FloatList(
                                                                 value=list(masked_lm_weights)
                                                                 )
                                             )
-      features["next_sentence_labels"] = self.tf.train.Feature(
-                                            int64_list = self.tf.train.Int64List(
+      features["next_sentence_labels"] = tf.train.Feature(
+                                            int64_list = tf.train.Int64List(
                                                                 value = list([next_sentence_label])
                                                                 )
                                             )
-      tf_example = self.tf.train.Example(features=self.tf.train.Features(feature=features))
+      tf_example = tf.train.Example(features=tf.train.Features(feature=features))
       writer.write(tf_example.SerializeToString())
       total_written += 1
 
     writer.close()
     ## TODO print num_batches x batch_size (a.k.a. 185 * 64) instead of 11840
-    l.getLogger().info("Wrote {} instances to {}".format(total_written, self.tfRecord))
+    l.getLogger().info("Wrote {} instances to {}".format(total_written, tfRecord))
     return
