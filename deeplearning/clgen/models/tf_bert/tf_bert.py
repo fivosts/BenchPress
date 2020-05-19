@@ -231,23 +231,15 @@ class tfBert(backends.BackendBase):
 
     l.getLogger().warning("Init Sampling: Called once, sets model")
 
-    processors = {
-        "cola": ColaProcessor,
-        "mnli": MnliProcessor,
-        "mrpc": MrpcProcessor,
-        "xnli": XnliProcessor,
-    }
-    
-    self._ConfigModelParams(is_training = False)
-    ## TODO when finish training, write bert to file.
-    bert_config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
-    # bert_config = model.BertConfig.from_dict(self.bertConfig)
+    if self.bertConfig is None:
+      self._ConfigModelParams()
+    bert_config = model.BertConfig.from_dict(self.bertConfig)
 
-    if FLAGS.max_seq_length > bert_config.max_position_embeddings:
+    if self.max_seq_length > bert_config.max_position_embeddings:
       raise ValueError(
           "Cannot use sequence length %d because the BERT model "
           "was only trained up to sequence length %d" %
-          (FLAGS.max_seq_length, bert_config.max_position_embeddings))
+          (self.max_seq_length, bert_config.max_position_embeddings))
 
     tf.gfile.MakeDirs(FLAGS.output_dir)
 
@@ -296,7 +288,7 @@ class tfBert(backends.BackendBase):
 
       predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
       file_based_convert_examples_to_features(predict_examples, label_list,
-                                              FLAGS.max_seq_length, tokenizer,
+                                              self.max_seq_length, tokenizer,
                                               predict_file)
 
       tf.logging.info("***** Running prediction*****")
@@ -311,7 +303,7 @@ class tfBert(backends.BackendBase):
       ## and will be migrated from file based, to sampler text based builder
       predict_input_fn = file_based_input_fn_builder(
           input_file=predict_file,
-          seq_length=FLAGS.max_seq_length,
+          seq_length=self.max_seq_length,
           is_training=False,
           drop_remainder=predict_drop_remainder)
 
