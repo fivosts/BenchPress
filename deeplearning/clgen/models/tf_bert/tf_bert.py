@@ -287,7 +287,8 @@ class tfBert(backends.BackendBase):
         # num_train_steps = self.num_train_steps,
         # num_warmup_steps = self.num_warmup_steps,
         use_tpu = FLAGS.use_tpu,
-        use_one_hot_embeddings = FLAGS.use_tpu)
+        use_one_hot_embeddings = FLAGS.use_tpu,
+        sampling_mode = True)
 
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
@@ -514,7 +515,7 @@ class tfBert(backends.BackendBase):
           masked_lm_weights = tf.reshape(masked_lm_weights, [-1])
           masked_lm_accuracy = tf.compat.v1.metrics.accuracy(
               labels=masked_lm_ids,
-              predictions=masked_lm_predictions,
+              predictions=masked_lm_predictions, ## TODO!! This is your predictions for mask
               weights=masked_lm_weights)
           masked_lm_mean_loss = tf.compat.v1.metrics.mean(
               values=masked_lm_example_loss, weights=masked_lm_weights)
@@ -552,64 +553,39 @@ class tfBert(backends.BackendBase):
             eval_metrics=eval_metrics,
             scaffold_fn=scaffold_fn)
       else:
-        raise ValueError("Only TRAIN and EVAL modes are supported: %s" % (mode))
+        def _metric_fn(masked_lm_log_probs, masked_lm_ids, next_sentence_log_probs):
+          """Computes the model's mask and next sentence predictions"""
+          masked_lm_log_probs = tf.reshape(masked_lm_log_probs,
+                                           [-1, masked_lm_log_probs.shape[-1]])
+          masked_lm_predictions = tf.argmax(
+              masked_lm_log_probs, axis=-1, output_type=tf.int32)
+          masked_lm_ids = tf.reshape(masked_lm_ids, [-1])
 
-      return output_spec
+          next_sentence_log_probs = tf.reshape(
+              next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]])
+          next_sentence_predictions = tf.argmax(
+              next_sentence_log_probs, axis=-1, output_type=tf.int32)
 
-    def _sampling_model_fn(features, labels, node, params):
+          return {
+              "masked_lm_predictions": masked_lm_predictions,
+              "next_sentence_predictions": next_sentence_predictions,
+          }
 
-      input_ids = features["input_ids"]
-      label_ids = features["label_ids"]
-      is_real_example = None
-      if "is_real_example" in features:
-        is_real_example = tf.cast(features["is_real_example"], dtype=tf.float32)
-      else:
-        is_real_example = tf.ones(tf.shape(label_ids), dtype=tf.float32)
+        eval_metrics = (_metric_fn, [masked_lm_log_probs, masked_lm_ids, next_sentence_log_probs])
 
-      is_training = False
-
-      (total_loss, per_example_loss, logits, probabilities) = create_model(
-          bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
-          num_labels, use_one_hot_embeddings)
-
-      tvars = tf.trainable_variables()
-      initialized_variable_names = {}
-      scaffold_fn = None
-      if init_checkpoint:
-        (assignment_map, initialized_variable_names
-        ) = modeling.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
-        if use_tpu:
-
-          def tpu_scaffold():
-            tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
-            return tf.train.Scaffold()
-
-          scaffold_fn = tpu_scaffold
-        else:
-          tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
-
-      tf.logging.info("**** Trainable Variables ****")
-      for var in tvars:
-        init_string = ""
-        if var.name in initialized_variable_names:
-          init_string = ", *INIT_FROM_CKPT*"
-        tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
-                        init_string)
-
-      output_spec = None
-
-      else:
-        output_spec = tf.contrib.tpu.TPUEstimatorSpec(
+        evaluation_hooks = self._GetProgressBarHooks(
+          max_length = FLAGS.max_eval_steps, is_training = False
+        )
+        output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
             mode=mode,
-            predictions={"probabilities": probabilities},
+            loss=total_loss,
+            evaluation_hooks = evaluation_hooks,
+            eval_metrics=eval_metrics,
             scaffold_fn=scaffold_fn)
+
       return output_spec
 
-    if sampling_mode:
-      return _sampling_model_fn
-    else:
-      return _model_fn
-
+    return _model_fn
 
   def _get_masked_lm_output(self, 
                            bert_config,
