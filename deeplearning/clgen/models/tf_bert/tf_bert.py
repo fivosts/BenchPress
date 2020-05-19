@@ -339,20 +339,22 @@ class tfBert(backends.BackendBase):
     ## the input_fn builder
     result = estimator.predict(input_fn=predict_input_fn)
 
-    output_predict_file = str(self.sample_path / "test_results.tsv")
-    with tf.gfile.GFile(output_predict_file, "w") as writer:
-      num_written_lines = 0
-      tf.logging.info("***** Predict results *****")
-      for (i, prediction) in enumerate(result):
-        probabilities = prediction["probabilities"]
-        if i >= num_actual_predict_examples:
-          break
-        output_line = "\t".join(
-            str(class_probability)
-            for class_probability in probabilities) + "\n"
-        writer.write(output_line)
-        num_written_lines += 1
-    assert num_written_lines == num_actual_predict_examples
+    l.getLogger().info("Classifier prediction: {}".format(result))
+
+    # output_predict_file = str(self.sample_path / "test_results.tsv")
+    # with tf.gfile.GFile(output_predict_file, "w") as writer:
+    #   num_written_lines = 0
+    #   tf.logging.info("***** Predict results *****")
+    #   for (i, prediction) in enumerate(result):
+    #     probabilities = prediction["probabilities"]
+    #     if i >= num_actual_predict_examples:
+    #       break
+    #     output_line = "\t".join(
+    #         str(class_probability)
+    #         for class_probability in probabilities) + "\n"
+    #     writer.write(output_line)
+    #     num_written_lines += 1
+    # assert num_written_lines == num_actual_predict_examples
 
     return []
 
