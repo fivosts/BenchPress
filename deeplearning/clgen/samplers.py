@@ -169,12 +169,12 @@ class SymmetricalTokenDepthCriterion(TerminationCriterionBase):
       left = atomizer.AtomizeString(self.left_token)
       right = atomizer.AtomizeString(self.right_token)
       if len(left) > 1 or len(right) > 1:
-        raise errors.InvalidSymtokTokens(
+        raise ValueError(
           "Sampler symmetrical depth tokens do not encode to a single "
           "token using the corpus vocabulary"
         )
     except ValueError:
-      raise errors.InvalidSymtokTokens(
+      raise ValueError(
         "Sampler symmetrical depth tokens cannot be encoded using the "
         "corpus vocabulary"
       )

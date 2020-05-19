@@ -265,7 +265,7 @@ def test_Sampler_Specialize_invalid_depth_tokens(
 
   mock = AtomizerMock()
   mock.AtomizeString = MockAtomizeString
-  with test.Raises(errors.InvalidSymtokTokens) as e_info:
+  with test.Raises(ValueError) as e_info:
     s.Specialize(mock)
   assert (
     "Sampler symmetrical depth tokens cannot be encoded using the "
@@ -289,7 +289,7 @@ def test_Sampler_Specialize_multiple_tokens_per(
 
   mock = AtomizerMock()
   mock.AtomizeString = MockAtomizeString
-  with test.Raises(errors.InvalidSymtokTokens) as e_info:
+  with test.Raises(ValueError) as e_info:
     s.Specialize(mock)
   assert (
     "Sampler symmetrical depth tokens do not encode to a single "
