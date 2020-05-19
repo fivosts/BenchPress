@@ -145,7 +145,7 @@ class tfBert(backends.BackendBase):
       gpu_scheduler.LockExclusiveProcessGpuAccess()
 
       ## Initialize params and data generator
-      self.data_generator = data_generators.TrainMaskLMBatchGenerator(
+      self.data_generator = data_generators.MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
                                 corpus, self.config.training, self.cache.path
                              )
       self._ConfigModelParams()
@@ -234,6 +234,8 @@ class tfBert(backends.BackendBase):
 
     l.getLogger().warning("Init Sampling: Called once, sets model")
 
+    self.data_generator = data_generator.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(sampler, seed)
+
     if self.bertConfig is None:
       self._ConfigModelParams()
     bert_config = model.BertConfig.from_dict(self.bertConfig)
@@ -248,8 +250,8 @@ class tfBert(backends.BackendBase):
 
     # label_list = processor.get_labels()
 
-    tokenizer = tokenization.FullTokenizer(
-        vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
+    # tokenizer = tokenization.FullTokenizer(
+    #     vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
 
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
