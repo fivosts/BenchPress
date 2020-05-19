@@ -247,9 +247,7 @@ class tfBert(backends.BackendBase):
           (self.max_seq_length, bert_config.max_position_embeddings))
 
     # processor = processors[task_name]()
-
     # label_list = processor.get_labels()
-
     # tokenizer = tokenization.FullTokenizer(
     #     vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
 
@@ -269,17 +267,6 @@ class tfBert(backends.BackendBase):
             num_shards = FLAGS.num_tpu_cores,
             per_host_input_for_training = is_per_host))
 
-    ## TODO integrate this fn_builder to the current one
-    # model_fn = model_fn_builder(
-    #     bert_config = bert_config,
-    #     num_labels = len(label_list),
-    #     init_checkpoint = self.ckpt_path,
-    #     # learning_rate = self.learning_rate,
-    #     # num_train_steps = num_train_steps,
-    #     # num_warmup_steps = num_warmup_steps,
-    #     use_tpu = FLAGS.use_tpu,
-    #     use_one_hot_embeddings = FLAGS.use_tpu)
-
     model_fn = self._model_fn_builder(
         bert_config = bert_config,
         init_checkpoint = self.ckpt_path,
@@ -289,16 +276,6 @@ class tfBert(backends.BackendBase):
         use_tpu = FLAGS.use_tpu,
         use_one_hot_embeddings = FLAGS.use_tpu,
         sampling_mode = True)
-
-    # If TPU is not available, this will fall back to normal Estimator on CPU
-    # or GPU.
-    # estimator = tf.compat.v1.estimator.tpu.TPUEstimator(
-    #     use_tpu = FLAGS.use_tpu,
-    #     model_fn = model_fn,
-    #     config = run_config,
-    #     # train_batch_size = self.train_batch_size,
-    #     # eval_batch_size = self.eval_batch_size,
-    #     predict_batch_size = sampler.batch_size)
 
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
@@ -319,61 +296,63 @@ class tfBert(backends.BackendBase):
                    ) -> None:
 
     l.getLogger().warning("Called while batches are not done. Sets up batch")
+    ## Do nothing 
     return 
 
   def SampleNextIndices(self, sampler: samplers.Sampler, done):
     l.getLogger().warning("Within a batch, called for each i/o step")
 
-    if FLAGS.do_predict:
-      # predict_examples = processor.get_test_examples(FLAGS.data_dir)
-      # num_actual_predict_examples = len(predict_examples)
-      if FLAGS.use_tpu:
-        # TPU requires a fixed batch size for all batches, therefore the number
-        # of examples must be a multiple of the batch size, or else examples
-        # will get dropped. So we pad with fake examples which are ignored
-        # later on.
-        while len(predict_examples) % FLAGS.predict_batch_size != 0:
-          predict_examples.append(PaddingInputExample())
+    ## TODO: data_generator takes encoded text, pads it to max_position_embeddings
+    ## and masks it up to sampler sequence length
+    ## Then feed that input and  ask for a prediction
 
-      predict_file = str(self.sample_path / "predict.tf_record")
-      file_based_convert_examples_to_features(predict_examples, label_list,
-                                              self.max_seq_length, tokenizer,
-                                              predict_file)
+    if FLAGS.use_tpu:
+      # TPU requires a fixed batch size for all batches, therefore the number
+      # of examples must be a multiple of the batch size, or else examples
+      # will get dropped. So we pad with fake examples which are ignored
+      # later on.
+      while len(predict_examples) % FLAGS.predict_batch_size != 0:
+        predict_examples.append(PaddingInputExample())
 
-      tf.logging.info("***** Running prediction*****")
-      tf.logging.info("  Num examples = %d (%d actual, %d padding)",
-                      len(predict_examples), num_actual_predict_examples,
-                      len(predict_examples) - num_actual_predict_examples)
-      tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
+    predict_file = str(self.sample_path / "predict.tf_record")
+    file_based_convert_examples_to_features(predict_examples, label_list,
+                                            self.max_seq_length, tokenizer,
+                                            predict_file)
 
-      predict_drop_remainder = True if FLAGS.use_tpu else False
+    tf.logging.info("***** Running prediction*****")
+    tf.logging.info("  Num examples = %d (%d actual, %d padding)",
+                    len(predict_examples), num_actual_predict_examples,
+                    len(predict_examples) - num_actual_predict_examples)
+    tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
 
-      ## TODO this function is going to the data_generator
-      ## and will be migrated from file based, to sampler text based builder
-      predict_input_fn = file_based_input_fn_builder(
-          input_file = predict_file,
-          seq_length = self.max_seq_length,
-          is_training = False,
-          drop_remainder = predict_drop_remainder)
+    predict_drop_remainder = True if FLAGS.use_tpu else False
 
-      ## Batch size could determine the number of tf.data entries provided by
-      ## the input_fn builder
-      result = estimator.predict(input_fn=predict_input_fn)
+    ## TODO this function is going to the data_generator
+    ## and will be migrated from file based, to sampler text based builder
+    predict_input_fn = file_based_input_fn_builder(
+        input_file = predict_file,
+        seq_length = self.max_seq_length,
+        is_training = False,
+        drop_remainder = predict_drop_remainder)
 
-      output_predict_file = str(self.sample_path / "test_results.tsv")
-      with tf.gfile.GFile(output_predict_file, "w") as writer:
-        num_written_lines = 0
-        tf.logging.info("***** Predict results *****")
-        for (i, prediction) in enumerate(result):
-          probabilities = prediction["probabilities"]
-          if i >= num_actual_predict_examples:
-            break
-          output_line = "\t".join(
-              str(class_probability)
-              for class_probability in probabilities) + "\n"
-          writer.write(output_line)
-          num_written_lines += 1
-      assert num_written_lines == num_actual_predict_examples
+    ## Batch size could determine the number of tf.data entries provided by
+    ## the input_fn builder
+    result = estimator.predict(input_fn=predict_input_fn)
+
+    output_predict_file = str(self.sample_path / "test_results.tsv")
+    with tf.gfile.GFile(output_predict_file, "w") as writer:
+      num_written_lines = 0
+      tf.logging.info("***** Predict results *****")
+      for (i, prediction) in enumerate(result):
+        probabilities = prediction["probabilities"]
+        if i >= num_actual_predict_examples:
+          break
+        output_line = "\t".join(
+            str(class_probability)
+            for class_probability in probabilities) + "\n"
+        writer.write(output_line)
+        num_written_lines += 1
+    assert num_written_lines == num_actual_predict_examples
 
     return []
 
