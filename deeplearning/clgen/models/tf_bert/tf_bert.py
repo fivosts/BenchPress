@@ -454,7 +454,6 @@ class tfBert(backends.BackendBase):
                                                     tensors = {'Loss': total_loss},
                                                     log_steps = self.num_steps_per_epoch,
                                                     at_end = True,
-                                                    is_training = True,
                                                     )
 
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
