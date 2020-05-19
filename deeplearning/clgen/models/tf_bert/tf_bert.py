@@ -448,8 +448,6 @@ class tfBert(backends.BackendBase):
            bert_config, bert_model.get_pooled_output(), next_sentence_labels)
 
       total_loss = masked_lm_loss + next_sentence_loss
-      # print_op = tf.print(total_loss)
-      # with tf.control_dependencies([print_op]):
       tvars = tf.compat.v1.trainable_variables()
 
       initialized_variable_names = {}
