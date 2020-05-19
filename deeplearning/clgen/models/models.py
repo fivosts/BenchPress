@@ -123,6 +123,10 @@ class Model(object):
       cached_to_compare.CopyFrom(cached_meta.config)
       cached_to_compare.corpus.ClearField("contentfiles")
       cached_to_compare.training.ClearField("num_epochs")
+      if cached_to_compare.training.sequence_length != config_to_compare.training.sequence_length:
+        l.getLogger().warning("Mismatch between pre-trained and current config sequence_length!\
+          This can only be intended in tfBert model!")
+      cached_to_compare.training.ClearField("sequence_length")
       if config_to_compare != cached_to_compare:
         raise errors.InternalError("Metadata mismatch")
       self.meta = cached_meta
