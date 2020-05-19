@@ -177,7 +177,7 @@ class tfBert(backends.BackendBase):
 
       model_fn = self._model_fn_builder(
           bert_config = bert_config,
-          init_checkpoint = None,
+          init_checkpoint = self.ckpt_path,
           learning_rate = self.learning_rate,
           num_train_steps = self.num_train_steps,
           num_warmup_steps = self.num_warmup_steps,
@@ -283,9 +283,9 @@ class tfBert(backends.BackendBase):
     model_fn = self._model_fn_builder(
         bert_config = bert_config,
         init_checkpoint = self.ckpt_path,
-        learning_rate = self.learning_rate,
-        num_train_steps = self.num_train_steps,
-        num_warmup_steps = self.num_warmup_steps,
+        # learning_rate = self.learning_rate,
+        # num_train_steps = self.num_train_steps,
+        # num_warmup_steps = self.num_warmup_steps,
         use_tpu = FLAGS.use_tpu,
         use_one_hot_embeddings = FLAGS.use_tpu)
 
@@ -408,7 +408,8 @@ class tfBert(backends.BackendBase):
                       num_train_steps,
                       num_warmup_steps,
                       use_tpu,
-                      use_one_hot_embeddings):
+                      use_one_hot_embeddings,
+                      sampling_mode = False):
     """Returns `model_fn` closure for TPUEstimator."""
 
     def _model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
@@ -555,7 +556,59 @@ class tfBert(backends.BackendBase):
 
       return output_spec
 
-    return _model_fn
+    def _sampling_model_fn(features, labels, node, params):
+
+      input_ids = features["input_ids"]
+      label_ids = features["label_ids"]
+      is_real_example = None
+      if "is_real_example" in features:
+        is_real_example = tf.cast(features["is_real_example"], dtype=tf.float32)
+      else:
+        is_real_example = tf.ones(tf.shape(label_ids), dtype=tf.float32)
+
+      is_training = False
+
+      (total_loss, per_example_loss, logits, probabilities) = create_model(
+          bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
+          num_labels, use_one_hot_embeddings)
+
+      tvars = tf.trainable_variables()
+      initialized_variable_names = {}
+      scaffold_fn = None
+      if init_checkpoint:
+        (assignment_map, initialized_variable_names
+        ) = modeling.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
+        if use_tpu:
+
+          def tpu_scaffold():
+            tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+            return tf.train.Scaffold()
+
+          scaffold_fn = tpu_scaffold
+        else:
+          tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+
+      tf.logging.info("**** Trainable Variables ****")
+      for var in tvars:
+        init_string = ""
+        if var.name in initialized_variable_names:
+          init_string = ", *INIT_FROM_CKPT*"
+        tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
+                        init_string)
+
+      output_spec = None
+
+      else:
+        output_spec = tf.contrib.tpu.TPUEstimatorSpec(
+            mode=mode,
+            predictions={"probabilities": probabilities},
+            scaffold_fn=scaffold_fn)
+      return output_spec
+
+    if sampling_mode:
+      return _sampling_model_fn
+    else:
+      return _model_fn
 
 
   def _get_masked_lm_output(self, 
