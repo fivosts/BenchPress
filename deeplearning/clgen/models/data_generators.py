@@ -305,6 +305,8 @@ class MaskLMBatchGenerator(object):
     self.num_batches = None
     self.sequence_length = None
     self.sampler = None
+    self.rngen = None
+    self.is_training = None
     return
 
   @classmethod
@@ -318,17 +320,14 @@ class MaskLMBatchGenerator(object):
     d.training_opts = training_opts
     d.tfRecord = cache_path / "dataset" / "maskedDataset.tf_record"
 
-    # Lazily instantiated.
     d._masked_corpus = None
     d._original_encoded_corpus = None
     d.shaped_corpus = None
     d.num_batches = None
-    d.sequence_length = d.training_opts.sequence_length
 
-    if d.training_opts.random_seed:
-      d.rngen = random.Random(training_opts.random_seed)
-    else:
-      d.rngen = random.Random()
+    d.sequence_length = d.training_opts.sequence_length
+    d.is_training = True
+    d.rngen = random.Random(d.training_opts.random_seed)
 
     d.CreateCorpus()
 
@@ -340,10 +339,13 @@ class MaskLMBatchGenerator(object):
 
   @classmethod
   def SampleMaskLMBatchGenerator(cls,
-                                sampler
+                                sampler,
+                                seed
                                 ) -> "data_generators.MaskLMBatchGenerator":
     d = MaskLMBatchGenerator()
     d.sampler = sampler
+    d.rngen = random.Random(seed)
+    d.is_training = False
     return d
 
   def generateTfDataset(self,
