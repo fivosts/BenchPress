@@ -506,7 +506,9 @@ class tfBert(backends.BackendBase):
             next_sentence_log_probs, next_sentence_labels
         ])
 
-        evaluation_hooks = self._GetProgressBarHooks(max_length = FLAGS.max_eval_steps, is_training = False)
+        evaluation_hooks = self._GetProgressBarHooks(
+          max_length = FLAGS.max_eval_steps, is_training = False
+        )
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
             mode=mode,
             loss=total_loss,
