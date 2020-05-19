@@ -161,7 +161,7 @@ def test_EncodedContentFiles_empty_preprocessed_db(
     p = preprocessed.PreprocessedContentFiles(
       f"sqlite:///{pathlib.Path(d)}/preprocessed.db"
     )
-    with test.Raises(errors.EmptyCorpusException):
+    with test.Raises(ValueError):
       temp_db.Create(p, abc_atomizer, "\n\n")
 
 

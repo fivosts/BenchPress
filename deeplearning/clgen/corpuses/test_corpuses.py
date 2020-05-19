@@ -191,7 +191,7 @@ def test_Corpus_Create_empty_directory_raises_error(
   del clgen_cache_dir
   with tempfile.TemporaryDirectory() as d:
     abc_corpus_config.local_directory = d
-    with test.Raises(errors.EmptyCorpusException) as e_info:
+    with test.Raises(ValueError) as e_info:
       corpuses.Corpus(abc_corpus_config).Create()
     assert f"Empty content files directory: '{d}'" == str(e_info.value)
 
@@ -206,9 +206,9 @@ def test_Corpus_Create_empty_preprocessed_raises_error(
   c.preprocessed.Create(abc_corpus_config)
   with c.preprocessed.Session(commit=True) as session:
     session.query(preprocessed.PreprocessedContentFile).delete()
-  with test.Raises(errors.EmptyCorpusException) as e_info:
+  with test.Raises(ValueError) as e_info:
     c.Create()
-  assert isinstance(e_info.value, errors.EmptyCorpusException)
+  assert isinstance(e_info.value, ValueError)
   assert str(e_info.value).startswith(
     "Pre-processed corpus contains no files: 'sqlite:////"
   )

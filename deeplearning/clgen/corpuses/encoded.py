@@ -257,7 +257,7 @@ class EncodedContentFiles(sqlutil.Database):
         for x in query
       ]
       if not jobs:
-        raise errors.EmptyCorpusException(
+        raise ValueError(
           "Pre-processed corpus contains no files: " f"'{preprocessed_db.url}'"
         )
 

@@ -275,7 +275,7 @@ class Corpus(object):
     with lockfile.LockFile(preprocessed_lock_path):
       self.preprocessed.Create(self.config)
     if not self.preprocessed.size:
-      raise errors.EmptyCorpusException(
+      raise ValueError(
         f"Pre-processed corpus contains no files: '{self.preprocessed.url}'"
       )
     encoded_lock_path = (

@@ -286,13 +286,13 @@ class Sampler(object):
       self.encoded_start_text = atomizer.AtomizeString(self.start_text)
       self.tokenized_start_text = atomizer.TokenizeString(self.start_text)
     except ValueError:
-      raise errors.InvalidStartText(
+      raise ValueError(
         "Sampler start text cannot be encoded using the corpus vocabulary: "
         f"'{self.start_text}'"
       )
 
     if len(self.encoded_start_text) >= self.sequence_length:
-      raise errors.InvalidStartText(
+      raise ValueError(
         "Encoded sampler start text must be less than sampler sequence "
         f"length. Sampler sequence length={self.sequence_length}, encoded "
         f"start text length={len(self.encoded_start_text)}"

@@ -380,7 +380,7 @@ class PreprocessedContentFiles(sqlutil.Database):
         .strip()
       )
       if not find_output:
-        raise errors.EmptyCorpusException(
+        raise ValueError(
           f"Empty content files directory: '{contentfile_root}'"
         )
       return find_output.split("\n")
