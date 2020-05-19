@@ -120,15 +120,16 @@ class tfBert(backends.BackendBase):
     self.learning_rate                      = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
     self.num_train_steps                    = self.config.training.num_train_steps
     self.num_warmup_steps                   = self.config.training.num_warmup_steps
-    self.ckpt_path                          = str(self.cache.path / "checkpoints")
-    self.logfile_path                       = str(self.cache.path / "logs")
-    self.telemetry                          = telemetry.TrainingLogger(self.logfile_path)
+    self.ckpt_path                          = self.cache.path / "checkpoints"
+    self.logfile_path                       = self.cache.path / "logs"
+    self.sample_path                        = self.cache.path / "samples"
+    self.telemetry                          = telemetry.TrainingLogger(str(self.logfile_path))
 
     self.num_steps_per_epoch                = self.data_generator.num_batches
     self.num_epochs                         = int(self.num_train_steps / self.num_steps_per_epoch)
 
     self.validation_results_file            = "val_results.txt"
-    self.validation_results_path            = os.path.join(self.logfile_path, self.validation_results_file)
+    self.validation_results_path            = os.path.join(str(self.logfile_path), self.validation_results_file)
 
     return
 
@@ -162,7 +163,7 @@ class tfBert(backends.BackendBase):
       run_config = tf.compat.v1.estimator.tpu.RunConfig(
           cluster = tpu_cluster_resolver,
           master = FLAGS.master,
-          model_dir = self.ckpt_path,
+          model_dir = str(self.ckpt_path),
           save_checkpoints_steps = self.num_steps_per_epoch,
           save_summary_steps = self.num_steps_per_epoch,
           keep_checkpoint_max = 0,
@@ -241,8 +242,6 @@ class tfBert(backends.BackendBase):
           "was only trained up to sequence length %d" %
           (self.max_seq_length, bert_config.max_position_embeddings))
 
-    tf.gfile.MakeDirs(FLAGS.output_dir)
-
     task_name = FLAGS.task_name.lower()
 
     if task_name not in processors:
@@ -264,7 +263,7 @@ class tfBert(backends.BackendBase):
     run_config = tf.contrib.tpu.RunConfig(
         cluster=tpu_cluster_resolver,
         master=FLAGS.master,
-        model_dir=self.ckpt_path,
+        model_dir=str(self.ckpt_path),
         # save_checkpoints_steps=FLAGS.save_checkpoints_steps,
         tpu_config=tf.contrib.tpu.TPUConfig(
             # iterations_per_loop=FLAGS.iterations_per_loop,
@@ -286,7 +285,7 @@ class tfBert(backends.BackendBase):
         while len(predict_examples) % FLAGS.predict_batch_size != 0:
           predict_examples.append(PaddingInputExample())
 
-      predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
+      predict_file = str(self.sample_path / "predict.tf_record")
       file_based_convert_examples_to_features(predict_examples, label_list,
                                               self.max_seq_length, tokenizer,
                                               predict_file)
@@ -311,7 +310,7 @@ class tfBert(backends.BackendBase):
       ## the input_fn builder
       result = estimator.predict(input_fn=predict_input_fn)
 
-      output_predict_file = os.path.join(FLAGS.output_dir, "test_results.tsv")
+      output_predict_file = str(self.sample_path / "test_results.tsv")
       with tf.gfile.GFile(output_predict_file, "w") as writer:
         num_written_lines = 0
         tf.logging.info("***** Predict results *****")
@@ -444,7 +443,7 @@ class tfBert(backends.BackendBase):
             total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
 
         training_hooks = self._GetSummaryHooks(save_steps = self.num_steps_per_epoch,
-                                              output_dir = self.logfile_path,
+                                              output_dir = str(self.logfile_path),
                                               masked_lm_loss = masked_lm_loss,
                                               next_sentence_loss = next_sentence_loss,
                                               total_loss = total_loss,
