@@ -185,7 +185,7 @@ def NormalizeIdentifiers(text: str) -> str:
 #   """
 #   from labm8.py import system
 #   if not system.is_linux():
-#     raise errors.InternalError("GPUVerify only supported on Linux!")
+#     raise SystemError("GPUVerify only supported on Linux!")
 #
 #   # GPUverify can't read from stdin.
 #   with tempfile.NamedTemporaryFile('w', suffix='.cl') as tmp:

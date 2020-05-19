@@ -128,7 +128,7 @@ class Model(object):
           This can only be intended in tfBert model!")
       cached_to_compare.training.ClearField("sequence_length")
       if config_to_compare != cached_to_compare:
-        raise errors.InternalError("Metadata mismatch")
+        raise SystemError("Metadata mismatch")
       self.meta = cached_meta
     else:
       self.meta = internal_pb2.ModelMeta()

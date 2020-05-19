@@ -45,7 +45,7 @@ def MockPreprocessorBadCode(text: str) -> str:
 def MockPreprocessorInternalError(text: str) -> str:
   """A mock preprocessor which raises a BadCodeException."""
   del text
-  raise errors.InternalError("internal error")
+  raise SystemError("internal error")
 
 
 def MockUndecoratedPreprocessor(text: str) -> str:
@@ -192,7 +192,7 @@ def test_Preprocess_mock_preprocessor_bad_code():
 
 def test_Preprocess_mock_preprocessor_internal_error():
   """Test that InternalError is propagated."""
-  with test.Raises(errors.InternalError):
+  with test.Raises(SystemError):
     preprocessors.Preprocess(
       "",
       [

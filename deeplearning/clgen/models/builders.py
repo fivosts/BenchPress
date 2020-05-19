@@ -205,7 +205,7 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         "RmsPropOptimizer.learning_rate_decay_per_epoch_micros must be >= 0",
       )
     else:
-      raise errors.InternalError(
+      raise SystemError(
         "Unrecognized value: 'TrainingOptions.optimizer'"
       )
   except pbutil.ProtoValueError as e:
@@ -251,7 +251,7 @@ def BuildOptimizer(config: model_pb2.Model) -> "keras.optimizers.Optimizer":
       epsilon=None,
     )
   else:
-    raise errors.InternalError(
+    raise SystemError(
       "Unrecognized value: 'TrainingOptions.optimizer'"
     )
 
