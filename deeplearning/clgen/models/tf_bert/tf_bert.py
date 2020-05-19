@@ -137,6 +137,8 @@ class tfBert(backends.BackendBase):
 
     del unused_kwargs
 
+    ## TODO, also search the checkpoints to determine if is_trained
+    ## Additionally, you will have to exclude num_train_steps from model hash
     if not self.is_trained:
 
       ## Acquire GPU Lock before anything else is done
