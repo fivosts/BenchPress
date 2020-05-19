@@ -253,16 +253,16 @@ class tfBert(backends.BackendBase):
 
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
-      tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
+      tpu_cluster_resolver = tf.compat.v1.cluster_resolver.TPUClusterResolver(
           FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
 
-    is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
-    run_config = tf.contrib.tpu.RunConfig(
+    is_per_host = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
+    run_config = tf.compat.v1.estimator.tpu.RunConfig(
         cluster = tpu_cluster_resolver,
         master = FLAGS.master,
         model_dir = str(self.ckpt_path),
         # save_checkpoints_steps=FLAGS.save_checkpoints_steps,
-        tpu_config = tf.contrib.tpu.TPUConfig(
+        tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
             # iterations_per_loop=FLAGS.iterations_per_loop,
             num_shards = FLAGS.num_tpu_cores,
             per_host_input_for_training = is_per_host))
@@ -279,14 +279,14 @@ class tfBert(backends.BackendBase):
 
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
-    estimator = tf.contrib.tpu.TPUEstimator(
-        use_tpu=FLAGS.use_tpu,
-        model_fn=model_fn,
-        config=run_config,
-        train_batch_size=FLAGS.train_batch_size,
-        eval_batch_size=FLAGS.eval_batch_size,
-        predict_batch_size=FLAGS.predict_batch_size)
-    
+    estimator = tf.compat.v1.estimator.tpu.TPUEstimator(
+        use_tpu = FLAGS.use_tpu,
+        model_fn = model_fn,
+        config = run_config,
+        # train_batch_size = self.train_batch_size,
+        # eval_batch_size = self.eval_batch_size,
+        predict_batch_size = sampler.batch_size)
+
     l.getLogger().info("Initialized BERT sampler in {}".format(self.sample_path))
 
     if FLAGS.do_predict:
