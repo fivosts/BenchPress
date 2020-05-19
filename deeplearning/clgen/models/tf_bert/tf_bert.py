@@ -244,14 +244,9 @@ class tfBert(backends.BackendBase):
           "was only trained up to sequence length %d" %
           (self.max_seq_length, bert_config.max_position_embeddings))
 
-    task_name = FLAGS.task_name.lower()
+    # processor = processors[task_name]()
 
-    if task_name not in processors:
-      raise ValueError("Task not found: %s" % (task_name))
-
-    processor = processors[task_name]()
-
-    label_list = processor.get_labels()
+    # label_list = processor.get_labels()
 
     tokenizer = tokenization.FullTokenizer(
         vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
@@ -272,9 +267,7 @@ class tfBert(backends.BackendBase):
             num_shards = FLAGS.num_tpu_cores,
             per_host_input_for_training = is_per_host))
 
-    train_examples = None
-    num_train_steps = None
-    num_warmup_steps = None
+    l.getLogger().info("Initialized BERT sampler in {}".format(self.sample_path))
 
     if FLAGS.do_predict:
       # predict_examples = processor.get_test_examples(FLAGS.data_dir)
