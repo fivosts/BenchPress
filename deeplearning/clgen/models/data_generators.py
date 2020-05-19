@@ -1,17 +1,3 @@
-# Copyright (c) 2016-2020 Chris Cummins.
-#
-# clgen is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# clgen is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """This file defines the streaming generators for model training data.
 
 We train models on overlapping one-hot encoded text sequences. For a corpus of
@@ -64,15 +50,25 @@ def LogBatchTelemetry(
     # objects it refernces, so we must manually sum the X and y arrays.
     sizeof_batch = sys.getsizeof(batch) + batch.X.nbytes + batch.y.nbytes
   elif isinstance(batch, MaskBatch):
-    l.getLogger().info("Step shape: Input_ids: {}, masked_lm_positions: {}, masked_lm_ids: {}"
+    l.getLogger().info("Step shape: Input_ids: {},\
+                                    masked_lm_positions: {}, \
+                                    masked_lm_ids: {}, \
+                                    masked_lm_weights: {}, \
+                                    next_sentence_label: {}"
                         .format(
                                 batch.input_ids.shape, 
                                 batch.masked_lm_positions.shape, 
-                                batch.masked_lm_ids.shape))
+                                batch.masked_lm_ids.shape,
+                                batch.masked_lm_weights,
+                                batch.next_sentence_label
+                                )
+                        )
     sizeof_batch = (sys.getsizeof(batch) +
                     batch.input_ids.nbytes +
                     batch.masked_lm_positions.nbytes +
-                    batch.masked_lm_ids.nbytes
+                    batch.masked_lm_ids.nbytes +
+                    batch.masked_lm_weights +
+                    batch.next_sentence_label
                   )
   else:
     raise ValueError("Unrecognized Data Batch type: {}".format(type(batch)))
