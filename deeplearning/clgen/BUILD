@@ -94,12 +94,6 @@ py_test(
     ],
 )
 
-py_library(
-    name = "errors",
-    srcs = ["errors.py"],
-    visibility = ["//deeplearning/clgen:__subpackages__"],
-)
-
 py_binary(
     name = "ls_models",
     srcs = ["ls_models.py"],
@@ -141,7 +135,6 @@ py_library(
     srcs = ["sample.py"],
     visibility = ["//visibility:public"],
     deps = [
-        ":errors",
         ":samplers",
         "//deeplearning/clgen/models:pretrained",
         "//deeplearning/clgen/proto:clgen_pb_py",
