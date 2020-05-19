@@ -261,14 +261,14 @@ class tfBert(backends.BackendBase):
 
     is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
     run_config = tf.contrib.tpu.RunConfig(
-        cluster=tpu_cluster_resolver,
-        master=FLAGS.master,
-        model_dir=str(self.ckpt_path),
+        cluster = tpu_cluster_resolver,
+        master = FLAGS.master,
+        model_dir = str(self.ckpt_path),
         # save_checkpoints_steps=FLAGS.save_checkpoints_steps,
-        tpu_config=tf.contrib.tpu.TPUConfig(
+        tpu_config = tf.contrib.tpu.TPUConfig(
             # iterations_per_loop=FLAGS.iterations_per_loop,
-            num_shards=FLAGS.num_tpu_cores,
-            per_host_input_for_training=is_per_host))
+            num_shards = FLAGS.num_tpu_cores,
+            per_host_input_for_training = is_per_host))
 
     train_examples = None
     num_train_steps = None
@@ -301,10 +301,10 @@ class tfBert(backends.BackendBase):
       ## TODO this function is going to the data_generator
       ## and will be migrated from file based, to sampler text based builder
       predict_input_fn = file_based_input_fn_builder(
-          input_file=predict_file,
-          seq_length=self.max_seq_length,
-          is_training=False,
-          drop_remainder=predict_drop_remainder)
+          input_file = predict_file,
+          seq_length = self.max_seq_length,
+          is_training = False,
+          drop_remainder = predict_drop_remainder)
 
       ## Batch size could determine the number of tf.data entries provided by
       ## the input_fn builder
