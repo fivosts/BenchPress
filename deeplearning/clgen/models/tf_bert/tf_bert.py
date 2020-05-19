@@ -268,14 +268,14 @@ class tfBert(backends.BackendBase):
             per_host_input_for_training = is_per_host))
 
     model_fn = model_fn_builder(
-        bert_config=bert_config,
-        num_labels=len(label_list),
-        init_checkpoint=FLAGS.init_checkpoint,
-        learning_rate=FLAGS.learning_rate,
-        num_train_steps=num_train_steps,
-        num_warmup_steps=num_warmup_steps,
-        use_tpu=FLAGS.use_tpu,
-        use_one_hot_embeddings=FLAGS.use_tpu)
+        bert_config = bert_config,
+        num_labels = len(label_list),
+        init_checkpoint = self.ckpt_path,
+        # learning_rate = self.learning_rate,
+        # num_train_steps = num_train_steps,
+        # num_warmup_steps = num_warmup_steps,
+        use_tpu = FLAGS.use_tpu,
+        use_one_hot_embeddings = FLAGS.use_tpu)
 
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
