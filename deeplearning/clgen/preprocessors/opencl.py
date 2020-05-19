@@ -201,7 +201,7 @@ def NormalizeIdentifiers(text: str) -> str:
 #     raise TimeoutError(
 #       f"GPUveryify failed to complete with {timeout} seconds")
 #   elif process.returncode != 0:
-#     raise errors.GPUVerifyException(stderr.decode('utf-8'))
+#     raise ValueError(stderr.decode('utf-8'))
 #   return src
 
 

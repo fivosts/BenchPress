@@ -343,7 +343,7 @@ def test_GpuVerify_data_race():
 __kernel void A(__global float* a) {
   a[0] +=  1.0f;
 }"""
-  with test.Raises(deeplearning.clgen.errors.GPUVerifyException):
+  with test.Raises(deeplearning.clgen.ValueError):
     opencl.GpuVerify(code, ["--local_size=64", "--num_groups=128"])
 
 
