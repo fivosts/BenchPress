@@ -50,7 +50,7 @@ def test_Instance_working_dir_shell_variable_expansion(abc_instance_config):
 def test_Instance_no_model_field(abc_instance_config):
   """Test that UserError is raised when no model field in config."""
   abc_instance_config.ClearField("model_specification")
-  with test.Raises(errors.UserError) as e_info:
+  with test.Raises(ValueError) as e_info:
     clgen.Instance(abc_instance_config)
   assert "Field not set: 'Instance.model_specification'" == str(e_info.value)
 
@@ -58,7 +58,7 @@ def test_Instance_no_model_field(abc_instance_config):
 def test_Instance_no_sampler_field(abc_instance_config):
   """Test that UserError is raised when no model field in config."""
   abc_instance_config.ClearField("model_specification")
-  with test.Raises(errors.UserError) as e_info:
+  with test.Raises(ValueError) as e_info:
     clgen.Instance(abc_instance_config)
   assert "Field not set: 'Instance.model_specification'" == str(e_info.value)
 

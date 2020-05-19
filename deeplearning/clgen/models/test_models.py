@@ -83,7 +83,7 @@ def test_Model_config_sequence_length_not_set(
   """Test that an error is raised if sequence_length is < 1."""
   del clgen_cache_dir
   abc_model_config.training.sequence_length = -1
-  with test.Raises(errors.UserError):
+  with test.Raises(ValueError):
     models.Model(abc_model_config)
 
 

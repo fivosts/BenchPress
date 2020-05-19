@@ -209,7 +209,7 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         "Unrecognized value: 'TrainingOptions.optimizer'"
       )
   except pbutil.ProtoValueError as e:
-    raise errors.UserError(str(e))
+    raise ValueError(str(e))
   return config
 
 

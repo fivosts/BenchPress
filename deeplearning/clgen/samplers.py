@@ -65,7 +65,7 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
     )
     return config
   except pbutil.ProtoValueError as e:
-    raise errors.UserError(e)
+    raise ValueError(e)
 
 
 class TerminationCriterionBase(object):
@@ -113,7 +113,7 @@ class MaxlenTerminationCriterion(TerminationCriterionBase):
         "MaxTokenLength.maximum_tokens_in_sample must be > 0",
       )
     except pbutil.ProtoValueError as e:
-      raise errors.UserError(e)
+      raise ValueError(e)
 
   def SampleIsComplete(self, sample_in_progress: typing.List[str]) -> bool:
     """Determine whether to stop sampling."""
@@ -146,9 +146,9 @@ class SymmetricalTokenDepthCriterion(TerminationCriterionBase):
         "SymmetricalTokenDepth.depth_decrease_token must be a string",
       )
     except pbutil.ProtoValueError as e:
-      raise errors.UserError(e)
+      raise ValueError(e)
     if self.left_token == self.right_token:
-      raise errors.UserError("SymmetricalTokenDepth tokens must be different")
+      raise ValueError("SymmetricalTokenDepth tokens must be different")
 
   def Specialize(self, atomizer: atomizers.AtomizerBase) -> None:
     """Specialize a termination criteria to a vocabulary.

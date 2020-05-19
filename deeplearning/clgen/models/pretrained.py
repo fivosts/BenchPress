@@ -152,7 +152,7 @@ class PreTrainedModel(object):
         encoded.
     """
     if not sample_observers:
-      raise errors.UserError("Cannot sample without any observers")
+      raise ValueError("Cannot sample without any observers")
 
     sample_start_time = labdate.MillisecondsTimestamp()
     app.Log(1, "Sampling: '%s'", sampler.start_text)

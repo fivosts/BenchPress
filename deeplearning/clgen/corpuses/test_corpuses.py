@@ -98,7 +98,7 @@ def test_Corpus_badpath(clgen_cache_dir, abc_corpus_config):
   """Test that CLgenError is raised when corpus has a non-existent path."""
   del clgen_cache_dir
   abc_corpus_config.local_directory = "notarealpath"
-  with test.Raises(errors.UserError) as e_info:
+  with test.Raises(ValueError) as e_info:
     corpuses.Corpus(abc_corpus_config)
   # We resolve the absolute path, so we can't match the whole string.
   assert str(e_info.value).startswith("File not found: '")
@@ -127,7 +127,7 @@ def test_Corpus_archive_not_found(clgen_cache_dir, abc_corpus_config):
   del clgen_cache_dir
   with tempfile.TemporaryDirectory() as d:
     abc_corpus_config.local_tar_archive = f"{d}/missing_archive.tar.bz2"
-    with test.Raises(errors.UserError) as e_ctx:
+    with test.Raises(ValueError) as e_ctx:
       corpuses.Corpus(abc_corpus_config)
   assert f"Archive not found: '{d}/missing_archive.tar.bz2'" == str(e_ctx.value)
 
@@ -138,7 +138,7 @@ def test_Corpus_archive_cannot_be_unpacked(clgen_cache_dir, abc_corpus_config):
   with tempfile.TemporaryDirectory() as d:
     (pathlib.Path(d) / "empty.tar.bz2").touch()
     abc_corpus_config.local_tar_archive = str(pathlib.Path(d) / "empty.tar.bz2")
-    with test.Raises(errors.UserError) as e_ctx:
+    with test.Raises(ValueError) as e_ctx:
       corpuses.Corpus(abc_corpus_config)
   assert f"Archive unpack failed: '{d}/empty.tar.bz2'" == str(e_ctx.value)
 
@@ -220,7 +220,7 @@ def test_Corpus_greedy_multichar_atomizer_no_atoms(
   """Test that a GreedyMulticharAtomizer raises error if no tokens provided."""
   del clgen_cache_dir
   abc_corpus_config.greedy_multichar_atomizer.tokens[:] = []
-  with test.Raises(errors.UserError) as e_info:
+  with test.Raises(ValueError) as e_info:
     corpuses.Corpus(abc_corpus_config)
   assert "GreedyMulticharAtomizer.tokens is empty" == str(e_info.value)
 
@@ -230,7 +230,7 @@ def test_Corpus_greedy_multichar_atomizer_empty_atoms(
 ):
   """Test that a GreedyMulticharAtomizer raises error for zero-length string."""
   del clgen_cache_dir
-  with test.Raises(errors.UserError) as e_info:
+  with test.Raises(ValueError) as e_info:
     abc_corpus_config.greedy_multichar_atomizer.tokens[:] = [""]
     corpuses.Corpus(abc_corpus_config)
   assert "Empty string found in GreedyMulticharAtomizer.tokens is empty" == str(
@@ -290,7 +290,7 @@ def test_Corpus_invalid_content_id(clgen_cache_dir, abc_corpus_config):
   del clgen_cache_dir
   abc_corpus_config.ClearField("contentfiles")
   abc_corpus_config.content_id = "1234invalid"
-  with test.Raises(errors.UserError) as e_ctx:
+  with test.Raises(ValueError) as e_ctx:
     corpuses.Corpus(abc_corpus_config)
   assert "Content ID not found: '1234invalid'" == str(e_ctx.value)
 

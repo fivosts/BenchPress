@@ -75,7 +75,7 @@ def LogBatchTelemetry(
                     batch.masked_lm_ids.nbytes
                   )
   else:
-    raise errors.UserError("Unrecognized Data Batch type: {}".format(type(batch)))
+    raise ValueError("Unrecognized Data Batch type: {}".format(type(batch)))
   l.getLogger().info(
     "Memory: {} per batch, {} per epoch, {} total.".format(
             humanize.BinaryPrefix(sizeof_batch, "B"),
@@ -173,7 +173,7 @@ class KerasBatchGenerator():
       training_opts.batch_size * training_opts.sequence_length
     )
     if not steps_per_epoch:
-      raise errors.UserError(
+      raise ValueError(
         f"Requested batch size ({training_opts.batch_size}) and "
         f"sequence length ({training_opts.sequence_length}) are too large for "
         f"corpus of size {corpus_length}."
@@ -255,7 +255,7 @@ class TensorflowBatchGenerator(object):
       len(self.encoded_corpus) / (batch_size * sequence_length)
     )
     if self.num_batches == 0:
-      raise errors.UserError(
+      raise ValueError(
         "Not enough data. Use a smaller sequence_length and batch_size"
       )
 
@@ -429,7 +429,7 @@ class MaskLMBatchGenerator(object):
       len(encoded_corpus) / (batch_size * self.sequence_length)
     )
     if self.num_batches == 0:
-      raise errors.UserError(
+      raise ValueError(
         "Not enough data. Use a smaller sequence_length and batch_size"
       )
     # split into batches

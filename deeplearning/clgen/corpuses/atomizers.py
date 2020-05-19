@@ -279,7 +279,7 @@ class GreedyAtomizer(AtomizerBase):
     """
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.GreedyAtomizer.FromText()")
     if not atoms:
-      raise errors.UserError("No atoms specified")
+      raise ValueError("No atoms specified")
 
     # Instantiate a greedy atomizer using the full vocabulary.
     full_vocab = dict(zip(atoms, range(len(atoms))))

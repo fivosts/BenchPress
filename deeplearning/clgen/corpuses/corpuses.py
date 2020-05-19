@@ -91,19 +91,19 @@ def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
 
     if config.HasField("greedy_multichar_atomizer"):
       if not config.greedy_multichar_atomizer.tokens:
-        raise errors.UserError("GreedyMulticharAtomizer.tokens is empty")
+        raise ValueError("GreedyMulticharAtomizer.tokens is empty")
       for atom in config.greedy_multichar_atomizer.tokens:
         if not atom:
-          raise errors.UserError(
+          raise ValueError(
             "Empty string found in GreedyMulticharAtomizer.tokens is empty"
           )
     if config.HasField("maskLM_atomizer"):
       if not config.maskLM_atomizer.wordpiece_tokenization:
-        raise errors.UserError("Empty string found in maskLM_atomizer: wordpiece_tokenization is empty")
+        raise ValueError("Empty string found in maskLM_atomizer: wordpiece_tokenization is empty")
 
     return config
   except pbutil.ProtoValueError as e:
-    raise errors.UserError(e)
+    raise ValueError(e)
 
 
 class Corpus(object):
@@ -161,7 +161,7 @@ class Corpus(object):
     if (
       self.config.HasField("content_id") and not preprocessed_db_path.is_file()
     ):
-      raise errors.UserError(f"Content ID not found: '{self.content_id}'")
+      raise ValueError(f"Content ID not found: '{self.content_id}'")
     self.preprocessed = preprocessed.PreprocessedContentFiles(
       f"sqlite:///{preprocessed_db_path}"
     )
@@ -566,7 +566,7 @@ def ResolveContentId(
       try:
         content_id = hc.GetHash(local_directory)
       except FileNotFoundError as e:
-        raise errors.UserError(e)
+        raise ValueError(e)
       # Create the hash file in the directory so that next time we don't need
       # to reference the hash cache.
       with open(hash_file_path, "w") as f:
@@ -640,12 +640,12 @@ def GetHashOfArchiveContents(archive: pathlib.Path) -> str:
   """
   l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.GetHashOfArchiveContents()")
   if not archive.is_file():
-    raise errors.UserError(f"Archive not found: '{archive}'")
+    raise ValueError(f"Archive not found: '{archive}'")
 
   with tempfile.TemporaryDirectory(prefix="clgen_corpus_") as d:
     cmd = ["tar", "-xf", str(archive), "-C", d]
     try:
       subprocess.check_call(cmd)
     except subprocess.CalledProcessError:
-      raise errors.UserError(f"Archive unpack failed: '{archive}'")
+      raise ValueError(f"Archive unpack failed: '{archive}'")
     return checksumdir.dirhash(d, "sha1")

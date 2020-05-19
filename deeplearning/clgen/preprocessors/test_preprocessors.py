@@ -58,21 +58,21 @@ def MockUndecoratedPreprocessor(text: str) -> str:
 
 def test_GetPreprocessFunction_empty_string():
   """Test that an UserError is raised if no preprocessor is given."""
-  with test.Raises(errors.UserError) as e_info:
+  with test.Raises(ValueError) as e_info:
     preprocessors.GetPreprocessorFunction("")
   assert "Invalid preprocessor name" in str(e_info.value)
 
 
 def test_GetPreprocessFunction_missing_module():
   """Test that UserError is raised if module not found."""
-  with test.Raises(errors.UserError) as e_info:
+  with test.Raises(ValueError) as e_info:
     preprocessors.GetPreprocessorFunction("not.a.real.module:Foo")
   assert "not found" in str(e_info.value)
 
 
 def test_GetPreprocessFunction_missing_function():
   """Test that UserError is raised if module exists but function doesn't."""
-  with test.Raises(errors.UserError) as e_info:
+  with test.Raises(ValueError) as e_info:
     preprocessors.GetPreprocessorFunction(
       "deeplearning.clgen.preprocessors.preprocessors_test:Foo"
     )
@@ -81,7 +81,7 @@ def test_GetPreprocessFunction_missing_function():
 
 def test_GetPreprocessFunction_undecorated_preprocessor():
   """Test that an UserError is raised if preprocessor not decorated."""
-  with test.Raises(errors.UserError) as e_info:
+  with test.Raises(ValueError) as e_info:
     preprocessors.GetPreprocessorFunction(
       "deeplearning.clgen.preprocessors.preprocessors_test"
       ":MockUndecoratedPreprocessor"
@@ -139,7 +139,7 @@ def Preprocess(src):
     ),
   )
 
-  with test.Raises(errors.UserError):
+  with test.Raises(ValueError):
     preprocessors.GetPreprocessorFunction(f"{path}:Preprocess")
 
 
@@ -147,7 +147,7 @@ def test_GetPreprocessorFunction_absolute_path_not_found(tempdir: pathlib.Path):
   """Test loading module when file not found."""
   path = tempdir / "foo.py"
   fs.Write(path, "".encode("utf-8"))
-  with test.Raises(errors.UserError):
+  with test.Raises(ValueError):
     preprocessors.GetPreprocessorFunction(f"{path}:NotFound")
 
 
@@ -155,7 +155,7 @@ def test_GetPreprocessorFunction_absolute_function_not_found(
   tempdir: pathlib.Path,
 ):
   """Test loading module when file not found."""
-  with test.Raises(errors.UserError):
+  with test.Raises(ValueError):
     preprocessors.GetPreprocessorFunction(f"{tempdir}/foo.py:Preprocess")
 
 

@@ -147,7 +147,7 @@ class Instance(object):
       pbutil.AssertFieldIsSet(config, "model_specification")
       pbutil.AssertFieldIsSet(config, "sampler")
     except pbutil.ProtoValueError as e:
-      raise errors.UserError(e)
+      raise ValueError(e)
 
     self.config = config
     self.working_dir = None
@@ -413,7 +413,7 @@ def RunWithErrorHandling(
   except app.UsageError as err:
     # UsageError is handled by the call to app.RunWithArgs(), not here.
     raise err
-  except errors.UserError as err:
+  except ValueError as err:
     l.getLogger().error("{} ({})".format(err, type(err).__name))
     sys.exit(1)
   except KeyboardInterrupt:

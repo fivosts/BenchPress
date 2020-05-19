@@ -20,15 +20,15 @@ def _ImportPreprocessorFromFile(module_path: pathlib.Path, function_name: str):
   """Import module from an absolute path to file, e.g. '/foo/bar.py'."""
   l.getLogger().debug("deeplearning.clgen.preprocessors.preprocessors._ImportPreprocessorFromFile()")
   if not module_path.is_file():
-    raise errors.UserError(f"File not found: {module_path}")
+    raise ValueError(f"File not found: {module_path}")
   try:
     spec = importlib_util.spec_from_file_location("module", str(module_path))
     module = importlib_util.module_from_spec(spec)
     spec.loader.exec_module(module)
   except ImportError as e:
-    raise errors.UserError(f"Failed to import module {module_path}: {e}")
+    raise ValueError(f"Failed to import module {module_path}: {e}")
   if not hasattr(module, function_name):
-    raise errors.UserError(
+    raise ValueError(
       f"Function {function_name} not found in module {module_path}"
     )
   return getattr(module, function_name)
@@ -40,14 +40,14 @@ def _ImportPreprocessorFromModule(module_name: str, function_name: str):
   try:
     module = importlib.import_module(module_name)
   except (ModuleNotFoundError, AttributeError):
-    raise errors.UserError(f"Module {module_name} not found.")
+    raise ValueError(f"Module {module_name} not found.")
   if not hasattr(module, function_name):
-    raise errors.UserError(
+    raise ValueError(
       f"Function {function_name} not found in module {module_name}"
     )
   function_ = getattr(module, function_name)
   if not function_.__dict__.get("is_clgen_preprocessor"):
-    raise errors.UserError(
+    raise ValueError(
       f"Preprocessor {function_name} not decorated with @clgen_preprocessor"
     )
   return function_
@@ -78,7 +78,7 @@ def GetPreprocessorFunction(name: str) -> public.PreprocessorFunction:
   l.getLogger().debug("deeplearning.clgen.preprocessors.preprocessors.GetPreprocessorFunction()")
   components = name.split(":")
   if len(components) != 2:
-    raise errors.UserError(f"Invalid preprocessor name {name}")
+    raise ValueError(f"Invalid preprocessor name {name}")
   module_name, function_name = components
   if module_name[0] == "/":
     return _ImportPreprocessorFromFile(pathlib.Path(module_name), function_name)

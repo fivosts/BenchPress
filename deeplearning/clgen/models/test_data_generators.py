@@ -43,7 +43,7 @@ def test_BatchGenerator_sequence_length_too_large(abc_model_config):
   """Test that sequence length derives from TrainingOptions.sequence_length."""
   opt = abc_model_config.training
   opt.sequence_length = 50
-  with test.Raises(errors.UserError) as e_info:
+  with test.Raises(ValueError) as e_info:
     data_generators.BatchGenerator(CorpusMock(corpus_length=10), opt)
   assert (
     "Requested training.sequence_length (50) is larger than the corpus "
@@ -57,7 +57,7 @@ def test_BatchGenerator_batch_size_too_large(abc_model_config):
   opt = abc_model_config.training
   opt.batch_size = 50
   opt.sequence_length = 5
-  with test.Raises(errors.UserError) as e_info:
+  with test.Raises(ValueError) as e_info:
     data_generators.BatchGenerator(CorpusMock(corpus_length=10), opt)
   assert ("") == str(e_info.value)
 

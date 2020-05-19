@@ -223,7 +223,7 @@ class Model(object):
     telemetry_logs = self.backend.telemetry.EpochTelemetry()
 
     if len(telemetry_logs) != self.backend.num_epochs:
-      raise errors.UserError("Epoch telemetry logs contain {} epoch entries, but model has {} epochs!"
+      raise ValueError("Epoch telemetry logs contain {} epoch entries, but model has {} epochs!"
                               .format(
                                   len(telemetry_logs),
                                   self.backend.num_epochs,
@@ -275,7 +275,7 @@ class Model(object):
     """
     l.getLogger().debug("deeplearning.clgen.models.Model.Sample()")
     if not sample_observers:
-      raise errors.UserError("Cannot sample without any observers")
+      raise ValueError("Cannot sample without any observers")
 
     sample_start_time = labdate.MillisecondsTimestamp()
 
