@@ -289,6 +289,18 @@ class tfBert(backends.BackendBase):
 
     l.getLogger().info("Initialized BERT sampler in {}".format(self.sample_path))
 
+    return 
+
+  def InitSampleBatch(self,
+                   sampler: samplers.Sampler, 
+                   ) -> None:
+
+    l.getLogger().warning("Called while batches are not done. Sets up batch")
+    return 
+
+  def SampleNextIndices(self, sampler: samplers.Sampler, done):
+    l.getLogger().warning("Within a batch, called for each i/o step")
+
     if FLAGS.do_predict:
       # predict_examples = processor.get_test_examples(FLAGS.data_dir)
       # num_actual_predict_examples = len(predict_examples)
@@ -339,20 +351,7 @@ class tfBert(backends.BackendBase):
           writer.write(output_line)
           num_written_lines += 1
       assert num_written_lines == num_actual_predict_examples
-
-
-    return 
-
-  def InitSampleBatch(self,
-                   sampler: samplers.Sampler, 
-                   ) -> None:
-
-    l.getLogger().warning("Called while batches are not done. Sets up batch")
-    return 
-
-  def SampleNextIndices(self, sampler: samplers.Sampler, done):
-    l.getLogger().warning("Within a batch, called for each i/o step")
-
+      
     return []
 
 
