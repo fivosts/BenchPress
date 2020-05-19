@@ -163,4 +163,4 @@ def RejectSecrets(text: str) -> str:
     secrets.ScanForSecrets(text)
     return text
   except secrets.TextContainsSecret as e:
-    raise errors.BadCodeException(str(e))
+    raise ValueError(str(e))

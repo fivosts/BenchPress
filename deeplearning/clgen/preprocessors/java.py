@@ -85,9 +85,9 @@ def Javac(
     )
     stdout, stderr = process.communicate()
   if process.returncode == 9:
-    raise errors.BadCodeException(f"Javac timed out after {timeout_seconds}s")
+    raise ValueError(f"Javac timed out after {timeout_seconds}s")
   elif process.returncode != 0:
-    raise errors.BadCodeException(stderr)
+    raise ValueError(stderr)
   return text
 
 
@@ -103,7 +103,7 @@ def Compile(text: str) -> str:
   """
   match = CLASS_NAME_RE.search(text)
   if not match:
-    raise errors.BadCodeException("Failed to determine class name")
+    raise ValueError("Failed to determine class name")
   class_name = match.group(1)
   return Javac(text, class_name, [])
 
@@ -140,7 +140,7 @@ def UnwrapMethodInClass(text: str) -> str:
   """
   methods = extractors.ExtractJavaMethods(text, static_only=False)
   if len(methods) != 1:
-    raise errors.BadCodeException(f"Expected 1 method, found {len(methods)}")
+    raise ValueError(f"Expected 1 method, found {len(methods)}")
 
   return methods[0]
 

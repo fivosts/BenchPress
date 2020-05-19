@@ -38,7 +38,7 @@ def MockPreprocessor(text: str) -> str:
 def MockPreprocessorBadCode(text: str) -> str:
   """A mock preprocessor which raises a BadCodeException."""
   del text
-  raise errors.BadCodeException("bad code")
+  raise ValueError("bad code")
 
 
 @public.clgen_preprocessor
@@ -180,7 +180,7 @@ def test_Preprocess_mock_preprocessor():
 
 def test_Preprocess_mock_preprocessor_bad_code():
   """Test that BadCodeException is propagated."""
-  with test.Raises(errors.BadCodeException):
+  with test.Raises(ValueError):
     preprocessors.Preprocess(
       "",
       [
@@ -218,7 +218,7 @@ def test_Preprocess_RejectSecrets():
 
 def test_Preprocess_RejectSecrets():
   """Test that InternalError is propagated."""
-  with test.Raises(errors.BadCodeException):
+  with test.Raises(ValueError):
     preprocessors.Preprocess(
       "-----BEGIN RSA PRIVATE KEY-----",
       ["deeplearning.clgen.preprocessors.preprocessors" ":RejectSecrets"],
