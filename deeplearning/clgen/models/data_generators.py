@@ -296,18 +296,27 @@ class TensorflowBatchGenerator(object):
 class MaskLMBatchGenerator(object):
   def __init__():
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.__init__()")
+    self.corpus = None
+    self.training_opts = None
+    self.tfRecord = None
+    self._masked_corpus = None
+    self._original_encoded_corpus = None
+    self.shaped_corpus = None
+    self.num_batches = None
+    self.sequence_length = None
+    self.sampler = None
     return
 
   @classmethod
   def TrainMaskLMBatchGenerator(cls,
                                corpus: "corpuses.Corpus",
                                training_opts: model_pb2.TrainingOptions,
-                               cache_path) -> "data_generators.MaskLMBatchGenerator":
+                               cache_path
+                               ) -> "data_generators.MaskLMBatchGenerator":
     d = MaskLMBatchGenerator()
     d.corpus = corpus
     d.training_opts = training_opts
-    tfRecord = cache_path / "dataset" / "maskedDataset.tf_record"
-    tf = tf
+    d.tfRecord = cache_path / "dataset" / "maskedDataset.tf_record"
 
     # Lazily instantiated.
     d._masked_corpus = None
@@ -323,16 +332,18 @@ class MaskLMBatchGenerator(object):
 
     d.CreateCorpus()
 
-    if not tfRecord.exists():
+    if not d.tfRecord.exists():
       d.MaskCorpus(d.shaped_corpus)
       d.saveMaskedCorpus()
 
     return d
 
   @classmethod
-  def SampleMaskLMBatchGenerator(cls) -> "data_generators.MaskLMBatchGenerator":
+  def SampleMaskLMBatchGenerator(cls,
+                                sampler
+                                ) -> "data_generators.MaskLMBatchGenerator":
     d = MaskLMBatchGenerator()
-    ## TODO
+    d.sampler = sampler
     return d
 
   def generateTfDataset(self,
@@ -376,7 +387,7 @@ class MaskLMBatchGenerator(object):
               tf.io.FixedLenFeature([1], tf.int64),
       }
 
-      dataset = tf.io.gfile.glob(str(tfRecord))
+      dataset = tf.io.gfile.glob(str(self.tfRecord))
       # For training, we want a lot of parallel reading and shuffling.
       # For eval, we want no shuffling and parallel reading doesn't matter.
       if is_training:
@@ -550,8 +561,8 @@ class MaskLMBatchGenerator(object):
   def saveMaskedCorpus(self) -> None:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.saveMaskedCorpus()")
      
-    tfRecord.parent.mkdir(exist_ok = True, parents = True)
-    writer = tf.io.TFRecordWriter(str(tfRecord))
+    self.tfRecord.parent.mkdir(exist_ok = True, parents = True)
+    writer = tf.io.TFRecordWriter(str(self.tfRecord))
 
     total_written = 0
     for (inst_index, instance) in enumerate(self._masked_corpus):
@@ -596,5 +607,5 @@ class MaskLMBatchGenerator(object):
 
     writer.close()
     ## TODO print num_batches x batch_size (a.k.a. 185 * 64) instead of 11840
-    l.getLogger().info("Wrote {} instances to {}".format(total_written, tfRecord))
+    l.getLogger().info("Wrote {} instances to {}".format(total_written, self.tfRecord))
     return
