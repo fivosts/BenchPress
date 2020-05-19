@@ -420,7 +420,7 @@ def RunWithErrorHandling(
     Flush()
     print("\nReceived keyboard interrupt, terminating", file=sys.stderr)
     sys.exit(1)
-  except errors.File404 as e:
+  except FileNotFoundError as e:
     Flush()
     LogException(e)
     sys.exit(1)
