@@ -191,7 +191,7 @@ def JavaRewrite(text: str) -> str:
   l.getLogger().warning("$ {}".format(" ".join(cmd)))
   stdout, stderr = process.communicate(text)
   if process.returncode == 9:
-    raise errors.RewriterException("JavaRewriter failed to complete after 60s")
+    raise RuntimeError("JavaRewriter failed to complete after 60s")
   elif process.returncode:
-    raise errors.RewriterException(stderr)
+    raise RuntimeError(stderr)
   return stdout.strip() + "\n"

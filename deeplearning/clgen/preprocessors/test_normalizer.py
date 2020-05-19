@@ -60,7 +60,7 @@ def test_NormalizeIdentifiers_RewriterException(mocker):
   """Test that ClangException is raised if clang_rewriter returns 204."""
   mock_Popen = mocker.patch("subprocess.Popen")
   mock_Popen.return_value = MockProcess(204)
-  with test.Raises(errors.RewriterException):
+  with test.Raises(RuntimeError):
     normalizer.NormalizeIdentifiers("", ".c", [])
   # RewriterException inherits from ClangException.
   with test.Raises(RuntimeError):
@@ -69,7 +69,7 @@ def test_NormalizeIdentifiers_RewriterException(mocker):
 
 def test_NormalizeIdentifiers_empty_c_file():
   """Test that RewriterException is raised on an empty file."""
-  with test.Raises(errors.RewriterException):
+  with test.Raises(RuntimeError):
     normalizer.NormalizeIdentifiers("", ".c", [])
 
 
