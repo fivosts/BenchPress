@@ -144,7 +144,7 @@ def EncoderWorker(
       pickle.loads(job.pickled_atomizer),
       job.contentfile_separator,
     )
-  except errors.VocabError:
+  except ValueError:
     return None
 
 

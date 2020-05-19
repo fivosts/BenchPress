@@ -173,7 +173,7 @@ class SymmetricalTokenDepthCriterion(TerminationCriterionBase):
           "Sampler symmetrical depth tokens do not encode to a single "
           "token using the corpus vocabulary"
         )
-    except errors.VocabError:
+    except ValueError:
       raise errors.InvalidSymtokTokens(
         "Sampler symmetrical depth tokens cannot be encoded using the "
         "corpus vocabulary"
@@ -285,7 +285,7 @@ class Sampler(object):
     try:
       self.encoded_start_text = atomizer.AtomizeString(self.start_text)
       self.tokenized_start_text = atomizer.TokenizeString(self.start_text)
-    except errors.VocabError:
+    except ValueError:
       raise errors.InvalidStartText(
         "Sampler start text cannot be encoded using the corpus vocabulary: "
         f"'{self.start_text}'"

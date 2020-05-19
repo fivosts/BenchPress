@@ -259,7 +259,7 @@ def test_Sampler_Specialize_invalid_depth_tokens(
   def MockAtomizeString(string):
     """AtomizeString() with a vocab error on depth tokens."""
     if string == "{" or string == "}":
-      raise errors.VocabError()
+      raise ValueError()
     else:
       return np.ndarray([1])
 

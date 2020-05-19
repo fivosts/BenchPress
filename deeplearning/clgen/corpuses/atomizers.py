@@ -125,7 +125,7 @@ class AtomizerBase(object):
       else:
         raise UserError("Wrong encoded array specified")
     except KeyError:
-      raise errors.VocabError
+      raise ValueError
 
   def ToFile(self, path: pathlib.Path) -> None:
     """Save an atomizer to file."""
@@ -170,7 +170,7 @@ class AsciiCharacterAtomizer(AtomizerBase):
     try:
       return np.array(list(map(lambda x: self.vocab[x], text)), dtype=np.int32)
     except KeyError:
-      raise errors.VocabError
+      raise ValueError
 
   def __repr__(self) -> str:
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AsciiCharacterAtomizer.__repr__()")
@@ -255,7 +255,7 @@ class GreedyAtomizer(AtomizerBase):
           i += 1
           j += 2
     except KeyError:
-      raise errors.VocabError
+      raise ValueError
 
     if self.determine_chars:
       self._UpdateVocabulary()
@@ -316,7 +316,7 @@ class MaskLMAtomizer(AtomizerBase):
     try:
       return np.array(list(map(lambda x: self.vocab[x], text)), dtype=np.int32)
     except KeyError:
-      raise errors.VocabError
+      raise ValueError
 
   def __repr__(self) -> str:
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.__repr__()")
