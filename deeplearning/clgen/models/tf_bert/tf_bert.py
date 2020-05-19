@@ -269,15 +269,35 @@ class tfBert(backends.BackendBase):
             num_shards = FLAGS.num_tpu_cores,
             per_host_input_for_training = is_per_host))
 
-    model_fn = model_fn_builder(
+    ## TODO integrate this fn_builder to the current one
+    # model_fn = model_fn_builder(
+    #     bert_config = bert_config,
+    #     num_labels = len(label_list),
+    #     init_checkpoint = self.ckpt_path,
+    #     # learning_rate = self.learning_rate,
+    #     # num_train_steps = num_train_steps,
+    #     # num_warmup_steps = num_warmup_steps,
+    #     use_tpu = FLAGS.use_tpu,
+    #     use_one_hot_embeddings = FLAGS.use_tpu)
+
+    model_fn = self._model_fn_builder(
         bert_config = bert_config,
-        num_labels = len(label_list),
         init_checkpoint = self.ckpt_path,
-        # learning_rate = self.learning_rate,
-        # num_train_steps = num_train_steps,
-        # num_warmup_steps = num_warmup_steps,
+        learning_rate = self.learning_rate,
+        num_train_steps = self.num_train_steps,
+        num_warmup_steps = self.num_warmup_steps,
         use_tpu = FLAGS.use_tpu,
         use_one_hot_embeddings = FLAGS.use_tpu)
+
+    # If TPU is not available, this will fall back to normal Estimator on CPU
+    # or GPU.
+    # estimator = tf.compat.v1.estimator.tpu.TPUEstimator(
+    #     use_tpu = FLAGS.use_tpu,
+    #     model_fn = model_fn,
+    #     config = run_config,
+    #     # train_batch_size = self.train_batch_size,
+    #     # eval_batch_size = self.eval_batch_size,
+    #     predict_batch_size = sampler.batch_size)
 
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
@@ -286,9 +306,9 @@ class tfBert(backends.BackendBase):
         model_fn = model_fn,
         config = run_config,
         # train_batch_size = self.train_batch_size,
-        # eval_batch_size = self.eval_batch_size,
         predict_batch_size = sampler.batch_size)
 
+    ## TODO save that stuff somewhere
     l.getLogger().info("Initialized BERT sampler in {}".format(self.sample_path))
 
     return 
