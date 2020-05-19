@@ -264,10 +264,10 @@ class tfBert(backends.BackendBase):
     run_config = tf.contrib.tpu.RunConfig(
         cluster=tpu_cluster_resolver,
         master=FLAGS.master,
-        model_dir=FLAGS.output_dir,
-        save_checkpoints_steps=FLAGS.save_checkpoints_steps,
+        model_dir=self.ckpt_path,
+        # save_checkpoints_steps=FLAGS.save_checkpoints_steps,
         tpu_config=tf.contrib.tpu.TPUConfig(
-            iterations_per_loop=FLAGS.iterations_per_loop,
+            # iterations_per_loop=FLAGS.iterations_per_loop,
             num_shards=FLAGS.num_tpu_cores,
             per_host_input_for_training=is_per_host))
 
@@ -276,8 +276,8 @@ class tfBert(backends.BackendBase):
     num_warmup_steps = None
 
     if FLAGS.do_predict:
-      predict_examples = processor.get_test_examples(FLAGS.data_dir)
-      num_actual_predict_examples = len(predict_examples)
+      # predict_examples = processor.get_test_examples(FLAGS.data_dir)
+      # num_actual_predict_examples = len(predict_examples)
       if FLAGS.use_tpu:
         # TPU requires a fixed batch size for all batches, therefore the number
         # of examples must be a multiple of the batch size, or else examples
