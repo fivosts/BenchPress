@@ -123,7 +123,7 @@ class AtomizerBase(object):
       elif np.ndim(encoded) == 1:
         return "".join(list(map(lambda x: self.decoder[x], encoded)))
       else:
-        raise UserError("Wrong encoded array specified")
+        raise ValueError("Wrong encoded array specified")
     except KeyError:
       raise ValueError
 
