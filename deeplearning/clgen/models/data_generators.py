@@ -433,6 +433,7 @@ class MaskLMBatchGenerator(object):
   def generateTfSample(self,
                        input_text,
                        max_seq_length,
+                       batch_size,
                        num_cpu_threads,
                        use_tpu,
                        drop_remainder

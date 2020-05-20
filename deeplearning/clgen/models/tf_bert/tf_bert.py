@@ -277,6 +277,7 @@ class tfBert(backends.BackendBase):
     predict_input_fn = self.data_generator.generateTfSample(
         input_text = sampler.encoded_start_text,
         max_seq_length = self.max_seq_length,
+        batch_size = sampler.batch_size,
         num_cpu_threads = min(os.cpu_count(), sampler.batch_size),
         use_tpu = FLAGS.use_tpu, ## TODO this flag is supposed to PaddingInputExamples
         drop_remainder = FLAGS.use_tpu
