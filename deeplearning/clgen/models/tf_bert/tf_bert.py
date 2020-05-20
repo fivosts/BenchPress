@@ -180,9 +180,7 @@ class tfBert(backends.BackendBase):
           init_checkpoint = self.ckpt_path,
           learning_rate = self.learning_rate,
           num_train_steps = self.num_train_steps,
-          num_warmup_steps = self.num_warmup_steps,
-          use_tpu = FLAGS.use_tpu,
-          use_one_hot_embeddings = FLAGS.use_tpu)
+          num_warmup_steps = self.num_warmup_steps)
 
       # If TPU is not available, this will fall back to normal Estimator on CPU
       # or GPU.
@@ -246,11 +244,6 @@ class tfBert(backends.BackendBase):
           "was only trained up to sequence length %d" %
           (self.max_seq_length, bert_config.max_position_embeddings))
 
-    # processor = processors[task_name]()
-    # label_list = processor.get_labels()
-    # tokenizer = tokenization.FullTokenizer(
-    #     vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
-
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
       tpu_cluster_resolver = tf.compat.v1.cluster_resolver.TPUClusterResolver(
@@ -261,9 +254,7 @@ class tfBert(backends.BackendBase):
         cluster = tpu_cluster_resolver,
         master = FLAGS.master,
         model_dir = str(self.ckpt_path),
-        # save_checkpoints_steps=FLAGS.save_checkpoints_steps,
         tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
-            # iterations_per_loop=FLAGS.iterations_per_loop,
             num_shards = FLAGS.num_tpu_cores,
             per_host_input_for_training = is_per_host))
 
@@ -273,8 +264,6 @@ class tfBert(backends.BackendBase):
         # learning_rate = self.learning_rate,
         # num_train_steps = self.num_train_steps,
         # num_warmup_steps = self.num_warmup_steps,
-        use_tpu = FLAGS.use_tpu,
-        use_one_hot_embeddings = FLAGS.use_tpu,
         sampling_mode = True)
 
     # If TPU is not available, this will fall back to normal Estimator on CPU
@@ -389,10 +378,10 @@ class tfBert(backends.BackendBase):
                       learning_rate,
                       num_train_steps,
                       num_warmup_steps,
-                      use_tpu,
-                      use_one_hot_embeddings,
                       sampling_mode = False):
     """Returns `model_fn` closure for TPUEstimator."""
+
+
 
     def _model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
       """The `model_fn` for TPUEstimator."""
@@ -417,7 +406,7 @@ class tfBert(backends.BackendBase):
           input_ids=input_ids,
           # input_mask=input_mask, # You CAN ignore. Used for padding. 0s after real sequence. Now all 1s.
           # token_type_ids=segment_ids, # You can ignore. Used for double sentences (sA -> 0, sB ->1). Now all will be zero
-          use_one_hot_embeddings=use_one_hot_embeddings)
+          use_one_hot_embeddings=FLAGS.use_tpu)
 
       (masked_lm_loss,
        masked_lm_example_loss, masked_lm_log_probs) = self._get_masked_lm_output(
@@ -436,7 +425,7 @@ class tfBert(backends.BackendBase):
       if init_checkpoint:
         (assignment_map, initialized_variable_names
         ) = model.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
-        if use_tpu:
+        if FLAGS.use_tpu:
 
           def _tpu_scaffold():
             tf.compat.v1.train.init_from_checkpoint(init_checkpoint, assignment_map)
@@ -457,7 +446,7 @@ class tfBert(backends.BackendBase):
       output_spec = None
       if mode == tf.compat.v1.estimator.ModeKeys.TRAIN:
         train_op = optimizer.create_optimizer(
-            total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
+            total_loss, learning_rate, num_train_steps, num_warmup_steps, FLAGS.use_tpu)
 
         training_hooks = self._GetSummaryHooks(save_steps = self.num_steps_per_epoch,
                                               output_dir = str(self.logfile_path),
