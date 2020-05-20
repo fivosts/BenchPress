@@ -332,7 +332,7 @@ class MaskLMAtomizer(AtomizerBase):
           encoded.append(self.vocab[char])
       except KeyError:
         raise ValueError("Out of vocabulary word!")
-     return np.array(encoded, dtype=np.int32)
+    return np.array(encoded, dtype=np.int32)
     
   def __repr__(self) -> str:
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.__repr__()")
