@@ -127,8 +127,9 @@ class Model(object):
         l.getLogger().warning("Mismatch between pre-trained and current config sequence_length!\
           This can only be intended in tfBert model!")
       cached_to_compare.training.ClearField("sequence_length")
+      config_to_compare.training.ClearField("sequence_length")
       if config_to_compare != cached_to_compare:
-        raise SystemError("Metadata mismatch")
+        raise SystemError("Metadata mismatch: {} \n\n {}".format(config_to_compare, cached_to_compare))
       self.meta = cached_meta
     else:
       self.meta = internal_pb2.ModelMeta()
