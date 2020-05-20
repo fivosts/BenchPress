@@ -299,8 +299,7 @@ class tfBert(backends.BackendBase):
     ## Then feed that input and  ask for a prediction
     predict_input_fn = self.data_generator.generateTfSample(
         max_seq_length = self.max_seq_length,
-        num_cpu_threads = 8,
-        is_training = True,
+        num_cpu_threads = min(os.cpu_count(), sampler.batch_size),
         use_tpu = self.use_tpu, ## TODO this flag is supposed to PaddingInputExamples
         drop_remainder = self.use_tpu
         )
