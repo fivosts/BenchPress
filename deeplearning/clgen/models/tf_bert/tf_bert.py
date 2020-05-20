@@ -276,7 +276,7 @@ class tfBert(backends.BackendBase):
 
     l.getLogger().warning("Called while batches are not done. Sets up batch")
     predict_input_fn = self.data_generator.generateTfSamples(
-        input_text = sampler.encoded_start_text,
+        input_sample = sampler.encoded_start_text,
         max_seq_length = self.max_seq_length,
         batch_size = sampler.batch_size,
         num_cpu_threads = min(os.cpu_count(), sampler.batch_size),
