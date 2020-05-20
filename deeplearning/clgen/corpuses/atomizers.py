@@ -322,14 +322,6 @@ class MaskLMAtomizer(AtomizerBase):
   def __repr__(self) -> str:
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.__repr__()")
     return f"MaskLMAtomizer[{self.vocab_size} chars]"
-
-  @property
-  def maskToken(self):
-    return self.vocab[self.metaTokens['mask']]
-
-  @property
-  def maskLabel(self):
-    return self.metaTokens['mask']
   
   @classmethod
   def FromText(cls, 
