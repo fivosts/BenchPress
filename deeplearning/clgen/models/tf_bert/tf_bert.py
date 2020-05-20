@@ -274,7 +274,13 @@ class tfBert(backends.BackendBase):
                    ) -> None:
 
     l.getLogger().warning("Called while batches are not done. Sets up batch")
-    ## Do nothing 
+    predict_input_fn = self.data_generator.generateTfSample(
+        input_text = sampler.encoded_start_text,
+        max_seq_length = self.max_seq_length,
+        num_cpu_threads = min(os.cpu_count(), sampler.batch_size),
+        use_tpu = FLAGS.use_tpu, ## TODO this flag is supposed to PaddingInputExamples
+        drop_remainder = FLAGS.use_tpu
+        )
     return 
 
   def SampleNextIndices(self, sampler: samplers.Sampler, done):
@@ -298,12 +304,6 @@ class tfBert(backends.BackendBase):
     ## TODO: data_generator takes encoded text, pads it to max_position_embeddings
     ## and masks it up to sampler sequence length
     ## Then feed that input and  ask for a prediction
-    predict_input_fn = self.data_generator.generateTfSample(
-        max_seq_length = self.max_seq_length,
-        num_cpu_threads = min(os.cpu_count(), sampler.batch_size),
-        use_tpu = FLAGS.use_tpu, ## TODO this flag is supposed to PaddingInputExamples
-        drop_remainder = FLAGS.use_tpu
-        )
     
     ## Batch size could determine the number of tf.data entries provided by
     ## the input_fn builder
