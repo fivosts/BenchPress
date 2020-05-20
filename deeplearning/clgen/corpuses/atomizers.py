@@ -339,7 +339,7 @@ class MaskLMAtomizer(AtomizerBase):
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.FromText()")
     
     ## Account for MetaTokens. CLS and SEP or START might need to be added.
-    metaTokens = ('[MASK]', '[HOLE]', '[START]', '[END]')
+    metaTokens = ('[MASK]', '[HOLE]', '[START]', '[END]', '[PAD]')
     metaTokensDict = {
       'mask'  : '[MASK]',
       'hole'  : '[HOLE]',
