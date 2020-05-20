@@ -175,9 +175,9 @@ def CompileLlvmBytecode(
     )
     stdout, stderr = process.communicate()
   if process.returncode == 9:
-    raise RuntimeError(f"Clang timed out after {timeout_seconds}s")
+    raise ValueError(f"Clang timed out after {timeout_seconds}s")
   elif process.returncode != 0:
-    raise RuntimeError(stderr)
+    raise ValueError(stderr)
   return stdout
 
 

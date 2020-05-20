@@ -34,7 +34,7 @@ def _MinimumLineCount(text: str, min_line_count: int) -> str:
   """
   l.getLogger().debug("deeplearning.clgen.preprocessors.common._MinimumLineCount()")
   if len(text.strip().split("\n")) < min_line_count:
-    raise NameError
+    raise ValueError
   return text
 
 
