@@ -369,10 +369,6 @@ class tfBert(backends.BackendBase):
     def _model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
       """The `model_fn` for TPUEstimator."""
 
-      # l.getLogger().info("*** Features ***")
-      # for name in sorted(features.keys()):
-      #   l.getLogger().info("  name = %s, shape = %s" % (name, features[name].shape))
-
       input_ids = features["input_ids"]
       # input_mask = features["input_mask"]
       # segment_ids = features["segment_ids"]
@@ -387,8 +383,8 @@ class tfBert(backends.BackendBase):
           config=bert_config,
           is_training=is_training,
           input_ids=input_ids,
-          # input_mask=input_mask, # You CAN ignore. Used for padding. 0s after real sequence. Now all 1s.
-          # token_type_ids=segment_ids, # You can ignore. Used for double sentences (sA -> 0, sB ->1). Now all will be zero
+          input_mask=None, # You CAN ignore. Used for padding. 0s after real sequence. Now all 1s.
+          token_type_ids=None, # You can ignore. Used for double sentences (sA -> 0, sB ->1). Now all will be zero
           use_one_hot_embeddings=FLAGS.use_tpu)
 
       (masked_lm_loss,
