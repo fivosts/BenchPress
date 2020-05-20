@@ -175,12 +175,7 @@ class tfBert(backends.BackendBase):
               num_shards = FLAGS.num_tpu_cores,
               per_host_input_for_training = is_per_host))
 
-      model_fn = self._model_fn_builder(
-          bert_config = bert_config,
-          init_checkpoint = self.ckpt_path,
-          learning_rate = self.learning_rate,
-          num_train_steps = self.num_train_steps,
-          num_warmup_steps = self.num_warmup_steps)
+      model_fn = self._model_fn_builder(bert_config = bert_config)
 
       # If TPU is not available, this will fall back to normal Estimator on CPU
       # or GPU.
@@ -258,13 +253,7 @@ class tfBert(backends.BackendBase):
             num_shards = FLAGS.num_tpu_cores,
             per_host_input_for_training = is_per_host))
 
-    model_fn = self._model_fn_builder(
-        bert_config = bert_config,
-        init_checkpoint = self.ckpt_path,
-        # learning_rate = self.learning_rate,
-        # num_train_steps = self.num_train_steps,
-        # num_warmup_steps = self.num_warmup_steps,
-        sampling_mode = True)
+    model_fn = self._model_fn_builder(bert_config = bert_config, sampling_mode = True)
 
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
@@ -374,14 +363,8 @@ class tfBert(backends.BackendBase):
 
   def _model_fn_builder(self,
                       bert_config, 
-                      init_checkpoint, 
-                      learning_rate,
-                      num_train_steps,
-                      num_warmup_steps,
                       sampling_mode = False):
     """Returns `model_fn` closure for TPUEstimator."""
-
-
 
     def _model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
       """The `model_fn` for TPUEstimator."""
@@ -422,19 +405,19 @@ class tfBert(backends.BackendBase):
 
       initialized_variable_names = {}
       scaffold_fn = None
-      if init_checkpoint:
+      if self.ckpt_path:
         (assignment_map, initialized_variable_names
-        ) = model.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
+        ) = model.get_assignment_map_from_checkpoint(tvars, self.ckpt_path)
         if FLAGS.use_tpu:
 
           def _tpu_scaffold():
-            tf.compat.v1.train.init_from_checkpoint(init_checkpoint, assignment_map)
+            tf.compat.v1.train.init_from_checkpoint(self.ckpt_path, assignment_map)
             return tf.train.Scaffold()
 
           scaffold_fn = _tpu_scaffold
         else:
-          l.getLogger().info("Loading model checkpoint from: {}".format(init_checkpoint))
-          tf.compat.v1.train.init_from_checkpoint(init_checkpoint, assignment_map)
+          l.getLogger().info("Loading model checkpoint from: {}".format(self.ckpt_path))
+          tf.compat.v1.train.init_from_checkpoint(self.ckpt_path, assignment_map)
 
       # l.getLogger().info("**** Trainable Variables ****")
       # for var in tvars:
@@ -446,17 +429,17 @@ class tfBert(backends.BackendBase):
       output_spec = None
       if mode == tf.compat.v1.estimator.ModeKeys.TRAIN:
         train_op = optimizer.create_optimizer(
-            total_loss, learning_rate, num_train_steps, num_warmup_steps, FLAGS.use_tpu)
+            total_loss, self.learning_rate, self.num_train_steps, self.num_warmup_steps, FLAGS.use_tpu)
 
         training_hooks = self._GetSummaryHooks(save_steps = self.num_steps_per_epoch,
                                               output_dir = str(self.logfile_path),
                                               masked_lm_loss = masked_lm_loss,
                                               next_sentence_loss = next_sentence_loss,
                                               total_loss = total_loss,
-                                              learning_rate = learning_rate
+                                              learning_rate = self.learning_rate
                                               )
 
-        training_hooks += self._GetProgressBarHooks(max_length = self.num_train_steps,
+        training_hooks += self._GetProgressBarHooks(max_length = self.self.num_train_steps,
                                                     tensors = {'Loss': total_loss},
                                                     log_steps = self.num_steps_per_epoch,
                                                     at_end = True,
