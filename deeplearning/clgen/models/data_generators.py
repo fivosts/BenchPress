@@ -294,7 +294,7 @@ class TensorflowBatchGenerator(object):
     return batch
 
 class MaskLMBatchGenerator(object):
-  def __init__():
+  def __init__(self):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.__init__()")
     self.corpus = None
     self.training_opts = None
