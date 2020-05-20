@@ -431,8 +431,27 @@ class MaskLMBatchGenerator(object):
 
     return input_fn
 
+  def expandHoleToMasks(self,
+                        sample: np.array, 
+                        idx: int, 
+                        length: int
+                        ) -> np.array:
+
+    if idx >= len(sample):
+      raise ValueError("Index provided is out of bounds on this sequence")  
+
+    if sample[idx] != self.corpus.atomizer.holeToken:
+      raise ValueError("Index does not map to hole token in sequence")
+
+    expanded = (sample[:idx] 
+                  + np.array([self.corpus.atomizer.maskToken] * length, dtype = np.int32) 
+                  + sample[idx + 1:])
+    return expanded
+
+
+
   def generateTfSamples(self,
-                       input_text,
+                       input_sample,
                        max_seq_length,
                        batch_size,
                        num_cpu_threads,
@@ -440,7 +459,18 @@ class MaskLMBatchGenerator(object):
                        drop_remainder
                        ):
 
-    l.getLogger().warning(input_text)
+    l.getLogger().warning(input_sample)
+
+    hole_index = np.where(input_sample == self.corpus.atomizer.holeToken)
+    expanded_sample = self.expandHoleToMasks(
+          input_sample, hole_index, max_seq_length - len(input_sample) + 1)
+
+    assert len(expanded_sample) == max_seq_length
+    # expandHoles
+    # pad2maxpositionembeddings
+
+    l.getLogger().critical("generateTfSamples Not implemented")
+    exit()
 
     def _decode_record(record, name_to_features):
       """Decodes a record to a TensorFlow example."""
