@@ -280,39 +280,31 @@ class tfBert(backends.BackendBase):
   def SampleNextIndices(self, sampler: samplers.Sampler, done):
     l.getLogger().warning("Within a batch, called for each i/o step")
 
-    ## TODO: data_generator takes encoded text, pads it to max_position_embeddings
-    ## and masks it up to sampler sequence length
-    ## Then feed that input and  ask for a prediction
-
     if FLAGS.use_tpu:
       # TPU requires a fixed batch size for all batches, therefore the number
       # of examples must be a multiple of the batch size, or else examples
       # will get dropped. So we pad with fake examples which are ignored
       # later on.
-      while len(predict_examples) % FLAGS.predict_batch_size != 0:
+      while len(predict_examples) % sampler.batch_size != 0:
         predict_examples.append(PaddingInputExample())
-
-    predict_file = str(self.sample_path / "predict.tf_record")
-    file_based_convert_examples_to_features(predict_examples, label_list,
-                                            self.max_seq_length, tokenizer,
-                                            predict_file)
 
     tf.logging.info("***** Running prediction*****")
     tf.logging.info("  Num examples = %d (%d actual, %d padding)",
                     len(predict_examples), num_actual_predict_examples,
                     len(predict_examples) - num_actual_predict_examples)
-    tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
+    tf.logging.info("  Batch size = %d", sampler.batch_size)
 
-    predict_drop_remainder = True if FLAGS.use_tpu else False
-
-    ## TODO this function is going to the data_generator
-    ## and will be migrated from file based, to sampler text based builder
-    predict_input_fn = file_based_input_fn_builder(
-        input_file = predict_file,
-        seq_length = self.max_seq_length,
-        is_training = False,
-        drop_remainder = predict_drop_remainder)
-
+    ## TODO: data_generator takes encoded text, pads it to max_position_embeddings
+    ## and masks it up to sampler sequence length
+    ## Then feed that input and  ask for a prediction
+    predict_input_fn = self.data_generator.generateTfSample(
+        max_seq_length = self.max_seq_length,
+        num_cpu_threads = 8,
+        is_training = True,
+        use_tpu = self.use_tpu, ## TODO this flag is supposed to PaddingInputExamples
+        drop_remainder = self.use_tpu
+        )
+    
     ## Batch size could determine the number of tf.data entries provided by
     ## the input_fn builder
     result = estimator.predict(input_fn=predict_input_fn)
