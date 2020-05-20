@@ -314,11 +314,26 @@ class MaskLMAtomizer(AtomizerBase):
       An array of indices into vocabulary for all atoms in text.
     """
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.AtomizeString()")
-    try:
-      return np.array(list(map(lambda x: self.vocab[x], text)), dtype=np.int32)
-    except KeyError:
-      raise ValueError
 
+    encoded = []
+    skipNext = 0
+    for idx, char in enumerate(text):
+      if skipNext > 0:
+        skipNext -= 1
+        continue
+      try:
+        if char == '[':
+          for meta in self.metaTokens.values():
+            if text[idx: idx + len(meta)] == meta:
+              encoded.append(self.vocab[meta])
+              skipNext = len(meta) - 1
+              break
+        if skipNext == 0:
+          encoded.append(self.vocab[char])
+      except KeyError:
+        raise ValueError("Out of vocabulary word!")
+     return np.array(encoded, dtype=np.int32)
+    
   def __repr__(self) -> str:
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.__repr__()")
     return f"MaskLMAtomizer[{self.vocab_size} chars]"
@@ -331,7 +346,7 @@ class MaskLMAtomizer(AtomizerBase):
   @property
   def maskLabel(self):
     return self.metaTokens['mask']
-    
+
   @classmethod
   def FromText(cls, 
                text: str,
