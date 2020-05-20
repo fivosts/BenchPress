@@ -50,7 +50,7 @@ model {
     initializer_range: 0.02
   }
   training {
-    num_train_steps: 5000
+    num_train_steps: 3500
     num_warmup_steps: 2000
     sequence_length: 128
     batch_size: 64
