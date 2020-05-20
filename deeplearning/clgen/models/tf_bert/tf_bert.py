@@ -192,6 +192,7 @@ class tfBert(backends.BackendBase):
       train_input_fn = self.data_generator.generateTfDataset(
           max_seq_length = self.max_seq_length,
           num_cpu_threads = 8,
+          use_tpu = FLAGS.use_tpu,
           is_training = True)
 
       l.getLogger().info("Running model for {} steps".format(self.num_train_steps))

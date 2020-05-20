@@ -352,6 +352,7 @@ class MaskLMBatchGenerator(object):
                       max_seq_length,
                       is_training,
                       num_cpu_threads,
+                      use_tpu = False,
                       ) -> "tf.Dataset":
 
     def _decode_record(record, name_to_features):
@@ -425,7 +426,7 @@ class MaskLMBatchGenerator(object):
               lambda record: _decode_record(record, name_to_features),
               batch_size=batch_size,
               num_parallel_batches=num_cpu_threads,
-              drop_remainder=True))
+              drop_remainder=use_tpu))
       return d
 
     return input_fn
