@@ -15,7 +15,7 @@ import collections
 import numpy as np
 
 from deeplearning.clgen import cache
-from deeplearning.clgen import tf
+from deeplearning.clgen.tf import tf
 from deeplearning.clgen.proto import model_pb2
 
 from labm8.py import app

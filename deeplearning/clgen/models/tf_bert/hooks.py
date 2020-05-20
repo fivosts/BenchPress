@@ -31,10 +31,8 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
     if self.is_training:
       self.step_tensor = { self.global_step: self.global_step }
       self._current_epoch = 0
-      raise ValueError
 
     if self.tensors is not None:
-      raise ValueError
 
       only_log_at_end = False
       if self.log_steps is None:
@@ -65,14 +63,13 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
     self.bar = progressbar.ProgressBar(max_value = self.max_length)
 
     if self.is_training:
-      raise ValueError
+
       self.step_tensor = {
           tag: self._as_graph_element(tensor)
           for (tag, tensor) in self.step_tensor.items()
           }
     
     if self.tensors is not None:
-      raise ValueError
       self._timer.reset()
       self._current_tensors = {
           tag: self._as_graph_element(tensor)
@@ -86,7 +83,6 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
       returns None or SessionRunArgs()
     """
     if self.tensors is not None:
-      raise ValueError
       if self._timer.should_trigger_for_step(self._trigger_step):
         if self.is_training:
           self.session_dict = {
@@ -101,7 +97,6 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
           return tf.estimator.SessionRunArgs([self._current_tensors])
 
     if self.is_training:
-      raise ValueError
       self.session_dict = {
         'step_tensor': 0,
       }
@@ -135,7 +130,6 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
       Called at the end of session
     """
     if self.tensors is not None and self.at_end:
-      raise ValueError
       values = session.run(self._current_tensors)
       self._log_tensors(values)
 

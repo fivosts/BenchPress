@@ -414,7 +414,7 @@ def RunWithErrorHandling(
     # UsageError is handled by the call to app.RunWithArgs(), not here.
     raise err
   except ValueError as err:
-    l.getLogger().error("{} ({})".format(err, type(err).__name))
+    raise err
     sys.exit(1)
   except KeyboardInterrupt:
     Flush()

@@ -395,19 +395,19 @@ class tfBert(backends.BackendBase):
 
       initialized_variable_names = {}
       scaffold_fn = None
-      if self.ckpt_path:
+      if (self.ckpt_path / "checkpoint").exists():
         (assignment_map, initialized_variable_names
-        ) = model.get_assignment_map_from_checkpoint(tvars, self.ckpt_path)
+        ) = model.get_assignment_map_from_checkpoint(tvars, str(self.ckpt_path))
         if FLAGS.use_tpu:
 
           def _tpu_scaffold():
-            tf.compat.v1.train.init_from_checkpoint(self.ckpt_path, assignment_map)
+            tf.compat.v1.train.init_from_checkpoint(str(self.ckpt_path), assignment_map)
             return tf.train.Scaffold()
 
           scaffold_fn = _tpu_scaffold
         else:
-          l.getLogger().info("Loading model checkpoint from: {}".format(self.ckpt_path))
-          tf.compat.v1.train.init_from_checkpoint(self.ckpt_path, assignment_map)
+          l.getLogger().info("Loading model checkpoint from: {}".format(str(self.ckpt_path)))
+          tf.compat.v1.train.init_from_checkpoint(str(self.ckpt_path), assignment_map)
 
       # l.getLogger().info("**** Trainable Variables ****")
       # for var in tvars:
@@ -429,7 +429,7 @@ class tfBert(backends.BackendBase):
                                               learning_rate = self.learning_rate
                                               )
 
-        training_hooks += self._GetProgressBarHooks(max_length = self.self.num_train_steps,
+        training_hooks += self._GetProgressBarHooks(max_length = self.num_train_steps,
                                                     tensors = {'Loss': total_loss},
                                                     log_steps = self.num_steps_per_epoch,
                                                     at_end = True,
