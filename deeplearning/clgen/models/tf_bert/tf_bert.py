@@ -227,7 +227,7 @@ class tfBert(backends.BackendBase):
 
     l.getLogger().warning("Init Sampling: Called once, sets model")
 
-    self.data_generator = data_generator.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(sampler, seed)
+    self.data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(sampler, seed)
 
     if self.bertConfig is None:
       self._ConfigModelParams()
