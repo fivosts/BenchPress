@@ -345,6 +345,7 @@ class MaskLMAtomizer(AtomizerBase):
       'hole'  : '[HOLE]',
       'start' : '[START]',
       'end'   : '[END]',
+      'pad'   : '[PAD]'
     }
 
     counter = Counter(text)
