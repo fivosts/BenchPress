@@ -430,6 +430,15 @@ class MaskLMBatchGenerator(object):
 
     return input_fn
 
+  def generateTfSample(self,
+                       input_text,
+                       max_seq_length,
+                       num_cpu_threads,
+                       use_tpu,
+                       drop_remainder
+                       ):
+
+    return
 
   def CreateCorpus(self) -> None:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.CreateBatches()")
