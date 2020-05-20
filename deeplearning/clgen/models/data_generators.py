@@ -430,7 +430,7 @@ class MaskLMBatchGenerator(object):
 
     return input_fn
 
-  def generateTfSample(self,
+  def generateTfSamples(self,
                        input_text,
                        max_seq_length,
                        batch_size,
