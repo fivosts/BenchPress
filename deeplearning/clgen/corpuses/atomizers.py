@@ -347,6 +347,14 @@ class MaskLMAtomizer(AtomizerBase):
   def maskLabel(self):
     return self.metaTokens['mask']
 
+  @property
+  def holeToken(self):
+    return self.vocab[self.metaTokens['hole']]
+
+  @property
+  def holeLabel(self):
+    return self.metaTokens['hole']
+
   @classmethod
   def FromText(cls, 
                text: str,
