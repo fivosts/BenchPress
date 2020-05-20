@@ -280,19 +280,20 @@ class tfBert(backends.BackendBase):
   def SampleNextIndices(self, sampler: samplers.Sampler, done):
     l.getLogger().warning("Within a batch, called for each i/o step")
 
-    if FLAGS.use_tpu:
-      # TPU requires a fixed batch size for all batches, therefore the number
-      # of examples must be a multiple of the batch size, or else examples
-      # will get dropped. So we pad with fake examples which are ignored
-      # later on.
-      while len(predict_examples) % sampler.batch_size != 0:
-        predict_examples.append(PaddingInputExample())
+    # if FLAGS.use_tpu:
+    #   # TPU requires a fixed batch size for all batches, therefore the number
+    #   # of examples must be a multiple of the batch size, or else examples
+    #   # will get dropped. So we pad with fake examples which are ignored
+    #   # later on.
+    #   while len(predict_examples) % sampler.batch_size != 0:
+    #     predict_examples.append(PaddingInputExample())
 
-    tf.logging.info("***** Running prediction*****")
-    tf.logging.info("  Num examples = %d (%d actual, %d padding)",
-                    len(predict_examples), num_actual_predict_examples,
-                    len(predict_examples) - num_actual_predict_examples)
-    tf.logging.info("  Batch size = %d", sampler.batch_size)
+    l.getLogger().info("***** Running prediction*****")
+    # l.getLogger().info("  Num examples = {} ({} actual, {} padding)".format(
+    #                       len(predict_examples), num_actual_predict_examples,
+    #                       len(predict_examples) - num_actual_predict_examples)
+    #                 )
+    # l.getLogger().info("  Batch size = {}".format(sampler.batch_size))
 
     ## TODO: data_generator takes encoded text, pads it to max_position_embeddings
     ## and masks it up to sampler sequence length
@@ -300,8 +301,8 @@ class tfBert(backends.BackendBase):
     predict_input_fn = self.data_generator.generateTfSample(
         max_seq_length = self.max_seq_length,
         num_cpu_threads = min(os.cpu_count(), sampler.batch_size),
-        use_tpu = self.use_tpu, ## TODO this flag is supposed to PaddingInputExamples
-        drop_remainder = self.use_tpu
+        use_tpu = FLAGS.use_tpu, ## TODO this flag is supposed to PaddingInputExamples
+        drop_remainder = FLAGS.use_tpu
         )
     
     ## Batch size could determine the number of tf.data entries provided by
@@ -313,7 +314,7 @@ class tfBert(backends.BackendBase):
     # output_predict_file = str(self.sample_path / "test_results.tsv")
     # with tf.gfile.GFile(output_predict_file, "w") as writer:
     #   num_written_lines = 0
-    #   tf.logging.info("***** Predict results *****")
+    #   l.getLogger().info("***** Predict results *****")
     #   for (i, prediction) in enumerate(result):
     #     probabilities = prediction["probabilities"]
     #     if i >= num_actual_predict_examples:
