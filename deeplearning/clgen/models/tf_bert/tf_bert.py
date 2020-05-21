@@ -233,14 +233,14 @@ class tfBert(backends.BackendBase):
       self._ConfigModelParams()
     bert_config = model.BertConfig.from_dict(self.bertConfig)
 
-    if self.max_seq_length > bert_config.max_position_embeddings:
+    if self.max_seq_length > self.BertConfig['max_position_embeddings']:
       raise ValueError(
           "Cannot use sequence length %d because the BERT model "
           "was only trained up to sequence length %d" %
-          (self.max_seq_length, bert_config.max_position_embeddings))
+          (self.max_seq_length, self.BertConfig['max_position_embeddings']))
 
     self.data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
-                            sampler, atomizer, seed, max_position_embeddings
+                            sampler, atomizer, seed, self.BertConfig['max_position_embeddings']
                           )
 
     tpu_cluster_resolver = None
