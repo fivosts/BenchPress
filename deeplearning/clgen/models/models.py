@@ -289,7 +289,7 @@ class Model(object):
 
       atomizer = self.corpus.atomizer
       sampler.Specialize(atomizer)
-      self.backend.InitSampling(sampler, seed)
+      self.backend.InitSampling(sampler, atomizer, seed)
       [obs.Specialize(self, sampler) for obs in sample_observers]
 
       batch_count = 1
