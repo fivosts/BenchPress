@@ -559,11 +559,13 @@ class tfSequential(backends.BackendBase):
     return f"<pre>{text.strip()}</pre>"
 
   def InitSampling(
-    self, sampler: samplers.Sampler, seed: typing.Optional[int] = None
+    self, sampler: samplers.Sampler, seed: typing.Optional[int] = None, **unused_kwargs,
   ) -> None:
     """Initialize model for sampling."""
     import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
+
+    del unused_kwargs
 
     # Delete any previous sampling session.
     if self.inference_tf:
