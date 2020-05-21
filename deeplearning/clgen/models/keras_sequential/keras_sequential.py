@@ -199,10 +199,9 @@ class kerasSequential(backends.BackendBase):
     return inference_model
 
   def InitSampling(
-    self, sampler: samplers.Sampler, seed: typing.Optional[int] = None, **unused_kwargs,
+    self, sampler: samplers.Sampler, seed: typing.Optional[int] = None
   ) -> None:
   
-    del unused_kwargs
     self.inference_model = self.GetInferenceModel()
     if seed is not None:
       np.random.seed(seed)
