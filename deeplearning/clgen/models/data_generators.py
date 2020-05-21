@@ -297,6 +297,7 @@ class MaskLMBatchGenerator(object):
   def __init__(self):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.__init__()")
     self.corpus = None
+    self.atomizer = None
     self.training_opts = None
     self.tfRecord = None
     self._masked_corpus = None
@@ -317,6 +318,7 @@ class MaskLMBatchGenerator(object):
                                ) -> "data_generators.MaskLMBatchGenerator":
     d = MaskLMBatchGenerator()
     d.corpus = corpus
+    d.atomizer = corpus.atomizer
     d.training_opts = training_opts
     d.tfRecord = cache_path / "dataset" / "maskedDataset.tf_record"
 
@@ -340,10 +342,12 @@ class MaskLMBatchGenerator(object):
   @classmethod
   def SampleMaskLMBatchGenerator(cls,
                                 sampler,
+                                atomizer,
                                 seed
                                 ) -> "data_generators.MaskLMBatchGenerator":
     d = MaskLMBatchGenerator()
     d.sampler = sampler
+    d.atomizer = atomizer
     d.rngen = random.Random(seed)
     d.is_training = False
     return d
@@ -440,11 +444,11 @@ class MaskLMBatchGenerator(object):
     if idx >= len(sample):
       raise ValueError("Index provided is out of bounds on this sequence")  
 
-    if sample[idx] != self.corpus.atomizer.holeToken:
+    if sample[idx] != self.atomizer.holeToken:
       raise ValueError("Index does not map to hole token in sequence")
 
     expanded = (sample[:idx] 
-                  + np.array([self.corpus.atomizer.maskToken] * length, dtype = np.int32) 
+                  + np.array([self.atomizer.maskToken] * length, dtype = np.int32) 
                   + sample[idx + 1:])
     return expanded
 
@@ -461,7 +465,7 @@ class MaskLMBatchGenerator(object):
 
     l.getLogger().warning(input_sample)
 
-    hole_index = np.where(input_sample == self.corpus.atomizer.holeToken)
+    hole_index = np.where(input_sample == self.atomizer.holeToken)
     expanded_sample = self.expandHoleToMasks(
           input_sample, hole_index, max_seq_length - len(input_sample) + 1)
 
@@ -636,7 +640,7 @@ class MaskLMBatchGenerator(object):
 
       # 80% of the time, replace with [MASK]
       if self.rngen.random() < 0.8:
-        output_tokens[pos_index] = self.corpus.atomizer.maskToken
+        output_tokens[pos_index] = self.atomizer.maskToken
       # The else block below is debatable for this use case. So comment out for now
       # else:
       #   # 10% of the time, keep original
@@ -644,7 +648,7 @@ class MaskLMBatchGenerator(object):
       #     pass
       #   # 10% of the time, replace with random word
       #   else:
-      #     output_tokens[pos_index] = self.rngen.randint(0, self.corpus.atomizer.vocab_size - 1)
+      #     output_tokens[pos_index] = self.rngen.randint(0, self.atomizer.vocab_size - 1)
 
       class MaskedLmInstance(typing.NamedTuple):
         pos_index: int
