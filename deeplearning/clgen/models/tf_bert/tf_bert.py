@@ -278,13 +278,11 @@ class tfBert(backends.BackendBase):
                    ) -> None:
 
     l.getLogger().warning("Called while batches are not done. Sets up batch")
-    self.data_generator.initSampleBatch(
+    self.data_generator.InitSampleBatch(
         input_sample = sampler.encoded_start_text,
         max_seq_length = self.max_seq_length,
         batch_size = sampler.batch_size,
-        num_cpu_threads = min(os.cpu_count(), sampler.batch_size),
-        use_tpu = FLAGS.use_tpu, ## TODO this flag is supposed to PaddingInputExamples
-        drop_remainder = FLAGS.use_tpu
+
         )
     return 
 
@@ -312,7 +310,11 @@ class tfBert(backends.BackendBase):
     
     ## Batch size could determine the number of tf.data entries provided by
     ## the input_fn builder
-    result = estimator.predict(input_fn=self.data_generator.generateTfSamples())
+    input_fn = self.data_generator.generateTfSamples(
+                num_cpu_threads = min(os.cpu_count(), sampler.batch_size),
+                use_tpu = FLAGS.use_tpu, ## TODO this flag is supposed to PaddingInputExamples
+                )
+    result = estimator.predict(input_fn=input_fn)
 
     l.getLogger().info("Classifier prediction: {}".format(result))
 
