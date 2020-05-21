@@ -322,6 +322,7 @@ class tfBert(backends.BackendBase):
 
     l.getLogger().info("Classifier prediction: {}".format(result))
     for pr in result:
+      l.getLogger().info(pr['masked_lm_predictions'])
       l.getLogger().info(self.atomizer.DeatomizeIndices(pr['masked_lm_predictions']))
       exit()
       # probs = pr['probabilities']
