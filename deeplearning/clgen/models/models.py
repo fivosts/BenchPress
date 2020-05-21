@@ -140,7 +140,7 @@ class Model(object):
       model_pb2.NetworkArchitecture.TENSORFLOW_SEQ: tf_sequential.tfSequential,
       model_pb2.NetworkArchitecture.KERAS_SEQ: keras_sequential.kerasSequential,
       model_pb2.NetworkArchitecture.TENSORFLOW_BERT: tf_bert.tfBert,
-    }[config.architecture.backend](self.config, self.cache, self.corpus.atomizer)
+    }[config.architecture.backend](self.config, self.cache)
 
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.Model.GetShortSummary()")
@@ -177,7 +177,8 @@ class Model(object):
       return False
     self._created = True
     self.corpus.Create()
-
+    self.backend.Create()
+    
     # Add entry to dashboard database
     with self.dashboard_db.Session(commit=True) as session:
       config_to_store = model_pb2.Model()

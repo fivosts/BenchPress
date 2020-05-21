@@ -42,6 +42,10 @@ class BackendBase(object):
     self.cache = fs_cache
     self.atomizer = atomizer
 
+  ## Legacy function to support lazy creation of corpus
+  def Create(self, atomizer: atomizers.AtomizerBase) -> None:
+    self.atomizer = atomizer
+
   def Train(self, corpus: "Corpus", **extra_kwargs) -> None:
     """Train the backend."""
     raise NotImplementedError
