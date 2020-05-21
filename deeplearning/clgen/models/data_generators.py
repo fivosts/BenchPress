@@ -449,6 +449,9 @@ class MaskLMBatchGenerator(object):
     ## generalized to anything
     hole_index = np.where(sample == self.atomizer.holeToken)[0]
 
+    if len(hole_index) == 0: ## Nothing to do
+      return sample
+
     if len(hole_index) > 1:
       l.getLogger().warning("Multiple instances of {} are found. \
                               Selecting the first one.".format(self.atomizer.holeLabel))
