@@ -469,7 +469,6 @@ class MaskLMBatchGenerator(object):
     return expanded
 
   def padToMaxPosition(self, input_sample):
-    l.getLogger().warning(self.max_position_embeddings)
     return np.concatenate([
                 input_sample, np.array([self.atomizer.padToken] * (
                                               self.max_position_embeddings - len(input_sample)
