@@ -311,6 +311,7 @@ class tfBert(backends.BackendBase):
     ## Batch size could determine the number of tf.data entries provided by
     ## the input_fn builder
     input_fn = self.data_generator.generateTfSamples(
+                max_seq_length = sampler.sequence_length,
                 num_cpu_threads = min(os.cpu_count(), sampler.batch_size),
                 use_tpu = FLAGS.use_tpu, ## TODO this flag is supposed to PaddingInputExamples
                 )
