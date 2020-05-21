@@ -177,8 +177,8 @@ class Model(object):
       return False
     self._created = True
     self.corpus.Create()
-    self.backend.Create()
-    
+    self.backend.Create(atomizer = self.corpus.atomizer)
+
     # Add entry to dashboard database
     with self.dashboard_db.Session(commit=True) as session:
       config_to_store = model_pb2.Model()
@@ -290,7 +290,7 @@ class Model(object):
 
       atomizer = self.corpus.atomizer
       sampler.Specialize(atomizer)
-      self.backend.InitSampling(sampler, atomizer, seed)
+      self.backend.InitSampling(sampler, seed)
       [obs.Specialize(self, sampler) for obs in sample_observers]
 
       batch_count = 1

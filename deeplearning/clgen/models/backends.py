@@ -36,7 +36,7 @@ class BackendBase(object):
     self,
     config: model_pb2.Model,
     fs_cache: cache.FSCache,
-    atomizer: atomizers.AtomizerBase,
+    atomizer: atomizers.AtomizerBase = None,
   ):
     self.config = config
     self.cache = fs_cache
