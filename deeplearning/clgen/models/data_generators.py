@@ -461,9 +461,6 @@ class MaskLMBatchGenerator(object):
     if sample[fhidx] != self.atomizer.holeToken:
       raise ValueError("Index does not map to hole token in sequence")
 
-    l.getLogger().error(sample[:fhidx])
-    l.getLogger().error(sample[fhidx+1:])
-
     expanded = np.concatenate([
                               sample[:fhidx], 
                               np.array([self.atomizer.maskToken] * length, dtype = np.int32),
@@ -471,7 +468,15 @@ class MaskLMBatchGenerator(object):
                             ])
     return expanded
 
-
+  def padToMaxPosition(self, input_sample):
+    l.getLogger().warning(self.max_position_embeddings)
+    return np.concatenate([
+                input_sample, np.array([self.atomizer.padToken] * (
+                                              self.max_position_embeddings - len(input_sample)
+                                              ), 
+                                        dtype = np.int32
+                                      )
+            ])
 
   def generateTfSamples(self,
                        input_sample,
@@ -486,14 +491,12 @@ class MaskLMBatchGenerator(object):
       raise ValueError("generateTfSamples works only on single dimensional samples!\
                          {} shape given".format(input_sample.shape))
 
-    l.getLogger().warning(input_sample)
-
     expanded_sample = self.expandHoleToMasks(
           input_sample, max_seq_length - len(input_sample) + 1
           )
-
     assert len(expanded_sample) == max_seq_length
-    # pad2maxpositionembeddings
+    padded_sample = self.padToMaxPosition(expanded_sample)
+    assert len(padded_sample) == self.max_position_embeddings
 
     l.getLogger().critical("generateTfSamples Not implemented")
     exit()
