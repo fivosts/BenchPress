@@ -496,7 +496,6 @@ class MaskLMBatchGenerator(object):
 
     padded_sample = self.padToMaxPosition(expanded_sample)
 
-    assert len(expanded_sample) == max_seq_length
     assert len(padded_sample) == self.max_position_embeddings
 
     self.tfRecord = np.repeat(padded_sample[None, :], batch_size, axis = 0)
