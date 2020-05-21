@@ -223,14 +223,13 @@ class tfBert(backends.BackendBase):
 
   def InitSampling(self,
                    sampler: samplers.Sampler, 
-                   atomizer,
                    seed: typing.Optional[int] = None
                    ) -> None:
 
     l.getLogger().warning("Init Sampling: Called once, sets model")
 
     self.data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
-                            sampler, atomizer, seed, self.config.architecture.max_position_embeddings
+                            sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings
                           )
 
     if self.bertConfig is None:
@@ -323,7 +322,8 @@ class tfBert(backends.BackendBase):
 
     l.getLogger().info("Classifier prediction: {}".format(result))
     for pr in result:
-      l.getLogger().critical(pr)
+      l.getLogger().info(self.atomizer.DeatomizeIndices(pr['masked_lm_predictions']))
+      exit()
       # probs = pr['probabilities']
 
     # output_predict_file = str(self.sample_path / "test_results.tsv")
@@ -341,7 +341,7 @@ class tfBert(backends.BackendBase):
     #     num_written_lines += 1
     # assert num_written_lines == num_actual_predict_examples
 
-    return result['masked_lm_predictions']
+    return []
 
 
   def GetShortSummary(self) -> str:
