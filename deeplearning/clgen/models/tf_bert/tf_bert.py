@@ -229,10 +229,6 @@ class tfBert(backends.BackendBase):
 
     l.getLogger().warning("Init Sampling: Called once, sets model")
 
-    self.data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
-                            sampler, atomizer, seed
-                          )
-
     if self.bertConfig is None:
       self._ConfigModelParams()
     bert_config = model.BertConfig.from_dict(self.bertConfig)
@@ -242,6 +238,10 @@ class tfBert(backends.BackendBase):
           "Cannot use sequence length %d because the BERT model "
           "was only trained up to sequence length %d" %
           (self.max_seq_length, bert_config.max_position_embeddings))
+
+    self.data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
+                            sampler, atomizer, seed, max_position_embeddings
+                          )
 
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
