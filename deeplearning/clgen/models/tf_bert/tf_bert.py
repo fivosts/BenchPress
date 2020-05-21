@@ -278,7 +278,7 @@ class tfBert(backends.BackendBase):
                    ) -> None:
 
     l.getLogger().warning("Called while batches are not done. Sets up batch")
-    predict_input_fn = self.data_generator.generateTfSamples(
+    self.data_generator.initSampleBatch(
         input_sample = sampler.encoded_start_text,
         max_seq_length = self.max_seq_length,
         batch_size = sampler.batch_size,
@@ -312,7 +312,7 @@ class tfBert(backends.BackendBase):
     
     ## Batch size could determine the number of tf.data entries provided by
     ## the input_fn builder
-    result = estimator.predict(input_fn=predict_input_fn)
+    result = estimator.predict(input_fn=self.data_generator.generateTfSamples())
 
     l.getLogger().info("Classifier prediction: {}".format(result))
 
