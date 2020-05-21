@@ -257,15 +257,14 @@ class tfBert(backends.BackendBase):
             num_shards = FLAGS.num_tpu_cores,
             per_host_input_for_training = is_per_host))
 
-    model_fn = self._model_fn_builder(bert_config = bert_config, sampling_mode = True)
+    model_fn = self._model_fn_builder(bert_config = bert_config)
 
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
-    estimator = tf.compat.v1.estimator.tpu.TPUEstimator(
+    self.estimator = tf.compat.v1.estimator.tpu.TPUEstimator(
         use_tpu = FLAGS.use_tpu,
         model_fn = model_fn,
         config = run_config,
-        # train_batch_size = self.train_batch_size,
         predict_batch_size = sampler.batch_size)
 
     ## TODO save that stuff somewhere
@@ -315,9 +314,17 @@ class tfBert(backends.BackendBase):
                 num_cpu_threads = min(os.cpu_count(), sampler.batch_size),
                 use_tpu = FLAGS.use_tpu, ## TODO this flag is supposed to PaddingInputExamples
                 )
-    result = estimator.predict(input_fn=input_fn)
+    result = self.estimator.predict(input_fn=input_fn)
+
+    l.getLogger().warning("TODO!")
+    l.getLogger().warning("A) Does the data generator bring as many batches as should ? No less, no more than!")
+    l.getLogger().warning("When all data are fetched, the input_fn function should raise an exception")
+    l.getLogger().warning("B) Are you able to handle the generated sentence and forward it back to the input ?")
 
     l.getLogger().info("Classifier prediction: {}".format(result))
+    for pr in result:
+      l.getLogger().critical(pr)
+      # probs = pr['probabilities']
 
     # output_predict_file = str(self.sample_path / "test_results.tsv")
     # with tf.gfile.GFile(output_predict_file, "w") as writer:
@@ -334,7 +341,7 @@ class tfBert(backends.BackendBase):
     #     num_written_lines += 1
     # assert num_written_lines == num_actual_predict_examples
 
-    return []
+    return result['masked_lm_predictions']
 
 
   def GetShortSummary(self) -> str:
@@ -363,7 +370,7 @@ class tfBert(backends.BackendBase):
 
   def _model_fn_builder(self,
                       bert_config, 
-                      sampling_mode = False):
+                      ):
     """Returns `model_fn` closure for TPUEstimator."""
 
     def _model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
@@ -500,36 +507,25 @@ class tfBert(backends.BackendBase):
             eval_metrics=eval_metrics,
             scaffold_fn=scaffold_fn)
       else:
-        def _metric_fn(masked_lm_log_probs, masked_lm_ids, next_sentence_log_probs):
-          """Computes the model's mask and next sentence predictions"""
-          masked_lm_log_probs = tf.reshape(masked_lm_log_probs,
-                                           [-1, masked_lm_log_probs.shape[-1]])
-          masked_lm_predictions = tf.argmax(
-              masked_lm_log_probs, axis=-1, output_type=tf.int32)
-          masked_lm_ids = tf.reshape(masked_lm_ids, [-1])
+        masked_lm_log_probs = tf.reshape(masked_lm_log_probs,[-1, masked_lm_log_probs.shape[-1]])
+        masked_lm_predictions = tf.argmax(masked_lm_log_probs, axis=-1, output_type=tf.int32)
 
-          next_sentence_log_probs = tf.reshape(
-              next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]])
-          next_sentence_predictions = tf.argmax(
-              next_sentence_log_probs, axis=-1, output_type=tf.int32)
+        next_sentence_log_probs = tf.reshape(next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]])
+        next_sentence_predictions = tf.argmax(next_sentence_log_probs, axis=-1, output_type=tf.int32)
 
-          return {
-              "masked_lm_predictions": masked_lm_predictions,
-              "next_sentence_predictions": next_sentence_predictions,
-          }
+        ## TODO Make sure this is correct when batch > 1
+        masked_lm_predictions = tf.expand_dims(masked_lm_predictions, 0)
+        next_sentence_predictions = tf.expand_dims(next_sentence_predictions, 0)
 
-        eval_metrics = (_metric_fn, [masked_lm_log_probs, masked_lm_ids, next_sentence_log_probs])
+        prediction_metrics = {
+            'masked_lm_predictions': masked_lm_predictions,
+            'next_sentence_predictions': next_sentence_predictions,
+        }
 
-        evaluation_hooks = self._GetProgressBarHooks(
-          max_length = FLAGS.max_eval_steps, is_training = False
-        )
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
             mode=mode,
-            loss=total_loss,
-            evaluation_hooks = evaluation_hooks,
-            eval_metrics=eval_metrics,
-            scaffold_fn=scaffold_fn)
-
+            predictions = prediction_metrics,
+            scaffold_fn = scaffold_fn)
       return output_spec
 
     return _model_fn
