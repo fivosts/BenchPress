@@ -305,6 +305,7 @@ class MaskLMBatchGenerator(object):
     self.shaped_corpus = None
     self.num_batches = None
     self.sequence_length = None
+    self.max_position_embeddings = None
     self.sampler = None
     self.rngen = None
     self.is_training = None
@@ -343,12 +344,14 @@ class MaskLMBatchGenerator(object):
   def SampleMaskLMBatchGenerator(cls,
                                 sampler,
                                 atomizer,
-                                seed
+                                seed,
+                                max_position_embeddings,
                                 ) -> "data_generators.MaskLMBatchGenerator":
     d = MaskLMBatchGenerator()
     d.sampler = sampler
     d.atomizer = atomizer
     d.rngen = random.Random(seed)
+    d.max_position_embeddings = max_position_embeddings
     d.is_training = False
     return d
 
@@ -441,15 +444,24 @@ class MaskLMBatchGenerator(object):
                         length: int
                         ) -> np.array:
 
+    l.getLogger().info(idx)
+    l.getLogger().info(length)
     if idx >= len(sample):
       raise ValueError("Index provided is out of bounds on this sequence")  
 
     if sample[idx] != self.atomizer.holeToken:
       raise ValueError("Index does not map to hole token in sequence")
 
-    expanded = (sample[:idx] 
-                  + np.array([self.atomizer.maskToken] * length, dtype = np.int32) 
-                  + sample[idx + 1:])
+    l.getLogger().error(sample[:idx])
+    l.getLogger().error(sample[idx+1:])
+
+    expanded = np.concatenate([
+                              sample[:idx], 
+                              np.array([self.atomizer.maskToken] * length, dtype = np.int32),
+                              sample[idx + 1:]
+                            ])
+    l.getLogger().warning(expanded)
+    l.getLogger().warning(len(expanded))
     return expanded
 
 
@@ -463,14 +475,27 @@ class MaskLMBatchGenerator(object):
                        drop_remainder
                        ):
 
+    if np.ndim(input_sample) != 1:
+      raise ValueError("generateTfSamples works only on single dimensional samples!\
+                         {} shape given".format(input_sample.shape))
+
     l.getLogger().warning(input_sample)
 
-    hole_index = np.where(input_sample == self.atomizer.holeToken)
+    ## TODO. Essentially this snippet below finds the indices of a random token
+    ## and instructs a function to replace that token  with a sequence of masks
+    ## That is too specific over "replacing holes with masks" but can/should be 
+    ## generalized to anything
+    hole_index = np.where(input_sample == self.atomizer.holeToken)[0]
+
+    if len(hole_index) > 1:
+      l.getLogger().warning("Multiple instances of {} are found. \
+                              Selecting the first one.".format(self.atomizer.holeLabel))
+    
+    first_hole_index = hole_index[0]
     expanded_sample = self.expandHoleToMasks(
-          input_sample, hole_index, max_seq_length - len(input_sample) + 1)
+          input_sample, first_hole_index, max_seq_length - len(input_sample) + 1)
 
     assert len(expanded_sample) == max_seq_length
-    # expandHoles
     # pad2maxpositionembeddings
 
     l.getLogger().critical("generateTfSamples Not implemented")
