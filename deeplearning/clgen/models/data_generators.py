@@ -440,28 +440,35 @@ class MaskLMBatchGenerator(object):
 
   def expandHoleToMasks(self,
                         sample: np.array, 
-                        idx: int, 
                         length: int
                         ) -> np.array:
 
-    l.getLogger().info(idx)
-    l.getLogger().info(length)
-    if idx >= len(sample):
+    ## TODO. Essentially this snippet below finds the indices of a random token
+    ## and instructs a function to replace that token  with a sequence of masks
+    ## That is too specific over "replacing holes with masks" but can/should be 
+    ## generalized to anything
+    hole_index = np.where(sample == self.atomizer.holeToken)[0]
+
+    if len(hole_index) > 1:
+      l.getLogger().warning("Multiple instances of {} are found. \
+                              Selecting the first one.".format(self.atomizer.holeLabel))
+
+    fhidx = hole_index[0]
+
+    if fhidx >= len(sample):
       raise ValueError("Index provided is out of bounds on this sequence")  
 
-    if sample[idx] != self.atomizer.holeToken:
+    if sample[fhidx] != self.atomizer.holeToken:
       raise ValueError("Index does not map to hole token in sequence")
 
-    l.getLogger().error(sample[:idx])
-    l.getLogger().error(sample[idx+1:])
+    l.getLogger().error(sample[:fhidx])
+    l.getLogger().error(sample[fhidx+1:])
 
     expanded = np.concatenate([
-                              sample[:idx], 
+                              sample[:fhidx], 
                               np.array([self.atomizer.maskToken] * length, dtype = np.int32),
-                              sample[idx + 1:]
+                              sample[fhidx + 1:]
                             ])
-    l.getLogger().warning(expanded)
-    l.getLogger().warning(len(expanded))
     return expanded
 
 
@@ -481,19 +488,9 @@ class MaskLMBatchGenerator(object):
 
     l.getLogger().warning(input_sample)
 
-    ## TODO. Essentially this snippet below finds the indices of a random token
-    ## and instructs a function to replace that token  with a sequence of masks
-    ## That is too specific over "replacing holes with masks" but can/should be 
-    ## generalized to anything
-    hole_index = np.where(input_sample == self.atomizer.holeToken)[0]
-
-    if len(hole_index) > 1:
-      l.getLogger().warning("Multiple instances of {} are found. \
-                              Selecting the first one.".format(self.atomizer.holeLabel))
-    
-    first_hole_index = hole_index[0]
     expanded_sample = self.expandHoleToMasks(
-          input_sample, first_hole_index, max_seq_length - len(input_sample) + 1)
+          input_sample, max_seq_length - len(input_sample) + 1
+          )
 
     assert len(expanded_sample) == max_seq_length
     # pad2maxpositionembeddings
