@@ -500,6 +500,7 @@ class MaskLMBatchGenerator(object):
     assert len(expanded_sample) == max_seq_length
     assert len(padded_sample) == self.max_position_embeddings
 
+    self.tfRecord = np.repeat(padded_sample[None, :], batch_size, axis = 0)
     return
     # def _decode_record(record, name_to_features):
     #   """Decodes a record to a TensorFlow example."""
