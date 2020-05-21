@@ -505,41 +505,6 @@ class MaskLMBatchGenerator(object):
                         use_tpu,
                         ):
 
-    l.getLogger().critical("HELLO!")
-    def _decode_record(sample, name_to_features):
-      """Decodes a record to a TensorFlow example."""
-      ## This function assumes record is still a file (expressed as TF dataset)
-      ## It decodes this record to tf scalars.
-      ## You already have them so this will be skipped
-      l.getLogger().critical(sample)
-      l.getLogger().critical(name_to_features)
-      example = tf.io.parse_single_example(sample, name_to_features)
-
-      name_to_features = {
-          "input_ids":
-              tf.io.FixedLenFeature([max_seq_length], tf.int64),
-          "masked_lm_positions":
-              tf.io.FixedLenFeature([max_seq_length], tf.int64),
-          "masked_lm_ids":
-              tf.io.FixedLenFeature([max_seq_length], tf.int64),
-          "masked_lm_weights":
-              tf.io.FixedLenFeature([max_seq_length], tf.float32),
-          "next_sentence_labels":
-              tf.io.FixedLenFeature([1], tf.int64),
-      }
-
-      # tf.Example only supports tf.int64, but the TPU only supports tf.int32.
-      # So cast all int64 to int32.
-      for name in list(example.keys()):
-        t = example[name]
-        if t.dtype == tf.int64:
-          # t = tf.compat.v1.to_int32(t)
-          t = tf.cast(t, dtype = tf.int32)
-
-        example[name] = t
-
-      return example
-
     def input_fn(params):
       l.getLogger().critical(params)
       batch_size = params["batch_size"]
@@ -564,24 +529,12 @@ class MaskLMBatchGenerator(object):
         tfSampleBatch['masked_lm_ids'][bidx]        = masked_lm_ids
         tfSampleBatch['masked_lm_weights'][bidx]    = masked_lm_weights
 
-      l.getLogger().critical(tfSampleBatch['input_ids'])
       tfSampleBatch['input_ids']            = tf.convert_to_tensor(tfSampleBatch['input_ids'], dtype = tf.int32)
       tfSampleBatch['masked_lm_positions']  = tf.convert_to_tensor(tfSampleBatch['masked_lm_positions'], dtype = tf.int32)
       tfSampleBatch['masked_lm_ids']        = tf.convert_to_tensor(tfSampleBatch['masked_lm_ids'], dtype = tf.int32)
       tfSampleBatch['masked_lm_weights']    = tf.convert_to_tensor(tfSampleBatch['masked_lm_weights'], dtype = tf.float32)
 
-      # tfSampleBatch = tf.data.Dataset.from_generator(lambda: tfSampleBatch, output_types = tf.int32)
-      # tfSampleBatch = tf.data.Dataset.from_tensor_slices(batch)
       return tfSampleBatch
-
-      l.getLogger().critical("dataset is ok")
-      # tfSampleBatch = tfSampleBatch.apply(
-      #     tf.data.experimental.map_and_batch(
-      #         lambda sample: sample,
-      #         batch_size=batch_size,
-      #         num_parallel_batches=num_cpu_threads,
-      #         drop_remainder=use_tpu))
-      # return tfSampleBatch
     return input_fn
 
   def CreateCorpus(self) -> None:
