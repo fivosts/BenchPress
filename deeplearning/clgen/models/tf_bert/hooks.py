@@ -71,6 +71,7 @@ class tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
     return tf.estimator.SessionRunArgs(self.step_tensor)
 
   def after_run(self, run_context, run_values):
+    l.getLogger().critical(run_values.results)
     self.current_step = run_values.results[self.global_step]
     return
 
@@ -196,9 +197,12 @@ class tfLogTensorHook(tfEstimatorHooks):
 
   def _log_tensors(self, tensor_values):
 
-    elapsed_secs, _ = self.timer.update_last_triggered_step(self.trigger_step)
-    stats = []
+    if self.is_training:
+      elapsed_secs, _ = self.timer.update_last_triggered_step(self.trigger_step)
+    else:
+      elapsed_secs = None
 
+    stats = []
     for tag in self.tensor_tags:
       stats.append("{}: {:.5f}".format(tag, tensor_values[tag]))
     if elapsed_secs is not None:
@@ -206,4 +210,7 @@ class tfLogTensorHook(tfEstimatorHooks):
     elif self.current_epoch > 0:
       l.getLogger().info("Epoch {} {}".format(self.current_epoch, ", ".join(stats)))
     else:
-      l.getLogger().info("Initialization: {}".format(", ".join(stats)))
+      if self.is_training:
+        l.getLogger().info("Initialization: {}".format(", ".join(stats)))
+      else:
+        l.getLogger().info("Tensor Values: {}".format(", ".join(stats)))
