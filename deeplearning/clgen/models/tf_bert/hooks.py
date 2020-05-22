@@ -36,21 +36,21 @@ def _as_graph_element(obj):
 class tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
   """Base class for Estimator Hooks, used for this BERT model"""
   def __init__(self,
-         is_training: tf.compat.v1.estimator.ModeKeys,
-        ):
+              mode: tf.compat.v1.estimator.ModeKeys,
+              ):
     """
     Base class hook initialization
   Args:
-    is_training: If hooks is used for training or evaluation
+    mode: If hooks is used for training or evaluation
     """
 
     self.global_step = tf.compat.v1.train.get_or_create_global_step()
     self.current_step = None
 
-    if is_training == tf.compat.v1.estimator.ModeKeys.TRAIN:
+    if mode == tf.compat.v1.estimator.ModeKeys.TRAIN:
       ## Training
       self.is_training = True
-    elif is_training == tf.compat.v1.estimator.ModeKeys.EVAL:
+    elif mode == tf.compat.v1.estimator.ModeKeys.EVAL:
       ## Validation
       self.is_training = False
     else:
@@ -76,15 +76,12 @@ class tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
     def end(self, session):
       return
 
-class tfProgressBar(tf.compat.v1.train.SessionRunHook):
+class tfProgressBar(tfEstimatorHooks):
   """Real time progressbar to capture tf Estimator training or validation"""
 
   def __init__(self, 
                max_length: int,
-               tensors: dict = None,
-               log_steps: int = None,
-               at_end: bool = False,
-               is_training: bool = True,
+               mode: tf.compat.v1.estimator.ModeKeys = None,
                ):
     """
     Initialize Progress Bar Hook
@@ -95,38 +92,15 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
     tensors: Optional string to tf.Tensor dictionary for the tensor values desired to be monitored, if set.
     log_steps: If set, logs tensor values once every defined number of estimator steps
     at_end: If set, prints tensor values at end of session
-    is_training: If hooks is used for training or evaluation
+    mode: If hooks is used for training or evaluation
     """
-    self.max_length = max_length
-    self.tensors = tensors
-    self.log_steps = log_steps
-    self.at_end = at_end
-    self.is_training = is_training
+    super(tfProgressBar, self).__init__(mode)
 
-    self.global_step = tf.compat.v1.train.get_or_create_global_step()
+    self.max_length = max_length
 
     if self.is_training:
       self.step_tensor = { self.global_step: self.global_step }
       self._current_epoch = 0
-
-    if self.tensors is not None:
-
-      only_log_at_end = False
-      if self.log_steps is None:
-        if self.at_end:
-          only_log_at_end = True
-        else:
-          raise ValueError("Tensors is not None, but log_steps has not been set!")
-
-      if not isinstance(self.tensors, dict):
-        self._tag_order = self.tensors
-        self.tensors = {item: item for item in self.tensors}
-      else:
-        self._tag_order = sorted(self.tensors.keys())
-
-      self._timer = (
-          tf.compat.v1.train.SecondOrStepTimer(every_steps=max_length) if only_log_at_end
-          else tf.compat.v1.train.SecondOrStepTimer(every_steps=log_steps))
 
   def begin(self):
     """
@@ -224,4 +198,25 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
     else:
       l.getLogger().info("Initialization: {}".format(", ".join(stats)))
 
-class tfLogTensorHook()
+class tfLogTensorHook(tfEstimatorHooks):
+
+  def __init__(self,
+               tensors: dict,
+               log_steps: int = None,
+               at_end: bool = False,
+              ):
+    super(tfLogTensorHook, self).__init__(mode)
+
+    self.tensors = tensors
+    self.log_steps = log_steps
+    self.at_end = at_end
+
+    if log_steps is None and not at_end:
+      raise ValueError("Neither log_steps nor at_end have been set. Select at least one.")
+
+    self.timer = tf.compat.v1.train.SecondOrStepTimer(
+      every_steps = (max_length if log_steps is None else log_steps)
+      )
+
+    self.tensor_tags = sorted(self.tensors.keys())
+    return
