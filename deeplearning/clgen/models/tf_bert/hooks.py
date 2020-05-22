@@ -56,25 +56,26 @@ class tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
     else:
       ## Sampling
       self.is_training = False
-
     return
 
-    def begin(self):
-      if self.is_training:
-        self.step_tensor = {
-            self.global_step: _as_graph_element(self.global_step)
-          }
-      return
+  def begin(self):
+    if self.is_training:
+      self.step_tensor = {
+          self.global_step: _as_graph_element(self.global_step)
+        }
+    return
 
-    def before_run(self, run_context):
-      return tf.estimator.SessionRunArgs(self.step_tensor)
+  def before_run(self, run_context):
+    return tf.estimator.SessionRunArgs(self.step_tensor)
 
-    def after_run(self, run_context, run_values):
-      self._current_step = run_values.results[self.global_step]
-      return
+  def after_run(self, run_context, run_values):
+    self._current_step = run_values.results[self.global_step]
+    return
 
-    def end(self, session):
-      return
+  def end(self, session):
+    return
+
+
 
 class tfProgressBar(tfEstimatorHooks):
   """Real time progressbar to capture tf Estimator training or validation"""
@@ -104,28 +105,10 @@ class tfProgressBar(tfEstimatorHooks):
 
   def begin(self):
     """
-        Called once at initialization stage
-    :param session:
-        Tensorflow session
-    :param coord:
-        unused
+    Called once at initialization stage
     """
-    self._trigger_step = 0
     self.bar = progressbar.ProgressBar(max_value = self.max_length)
-
-    if self.is_training:
-
-      self.step_tensor = {
-          tag: _as_graph_element(tensor)
-          for (tag, tensor) in self.step_tensor.items()
-          }
-    
-    if self.tensors is not None:
-      self._timer.reset()
-      self._current_tensors = {
-          tag: _as_graph_element(tensor)
-          for (tag, tensor) in self.tensors.items()
-      }
+    return
 
   def before_run(self, run_context):
     """
@@ -207,7 +190,12 @@ class tfLogTensorHook(tfEstimatorHooks):
               ):
     super(tfLogTensorHook, self).__init__(mode)
 
-    self.tensors = tensors
+
+    self.tensor_tags = sorted(tensors.keys())
+    self.tensors = {
+        tag: _as_graph_element(tensor)
+        for (tag, tensor) in tensors.items()
+    }
     self.log_steps = log_steps
     self.at_end = at_end
 
@@ -218,5 +206,13 @@ class tfLogTensorHook(tfEstimatorHooks):
       every_steps = (max_length if log_steps is None else log_steps)
       )
 
-    self.tensor_tags = sorted(self.tensors.keys())
     return
+
+  def begin(self):
+    """
+        Called once at initialization stage
+    """
+    self.trigger_step = 0
+    self.timer.reset()
+    return
+    
