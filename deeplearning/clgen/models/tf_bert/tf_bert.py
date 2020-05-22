@@ -466,7 +466,7 @@ class tfBert(backends.BackendBase):
           masked_lm_weights = tf.reshape(masked_lm_weights, [-1])
           masked_lm_accuracy = tf.compat.v1.metrics.accuracy(
               labels=masked_lm_ids,
-              predictions=masked_lm_predictions, ## TODO!! This is your predictions for mask
+              predictions=masked_lm_predictions,
               weights=masked_lm_weights)
           masked_lm_mean_loss = tf.compat.v1.metrics.mean(
               values=masked_lm_example_loss, weights=masked_lm_weights)
