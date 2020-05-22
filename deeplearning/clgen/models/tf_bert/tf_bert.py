@@ -301,10 +301,6 @@ class tfBert(backends.BackendBase):
     #                       len(predict_examples) - num_actual_predict_examples)
     #                 )
     # l.getLogger().info("  Batch size = {}".format(sampler.batch_size))
-
-    ## TODO: data_generator takes encoded text, pads it to max_position_embeddings
-    ## and masks it up to sampler sequence length
-    ## Then feed that input and  ask for a prediction
     
     ## Batch size could determine the number of tf.data entries provided by
     ## the input_fn builder
