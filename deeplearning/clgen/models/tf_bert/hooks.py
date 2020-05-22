@@ -10,15 +10,21 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
 
   def __init__(self, 
                max_length: int,
-               tensors = None,
-               log_steps = None,
-               at_end = None,
-               is_training = True,
+               tensors: dict = None,
+               log_steps: int = None,
+               at_end: bool = False,
+               is_training: bool = True,
                ):
     """
-    Set class variables
-    :param max_length:
-        Upper threshold of progressbar
+    Initialize Progress Bar Hook
+    This hook shows a progress bar in output and prints after N steps tensor values provided.
+
+	Args:
+		max_length: This is the maximum threshold of the progress bar
+		tensors: Optional string to tf.Tensor dictionary for the tensor values desired to be monitored, if set.
+		log_steps: If set, logs tensor values once every defined number of estimator steps
+		at_end: If set, prints tensor values at end of session
+		is_training: If hooks is used for training or evaluation
     """
     self.max_length = max_length
     self.tensors = tensors
@@ -36,10 +42,10 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
 
       only_log_at_end = False
       if self.log_steps is None:
-        if self.at_end is None:
-          raise ValueError("Tensors is not None, but log_steps has not been set!")
-        else:
+        if self.at_end:
           only_log_at_end = True
+        else:
+          raise ValueError("Tensors is not None, but log_steps has not been set!")
 
       if not isinstance(self.tensors, dict):
         self._tag_order = self.tensors
