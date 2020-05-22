@@ -69,7 +69,7 @@ class tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
     return tf.estimator.SessionRunArgs(self.step_tensor)
 
   def after_run(self, run_context, run_values):
-    self._current_step = run_values.results[self.global_step]
+    self.current_step = run_values.results[self.global_step]
     return
 
   def end(self, session):
@@ -110,34 +110,7 @@ class tfProgressBar(tfEstimatorHooks):
     self.bar = progressbar.ProgressBar(max_value = self.max_length)
     return
 
-  def before_run(self, run_context):
-    """
-      Called before session.run()
-      Any tensor/op should be declared here in order to be evaluated
-      returns None or SessionRunArgs()
-    """
-    if self.tensors is not None:
-      if self._timer.should_trigger_for_step(self._trigger_step):
-        if self.is_training:
-          self.session_dict = {
-            'step_tensor': 0,
-            'value_tensor': 1,
-          }
-          return tf.estimator.SessionRunArgs([self.step_tensor, self._current_tensors])
-        else:
-          self.session_dict = {
-            'value_tensor': 0,
-          }
-          return tf.estimator.SessionRunArgs([self._current_tensors])
-
-    if self.is_training:
-      self.session_dict = {
-        'step_tensor': 0,
-      }
-      return tf.estimator.SessionRunArgs([self.step_tensor])
-    else:
-      self.session_dict = {}
-      return None
+  # def before_run(self, run_context):
 
   def after_run(self, run_context, run_values):
     """
@@ -146,18 +119,18 @@ class tfProgressBar(tfEstimatorHooks):
     ##  0th element is always global_step, see how list is ordered in SessionRunArgs
 
     if 'step_tensor' in self.session_dict:
-      self._current_step = run_values.results[self.session_dict['step_tensor']][self.global_step]
-      self._current_epoch = int(self._current_step / self.log_steps)
+      self.current_step = run_values.results[self.session_dict['step_tensor']][self.global_step]
+      self._current_epoch = int(self.current_step / self.log_steps)
     else:
-      self._current_step = self._trigger_step
+      self.current_step = self.trigger_step
 
-    self.bar.update(self._current_step) 
+    self.bar.update(self.current_step) 
 
     _ = run_context
     if 'value_tensor' in self.session_dict:
       self._log_tensors(run_values.results[self.session_dict['value_tensor']])
 
-    self._trigger_step += 1
+    self.trigger_step += 1
 
   def end(self, session):
     """
@@ -169,7 +142,7 @@ class tfProgressBar(tfEstimatorHooks):
 
   def _log_tensors(self, tensor_values):
 
-    elapsed_secs, _ = self._timer.update_last_triggered_step(self._trigger_step)
+    elapsed_secs, _ = self._timer.update_last_triggered_step(self.trigger_step)
     stats = []
 
     for tag in self._tag_order:
@@ -198,6 +171,7 @@ class tfLogTensorHook(tfEstimatorHooks):
     }
     self.log_steps = log_steps
     self.at_end = at_end
+    self.step_triggered = False
 
     if log_steps is None and not at_end:
       raise ValueError("Neither log_steps nor at_end have been set. Select at least one.")
@@ -215,4 +189,38 @@ class tfLogTensorHook(tfEstimatorHooks):
     self.trigger_step = 0
     self.timer.reset()
     return
-    
+
+  def before_run(self, run_context):
+    """
+      Called before session.run()
+      Any tensor/op should be declared here in order to be evaluated
+      returns None or SessionRunArgs()
+    """
+    super(tfLogTensorHook, self).before_run(run_context)
+    if self._timer.should_trigger_for_step(self.trigger_step):
+      self.step_triggered = True
+      return tf.estimator.SessionRunArgs([self.tensors])
+    self.step_triggered = False
+    return None
+
+  def after_run(self, run_context, run_values):
+    """
+      Requested tensors are evaluated and their values are available
+    """
+    ##  0th element is always global_step, see how list is ordered in SessionRunArgs
+    super(tfLogTensorHook, self).after_run(run_context, run_values)
+    self.current_epoch = int(self.current_step / self.log_steps)
+
+    if self.step_triggered:
+      self._log_tensors(run_values.results)
+
+    self.trigger_step += 1
+
+  def end(self, session):
+    """
+      Called at the end of session
+    """
+    super(tfLogTensorHook, self).end(session)
+    if self.at_end:
+      end_values = session.run(self.tensors)
+      self._log_tensors(end_values)
