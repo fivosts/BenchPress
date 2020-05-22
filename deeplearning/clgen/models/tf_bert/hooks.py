@@ -142,8 +142,10 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
       stats.append("{}: {:.5f}".format(tag, tensor_values[tag]))
     if elapsed_secs is not None:
       l.getLogger().info("Epoch {} {} - {:.3f} sec".format(self._current_epoch, ", ".join(stats), elapsed_secs))
+    elif self._current_epoch > 0:
+      l.getLogger().info("Epoch {} {}".format(self._current_epoch, ", ".join(stats)))
     else:
-      l.getLogger().info("Starting values: {}".format(", ".join(stats)))
+      l.getLogger().info("Initialization: {}".format(", ".join(stats)))
 
   def _as_graph_element(self, obj):
     """Retrieves Graph element."""
