@@ -3,7 +3,78 @@ import six
 
 from deeplearning.clgen.tf import tf
 from eupy.native import logger as l
+"""
+All hooks deployed for this implementation of BERT.
+These hooks must be strictly called within model_fn function
+and be passed to EstimatorSpec.
+"""
 
+def _as_graph_element(obj):
+  """Retrieves Graph element."""
+  graph = tf.python.framework.ops.get_default_graph()
+  if not isinstance(obj, six.string_types):
+    if not hasattr(obj, "graph") or obj.graph != graph:
+      raise ValueError("Passed %s should have graph attribute that is equal "
+                       "to current graph %s." % (obj, graph))
+    return obj
+  if ":" in obj:
+    element = graph.as_graph_element(obj)
+  else:
+    element = graph.as_graph_element(obj + ":0")
+    # Check that there is no :1 (e.g. it's single output).
+    try:
+      graph.as_graph_element(obj + ":1")
+    except (KeyError, ValueError):
+      pass
+    else:
+      raise ValueError("Name %s is ambiguous, "
+                       "as this `Operation` has multiple outputs "
+                       "(at least 2)." % obj)
+  return element
+
+
+class tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
+  """Base class for Estimator Hooks, used for this BERT model"""
+  def __init__(self,
+         is_training: tf.compat.v1.estimator.ModeKeys,
+        ):
+    """
+    Base class hook initialization
+  Args:
+    is_training: If hooks is used for training or evaluation
+    """
+
+    self.global_step = tf.compat.v1.train.get_or_create_global_step()
+    self.current_step = None
+
+    if is_training == tf.compat.v1.estimator.ModeKeys.TRAIN:
+      ## Training
+      self.is_training = True
+    elif is_training == tf.compat.v1.estimator.ModeKeys.EVAL:
+      ## Validation
+      self.is_training = False
+    else:
+      ## Sampling
+      self.is_training = False
+
+    return
+
+    def begin(self):
+      if self.is_training:
+        self.step_tensor = {
+            self.global_step: _as_graph_element(self.global_step)
+          }
+      return
+
+    def before_run(self, run_context):
+      return tf.estimator.SessionRunArgs(self.step_tensor)
+
+    def after_run(self, run_context, run_values):
+      self._current_step = run_values.results[self.global_step]
+      return
+
+    def end(self, session):
+      return
 
 class tfProgressBar(tf.compat.v1.train.SessionRunHook):
   """Real time progressbar to capture tf Estimator training or validation"""
@@ -19,12 +90,12 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
     Initialize Progress Bar Hook
     This hook shows a progress bar in output and prints after N steps tensor values provided.
 
-	Args:
-		max_length: This is the maximum threshold of the progress bar
-		tensors: Optional string to tf.Tensor dictionary for the tensor values desired to be monitored, if set.
-		log_steps: If set, logs tensor values once every defined number of estimator steps
-		at_end: If set, prints tensor values at end of session
-		is_training: If hooks is used for training or evaluation
+  Args:
+    max_length: This is the maximum threshold of the progress bar
+    tensors: Optional string to tf.Tensor dictionary for the tensor values desired to be monitored, if set.
+    log_steps: If set, logs tensor values once every defined number of estimator steps
+    at_end: If set, prints tensor values at end of session
+    is_training: If hooks is used for training or evaluation
     """
     self.max_length = max_length
     self.tensors = tensors
@@ -71,14 +142,14 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
     if self.is_training:
 
       self.step_tensor = {
-          tag: self._as_graph_element(tensor)
+          tag: _as_graph_element(tensor)
           for (tag, tensor) in self.step_tensor.items()
           }
     
     if self.tensors is not None:
       self._timer.reset()
       self._current_tensors = {
-          tag: self._as_graph_element(tensor)
+          tag: _as_graph_element(tensor)
           for (tag, tensor) in self.tensors.items()
       }
 
@@ -153,25 +224,4 @@ class tfProgressBar(tf.compat.v1.train.SessionRunHook):
     else:
       l.getLogger().info("Initialization: {}".format(", ".join(stats)))
 
-  def _as_graph_element(self, obj):
-    """Retrieves Graph element."""
-    graph = tf.python.framework.ops.get_default_graph()
-    if not isinstance(obj, six.string_types):
-      if not hasattr(obj, "graph") or obj.graph != graph:
-        raise ValueError("Passed %s should have graph attribute that is equal "
-                         "to current graph %s." % (obj, graph))
-      return obj
-    if ":" in obj:
-      element = graph.as_graph_element(obj)
-    else:
-      element = graph.as_graph_element(obj + ":0")
-      # Check that there is no :1 (e.g. it's single output).
-      try:
-        graph.as_graph_element(obj + ":1")
-      except (KeyError, ValueError):
-        pass
-      else:
-        raise ValueError("Name %s is ambiguous, "
-                         "as this `Operation` has multiple outputs "
-                         "(at least 2)." % obj)
-    return element
+class tfLogTensorHook()
