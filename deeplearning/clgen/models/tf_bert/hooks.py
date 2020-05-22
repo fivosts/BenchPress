@@ -44,9 +44,6 @@ class tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
     mode: If hooks is used for training or evaluation
     """
 
-    self.global_step = tf.compat.v1.train.get_or_create_global_step()
-    self.current_step = None
-
     if mode == tf.compat.v1.estimator.ModeKeys.TRAIN:
       ## Training
       self.is_training = True
@@ -56,13 +53,18 @@ class tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
     else:
       ## Sampling
       self.is_training = False
+
+    self.global_step = tf.compat.v1.train.get_or_create_global_step()
+
+    self.step_tensor = {
+        self.global_step: _as_graph_element(self.global_step)
+      }
+    self.current_step = None
+
     return
 
   def begin(self):
-    if self.is_training:
-      self.step_tensor = {
-          self.global_step: _as_graph_element(self.global_step)
-        }
+
     return
 
   def before_run(self, run_context):
@@ -74,8 +76,6 @@ class tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
 
   def end(self, session):
     return
-
-
 
 class tfProgressBar(tfEstimatorHooks):
   """Real time progressbar to capture tf Estimator training or validation"""
@@ -116,11 +116,11 @@ class tfProgressBar(tfEstimatorHooks):
     """
       Requested tensors are evaluated and their values are available
     """
+    super(tfProgressBar, self).after_run(run_context, run_values)
     self.bar.update(self.current_step) 
     return
 
   # def end(self, session):
-
 
 class tfLogTensorHook(tfEstimatorHooks):
 
@@ -128,6 +128,7 @@ class tfLogTensorHook(tfEstimatorHooks):
                tensors: dict,
                log_steps: int = None,
                at_end: bool = False,
+               mode: tf.compat.v1.estimator.ModeKeys = None,
               ):
     super(tfLogTensorHook, self).__init__(mode)
 
