@@ -171,6 +171,7 @@ class Model(object):
     config_to_hash.CopyFrom(config)
     config_to_hash.ClearField("corpus")
     config_to_hash.training.ClearField("num_epochs")
+    config_to_hash.training.ClearField("num_train_steps")
     return crypto.sha1_list(corpus_.hash, config_to_hash.SerializeToString())
 
   def Create(self) -> bool:
