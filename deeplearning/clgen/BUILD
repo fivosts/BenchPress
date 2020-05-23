@@ -21,29 +21,6 @@
 # You should have received a copy of the GNU General Public License
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 
-load("//tools/bzl:exports.bzl", "exports_repo")
-
-licenses(["restricted"])  # GPL v3
-
-exports_files([
-    "LICENSE",
-    "README.md",
-])
-
-exports_repo(
-    name = "export",
-    github_repo = "clgen",
-    move_file_mapping = {
-        "deeplearning/clgen/README.md": "README.md",
-        "deeplearning/clgen/LICENSE": "LICENSE",
-        "deeplearning/clgen/travis.yml": ".travis.yml",
-    },
-    targets = [
-        "//deeplearning/clgen",
-        "tests(//deeplearning/clgen/...)",
-    ],
-)
-
 py_library(
     name = "cache",
     srcs = ["cache.py"],
@@ -91,17 +68,6 @@ py_test(
 )
 
 py_binary(
-    name = "ls_models",
-    srcs = ["ls_models.py"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//deeplearning/clgen/models",
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        ":pbutil",
-    ],
-)
-
-py_binary(
     name = "preprocess",
     srcs = ["preprocess.py"],
     visibility = ["//visibility:public"],
@@ -121,18 +87,6 @@ py_test(
         ":preprocess",
         "//labm8/py:test",
         "//third_party/py/pytest",
-    ],
-)
-
-py_library(
-    name = "sample",
-    srcs = ["sample.py"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":samplers",
-        "//deeplearning/clgen/models:pretrained",
-        "//deeplearning/clgen/proto:clgen_pb_py",
-        ":pbutil",
     ],
 )
 
