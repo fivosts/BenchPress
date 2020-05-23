@@ -155,7 +155,7 @@ class PreTrainedModel(object):
       raise ValueError("Cannot sample without any observers")
 
     sample_start_time = labdate.MillisecondsTimestamp()
-    app.Log(1, "Sampling: '%s'", sampler.start_text)
+    l.getLogger().info("Sampling: '{}'".format(sampler.start_text))
 
     atomizer = self.atomizer
     sampler.Specialize(atomizer)
@@ -167,14 +167,9 @@ class PreTrainedModel(object):
       batch_count += 1
 
     time_now = labdate.MillisecondsTimestamp()
-    app.Log(
-      1,
-      "Produced %s sample batches at a rate of %s ms / batch.",
-      humanize.Commas(batch_count),
-      humanize.Commas(
-        int((time_now - sample_start_time) / max(batch_count, 1))
-      ),
-    )
+    l.getLogger().info("Produced {} sample batches at a rate of {} ms / batch.".format(
+    	humanize.Commas(batch_count), humanize.Commas(int((time_now - sample_start_time) / max(batch_count, 1)))
+    	))
 
   def SamplerCache(self, sampler: samplers.Sampler) -> pathlib.Path:
     """Get the path to a sampler cache.
