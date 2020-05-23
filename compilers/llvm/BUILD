@@ -21,7 +21,6 @@ py_binary(
     srcs = ["build.py"],
     visibility = ["//visibility:public"],
     deps = [
-        "//labm8/py:app",
         "//labm8/py:fs",
         "//labm8/py:prof",
     ],
@@ -34,7 +33,6 @@ py_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":llvm",
-        "//labm8/py:app",
         "//labm8/py:bazelutil",
     ],
 )
@@ -46,7 +44,6 @@ py_test(
     deps = [
         ":clang",
         ":llvm",
-        "//labm8/py:app",
         "//labm8/py:bazelutil",
         "//labm8/py:fs",
         "//labm8/py:test",
@@ -60,7 +57,6 @@ py_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":llvm",
-        "//labm8/py:app",
         "//labm8/py:bazelutil",
     ],
 )
@@ -71,7 +67,6 @@ py_test(
     deps = [
         ":clang_format",
         ":llvm",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )
@@ -83,7 +78,6 @@ py_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":llvm",
-        "//labm8/py:app",
         "//labm8/py:bazelutil",
     ],
 )
@@ -95,7 +89,6 @@ py_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":llvm",
-        "//labm8/py:app",
         "//labm8/py:bazelutil",
     ],
 )
@@ -105,7 +98,6 @@ py_test(
     srcs = ["llvm_dis_test.py"],
     deps = [
         ":llvm_dis",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )
@@ -117,7 +109,6 @@ py_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":llvm",
-        "//labm8/py:app",
         "//labm8/py:bazelutil",
     ],
 )
@@ -128,7 +119,6 @@ py_test(
     deps = [
         ":llvm",
         ":llvm_link",
-        "//labm8/py:app",
         "//labm8/py:fs",
         "//labm8/py:test",
     ],
@@ -139,7 +129,6 @@ py_library(
     srcs = ["llvm.py"],
     visibility = ["//visibility:public"],
     deps = [
-        "//labm8/py:app",
     ],
 )
 
@@ -153,7 +142,6 @@ py_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":llvm",
-        "//labm8/py:app",
         "//labm8/py:bazelutil",
     ],
 )
@@ -164,7 +152,6 @@ py_test(
     deps = [
         ":llvm",
         ":opt",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )
@@ -182,7 +169,6 @@ py_library(
         ":llvm",
         ":llvm_as",
         ":opt",
-        "//labm8/py:app",
         "//labm8/py:humanize",
     ],
 )
@@ -194,7 +180,6 @@ py_test(
         ":llvm",
         ":opt",
         ":opt_util",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )

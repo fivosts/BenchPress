@@ -28,17 +28,16 @@ import fileinput
 import subprocess
 import sys
 import typing
-
+from absl import flags
 from compilers.llvm import llvm
-from labm8.py import app
 from labm8.py import bazelutil
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
-app.DEFINE_string(
+flags.DEFINE_string(
   "clang_format_file_suffix", ".c", "The file name suffix to assume for files."
 )
-app.DEFINE_integer(
+flags.DEFINE_integer(
   "clang_format_timeout_seconds",
   60,
   "The maximum number of seconds to allow process to run.",
@@ -81,7 +80,6 @@ def Exec(
     "-assume-filename",
     f"input{suffix}",
   ] + args
-  app.Log(3, "$ %s", " ".join(cmd))
   process = subprocess.Popen(
     cmd,
     stdin=subprocess.PIPE,
@@ -114,4 +112,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-  app.RunWithArgs(main)
+  app.run(main)

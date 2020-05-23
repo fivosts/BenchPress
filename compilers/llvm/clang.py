@@ -28,14 +28,15 @@ import re
 import subprocess
 import sys
 import typing
+from absl import flags, app
 
 from compilers.llvm import llvm
-from labm8.py import app
 from labm8.py import bazelutil
 from eupy.native import logger as l
-FLAGS = app.FLAGS
 
-app.DEFINE_integer(
+FLAGS = flags.FLAGS
+
+flags.DEFINE_integer(
   "clang_timeout_seconds",
   60,
   "The maximum number of seconds to allow process to run.",
@@ -111,8 +112,6 @@ def Exec(
   """
   l.getLogger().debug("compilers.llvm.clang.Exec()")
   cmd = ["timeout", "-s9", str(timeout_seconds), str(CLANG)] + args
-  if log:
-    app.Log(3, "$ %s", " ".join(cmd))
   process = subprocess.Popen(
     cmd,
     stdout=stdout,
@@ -203,7 +202,6 @@ def Preprocess(
   l.getLogger().debug("compilers.llvm.clang.Preprocess()")
   copts = copts or []
   cmd = ["-E", "-c", "-", "-o", "-"] + copts
-  app.Log(3, "$ %s", " ".join(cmd))
   process = Exec(cmd, timeout_seconds=timeout_seconds, stdin=src)
   if process.returncode:
     raise ClangException(returncode=process.returncode, stderr=process.stderr)
@@ -288,4 +286,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-  app.RunWithArgs(main)
+	app.run(main)
