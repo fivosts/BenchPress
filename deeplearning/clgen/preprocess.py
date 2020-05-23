@@ -33,8 +33,8 @@ from labm8.py import humanize
 from eupy.native import logger as l
 
 FLAGS = app.FLAGS
-app.DEFINE_input_path(
-  "contentfiles", None, "The directory containing content files.", is_dir=True
+app.DEFINE_string(
+  "contentfiles", None, "The directory containing content files."
 )
 app.DEFINE_output_path(
   "outdir",
@@ -100,4 +100,4 @@ def main():
 
 
 if __name__ == "__main__":
-  app.Run(main)
+  main()
