@@ -82,8 +82,8 @@ class MaskBatch(typing.NamedTuple):
                         .format(self.input_ids.shape, 
                                 self.masked_lm_positions.shape, 
                                 self.masked_lm_ids.shape,
-                                self.masked_lm_weights,
-                                self.next_sentence_label
+                                self.masked_lm_weights.shape,
+                                self.next_sentence_label.shape
                                 )
                         )
     l.getLogger().info(
@@ -596,6 +596,7 @@ class MaskLMBatchGenerator(object):
         for idx, batch in enumerate(flattened_corpus):
           self._masked_corpus.extend(self.maskBatch(batch))
           bar.update(idx)
+    self._masked_corpus[0].LogBatchTelemetry(self.num_batches, int(self.training_opts.num_train_steps / self.num_batches))
     return
 
   def maskBatch(self, batch):
