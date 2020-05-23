@@ -93,7 +93,10 @@ class tfBert(backends.BackendBase):
     self.learning_rate                      = None
     self.num_train_steps                    = None
     self.num_warmup_steps                   = None
-    self.is_trained                         = False
+
+    self.ckpt_path                          = self.cache.path / "checkpoints"
+    self.logfile_path                       = self.cache.path / "logs"
+    self.sample_path                        = self.cache.path / "samples"
 
     return
 
@@ -120,11 +123,8 @@ class tfBert(backends.BackendBase):
     self.learning_rate                      = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
     self.num_train_steps                    = self.config.training.num_train_steps
     self.num_warmup_steps                   = self.config.training.num_warmup_steps
-    self.ckpt_path                          = self.cache.path / "checkpoints"
-    self.logfile_path                       = self.cache.path / "logs"
-    self.sample_path                        = self.cache.path / "samples"
-    self.telemetry                          = telemetry.TrainingLogger(str(self.logfile_path))
 
+    self.telemetry                          = telemetry.TrainingLogger(self.logfile_path)
     self.num_steps_per_epoch                = self.data_generator.num_batches
     self.num_epochs                         = int(self.num_train_steps / self.num_steps_per_epoch)
 
@@ -135,14 +135,24 @@ class tfBert(backends.BackendBase):
     return
 
   @property
-  def is_validated(self):
-    if os.path.exists(self.validation_results_path):
-      return True
-    return False
+  def is_trained(self):
+    for file_path in self.ckpt_path.iterdir():
+      filename = file_path.stem
+      if "model.ckpt-" in filename:
+        step_ckpt = int(filename.replace("model.ckpt-", ""))
+        if step_ckpt >= self.num_train_steps:
+          return True
+    return False  
 
   def Train(self, corpus, **unused_kwargs) -> None:
 
     del unused_kwargs
+
+    ## Initialize params and data generator
+    self.data_generator = data_generators.MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
+                              corpus, self.config.training, self.cache.path
+                           )
+    self._ConfigModelParams()
 
     ## TODO, also search the checkpoints to determine if is_trained
     ## Additionally, you will have to exclude num_train_steps from model hash
@@ -150,12 +160,6 @@ class tfBert(backends.BackendBase):
 
       ## Acquire GPU Lock before anything else is done
       gpu_scheduler.LockExclusiveProcessGpuAccess()
-
-      ## Initialize params and data generator
-      self.data_generator = data_generators.MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
-                                corpus, self.config.training, self.cache.path
-                             )
-      self._ConfigModelParams()
 
       ## Generate BERT Model from dict params
       bert_config = model.BertConfig.from_dict(self.bertConfig)
@@ -209,10 +213,7 @@ class tfBert(backends.BackendBase):
                         )
 
       estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
-      self.is_trained = True
-      self.telemetry.TfRecordEpochs()
 
-    if not self.is_validated:
       l.getLogger().info("BERT Validation")
       ## TODO print short summary of model and/or dataset features
 
@@ -220,12 +221,11 @@ class tfBert(backends.BackendBase):
           max_seq_length=self.max_seq_length,
           num_cpu_threads = 8,
           is_training=False)
-
-      result = estimator.evaluate(
-          input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
-
+      
+      result = estimator.evaluate(input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
       self._writeValidation(result)
 
+    self.telemetry.TfRecordEpochs()
     return
 
   def InitSampling(self,
