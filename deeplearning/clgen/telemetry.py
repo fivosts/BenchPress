@@ -60,7 +60,7 @@ class TrainingLogger(object):
 
   def TfRecordEpochs(self):
     from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
-    event_acc = EventAccumulator(self.logdir)
+    event_acc = EventAccumulator(str(self.logdir))
     event_acc.Reload()
     wall_time, step_nums, loss = zip(*event_acc.Scalars('total_loss'))
     assert len(wall_time) == len(step_nums)
