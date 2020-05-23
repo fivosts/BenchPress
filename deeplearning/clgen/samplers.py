@@ -22,7 +22,7 @@ import typing
 
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.proto import sampler_pb2
-from labm8.py import app
+from absl import flags
 from labm8.py import crypto
 from deeplearning.clgen import pbutil
 

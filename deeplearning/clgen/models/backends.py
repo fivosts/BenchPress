@@ -20,7 +20,7 @@ import numpy as np
 from deeplearning.clgen import samplers
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.proto import model_pb2
-from labm8.py import app
+from absl import flags
 from labm8.py import cache
 
 FLAGS = flags.FLAGS

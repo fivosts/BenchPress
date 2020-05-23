@@ -23,7 +23,7 @@ from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.proto import corpus_pb2
-from labm8.py import app
+from absl import flags
 from labm8.py import test
 
 FLAGS = flags.FLAGS

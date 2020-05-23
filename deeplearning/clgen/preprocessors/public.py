@@ -16,7 +16,7 @@
 import typing
 
 
-from labm8.py import app
+from absl import flags
 
 FLAGS = flags.FLAGS
 

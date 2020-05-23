@@ -4,7 +4,7 @@ import re
 import typing
 
 from deeplearning.clgen.proto import telemetry_pb2
-from labm8.py import app
+from absl import flags
 from labm8.py import jsonutil
 from labm8.py import labdate
 from deeplearning.clgen import pbutil

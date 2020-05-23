@@ -20,7 +20,7 @@ import tempfile
 from deeplearning.clgen import clgen
 
 from deeplearning.clgen.proto import clgen_pb2
-from labm8.py import app
+from absl import flags
 from deeplearning.clgen import pbutil
 from labm8.py import test
 

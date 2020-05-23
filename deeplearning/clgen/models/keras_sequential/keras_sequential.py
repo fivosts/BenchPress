@@ -24,7 +24,7 @@ from deeplearning.clgen import telemetry
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import builders
 from deeplearning.clgen.models import data_generators
-from labm8.py import app
+from absl import flags
 from labm8.py import humanize
 from labm8.py import logutil
 from eupy.native import logger as l

@@ -33,7 +33,7 @@ from sqlalchemy.sql import func
 from deeplearning.clgen.preprocessors import preprocessors
 from deeplearning.clgen.proto import corpus_pb2
 from deeplearning.clgen.proto import internal_pb2
-from labm8.py import app
+from absl import flags
 from labm8.py import fs
 from labm8.py import humanize
 from labm8.py import sqlutil

@@ -33,7 +33,7 @@ from deeplearning.clgen.models.tf_bert import optimizer
 from deeplearning.clgen.models.tf_bert import hooks
 
 from eupy.native import logger as l
-from labm8.py import app
+from absl import flags
 from labm8.py import gpu_scheduler
 
 FLAGS = flags.FLAGS

@@ -17,7 +17,7 @@ import pathlib
 
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.corpuses.tools import export_preprocessed_files
-from labm8.py import app
+from absl import flags
 from labm8.py import fs
 from labm8.py import test
 

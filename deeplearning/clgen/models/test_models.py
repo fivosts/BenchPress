@@ -19,7 +19,7 @@ import pathlib
 from deeplearning.clgen.models import models
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.proto import model_pb2
-from labm8.py import app
+from absl import flags
 from deeplearning.clgen import pbutil
 from labm8.py import test
 

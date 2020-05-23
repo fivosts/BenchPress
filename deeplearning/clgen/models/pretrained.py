@@ -29,7 +29,7 @@ from deeplearning.clgen.models.tf_bert import tf_bert
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import telemetry_pb2
-from labm8.py import app
+from absl import flags
 from labm8.py import cache
 from labm8.py import humanize
 from labm8.py import labdate

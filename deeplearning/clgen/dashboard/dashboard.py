@@ -10,7 +10,7 @@ import sqlalchemy as sql
 
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.dashboard import dashboard_db
-from labm8.py import app
+from absl import flags
 from labm8.py import bazelutil
 from labm8.py import humanize
 

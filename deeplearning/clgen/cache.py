@@ -16,7 +16,7 @@
 import os
 import pathlib
 
-from labm8.py import app
+from absl import flags
 from labm8.py import cache
 from labm8.py import fs
 

@@ -37,7 +37,7 @@ from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.preprocessors import preprocessors
 from deeplearning.clgen.proto import corpus_pb2
-from labm8.py import app
+from absl import flags
 from labm8.py import bazelutil
 from labm8.py import crypto
 from labm8.py import hashcache

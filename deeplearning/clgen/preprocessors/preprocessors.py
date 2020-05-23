@@ -7,7 +7,7 @@ from importlib import util as importlib_util
 from datasets.github.scrape_repos.preprocessors import secrets
 
 from deeplearning.clgen.preprocessors import public
-from labm8.py import app
+from absl import flags
 from eupy.native import logger as l
 
 FLAGS = flags.FLAGS

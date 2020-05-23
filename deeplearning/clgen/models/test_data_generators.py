@@ -17,7 +17,7 @@ import numpy as np
 
 
 from deeplearning.clgen.models import data_generators
-from labm8.py import app
+from absl import flags
 from labm8.py import test
 
 FLAGS = flags.FLAGS

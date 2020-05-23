@@ -5,7 +5,7 @@ import tempfile
 import typing
 
 from deeplearning.clgen import clgen
-from labm8.py import app
+from absl import flags
 from labm8.py import fs
 from deeplearning.clgen import pbutil
 from research.cummins_2017_cgo import generative_model

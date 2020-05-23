@@ -29,7 +29,7 @@ from sqlalchemy.sql import func
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.proto import internal_pb2
-from labm8.py import app
+from absl import flags
 from labm8.py import humanize
 from labm8.py import sqlutil
 

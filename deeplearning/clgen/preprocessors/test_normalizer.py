@@ -19,7 +19,7 @@ import pytest
 
 
 from deeplearning.clgen.preprocessors import normalizer
-from labm8.py import app
+from absl import flags
 from labm8.py import test
 
 FLAGS = flags.FLAGS

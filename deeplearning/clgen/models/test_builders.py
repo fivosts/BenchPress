@@ -18,7 +18,7 @@ import pytest
 
 from deeplearning.clgen.models import builders
 from deeplearning.clgen.proto import model_pb2
-from labm8.py import app
+from absl import flags
 from labm8.py import test
 
 FLAGS = flags.FLAGS

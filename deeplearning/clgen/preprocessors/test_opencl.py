@@ -20,7 +20,7 @@ import pytest
 import deeplearning.clgen
 
 from deeplearning.clgen.preprocessors import opencl
-from labm8.py import app
+from absl import flags
 from labm8.py import bazelutil
 from labm8.py import test
 

@@ -15,7 +15,7 @@
 """Unit tests for //deeplearning/clgen/preprocessors/java.py."""
 
 from deeplearning.clgen.preprocessors import java
-from labm8.py import app
+from absl import flags
 from labm8.py import test
 
 FLAGS = flags.FLAGS

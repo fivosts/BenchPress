@@ -8,7 +8,7 @@ from sqlalchemy.ext import declarative
 
 from deeplearning.clgen import sample_observers
 from deeplearning.clgen.proto import model_pb2
-from labm8.py import app
+from absl import flags
 from labm8.py import crypto
 from labm8.py import labdate
 from labm8.py import sqlutil

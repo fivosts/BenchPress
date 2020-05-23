@@ -4,7 +4,7 @@ import os
 import sqlalchemy as sql
 from sqlalchemy.dialects import mysql
 
-from labm8.py import app
+from absl import flags
 from labm8.py import decorators
 from labm8.py import labdate
 from labm8.py import sqlutil

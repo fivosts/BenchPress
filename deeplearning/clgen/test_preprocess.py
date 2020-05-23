@@ -4,7 +4,7 @@ import pathlib
 import pytest
 
 from deeplearning.clgen import preprocess
-from labm8.py import app
+from absl import flags
 from labm8.py import fs
 from labm8.py import test
 

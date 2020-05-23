@@ -15,7 +15,7 @@
 """Common preprocessor passes."""
 
 from deeplearning.clgen.preprocessors import public
-from labm8.py import app
+from absl import flags
 from eupy.native import logger as l
 FLAGS = flags.FLAGS
 

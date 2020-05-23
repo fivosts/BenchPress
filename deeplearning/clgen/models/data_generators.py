@@ -18,7 +18,7 @@ from deeplearning.clgen import cache
 from deeplearning.clgen.tf import tf
 from deeplearning.clgen.proto import model_pb2
 
-from labm8.py import app
+from absl import flags
 from labm8.py import humanize
 
 from eupy.native import logger as l

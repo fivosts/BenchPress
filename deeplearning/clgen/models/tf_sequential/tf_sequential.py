@@ -32,7 +32,7 @@ from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import data_generators
 from deeplearning.clgen.proto import model_pb2
-from labm8.py import app
+from absl import flags
 from labm8.py import gpu_scheduler
 from labm8.py import humanize
 

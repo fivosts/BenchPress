@@ -22,7 +22,7 @@ from compilers.llvm import llvm
 from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import normalizer
 from deeplearning.clgen.preprocessors import public
-from labm8.py import app
+from absl import flags
 from labm8.py import bazelutil
 
 FLAGS = flags.FLAGS
