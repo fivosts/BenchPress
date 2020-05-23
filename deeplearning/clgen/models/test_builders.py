@@ -21,7 +21,7 @@ from deeplearning.clgen.proto import model_pb2
 from labm8.py import app
 from labm8.py import test
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 pytest_plugins = ["deeplearning.clgen.tests.fixtures"]
 

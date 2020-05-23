@@ -37,20 +37,20 @@ from labm8.py import gpu_scheduler
 from labm8.py import humanize
 
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
-app.DEFINE_boolean(
+flags.DEFINE_boolean(
   "clgen_tf_backend_reset_inference_state_between_batches",
   False,
   "If set, reset the network state between sample batches. Else, the model "
   "state is unaffected.",
 )
-app.DEFINE_integer(
+flags.DEFINE_integer(
   "clgen_tf_backend_tensorboard_summary_step_count",
   25,
   "The number of steps between writing tensorboard summaries.",
 )
-app.DEFINE_integer(
+flags.DEFINE_integer(
   "clgen_per_epoch_test_samples",
   12,
   "The number of samples to make at the end of each training epoch.",

@@ -23,7 +23,7 @@ from labm8.py import app
 from labm8.py import bazelutil
 from eupy.native import logger as l
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 # Path of the clang rewriter binary.
 CLGEN_REWRITER = bazelutil.DataPath(

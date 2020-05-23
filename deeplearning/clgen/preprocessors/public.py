@@ -18,7 +18,7 @@ import typing
 
 from labm8.py import app
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 # Type hint for a preprocessor function. See @clgen_preprocess for details.
 PreprocessorFunction = typing.Callable[[str], str]

@@ -22,7 +22,7 @@ from deeplearning.clgen.preprocessors import normalizer
 from labm8.py import app
 from labm8.py import test
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 
 class MockProcess:

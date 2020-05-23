@@ -18,7 +18,7 @@ from deeplearning.clgen.proto import model_pb2
 from labm8.py import app
 from deeplearning.clgen import pbutil
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 
 def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:

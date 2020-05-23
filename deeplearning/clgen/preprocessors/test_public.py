@@ -20,7 +20,7 @@ from deeplearning.clgen.preprocessors import public
 from labm8.py import app
 from labm8.py import test
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 
 def test_clgen_preprocessor_good():

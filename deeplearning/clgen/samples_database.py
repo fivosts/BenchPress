@@ -13,7 +13,7 @@ from labm8.py import crypto
 from labm8.py import labdate
 from labm8.py import sqlutil
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 Base = declarative.declarative_base()
 

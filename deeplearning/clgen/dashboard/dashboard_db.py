@@ -11,7 +11,7 @@ from labm8.py import sqlutil
 
 from eupy.native import logger as l
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 Base = sqlutil.Base()
 
 

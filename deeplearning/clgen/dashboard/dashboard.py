@@ -16,13 +16,13 @@ from labm8.py import humanize
 
 from eupy.native import logger as l
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 # Disable flask banner on load.
 _cli = sys.modules["flask.cli"]
 _cli.show_server_banner = lambda *x: None
 
-app.DEFINE_integer(
+flags.DEFINE_integer(
   "clgen_dashboard_port", None, "The port to launch the server on.",
 )
 

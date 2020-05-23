@@ -28,7 +28,7 @@ from labm8.py import app
 from labm8.py import humanize
 from labm8.py import logutil
 from eupy.native import logger as l
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 
 class kerasSequential(backends.BackendBase):

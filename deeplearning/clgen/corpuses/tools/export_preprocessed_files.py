@@ -17,28 +17,28 @@ from labm8.py import sqlutil
 
 from eupy.native import logger as l
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
-app.DEFINE_string(
+flags.DEFINE_string(
   "db_url",
   None,
   "The URL of the database to export files from.",
 )
-app.DEFINE_string(
+flags.DEFINE_string(
   "outdir", None, "The output directory to export files to."
 )
-app.DEFINE_string(
+flags.DEFINE_string(
   "file_suffix", ".txt", "The filename suffix for exported texts."
 )
-app.DEFINE_boolean(
+flags.DEFINE_boolean(
   "only_successfully_preprocessed",
   False,
   "Export only the text of contenfiles which were succesfully preprocessed.",
 )
-app.DEFINE_integer(
+flags.DEFINE_integer(
   "batch_size", 10000, "The number of texts to export in a batch."
 )
-app.DEFINE_boolean(
+flags.DEFINE_boolean(
   "archive_batches",
   False,
   "Create a .tar.bz2 archive of each --batch_size files.",

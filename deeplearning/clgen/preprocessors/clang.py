@@ -32,7 +32,7 @@ from compilers.llvm import llvm
 from labm8.py import app
 from eupy.native import  logger as l
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 # The marker used to mark stdin from clang pre-processor output.
 CLANG_STDIN_MARKER = re.compile(r'# \d+ "<stdin>" 2')

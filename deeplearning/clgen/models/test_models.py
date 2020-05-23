@@ -23,7 +23,7 @@ from labm8.py import app
 from deeplearning.clgen import pbutil
 from labm8.py import test
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 pytest_plugins = ["deeplearning.clgen.tests.fixtures"]
 

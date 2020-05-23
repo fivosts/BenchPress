@@ -45,7 +45,7 @@ from labm8.py import system
 
 from eupy.native import logger as l
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 
 class Model(object):

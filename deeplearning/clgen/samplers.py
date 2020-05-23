@@ -26,7 +26,7 @@ from labm8.py import app
 from labm8.py import crypto
 from deeplearning.clgen import pbutil
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 
 def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:

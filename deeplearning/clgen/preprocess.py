@@ -32,22 +32,24 @@ from labm8.py import app
 from labm8.py import humanize
 from eupy.native import logger as l
 
-FLAGS = app.FLAGS
-app.DEFINE_string(
+FLAGS = flags.FLAGS
+flags.DEFINE_string(
   "contentfiles", None, "The directory containing content files."
 )
-app.DEFINE_output_path(
+flags.DEFINE_string(
   "outdir",
   None,
   "Directory to export preprocessed content files to.",
   is_dir=True,
 )
-app.DEFINE_list("preprocessors", [], "The preprocessors to run, in order.")
+flags.DEFINE_list("preprocessors", [], "The preprocessors to run, in order.")
 
 
 def Preprocess(
   contentfiles: pathlib.Path, outdir: pathlib.Path, preprocessor_names
 ):
+  if not contentfiles.exists():
+    raise FileNotFoundError(contentfiles)
   # Error early if preprocessors are bad.
   [preprocessors.GetPreprocessorFunction(f) for f in preprocessor_names]
 

@@ -25,7 +25,7 @@ from deeplearning.clgen.preprocessors import public
 from labm8.py import app
 from labm8.py import bazelutil
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 _UNAME = "mac" if sys.platform == "darwin" else "linux"
 LIBCXX_HEADERS = bazelutil.DataPath(f"libcxx_{_UNAME}/include/c++/v1")

@@ -23,7 +23,7 @@ from deeplearning.clgen.proto import model_pb2
 from labm8.py import app
 from labm8.py import cache
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 
 class BackendBase(object):

@@ -20,7 +20,7 @@ from deeplearning.clgen.models import data_generators
 from labm8.py import app
 from labm8.py import test
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 pytest_plugins = ["deeplearning.clgen.tests.fixtures"]
 

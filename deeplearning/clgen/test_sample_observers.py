@@ -8,7 +8,7 @@ from labm8.py import crypto
 from labm8.py import fs
 from labm8.py import test
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 
 def test_MaxSampleCountObserver():

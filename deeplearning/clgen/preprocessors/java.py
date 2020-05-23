@@ -27,7 +27,7 @@ from labm8.py import app
 from labm8.py import bazelutil
 from eupy.native import logger as l
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 CLASS_NAME_RE = re.compile(r"public\s+class\s+(\w+)")
 

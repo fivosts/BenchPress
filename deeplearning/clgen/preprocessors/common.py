@@ -17,7 +17,7 @@
 from deeplearning.clgen.preprocessors import public
 from labm8.py import app
 from eupy.native import logger as l
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 
 def _MinimumLineCount(text: str, min_line_count: int) -> str:

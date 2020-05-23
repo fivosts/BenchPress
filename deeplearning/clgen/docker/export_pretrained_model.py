@@ -10,12 +10,12 @@ from labm8.py import fs
 from deeplearning.clgen import pbutil
 from research.cummins_2017_cgo import generative_model
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
-app.DEFINE_string(
+flags.DEFINE_string(
   "export_instance_config", None, "Path of CLgen instance proto to export."
 )
-app.DEFINE_string(
+flags.DEFINE_string(
   "docker_base_image",
   "ubuntu:latest",
   "The name of the base docker image to build using.",

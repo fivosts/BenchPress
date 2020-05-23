@@ -20,7 +20,7 @@ from labm8.py import app
 from labm8.py import cache
 from labm8.py import fs
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 
 def cachepath(*relative_path_components: str) -> pathlib.Path:

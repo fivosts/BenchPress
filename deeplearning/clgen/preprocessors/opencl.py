@@ -21,7 +21,7 @@ from deeplearning.clgen.preprocessors import public
 from labm8.py import app
 from labm8.py import bazelutil
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 LIBCLC = bazelutil.DataPath("phd/third_party/libclc/generic/include")
 OPENCL_H = bazelutil.DataPath("phd/deeplearning/clgen/data/include/opencl.h")

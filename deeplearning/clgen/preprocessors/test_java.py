@@ -18,7 +18,7 @@ from deeplearning.clgen.preprocessors import java
 from labm8.py import app
 from labm8.py import test
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 # ClangFormat() tests.
 

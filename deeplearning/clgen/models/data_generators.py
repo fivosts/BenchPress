@@ -23,7 +23,7 @@ from labm8.py import humanize
 
 from eupy.native import logger as l
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 
 class DataBatch(typing.NamedTuple):

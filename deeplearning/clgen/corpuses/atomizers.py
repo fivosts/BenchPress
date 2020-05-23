@@ -29,7 +29,7 @@ from labm8.py import labdate
 
 from eupy.native import logger as l
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 
 class AtomizerBase(object):

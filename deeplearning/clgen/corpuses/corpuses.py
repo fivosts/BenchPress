@@ -48,9 +48,9 @@ from labm8.py import prof
 from labm8.py import sqlutil
 from eupy.native import logger as l
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
-app.DEFINE_string(
+flags.DEFINE_string(
   "clgen_local_path_prefix",
   None,
   "An optional prefix to use when resolving the path to a local directory "

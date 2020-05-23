@@ -21,7 +21,7 @@ from labm8.py import crypto
 from labm8.py import fs
 from deeplearning.clgen import pbutil
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 
 class SampleObserver(object):
