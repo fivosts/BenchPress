@@ -110,19 +110,19 @@ class kerasSequential(backends.BackendBase):
         ):
           f.write(Escape(token) + "\n")
 
-    target_num_epochs = self.config.training.num_epochs
+    self.num_epochs = self.config.training.num_epochs
     starting_epoch = 0
 
     epoch_checkpoints = self.epoch_checkpoints
-    if len(epoch_checkpoints) >= target_num_epochs:
+    if len(epoch_checkpoints) >= self.num_epochs:
       # We have already trained a model to at least this number of epochs, so
       # simply the weights from that epoch and call it a day.
       l.getLogger().info( "Loading weights from {}"
                           .format(
-                              epoch_checkpoints[target_num_epochs - 1]
+                              epoch_checkpoints[self.num_epochs - 1]
                             )
       )
-      model.load_weights(epoch_checkpoints[target_num_epochs - 1])
+      model.load_weights(epoch_checkpoints[self.num_epochs - 1])
       return model
 
     # Now entering the point at which training is inevitable.
@@ -164,8 +164,8 @@ class kerasSequential(backends.BackendBase):
         "Step counts: {} per epoch, {} left to do, {} total"
               .format(
                   humanize.Commas(steps_per_epoch),
-                  humanize.Commas((target_num_epochs - starting_epoch) * steps_per_epoch),
-                  humanize.Commas(target_num_epochs * steps_per_epoch),
+                  humanize.Commas((self.num_epochs - starting_epoch) * steps_per_epoch),
+                  humanize.Commas(self.num_epochs * steps_per_epoch),
               )
       )
       model.fit_generator(
@@ -173,7 +173,7 @@ class kerasSequential(backends.BackendBase):
         steps_per_epoch=steps_per_epoch,
         callbacks=callbacks,
         initial_epoch=starting_epoch,
-        epochs=target_num_epochs,
+        epochs=self.num_epochs,
       )
     return model
 
