@@ -28,14 +28,13 @@ FLAGS = flags.FLAGS
 
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
-  def __init__(self, 
-               inp: np.array, 
-               target: np.array):
-    self.X = inp
-    self.y = target
-    self.sizeof_batch = sys.getsizeof(self) + self.X.nbytes + self.y.nbytes
-    return
+  X: np.array
+  y: np.array
 
+  @property
+  def sizeof_batch(self):
+    return sys.getsizeof(self) + self.X.nbytes + self.y.nbytes
+  
   def LogBatchTelemetry(self,
                         steps_per_epoch: int,
                         num_epochs: int,
@@ -55,26 +54,19 @@ class DataBatch(typing.NamedTuple):
 
 class MaskBatch(typing.NamedTuple):
   """Tuple representation of a single MaskLM batch"""
-  def __init__(self, 
-               input_ids            : np.array,
-               masked_lm_positions  : np.array,
-               masked_lm_ids        : np.array,
-               masked_lm_weights    : np.array,
-               next_sentence_label  : np.int32,
-               ):
-    self.input_ids            = input_ids
-    self.masked_lm_positions  = masked_lm_positions
-    self.masked_lm_ids        = masked_lm_ids
-    self.masked_lm_weights    = masked_lm_weights
-    self.next_sentence_label  = next_sentence_label
-    self.sizeof_batch = (sys.getsizeof(self) + 
-                         self.input_ids.nbytes +
-                         self.masked_lm_positions.nbytes +
-                         self.masked_lm_ids.nbytes +
-                         self.masked_lm_weights.nbytes +
-                         self.next_sentence_label.nbytes
-                         )
-    return
+
+  input_ids            : np.array
+  masked_lm_positions  : np.array
+  masked_lm_ids        : np.array
+  masked_lm_weights    : np.array
+  next_sentence_label  : np.int32
+
+  @property
+  def sizeof_batch(self):
+    return (sys.getsizeof(self) + self.input_ids.nbytes +
+           self.masked_lm_positions.nbytes + self.masked_lm_ids.nbytes +
+           self.masked_lm_weights.nbytes + self.next_sentence_label.nbytes
+           )
 
   def LogBatchTelemetry(self,
                         steps_per_epoch: int,
