@@ -33,7 +33,7 @@ from labm8.py import app
 from labm8.py import cache
 from labm8.py import humanize
 from labm8.py import labdate
-from labm8.py import pbutil
+from deeplearning.clgen import pbutil
 
 FLAGS = app.FLAGS
 

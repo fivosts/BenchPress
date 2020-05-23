@@ -40,7 +40,7 @@ from labm8.py import humanize
 from labm8.py import labdate
 from labm8.py import lockfile
 from labm8.py import logutil
-from labm8.py import pbutil
+from deeplearning.clgen import pbutil
 from labm8.py import system
 
 from eupy.native import logger as l

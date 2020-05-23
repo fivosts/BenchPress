@@ -16,7 +16,7 @@
 
 from deeplearning.clgen.proto import model_pb2
 from labm8.py import app
-from labm8.py import pbutil
+from deeplearning.clgen import pbutil
 
 FLAGS = app.FLAGS
 

@@ -22,7 +22,7 @@ from deeplearning.clgen.proto import clgen_pb2
 from deeplearning.clgen.proto import corpus_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
-from labm8.py import pbutil
+from deeplearning.clgen import pbutil
 from labm8.py import test
 
 FLAGS = test.FLAGS

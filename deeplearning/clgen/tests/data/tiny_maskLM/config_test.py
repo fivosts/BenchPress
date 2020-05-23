@@ -18,7 +18,7 @@ import tempfile
 from deeplearning.clgen import clgen
 from deeplearning.clgen.proto import clgen_pb2
 from labm8.py import bazelutil
-from labm8.py import pbutil
+from deeplearning.clgen import pbutil
 from labm8.py import test
 
 MODULE_UNDER_TEST = 'deeplearning.clgen'

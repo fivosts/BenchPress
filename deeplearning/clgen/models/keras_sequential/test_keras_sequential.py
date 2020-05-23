@@ -23,7 +23,7 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import telemetry_pb2
 from labm8.py import app
 from labm8.py import crypto
-from labm8.py import pbutil
+from deeplearning.clgen import pbutil
 from labm8.py import test
 
 FLAGS = app.FLAGS

@@ -43,7 +43,7 @@ from labm8.py import crypto
 from labm8.py import hashcache
 from labm8.py import humanize
 from labm8.py import lockfile
-from labm8.py import pbutil
+from deeplearning.clgen import pbutil
 from labm8.py import prof
 from labm8.py import sqlutil
 from eupy.native import logger as l

@@ -7,7 +7,7 @@ import typing
 from deeplearning.clgen import clgen
 from labm8.py import app
 from labm8.py import fs
-from labm8.py import pbutil
+from deeplearning.clgen import pbutil
 from research.cummins_2017_cgo import generative_model
 
 FLAGS = app.FLAGS

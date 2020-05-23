@@ -7,7 +7,7 @@ from deeplearning.clgen.proto import telemetry_pb2
 from labm8.py import app
 from labm8.py import jsonutil
 from labm8.py import labdate
-from labm8.py import pbutil
+from deeplearning.clgen import pbutil
 
 FLAGS = app.FLAGS
 
