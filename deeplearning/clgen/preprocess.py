@@ -28,7 +28,7 @@ import progressbar
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.preprocessors import preprocessors
 from deeplearning.clgen.proto import internal_pb2
-from absl import flags
+from absl import flags, app
 from labm8.py import humanize
 from eupy.native import logger as l
 
@@ -102,4 +102,4 @@ def main():
 
 
 if __name__ == "__main__":
-  main()
+  app.run(main())
