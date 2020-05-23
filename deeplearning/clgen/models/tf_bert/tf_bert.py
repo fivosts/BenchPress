@@ -368,7 +368,7 @@ class tfBert(backends.BackendBase):
           config=bert_config,
           is_training=is_training,
           input_ids=input_ids,
-          input_mask=None, # You CAN ignore. Used for padding. 0s after real sequence. Now all 1s.
+          input_mask=None, # You CAN ignore this. Used for padding. 0s after real sequence. Now all 1s. TODO!!!
           token_type_ids=None, # You can ignore. Used for double sentences (sA -> 0, sB ->1). Now all will be zero
           use_one_hot_embeddings=FLAGS.use_tpu)
 
