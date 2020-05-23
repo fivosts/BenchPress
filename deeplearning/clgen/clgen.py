@@ -236,142 +236,12 @@ class Instance(object):
     l.getLogger().debug("deeplearning.clgen.clgen.Instance.FromFile()")
     return cls(pbutil.FromFile(path, clgen_pb2.Instance()))
 
-"""
-# Keep this function for future reference
-def parseArgs():
-  parser = argparse.ArgumentParser(description = "OpenCL kernel ML generator")
-
-  ## TODO
-  clgen = parser.add_argument_group("Main CLgen Arguments")
-  logging_args = parser.add_argument_group("Logging Arguments")
-  dashboard_db_args = parser.add_argument_group("Dashboard DB arguments")
-
-  logging_args.add_argument('-lvl', '--level', 
-                            default = l.INFO, 
-                            type = int,
-                            choices = [l.DEBUG, l.INFO, l.WARNING, l.ERROR, l.CRITICAL],
-                            required = False, 
-                            help = "Define logging level of logger",
-                            )
-  logging_args.add_argument('-cl', '--color', 
-                            default = True, 
-                            action = 'store_true',
-                            required = False, 
-                            help = "Colorize or not, logging messages",
-                            )
-  logging_args.add_argument('-st', '--step', default = False, action = 'store_true',
-                            required = False, help = "Enable step execution on debug logs (debug level must be selected)",
-                            )
-
-  clgen.add_argument('--config', 
-                      required = True, 
-                      help = "Path to a clgen.Instance proto file (config.pbtxt).",
-                    )
-  clgen.add_argument('--clgen_debug', 
-                    default = False, 
-                    action = 'store_true', 
-                    required = False, 
-                    help = "Enable a debugging mode of CLgen python runtime. When enabled, errors which may otherwise be caught lead to program crashes and stack traces.",
-                    )
-  clgen.add_argument('--min_samples',
-                    type = int,
-                    default = 0,
-                    help = "The minimum number of samples to make. If <= 0, sampling continues indefinitely and never terminates.",
-                    )
-  clgen.add_argument('--print_samples',
-                    default = True,
-                    required = False,
-                    action = 'store_true',
-                    help = "If set, print the generated samples.",
-                    )
-  clgen.add_argument('--cache_samples',
-                    default = False,
-                    required = False,
-                    action = 'store_true',
-                    help = "If set, cache the generated sample protobufs.",
-                    )
-  clgen.add_argument('--sample_text_dir',
-                    type = str,
-                    default = None,
-                    required = False,
-                    help = "A directory to write plain text samples to.",
-                    )
-  clgen.add_argument('--stop_after',
-                    type = str,
-                    default = None,
-                    required = False,
-                    choices = ["corpus", "train"],
-                    help = "Stop CLgen early.",
-                    )
-  clgen.add_argument('--print_cache_path',
-                    type = str,
-                    default = None,
-                    required = False,
-                    choices = ["corpus", "model", "sampler"],
-                    help = "Print the directory of a cache and exit."
-                    )
-  clgen.add_argument('--export_model',
-                    type = str,
-                    default = None,
-                    required = False,
-                    help = "Path to export a trained TensorFlow model to. This exports all of the files required for sampling to specified directory. The directory can then be used as the pretrained_model field of an Instance proto config."
-                    )
-  clgen.add_argument('--clgen_profiling',
-                    default = False,
-                    required = False,
-                    action = 'store_true',
-                    help = "Enable CLgen self profilinng. Profiling results are logged."
-                    )
-  clgen.add_argument('--clgen_dashboard_only',
-                    default = False,
-                    required = False,
-                    action = 'store_true',
-                    help = "If true, launch dashboard only."
-                    )
-
-  dashboard_db_args.add_argument('--clgen_dashboard_db',
-                                type = str,
-                                default = "sqlite:////tmp/phd/deeplearning/clgen/dashboard.db",
-                                required = False,
-                                help = "URL of the dashboard database."
-                                )
-
-  dashboard_db_args.add_argument('--clgen_dashboard_port',
-                                type = int,
-                                default = None,
-                                required = False,
-                                help = "The port to launch the server on."
-                                )
-
-  return parser.parse_args()
-"""
-
 def Flush():
   """Flush logging and stout/stderr outputs."""
   l.getLogger().debug("deeplearning.clgen.clgen.Flush()")
   app.FlushLogs()
   sys.stdout.flush()
   sys.stderr.flush()
-
-
-def LogException(exception: Exception):
-  """Log an error."""
-  l.getLogger().debug("deeplearning.clgen.clgen.LogException()")
-  l.getLogger().error(f"""\
-%s (%s)
-
-Please report bugs at <https://github.com/ChrisCummins/phd/issues>\
-""", exception, type(exception).__name__)
-#   app.Error(
-#     f"""\
-# %s (%s)
-
-# Please report bugs at <https://github.com/ChrisCummins/phd/issues>\
-# """,
-#     exception,
-#     type(exception).__name__,
-#   )
-  sys.exit(1)
 
 def RunWithErrorHandling(
   function_to_run: typing.Callable, *args, **kwargs
@@ -422,7 +292,7 @@ def RunWithErrorHandling(
     sys.exit(1)
   except FileNotFoundError as e:
     Flush()
-    LogException(e)
+    raise e
     sys.exit(1)
 
 def ConfigFromFlags() -> clgen_pb2.Instance:
