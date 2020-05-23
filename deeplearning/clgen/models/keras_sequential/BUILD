@@ -13,7 +13,7 @@ py_library(
         "//labm8/py:humanize",
         "//labm8/py:labdate",
         "//labm8/py:logutil",
-        "//labm8/py:pbutil",
+        "//deeplearning/clgen:pbutil",
         "//third_party/py/keras",
         "//third_party/py/numpy",
         "//third_party/py/tensorflow",

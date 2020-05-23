@@ -39,7 +39,7 @@ py_binary(
         "//deeplearning/clgen",
         "//labm8/py:app",
         "//labm8/py:fs",
-        "//labm8/py:pbutil",
+        "//deeplearning/clgen:pbutil",
         "//research/cummins_2017_cgo:generative_model",
     ],
 )

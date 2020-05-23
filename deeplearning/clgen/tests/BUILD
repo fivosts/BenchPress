@@ -10,7 +10,7 @@ py_library(
     ],
     deps = [
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:pbutil",
+        "//deeplearning/clgen:pbutil",
         "//labm8/py:test",
     ],
 )

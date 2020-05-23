@@ -38,7 +38,7 @@ py_library(
     deps = [
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//labm8/py:app",
-        "//labm8/py:pbutil",
+        "//deeplearning/clgen:pbutil",
         "//third_party/py/keras",
         "//third_party/py/tensorflow",
     ],
@@ -100,7 +100,7 @@ py_library(
         "//labm8/py:crypto",
         "//labm8/py:humanize",
         "//labm8/py:lockfile",
-        "//labm8/py:pbutil",
+        "//deeplearning/clgen:pbutil",
         "//labm8/py:system",
         "//third_party/py/numpy",
     ],
@@ -125,7 +125,7 @@ py_library(
         "//labm8/py:cache",
         "//labm8/py:humanize",
         "//labm8/py:labdate",
-        "//labm8/py:pbutil",
+        "//deeplearning/clgen:pbutil",
         "//third_party/py/numpy",
     ],
 )

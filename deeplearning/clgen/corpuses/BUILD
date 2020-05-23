@@ -57,7 +57,7 @@ py_library(
         "//labm8/py:hashcache",
         "//labm8/py:humanize",
         "//labm8/py:lockfile",
-        "//labm8/py:pbutil",
+        "//deeplearning/clgen:pbutil",
         "//labm8/py:prof",
         "//third_party/py/checksumdir",
         "//third_party/py/numpy",
