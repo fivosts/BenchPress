@@ -134,6 +134,12 @@ class tfBert(backends.BackendBase):
 
     return
 
+  @property
+  def is_validated(self):
+    if os.path.exists(self.validation_results_path):
+      return True
+    return False
+
   def Train(self, corpus, **unused_kwargs) -> None:
 
     del unused_kwargs
@@ -338,6 +344,16 @@ class tfBert(backends.BackendBase):
     paths += [ path.absolute() for path in (self.cache.path / "logs").iterdir() ]
     paths += [ self.data_generator.tfRecord ] ## TODO!!! Warning this can be a bug
     return sorted(paths)
+
+  def _writeValidation(self,
+                       result
+                       ) -> None:
+    with tf.io.gfile.GFile(self.validation_results_path, "w") as writer:
+      l.getLogger().info("Validation set result summary")
+      for key in sorted(result.keys()):
+        l.getLogger().info("{}: {}".format(key, str(result[key])))
+        writer.write("{}: {}\n".format(key, str(result[key])))
+    return 
 
   def _model_fn_builder(self,
                       bert_config, 
@@ -621,19 +637,3 @@ class tfBert(backends.BackendBase):
     return [
             hooks.tfProgressBar(max_length = max_steps, mode = tf.compat.v1.ModeKeys.EVAL)
             ]
-
-  @property
-  def is_validated(self):
-    if os.path.exists(self.validation_results_path):
-      return True
-    return False
-
-  def _writeValidation(self,
-                       result
-                       ) -> None:
-    with tf.io.gfile.GFile(self.validation_results_path, "w") as writer:
-      l.getLogger().info("Validation set result summary")
-      for key in sorted(result.keys()):
-        l.getLogger().info("{}: {}".format(key, str(result[key])))
-        writer.write("{}: {}\n".format(key, str(result[key])))
-    return 
