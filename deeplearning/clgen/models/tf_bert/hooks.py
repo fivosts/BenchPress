@@ -47,17 +47,19 @@ class _tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
     if mode == tf.compat.v1.estimator.ModeKeys.TRAIN:
       ## Training
       self.is_training = True
+      self.current_step = None
     elif mode == tf.compat.v1.estimator.ModeKeys.EVAL:
       ## Validation
       self.is_training = False
+      self.current_step = 0
     elif mode == tf.compat.v1.estimator.ModeKeys.PREDICT:
       ## Sampling
       self.is_training = False
+      self.current_step = None
     else:
       raise ValueError("mode for hook has not been provided")
 
     self.global_step = _as_graph_element(tf.compat.v1.train.get_or_create_global_step())
-    self.current_step = None
 
     return
 
@@ -70,7 +72,10 @@ class _tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
                                       })
 
   def after_run(self, run_context, run_values):
-    self.current_step = run_values.results[self.global_step]
+    if self.is_training:
+      self.current_step = run_values.results[self.global_step]
+    else:
+      self.current_step += 1
     return
 
   def end(self, session):
