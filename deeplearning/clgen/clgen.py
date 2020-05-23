@@ -37,18 +37,17 @@ import shutil
 import sys
 import typing
 
-from absl import app
-from absl import flags
+from absl import app, flags
 
 from deeplearning.clgen import sample_observers as sample_observers_lib
 from deeplearning.clgen import samplers
+from deeplearning.clgen import pbutil
 from deeplearning.clgen.dashboard import dashboard
 from deeplearning.clgen.models import models
 from deeplearning.clgen.models import pretrained
 from deeplearning.clgen.proto import clgen_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
-from labm8.py import pbutil
 
 from eupy.native import logger as l
 
