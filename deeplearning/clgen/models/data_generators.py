@@ -508,7 +508,6 @@ class MaskLMBatchGenerator(object):
                         ):
 
     def input_fn(params):
-      l.getLogger().critical(params)
       batch_size = params["batch_size"]
 
       tfSampleBatch = {
