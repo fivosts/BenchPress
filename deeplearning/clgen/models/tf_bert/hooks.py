@@ -33,7 +33,7 @@ def _as_graph_element(obj):
   return element
 
 
-class tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
+class _tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
   """Base class for Estimator Hooks, used for this BERT model"""
   def __init__(self,
               mode: tf.compat.v1.estimator.ModeKeys,
@@ -50,40 +50,38 @@ class tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
     elif mode == tf.compat.v1.estimator.ModeKeys.EVAL:
       ## Validation
       self.is_training = False
-    else:
+    elif mode == tf.compat.v1.estimator.ModeKeys.PREDICT:
       ## Sampling
       self.is_training = False
+    else:
+      raise ValueError("mode for hook has not been provided")
 
-    self.global_step = tf.compat.v1.train.get_or_create_global_step()
-
-    self.step_tensor = {
-        self.global_step: _as_graph_element(self.global_step)
-      }
+    self.global_step = _as_graph_element(tf.compat.v1.train.get_or_create_global_step())
     self.current_step = None
 
     return
 
   def begin(self):
-
     return
 
   def before_run(self, run_context):
-    return tf.estimator.SessionRunArgs(self.step_tensor)
+    return tf.estimator.SessionRunArgs({
+                                      self.global_step: self.global_step,
+                                      })
 
   def after_run(self, run_context, run_values):
-    l.getLogger().critical(run_values.results)
     self.current_step = run_values.results[self.global_step]
     return
 
   def end(self, session):
     return
 
-class tfProgressBar(tfEstimatorHooks):
+class tfProgressBar(_tfEstimatorHooks):
   """Real time progressbar to capture tf Estimator training or validation"""
 
   def __init__(self, 
                max_length: int,
-               mode: tf.compat.v1.estimator.ModeKeys = None,
+               mode: tf.compat.v1.estimator.ModeKeys = tf.compat.v1.estimator.ModeKeys.TRAIN,
                ):
     """
     Initialize Progress Bar Hook
@@ -99,10 +97,6 @@ class tfProgressBar(tfEstimatorHooks):
     super(tfProgressBar, self).__init__(mode)
 
     self.max_length = max_length
-
-    if self.is_training:
-      self.step_tensor = { self.global_step: self.global_step }
-      self._current_epoch = 0
 
   def begin(self):
     """
@@ -123,13 +117,13 @@ class tfProgressBar(tfEstimatorHooks):
 
   # def end(self, session):
 
-class tfLogTensorHook(tfEstimatorHooks):
+class tfLogTensorHook(_tfEstimatorHooks):
 
   def __init__(self,
                tensors: dict,
                log_steps: int = None,
                at_end: bool = False,
-               mode: tf.compat.v1.estimator.ModeKeys = None,
+               mode: tf.compat.v1.estimator.ModeKeys = tf.compat.v1.estimator.ModeKeys.TRAIN,
               ):
     super(tfLogTensorHook, self).__init__(mode)
 
@@ -157,6 +151,7 @@ class tfLogTensorHook(tfEstimatorHooks):
         Called once at initialization stage
     """
     self.trigger_step = 0
+    self.current_epoch = 0
     self.timer.reset()
     return
 
@@ -166,11 +161,17 @@ class tfLogTensorHook(tfEstimatorHooks):
       Any tensor/op should be declared here in order to be evaluated
       returns None or SessionRunArgs()
     """
-    super(tfLogTensorHook, self).before_run(run_context)
+
     if self.timer.should_trigger_for_step(self.trigger_step):
       self.step_triggered = True
-      return tf.estimator.SessionRunArgs([self.tensors])
-    self.step_triggered = False
+      return tf.estimator.SessionRunArgs({
+                                          self.global_step    : self.global_step, 
+                                          'tensors'           : self.tensors
+                                        })
+    else:
+      self.step_triggered = False
+      return super(tfLogTensorHook, self).before_run(run_context)
+    
     return None
 
   def after_run(self, run_context, run_values):
@@ -182,7 +183,7 @@ class tfLogTensorHook(tfEstimatorHooks):
     self.current_epoch = int(self.current_step / self.log_steps)
 
     if self.step_triggered:
-      self._log_tensors(run_values.results)
+      self._log_tensors(run_values.results['tensors'])
 
     self.trigger_step += 1
 
