@@ -77,7 +77,7 @@ def ExportPreprocessedFiles(
         sql.func.distinct(preprocessed.PreprocessedContentFile.sha256)
       )
     ).scalar()
-    app.Log(1, "%s files to export", humanize.Commas(max_rows))
+    l.getLogger().info("{} files to export", humanize.Commas(max_rows))
 
   # Create a new session because we are going to hand over the session object
   # to a background thread, which is not supported in SQLite.
@@ -115,14 +115,12 @@ def ExportPreprocessedFiles(
         for sha256, text in batch.rows:
           fs.Write(outdir / f"{sha256}{file_suffix}", text.encode("utf-8"))
 
-      app.Log(
-        1,
-        "Exported pre-processed files %s..%s of %s (%.2f%%)",
-        humanize.Commas(batch.offset),
-        humanize.Commas(batch.offset + len(batch.rows)),
-        humanize.Commas(max_rows),
-        ((batch.offset + len(batch.rows)) / max_rows) * 100,
-      )
+      l.getLogger().info("Exported pre-processed files {}..{} of {} ({:.2f})".format(
+				    humanize.Commas(batch.offset),
+				    humanize.Commas(batch.offset + len(batch.rows)),
+				    humanize.Commas(max_rows),
+				    ((batch.offset + len(batch.rows)) / max_rows) * 100,
+      				))
 
 
 def Main():
