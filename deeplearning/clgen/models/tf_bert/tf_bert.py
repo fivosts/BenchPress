@@ -261,7 +261,7 @@ class tfBert(backends.BackendBase):
 
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
-    self.estimator = tf.compat.v1.estimator.tpu.TPUEstimator(
+    self.sample_estimator = tf.compat.v1.estimator.tpu.TPUEstimator(
         use_tpu = FLAGS.use_tpu,
         model_fn = model_fn,
         config = run_config,
@@ -288,29 +288,15 @@ class tfBert(backends.BackendBase):
   def SampleNextIndices(self, sampler: samplers.Sampler, done):
     l.getLogger().warning("Within a batch, called for each i/o step")
 
-    # if FLAGS.use_tpu:
-    #   # TPU requires a fixed batch size for all batches, therefore the number
-    #   # of examples must be a multiple of the batch size, or else examples
-    #   # will get dropped. So we pad with fake examples which are ignored
-    #   # later on.
-    #   while len(predict_examples) % sampler.batch_size != 0:
-    #     predict_examples.append(PaddingInputExample())
+    if self.sample_estimator is None:
+      raise ValueError("Bert sampler has not been initialized.")
 
-    l.getLogger().info("***** Running prediction*****")
-    # l.getLogger().info("  Num examples = {} ({} actual, {} padding)".format(
-    #                       len(predict_examples), num_actual_predict_examples,
-    #                       len(predict_examples) - num_actual_predict_examples)
-    #                 )
-    # l.getLogger().info("  Batch size = {}".format(sampler.batch_size))
-    
-    ## Batch size could determine the number of tf.data entries provided by
-    ## the input_fn builder
     input_fn = self.data_generator.generateTfSamples(
                 max_seq_length = sampler.sequence_length,
                 num_cpu_threads = min(os.cpu_count(), sampler.batch_size),
                 use_tpu = FLAGS.use_tpu, ## TODO this flag is supposed to PaddingInputExamples
                 )
-    result = self.estimator.predict(input_fn=input_fn)
+    result = self.sample_estimator.predict(input_fn=input_fn)
 
     l.getLogger().warning("TODO!")
     l.getLogger().warning("A) Does the data generator bring as many batches as should ? No less, no more than!")
@@ -319,25 +305,13 @@ class tfBert(backends.BackendBase):
 
     l.getLogger().info("Classifier prediction: {}".format(result))
     for pr in result:
+      ## I'm getting a couple of things here:
+      ## a) masked_lm_predictions
+      ## b) next_sentence_predictions
       l.getLogger().info(pr['masked_lm_predictions'])
       l.getLogger().info(self.atomizer.DeatomizeIndices(pr['masked_lm_predictions']))
+      l.getLogger().warning("OK")
       exit()
-      # probs = pr['probabilities']
-
-    # output_predict_file = str(self.sample_path / "test_results.tsv")
-    # with tf.gfile.GFile(output_predict_file, "w") as writer:
-    #   num_written_lines = 0
-    #   l.getLogger().info("***** Predict results *****")
-    #   for (i, prediction) in enumerate(result):
-    #     probabilities = prediction["probabilities"]
-    #     if i >= num_actual_predict_examples:
-    #       break
-    #     output_line = "\t".join(
-    #         str(class_probability)
-    #         for class_probability in probabilities) + "\n"
-    #     writer.write(output_line)
-    #     num_written_lines += 1
-    # assert num_written_lines == num_actual_predict_examples
 
     return []
 
