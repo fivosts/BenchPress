@@ -219,7 +219,7 @@ class tfBert(backends.BackendBase):
           num_cpu_threads = 8,
           is_training=False)
 
-      result = estimator.evaluate(input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
+      result = estimator.evaluate(input_fn=eval_input_fn, steps=self.max_eval_steps)
       self._writeValidation(result)
 
     self.telemetry.TfRecordEpochs()
