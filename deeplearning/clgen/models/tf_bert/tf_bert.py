@@ -619,7 +619,7 @@ class tfBert(backends.BackendBase):
                        max_steps: int = None,
                        output_dir: str = None,
                        **kwargs
-                       ) -> typing.List[tf.estimator.SessionRunHooks]:
+                       ) -> typing.List[tf.estimator.SessionRunHook]:
     if log_steps is None:
       log_steps = self.num_steps_per_epoch
     if max_steps is None:
@@ -642,7 +642,7 @@ class tfBert(backends.BackendBase):
   
   def GetValidationHooks(self,
                          max_steps = None,
-                         ) -> typing.List[tf.estimator.SessionRunHooks]:
+                         ) -> typing.List[tf.estimator.SessionRunHook]:
     if max_steps is None:
       max_steps = self.max_eval_steps
     return [
