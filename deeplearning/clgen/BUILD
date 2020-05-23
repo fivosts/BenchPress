@@ -60,7 +60,6 @@ py_binary(
     srcs = ["clgen.py"],
     visibility = ["//visibility:public"],
     deps = [
-        ":errors",
         ":sample_observers",
         ":samplers",
         "//deeplearning/clgen/dashboard",
@@ -68,7 +67,7 @@ py_binary(
         "//deeplearning/clgen/models:pretrained",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//labm8/py:app",
-        "//labm8/py:pbutil",
+        ":pbutil",
         "//labm8/py:prof",
     ],
 )
@@ -88,7 +87,7 @@ py_test(
         "//deeplearning/clgen/tests:fixtures",
         "//labm8/py:app",
         "//labm8/py:fs",
-        "//labm8/py:pbutil",
+        ":pbutil",
         "//labm8/py:tar",
         "//labm8/py:test",
     ],
@@ -102,7 +101,7 @@ py_binary(
         "//deeplearning/clgen/models",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//labm8/py:app",
-        "//labm8/py:pbutil",
+        ":pbutil",
     ],
 )
 
@@ -139,7 +138,7 @@ py_library(
         "//deeplearning/clgen/models:pretrained",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//labm8/py:app",
-        "//labm8/py:pbutil",
+        ":pbutil",
     ],
 )
 
@@ -152,7 +151,7 @@ py_library(
         "//labm8/py:app",
         "//labm8/py:crypto",
         "//labm8/py:fs",
-        "//labm8/py:pbutil",
+        ":pbutil",
     ],
 )
 
@@ -175,12 +174,19 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
         ":cache",
-        ":errors",
         "//deeplearning/clgen/corpuses:atomizers",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//labm8/py:app",
         "//labm8/py:crypto",
-        "//labm8/py:pbutil",
+        ":pbutil",
+    ],
+)
+
+py_library(
+    name = "pbutil",
+    srcs = ["pbutil.py"],
+    visibility = ["//visibility:public"],
+    deps = [
     ],
 )
 
@@ -188,7 +194,6 @@ py_test(
     name = "test_samplers",
     srcs = ["test_samplers.py"],
     deps = [
-        ":errors",
         ":samplers",
         "//deeplearning/clgen/tests:fixtures",
         "//labm8/py:app",
@@ -205,7 +210,7 @@ py_library(
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//labm8/py:crypto",
         "//labm8/py:labdate",
-        "//labm8/py:pbutil",
+        ":pbutil",
         "//labm8/py:sqlutil",
         "//third_party/py/sqlalchemy",
     ],
@@ -231,7 +236,7 @@ py_library(
         "//labm8/py:app",
         "//labm8/py:jsonutil",
         "//labm8/py:labdate",
-        "//labm8/py:pbutil",
+        ":pbutil",
     ],
 )
 

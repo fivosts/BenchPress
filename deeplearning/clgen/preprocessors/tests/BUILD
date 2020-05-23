@@ -19,7 +19,6 @@ py_test(
     name = "test_preprocessors_benchmark",
     srcs = ["test_preprocessors_benchmark.py"],
     deps = [
-        "//deeplearning/clgen:errors",
         "//deeplearning/clgen/preprocessors",
         "//deeplearning/clgen/preprocessors:common",
         "//deeplearning/clgen/preprocessors:cxx",

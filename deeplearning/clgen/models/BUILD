@@ -36,7 +36,6 @@ py_library(
     srcs = ["builders.py"],
     visibility = ["//visibility:public"],
     deps = [
-        "//deeplearning/clgen:errors",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//labm8/py:app",
         "//labm8/py:pbutil",
@@ -62,7 +61,6 @@ py_library(
     srcs = ["data_generators.py"],
     visibility = ["//visibility:public"],
     deps = [
-        "//deeplearning/clgen:errors",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//labm8/py:app",
         "//labm8/py:humanize",
@@ -92,7 +90,6 @@ py_library(
         "//deeplearning/clgen/models/tf_sequential:tf_sequential",
         "//deeplearning/clgen/models/tf_bert:tf_bert",
         "//deeplearning/clgen:cache",
-        "//deeplearning/clgen:errors",
         "//deeplearning/clgen:sample_observers",
         "//deeplearning/clgen:samplers",
         "//deeplearning/clgen:telemetry",
@@ -119,7 +116,6 @@ py_library(
         "//deeplearning/clgen/models/tf_sequential:tf_sequential",
         "//deeplearning/clgen/models/tf_bert:tf_bert",
         "//deeplearning/clgen:cache",
-        "//deeplearning/clgen:errors",
         "//deeplearning/clgen:sample_observers",
         "//deeplearning/clgen:samplers",
         "//deeplearning/clgen:telemetry",

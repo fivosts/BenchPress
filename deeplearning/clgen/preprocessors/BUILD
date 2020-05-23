@@ -33,7 +33,6 @@ py_library(
         "//compilers/llvm",
         "//compilers/llvm:clang",
         "//compilers/llvm:clang_format",
-        "//deeplearning/clgen:errors",
         "//labm8/py:app",
     ],
 )
@@ -255,7 +254,6 @@ py_library(
     visibility = ["//deeplearning/clgen:__subpackages__"],
     deps = [
         ":public",
-        "//deeplearning/clgen:errors",
         "//labm8/py:app",
     ],
 )
@@ -265,7 +263,6 @@ py_test(
     srcs = ["test_common.py"],
     deps = [
         ":common",
-        "//deeplearning/clgen:errors",
         "//labm8/py:app",
         "//labm8/py:test",
     ],
@@ -298,7 +295,6 @@ py_test(
     srcs = ["test_cxx.py"],
     deps = [
         ":cxx",
-        "//deeplearning/clgen:errors",
         "//labm8/py:app",
         "//labm8/py:test",
     ],
@@ -313,7 +309,6 @@ py_library(
         ":clang",
         ":public",
         "//datasets/github/scrape_repos/preprocessors:extractors",
-        "//deeplearning/clgen:errors",
         "//labm8/py:app",
         "//labm8/py:bazelutil",
     ],
@@ -324,7 +319,6 @@ py_test(
     srcs = ["test_java.py"],
     deps = [
         ":java",
-        "//deeplearning/clgen:errors",
         "//labm8/py:app",
         "//labm8/py:test",
     ],
@@ -451,7 +445,6 @@ py_library(
         ":clang_rewriter",
     ],
     deps = [
-        "//deeplearning/clgen:errors",
         "//labm8/py:app",
         "//labm8/py:bazelutil",
     ],
@@ -462,7 +455,6 @@ py_test(
     srcs = ["test_normalizer.py"],
     deps = [
         ":normalizer",
-        "//deeplearning/clgen:errors",
         "//labm8/py:app",
         "//labm8/py:test",
     ],
@@ -517,7 +509,6 @@ py_library(
         ":opencl",
         ":public",
         "//datasets/github/scrape_repos/preprocessors:secrets",
-        "//deeplearning/clgen:errors",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//labm8/py:app",
     ],
@@ -529,7 +520,6 @@ py_test(
     deps = [
         ":preprocessors",
         ":public",
-        "//deeplearning/clgen:errors",
         "//deeplearning/clgen/tests:fixtures",
         "//labm8/py:app",
         "//labm8/py:fs",
@@ -551,7 +541,6 @@ py_test(
     srcs = ["test_public.py"],
     deps = [
         ":public",
-        "//deeplearning/clgen:errors",
         "//labm8/py:app",
         "//labm8/py:test",
     ],
