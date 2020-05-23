@@ -619,5 +619,5 @@ class tfBert(backends.BackendBase):
     if max_steps is None:
       max_steps = self.max_eval_steps
     return [
-            hooks.tfProgressBar(max_length = max_steps, mode = tf.compat.v1.ModeKeys.EVAL)
+            hooks.tfProgressBar(max_length = max_steps, mode = tf.compat.v1.estimator.ModeKeys.EVAL)
             ]
