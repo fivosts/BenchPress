@@ -37,6 +37,7 @@ import shutil
 import sys
 import typing
 
+from absl import app as absl_app
 
 from deeplearning.clgen import sample_observers as sample_observers_lib
 from deeplearning.clgen import samplers
@@ -48,7 +49,6 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from labm8.py import app
 from labm8.py import pbutil
-from labm8.py import prof
 
 from eupy.native import logger as l
 
@@ -236,65 +236,6 @@ class Instance(object):
     l.getLogger().debug("deeplearning.clgen.clgen.Instance.FromFile()")
     return cls(pbutil.FromFile(path, clgen_pb2.Instance()))
 
-def Flush():
-  """Flush logging and stout/stderr outputs."""
-  l.getLogger().debug("deeplearning.clgen.clgen.Flush()")
-  app.FlushLogs()
-  sys.stdout.flush()
-  sys.stderr.flush()
-
-def RunWithErrorHandling(
-  function_to_run: typing.Callable, *args, **kwargs
-) -> typing.Any:
-  """
-  Runs the given method as the main entrypoint to a program.
-
-  If an exception is thrown, print error message and exit. If FLAGS.debug is
-  set, the exception is not caught.
-
-  Args:
-    function_to_run: The function to run.
-    *args: Arguments to be passed to the function.
-    **kwargs: Arguments to be passed to the function.
-
-  Returns:
-    The return value of the function when called with the given args.
-  """
-  l.initLogger(name = "clgen", lvl = FLAGS.level, colorize = FLAGS.color, step = FLAGS.step)
-  l.getLogger().debug("deeplearning.clgen.clgen.RunWithErrorHandling()")
-  if FLAGS.clgen_debug:
-    # Enable verbose stack traces. See: https://pymotw.com/2/cgitb/
-    import cgitb
-
-    cgitb.enable(format="text")
-    return function_to_run(*args, **kwargs)
-
-  def RunContext():
-    """Run the function with arguments."""
-    l.getLogger().debug("deeplearning.clgen.clgen.RunContext()")
-    return function_to_run(*args, **kwargs)
-
-  try:
-    if prof.is_enabled():
-      return cProfile.runctx("RunContext()", None, locals(), sort="tottime")
-    else:
-      return RunContext()
-
-  except app.UsageError as err:
-    # UsageError is handled by the call to app.RunWithArgs(), not here.
-    raise err
-  except ValueError as err:
-    raise err
-    sys.exit(1)
-  except KeyboardInterrupt:
-    Flush()
-    print("\nReceived keyboard interrupt, terminating", file=sys.stderr)
-    sys.exit(1)
-  except FileNotFoundError as e:
-    Flush()
-    raise e
-    sys.exit(1)
-
 def ConfigFromFlags() -> clgen_pb2.Instance:
   l.getLogger().debug("deeplearning.clgen.clgen.ConfigFromFlags()")
 
@@ -352,8 +293,6 @@ def DoFlagsAction(
     config: The CLgen instance to act on.
     sample_observer: A list of sample observers. Unused if no sampling occurs.
   """
-  if FLAGS.clgen_profiling:
-    prof.enable()
 
   with instance.Session():
     if FLAGS.clgen_dashboard_only:
@@ -397,6 +336,33 @@ def main():
   )
   sample_observers = SampleObserversFromFlags()
   DoFlagsAction(instance, sample_observers)
+  return
+
+def initMain(*args, **kwargs):
+  """
+  Pre-initialization for the main function of the program
+
+  Args:
+    *args: Arguments to be passed to the function.
+    **kwargs: Arguments to be passed to the function.
+  """
+  l.initLogger(name = "clgen", lvl = FLAGS.level, colorize = FLAGS.color, step = FLAGS.step)
+  l.getLogger().debug("deeplearning.clgen.clgen.RunWithErrorHandling()")
+  if FLAGS.clgen_debug:
+    # Enable verbose stack traces. See: https://pymotw.com/2/cgitb/
+    import cgitb
+    cgitb.enable(format="text")
+    main()
+    sys.exit(0)
+  try:
+    if FLAGS.clgen_profiling:
+      cProfile.runctx("main()", None, None, sort="tottime")
+    else:
+      main()
+  except Exception as e:
+    l.getLogger().error(e)
+    sys.exit(1)
+  sys.exit(0)
 
 if __name__ == "__main__":
-  app.Run(lambda: RunWithErrorHandling(main))
+  absl_app.run(initMain)
