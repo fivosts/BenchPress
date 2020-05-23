@@ -347,6 +347,7 @@ class tfSequential(backends.BackendBase):
     l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.Train()")
     del unused_kwargs
 
+    self.num_epochs = self.config.training.num_epochs
     if self.is_trained:
       return
 
