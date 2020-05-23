@@ -336,7 +336,7 @@ class tfBert(backends.BackendBase):
     l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.InferenceManifest()")
     paths = [ path.absolute() for path in (self.cache.path / "checkpoints").iterdir() ]
     paths += [ path.absolute() for path in (self.cache.path / "logs").iterdir() ]
-    paths += [ self.data_generator.tfRecord ]
+    paths += [ self.data_generator.tfRecord ] ## TODO!!! Warning this can be a bug
     return sorted(paths)
 
   def _model_fn_builder(self,
