@@ -28,58 +28,79 @@ FLAGS = flags.FLAGS
 
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
+  def __init__(self, 
+               inp: np.array, 
+               target: np.array):
+    self.X = inp
+    self.y = target
+    self.sizeof_batch = sys.getsizeof(self) + self.X.nbytes + self.y.nbytes
+    return
 
-  X: np.array
-  y: np.array
+  def LogBatchTelemetry(self,
+                        steps_per_epoch: int,
+                        num_epochs: int,
+                        ) -> None:
+
+    """Log analytics about the batch."""
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.DataBatch.LogBatchTelemetry()")
+    l.getLogger().info("Step shape: X: {}, y" ": {}.".format(batch.X.shape, batch.y.shape))
+    l.getLogger().info(
+      "Memory: {} per batch, {} per epoch, {} total.".format(
+              humanize.BinaryPrefix(self.sizeof_batch, "B"),
+              humanize.BinaryPrefix(self.sizeof_batch * steps_per_epoch, "B"),
+              humanize.BinaryPrefix(self.sizeof_batch * steps_per_epoch * num_epochs, "B"),
+          )
+    )
+    return
 
 class MaskBatch(typing.NamedTuple):
-  input_ids                 : np.array
-  masked_lm_positions       : np.array
-  masked_lm_ids             : np.array
-  masked_lm_weights         : np.array
-  next_sentence_label       : np.int32 ## TODO
+  """Tuple representation of a single MaskLM batch"""
+  def __init__(self, 
+               input_ids            : np.array,
+               masked_lm_positions  : np.array,
+               masked_lm_ids        : np.array,
+               masked_lm_weights    : np.array,
+               next_sentence_label  : np.int32,
+               ):
+    self.input_ids            = input_ids
+    self.masked_lm_positions  = masked_lm_positions
+    self.masked_lm_ids        = masked_lm_ids
+    self.masked_lm_weights    = masked_lm_weights
+    self.next_sentence_label  = next_sentence_label
+    self.sizeof_batch = (sys.getsizeof(self) + 
+                         self.input_ids.nbytes +
+                         self.masked_lm_positions.nbytes +
+                         self.masked_lm_ids.nbytes +
+                         self.masked_lm_weights.nbytes +
+                         self.next_sentence_label.nbytes
+                         )
+    return
 
-def LogBatchTelemetry(
-  batch, steps_per_epoch: int, num_epochs: int
-) -> None:
-  """Log analytics about the batch."""
-  l.getLogger().debug("deeplearning.clgen.models.data_generators.LogBatchTelemetry()")
-  sizeof_batch = 0
-  if isinstance(batch, DataBatch):
-    l.getLogger().info("Step shape: X: {}, y" ": {}.".format(batch.X.shape, batch.y.shape))
-    # sys.getsizeof() includes only the memory required for an object, not any
-    # objects it refernces, so we must manually sum the X and y arrays.
-    sizeof_batch = sys.getsizeof(batch) + batch.X.nbytes + batch.y.nbytes
-  elif isinstance(batch, MaskBatch):
+  def LogBatchTelemetry(self,
+                        steps_per_epoch: int,
+                        num_epochs: int,
+                        ) -> None:
+    """Log analytics about the batch."""
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskBatch.LogBatchTelemetry()")
     l.getLogger().info("Step shape: Input_ids: {},\
                                     masked_lm_positions: {}, \
                                     masked_lm_ids: {}, \
                                     masked_lm_weights: {}, \
                                     next_sentence_label: {}"
-                        .format(
-                                batch.input_ids.shape, 
-                                batch.masked_lm_positions.shape, 
-                                batch.masked_lm_ids.shape,
-                                batch.masked_lm_weights,
-                                batch.next_sentence_label
+                        .format(self.input_ids.shape, 
+                                self.masked_lm_positions.shape, 
+                                self.masked_lm_ids.shape,
+                                self.masked_lm_weights,
+                                self.next_sentence_label
                                 )
                         )
-    sizeof_batch = (sys.getsizeof(batch) +
-                    batch.input_ids.nbytes +
-                    batch.masked_lm_positions.nbytes +
-                    batch.masked_lm_ids.nbytes +
-                    batch.masked_lm_weights +
-                    batch.next_sentence_label
-                  )
-  else:
-    raise ValueError("Unrecognized Data Batch type: {}".format(type(batch)))
-  l.getLogger().info(
-    "Memory: {} per batch, {} per epoch, {} total.".format(
-            humanize.BinaryPrefix(sizeof_batch, "B"),
-            humanize.BinaryPrefix(sizeof_batch * steps_per_epoch, "B"),
-            humanize.BinaryPrefix(sizeof_batch * steps_per_epoch * num_epochs, "B"),
-        )
-  )
+    l.getLogger().info(
+      "Memory: {} per batch, {} per epoch, {} total.".format(
+              humanize.BinaryPrefix(self.sizeof_batch, "B"),
+              humanize.BinaryPrefix(self.sizeof_batch * steps_per_epoch, "B"),
+              humanize.BinaryPrefix(self.sizeof_batch * steps_per_epoch * num_epochs, "B"),
+          )
+    )
 
 class KerasBatchGenerator():
 
