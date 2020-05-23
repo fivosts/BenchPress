@@ -114,7 +114,7 @@ def Preprocess(
     "-o",
     "-",
   ] + cflags
-  app.Log(2, "$ %s", " ".join(cmd))
+
   process = subprocess.Popen(
     cmd,
     stdin=subprocess.PIPE,
@@ -166,7 +166,7 @@ def CompileLlvmBytecode(
       + builtin_cflags
       + cflags
     )
-    app.Log(2, "$ %s", " ".join(cmd))
+
     process = subprocess.Popen(
       cmd,
       stdout=subprocess.PIPE,
