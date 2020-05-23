@@ -37,7 +37,8 @@ import shutil
 import sys
 import typing
 
-from absl import app as absl_app
+from absl import app
+from absl import flags
 
 from deeplearning.clgen import sample_observers as sample_observers_lib
 from deeplearning.clgen import samplers
@@ -47,63 +48,62 @@ from deeplearning.clgen.models import pretrained
 from deeplearning.clgen.proto import clgen_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
-from labm8.py import app
 from labm8.py import pbutil
 
 from eupy.native import logger as l
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
-app.DEFINE_integer(
+flags.DEFINE_integer(
   "level",
   20,
   "Define logging level of logger"
 )
 
-app.DEFINE_boolean(
+flags.DEFINE_boolean(
   "color", True, "Colorize or not, logging messages"
 )
 
-app.DEFINE_boolean(
+flags.DEFINE_boolean(
   "step", False, "Enable step execution on debug logs (debug level must be selected)"
 )
 
-app.DEFINE_string(
+flags.DEFINE_string(
   "config", "/clgen/config.pbtxt", "Path to a clgen.Instance proto file."
 )
-app.DEFINE_string(
+flags.DEFINE_string(
   "workspace_dir",
   "/tmp/clgen",
   "Root path of the working space directory. Corpus, dataset, model and all meta files"
   "will be stored here. Default value is /tmp folder.",
 )
-app.DEFINE_integer(
+flags.DEFINE_integer(
   "min_samples",
   0,
   "The minimum number of samples to make. If <= 0, sampling continues "
   "indefinitely and never terminates.",
 )
-app.DEFINE_boolean(
+flags.DEFINE_boolean(
   "print_samples", True, "If set, print the generated samples."
 )
-app.DEFINE_boolean(
+flags.DEFINE_boolean(
   "cache_samples", False, "If set, cache the generated sample protobufs."
 )
-app.DEFINE_string(
+flags.DEFINE_string(
   "sample_text_dir", None, "A directory to write plain text samples to."
 )
-app.DEFINE_string(
+flags.DEFINE_string(
   "stop_after",
   None,
   'Stop CLgen early. Valid options are: "corpus", or "train".',
 )
-app.DEFINE_string(
+flags.DEFINE_string(
   "print_cache_path",
   None,
   'Print the directory of a cache and exit. Valid options are: "corpus", '
   '"model", or "sampler".',
 )
-app.DEFINE_string(
+flags.DEFINE_string(
   "export_model",
   None,
   "Path to export a trained TensorFlow model to. This exports all of the "
@@ -114,18 +114,18 @@ app.DEFINE_string(
 # TODO(github.com/ChrisCummins/clgen/issues/131): Remove these in favor of
 # standard labm8.py.app methods for enabling extra debugging or profiling
 # information.
-app.DEFINE_boolean(
+flags.DEFINE_boolean(
   "clgen_debug",
   False,
   "Enable a debugging mode of CLgen python runtime. When enabled, errors "
   "which may otherwise be caught lead to program crashes and stack traces.",
 )
-app.DEFINE_boolean(
+flags.DEFINE_boolean(
   "clgen_profiling",
   False,
   "Enable CLgen self profiling. Profiling results be logged.",
 )
-app.DEFINE_boolean(
+flags.DEFINE_boolean(
   "clgen_dashboard_only", False, "If true, launch dashboard only."
 )
 
@@ -365,4 +365,4 @@ def initMain(*args, **kwargs):
   sys.exit(0)
 
 if __name__ == "__main__":
-  absl_app.run(initMain)
+  app.run(initMain)
