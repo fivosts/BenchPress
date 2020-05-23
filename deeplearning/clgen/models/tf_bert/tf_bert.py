@@ -157,7 +157,7 @@ class tfBert(backends.BackendBase):
     if not self.is_trained:
 
       ## Acquire GPU Lock before anything else is done
-      gpu_scheduler.LockExclusiveProcessGpuAccess()
+      # gpu_scheduler.LockExclusiveProcessGpuAccess()
 
       ## Generate BERT Model from dict params
       bert_config = model.BertConfig.from_dict(self.bertConfig)
