@@ -501,11 +501,7 @@ class MaskLMBatchGenerator(object):
     self.tfRecord = np.repeat(padded_sample[None, :], batch_size, axis = 0)
     return
 
-  def generateTfSamples(self,
-                        max_seq_length,
-                        num_cpu_threads,
-                        use_tpu,
-                        ):
+  def generateTfSamples(self):
 
     def input_fn(params):
       batch_size = params["batch_size"]

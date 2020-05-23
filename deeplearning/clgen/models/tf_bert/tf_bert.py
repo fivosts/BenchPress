@@ -294,20 +294,14 @@ class tfBert(backends.BackendBase):
     if self.sample_estimator is None:
       raise ValueError("Bert sampler has not been initialized.")
 
-    input_fn = self.data_generator.generateTfSamples(
-                max_seq_length = sampler.sequence_length,
-                num_cpu_threads = min(os.cpu_count(), sampler.batch_size),
-                use_tpu = FLAGS.use_tpu, ## TODO this flag is supposed to PaddingInputExamples
-                )
-    result = self.sample_estimator.predict(input_fn=input_fn)
+    sample_generator = self.sample_estimator.predict(input_fn = self.data_generator.generateTfSamples())
 
     l.getLogger().warning("TODO!")
     l.getLogger().warning("A) Does the data generator bring as many batches as should ? No less, no more than!")
     l.getLogger().warning("When all data are fetched, the input_fn function should raise an exception")
     l.getLogger().warning("B) Are you able to handle the generated sentence and forward it back to the input ?")
 
-    l.getLogger().info("Classifier prediction: {}".format(result))
-    for pr in result:
+    for pr in sample_generator:
       ## I'm getting a couple of things here:
       ## a) masked_lm_predictions
       ## b) next_sentence_predictions
