@@ -14,7 +14,7 @@
 """Shared code for LLVM modules."""
 import typing
 
-from absl import app
+from absl import flags
 
 FLAGS = flags.FLAGS
 

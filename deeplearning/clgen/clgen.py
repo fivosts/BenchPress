@@ -360,6 +360,7 @@ def initMain(*args, **kwargs):
       main()
   except Exception as e:
     l.getLogger().error(e)
+    raise
     sys.exit(1)
   sys.exit(0)
 
