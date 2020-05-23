@@ -74,11 +74,7 @@ class MaskBatch(typing.NamedTuple):
                         ) -> None:
     """Log analytics about the batch."""
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskBatch.LogBatchTelemetry()")
-    l.getLogger().info("Step shape: Input_ids: {},\
-                                    masked_lm_positions: {}, \
-                                    masked_lm_ids: {}, \
-                                    masked_lm_weights: {}, \
-                                    next_sentence_label: {}"
+    l.getLogger().info("Step shape: Input_ids: {}, masked_lm_positions: {}, masked_lm_ids: {}, masked_lm_weights: {}, next_sentence_label: {}"
                         .format(self.input_ids.shape, 
                                 self.masked_lm_positions.shape, 
                                 self.masked_lm_ids.shape,
