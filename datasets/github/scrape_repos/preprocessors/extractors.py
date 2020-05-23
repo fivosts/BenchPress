@@ -17,13 +17,14 @@ import pathlib
 import subprocess
 import typing
 
+from absl import flags
+
 from datasets.github.scrape_repos.preprocessors import public
 from datasets.github.scrape_repos.proto import scrape_repos_pb2
-from labm8.py import app
 from labm8.py import bazelutil
 from labm8.py import pbutil
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 # The path to the methods extractor binary.
 JAVA_METHODS_EXTRACTOR = bazelutil.DataPath(
@@ -51,7 +52,7 @@ def ExtractJavaMethods(text: str, static_only: bool = True) -> typing.List[str]:
   Raises:
     ValueError: In case method extraction fails.
   """
-  app.Log(2, "$ %s", JAVA_METHODS_EXTRACTOR)
+  l.getLogger().error("$ {}".format(JAVA_METHODS_EXTRACTOR))
   process = subprocess.Popen(
     [JAVA_METHODS_EXTRACTOR],
     stdin=subprocess.PIPE,

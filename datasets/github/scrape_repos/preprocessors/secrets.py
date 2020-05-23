@@ -12,9 +12,9 @@ from detect_secrets.plugins.common import (
 )
 
 from datasets.github.scrape_repos.preprocessors import public
-from labm8.py import app
+from absl import flags
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 
 class TextContainsSecret(ValueError):

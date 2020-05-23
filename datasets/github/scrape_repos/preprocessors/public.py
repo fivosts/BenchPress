@@ -16,10 +16,10 @@ import pathlib
 import subprocess
 import typing
 
-from labm8.py import app
+from absl import flags
 from labm8.py import fs
 
-FLAGS = app.FLAGS
+FLAGS = flags.FLAGS
 
 # Type hint for a preprocessor function. See @clgen_preprocess for details.
 PreprocessorFunction = typing.Callable[[str], typing.List[str]]
