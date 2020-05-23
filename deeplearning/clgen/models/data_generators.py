@@ -160,7 +160,7 @@ class KerasBatchGenerator():
           y=self.OneHotEncode(y_epoch[batch_num], corpus.vocab_size),
         )
         if not batch_num and not epoch_num:
-          LogBatchTelemetry(batch, steps_per_epoch, training_opts.num_epochs)
+          batch.LogBatchTelemetry(steps_per_epoch, training_opts.num_epochs)
         yield batch
       epoch_num += 1
     return
@@ -249,9 +249,7 @@ class TensorflowBatchGenerator(object):
     self.batches = None
     self.CreateBatches()
 
-    LogBatchTelemetry(
-      self.batches[0], self.num_batches, self.training_opts.num_epochs
-    )
+    self.batches[0].LogBatchTelemetry(self.num_batches, self.training_opts.num_epochs)
     return
 
   def CreateBatches(self) -> None:
