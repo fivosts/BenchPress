@@ -431,19 +431,12 @@ class tfBert(backends.BackendBase):
         train_op = optimizer.create_optimizer(
             total_loss, self.learning_rate, self.num_train_steps, self.num_warmup_steps, FLAGS.use_tpu)
 
-        training_hooks = self._GetSummaryHooks(save_steps = self.num_steps_per_epoch,
-                                              output_dir = str(self.logfile_path),
+        training_hooks = self.GetTrainingHooks(tensors = {'Loss': total_loss},
                                               masked_lm_loss = masked_lm_loss,
                                               next_sentence_loss = next_sentence_loss,
                                               total_loss = total_loss,
-                                              learning_rate = self.learning_rate
+                                              learning_rate = self.learning_rate,
                                               )
-
-        training_hooks += self._GetProgressBarHooks(max_length = self.num_train_steps,
-                                                    tensors = {'Loss': total_loss},
-                                                    log_steps = self.num_steps_per_epoch,
-                                                    at_end = True,
-                                                    )
 
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
             mode = mode,
@@ -620,34 +613,32 @@ class tfBert(backends.BackendBase):
     output_tensor = tf.gather(flat_sequence_tensor, flat_positions)
     return output_tensor
 
-  def _GetSummaryHooks(self, 
-                       save_steps: int, 
-                       output_dir: str, 
+  def GetTrainingHooks(self,
+                       tensors: typing.Dict[str, tf.Tensor],
+                       log_steps: int = None, 
+                       max_steps: int = None,
+                       output_dir: str = None,
                        **kwargs
                        ) -> typing.List[tf.estimator.SummarySaverHook]:
-    return [tf.estimator.SummarySaverHook(save_steps = save_steps,
+    if log_steps is None:
+      log_steps = self.num_steps_per_epoch
+    if max_steps is None:
+      max_steps = self.num_train_steps
+    if output_dir is None:
+      output_dir = str(self.logfile_path)
+    return [
+            tf.estimator.SummarySaverHook(save_steps = log_steps,
                                           output_dir = output_dir,
                                           summary_op = [ tf.compat.v1.summary.scalar(name, value) 
                                                           for name, value in kwargs.items()
                                                         ]
-                                          )
+                                          ),
+            hooks.tfLogTensorHook(tensors = tensors, 
+                                  log_steps = log_steps, 
+                                  at_end = True
+                                  ),
+            hooks.tfProgressBar(max_length = max_steps),
            ]
-
-  def _GetProgressBarHooks(self, 
-                           max_length: int, 
-                           tensors = None,
-                           log_steps = None,
-                           at_end = None,
-                           is_training = True,
-                           ) -> typing.List[hooks.tfProgressBar]:
-    return [hooks.tfProgressBar(
-                max_length = max_length,
-                tensors = tensors,
-                log_steps = log_steps,
-                at_end = at_end,
-                is_training = is_training,
-              )
-            ]    
   
   @property
   def is_validated(self):
