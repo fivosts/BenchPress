@@ -400,13 +400,6 @@ class tfBert(backends.BackendBase):
           l.getLogger().info("Loading model checkpoint from: {}".format(str(self.ckpt_path)))
           tf.compat.v1.train.init_from_checkpoint(str(self.ckpt_path), assignment_map)
 
-      # l.getLogger().info("**** Trainable Variables ****")
-      # for var in tvars:
-      #   init_string = ""
-      #   if var.name in initialized_variable_names:
-      #     init_string = ", *INIT_FROM_CKPT*"
-      #   l.getLogger().info("  name = {}, shape = {}{}".format(var.name, var.shape, init_string))
-
       output_spec = None
       if mode == tf.compat.v1.estimator.ModeKeys.TRAIN:
         train_op = optimizer.create_optimizer(
