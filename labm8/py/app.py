@@ -94,15 +94,13 @@ absl_flags.DEFINE_boolean(
 
 # Expose some of the variables produced by //tools:workspace_status.sh, see the
 # module docstring for details:
-# VERSION = workspace_status.STABLE_VERSION
-GIT_URL = workspace_status.STABLE_GIT_URL
-GIT_COMMIT = workspace_status.STABLE_GIT_COMMIT
-GIT_DIRTY = workspace_status.STABLE_GIT_DIRTY
-TIMESTAMP = datetime.datetime.fromtimestamp(
-  int(workspace_status.BUILD_TIMESTAMP)
-)
-BUILT_BY = f"{workspace_status.BUILD_USER}@{workspace_status.BUILD_HOST}"
-ARCH = workspace_status.STABLE_ARCH
+VERSION = "1.0.0" 
+GIT_URL = "https://github.com/fivosts/clgen.git"
+GIT_COMMIT = "master:latest"
+GIT_DIRTY = False
+TIMESTAMP = datetime.datetime.fromtimestamp(23052020)
+BUILT_BY = "SAM"
+ARCH = "Linux-x64"
 
 
 # A decorator to mark a function as ignored when computing the log prefix.
