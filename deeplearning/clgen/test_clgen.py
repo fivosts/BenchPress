@@ -20,31 +20,23 @@ import tempfile
 from deeplearning.clgen import clgen
 
 from deeplearning.clgen.proto import clgen_pb2
-from absl import flags
+from absl import flags, app
 from deeplearning.clgen import pbutil
 from labm8.py import test
+from eupy.native import logger as l
 
 FLAGS = test.FLAGS
 
 pytest_plugins = ["deeplearning.clgen.tests.fixtures"]
+l.initLogger(name = "clgen_test")
 
 # Instance tests.
-
 
 def test_Instance_no_working_dir_field(abc_instance_config):
   """Test that working_dir is None when no working_dir field in config."""
   abc_instance_config.ClearField("working_dir")
   instance = clgen.Instance(abc_instance_config)
   assert instance.working_dir is None
-
-
-def test_Instance_working_dir_shell_variable_expansion(abc_instance_config):
-  """Test that shell variables are expanded in working_dir."""
-  working_dir = abc_instance_config.working_dir
-  os.environ["FOO"] = working_dir
-  abc_instance_config.working_dir = "$FOO/"
-  instance = clgen.Instance(abc_instance_config)
-  assert str(instance.working_dir) == working_dir
 
 
 def test_Instance_no_model_field(abc_instance_config):
@@ -93,39 +85,12 @@ def test_Instance_ToProto_equality(abc_instance_config):
   instance = clgen.Instance(abc_instance_config)
   assert abc_instance_config == instance.ToProto()
 
-
-# RunWithErrorHandling() tests.
-
-
-def test_RunWithErrorHandling_return_value(clgen_cache_dir):
-  """Test that RunWithErrorHandling() returns correct value for function."""
-  del clgen_cache_dir
-  assert clgen.RunWithErrorHandling(lambda a, b: a // b, 4, 2) == 2
-
-
-def test_RunWithErrorHandling_system_exit(clgen_cache_dir):
-  """Test that SystemExit is raised on exception."""
-  del clgen_cache_dir
-  with test.Raises(SystemExit):
-    clgen.RunWithErrorHandling(lambda a, b: a // b, 1, 0)
-
-
-def test_RunWithErrorHandling_exception_debug(clgen_cache_dir):
-  """Test that FLAGS.debug disables exception catching."""
-  del clgen_cache_dir
-  FLAGS.unparse_flags()
-  FLAGS(["argv0"])
-  FLAGS.clgen_debug = True
-  with test.Raises(ZeroDivisionError):
-    clgen.RunWithErrorHandling(lambda a, b: a // b, 1, 0)
-
-
 # main tests.
 
 
 def test_main_no_config_flag():
   """Test that UsageError is raised if --config flag not set."""
-  with test.Raises(app.UsageError) as e_info:
+  with test.Raises(FileNotFoundError) as e_info:
     clgen.main()
   assert "CLgen --config file not found: '/clgen/config.pbtxt'" == str(
     e_info.value
@@ -138,7 +103,7 @@ def test_main_config_file_not_found():
   FLAGS(["argv0"])
   with tempfile.TemporaryDirectory() as d:
     FLAGS.config = f"{d}/config.pbtxt"
-    with test.Raises(app.UsageError) as e_info:
+    with test.Raises(FileNotFoundError) as e_info:
       clgen.main()
     assert f"CLgen --config file not found: '{d}/config.pbtxt'" == str(
       e_info.value
@@ -190,7 +155,7 @@ def test_main_print_cache_invalid_argument(abc_instance_file):
   FLAGS(["argv0"])
   FLAGS.config = abc_instance_file
   FLAGS.print_cache_path = "foo"
-  with test.Raises(app.UsageError) as e_info:
+  with test.Raises(ValueError) as e_info:
     clgen.main()
   assert "Invalid --print_cache_path argument: 'foo'" == str(e_info.value)
 
@@ -236,7 +201,7 @@ def test_main_stop_after_uncrecognized(abc_instance_file):
   FLAGS(["argv0"])
   FLAGS.config = abc_instance_file
   FLAGS.stop_after = "foo"
-  with test.Raises(app.UsageError):
+  with test.Raises(ValueError):
     clgen.main()
 
 
