@@ -320,7 +320,7 @@ class tfBert(backends.BackendBase):
       f"#att_h: {self.bertConfig['num_attention_heads']}, "
       f"imd_s: {self.bertConfig['intermediate_size']}, "
       f"h_act: {self.bertConfig['hidden_act']}, "
-      f"{model_pb2.NetworkArchitecture.NeuronType.Name(self.config.architecture.backend)} "
+      f"{model_pb2.NetworkArchitecture.Backend.Name(self.config.architecture.backend)} "
       "network"
     )
 
