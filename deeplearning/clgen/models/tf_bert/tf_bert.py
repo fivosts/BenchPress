@@ -154,8 +154,6 @@ class tfBert(backends.BackendBase):
                            )
     self._ConfigModelParams()
 
-    ## TODO, also search the checkpoints to determine if is_trained
-    ## Additionally, you will have to exclude num_train_steps from model hash
     if not self.is_trained:
 
       ## Acquire GPU Lock before anything else is done
@@ -221,7 +219,7 @@ class tfBert(backends.BackendBase):
           max_seq_length=self.max_seq_length,
           num_cpu_threads = 8,
           is_training=False)
-      
+
       result = estimator.evaluate(input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
       self._writeValidation(result)
 
