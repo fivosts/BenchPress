@@ -16,7 +16,6 @@ py_test(
     deps = [
         "//deeplearning/clgen",
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         "//labm8/py:bazelutil",
         "//deeplearning/clgen:pbutil",
         "//labm8/py:test",

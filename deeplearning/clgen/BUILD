@@ -49,7 +49,6 @@ py_library(
     srcs = ["cache.py"],
     visibility = ["//deeplearning/clgen:__subpackages__"],
     deps = [
-        "//labm8/py:app",
         "//labm8/py:cache",
         "//labm8/py:fs",
     ],
@@ -66,7 +65,6 @@ py_binary(
         "//deeplearning/clgen/models",
         "//deeplearning/clgen/models:pretrained",
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         ":pbutil",
         "//labm8/py:prof",
     ],
@@ -85,7 +83,6 @@ py_test(
         ":clgen",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//deeplearning/clgen/tests:fixtures",
-        "//labm8/py:app",
         "//labm8/py:fs",
         ":pbutil",
         "//labm8/py:tar",
@@ -100,7 +97,6 @@ py_binary(
     deps = [
         "//deeplearning/clgen/models",
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         ":pbutil",
     ],
 )
@@ -113,7 +109,6 @@ py_binary(
         "//deeplearning/clgen/corpuses:preprocessed",
         "//deeplearning/clgen/preprocessors",
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         "//labm8/py:humanize",
         "//third_party/py/progressbar",
     ],
@@ -137,7 +132,6 @@ py_library(
         ":samplers",
         "//deeplearning/clgen/models:pretrained",
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         ":pbutil",
     ],
 )
@@ -148,7 +142,6 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         "//labm8/py:crypto",
         "//labm8/py:fs",
         ":pbutil",
@@ -161,7 +154,6 @@ py_test(
     deps = [
         ":sample_observers",
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         "//labm8/py:crypto",
         "//labm8/py:fs",
         "//labm8/py:test",
@@ -176,7 +168,6 @@ py_library(
         ":cache",
         "//deeplearning/clgen/corpuses:atomizers",
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         "//labm8/py:crypto",
         ":pbutil",
     ],
@@ -196,7 +187,6 @@ py_test(
     deps = [
         ":samplers",
         "//deeplearning/clgen/tests:fixtures",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )
@@ -233,7 +223,6 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         "//labm8/py:jsonutil",
         "//labm8/py:labdate",
         ":pbutil",
@@ -245,7 +234,6 @@ py_test(
     srcs = ["test_telemetry.py"],
     deps = [
         ":telemetry",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )

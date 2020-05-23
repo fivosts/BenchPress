@@ -20,7 +20,6 @@ py_binary(
     srcs = ["export_preprocessed_files.py"],
     deps = [
         "//deeplearning/clgen/corpuses:preprocessed",
-        "//labm8/py:app",
         "//labm8/py:fs",
         "//labm8/py:humanize",
         "//labm8/py:ppar",
@@ -35,7 +34,6 @@ py_test(
     deps = [
         ":export_preprocessed_files",
         "//deeplearning/clgen/corpuses:preprocessed",
-        "//labm8/py:app",
         "//labm8/py:fs",
         "//labm8/py:test",
     ],

@@ -25,7 +25,6 @@ py_library(
         "//deeplearning/clgen/dashboard",
         "//deeplearning/clgen/dashboard:dashboard_db",
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         "//labm8/py:cache",
         "//third_party/py/numpy",
     ],
@@ -37,7 +36,6 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         "//deeplearning/clgen:pbutil",
         "//third_party/py/keras",
         "//third_party/py/tensorflow",
@@ -51,7 +49,6 @@ py_test(
         ":builders",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//deeplearning/clgen/tests:fixtures",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )
@@ -62,7 +59,6 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         "//labm8/py:humanize",
         "//third_party/py/numpy",
     ],
@@ -75,7 +71,6 @@ py_test(
         ":data_generators",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//deeplearning/clgen/tests:fixtures",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )
@@ -96,7 +91,6 @@ py_library(
         "//deeplearning/clgen/corpuses",
         "//deeplearning/clgen/dashboard:dashboard_db",
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         "//labm8/py:crypto",
         "//labm8/py:humanize",
         "//labm8/py:lockfile",
@@ -121,7 +115,6 @@ py_library(
         "//deeplearning/clgen:telemetry",
         "//deeplearning/clgen/corpuses:atomizers",
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         "//labm8/py:cache",
         "//labm8/py:humanize",
         "//labm8/py:labdate",
@@ -137,7 +130,6 @@ py_test(
         ":models",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//deeplearning/clgen/tests:fixtures",
-        "//labm8/py:app",
         "//labm8/py:crypto",
         "//labm8/py:fs",
         "//labm8/py:test",

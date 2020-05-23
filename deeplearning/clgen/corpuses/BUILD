@@ -20,7 +20,6 @@ py_library(
     srcs = ["atomizers.py"],
     visibility = ["//visibility:public"],
     deps = [
-        "//labm8/py:app",
         "//labm8/py:labdate",
         "//third_party/py/numpy",
     ],
@@ -33,7 +32,6 @@ py_test(
     deps = [
         ":atomizers",
         "//deeplearning/clgen/tests:fixtures",
-        "//labm8/py:app",
         "//labm8/py:bazelutil",
         "//labm8/py:test",
     ],
@@ -51,7 +49,6 @@ py_library(
         "//deeplearning/clgen/dashboard:dashboard_db",
         "//deeplearning/clgen/preprocessors",
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         "//labm8/py:bazelutil",
         "//labm8/py:crypto",
         "//labm8/py:hashcache",
@@ -77,7 +74,6 @@ py_test(
         "//deeplearning/clgen/preprocessors:opencl",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//deeplearning/clgen/tests:fixtures",
-        "//labm8/py:app",
         "//labm8/py:fs",
         "//labm8/py:test",
     ],
@@ -91,7 +87,6 @@ py_library(
         ":atomizers",
         ":preprocessed",
         "//deeplearning/clgen/preprocessors",
-        "//labm8/py:app",
         "//labm8/py:humanize",
         "//labm8/py:sqlutil",
         "//third_party/py/numpy",
@@ -108,7 +103,6 @@ py_test(
         ":encoded",
         ":preprocessed",
         "//deeplearning/clgen/tests:fixtures",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )
@@ -120,7 +114,6 @@ py_library(
     deps = [
         "//deeplearning/clgen/preprocessors",
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         "//labm8/py:crypto",
         "//labm8/py:fs",
         "//labm8/py:sqlutil",

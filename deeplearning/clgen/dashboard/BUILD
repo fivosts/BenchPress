@@ -11,7 +11,6 @@ py_library(
     ],
     visibility = ["//deeplearning/clgen:__subpackages__"],
     deps = [
-        "//labm8/py:app",
         "//labm8/py:decorators",
         "//labm8/py:labdate",
         "//labm8/py:sqlutil",
@@ -30,7 +29,6 @@ py_library(
     ],
     visibility = ["//deeplearning/clgen:__subpackages__"],
     deps = [
-        "//labm8/py:app",
         "//labm8/py:decorators",
         "//labm8/py:labdate",
         "//labm8/py:sqlutil",

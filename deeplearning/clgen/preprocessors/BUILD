@@ -33,7 +33,6 @@ py_library(
         "//compilers/llvm",
         "//compilers/llvm:clang",
         "//compilers/llvm:clang_format",
-        "//labm8/py:app",
     ],
 )
 
@@ -42,7 +41,6 @@ py_test(
     srcs = ["test_clangt.py"],
     deps = [
         ":clang",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )
@@ -254,7 +252,6 @@ py_library(
     visibility = ["//deeplearning/clgen:__subpackages__"],
     deps = [
         ":public",
-        "//labm8/py:app",
     ],
 )
 
@@ -263,7 +260,6 @@ py_test(
     srcs = ["test_common.py"],
     deps = [
         ":common",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )
@@ -285,7 +281,6 @@ py_library(
         ":normalizer",
         ":public",
         "//compilers/llvm:clang",
-        "//labm8/py:app",
         "//labm8/py:bazelutil",
     ],
 )
@@ -295,7 +290,6 @@ py_test(
     srcs = ["test_cxx.py"],
     deps = [
         ":cxx",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )
@@ -309,7 +303,6 @@ py_library(
         ":clang",
         ":public",
         "//datasets/github/scrape_repos/preprocessors:extractors",
-        "//labm8/py:app",
         "//labm8/py:bazelutil",
     ],
 )
@@ -319,7 +312,6 @@ py_test(
     srcs = ["test_java.py"],
     deps = [
         ":java",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )
@@ -445,7 +437,6 @@ py_library(
         ":clang_rewriter",
     ],
     deps = [
-        "//labm8/py:app",
         "//labm8/py:bazelutil",
     ],
 )
@@ -455,7 +446,6 @@ py_test(
     srcs = ["test_normalizer.py"],
     deps = [
         ":normalizer",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )
@@ -485,7 +475,6 @@ py_test(
         ":clang",
         ":opencl",
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
         "//labm8/py:bazelutil",
         "//labm8/py:test",
     ],
@@ -510,7 +499,6 @@ py_library(
         ":public",
         "//datasets/github/scrape_repos/preprocessors:secrets",
         "//deeplearning/clgen/proto:clgen_pb_py",
-        "//labm8/py:app",
     ],
 )
 
@@ -521,7 +509,6 @@ py_test(
         ":preprocessors",
         ":public",
         "//deeplearning/clgen/tests:fixtures",
-        "//labm8/py:app",
         "//labm8/py:fs",
         "//labm8/py:test",
     ],
@@ -532,7 +519,6 @@ py_library(
     srcs = ["public.py"],
     visibility = ["//visibility:public"],
     deps = [
-        "//labm8/py:app",
     ],
 )
 
@@ -541,7 +527,6 @@ py_test(
     srcs = ["test_public.py"],
     deps = [
         ":public",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )

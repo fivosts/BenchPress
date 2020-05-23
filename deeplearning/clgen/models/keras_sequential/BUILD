@@ -30,7 +30,6 @@ py_test(
         "//deeplearning/clgen:sample_observers",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//deeplearning/clgen/tests:fixtures",
-        "//labm8/py:app",
         "//labm8/py:crypto",
         "//labm8/py:fs",
         "//labm8/py:test",

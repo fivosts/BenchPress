@@ -23,7 +23,6 @@ py_test(
         "//deeplearning/clgen/preprocessors:common",
         "//deeplearning/clgen/preprocessors:cxx",
         "//deeplearning/clgen/preprocessors:opencl",
-        "//labm8/py:app",
         "//labm8/py:test",
     ],
 )
