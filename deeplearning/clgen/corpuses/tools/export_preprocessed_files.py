@@ -7,15 +7,14 @@ import tarfile
 from typing import Optional
 
 import sqlalchemy as sql
+from absl import flags, app
+from eupy.native import logger as l
 
 from deeplearning.clgen.corpuses import preprocessed
-from absl import flags
 from labm8.py import fs
 from labm8.py import humanize
 from labm8.py import ppar
 from labm8.py import sqlutil
-
-from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
@@ -142,4 +141,4 @@ def Main():
 
 
 if __name__ == "__main__":
-  app.Run(Main)
+  app.run(Main)

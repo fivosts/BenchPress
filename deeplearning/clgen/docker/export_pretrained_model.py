@@ -4,8 +4,9 @@ import subprocess
 import tempfile
 import typing
 
+from absl import flags, app
+
 from deeplearning.clgen import clgen
-from absl import flags
 from labm8.py import fs
 from deeplearning.clgen import pbutil
 from research.cummins_2017_cgo import generative_model
@@ -66,4 +67,4 @@ def main():
 
 
 if __name__ == "__main__":
-  app.Run(main)
+  app.run(main)
