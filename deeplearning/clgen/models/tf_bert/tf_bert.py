@@ -128,6 +128,7 @@ class tfBert(backends.BackendBase):
     self.num_steps_per_epoch                = self.data_generator.num_batches
     self.num_epochs                         = int(self.num_train_steps / self.num_steps_per_epoch)
 
+    self.max_eval_steps                     = FLAGS.max_eval_steps
     self.validation_results_file            = "val_results.txt"
     self.validation_results_path            = os.path.join(str(self.logfile_path), self.validation_results_file)
 
@@ -487,15 +488,14 @@ class tfBert(backends.BackendBase):
             next_sentence_log_probs, next_sentence_labels
         ])
 
-        evaluation_hooks = self._GetProgressBarHooks(
-          max_length = FLAGS.max_eval_steps, is_training = False
-        )
+        evaluation_hooks = self.GetValidationHooks()
+
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
-            mode=mode,
-            loss=total_loss,
+            mode = mode,
+            loss = total_loss,
             evaluation_hooks = evaluation_hooks,
-            eval_metrics=eval_metrics,
-            scaffold_fn=scaffold_fn)
+            eval_metrics = eval_metrics,
+            scaffold_fn = scaffold_fn)
       else:
         masked_lm_log_probs = tf.reshape(masked_lm_log_probs,[-1, masked_lm_log_probs.shape[-1]])
         masked_lm_predictions = tf.argmax(masked_lm_log_probs, axis=-1, output_type=tf.int32)
@@ -619,7 +619,7 @@ class tfBert(backends.BackendBase):
                        max_steps: int = None,
                        output_dir: str = None,
                        **kwargs
-                       ) -> typing.List[tf.estimator.SummarySaverHook]:
+                       ) -> typing.List[tf.estimator.SessionRunHooks]:
     if log_steps is None:
       log_steps = self.num_steps_per_epoch
     if max_steps is None:
@@ -640,6 +640,15 @@ class tfBert(backends.BackendBase):
             hooks.tfProgressBar(max_length = max_steps),
            ]
   
+  def GetValidationHooks(self,
+                         max_steps = None,
+                         ) -> typing.List[tf.estimator.SessionRunHooks]:
+    if max_steps is None:
+      max_steps = self.max_eval_steps
+    return [
+            hooks.tfProgressBar(max_length = max_steps, mode = tf.compat.v1.ModeKeys.EVAL)
+            ]
+
   @property
   def is_validated(self):
     if os.path.exists(self.validation_results_path):
