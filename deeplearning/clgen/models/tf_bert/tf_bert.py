@@ -315,7 +315,6 @@ class tfBert(backends.BackendBase):
 
     return []
 
-
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
     return (
