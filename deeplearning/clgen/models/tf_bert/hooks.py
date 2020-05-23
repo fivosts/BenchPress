@@ -87,12 +87,9 @@ class tfProgressBar(_tfEstimatorHooks):
     Initialize Progress Bar Hook
     This hook shows a progress bar in output and prints after N steps tensor values provided.
 
-  Args:
-    max_length: This is the maximum threshold of the progress bar
-    tensors: Optional string to tf.Tensor dictionary for the tensor values desired to be monitored, if set.
-    log_steps: If set, logs tensor values once every defined number of estimator steps
-    at_end: If set, prints tensor values at end of session
-    mode: If hooks is used for training or evaluation
+    Args:
+      max_length: This is the maximum threshold of the progress bar
+      mode: If hooks is used for training or evaluation
     """
     super(tfProgressBar, self).__init__(mode)
 
@@ -125,6 +122,13 @@ class tfLogTensorHook(_tfEstimatorHooks):
                at_end: bool = False,
                mode: tf.compat.v1.estimator.ModeKeys = tf.compat.v1.estimator.ModeKeys.TRAIN,
               ):
+    """
+    Args:
+      tensors: Optional string to tf.Tensor dictionary for the tensor values desired to be monitored, if set.
+      log_steps: If set, logs tensor values once every defined number of estimator steps
+      at_end: If set, prints tensor values at end of session
+      mode: If hooks is used for training or evaluation
+    """
     super(tfLogTensorHook, self).__init__(mode)
 
 
