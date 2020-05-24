@@ -305,6 +305,7 @@ class MaskLMBatchGenerator(object):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.__init__()")
 
     self.corpus                     = None
+    self.atomizer                   = None
     self.shaped_corpus              = None
     self.masked_corpus              = None
 
@@ -327,6 +328,7 @@ class MaskLMBatchGenerator(object):
                                ) -> "data_generators.MaskLMBatchGenerator":
     d               = MaskLMBatchGenerator()
     d.corpus        = corpus
+    d.atomizer      = corpus.atomizer
     d.training_opts = training_opts
     d.tfRecord      = cache_path / "dataset" / "maskedDataset.tf_record"
     d.rngen         = random.Random(d.training_opts.random_seed)
@@ -346,15 +348,15 @@ class MaskLMBatchGenerator(object):
                                 max_position_embeddings,
                                 ) -> "data_generators.MaskLMBatchGenerator":
     d = MaskLMBatchGenerator()
-    d.sampler = sampler
-    d.atomizer = atomizer
-    d.rngen = random.Random(seed)
+    d.sampler     = sampler
+    d.atomizer    = atomizer
+    d.rngen       = random.Random(seed)
+    d.batch_size              = sampler.batch_size
     d.max_position_embeddings = max_position_embeddings
-    d.is_training = False
     return d
 
   def generateTfDataset(self,
-                      max_seq_length,
+                      sequence_length,
                       is_training,
                       num_cpu_threads,
                       use_tpu = False,
@@ -364,19 +366,14 @@ class MaskLMBatchGenerator(object):
       """Decodes a record to a TensorFlow example."""
       ## This function assumes record is still a file (expressed as TF dataset)
       ## It decodes this record to tf scalars.
-      ## You already have them so this will be skipped
       example = tf.io.parse_single_example(record, name_to_features)
-
       # tf.Example only supports tf.int64, but the TPU only supports tf.int32.
       # So cast all int64 to int32.
       for name in list(example.keys()):
         t = example[name]
         if t.dtype == tf.int64:
-          # t = tf.compat.v1.to_int32(t)
           t = tf.cast(t, dtype = tf.int32)
-
         example[name] = t
-
       return example
 
     def input_fn(params):
@@ -384,7 +381,7 @@ class MaskLMBatchGenerator(object):
       batch_size = params["batch_size"]
       name_to_features = {
           "input_ids":
-              tf.io.FixedLenFeature([max_seq_length], tf.int64),
+              tf.io.FixedLenFeature([sequence_length], tf.int64),
           "masked_lm_positions":
               tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
           "masked_lm_ids":
@@ -439,19 +436,17 @@ class MaskLMBatchGenerator(object):
 
   def InitSampleBatch(self,
                       input_sample,
-                      max_seq_length,
-                      batch_size,
+                      sequence_length,
                       ) -> None:
 
     assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
     expanded_sample = self._expandHoleToMasks(
-          input_sample, max_seq_length - len(input_sample) + 1
+          input_sample, sequence_length - len(input_sample) + 1
           )
-
     padded_sample = self._padToMaxPosition(expanded_sample)
 
     assert len(padded_sample) == self.max_position_embeddings, "Padded sequence does not match max_position_embeddings"
-    self.tfRecord = np.repeat(padded_sample[None, :], batch_size, axis = 0)
+    self.tfRecord = np.repeat(padded_sample[None, :], self.batch_size, axis = 0)
     return
 
   def _expandHoleToMasks(self,
@@ -463,22 +458,22 @@ class MaskLMBatchGenerator(object):
     ## and instructs a function to replace that token  with a sequence of masks
     ## That is too specific over "replacing holes with masks" but can/should be 
     ## generalized to anything
-    hole_index = np.where(sample == self.corpus.atomizer.holeToken)[0]
+    hole_index = np.where(sample == self.atomizer.holeToken)[0]
     if len(hole_index) == 0: ## Nothing to do
       return sample
     if len(hole_index) > 1:
       l.getLogger().warning("Multiple instances of {} are found. \
-                              Selecting the first one.".format(self.corpus.atomizer.holeLabel))
+                              Selecting the first one.".format(self.atomizer.holeLabel))
 
     fhidx = hole_index[0]
     return np.concatenate([sample[:fhidx], 
-                            np.array([self.corpus.atomizer.maskToken] * length, dtype = np.int32),
+                            np.array([self.atomizer.maskToken] * length, dtype = np.int32),
                             sample[fhidx + 1:]
                           ])
 
   def _padToMaxPosition(self, input_sample):
     return np.concatenate([
-                input_sample, np.array([self.corpus.atomizer.padToken] * (
+                input_sample, np.array([self.atomizer.padToken] * (
                                               self.max_position_embeddings - len(input_sample)
                                               ), 
                                         dtype = np.int32
@@ -499,17 +494,10 @@ class MaskLMBatchGenerator(object):
           'next_sentence_labels'  : tf.convert_to_tensor([[1] * batch_size], dtype = tf.int32)
         }
       for bidx, sample in enumerate(self.tfRecord):
-        input_ids, masked_lm_positions, masked_lm_ids, masked_lm_weights = [], [], [], []
-        for tidx, token in enumerate(sample):
-          input_ids.append(token)
-          if token == self.corpus.atomizer.maskToken:
-            masked_lm_positions.append(tidx)
-            masked_lm_ids.append(token)
-            masked_lm_weights.append(0.0)
-        tfSampleBatch['input_ids'][bidx]            = input_ids
-        tfSampleBatch['masked_lm_positions'][bidx]  = masked_lm_positions
-        tfSampleBatch['masked_lm_ids'][bidx]        = masked_lm_ids
-        tfSampleBatch['masked_lm_weights'][bidx]    = masked_lm_weights
+        tfSampleBatch['input_ids'][bidx]            = list(sample)
+        tfSampleBatch['masked_lm_positions'][bidx]  = list(np.where(sample == self.atomizer.maskToken)[0])
+        tfSampleBatch['masked_lm_ids'][bidx]        = [self.atomizer.padToken] * len(tfSampleBatch['masked_lm_positions'][bidx])
+        tfSampleBatch['masked_lm_weights'][bidx]    = [0.0] * len(tfSampleBatch['masked_lm_positions'][bidx])
 
       tfSampleBatch['input_ids']            = tf.convert_to_tensor(tfSampleBatch['input_ids'], dtype = tf.int32)
       tfSampleBatch['masked_lm_positions']  = tf.convert_to_tensor(tfSampleBatch['masked_lm_positions'], dtype = tf.int32)
@@ -641,7 +629,7 @@ class MaskLMBatchGenerator(object):
 
       # 80% of the time, replace with [MASK]
       if self.rngen.random() < 0.8:
-        input_ids[pos_index] = self.corpus.atomizer.maskToken ## TODO ?????
+        input_ids[pos_index] = self.atomizer.maskToken ## TODO ?????
       # The else block below is debatable for this use case. So comment out for now
       # else:
       #   # 10% of the time, keep original
@@ -649,7 +637,7 @@ class MaskLMBatchGenerator(object):
       #     pass
       #   # 10% of the time, replace with random word
       #   else:
-      #     input_ids[pos_index] = self.rngen.randint(0, self.corpus.atomizer.vocab_size - 1)
+      #     input_ids[pos_index] = self.rngen.randint(0, self.atomizer.vocab_size - 1)
 
       class MaskedLmInstance(typing.NamedTuple):
         pos_index: int
@@ -674,7 +662,7 @@ class MaskLMBatchGenerator(object):
       masked_lm_weights.append(1.0)
     while len(masked_lm_positions) < self.training_opts.max_predictions_per_seq:
         masked_lm_positions.append(0)
-        masked_lm_ids.append(self.corpus.atomizer.padToken)
+        masked_lm_ids.append(self.atomizer.padToken)
         masked_lm_weights.append(0.0)
 
     return (input_ids, masked_lm_positions, 
