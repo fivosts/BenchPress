@@ -604,8 +604,8 @@ class tfBert(backends.BackendBase):
 
   def GetTrainingHooks(self,
                        tensors: typing.Dict[str, tf.Tensor],
-                       log_steps: int = None, 
-                       max_steps: int = None,
+                       log_steps:  int = None, 
+                       max_steps:  int = None,
                        output_dir: str = None,
                        **kwargs
                        ) -> typing.List[tf.estimator.SessionRunHook]:
