@@ -334,8 +334,8 @@ class MaskLMBatchGenerator(object):
     d.tfRecord.parent.mkdir(exist_ok = True, parents = True)
     d.CreateCorpus()
     if not d.tfRecord.exists():
-      d.MaskCorpus(d.shaped_corpus)
-      d.saveCorpusTfRecord()
+      d._MaskCorpus(d.shaped_corpus)
+      d._saveCorpusTfRecord()
     return d
 
   @classmethod
@@ -436,7 +436,25 @@ class MaskLMBatchGenerator(object):
 
     return input_fn
 
-  def expandHoleToMasks(self,
+
+  def InitSampleBatch(self,
+                      input_sample,
+                      max_seq_length,
+                      batch_size,
+                      ) -> None:
+
+    assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
+    expanded_sample = self._expandHoleToMasks(
+          input_sample, max_seq_length - len(input_sample) + 1
+          )
+
+    padded_sample = self._padToMaxPosition(expanded_sample)
+
+    assert len(padded_sample) == self.max_position_embeddings, "Padded sequence does not match max_position_embeddings"
+    self.tfRecord = np.repeat(padded_sample[None, :], batch_size, axis = 0)
+    return
+
+  def _expandHoleToMasks(self,
                         sample: np.array, 
                         length: int
                         ) -> np.array:
@@ -458,7 +476,7 @@ class MaskLMBatchGenerator(object):
                             sample[fhidx + 1:]
                           ])
 
-  def padToMaxPosition(self, input_sample):
+  def _padToMaxPosition(self, input_sample):
     return np.concatenate([
                 input_sample, np.array([self.corpus.atomizer.padToken] * (
                                               self.max_position_embeddings - len(input_sample)
@@ -466,24 +484,7 @@ class MaskLMBatchGenerator(object):
                                         dtype = np.int32
                                       )
             ])
-
-  def InitSampleBatch(self,
-                      input_sample,
-                      max_seq_length,
-                      batch_size,
-                      ) -> None:
-
-    assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
-    expanded_sample = self.expandHoleToMasks(
-          input_sample, max_seq_length - len(input_sample) + 1
-          )
-
-    padded_sample = self.padToMaxPosition(expanded_sample)
-
-    assert len(padded_sample) == self.max_position_embeddings, "Padded sequence does not match max_position_embeddings"
-    self.tfRecord = np.repeat(padded_sample[None, :], batch_size, axis = 0)
-    return
-
+    
   def generateTfSamples(self):
 
     def input_fn(params):
@@ -550,27 +551,66 @@ class MaskLMBatchGenerator(object):
     )
     return
 
-  def MaskCorpus(self, 
+  def _saveCorpusTfRecord(self) -> None:
+    """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator._saveCorpusTfRecord()")
+     
+    writer = tf.io.TFRecordWriter(str(self.tfRecord))
+    for (inst_index, instance) in enumerate(self.masked_corpus):
+      input_ids = instance.input_ids
+
+      assert len(input_ids) == self.sequence_length
+
+      masked_lm_positions   = instance.masked_lm_positions
+      masked_lm_ids         = instance.masked_lm_ids
+      masked_lm_weights     = instance.masked_lm_weights
+      next_sentence_label   = instance.next_sentence_label
+      features              = collections.OrderedDict()
+
+      features["input_ids"]             = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                                value = list(input_ids)))
+
+      features["masked_lm_positions"]   = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                                value = list(masked_lm_positions)))
+
+      features["masked_lm_ids"]         = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                                value = list(masked_lm_ids)))
+
+      features["masked_lm_weights"]     = tf.train.Feature(float_list = tf.train.FloatList(
+                                                                value = list(masked_lm_weights)))
+
+      features["next_sentence_labels"]  = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                                value = list([next_sentence_label])))
+
+      tf_example = tf.train.Example(features = tf.train.Features(feature = features))
+      writer.write(tf_example.SerializeToString())
+
+    writer.close()
+    l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
+                      .format(inst_index, self.steps_per_epoch, self.batch_size, self.tfRecord))
+    return
+
+  def _MaskCorpus(self, 
                  corpus: np.array
                 )-> None:
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.MaskCorpus()")
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator._MaskCorpus()")
     l.getLogger().warn("Masking Corpus is a slow process. Assign multiple threads to it")
 
     self.masked_corpus = []
 
     with progressbar.ProgressBar(max_value = len(corpus)) as bar:
         for idx, batch in enumerate(corpus):
-          self.masked_corpus.extend(self.maskBatch(batch))
+          self.masked_corpus.extend(self._maskBatch(batch))
           bar.update(idx)
     self.masked_corpus[0].LogBatchTelemetry(self.steps_per_epoch, self.num_epochs)
     return
 
-  def maskBatch(self, 
+  def _maskBatch(self, 
                 batch: np.array
                 ) -> typing.List[MaskBatch]:
     out_batch = []
     for seq in batch:
-      inp_id, mask_pos, mask_tok, mask_wei, next_sentence_label = self.maskSequence(seq)
+      inp_id, mask_pos, mask_tok, mask_wei, next_sentence_label = self._maskSequence(seq)
       out_batch.append(MaskBatch(np.asarray(inp_id), 
                                  np.asarray(mask_pos), 
                                  np.asarray(mask_tok), 
@@ -580,10 +620,10 @@ class MaskLMBatchGenerator(object):
                       )
     return out_batch
 
-  def maskSequence(self,
+  def _maskSequence(self,
                    seq: np.array,
                   ) -> MaskBatch:
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.maskSequence()")
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator._maskSequence()")
       
     assert seq.ndim == 1, "Input for masking must be single-dimension array."
 
@@ -640,42 +680,3 @@ class MaskLMBatchGenerator(object):
 
     return (input_ids, masked_lm_positions, 
             masked_lm_ids, masked_lm_weights, next_sentence_label)
-
-  def saveCorpusTfRecord(self) -> None:
-    """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.saveCorpusTfRecord()")
-     
-    writer = tf.io.TFRecordWriter(str(self.tfRecord))
-    for (inst_index, instance) in enumerate(self.masked_corpus):
-      input_ids = instance.input_ids
-
-      assert len(input_ids) == self.sequence_length
-
-      masked_lm_positions   = instance.masked_lm_positions
-      masked_lm_ids         = instance.masked_lm_ids
-      masked_lm_weights     = instance.masked_lm_weights
-      next_sentence_label   = instance.next_sentence_label
-      features              = collections.OrderedDict()
-
-      features["input_ids"]             = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list(input_ids)))
-
-      features["masked_lm_positions"]   = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list(masked_lm_positions)))
-
-      features["masked_lm_ids"]         = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list(masked_lm_ids)))
-
-      features["masked_lm_weights"]     = tf.train.Feature(float_list = tf.train.FloatList(
-                                                                value = list(masked_lm_weights)))
-
-      features["next_sentence_labels"]  = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list([next_sentence_label])))
-
-      tf_example = tf.train.Example(features = tf.train.Features(feature = features))
-      writer.write(tf_example.SerializeToString())
-
-    writer.close()
-    l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
-                      .format(inst_index, self.steps_per_epoch, self.batch_size, self.tfRecord))
-    return
