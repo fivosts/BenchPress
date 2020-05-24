@@ -484,11 +484,12 @@ class MaskLMBatchGenerator(object):
                                         dtype = np.int32
                                       )
             ])
-    
+
   def generateTfSamples(self):
 
     def input_fn(params):
       batch_size = params["batch_size"]
+      assert batch_size == len(self.tfRecord)
 
       tfSampleBatch = {
           'input_ids'             : [[] * batch_size],
@@ -626,16 +627,14 @@ class MaskLMBatchGenerator(object):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator._maskSequence()")
       
     assert seq.ndim == 1, "Input for masking must be single-dimension array."
-
     candidate_indexes = np.arange(len(seq))
     self.rngen.shuffle(candidate_indexes)
 
     masks_to_predict = min(self.training_opts.max_predictions_per_seq,
                           max(1, int(round(len(seq) * self.training_opts.masked_lm_prob))))
-
     input_ids = np.copy(seq)
     masked_lms = []
-    exit()
+
     for pos_index in candidate_indexes:
       if len(masked_lms) >= masks_to_predict:
         break
