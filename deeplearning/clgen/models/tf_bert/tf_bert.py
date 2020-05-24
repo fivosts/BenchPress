@@ -125,8 +125,8 @@ class tfBert(backends.BackendBase):
     self.num_warmup_steps                   = self.config.training.num_warmup_steps
 
     self.telemetry                          = telemetry.TrainingLogger(self.logfile_path)
-    self.num_steps_per_epoch                = self.data_generator.num_batches
-    self.num_epochs                         = int(self.num_train_steps / self.num_steps_per_epoch)
+    self.steps_per_epoch                    = self.data_generator.steps_per_epoch
+    self.num_epochs                         = self.data_generator.num_epochs
 
     self.max_eval_steps                     = FLAGS.max_eval_steps
     self.validation_results_file            = "val_results.txt"
@@ -175,12 +175,12 @@ class tfBert(backends.BackendBase):
           cluster = tpu_cluster_resolver,
           master = FLAGS.master,
           model_dir = str(self.ckpt_path),
-          save_checkpoints_steps = self.num_steps_per_epoch,
-          save_summary_steps = self.num_steps_per_epoch,
+          save_checkpoints_steps = self.steps_per_epoch,
+          save_summary_steps = self.steps_per_epoch,
           keep_checkpoint_max = 0,
-          log_step_count_steps = self.num_steps_per_epoch,
+          log_step_count_steps = self.steps_per_epoch,
           tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
-              iterations_per_loop = self.num_steps_per_epoch,
+              iterations_per_loop = self.steps_per_epoch,
               num_shards = FLAGS.num_tpu_cores,
               per_host_input_for_training = is_per_host))
 
@@ -206,7 +206,7 @@ class tfBert(backends.BackendBase):
 
       l.getLogger().info("Running model for {} steps".format(self.num_train_steps))
       l.getLogger().info("Splitting {} steps into {} equivalent epochs, {} steps each".format(
-                                        self.num_train_steps, self.num_epochs, self.num_steps_per_epoch
+                                        self.num_train_steps, self.num_epochs, self.steps_per_epoch
                                         )
                         )
 
@@ -594,7 +594,7 @@ class tfBert(backends.BackendBase):
                        **kwargs
                        ) -> typing.List[tf.estimator.SessionRunHook]:
     if log_steps is None:
-      log_steps = self.num_steps_per_epoch
+      log_steps = self.steps_per_epoch
     if max_steps is None:
       max_steps = self.num_train_steps
     if output_dir is None:
