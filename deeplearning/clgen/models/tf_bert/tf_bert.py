@@ -487,6 +487,8 @@ class tfBert(backends.BackendBase):
             mode=mode,
             predictions = prediction_metrics,
             scaffold_fn = scaffold_fn)
+      else:
+        raise ValueError("{} is not a valid mode".format(mode))
       return output_spec
 
     return _model_fn
