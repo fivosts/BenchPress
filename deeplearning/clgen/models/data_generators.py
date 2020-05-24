@@ -317,7 +317,7 @@ class MaskLMBatchGenerator(object):
 
     self.tfRecord                   = None
     self.sampleBatch                = None
-    
+
     self.sampler                    = None
     self.rngen                      = None
     return
@@ -484,25 +484,24 @@ class MaskLMBatchGenerator(object):
       batch_size = params["batch_size"]
       assert batch_size == len(self.sampleBatch)
 
-      tfSampleBatch = {
-          'input_ids'             : [[] * batch_size],
-          'masked_lm_positions'   : [[] * batch_size],
-          'masked_lm_ids'         : [[] * batch_size],
-          'masked_lm_weights'     : [[] * batch_size],
-          'next_sentence_labels'  : tf.convert_to_tensor([[1] * batch_size], dtype = tf.int32)
-        }
-      for bidx, sample in enumerate(self.sampleBatch):
-        tfSampleBatch['input_ids'][bidx]            = list(sample)
-        tfSampleBatch['masked_lm_positions'][bidx]  = list(np.where(sample == self.atomizer.maskToken)[0])
-        tfSampleBatch['masked_lm_ids'][bidx]        = [self.atomizer.padToken] * len(tfSampleBatch['masked_lm_positions'][bidx])
-        tfSampleBatch['masked_lm_weights'][bidx]    = [0.0] * len(tfSampleBatch['masked_lm_positions'][bidx])
+      (input_ids, masked_lm_positions, 
+      masked_lm_ids, masked_lm_weights) = [], [], [], []
 
-      tfSampleBatch['input_ids']            = tf.convert_to_tensor(tfSampleBatch['input_ids'], dtype = tf.int32)
-      tfSampleBatch['masked_lm_positions']  = tf.convert_to_tensor(tfSampleBatch['masked_lm_positions'], dtype = tf.int32)
-      tfSampleBatch['masked_lm_ids']        = tf.convert_to_tensor(tfSampleBatch['masked_lm_ids'], dtype = tf.int32)
-      tfSampleBatch['masked_lm_weights']    = tf.convert_to_tensor(tfSampleBatch['masked_lm_weights'], dtype = tf.float32)
+      for sample in self.sampleBatch:
+        sammple_masks = np.where(sample == self.atomizer.maskToken)[0]
 
-      return tfSampleBatch
+        input_ids.append(list(sample))
+        masked_lm_positions.append(list(sammple_masks))
+        masked_lm_ids.append([self.atomizer.padToken] * len(sammple_masks))
+        masked_lm_weights.append([0.0] * len(sammple_masks))
+
+      return {
+          'input_ids'             : tf.convert_to_tensor(input_ids, dtype = tf.int32),
+          'masked_lm_positions'   : tf.convert_to_tensor(masked_lm_positions, dtype = tf.int32),
+          'masked_lm_ids'         : tf.convert_to_tensor(masked_lm_ids, dtype = tf.int32),
+          'masked_lm_weights'     : tf.convert_to_tensor(masked_lm_weights, dtype = tf.float32),
+          'next_sentence_labels'  : tf.ones((1, batch_size), dtype = tf.int32)
+      }
     return input_fn
 
   def CreateCorpus(self) -> None:
