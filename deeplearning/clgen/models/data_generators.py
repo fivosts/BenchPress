@@ -335,7 +335,7 @@ class MaskLMBatchGenerator(object):
     d.CreateCorpus()
     if not d.tfRecord.exists():
       d.MaskCorpus(d.shaped_corpus)
-      d.saveMaskedCorpus()
+      d.saveCorpusTfRecord()
     return d
 
   @classmethod
@@ -593,7 +593,7 @@ class MaskLMBatchGenerator(object):
     masks_to_predict = min(self.training_opts.max_predictions_per_seq,
                           max(1, int(round(len(seq) * self.training_opts.masked_lm_prob))))
 
-    output_tokens = np.copy(seq)
+    input_ids = np.copy(seq)
     masked_lms = []
     exit()
     for pos_index in candidate_indexes:
@@ -602,7 +602,7 @@ class MaskLMBatchGenerator(object):
 
       # 80% of the time, replace with [MASK]
       if self.rngen.random() < 0.8:
-        output_tokens[pos_index] = self.corpus.atomizer.maskToken ## TODO ?????
+        input_ids[pos_index] = self.corpus.atomizer.maskToken ## TODO ?????
       # The else block below is debatable for this use case. So comment out for now
       # else:
       #   # 10% of the time, keep original
@@ -610,7 +610,7 @@ class MaskLMBatchGenerator(object):
       #     pass
       #   # 10% of the time, replace with random word
       #   else:
-      #     output_tokens[pos_index] = self.rngen.randint(0, self.corpus.atomizer.vocab_size - 1)
+      #     input_ids[pos_index] = self.rngen.randint(0, self.corpus.atomizer.vocab_size - 1)
 
       class MaskedLmInstance(typing.NamedTuple):
         pos_index: int
@@ -621,9 +621,7 @@ class MaskLMBatchGenerator(object):
     assert len(masked_lms) <= masks_to_predict
     masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
 
-    masked_lm_positions = []
-    masked_lm_ids = []
-    masked_lm_weights = []
+    masked_lm_positions, masked_lm_ids, masked_lm_weights = [], [], []
     next_sentence_label = np.int32(0)
     ## Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
     ## is intended on kernels. In any other case, check bert's create_instances_from_document
@@ -640,14 +638,14 @@ class MaskLMBatchGenerator(object):
         masked_lm_ids.append(self.corpus.atomizer.padToken)
         masked_lm_weights.append(0.0)
 
-    return (output_tokens, masked_lm_positions, 
+    return (input_ids, masked_lm_positions, 
             masked_lm_ids, masked_lm_weights, next_sentence_label)
 
-  def saveMaskedCorpus(self) -> None:
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.saveMaskedCorpus()")
+  def saveCorpusTfRecord(self) -> None:
+    """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.saveCorpusTfRecord()")
      
     writer = tf.io.TFRecordWriter(str(self.tfRecord))
-
     for (inst_index, instance) in enumerate(self.masked_corpus):
       input_ids = instance.input_ids
 
@@ -660,22 +658,21 @@ class MaskLMBatchGenerator(object):
       features              = collections.OrderedDict()
 
       features["input_ids"]             = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                              value = list(input_ids)
-                                                            ))
-      features["masked_lm_positions"]   = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                              value = list(masked_lm_positions)
-                                                            ))
-      features["masked_lm_ids"]         = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                              value = list(masked_lm_ids)
-                                                            ))
-      features["masked_lm_weights"]     = tf.train.Feature(float_list = tf.train.FloatList(
-                                                              value=list(masked_lm_weights)
-                                                            ))
-      features["next_sentence_labels"]  = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                              value = list([next_sentence_label])
-                                                            ))
+                                                                value = list(input_ids)))
 
-      tf_example = tf.train.Example(features=tf.train.Features(feature=features))
+      features["masked_lm_positions"]   = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                                value = list(masked_lm_positions)))
+
+      features["masked_lm_ids"]         = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                                value = list(masked_lm_ids)))
+
+      features["masked_lm_weights"]     = tf.train.Feature(float_list = tf.train.FloatList(
+                                                                value = list(masked_lm_weights)))
+
+      features["next_sentence_labels"]  = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                                value = list([next_sentence_label])))
+
+      tf_example = tf.train.Example(features = tf.train.Features(feature = features))
       writer.write(tf_example.SerializeToString())
 
     writer.close()
