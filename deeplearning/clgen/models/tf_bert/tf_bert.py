@@ -89,7 +89,6 @@ class tfBert(backends.BackendBase):
     self.sequence_length                    = None
     self.train_batch_size                   = None
     self.eval_batch_size                    = None
-    self.max_predictions_per_seq            = None
     self.learning_rate                      = None
     self.num_train_steps                    = None
     self.num_warmup_steps                   = None
@@ -103,8 +102,15 @@ class tfBert(backends.BackendBase):
 
     return
 
-  def _ConfigModelParams(self):
+  def _ConfigModelParams(self,
+                         sampler: samplers.Sampler = None
+                         ) -> None:
+    """
+    Core Model parameter initialization
 
+    If sampler is not None, then sampling mode is triggered.
+    Otherwise training/evaluation mode is implied.
+    """
     self.bertConfig = {
           "vocab_size"                      : self.atomizer.vocab_size,
           "hidden_size"                     : self.config.architecture.hidden_size,
@@ -119,21 +125,23 @@ class tfBert(backends.BackendBase):
           "initializer_range"               : self.config.architecture.initializer_range,
     }
 
-    self.sequence_length                     = self.config.training.sequence_length
-    self.train_batch_size                   = self.config.training.batch_size
-    self.eval_batch_size                    = self.config.training.batch_size
-    self.max_predictions_per_seq            = self.config.training.max_predictions_per_seq
-    self.learning_rate                      = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
-    self.num_train_steps                    = self.config.training.num_train_steps
-    self.num_warmup_steps                   = self.config.training.num_warmup_steps
+    if sampler is None:
+      self.sequence_length                  = self.config.training.sequence_length
+      self.train_batch_size                 = self.config.training.batch_size
+      self.eval_batch_size                  = self.config.training.batch_size
+      self.learning_rate                    = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
+      self.num_train_steps                  = self.config.training.num_train_steps
+      self.num_warmup_steps                 = self.config.training.num_warmup_steps
 
-    self.telemetry                          = telemetry.TrainingLogger(self.logfile_path)
-    self.steps_per_epoch                    = self.data_generator.steps_per_epoch
-    self.num_epochs                         = self.data_generator.num_epochs
+      self.telemetry                        = telemetry.TrainingLogger(self.logfile_path)
+      self.steps_per_epoch                  = self.data_generator.steps_per_epoch
+      self.num_epochs                       = self.data_generator.num_epochs
+      self.max_eval_steps                   = FLAGS.max_eval_steps
 
-    self.max_eval_steps                     = FLAGS.max_eval_steps
-    self.validation_results_file            = "val_results.txt"
-    self.validation_results_path            = os.path.join(str(self.logfile_path), self.validation_results_file)
+      self.validation_results_file          = "val_results.txt"
+      self.validation_results_path          = os.path.join(str(self.logfile_path), self.validation_results_file)
+    else:
+      self.sequence_length                  = sampler.sequence_length
 
     return
 
@@ -238,7 +246,7 @@ class tfBert(backends.BackendBase):
                           )
 
     if self.bertConfig is None:
-      self._ConfigModelParams()
+      self._ConfigModelParams(sampler)
     bert_config = model.BertConfig.from_dict(self.bertConfig)
 
     if self.sequence_length > self.bertConfig['max_position_embeddings']:
