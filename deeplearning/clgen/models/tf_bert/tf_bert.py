@@ -86,13 +86,16 @@ class tfBert(backends.BackendBase):
           "initializer_range"               : None,
     }
 
-    self.sequence_length                     = None
+    self.sequence_length                    = None
     self.train_batch_size                   = None
     self.eval_batch_size                    = None
     self.max_predictions_per_seq            = None
     self.learning_rate                      = None
     self.num_train_steps                    = None
     self.num_warmup_steps                   = None
+
+    self.sample_estimator                   = None
+    self.sample_generator                   = None
 
     self.ckpt_path                          = self.cache.path / "checkpoints"
     self.logfile_path                       = self.cache.path / "logs"
@@ -292,21 +295,23 @@ class tfBert(backends.BackendBase):
     if self.sample_estimator is None:
       raise ValueError("Bert sampler has not been initialized.")
 
-    sample_generator = self.sample_estimator.predict(input_fn = self.data_generator.generateTfSamples())
+    if self.sample_generator is None:
+      self.sample_generator = self.sample_estimator.predict(input_fn = self.data_generator.generateTfSamples())
 
     l.getLogger().warning("TODO!")
     l.getLogger().warning("When all data are fetched, the input_fn function should raise an exception")
     l.getLogger().warning("B) Are you able to handle the generated sentence and forward it back to the input ?")
 
-    for pr in sample_generator:
+    for pr in self.sample_generator:
       ## I'm getting a couple of things here:
       ## a) masked_lm_predictions
       ## b) next_sentence_predictions
       for batch in pr['masked_lm_predictions']:
         l.getLogger().info(batch)
         l.getLogger().info(self.atomizer.DeatomizeIndices(batch))
-        l.getLogger().warning("OK")
-      exit()
+      l.getLogger().warning("TODO! Right here you must forward output back to input.")
+      sample_generator.close()
+    exit()
 
     return []
 
