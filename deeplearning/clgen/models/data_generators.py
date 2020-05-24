@@ -562,7 +562,6 @@ class MaskLMBatchGenerator(object):
                 humanize.Commas(int((time.time() - start_time) * 1000)),
             )
     )
-    exit()
     return
 
   def MaskCorpus(self, 
@@ -580,11 +579,13 @@ class MaskLMBatchGenerator(object):
     self.masked_corpus[0].LogBatchTelemetry(self.steps_per_epoch, self.num_epochs)
     return
 
-  def maskBatch(self, batch):
+  def maskBatch(self, 
+                batch: np.array
+                ) -> typing.List[MaskBatch]:
     out_batch = []
     for seq in batch:
-      x, mask_pos, mask_tok, mask_wei, next_sentence_label = self.maskSequence(seq)
-      out_batch.append(MaskBatch(np.asarray(x), 
+      inp_id, mask_pos, mask_tok, mask_wei, next_sentence_label = self.maskSequence(seq)
+      out_batch.append(MaskBatch(np.asarray(inp_id), 
                                  np.asarray(mask_pos), 
                                  np.asarray(mask_tok), 
                                  np.asarray(mask_wei),
@@ -595,27 +596,27 @@ class MaskLMBatchGenerator(object):
 
   def maskSequence(self,
                    seq: np.array,
-                  ) -> DataBatch:
+                  ) -> MaskBatch:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.maskSequence()")
     if seq.ndim != 1:
       raise ValueError("Input for masking is not a single dimensional array!")
 
-    cand_indexes = np.arange(len(seq))
-    self.rngen.shuffle(cand_indexes)
+    candidate_indexes = np.arange(len(seq))
+    self.rngen.shuffle(candidate_indexes)
 
     masks_to_predict = min(self.training_opts.max_predictions_per_seq,
-                            max(1, int(round(len(seq) * self.training_opts.masked_lm_prob))))
+                          max(1, int(round(len(seq) * self.training_opts.masked_lm_prob))))
 
     output_tokens = np.copy(seq)
     masked_lms = []
-
-    for pos_index in cand_indexes:
+    exit()
+    for pos_index in candidate_indexes:
       if len(masked_lms) >= masks_to_predict:
         break
 
       # 80% of the time, replace with [MASK]
       if self.rngen.random() < 0.8:
-        output_tokens[pos_index] = self.corpus.atomizer.maskToken
+        output_tokens[pos_index] = self.corpus.atomizer.maskToken ## TODO ?????
       # The else block below is debatable for this use case. So comment out for now
       # else:
       #   # 10% of the time, keep original
