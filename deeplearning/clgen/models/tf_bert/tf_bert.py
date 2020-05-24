@@ -86,7 +86,7 @@ class tfBert(backends.BackendBase):
           "initializer_range"               : None,
     }
 
-    self.max_seq_length                     = None
+    self.sequence_length                     = None
     self.train_batch_size                   = None
     self.eval_batch_size                    = None
     self.max_predictions_per_seq            = None
@@ -116,7 +116,7 @@ class tfBert(backends.BackendBase):
           "initializer_range"               : self.config.architecture.initializer_range,
     }
 
-    self.max_seq_length                     = self.config.training.sequence_length
+    self.sequence_length                     = self.config.training.sequence_length
     self.train_batch_size                   = self.config.training.batch_size
     self.eval_batch_size                    = self.config.training.batch_size
     self.max_predictions_per_seq            = self.config.training.max_predictions_per_seq
@@ -199,7 +199,7 @@ class tfBert(backends.BackendBase):
       l.getLogger().info(self.GetShortSummary())
 
       train_input_fn = self.data_generator.generateTfDataset(
-          max_seq_length = self.max_seq_length,
+          max_seq_length = self.sequence_length,
           num_cpu_threads = 8,
           use_tpu = FLAGS.use_tpu,
           is_training = True)
@@ -215,7 +215,7 @@ class tfBert(backends.BackendBase):
       l.getLogger().info("BERT Validation")
 
       eval_input_fn = self.data_generator.generateTfDataset(
-          max_seq_length=self.max_seq_length,
+          max_seq_length=self.sequence_length,
           num_cpu_threads = 8,
           is_training=False)
 
@@ -240,11 +240,11 @@ class tfBert(backends.BackendBase):
       self._ConfigModelParams()
     bert_config = model.BertConfig.from_dict(self.bertConfig)
 
-    if self.max_seq_length > self.bertConfig['max_position_embeddings']:
+    if self.sequence_length > self.bertConfig['max_position_embeddings']:
       raise ValueError(
           "Cannot use sequence length %d because the BERT model "
           "was only trained up to sequence length %d" %
-          (self.max_seq_length, self.bertConfig['max_position_embeddings']))
+          (self.sequence_length, self.bertConfig['max_position_embeddings']))
 
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
@@ -282,9 +282,7 @@ class tfBert(backends.BackendBase):
     l.getLogger().warning("Called while batches are not done. Sets up batch")
     self.data_generator.InitSampleBatch(
         input_sample = sampler.encoded_start_text,
-        max_seq_length = self.max_seq_length,
-        batch_size = sampler.batch_size,
-
+        max_seq_length = self.sequence_length,
         )
     return 
 
