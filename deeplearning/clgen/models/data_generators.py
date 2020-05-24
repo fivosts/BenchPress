@@ -316,6 +316,8 @@ class MaskLMBatchGenerator(object):
     self.sequence_length            = None
 
     self.tfRecord                   = None
+    self.sampleBatch                = None
+    
     self.sampler                    = None
     self.rngen                      = None
     return
@@ -446,7 +448,7 @@ class MaskLMBatchGenerator(object):
     padded_sample = self._padToMaxPosition(expanded_sample)
 
     assert len(padded_sample) == self.max_position_embeddings, "Padded sequence does not match max_position_embeddings"
-    self.tfRecord = np.repeat(padded_sample[None, :], self.batch_size, axis = 0)
+    self.sampleBatch = np.repeat(padded_sample[None, :], self.batch_size, axis = 0)
     return
 
   def _expandHoleToMasks(self,
@@ -468,23 +470,19 @@ class MaskLMBatchGenerator(object):
     fhidx = hole_index[0]
     return np.concatenate([sample[:fhidx], 
                             np.array([self.atomizer.maskToken] * length, dtype = np.int32),
-                            sample[fhidx + 1:]
-                          ])
+                            sample[fhidx + 1:]])
 
   def _padToMaxPosition(self, input_sample):
-    return np.concatenate([
-                input_sample, np.array([self.atomizer.padToken] * (
-                                              self.max_position_embeddings - len(input_sample)
-                                              ), 
-                                        dtype = np.int32
-                                      )
-            ])
+    return np.concatenate([input_sample, 
+                          np.array([self.atomizer.padToken] * 
+                              (self.max_position_embeddings - len(input_sample)), dtype = np.int32)
+                          ])
 
   def generateTfSamples(self):
 
     def input_fn(params):
       batch_size = params["batch_size"]
-      assert batch_size == len(self.tfRecord)
+      assert batch_size == len(self.sampleBatch)
 
       tfSampleBatch = {
           'input_ids'             : [[] * batch_size],
@@ -493,7 +491,7 @@ class MaskLMBatchGenerator(object):
           'masked_lm_weights'     : [[] * batch_size],
           'next_sentence_labels'  : tf.convert_to_tensor([[1] * batch_size], dtype = tf.int32)
         }
-      for bidx, sample in enumerate(self.tfRecord):
+      for bidx, sample in enumerate(self.sampleBatch):
         tfSampleBatch['input_ids'][bidx]            = list(sample)
         tfSampleBatch['masked_lm_positions'][bidx]  = list(np.where(sample == self.atomizer.maskToken)[0])
         tfSampleBatch['masked_lm_ids'][bidx]        = [self.atomizer.padToken] * len(tfSampleBatch['masked_lm_positions'][bidx])
