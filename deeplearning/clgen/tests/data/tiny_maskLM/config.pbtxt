@@ -1,22 +1,3 @@
-# A tiny corpus of OpenCL kernels and a correspondingly small model.
-# It should take a few minutes to train on a reasonably powerful GPU.
-# File: //deeplearning/deepsmith/proto/clgen.proto
-# Proto: clgen.Instance
-#
-# Copyright (c) 2016-2020 Chris Cummins.
-#
-# clgen is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# clgen is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 working_dir: "tiny_maskLM" ## This path is relative to "workspace_dir"
 model {
   corpus {
@@ -50,8 +31,8 @@ model {
     initializer_range: 0.02
   }
   training {
-    num_train_steps: 3500
-    num_warmup_steps: 2000
+    num_train_steps: 10000
+    num_warmup_steps: 2500
     sequence_length: 128
     batch_size: 64
     max_predictions_per_seq: 20
@@ -66,7 +47,7 @@ model {
 }
 sampler {
   start_text: "kernel void A([HOLE]}"
-  batch_size: 1
+  batch_size: 2
   sequence_length: 64
   temperature_micros: 800000  # = 0.8 real value
   termination_criteria {
