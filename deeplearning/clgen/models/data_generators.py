@@ -330,6 +330,8 @@ class MaskLMBatchGenerator(object):
     d.training_opts = training_opts
     d.tfRecord      = cache_path / "dataset" / "maskedDataset.tf_record"
     d.rngen         = random.Random(d.training_opts.random_seed)
+
+    d.tfRecord.parent.mkdir(exist_ok = True, parents = True)
     d.CreateCorpus()
     if not d.tfRecord.exists():
       d.MaskCorpus(d.shaped_corpus)
@@ -444,28 +446,17 @@ class MaskLMBatchGenerator(object):
     ## That is too specific over "replacing holes with masks" but can/should be 
     ## generalized to anything
     hole_index = np.where(sample == self.corpus.atomizer.holeToken)[0]
-
     if len(hole_index) == 0: ## Nothing to do
       return sample
-
     if len(hole_index) > 1:
       l.getLogger().warning("Multiple instances of {} are found. \
                               Selecting the first one.".format(self.corpus.atomizer.holeLabel))
 
     fhidx = hole_index[0]
-
-    if fhidx >= len(sample):
-      raise ValueError("Index provided is out of bounds on this sequence")  
-
-    if sample[fhidx] != self.corpus.atomizer.holeToken:
-      raise ValueError("Index does not map to hole token in sequence")
-
-    expanded = np.concatenate([
-                              sample[:fhidx], 
-                              np.array([self.corpus.atomizer.maskToken] * length, dtype = np.int32),
-                              sample[fhidx + 1:]
-                            ])
-    return expanded
+    return np.concatenate([sample[:fhidx], 
+                            np.array([self.corpus.atomizer.maskToken] * length, dtype = np.int32),
+                            sample[fhidx + 1:]
+                          ])
 
   def padToMaxPosition(self, input_sample):
     return np.concatenate([
@@ -482,18 +473,14 @@ class MaskLMBatchGenerator(object):
                       batch_size,
                       ) -> None:
 
-    if np.ndim(input_sample) != 1:
-      raise ValueError("generateTfSamples works only on single dimensional samples!\
-                         {} shape given".format(input_sample.shape))
-
+    assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
     expanded_sample = self.expandHoleToMasks(
           input_sample, max_seq_length - len(input_sample) + 1
           )
 
     padded_sample = self.padToMaxPosition(expanded_sample)
 
-    assert len(padded_sample) == self.max_position_embeddings
-
+    assert len(padded_sample) == self.max_position_embeddings, "Padded sequence does not match max_position_embeddings"
     self.tfRecord = np.repeat(padded_sample[None, :], batch_size, axis = 0)
     return
 
@@ -542,18 +529,17 @@ class MaskLMBatchGenerator(object):
       self.rngen.shuffle(encoded_corpus)
 
     # Set corpus dimension parameters
-    self.sequence_length    = self.training_opts.sequence_length
-    self.batch_size         = self.training_opts.batch_size
-    self.steps_per_epoch    = int(len(encoded_corpus) / (self.batch_size * self.sequence_length))
-    if self.steps_per_epoch == 0:
-      raise ValueError      ("Not enough data. Use a smaller sequence_length and batch_size")
-    self.num_epochs         = int(self.training_opts.num_train_steps / self.steps_per_epoch)
+    self.sequence_length        = self.training_opts.sequence_length
+    self.batch_size             = self.training_opts.batch_size
+    self.steps_per_epoch        = int(len(encoded_corpus) / (self.batch_size * self.sequence_length))
+    assert self.steps_per_epoch != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
+    self.num_epochs             = int(self.training_opts.num_train_steps / self.steps_per_epoch)
 
     # split into batches (TODO remove clipping)
-    clipped_corpus_length   = self.steps_per_epoch * self.batch_size * self.sequence_length
-    clipped_corpus          = encoded_corpus[:clipped_corpus_length]
+    clipped_corpus_length       = self.steps_per_epoch * self.batch_size * self.sequence_length
+    clipped_corpus              = encoded_corpus[:clipped_corpus_length]
 
-    self.shaped_corpus      = np.split(clipped_corpus.reshape(self.batch_size, -1), self.steps_per_epoch, 1)
+    self.shaped_corpus          = np.split(clipped_corpus.reshape(self.batch_size, -1), self.steps_per_epoch, 1)
 
     l.getLogger().info(
       "Loaded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
@@ -598,8 +584,8 @@ class MaskLMBatchGenerator(object):
                    seq: np.array,
                   ) -> MaskBatch:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.maskSequence()")
-    if seq.ndim != 1:
-      raise ValueError("Input for masking is not a single dimensional array!")
+      
+    assert seq.ndim == 1, "Input for masking must be single-dimension array."
 
     candidate_indexes = np.arange(len(seq))
     self.rngen.shuffle(candidate_indexes)
@@ -660,51 +646,39 @@ class MaskLMBatchGenerator(object):
   def saveMaskedCorpus(self) -> None:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.saveMaskedCorpus()")
      
-    self.tfRecord.parent.mkdir(exist_ok = True, parents = True)
     writer = tf.io.TFRecordWriter(str(self.tfRecord))
 
-    total_written = 0
     for (inst_index, instance) in enumerate(self.masked_corpus):
       input_ids = instance.input_ids
 
       assert len(input_ids) == self.sequence_length
 
-      masked_lm_positions = instance.masked_lm_positions
-      masked_lm_ids = instance.masked_lm_ids
-      masked_lm_weights = instance.masked_lm_weights
-      next_sentence_label = instance.next_sentence_label
+      masked_lm_positions   = instance.masked_lm_positions
+      masked_lm_ids         = instance.masked_lm_ids
+      masked_lm_weights     = instance.masked_lm_weights
+      next_sentence_label   = instance.next_sentence_label
+      features              = collections.OrderedDict()
 
-      features = collections.OrderedDict()
-      features["input_ids"] = tf.train.Feature(
-                                            int64_list = tf.train.Int64List(
-                                                                value = list(input_ids)
-                                                                )
-                                            )
-      features["masked_lm_positions"] = tf.train.Feature(
-                                            int64_list = tf.train.Int64List(
-                                                                value = list(masked_lm_positions)
-                                                                )
-                                            )
-      features["masked_lm_ids"] = tf.train.Feature(
-                                            int64_list = tf.train.Int64List(
-                                                                value = list(masked_lm_ids)
-                                                                )
-                                            )
-      features["masked_lm_weights"] = tf.train.Feature(
-                                            float_list = tf.train.FloatList(
-                                                                value=list(masked_lm_weights)
-                                                                )
-                                            )
-      features["next_sentence_labels"] = tf.train.Feature(
-                                            int64_list = tf.train.Int64List(
-                                                                value = list([next_sentence_label])
-                                                                )
-                                            )
+      features["input_ids"]             = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                              value = list(input_ids)
+                                                            ))
+      features["masked_lm_positions"]   = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                              value = list(masked_lm_positions)
+                                                            ))
+      features["masked_lm_ids"]         = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                              value = list(masked_lm_ids)
+                                                            ))
+      features["masked_lm_weights"]     = tf.train.Feature(float_list = tf.train.FloatList(
+                                                              value=list(masked_lm_weights)
+                                                            ))
+      features["next_sentence_labels"]  = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                              value = list([next_sentence_label])
+                                                            ))
+
       tf_example = tf.train.Example(features=tf.train.Features(feature=features))
       writer.write(tf_example.SerializeToString())
-      total_written += 1
 
     writer.close()
     l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
-                      .format(total_written, self.steps_per_epoch, self.batch_size, self.tfRecord))
+                      .format(inst_index, self.steps_per_epoch, self.batch_size, self.tfRecord))
     return
