@@ -303,19 +303,18 @@ class TensorflowBatchGenerator(object):
 class MaskLMBatchGenerator(object):
   def __init__(self):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.__init__()")
-    self.corpus = None
-    self.atomizer = None
-    self.training_opts = None
-    self.tfRecord = None
-    self._masked_corpus = None
-    self._original_encoded_corpus = None
-    self.shaped_corpus = None
-    self.num_batches = None
-    self.sequence_length = None
-    self.max_position_embeddings = None
-    self.sampler = None
-    self.rngen = None
-    self.is_training = None
+    self.corpus                     = None
+    self.training_opts              = None
+    self.tfRecord                   = None
+    self._masked_corpus             = None
+    self.shaped_corpus              = None
+    self.steps_per_epoch            = None
+    self.batch_size                 = None
+    self.sequence_length            = None
+    self.max_position_embeddings    = None
+    self.sampler                    = None
+    self.rngen                      = None
+    self.is_training                = None
     return
 
   @classmethod
@@ -326,16 +325,9 @@ class MaskLMBatchGenerator(object):
                                ) -> "data_generators.MaskLMBatchGenerator":
     d = MaskLMBatchGenerator()
     d.corpus = corpus
-    d.atomizer = corpus.atomizer
     d.training_opts = training_opts
     d.tfRecord = cache_path / "dataset" / "maskedDataset.tf_record"
 
-    d._masked_corpus = None
-    d._original_encoded_corpus = None
-    d.shaped_corpus = None
-    d.num_batches = None
-
-    d.sequence_length = d.training_opts.sequence_length
     d.is_training = True
     d.rngen = random.Random(d.training_opts.random_seed)
 
@@ -454,33 +446,33 @@ class MaskLMBatchGenerator(object):
     ## and instructs a function to replace that token  with a sequence of masks
     ## That is too specific over "replacing holes with masks" but can/should be 
     ## generalized to anything
-    hole_index = np.where(sample == self.atomizer.holeToken)[0]
+    hole_index = np.where(sample == self.corpus.atomizer.holeToken)[0]
 
     if len(hole_index) == 0: ## Nothing to do
       return sample
 
     if len(hole_index) > 1:
       l.getLogger().warning("Multiple instances of {} are found. \
-                              Selecting the first one.".format(self.atomizer.holeLabel))
+                              Selecting the first one.".format(self.corpus.atomizer.holeLabel))
 
     fhidx = hole_index[0]
 
     if fhidx >= len(sample):
       raise ValueError("Index provided is out of bounds on this sequence")  
 
-    if sample[fhidx] != self.atomizer.holeToken:
+    if sample[fhidx] != self.corpus.atomizer.holeToken:
       raise ValueError("Index does not map to hole token in sequence")
 
     expanded = np.concatenate([
                               sample[:fhidx], 
-                              np.array([self.atomizer.maskToken] * length, dtype = np.int32),
+                              np.array([self.corpus.atomizer.maskToken] * length, dtype = np.int32),
                               sample[fhidx + 1:]
                             ])
     return expanded
 
   def padToMaxPosition(self, input_sample):
     return np.concatenate([
-                input_sample, np.array([self.atomizer.padToken] * (
+                input_sample, np.array([self.corpus.atomizer.padToken] * (
                                               self.max_position_embeddings - len(input_sample)
                                               ), 
                                         dtype = np.int32
@@ -524,7 +516,7 @@ class MaskLMBatchGenerator(object):
         input_ids, masked_lm_positions, masked_lm_ids, masked_lm_weights = [], [], [], []
         for tidx, token in enumerate(sample):
           input_ids.append(token)
-          if token == self.atomizer.maskToken:
+          if token == self.corpus.atomizer.maskToken:
             masked_lm_positions.append(tidx)
             masked_lm_ids.append(token)
             masked_lm_weights.append(0.0)
@@ -546,27 +538,25 @@ class MaskLMBatchGenerator(object):
     start_time = time.time()
 
     # generate a kernel corpus
-    self._original_encoded_corpus = self.corpus.GetTrainingData(
-      shuffle=self.training_opts.shuffle_corpus_contentfiles_between_epochs
-    )
+    encoded_corpus = np.concatenate(self.corpus.GetTrainingData())
+    encoded_corpus = np.repeat(encoded_corpus, self.training_opts.dupe_factor)
 
-    encoded_corpus = np.concatenate(self._original_encoded_corpus)
-    batch_size = self.training_opts.batch_size
+    if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
+      self.rngen.shuffle(encoded_corpus)
 
-    # set corpus size and number of batches
-    self.num_batches = int(
-      len(encoded_corpus) / (batch_size * self.sequence_length)
-    )
-    if self.num_batches == 0:
-      raise ValueError(
-        "Not enough data. Use a smaller sequence_length and batch_size"
-      )
-    # split into batches
-    clipped_corpus_length = self.num_batches * batch_size * self.sequence_length
-    clipped_corpus = encoded_corpus[:clipped_corpus_length]
-    ## TODO remove clipping
-    self.shaped_corpus = np.split(clipped_corpus.reshape(batch_size, -1), self.num_batches, 1)
-    self.num_batches = self.num_batches * int(self.training_opts.dupe_factor)
+    # Set corpus dimension parameters
+    self.sequence_length    = self.training_opts.sequence_length
+    self.batch_size         = self.training_opts.batch_size
+    self.steps_per_epoch    = int(len(encoded_corpus) / (self.batch_size * self.sequence_length))
+    if self.steps_per_epoch == 0:
+      raise ValueError      ("Not enough data. Use a smaller sequence_length and batch_size")
+    self.num_epochs         = int(self.training_opts.num_train_steps / self.steps_per_epoch)
+
+    # split into batches (TODO remove clipping)
+    clipped_corpus_length   = self.steps_per_epoch * self.batch_size * self.sequence_length
+    clipped_corpus          = encoded_corpus[:clipped_corpus_length]
+
+    self.shaped_corpus      = np.split(clipped_corpus.reshape(self.batch_size, -1), self.steps_per_epoch, 1)
 
     l.getLogger().info(
       "Loaded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
@@ -575,6 +565,7 @@ class MaskLMBatchGenerator(object):
                 humanize.Commas(int((time.time() - start_time) * 1000)),
             )
     )
+    exit()
     return
 
   def MaskCorpus(self, 
@@ -584,15 +575,12 @@ class MaskLMBatchGenerator(object):
     l.getLogger().warn("Masking Corpus is a slow process. Assign multiple threads to it")
 
     self._masked_corpus = []
-    flattened_corpus = []
-    for _ in range(self.training_opts.dupe_factor): # This enables multiprocessing
-      flattened_corpus.extend(corpus)
 
-    with progressbar.ProgressBar(max_value = len(flattened_corpus)) as bar:
-        for idx, batch in enumerate(flattened_corpus):
+    with progressbar.ProgressBar(max_value = len(corpus)) as bar:
+        for idx, batch in enumerate(corpus):
           self._masked_corpus.extend(self.maskBatch(batch))
           bar.update(idx)
-    self._masked_corpus[0].LogBatchTelemetry(self.num_batches, int(self.training_opts.num_train_steps / self.num_batches))
+    self._masked_corpus[0].LogBatchTelemetry(self.steps_per_epoch, self.num_epochs)
     return
 
   def maskBatch(self, batch):
@@ -630,7 +618,7 @@ class MaskLMBatchGenerator(object):
 
       # 80% of the time, replace with [MASK]
       if self.rngen.random() < 0.8:
-        output_tokens[pos_index] = self.atomizer.maskToken
+        output_tokens[pos_index] = self.corpus.atomizer.maskToken
       # The else block below is debatable for this use case. So comment out for now
       # else:
       #   # 10% of the time, keep original
@@ -638,7 +626,7 @@ class MaskLMBatchGenerator(object):
       #     pass
       #   # 10% of the time, replace with random word
       #   else:
-      #     output_tokens[pos_index] = self.rngen.randint(0, self.atomizer.vocab_size - 1)
+      #     output_tokens[pos_index] = self.rngen.randint(0, self.corpus.atomizer.vocab_size - 1)
 
       class MaskedLmInstance(typing.NamedTuple):
         pos_index: int
@@ -720,5 +708,5 @@ class MaskLMBatchGenerator(object):
 
     writer.close()
     l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
-                      .format(total_written, self.num_batches, self.training_opts.batch_size, self.tfRecord))
+                      .format(total_written, self.steps_per_epoch, self.batch_size, self.tfRecord))
     return
