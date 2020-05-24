@@ -295,7 +295,6 @@ class tfBert(backends.BackendBase):
     sample_generator = self.sample_estimator.predict(input_fn = self.data_generator.generateTfSamples())
 
     l.getLogger().warning("TODO!")
-    l.getLogger().warning("A) Does the data generator bring as many batches as should ? No less, no more than!")
     l.getLogger().warning("When all data are fetched, the input_fn function should raise an exception")
     l.getLogger().warning("B) Are you able to handle the generated sentence and forward it back to the input ?")
 
@@ -303,9 +302,10 @@ class tfBert(backends.BackendBase):
       ## I'm getting a couple of things here:
       ## a) masked_lm_predictions
       ## b) next_sentence_predictions
-      l.getLogger().info(pr['masked_lm_predictions'])
-      l.getLogger().info(self.atomizer.DeatomizeIndices(pr['masked_lm_predictions']))
-      l.getLogger().warning("OK")
+      for batch in pr['masked_lm_predictions']:
+        l.getLogger().info(batch)
+        l.getLogger().info(self.atomizer.DeatomizeIndices(batch))
+        l.getLogger().warning("OK")
       exit()
 
     return []
@@ -468,14 +468,20 @@ class tfBert(backends.BackendBase):
             eval_metrics = eval_metrics,
             scaffold_fn = scaffold_fn)
       elif mode == tf.compat.v1.estimator.ModeKeys.PREDICT:
-        masked_lm_log_probs = tf.reshape(masked_lm_log_probs,[-1, masked_lm_log_probs.shape[-1]])
-        masked_lm_predictions = tf.argmax(masked_lm_log_probs, axis=-1, output_type=tf.int32)
 
-        next_sentence_log_probs = tf.reshape(next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]])
-        next_sentence_predictions = tf.argmax(next_sentence_log_probs, axis=-1, output_type=tf.int32)
+        mask_batch_size, mask_seq_length = model.get_shape_list(masked_lm_positions,  expected_rank = 2)
+        next_batch_size, next_seq_length = model.get_shape_list(next_sentence_labels, expected_rank = 2)
 
-        ## TODO Make sure this is correct when batch > 1
-        masked_lm_predictions = tf.expand_dims(masked_lm_predictions, 0)
+        masked_lm_log_probs       = tf.reshape(masked_lm_log_probs,     [-1, masked_lm_log_probs.shape[-1]])
+        next_sentence_log_probs   = tf.reshape(next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]])
+
+        masked_lm_predictions     = tf.argmax(masked_lm_log_probs,     axis = -1, output_type = tf.int32)
+        next_sentence_predictions = tf.argmax(next_sentence_log_probs, axis = -1, output_type = tf.int32)
+
+        masked_lm_predictions     = tf.reshape(masked_lm_predictions,     shape = [mask_batch_size, mask_seq_length])
+        next_sentence_predictions = tf.reshape(next_sentence_predictions, shape = [next_batch_size, next_seq_length])
+
+        masked_lm_predictions     = tf.expand_dims(masked_lm_predictions,     0)
         next_sentence_predictions = tf.expand_dims(next_sentence_predictions, 0)
 
         prediction_metrics = {
