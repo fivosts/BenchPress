@@ -303,18 +303,20 @@ class TensorflowBatchGenerator(object):
 class MaskLMBatchGenerator(object):
   def __init__(self):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.__init__()")
+
     self.corpus                     = None
-    self.training_opts              = None
-    self.tfRecord                   = None
-    self._masked_corpus             = None
     self.shaped_corpus              = None
+    self.masked_corpus              = None
+
+    self.training_opts              = None
     self.steps_per_epoch            = None
     self.batch_size                 = None
-    self.sequence_length            = None
     self.max_position_embeddings    = None
+    self.sequence_length            = None
+
+    self.tfRecord                   = None
     self.sampler                    = None
     self.rngen                      = None
-    self.is_training                = None
     return
 
   @classmethod
@@ -324,13 +326,10 @@ class MaskLMBatchGenerator(object):
                                cache_path
                                ) -> "data_generators.MaskLMBatchGenerator":
     d = MaskLMBatchGenerator()
-    d.corpus = corpus
+    d.corpus        = corpus
     d.training_opts = training_opts
-    d.tfRecord = cache_path / "dataset" / "maskedDataset.tf_record"
-
-    d.is_training = True
-    d.rngen = random.Random(d.training_opts.random_seed)
-
+    d.tfRecord      = cache_path / "dataset" / "maskedDataset.tf_record"
+    d.rngen         = random.Random(d.training_opts.random_seed)
     d.CreateCorpus()
 
     if not d.tfRecord.exists():
@@ -574,13 +573,13 @@ class MaskLMBatchGenerator(object):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.MaskCorpus()")
     l.getLogger().warn("Masking Corpus is a slow process. Assign multiple threads to it")
 
-    self._masked_corpus = []
+    self.masked_corpus  = []
 
     with progressbar.ProgressBar(max_value = len(corpus)) as bar:
         for idx, batch in enumerate(corpus):
-          self._masked_corpus.extend(self.maskBatch(batch))
+          self.masked_corpus .extend(self.maskBatch(batch))
           bar.update(idx)
-    self._masked_corpus[0].LogBatchTelemetry(self.steps_per_epoch, self.num_epochs)
+    self.masked_corpus [0].LogBatchTelemetry(self.steps_per_epoch, self.num_epochs)
     return
 
   def maskBatch(self, batch):
@@ -666,7 +665,7 @@ class MaskLMBatchGenerator(object):
     writer = tf.io.TFRecordWriter(str(self.tfRecord))
 
     total_written = 0
-    for (inst_index, instance) in enumerate(self._masked_corpus):
+    for (inst_index, instance) in enumerate(self.masked_corpus ):
       input_ids = instance.input_ids
 
       assert len(input_ids) == self.sequence_length
