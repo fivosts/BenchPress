@@ -510,23 +510,27 @@ class MaskLMBatchGenerator(object):
 
     # generate a kernel corpus
     encoded_corpus = np.concatenate(self.corpus.GetTrainingData())
-    encoded_corpus = np.repeat(encoded_corpus, self.training_opts.dupe_factor)
+    encoded_corpus = np.tile(encoded_corpus, self.training_opts.dupe_factor)
 
-    if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
-      self.rngen.shuffle(encoded_corpus)
+    ## TODO!
+    # if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
+    #   self.rngen.shuffle(encoded_corpus)
 
     # Set corpus dimension parameters
     self.sequence_length        = self.training_opts.sequence_length
     self.batch_size             = self.training_opts.batch_size
-    self.steps_per_epoch        = int(len(encoded_corpus) / (self.batch_size * self.sequence_length))
+    self.steps_per_epoch        = int(len(encoded_corpus) / (self.batch_size * self.sequence_length * self.training_opts.dupe_factor))
     assert self.steps_per_epoch != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
     self.num_epochs             = int(self.training_opts.num_train_steps / self.steps_per_epoch)
 
-    # split into batches (TODO remove clipping)
-    clipped_corpus_length       = self.steps_per_epoch * self.batch_size * self.sequence_length
+    clipped_corpus_length       = self.training_opts.dupe_factor * self.steps_per_epoch * self.batch_size * self.sequence_length
     clipped_corpus              = encoded_corpus[:clipped_corpus_length]
 
-    self.shaped_corpus          = np.split(clipped_corpus.reshape(self.batch_size, -1), self.steps_per_epoch, 1)
+    self.shaped_corpus          = np.split(clipped_corpus.reshape(self.batch_size, -1), (self.training_opts.dupe_factor * self.steps_per_epoch), 1)
+    np_corpus = np.asarray(self.shaped_corpus)
+    assert np_corpus.ndim == 3, "Wrong dimensions for shaped_corpus: {}".format(np_corpus.shape)
+    assert np_corpus.shape[1] == self.batch_size, "Second dimension is not equal to batch size: {}".format(np_corpus.shape[1])
+    assert np_corpus.shape[2] == self.sequence_length, "Third dimension is not equal to sequence length: {}".format(np_corpus.shape[2])
 
     l.getLogger().info(
       "Loaded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
@@ -545,7 +549,7 @@ class MaskLMBatchGenerator(object):
     for (inst_index, instance) in enumerate(self.masked_corpus):
       input_ids = instance.input_ids
 
-      assert len(input_ids) == self.sequence_length
+      assert len(input_ids) == self.sequence_length, "len(input_ids):  {}, self.sequence_length: {}".format(len(input_ids), self.sequence_length)
 
       masked_lm_positions   = instance.masked_lm_positions
       masked_lm_ids         = instance.masked_lm_ids
