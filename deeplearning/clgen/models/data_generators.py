@@ -651,7 +651,7 @@ class MaskLMBatchGenerator(object):
       masked_lm_weights.append(1.0)
     while len(masked_lm_positions) < self.training_opts.max_predictions_per_seq:
         masked_lm_positions.append(0)
-        masked_lm_ids.append(0)
+        masked_lm_ids.append(self.corpus.atomizer.padToken)
         masked_lm_weights.append(0.0)
 
     return (output_tokens, masked_lm_positions, 
