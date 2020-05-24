@@ -467,7 +467,7 @@ class tfBert(backends.BackendBase):
             evaluation_hooks = evaluation_hooks,
             eval_metrics = eval_metrics,
             scaffold_fn = scaffold_fn)
-      else:
+      elif mode == tf.compat.v1.estimator.ModeKeys.PREDICT:
         masked_lm_log_probs = tf.reshape(masked_lm_log_probs,[-1, masked_lm_log_probs.shape[-1]])
         masked_lm_predictions = tf.argmax(masked_lm_log_probs, axis=-1, output_type=tf.int32)
 
