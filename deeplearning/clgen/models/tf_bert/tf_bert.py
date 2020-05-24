@@ -283,6 +283,7 @@ class tfBert(backends.BackendBase):
                    ) -> None:
 
     l.getLogger().warning("Called while batches are not done. Sets up batch")
+    self.sample_generator = None
     self.data_generator.InitSampleBatch(
         input_sample = sampler.encoded_start_text,
         sequence_length = self.sequence_length,
