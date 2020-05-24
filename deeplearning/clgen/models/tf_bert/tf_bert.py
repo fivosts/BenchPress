@@ -232,9 +232,7 @@ class tfBert(backends.BackendBase):
                    sampler: samplers.Sampler, 
                    seed: typing.Optional[int] = None
                    ) -> None:
-
-    l.getLogger().warning("Init Sampling: Called once, sets model")
-
+    """This is called only once. Performs basic initialization of sampling"""
     self.data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
                             sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings
                           )
@@ -281,8 +279,7 @@ class tfBert(backends.BackendBase):
   def InitSampleBatch(self,
                    sampler: samplers.Sampler, 
                    ) -> None:
-
-    l.getLogger().warning("Called while batches are not done. Sets up batch")
+    """Batch-specific initialization. Called once when a new batch is going to be generated"""
     self.sample_generator = None
     self.data_generator.InitSampleBatch(
         input_sample = sampler.encoded_start_text,
@@ -291,8 +288,7 @@ class tfBert(backends.BackendBase):
     return 
 
   def SampleNextIndices(self, sampler: samplers.Sampler, done):
-    l.getLogger().warning("Within a batch, called for each i/o step")
-
+    """Called iteratively to build a single batch of samples, until termination criteria stops calling"""
     if self.sample_estimator is None:
       raise ValueError("Bert sampler has not been initialized.")
 
