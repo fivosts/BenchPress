@@ -199,7 +199,7 @@ class tfBert(backends.BackendBase):
       l.getLogger().info(self.GetShortSummary())
 
       train_input_fn = self.data_generator.generateTfDataset(
-          max_seq_length = self.sequence_length,
+          sequence_length = self.sequence_length,
           num_cpu_threads = 8,
           use_tpu = FLAGS.use_tpu,
           is_training = True)
@@ -215,7 +215,7 @@ class tfBert(backends.BackendBase):
       l.getLogger().info("BERT Validation")
 
       eval_input_fn = self.data_generator.generateTfDataset(
-          max_seq_length=self.sequence_length,
+          sequence_length=self.sequence_length,
           num_cpu_threads = 8,
           is_training=False)
 
@@ -282,7 +282,7 @@ class tfBert(backends.BackendBase):
     l.getLogger().warning("Called while batches are not done. Sets up batch")
     self.data_generator.InitSampleBatch(
         input_sample = sampler.encoded_start_text,
-        max_seq_length = self.sequence_length,
+        sequence_length = self.sequence_length,
         )
     return 
 
