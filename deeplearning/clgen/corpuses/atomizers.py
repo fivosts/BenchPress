@@ -125,7 +125,7 @@ class AtomizerBase(object):
       else:
         raise ValueError("Wrong encoded array specified")
     except KeyError:
-      raise ValueError
+      raise KeyError("Out of vocab: {}".format(encoded))
 
   def ToFile(self, path: pathlib.Path) -> None:
     """Save an atomizer to file."""
