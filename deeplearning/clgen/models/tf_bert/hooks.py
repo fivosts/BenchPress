@@ -89,10 +89,9 @@ class _tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
       dictionary 
     """
     if not isinstance(session, dict):
-      raise ValueError("session dict is not in dict format")
-    if self.global_step in session:
-      raise KeyError("global_step tensor has been set by derived class, while base class should do that.")
-    session[self.global_step] = self.global_step
+      raise TypeError("session dict is not in dict format")
+    if not self.global_step in session:
+      session[self.global_step] = self.global_step
     return session
 
 class tfProgressBar(_tfEstimatorHooks):
@@ -133,7 +132,7 @@ class tfLogTensorHook(_tfEstimatorHooks):
   def __init__(self,
                tensors: dict,
                log_steps: int = None,
-               show_average: bool = False,
+               show_average: bool = True,
                at_end: bool = False,
                mode: tf.compat.v1.estimator.ModeKeys = tf.compat.v1.estimator.ModeKeys.TRAIN,
               ):
@@ -153,9 +152,10 @@ class tfLogTensorHook(_tfEstimatorHooks):
     }
     self.result = {k: [] for k in self.tensor_tags}
 
-    self.log_steps = log_steps
-    self.at_end = at_end
+    self.log_steps      = log_steps
+    self.at_end         = at_end
     self.step_triggered = False
+    self.show_average   = show_average
 
     if log_steps is None and not at_end:
       raise ValueError("Neither log_steps nor at_end have been set. Select at least one.")
@@ -196,7 +196,7 @@ class tfLogTensorHook(_tfEstimatorHooks):
       if self.show_average:
         self.result[tag].append(run_values.results['tensors'][tag])
       else:
-        self.result[tag] = run_values.results['tensors'][tag]
+        self.result[tag] = [run_values.results['tensors'][tag]]
 
     if self.step_triggered:
       self.result = { k: (sum(v) / len(v)) for (k, v) in self.result.items() }
