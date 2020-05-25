@@ -25,7 +25,11 @@ from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
-
+flags.DEFINE_boolean(
+  "write_text_dataset", 
+  False, 
+  "Set for MaskLM data generator to write dataset in text format, along with the tfRecord."
+)
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
   X: np.array
@@ -52,8 +56,12 @@ class DataBatch(typing.NamedTuple):
     )
     return
 
-class MaskBatch(typing.NamedTuple):
-  """Tuple representation of a single MaskLM batch"""
+class MaskSequence(typing.NamedTuple):
+  """
+  Tuple representation of a single MaskLM Instance. 
+  This is not batch! generateTfDataset applies native batching,
+  so this class represents a single instance!
+  """
 
   input_ids            : np.array
   masked_lm_positions  : np.array
@@ -62,31 +70,35 @@ class MaskBatch(typing.NamedTuple):
   next_sentence_label  : np.int32
 
   @property
-  def sizeof_batch(self):
+  def sizeof_sequence(self):
     return (sys.getsizeof(self) + self.input_ids.nbytes +
            self.masked_lm_positions.nbytes + self.masked_lm_ids.nbytes +
            self.masked_lm_weights.nbytes + self.next_sentence_label.nbytes
            )
 
+  def shapeSeqToBatch(self, inp, batch_size):
+    return "(" + str(batch_size) + ", " + ", ".join([str(s) for s in inp.shape]) + ")"
+
   def LogBatchTelemetry(self,
+                        batch_size: int,
                         steps_per_epoch: int,
                         num_epochs: int,
                         ) -> None:
     """Log analytics about the batch."""
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskBatch.LogBatchTelemetry()")
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskSequence.LogBatchTelemetry()")
     l.getLogger().info("Step shape: Input_ids: {}, masked_lm_positions: {}, masked_lm_ids: {}, masked_lm_weights: {}, next_sentence_label: {}"
-                        .format(self.input_ids.shape, 
-                                self.masked_lm_positions.shape, 
-                                self.masked_lm_ids.shape,
-                                self.masked_lm_weights.shape,
-                                self.next_sentence_label.shape
-                                )
+                        .format(self.shapeSeqToBatch(self.input_ids,            batch_size),
+                                self.shapeSeqToBatch(self.masked_lm_positions,  batch_size),
+                                self.shapeSeqToBatch(self.masked_lm_ids,        batch_size),
+                                self.shapeSeqToBatch(self.masked_lm_weights,    batch_size),
+                                self.shapeSeqToBatch(self.next_sentence_label,  batch_size),
+                          )
                         )
     l.getLogger().info(
       "Memory: {} per batch, {} per epoch, {} total.".format(
-              humanize.BinaryPrefix(self.sizeof_batch, "B"),
-              humanize.BinaryPrefix(self.sizeof_batch * steps_per_epoch, "B"),
-              humanize.BinaryPrefix(self.sizeof_batch * steps_per_epoch * num_epochs, "B"),
+              humanize.BinaryPrefix(self.sizeof_sequence * batch_size, "B"),
+              humanize.BinaryPrefix(self.sizeof_sequence * batch_size * steps_per_epoch, "B"),
+              humanize.BinaryPrefix(self.sizeof_sequence * batch_size * steps_per_epoch * num_epochs, "B"),
           )
     )
 
@@ -316,6 +328,7 @@ class MaskLMBatchGenerator(object):
     self.sequence_length            = None
 
     self.tfRecord                   = None
+    self.txtRecord                  = None
     self.sampleBatch                = None
 
     self.sampler                    = None
@@ -333,6 +346,7 @@ class MaskLMBatchGenerator(object):
     d.atomizer      = corpus.atomizer
     d.training_opts = training_opts
     d.tfRecord      = cache_path / "dataset" / "maskedDataset.tf_record"
+    d.txtRecord     = cache_path / "dataset" / "maskedDataset.txt"
     d.rngen         = random.Random(d.training_opts.random_seed)
 
     d.tfRecord.parent.mkdir(exist_ok = True, parents = True)
@@ -546,6 +560,9 @@ class MaskLMBatchGenerator(object):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator._saveCorpusTfRecord()")
      
     writer = tf.io.TFRecordWriter(str(self.tfRecord))
+    if FLAGS.write_text_dataset:
+      file_writer = open(self.txtRecord, 'w')
+
     for (inst_index, instance) in enumerate(self.masked_corpus):
       input_ids = instance.input_ids
 
@@ -574,8 +591,17 @@ class MaskLMBatchGenerator(object):
 
       tf_example = tf.train.Example(features = tf.train.Features(feature = features))
       writer.write(tf_example.SerializeToString())
-
+      if FLAGS.write_text_dataset:
+        file_writer.write("'input_ids': {}\n'masked_lm_positions': {}\n'masked_lm_ids': {}\'nmasked_lm_weights': {}\n'next_sentence_labels': {}\n\n"
+                            .format(self.atomizer.DeatomizeIndices(input_ids), 
+                                    masked_lm_positions, 
+                                    self.atomizer.DeatomizeIndices(masked_lm_ids), 
+                                    masked_lm_weights, 
+                                    next_sentence_label)
+                            )
     writer.close()
+    if FLAGS.write_text_dataset:
+      file_writer.close()
     l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
                       .format(inst_index, self.steps_per_epoch, self.batch_size, self.tfRecord))
     return
@@ -592,16 +618,16 @@ class MaskLMBatchGenerator(object):
         for idx, batch in enumerate(corpus):
           self.masked_corpus.extend(self._maskBatch(batch))
           bar.update(idx)
-    self.masked_corpus[0].LogBatchTelemetry(self.steps_per_epoch, self.num_epochs)
+    self.masked_corpus[0].LogBatchTelemetry(self.batch_size, self.steps_per_epoch, self.num_epochs)
     return
 
   def _maskBatch(self, 
                 batch: np.array
-                ) -> typing.List[MaskBatch]:
+                ) -> typing.List[MaskSequence]:
     out_batch = []
     for seq in batch:
       inp_id, mask_pos, mask_tok, mask_wei, next_sentence_label = self._maskSequence(seq)
-      out_batch.append(MaskBatch(np.asarray(inp_id), 
+      out_batch.append(MaskSequence(np.asarray(inp_id), 
                                  np.asarray(mask_pos), 
                                  np.asarray(mask_tok), 
                                  np.asarray(mask_wei),
@@ -611,8 +637,8 @@ class MaskLMBatchGenerator(object):
     return out_batch
 
   def _maskSequence(self,
-                   seq: np.array,
-                  ) -> MaskBatch:
+                    seq: np.array,
+                    ):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator._maskSequence()")
       
     assert seq.ndim == 1, "Input for masking must be single-dimension array."
