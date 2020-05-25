@@ -60,16 +60,13 @@ class _tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
       raise ValueError("mode for hook has not been provided")
 
     self.global_step = _as_graph_element(tf.compat.v1.train.get_or_create_global_step())
-
     return
 
   def begin(self):
     return
 
   def before_run(self, run_context):
-    return tf.estimator.SessionRunArgs({
-                                      self.global_step: self.global_step,
-                                      })
+    return tf.estimator.SessionRunArgs(self._buildSessionDict())
 
   def after_run(self, run_context, run_values):
     if self.is_training:
@@ -80,6 +77,23 @@ class _tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
 
   def end(self, session):
     return
+
+  def _buildSessionDict(self,
+                        session: dict = {}
+                        ) -> dict:
+    """
+    Builds dictionary passed to SessionRunArgs on top of default KV pairs of base class
+    Args: 
+      session: dictionary mapping key->tensor
+    Returns:
+      dictionary 
+    """
+    if not isinstance(session, dict):
+      raise ValueError("session dict is not in dict format")
+    if self.global_step in session:
+      raise KeyError("global_step tensor has been set by derived class, while base class should do that.")
+    session[self.global_step] = self.global_step
+    return session
 
 class tfProgressBar(_tfEstimatorHooks):
   """Real time progressbar to capture tf Estimator training or validation"""
@@ -97,7 +111,6 @@ class tfProgressBar(_tfEstimatorHooks):
       mode: If hooks is used for training or evaluation
     """
     super(tfProgressBar, self).__init__(mode)
-
     self.max_length = max_length
 
   def begin(self):
@@ -107,8 +120,6 @@ class tfProgressBar(_tfEstimatorHooks):
     self.bar = progressbar.ProgressBar(max_value = self.max_length)
     return
 
-  # def before_run(self, run_context):
-
   def after_run(self, run_context, run_values):
     """
       Requested tensors are evaluated and their values are available
@@ -116,8 +127,6 @@ class tfProgressBar(_tfEstimatorHooks):
     super(tfProgressBar, self).after_run(run_context, run_values)
     self.bar.update(self.current_step) 
     return
-
-  # def end(self, session):
 
 class tfLogTensorHook(_tfEstimatorHooks):
 
@@ -135,7 +144,6 @@ class tfLogTensorHook(_tfEstimatorHooks):
       mode: If hooks is used for training or evaluation
     """
     super(tfLogTensorHook, self).__init__(mode)
-
 
     self.tensor_tags = sorted(tensors.keys())
     self.tensors = {
@@ -173,10 +181,7 @@ class tfLogTensorHook(_tfEstimatorHooks):
 
     if self.timer.should_trigger_for_step(self.trigger_step):
       self.step_triggered = True
-      return tf.estimator.SessionRunArgs({
-                                          self.global_step    : self.global_step, 
-                                          'tensors'           : self.tensors
-                                        })
+      return tf.estimator.SessionRunArgs(self._buildSessionDict({'tensors' : self.tensors}))
     else:
       self.step_triggered = False
       return super(tfLogTensorHook, self).before_run(run_context)
