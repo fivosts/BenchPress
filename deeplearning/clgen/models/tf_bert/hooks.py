@@ -151,6 +151,8 @@ class tfLogTensorHook(_tfEstimatorHooks):
         tag: _as_graph_element(tensor)
         for (tag, tensor) in tensors.items()
     }
+    self.result = {k: [] for k in self.tensor_tags}
+
     self.log_steps = log_steps
     self.at_end = at_end
     self.step_triggered = False
@@ -197,8 +199,9 @@ class tfLogTensorHook(_tfEstimatorHooks):
         self.result[tag] = run_values.results['tensors'][tag]
 
     if self.step_triggered:
-      self.result = { key: (sum(self.result[key]) / len(self.result[key])) for key in self.result }
+      self.result = { k: (sum(v) / len(v)) for (k, v) in self.result.items() }
       self._log_tensors(self.result)
+      self.result = {k: [] for k in self.result}
 
     self.trigger_step += 1
 
