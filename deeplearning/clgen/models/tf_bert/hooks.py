@@ -133,6 +133,7 @@ class tfLogTensorHook(_tfEstimatorHooks):
   def __init__(self,
                tensors: dict,
                log_steps: int = None,
+               show_average: bool = False,
                at_end: bool = False,
                mode: tf.compat.v1.estimator.ModeKeys = tf.compat.v1.estimator.ModeKeys.TRAIN,
               ):
@@ -178,16 +179,9 @@ class tfLogTensorHook(_tfEstimatorHooks):
       Any tensor/op should be declared here in order to be evaluated
       returns None or SessionRunArgs()
     """
-
-    if self.timer.should_trigger_for_step(self.trigger_step):
-      self.step_triggered = True
-      return tf.estimator.SessionRunArgs(self._buildSessionDict({'tensors' : self.tensors}))
-    else:
-      self.step_triggered = False
-      return super(tfLogTensorHook, self).before_run(run_context)
+    self.step_triggered = self.timer.should_trigger_for_step(self.trigger_step)
+    return tf.estimator.SessionRunArgs(self._buildSessionDict({'tensors' : self.tensors}))
     
-    return None
-
   def after_run(self, run_context, run_values):
     """
       Requested tensors are evaluated and their values are available
@@ -196,8 +190,15 @@ class tfLogTensorHook(_tfEstimatorHooks):
     super(tfLogTensorHook, self).after_run(run_context, run_values)
     self.current_epoch = int(self.current_step / self.log_steps)
 
+    for tag in self.tensor_tags:
+      if self.show_average:
+        self.result[tag].append(run_values.results['tensors'][tag])
+      else:
+        self.result[tag] = run_values.results['tensors'][tag]
+
     if self.step_triggered:
-      self._log_tensors(run_values.results['tensors'])
+      self.result = { key: (sum(self.result[key]) / len(self.result[key])) for key in self.result }
+      self._log_tensors(self.result)
 
     self.trigger_step += 1
 
