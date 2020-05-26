@@ -501,7 +501,7 @@ class tfBert(backends.BackendBase):
         }
 
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
-            mode=mode,
+            mode = mode,
             predictions = prediction_metrics,
             scaffold_fn = scaffold_fn)
       else:
