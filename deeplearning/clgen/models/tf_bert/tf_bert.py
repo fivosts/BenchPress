@@ -307,18 +307,19 @@ class tfBert(backends.BackendBase):
     l.getLogger().warning("When all data are fetched, the input_fn function should raise an exception")
     l.getLogger().warning("B) Are you able to handle the generated sentence and forward it back to the input ?")
 
-    for pr in self.sample_generator:
-      ## I'm getting a couple of things here:
-      ## a) masked_lm_predictions
-      ## b) next_sentence_predictions
-      for batch in pr['masked_lm_predictions']:
-        l.getLogger().info(batch)
-        l.getLogger().info(self.atomizer.DeatomizeIndices(batch))
-      l.getLogger().warning("TODO! Right here you must forward output back to input.")
-      sample_generator.close()
-    exit()
+    result = next(self.sample_generator)
 
-    return []
+    for batch in result['masked_lm_predictions']:
+      l.getLogger().info(batch)
+      l.getLogger().info(self.atomizer.DeatomizeIndices(batch))
+
+    for batch in result['next_sentence_predictions']:
+      l.getLogger().info(batch)
+
+    l.getLogger().warning("TODO! Right here you must forward output back to input.")
+
+    exit()
+    return result['masked_lm_predictions']
 
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
