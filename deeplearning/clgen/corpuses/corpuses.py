@@ -196,9 +196,6 @@ class Corpus(object):
       exist_ok=True, parents=True
     )
     db_path = cache.cachepath("corpus", "encoded", encoded_id, "encoded.db")
-    # TODO(github.com/ChrisCummins/clgen/issues/130): Refactor this conditional
-    # logic by making Corpus an abstract class and creating concrete subclasses
-    # for the different types of corpus.
     if self.config.HasField("pre_encoded_corpus_url"):
       self.encoded = encoded.EncodedContentFiles(config.pre_encoded_corpus_url)
     else:
@@ -206,9 +203,6 @@ class Corpus(object):
     self.atomizer_path = cache.cachepath(
       "corpus", "encoded", encoded_id, "atomizer.pkl"
     )
-    # Create symlink to preprocessed files.
-    # TODO(github.com/ChrisCummins/clgen/issues/130): Refactor this conditional
-    # logic after splitting Corpus class.
     if not self.config.HasField("pre_encoded_corpus_url"):
       symlink = (
         pathlib.Path(self.encoded.url[len("sqlite:///") :]).parent
@@ -246,8 +240,6 @@ class Corpus(object):
     l.getLogger().info("Content ID: {}".format(self.content_id))
 
     # Nothing to do for already-encoded databases.
-    # TODO(github.com/ChrisCummins/clgen/issues/130): Refactor this after
-    # splitting out Corpus class.
     if self.config.HasField("pre_encoded_corpus_url"):
       with self.dashboard_db.Session(commit=True) as session:
         config_to_store = corpus_pb2.Corpus()
