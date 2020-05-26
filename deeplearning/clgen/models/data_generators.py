@@ -474,12 +474,11 @@ class MaskLMBatchGenerator(object):
     start_time = time.time()
 
     # generate a kernel corpus
-    encoded_corpus = np.concatenate(self.corpus.GetTrainingData())
+    encoded_corpus = self.corpus.GetTrainingData()
+    if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
+      self.rngen.shuffle(encoded_corpus)
+    encoded_corpus = np.concatenate(encoded_corpus)
     encoded_corpus = np.tile(encoded_corpus, self.training_opts.dupe_factor)
-
-    ## TODO!
-    # if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
-    #   self.rngen.shuffle(encoded_corpus)
 
     # Set corpus dimension parameters
     self.sequence_length        = self.training_opts.sequence_length
