@@ -396,16 +396,11 @@ class MaskLMBatchGenerator(object):
 
       batch_size = params["batch_size"]
       name_to_features = {
-          "input_ids":
-              tf.io.FixedLenFeature([sequence_length], tf.int64),
-          "masked_lm_positions":
-              tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
-          "masked_lm_ids":
-              tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
-          "masked_lm_weights":
-              tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.float32),
-          "next_sentence_labels":
-              tf.io.FixedLenFeature([1], tf.int64),
+          "input_ids":            tf.io.FixedLenFeature([sequence_length], tf.int64),
+          "masked_lm_positions":  tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
+          "masked_lm_ids":        tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
+          "masked_lm_weights":    tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.float32),
+          "next_sentence_labels": tf.io.FixedLenFeature([1], tf.int64),
       }
 
       dataset = tf.io.gfile.glob(str(self.tfRecord))
@@ -446,51 +441,7 @@ class MaskLMBatchGenerator(object):
               num_parallel_batches=num_cpu_threads,
               drop_remainder=use_tpu))
       return d
-
     return input_fn
-
-
-  def InitSampleBatch(self,
-                      input_sample,
-                      sequence_length,
-                      ) -> None:
-
-    assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
-    expanded_sample = self._expandHoleToMasks(
-          input_sample, sequence_length - len(input_sample) + 1
-          )
-    padded_sample = self._padToMaxPosition(expanded_sample)
-
-    assert len(padded_sample) == self.max_position_embeddings, "Padded sequence does not match max_position_embeddings"
-    self.sampleBatch = np.repeat(padded_sample[None, :], self.batch_size, axis = 0)
-    return
-
-  def _expandHoleToMasks(self,
-                        sample: np.array, 
-                        length: int
-                        ) -> np.array:
-
-    ## TODO. Essentially this snippet below finds the indices of a random token
-    ## and instructs a function to replace that token  with a sequence of masks
-    ## That is too specific over "replacing holes with masks" but can/should be 
-    ## generalized to anything
-    hole_index = np.where(sample == self.atomizer.holeToken)[0]
-    if len(hole_index) == 0: ## Nothing to do
-      return sample
-    if len(hole_index) > 1:
-      l.getLogger().warning("Multiple instances of {} are found. \
-                              Selecting the first one.".format(self.atomizer.holeLabel))
-
-    fhidx = hole_index[0]
-    return np.concatenate([sample[:fhidx], 
-                            np.array([self.atomizer.maskToken] * length, dtype = np.int32),
-                            sample[fhidx + 1:]])
-
-  def _padToMaxPosition(self, input_sample):
-    return np.concatenate([input_sample, 
-                          np.array([self.atomizer.padToken] * 
-                              (self.max_position_embeddings - len(input_sample)), dtype = np.int32)
-                          ])
 
   def generateTfSamples(self):
 
@@ -553,6 +504,21 @@ class MaskLMBatchGenerator(object):
                 humanize.Commas(int((time.time() - start_time) * 1000)),
             )
     )
+    return
+
+  def InitSampleBatch(self,
+                      input_sample,
+                      sequence_length,
+                      ) -> None:
+
+    assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
+    expanded_sample = self._expandHoleToMasks(
+          input_sample, sequence_length - len(input_sample) + 1
+          )
+    padded_sample = self._padToMaxPosition(expanded_sample)
+
+    assert len(padded_sample) == self.max_position_embeddings, "Padded sequence does not match max_position_embeddings"
+    self.sampleBatch = np.repeat(padded_sample[None, :], self.batch_size, axis = 0)
     return
 
   def _saveCorpusTfRecord(self) -> None:
@@ -694,3 +660,30 @@ class MaskLMBatchGenerator(object):
 
     return (input_ids, masked_lm_positions, 
             masked_lm_ids, masked_lm_weights, next_sentence_label)
+
+  def _expandHoleToMasks(self,
+                        sample: np.array, 
+                        length: int
+                        ) -> np.array:
+
+    ## TODO. Essentially this snippet below finds the indices of a random token
+    ## and instructs a function to replace that token  with a sequence of masks
+    ## That is too specific over "replacing holes with masks" but can/should be 
+    ## generalized to anything
+    hole_index = np.where(sample == self.atomizer.holeToken)[0]
+    if len(hole_index) == 0: ## Nothing to do
+      return sample
+    if len(hole_index) > 1:
+      l.getLogger().warning("Multiple instances of {} are found. \
+                              Selecting the first one.".format(self.atomizer.holeLabel))
+
+    fhidx = hole_index[0]
+    return np.concatenate([sample[:fhidx], 
+                            np.array([self.atomizer.maskToken] * length, dtype = np.int32),
+                            sample[fhidx + 1:]])
+
+  def _padToMaxPosition(self, input_sample):
+    return np.concatenate([input_sample, 
+                          np.array([self.atomizer.padToken] * 
+                              (self.max_position_embeddings - len(input_sample)), dtype = np.int32)
+                          ])
