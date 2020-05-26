@@ -94,6 +94,13 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         config.architecture,
         "intermediate_size",
       )
+      pbutil.AssertFieldConstraint(
+        config.architecture,
+        "hidden_size",
+        lambda x: x % config.architecture.num_attention_heads == 0,
+        "The hidden size is not a multiple of the number of attention "
+        "heads."
+      )
       pbutil.AssertFieldIsSet(
         config.architecture,
         "hidden_act",
@@ -208,8 +215,8 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
       raise SystemError(
         "Unrecognized value: 'TrainingOptions.optimizer'"
       )
-  except pbutil.ProtoValueError as e:
-    raise ValueError(str(e))
+  except Exception as e:
+    raise e
   return config
 
 
