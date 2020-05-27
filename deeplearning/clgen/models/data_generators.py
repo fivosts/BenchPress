@@ -396,11 +396,11 @@ class MaskLMBatchGenerator(object):
 
       batch_size = params["batch_size"]
       name_to_features = {
-          "input_ids":            tf.io.FixedLenFeature([sequence_length], tf.int64),
-          "masked_lm_positions":  tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
-          "masked_lm_ids":        tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
-          "masked_lm_weights":    tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.float32),
-          "next_sentence_labels": tf.io.FixedLenFeature([1], tf.int64),
+          "input_ids"               : tf.io.FixedLenFeature([sequence_length], tf.int64),
+          "masked_lm_positions"     : tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
+          "masked_lm_ids"           : tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
+          "masked_lm_weights"       : tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.float32),
+          "next_sentence_labels"    : tf.io.FixedLenFeature([1], tf.int64),
       }
 
       dataset = tf.io.gfile.glob(str(self.tfRecord))
