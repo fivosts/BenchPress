@@ -382,7 +382,7 @@ class MaskLMAtomizer(AtomizerBase):
     metaTokensDict = {
         '[START]'   : '[START]',
         '[END]'     : '[END]',
-        '[PAD]'     : '[PAD]'
+        '[PAD]'     : '[PAD]',
         '[MASK]'    : '[MASK]',
         '[HOLE]'    : '[HOLE]',
         '[ENDHOLE]' : '[ENDHOLE]',
