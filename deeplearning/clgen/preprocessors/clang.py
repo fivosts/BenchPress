@@ -205,9 +205,9 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
       ["-style={}".format(json.dumps(CLANG_FORMAT_CONFIG))],
       timeout_seconds,
     )
-  except llvm.LlvmTimeout:
-    raise RuntimeError(
+  except TimeoutError:
+    raise TimeoutError(
       f"Clang-format timed out after {timeout_seconds}s"
     )
-  except clang_format.ClangFormatException as e:
-    raise RuntimeError(str(e))
+  except Exception as e:
+    raise e
