@@ -24,14 +24,11 @@ import re
 import subprocess
 import tempfile
 import typing
+from absl import flags
 
 from compilers.llvm import clang
-from compilers.llvm import clang_format
-
-from absl import flags
 from eupy.native import  logger as l
-
-FLAGS = flags.FLAGS
+from labm8.py import bazelutil
 
 # The marker used to mark stdin from clang pre-processor output.
 CLANG_STDIN_MARKER = re.compile(r'# \d+ "<stdin>" 2')
@@ -54,6 +51,7 @@ CLANG_FORMAT_CONFIG = {
   "AlwaysBreakAfterReturnType": "None",
   "AlwaysBreakAfterDefinitionReturnType": "None",
 }
+CLANG_FORMAT = bazelutil.DataPath("phd/third_party/llvm/clang-format")
 
 
 def StripPreprocessorLines(src: str) -> str:
@@ -197,16 +195,25 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
     ClangTimeout: If clang-format does not complete before timeout_seconds.
   """
   l.getLogger().debug("deeplearning.clgen.preprocessors.clang.ClangFormat()")
-  try:
-    return clang_format.Exec(
-      text,
-      suffix,
-      ["-style={}".format(json.dumps(CLANG_FORMAT_CONFIG))],
-      timeout_seconds,
-    )
-  except TimeoutError:
-    raise TimeoutError(
-      f"Clang-format timed out after {timeout_seconds}s"
-    )
-  except Exception as e:
-    raise e
+
+  cmd = [
+    "timeout",
+    "-s9",
+    str(timeout_seconds),
+    str(CLANG_FORMAT),
+    "-assume-filename",
+    f"input{suffix}",
+  ] + args
+  process = subprocess.Popen(
+    cmd,
+    stdin=subprocess.PIPE,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    universal_newlines=True,
+  )
+  stdout, stderr = process.communicate(text)
+  if process.returncode == 9:
+    raise TimeoutError(f"clang-format timed out after {timeout_seconds}s")
+  elif process.returncode != 0:
+    raise RuntimeError(stderr)
+  return stdout
