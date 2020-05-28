@@ -30,9 +30,6 @@ py_library(
     }),
     deps = [
         ":public",
-        "//compilers/llvm",
-        "//compilers/llvm:clang",
-        "//compilers/llvm:clang_format",
     ],
 )
 
@@ -280,7 +277,6 @@ py_library(
         ":clang",
         ":normalizer",
         ":public",
-        "//compilers/llvm:clang",
         "//labm8/py:bazelutil",
     ],
 )

@@ -26,7 +26,6 @@ import tempfile
 import typing
 from absl import flags
 
-from compilers.llvm import clang
 from eupy.native import  logger as l
 from labm8.py import bazelutil
 

@@ -83,7 +83,6 @@ def Preprocess(src: str,
     ClangException: In case of an error.
     ClangTimeout: If clang does not complete before timeout_seconds.
   """
-  l.getLogger().debug("compilers.llvm.clang.Preprocess()")
   copts = copts or []
   cmd = ["timeout", "-s9", str(timeout_seconds), str(CLANG)] + ["-E", "-c", "-", "-o", "-"] + copts
 
