@@ -16,8 +16,6 @@
 import re
 import sys
 
-from compilers.llvm import clang as clanglib
-
 from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import normalizer
 from deeplearning.clgen.preprocessors import public
@@ -39,6 +37,7 @@ C_COMMENT_RE = re.compile(
 # but substituted the sandboxed header locations in place of the defaults.
 #   bazel-phd/bazel-out/*-py3-opt/bin/deeplearning/clgen/preprocessors/\
 #     cxx_test.runfiles/llvm_mac/bin/clang -xc++ -E - -v
+CLANG = bazelutil.DataPath("phd/third_party/llvm/clang")
 CLANG_ARGS = [
   "-xc++",
   "-isystem",
@@ -66,11 +65,49 @@ CLANG_ARGS = [
   "-D_LIBCPP_HAS_C_ATOMIC_IMP",
 ]
 
+def Preprocess(src: str,
+               copts: typing.Optional[typing.List[str]] = None,
+               timeout_seconds: int = 60,
+              ):
+  """Run input code through the compiler frontend to inline macros.
+
+  Args:
+    src: The source code to preprocess.
+    copts: A list of flags to be passed to clang.
+    timeout_seconds: The number of seconds to allow before killing clang.
+
+  Returns:
+    The preprocessed code.
+
+  Raises:
+    ClangException: In case of an error.
+    ClangTimeout: If clang does not complete before timeout_seconds.
+  """
+  l.getLogger().debug("compilers.llvm.clang.Preprocess()")
+  copts = copts or []
+  cmd = ["timeout", "-s9", str(timeout_seconds), str(CLANG)] + ["-E", "-c", "-", "-o", "-"] + copts
+
+  process = subprocess.Popen(
+    cmd,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    stdin=subprocess.PIPE,
+    universal_newlines=True,
+  )
+  stdout, stderr = process.communicate(stdin)
+  if process.returncode == 9:
+    raise TimeoutError(f"clang timed out after {timeout_seconds}s")
+
+  process.stdout = stdout
+  process.stderr = stderr
+  if process.returncode:
+    raise RuntimeError("{}: {}".format(process.stderr, process.returncode))
+  return process.stdout
 
 @public.clgen_preprocessor
 def ClangPreprocess(text: str) -> str:
   try:
-    return clang.StripPreprocessorLines(clanglib.Preprocess(text, CLANG_ARGS))
+    return clang.StripPreprocessorLines(Preprocess(text, CLANG_ARGS))
   except Exception as e:
     raise e
 

@@ -51,6 +51,8 @@ CLANG_FORMAT_CONFIG = {
   "AlwaysBreakAfterReturnType": "None",
   "AlwaysBreakAfterDefinitionReturnType": "None",
 }
+
+CLANG = bazelutil.DataPath("phd/third_party/llvm/clang")
 CLANG_FORMAT = bazelutil.DataPath("phd/third_party/llvm/clang-format")
 
 
@@ -104,7 +106,7 @@ def Preprocess(
     "timeout",
     "-s9",
     str(timeout_seconds),
-    str(clang.CLANG),
+    str(CLANG),
     "-E",
     "-c",
     "-",
@@ -159,7 +161,7 @@ def CompileLlvmBytecode(
     f.write(src)
     f.flush()
     cmd = (
-      ["timeout", "-s9", str(timeout_seconds), str(clang.CLANG), f.name]
+      ["timeout", "-s9", str(timeout_seconds), str(CLANG), f.name]
       + builtin_cflags
       + cflags
     )
