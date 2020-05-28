@@ -17,7 +17,6 @@ import re
 import sys
 
 from compilers.llvm import clang as clanglib
-from compilers.llvm import llvm
 
 from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import normalizer
@@ -72,8 +71,8 @@ CLANG_ARGS = [
 def ClangPreprocess(text: str) -> str:
   try:
     return clang.StripPreprocessorLines(clanglib.Preprocess(text, CLANG_ARGS))
-  except llvm.LlvmError as e:
-    raise RuntimeError(str(e.stderr[:1024]))
+  except Exception as e:
+    raise e
 
 
 @public.clgen_preprocessor
