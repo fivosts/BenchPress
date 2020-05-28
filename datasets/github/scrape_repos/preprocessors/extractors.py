@@ -52,6 +52,7 @@ def ExtractJavaMethods(text: str, static_only: bool = True) -> typing.List[str]:
   Raises:
     ValueError: In case method extraction fails.
   """
+  raise SystemError("JAVA method is being called!")
   l.getLogger().error("$ {}".format(JAVA_METHODS_EXTRACTOR))
   process = subprocess.Popen(
     [JAVA_METHODS_EXTRACTOR],
@@ -89,6 +90,7 @@ def BatchedMethodExtractor(
   Raises:
     ValueError: In case method extraction fails.
   """
+  raise SystemError("JAVA method is being called!")
   input_message = scrape_repos_pb2.ListOfStrings(string=texts)
   output_message = scrape_repos_pb2.ListOfListOfStrings()
   pbutil.RunProcessMessageToProto(

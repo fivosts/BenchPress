@@ -180,6 +180,7 @@ def JavaRewrite(text: str) -> str:
     RewriterError: If rewriter found nothing to rewrite.
     ClangTimeout: If rewriter fails to complete within timeout_seconds.
   """
+  raise SystemError("JAVA rewriter is being called.")
   cmd = ["timeout", "-s9", "60", str(JAVA_REWRITER)]
   process = subprocess.Popen(
     cmd,
