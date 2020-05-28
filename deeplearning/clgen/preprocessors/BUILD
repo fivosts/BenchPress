@@ -26,6 +26,8 @@ py_library(
         ],
         "//conditions:default": [
             "@libcxx_linux//:headers",
+            "@llvm_linux//:clang",
+            "@llvm_linux//:clang-format",
         ],
     }),
     deps = [
@@ -270,6 +272,8 @@ py_library(
         ],
         "//conditions:default": [
             "@libcxx_linux//:headers",
+            "@llvm_linux//:clang",
+            "@llvm_linux//:clang-format",
         ],
     }),
     visibility = ["//deeplearning/clgen:__subpackages__"],
