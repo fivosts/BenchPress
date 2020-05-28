@@ -50,9 +50,8 @@ CLANG_FORMAT_CONFIG = {
   "AlwaysBreakAfterReturnType": "None",
   "AlwaysBreakAfterDefinitionReturnType": "None",
 }
-
-CLANG = bazelutil.DataPath("phd/third_party/llvm/clang")
-CLANG_FORMAT = bazelutil.DataPath("phd/third_party/llvm/clang-format")
+CLANG = bazelutil.DataPath("phd/external/llvm_linux/bin/clang")
+CLANG_FORMAT = bazelutil.DataPath("phd/external/llvm_linux/bin/clang-format")
 
 
 def StripPreprocessorLines(src: str) -> str:

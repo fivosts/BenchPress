@@ -37,7 +37,7 @@ C_COMMENT_RE = re.compile(
 # but substituted the sandboxed header locations in place of the defaults.
 #   bazel-phd/bazel-out/*-py3-opt/bin/deeplearning/clgen/preprocessors/\
 #     cxx_test.runfiles/llvm_mac/bin/clang -xc++ -E - -v
-CLANG = bazelutil.DataPath("phd/third_party/llvm/clang")
+CLANG = bazelutil.DataPath("phd/external/llvm_linux/bin/clang")
 CLANG_ARGS = [
   "-xc++",
   "-isystem",
