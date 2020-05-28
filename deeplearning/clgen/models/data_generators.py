@@ -28,8 +28,18 @@ FLAGS = flags.FLAGS
 flags.DEFINE_boolean(
   "write_text_dataset", 
   False, 
-  "Set for MaskLM data generator to write dataset in text format, along with the tfRecord."
+  "Set True for MaskLM data generator to write dataset in text format, along with the tfRecord."
 )
+
+flags.DEFINE_boolean(
+  "randomize_mask_placement",
+  False,
+  "When selecting an index in the input tensor, the original BERT model gives 80% chance ",
+  "to replace it with a MASK, a 10% chance to replace it with another random token ",
+  "and another 10% to leave it be after all. Set True to enable this behavior. Otherwise, ",
+  "when selecting an index in the input, this will be replaced by a MASK."
+)
+
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
   X: np.array
@@ -619,17 +629,19 @@ class MaskLMBatchGenerator(object):
       if len(masked_lms) >= masks_to_predict:
         break
 
-      # 80% of the time, replace with [MASK]
-      if self.rngen.random() < 0.8:
-        input_ids[pos_index] = self.atomizer.maskToken ## TODO ?????
-      # The else block below is debatable for this use case. So comment out for now
-      # else:
-      #   # 10% of the time, keep original
-      #   if self.rngen.random() < 0.5:
-      #     pass
-      #   # 10% of the time, replace with random word
-      #   else:
-      #     input_ids[pos_index] = self.rngen.randint(0, self.atomizer.vocab_size - 1)
+      if FLAGS.randomize_mask_placement:
+        # 80% of the time, replace with [MASK]
+        if self.rngen.random() < 0.8:
+          input_ids[pos_index] = self.atomizer.maskToken
+        else:
+          # 10% of the time, keep original
+          if self.rngen.random() < 0.5:
+            pass
+          # 10% of the time, replace with random word
+          else:
+            input_ids[pos_index] = self.rngen.randint(0, self.atomizer.vocab_size - 1)
+      else:
+        input_ids[pos_index] = self.atomizer.maskToken
 
       class MaskedLmInstance(typing.NamedTuple):
         pos_index: int
