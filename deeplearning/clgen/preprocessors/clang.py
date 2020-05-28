@@ -27,7 +27,6 @@ import typing
 
 from compilers.llvm import clang
 from compilers.llvm import clang_format
-from compilers.llvm import llvm
 
 from absl import flags
 from eupy.native import  logger as l
