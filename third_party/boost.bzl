@@ -112,8 +112,6 @@ def boost_deps():
             ],
         )
 
-    SOURCEFORGE_MIRRORS = ["phoenixnap", "newcontinuum", "cfhcable", "superb-sea2", "cytranet", "iweb", "gigenet", "ayera", "astuteinternet", "pilotfiber", "svwh"]
-
     if "org_lzma_lzma" not in native.existing_rules():
         http_archive(
             name = "org_lzma_lzma",
@@ -121,8 +119,7 @@ def boost_deps():
             sha256 = "71928b357d0a09a12a4b4c5fafca8c31c19b0e7d3b8ebb19622e96f26dbf28cb",
             strip_prefix = "xz-5.2.3",
             urls = [
-                "https://%s.dl.sourceforge.net/project/lzmautils/xz-5.2.3.tar.gz" % m
-                for m in SOURCEFORGE_MIRRORS
+                "https://sourceforge.net/projects/lzmautils/files/xz-5.2.3.tar.gz"
             ],
         )
 
@@ -130,10 +127,9 @@ def boost_deps():
         http_archive(
             name = "boost",
             build_file = "@com_github_nelhage_rules_boost//:BUILD.boost",
-            sha256 = "da3411ea45622579d419bfda66f45cd0f8c32a181d84adfa936f5688388995cf",
+            # sha256 = "da3411ea45622579d419bfda66f45cd0f8c32a181d84adfa936f5688388995cf",
             strip_prefix = "boost_1_68_0",
             urls = [
-                "https://%s.dl.sourceforge.net/project/boost/boost/1.68.0/boost_1_68_0.tar.gz" % m
-                for m in SOURCEFORGE_MIRRORS
+                "https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz"
             ],
         )

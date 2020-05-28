@@ -69,12 +69,12 @@ http_archive(
 # Boost C++ library.
 # See: https://github.com/nelhage/rules_boost
 
-#http_archive(
-#    name = "com_github_nelhage_rules_boost",
-#    sha256 = "391c6988d9f7822176fb9cf7da8930ef4474b0b35b4f24c78973cb6075fd17e4",
-#    strip_prefix = "rules_boost-417642961150e987bc1ac78c7814c617566ffdaaa",
-#    url = "https://github.com/nelhage/rules_boost/archive/417642961150e987bc1ac78c7814c617566ffdaa.tar.gz",
-#)
+http_archive(
+   name = "com_github_nelhage_rules_boost",
+   sha256 = "391c6988d9f7822176fb9cf7da8930ef4474b0b35b4f24c78973cb6075fd17e4",
+   strip_prefix = "rules_boost-417642961150e987bc1ac78c7814c617566ffdaa",
+   url = "https://github.com/nelhage/rules_boost/archive/417642961150e987bc1ac78c7814c617566ffdaa.tar.gz",
+)
 
 load("//:third_party/boost.bzl", "boost_deps")
 
@@ -111,14 +111,6 @@ http_archive(
 # OpenCL headers.
 
 http_archive(
-    name = "opencl_120_headers",
-    build_file = "//:third_party/opencl_headers.BUILD",
-    sha256 = "fab4705dd3b0518f40e9d5d2f234aa57b82569841122f88a4ebcba10ecc17119",
-    strip_prefix = "OpenCL-Headers-1.2/opencl12",
-    urls = ["https://github.com/ChrisCummins/OpenCL-Headers/archive/v1.2.tar.gz"],
-)
-
-http_archive(
     name = "opencl_220_headers",
     build_file = "//:third_party/opencl_headers.BUILD",
     sha256 = "4b159af0ce0a5260098fff9992cde242af09c24c794ab46ff57390804a65066d",
@@ -137,14 +129,6 @@ http_archive(
 # LLVM.
 
 http_archive(
-    name = "llvm_mac",
-    build_file = "//:third_party/llvm.BUILD",
-    sha256 = "0ef8e99e9c9b262a53ab8f2821e2391d041615dd3f3ff36fdf5370916b0f4268",
-    strip_prefix = "clang+llvm-6.0.0-x86_64-apple-darwin",
-    urls = ["https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-apple-darwin.tar.xz"],
-)
-
-http_archive(
     name = "llvm_linux",
     build_file = "//:third_party/llvm.BUILD",
     sha256 = "cc99fda45b4c740f35d0a367985a2bf55491065a501e2dd5d1ad3f97dcac89da",
@@ -159,13 +143,6 @@ http_archive(
     build_file = "//:third_party/git-sizer.BUILD",
     sha256 = "44570533f2ba434bedb70ee90a83d65f9b4da03b008041f2dad755ba6cd47377",
     urls = ["https://github.com/github/git-sizer/releases/download/v1.3.0/git-sizer-1.3.0-linux-386.zip"],
-)
-
-http_archive(
-    name = "git_sizer_mac",
-    build_file = "//:third_party/git-sizer.BUILD",
-    sha256 = "d80fcd2f28bfd2b531fd469bf65bd7dd2908c82a52bf4f82fdbf1caf34392124",
-    urls = ["https://github.com/github/git-sizer/releases/download/v1.3.0/git-sizer-1.3.0-darwin-386.zip"],
 )
 
 # Golang and gazelle.
@@ -204,14 +181,6 @@ http_archive(
 # attributes, without having to set a custom -I path in copts.
 
 http_archive(
-    name = "llvm_headers_mac",
-    build_file = "//:third_party/llvm_headers.BUILD",
-    sha256 = "0ef8e99e9c9b262a53ab8f2821e2391d041615dd3f3ff36fdf5370916b0f4268",
-    strip_prefix = "clang+llvm-6.0.0-x86_64-apple-darwin/include",
-    urls = ["https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-apple-darwin.tar.xz"],
-)
-
-http_archive(
     name = "llvm_headers_linux",
     build_file = "//:third_party/llvm_headers.BUILD",
     sha256 = "cc99fda45b4c740f35d0a367985a2bf55491065a501e2dd5d1ad3f97dcac89da",
@@ -231,14 +200,6 @@ http_archive(
 # TODO: Remove these.
 
 http_archive(
-    name = "libcxx_mac",
-    build_file = "//:third_party/libcxx.BUILD",
-    sha256 = "0ef8e99e9c9b262a53ab8f2821e2391d041615dd3f3ff36fdf5370916b0f4268",
-    strip_prefix = "clang+llvm-6.0.0-x86_64-apple-darwin",
-    urls = ["https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-apple-darwin.tar.xz"],
-)
-
-http_archive(
     name = "libcxx_linux",
     build_file = "//:third_party/libcxx.BUILD",
     sha256 = "cc99fda45b4c740f35d0a367985a2bf55491065a501e2dd5d1ad3f97dcac89da",
@@ -256,15 +217,7 @@ git_repository(
     shallow_since = "1571659731 -0400",
 )
 
-# Intel TBB (pre-built binaries for mac and linux)
-
-http_archive(
-    name = "tbb_mac",
-    build_file = "//:third_party/tbb_mac.BUILD",
-    sha256 = "6ff553ec31c33b8340ce2113853be1c42e12b1a4571f711c529f8d4fa762a1bf",
-    strip_prefix = "tbb2017_20170226oss",
-    urls = ["https://github.com/01org/tbb/releases/download/2017_U5/tbb2017_20170226oss_mac.tgz"],
-)
+# Intel TBB (pre-built binaries for linux)
 
 http_archive(
     name = "tbb_lin",
@@ -274,15 +227,7 @@ http_archive(
     urls = ["https://github.com/01org/tbb/releases/download/2017_U5/tbb2017_20170226oss_lin.tgz"],
 )
 
-# Oclgrind (pre-built binaries for mac and linux).
-
-http_archive(
-    name = "oclgrind_mac",
-    build_file = "//:third_party/oclgrind.BUILD",
-    sha256 = "484d0d66c4bcc46526d031acb31fed52eea375e818a2b3dea3d4a31d686b3018",
-    strip_prefix = "oclgrind-18.3",
-    urls = ["https://github.com/jrprice/Oclgrind/releases/download/v18.3/Oclgrind-18.3-macOS.tgz"],
-)
+# Oclgrind (pre-built binaries for linux).
 
 http_archive(
     name = "oclgrind_linux",
@@ -743,24 +688,6 @@ go_repository(
     importpath = "github.com/golang/gp",
 )
 
-# Pre-built go binaries.
-
-http_archive(
-    name = "go_linux",
-    build_file = "//:third_party/go.BUILD",
-    sha256 = "a1bc06deb070155c4f67c579f896a45eeda5a8fa54f35ba233304074c4abbbbd",
-    strip_prefix = "go",
-    urls = ["https://dl.google.com/go/go1.13.6.linux-amd64.tar.gz"],
-)
-
-http_archive(
-    name = "go_mac",
-    build_file = "//:third_party/go.BUILD",
-    sha256 = "1ee0dc6a7abf389dac898cbe27e28c4388a61e45cba2632c01d749e25003007f",
-    strip_prefix = "go",
-    urls = ["https://dl.google.com/go/go1.13.6.darwin-amd64.tar.gz"],
-)
-
 # Pre-compiled shfmt binary
 # https://github.com/mvdan/sh
 
@@ -770,14 +697,6 @@ http_file(
     executable = 1,
     sha256 = "86892020280d923976ecaaad1e7db372d37dce3cfaad44a7de986f7eb728eae7",
     urls = ["https://github.com/mvdan/sh/releases/download/v3.0.1/shfmt_v3.0.1_linux_amd64"],
-)
-
-http_file(
-    name = "shfmt_mac",
-    downloaded_file_path = "shfmt",
-    executable = 1,
-    sha256 = "e470d216818a107078fbaf34807079c4857cb98610d67c96bf4dece43a56b66c",
-    urls = ["https://github.com/mvdan/sh/releases/download/v3.0.1/shfmt_v3.0.1_darwin_amd64"],
 )
 
 # Pre-compiled buf binary
