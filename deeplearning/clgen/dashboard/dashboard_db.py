@@ -5,7 +5,6 @@ import sqlalchemy as sql
 from sqlalchemy.dialects import mysql
 
 from absl import flags
-from labm8.py import decorators
 from labm8.py import labdate
 from labm8.py import sqlutil
 
@@ -13,7 +12,6 @@ from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 Base = sqlutil.Base()
-
 
 class DashboardDatabase(sqlutil.Database):
   def __init__(self, url: str, must_exist: bool):
@@ -41,7 +39,6 @@ class Corpus(Base):
     ),
   )
 
-
 class Model(Base):
   __tablename__ = "models"
 
@@ -62,7 +59,6 @@ class Model(Base):
       "corpus_id", "config_proto_sha1", "cache_path", name="unique_model"
     ),
   )
-
 
 class TrainingTelemetry(Base):
   __tablename__ = "training_telemetry"
@@ -89,7 +85,6 @@ class TrainingTelemetry(Base):
     sql.UniqueConstraint("model_id", "epoch", "step", name="unique_telemetry"),
   )
 
-
 class TrainingSample(Base):
   __tablename__ = "training_samples"
 
@@ -107,8 +102,6 @@ class TrainingSample(Base):
 
   model: Model = sql.orm.relationship("Model")
 
-
-@decorators.run_once
 def GetDatabase() -> DashboardDatabase:
   l.getLogger().debug("deeplearning.clgen.dashboard.dashboard_db.GetDatabase()")
   db: DashboardDatabase = DashboardDatabase(
