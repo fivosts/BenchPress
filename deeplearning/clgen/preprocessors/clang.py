@@ -204,7 +204,8 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
     str(CLANG_FORMAT),
     "-assume-filename",
     f"input{suffix}",
-  ] + args
+    "-style={}".format(json.dumps(CLANG_FORMAT_CONFIG))
+  ]
   process = subprocess.Popen(
     cmd,
     stdin=subprocess.PIPE,

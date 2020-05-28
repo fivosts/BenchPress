@@ -34,10 +34,10 @@ flags.DEFINE_boolean(
 flags.DEFINE_boolean(
   "randomize_mask_placement",
   False,
-  "When selecting an index in the input tensor, the original BERT model gives 80% chance ",
-  "to replace it with a MASK, a 10% chance to replace it with another random token ",
-  "and another 10% to leave it be after all. Set True to enable this behavior. Otherwise, ",
-  "when selecting an index in the input, this will be replaced by a MASK."
+  "When selecting an index in the input tensor, the original BERT model gives 80% chance "
+  "to replace it with a MASK, a 10% chance to replace it with another random token "
+  "and another 10% to leave it be after all. Set True to enable this behavior. Otherwise, "
+  "when selecting an index in the input, this will be replaced by a MASK.",
 )
 
 class DataBatch(typing.NamedTuple):
