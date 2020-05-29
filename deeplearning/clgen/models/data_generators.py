@@ -40,6 +40,12 @@ flags.DEFINE_boolean(
   "when selecting an index in the input, this will be replaced by a MASK.",
 )
 
+flags.DEFINE_boolean(
+  "use_start_end_metatokens", 
+  True, 
+  "Use [START] and [END] meta tokens at the beginning and end of each sequence."
+)
+
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
   X: np.array
@@ -487,6 +493,11 @@ class MaskLMBatchGenerator(object):
     encoded_corpus = self.corpus.GetTrainingData()
     if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
       self.rngen.shuffle(encoded_corpus)
+
+    if FLAGS.use_start_end_metatokens:
+      for i, kf in enumerate(encoded_corpus):
+        encoded_corpus[i] = self.atomizer.startToken + kf + self.atomizer.endToken
+        
     encoded_corpus = np.concatenate(encoded_corpus)
     encoded_corpus = np.tile(encoded_corpus, self.training_opts.dupe_factor)
 

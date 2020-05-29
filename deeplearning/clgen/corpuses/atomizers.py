@@ -338,6 +338,13 @@ class MaskLMAtomizer(AtomizerBase):
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.__repr__()")
     return f"MaskLMAtomizer[{self.vocab_size} chars]"
   
+  @property
+  def startToken(self):
+    return self.vocab[self.metaTokens['[START]']]
+
+  @property
+  def endToken(self):
+    return self.vocab[self.metaTokens['[END]']]
 
   @property
   def maskToken(self):
@@ -354,6 +361,14 @@ class MaskLMAtomizer(AtomizerBase):
   @property
   def padToken(self):
     return self.vocab[self.metaTokens['[PAD]']]
+
+  @property
+  def startLabel(self):
+    return self.metaTokens['[START]']
+
+  @property
+  def endLabel(self):
+    return self.metaTokens['[END]']
 
   @property
   def maskLabel(self):
