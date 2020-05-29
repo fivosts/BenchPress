@@ -489,38 +489,44 @@ class MaskLMBatchGenerator(object):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.CreateBatches()")
     start_time = time.time()
 
-    # generate a kernel corpus
-    encoded_corpus = self.corpus.GetTrainingData()
-    if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
-      self.rngen.shuffle(encoded_corpus)
-
-    if FLAGS.use_start_end_metatokens:
-      for i, kf in enumerate(encoded_corpus):
-        encoded_corpus[i] = self.atomizer.startToken + kf + self.atomizer.endToken
-        
-    encoded_corpus = np.concatenate(encoded_corpus)
-    encoded_corpus = np.tile(encoded_corpus, self.training_opts.dupe_factor)
-
     # Set corpus dimension parameters
     self.sequence_length        = self.training_opts.sequence_length
     self.batch_size             = self.training_opts.batch_size
-    self.steps_per_epoch        = int(len(encoded_corpus) / (self.batch_size * self.sequence_length * self.training_opts.dupe_factor))
-    assert self.steps_per_epoch != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
+    dupe_factor                 = self.training_opts.dupe_factor
+    shuffle                     = self.training_opts.shuffle_corpus_contentfiles_between_epochs
+    pad                         = [self.atomizer.padToken   ]
+    start                       = [self.atomizer.startToken ]
+    end                         = [self.atomizer.endToken   ]
+
+    # generate a kernel corpus
+    encoded_corpus = self.corpus.GetTrainingData()
+    # Reject larger than sequence length
+    encoded_corpus = [list(x) for x in encoded_corpus 
+                      if len(x) <= self.sequence_length - (2 if FLAGS.use_start_end_metatokens else 0)] # Account for start and end token
+    # Add start/end tokens
+    if FLAGS.use_start_end_metatokens:
+      for i, kf in enumerate(encoded_corpus):
+        encoded_corpus[i]       = start + kf + end
+    # pad sequences to sequence length
+    encoded_corpus              = np.array([x + pad * (self.sequence_length - len(x)) for x in encoded_corpus])
+    # Clone datapoints dupe_factor times
+    self.shaped_corpus          = np.repeat(encoded_corpus, dupe_factor, axis = 0)
+    # Shuffle
+    if shuffle:
+      self.rngen.shuffle(self.shaped_corpus)
+    assert len(self.shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
+
+    # Set corpus epoch parameters
+    self.steps_per_epoch        = min(self.training_opts.num_train_steps, 500) ## TODO add this as flag or pb param
     self.num_epochs             = int(self.training_opts.num_train_steps / self.steps_per_epoch)
 
-    clipped_corpus_length       = self.training_opts.dupe_factor * self.steps_per_epoch * self.batch_size * self.sequence_length
-    clipped_corpus              = encoded_corpus[:clipped_corpus_length]
-
-    self.shaped_corpus          = np.split(clipped_corpus.reshape(self.batch_size, -1), (self.training_opts.dupe_factor * self.steps_per_epoch), 1)
-    np_corpus = np.asarray(self.shaped_corpus)
-    assert np_corpus.ndim == 3, "Wrong dimensions for shaped_corpus: {}".format(np_corpus.shape)
-    assert np_corpus.shape[1] == self.batch_size, "Second dimension is not equal to batch size: {}".format(np_corpus.shape[1])
-    assert np_corpus.shape[2] == self.sequence_length, "Third dimension is not equal to sequence length: {}".format(np_corpus.shape[2])
+    assert self.shaped_corpus.ndim     == 2, "corpus dim: {}".format(self.shaped_corpus.shape)
+    assert self.shaped_corpus.shape[1] == self.sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(encoded_corpus.shape[1], self.sequence_length)
+    assert self.steps_per_epoch        != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
 
     l.getLogger().info(
-      "Loaded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
-                humanize.Commas(clipped_corpus_length),
-                humanize.Commas(len(encoded_corpus) - clipped_corpus_length),
+      "Loaded corpus of shape {} in {} ms.".format(
+                self.shaped_corpus.shape,
                 humanize.Commas(int((time.time() - start_time) * 1000)),
             )
     )
@@ -596,31 +602,21 @@ class MaskLMBatchGenerator(object):
                  corpus: np.array
                 )-> None:
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator._MaskCorpus()")
-    l.getLogger().warn("Masking Corpus is a slow process. Assign multiple threads to it")
-
     self.masked_corpus = []
 
     with progressbar.ProgressBar(max_value = len(corpus)) as bar:
-        for idx, batch in enumerate(corpus):
-          self.masked_corpus.extend(self._maskBatch(batch))
+        for idx, kernel in enumerate(corpus):
+          inp_id, mask_pos, mask_tok, mask_wei, next_sentence_label = self._maskSequence(kernel)
+          self.masked_corpus.append(MaskSequence(np.asarray(inp_id), 
+                                                 np.asarray(mask_pos), 
+                                                 np.asarray(mask_tok), 
+                                                 np.asarray(mask_wei),
+                                                 next_sentence_label
+                                                 )
+                                  )
           bar.update(idx)
     self.masked_corpus[0].LogBatchTelemetry(self.batch_size, self.steps_per_epoch, self.num_epochs)
     return
-
-  def _maskBatch(self, 
-                batch: np.array
-                ) -> typing.List[MaskSequence]:
-    out_batch = []
-    for seq in batch:
-      inp_id, mask_pos, mask_tok, mask_wei, next_sentence_label = self._maskSequence(seq)
-      out_batch.append(MaskSequence(np.asarray(inp_id), 
-                                 np.asarray(mask_pos), 
-                                 np.asarray(mask_tok), 
-                                 np.asarray(mask_wei),
-                                 next_sentence_label
-                                 )
-                      )
-    return out_batch
 
   def _maskSequence(self,
                     seq: np.array,
@@ -628,7 +624,12 @@ class MaskLMBatchGenerator(object):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator._maskSequence()")
       
     assert seq.ndim == 1, "Input for masking must be single-dimension array."
-    candidate_indexes = np.arange(len(seq))
+    if self.atomizer.padToken in seq:
+      actual_length = np.where(seq == self.atomizer.padToken)[0][0]
+    else:
+      actual_length = len(seq)
+
+    candidate_indexes = np.arange(actual_length)
     self.rngen.shuffle(candidate_indexes)
 
     masks_to_predict = min(self.training_opts.max_predictions_per_seq,
