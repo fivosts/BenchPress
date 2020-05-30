@@ -26,9 +26,9 @@ def _ImportPreprocessorFromFile(module_path: pathlib.Path, function_name: str):
     module = importlib_util.module_from_spec(spec)
     spec.loader.exec_module(module)
   except ImportError as e:
-    raise ValueError(f"Failed to import module {module_path}: {e}")
+    raise ImportError(f"Failed to import module {module_path}: {e}")
   if not hasattr(module, function_name):
-    raise ValueError(
+    raise AttributeError(
       f"Function {function_name} not found in module {module_path}"
     )
   return getattr(module, function_name)
@@ -40,14 +40,14 @@ def _ImportPreprocessorFromModule(module_name: str, function_name: str):
   try:
     module = importlib.import_module(module_name)
   except (ModuleNotFoundError, AttributeError):
-    raise ValueError(f"Module {module_name} not found.")
+    raise AttributeError(f"Module {module_name} not found.")
   if not hasattr(module, function_name):
-    raise ValueError(
+    raise AttributeError(
       f"Function {function_name} not found in module {module_name}"
     )
   function_ = getattr(module, function_name)
   if not function_.__dict__.get("is_clgen_preprocessor"):
-    raise ValueError(
+    raise AttributeError(
       f"Preprocessor {function_name} not decorated with @clgen_preprocessor"
     )
   return function_
@@ -89,10 +89,7 @@ def GetPreprocessorFunction(name: str) -> public.PreprocessorFunction:
 def Preprocess(text: str, preprocessors: typing.List[str]) -> str:
   """Preprocess a text using the given preprocessor pipeline.
 
-  If preprocessing succeeds, the preprocessed text is returned. If preprocessing
-  fails (in an expected way, for example by trying to compile incorrect code),
-  a BadCodeException is raised. Any other error leads to an InternalError.
-
+  If preprocessing succeeds, the preprocessed text is returned.
 
   Args:
     text: The input to be preprocessed.
@@ -103,15 +100,43 @@ def Preprocess(text: str, preprocessors: typing.List[str]) -> str:
     Preprocessed source input as a string.
 
   Raises:
-    UserError: If the requested preprocessors cannot be loaded.
-    BadCodeException: If one of the preprocessors rejects the input.
-    InternalException: In case of some other error.
+    ValueError, UnicodeError
   """
   l.getLogger().debug("deeplearning.clgen.preprocessors.preprocessors.Preprocess()")
   preprocessor_functions = [GetPreprocessorFunction(p) for p in preprocessors]
-  for preprocessor in preprocessor_functions:
-    text = preprocessor(text)
-  return text
+
+  def PreprocessSingle(text, preprocessors: typing.List[public.clgen_preprocessor]):
+    """
+      This recursive generator is an elegant way to manage preprocessors that decide to split one text into many,
+      without destroying the whole preprocessing pipeline. The generator creates a stream of pre-processed files,
+      in case one - or more - preprocessing functions return a list of strings.
+    """
+    preprocessor_success = True
+    for idx, pr in enumerate(preprocessors):
+      if isinstance(text, str):
+        try:
+          text = pr(text)
+        except ValueError as e:
+          text = str(e)
+          preprocessor_success = False
+        except UnicodeError:
+          text = "UnicodeError"
+          preprocessor_success = False
+      elif isinstance(text, list):
+        for item in text:
+          for t, pc in PreprocessSingle(item, preprocessors[idx:]):
+            yield t, pc
+        return
+      else:
+        raise TypeError("Preprocessor has returned type: {}".format(type(text)))
+
+    if isinstance(text, str):
+      yield text, preprocessor_success
+    elif isinstance(text, list):
+      for i in text:
+        yield i, preprocessor_success
+
+  return PreprocessSingle(text, preprocessor_functions)
 
 
 def PreprocessFile(
@@ -131,9 +156,7 @@ def PreprocessFile(
     Preprocessed source input as a string.
 
   Raises:
-    UserError: If the requested preprocessors cannot be loaded.
-    BadCodeException: If one of the preprocessors rejects the input.
-    InternalException: In case of some other error.
+    ValueError
   """
   l.getLogger().debug("deeplearning.clgen.preprocessors.preprocessors.PreprocessFile()")
   with open(path) as infile:
@@ -156,11 +179,11 @@ def RejectSecrets(text: str) -> str:
     The unmodified text.
 
   Raises:
-    BadCodeException: In case the text contains secrets.
+    ValueError: In case the text contains secrets.
   """
   l.getLogger().debug("deeplearning.clgen.preprocessors.preprocessors.RejectSecrets()")
   try:
     secrets.ScanForSecrets(text)
     return text
-  except secrets.TextContainsSecret as e:
+  except ValueError as e:
     raise ValueError(str(e))

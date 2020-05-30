@@ -56,7 +56,7 @@ class PreprocessedContentFile(Base):
 
   id: int = sql.Column(sql.Integer, primary_key=True)
   # Relative path of the input file within the content files.
-  input_relpath: str = sql.Column(sql.String(3072), nullable=False, unique=True)
+  input_relpath: str = sql.Column(sql.String(3072), nullable=False, unique=False)
   # Checksum of the input file.
   input_sha256: str = sql.Column(sql.String(64), nullable=False)
   input_charcount = sql.Column(sql.Integer, nullable=False)
@@ -98,32 +98,28 @@ class PreprocessedContentFile(Base):
     try:
       with open(contentfile_root / relpath) as f:
         input_text = f.read()
-      text = preprocessors.Preprocess(input_text, preprocessors_)
-      preprocessing_succeeded = True
-    except UnicodeDecodeError as e:
-      text = "Unicode error"
-    except ValueError as e:
-      # BadCodeException subclasses ValueError. Catch the more general
-      # ValueError so that custom preprocessors can raise ValueError and don't
-      # have to depend on CLgen sources.
-      text = str(e)
+      text_generator = preprocessors.Preprocess(input_text, preprocessors_)
+      # preprocessing_succeeded = True
+    except Exception as e:
+      raise("Unexpected exception: {}".format(e))
+
     end_time = time.time()
     preprocess_time_ms = int((end_time - start_time) * 1000)
     input_text_stripped = input_text.strip()
-    return cls(
+    return [ cls(
       input_relpath=relpath,
-      input_sha256=GetFileSha256(contentfile_root / relpath),
+      input_sha256=GetFileSha256(contentfile_root / (relpath)),
       input_charcount=len(input_text_stripped),
       input_linecount=len(input_text_stripped.split("\n")),
       sha256=hashlib.sha256(text.encode("utf-8")).hexdigest(),
       charcount=len(text),
       linecount=len(text.split("\n")),
       text=text,
-      preprocessing_succeeded=preprocessing_succeeded,
+      preprocessing_succeeded=success,
       preprocess_time_ms=preprocess_time_ms,
       wall_time_ms=preprocess_time_ms,  # The outer-loop may change this.
       date_added=datetime.datetime.utcnow(),
-    )
+    ) for (text, success) in text_generator ]
 
 
 def PreprocessorWorker(
@@ -239,16 +235,17 @@ class PreprocessedContentFiles(sqlutil.Database):
       bar = progressbar.ProgressBar(max_value=len(jobs))
       last_commit = time.time()
       wall_time_start = time.time()
-      for preprocessed_cf in bar(pool.imap_unordered(PreprocessorWorker, jobs)):
-        wall_time_end = time.time()
-        preprocessed_cf.wall_time_ms = int(
-          (wall_time_end - wall_time_start) * 1000
-        )
-        wall_time_start = wall_time_end
-        session.add(preprocessed_cf)
-        if wall_time_end - last_commit > 10:
-          session.commit()
-          last_commit = wall_time_end
+      for preprocessed_list in bar(pool.imap_unordered(PreprocessorWorker, jobs)):
+        for preprocessed_cf in preprocessed_list:
+          wall_time_end = time.time()
+          preprocessed_cf.wall_time_ms = int(
+            (wall_time_end - wall_time_start) * 1000
+          )
+          wall_time_start = wall_time_end
+          session.add(preprocessed_cf)
+          if wall_time_end - last_commit > 10:
+            session.commit()
+            last_commit = wall_time_end
 
   @contextlib.contextmanager
   def GetContentFileRoot(self, config: corpus_pb2.Corpus) -> pathlib.Path:
