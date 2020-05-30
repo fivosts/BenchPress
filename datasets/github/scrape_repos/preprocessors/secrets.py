@@ -41,7 +41,7 @@ def ScanForSecrets(text: str) -> bool:
   )
   for plugin in plugins:
     if plugin.analyze_string(text, 0, "does_not_matter"):
-      raise TextContainsSecret(plugin.__class__.__name__)
+      raise ValueError(plugin.__class__.__name__)
 
   return True
 
