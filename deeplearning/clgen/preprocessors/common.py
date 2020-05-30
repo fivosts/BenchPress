@@ -90,3 +90,13 @@ def StripTrailingWhitespace(text: str) -> str:
   """
   l.getLogger().debug("deeplearning.clgen.preprocessors.common.StripTrailingWhitespace()")
   return "\n".join(l.rstrip() for l in text.split("\n")).rstrip()
+
+@public.clgen_preprocessor
+def ExtractSingleKernels(text: str) -> str:
+
+  # l.getLogger().error("HELLO!")
+  # l.getLogger().info(text)
+  # raise TypeError
+  # exit()
+  return [text, text]
+  # return text  
