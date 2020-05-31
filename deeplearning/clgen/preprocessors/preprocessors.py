@@ -125,7 +125,7 @@ def Preprocess(text: str, preprocessors: typing.List[str]) -> str:
       elif isinstance(text, list):
         for item in text:
           for t, pc in PreprocessSingle(item, preprocessors[idx:]):
-            yield t, pc
+            yield t, (pc and preprocessor_success)
         return
       else:
         raise TypeError("Preprocessor has returned type: {}".format(type(text)))
