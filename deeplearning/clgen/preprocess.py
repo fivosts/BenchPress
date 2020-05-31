@@ -18,6 +18,7 @@ This is a utility script allowing you to invoke preprocessors from the command
 line. Preprocessing is performed automatically by CLgen when constructing a
 corpus - there is likely never a good reason to use this script. It is intended
 only for testing and debugging purposes.
+## TODO Remove me plz!
 """
 import multiprocessing
 import pathlib
