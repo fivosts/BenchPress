@@ -11,6 +11,7 @@ import typing
 import random
 import progressbar
 import collections
+import copy
 
 import numpy as np
 
@@ -499,18 +500,19 @@ class MaskLMBatchGenerator(object):
     end                         = [self.atomizer.endToken   ]
 
     # generate a kernel corpus
-    encoded_corpus = self.corpus.GetTrainingData()
+    encoded_corpus      = self.corpus.GetTrainingData()
     # Reject larger than sequence length
-    encoded_corpus = [list(x) for x in encoded_corpus 
-                      if len(x) <= self.sequence_length - (2 if FLAGS.use_start_end_metatokens else 0)] # Account for start and end token
+    initial_length      = copy.deepcopy(len(encoded_corpus))
+    encoded_corpus      = [list(x) for x in encoded_corpus if 
+                           len(x) <= self.sequence_length - (2 if FLAGS.use_start_end_metatokens else 0)] # Account for start and end token
+    reduced_length      = copy.deepcopy(len(encoded_corpus))
     # Add start/end tokens
     if FLAGS.use_start_end_metatokens:
-      for i, kf in enumerate(encoded_corpus):
-        encoded_corpus[i]       = start + kf + end
+      encoded_corpus    = [start + kf + end for kf in encoded_corpus]
     # pad sequences to sequence length
-    encoded_corpus              = np.array([x + pad * (self.sequence_length - len(x)) for x in encoded_corpus])
+    encoded_corpus      = np.array([x + pad * (self.sequence_length - len(x)) for x in encoded_corpus])
     # Clone datapoints dupe_factor times
-    self.shaped_corpus          = np.repeat(encoded_corpus, dupe_factor, axis = 0)
+    self.shaped_corpus  = np.repeat(encoded_corpus, dupe_factor, axis = 0)
     # Shuffle
     if shuffle:
       self.rngen.shuffle(self.shaped_corpus)
@@ -525,8 +527,10 @@ class MaskLMBatchGenerator(object):
     assert self.steps_per_epoch        != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
 
     l.getLogger().info(
-      "Loaded corpus of shape {} in {} ms.".format(
+      "Loaded corpus of shape {} (reduced by {} encoded files, multiplied by dupe factor: {}) in {} ms.".format(
                 self.shaped_corpus.shape,
+                initial_length - reduced_length,
+                dupe_factor,
                 humanize.Commas(int((time.time() - start_time) * 1000)),
             )
     )
