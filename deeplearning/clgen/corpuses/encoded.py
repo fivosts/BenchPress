@@ -271,7 +271,6 @@ class EncodedContentFiles(sqlutil.Database):
                               )
                           )
                         )
-
       try:
         pool = multiprocessing.Pool()
         bar = progressbar.ProgressBar(max_value=len(jobs))
@@ -297,7 +296,7 @@ class EncodedContentFiles(sqlutil.Database):
       except Exception as e:
         pool.terminate()
         raise e
-        
+
   @staticmethod
   def GetVocabFromMetaTable(session) -> typing.Dict[str, int]:
     l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.GetVocabFromMetaTable()")
