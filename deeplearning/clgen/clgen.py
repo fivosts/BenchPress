@@ -1,17 +1,3 @@
-# Copyright (c) 2016-2020 Chris Cummins.
-#
-# clgen is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# clgen is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """CLgen: a deep learning program generator.
 
 The core operations of CLgen are:
@@ -25,9 +11,6 @@ The pipeline can be interrupted and resumed at any time. Results are cached
 across runs. Please note that many of the steps in the pipeline are extremely
 compute intensive and highly parallelized. If configured with CUDA support,
 any NVIDIA GPUs will be used to improve performance where possible.
-
-Made with \033[1;31m♥\033[0;0m by Chris Cummins <chrisc.101@gmail.com>.
-https://chriscummins.cc/clgen
 """
 import contextlib
 import cProfile
@@ -109,10 +92,6 @@ flags.DEFINE_string(
   "files required for sampling to specified directory. The directory can "
   "then be used as the pretrained_model field of an Instance proto config.",
 )
-
-# TODO(github.com/ChrisCummins/clgen/issues/131): Remove these in favor of
-# standard labm8.py.app methods for enabling extra debugging or profiling
-# information.
 flags.DEFINE_boolean(
   "clgen_debug",
   False,
