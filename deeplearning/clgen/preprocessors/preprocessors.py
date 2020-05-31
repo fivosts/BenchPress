@@ -117,15 +117,15 @@ def Preprocess(text: str, preprocessors: typing.List[str]) -> str:
         try:
           text = pr(text)
         except ValueError as e:
-          text = str(e)
-          preprocessor_success = False
+          yield str(e), False
+          return
         except UnicodeError:
-          text = "UnicodeError"
-          preprocessor_success = False
+          yield "UnicodeError", False
+          return
       elif isinstance(text, list):
         for item in text:
           for t, pc in PreprocessSingle(item, preprocessors[idx:]):
-            yield t, (pc and preprocessor_success)
+            yield t, pc
         return
       else:
         raise TypeError("Preprocessor has returned type: {}".format(type(text)))
