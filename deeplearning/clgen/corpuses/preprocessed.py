@@ -231,21 +231,29 @@ class PreprocessedContentFiles(sqlutil.Database):
         )
         for t in todo
       ]
-      pool = multiprocessing.Pool()
-      bar = progressbar.ProgressBar(max_value=len(jobs))
-      last_commit = time.time()
-      wall_time_start = time.time()
-      for preprocessed_list in bar(pool.imap_unordered(PreprocessorWorker, jobs)):
-        for preprocessed_cf in preprocessed_list:
-          wall_time_end = time.time()
-          preprocessed_cf.wall_time_ms = int(
-            (wall_time_end - wall_time_start) * 1000
-          )
-          wall_time_start = wall_time_end
-          session.add(preprocessed_cf)
-          if wall_time_end - last_commit > 10:
-            session.commit()
-            last_commit = wall_time_end
+      try:
+        pool = multiprocessing.Pool()
+        bar = progressbar.ProgressBar(max_value=len(jobs))
+        last_commit = time.time()
+        wall_time_start = time.time()
+        for preprocessed_list in bar(pool.imap_unordered(PreprocessorWorker, jobs)):
+          for preprocessed_cf in preprocessed_list:
+            wall_time_end = time.time()
+            preprocessed_cf.wall_time_ms = int(
+              (wall_time_end - wall_time_start) * 1000
+            )
+            wall_time_start = wall_time_end
+            session.add(preprocessed_cf)
+            if wall_time_end - last_commit > 10:
+              session.commit()
+              last_commit = wall_time_end
+        pool.close()
+      except KeyboardInterrupt as e:
+        pool.terminate()
+        raise e
+      except Exception as e:
+        pool.terminate()
+        raise e
 
   @contextlib.contextmanager
   def GetContentFileRoot(self, config: corpus_pb2.Corpus) -> pathlib.Path:

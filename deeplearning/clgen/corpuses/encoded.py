@@ -272,24 +272,32 @@ class EncodedContentFiles(sqlutil.Database):
                           )
                         )
 
-      pool = multiprocessing.Pool()
-      bar = progressbar.ProgressBar(max_value=len(jobs))
-      last_commit = time.time()
-      wall_time_start = time.time()
-      for encoded_cf in bar(pool.imap_unordered(EncoderWorker, jobs)):
-        wall_time_end = time.time()
-        # TODO(cec): Remove the if check once EncoderWorker no longer returns
-        # None on atomizer encode error.
-        if encoded_cf:
-          encoded_cf.wall_time_ms = int(
-            (wall_time_end - wall_time_start) * 1000
-          )
-          session.add(encoded_cf)
-        wall_time_start = wall_time_end
-        if wall_time_end - last_commit > 10:
-          session.commit()
-          last_commit = wall_time_end
-
+      try:
+        pool = multiprocessing.Pool()
+        bar = progressbar.ProgressBar(max_value=len(jobs))
+        last_commit = time.time()
+        wall_time_start = time.time()
+        for encoded_cf in bar(pool.imap_unordered(EncoderWorker, jobs)):
+          wall_time_end = time.time()
+          # TODO(cec): Remove the if check once EncoderWorker no longer returns
+          # None on atomizer encode error.
+          if encoded_cf:
+            encoded_cf.wall_time_ms = int(
+              (wall_time_end - wall_time_start) * 1000
+            )
+            session.add(encoded_cf)
+          wall_time_start = wall_time_end
+          if wall_time_end - last_commit > 10:
+            session.commit()
+            last_commit = wall_time_end
+        pool.close()
+      except KeyboardInterrupt as e:
+        pool.terminate()
+        raise e
+      except Exception as e:
+        pool.terminate()
+        raise e
+        
   @staticmethod
   def GetVocabFromMetaTable(session) -> typing.Dict[str, int]:
     l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.GetVocabFromMetaTable()")

@@ -120,7 +120,6 @@ class Instance(object):
       UserError: If the instance proto contains invalid values, is missing
         a model or sampler fields.
     """
-    l.getLogger().debug("deeplearning.clgen.clgen.Instance.__init__()")
     try:
       pbutil.AssertFieldIsSet(config, "model_specification")
       pbutil.AssertFieldIsSet(config, "sampler")
@@ -149,7 +148,6 @@ class Instance(object):
   @contextlib.contextmanager
   def Session(self) -> "Instance":
     """Scoped $CLGEN_CACHE value."""
-    l.getLogger().debug("deeplearning.clgen.clgen.Instance.Session()")
     old_working_dir = os.environ.get("CLGEN_CACHE", "")
     if self.working_dir:
       os.environ["CLGEN_CACHE"] = str(self.working_dir)
@@ -158,12 +156,10 @@ class Instance(object):
       os.environ["CLGEN_CACHE"] = old_working_dir
 
   def Create(self) -> None:
-    l.getLogger().debug("deeplearning.clgen.clgen.Instance.Create()")
     with self.Session():
       self.model.Create()
 
   def Train(self, *args, **kwargs) -> None:
-    l.getLogger().debug("deeplearning.clgen.clgen.Instance.Train()")
     with self.Session():
       test_sampler_config = sampler_pb2.Sampler()
       test_sampler_config.CopyFrom(self.sampler.config)
@@ -183,14 +179,12 @@ class Instance(object):
       self.model.Train(*args, test_sampler=test_sampler, **kwargs)
 
   def Sample(self, *args, **kwargs) -> typing.List[model_pb2.Sample]:
-    l.getLogger().debug("deeplearning.clgen.clgen.Instance.Sample()")
     self.Train()
     with self.Session():
       return self.model.Sample(self.sampler, *args, **kwargs)
 
   def ExportPretrainedModel(self, export_dir: pathlib.Path) -> None:
     """Export a trained model."""
-    l.getLogger().debug("deeplearning.clgen.clgen.Instance.ExportPretrainedModel()")
     if isinstance(self.model, pretrained.PreTrainedModel):
       shutil.copytree(self.config.pretrained_model, export_dir / "model")
     else:
@@ -202,7 +196,6 @@ class Instance(object):
 
   def ToProto(self) -> clgen_pb2.Instance:
     """Get the proto config for the instance."""
-    l.getLogger().debug("deeplearning.clgen.clgen.Instance.ToProto()")
     config = clgen_pb2.Instance()
     config.working_dir = str(self.working_dir)
     config.model.CopyFrom(self.model.config)
@@ -211,11 +204,9 @@ class Instance(object):
 
   @classmethod
   def FromFile(cls, path: pathlib.Path) -> "Instance":
-    l.getLogger().debug("deeplearning.clgen.clgen.Instance.FromFile()")
     return cls(pbutil.FromFile(path, clgen_pb2.Instance()))
 
 def ConfigFromFlags() -> clgen_pb2.Instance:
-  l.getLogger().debug("deeplearning.clgen.clgen.ConfigFromFlags()")
 
   config_path = pathlib.Path(FLAGS.config)
   if not config_path.is_file():
@@ -224,11 +215,9 @@ def ConfigFromFlags() -> clgen_pb2.Instance:
   os.environ["PWD"] = str(config_path.parent)
   return config
 
-
 def SampleObserversFromFlags() -> typing.List[
   sample_observers_lib.SampleObserver
 ]:
-  l.getLogger().debug("deeplearning.clgen.clgen.SampleObserversFromFlags()")
   """Instantiate sample observers from flag values."""
   sample_observers = []
   if FLAGS.min_samples <= 0:
@@ -251,12 +240,10 @@ def SampleObserversFromFlags() -> typing.List[
     )
   return sample_observers
 
-
 def DoFlagsAction(
   instance: Instance,
   sample_observers: typing.List[sample_observers_lib.SampleObserver],
 ) -> None:
-  l.getLogger().debug("deeplearning.clgen.clgen.DoFlagsAction()")
   """Do the action requested by the command line flags.
 
   By default, this method trains and samples the instance using the given
@@ -286,9 +273,7 @@ def DoFlagsAction(
       print(instance.model.SamplerCache(instance.sampler))
       return
     elif FLAGS.print_cache_path:
-      raise ValueError(
-        f"Invalid --print_cache_path argument: '{FLAGS.print_cache_path}'"
-      )
+      raise ValueError(f"Invalid --print_cache_path argument: '{FLAGS.print_cache_path}'")
 
     # The default action is to sample the model.
     if FLAGS.stop_after == "corpus":
@@ -305,10 +290,8 @@ def DoFlagsAction(
     else:
       instance.Sample(sample_observers)
 
-
 def main():
   """Main entry point."""
-  l.getLogger().debug("deeplearning.clgen.clgen.main()")
   instance = Instance(
     ConfigFromFlags(), dashboard_opts={"debug": FLAGS.clgen_dashboard_only,}
   )
@@ -325,7 +308,6 @@ def initMain(*args, **kwargs):
     **kwargs: Arguments to be passed to the function.
   """
   l.initLogger(name = "clgen", lvl = FLAGS.level, colorize = FLAGS.color, step = FLAGS.step)
-  l.getLogger().debug("deeplearning.clgen.clgen.RunWithErrorHandling()")
   if FLAGS.clgen_debug:
     # Enable verbose stack traces. See: https://pymotw.com/2/cgitb/
     import cgitb
@@ -337,6 +319,8 @@ def initMain(*args, **kwargs):
       cProfile.runctx("main()", None, None, sort="tottime")
     else:
       main()
+  except KeyboardInterrupt:
+    sys.exit(1)
   except Exception as e:
     l.getLogger().error(e)
     raise
