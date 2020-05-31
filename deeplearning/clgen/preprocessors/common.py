@@ -94,9 +94,5 @@ def StripTrailingWhitespace(text: str) -> str:
 @public.clgen_preprocessor
 def ExtractSingleKernels(text: str) -> str:
 
-  # l.getLogger().error("HELLO!")
-  # l.getLogger().info(text)
-  # raise TypeError
-  # exit()
-  return [text, text]
-  # return text  
+  raise NotImplementedError
+  return text
