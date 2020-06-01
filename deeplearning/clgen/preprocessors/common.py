@@ -94,7 +94,9 @@ def StripTrailingWhitespace(text: str) -> str:
 @public.clgen_preprocessor
 def ExtractSingleKernels(text: str) -> str:
 
-  kernel_chunks = text.split('kernel')
+  kernel_specifier = 'kernel void'
+
+  kernel_chunks = text.split(kernel_specifier)
 
   actual_kernels, global_space = [], []
   for idx, chunk in enumerate(kernel_chunks):
@@ -122,7 +124,7 @@ def ExtractSingleKernels(text: str) -> str:
         else:
           break
 
-      actual_kernels.append(''.join(global_space) + 'kernel' + chunk[:chunk_idx])
+      actual_kernels.append(''.join(global_space) + kernel_specifier + chunk[:chunk_idx])
       if ''.join(chunk[chunk_idx:]) != '':
         global_space.append(chunk[chunk_idx:])
 
