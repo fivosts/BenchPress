@@ -610,23 +610,25 @@ class MaskLMBatchGenerator(object):
 
     with progressbar.ProgressBar(max_value = len(corpus)) as bar:
         for idx, kernel in enumerate(corpus):
-          inp_id, mask_pos, mask_tok, mask_wei, next_sentence_label = self._maskSequence(kernel)
-          self.masked_corpus.append(MaskSequence(np.asarray(inp_id), 
-                                                 np.asarray(mask_pos), 
-                                                 np.asarray(mask_tok), 
-                                                 np.asarray(mask_wei),
-                                                 next_sentence_label
-                                                 )
-                                  )
+          masked_seq = self._maskSequence(kernel)
+          self.masked_corpus.append(masked_seq)
           bar.update(idx)
     self.masked_corpus[0].LogBatchTelemetry(self.batch_size, self.steps_per_epoch, self.num_epochs)
     return
 
+  def _holeSequence(self,
+                    seq: np.array,
+                    ) -> MaskSequence:
+
+    return MaskSequence(np.asarray(input_ids), np.asarray(masked_lm_positions), 
+                        np.asarray(masked_lm_ids), np.asarray(masked_lm_weights), 
+                        next_sentence_label
+                        )
+
   def _maskSequence(self,
                     seq: np.array,
-                    ):
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator._maskSequence()")
-      
+                    ) -> MaskSequence:
+
     assert seq.ndim == 1, "Input for masking must be single-dimension array."
     if self.atomizer.padToken in seq:
       actual_length = np.where(seq == self.atomizer.padToken)[0][0]
@@ -685,8 +687,10 @@ class MaskLMBatchGenerator(object):
         masked_lm_ids.append(self.atomizer.padToken)
         masked_lm_weights.append(0.0)
 
-    return (input_ids, masked_lm_positions, 
-            masked_lm_ids, masked_lm_weights, next_sentence_label)
+    return MaskSequence(np.asarray(input_ids), np.asarray(masked_lm_positions), 
+                        np.asarray(masked_lm_ids), np.asarray(masked_lm_weights), 
+                        next_sentence_label
+                        )
 
   def _expandHoleToMasks(self,
                         sample: np.array, 
