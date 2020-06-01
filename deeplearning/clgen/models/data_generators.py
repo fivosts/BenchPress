@@ -620,6 +620,15 @@ class MaskLMBatchGenerator(object):
                     seq: np.array,
                     ) -> MaskSequence:
 
+    assert seq.ndim == 1, "Input for masking must be single-dimension array."
+    # Actual length represents the sequence length before pad begins
+    if self.atomizer.padToken in seq:
+      actual_length = np.where(seq == self.atomizer.padToken)[0][0]
+    else:
+      actual_length = len(seq)
+
+    # max_predictions_per_seq: total tokens hidden in holes
+
     return MaskSequence(np.asarray(input_ids), np.asarray(masked_lm_positions), 
                         np.asarray(masked_lm_ids), np.asarray(masked_lm_weights), 
                         next_sentence_label
@@ -630,6 +639,7 @@ class MaskLMBatchGenerator(object):
                     ) -> MaskSequence:
 
     assert seq.ndim == 1, "Input for masking must be single-dimension array."
+    # Actual length represents the sequence length before pad begins
     if self.atomizer.padToken in seq:
       actual_length = np.where(seq == self.atomizer.padToken)[0][0]
     else:
@@ -639,7 +649,7 @@ class MaskLMBatchGenerator(object):
     self.rngen.shuffle(candidate_indexes)
 
     masks_to_predict = min(self.training_opts.max_predictions_per_seq,
-                          max(1, int(round(len(seq) * self.training_opts.masked_lm_prob))))
+                           max(1, int(round(actual_length * self.training_opts.masked_lm_prob))))
     input_ids = np.copy(seq)
     masked_lms = []
 
