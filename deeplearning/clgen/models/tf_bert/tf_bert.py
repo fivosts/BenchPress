@@ -160,6 +160,7 @@ class tfBert(backends.BackendBase):
     del unused_kwargs
 
     ## Initialize params and data generator
+    ## Not the best practise to have this called during only inference
     self.data_generator = data_generators.MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
                               corpus, self.config.training, self.cache.path
                            )
@@ -309,9 +310,9 @@ class tfBert(backends.BackendBase):
 
     result = next(self.sample_generator)
 
-    for batch in result['masked_lm_predictions']:
-      l.getLogger().info(batch)
-      l.getLogger().info(self.atomizer.DeatomizeIndices(batch))
+    for inp, pred in zip(result['input_ids'], result['masked_lm_predictions']):
+      l.getLogger().info(self.atomizer.DeatomizeIndices([inp]))
+      l.getLogger().info(self.atomizer.DeatomizeIndices([pred]))
 
     for batch in result['next_sentence_predictions']:
       l.getLogger().info(batch)
@@ -492,10 +493,12 @@ class tfBert(backends.BackendBase):
         masked_lm_predictions     = tf.reshape(masked_lm_predictions,     shape = [mask_batch_size, mask_seq_length])
         next_sentence_predictions = tf.reshape(next_sentence_predictions, shape = [next_batch_size, next_seq_length])
 
+        input_ids                 = tf.expand_dims(input_ids,                 0)
         masked_lm_predictions     = tf.expand_dims(masked_lm_predictions,     0)
         next_sentence_predictions = tf.expand_dims(next_sentence_predictions, 0)
 
         prediction_metrics = {
+            'input_ids'                 : input_ids,
             'masked_lm_predictions'     : masked_lm_predictions,
             'next_sentence_predictions' : next_sentence_predictions,
         }
