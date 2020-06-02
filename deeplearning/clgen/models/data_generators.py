@@ -881,4 +881,9 @@ class MaskLMBatchGenerator(object):
                           ])
 
   def _addStartEndToken(self, inp: list) -> list:
-    return [self.startToken] + inp + [self.endToken]
+    assert len(inp) != 0, "Empty list provided."
+    assert self.atomizer.padToken not in inp, "Use this function before padding a sequence!"
+
+    start = [self.atomizer.startToken] if inp[0]  != self.atomizer.startToken else []
+    end   = [self.atomizer.endToken  ] if inp[-1] != self.atomizer.endToken   else []
+    return start + inp + end
