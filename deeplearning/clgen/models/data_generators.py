@@ -659,7 +659,7 @@ class MaskLMBatchGenerator(object):
           elif self.target_predictions == "hole":
             masked_seq = self._holeSequence(kernel)
           else:
-            raise AttributeError, "target predictions cannot be {}".format(self.target_predictions)
+            raise AttributeError("target predictions cannot be {}".format(self.target_predictions))
           self.masked_corpus.append(masked_seq)
           bar.update(idx)
     self.masked_corpus[0].LogBatchTelemetry(self.batch_size, self.steps_per_epoch, self.num_epochs)
