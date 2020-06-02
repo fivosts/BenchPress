@@ -364,7 +364,7 @@ class MaskLMBatchGenerator(object):
     d.training_opts = training_opts
     d.tfRecord      = cache_path / "dataset" / "maskedDataset.tf_record"
     d.txtRecord     = cache_path / "dataset" / "maskedDataset.txt"
-    d.rngen         = random.Random(d.training_opts.random_seed)
+    d.rngen         = random.Random()
 
     d.tfRecord.parent.mkdir(exist_ok = True, parents = True)
     d.CreateCorpus()
@@ -610,7 +610,7 @@ class MaskLMBatchGenerator(object):
 
     with progressbar.ProgressBar(max_value = len(corpus)) as bar:
         for idx, kernel in enumerate(corpus):
-          masked_seq = self._maskSequence(kernel)
+          masked_seq = self._holeSequence(kernel)
           self.masked_corpus.append(masked_seq)
           bar.update(idx)
     self.masked_corpus[0].LogBatchTelemetry(self.batch_size, self.steps_per_epoch, self.num_epochs)
@@ -621,13 +621,118 @@ class MaskLMBatchGenerator(object):
                     ) -> MaskSequence:
 
     assert seq.ndim == 1, "Input for masking must be single-dimension array."
+
+    ## Tuple representation of mask id/position for easy sorting
+    class MaskedLmInstance(typing.NamedTuple):
+      pos_index: int
+      token_id: int
+
     # Actual length represents the sequence length before pad begins
     if self.atomizer.padToken in seq:
-      actual_length = np.where(seq == self.atomizer.padToken)[0][0]
+      actual_length   = np.where(seq == self.atomizer.padToken)[0][0]
     else:
-      actual_length = len(seq)
+      actual_length   = len(seq)
 
-    # max_predictions_per_seq: total tokens hidden in holes
+    candidate_indexes = np.arange(actual_length)
+    # candidate_indexes = np.arange(5)
+    candidate_indexes = sorted(candidate_indexes, reverse = True)
+    # self.rngen.shuffle(candidate_indexes)
+    visited_indexes   = set()
+    hole_events       = {}
+
+    masks_to_predict  = min(self.training_opts.max_predictions_per_seq,
+                           max(1, int(round(actual_length * self.training_opts.masked_lm_prob))))
+
+    input_ids         = list(np.copy(seq))
+    masked_lms        = []
+    offset_idxs        = np.zeros(len(seq), dtype = np.int32)
+    total_predictions = 0
+    for pos_index in candidate_indexes:
+
+      assert pos_index < len(seq), "Candidate index is out of bounds: {} >= {}".format(pos_index, len(seq))
+
+      input_id_idx = pos_index + offset_idxs[pos_index]
+
+      if total_predictions >= masks_to_predict:
+        break
+      ## This condition could be troublesome in case it gets False by accident
+      ## i.e. the index has gone wrong due to the whole, BUT still point to an identical element
+      elif seq[pos_index] != input_ids[input_id_idx]:
+        l.getLogger().critical("seq, inpid: {} {}".format(self.atomizer.DeatomizeIndices([seq[pos_index]]), self.atomizer.DeatomizeIndices([input_ids[input_id_idx]])))
+        continue
+
+      l.getLogger().warn("input_seq: {}".format(self.atomizer.DeatomizeIndices(input_ids)))
+      l.getLogger().warn("offset array: {}".format(offset_idxs))
+      l.getLogger().warn("Length offset array: {}".format(len(offset_idxs)))
+      l.getLogger().warn("Length input_ids: {}".format(len(input_ids)))
+      l.getLogger().warn("candidate_indexes: {}".format(candidate_indexes))
+      l.getLogger().warn("current candidate: {}".format(pos_index))
+
+      ## Array of ofsets per index! Yes, that's optimal :)
+      l.getLogger().warn("Current input_id_idx: {}".format(input_id_idx))
+      l.getLogger().info("seq, inpid: {} {}".format(self.atomizer.DeatomizeIndices([seq[pos_index]]), self.atomizer.DeatomizeIndices([input_ids[input_id_idx]])))
+
+      assert (input_ids[input_id_idx] == seq[pos_index], 
+              "Original and offset-ted sequence have misaligned tokens: {}, {}"
+              .format(seq[pos_index], input_ids[input_id_idx]))
+
+      rand_len = self.rngen.randint(0, 5)
+      for i in range(rand_len):
+        if input_id_idx + i >= len(input_ids):
+          break
+        elif input_ids[input_id_idx + i] == self.atomizer.holeToken:
+          rand_len = i
+          break
+
+      hole_length = min(
+                      min(rand_len, len(input_ids) - input_id_idx), 
+                      rand_len
+                      )
+
+      target = input_ids[input_id_idx] if hole_length > 0 else self.atomizer.endholeToken
+      input_ids = input_ids[:input_id_idx] + [self.atomizer.holeToken] + input_ids[input_id_idx + hole_length:]
+
+      l.getLogger().warn("offset_idxsay before: {}".format(offset_idxs))
+      l.getLogger().warn("offset_idxsay before length: {}".format(offset_idxs.shape))
+      l.getLogger().warn("Incrementing with: {}".format(1 - hole_length))
+      l.getLogger().warn("Of length: {}".format(pos_index))
+      offset_idxs[pos_index:] += 1 - hole_length
+      total_predictions += max(1, hole_length)
+      input()
+      l.getLogger().error("Afterwards")
+      l.getLogger().warn("offset array: {}".format(offset_idxs))
+      l.getLogger().warn("offset array shape: {}".format(offset_idxs.shape))
+      l.getLogger().warn("Hole length: {}".format(hole_length))
+      l.getLogger().warn("input_ids: {}".format(self.atomizer.DeatomizeIndices(input_ids)))
+      l.getLogger().warn("Target type: {}".format(type(target)))
+      l.getLogger().warn("Target: {}".format(self.atomizer.DeatomizeIndices([target])))
+      input()
+
+      # ## Do here the main hole routine
+      # if self.rngen.random() > 0.8:
+      #   hl = 0
+      # else:
+      #   hl = self.rngen.randint(1, 5)
+      # visited_indexes.add(pos_index)
+      # hole_len = 0 if hl == 0 else 1
+      # for h_offset in range(1, hl):
+      #   if pos_index + h_offset in visited_indexes:
+      #     hole_len = h_offset
+      #     break
+      #   elif len(visited_indexes) >= masks_to_predict:
+      #     break
+      #   else:
+      #     visited_indexes.add(pos_index + h_offset)
+      #     hole_len = h_offset + 1
+      # hole_events[pos_index] = hole_len
+
+      # l.getLogger().warn(seq)
+      # l.getLogger().warn(candidate_indexes)
+      # l.getLogger().warn(sorted(visited_indexes))
+      # l.getLogger().warn(hole_events)
+      # input()
+
+    exit()
 
     return MaskSequence(np.asarray(input_ids), np.asarray(masked_lm_positions), 
                         np.asarray(masked_lm_ids), np.asarray(masked_lm_weights), 
@@ -639,6 +744,12 @@ class MaskLMBatchGenerator(object):
                     ) -> MaskSequence:
 
     assert seq.ndim == 1, "Input for masking must be single-dimension array."
+
+    ## Tuple representation of mask id/position for easy sorting
+    class MaskedLmInstance(typing.NamedTuple):
+      pos_index: int
+      token_id: int
+
     # Actual length represents the sequence length before pad begins
     if self.atomizer.padToken in seq:
       actual_length = np.where(seq == self.atomizer.padToken)[0][0]
@@ -670,10 +781,6 @@ class MaskLMBatchGenerator(object):
             input_ids[pos_index] = self.rngen.randint(0, self.atomizer.vocab_size - 1)
       else:
         input_ids[pos_index] = self.atomizer.maskToken
-
-      class MaskedLmInstance(typing.NamedTuple):
-        pos_index: int
-        token_id: int
 
       masked_lms.append(MaskedLmInstance(pos_index=pos_index, token_id=seq[pos_index]))
 
