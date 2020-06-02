@@ -830,7 +830,7 @@ class MaskLMBatchGenerator(object):
     ## That is too specific over "replacing holes with masks" but can/should be 
     ## generalized to anything
     hole_index = np.where(sample == self.atomizer.holeToken)[0]
-    if len(hole_index) == 0: ## Nothing to do
+    if len(hole_index) == 0: ## Nothing to do, no holes found
       return sample
     if len(hole_index) > 1:
       l.getLogger().warning("Multiple instances of {} are found. \
