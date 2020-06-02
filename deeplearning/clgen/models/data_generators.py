@@ -479,12 +479,12 @@ class MaskLMBatchGenerator(object):
       masked_lm_ids, masked_lm_weights) = [], [], [], []
 
       for sample in self.sampleBatch:
-        sammple_masks = np.where(sample == self.atomizer.maskToken)[0]
+        sample_masks = np.where(sample == self.atomizer.maskToken)[0]
 
         input_ids.append(list(sample))
-        masked_lm_positions.append(list(sammple_masks))
-        masked_lm_ids.append([self.atomizer.padToken] * len(sammple_masks))
-        masked_lm_weights.append([0.0] * len(sammple_masks))
+        masked_lm_positions.append(list(sample_masks))
+        masked_lm_ids.append([self.atomizer.padToken] * len(sample_masks))
+        masked_lm_weights.append([0.0] * len(sample_masks))
 
       return {
           'input_ids'             : tf.convert_to_tensor(input_ids, dtype = tf.int32),
