@@ -648,29 +648,26 @@ class MaskLMBatchGenerator(object):
     offset_idxs        = np.zeros(len(seq), dtype = np.int32)
     total_predictions = 0
     for pos_index in candidate_indexes:
-
       assert pos_index < len(seq), "Candidate index is out of bounds: {} >= {}".format(pos_index, len(seq))
-
+      
       input_id_idx = pos_index + offset_idxs[pos_index]
-
       if total_predictions >= masks_to_predict:
         break
       ## This condition could be troublesome in case it gets False by accident
       ## i.e. the index has gone wrong due to the whole, BUT still point to an identical element
       elif seq[pos_index] != input_ids[input_id_idx]:
-        l.getLogger().critical("seq, inpid: {} {}".format(self.atomizer.DeatomizeIndices([seq[pos_index]]), self.atomizer.DeatomizeIndices([input_ids[input_id_idx]])))
         continue
 
-      l.getLogger().warn("input_seq: {}".format(self.atomizer.DeatomizeIndices(input_ids)))
-      l.getLogger().warn("offset array: {}".format(offset_idxs))
-      l.getLogger().warn("Length offset array: {}".format(len(offset_idxs)))
-      l.getLogger().warn("Length input_ids: {}".format(len(input_ids)))
-      l.getLogger().warn("candidate_indexes: {}".format(candidate_indexes))
-      l.getLogger().warn("current candidate: {}".format(pos_index))
+      # l.getLogger().warn("input_seq: {}".format(self.atomizer.DeatomizeIndices(input_ids)))
+      # l.getLogger().warn("offset array: {}".format(offset_idxs))
+      # l.getLogger().warn("Length offset array: {}".format(len(offset_idxs)))
+      # l.getLogger().warn("Length input_ids: {}".format(len(input_ids)))
+      # l.getLogger().warn("candidate_indexes: {}".format(candidate_indexes))
+      # l.getLogger().warn("current candidate: {}".format(pos_index))
 
       ## Array of ofsets per index! Yes, that's optimal :)
-      l.getLogger().warn("Current input_id_idx: {}".format(input_id_idx))
-      l.getLogger().info("seq, inpid: {} {}".format(self.atomizer.DeatomizeIndices([seq[pos_index]]), self.atomizer.DeatomizeIndices([input_ids[input_id_idx]])))
+      # l.getLogger().warn("Current input_id_idx: {}".format(input_id_idx))
+      # l.getLogger().info("seq, inpid: {} {}".format(self.atomizer.DeatomizeIndices([seq[pos_index]]), self.atomizer.DeatomizeIndices([input_ids[input_id_idx]])))
 
       assert (input_ids[input_id_idx] == seq[pos_index], 
               "Original and offset-ted sequence have misaligned tokens: {}, {}"
@@ -687,7 +684,7 @@ class MaskLMBatchGenerator(object):
                       rand_len
                       )
 
-      target = input_ids[input_id_idx] if hole_length > 0 else self.atomizer.endholeToken
+      target    = input_ids[ input_id_idx] if hole_length > 0 else self.atomizer.endholeToken
       input_ids = input_ids[:input_id_idx] + [self.atomizer.holeToken] + input_ids[input_id_idx + hole_length:]
 
       masked_lms.append(MaskedLmInstance(pos_index=input_id_idx, token_id=target))
@@ -701,8 +698,8 @@ class MaskLMBatchGenerator(object):
       l.getLogger().warn("Incrementing with: {}".format(1 - hole_length))
       l.getLogger().warn("Of length: {}".format(pos_index))
       offset_idxs[pos_index:] += 1 - hole_length
-      total_predictions += max(1, hole_length)
-      input()
+      total_predictions       += max(1, hole_length)
+      # input()
       l.getLogger().error("Afterwards")
       l.getLogger().warn("offset array: {}".format(offset_idxs))
       l.getLogger().warn("offset array shape: {}".format(offset_idxs.shape))
@@ -710,36 +707,32 @@ class MaskLMBatchGenerator(object):
       l.getLogger().warn("input_ids: {}".format(self.atomizer.DeatomizeIndices(input_ids)))
       l.getLogger().warn("Target type: {}".format(type(target)))
       l.getLogger().warn("Target: {}".format(self.atomizer.DeatomizeIndices([target])))
-      input()
-
-      # ## Do here the main hole routine
-      # if self.rngen.random() > 0.8:
-      #   hl = 0
-      # else:
-      #   hl = self.rngen.randint(1, 5)
-      # visited_indexes.add(pos_index)
-      # hole_len = 0 if hl == 0 else 1
-      # for h_offset in range(1, hl):
-      #   if pos_index + h_offset in visited_indexes:
-      #     hole_len = h_offset
-      #     break
-      #   elif len(visited_indexes) >= masks_to_predict:
-      #     break
-      #   else:
-      #     visited_indexes.add(pos_index + h_offset)
-      #     hole_len = h_offset + 1
-      # hole_events[pos_index] = hole_len
-
-      # l.getLogger().warn(seq)
-      # l.getLogger().warn(candidate_indexes)
-      # l.getLogger().warn(sorted(visited_indexes))
-      # l.getLogger().warn(hole_events)
       # input()
 
-    exit()
+    # exit()
 
-    return MaskSequence(np.asarray(input_ids), np.asarray(masked_lm_positions), 
-                        np.asarray(masked_lm_ids), np.asarray(masked_lm_weights), 
+    while len(input_ids) < len(seq):
+      input_ids.append(self.atomizer.padToken)
+    masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
+    masked_lm_positions, masked_lm_ids, masked_lm_weights = [], [], []
+    next_sentence_label = np.int32(0)
+    ## Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
+    ## is intended on kernels. In any other case, check bert's create_instances_from_document
+    ## to see how next_sentence_labels are calculated.
+    ## Setting this to 0 means that next sentence is NOT random.
+    ## Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.
+
+    for p in masked_lms:
+      masked_lm_positions.append(p.pos_index)
+      masked_lm_ids.append(p.token_id)
+      masked_lm_weights.append(1.0)
+    while len(masked_lm_positions) < self.training_opts.max_predictions_per_seq:
+        masked_lm_positions.append(0)
+        masked_lm_ids.append(self.atomizer.padToken)
+        masked_lm_weights.append(0.0)
+
+    return MaskSequence(np.asarray(input_ids[:len(seq)]), np.asarray(masked_lm_positions), 
+                        np.asarray(masked_lm_ids),        np.asarray(masked_lm_weights), 
                         next_sentence_label
                         )
 
