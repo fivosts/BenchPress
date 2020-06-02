@@ -517,7 +517,7 @@ class MaskLMBatchGenerator(object):
     reduced_length       = copy.deepcopy(len(encoded_corpus))
     # Add start/end tokens
     if FLAGS.use_start_end_metatokens:
-      encoded_corpus     = [start + kf + end for kf in encoded_corpus]
+      encoded_corpus     = [self._addStartEndToken(kf) for kf in encoded_corpus]
     # pad sequences to sequence length
     encoded_corpus       = np.array([x + pad * (self.sequence_length - len(x)) for x in encoded_corpus])
     # Clone datapoints dupe_factor times
@@ -551,6 +551,39 @@ class MaskLMBatchGenerator(object):
                       ) -> None:
 
     assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
+
+    mask_idx = np.where(input_sample == self.maskToken)[0]
+    hole_idx = np.where(input_sample == self.holeToken)[0]
+
+    if len(mask_idx) + len(hole_idx) > 1:
+      raise NotImplementedError(
+        """\
+          Having more than one [MASK]/[HOLE] tokens in a to-be-predicted \
+          text is something I cannot handle now (and don't know if I should \
+          anyway). There are some reasons for this:
+          a) When two any of [MASK] or [HOLE] appear in a sampling text \
+          one should think through which should be given first for inference.\
+          This, should make a difference given the model takes into account the context \
+          of the whole sentence.
+          b) generateTfSamples constructs the arrays that hold indices of all masks/holes \
+          to be predicted. If a text contains multiple masks/holes in a single timestep, \
+          then some algorithm will have to be embedded to make a queue of these many masks/holes \
+          to provide them one at a time. Alternatively, they could be provided alltogether in a \
+          batched timestep fashion. Now, that sounds weird so, let me provide an example:
+          If the sampler encounters this: 'kernel [HOLE] A([HOLE)', then this could be fed \
+          into the model with both holes at the same time, and then ask for a single prediction for \
+          each. Then two predictions replace the HOLES, a new HOLE is appended after the predicted \
+          token for any of these two predictions does not match the ENDHOLE token, and that goes on \
+          in this batched-timestep fashion. 
+
+          But for now, let's assume input_sample contains either one MASK or one HOLE.
+        """
+        )
+
+    # Add start/end tokens
+    if FLAGS.use_start_end_metatokens:
+      input_sample = self._addStartEndToken(input_sample)
+
     expanded_sample = self._expandHoleToMasks(
           input_sample, sequence_length - len(input_sample) + 1
           )
@@ -846,3 +879,6 @@ class MaskLMBatchGenerator(object):
                           np.array([self.atomizer.padToken] * 
                               (self.max_position_embeddings - len(input_sample)), dtype = np.int32)
                           ])
+
+  def _addStartEndToken(self, inp: list) -> list:
+    return [self.startToken] + inp + [self.endToken]
