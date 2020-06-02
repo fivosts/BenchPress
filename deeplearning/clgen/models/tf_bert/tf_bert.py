@@ -496,8 +496,8 @@ class tfBert(backends.BackendBase):
         next_sentence_predictions = tf.expand_dims(next_sentence_predictions, 0)
 
         prediction_metrics = {
-            'masked_lm_predictions': masked_lm_predictions,
-            'next_sentence_predictions': next_sentence_predictions,
+            'masked_lm_predictions'     : masked_lm_predictions,
+            'next_sentence_predictions' : next_sentence_predictions,
         }
 
         output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
