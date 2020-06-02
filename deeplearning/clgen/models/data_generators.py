@@ -677,10 +677,8 @@ class MaskLMBatchGenerator(object):
               .format(seq[pos_index], input_ids[input_id_idx]))
 
       rand_len = self.rngen.randint(0, 5)
-      for i in range(rand_len):
-        if input_id_idx + i >= len(input_ids):
-          break
-        elif input_ids[input_id_idx + i] == self.atomizer.holeToken:
+      for i in range(min(rand_len, len(input_ids) - input_id_idx)):
+        if input_ids[input_id_idx + i] == self.atomizer.holeToken:
           rand_len = i
           break
 
@@ -691,6 +689,12 @@ class MaskLMBatchGenerator(object):
 
       target = input_ids[input_id_idx] if hole_length > 0 else self.atomizer.endholeToken
       input_ids = input_ids[:input_id_idx] + [self.atomizer.holeToken] + input_ids[input_id_idx + hole_length:]
+
+      masked_lms.append(MaskedLmInstance(pos_index=input_id_idx, token_id=target))
+      assert (input_ids[input_id_idx] == self.atomizer.holeToken, 
+            "target index does not correspond to hole token: {}".format(self.atomizer.DeatomizeIndices([input_ids[input_id_idx]])))
+
+      l.getLogger().error("Placed: targ: {} idx: {}".format(self.atomizer.DeatomizeIndices([target]), input_id_idx))
 
       l.getLogger().warn("offset_idxsay before: {}".format(offset_idxs))
       l.getLogger().warn("offset_idxsay before length: {}".format(offset_idxs.shape))
