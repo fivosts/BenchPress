@@ -487,11 +487,11 @@ class MaskLMBatchGenerator(object):
         masked_lm_weights.append([0.0] * len(sample_masks))
 
       return {
-          'input_ids'             : tf.convert_to_tensor(input_ids, dtype = tf.int32),
+          'input_ids'             : tf.convert_to_tensor(input_ids,           dtype = tf.int32),
           'masked_lm_positions'   : tf.convert_to_tensor(masked_lm_positions, dtype = tf.int32),
-          'masked_lm_ids'         : tf.convert_to_tensor(masked_lm_ids, dtype = tf.int32),
-          'masked_lm_weights'     : tf.convert_to_tensor(masked_lm_weights, dtype = tf.float32),
-          'next_sentence_labels'  : tf.zeros((batch_size, 1), dtype = tf.int32)
+          'masked_lm_ids'         : tf.convert_to_tensor(masked_lm_ids,       dtype = tf.int32),
+          'masked_lm_weights'     : tf.convert_to_tensor(masked_lm_weights,   dtype = tf.float32),
+          'next_sentence_labels'  : tf.zeros((batch_size, 1),                 dtype = tf.int32)
       }
     return input_fn
 
