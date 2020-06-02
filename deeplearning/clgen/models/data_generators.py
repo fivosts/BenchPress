@@ -372,7 +372,7 @@ class MaskLMBatchGenerator(object):
     d.target_predictions  = FLAGS.mask_or_hole
     d.tfRecord            = cache_path / "dataset" / "maskedDataset.tf_record"
     d.txtRecord           = cache_path / "dataset" / "maskedDataset.txt"
-    d.rngen               = random.Random()
+    d.rngen               = random.Random(training_opts.random_seed)
 
     d.tfRecord.parent.mkdir(exist_ok = True, parents = True)
     d.CreateCorpus()
@@ -394,7 +394,6 @@ class MaskLMBatchGenerator(object):
     d.rngen                   = random.Random(seed)
     d.batch_size              = sampler.batch_size
     d.max_position_embeddings = max_position_embeddings
-    d.target_predictions      = FLAGS.mask_or_hole
     return d
 
   def generateTfDataset(self,
@@ -473,13 +472,14 @@ class MaskLMBatchGenerator(object):
 
     def input_fn(params):
       batch_size = params["batch_size"]
+      assert isinstance(self.sampleBatch, np.ndarray), "input sample is not in np.array format"
       assert batch_size == len(self.sampleBatch)
 
       (input_ids, masked_lm_positions, 
       masked_lm_ids, masked_lm_weights) = [], [], [], []
 
       for sample in self.sampleBatch:
-        sample_masks = np.where(sample == self.atomizer.maskToken)[0]
+        sample_masks = np.where(np.in1d(sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
 
         input_ids.append(list(sample))
         masked_lm_positions.append(list(sample_masks))
@@ -552,45 +552,38 @@ class MaskLMBatchGenerator(object):
 
     assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
 
-    mask_idx = np.where(input_sample == self.maskToken)[0]
-    hole_idx = np.where(input_sample == self.holeToken)[0]
+    target_idx = np.where(np.in1d(input_sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
+    assert len(target_idx) != 0, "No target prediction in sample text"
 
-    assert len(mask_idx) + len(hole_idx) != 0, "No target prediction in sample text"
+    # if len(target_idx) > 1:
+    #   raise NotImplementedError(
+    #     """\
+    #       Having more than one [MASK]/[HOLE] tokens in a to-be-predicted \
+    #       text is something I cannot handle now (and don't know if I should \
+    #       anyway). There are some reasons for this:
+    #       a) When two any of [MASK] or [HOLE] appear in a sampling text \
+    #       one should think through which should be given first for inference.\
+    #       This, should make a difference given the model takes into account the context \
+    #       of the whole sentence.
+    #       b) generateTfSamples constructs the arrays that hold indices of all masks/holes \
+    #       to be predicted. If a text contains multiple masks/holes in a single timestep, \
+    #       then some algorithm will have to be embedded to make a queue of these many masks/holes \
+    #       to provide them one at a time. Alternatively, they could be provided alltogether in a \
+    #       batched timestep fashion. Now, that sounds weird so, let me provide an example:
+    #       If the sampler encounters this: 'kernel [HOLE] A([HOLE)', then this could be fed \
+    #       into the model with both holes at the same time, and then ask for a single prediction for \
+    #       each. Then two predictions replace the HOLES, a new HOLE is appended after the predicted \
+    #       token for any of these two predictions does not match the ENDHOLE token, and that goes on \
+    #       in this batched-timestep fashion. 
 
-    if len(mask_idx) + len(hole_idx) > 1:
-      raise NotImplementedError(
-        """\
-          Having more than one [MASK]/[HOLE] tokens in a to-be-predicted \
-          text is something I cannot handle now (and don't know if I should \
-          anyway). There are some reasons for this:
-          a) When two any of [MASK] or [HOLE] appear in a sampling text \
-          one should think through which should be given first for inference.\
-          This, should make a difference given the model takes into account the context \
-          of the whole sentence.
-          b) generateTfSamples constructs the arrays that hold indices of all masks/holes \
-          to be predicted. If a text contains multiple masks/holes in a single timestep, \
-          then some algorithm will have to be embedded to make a queue of these many masks/holes \
-          to provide them one at a time. Alternatively, they could be provided alltogether in a \
-          batched timestep fashion. Now, that sounds weird so, let me provide an example:
-          If the sampler encounters this: 'kernel [HOLE] A([HOLE)', then this could be fed \
-          into the model with both holes at the same time, and then ask for a single prediction for \
-          each. Then two predictions replace the HOLES, a new HOLE is appended after the predicted \
-          token for any of these two predictions does not match the ENDHOLE token, and that goes on \
-          in this batched-timestep fashion. 
+    #       But for now, let's assume input_sample contains either one MASK or one HOLE.
+    #     """
+    #     )
 
-          But for now, let's assume input_sample contains either one MASK or one HOLE.
-        """
-        )
-
-    # Add start/end tokens if they don't exist
-    if FLAGS.use_start_end_metatokens:
-      input_sample = self._addStartEndToken(input_sample)
-
-    expanded_sample = self._expandHoleToMasks(
-          input_sample, sequence_length - len(input_sample) + 1
-          )
-    padded_sample = self._padToMaxPosition(expanded_sample)
-
+    # expanded_sample = self._expandHoleToMasks(
+    #       input_sample, sequence_length - len(input_sample) + 1
+    #       )
+    padded_sample = self._padToMaxPosition(input_sample)
     assert len(padded_sample) == self.max_position_embeddings, "Padded sequence does not match max_position_embeddings"
     self.sampleBatch = np.repeat(padded_sample[None, :], self.batch_size, axis = 0)
     return
@@ -684,8 +677,8 @@ class MaskLMBatchGenerator(object):
 
     candidate_indexes = np.arange(actual_length)
     # candidate_indexes = np.arange(5)
-    candidate_indexes = sorted(candidate_indexes, reverse = True)
-    # self.rngen.shuffle(candidate_indexes)
+    # candidate_indexes = sorted(candidate_indexes, reverse = True)
+    self.rngen.shuffle(candidate_indexes)
     visited_indexes   = set()
     hole_events       = {}
 
@@ -888,4 +881,7 @@ class MaskLMBatchGenerator(object):
 
     start = [self.atomizer.startToken] if inp[0]  != self.atomizer.startToken else []
     end   = [self.atomizer.endToken  ] if inp[-1] != self.atomizer.endToken   else []
-    return start + inp + end
+    if isinstance(inp, list):
+      return start + inp + end
+    elif isinstance(inp, np.ndarray):
+      raise NotImplementedError
