@@ -365,7 +365,7 @@ class tfBert(backends.BackendBase):
       """The `model_fn` for TPUEstimator."""
 
       input_ids = features["input_ids"]
-      # input_mask = features["input_mask"]
+      input_mask = features["input_mask"]
       # segment_ids = features["segment_ids"]
       masked_lm_positions = features["masked_lm_positions"]
       masked_lm_ids = features["masked_lm_ids"]
@@ -378,7 +378,7 @@ class tfBert(backends.BackendBase):
           config=bert_config,
           is_training=is_training,
           input_ids=input_ids,
-          input_mask=None, # You CAN ignore this. Used for padding. 0s after real sequence. Now all 1s. TODO!!!
+          input_mask=input_mask,
           token_type_ids=None, # You can ignore. Used for double sentences (sA -> 0, sB ->1). Now all will be zero
           use_one_hot_embeddings=FLAGS.use_tpu)
 
