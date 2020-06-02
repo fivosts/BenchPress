@@ -47,6 +47,12 @@ flags.DEFINE_boolean(
   "Use [START] and [END] meta tokens at the beginning and end of each sequence."
 )
 
+flags.DEFINE_string(
+  "mask_or_hole",
+  "hole",
+  "Set target prediction of MaskLM as [MASK] tokens or [HOLE] sequences."
+)
+
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
   X: np.array
@@ -343,6 +349,7 @@ class MaskLMBatchGenerator(object):
     self.batch_size                 = None
     self.max_position_embeddings    = None
     self.sequence_length            = None
+    self.target_predictions         = None
 
     self.tfRecord                   = None
     self.txtRecord                  = None
@@ -358,13 +365,14 @@ class MaskLMBatchGenerator(object):
                                training_opts: model_pb2.TrainingOptions,
                                cache_path
                                ) -> "data_generators.MaskLMBatchGenerator":
-    d               = MaskLMBatchGenerator()
-    d.corpus        = corpus
-    d.atomizer      = corpus.atomizer
-    d.training_opts = training_opts
-    d.tfRecord      = cache_path / "dataset" / "maskedDataset.tf_record"
-    d.txtRecord     = cache_path / "dataset" / "maskedDataset.txt"
-    d.rngen         = random.Random()
+    d                     = MaskLMBatchGenerator()
+    d.corpus              = corpus
+    d.atomizer            = corpus.atomizer
+    d.training_opts       = training_opts
+    d.target_predictions  = FLAGS.mask_or_hole
+    d.tfRecord            = cache_path / "dataset" / "maskedDataset.tf_record"
+    d.txtRecord           = cache_path / "dataset" / "maskedDataset.txt"
+    d.rngen               = random.Random()
 
     d.tfRecord.parent.mkdir(exist_ok = True, parents = True)
     d.CreateCorpus()
@@ -380,12 +388,13 @@ class MaskLMBatchGenerator(object):
                                 seed,
                                 max_position_embeddings,
                                 ) -> "data_generators.MaskLMBatchGenerator":
-    d = MaskLMBatchGenerator()
-    d.sampler     = sampler
-    d.atomizer    = atomizer
-    d.rngen       = random.Random(seed)
+    d                         = MaskLMBatchGenerator()
+    d.sampler                 = sampler
+    d.atomizer                = atomizer
+    d.rngen                   = random.Random(seed)
     d.batch_size              = sampler.batch_size
     d.max_position_embeddings = max_position_embeddings
+    d.target_predictions      = FLAGS.mask_or_hole
     return d
 
   def generateTfDataset(self,
@@ -610,7 +619,12 @@ class MaskLMBatchGenerator(object):
 
     with progressbar.ProgressBar(max_value = len(corpus)) as bar:
         for idx, kernel in enumerate(corpus):
-          masked_seq = self._holeSequence(kernel)
+          if self.target_predictions == "mask":
+            masked_seq = self._maskSequence(kernel)
+          elif self.target_predictions == "hole":
+            masked_seq = self._holeSequence(kernel)
+          else:
+            raise AttributeError, "target predictions cannot be {}".format(self.target_predictions)
           self.masked_corpus.append(masked_seq)
           bar.update(idx)
     self.masked_corpus[0].LogBatchTelemetry(self.batch_size, self.steps_per_epoch, self.num_epochs)
