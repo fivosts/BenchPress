@@ -509,27 +509,27 @@ class MaskLMBatchGenerator(object):
     end                         = [self.atomizer.endToken   ]
 
     # generate a kernel corpus
-    encoded_corpus      = self.corpus.GetTrainingData()
+    encoded_corpus       = self.corpus.GetTrainingData()
     # Reject larger than sequence length
-    initial_length      = copy.deepcopy(len(encoded_corpus))
-    encoded_corpus      = [list(x) for x in encoded_corpus if 
+    initial_length       = copy.deepcopy(len(encoded_corpus))
+    encoded_corpus       = [list(x) for x in encoded_corpus if 
                            len(x) <= self.sequence_length - (2 if FLAGS.use_start_end_metatokens else 0)] # Account for start and end token
-    reduced_length      = copy.deepcopy(len(encoded_corpus))
+    reduced_length       = copy.deepcopy(len(encoded_corpus))
     # Add start/end tokens
     if FLAGS.use_start_end_metatokens:
-      encoded_corpus    = [start + kf + end for kf in encoded_corpus]
+      encoded_corpus     = [start + kf + end for kf in encoded_corpus]
     # pad sequences to sequence length
-    encoded_corpus      = np.array([x + pad * (self.sequence_length - len(x)) for x in encoded_corpus])
+    encoded_corpus       = np.array([x + pad * (self.sequence_length - len(x)) for x in encoded_corpus])
     # Clone datapoints dupe_factor times
-    self.shaped_corpus  = np.repeat(encoded_corpus, dupe_factor, axis = 0)
+    self.shaped_corpus   = np.repeat(encoded_corpus, dupe_factor, axis = 0)
     # Shuffle
     if shuffle:
       self.rngen.shuffle(self.shaped_corpus)
     assert len(self.shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
 
     # Set corpus epoch parameters
-    self.steps_per_epoch        = min(self.training_opts.num_train_steps, 500) ## TODO add this as flag or pb param
-    self.num_epochs             = int(self.training_opts.num_train_steps / self.steps_per_epoch)
+    self.steps_per_epoch = min(self.training_opts.num_train_steps, 500) ## TODO add this as flag or pb param
+    self.num_epochs      = int(self.training_opts.num_train_steps / self.steps_per_epoch)
 
     assert self.shaped_corpus.ndim     == 2, "corpus dim: {}".format(self.shaped_corpus.shape)
     assert self.shaped_corpus.shape[1] == self.sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(encoded_corpus.shape[1], self.sequence_length)
