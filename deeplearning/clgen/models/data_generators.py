@@ -555,6 +555,8 @@ class MaskLMBatchGenerator(object):
     mask_idx = np.where(input_sample == self.maskToken)[0]
     hole_idx = np.where(input_sample == self.holeToken)[0]
 
+    assert len(mask_idx) + len(hole_idx) != 0, "No target prediction in sample text"
+
     if len(mask_idx) + len(hole_idx) > 1:
       raise NotImplementedError(
         """\
@@ -580,7 +582,7 @@ class MaskLMBatchGenerator(object):
         """
         )
 
-    # Add start/end tokens
+    # Add start/end tokens if they don't exist
     if FLAGS.use_start_end_metatokens:
       input_sample = self._addStartEndToken(input_sample)
 
