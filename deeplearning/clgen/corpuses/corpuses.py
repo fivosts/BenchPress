@@ -174,8 +174,10 @@ class Corpus(object):
           symlink,
         )
       elif config.HasField("fetch_github"):
-        ## TODO issue #32
-        raise NotImplementedError
+        os.symlink(
+          str(ExpandConfigPath(config.fetch_github, path_prefix=FLAGS.clgen_local_path_prefix)),
+          symlink,
+        )
     # Data of encoded pre-preprocessed files.
     encoded_id = ResolveEncodedId(self.content_id, self.config)
     cache.cachepath("corpus", "encoded", encoded_id).mkdir(exist_ok=True, parents=True)
