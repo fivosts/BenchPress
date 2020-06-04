@@ -22,33 +22,20 @@ Fetch OpenCL files
 import json
 import os
 import re
+import time
 import requests
 import sys
-import sqlite3
+import typing
 
 from base64 import b64decode
 from functools import partial
 from github import Github, GithubException
-from hashlib import sha1
 from io import open
-from labm8 import crypto
 from labm8 import fs
-from subprocess import Popen
-from time import sleep
-from typing import List
 
-import clgen
-from clgen import clutil
+from eupy.native import logger as l
+
 from clgen import dbutil
-from clgen import log
-
-
-class FetchError(clgen.CLgenError):
-    """
-    Module error.
-    """
-    pass
-
 
 # Counters
 repos_new_counter = 0
@@ -85,7 +72,7 @@ def _rate_limit(g) -> None:
     global status_string
     remaining = g.get_rate_limit().rate.remaining
     while remaining < 100:
-        sleep(1)
+        time.sleep(1)
         status_string = 'WAITING ON RATE LIMIT'
         _print_counters()
         remaining = g.get_rate_limit().rate.remaining
@@ -162,7 +149,7 @@ def _process_repo(g, db, repo) -> bool:
 _include_re = re.compile('\w*#include ["<](.*)[">]')
 
 
-def _download_file(github_token: str, repo, url: str, stack: List[str]) -> str:
+def _download_file(github_token: str, repo, url: str, stack: typing.List[str]) -> str:
     """
     Fetch file from GitHub.
 
@@ -176,7 +163,7 @@ def _download_file(github_token: str, repo, url: str, stack: List[str]) -> str:
         Repository.
     url : str
         Path.
-    stack : List[str]
+    stack : typing.List[str]
         URL stack.
 
     Returns
@@ -318,7 +305,7 @@ def fetch_github(db_path: str, github_username: str, github_pw: str,
     db = dbutil.connect(db_path)
 
     if not dbutil.is_github:
-        raise clgen.UserError("not a GitHub database")
+        raise ValueError("Not a github database")
 
     handle_repo = partial(_process_repo, g, db)
 
@@ -372,7 +359,7 @@ def fetch_github(db_path: str, github_username: str, github_pw: str,
     db.close()
 
 
-def inline_fs_headers(path: str, stack: List[str]) -> str:
+def inline_fs_headers(path: str, stack: typing.List[str]) -> str:
     """
     Recursively inline headers in file.
 
@@ -380,7 +367,7 @@ def inline_fs_headers(path: str, stack: List[str]) -> str:
     ----------
     path : str
         File.
-    stack : List[str]
+    stack : typing.List[str]
         File stack.
 
     Returns
@@ -435,17 +422,17 @@ def process_cl_file(db_path: str, path: str) -> None:
 
     Raises
     ------
-    FetchError
+    IOError
         In case of IO error.
     """
     db = dbutil.connect(db_path)
     c = db.cursor()
 
-    log.debug("fetch {path}".format(path=fs.abspath(path)))
+    l.getLogger().info("fetch {path}".format(path=fs.abspath(path)))
     try:
         contents = inline_fs_headers(path, [])
     except IOError:
-        raise FetchError(
+        raise IOError(
             "cannot read file '{path}'".format(path=fs.abspath(path)))
     c.execute('INSERT OR IGNORE INTO ContentFiles VALUES(?,?)',
               (path, contents))
@@ -454,7 +441,7 @@ def process_cl_file(db_path: str, path: str) -> None:
     c.close()
 
 
-def fetch(db_path: str, paths: List[str]=[]) -> None:
+def fetch(db_path: str, paths: typing.List[str]=[]) -> None:
     """
     Fetch from a list of files.
 
@@ -462,8 +449,8 @@ def fetch(db_path: str, paths: List[str]=[]) -> None:
     ----------
     db_path : str
         Output dataset.
-    paths : List[str]
-        List of file paths.
+    paths : typing.List[str]
+        typing.List of file paths.
     """
     paths = fs.files_from_list(*paths)  # expand directories
 
@@ -471,12 +458,12 @@ def fetch(db_path: str, paths: List[str]=[]) -> None:
     c = db.cursor()
 
     for path in paths:
-        log.debug("fetch", path)
+        l.getLogger().info("fetch", path)
         try:
             contents = inline_fs_headers(path, [])
         except IOError:
             db.commit()
-            raise FetchError(
+            raise IOError(
                 "cannot read file '{path}'".format(path=fs.abspath(path)))
         c.execute('INSERT OR IGNORE INTO ContentFiles VALUES(?,?)',
                   (path, contents))
