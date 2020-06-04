@@ -165,13 +165,17 @@ class Corpus(object):
     if not symlink.is_symlink():
       if config.HasField("local_directory"):
         os.symlink(
-          str(ExpandConfigPath(config.local_directory, path_prefix=FLAGS.clgen_local_path_prefix)),
+          str(ExpandConfigPath(config.local_directory,   path_prefix=FLAGS.clgen_local_path_prefix)),
           symlink,
         )
       elif config.HasField("local_tar_archive"):
-        os.symlink(str(ExpandConfigPath(config.local_tar_archive, path_prefix=FLAGS.clgen_local_path_prefix)),
+        os.symlink(
+          str(ExpandConfigPath(config.local_tar_archive, path_prefix=FLAGS.clgen_local_path_prefix)),
           symlink,
         )
+      elif config.HasField("fetch_github"):
+        ## TODO issue #32
+        pass
     # Data of encoded pre-preprocessed files.
     encoded_id = ResolveEncodedId(self.content_id, self.config)
     cache.cachepath("corpus", "encoded", encoded_id).mkdir(exist_ok=True, parents=True)
@@ -553,6 +557,9 @@ def ResolveContentId(
         config.local_tar_archive, path_prefix=FLAGS.clgen_local_path_prefix
       )
     )
+  elif config.HasField("fetch_github"):
+    ## TODO issue #32
+    pass
   else:
     raise NotImplementedError("Unsupported Corpus.contentfiles field value")
   l.getLogger().warning(
