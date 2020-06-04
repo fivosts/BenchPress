@@ -152,49 +152,30 @@ class Corpus(object):
     self.content_id = ResolveContentId(self.config, hc)
     # Database of pre-processed files.
     preprocessed_id = ResolvePreprocessedId(self.content_id, self.config)
-    cache.cachepath("corpus", "preprocessed", preprocessed_id).mkdir(
-      exist_ok=True, parents=True
-    )
-    preprocessed_db_path = cache.cachepath(
-      "corpus", "preprocessed", preprocessed_id, "preprocessed.db"
-    )
-    if (
-      self.config.HasField("content_id") and not preprocessed_db_path.is_file()
-    ):
+    cache.cachepath("corpus", "preprocessed", preprocessed_id).mkdir(exist_ok=True, parents=True)
+    preprocessed_db_path = cache.cachepath("corpus", "preprocessed", 
+                                           preprocessed_id, "preprocessed.db")
+
+    if self.config.HasField("content_id") and not preprocessed_db_path.is_file():
       raise ValueError(f"Content ID not found: '{self.content_id}'")
     self.preprocessed = preprocessed.PreprocessedContentFiles(
       f"sqlite:///{preprocessed_db_path}"
     )
     # Create symlink to contentfiles.
-    symlink = (
-      pathlib.Path(self.preprocessed.url[len("sqlite:///") :]).parent
-      / "contentfiles"
-    )
+    symlink = (pathlib.Path(self.preprocessed.url[len("sqlite:///") :]).parent / "contentfiles")
     if not symlink.is_symlink():
       if config.HasField("local_directory"):
         os.symlink(
-          str(
-            ExpandConfigPath(
-              config.local_directory, path_prefix=FLAGS.clgen_local_path_prefix
-            )
-          ),
+          str(ExpandConfigPath(config.local_directory, path_prefix=FLAGS.clgen_local_path_prefix)),
           symlink,
         )
       elif config.HasField("local_tar_archive"):
-        os.symlink(
-          str(
-            ExpandConfigPath(
-              config.local_tar_archive,
-              path_prefix=FLAGS.clgen_local_path_prefix,
-            )
-          ),
+        os.symlink(str(ExpandConfigPath(config.local_tar_archive, path_prefix=FLAGS.clgen_local_path_prefix)),
           symlink,
         )
     # Data of encoded pre-preprocessed files.
     encoded_id = ResolveEncodedId(self.content_id, self.config)
-    cache.cachepath("corpus", "encoded", encoded_id).mkdir(
-      exist_ok=True, parents=True
-    )
+    cache.cachepath("corpus", "encoded", encoded_id).mkdir(exist_ok=True, parents=True)
     db_path = cache.cachepath("corpus", "encoded", encoded_id, "encoded.db")
     if self.config.HasField("pre_encoded_corpus_url"):
       self.encoded = encoded.EncodedContentFiles(config.pre_encoded_corpus_url)
@@ -204,16 +185,13 @@ class Corpus(object):
       "corpus", "encoded", encoded_id, "atomizer.pkl"
     )
     if not self.config.HasField("pre_encoded_corpus_url"):
-      symlink = (
-        pathlib.Path(self.encoded.url[len("sqlite:///") :]).parent
-        / "preprocessed"
-      )
+      symlink = (pathlib.Path(self.encoded.url[len("sqlite:///") :]).parent / "preprocessed")
       if not symlink.is_symlink():
         os.symlink(
           os.path.relpath(
             pathlib.Path(self.preprocessed.url[len("sqlite:///") :]).parent,
             pathlib.Path(self.encoded.url[len("sqlite:///") :]).parent,
-          ),
+            ),
           symlink,
         )
     self.hash = encoded_id
