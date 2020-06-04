@@ -132,8 +132,7 @@ class Corpus(object):
     """
     l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.__init__()")
     if not isinstance(config, corpus_pb2.Corpus):
-      t = type(config).__name__
-      raise TypeError(f"Config must be a Corpus proto. Received: '{t}'")
+      raise TypeError(f"Config must be a Corpus proto. Received: '{type(config).__name__}'")
 
     # Make a local copy of the configuration.
     self.config = corpus_pb2.Corpus()
