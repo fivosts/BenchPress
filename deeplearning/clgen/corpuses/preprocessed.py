@@ -291,10 +291,7 @@ class PreprocessedContentFiles(sqlutil.Database):
         )
         yield pathlib.Path(d)
     elif config.HasField("fetch_github"):
-      ## TODO issue 32
-      # yield back the files from the folder where you saved the git storing
-      # exactly like local_directory case
-      raise NotImplementedError
+      yield pathlib.Path(ExpandConfigPath(config.fetch_github))
     else:
       raise NotImplementedError
 
