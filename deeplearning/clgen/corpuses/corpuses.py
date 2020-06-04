@@ -175,7 +175,7 @@ class Corpus(object):
         )
       elif config.HasField("fetch_github"):
         ## TODO issue #32
-        pass
+        raise NotImplementedError
     # Data of encoded pre-preprocessed files.
     encoded_id = ResolveEncodedId(self.content_id, self.config)
     cache.cachepath("corpus", "encoded", encoded_id).mkdir(exist_ok=True, parents=True)
@@ -553,13 +553,41 @@ def ResolveContentId(
     # to maintain a cache which maps the mtime of tarballs to their content ID,
     # similart to how local_directory is implemented.
     content_id = GetHashOfArchiveContents(
-      ExpandConfigPath(
-        config.local_tar_archive, path_prefix=FLAGS.clgen_local_path_prefix
-      )
+      ExpandConfigPath(config.local_tar_archive, path_prefix=FLAGS.clgen_local_path_prefix)
     )
   elif config.HasField("fetch_github"):
-    ## TODO issue #32
-    pass
+
+    gitfile_path = ExpandConfigPath(
+      config.fetch_github, path_prefix=FLAGS.clgen_local_path_prefix
+    )
+
+    l.getLogger().warning("TODO: Insert here checks if the folder exists and if contains gitfiles. If it does, skip pulling again")
+
+    # if not is_github_files:
+    if True:
+      raise NotImplementedError("Insert here call to fetch git script. It should write all files to local_directory")
+      # After the first time we compute the hash of a directory, we write it into
+      # a file. This is a shortcut to work around the fact that computing the
+      # directory checksum is O(n) with respect to the number of files in the
+      # directory (even if the directory is already cached by the hash cache).
+      # This means that it is the responsibility of the user to delete this cached
+      # file if the directory is changed.
+      hash_file_path = pathlib.Path(str(gitfile_path) + ".sha1.txt")
+      if hash_file_path.is_file():
+        l.getLogger().info("Reading directory hash: '{}'.".format(hash_file_path))
+        with open(hash_file_path) as f:
+          content_id = f.read().rstrip()
+      else:
+        # No hash file, so compute the directory hash and create it.
+        try:
+          content_id = hc.GetHash(gitfile_path)
+        except FileNotFoundError as e:
+          raise ValueError(e)
+        # Create the hash file in the directory so that next time we don't need
+        # to reference the hash cache.
+        with open(hash_file_path, "w") as f:
+          print(content_id, file=f)
+        l.getLogger().info("Wrote directory hash: '{}'.".format(hash_file_path))
   else:
     raise NotImplementedError("Unsupported Corpus.contentfiles field value")
   l.getLogger().warning(
