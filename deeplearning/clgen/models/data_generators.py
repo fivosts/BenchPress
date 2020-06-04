@@ -53,6 +53,12 @@ flags.DEFINE_string(
   "Set target prediction of MaskLM as [MASK] tokens or [HOLE] sequences."
 )
 
+flags.DEFINE_string(
+  "datapoint_type",
+  "kernel",
+  "Represent single training instance as whole padded kernel, or arbitrary statement sequences."
+)
+
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
   X: np.array
@@ -520,77 +526,76 @@ class MaskLMBatchGenerator(object):
 
     # generate a kernel corpus
     encoded_corpus       = self.corpus.GetTrainingData()
-    # Reject larger than sequence length
-    initial_length       = copy.deepcopy(len(encoded_corpus))
-    encoded_corpus       = [list(x) for x in encoded_corpus if 
-                           len(x) <= self.sequence_length - (2 if FLAGS.use_start_end_metatokens else 0)] # Account for start and end token
-    reduced_length       = copy.deepcopy(len(encoded_corpus))
-    # Add start/end tokens
-    if FLAGS.use_start_end_metatokens:
-      encoded_corpus     = [self._addStartEndToken(kf) for kf in encoded_corpus]
-    # pad sequences to sequence length
-    encoded_corpus       = np.array([x + pad * (self.sequence_length - len(x)) for x in encoded_corpus])
-    # Clone datapoints dupe_factor times
-    self.shaped_corpus   = np.repeat(encoded_corpus, dupe_factor, axis = 0)
-    # Shuffle
-    if shuffle:
-      self.rngen.shuffle(self.shaped_corpus)
-    assert len(self.shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
 
-    # Set corpus epoch parameters
-    self.steps_per_epoch = min(self.training_opts.num_train_steps, 500) ## TODO add this as flag or pb param
-    self.num_epochs      = int(self.training_opts.num_train_steps / self.steps_per_epoch)
+    if FLAGS.datapoint_type == "kernel":
 
-    assert self.shaped_corpus.ndim     == 2, "corpus dim: {}".format(self.shaped_corpus.shape)
-    assert self.shaped_corpus.shape[1] == self.sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(encoded_corpus.shape[1], self.sequence_length)
+      # Reject larger than sequence length
+      initial_length       = copy.deepcopy(len(encoded_corpus))
+      encoded_corpus       = [list(x) for x in encoded_corpus if 
+                             len(x) <= self.sequence_length - (2 if FLAGS.use_start_end_metatokens else 0)] # Account for start and end token
+      reduced_length       = copy.deepcopy(len(encoded_corpus))
+      # Add start/end tokens
+      if FLAGS.use_start_end_metatokens:
+        encoded_corpus     = [self._addStartEndToken(kf) for kf in encoded_corpus]
+      # pad sequences to sequence length
+      encoded_corpus       = np.array([x + pad * (self.sequence_length - len(x)) for x in encoded_corpus])
+      # Clone datapoints dupe_factor times
+      self.shaped_corpus   = np.repeat(encoded_corpus, dupe_factor, axis = 0)
+      # Shuffle
+      if shuffle:
+        self.rngen.shuffle(self.shaped_corpus)
+      assert len(self.shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
 
-    l.getLogger().info("{} kernels were rejected (larger than sequence_length)".format(initial_length - reduced_length))
-    l.getLogger().info(
-      "Loaded corpus of shape {} ({} kernels remained, multiplied by dupe factor: {}) in {} ms.".format(
-                self.shaped_corpus.shape,
-                reduced_length,
-                dupe_factor,
-                humanize.Commas(int((time.time() - start_time) * 1000)),
-            )
-    )
+      # Set corpus epoch parameters
+      self.steps_per_epoch = min(self.training_opts.num_train_steps, 500) ## TODO add this as flag or pb param
+      self.num_epochs      = int(self.training_opts.num_train_steps / self.steps_per_epoch)
+
+      assert self.shaped_corpus.ndim     == 2, "corpus dim: {}".format(self.shaped_corpus.shape)
+      assert self.shaped_corpus.shape[1] == self.sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(encoded_corpus.shape[1], self.sequence_length)
+
+      l.getLogger().info("{} kernels were rejected (larger than sequence_length)".format(initial_length - reduced_length))
+      l.getLogger().info(
+        "Loaded corpus of shape {} ({} kernels remained, multiplied by dupe factor: {}) in {} ms.".format(
+                  self.shaped_corpus.shape,
+                  reduced_length,
+                  dupe_factor,
+                  humanize.Commas(int((time.time() - start_time) * 1000)),
+              )
+      )
+    elif FLAGS.datapoint_type == "statement":
+    ## This branch is legacy data processing
+
+      if shuffle:
+        self.rngen.shuffle(encoded_corpus)
+      encoded_corpus = np.concatenate(encoded_corpus)
+      encoded_corpus = np.tile(encoded_corpus, dupe_factor)
+
+      # Set corpus dimension parameters
+      self.steps_per_epoch        = int(len(encoded_corpus) / (self.batch_size * self.sequence_length * dupe_factor))
+      assert self.steps_per_epoch != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
+      self.num_epochs             = int(self.training_opts.num_train_steps / self.steps_per_epoch)
+
+      clipped_corpus_length       = dupe_factor * self.steps_per_epoch * self.batch_size * self.sequence_length
+      clipped_corpus              = encoded_corpus[:clipped_corpus_length]
+
+      self.shaped_corpus = np.split(clipped_corpus, self.batch_size * self.steps_per_epoch * dupe_factor, 0)
+
+      np_corpus = np.asarray(self.shaped_corpus)
+      assert np_corpus.ndim == 2, "Wrong dimensions for shaped_corpus: {}".format(np_corpus.shape)
+      assert np_corpus.shape[1] == self.sequence_length, "Second dimension is not equal to sequence length: {}".format(np_corpus.shape[1])
+
+      l.getLogger().info(
+        "Loaded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
+                  humanize.Commas(clipped_corpus_length),
+                  humanize.Commas(len(encoded_corpus) - clipped_corpus_length),
+                  humanize.Commas(int((time.time() - start_time) * 1000)),
+              )
+      )
+
+    else:
+      raise ValueError("Unrecognized datapoint_type: {}".format(FLAGS.datapoint_type))
+
     return
-
-  ## TODO this whole function is a temp
-  # def CreateCorpus(self) -> None:
-  #   l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.CreateBatches()")
-  #   start_time = time.time()
-
-  #   # generate a kernel corpus
-  #   encoded_corpus = self.corpus.GetTrainingData()
-  #   if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
-  #     self.rngen.shuffle(encoded_corpus)
-  #   encoded_corpus = np.concatenate(encoded_corpus)
-  #   encoded_corpus = np.tile(encoded_corpus, self.training_opts.dupe_factor)
-
-  #   # Set corpus dimension parameters
-  #   self.sequence_length        = self.training_opts.sequence_length
-  #   self.batch_size             = self.training_opts.batch_size
-  #   self.steps_per_epoch        = int(len(encoded_corpus) / (self.batch_size * self.sequence_length * self.training_opts.dupe_factor))
-  #   assert self.steps_per_epoch != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
-  #   self.num_epochs             = int(self.training_opts.num_train_steps / self.steps_per_epoch)
-
-  #   clipped_corpus_length       = self.training_opts.dupe_factor * self.steps_per_epoch * self.batch_size * self.sequence_length
-  #   clipped_corpus              = encoded_corpus[:clipped_corpus_length]
-
-  #   self.shaped_corpus = np.split(clipped_corpus, self.batch_size * self.steps_per_epoch * self.training_opts.dupe_factor, 0)
-
-  #   np_corpus = np.asarray(self.shaped_corpus)
-  #   assert np_corpus.ndim == 2, "Wrong dimensions for shaped_corpus: {}".format(np_corpus.shape)
-  #   assert self.shaped_corpus.shape[1] == self.sequence_length, "Second dimension is not equal to sequence length: {}".format(np_corpus.shape[1])
-
-  #   l.getLogger().info(
-  #     "Loaded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
-  #               humanize.Commas(clipped_corpus_length),
-  #               humanize.Commas(len(encoded_corpus) - clipped_corpus_length),
-  #               humanize.Commas(int((time.time() - start_time) * 1000)),
-  #           )
-  #   )
-  #   return
 
   def InitSampleBatch(self,
                       input_sample,
