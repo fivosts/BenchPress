@@ -110,9 +110,9 @@ class MaskSequence(typing.NamedTuple):
                         ) -> None:
     """Log analytics about the batch."""
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskSequence.LogBatchTelemetry()")
-    l.getLogger().info("Step shape: Input_ids: {}, masked_lm_positions: {}, masked_lm_ids: {}, masked_lm_weights: {}, next_sentence_label: {}"
+    l.getLogger().info("Step shape: Input_ids: {}, input_mask: {}, masked_lm_positions: {}, masked_lm_ids: {}, masked_lm_weights: {}, next_sentence_label: {}"
                         .format(self.shapeSeqToBatch(self.input_ids,            batch_size),
-                                self.shapeSeqToBatch(self.input_mask,  batch_size),
+                                self.shapeSeqToBatch(self.input_mask,           batch_size),
                                 self.shapeSeqToBatch(self.masked_lm_positions,  batch_size),
                                 self.shapeSeqToBatch(self.masked_lm_ids,        batch_size),
                                 self.shapeSeqToBatch(self.masked_lm_weights,    batch_size),
@@ -485,7 +485,7 @@ class MaskLMBatchGenerator(object):
         sample_masks = np.where(np.in1d(sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
 
         pad_idx      = np.where(sample == self.atomizer.padToken)[0]
-        inp_mask   = np.ones(len(sample), dtype = np.int32)
+        inp_mask     = np.ones(len(sample), dtype = np.int32)
         if len(pad_idx) > 0:
           inp_mask[pad_idx[0]:] = 0
 
@@ -543,7 +543,6 @@ class MaskLMBatchGenerator(object):
 
     assert self.shaped_corpus.ndim     == 2, "corpus dim: {}".format(self.shaped_corpus.shape)
     assert self.shaped_corpus.shape[1] == self.sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(encoded_corpus.shape[1], self.sequence_length)
-    assert self.steps_per_epoch        != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
 
     l.getLogger().info("{} kernels were rejected (larger than sequence_length)".format(initial_length - reduced_length))
     l.getLogger().info(
@@ -555,6 +554,43 @@ class MaskLMBatchGenerator(object):
             )
     )
     return
+
+  ## TODO this whole function is a temp
+  # def CreateCorpus(self) -> None:
+  #   l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.CreateBatches()")
+  #   start_time = time.time()
+
+  #   # generate a kernel corpus
+  #   encoded_corpus = self.corpus.GetTrainingData()
+  #   if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
+  #     self.rngen.shuffle(encoded_corpus)
+  #   encoded_corpus = np.concatenate(encoded_corpus)
+  #   encoded_corpus = np.tile(encoded_corpus, self.training_opts.dupe_factor)
+
+  #   # Set corpus dimension parameters
+  #   self.sequence_length        = self.training_opts.sequence_length
+  #   self.batch_size             = self.training_opts.batch_size
+  #   self.steps_per_epoch        = int(len(encoded_corpus) / (self.batch_size * self.sequence_length * self.training_opts.dupe_factor))
+  #   assert self.steps_per_epoch != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
+  #   self.num_epochs             = int(self.training_opts.num_train_steps / self.steps_per_epoch)
+
+  #   clipped_corpus_length       = self.training_opts.dupe_factor * self.steps_per_epoch * self.batch_size * self.sequence_length
+  #   clipped_corpus              = encoded_corpus[:clipped_corpus_length]
+
+  #   self.shaped_corpus = np.split(clipped_corpus, self.batch_size * self.steps_per_epoch * self.training_opts.dupe_factor, 0)
+
+  #   np_corpus = np.asarray(self.shaped_corpus)
+  #   assert np_corpus.ndim == 2, "Wrong dimensions for shaped_corpus: {}".format(np_corpus.shape)
+  #   assert self.shaped_corpus.shape[1] == self.sequence_length, "Second dimension is not equal to sequence length: {}".format(np_corpus.shape[1])
+
+  #   l.getLogger().info(
+  #     "Loaded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
+  #               humanize.Commas(clipped_corpus_length),
+  #               humanize.Commas(len(encoded_corpus) - clipped_corpus_length),
+  #               humanize.Commas(int((time.time() - start_time) * 1000)),
+  #           )
+  #   )
+  #   return
 
   def InitSampleBatch(self,
                       input_sample,
@@ -717,6 +753,8 @@ class MaskLMBatchGenerator(object):
               .format(seq[pos_index], input_ids[input_id_idx]))
 
       rand_len = self.rngen.randint(0, 5)
+      # Before confirming this rand_len, first make sure 
+      # it is no conflicting another hole further down the road
       for i in range(min(rand_len, len(input_ids) - input_id_idx)):
         if input_ids[input_id_idx + i] == self.atomizer.holeToken:
           rand_len = i
@@ -728,7 +766,11 @@ class MaskLMBatchGenerator(object):
                       )
 
       target    = input_ids[ input_id_idx] if hole_length > 0 else self.atomizer.endholeToken
+      # if self.rngen.random() < 0.8:
+      ## TODO that only works fine when hole_length = 1
       input_ids = input_ids[:input_id_idx] + [self.atomizer.holeToken] + input_ids[input_id_idx + hole_length:]
+      # else:
+      #   pass
 
       masked_lms.append(MaskedLmInstance(pos_index=input_id_idx, token_id=target))
       assert (input_ids[input_id_idx] == self.atomizer.holeToken, 
@@ -789,7 +831,7 @@ class MaskLMBatchGenerator(object):
 
     masks_to_predict = min(self.training_opts.max_predictions_per_seq,
                            max(1, int(round(actual_length * self.training_opts.masked_lm_prob))))
-    input_ids = np.copy(seq)
+    input_ids = list(np.copy(seq))
     masked_lms = []
 
     for pos_index in candidate_indexes:
@@ -808,7 +850,8 @@ class MaskLMBatchGenerator(object):
           else:
             input_ids[pos_index] = self.rngen.randint(0, self.atomizer.vocab_size - 1)
       else:
-        input_ids[pos_index] = self.atomizer.maskToken
+        if self.rngen.random() < 0.8:
+          input_ids[pos_index] = self.atomizer.maskToken
 
       masked_lms.append(MaskedLmInstance(pos_index=pos_index, token_id=seq[pos_index]))
 
