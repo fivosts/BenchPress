@@ -497,7 +497,6 @@ py_library(
         ":normalizer",
         ":opencl",
         ":public",
-        "//datasets/github/scrape_repos/preprocessors:secrets",
         "//deeplearning/clgen/proto:clgen_pb_py",
     ],
 )

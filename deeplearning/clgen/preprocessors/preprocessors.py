@@ -3,8 +3,8 @@ import importlib
 import pathlib
 import typing
 from importlib import util as importlib_util
-
-from datasets.github.scrape_repos.preprocessors import secrets
+from detect_secrets import main as secrets_main
+from detect_secrets.plugins.common import initialize as secrets_init
 
 from deeplearning.clgen.preprocessors import public
 from absl import flags
@@ -182,8 +182,11 @@ def RejectSecrets(text: str) -> str:
     ValueError: In case the text contains secrets.
   """
   l.getLogger().debug("deeplearning.clgen.preprocessors.preprocessors.RejectSecrets()")
-  try:
-    secrets.ScanForSecrets(text)
-    return text
-  except ValueError as e:
-    raise ValueError(str(e))
+
+  args = secrets_main.parse_args(["scan"])
+  plugins = secrets_init.from_parser_builder(args.plugins, exclude_lines_regex="")
+  for plugin in plugins:
+    if plugin.analyze_string(text, 0, "does_not_matter"):
+      raise ValueError(plugin.__class__.__name__)
+
+  return text
