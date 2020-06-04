@@ -43,6 +43,8 @@ message Corpus {
     string local_tar_archive = 3;
     // The path to a database of encoded files.
     string pre_encoded_corpus_url = 4;
+    // Fetch a new corpus directly from github
+    bool fetch_github = 5;
   }
   // The atomizer to use to encode the corpus.
   oneof atomizer {
