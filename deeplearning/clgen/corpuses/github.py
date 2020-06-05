@@ -33,18 +33,76 @@ from base64 import b64decode
 from functools import partial
 from labm8.py import fs
 from eupy.native import logger as l
-# from deeplearning.clgen import dbutil
 
-# Counters
-repos_new_counter = 0
-repos_modified_counter = 0
-repos_unchanged_counter = 0
-files_new_counter = 0
-files_modified_counter = 0
-files_unchanged_counter = 0
-errors_counter = 0
-status_string = ''
+class GithubRepo():
+  def __init__(self, url: str, **kwargs):
+    # url of a repo is immutable.
+    self.url = url
+    if kwargs:
+      self.update(kwargs)
+    return
 
+  def update(self,
+             url          : str,
+             owner        : str,
+             name         : str,
+             fork         : int,
+             stars        : str,
+             contributors : int,
+             forks        : str,
+             created_at   : str,
+             updated_at   : str):
+
+    if url != self.url:
+      raise ValueError("Updated url of already existent repo does not match")
+    self.ownner        = owner
+    self.name          = name
+    self.fork          = fork
+    self.stars         = stars
+    self.contributors  = contributors
+    self.forks         = forks
+    self.created_at    = created_at
+    return 
+
+class GithubRepoHandler():
+  def __init__(self):
+    self._scraped_repos           = {}
+
+    self.repos_new_counter        = 0
+    self.repos_modified_counter   = 0
+    self.repos_unchanged_counter  = 0    
+
+    self.files_new_counter        = 0
+    self.files_modified_counter   = 0
+    self.files_unchanged_counter  = 0
+
+    return
+
+  def is_updated(self, url, updated_at):
+    if url in self._scraped_repos and self._scraped_repos[url] == updated_at:
+      self.repos_unchanged_counter += 1
+      return True
+    return False
+
+  def update(self, **kwargs):
+    if url in self._scraped_repos:
+      self._scraped_repos[url].update(kwargs)
+      self.repos_modified_counter += 1
+    else:
+      new_repo                    = GithubRepo(kwargs)
+      self.repos_new_counter      += 1
+    return True
+
+  def print_counters(self) -> None:
+    """
+    Print analytics counters.
+    """
+    print('\r\033[Kfiles: new ',  self.files_new_counter,
+        ', modified ',            self.files_modified_counter,
+        # '. errors ',              self.errors_counter,
+        # '. ',                     self.status_string[0:25],
+        sep='', end='')
+    sys.stdout.flush()
 
 class GithubFetcher():
   """GitHub API wrapper to pull from github a fresh corpus of OpenCL kernels"""
@@ -71,13 +129,22 @@ class GithubFetcher():
         git_credentials[key] = input("{}: ".format(key))
         os.environ[key]      = git_credentials[key]
 
-    self.username = git_credentials['GITHUB_USERNAME']
-    self.password = git_credentials['GITHUB_PW']
-    self.token    = git_credentials['GITHUB_TOKEN']
+    self.username       = git_credentials['GITHUB_USERNAME']
+    self.password       = git_credentials['GITHUB_PW']
+    self.token          = git_credentials['GITHUB_TOKEN']
+    self.repo_handler   = GithubRepoHandler()
+
+    self.status_string  = ""
+    self.errors_counter = 0
     return
 
-  def fetch(self, db_path: str, github_username: str, github_pw: str,
-           github_token: str) -> None:
+  def print_counters(self):
+    self.repo_handler.print(counters)
+    print('. errors ', self.errors_counter,
+          '. ',        self.status_string[0:25],
+        sep='', end='')    
+
+  def fetch(self) -> None:
     """
     Download all of the OpenCL on GitHub (!)
 
@@ -85,26 +152,17 @@ class GithubFetcher():
       * Only includes exclusively OpenCL files, no inline strings.
       * Occasionally (< 1%) can't find headers to include.
 
-    Parameters
-    ----------
-    db_path : str
-      Dataset path.
-    github_username : str
-      Authorization.
-    github_pw : str
-      Authorization.
-    github_token : str
-      Authorization.
     """
     global errors_counter
 
-    g = github.Github(github_username, github_pw)
-    db = dbutil.connect(db_path)
+    g = github.Github(self.username, self.password)
 
-    if not dbutil.is_github:
-      raise ValueError("Not a github database")
+    # db = dbutil.connect(db_path)
 
-    handle_repo = partial(self._process_repo, g, db)
+    # if not dbutil.is_github:
+    #   raise ValueError("Not a github database")
+
+    handle_repo = partial(self.process_repo, g)
 
     # fetch the repositories to iterate over. Since opencl isn't
     # treated as a first-class language by GitHub, we can't use the
@@ -133,7 +191,7 @@ class GithubFetcher():
         if not repo_modified:
           continue
 
-        handle_file = partial(_process_file, g, github_token, db, repo)
+        handle_file = partial(process_file, g, repo)
 
         # iterate over the entire git tree of the repo's default
         # branch (usually 'master'). If a file ends with the .cl
@@ -151,11 +209,11 @@ class GithubFetcher():
           # do nothing in case of error (such as an empty repo)
           pass
 
-    self._print_counters()
+    self.print_counters()
     print("\n\ndone.")
     db.close()
 
-  def _process_repo(self, g, db, repo) -> bool:
+  def process_repo(self, g, repo) -> bool:
     """
     GitHub repository handler.
 
@@ -168,8 +226,6 @@ class GithubFetcher():
     ----------
     g
       GitHub connection.
-    db : sqlite3.Connection
-      Dataset.
     repo
       Repository.
 
@@ -178,51 +234,56 @@ class GithubFetcher():
     bool
       True if repository should be scraped, else False.
     """
-    global repos_new_counter
-    global repos_modified_counter
-    global repos_unchanged_counter
-    global status_string
-
     _rate_limit(g)
-    url = repo.url
-    updated_at = str(repo.updated_at)
-    name = repo.name
-    status_string = name
-    self._print_counters()
+    url                   = repo.url
+    name                 = repo.name
+    updated_at           = str(repo.updated_at)
+    self.status_string   = name
+    self.print_counters()
 
-    c = db.cursor()
-    c.execute("SELECT updated_at FROM Repositories WHERE url=?", (url,))
-    cached_updated_at = c.fetchone()
-
-    # Do nothing unless updated timestamps don't match
-    if cached_updated_at and cached_updated_at[0] == updated_at:
-      repos_unchanged_counter += 1
+    if not self.repo_handler.is_updated(url, updated_at):
+      # Timestamp of already scraped repo matches, so nothing to do.
       return False
 
-    owner = repo.owner.email
-    fork = 1 if repo.fork else 0
-    stars = repo.stargazers_count
+    # c = db.cursor()
+    # c.execute("SELECT updated_at FROM Repositories WHERE url=?", (url,))
+    # cached_updated_at = c.fetchone()
+
+    # # Do nothing unless updated timestamps don't match
+    # if cached_updated_at and cached_updated_at[0] == updated_at:
+    #   repos_unchanged_counter += 1
+    #   return False
+
+    owner  = repo.owner.email
+    fork   = 1 if repo.fork else 0
+    stars  = repo.stargazers_count
+
     try:
       contributors = len([x for x in repo.get_contributors()])
     except github.GithubException:
       contributors = -1
+
     forks = repo.forks
     created_at = repo.created_at
     updated_at = repo.updated_at
 
-    c.execute("DELETE FROM Repositories WHERE url=?", (url,))
-    c.execute("INSERT INTO Repositories VALUES(?,?,?,?,?,?,?,?,?)",
-          (url, owner, name, fork, stars, contributors, forks, created_at,
-           updated_at))
+    self.repo_handler.update(
+      url, owner, name, fork, stars, contributors, forks, created_at, updated_at
+    )
 
-    if cached_updated_at:
-      repos_modified_counter += 1
-    else:
-      repos_new_counter += 1
-    db.commit()
+    # c.execute("DELETE FROM Repositories WHERE url=?", (url,))
+    # c.execute("INSERT INTO Repositories VALUES(?,?,?,?,?,?,?,?,?)",
+    #       (url, owner, name, fork, stars, contributors, forks, created_at,
+    #        updated_at))
+
+    # if cached_updated_at:
+    #   repos_modified_counter += 1
+    # else:
+    #   repos_new_counter += 1
+    # db.commit()
     return True
 
-  def _process_file(self, g, github_token: str, db, repo, file) -> bool:
+  def process_file(self, g, repo, file) -> bool:
     """
     GitHub file handler.
 
@@ -230,10 +291,6 @@ class GithubFetcher():
     ----------
     g
       GitHub connection.
-    github_token : str
-      Authorization.
-    db : sqlite3.Connection
-      Dataset.
     repo
       Repository.
     file
@@ -247,7 +304,6 @@ class GithubFetcher():
     global files_new_counter
     global files_modified_counter
     global files_unchanged_counter
-    global status_string
 
     # We're only interested in OpenCL files.
     if not (file.path.endswith('.cl') or path.endswith('.ocl')):
@@ -256,8 +312,8 @@ class GithubFetcher():
     url = file.url
     sha = file.sha
     path = file.path
-    status_string = repo.name + '/' + path
-    self._print_counters()
+    self.status_string = repo.name + '/' + path
+    self.print_counters()
 
     c = db.cursor()
     c.execute("SELECT sha FROM ContentMeta WHERE id=?", (url,))
@@ -269,7 +325,7 @@ class GithubFetcher():
       return False
 
     repo_url = repo.url
-    contents = _download_file(github_token, repo, file.url, [])
+    contents = _download_file(self.token, repo, file.url, [])
     size = file.size
 
     c.execute("DELETE FROM ContentFiles WHERE id=?", (url,))
@@ -286,18 +342,6 @@ class GithubFetcher():
 
     db.commit()
     return True
-    
-  def _print_counters(self) -> None:
-    """
-    Print analytics counters.
-    """
-    print('\r\033[Kfiles: new ', files_new_counter,
-        ', modified ', files_modified_counter,
-        '. errors ', errors_counter,
-        '. ', status_string[0:25],
-        sep='', end='')
-    sys.stdout.flush()
-
 
   def _rate_limit(self, g) -> None:
     """
@@ -308,12 +352,11 @@ class GithubFetcher():
     g
       GitHub connection.
     """
-    global status_string
     remaining = g.get_rate_limit().rate.remaining
     while remaining < 100:
       time.sleep(1)
-      status_string = 'WAITING ON RATE LIMIT'
-      self._print_counters()
+      self.status_string = 'WAITING ON RATE LIMIT'
+      self.print_counters()
       remaining = g.get_rate_limit().rate.remaining
 
 
