@@ -76,233 +76,6 @@ class GithubFetcher():
     self.token    = git_credentials['GITHUB_TOKEN']
     return
 
-  def _print_counters(self) -> None:
-    """
-    Print analytics counters.
-    """
-    print('\r\033[Kfiles: new ', files_new_counter,
-        ', modified ', files_modified_counter,
-        '. errors ', errors_counter,
-        '. ', status_string[0:25],
-        sep='', end='')
-    sys.stdout.flush()
-
-
-  def _rate_limit(self, g) -> None:
-    """
-    Block on GitHub rate limit.
-
-    Parameters
-    ----------
-    g
-      GitHub connection.
-    """
-    global status_string
-    remaining = g.get_rate_limit().rate.remaining
-    while remaining < 100:
-      time.sleep(1)
-      status_string = 'WAITING ON RATE LIMIT'
-      self._print_counters()
-      remaining = g.get_rate_limit().rate.remaining
-
-
-  def _process_repo(self, g, db, repo) -> bool:
-    """
-    GitHub repository handler.
-
-    Determines if a repository needs to be scraped. There are two cases for
-    this:
-      * The repository has not already been visited.
-      * The repository has been modified since it was last visited.
-
-    Parameters
-    ----------
-    g
-      GitHub connection.
-    db : sqlite3.Connection
-      Dataset.
-    repo
-      Repository.
-
-    Returns
-    -------
-    bool
-      True if repository should be scraped, else False.
-    """
-    global repos_new_counter
-    global repos_modified_counter
-    global repos_unchanged_counter
-    global status_string
-
-    _rate_limit(g)
-    url = repo.url
-    updated_at = str(repo.updated_at)
-    name = repo.name
-    status_string = name
-    self._print_counters()
-
-    c = db.cursor()
-    c.execute("SELECT updated_at FROM Repositories WHERE url=?", (url,))
-    cached_updated_at = c.fetchone()
-
-    # Do nothing unless updated timestamps don't match
-    if cached_updated_at and cached_updated_at[0] == updated_at:
-      repos_unchanged_counter += 1
-      return False
-
-    owner = repo.owner.email
-    fork = 1 if repo.fork else 0
-    stars = repo.stargazers_count
-    try:
-      contributors = len([x for x in repo.get_contributors()])
-    except github.GithubException:
-      contributors = -1
-    forks = repo.forks
-    created_at = repo.created_at
-    updated_at = repo.updated_at
-
-    c.execute("DELETE FROM Repositories WHERE url=?", (url,))
-    c.execute("INSERT INTO Repositories VALUES(?,?,?,?,?,?,?,?,?)",
-          (url, owner, name, fork, stars, contributors, forks, created_at,
-           updated_at))
-
-    if cached_updated_at:
-      repos_modified_counter += 1
-    else:
-      repos_new_counter += 1
-    db.commit()
-    return True
-
-  def _download_file(self, github_token: str, repo, url: str, stack: typing.List[str]) -> str:
-    """
-    Fetch file from GitHub.
-
-    Recursively downloads and inlines headers.
-
-    Parameters
-    ----------
-    github_token : str
-      Authorization.
-    repo
-      Repository.
-    url : str
-      Path.
-    stack : typing.List[str]
-      URL stack.
-
-    Returns
-    -------
-    str
-      File contents.
-    """
-    # Recursion stack
-    stack.append(url)
-
-    response = json.loads(requests.get(
-      url,
-      headers={
-        'Authorization': 'token ' + str(github_token)
-      }
-    ).content.decode('utf-8'))
-    src = b64decode(response['content']).decode('utf-8')
-
-    outlines = []
-    for line in src.split('\n'):
-      match = re.match(re.compile('\w*#include ["<](.*)[">]'), line)
-      if match:
-        include_name = match.group(1)
-
-        # Try and resolve relative paths
-        include_name = include_name.replace('../', '')
-
-        branch = repo.default_branch
-        tree_iterator = repo.get_git_tree(branch, recursive=True).tree
-        include_url = ''
-        for f in tree_iterator:
-          if f.path.endswith(include_name):
-            include_url = f.url
-            break
-
-        if include_url and include_url not in stack:
-          include_src = _download_file(github_token, repo, include_url)
-          outlines.append(include_src)
-        else:
-          if not include_url:
-            outlines.append('// [FETCH] didnt find: ' + line)
-          else:
-            outlines.append('// [FETCH] skipped: ' + line)
-      else:
-        outlines.append(line)
-
-    return '\n'.join(outlines)
-
-
-  def _process_file(self, g, github_token: str, db, repo, file) -> bool:
-    """
-    GitHub file handler.
-
-    Parameters
-    ----------
-    g
-      GitHub connection.
-    github_token : str
-      Authorization.
-    db : sqlite3.Connection
-      Dataset.
-    repo
-      Repository.
-    file
-      File.
-
-    Returns
-    -------
-    bool
-      True on success, else False.
-    """
-    global files_new_counter
-    global files_modified_counter
-    global files_unchanged_counter
-    global status_string
-
-    # We're only interested in OpenCL files.
-    if not (file.path.endswith('.cl') or path.endswith('.ocl')):
-      return
-
-    url = file.url
-    sha = file.sha
-    path = file.path
-    status_string = repo.name + '/' + path
-    self._print_counters()
-
-    c = db.cursor()
-    c.execute("SELECT sha FROM ContentMeta WHERE id=?", (url,))
-    cached_sha = c.fetchone()
-
-    # Do nothing unless checksums don't match
-    if cached_sha and cached_sha[0] == sha:
-      files_unchanged_counter += 1
-      return False
-
-    repo_url = repo.url
-    contents = _download_file(github_token, repo, file.url, [])
-    size = file.size
-
-    c.execute("DELETE FROM ContentFiles WHERE id=?", (url,))
-    c.execute("DELETE FROM ContentMeta WHERE id=?", (url,))
-    c.execute("INSERT INTO ContentFiles VALUES(?,?)",
-          (url, contents))
-    c.execute("INSERT INTO ContentMeta VALUES(?,?,?,?,?)",
-          (url, path, repo_url, sha, size))
-
-    if cached_sha:
-      files_modified_counter += 1
-    else:
-      files_new_counter += 1
-
-    db.commit()
-    return True
-
-
   def fetch(self, db_path: str, github_username: str, github_pw: str,
            github_token: str) -> None:
     """
@@ -382,6 +155,232 @@ class GithubFetcher():
     print("\n\ndone.")
     db.close()
 
+  def _process_repo(self, g, db, repo) -> bool:
+    """
+    GitHub repository handler.
+
+    Determines if a repository needs to be scraped. There are two cases for
+    this:
+      * The repository has not already been visited.
+      * The repository has been modified since it was last visited.
+
+    Parameters
+    ----------
+    g
+      GitHub connection.
+    db : sqlite3.Connection
+      Dataset.
+    repo
+      Repository.
+
+    Returns
+    -------
+    bool
+      True if repository should be scraped, else False.
+    """
+    global repos_new_counter
+    global repos_modified_counter
+    global repos_unchanged_counter
+    global status_string
+
+    _rate_limit(g)
+    url = repo.url
+    updated_at = str(repo.updated_at)
+    name = repo.name
+    status_string = name
+    self._print_counters()
+
+    c = db.cursor()
+    c.execute("SELECT updated_at FROM Repositories WHERE url=?", (url,))
+    cached_updated_at = c.fetchone()
+
+    # Do nothing unless updated timestamps don't match
+    if cached_updated_at and cached_updated_at[0] == updated_at:
+      repos_unchanged_counter += 1
+      return False
+
+    owner = repo.owner.email
+    fork = 1 if repo.fork else 0
+    stars = repo.stargazers_count
+    try:
+      contributors = len([x for x in repo.get_contributors()])
+    except github.GithubException:
+      contributors = -1
+    forks = repo.forks
+    created_at = repo.created_at
+    updated_at = repo.updated_at
+
+    c.execute("DELETE FROM Repositories WHERE url=?", (url,))
+    c.execute("INSERT INTO Repositories VALUES(?,?,?,?,?,?,?,?,?)",
+          (url, owner, name, fork, stars, contributors, forks, created_at,
+           updated_at))
+
+    if cached_updated_at:
+      repos_modified_counter += 1
+    else:
+      repos_new_counter += 1
+    db.commit()
+    return True
+
+  def _process_file(self, g, github_token: str, db, repo, file) -> bool:
+    """
+    GitHub file handler.
+
+    Parameters
+    ----------
+    g
+      GitHub connection.
+    github_token : str
+      Authorization.
+    db : sqlite3.Connection
+      Dataset.
+    repo
+      Repository.
+    file
+      File.
+
+    Returns
+    -------
+    bool
+      True on success, else False.
+    """
+    global files_new_counter
+    global files_modified_counter
+    global files_unchanged_counter
+    global status_string
+
+    # We're only interested in OpenCL files.
+    if not (file.path.endswith('.cl') or path.endswith('.ocl')):
+      return
+
+    url = file.url
+    sha = file.sha
+    path = file.path
+    status_string = repo.name + '/' + path
+    self._print_counters()
+
+    c = db.cursor()
+    c.execute("SELECT sha FROM ContentMeta WHERE id=?", (url,))
+    cached_sha = c.fetchone()
+
+    # Do nothing unless checksums don't match
+    if cached_sha and cached_sha[0] == sha:
+      files_unchanged_counter += 1
+      return False
+
+    repo_url = repo.url
+    contents = _download_file(github_token, repo, file.url, [])
+    size = file.size
+
+    c.execute("DELETE FROM ContentFiles WHERE id=?", (url,))
+    c.execute("DELETE FROM ContentMeta WHERE id=?", (url,))
+    c.execute("INSERT INTO ContentFiles VALUES(?,?)",
+          (url, contents))
+    c.execute("INSERT INTO ContentMeta VALUES(?,?,?,?,?)",
+          (url, path, repo_url, sha, size))
+
+    if cached_sha:
+      files_modified_counter += 1
+    else:
+      files_new_counter += 1
+
+    db.commit()
+    return True
+    
+  def _print_counters(self) -> None:
+    """
+    Print analytics counters.
+    """
+    print('\r\033[Kfiles: new ', files_new_counter,
+        ', modified ', files_modified_counter,
+        '. errors ', errors_counter,
+        '. ', status_string[0:25],
+        sep='', end='')
+    sys.stdout.flush()
+
+
+  def _rate_limit(self, g) -> None:
+    """
+    Block on GitHub rate limit.
+
+    Parameters
+    ----------
+    g
+      GitHub connection.
+    """
+    global status_string
+    remaining = g.get_rate_limit().rate.remaining
+    while remaining < 100:
+      time.sleep(1)
+      status_string = 'WAITING ON RATE LIMIT'
+      self._print_counters()
+      remaining = g.get_rate_limit().rate.remaining
+
+
+
+
+  def _download_file(self, github_token: str, repo, url: str, stack: typing.List[str]) -> str:
+    """
+    Fetch file from GitHub.
+
+    Recursively downloads and inlines headers.
+
+    Parameters
+    ----------
+    github_token : str
+      Authorization.
+    repo
+      Repository.
+    url : str
+      Path.
+    stack : typing.List[str]
+      URL stack.
+
+    Returns
+    -------
+    str
+      File contents.
+    """
+    # Recursion stack
+    stack.append(url)
+
+    response = json.loads(requests.get(
+      url,
+      headers={
+        'Authorization': 'token ' + str(github_token)
+      }
+    ).content.decode('utf-8'))
+    src = b64decode(response['content']).decode('utf-8')
+
+    outlines = []
+    for line in src.split('\n'):
+      match = re.match(re.compile('\w*#include ["<](.*)[">]'), line)
+      if match:
+        include_name = match.group(1)
+
+        # Try and resolve relative paths
+        include_name = include_name.replace('../', '')
+
+        branch = repo.default_branch
+        tree_iterator = repo.get_git_tree(branch, recursive=True).tree
+        include_url = ''
+        for f in tree_iterator:
+          if f.path.endswith(include_name):
+            include_url = f.url
+            break
+
+        if include_url and include_url not in stack:
+          include_src = _download_file(github_token, repo, include_url)
+          outlines.append(include_src)
+        else:
+          if not include_url:
+            outlines.append('// [FETCH] didnt find: ' + line)
+          else:
+            outlines.append('// [FETCH] skipped: ' + line)
+      else:
+        outlines.append(line)
+
+    return '\n'.join(outlines)
 
   def inline_fs_headers(self, path: str, stack: typing.List[str]) -> str:
     """
