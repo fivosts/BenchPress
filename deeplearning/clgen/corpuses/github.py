@@ -35,11 +35,15 @@ from labm8.py import fs
 from eupy.native import logger as l
 
 class GithubRepo():
-  def __init__(self, url: str, **kwargs):
+  def __init__(self, **kwargs):
     # url of a repo is immutable.
-    self.url = url
+    self.url = kwargs.get('url')
     if kwargs:
-      self.update(kwargs)
+      self.update(
+        kwargs.get('url'), kwargs.get('owner'), kwargs.get('name'), 
+        kwargs.get('fork'),kwargs.get('stars'), kwargs.get('contributors'), 
+        kwargs.get('forks'), kwargs.get('created_at'), kwargs.get('updated_at')
+      )
     return
 
   def update(self,
@@ -85,11 +89,13 @@ class GithubRepoHandler():
     return False
 
   def update(self, **kwargs):
+
+    url = kwargs.get('url')
     if url in self._scraped_repos:
       self._scraped_repos[url].update(kwargs)
       self.repos_modified_counter += 1
     else:
-      new_repo                    = GithubRepo(kwargs)
+      self._scraped_repos[url]    =  GithubRepo(kwargs)
       self.repos_new_counter      += 1
     return True
 
@@ -184,13 +190,12 @@ class GithubFetcher():
 
       for repo in repos:
         repo_modified = handle_repo(repo)
-        l.getLogger().info("DONE")
-        exit()
+
         # do nothing unless the repo is new or modified
         if not repo_modified:
           continue
 
-        handle_file = partial(process_file, g, repo)
+        handle_file = partial(self.process_file, g, repo)
 
         # iterate over the entire git tree of the repo's default
         # branch (usually 'master'). If a file ends with the .cl
@@ -227,7 +232,6 @@ class GithubFetcher():
       GitHub connection.
     repo
       Repository.
-
     Returns
     -------
     bool
@@ -240,46 +244,28 @@ class GithubFetcher():
     self.current_status   = name
     self.print_counters()
 
-    if not self.repo_handler.is_updated(url, updated_at):
+    if self.repo_handler.is_updated(url, updated_at):
       # Timestamp of already scraped repo matches, so nothing to do.
       return False
-
-    # c = db.cursor()
-    # c.execute("SELECT updated_at FROM Repositories WHERE url=?", (url,))
-    # cached_updated_at = c.fetchone()
-
-    # # Do nothing unless updated timestamps don't match
-    # if cached_updated_at and cached_updated_at[0] == updated_at:
-    #   repos_unchanged_counter += 1
-    #   return False
 
     owner  = repo.owner.email
     fork   = 1 if repo.fork else 0
     stars  = repo.stargazers_count
-
     try:
       contributors = len([x for x in repo.get_contributors()])
     except github.GithubException:
       contributors = -1
 
-    forks = repo.forks
+    forks      = repo.forks
     created_at = repo.created_at
     updated_at = repo.updated_at
 
-    self.repo_handler.update(
-      url, owner, name, fork, stars, contributors, forks, created_at, updated_at
-    )
+    self.repo_handler.update(url          = url,       owner        = owner, 
+                             name         = name,      fork         = fork, 
+                             stars        = stars,     contributors = contributors, 
+                             forks        = forks,     created_at   = created_at, 
+                             updated_at   = updated_at )
 
-    # c.execute("DELETE FROM Repositories WHERE url=?", (url,))
-    # c.execute("INSERT INTO Repositories VALUES(?,?,?,?,?,?,?,?,?)",
-    #       (url, owner, name, fork, stars, contributors, forks, created_at,
-    #        updated_at))
-
-    # if cached_updated_at:
-    #   repos_modified_counter += 1
-    # else:
-    #   repos_new_counter += 1
-    # db.commit()
     return True
 
   def process_file(self, g, repo, file) -> bool:
