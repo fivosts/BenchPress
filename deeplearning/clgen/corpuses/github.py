@@ -381,8 +381,6 @@ class GithubFetcher():
 
     Parameters
     ----------
-    github_token : str
-      Authorization.
     repo
       Repository.
     url : str
@@ -424,7 +422,7 @@ class GithubFetcher():
             break
 
         if include_url and include_url not in stack:
-          include_src = self.download_file(github_token, repo, stack = include_url)
+          include_src = self.download_file(self.token, repo, stack = include_url)
           outlines.append(include_src)
         else:
           if not include_url:
