@@ -74,14 +74,9 @@ class GithubFetcher():
     self.username = git_credentials['GITHUB_USERNAME']
     self.password = git_credentials['GITHUB_PW']
     self.token    = git_credentials['GITHUB_TOKEN']
-
-    # try:
-    #     fetch(db_file.name, username, password, token)
-    # except BadCredentialsException as e:
-    #     log.fatal("bad GitHub credentials")
     return
 
-  def fetch(self, db_path: str) -> None:
+  def fetch(self) -> None:
     """
     Download all of the OpenCL on GitHub (!)
 
@@ -103,12 +98,12 @@ class GithubFetcher():
     global errors_counter
 
     g = github.Github(self.username, self.password)
-    db = dbutil.connect(db_path)
+    # db = dbutil.connect(db_path)
 
-    if not dbutil.is_github:
-      raise ValueError("Not a github database")
+    # if not dbutil.is_github:
+    #   raise ValueError("Not a github database")
 
-    handle_repo = partial(_process_repo, g, db)
+    handle_repo = partial(_process_repo, g)
 
     # fetch the repositories to iterate over. Since opencl isn't
     # treated as a first-class language by GitHub, we can't use the
@@ -137,7 +132,7 @@ class GithubFetcher():
         if not repo_modified:
           continue
 
-        handle_file = partial(_process_file, g, self.token, db, repo)
+        handle_file = partial(_process_file, g, repo)
 
         # iterate over the entire git tree of the repo's default
         # branch (usually 'master'). If a file ends with the .cl
@@ -158,6 +153,73 @@ class GithubFetcher():
     _print_counters()
     print("\n\ndone.")
     db.close()
+
+  def _process_repo(g, repo) -> bool:
+    """
+    GitHub repository handler.
+
+    Determines if a repository needs to be scraped. There are two cases for
+    this:
+      * The repository has not already been visited.
+      * The repository has been modified since it was last visited.
+
+    Parameters
+    ----------
+    g
+      GitHub connection.
+    db : sqlite3.Connection
+      Dataset.
+    repo
+      Repository.
+
+    Returns
+    -------
+    bool
+      True if repository should be scraped, else False.
+    """
+    global repos_new_counter
+    global repos_modified_counter
+    global repos_unchanged_counter
+    global status_string
+
+    _rate_limit(g)
+    url = repo.url
+    updated_at = str(repo.updated_at)
+    name = repo.name
+    status_string = name
+    _print_counters()
+
+    # c = db.cursor()
+    # c.execute("SELECT updated_at FROM Repositories WHERE url=?", (url,))
+    # cached_updated_at = c.fetchone()
+
+    # Do nothing unless updated timestamps don't match
+    if cached_updated_at and cached_updated_at[0] == updated_at:
+      repos_unchanged_counter += 1
+      return False
+
+    owner = repo.owner.email
+    fork = 1 if repo.fork else 0
+    stars = repo.stargazers_count
+    try:
+      contributors = len([x for x in repo.get_contributors()])
+    except github.GithubException:
+      contributors = -1
+    forks = repo.forks
+    created_at = repo.created_at
+    updated_at = repo.updated_at
+
+    # c.execute("DELETE FROM Repositories WHERE url=?", (url,))
+    # c.execute("INSERT INTO Repositories VALUES(?,?,?,?,?,?,?,?,?)",
+    #       (url, owner, name, fork, stars, contributors, forks, created_at,
+    #        updated_at))
+
+    if cached_updated_at:
+      repos_modified_counter += 1
+    else:
+      repos_new_counter += 1
+    # db.commit()
+    return True
 
 def _print_counters() -> None:
   """
@@ -187,78 +249,6 @@ def _rate_limit(g) -> None:
     status_string = 'WAITING ON RATE LIMIT'
     _print_counters()
     remaining = g.get_rate_limit().rate.remaining
-
-
-def _process_repo(g, db, repo) -> bool:
-  """
-  GitHub repository handler.
-
-  Determines if a repository needs to be scraped. There are two cases for
-  this:
-    * The repository has not already been visited.
-    * The repository has been modified since it was last visited.
-
-  Parameters
-  ----------
-  g
-    GitHub connection.
-  db : sqlite3.Connection
-    Dataset.
-  repo
-    Repository.
-
-  Returns
-  -------
-  bool
-    True if repository should be scraped, else False.
-  """
-  global repos_new_counter
-  global repos_modified_counter
-  global repos_unchanged_counter
-  global status_string
-
-  _rate_limit(g)
-  url = repo.url
-  updated_at = str(repo.updated_at)
-  name = repo.name
-  status_string = name
-  _print_counters()
-
-  c = db.cursor()
-  c.execute("SELECT updated_at FROM Repositories WHERE url=?", (url,))
-  cached_updated_at = c.fetchone()
-
-  # Do nothing unless updated timestamps don't match
-  if cached_updated_at and cached_updated_at[0] == updated_at:
-    repos_unchanged_counter += 1
-    return False
-
-  owner = repo.owner.email
-  fork = 1 if repo.fork else 0
-  stars = repo.stargazers_count
-  try:
-    contributors = len([x for x in repo.get_contributors()])
-  except github.GithubException:
-    contributors = -1
-  forks = repo.forks
-  created_at = repo.created_at
-  updated_at = repo.updated_at
-
-  c.execute("DELETE FROM Repositories WHERE url=?", (url,))
-  c.execute("INSERT INTO Repositories VALUES(?,?,?,?,?,?,?,?,?)",
-        (url, owner, name, fork, stars, contributors, forks, created_at,
-         updated_at))
-
-  if cached_updated_at:
-    repos_modified_counter += 1
-  else:
-    repos_new_counter += 1
-  db.commit()
-  return True
-
-
-_include_re = re.compile('\w*#include ["<](.*)[">]')
-
 
 def _download_file(github_token: str, repo, url: str, stack: typing.List[str]) -> str:
   """
@@ -295,7 +285,7 @@ def _download_file(github_token: str, repo, url: str, stack: typing.List[str]) -
 
   outlines = []
   for line in src.split('\n'):
-    match = re.match(_include_re, line)
+    match = re.match(re.compile('\w*#include ["<](.*)[">]'), line)
     if match:
       include_name = match.group(1)
 
@@ -412,7 +402,7 @@ def inline_fs_headers(path: str, stack: typing.List[str]) -> str:
 
   outlines = []
   for line in src.split('\n'):
-    match = re.match(_include_re, line)
+    match = re.match(re.compile('\w*#include ["<](.*)[">]'), line)
     if match:
       include_name = match.group(1)
 
