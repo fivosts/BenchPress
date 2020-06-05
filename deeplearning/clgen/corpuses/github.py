@@ -373,25 +373,6 @@ class GithubFetcher():
 
     return True
 
-  def rate_limit(self, g) -> None:
-    """
-    Block on GitHub rate limit.
-
-    Parameters
-    ----------
-    g
-      GitHub connection.
-    """
-    remaining = g.get_rate_limit().rate.remaining
-    while remaining < 100:
-      time.sleep(1)
-      self.current_status = 'WAITING ON RATE LIMIT'
-      self.print_counters()
-      remaining = g.get_rate_limit().rate.remaining
-
-
-
-
   def download_file(self, repo, url: str, stack: typing.List[str]) -> str:
     """
     Fetch file from GitHub.
@@ -455,6 +436,22 @@ class GithubFetcher():
 
     return '\n'.join(outlines)
 
+  def rate_limit(self, g) -> None:
+    """
+    Block on GitHub rate limit.
+
+    Parameters
+    ----------
+    g
+      GitHub connection.
+    """
+    remaining = g.get_rate_limit().rate.remaining
+    while remaining < 100:
+      time.sleep(1)
+      self.current_status = 'WAITING ON RATE LIMIT'
+      self.print_counters()
+      remaining = g.get_rate_limit().rate.remaining
+      
   def inline_fs_headers(self, path: str, stack: typing.List[str]) -> str:
     """
     Recursively inline headers in file.
