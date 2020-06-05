@@ -33,7 +33,7 @@ dash-renderer==0.20.0
 dash-table==3.6.0
 dataclasses==0.6
 decorator==4.3.0
-detect-secrets==0.12.4
+detect-secrets==0.13.1
 # The graph_nets package depends on a specific version of dm-sonnet. See:
 # https://github.com/deepmind/graph_nets/blob/master/setup.py
 dm-sonnet==1.23
