@@ -33,7 +33,7 @@ from base64 import b64decode
 from functools import partial
 from labm8.py import fs
 from eupy.native import logger as l
-from deeplearning.clgen import dbutil
+# from deeplearning.clgen import dbutil
 
 # Counters
 repos_new_counter = 0
@@ -62,23 +62,102 @@ class GithubFetcher():
     }
 
     if not all(k in os.environ for k in git_credentials.keys()):
-      l.getLogger().warn("export github credentials as environment variables to speed up the process")
+      l.getLogger().warn("Export github credentials as environment variables to speed up the process")
 
     for key in git_credentials:
       if key in os.environ:
         git_credentials[key] = os.environ[key]
       else:
-        git_credentials[key] = input("{}".format())
+        git_credentials[key] = input("{}: ".format(key))
+        os.environ[key]      = git_credentials[key]
 
     self.username = git_credentials['GITHUB_USERNAME']
     self.password = git_credentials['GITHUB_PW']
     self.token    = git_credentials['GITHUB_TOKEN']
 
     # try:
-    #     fetch_github(db_file.name, username, password, token)
+    #     fetch(db_file.name, username, password, token)
     # except BadCredentialsException as e:
     #     log.fatal("bad GitHub credentials")
     return
+
+  def fetch(self, db_path: str) -> None:
+    """
+    Download all of the OpenCL on GitHub (!)
+
+    Shortcomings of this appraoch:
+      * Only includes exclusively OpenCL files, no inline strings.
+      * Occasionally (< 1%) can't find headers to include.
+
+    Parameters
+    ----------
+    db_path : str
+      Dataset path.
+    self.username : str
+      Authorization.
+    self.password : str
+      Authorization.
+    self.token : str
+      Authorization.
+    """
+    global errors_counter
+
+    g = github.Github(self.username, self.password)
+    db = dbutil.connect(db_path)
+
+    if not dbutil.is_github:
+      raise ValueError("Not a github database")
+
+    handle_repo = partial(_process_repo, g, db)
+
+    # fetch the repositories to iterate over. Since opencl isn't
+    # treated as a first-class language by GitHub, we can't use the
+    # 'language=' keyword for queries, so instead we through a much
+    # wider net and filter the results afterwards.
+    query_terms = [
+      'opencl',
+      'cl',
+      'khronos',
+      'gpu',
+      'gpgpu',
+      'cuda',
+      'amd',
+      'nvidia',
+      'heterogeneous'
+    ]
+    for query in query_terms:
+      # forks are okay - we use checksums to ensure uniqueness in
+      # final dataset
+      repos = g.search_repositories(query + ' fork:true sort:stars')
+
+      for repo in repos:
+        repo_modified = handle_repo(repo)
+
+        # do nothing unless the repo is new or modified
+        if not repo_modified:
+          continue
+
+        handle_file = partial(_process_file, g, self.token, db, repo)
+
+        # iterate over the entire git tree of the repo's default
+        # branch (usually 'master'). If a file ends with the .cl
+        # extension, check to see if we already have it, else download
+        # it
+        try:
+          branch = repo.default_branch
+          tree_iterator = repo.get_git_tree(branch, recursive=True).tree
+          for f in tree_iterator:
+            try:
+              handle_file(f)
+            except Exception:
+              errors_counter += 1
+        except github.GithubException:
+          # do nothing in case of error (such as an empty repo)
+          pass
+
+    _print_counters()
+    print("\n\ndone.")
+    db.close()
 
 def _print_counters() -> None:
   """
@@ -309,87 +388,6 @@ def _process_file(g, github_token: str, db, repo, file) -> bool:
 
   db.commit()
   return True
-
-
-def fetch_github(db_path: str, github_username: str, github_pw: str,
-         github_token: str) -> None:
-  """
-  Download all of the OpenCL on GitHub (!)
-
-  Shortcomings of this appraoch:
-    * Only includes exclusively OpenCL files, no inline strings.
-    * Occasionally (< 1%) can't find headers to include.
-
-  Parameters
-  ----------
-  db_path : str
-    Dataset path.
-  github_username : str
-    Authorization.
-  github_pw : str
-    Authorization.
-  github_token : str
-    Authorization.
-  """
-  global errors_counter
-
-  g = github.Github(github_username, github_pw)
-  db = dbutil.connect(db_path)
-
-  if not dbutil.is_github:
-    raise ValueError("Not a github database")
-
-  handle_repo = partial(_process_repo, g, db)
-
-  # fetch the repositories to iterate over. Since opencl isn't
-  # treated as a first-class language by GitHub, we can't use the
-  # 'language=' keyword for queries, so instead we through a much
-  # wider net and filter the results afterwards.
-  query_terms = [
-    'opencl',
-    'cl',
-    'khronos',
-    'gpu',
-    'gpgpu',
-    'cuda',
-    'amd',
-    'nvidia',
-    'heterogeneous'
-  ]
-  for query in query_terms:
-    # forks are okay - we use checksums to ensure uniqueness in
-    # final dataset
-    repos = g.search_repositories(query + ' fork:true sort:stars')
-
-    for repo in repos:
-      repo_modified = handle_repo(repo)
-
-      # do nothing unless the repo is new or modified
-      if not repo_modified:
-        continue
-
-      handle_file = partial(_process_file, g, github_token, db, repo)
-
-      # iterate over the entire git tree of the repo's default
-      # branch (usually 'master'). If a file ends with the .cl
-      # extension, check to see if we already have it, else download
-      # it
-      try:
-        branch = repo.default_branch
-        tree_iterator = repo.get_git_tree(branch, recursive=True).tree
-        for f in tree_iterator:
-          try:
-            handle_file(f)
-          except Exception:
-            errors_counter += 1
-      except github.GithubException:
-        # do nothing in case of error (such as an empty repo)
-        pass
-
-  _print_counters()
-  print("\n\ndone.")
-  db.close()
-
 
 def inline_fs_headers(path: str, stack: typing.List[str]) -> str:
   """
