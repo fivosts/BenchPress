@@ -99,8 +99,6 @@ class GithubRepoHandler():
     """
     print('\r\033[Kfiles: new ',  self.files_new_counter,
         ', modified ',            self.files_modified_counter,
-        # '. errors ',              self.errors_counter,
-        # '. ',                     self.status_string[0:25],
         sep='', end='\n')
     sys.stdout.flush()
 
@@ -129,19 +127,19 @@ class GithubFetcher():
         git_credentials[key] = input("{}: ".format(key))
         os.environ[key]      = git_credentials[key]
 
-    self.username       = git_credentials['GITHUB_USERNAME']
-    self.password       = git_credentials['GITHUB_PW']
-    self.token          = git_credentials['GITHUB_TOKEN']
-    self.repo_handler   = GithubRepoHandler()
+    self.username        = git_credentials['GITHUB_USERNAME']
+    self.password        = git_credentials['GITHUB_PW']
+    self.token           = git_credentials['GITHUB_TOKEN']
+    self.repo_handler    = GithubRepoHandler()
 
-    self.status_string  = ""
-    self.errors_counter = 0
+    self.current_status  = ""
+    self.errors_counter  = 0
     return
 
   def print_counters(self):
     self.repo_handler.print_counters()
     print('. errors ', self.errors_counter,
-          '. ',        self.status_string[0:25],
+          '. ',        self.current_status[0:25],
         sep='', end='\n')    
 
   def fetch(self) -> None:
@@ -237,9 +235,9 @@ class GithubFetcher():
     """
     self.rate_limit(g)
     url                   = repo.url
-    name                 = repo.name
-    updated_at           = str(repo.updated_at)
-    self.status_string   = name
+    name                  = repo.name
+    updated_at            = str(repo.updated_at)
+    self.current_status   = name
     self.print_counters()
 
     if not self.repo_handler.is_updated(url, updated_at):
@@ -313,7 +311,7 @@ class GithubFetcher():
     url = file.url
     sha = file.sha
     path = file.path
-    self.status_string = repo.name + '/' + path
+    self.current_status = repo.name + '/' + path
     self.print_counters()
 
     c = db.cursor()
@@ -356,7 +354,7 @@ class GithubFetcher():
     remaining = g.get_rate_limit().rate.remaining
     while remaining < 100:
       time.sleep(1)
-      self.status_string = 'WAITING ON RATE LIMIT'
+      self.current_status = 'WAITING ON RATE LIMIT'
       self.print_counters()
       remaining = g.get_rate_limit().rate.remaining
 
