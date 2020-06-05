@@ -76,85 +76,37 @@ class GithubFetcher():
     self.token    = git_credentials['GITHUB_TOKEN']
     return
 
-  def fetch(self) -> None:
+  def _print_counters(self) -> None:
     """
-    Download all of the OpenCL on GitHub (!)
+    Print analytics counters.
+    """
+    print('\r\033[Kfiles: new ', files_new_counter,
+        ', modified ', files_modified_counter,
+        '. errors ', errors_counter,
+        '. ', status_string[0:25],
+        sep='', end='')
+    sys.stdout.flush()
 
-    Shortcomings of this appraoch:
-      * Only includes exclusively OpenCL files, no inline strings.
-      * Occasionally (< 1%) can't find headers to include.
+
+  def _rate_limit(self, g) -> None:
+    """
+    Block on GitHub rate limit.
 
     Parameters
     ----------
-    db_path : str
-      Dataset path.
-    self.username : str
-      Authorization.
-    self.password : str
-      Authorization.
-    self.token : str
-      Authorization.
+    g
+      GitHub connection.
     """
-    global errors_counter
+    global status_string
+    remaining = g.get_rate_limit().rate.remaining
+    while remaining < 100:
+      time.sleep(1)
+      status_string = 'WAITING ON RATE LIMIT'
+      self._print_counters()
+      remaining = g.get_rate_limit().rate.remaining
 
-    g = github.Github(self.username, self.password)
-    # db = dbutil.connect(db_path)
 
-    # if not dbutil.is_github:
-    #   raise ValueError("Not a github database")
-
-    handle_repo = partial(_process_repo, g)
-
-    # fetch the repositories to iterate over. Since opencl isn't
-    # treated as a first-class language by GitHub, we can't use the
-    # 'language=' keyword for queries, so instead we through a much
-    # wider net and filter the results afterwards.
-    query_terms = [
-      'opencl',
-      'cl',
-      'khronos',
-      'gpu',
-      'gpgpu',
-      'cuda',
-      'amd',
-      'nvidia',
-      'heterogeneous'
-    ]
-    for query in query_terms:
-      # forks are okay - we use checksums to ensure uniqueness in
-      # final dataset
-      repos = g.search_repositories(query + ' fork:true sort:stars')
-
-      for repo in repos:
-        repo_modified = handle_repo(repo)
-
-        # do nothing unless the repo is new or modified
-        if not repo_modified:
-          continue
-
-        handle_file = partial(_process_file, g, repo)
-
-        # iterate over the entire git tree of the repo's default
-        # branch (usually 'master'). If a file ends with the .cl
-        # extension, check to see if we already have it, else download
-        # it
-        try:
-          branch = repo.default_branch
-          tree_iterator = repo.get_git_tree(branch, recursive=True).tree
-          for f in tree_iterator:
-            try:
-              handle_file(f)
-            except Exception:
-              errors_counter += 1
-        except github.GithubException:
-          # do nothing in case of error (such as an empty repo)
-          pass
-
-    _print_counters()
-    print("\n\ndone.")
-    db.close()
-
-  def _process_repo(g, repo) -> bool:
+  def _process_repo(self, g, db, repo) -> bool:
     """
     GitHub repository handler.
 
@@ -187,11 +139,11 @@ class GithubFetcher():
     updated_at = str(repo.updated_at)
     name = repo.name
     status_string = name
-    _print_counters()
+    self._print_counters()
 
-    # c = db.cursor()
-    # c.execute("SELECT updated_at FROM Repositories WHERE url=?", (url,))
-    # cached_updated_at = c.fetchone()
+    c = db.cursor()
+    c.execute("SELECT updated_at FROM Repositories WHERE url=?", (url,))
+    cached_updated_at = c.fetchone()
 
     # Do nothing unless updated timestamps don't match
     if cached_updated_at and cached_updated_at[0] == updated_at:
@@ -209,19 +161,83 @@ class GithubFetcher():
     created_at = repo.created_at
     updated_at = repo.updated_at
 
-    # c.execute("DELETE FROM Repositories WHERE url=?", (url,))
-    # c.execute("INSERT INTO Repositories VALUES(?,?,?,?,?,?,?,?,?)",
-    #       (url, owner, name, fork, stars, contributors, forks, created_at,
-    #        updated_at))
+    c.execute("DELETE FROM Repositories WHERE url=?", (url,))
+    c.execute("INSERT INTO Repositories VALUES(?,?,?,?,?,?,?,?,?)",
+          (url, owner, name, fork, stars, contributors, forks, created_at,
+           updated_at))
 
     if cached_updated_at:
       repos_modified_counter += 1
     else:
       repos_new_counter += 1
-    # db.commit()
+    db.commit()
     return True
 
-  def _process_file(self, g, repo, file) -> bool:
+  def _download_file(self, github_token: str, repo, url: str, stack: typing.List[str]) -> str:
+    """
+    Fetch file from GitHub.
+
+    Recursively downloads and inlines headers.
+
+    Parameters
+    ----------
+    github_token : str
+      Authorization.
+    repo
+      Repository.
+    url : str
+      Path.
+    stack : typing.List[str]
+      URL stack.
+
+    Returns
+    -------
+    str
+      File contents.
+    """
+    # Recursion stack
+    stack.append(url)
+
+    response = json.loads(requests.get(
+      url,
+      headers={
+        'Authorization': 'token ' + str(github_token)
+      }
+    ).content.decode('utf-8'))
+    src = b64decode(response['content']).decode('utf-8')
+
+    outlines = []
+    for line in src.split('\n'):
+      match = re.match(re.compile('\w*#include ["<](.*)[">]'), line)
+      if match:
+        include_name = match.group(1)
+
+        # Try and resolve relative paths
+        include_name = include_name.replace('../', '')
+
+        branch = repo.default_branch
+        tree_iterator = repo.get_git_tree(branch, recursive=True).tree
+        include_url = ''
+        for f in tree_iterator:
+          if f.path.endswith(include_name):
+            include_url = f.url
+            break
+
+        if include_url and include_url not in stack:
+          include_src = _download_file(github_token, repo, include_url)
+          outlines.append(include_src)
+        else:
+          if not include_url:
+            outlines.append('// [FETCH] didnt find: ' + line)
+          else:
+            outlines.append('// [FETCH] skipped: ' + line)
+      else:
+        outlines.append(line)
+
+    return '\n'.join(outlines)
+
+
+  def _process_file(self, g, github_token: str, db, repo, file) -> bool:
     """
     GitHub file handler.
 
@@ -229,6 +245,8 @@ class GithubFetcher():
     ----------
     g
       GitHub connection.
+    github_token : str
+      Authorization.
     db : sqlite3.Connection
       Dataset.
     repo
@@ -254,11 +272,11 @@ class GithubFetcher():
     sha = file.sha
     path = file.path
     status_string = repo.name + '/' + path
-    _print_counters()
+    self._print_counters()
 
-    # c = db.cursor()
-    # c.execute("SELECT sha FROM ContentMeta WHERE id=?", (url,))
-    # cached_sha = c.fetchone()
+    c = db.cursor()
+    c.execute("SELECT sha FROM ContentMeta WHERE id=?", (url,))
+    cached_sha = c.fetchone()
 
     # Do nothing unless checksums don't match
     if cached_sha and cached_sha[0] == sha:
@@ -266,224 +284,212 @@ class GithubFetcher():
       return False
 
     repo_url = repo.url
-    contents = _download_file(self.token, repo, file.url, [])
+    contents = _download_file(github_token, repo, file.url, [])
     size = file.size
 
-    # c.execute("DELETE FROM ContentFiles WHERE id=?", (url,))
-    # c.execute("DELETE FROM ContentMeta WHERE id=?", (url,))
-    # c.execute("INSERT INTO ContentFiles VALUES(?,?)",
-    #       (url, contents))
-    # c.execute("INSERT INTO ContentMeta VALUES(?,?,?,?,?)",
-    #       (url, path, repo_url, sha, size))
+    c.execute("DELETE FROM ContentFiles WHERE id=?", (url,))
+    c.execute("DELETE FROM ContentMeta WHERE id=?", (url,))
+    c.execute("INSERT INTO ContentFiles VALUES(?,?)",
+          (url, contents))
+    c.execute("INSERT INTO ContentMeta VALUES(?,?,?,?,?)",
+          (url, path, repo_url, sha, size))
 
     if cached_sha:
       files_modified_counter += 1
     else:
       files_new_counter += 1
 
-    # db.commit()
+    db.commit()
     return True
-  
-def _print_counters() -> None:
-  """
-  Print analytics counters.
-  """
-  print('\r\033[Kfiles: new ', files_new_counter,
-      ', modified ', files_modified_counter,
-      '. errors ', errors_counter,
-      '. ', status_string[0:25],
-      sep='', end='')
-  sys.stdout.flush()
 
 
-def _rate_limit(g) -> None:
-  """
-  Block on GitHub rate limit.
+  def fetch(self, db_path: str, github_username: str, github_pw: str,
+           github_token: str) -> None:
+    """
+    Download all of the OpenCL on GitHub (!)
 
-  Parameters
-  ----------
-  g
-    GitHub connection.
-  """
-  global status_string
-  remaining = g.get_rate_limit().rate.remaining
-  while remaining < 100:
-    time.sleep(1)
-    status_string = 'WAITING ON RATE LIMIT'
-    _print_counters()
-    remaining = g.get_rate_limit().rate.remaining
+    Shortcomings of this appraoch:
+      * Only includes exclusively OpenCL files, no inline strings.
+      * Occasionally (< 1%) can't find headers to include.
 
-def _download_file(github_token: str, repo, url: str, stack: typing.List[str]) -> str:
-  """
-  Fetch file from GitHub.
+    Parameters
+    ----------
+    db_path : str
+      Dataset path.
+    github_username : str
+      Authorization.
+    github_pw : str
+      Authorization.
+    github_token : str
+      Authorization.
+    """
+    global errors_counter
 
-  Recursively downloads and inlines headers.
+    g = github.Github(github_username, github_pw)
+    db = dbutil.connect(db_path)
 
-  Parameters
-  ----------
-  github_token : str
-    Authorization.
-  repo
-    Repository.
-  url : str
-    Path.
-  stack : typing.List[str]
-    URL stack.
+    if not dbutil.is_github:
+      raise ValueError("Not a github database")
 
-  Returns
-  -------
-  str
-    File contents.
-  """
-  # Recursion stack
-  stack.append(url)
+    handle_repo = partial(self._process_repo, g, db)
 
-  response = json.loads(requests.get(
-    url,
-    headers={
-      'Authorization': 'token ' + str(github_token)
-    }
-  ).content.decode('utf-8'))
-  src = b64decode(response['content']).decode('utf-8')
+    # fetch the repositories to iterate over. Since opencl isn't
+    # treated as a first-class language by GitHub, we can't use the
+    # 'language=' keyword for queries, so instead we through a much
+    # wider net and filter the results afterwards.
+    query_terms = [
+      'opencl',
+      'cl',
+      'khronos',
+      'gpu',
+      'gpgpu',
+      'cuda',
+      'amd',
+      'nvidia',
+      'heterogeneous'
+    ]
+    for query in query_terms:
+      # forks are okay - we use checksums to ensure uniqueness in
+      # final dataset
+      repos = g.search_repositories(query + ' fork:true sort:stars')
 
-  outlines = []
-  for line in src.split('\n'):
-    match = re.match(re.compile('\w*#include ["<](.*)[">]'), line)
-    if match:
-      include_name = match.group(1)
+      for repo in repos:
+        repo_modified = handle_repo(repo)
 
-      # Try and resolve relative paths
-      include_name = include_name.replace('../', '')
+        # do nothing unless the repo is new or modified
+        if not repo_modified:
+          continue
 
-      branch = repo.default_branch
-      tree_iterator = repo.get_git_tree(branch, recursive=True).tree
-      include_url = ''
-      for f in tree_iterator:
-        if f.path.endswith(include_name):
-          include_url = f.url
-          break
+        handle_file = partial(_process_file, g, github_token, db, repo)
 
-      if include_url and include_url not in stack:
-        include_src = _download_file(github_token, repo, include_url)
-        outlines.append(include_src)
-      else:
-        if not include_url:
-          outlines.append('// [FETCH] didnt find: ' + line)
+        # iterate over the entire git tree of the repo's default
+        # branch (usually 'master'). If a file ends with the .cl
+        # extension, check to see if we already have it, else download
+        # it
+        try:
+          branch = repo.default_branch
+          tree_iterator = repo.get_git_tree(branch, recursive=True).tree
+          for f in tree_iterator:
+            try:
+              handle_file(f)
+            except Exception:
+              errors_counter += 1
+        except github.GithubException:
+          # do nothing in case of error (such as an empty repo)
+          pass
+
+    self._print_counters()
+    print("\n\ndone.")
+    db.close()
+
+
+  def inline_fs_headers(self, path: str, stack: typing.List[str]) -> str:
+    """
+    Recursively inline headers in file.
+
+    Parameters
+    ----------
+    path : str
+      File.
+    stack : typing.List[str]
+      File stack.
+
+    Returns
+    -------
+    str
+      Inlined file.
+    """
+    stack.append(path)
+
+    with io.open(path) as infile:
+      src = infile.read()
+
+    outlines = []
+    for line in src.split('\n'):
+      match = re.match(re.compile('\w*#include ["<](.*)[">]'), line)
+      if match:
+        include_name = match.group(1)
+
+        # try and resolve relative paths
+        include_name = include_name.replace('../', '')
+
+        include_path = os.path.join(os.path.dirname(path), include_name)
+
+        if os.path.exists(include_path) and include_path not in stack:
+          include_src = inline_fs_headers(include_path, stack)
+          outlines.append('// [FETCH] include: ' + include_path)
+          outlines.append(include_src)
+          outlines.append('// [FETCH] eof(' + include_path + ')')
         else:
-          outlines.append('// [FETCH] skipped: ' + line)
-    else:
-      outlines.append(line)
-
-  return '\n'.join(outlines)
-
-
-def inline_fs_headers(path: str, stack: typing.List[str]) -> str:
-  """
-  Recursively inline headers in file.
-
-  Parameters
-  ----------
-  path : str
-    File.
-  stack : typing.List[str]
-    File stack.
-
-  Returns
-  -------
-  str
-    Inlined file.
-  """
-  stack.append(path)
-
-  with io.open(path) as infile:
-    src = infile.read()
-
-  outlines = []
-  for line in src.split('\n'):
-    match = re.match(re.compile('\w*#include ["<](.*)[">]'), line)
-    if match:
-      include_name = match.group(1)
-
-      # try and resolve relative paths
-      include_name = include_name.replace('../', '')
-
-      include_path = os.path.join(os.path.dirname(path), include_name)
-
-      if os.path.exists(include_path) and include_path not in stack:
-        include_src = inline_fs_headers(include_path, stack)
-        outlines.append('// [FETCH] include: ' + include_path)
-        outlines.append(include_src)
-        outlines.append('// [FETCH] eof(' + include_path + ')')
+          if include_path in stack:
+            outlines.append('// [FETCH] ignored recursive include: ' +
+                    include_path)
+          else:
+            outlines.append('// [FETCH] 404 not found: ' +
+                    include_path)
       else:
-        if include_path in stack:
-          outlines.append('// [FETCH] ignored recursive include: ' +
-                  include_path)
-        else:
-          outlines.append('// [FETCH] 404 not found: ' +
-                  include_path)
-    else:
-      outlines.append(line)
+        outlines.append(line)
 
-  return '\n'.join(outlines)
+    return '\n'.join(outlines)
 
 
-def process_cl_file(db_path: str, path: str) -> None:
-  """
-  Process OpenCL file.
+  def process_cl_file(self, db_path: str, path: str) -> None:
+    """
+    Process OpenCL file.
 
-  Parameters
-  ----------
-  db_path : str
-    Path to output database.
-  path : str
-    Path to input file.
+    Parameters
+    ----------
+    db_path : str
+      Path to output database.
+    path : str
+      Path to input file.
 
-  Raises
-  ------
-  IOError
-    In case of IO error.
-  """
-  db = dbutil.connect(db_path)
-  c = db.cursor()
+    Raises
+    ------
+    IOError
+      In case of IO error.
+    """
+    db = dbutil.connect(db_path)
+    c = db.cursor()
 
-  l.getLogger().info("fetch {path}".format(path=fs.abspath(path)))
-  try:
-    contents = inline_fs_headers(path, [])
-  except IOError:
-    raise IOError(
-      "cannot read file '{path}'".format(path=fs.abspath(path)))
-  c.execute('INSERT OR IGNORE INTO ContentFiles VALUES(?,?)',
-        (path, contents))
-
-  db.commit()
-  c.close()
-
-
-def fetch(db_path: str, paths: typing.List[str]=[]) -> None:
-  """
-  Fetch from a list of files.
-
-  Parameters
-  ----------
-  db_path : str
-    Output dataset.
-  paths : typing.List[str]
-    typing.List of file paths.
-  """
-  paths = fs.files_from_list(*paths)  # expand directories
-
-  db = dbutil.connect(db_path)
-  c = db.cursor()
-
-  for path in paths:
-    l.getLogger().info("fetch", path)
+    l.getLogger().info("fetch {path}".format(path=fs.abspath(path)))
     try:
       contents = inline_fs_headers(path, [])
     except IOError:
-      db.commit()
       raise IOError(
         "cannot read file '{path}'".format(path=fs.abspath(path)))
     c.execute('INSERT OR IGNORE INTO ContentFiles VALUES(?,?)',
           (path, contents))
 
-  db.commit()
+    db.commit()
+    c.close()
+
+
+  def fetch_files(self, db_path: str, paths: typing.List[str]=[]) -> None:
+    """
+    Fetch from a list of files.
+
+    Parameters
+    ----------
+    db_path : str
+      Output dataset.
+    paths : typing.List[str]
+      typing.List of file paths.
+    """
+    paths = fs.files_from_list(*paths)  # expand directories
+
+    db = dbutil.connect(db_path)
+    c = db.cursor()
+
+    for path in paths:
+      l.getLogger().info("fetch", path)
+      try:
+        contents = inline_fs_headers(path, [])
+      except IOError:
+        db.commit()
+        raise IOError(
+          "cannot read file '{path}'".format(path=fs.abspath(path)))
+      c.execute('INSERT OR IGNORE INTO ContentFiles VALUES(?,?)',
+            (path, contents))
+
+    db.commit()
