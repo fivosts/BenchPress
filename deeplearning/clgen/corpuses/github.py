@@ -92,7 +92,13 @@ class GithubFile():
     return current_size
 
 class GithubRepoHandler():
-  def __init__(self):
+  def __init__(self, corpus_path: str):
+
+    ## Use this to read a json file with all current sha files
+    ## And of course to append the json file every time you flush
+    ## ..and to flush
+    self.corpus_path              = set()
+
     self._scraped_repos           = {}
     self._scraped_files           = {}
 
@@ -179,7 +185,7 @@ class GithubFetcher():
     self.username        = git_credentials['GITHUB_USERNAME']
     self.password        = git_credentials['GITHUB_PW']
     self.token           = git_credentials['GITHUB_TOKEN']
-    self.repo_handler    = GithubRepoHandler()
+    self.repo_handler    = GithubRepoHandler(self.corpus_path)
 
     self.current_status  = ""
     self.errors_counter  = 0
@@ -422,7 +428,7 @@ class GithubFetcher():
             break
 
         if include_url and include_url not in stack:
-          include_src = self.download_file(self.token, repo, stack = [include_url])
+          include_src = self.download_file(repo, include_url, stack)
           outlines.append(include_src)
         else:
           if not include_url:
