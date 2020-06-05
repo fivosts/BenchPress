@@ -174,6 +174,7 @@ class Corpus(object):
           symlink,
         )
       elif config.HasField("fetch_github"):
+        ## TODO issue 32 this might not be needed. Instead you might need to mkdir the file
         os.symlink(
           str(ExpandConfigPath(config.fetch_github, path_prefix=FLAGS.clgen_local_path_prefix)),
           symlink,
