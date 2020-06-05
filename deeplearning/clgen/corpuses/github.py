@@ -101,7 +101,7 @@ class GithubRepoHandler():
         ', modified ',            self.files_modified_counter,
         # '. errors ',              self.errors_counter,
         # '. ',                     self.status_string[0:25],
-        sep='', end='')
+        sep='', end='\n')
     sys.stdout.flush()
 
 class GithubFetcher():
@@ -139,10 +139,10 @@ class GithubFetcher():
     return
 
   def print_counters(self):
-    self.repo_handler.print(counters)
+    self.repo_handler.print_counters()
     print('. errors ', self.errors_counter,
           '. ',        self.status_string[0:25],
-        sep='', end='')    
+        sep='', end='\n')    
 
   def fetch(self) -> None:
     """
@@ -186,7 +186,8 @@ class GithubFetcher():
 
       for repo in repos:
         repo_modified = handle_repo(repo)
-
+        l.getLogger().info("DONE")
+        exit()
         # do nothing unless the repo is new or modified
         if not repo_modified:
           continue
@@ -234,7 +235,7 @@ class GithubFetcher():
     bool
       True if repository should be scraped, else False.
     """
-    _rate_limit(g)
+    self.rate_limit(g)
     url                   = repo.url
     name                 = repo.name
     updated_at           = str(repo.updated_at)
@@ -343,7 +344,7 @@ class GithubFetcher():
     db.commit()
     return True
 
-  def _rate_limit(self, g) -> None:
+  def rate_limit(self, g) -> None:
     """
     Block on GitHub rate limit.
 
