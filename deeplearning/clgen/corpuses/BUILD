@@ -122,6 +122,15 @@ py_library(
     ],
 )
 
+py_library(
+    name = "github",
+    srcs = ["github.py"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//labm8/py:fs",
+    ],
+)
+
 filegroup(
     name = "token_lists",
     srcs = ["token_lists.json"],

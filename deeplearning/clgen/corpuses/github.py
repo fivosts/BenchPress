@@ -31,7 +31,7 @@ import github
 
 from base64 import b64decode
 from functools import partial
-from labm8 import fs
+from labm8.py import fs
 from eupy.native import logger as l
 from deeplearning.clgen import dbutil
 
