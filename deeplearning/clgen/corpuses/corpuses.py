@@ -32,6 +32,7 @@ from sqlalchemy.sql.expression import func
 from deeplearning.clgen import cache
 
 from deeplearning.clgen.corpuses import atomizers
+from deeplearning.clgen.corpuses import github
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.dashboard import dashboard_db
@@ -175,6 +176,7 @@ class Corpus(object):
         )
       elif config.HasField("fetch_github"):
         ## TODO issue 32 this might not be needed. Instead you might need to mkdir the file
+        self.github_fetcher = github.GithubFetcher(config.fetch_github)
         os.symlink(
           str(ExpandConfigPath(config.fetch_github, path_prefix=FLAGS.clgen_local_path_prefix)),
           symlink,
