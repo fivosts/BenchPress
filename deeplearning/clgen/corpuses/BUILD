@@ -43,6 +43,7 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
         ":atomizers",
+        ":github",
         ":encoded",
         ":preprocessed",
         "//deeplearning/clgen:cache",
@@ -112,6 +113,7 @@ py_library(
     srcs = ["preprocessed.py"],
     visibility = ["//visibility:public"],
     deps = [
+        ":github",
         "//deeplearning/clgen/preprocessors",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//labm8/py:crypto",
