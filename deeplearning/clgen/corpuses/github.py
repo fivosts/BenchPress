@@ -373,7 +373,7 @@ class GithubFetcher():
 
     return True
 
-  def download_file(self, repo, url: str, stack: typing.List[str]) -> str:
+  def download_file(self, repo, url: str, stack = []) -> str:
     """
     Fetch file from GitHub.
 
@@ -387,7 +387,7 @@ class GithubFetcher():
       Repository.
     url : str
       Path.
-    stack : typing.List[str]
+    stack : List[str]
       URL stack.
 
     Returns
@@ -401,7 +401,7 @@ class GithubFetcher():
     response = json.loads(requests.get(
       url,
       headers={
-        'Authorization': 'token ' + str(github_token)
+        'Authorization': 'token ' + str(self.token)
       }
     ).content.decode('utf-8'))
     src = b64decode(response['content']).decode('utf-8')
@@ -451,7 +451,7 @@ class GithubFetcher():
       self.current_status = 'WAITING ON RATE LIMIT'
       self.print_counters()
       remaining = g.get_rate_limit().rate.remaining
-      
+
   def inline_fs_headers(self, path: str, stack: typing.List[str]) -> str:
     """
     Recursively inline headers in file.
