@@ -88,13 +88,23 @@ class GithubRepoHandler():
 
     return
 
-  def is_file_updated(self, url, updated_at):
-    if url in self._scraped_repos and self._scraped_repos[url] == updated_at:
+  def is_repo_updated(self, url, updated_at):
+    if url in self._scraped_repos and self._scraped_repos[url].updated_at == updated_at:
       self.repos_unchanged_counter += 1
+      return True
+    return False
+  
+  def is_file_updated(self, url, sha):
+    if url in self._scraped_files and self._scraped_files[url].sha == sha:
+      self.files_unchanged_counter += 1
       return True
     return False
 
   def update_file(self, **kwargs):
+
+    return True
+
+  def update_repo(self, **kwargs):
 
     url = kwargs.get('url')
     if url in self._scraped_repos:
@@ -249,7 +259,7 @@ class GithubFetcher():
     self.current_status   = name
     self.print_counters()
 
-    if self.repo_handler.is_file_updated(url, updated_at):
+    if self.repo_handler.is_repo_updated(url, updated_at):
       # Timestamp of already scraped repo matches, so nothing to do.
       return False
 
@@ -265,11 +275,11 @@ class GithubFetcher():
     created_at = repo.created_at
     updated_at = repo.updated_at
 
-    self.repo_handler.update_file(url          = url,       owner        = owner, 
-                                 name         = name,      fork         = fork, 
-                                 stars        = stars,     contributors = contributors, 
-                                 forks        = forks,     created_at   = created_at, 
-                                 updated_at   = updated_at )
+    self.repo_handler.update_repo(url          = url,       owner        = owner, 
+                                  name         = name,      fork         = fork, 
+                                  stars        = stars,     contributors = contributors, 
+                                  forks        = forks,     created_at   = created_at, 
+                                  updated_at   = updated_at )
 
     return True
 
@@ -291,10 +301,6 @@ class GithubFetcher():
     bool
       True on success, else False.
     """
-    global files_new_counter
-    global files_modified_counter
-    global files_unchanged_counter
-
     # We're only interested in OpenCL files.
     if not (file.path.endswith('.cl') or file.path.endswith('.ocl')):
       return
@@ -305,17 +311,17 @@ class GithubFetcher():
     self.current_status = repo.name + '/' + path
     self.print_counters()
 
-
-
+    if self.repo_handler.is_file_updated(url, sha):
+      # Do nothing unless checksums don't match
+      return False
 
     # c = db.cursor()
     # c.execute("SELECT sha FROM ContentMeta WHERE id=?", (url,))
     # cached_sha = c.fetchone()
 
-    # Do nothing unless checksums don't match
-    if cached_sha and cached_sha[0] == sha:
-      files_unchanged_counter += 1
-      return False
+    # if cached_sha and cached_sha[0] == sha:
+    #   files_unchanged_counter += 1
+    #   return False
 
     repo_url = repo.url
     contents = _download_file(self.token, repo, file.url, [])
