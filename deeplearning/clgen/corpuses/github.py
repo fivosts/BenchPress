@@ -39,11 +39,7 @@ class GithubRepo():
     # url of a repo is immutable.
     self.url = kwargs.get('url')
     if kwargs:
-      self.update(
-        kwargs.get('url'), kwargs.get('owner'), kwargs.get('name'), 
-        kwargs.get('fork'),kwargs.get('stars'), kwargs.get('contributors'), 
-        kwargs.get('forks'), kwargs.get('created_at'), kwargs.get('updated_at')
-      )
+      self.update(**kwargs)
     return
 
   def update(self,
@@ -92,10 +88,10 @@ class GithubRepoHandler():
 
     url = kwargs.get('url')
     if url in self._scraped_repos:
-      self._scraped_repos[url].update(kwargs)
+      self._scraped_repos[url].update(**kwargs)
       self.repos_modified_counter += 1
     else:
-      self._scraped_repos[url]    =  GithubRepo(kwargs)
+      self._scraped_repos[url]    =  GithubRepo(**kwargs)
       self.repos_new_counter      += 1
     return True
 
@@ -157,8 +153,6 @@ class GithubFetcher():
       * Occasionally (< 1%) can't find headers to include.
 
     """
-    global errors_counter
-
     g = github.Github(self.username, self.password)
 
     # db = dbutil.connect(db_path)
@@ -207,8 +201,11 @@ class GithubFetcher():
           for f in tree_iterator:
             try:
               handle_file(f)
-            except Exception:
-              errors_counter += 1
+              l.getLogger().info("Done")
+              exit()
+            except Exception as e:
+              raise e
+              self.errors_counter += 1
         except github.GithubException:
           # do nothing in case of error (such as an empty repo)
           pass
