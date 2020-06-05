@@ -221,6 +221,69 @@ class GithubFetcher():
     # db.commit()
     return True
 
+  def _process_file(self, g, repo, file) -> bool:
+    """
+    GitHub file handler.
+
+    Parameters
+    ----------
+    g
+      GitHub connection.
+    db : sqlite3.Connection
+      Dataset.
+    repo
+      Repository.
+    file
+      File.
+
+    Returns
+    -------
+    bool
+      True on success, else False.
+    """
+    global files_new_counter
+    global files_modified_counter
+    global files_unchanged_counter
+    global status_string
+
+    # We're only interested in OpenCL files.
+    if not (file.path.endswith('.cl') or path.endswith('.ocl')):
+      return
+
+    url = file.url
+    sha = file.sha
+    path = file.path
+    status_string = repo.name + '/' + path
+    _print_counters()
+
+    # c = db.cursor()
+    # c.execute("SELECT sha FROM ContentMeta WHERE id=?", (url,))
+    # cached_sha = c.fetchone()
+
+    # Do nothing unless checksums don't match
+    if cached_sha and cached_sha[0] == sha:
+      files_unchanged_counter += 1
+      return False
+
+    repo_url = repo.url
+    contents = _download_file(self.token, repo, file.url, [])
+    size = file.size
+
+    # c.execute("DELETE FROM ContentFiles WHERE id=?", (url,))
+    # c.execute("DELETE FROM ContentMeta WHERE id=?", (url,))
+    # c.execute("INSERT INTO ContentFiles VALUES(?,?)",
+    #       (url, contents))
+    # c.execute("INSERT INTO ContentMeta VALUES(?,?,?,?,?)",
+    #       (url, path, repo_url, sha, size))
+
+    if cached_sha:
+      files_modified_counter += 1
+    else:
+      files_new_counter += 1
+
+    # db.commit()
+    return True
+  
 def _print_counters() -> None:
   """
   Print analytics counters.
@@ -313,71 +376,6 @@ def _download_file(github_token: str, repo, url: str, stack: typing.List[str]) -
 
   return '\n'.join(outlines)
 
-
-def _process_file(g, github_token: str, db, repo, file) -> bool:
-  """
-  GitHub file handler.
-
-  Parameters
-  ----------
-  g
-    GitHub connection.
-  github_token : str
-    Authorization.
-  db : sqlite3.Connection
-    Dataset.
-  repo
-    Repository.
-  file
-    File.
-
-  Returns
-  -------
-  bool
-    True on success, else False.
-  """
-  global files_new_counter
-  global files_modified_counter
-  global files_unchanged_counter
-  global status_string
-
-  # We're only interested in OpenCL files.
-  if not (file.path.endswith('.cl') or path.endswith('.ocl')):
-    return
-
-  url = file.url
-  sha = file.sha
-  path = file.path
-  status_string = repo.name + '/' + path
-  _print_counters()
-
-  c = db.cursor()
-  c.execute("SELECT sha FROM ContentMeta WHERE id=?", (url,))
-  cached_sha = c.fetchone()
-
-  # Do nothing unless checksums don't match
-  if cached_sha and cached_sha[0] == sha:
-    files_unchanged_counter += 1
-    return False
-
-  repo_url = repo.url
-  contents = _download_file(github_token, repo, file.url, [])
-  size = file.size
-
-  c.execute("DELETE FROM ContentFiles WHERE id=?", (url,))
-  c.execute("DELETE FROM ContentMeta WHERE id=?", (url,))
-  c.execute("INSERT INTO ContentFiles VALUES(?,?)",
-        (url, contents))
-  c.execute("INSERT INTO ContentMeta VALUES(?,?,?,?,?)",
-        (url, path, repo_url, sha, size))
-
-  if cached_sha:
-    files_modified_counter += 1
-  else:
-    files_new_counter += 1
-
-  db.commit()
-  return True
 
 def inline_fs_headers(path: str, stack: typing.List[str]) -> str:
   """
