@@ -69,9 +69,27 @@ class GithubFile():
     # url of a file is immutable
     self.url = kwargs.get('url')
 
-  def update(self,):
+  def update(self,
+             url      : str,
+             contents : str,
+             path     : str,
+             repo_url : str,
+             sha      : str,
+             size     : int):
+
     if url != self.url:
       raise ValueError("Updated url of already existent file does not match.")
+
+    self.contents   = contents
+    self.path       = path
+    self.repo_url   = repo_url
+    self.sha        = sha
+    if self.size:
+      current_size  = size - self.size
+    else:
+      current_size  = size
+    self.size       = size
+    return current_size
 
 class GithubRepoHandler():
   def __init__(self):
@@ -85,6 +103,7 @@ class GithubRepoHandler():
     self.files_new_counter        = 0
     self.files_modified_counter   = 0
     self.files_unchanged_counter  = 0
+    self.file_size_counter        = 0
 
     return
 
@@ -102,6 +121,14 @@ class GithubRepoHandler():
 
   def update_file(self, **kwargs):
 
+    url = kwargs.get('url')
+    if url in self._scraped_files:
+      self.file_size_counter      += self._scraped_files[url].update(**kwargs)
+      self.files_modified_counter += 1
+    else:
+      self._scraped_files[url]    =  GithubFile(**kwargs)
+      self.files_new_counter      += 1
+      self.file_size_counter      += kwargs.get('size')
     return True
 
   def update_repo(self, **kwargs):
@@ -324,22 +351,26 @@ class GithubFetcher():
     #   return False
 
     repo_url = repo.url
-    contents = _download_file(self.token, repo, file.url, [])
+    contents = self.download_file(repo, url, [])
     size = file.size
 
-    c.execute("DELETE FROM ContentFiles WHERE id=?", (url,))
-    c.execute("DELETE FROM ContentMeta WHERE id=?", (url,))
-    c.execute("INSERT INTO ContentFiles VALUES(?,?)",
-          (url, contents))
-    c.execute("INSERT INTO ContentMeta VALUES(?,?,?,?,?)",
-          (url, path, repo_url, sha, size))
+    self.repo_handler.update_file(
+      url = url, contents = contents, path = path, 
+      sha = sha, repo_url = repo_url, size = size
+    )
 
-    if cached_sha:
-      files_modified_counter += 1
-    else:
-      files_new_counter += 1
+    # c.execute("DELETE FROM ContentFiles WHERE id=?", (url,))
+    # c.execute("DELETE FROM ContentMeta WHERE id=?", (url,))
+    # c.execute("INSERT INTO ContentFiles VALUES(?,?)",
+    #       (url, contents))
+    # c.execute("INSERT INTO ContentMeta VALUES(?,?,?,?,?)",
+    #       (url, path, repo_url, sha, size))
 
-    db.commit()
+    # if cached_sha:
+    #   files_modified_counter += 1
+    # else:
+    #   files_new_counter += 1
+
     return True
 
   def rate_limit(self, g) -> None:
@@ -361,7 +392,7 @@ class GithubFetcher():
 
 
 
-  def _download_file(self, github_token: str, repo, url: str, stack: typing.List[str]) -> str:
+  def download_file(self, repo, url: str, stack: typing.List[str]) -> str:
     """
     Fetch file from GitHub.
 
@@ -412,7 +443,7 @@ class GithubFetcher():
             break
 
         if include_url and include_url not in stack:
-          include_src = _download_file(github_token, repo, include_url)
+          include_src = self.download_file(github_token, repo, include_url)
           outlines.append(include_src)
         else:
           if not include_url:
