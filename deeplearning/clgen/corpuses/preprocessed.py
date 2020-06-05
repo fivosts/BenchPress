@@ -395,6 +395,8 @@ class PreprocessedContentFiles(sqlutil.Database):
 
 def ExpandConfigPath(path: str) -> pathlib.Path:
   l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.ExpandConfigPath()")
+  l.getLogger().critical(pathlib.Path(os.path.expandvars(path)).expanduser().absolute())
+  exit()
   return pathlib.Path(os.path.expandvars(path)).expanduser().absolute()
 
 
