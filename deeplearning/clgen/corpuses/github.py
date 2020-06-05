@@ -351,8 +351,8 @@ class GithubFetcher():
     #   return False
 
     repo_url = repo.url
-    contents = self.download_file(repo, url, [])
-    size = file.size
+    contents = self.download_file(repo, url)
+    size     = file.size
 
     self.repo_handler.update_file(
       url = url, contents = contents, path = path, 
@@ -424,7 +424,7 @@ class GithubFetcher():
             break
 
         if include_url and include_url not in stack:
-          include_src = self.download_file(github_token, repo, include_url)
+          include_src = self.download_file(github_token, repo, stack = include_url)
           outlines.append(include_src)
         else:
           if not include_url:
