@@ -325,6 +325,8 @@ class GithubFetcher():
             for f in tree_iterator:
               try:
                 handle_file(f)
+              except UnicodeError:
+                pass
               except Exception as e:
                 raise e
                 self.errors_counter += 1
