@@ -168,7 +168,7 @@ class GithubRepoHandler():
     if url in self._scraped_repos and self._scraped_repos[url].updated_at == updated_at:
       self.repos_unchanged_counter += 1
       return True
-    elif url in self._stored_repos and self._stored_repos[url] == updated_at:
+    elif url in self._stored_repos:# and self._stored_repos[url] == updated_at:
       self.repos_stored_counter    += 1
       return True
     return False
