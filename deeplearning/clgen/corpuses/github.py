@@ -34,6 +34,15 @@ from base64 import b64decode
 from functools import partial
 from labm8.py import fs
 from eupy.native import logger as l
+from absl_import import flags
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string(
+  "github_corpus_size",
+  None,
+  "Set the target size of kernel files gathered from Github."
+)
 
 class GithubRepo():
   def __init__(self, **kwargs):
@@ -122,7 +131,7 @@ class GithubRepoHandler():
     self.file_size_counter        = 0
 
     self.collectHistory()
-
+    self.is_finished              = False if FLAGS.github_corpus_size else (self.updated_length >= FLAGS.github_corpus_size)
     return
 
   def collectHistory(self):
@@ -277,6 +286,12 @@ class GithubFetcher():
         repos = g.search_repositories(query + ' fork:true sort:stars')
 
         for repo in repos:
+          if self.repo_handler.is_finished:
+            self.print_counters()
+            self.repo_handler.Flush()
+            l.getLogger().info("Finished gathering Github kernels.")
+            return
+
           repo_modified = handle_repo(repo)
 
           # do nothing unless the repo is new or modified
@@ -307,7 +322,7 @@ class GithubFetcher():
 
     self.print_counters()
     self.repo_handler.Flush()
-    l.getLogger().info("Finished gathering Github kernels")
+    l.getLogger().info("Finished gathering Github kernels.")
     return
 
   def process_repo(self, g, repo) -> bool:
