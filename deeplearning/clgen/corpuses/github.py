@@ -28,6 +28,7 @@ import requests
 import sys
 import typing
 import github
+import copy
 
 from base64 import b64decode
 from functools import partial
@@ -62,12 +63,16 @@ class GithubRepo():
     self.contributors  = contributors
     self.forks         = forks
     self.created_at    = created_at
+    self.updated_at    = updated_at
     return
 
 class GithubFile():
   def __init__(self, **kwargs):
     # url of a file is immutable
-    self.url = kwargs.get('url')
+    self.url  = kwargs.get('url')
+    self.size = 0
+    if kwargs:
+      self.update(**kwargs)
 
   def update(self,
              url      : str,
@@ -84,7 +89,7 @@ class GithubFile():
     self.path       = path
     self.repo_url   = repo_url
     self.sha        = sha
-    if self.size:
+    if self.size != 0:
       current_size  = size - self.size
     else:
       current_size  = size
@@ -99,7 +104,8 @@ class GithubRepoHandler():
     ## ..and to flush
     self.corpus_path              = corpus_path
     self.stored_file_idx          = "record.json"
-    self.collectHistory()
+
+    self.updated_length           = 0
 
     self._scraped_repos           = {}
     self._stored_repos            = {}
@@ -115,18 +121,27 @@ class GithubRepoHandler():
     self.files_unchanged_counter  = 0
     self.file_size_counter        = 0
 
+    self.collectHistory()
+
     return
 
   def collectHistory(self):
     storage_file = os.path.join(self.corpus_path, self.stored_file_idx)
     if os.path.isfile(storage_file):
-      self._stored_repos = json.loads(storage_file)
+      with open(storage_file, 'r') as f:
+        try:
+          data                = json.load(f)
+          assert len(data)    == 2, "Wrong format of kernel history provided"
+          self._stored_repos  = data[0]
+          self.updated_length = data[1]['total_files']
+        except json.JSONDecodeError:
+          l.getLogger().warn("Problem encountered with reading kernel file record.")
     return
 
   def appendHistory(self):
     storage_file = os.path.join(self.corpus_path, self.stored_file_idx)
     with open(storage_file, 'w') as f:
-      f.write(json.dumps(self._stored_repos, indent = 2))
+      json.dump([self._stored_repos, {'total_files': copy.deepcopy(len(self._scraped_files))}], f, indent = 2)
     return
 
   def is_repo_updated(self, url, updated_at):
@@ -170,7 +185,7 @@ class GithubRepoHandler():
   def Flush(self):
     for idx, file in enumerate(self._scraped_files):
       with open(os.path.join(self.corpus_path, "{}.cl".format(idx + self.updated_length)), 'w') as f:
-        f.write(file.contents)
+        f.write(self._scraped_files[file].contents)
     for repo in self._scraped_repos:
       self._stored_repos[repo] = self._scraped_repos[repo].updated_at
     self.appendHistory()
@@ -185,8 +200,7 @@ class GithubRepoHandler():
     """
     print('\r\033[Kfiles: new ',  self.files_new_counter,
         ', modified ',            self.files_modified_counter,
-        sep='', end='\n')
-    sys.stdout.flush()
+        sep='', end='')
 
 class GithubFetcher():
   """GitHub API wrapper to pull from github a fresh corpus of OpenCL kernels"""
@@ -225,8 +239,9 @@ class GithubFetcher():
   def print_counters(self):
     self.repo_handler.print_counters()
     print('. errors ', self.errors_counter,
-          '. ',        self.current_status[0:25],
-        sep='', end='\n')
+          '. ',        self.current_status[0:80],
+        sep='', end='')
+    sys.stdout.flush()
 
   def fetch(self) -> None:
     """
@@ -261,40 +276,43 @@ class GithubFetcher():
       'nvidia',
       'heterogeneous'
     ]
-    for query in query_terms:
-      # forks are okay - we use checksums to ensure uniqueness in
-      # final dataset
-      repos = g.search_repositories(query + ' fork:true sort:stars')
+    try:
+      for query in query_terms:
+        # forks are okay - we use checksums to ensure uniqueness in
+        # final dataset
+        repos = g.search_repositories(query + ' fork:true sort:stars')
 
-      for repo in repos:
-        repo_modified = handle_repo(repo)
+        for repo in repos:
+          repo_modified = handle_repo(repo)
 
-        # do nothing unless the repo is new or modified
-        if not repo_modified:
-          continue
+          # do nothing unless the repo is new or modified
+          if not repo_modified:
+            continue
 
-        handle_file = partial(self.process_file, g, repo)
+          handle_file = partial(self.process_file, g, repo)
 
-        # iterate over the entire git tree of the repo's default
-        # branch (usually 'master'). If a file ends with the .cl
-        # extension, check to see if we already have it, else download
-        # it
-        try:
-          branch = repo.default_branch
-          tree_iterator = repo.get_git_tree(branch, recursive=True).tree
-          for f in tree_iterator:
-            try:
-              handle_file(f)
-            except Exception as e:
-              raise e
-              self.errors_counter += 1
-        except github.GithubException:
-          # do nothing in case of error (such as an empty repo)
-          pass
+          # iterate over the entire git tree of the repo's default
+          # branch (usually 'master'). If a file ends with the .cl
+          # extension, check to see if we already have it, else download
+          # it
+          try:
+            branch = repo.default_branch
+            tree_iterator = repo.get_git_tree(branch, recursive=True).tree
+            for f in tree_iterator:
+              try:
+                handle_file(f)
+              except Exception as e:
+                raise e
+                self.errors_counter += 1
+          except github.GithubException:
+            # do nothing in case of error (such as an empty repo)
+            pass
+    except KeyboardInterrupt:
+      self.repo_handler.Flush()
 
     self.print_counters()
     print("\n\ndone.")
-    db.close()
+    exit()
 
   def process_repo(self, g, repo) -> bool:
     """
@@ -338,7 +356,6 @@ class GithubFetcher():
 
     forks      = repo.forks
     created_at = repo.created_at
-    updated_at = repo.updated_at
 
     self.repo_handler.update_repo(url          = url,       owner        = owner,
                                   name         = name,      fork         = fork,
