@@ -379,7 +379,6 @@ class PreprocessedContentFiles(sqlutil.Database):
     Raises:
       EmptyCorpusException: If the content files directory is empty.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.PreprocessedContentFiles.GetImportRelpaths()")
     with fs.chdir(contentfile_root):
       find_output = (
         subprocess.check_output(["find", ".", "-type", "f"])
@@ -395,8 +394,6 @@ class PreprocessedContentFiles(sqlutil.Database):
 
 def ExpandConfigPath(path: str) -> pathlib.Path:
   l.getLogger().debug("deeplearning.clgen.corpuses.preprocessed.ExpandConfigPath()")
-  l.getLogger().critical(pathlib.Path(os.path.expandvars(path)).expanduser().absolute())
-  exit()
   return pathlib.Path(os.path.expandvars(path)).expanduser().absolute()
 
 
