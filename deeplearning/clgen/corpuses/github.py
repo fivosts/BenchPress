@@ -334,6 +334,9 @@ class GithubFetcher():
     except KeyboardInterrupt:
       # Don't gather any more files
       pass
+    except Exception as e:
+      self.repo_handler.Flush()
+      raise e
 
     self.print_counters()
     self.repo_handler.Flush()
@@ -360,6 +363,8 @@ class GithubFetcher():
     bool
       True if repository should be scraped, else False.
     """
+    self.rate_limit(g)
+
     url                   = repo.url
     name                  = repo.name
     updated_at            = str(repo.updated_at)
@@ -369,8 +374,6 @@ class GithubFetcher():
     if self.repo_handler.is_repo_updated(url, updated_at):
       # Timestamp of already scraped repo matches, so nothing to do.
       return False
-
-    self.rate_limit(g)
 
     owner  = repo.owner.email
     fork   = 1 if repo.fork else 0
