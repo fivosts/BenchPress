@@ -157,7 +157,11 @@ class GithubRepoHandler():
   def appendHistory(self):
     storage_file = os.path.join(self.corpus_path, self.stored_file_idx)
     with open(storage_file, 'w') as f:
-      json.dump([self._stored_repos, {'total_files': copy.deepcopy(len(self._scraped_files))}], f, indent = 2)
+      json.dump(
+        [self._stored_repos, 
+         {'total_files': self.updated_length + copy.deepcopy(len(self._scraped_files))}],
+        f, 
+        indent = 2)
     return
 
   def is_repo_updated(self, url, updated_at):
