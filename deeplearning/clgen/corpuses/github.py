@@ -330,10 +330,10 @@ class GithubFetcher():
               try:
                 handle_file(f)
               except UnicodeError:
+                self.errors_counter += 1
                 pass
               except Exception as e:
                 raise e
-                self.errors_counter += 1
           except github.GithubException:
             # do nothing in case of error (such as an empty repo)
             pass
@@ -341,6 +341,7 @@ class GithubFetcher():
       # Don't gather any more files
       pass
     except Exception as e:
+      self.errors_counter += 1
       self.repo_handler.Flush()
       raise e
 
