@@ -253,12 +253,6 @@ class GithubFetcher():
 
     """
     g = github.Github(self.username, self.password)
-
-    # db = dbutil.connect(db_path)
-
-    # if not dbutil.is_github:
-    #   raise ValueError("Not a github database")
-
     handle_repo = partial(self.process_repo, g)
 
     # fetch the repositories to iterate over. Since opencl isn't
@@ -308,11 +302,13 @@ class GithubFetcher():
             # do nothing in case of error (such as an empty repo)
             pass
     except KeyboardInterrupt:
-      self.repo_handler.Flush()
+      # Don't gather any more files
+      pass
 
     self.print_counters()
-    print("\n\ndone.")
-    exit()
+    self.repo_handler.Flush()
+    l.getLogger().info("Finished gathering Github kernels")
+    return
 
   def process_repo(self, g, repo) -> bool:
     """
@@ -397,14 +393,6 @@ class GithubFetcher():
       # Do nothing unless checksums don't match
       return False
 
-    # c = db.cursor()
-    # c.execute("SELECT sha FROM ContentMeta WHERE id=?", (url,))
-    # cached_sha = c.fetchone()
-
-    # if cached_sha and cached_sha[0] == sha:
-    #   files_unchanged_counter += 1
-    #   return False
-
     repo_url = repo.url
     contents = self.download_file(repo, url)
     size     = file.size
@@ -413,19 +401,6 @@ class GithubFetcher():
       url = url, contents = contents, path = path,
       sha = sha, repo_url = repo_url, size = size
     )
-
-    # c.execute("DELETE FROM ContentFiles WHERE id=?", (url,))
-    # c.execute("DELETE FROM ContentMeta WHERE id=?", (url,))
-    # c.execute("INSERT INTO ContentFiles VALUES(?,?)",
-    #       (url, contents))
-    # c.execute("INSERT INTO ContentMeta VALUES(?,?,?,?,?)",
-    #       (url, path, repo_url, sha, size))
-
-    # if cached_sha:
-    #   files_modified_counter += 1
-    # else:
-    #   files_new_counter += 1
-
     return True
 
   def download_file(self, repo, url: str, stack = []) -> str:
