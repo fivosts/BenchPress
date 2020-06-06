@@ -34,7 +34,7 @@ from base64 import b64decode
 from functools import partial
 from labm8.py import fs
 from eupy.native import logger as l
-from absl_import import flags
+from absl import flags
 
 FLAGS = flags.FLAGS
 
@@ -42,6 +42,12 @@ flags.DEFINE_string(
   "github_corpus_size",
   None,
   "Set the target size of kernel files gathered from Github."
+)
+
+flags.DEFINE_integer(
+  "file_size_limit",
+  52428800,
+  "How often should the Github Handler flush memory data to the disk."
 )
 
 class GithubRepo():
@@ -129,9 +135,10 @@ class GithubRepoHandler():
     self.files_modified_counter   = 0
     self.files_unchanged_counter  = 0
     self.file_size_counter        = 0
+    self.file_size_limit          = FLAGS.file_size_limit
 
     self.collectHistory()
-    self.is_finished              = False if FLAGS.github_corpus_size else (self.updated_length >= FLAGS.github_corpus_size)
+    self.is_finished              = False if FLAGS.github_corpus_size is None else (self.updated_length >= FLAGS.github_corpus_size)
     return
 
   def collectHistory(self):
@@ -178,6 +185,13 @@ class GithubRepoHandler():
       self._scraped_files[url]    =  GithubFile(**kwargs)
       self.files_new_counter      += 1
       self.file_size_counter      += kwargs.get('size')
+
+    if self.file_size_counter >= self.file_size_limit:
+      l.getLogger().warn("time to flush!")
+      self.Flush()
+      self.collectHistory()
+      self.file_size_counter = 0
+
     return True
 
   def update_repo(self, **kwargs):
@@ -207,8 +221,9 @@ class GithubRepoHandler():
     """
     Print analytics counters.
     """
-    print('\r\033[Kfiles: new ',  self.files_new_counter,
-        ', modified ',            self.files_modified_counter,
+    print('\r\033[Kfiles: new: ',  self.files_new_counter,
+        ', modified: ',            self.files_modified_counter,
+        ', mem_size: ',            self.file_size_counter, 'B',
         sep='', end='')
 
 class GithubFetcher():
@@ -247,7 +262,7 @@ class GithubFetcher():
 
   def print_counters(self):
     self.repo_handler.print_counters()
-    print('. errors ', self.errors_counter,
+    print('. errors: ', self.errors_counter,
           '. ',        self.current_status[0:80],
         sep='', end='')
     sys.stdout.flush()
