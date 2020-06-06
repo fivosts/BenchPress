@@ -62,7 +62,7 @@ class GithubRepo():
     self.contributors  = contributors
     self.forks         = forks
     self.created_at    = created_at
-    return 
+    return
 
 class GithubFile():
   def __init__(self, **kwargs):
@@ -97,14 +97,18 @@ class GithubRepoHandler():
     ## Use this to read a json file with all current sha files
     ## And of course to append the json file every time you flush
     ## ..and to flush
-    self.corpus_path              = set()
+    self.corpus_path              = corpus_path
+    self.stored_file_idx          = "record.json"
+    self.collectHistory()
 
     self._scraped_repos           = {}
+    self._stored_repos            = {}
     self._scraped_files           = {}
 
     self.repos_new_counter        = 0
     self.repos_modified_counter   = 0
-    self.repos_unchanged_counter  = 0    
+    self.repos_unchanged_counter  = 0
+    self.repos_stored_counter     = 0
 
     self.files_new_counter        = 0
     self.files_modified_counter   = 0
@@ -113,12 +117,27 @@ class GithubRepoHandler():
 
     return
 
+  def collectHistory(self):
+    storage_file = os.path.join(self.corpus_path, self.stored_file_idx)
+    if os.path.isfile(storage_file):
+      self._stored_repos = json.loads(storage_file)
+    return
+
+  def appendHistory(self):
+    storage_file = os.path.join(self.corpus_path, self.stored_file_idx)
+    with open(storage_file, 'w') as f:
+      f.write(json.dumps(self._stored_repos, indent = 2))
+    return
+
   def is_repo_updated(self, url, updated_at):
     if url in self._scraped_repos and self._scraped_repos[url].updated_at == updated_at:
       self.repos_unchanged_counter += 1
       return True
+    elif url in self._stored_repos and self._stored_repos[url] == updated_at:
+      self.repos_stored_counter    += 1
+      return True
     return False
-  
+ 
   def is_file_updated(self, url, sha):
     if url in self._scraped_files and self._scraped_files[url].sha == sha:
       self.files_unchanged_counter += 1
@@ -147,6 +166,18 @@ class GithubRepoHandler():
       self._scraped_repos[url]    =  GithubRepo(**kwargs)
       self.repos_new_counter      += 1
     return True
+
+  def Flush(self):
+    for idx, file in enumerate(self._scraped_files):
+      with open(os.path.join(self.corpus_path, "{}.cl".format(idx + self.updated_length)), 'w') as f:
+        f.write(file.contents)
+    for repo in self._scraped_repos:
+      self._stored_repos[repo] = self._scraped_repos[repo].updated_at
+    self.appendHistory()
+    self._scraped_repos.clear()
+    self._scraped_files.clear()
+    self.file_size_counter  = 0
+    return
 
   def print_counters(self) -> None:
     """
@@ -195,7 +226,7 @@ class GithubFetcher():
     self.repo_handler.print_counters()
     print('. errors ', self.errors_counter,
           '. ',        self.current_status[0:25],
-        sep='', end='\n')    
+        sep='', end='\n')
 
   def fetch(self) -> None:
     """
@@ -285,7 +316,6 @@ class GithubFetcher():
     bool
       True if repository should be scraped, else False.
     """
-    self.rate_limit(g)
     url                   = repo.url
     name                  = repo.name
     updated_at            = str(repo.updated_at)
@@ -295,6 +325,8 @@ class GithubFetcher():
     if self.repo_handler.is_repo_updated(url, updated_at):
       # Timestamp of already scraped repo matches, so nothing to do.
       return False
+
+    self.rate_limit(g)
 
     owner  = repo.owner.email
     fork   = 1 if repo.fork else 0
@@ -308,10 +340,10 @@ class GithubFetcher():
     created_at = repo.created_at
     updated_at = repo.updated_at
 
-    self.repo_handler.update_repo(url          = url,       owner        = owner, 
-                                  name         = name,      fork         = fork, 
-                                  stars        = stars,     contributors = contributors, 
-                                  forks        = forks,     created_at   = created_at, 
+    self.repo_handler.update_repo(url          = url,       owner        = owner,
+                                  name         = name,      fork         = fork,
+                                  stars        = stars,     contributors = contributors,
+                                  forks        = forks,     created_at   = created_at,
                                   updated_at   = updated_at )
 
     return True
@@ -361,7 +393,7 @@ class GithubFetcher():
     size     = file.size
 
     self.repo_handler.update_file(
-      url = url, contents = contents, path = path, 
+      url = url, contents = contents, path = path,
       sha = sha, repo_url = repo_url, size = size
     )
 
