@@ -516,7 +516,7 @@ class GithubFetcher():
     remaining = g.get_rate_limit().rate.remaining
     while remaining < 100:
       time.sleep(1)
-      self.current_status = 'WAITING ON RATE LIMIT'
+      self.current_status = 'WAITING ON RATE LIMIT: {}'.format(remaining)
       self.print_counters()
       remaining = g.get_rate_limit().rate.remaining
 
