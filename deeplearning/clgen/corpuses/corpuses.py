@@ -566,8 +566,6 @@ def ResolveContentId(
     gitfile_path.mkdir(exist_ok=True, parents=True)
     github_fetcher = github.GithubFetcher(gitfile_path)
 
-    l.getLogger().warning("TODO: Insert here checks if the folder exists and if contains gitfiles. If it does, skip pulling again")
-
     github_fetcher.fetch()
     # After the first time we compute the hash of a directory, we write it into
     # a file. This is a shortcut to work around the fact that computing the
