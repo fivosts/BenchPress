@@ -86,13 +86,13 @@ def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
 
     pbutil.AssertFieldIsSet(config,          "contentfiles")
     pbutil.AssertFieldIsSet(config,          "atomizer")
-    pbutil.AssertFieldIsSet(config.atomizer, "token_types")
+    pbutil.AssertFieldIsSet(config.atomizer, "token_type")
     pbutil.AssertFieldIsSet(config,          "contentfile_separator")
     # Check that the preprocessor pipeline resolves to preprocessor functions.
     [preprocessors.GetPreprocessorFunction(p) for p in config.preprocessor]
 
     pbutil.AssertFieldConstraint(config.atomizer, 
-                                 "token_types", 
+                                 "token_type", 
                                  lambda x: x == "character" or x == "word",
                                  "atomizer is either character or word based."
                                  )
