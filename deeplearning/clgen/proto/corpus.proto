@@ -46,15 +46,17 @@ message Corpus {
     // The path to a local directory where a new corpus will be fetched from github.
     string fetch_github           = 5;
   }
-  // The atomizer to use to encode the corpus.
-  message atomizer{
-    required string token_types            = 10;
-    optional string token_list             = 11;
-    optional bool   mask_tokens            = 12;
-    optional bool   wordpiece_tokenization = 13;
-  }
+  required atomizer atomizer      = 6;
   // A list of preprocessor passes to run on each contentfile in the corpus
   // prior to training, in the order in which they are run.
-  repeated string preprocessor          = 30;
-  optional string contentfile_separator = 32;
+  repeated string preprocessor          = 7;
+  optional string contentfile_separator = 8;
+}
+
+// The atomizer to use to encode the corpus.
+message atomizer{
+  required string token_type             = 10;
+  optional string token_list             = 11;
+  optional bool   mask_tokens            = 12;
+  optional bool   wordpiece_tokenization = 13;
 }

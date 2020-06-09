@@ -32,11 +32,11 @@ FLAGS = flags.FLAGS
 def FromText(config, corpus_txt: str):
   mask_tokens = False if config.mask_tokens is None else config.mask_tokens
 
-  if config.token_types   == "character":
+  if config.token_type   == "character":
     if config.token_list is not None:
       l.getLogger().warning("token list in character-based tokenization is going to be ignored.")
     return AsciiCharacterAtomizer.FromText(corpus_txt, mask_tokens)
-  elif config.token_types == "word":
+  elif config.token_type == "word":
     with open(config.token_list, 'r') as f:
       token_set = json.load(f)
       token_set = set(token_set['opencl']['tokens'])

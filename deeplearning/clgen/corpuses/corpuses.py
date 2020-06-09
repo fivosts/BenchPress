@@ -96,7 +96,7 @@ def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
                                  lambda x: x == "character" or x == "word",
                                  "atomizer is either character or word based."
                                  )
-    if config.atomizer.token_types == "word":
+    if config.atomizer.token_type == "word":
       pbutil.AssertFieldConstraint(config.atomizer,
                                   "token_list",
                                   lambda x: os.path.isfile(x),
