@@ -84,23 +84,24 @@ def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
     if config.HasField("pre_encoded_corpus_url"):
       return config
 
-    pbutil.AssertFieldIsSet(config, "contentfiles")
-    pbutil.AssertFieldIsSet(config, "atomizer")
-    pbutil.AssertFieldIsSet(config, "contentfile_separator")
+    pbutil.AssertFieldIsSet(config,          "contentfiles")
+    pbutil.AssertFieldIsSet(config,          "atomizer")
+    pbutil.AssertFieldIsSet(config.atomizer, "token_types")
+    pbutil.AssertFieldIsSet(config,          "contentfile_separator")
     # Check that the preprocessor pipeline resolves to preprocessor functions.
     [preprocessors.GetPreprocessorFunction(p) for p in config.preprocessor]
 
-    if config.HasField("greedy_multichar_atomizer"):
-      if not config.greedy_multichar_atomizer.tokens:
-        raise ValueError("GreedyMulticharAtomizer.tokens is empty")
-      for atom in config.greedy_multichar_atomizer.tokens:
-        if not atom:
-          raise ValueError(
-            "Empty string found in GreedyMulticharAtomizer.tokens is empty"
-          )
-    if config.HasField("maskLM_atomizer"):
-      if not config.maskLM_atomizer.wordpiece_tokenization:
-        raise ValueError("Empty string found in maskLM_atomizer: wordpiece_tokenization is empty")
+    pbutil.AssertFieldConstraint(config.atomizer, 
+                                 "token_types", 
+                                 lambda x: x == "character" or x == "word",
+                                 "atomizer is either character or word based."
+                                 )
+    if config.atomizer.token_types == "word":
+      pbutil.AssertFieldConstraint(config.atomizer,
+                                  "token_list",
+                                  lambda x: os.path.isfile(x),
+                                  "Invalid token_list file"
+                                  )
 
     return config
   except pbutil.ProtoValueError as e:
@@ -400,21 +401,13 @@ class Corpus(object):
     l.getLogger().info("Deriving atomizer from preprocessed corpus")
     corpus_txt = self.GetTextCorpus(shuffle=False)
 
-    if self.config.HasField("ascii_character_atomizer"):
-      atomizer = atomizers.AsciiCharacterAtomizer.FromText(corpus_txt)
-    elif self.config.HasField("greedy_multichar_atomizer"):
-      atoms = set(self.config.greedy_multichar_atomizer.tokens)
-      atomizer = atomizers.GreedyAtomizer.FromText(corpus_txt, atoms)
-    elif self.config.HasField("maskLM_atomizer"):
-      wordpiece_tokenization  = set(self.config.maskLM_atomizer.wordpiece_tokenization).pop()
-      atomizer = atomizers.MaskLMAtomizer.FromText(corpus_txt, wordpiece_tokenization)
-    elif self.config.HasField("pre_encoded_corpus_url"):
+    if self.config.HasField("pre_encoded_corpus_url"):
       encoded_db = encoded.EncodedContentFiles(
         self.config.pre_encoded_corpus_url
       )
-      atomizer = GreedyAtomizerFromEncodedDb(encoded_db)
+      atomizer = GreedyAtomizerFromEncodedDb(config.atomizer, encoded_db)
     else:
-      raise NotImplementedError
+      atomizer = atomizers.FromText(config.atomizer, corpus_txt)
 
     atomizer.ToFile(self.atomizer_path)
     return atomizer
@@ -460,6 +453,7 @@ def StoreVocabInMetaTable(
 
 
 def GreedyAtomizerFromEncodedDb(encoded_db: encoded.EncodedContentFiles):
+  raise NotImplementedError
   """Create a greedy atomizer for the vocabulary of a given encoded_db."""
   # TODO(github.com/ChrisCummins/clgen/issues/130): This should be a method of
   # a concrete `DatabaseCorpus` class.

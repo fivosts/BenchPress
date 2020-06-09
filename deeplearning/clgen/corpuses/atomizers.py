@@ -31,23 +31,44 @@ from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
+def FromText(config: corpus_pb2.Corpus.atomizer, corpus_txt: str):
+  mask_atoms = False if config.mask_atoms is None else config.mask_atoms
+
+  if config.token_types   == "character":
+    if config.token_list is not None:
+      l.getLogger().warning("token list in character-based tokenization is going to be ignored.")
+    return AsciiCharacterAtomizer.FromText(corpus_txt, mask_atoms)
+  elif config.token_types == "word":
+    wpc_tok = False if config.wordpiece_tokenization is None else config.wordpiece_tokenization
+    return WordAtomizer.FromText(corpus_text, 
+                                 config.token_list, 
+                                 mask_atoms, 
+                                 wpc_tok
+                                )
+  else:
+    raise NotImplementedError
 
 class AtomizerBase(object):
   """The base class for implementing atomizers."""
 
-  def __init__(self, vocab: typing.Dict[str, int]):
+  def __init__(self, 
+               vocab: typing.Dict[str, int],
+               metaTokens: typing.Dict[str, str]
+               ):
     """Instantiate an atomizer.
 
     Args:
       vocab: A dictionary of mappings from character sequences (atoms) into
         indices.
-
+      metaTokens: A dictionary mapping the metaTokens needed for tokenization.
+        (Used when masking is selected)
     Raises:
       TypeError: If vocab is not a dictionary.
-      InvalidVocab: If the dictionary of mappings includes any duplicate values.
+      ValueError: If the dictionary of mappings includes any duplicate values.
     """
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.__init__()")
-    self.vocab = vocab
+    self.vocab      = vocab
+    self.metaTokens = metaTokens
     self._UpdateVocabulary()
 
   @property
@@ -157,7 +178,7 @@ class AtomizerBase(object):
 class AsciiCharacterAtomizer(AtomizerBase):
   """An atomizer for character-level syntactic modelling."""
 
-  def AtomizeString(self, text: str) -> np.array:
+  def AtomizeString(self, text: str, metaTokens: typing.Dict[str, str]) -> np.array:
     """Atomize a text into an array of vocabulary indices.
 
     Args:
@@ -168,16 +189,33 @@ class AsciiCharacterAtomizer(AtomizerBase):
     """
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AsciiCharacterAtomizer.AtomizeString()")
     try:
-      return np.array(list(map(lambda x: self.vocab[x], text)), dtype=np.int32)
+      if not self.metaTokens:
+        return np.array(list(map(lambda x: self.vocab[x], text)), dtype=np.int32)
+      else:
+        encoded = []
+        skipNext = 0
+        for idx, char in enumerate(text):
+          if skipNext > 0:
+            skipNext -= 1
+            continue
+          if char == '[':
+            for meta in self.metaTokens.values():
+              if text[idx: idx + len(meta)] == meta:
+                encoded.append(self.vocab[meta])
+                skipNext = len(meta) - 1
+                break
+          if skipNext == 0:
+            encoded.append(self.vocab[char])
+        return np.array(encoded, dtype = np.int32)
     except KeyError:
-      raise ValueError
-
+      raise ValueError("OoV index in string tokenizing.")
+      
   def __repr__(self) -> str:
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AsciiCharacterAtomizer.__repr__()")
     return f"AsciiCharacterAtomizer[{self.vocab_size} chars]"
 
   @classmethod
-  def FromText(cls, text: str) -> "AsciiCharacterAtomizer":
+  def FromText(cls, text: str, mask_atoms: bool = False) -> "AsciiCharacterAtomizer":
     """Instantiate and an atomizer from a corpus text.
 
     Args:
@@ -186,21 +224,32 @@ class AsciiCharacterAtomizer(AtomizerBase):
     Returns:
       An atomizer instance.
     """
+    if mask_atoms:
+      metaTokens = {
+        '[START]'   : '[START]',
+        '[END]'     : '[END]',
+        '[PAD]'     : '[PAD]',
+        '[MASK]'    : '[MASK]',
+        '[HOLE]'    : '[HOLE]',
+        '[ENDHOLE]' : '[ENDHOLE]',
+      }
+    else:
+      metaTokens = {}
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AsciiCharacterAtomizer.FromText()")
     counter = Counter(text)
     count_pairs = sorted(counter.items(), key=lambda x: -x[1])
     atoms, _ = zip(*count_pairs)
+    atoms = tuple(metaTokens.keys()) + atoms
     vocab = dict(zip(atoms, range(len(atoms))))
-    return AsciiCharacterAtomizer(vocab)
+    return AsciiCharacterAtomizer(vocab, metaTokens)
 
-
-class GreedyAtomizer(AtomizerBase):
+class WordAtomizer(AtomizerBase):
   """A greedy atomizer supports multi-character tokens."""
 
   def __init__(self, vocab: typing.Dict[str, int], determine_chars=False):
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.GreedyAtomizer.__init__()")
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.WordAtomizer.__init__()")
     self.determine_chars = determine_chars
-    super(GreedyAtomizer, self).__init__(vocab)
+    super(WordAtomizer, self).__init__(vocab)
 
     multichars = set(k for k in self.atoms if len(k) > 1)
     first_chars = set(a[0] for a in multichars)
@@ -217,11 +266,11 @@ class GreedyAtomizer(AtomizerBase):
     Returns:
       An array of indices into vocabulary for all atoms in text.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.GreedyAtomizer.AtomizeString()")
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.WordAtomizer.AtomizeString()")
 
     def _AddToVocab(token: str) -> int:
       """Add a token to the vocabulary and return its index."""
-      l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.GreedyAtomizer._AddToVocab()")
+      l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.WordAtomizer._AddToVocab()")
       if self.determine_chars and token not in self.vocab:
         max_index = max(self.vocab.values())
         self.vocab[token] = max_index + 1
@@ -263,11 +312,11 @@ class GreedyAtomizer(AtomizerBase):
     return np.array(indices, dtype=np.int32)
 
   def __repr__(self) -> str:
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.GreedyAtomizer.__repr__()")
-    return f"GreedyAtomizer[{self.vocab_size} tokens]"
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.WordAtomizer.__repr__()")
+    return f"WordAtomizer[{self.vocab_size} tokens]"
 
   @classmethod
-  def FromText(cls, text: str, atoms: typing.Set[str]) -> "GreedyAtomizer":
+  def FromText(cls, text: str, atoms: typing.Set[str]) -> "WordAtomizer":
     """Instantiate and an atomizer from a corpus text.
 
     Args:
@@ -277,19 +326,19 @@ class GreedyAtomizer(AtomizerBase):
     Returns:
       An atomizer instance.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.GreedyAtomizer.FromText()")
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.WordAtomizer.FromText()")
     if not atoms:
       raise ValueError("No atoms specified")
 
     # Instantiate a greedy atomizer using the full vocabulary.
     full_vocab = dict(zip(atoms, range(len(atoms))))
-    c = GreedyAtomizer(full_vocab, determine_chars=True)
+    c = WordAtomizer(full_vocab, determine_chars=True)
     # Derive the subset of the vocabulary required to encode the given text.
     tokens = sorted(list(set(c.TokenizeString(text))))
     vocab_subset = dict(zip(tokens, range(len(tokens))))
     end_time = labdate.MillisecondsTimestamp()
     # Return a new atomizer using the subset vocabulary.
-    return GreedyAtomizer(vocab_subset)
+    return WordAtomizer(vocab_subset)
 
 class MaskLMAtomizer(AtomizerBase):
   """MaskLM corpus atomizer, as implemented in BERT model."""
@@ -319,7 +368,6 @@ class MaskLMAtomizer(AtomizerBase):
     """
     l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.FromText()")
     
-    ## Account for MetaTokens. CLS and SEP or START might need to be added.
     metaTokens = {
         '[START]'   : '[START]',
         '[END]'     : '[END]',
