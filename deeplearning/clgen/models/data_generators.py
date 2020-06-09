@@ -34,7 +34,7 @@ flags.DEFINE_boolean(
 
 flags.DEFINE_boolean(
   "randomize_mask_placement",
-  False,
+  True,
   "When selecting an index in the input tensor, the original BERT model gives 80% chance "
   "to replace it with a MASK, a 10% chance to replace it with another random token "
   "and another 10% to leave it be after all. Set True to enable this behavior. Otherwise, "
@@ -735,20 +735,29 @@ class MaskLMBatchGenerator(object):
     candidate_indexes = np.arange(actual_length)
     self.rngen.shuffle(candidate_indexes)
 
-    masks_to_predict  = min(self.training_opts.max_predictions_per_seq,
+    # total tokens to add in holes.
+    # No more than max_predictions_per_seq, 
+    # no less than actual seq length x the probability of hiding a token
+    holes_to_predict  = min(self.training_opts.max_predictions_per_seq,
                            max(1, int(round(actual_length * self.training_opts.masked_lm_prob))))
 
+    # Processed input sequence
     input_ids         = list(np.copy(seq))
+    # List of (seq_idx, token_id) tupless
     masked_lms        = []
+    # Offset array. Indices represent elements in the initial array (seq)
+    # Values of indices represent current offset position in processed array (input_ids).
     offset_idxs        = np.zeros(len(seq), dtype = np.int32)
+    # Total masks placed so far.
     total_predictions = 0
     for pos_index in candidate_indexes:
       assert pos_index < len(seq), "Candidate index is out of bounds: {} >= {}".format(pos_index, len(seq))
       
+      # Element in processed array can be found in its original index +/- offset
       input_id_idx = pos_index + offset_idxs[pos_index]
-      if total_predictions >= masks_to_predict:
+      if total_predictions >= holes_to_predict:
         break
-      ## This condition could be troublesome in case it gets False by accident
+      ## TODO. This condition could be troublesome in case it gets False by accident
       ## i.e. the index has gone wrong due to the whole, BUT still point to an identical element
       elif seq[pos_index] != input_ids[input_id_idx]:
         continue
@@ -757,19 +766,23 @@ class MaskLMBatchGenerator(object):
               "Original and offset-ted sequence have misaligned tokens: {}, {}"
               .format(seq[pos_index], input_ids[input_id_idx]))
 
-      rand_len = self.rngen.randint(0, 5)
-      # Before confirming this rand_len, first make sure 
-      # it is no conflicting another hole further down the road
-      for i in range(min(rand_len, len(input_ids) - input_id_idx)):
+      # Random number to represent the length of this hole.
+      hole_length = self.rngen.randint(0, 5)
+      # Inside range, make sure hole length does not run over input_id_idx bounds
+      hole_length = min(hole_length, len(input_ids) - input_id_idx)
+      # Confirm there is no conflict with another hole, further down the sequence.
+      for i in range(hole_length):
         if input_ids[input_id_idx + i] == self.atomizer.holeToken:
-          rand_len = i
+          hole_length = i
           break
 
-      hole_length = min(
-                      min(rand_len, len(input_ids) - input_id_idx), 
-                      rand_len
-                      )
+      # Finally, 
+      # hole_length = min(
+      #                 min(rand_len, len(input_ids) - input_id_idx), 
+      #                 rand_len
+      #                 )
 
+      # Target token for classifier is either the first token of the hole, or endholToken if hole is empty
       target    = input_ids[ input_id_idx] if hole_length > 0 else self.atomizer.endholeToken
       # if self.rngen.random() < 0.8:
       ## TODO that only works fine when hole_length = 1
@@ -781,7 +794,9 @@ class MaskLMBatchGenerator(object):
       assert (input_ids[input_id_idx] == self.atomizer.holeToken, 
             "target index does not correspond to hole token: {}".format(self.atomizer.DeatomizeIndices([input_ids[input_id_idx]])))
 
+      # Adjust the offset of all affected tokens, from pos_index and after.
       offset_idxs[pos_index:] += 1 - hole_length
+      # An empty hole is counted as a prediction of count 1.
       total_predictions       += max(1, hole_length)
 
     while len(input_ids) < len(seq):
