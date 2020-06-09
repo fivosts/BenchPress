@@ -304,6 +304,39 @@ class MaskLMAtomizer(AtomizerBase):
     self.metaTokens = metaTokens
     super(MaskLMAtomizer, self).__init__(vocab)
 
+  @classmethod
+  def FromText(cls, 
+               text: str,
+               wordpiece_tokenization: bool
+               ) -> "MaskLMAtomizer":
+    """Instantiate and an atomizer from a corpus text.
+
+    Args:
+      text: Text corpus.
+
+    Returns:
+      An atomizer instance.
+    """
+    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.FromText()")
+    
+    ## Account for MetaTokens. CLS and SEP or START might need to be added.
+    metaTokens = {
+        '[START]'   : '[START]',
+        '[END]'     : '[END]',
+        '[PAD]'     : '[PAD]',
+        '[MASK]'    : '[MASK]',
+        '[HOLE]'    : '[HOLE]',
+        '[ENDHOLE]' : '[ENDHOLE]',
+    }
+
+    counter = Counter(text)
+    count_pairs = sorted(counter.items(), key=lambda x: -x[1])
+    atoms, _ = zip(*count_pairs)
+    atoms = tuple(metaTokens.keys()) + atoms
+    vocab = dict(zip(atoms, range(len(atoms))))
+
+    return MaskLMAtomizer(vocab, metaTokens, wordpiece_tokenization)
+
   def AtomizeString(self, text: str) -> np.array:
     """Atomize a text into an array of vocabulary indices.
 
@@ -385,36 +418,3 @@ class MaskLMAtomizer(AtomizerBase):
   @property
   def padLabel(self):
     return self.metaTokens['[PAD]']
-
-  @classmethod
-  def FromText(cls, 
-               text: str,
-               wordpiece_tokenization: bool
-               ) -> "MaskLMAtomizer":
-    """Instantiate and an atomizer from a corpus text.
-
-    Args:
-      text: Text corpus.
-
-    Returns:
-      An atomizer instance.
-    """
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.FromText()")
-    
-    ## Account for MetaTokens. CLS and SEP or START might need to be added.
-    metaTokens = {
-        '[START]'   : '[START]',
-        '[END]'     : '[END]',
-        '[PAD]'     : '[PAD]',
-        '[MASK]'    : '[MASK]',
-        '[HOLE]'    : '[HOLE]',
-        '[ENDHOLE]' : '[ENDHOLE]',
-    }
-
-    counter = Counter(text)
-    count_pairs = sorted(counter.items(), key=lambda x: -x[1])
-    atoms, _ = zip(*count_pairs)
-    atoms = tuple(metaTokens.keys()) + atoms
-    vocab = dict(zip(atoms, range(len(atoms))))
-
-    return MaskLMAtomizer(vocab, metaTokens, wordpiece_tokenization)
