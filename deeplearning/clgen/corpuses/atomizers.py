@@ -31,7 +31,7 @@ from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
-def FromText(config: corpus_pb2.Corpus.atomizer, corpus_txt: str):
+def FromText(config, corpus_txt: str):
   mask_atoms = False if config.mask_atoms is None else config.mask_atoms
 
   if config.token_types   == "character":
@@ -66,25 +66,21 @@ class AtomizerBase(object):
       TypeError: If vocab is not a dictionary.
       ValueError: If the dictionary of mappings includes any duplicate values.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.__init__()")
     self.vocab      = vocab
     self.metaTokens = metaTokens
     self._UpdateVocabulary()
 
   @property
   def atoms(self) -> typing.List[str]:
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.atoms()")
     """A list of atoms in the vocabulary."""
     return list(sorted(self.vocab.keys()))
 
   @property
   def indices(self) -> typing.List[int]:
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.indices()")
     """A list of vocabulary indices."""
     return list(sorted(self.vocab.values()))
 
   def _UpdateVocabulary(self) -> None:
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase._UpdateVocabulary()")
     """Private method which must be called if vocab is modified."""
     if not isinstance(self.vocab, dict):
       raise TypeError("vocabulary must be a dict")
@@ -97,6 +93,8 @@ class AtomizerBase(object):
 
     self.vocab_size = len(self.vocab)
     self.decoder = {val: key for key, val in self.vocab.items()}
+    # Set arbitrary object properties for meta tokens.
+    self.__dict__.update({x: self.vocab[y] for x, y in self.metaTokens.items()})
 
   def AtomizeString(self, text: str) -> np.array:
     """Atomize a text into an array of vocabulary indices.
@@ -110,7 +108,6 @@ class AtomizerBase(object):
     Raises:
       VocabError: If the input text contains elements not in the vocabulary.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.AtomizeString()")
     raise NotImplementedError("abstract class")
 
   def TokenizeString(self, text: str) -> typing.List[str]:
@@ -122,7 +119,6 @@ class AtomizerBase(object):
     Returns:
       A list of tokens.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.TokenizeString()")
     indices = self.AtomizeString(text)
     return list(map(lambda x: self.decoder[x], indices))
 
@@ -137,7 +133,6 @@ class AtomizerBase(object):
       Returns string if nparray is one-dimensional.
       Else returns list for each extra dimension of strings.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.DeatomizeIndices()")
     try:
       if np.ndim(encoded) > 1:
         return [ self.DeatomizeIndices(x) for x in encoded ]
@@ -150,7 +145,6 @@ class AtomizerBase(object):
 
   def ToFile(self, path: pathlib.Path) -> None:
     """Save an atomizer to file."""
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.ToFile()")
     with open(path, "wb") as f:
       pickle.dump(self, f)
 
@@ -164,13 +158,11 @@ class AtomizerBase(object):
     Returns:
       An atomizer instance.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.FromText()")
     raise NotImplementedError("abstract class")
 
   @classmethod
   def FromFile(cls, path: pathlib.Path) -> "AtomizerBase":
     """Load an atomizer from file."""
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AtomizerBase.FromFile()")
     with open(path, "rb") as infile:
       return pickle.load(infile)
 
@@ -178,7 +170,7 @@ class AtomizerBase(object):
 class AsciiCharacterAtomizer(AtomizerBase):
   """An atomizer for character-level syntactic modelling."""
 
-  def AtomizeString(self, text: str, metaTokens: typing.Dict[str, str]) -> np.array:
+  def AtomizeString(self, text: str) -> np.array:
     """Atomize a text into an array of vocabulary indices.
 
     Args:
@@ -187,7 +179,6 @@ class AsciiCharacterAtomizer(AtomizerBase):
     Returns:
       An array of indices into vocabulary for all atoms in text.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AsciiCharacterAtomizer.AtomizeString()")
     try:
       if not self.metaTokens:
         return np.array(list(map(lambda x: self.vocab[x], text)), dtype=np.int32)
@@ -211,7 +202,6 @@ class AsciiCharacterAtomizer(AtomizerBase):
       raise ValueError("OoV index in string tokenizing.")
       
   def __repr__(self) -> str:
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AsciiCharacterAtomizer.__repr__()")
     return f"AsciiCharacterAtomizer[{self.vocab_size} chars]"
 
   @classmethod
@@ -226,20 +216,19 @@ class AsciiCharacterAtomizer(AtomizerBase):
     """
     if mask_atoms:
       metaTokens = {
-        '[START]'   : '[START]',
-        '[END]'     : '[END]',
-        '[PAD]'     : '[PAD]',
-        '[MASK]'    : '[MASK]',
-        '[HOLE]'    : '[HOLE]',
-        '[ENDHOLE]' : '[ENDHOLE]',
+          'startToken'   : '[START]',
+          'endToken'     : '[END]',
+          'padToken'     : '[PAD]',
+          'maskToken'    : '[MASK]',
+          'holeToken'    : '[HOLE]',
+          'endholeToken' : '[ENDHOLE]',
       }
     else:
       metaTokens = {}
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.AsciiCharacterAtomizer.FromText()")
     counter = Counter(text)
     count_pairs = sorted(counter.items(), key=lambda x: -x[1])
     atoms, _ = zip(*count_pairs)
-    atoms = tuple(metaTokens.keys()) + atoms
+    atoms = tuple(metaTokens.values()) + atoms
     vocab = dict(zip(atoms, range(len(atoms))))
     return AsciiCharacterAtomizer(vocab, metaTokens)
 
@@ -247,7 +236,6 @@ class WordAtomizer(AtomizerBase):
   """A greedy atomizer supports multi-character tokens."""
 
   def __init__(self, vocab: typing.Dict[str, int], determine_chars=False):
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.WordAtomizer.__init__()")
     self.determine_chars = determine_chars
     super(WordAtomizer, self).__init__(vocab)
 
@@ -266,11 +254,9 @@ class WordAtomizer(AtomizerBase):
     Returns:
       An array of indices into vocabulary for all atoms in text.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.WordAtomizer.AtomizeString()")
 
     def _AddToVocab(token: str) -> int:
       """Add a token to the vocabulary and return its index."""
-      l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.WordAtomizer._AddToVocab()")
       if self.determine_chars and token not in self.vocab:
         max_index = max(self.vocab.values())
         self.vocab[token] = max_index + 1
@@ -312,7 +298,6 @@ class WordAtomizer(AtomizerBase):
     return np.array(indices, dtype=np.int32)
 
   def __repr__(self) -> str:
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.WordAtomizer.__repr__()")
     return f"WordAtomizer[{self.vocab_size} tokens]"
 
   @classmethod
@@ -326,7 +311,6 @@ class WordAtomizer(AtomizerBase):
     Returns:
       An atomizer instance.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.WordAtomizer.FromText()")
     if not atoms:
       raise ValueError("No atoms specified")
 
@@ -340,129 +324,125 @@ class WordAtomizer(AtomizerBase):
     # Return a new atomizer using the subset vocabulary.
     return WordAtomizer(vocab_subset)
 
-class MaskLMAtomizer(AtomizerBase):
-  """MaskLM corpus atomizer, as implemented in BERT model."""
+# class MaskLMAtomizer(AtomizerBase):
+#   """MaskLM corpus atomizer, as implemented in BERT model."""
 
-  def __init__(self, 
-               vocab: typing.Dict[str, int],
-               metaTokens: typing.Dict[str, str],
-               wordpiece_tokenization: bool
-               ):
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.__init__()")
-    self.wordpiece_tokenization = wordpiece_tokenization
-    self.metaTokens = metaTokens
-    super(MaskLMAtomizer, self).__init__(vocab)
+#   def __init__(self, 
+#                vocab: typing.Dict[str, int],
+#                metaTokens: typing.Dict[str, str],
+#                wordpiece_tokenization: bool
+#                ):
+#     self.wordpiece_tokenization = wordpiece_tokenization
+#     self.metaTokens = metaTokens
+#     super(MaskLMAtomizer, self).__init__(vocab)
 
-  @classmethod
-  def FromText(cls, 
-               text: str,
-               wordpiece_tokenization: bool
-               ) -> "MaskLMAtomizer":
-    """Instantiate and an atomizer from a corpus text.
+#   @classmethod
+#   def FromText(cls, 
+#                text: str,
+#                wordpiece_tokenization: bool
+#                ) -> "MaskLMAtomizer":
+#     """Instantiate and an atomizer from a corpus text.
 
-    Args:
-      text: Text corpus.
+#     Args:
+#       text: Text corpus.
 
-    Returns:
-      An atomizer instance.
-    """
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.FromText()")
+#     Returns:
+#       An atomizer instance.
+#     """
     
-    metaTokens = {
-        '[START]'   : '[START]',
-        '[END]'     : '[END]',
-        '[PAD]'     : '[PAD]',
-        '[MASK]'    : '[MASK]',
-        '[HOLE]'    : '[HOLE]',
-        '[ENDHOLE]' : '[ENDHOLE]',
-    }
+#     metaTokens = {
+#         'startToken'   : '[START]',
+#         'endToken'     : '[END]',
+#         'padToken'     : '[PAD]',
+#         'maskToken'    : '[MASK]',
+#         'holeToken'    : '[HOLE]',
+#         'endholeToken' : '[ENDHOLE]',
+#     }
 
-    counter = Counter(text)
-    count_pairs = sorted(counter.items(), key=lambda x: -x[1])
-    atoms, _ = zip(*count_pairs)
-    atoms = tuple(metaTokens.keys()) + atoms
-    vocab = dict(zip(atoms, range(len(atoms))))
+#     counter = Counter(text)
+#     count_pairs = sorted(counter.items(), key=lambda x: -x[1])
+#     atoms, _ = zip(*count_pairs)
+#     atoms = tuple(metaTokens.keys()) + atoms
+#     vocab = dict(zip(atoms, range(len(atoms))))
 
-    return MaskLMAtomizer(vocab, metaTokens, wordpiece_tokenization)
+#     return MaskLMAtomizer(vocab, metaTokens, wordpiece_tokenization)
 
-  def AtomizeString(self, text: str) -> np.array:
-    """Atomize a text into an array of vocabulary indices.
+#   def AtomizeString(self, text: str) -> np.array:
+#     """Atomize a text into an array of vocabulary indices.
 
-    Args:
-      text: Input text.
+#     Args:
+#       text: Input text.
 
-    Returns:
-      An array of indices into vocabulary for all atoms in text.
-    """
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.AtomizeString()")
+#     Returns:
+#       An array of indices into vocabulary for all atoms in text.
+#     """
 
-    encoded = []
-    skipNext = 0
-    for idx, char in enumerate(text):
-      if skipNext > 0:
-        skipNext -= 1
-        continue
-      try:
-        if char == '[':
-          for meta in self.metaTokens.values():
-            if text[idx: idx + len(meta)] == meta:
-              encoded.append(self.vocab[meta])
-              skipNext = len(meta) - 1
-              break
-        if skipNext == 0:
-          encoded.append(self.vocab[char])
-      except KeyError:
-        raise ValueError("Out of vocabulary word!")
-    return np.array(encoded, dtype=np.int32)
+#     encoded = []
+#     skipNext = 0
+#     for idx, char in enumerate(text):
+#       if skipNext > 0:
+#         skipNext -= 1
+#         continue
+#       try:
+#         if char == '[':
+#           for meta in self.metaTokens.values():
+#             if text[idx: idx + len(meta)] == meta:
+#               encoded.append(self.vocab[meta])
+#               skipNext = len(meta) - 1
+#               break
+#         if skipNext == 0:
+#           encoded.append(self.vocab[char])
+#       except KeyError:
+#         raise ValueError("Out of vocabulary word!")
+#     return np.array(encoded, dtype=np.int32)
     
-  def __repr__(self) -> str:
-    l.getLogger().debug("deeplearning.clgen.corpuses.atomizers.MaskLMAtomizer.__repr__()")
-    return f"MaskLMAtomizer[{self.vocab_size} chars]"
+#   def __repr__(self) -> str:
+#     return f"MaskLMAtomizer[{self.vocab_size} chars]"
   
-  @property
-  def startToken(self):
-    return self.vocab[self.metaTokens['[START]']]
+#   @property
+#   def startToken(self):
+#     return self.vocab[self.metaTokens['[START]']]
 
-  @property
-  def endToken(self):
-    return self.vocab[self.metaTokens['[END]']]
+#   @property
+#   def endToken(self):
+#     return self.vocab[self.metaTokens['[END]']]
 
-  @property
-  def maskToken(self):
-    return self.vocab[self.metaTokens['[MASK]']]
+#   @property
+#   def maskToken(self):
+#     return self.vocab[self.metaTokens['[MASK]']]
 
-  @property
-  def holeToken(self):
-    return self.vocab[self.metaTokens['[HOLE]']]
+#   @property
+#   def holeToken(self):
+#     return self.vocab[self.metaTokens['[HOLE]']]
 
-  @property
-  def endholeToken(self):
-    return self.vocab[self.metaTokens['[ENDHOLE]']]
+#   @property
+#   def endholeToken(self):
+#     return self.vocab[self.metaTokens['[ENDHOLE]']]
 
-  @property
-  def padToken(self):
-    return self.vocab[self.metaTokens['[PAD]']]
+#   @property
+#   def padToken(self):
+#     return self.vocab[self.metaTokens['[PAD]']]
 
-  @property
-  def startLabel(self):
-    return self.metaTokens['[START]']
+#   @property
+#   def startLabel(self):
+#     return self.metaTokens['[START]']
 
-  @property
-  def endLabel(self):
-    return self.metaTokens['[END]']
+#   @property
+#   def endLabel(self):
+#     return self.metaTokens['[END]']
 
-  @property
-  def maskLabel(self):
-    return self.metaTokens['[MASK]']
+#   @property
+#   def maskLabel(self):
+#     return self.metaTokens['[MASK]']
 
-  @property
-  def holeLabel(self):
-    return self.metaTokens['[HOLE]']
+#   @property
+#   def holeLabel(self):
+#     return self.metaTokens['[HOLE]']
 
-  @property
-  def endholeLabel(self):
-    return self.metaTokens['[ENDHOLE]']
+#   @property
+#   def endholeLabel(self):
+#     return self.metaTokens['[ENDHOLE]']
 
-  @property
-  def padLabel(self):
-    return self.metaTokens['[PAD]']
+#   @property
+#   def padLabel(self):
+#     return self.metaTokens['[PAD]']

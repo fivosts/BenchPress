@@ -405,9 +405,9 @@ class Corpus(object):
       encoded_db = encoded.EncodedContentFiles(
         self.config.pre_encoded_corpus_url
       )
-      atomizer = GreedyAtomizerFromEncodedDb(config.atomizer, encoded_db)
+      atomizer = GreedyAtomizerFromEncodedDb(self.config.atomizer, encoded_db)
     else:
-      atomizer = atomizers.FromText(config.atomizer, corpus_txt)
+      atomizer = atomizers.FromText(self.config.atomizer, corpus_txt)
 
     atomizer.ToFile(self.atomizer_path)
     return atomizer
