@@ -207,7 +207,7 @@ class AsciiCharacterAtomizer(AtomizerBase):
     return f"AsciiCharacterAtomizer[{self.vocab_size} chars]"
 
   @classmethod
-  def FromText(cls, text: str, mask_tokens: bool = False) -> "AsciiCharacterAtomizer":
+  def FromText(cls, text: str, mask_tokens: bool) -> "AsciiCharacterAtomizer":
     """Instantiate and an atomizer from a corpus text.
 
     Args:
@@ -238,9 +238,9 @@ class WordAtomizer(AtomizerBase):
   """A greedy atomizer supports multi-character tokens."""
 
   def __init__(self, vocab: typing.Dict[str, int], determine_chars=False):
-    self.determine_chars = determine_chars
     super(WordAtomizer, self).__init__(vocab)
 
+    self.determine_chars = determine_chars
     multichars = set(k for k in self.atoms if len(k) > 1)
     first_chars = set(a[0] for a in multichars)
     self.lookup = dict(
@@ -259,6 +259,7 @@ class WordAtomizer(AtomizerBase):
 
     def _AddToVocab(token: str) -> int:
       """Add a token to the vocabulary and return its index."""
+      ## TODO this will crash if cond1 = False && cond2 = True.
       if self.determine_chars and token not in self.vocab:
         max_index = max(self.vocab.values())
         self.vocab[token] = max_index + 1
@@ -301,10 +302,7 @@ class WordAtomizer(AtomizerBase):
 
   def __repr__(self) -> str:
     return f"WordAtomizer[{self.vocab_size} tokens]"
-corpus_text, 
-                                 config.token_list, 
-                                 mask_tokens, 
-                                 wpc_tok
+
   @classmethod
   def FromText(cls, text: str, tokens: typing.Set[str], mask_tokens: bool, wordpiece: bool) -> "WordAtomizer":
     """Instantiate and an atomizer from a corpus text.
