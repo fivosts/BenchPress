@@ -237,8 +237,11 @@ class AsciiCharacterAtomizer(AtomizerBase):
 class WordAtomizer(AtomizerBase):
   """A greedy atomizer supports multi-character tokens."""
 
-  def __init__(self, vocab: typing.Dict[str, int], determine_chars=False):
-    super(WordAtomizer, self).__init__(vocab)
+  def __init__(self, 
+               vocab:      typing.Dict[str, int], 
+               metaTokens: typing.Dict[str, str],
+               determine_chars = False):
+    super(WordAtomizer, self).__init__(vocab, metaTokens)
 
     self.determine_chars = determine_chars
     multichars = set(k for k in self.atoms if len(k) > 1)
@@ -336,9 +339,11 @@ class WordAtomizer(AtomizerBase):
       tokens.add(mt)
     # Instantiate a greedy atomizer using the full vocabulary.
     full_vocab = dict(zip(tokens, range(len(tokens))))
-    c = WordAtomizer(full_vocab, determine_chars=True)
+    c = WordAtomizer(full_vocab, metaTokens, determine_chars=True)
     # Derive the subset of the vocabulary required to encode the given text.
     tokens = sorted(list(set(c.TokenizeString(text))))
+    l.getLogger().critical("Hey babe")
+    exit()
     vocab_subset = dict(zip(tokens, range(len(tokens))))
     # Return a new atomizer using the subset vocabulary.
-    return WordAtomizer(vocab_subset)
+    return WordAtomizer(vocab_subset, metaTokens)
