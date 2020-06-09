@@ -307,17 +307,17 @@ class WordAtomizer(AtomizerBase):
     return f"WordAtomizer[{self.vocab_size} tokens]"
 
   @classmethod
-  def FromText(cls, text: str, tokens: typing.Set[str], mask_tokens: bool, wordpiece: bool) -> "WordAtomizer":
+  def FromText(cls, text: str, token_list: typing.Set[str], mask_tokens: bool, wordpiece: bool) -> "WordAtomizer":
     """Instantiate and an atomizer from a corpus text.
 
     Args:
       text: Text corpus
-      tokens: A list of multi-character tokens.
+      token_list: A list of multi-character token_list.
 
     Returns:
       An atomizer instance.
     """
-    if not tokens:
+    if not token_list:
       raise ValueError("No tokens specified")
 
     if wordpiece:
@@ -334,16 +334,14 @@ class WordAtomizer(AtomizerBase):
       }
     else:
       metaTokens = {}
-    # Add meta tokens to token set
+    # Add meta token_list to token set
     for mt in metaTokens.values():
-      tokens.add(mt)
+      token_list.add(mt)
     # Instantiate a greedy atomizer using the full vocabulary.
-    full_vocab = dict(zip(tokens, range(len(tokens))))
+    full_vocab = dict(zip(token_list, range(len(token_list))))
     c = WordAtomizer(full_vocab, metaTokens, determine_chars=True)
     # Derive the subset of the vocabulary required to encode the given text.
-    tokens = sorted(list(set(c.TokenizeString(text))))
-    l.getLogger().critical("Hey babe")
-    exit()
+    tokens = [mt for mt in metaTokens.values()] + sorted(list(set(c.TokenizeString(text))))
     vocab_subset = dict(zip(tokens, range(len(tokens))))
     # Return a new atomizer using the subset vocabulary.
     return WordAtomizer(vocab_subset, metaTokens)
