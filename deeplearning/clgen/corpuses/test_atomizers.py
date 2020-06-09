@@ -99,10 +99,10 @@ def test_AsciiCharacterAtomizer_DeatomizeIndices_error():
     c.DeatomizeIndices([1, 2, 5, 10, 0])
 
 
-# GreedyAtomizer
+# WordAtomizer
 
 
-def test_GreedyAtomizer_TokenizeString_1():
+def test_WordAtomizer_TokenizeString_1():
   test_vocab = {"abc": 1, "a": 2, "b": 3, "ab": 4, "c": 5, "cab": 6, " ": 7}
   test_in = "abcababbaabcabcaabccccabcabccabcccabcabc"
   test_out = [
@@ -127,19 +127,19 @@ def test_GreedyAtomizer_TokenizeString_1():
     "cab",
     "c",
   ]
-  c = atomizers.GreedyAtomizer(test_vocab)
+  c = atomizers.WordAtomizer(test_vocab)
   assert c.TokenizeString(test_in) == test_out
 
 
-def test_GreedyAtomizer_TokenizeString_2():
+def test_WordAtomizer_TokenizeString_2():
   test_vocab = {"volatile": 0, "voletile": 1, "vo": 2, " ": 3, "l": 4}
   test_in = "volatile voletile vol "
   test_out = ["volatile", " ", "voletile", " ", "vo", "l", " "]
-  c = atomizers.GreedyAtomizer(test_vocab)
+  c = atomizers.WordAtomizer(test_vocab)
   assert c.TokenizeString(test_in) == test_out
 
 
-def test_GreedyAtomizer_TokenizeString_3():
+def test_WordAtomizer_TokenizeString_3():
   test_in = """\
 __kernel void A(__global float* a, __global float* b, const int c) {
   int d = get_global_id(0);
@@ -234,11 +234,11 @@ __kernel void A(__global float* a, __global float* b, const int c) {
     "\n",
     "}",
   ]
-  c = atomizers.GreedyAtomizer.FromText(test_in, OPENCL_ATOMS)
+  c = atomizers.WordAtomizer.FromText(test_in, OPENCL_ATOMS)
   assert c.TokenizeString(test_in) == test_out
 
 
-def test_GreedyAtomizer_DeatomizeIndices():
+def test_WordAtomizer_DeatomizeIndices():
   test_in = """\
 __kernel void A(__global float* a, __global float* b, const int c) {
   int d = get_global_id(0);
@@ -247,12 +247,12 @@ __kernel void A(__global float* a, __global float* b, const int c) {
   }
 }\
 """
-  c = atomizers.GreedyAtomizer.FromText(test_in, OPENCL_ATOMS)
+  c = atomizers.WordAtomizer.FromText(test_in, OPENCL_ATOMS)
   a = c.AtomizeString(test_in)
   assert c.DeatomizeIndices(a) == test_in
 
 
-def test_GreedyAtomizer_FromText():
+def test_WordAtomizer_FromText():
   test_in = """\
 __kernel void A(__global float* a, __global float* b, const int c) {
   int d = get_global_id(0);
@@ -294,7 +294,7 @@ __kernel void A(__global float* a, __global float* b, const int c) {
     ",",
     "void",
   ]
-  c = atomizers.GreedyAtomizer.FromText(test_in, OPENCL_ATOMS)
+  c = atomizers.WordAtomizer.FromText(test_in, OPENCL_ATOMS)
   assert sorted(c.atoms) == sorted(tokens)
   assert c.vocab_size == len(tokens)
 

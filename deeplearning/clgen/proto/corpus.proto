@@ -50,7 +50,7 @@ message Corpus {
   message atomizer{
     required string token_types            = 10;
     optional string token_list             = 11;
-    optional bool   mask_atoms             = 12;
+    optional bool   mask_tokens            = 12;
     optional bool   wordpiece_tokenization = 13;
   }
   // A list of preprocessor passes to run on each contentfile in the corpus

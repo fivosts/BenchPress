@@ -19,29 +19,32 @@ An atomizer converts a block of text into a sequence of vocbulary tokens.
 import pathlib
 import pickle
 import typing
-from collections import Counter
-
+import json
 import numpy as np
 
+from collections import Counter
 from absl import flags
 from labm8.py import labdate
-
 from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
 def FromText(config, corpus_txt: str):
-  mask_atoms = False if config.mask_atoms is None else config.mask_atoms
+  mask_tokens = False if config.mask_tokens is None else config.mask_tokens
 
   if config.token_types   == "character":
     if config.token_list is not None:
       l.getLogger().warning("token list in character-based tokenization is going to be ignored.")
-    return AsciiCharacterAtomizer.FromText(corpus_txt, mask_atoms)
+    return AsciiCharacterAtomizer.FromText(corpus_txt, mask_tokens)
   elif config.token_types == "word":
+    with open(config.token_list, 'r') as f:
+      token_set = json.load(f)
+      token_set = set(token_set['opencl']['tokens'])
     wpc_tok = False if config.wordpiece_tokenization is None else config.wordpiece_tokenization
-    return WordAtomizer.FromText(corpus_text, 
-                                 config.token_list, 
-                                 mask_atoms, 
+
+    return WordAtomizer.FromText(corpus_text,
+                                 token_set, 
+                                 mask_tokens, 
                                  wpc_tok
                                 )
   else:
@@ -204,7 +207,7 @@ class AsciiCharacterAtomizer(AtomizerBase):
     return f"AsciiCharacterAtomizer[{self.vocab_size} chars]"
 
   @classmethod
-  def FromText(cls, text: str, mask_atoms: bool = False) -> "AsciiCharacterAtomizer":
+  def FromText(cls, text: str, mask_tokens: bool = False) -> "AsciiCharacterAtomizer":
     """Instantiate and an atomizer from a corpus text.
 
     Args:
@@ -213,7 +216,7 @@ class AsciiCharacterAtomizer(AtomizerBase):
     Returns:
       An atomizer instance.
     """
-    if mask_atoms:
+    if mask_tokens:
       metaTokens = {
           'startToken'   : '[START]',
           'endToken'     : '[END]',
@@ -298,27 +301,29 @@ class WordAtomizer(AtomizerBase):
 
   def __repr__(self) -> str:
     return f"WordAtomizer[{self.vocab_size} tokens]"
-
+corpus_text, 
+                                 config.token_list, 
+                                 mask_tokens, 
+                                 wpc_tok
   @classmethod
-  def FromText(cls, text: str, atoms: typing.Set[str]) -> "WordAtomizer":
+  def FromText(cls, text: str, tokens: typing.Set[str], mask_tokens: bool, wordpiece: bool) -> "WordAtomizer":
     """Instantiate and an atomizer from a corpus text.
 
     Args:
       text: Text corpus
-      atoms: A list of multi-character tokens.
+      tokens: A list of multi-character tokens.
 
     Returns:
       An atomizer instance.
     """
-    if not atoms:
-      raise ValueError("No atoms specified")
+    if not tokens:
+      raise ValueError("No tokens specified")
 
     # Instantiate a greedy atomizer using the full vocabulary.
-    full_vocab = dict(zip(atoms, range(len(atoms))))
+    full_vocab = dict(zip(tokens, range(len(tokens))))
     c = WordAtomizer(full_vocab, determine_chars=True)
     # Derive the subset of the vocabulary required to encode the given text.
     tokens = sorted(list(set(c.TokenizeString(text))))
     vocab_subset = dict(zip(tokens, range(len(tokens))))
-    end_time = labdate.MillisecondsTimestamp()
     # Return a new atomizer using the subset vocabulary.
     return WordAtomizer(vocab_subset)
