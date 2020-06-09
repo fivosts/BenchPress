@@ -23,7 +23,6 @@ from collections import Counter
 
 import numpy as np
 
-
 from absl import flags
 from labm8.py import labdate
 
