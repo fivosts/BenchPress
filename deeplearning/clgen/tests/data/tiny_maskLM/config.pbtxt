@@ -2,7 +2,10 @@ working_dir: "tiny_maskLM" ## This path is relative to "workspace_dir", which is
 model {
   corpus {
     local_tar_archive: "$PWD/corpus.tar.bz2"
-    maskLM_atomizer {
+    atomizer {
+      token_type: "word"
+      token_list: "deeplearning/clgen/corpuses/token_lists.json"
+      mask_tokens: true
       wordpiece_tokenization: false
     }
     contentfile_separator: "\n\n"

@@ -42,7 +42,7 @@ def FromText(config, corpus_txt: str):
       token_set = set(token_set['opencl']['tokens'])
     wpc_tok = False if config.wordpiece_tokenization is None else config.wordpiece_tokenization
 
-    return WordAtomizer.FromText(corpus_text,
+    return WordAtomizer.FromText(corpus_txt,
                                  token_set, 
                                  mask_tokens, 
                                  wpc_tok

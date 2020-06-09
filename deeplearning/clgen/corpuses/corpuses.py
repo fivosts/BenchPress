@@ -99,13 +99,13 @@ def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
     if config.atomizer.token_type == "word":
       pbutil.AssertFieldConstraint(config.atomizer,
                                   "token_list",
-                                  lambda x: os.path.isfile(x),
+                                  lambda x: os.path.isfile(str(ExpandConfigPath(x, path_prefix=FLAGS.clgen_local_path_prefix))),
                                   "Invalid token_list file"
                                   )
 
     return config
   except pbutil.ProtoValueError as e:
-    raise ValueError(e)
+    raise e
 
 
 class Corpus(object):
