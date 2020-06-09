@@ -48,7 +48,7 @@ message Corpus {
   }
   // The atomizer to use to encode the corpus.
   message atomizer{
-             string token_types            = 10;
+    required string token_types            = 10;
     optional string token_list             = 11;
     optional bool   mask_atoms             = 12;
     optional bool   wordpiece_tokenization = 13;
