@@ -317,6 +317,23 @@ class WordAtomizer(AtomizerBase):
     if not tokens:
       raise ValueError("No tokens specified")
 
+    if wordpiece:
+      raise NotImplementedError
+
+    if mask_tokens:
+      metaTokens = {
+          'startToken'   : '[START]',
+          'endToken'     : '[END]',
+          'padToken'     : '[PAD]',
+          'maskToken'    : '[MASK]',
+          'holeToken'    : '[HOLE]',
+          'endholeToken' : '[ENDHOLE]',
+      }
+    else:
+      metaTokens = {}
+    # Add meta tokens to token set
+    for mt in metaTokens.values():
+      tokens.add(mt)
     # Instantiate a greedy atomizer using the full vocabulary.
     full_vocab = dict(zip(tokens, range(len(tokens))))
     c = WordAtomizer(full_vocab, determine_chars=True)
