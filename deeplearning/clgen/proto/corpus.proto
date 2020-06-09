@@ -36,36 +36,25 @@ message Corpus {
   // Shell variables are expanded. E.g. $HOME -> /home/<user>.
   oneof contentfiles {
     // The ID of an already-cached corpus.
-    string content_id = 1;
+    string content_id             = 1;
     // The path to a directory on the local system containing content files.
-    string local_directory = 2;
+    string local_directory        = 2;
     // The path to a tarball archive file containing content files.
-    string local_tar_archive = 3;
+    string local_tar_archive      = 3;
     // The path to a database of encoded files.
     string pre_encoded_corpus_url = 4;
     // The path to a local directory where a new corpus will be fetched from github.
-    string fetch_github = 5;
+    string fetch_github           = 5;
   }
   // The atomizer to use to encode the corpus.
-  oneof atomizer {
-    bool ascii_character_atomizer = 20;
-    GreedyMulticharAtomizer greedy_multichar_atomizer = 21;
-    MaskLMAtomizer maskLM_atomizer = 22;
+  message atomizer{
+             string token_types            = 10;
+    optional string token_list             = 11;
+    optional bool   mask_atoms             = 12;
+    optional bool   wordpiece_tokenization = 13;
   }
   // A list of preprocessor passes to run on each contentfile in the corpus
   // prior to training, in the order in which they are run.
-  repeated string preprocessor = 30;
+  repeated string preprocessor          = 30;
   optional string contentfile_separator = 32;
-}
-
-message GreedyMulticharAtomizer {
-  // A list of multi-character tokens.
-  repeated string tokens = 1;
-}
-
-message MaskLMAtomizer {
-  // MASK LM decoding attributes as described in BERT
-  // Use Wordpiece to tokenize sequence
-  repeated bool wordpiece_tokenization = 1;
-
 }
