@@ -42,7 +42,7 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
 
-flags.DEFINE_integer("sample_per_epoch", 0, "Set above zero to sample model after every epoch.")
+flags.DEFINE_integer("sample_per_epoch", 5, "Set above zero to sample model after every epoch.")
 
 flags.DEFINE_boolean("use_tpu", False, "Whether to use TPU or GPU/CPU.")
 
@@ -76,28 +76,13 @@ flags.DEFINE_integer(
 class tfBert(backends.BackendBase):
 
   class BertEstimator(typing.NamedTuple):
-    estimator      : tf.compat.v1.estimator.tpu.TPUEstimator,
-    data_generator : data_generators.MaskLMBatchGenerator,
+    """Named tuple to wrap BERT estimator pipeline."""
+    estimator      : tf.compat.v1.estimator.tpu.TPUEstimator
+    data_generator : data_generators.MaskLMBatchGenerator
 
   def __init__(self, *args, **kwargs):
 
     super(tfBert, self).__init__(*args, **kwargs)
-    self.bertAttrs = {
-          "vocab_size"                      : self.atomizer.vocab_size,
-          "hidden_size"                     : self.config.architecture.hidden_size,
-          "num_hidden_layers"               : self.config.architecture.num_hidden_layers,
-          "num_attention_heads"             : self.config.architecture.num_attention_heads,
-          "intermediate_size"               : self.config.architecture.intermediate_size,
-          "hidden_act"                      : self.config.architecture.hidden_act,
-          "hidden_dropout_prob"             : 1.0 - self.config.architecture.hidden_dropout_prob,
-          "attention_probs_dropout_prob"    : 1.0 - self.config.architecture.attention_probs_dropout_prob,
-          "max_position_embeddings"         : self.config.architecture.max_position_embeddings,
-          "type_vocab_size"                 : self.config.architecture.type_vocab_size,
-          "initializer_range"               : self.config.architecture.initializer_range,
-    }
-
-    self.bert_config                        = model.BertConfig.from_dict(self.bertAttrs)
-
     self.train                              = None
     self.sample                             = None
     self.predict_generator                  = None
@@ -120,12 +105,31 @@ class tfBert(backends.BackendBase):
     l.getLogger().info("Logging path: \n{}".format(self.logfile_path))
     return
 
+  def _ConfigModelParams(self):
+    self.bertAttrs = {
+          "vocab_size"                      : self.atomizer.vocab_size,
+          "hidden_size"                     : self.config.architecture.hidden_size,
+          "num_hidden_layers"               : self.config.architecture.num_hidden_layers,
+          "num_attention_heads"             : self.config.architecture.num_attention_heads,
+          "intermediate_size"               : self.config.architecture.intermediate_size,
+          "hidden_act"                      : self.config.architecture.hidden_act,
+          "hidden_dropout_prob"             : 1.0 - self.config.architecture.hidden_dropout_prob,
+          "attention_probs_dropout_prob"    : 1.0 - self.config.architecture.attention_probs_dropout_prob,
+          "max_position_embeddings"         : self.config.architecture.max_position_embeddings,
+          "type_vocab_size"                 : self.config.architecture.type_vocab_size,
+          "initializer_range"               : self.config.architecture.initializer_range,
+    }
+    self.bert_config                        = model.BertConfig.from_dict(self.bertAttrs)
+    return
+
   def _ConfigTrainParams(self, 
                          data_generator: data_generators.MaskLMBatchGenerator
                         ) -> None:
     """
     Model parameter initialization for training and validation.
     """
+    self._ConfigModelParams()
+
     self.sequence_length                  = self.config.training.sequence_length
     self.train_batch_size                 = self.config.training.batch_size
     self.eval_batch_size                  = self.config.training.batch_size
@@ -178,12 +182,14 @@ class tfBert(backends.BackendBase):
     return
 
   def _ConfigSampleParams(self,
-                          data_generator: data_generators.MaskLMBatchGenerator
-                          sampler: samplers.Sampler
+                          data_generator: data_generators.MaskLMBatchGenerator,
+                          sampler: samplers.Sampler,
                           ) -> None:
     """
     Model parameter initialization for inference.
     """
+    self._ConfigModelParams()
+
     self.sequence_length = sampler.sequence_length
     self.sampler         = sampler
 
