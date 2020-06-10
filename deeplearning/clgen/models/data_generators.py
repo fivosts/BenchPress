@@ -820,23 +820,32 @@ class MaskLMBatchGenerator(object):
           hole_length = i
           break
 
-      # Finally, 
-      # hole_length = min(
-      #                 min(rand_len, len(input_ids) - input_id_idx), 
-      #                 rand_len
-      #                 )
-
       # Target token for classifier is either the first token of the hole, or endholToken if hole is empty
-      target    = input_ids[ input_id_idx] if hole_length > 0 else self.atomizer.endholeToken
-      # if self.rngen.random() < 0.8:
-      ## TODO that only works fine when hole_length = 1
-      input_ids = input_ids[:input_id_idx] + [self.atomizer.holeToken] + input_ids[input_id_idx + hole_length:]
+      target = input_ids[input_id_idx] if hole_length > 0 else self.atomizer.endholeToken
+
+      ## TODO. Think about '== self.atomizer.holeToken' condition.
+      # if FLAGS.randomize_mask_placement and hole_length != 0:
+      #   if self.rngen.random() < 0.8:
+      #     replacement_token = self.atomizer.holeToken
+      #   else:
+      #     if self.rngen.random() > 0.5:
+      #       # Sometimes keep the original token.
+      #       replacement_token = target
+      #     else:
+      #       # Other times add a random one.
+      #       replacement_token = self.rngen.randint(0, self.atomizer.vocab_size - 1)
       # else:
-      #   pass
+      #   replacement_token = self.atomizer.holeToken
+      replacement_token = self.atomizer.holeToken
+
+      input_ids = (input_ids[:input_id_idx] + 
+                   [replacement_token] + 
+                   input_ids[input_id_idx + hole_length:])
 
       masked_lms.append(MaskedLmInstance(pos_index=input_id_idx, token_id=target))
-      assert (input_ids[input_id_idx] == self.atomizer.holeToken, 
-            "target index does not correspond to hole token: {}".format(self.atomizer.DeatomizeIndices([input_ids[input_id_idx]])))
+      if not FLAGS.randomize_mask_placement:
+        assert (input_ids[input_id_idx] == self.atomizer.holeToken, 
+              "target index does not correspond to hole token: {}".format(self.atomizer.DeatomizeIndices([input_ids[input_id_idx]])))
 
       # Adjust the offset of all affected tokens, from pos_index and after.
       offset_idxs[pos_index:] += 1 - hole_length
