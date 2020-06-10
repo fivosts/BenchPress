@@ -222,7 +222,15 @@ class tfBert(backends.BackendBase):
                                         )
                         )
 
-      estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
+      if FLAGS.sample_per_epoch > 0:
+        self.InitSampling("""TODO""")
+        for _ in range(self.num_epochs):
+          estimator.train(input_fn = train_input_fn, steps = self.steps_per_epoch)
+          self.InitSampleBatch("""TODO""")
+          self.SampleNextIndices("""TODO""")
+
+      else:
+        estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
 
       l.getLogger().info("BERT Validation")
 
