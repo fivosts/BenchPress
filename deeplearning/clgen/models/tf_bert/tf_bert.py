@@ -43,7 +43,7 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
 
-flags.DEFINE_integer("sample_per_epoch", 5, "Set above zero to sample model after every epoch.")
+flags.DEFINE_integer("sample_per_epoch", 3, "Set above zero to sample model after every epoch.")
 
 flags.DEFINE_boolean("use_tpu", False, "Whether to use TPU or GPU/CPU.")
 
@@ -268,7 +268,7 @@ class tfBert(backends.BackendBase):
         def getMockSampler():
           from labm8.py import pbutil
           sampler_str = [
-              "start_text: \"kernel void D(__global double* f, const double g, __global double* h, c[HOLE][HOLE][HOLE]t double i) {  [HOLE][HOLE][HOLE] k = get_global_id(0);}\"",
+              "start_text: \"kernel void A([HOLE]",
               "batch_size: 1",
               "sequence_length: {}".format(self.sequence_length),
               "temperature_micros: 800000",
