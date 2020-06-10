@@ -36,10 +36,10 @@ model {
     initializer_range: 0.02
   }
   training {
-    num_train_steps: 30000
-    num_warmup_steps: 4000
+    num_train_steps: 180000
+    num_warmup_steps: 20000
     sequence_length: 768
-    batch_size: 8
+    batch_size: 16
     max_predictions_per_seq: 200
     dupe_factor: 10
     masked_lm_prob: 0.25

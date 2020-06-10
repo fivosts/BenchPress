@@ -551,7 +551,7 @@ class MaskLMBatchGenerator(object):
       assert len(self.shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
 
       # Set corpus epoch parameters
-      self.steps_per_epoch = min(self.training_opts.num_train_steps, 500) ## TODO add this as flag or pb param
+      self.steps_per_epoch = min(self.training_opts.num_train_steps, 5000) ## TODO add this as flag or pb param
       self.num_epochs      = int(self.training_opts.num_train_steps / self.steps_per_epoch)
 
       assert self.shaped_corpus.ndim     == 2, "corpus dim: {}".format(self.shaped_corpus.shape)
@@ -811,7 +811,7 @@ class MaskLMBatchGenerator(object):
               .format(seq[pos_index], input_ids[input_id_idx]))
 
       # Random number to represent the length of this hole.
-      hole_length = self.rngen.randint(0, 5)
+      hole_length = self.rngen.randint(0, 3)
       # Inside range, make sure hole length does not run over input_id_idx bounds
       hole_length = min(hole_length, len(input_ids) - input_id_idx)
       # Confirm there is no conflict with another hole, further down the sequence.
