@@ -21,6 +21,7 @@ from __future__ import print_function
 import os
 import typing
 import pathlib
+import tensorflow_probability as tfp
 
 from deeplearning.clgen import samplers
 from deeplearning.clgen import telemetry
@@ -43,6 +44,8 @@ flags.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
 flags.DEFINE_integer("sample_per_epoch", 0, "Set above zero to sample model after every epoch.")
 
 flags.DEFINE_boolean("use_tpu", False, "Whether to use TPU or GPU/CPU.")
+
+flags.DEFINE_boolean("categorical_sampling", True, "Use categorical distribution on logits when sampling.")
 
 flags.DEFINE_string(
     "tpu_name", None,
@@ -500,6 +503,14 @@ class tfBert(backends.BackendBase):
 
         masked_lm_predictions     = tf.argmax(masked_lm_log_probs,     axis = -1, output_type = tf.int32)
         next_sentence_predictions = tf.argmax(next_sentence_log_probs, axis = -1, output_type = tf.int32)
+
+        if FLAGS.categorical_sampling:
+
+          mlm_sampler = tfp.distributions.Categorical(logits = masked_lm_predictions)
+          nsp_sampler = tfp.distributions.Categorical(logits = next_sentence_predictions)
+
+          masked_lm_predictions     = mlm_sampler.sample()
+          next_sentence_predictions = nsp_sampler.sample()
 
         masked_lm_predictions     = tf.reshape(masked_lm_predictions,     shape = [mask_batch_size, mask_seq_length])
         next_sentence_predictions = tf.reshape(next_sentence_predictions, shape = [next_batch_size, next_seq_length])
