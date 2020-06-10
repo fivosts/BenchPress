@@ -94,21 +94,28 @@ def StripTrailingWhitespace(text: str) -> str:
 @public.clgen_preprocessor
 def ExtractSingleKernels(text: str) -> str:
 
+  # OpenCL kernels can only be void
   kernel_specifier = 'kernel void'
   kernel_chunks = text.split(kernel_specifier)
   actual_kernels, global_space = [], []
 
   for idx, chunk in enumerate(kernel_chunks):
     if idx == 0:
+      # There is no way the left-most part is not empty or global
       if chunk != '':
         global_space.append(chunk)
     else:
+      # Given this preprocessor is called after compile,
+      # we are certain that brackets will be paired
       num_lbrack, num_rbrack, chunk_idx = 0, 0, 0
-      while (num_lbrack  == 0 
-         or  num_lbrack  != num_rbrack 
-        and  chunk_idx   <= len(chunk)):
+      while ((num_lbrack  == 0 
+         or   num_lbrack  != num_rbrack)
+        and   chunk_idx   <  len(chunk)):
 
-        cur_tok = chunk[chunk_idx]
+        try:
+          cur_tok = chunk[chunk_idx]
+        except IndexError:
+          l.getLogger().warn(chunk)
         if   cur_tok == "{":
           num_lbrack += 1
         elif cur_tok == "}":
@@ -116,13 +123,17 @@ def ExtractSingleKernels(text: str) -> str:
         chunk_idx += 1
 
       while chunk_idx < len(chunk):
+        # Without this line, global_space tends to gather lots of newlines and wspaces
+        # Then they are replicated and become massive. Better isolate only actual text there.
         if chunk[chunk_idx] == ' ' or chunk[chunk_idx] == '\n':
           chunk_idx += 1
         else:
           break
 
+      # Add to kernels all global space met so far + 'kernel void' + the kernel's body
       actual_kernels.append(''.join(global_space) + kernel_specifier + chunk[:chunk_idx])
       if ''.join(chunk[chunk_idx:]) != '':
+        # All the rest below are appended to global_space
         global_space.append(chunk[chunk_idx:])
 
   return actual_kernels

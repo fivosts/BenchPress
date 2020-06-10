@@ -15,7 +15,6 @@
 """Unit tests for ///test_common.py."""
 import pytest
 
-
 from deeplearning.clgen.preprocessors import common
 from absl import flags
 from labm8.py import test
@@ -84,6 +83,75 @@ def test_benchmark_StripDuplicateEmptyLines_c_hello_world(benchmark):
   """Benchmark StripDuplicateEmptyLines on a "hello world" C program."""
   benchmark(common.StripDuplicateEmptyLines, HELLO_WORLD_C)
 
+EXTRACT_KERNEL_TEST[
+"""
+void A(ulong* a, ulong b) {
+  *a += b;
+}
+int B() {
+  return (get_global_id(2) * get_global_size(1) + get_global_id(1)) * get_global_size(0) + get_global_id(0);
+}
+union U5 {
+  short f0;
+  int f3;
+};
+struct S6 {
+  union U5 g_75[5][7][2];
+  union U5** g_91[78];
+};
+kernel void C(global ulong* a) {
+  int b, c, d;
+  struct S6 e;
+  struct S6* f = &e;
+  union U5* g;
+  struct S6 h = { {{{{0xD5e}}, h;
+  ulong i = b = 0;
+  for (; b < 9; b++) {
+    c = 0;
+    {
+      d = 0;
+      { A(&i, f->g_75[b][c][d].f0); }
+    }
+  }
+  a[B()] = i;
+}
+""",
+"""
+int A(int a);
+kernel void B(global int* a);
+kernel void C(global int* a) {
+  int b = A(0);
+
+  a[b] = b;
+  B(a);
+}
+""",
+"""
+typedef struct {
+  local int* min;
+  local int* max;
+} Inner;
+
+typedef struct {
+  Inner ll;
+} Outer;
+
+local int* A(local int* a) {
+  return (((int)a) & 0x1) ? a : a + 1;
+}
+
+kernel void B(void) {
+  local int a;
+  Outer b = { auter* c = &b;
+  *A(c->ll.max) = 1;
+}
+""",
+]
+
+def test_ExtractSingleKernels():
+  with test.Raises(IndexError):
+    for input_string in EXTRACT_KERNEL_TEST:
+      common.ExtractSingleKernels(input_string)
 
 if __name__ == "__main__":
   test.Main()

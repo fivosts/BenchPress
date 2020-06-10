@@ -96,9 +96,9 @@ def NormalizeIdentifiers(
   EUGLY_CODE = 204
   if process.returncode == EUGLY_CODE:
     # Propagate the error:
-    raise RuntimeError(stderr)
+    raise ValueError(stderr)
   elif process.returncode == 9:
-    raise RuntimeError(
+    raise ValueError(
       f"clang_rewriter failed to complete after {timeout_seconds}s"
     )
   # The rewriter process can still fail because of some other compilation

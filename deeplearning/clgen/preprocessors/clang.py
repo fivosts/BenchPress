@@ -121,11 +121,11 @@ def Preprocess(
   )
   stdout, stderr = process.communicate(src)
   if process.returncode == 9:
-    raise RuntimeError(
+    raise ValueError(
       f"Clang preprocessor timed out after {timeout_seconds}s"
     )
   elif process.returncode != 0:
-    raise RuntimeError(stderr)
+    raise ValueError(stderr)
   if strip_preprocessor_lines:
     return StripPreprocessorLines(stdout)
   else:
@@ -214,7 +214,7 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
   )
   stdout, stderr = process.communicate(text)
   if process.returncode == 9:
-    raise TimeoutError(f"clang-format timed out after {timeout_seconds}s")
+    raise ValueError(f"clang-format timed out after {timeout_seconds}s")
   elif process.returncode != 0:
-    raise RuntimeError(stderr)
+    raise ValueError(stderr)
   return stdout
