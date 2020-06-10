@@ -123,10 +123,7 @@ class tfBert(backends.BackendBase):
                          data_generator: data_generators.MaskLMBatchGenerator
                         ) -> None:
     """
-    Core Model parameter initialization
-
-    If sampler is not None, then sampling mode is triggered.
-    Otherwise training/evaluation mode is implied.
+    Model parameter initialization for training and validation.
     """
     self.sequence_length                  = self.config.training.sequence_length
     self.train_batch_size                 = self.config.training.batch_size
@@ -146,20 +143,20 @@ class tfBert(backends.BackendBase):
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
       tpu_cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
-          FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
+          FLAGS.tpu_name, zone = FLAGS.tpu_zone, project = FLAGS.gcp_project)
 
     is_per_host = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
     run_config  = tf.compat.v1.estimator.tpu.RunConfig(
-                    cluster = tpu_cluster_resolver,
-                    master = FLAGS.master,
+                    cluster   = tpu_cluster_resolver,
+                    master    = FLAGS.master,
                     model_dir = str(self.ckpt_path),
-                    save_checkpoints_steps = self.steps_per_epoch,
-                    save_summary_steps = self.steps_per_epoch,
-                    keep_checkpoint_max = 0,
-                    log_step_count_steps = self.steps_per_epoch,
+                    save_checkpoints_steps  = self.steps_per_epoch,
+                    save_summary_steps      = self.steps_per_epoch,
+                    keep_checkpoint_max     = 0,
+                    log_step_count_steps    = self.steps_per_epoch,
                     tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
                         iterations_per_loop = self.steps_per_epoch,
-                        num_shards = FLAGS.num_tpu_cores,
+                        num_shards          = FLAGS.num_tpu_cores,
                         per_host_input_for_training = is_per_host)
                     )
     model_fn    = self._model_fn_builder(
@@ -184,10 +181,7 @@ class tfBert(backends.BackendBase):
                           sampler: samplers.Sampler
                           ) -> None:
     """
-    Core Model parameter initialization
-
-    If sampler is not None, then sampling mode is triggered.
-    Otherwise training/evaluation mode is implied.
+    Model parameter initialization for inference.
     """
     self.sequence_length = sampler.sequence_length
     self.sampler         = sampler
@@ -201,13 +195,13 @@ class tfBert(backends.BackendBase):
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
       tpu_cluster_resolver = tf.compat.v1.cluster_resolver.TPUClusterResolver(
-          FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
+          FLAGS.tpu_name, zone = FLAGS.tpu_zone, project = FLAGS.gcp_project)
 
     is_per_host = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
-    run_config = tf.compat.v1.estimator.tpu.RunConfig(
-        cluster = tpu_cluster_resolver,
-        master = FLAGS.master,
-        model_dir = str(self.ckpt_path),
+    run_config  = tf.compat.v1.estimator.tpu.RunConfig(
+        cluster    = tpu_cluster_resolver,
+        master     = FLAGS.master,
+        model_dir  = str(self.ckpt_path),
         tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
             num_shards = FLAGS.num_tpu_cores,
             per_host_input_for_training = is_per_host))
@@ -237,11 +231,7 @@ class tfBert(backends.BackendBase):
 
     del unused_kwargs
 
-    ## Initialize params and data generator
-    ## Not the best practise to have this called during only inference
-
     if not self.is_trained:
-
       if self.train is None:
         data_generator = data_generators.MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
                            corpus, self.config.training, self.cache.path
@@ -299,9 +289,10 @@ class tfBert(backends.BackendBase):
     return 
 
   def InitSampleBatch(self,
-                      sampler: samplers.Sampler, 
+                      **unused_kwargs, 
                       ) -> None:
     """Batch-specific initialization. Called once when a new batch is going to be generated"""
+    del unused_kwargs
     self.predict_generator = None
     self.sample.data_generator.InitSampleBatch(
         input_sample = sampler.encoded_start_text,
