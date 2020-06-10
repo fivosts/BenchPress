@@ -27,6 +27,7 @@ from deeplearning.clgen import samplers
 from deeplearning.clgen import telemetry
 from deeplearning.clgen.tf import tf
 from deeplearning.clgen.proto import model_pb2
+from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import data_generators
 from deeplearning.clgen.models.tf_bert import model
