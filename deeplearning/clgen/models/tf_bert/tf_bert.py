@@ -40,6 +40,8 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
 
+flags.DEFINE_integer("sample_per_epoch", 0, "Set above zero to sample model after every epoch.")
+
 flags.DEFINE_boolean("use_tpu", False, "Whether to use TPU or GPU/CPU.")
 
 flags.DEFINE_string(
@@ -69,49 +71,14 @@ flags.DEFINE_integer(
 
 class tfBert(backends.BackendBase):
 
+  class BertEstimator(typing.NamedTuple):
+    estimator      : tf.compat.v1.estimator.tpu.TPUEstimator,
+    data_generator : data_generators.MaskLMBatchGenerator,
+
   def __init__(self, *args, **kwargs):
 
     super(tfBert, self).__init__(*args, **kwargs)
-    self.bertConfig = {
-          "vocab_size"                      : None,
-          "hidden_size"                     : None,
-          "num_hidden_layers"               : None,
-          "num_attention_heads"             : None,
-          "intermediate_size"               : None,
-          "hidden_act"                      : None,
-          "hidden_dropout_prob"             : None,
-          "attention_probs_dropout_prob"    : None,
-          "max_position_embeddings"         : None,
-          "type_vocab_size"                 : None,
-          "initializer_range"               : None,
-    }
-
-    self.sequence_length                    = None
-    self.train_batch_size                   = None
-    self.eval_batch_size                    = None
-    self.learning_rate                      = None
-    self.num_train_steps                    = None
-    self.num_warmup_steps                   = None
-
-    self.sample_estimator                   = None
-    self.sample_generator                   = None
-
-    self.ckpt_path                          = self.cache.path / "checkpoints"
-    self.logfile_path                       = self.cache.path / "logs"
-    self.sample_path                        = self.cache.path / "samples"
-
-    return
-
-  def _ConfigModelParams(self,
-                         sampler: samplers.Sampler = None
-                         ) -> None:
-    """
-    Core Model parameter initialization
-
-    If sampler is not None, then sampling mode is triggered.
-    Otherwise training/evaluation mode is implied.
-    """
-    self.bertConfig = {
+    self.bertAttrs = {
           "vocab_size"                      : self.atomizer.vocab_size,
           "hidden_size"                     : self.config.architecture.hidden_size,
           "num_hidden_layers"               : self.config.architecture.num_hidden_layers,
@@ -125,24 +92,132 @@ class tfBert(backends.BackendBase):
           "initializer_range"               : self.config.architecture.initializer_range,
     }
 
-    if sampler is None:
-      self.sequence_length                  = self.config.training.sequence_length
-      self.train_batch_size                 = self.config.training.batch_size
-      self.eval_batch_size                  = self.config.training.batch_size
-      self.learning_rate                    = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
-      self.num_train_steps                  = self.config.training.num_train_steps
-      self.num_warmup_steps                 = self.config.training.num_warmup_steps
+    self.bert_config                        = model.BertConfig.from_dict(self.bertAttrs)
 
-      self.telemetry                        = telemetry.TrainingLogger(self.logfile_path)
-      self.steps_per_epoch                  = self.data_generator.steps_per_epoch
-      self.num_epochs                       = self.data_generator.num_epochs
-      self.max_eval_steps                   = FLAGS.max_eval_steps
+    self.train                              = None
+    self.sample                             = None
+    self.predict_generator                  = None
+    self.sampler                            = None
 
-      self.validation_results_file          = "val_results.txt"
-      self.validation_results_path          = os.path.join(str(self.logfile_path), self.validation_results_file)
-    else:
-      self.sequence_length                  = sampler.sequence_length
+    self.sequence_length                    = None
+    self.train_batch_size                   = None
+    self.eval_batch_size                    = None
+    self.learning_rate                      = None
+    self.num_train_steps                    = None
+    self.num_warmup_steps                   = None
+    self.telemetry                          = None
 
+    self.ckpt_path                          = self.cache.path / "checkpoints"
+    self.logfile_path                       = self.cache.path / "logs"
+    self.sample_path                        = self.cache.path / "samples"
+
+    l.getLogger().info("BERT Model config initialized.")
+    l.getLogger().info("Checkpoint path: \n{}".format(self.ckpt_path))
+    l.getLogger().info("Logging path: \n{}".format(self.logfile_path))
+    return
+
+  def _ConfigTrainParams(self, 
+                         data_generator: data_generators.MaskLMBatchGenerator
+                        ) -> None:
+    """
+    Core Model parameter initialization
+
+    If sampler is not None, then sampling mode is triggered.
+    Otherwise training/evaluation mode is implied.
+    """
+    self.sequence_length                  = self.config.training.sequence_length
+    self.train_batch_size                 = self.config.training.batch_size
+    self.eval_batch_size                  = self.config.training.batch_size
+    self.learning_rate                    = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
+    self.num_train_steps                  = self.config.training.num_train_steps
+    self.num_warmup_steps                 = self.config.training.num_warmup_steps
+
+    self.telemetry                        = telemetry.TrainingLogger(self.logfile_path)
+    self.steps_per_epoch                  = data_generator.steps_per_epoch
+    self.num_epochs                       = data_generator.num_epochs
+    self.max_eval_steps                   = FLAGS.max_eval_steps
+
+    self.validation_results_file          = "val_results.txt"
+    self.validation_results_path          = os.path.join(str(self.logfile_path), self.validation_results_file)
+
+    tpu_cluster_resolver = None
+    if FLAGS.use_tpu and FLAGS.tpu_name:
+      tpu_cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
+          FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
+
+    is_per_host = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
+    run_config  = tf.compat.v1.estimator.tpu.RunConfig(
+                    cluster = tpu_cluster_resolver,
+                    master = FLAGS.master,
+                    model_dir = str(self.ckpt_path),
+                    save_checkpoints_steps = self.steps_per_epoch,
+                    save_summary_steps = self.steps_per_epoch,
+                    keep_checkpoint_max = 0,
+                    log_step_count_steps = self.steps_per_epoch,
+                    tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
+                        iterations_per_loop = self.steps_per_epoch,
+                        num_shards = FLAGS.num_tpu_cores,
+                        per_host_input_for_training = is_per_host)
+                    )
+    model_fn    = self._model_fn_builder(
+                    bert_config = self.bert_config
+                    )
+    # If TPU is not available, this will fall back to normal Estimator on CPU
+    # or GPU.
+    self.train = BertEstimator(tf.compat.v1.estimator.tpu.TPUEstimator(
+                            use_tpu = FLAGS.use_tpu,
+                            model_fn = model_fn,
+                            config = run_config,
+                            train_batch_size = self.train_batch_size,
+                            eval_batch_size = self.eval_batch_size
+                            ),
+                 data_generator
+                 )
+    l.getLogger().info(self.GetShortSummary())
+    return
+
+  def _ConfigSampleParams(self,
+                          data_generator: data_generators.MaskLMBatchGenerator
+                          sampler: samplers.Sampler
+                          ) -> None:
+    """
+    Core Model parameter initialization
+
+    If sampler is not None, then sampling mode is triggered.
+    Otherwise training/evaluation mode is implied.
+    """
+    self.sequence_length = sampler.sequence_length
+    self.sampler         = sampler
+
+    if self.sequence_length > self.bertAttrs['max_position_embeddings']:
+      raise ValueError(
+          "Cannot use sequence length %d because the BERT model "
+          "was only trained up to sequence length %d" %
+          (self.sequence_length, self.bertAttrs['max_position_embeddings']))
+      
+    tpu_cluster_resolver = None
+    if FLAGS.use_tpu and FLAGS.tpu_name:
+      tpu_cluster_resolver = tf.compat.v1.cluster_resolver.TPUClusterResolver(
+          FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
+
+    is_per_host = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
+    run_config = tf.compat.v1.estimator.tpu.RunConfig(
+        cluster = tpu_cluster_resolver,
+        master = FLAGS.master,
+        model_dir = str(self.ckpt_path),
+        tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
+            num_shards = FLAGS.num_tpu_cores,
+            per_host_input_for_training = is_per_host))
+
+    model_fn = self._model_fn_builder(bert_config = self.bert_config)
+
+    # If TPU is not available, this will fall back to normal Estimator on CPU
+    # or GPU.
+    self.sample = tf.compat.v1.estimator.tpu.TPUEstimator(
+        use_tpu = FLAGS.use_tpu,
+        model_fn = model_fn,
+        config = run_config,
+        predict_batch_size = sampler.batch_size)
     return
 
   @property
@@ -161,85 +236,45 @@ class tfBert(backends.BackendBase):
 
     ## Initialize params and data generator
     ## Not the best practise to have this called during only inference
-    self.data_generator = data_generators.MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
-                              corpus, self.config.training, self.cache.path
-                           )
-    self._ConfigModelParams()
 
     if not self.is_trained:
+
+      if self.train is None:
+        data_generator = data_generators.MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
+                           corpus, self.config.training, self.cache.path
+                          )
+        self._ConfigTrainParams(data_generator)
 
       ## Acquire GPU Lock before anything else is done
       # gpu_scheduler.LockExclusiveProcessGpuAccess()
 
-      ## Generate BERT Model from dict params
-      bert_config = model.BertConfig.from_dict(self.bertConfig)
-
-      l.getLogger().info("Checkpoint path: \n{}".format(self.ckpt_path))
-      l.getLogger().info("Logging path: \n{}".format(self.logfile_path))
-      
-      tpu_cluster_resolver = None
-      if FLAGS.use_tpu and FLAGS.tpu_name:
-        tpu_cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
-            FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
-
-      is_per_host = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
-      run_config = tf.compat.v1.estimator.tpu.RunConfig(
-          cluster = tpu_cluster_resolver,
-          master = FLAGS.master,
-          model_dir = str(self.ckpt_path),
-          save_checkpoints_steps = self.steps_per_epoch,
-          save_summary_steps = self.steps_per_epoch,
-          keep_checkpoint_max = 0,
-          log_step_count_steps = self.steps_per_epoch,
-          tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
-              iterations_per_loop = self.steps_per_epoch,
-              num_shards = FLAGS.num_tpu_cores,
-              per_host_input_for_training = is_per_host))
-
-      model_fn = self._model_fn_builder(bert_config = bert_config)
-
-      # If TPU is not available, this will fall back to normal Estimator on CPU
-      # or GPU.
-      estimator = tf.compat.v1.estimator.tpu.TPUEstimator(
-          use_tpu = FLAGS.use_tpu,
-          model_fn = model_fn,
-          config = run_config,
-          train_batch_size = self.train_batch_size,
-          eval_batch_size = self.eval_batch_size)
-
-      l.getLogger().info("BERT Training initialization")
-      l.getLogger().info(self.GetShortSummary())
-
-      train_input_fn = self.data_generator.generateTfDataset(
+      train_input_fn = self.train.data_generator.generateTfDataset(
           sequence_length = self.sequence_length,
           num_cpu_threads = 8,
           use_tpu = FLAGS.use_tpu,
           is_training = True)
 
-      l.getLogger().info("Running model for {} steps".format(self.num_train_steps))
       l.getLogger().info("Splitting {} steps into {} equivalent epochs, {} steps each".format(
                                         self.num_train_steps, self.num_epochs, self.steps_per_epoch
                                         )
                         )
-
       if FLAGS.sample_per_epoch > 0:
         self.InitSampling("""TODO""")
         for _ in range(self.num_epochs):
-          estimator.train(input_fn = train_input_fn, steps = self.steps_per_epoch)
+          self.train.estimator.train(input_fn = train_input_fn, steps = self.steps_per_epoch)
           self.InitSampleBatch("""TODO""")
           self.SampleNextIndices("""TODO""")
-
       else:
-        estimator.train(input_fn=train_input_fn, max_steps = self.num_train_steps)
+        self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps)
 
       l.getLogger().info("BERT Validation")
 
-      eval_input_fn = self.data_generator.generateTfDataset(
-          sequence_length=self.sequence_length,
+      eval_input_fn = self.train.data_generator.generateTfDataset(
+          sequence_length = self.sequence_length,
           num_cpu_threads = 8,
           is_training=False)
 
-      result = estimator.evaluate(input_fn=eval_input_fn, steps=self.max_eval_steps)
+      result = self.train.estimator.evaluate(input_fn=eval_input_fn, steps=self.max_eval_steps)
       self._writeValidation(result)
 
     self.telemetry.TfRecordEpochs()
@@ -250,55 +285,22 @@ class tfBert(backends.BackendBase):
                    seed: typing.Optional[int] = None
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
-    self.data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
-                            sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings
-                          )
-
-    if self.bertConfig is None:
-      self._ConfigModelParams(sampler)
-    bert_config = model.BertConfig.from_dict(self.bertConfig)
-
-    if self.sequence_length > self.bertConfig['max_position_embeddings']:
-      raise ValueError(
-          "Cannot use sequence length %d because the BERT model "
-          "was only trained up to sequence length %d" %
-          (self.sequence_length, self.bertConfig['max_position_embeddings']))
-
-    tpu_cluster_resolver = None
-    if FLAGS.use_tpu and FLAGS.tpu_name:
-      tpu_cluster_resolver = tf.compat.v1.cluster_resolver.TPUClusterResolver(
-          FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
-
-    is_per_host = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
-    run_config = tf.compat.v1.estimator.tpu.RunConfig(
-        cluster = tpu_cluster_resolver,
-        master = FLAGS.master,
-        model_dir = str(self.ckpt_path),
-        tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
-            num_shards = FLAGS.num_tpu_cores,
-            per_host_input_for_training = is_per_host))
-
-    model_fn = self._model_fn_builder(bert_config = bert_config)
-
-    # If TPU is not available, this will fall back to normal Estimator on CPU
-    # or GPU.
-    self.sample_estimator = tf.compat.v1.estimator.tpu.TPUEstimator(
-        use_tpu = FLAGS.use_tpu,
-        model_fn = model_fn,
-        config = run_config,
-        predict_batch_size = sampler.batch_size)
+    if self.sample is None or sampler != self.sampler:
+      data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
+                         sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings
+                       )
+      self._ConfigSampleParams(data_generator, sampler)
 
     ## TODO save that stuff somewhere
     l.getLogger().info("Initialized BERT sampler in {}".format(self.sample_path))
-
     return 
 
   def InitSampleBatch(self,
-                   sampler: samplers.Sampler, 
-                   ) -> None:
+                      sampler: samplers.Sampler, 
+                      ) -> None:
     """Batch-specific initialization. Called once when a new batch is going to be generated"""
-    self.sample_generator = None
-    self.data_generator.InitSampleBatch(
+    self.predict_generator = None
+    self.sample.data_generator.InitSampleBatch(
         input_sample = sampler.encoded_start_text,
         sequence_length = self.sequence_length,
         )
@@ -306,17 +308,18 @@ class tfBert(backends.BackendBase):
 
   def SampleNextIndices(self, sampler: samplers.Sampler, done):
     """Called iteratively to build a single batch of samples, until termination criteria stops calling"""
-    if self.sample_estimator is None:
+    if self.sample is None:
       raise ValueError("Bert sampler has not been initialized.")
 
-    if self.sample_generator is None:
-      self.sample_generator = self.sample_estimator.predict(input_fn = self.data_generator.generateTfSamples())
+    if self.predict_generator is None:
+      predict_input_fn = self.sample.data_generator.generateTfSamples()
+      self.predict_generator = self.sample.estimator.predict(input_fn = predict_input_fn)
 
     l.getLogger().warning("TODO!")
     l.getLogger().warning("When all data are fetched, the input_fn function should raise an exception")
     l.getLogger().warning("B) Are you able to handle the generated sentence and forward it back to the input ?")
 
-    result = next(self.sample_generator)
+    result = next(self.predict_generator)
 
     for inp, pred in zip(result['input_ids'], result['masked_lm_predictions']):
       l.getLogger().info(self.atomizer.DeatomizeIndices([inp]))
@@ -333,11 +336,11 @@ class tfBert(backends.BackendBase):
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
     return (
-      f"h_s: {self.bertConfig['hidden_size']}, "
-      f"#h_l: {self.bertConfig['num_hidden_layers']}, "
-      f"#att_h: {self.bertConfig['num_attention_heads']}, "
-      f"imd_s: {self.bertConfig['intermediate_size']}, "
-      f"h_act: {self.bertConfig['hidden_act']}, "
+      f"h_s: {self.bertAttrs['hidden_size']}, "
+      f"#h_l: {self.bertAttrs['num_hidden_layers']}, "
+      f"#att_h: {self.bertAttrs['num_attention_heads']}, "
+      f"imd_s: {self.bertAttrs['intermediate_size']}, "
+      f"h_act: {self.bertAttrs['hidden_act']}, "
       f"{model_pb2.NetworkArchitecture.Backend.Name(self.config.architecture.backend)} "
       "network"
     )
