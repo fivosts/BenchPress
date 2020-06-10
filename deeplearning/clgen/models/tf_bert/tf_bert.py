@@ -301,7 +301,11 @@ class tfBert(backends.BackendBase):
             done = False
             while not done:
               step_seq, done = self.SampleNextIndices()
-            print(self.atomizer.DeatomizeIndices(step_seq))
+            for batch in step_seq:
+              print(
+                self.atomizer.DeatomizeIndices(step_seq, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
+                end = "\n\n"
+                )
       else:
         self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps)
 
@@ -467,7 +471,8 @@ class tfBert(backends.BackendBase):
 
           scaffold_fn = _tpu_scaffold
         else:
-          l.getLogger().info("Loading model checkpoint from: {}".format(str(self.ckpt_path)))
+          if mode != tf.compat.v1.estimator.ModeKeys.PREDICT:
+            l.getLogger().info("Loading model checkpoint from: {}".format(str(self.ckpt_path)))
           tf.compat.v1.train.init_from_checkpoint(str(self.ckpt_path), assignment_map)
 
       output_spec = None
