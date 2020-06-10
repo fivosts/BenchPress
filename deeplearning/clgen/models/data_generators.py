@@ -641,27 +641,31 @@ class MaskLMBatchGenerator(object):
     return
 
   def updateSampleBatch(self, 
-                        input_ids     : typing.List[int],
-                        masked_lm_ids : typing.List[int],
+                        input_ids     : np.array,
+                        masked_lm_ids : np.array,
                         ) -> np.array:
     assert len(input_ids) == len(masked_lm_ids), "Inputs and predictions do not have the same batch size."
 
     updated_sequence = []
+    done = True
 
-    for batch_idx in range(input_ids):
+    for batch_idx, _ in enumerate(input_ids):
       batch = []
+      mask_id_index = 0
       for idx, token in enumerate(input_ids[batch_idx]):
         if   token == self.atomizer.maskToken:
-          mt = masked_lm_ids[batch_idx].pop(0)
+          mt = masked_lm_ids[batch_idx][mask_id_index]
+          mask_id_index += 1
           batch.append(mt)
         elif token == self.atomizer.holeToken:
-          mt = masked_lm_ids[batch_idx].pop(0)
+          mt = masked_lm_ids[batch_idx][mask_id_index]
+          mask_id_index += 1
           if mt != self.atomizer.endholeToken:
             batch.append(mt)
             batch.append(self.atomizer.holeToken)
+            done = False
         else:
           batch.append(token)
-
       batch = np.asarray(batch)
       batch = self._padToMaxPosition(batch)
       # TODO, chop sequence for now, but TODO it: 
@@ -669,12 +673,12 @@ class MaskLMBatchGenerator(object):
       # save them and send max_position_embeddings for next step.
       # Then, concat it back.
       batch = batch[:self.max_position_embeddings]
-      assert (len(masked_lm_ids[batch_idx]) == 0,
+      assert (len(masked_lm_ids[batch_idx]) == mask_id_index,
         "Not all predicted masks have been popped: {} remaining".format(len(masked_lm_ids)))
       updated_sequence.append(batch)
 
     self.sampleBatch = np.asarray(updated_sequence)
-    return self.sampleBatch
+    return self.sampleBatch, done
 
   def _saveCorpusTfRecord(self) -> None:
     """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""

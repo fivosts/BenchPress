@@ -22,6 +22,7 @@ import os
 import typing
 import pathlib
 import tensorflow_probability as tfp
+import numpy as np
 
 from deeplearning.clgen import samplers
 from deeplearning.clgen import telemetry
@@ -169,12 +170,13 @@ class tfBert(backends.BackendBase):
                     )
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
-    self.train = BertEstimator(tf.compat.v1.estimator.tpu.TPUEstimator(
+    self.train = tfBert.BertEstimator(tf.compat.v1.estimator.tpu.TPUEstimator(
                             use_tpu = FLAGS.use_tpu,
                             model_fn = model_fn,
                             config = run_config,
-                            train_batch_size = self.train_batch_size,
-                            eval_batch_size = self.eval_batch_size
+                            train_batch_size   = self.train_batch_size,
+                            eval_batch_size    = self.eval_batch_size,
+                            predict_batch_size = 1, # Used when sampling online, during training
                             ),
                  data_generator
                  )
@@ -217,11 +219,14 @@ class tfBert(backends.BackendBase):
 
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
-    self.sample = tf.compat.v1.estimator.tpu.TPUEstimator(
-        use_tpu = FLAGS.use_tpu,
-        model_fn = model_fn,
-        config = run_config,
-        predict_batch_size = sampler.batch_size)
+    self.sample = tfBert.BertEstimator(tf.compat.v1.estimator.tpu.TPUEstimator(
+                            use_tpu = FLAGS.use_tpu,
+                            model_fn = model_fn,
+                            config = run_config,
+                            predict_batch_size = sampler.batch_size
+                            ),
+                  data_generator
+                  )
     return
 
   @property
@@ -230,7 +235,7 @@ class tfBert(backends.BackendBase):
       filename = file_path.stem
       if "model.ckpt-" in filename:
         step_ckpt = int(filename.replace("model.ckpt-", ""))
-        if step_ckpt >= self.num_train_steps:
+        if step_ckpt >= self.config.training.num_train_steps:
           return True
     return False  
 
@@ -262,32 +267,41 @@ class tfBert(backends.BackendBase):
 
         def getMockSampler():
           from labm8.py import pbutil
-          sampler_str = """
-            sampler {
-              start_text: "kernel void D(__global double* f, const double g, __global double* h, const double i) {\n    [HOLE][HOLE]t k = get_global_id(0);\n}"
-              batch_size: 1
-              sequence_length: {}
-              temperature_micros: 800000
-              termination_criteria {
-                symtok {
-                  depth_increase_token: "{"
-                  depth_decrease_token: "}"
-                }
-              }
-              termination_criteria {
-                maxlen {
-                  maximum_tokens_in_sample: 500
-                }
-              }
-            }
-          """.format(self.sequence_length)
-          return pbutil.FromString(sampler_str, sampler_pb2.Sampler())
+          sampler_str = [
+              "start_text: \"kernel void D(__global double* f, const double g, __global double* h, c[HOLE][HOLE][HOLE]t double i) {  [HOLE][HOLE][HOLE] k = get_global_id(0);}\"",
+              "batch_size: 1",
+              "sequence_length: {}".format(self.sequence_length),
+              "temperature_micros: 800000",
+              "termination_criteria {",
+                "symtok {",
+                  "depth_increase_token: \"{\"",
+                  "depth_decrease_token: \"}\"",
+                "}",
+              "}",
+              "termination_criteria {",
+                "maxlen {",
+                  "maximum_tokens_in_sample: 500",
+                "}",
+              "}",
+          ]
+          return pbutil.FromString('\n'.join(sampler_str), sampler_pb2.Sampler())
 
-        self.InitSampling(getMockSampler())
+        sampler = samplers.Sampler(getMockSampler())
+        sampler.Specialize(self.atomizer)
+        self.sample = tfBert.BertEstimator(
+                        self.train.estimator,
+                        data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
+                          sampler, self.atomizer, 0, self.config.architecture.max_position_embeddings
+                          )
+                        )
         for _ in range(self.num_epochs):
           self.train.estimator.train(input_fn = train_input_fn, steps = self.steps_per_epoch)
-          self.InitSampleBatch("""TODO""")
-          self.SampleNextIndices("""TODO""")
+          for _ in range(FLAGS.sample_per_epoch):
+            self.InitSampleBatch(sampler)
+            done = False
+            while not done:
+              step_seq, done = self.SampleNextIndices()
+            print(self.atomizer.DeatomizeIndices(step_seq))
       else:
         self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps)
 
@@ -305,7 +319,7 @@ class tfBert(backends.BackendBase):
     return
 
   def InitSampling(self,
-                   sampler: samplers.Sampler, 
+                   sampler: samplers.Sampler,
                    seed: typing.Optional[int] = None
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
@@ -320,10 +334,9 @@ class tfBert(backends.BackendBase):
     return 
 
   def InitSampleBatch(self,
-                      **unused_kwargs, 
+                      sampler: samplers.Sampler,
                       ) -> None:
     """Batch-specific initialization. Called once when a new batch is going to be generated"""
-    del unused_kwargs
     self.predict_generator = None
     self.sample.data_generator.InitSampleBatch(
         input_sample = sampler.encoded_start_text,
@@ -331,44 +344,52 @@ class tfBert(backends.BackendBase):
         )
     return 
 
-  def SampleNextIndices(self, sampler: samplers.Sampler, done):
+  def SampleNextIndices(self, **unused_kwargs): #sampler: samplers.Sampler, done):
     """Called iteratively to build a single batch of samples, until termination criteria stops calling"""
+    del unused_kwargs
     if self.sample is None:
       raise ValueError("Bert sampler has not been initialized.")
 
     predict_input_fn = self.sample.data_generator.generateTfSamples()
     self.predict_generator = self.sample.estimator.predict(input_fn = predict_input_fn)
 
-    l.getLogger().warning("TODO!")
-    l.getLogger().warning("When all data are fetched, the input_fn function should raise an exception")
-    l.getLogger().warning("B) Are you able to handle the generated sentence and forward it back to the input ?")
+    # l.getLogger().warning("TODO!")
+    # l.getLogger().warning("When all data are fetched, the input_fn function should raise an exception")
+    # l.getLogger().warning("B) Are you able to handle the generated sentence and forward it back to the input ?")
 
     result = next(self.predict_generator)
 
-    outp_seq = self.sample.data_generator.updateSampleBatch(
-      result['input_ids'], result['masked_lm_ids']
+    outp_seq, done = self.sample.data_generator.updateSampleBatch(
+      result['input_ids'], result['masked_lm_predictions']
     )
 
     ### DEBUG
-    for inp, pred in zip(result['input_ids'], result['masked_lm_predictions']):
-      l.getLogger().info(self.atomizer.DeatomizeIndices([inp]))
-      l.getLogger().info(self.atomizer.DeatomizeIndices([pred]))
+    # for batch in outp_seq:
+    #   pad_idx = np.where(batch == self.atomizer.padToken)[0]
+    #   if len(pad_idx) > 0:
+    #     print(self.atomizer.DeatomizeIndices(batch[:pad_idx[0]]))
+    #   else:
+    #     print(self.atomizer.DeatomizeIndices(batch))
 
-    for batch in result['next_sentence_predictions']:
-      l.getLogger().info(batch)
-    l.getLogger().warning("TODO! Right here you must forward output back to input.")
+    # for inp, pred in zip(result['input_ids'], result['masked_lm_predictions']):
+    #   l.getLogger().info(self.atomizer.DeatomizeIndices([inp]))
+    #   l.getLogger().info(self.atomizer.DeatomizeIndices([pred]))
+
+    # for batch in result['next_sentence_predictions']:
+    #   l.getLogger().info(batch)
+    # l.getLogger().warning("TODO! Right here you must forward output back to input.")
     #### 
 
-    return outp_seq
+    return outp_seq, done
 
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
     return (
-      f"h_s: {self.bertAttrs['hidden_size']}, "
-      f"#h_l: {self.bertAttrs['num_hidden_layers']}, "
-      f"#att_h: {self.bertAttrs['num_attention_heads']}, "
-      f"imd_s: {self.bertAttrs['intermediate_size']}, "
-      f"h_act: {self.bertAttrs['hidden_act']}, "
+      f"h_s: {self.config.architecture.hidden_size}, "
+      f"#h_l: {self.config.architecture.num_hidden_layers}, "
+      f"#att_h: {self.config.architecture.num_attention_heads}, "
+      f"imd_s: {self.config.architecture.intermediate_size}, "
+      f"h_act: {self.config.architecture.hidden_act}, "
       f"{model_pb2.NetworkArchitecture.Backend.Name(self.config.architecture.backend)} "
       "network"
     )
@@ -526,16 +547,18 @@ class tfBert(backends.BackendBase):
         masked_lm_log_probs       = tf.reshape(masked_lm_log_probs,     [-1, masked_lm_log_probs.shape[-1]])
         next_sentence_log_probs   = tf.reshape(next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]])
 
-        masked_lm_predictions     = tf.argmax(masked_lm_log_probs,     axis = -1, output_type = tf.int32)
-        next_sentence_predictions = tf.argmax(next_sentence_log_probs, axis = -1, output_type = tf.int32)
-
         if FLAGS.categorical_sampling:
 
-          mlm_sampler = tfp.distributions.Categorical(logits = masked_lm_predictions)
-          nsp_sampler = tfp.distributions.Categorical(logits = next_sentence_predictions)
+          mlm_sampler = tfp.distributions.Categorical(logits = masked_lm_log_probs)
+          nsp_sampler = tfp.distributions.Categorical(logits = next_sentence_log_probs)
 
           masked_lm_predictions     = mlm_sampler.sample()
           next_sentence_predictions = nsp_sampler.sample()
+
+        else:
+
+          masked_lm_predictions     = tf.argmax(masked_lm_log_probs,     axis = -1, output_type = tf.int32)
+          next_sentence_predictions = tf.argmax(next_sentence_log_probs, axis = -1, output_type = tf.int32)
 
         masked_lm_predictions     = tf.reshape(masked_lm_predictions,     shape = [mask_batch_size, mask_seq_length])
         next_sentence_predictions = tf.reshape(next_sentence_predictions, shape = [next_batch_size, next_seq_length])
