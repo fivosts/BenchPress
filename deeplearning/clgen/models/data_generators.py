@@ -482,11 +482,15 @@ class MaskLMBatchGenerator(object):
     def input_fn(params):
       batch_size = params["batch_size"]
       assert isinstance(self.sampleBatch, np.ndarray), "input sample is not in np.array format"
-      assert batch_size == len(self.sampleBatch)
+      assert batch_size == len(self.sampleBatch), "{}, {}".format(batch_size, len(self.sampleBatch))
 
       (input_ids, input_mask, masked_lm_positions, 
       masked_lm_ids, masked_lm_weights) = [], [], [], [], []
 
+      ## TODO leave this for now. Different batch sizes look troublesome.
+      max_mask_len = max(
+      [len(np.where(np.in1d(np.asarray(x), [self.atomizer.maskToken, self.atomizer.holeToken]))[0]) for x in self.sampleBatch]
+      )
       for sample in self.sampleBatch:
         sample_masks = np.where(np.in1d(sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
 
