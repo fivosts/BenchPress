@@ -303,7 +303,7 @@ class tfBert(backends.BackendBase):
               step_seq, done = self.SampleNextIndices()
             for batch in step_seq:
               print(
-                self.atomizer.DeatomizeIndices(step_seq, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
+                self.atomizer.DeatomizeIndices(batch, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
                 end = "\n\n"
                 )
       else:
