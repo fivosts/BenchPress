@@ -252,7 +252,31 @@ class tfBert(backends.BackendBase):
                                         )
                         )
       if FLAGS.sample_per_epoch > 0:
-        self.InitSampling("""TODO""")
+
+        def getMockSampler():
+          from labm8.py import pbutil
+          sampler_str = """
+            sampler {
+              start_text: "kernel void D(__global double* f, const double g, __global double* h, const double i) {\n    [HOLE][HOLE]t k = get_global_id(0);\n}"
+              batch_size: 1
+              sequence_length: {}
+              temperature_micros: 800000
+              termination_criteria {
+                symtok {
+                  depth_increase_token: "{"
+                  depth_decrease_token: "}"
+                }
+              }
+              termination_criteria {
+                maxlen {
+                  maximum_tokens_in_sample: 500
+                }
+              }
+            }
+          """.format(self.sequence_length)
+          return pbutil.FromString(sampler_str, sampler_pb2.Sampler())
+
+        self.InitSampling(getMockSampler())
         for _ in range(self.num_epochs):
           self.train.estimator.train(input_fn = train_input_fn, steps = self.steps_per_epoch)
           self.InitSampleBatch("""TODO""")
@@ -305,9 +329,8 @@ class tfBert(backends.BackendBase):
     if self.sample is None:
       raise ValueError("Bert sampler has not been initialized.")
 
-    if self.predict_generator is None:
-      predict_input_fn = self.sample.data_generator.generateTfSamples()
-      self.predict_generator = self.sample.estimator.predict(input_fn = predict_input_fn)
+    predict_input_fn = self.sample.data_generator.generateTfSamples()
+    self.predict_generator = self.sample.estimator.predict(input_fn = predict_input_fn)
 
     l.getLogger().warning("TODO!")
     l.getLogger().warning("When all data are fetched, the input_fn function should raise an exception")
@@ -315,17 +338,21 @@ class tfBert(backends.BackendBase):
 
     result = next(self.predict_generator)
 
+    outp_seq = self.sample.data_generator.updateSampleBatch(
+      result['input_ids'], result['masked_lm_ids']
+    )
+
+    ### DEBUG
     for inp, pred in zip(result['input_ids'], result['masked_lm_predictions']):
       l.getLogger().info(self.atomizer.DeatomizeIndices([inp]))
       l.getLogger().info(self.atomizer.DeatomizeIndices([pred]))
 
     for batch in result['next_sentence_predictions']:
       l.getLogger().info(batch)
-
     l.getLogger().warning("TODO! Right here you must forward output back to input.")
+    #### 
 
-    exit()
-    return result['masked_lm_predictions']
+    return outp_seq
 
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
