@@ -124,12 +124,14 @@ class AtomizerBase(object):
     indices = self.AtomizeString(text)
     return list(map(lambda x: self.decoder[x], indices))
 
-  def DeatomizeIndices(self, encoded: np.array):
+  def DeatomizeIndices(self, 
+                       encoded: np.array, 
+                       ignore_token: int = None):
     """Translate atomized code back into a string.
 
     Args:
       encoded: An nparray of encoded vocabulary indices.
-
+      ignore_token: A specific token to ignore from the text string (e.g. exclude pads)
     Returns:
       The decoded text.
       Returns string if nparray is one-dimensional.
@@ -137,9 +139,9 @@ class AtomizerBase(object):
     """
     try:
       if np.ndim(encoded) > 1:
-        return [ self.DeatomizeIndices(x) for x in encoded ]
+        return [ self.DeatomizeIndices(x, ignore_token) for x in encoded ]
       elif np.ndim(encoded) == 1:
-        return "".join(list(map(lambda x: self.decoder[x], encoded)))
+        return "".join(list(map(lambda x: self.decoder[x] if x != ignore_token else '', encoded)))
       else:
         raise ValueError("Wrong encoded array specified")
     except KeyError:
