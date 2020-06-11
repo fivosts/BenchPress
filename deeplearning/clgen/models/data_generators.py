@@ -74,7 +74,6 @@ class DataBatch(typing.NamedTuple):
                         ) -> None:
 
     """Log analytics about the batch."""
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.DataBatch.LogBatchTelemetry()")
     l.getLogger().info("Step shape: X: {}, y" ": {}.".format(batch.X.shape, batch.y.shape))
     l.getLogger().info(
       "Memory: {} per batch, {} per epoch, {} total.".format(
@@ -115,7 +114,6 @@ class MaskSequence(typing.NamedTuple):
                         num_epochs: int,
                         ) -> None:
     """Log analytics about the batch."""
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskSequence.LogBatchTelemetry()")
     l.getLogger().info("Step shape: Input_ids: {}, input_mask: {}, masked_lm_positions: {}, masked_lm_ids: {}, masked_lm_weights: {}, next_sentence_label: {}"
                         .format(self.shapeSeqToBatch(self.input_ids,            batch_size),
                                 self.shapeSeqToBatch(self.input_mask,           batch_size),
@@ -150,7 +148,6 @@ class KerasBatchGenerator():
     Returns:
       A generator suitable for use by a model's fit_generator() method.
     """
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.KerasBatchGenerator.AutoGenerator()")
     return self.BatchGenerator(corpus, training_opts)
 
   def BatchGenerator(
@@ -170,7 +167,6 @@ class KerasBatchGenerator():
     Returns:
       A generator suitable for use by a model's fit_generator() method.
     """
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.KerasBatchGenerator.BatchGenerator()")
     x, y, steps_per_epoch = self.GetTrainingCorpus(corpus, training_opts)
 
     # Per-epoch outer loop.
