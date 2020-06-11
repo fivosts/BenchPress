@@ -272,7 +272,7 @@ class tfBert(backends.BackendBase):
         def getMockSampler():
           from labm8.py import pbutil
           sampler_str = [
-              "start_text: \"kernel void A([HOLE]\"",
+              "start_text: \"kernel void A(const double g, const double i)\\n  [HOLE] = [HOLE]\\n  int a = g + [HOLE]\"",
               "batch_size: 1",
               "sequence_length: {}".format(self.sequence_length),
               "temperature_micros: 800000",
