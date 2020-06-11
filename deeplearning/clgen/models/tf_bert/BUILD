@@ -14,6 +14,7 @@ py_library(
         "//deeplearning/clgen:samplers",
         "//deeplearning/clgen:telemetry",
         "//deeplearning/clgen:tf",
+        "//deeplearning/clgen:gpu",
         "//deeplearning/clgen/dashboard:dashboard_db",
         "//deeplearning/clgen/proto:clgen_pb_py",
         "//labm8/py:crypto",

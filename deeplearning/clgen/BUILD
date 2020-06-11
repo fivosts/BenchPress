@@ -199,3 +199,11 @@ py_library(
     deps = [
     ],
 )
+
+py_library(
+    name = "gpu",
+    srcs = ["gpu.py"],
+    visibility = ["//visibility:public"],
+    deps = [
+    ],
+)
