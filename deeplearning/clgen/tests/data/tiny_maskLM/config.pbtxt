@@ -27,7 +27,7 @@ model {
     hidden_size: 512
     num_hidden_layers: 8
     num_attention_heads: 8
-    intermediate_size: 768
+    intermediate_size: 1024
     hidden_act: "gelu"
     hidden_dropout_prob: 0.1
     attention_probs_dropout_prob: 0.1
@@ -39,8 +39,8 @@ model {
     num_train_steps: 180000
     num_warmup_steps: 20000
     sequence_length: 768
-    batch_size: 16
-    max_predictions_per_seq: 200
+    batch_size: 8
+    max_predictions_per_seq: 40
     dupe_factor: 10
     masked_lm_prob: 0.25
     random_seed: 12345
