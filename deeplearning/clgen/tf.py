@@ -28,5 +28,6 @@ if tf is None:
   import tensorflow
   tensorflow.python.util.deprecation._PRINT_DEPRECATION_WARNINGS = False
   os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+  os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
   tensorflow.compat.v1.disable_eager_execution()
   tf = tensorflow
