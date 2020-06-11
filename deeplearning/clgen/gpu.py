@@ -1,4 +1,4 @@
-from deeplearning.clgen import tf
+from deeplearning.clgen.tf import tf
 
 def numGPUs():
   devices = tf.python.client.device_lib.list_local_devices()
