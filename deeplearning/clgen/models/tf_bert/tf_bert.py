@@ -47,6 +47,8 @@ flags.DEFINE_integer("sample_per_epoch", 3, "Set above zero to sample model afte
 
 flags.DEFINE_boolean("use_tpu", False, "Whether to use TPU or GPU/CPU.")
 
+flags.DEFINE_boolean("mirror_gpus", False, "Set True to distribute training across all system's GPUs. (Only usable when use_tpu is False).")
+
 flags.DEFINE_boolean("categorical_sampling", True, "Use categorical distribution on logits when sampling.")
 
 flags.DEFINE_string(
@@ -152,7 +154,7 @@ class tfBert(backends.BackendBase):
           FLAGS.tpu_name, zone = FLAGS.tpu_zone, project = FLAGS.gcp_project)
 
     is_per_host      = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
-    train_distribute = tf.distribute.MirroredStrategy(num_gpus = gpu.numGPUs()) if FLAGS.use_tpu else None
+    train_distribute = tf.distribute.MirroredStrategy(num_gpus = gpu.numGPUs()) if FLAGS.use_tpu and FLAGS.mirror_gpus else None
     run_config  = tf.compat.v1.estimator.tpu.RunConfig(
                     cluster   = tpu_cluster_resolver,
                     master    = FLAGS.master,
