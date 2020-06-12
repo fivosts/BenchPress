@@ -153,8 +153,9 @@ class tfBert(backends.BackendBase):
       tpu_cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
           FLAGS.tpu_name, zone = FLAGS.tpu_zone, project = FLAGS.gcp_project)
 
-    is_per_host      = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
     train_distribute = tf.distribute.MirroredStrategy(num_gpus = gpu.numGPUs()) if FLAGS.use_tpu and FLAGS.mirror_gpus else None
+
+    is_per_host      = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
     run_config  = tf.compat.v1.estimator.tpu.RunConfig(
                     cluster   = tpu_cluster_resolver,
                     master    = FLAGS.master,
