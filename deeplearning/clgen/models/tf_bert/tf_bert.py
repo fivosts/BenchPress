@@ -175,9 +175,10 @@ class tfBert(backends.BackendBase):
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
     self.train = tfBert.BertEstimator(tf.compat.v1.estimator.tpu.TPUEstimator(
-                            use_tpu = FLAGS.use_tpu,
+                            use_tpu  = FLAGS.use_tpu,
                             model_fn = model_fn,
-                            config = run_config,
+                            config   = run_config,
+                            params   = None,
                             train_batch_size   = self.train_batch_size,
                             eval_batch_size    = self.eval_batch_size,
                             predict_batch_size = 1, # Used when sampling online, during training
@@ -224,9 +225,10 @@ class tfBert(backends.BackendBase):
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
     self.sample = tfBert.BertEstimator(tf.compat.v1.estimator.tpu.TPUEstimator(
-                            use_tpu = FLAGS.use_tpu,
+                            use_tpu  = FLAGS.use_tpu,
                             model_fn = model_fn,
-                            config = run_config,
+                            config   = run_config,
+                            params   = None,
                             predict_batch_size = sampler.batch_size
                             ),
                   data_generator
@@ -272,7 +274,7 @@ class tfBert(backends.BackendBase):
         def getMockSampler():
           from labm8.py import pbutil
           sampler_str = [
-              "start_text: \"kernel void A(const double g, const double i)\\n  [HOLE] = [HOLE]\\n  int a = g + [HOLE]\"",
+              "start_text: \"kernel void A(const double g, const double i){\\n  [HOLE] = [HOLE]\\n  int a = g + [HOLE]\"",
               "batch_size: 1",
               "sequence_length: {}".format(self.sequence_length),
               "temperature_micros: 800000",
