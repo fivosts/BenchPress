@@ -475,42 +475,100 @@ class MaskLMBatchGenerator(object):
 
   def generateTfSamples(self):
 
-    def input_fn(params):
-      batch_size = params["batch_size"]
-      assert isinstance(self.sampleBatch, np.ndarray), "input sample is not in np.array format"
-      assert batch_size == len(self.sampleBatch), "{}, {}".format(batch_size, len(self.sampleBatch))
+    def data_gen():
 
-      (input_ids, input_mask, masked_lm_positions, 
-      masked_lm_ids, masked_lm_weights) = [], [], [], [], []
+
+      while True:
+
+        (input_ids, input_mask, masked_lm_positions, 
+        masked_lm_ids, masked_lm_weights) = [], [], [], [], []
+
+
+        for sample in self.sampleBatch:
+          sample_masks = np.where(np.in1d(sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
+
+          pad_idx      = np.where(sample == self.atomizer.padToken)[0]
+          inp_mask     = np.ones(len(sample), dtype = np.int32)
+          if len(pad_idx) > 0:
+            inp_mask[pad_idx[0]:] = 0
+
+          input_ids.append(list(sample))
+          input_mask.append(list(inp_mask))
+          masked_lm_positions.append(list(sample_masks))
+          masked_lm_ids.append([self.atomizer.padToken] * len(sample_masks))
+          masked_lm_weights.append([0.0] * len(sample_masks))
+        l.getLogger().warn(self.atomizer.DeatomizeIndices(input_ids))
+        yield (input_ids, input_mask, 
+          masked_lm_positions, masked_lm_ids, 
+          masked_lm_weights, np.zeros([1,1]))
+
+    def input_fn(params):
+      # batch_size = params["batch_size"]
+      # assert isinstance(self.sampleBatch, np.ndarray), "input sample is not in np.array format"
+      # assert batch_size == len(self.sampleBatch), "{}, {}".format(batch_size, len(self.sampleBatch))
+
+      # (input_ids, input_mask, masked_lm_positions, 
+      # masked_lm_ids, masked_lm_weights) = [], [], [], [], []
 
       ## TODO leave this for now. Different batch sizes look troublesome.
       ## TODO. Related to issue #49: In masked_lm_ids, instead of padTokens, use hole/masks with pad
       ## to align all batches together and keep track of different lengths.
-      max_mask_len = max(
-      [len(np.where(np.in1d(np.asarray(x), [self.atomizer.maskToken, self.atomizer.holeToken]))[0]) for x in self.sampleBatch]
-      )
-      for sample in self.sampleBatch:
-        sample_masks = np.where(np.in1d(sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
+      # max_mask_len = max(
+      # [len(np.where(np.in1d(np.asarray(x), [self.atomizer.maskToken, self.atomizer.holeToken]))[0]) for x in self.sampleBatch]
+      # )
+      # for sample in self.sampleBatch:
+      #   sample_masks = np.where(np.in1d(sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
 
-        pad_idx      = np.where(sample == self.atomizer.padToken)[0]
-        inp_mask     = np.ones(len(sample), dtype = np.int32)
-        if len(pad_idx) > 0:
-          inp_mask[pad_idx[0]:] = 0
+      #   pad_idx      = np.where(sample == self.atomizer.padToken)[0]
+      #   inp_mask     = np.ones(len(sample), dtype = np.int32)
+      #   if len(pad_idx) > 0:
+      #     inp_mask[pad_idx[0]:] = 0
 
-        input_ids.append(list(sample))
-        input_mask.append(list(inp_mask))
-        masked_lm_positions.append(list(sample_masks))
-        masked_lm_ids.append([self.atomizer.padToken] * len(sample_masks))
-        masked_lm_weights.append([0.0] * len(sample_masks))
+      #   input_ids.append(list(sample))
+      #   input_mask.append(list(inp_mask))
+      #   masked_lm_positions.append(list(sample_masks))
+      #   masked_lm_ids.append([self.atomizer.padToken] * len(sample_masks))
+      #   masked_lm_weights.append([0.0] * len(sample_masks))
 
+      sample = tf.data.Dataset.from_generator(data_gen, 
+        output_types = (tf.int32, tf.int32, tf.int32, tf.int32, tf.float32, tf.int32),
+        output_shapes = (tf.TensorShape([1,256]), tf.TensorShape([1,256]),
+        tf.TensorShape([1,3]), tf.TensorShape([1,3]), tf.TensorShape([1,3]),
+        tf.TensorShape([1,1]) ) )
+      sample = sample.repeat(1)
+      sample = sample.batch(1)
+      it = tf.compat.v1.data.make_one_shot_iterator(sample)
+      (input_ids, input_mask,
+        masked_lm_positions, masked_lm_ids,
+        masked_lm_weights, next_sentence_labels) = it.get_next()
+      input_ids = tf.squeeze(input_ids, axis = 0)
+      input_mask = tf.squeeze(input_mask, axis = 0)
+      masked_lm_positions = tf.squeeze(masked_lm_positions, axis = 0)
+      masked_lm_ids = tf.squeeze(masked_lm_ids, axis = 0)
+      masked_lm_weights = tf.squeeze(masked_lm_weights, axis = 0)
+      next_sentence_labels = tf.squeeze(next_sentence_labels, axis = 0)
+      l.getLogger().critical(input_ids)
+      l.getLogger().critical(input_mask)
+      l.getLogger().critical(masked_lm_positions)
+      l.getLogger().critical(masked_lm_ids)
+      l.getLogger().critical(masked_lm_weights)
+      l.getLogger().critical(next_sentence_labels)
       return {
-          'input_ids'             : tf.convert_to_tensor(input_ids,           dtype = tf.int32),
-          'input_mask'            : tf.convert_to_tensor(input_mask,          dtype = tf.int32),
-          'masked_lm_positions'   : tf.convert_to_tensor(masked_lm_positions, dtype = tf.int32),
-          'masked_lm_ids'         : tf.convert_to_tensor(masked_lm_ids,       dtype = tf.int32),
-          'masked_lm_weights'     : tf.convert_to_tensor(masked_lm_weights,   dtype = tf.float32),
-          'next_sentence_labels'  : tf.zeros((batch_size, 1),                 dtype = tf.int32)
+          'input_ids'             : input_ids,
+          'input_mask'            : input_mask,
+          'masked_lm_positions'   : masked_lm_positions,
+          'masked_lm_ids'         : masked_lm_ids,
+          'masked_lm_weights'     : masked_lm_weights,
+          'next_sentence_labels'  : next_sentence_labels,
       }
+      # return {
+      #     'input_ids'             : tf.convert_to_tensor(input_ids,           dtype = tf.int32),
+      #     'input_mask'            : tf.convert_to_tensor(input_mask,          dtype = tf.int32),
+      #     'masked_lm_positions'   : tf.convert_to_tensor(masked_lm_positions, dtype = tf.int32),
+      #     'masked_lm_ids'         : tf.convert_to_tensor(masked_lm_ids,       dtype = tf.int32),
+      #     'masked_lm_weights'     : tf.convert_to_tensor(masked_lm_weights,   dtype = tf.float32),
+      #     'next_sentence_labels'  : tf.zeros((batch_size, 1),                 dtype = tf.int32)
+      # }
     return input_fn
 
   def CreateCorpus(self) -> None:
@@ -549,7 +607,7 @@ class MaskLMBatchGenerator(object):
       assert len(self.shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
 
       # Set corpus epoch parameters
-      self.steps_per_epoch = min(self.training_opts.num_train_steps, 5000) ## TODO add this as flag or pb param
+      self.steps_per_epoch = min(self.training_opts.num_train_steps, 250) ## TODO add this as flag or pb param
       self.num_epochs      = int(self.training_opts.num_train_steps / self.steps_per_epoch)
 
       assert self.shaped_corpus.ndim     == 2, "corpus dim: {}".format(self.shaped_corpus.shape)
