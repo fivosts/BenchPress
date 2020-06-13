@@ -484,6 +484,8 @@ class MaskLMBatchGenerator(object):
       masked_lm_ids, masked_lm_weights) = [], [], [], [], []
 
       ## TODO leave this for now. Different batch sizes look troublesome.
+      ## TODO. Related to issue #49: In masked_lm_ids, instead of padTokens, use hole/masks with pad
+      ## to align all batches together and keep track of different lengths.
       max_mask_len = max(
       [len(np.where(np.in1d(np.asarray(x), [self.atomizer.maskToken, self.atomizer.holeToken]))[0]) for x in self.sampleBatch]
       )
