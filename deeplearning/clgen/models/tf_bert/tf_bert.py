@@ -483,112 +483,122 @@ class tfBert(backends.BackendBase):
           tf.compat.v1.train.init_from_checkpoint(str(self.ckpt_path), assignment_map)
 
       output_spec = None
-      if mode == tf.compat.v1.estimator.ModeKeys.TRAIN:
-        train_op = optimizer.create_optimizer(
-            total_loss, self.learning_rate, self.num_train_steps, self.num_warmup_steps, FLAGS.use_tpu)
+      if mode == tf.compat.v1.estimator.ModeKeys.TRAIN:        
+        with tf.compat.v1.variable_scope("training"):
 
-        training_hooks = self.GetTrainingHooks(tensors = {'Loss': total_loss},
-                                              masked_lm_loss = masked_lm_loss,
-                                              next_sentence_loss = next_sentence_loss,
-                                              total_loss = total_loss,
-                                              learning_rate = self.learning_rate,
-                                              )
+          train_op = optimizer.create_optimizer(
+              total_loss, self.learning_rate, self.num_train_steps, self.num_warmup_steps, FLAGS.use_tpu)
 
-        output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
-            mode = mode,
-            loss = total_loss,
-            train_op = train_op,
-            training_hooks = training_hooks,
-            scaffold_fn = scaffold_fn)
+          training_hooks = self.GetTrainingHooks(tensors = {'Loss': total_loss},
+                                                masked_lm_loss = masked_lm_loss,
+                                                next_sentence_loss = next_sentence_loss,
+                                                total_loss = total_loss,
+                                                learning_rate = self.learning_rate,
+                                                )
+
+          output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
+              mode = mode,
+              loss = total_loss,
+              train_op = train_op,
+              training_hooks = training_hooks,
+              scaffold_fn = scaffold_fn)
       elif mode == tf.compat.v1.estimator.ModeKeys.EVAL:
+        with tf.compat.v1.variable_scope("evaluation"):
 
-        def _metric_fn(masked_lm_example_loss, masked_lm_log_probs, masked_lm_ids,
-                      masked_lm_weights, next_sentence_example_loss,
-                      next_sentence_log_probs, next_sentence_labels):
-          """Computes the loss and accuracy of the model."""
-          masked_lm_log_probs = tf.reshape(masked_lm_log_probs,
-                                           [-1, masked_lm_log_probs.shape[-1]])
-          masked_lm_predictions = tf.argmax(
-              masked_lm_log_probs, axis=-1, output_type=tf.int32)
-          masked_lm_example_loss = tf.reshape(masked_lm_example_loss, [-1])
-          masked_lm_ids = tf.reshape(masked_lm_ids, [-1])
-          masked_lm_weights = tf.reshape(masked_lm_weights, [-1])
-          masked_lm_accuracy = tf.compat.v1.metrics.accuracy(
-              labels=masked_lm_ids,
-              predictions=masked_lm_predictions,
-              weights=masked_lm_weights)
-          masked_lm_mean_loss = tf.compat.v1.metrics.mean(
-              values=masked_lm_example_loss, weights=masked_lm_weights)
+          def _metric_fn(masked_lm_example_loss, masked_lm_log_probs, masked_lm_ids,
+                        masked_lm_weights, next_sentence_example_loss,
+                        next_sentence_log_probs, next_sentence_labels):
+            """Computes the loss and accuracy of the model."""
+            masked_lm_log_probs = tf.reshape(masked_lm_log_probs,
+                                             [-1, masked_lm_log_probs.shape[-1]])
+            masked_lm_predictions = tf.argmax(
+                masked_lm_log_probs, axis=-1, output_type=tf.int32)
+            masked_lm_example_loss = tf.reshape(masked_lm_example_loss, [-1])
+            masked_lm_ids = tf.reshape(masked_lm_ids, [-1])
+            masked_lm_weights = tf.reshape(masked_lm_weights, [-1])
+            masked_lm_accuracy = tf.compat.v1.metrics.accuracy(
+                labels=masked_lm_ids,
+                predictions=masked_lm_predictions,
+                weights=masked_lm_weights, 
+                name = "masked_lm_mean_loss")
+            masked_lm_mean_loss = tf.compat.v1.metrics.mean(
+                values=masked_lm_example_loss, 
+                weights=masked_lm_weights, 
+                name = "masked_lm_mean_loss")
 
-          next_sentence_log_probs = tf.reshape(
-              next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]])
-          next_sentence_predictions = tf.argmax(
-              next_sentence_log_probs, axis=-1, output_type=tf.int32)
-          next_sentence_labels = tf.reshape(next_sentence_labels, [-1])
-          next_sentence_accuracy = tf.compat.v1.metrics.accuracy(
-              labels=next_sentence_labels, predictions=next_sentence_predictions)
-          next_sentence_mean_loss = tf.compat.v1.metrics.mean(
-              values=next_sentence_example_loss)
+            next_sentence_log_probs = tf.reshape(
+                next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]])
+            next_sentence_predictions = tf.argmax(
+                next_sentence_log_probs, axis=-1, output_type=tf.int32)
+            next_sentence_labels = tf.reshape(next_sentence_labels, [-1])
+            next_sentence_accuracy = tf.compat.v1.metrics.accuracy(
+                labels=next_sentence_labels, 
+                predictions=next_sentence_predictions, 
+                name = "next_sentence_accuracy")
+            next_sentence_mean_loss = tf.compat.v1.metrics.mean(
+                values=next_sentence_example_loss, 
+                name = "next_sentence_mean_loss")
 
-          return {
-              "masked_lm_accuracy": masked_lm_accuracy,
-              "masked_lm_loss": masked_lm_mean_loss,
-              "next_sentence_accuracy": next_sentence_accuracy,
-              "next_sentence_loss": next_sentence_mean_loss,
-          }
+            return {
+                "masked_lm_accuracy"    : masked_lm_accuracy,
+                "masked_lm_loss"        : masked_lm_mean_loss,
+                "next_sentence_accuracy": next_sentence_accuracy,
+                "next_sentence_loss"    : next_sentence_mean_loss,
+            }
 
-        eval_metrics = (_metric_fn, [
-            masked_lm_example_loss, masked_lm_log_probs, masked_lm_ids,
-            masked_lm_weights, next_sentence_example_loss,
-            next_sentence_log_probs, next_sentence_labels
-        ])
+          eval_metrics = (_metric_fn, [
+              masked_lm_example_loss, masked_lm_log_probs, masked_lm_ids,
+              masked_lm_weights, next_sentence_example_loss,
+              next_sentence_log_probs, next_sentence_labels
+          ])
 
-        evaluation_hooks = self.GetValidationHooks()
+          evaluation_hooks = self.GetValidationHooks()
 
-        output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
-            mode = mode,
-            loss = total_loss,
-            evaluation_hooks = evaluation_hooks,
-            eval_metrics = eval_metrics,
-            scaffold_fn = scaffold_fn)
+          output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
+              mode = mode,
+              loss = total_loss,
+              evaluation_hooks = evaluation_hooks,
+              eval_metrics = eval_metrics,
+              scaffold_fn = scaffold_fn)
       elif mode == tf.compat.v1.estimator.ModeKeys.PREDICT:
 
-        mask_batch_size, mask_seq_length = model.get_shape_list(masked_lm_positions,  expected_rank = 2)
-        next_batch_size, next_seq_length = model.get_shape_list(next_sentence_labels, expected_rank = 2)
+        with tf.compat.v1.variable_scope("predict"):
 
-        masked_lm_log_probs       = tf.reshape(masked_lm_log_probs,     [-1, masked_lm_log_probs.shape[-1]])
-        next_sentence_log_probs   = tf.reshape(next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]])
+          mask_batch_size, mask_seq_length = model.get_shape_list(masked_lm_positions,  expected_rank = 2)
+          next_batch_size, next_seq_length = model.get_shape_list(next_sentence_labels, expected_rank = 2)
 
-        if FLAGS.categorical_sampling:
+          masked_lm_log_probs       = tf.reshape(masked_lm_log_probs,     [-1, masked_lm_log_probs.shape[-1]])
+          next_sentence_log_probs   = tf.reshape(next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]])
 
-          mlm_sampler = tfp.distributions.Categorical(logits = masked_lm_log_probs)
-          nsp_sampler = tfp.distributions.Categorical(logits = next_sentence_log_probs)
+          if FLAGS.categorical_sampling:
 
-          masked_lm_predictions     = mlm_sampler.sample()
-          next_sentence_predictions = nsp_sampler.sample()
+            mlm_sampler = tfp.distributions.Categorical(logits = masked_lm_log_probs)
+            nsp_sampler = tfp.distributions.Categorical(logits = next_sentence_log_probs)
 
-        else:
+            masked_lm_predictions     = mlm_sampler.sample()
+            next_sentence_predictions = nsp_sampler.sample()
 
-          masked_lm_predictions     = tf.argmax(masked_lm_log_probs,     axis = -1, output_type = tf.int32)
-          next_sentence_predictions = tf.argmax(next_sentence_log_probs, axis = -1, output_type = tf.int32)
+          else:
 
-        masked_lm_predictions     = tf.reshape(masked_lm_predictions,     shape = [mask_batch_size, mask_seq_length])
-        next_sentence_predictions = tf.reshape(next_sentence_predictions, shape = [next_batch_size, next_seq_length])
+            masked_lm_predictions     = tf.argmax(masked_lm_log_probs,     axis = -1, output_type = tf.int32)
+            next_sentence_predictions = tf.argmax(next_sentence_log_probs, axis = -1, output_type = tf.int32)
 
-        input_ids                 = tf.expand_dims(input_ids,                 0)
-        masked_lm_predictions     = tf.expand_dims(masked_lm_predictions,     0)
-        next_sentence_predictions = tf.expand_dims(next_sentence_predictions, 0)
+          masked_lm_predictions     = tf.reshape(masked_lm_predictions,     shape = [mask_batch_size, mask_seq_length])
+          next_sentence_predictions = tf.reshape(next_sentence_predictions, shape = [next_batch_size, next_seq_length])
 
-        prediction_metrics = {
-            'input_ids'                 : input_ids,
-            'masked_lm_predictions'     : masked_lm_predictions,
-            'next_sentence_predictions' : next_sentence_predictions,
-        }
+          input_ids                 = tf.expand_dims(input_ids,                 0, name = "input_ids")
+          masked_lm_predictions     = tf.expand_dims(masked_lm_predictions,     0, name = "masked_lm_predictions")
+          next_sentence_predictions = tf.expand_dims(next_sentence_predictions, 0, name = "next_sentence_predictions")
 
-        output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
-            mode = mode,
-            predictions = prediction_metrics,
-            scaffold_fn = scaffold_fn)
+          prediction_metrics = {
+              'input_ids'                 : input_ids,
+              'masked_lm_predictions'     : masked_lm_predictions,
+              'next_sentence_predictions' : next_sentence_predictions,
+          }
+          output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
+              mode = mode,
+              predictions = prediction_metrics,
+              scaffold_fn = scaffold_fn)
       else:
         raise ValueError("{} is not a valid mode".format(mode))
       return output_spec
