@@ -230,7 +230,7 @@ class tfBert(backends.BackendBase):
                             use_tpu  = FLAGS.use_tpu,
                             model_fn = model_fn,
                             config   = run_config,
-                            params   = {'sampling_temperature': sampler.temperature_micros / 1e6},
+                            params   = {'sampling_temperature': sampler.temperature},
                             predict_batch_size = sampler.batch_size
                             ),
                   data_generator
@@ -274,9 +274,9 @@ class tfBert(backends.BackendBase):
       if FLAGS.sample_per_epoch == 0:
         self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps)
       else:
-        self.InitSampling(self._getMockSampler(self.config.training.sequence_length, self.config.training.random_seed))
+        self.InitSampling(self._getMockSampler(self.config.training.sequence_length), self.config.training.random_seed)
         for _ in range(self.num_epochs):
-          self.train.estimator.train(input_fn = train_input_fn, steps = self.steps_per_epoch)
+          self.train.estimator.train(input_fn = train_input_fn, steps = 10)
           for _ in range(FLAGS.sample_per_epoch):
             self.InitSampleBatch()
             sample, done = self.SampleNextIndices()
@@ -320,7 +320,7 @@ class tfBert(backends.BackendBase):
     self.sample.data_generator.InitSampleBatch()
     return 
 
-  def SampleNextIndices(self, **unused_kwargs) -> tuple(np.array, bool): #sampler: samplers.Sampler, done):
+  def SampleNextIndices(self, **unused_kwargs):
     """Called iteratively to build a single batch of samples, until termination criteria stops calling"""
     del unused_kwargs
     if self.sample is None:
@@ -335,17 +335,17 @@ class tfBert(backends.BackendBase):
         )
     return output_seq, done
 
-    def _getMockSampler(self, sequence_length):
-      from labm8.py import pbutil
-      sampler_str = [
-          "start_text: \"kernel void A(const double g, const double i){\\n  [HOLE] = [HOLE]\\n  int a = g + [HOLE]\"",
-          "batch_size: 2",
-          "sequence_length: {}".format(sequence_length),
-          "temperature_micros: 800000",
-      ]
-      sampler = pbutil.FromString('\n'.join(sampler_str), sampler_pb2.Sampler())
-      sampler.Specialize(self.atomizer)
-      return sampler
+  def _getMockSampler(self, sequence_length):
+    from labm8.py import pbutil
+    sampler_str = [
+        "start_text: \"kernel void A(const double g, const double i){\\n  [HOLE] = [HOLE]\\n  int a = g + [HOLE]\"",
+        "batch_size: 2",
+        "sequence_length: {}".format(sequence_length),
+        "temperature_micros: 800000",
+    ]
+    sampler = samplers.Sampler(pbutil.FromString('\n'.join(sampler_str), sampler_pb2.Sampler()))
+    sampler.Specialize(self.atomizer)
+    return sampler
 
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
