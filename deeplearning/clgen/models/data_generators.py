@@ -633,11 +633,9 @@ class MaskLMBatchGenerator(object):
 
     return
 
-  def InitSampleBatch(self,
-                      input_sample,
-                      sequence_length,
-                      ) -> None:
+  def InitSampleBatch(self) -> None:
 
+    input_sample = self.sampler.encoded_start_text
     assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
 
     target_idx = np.where(np.in1d(input_sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
