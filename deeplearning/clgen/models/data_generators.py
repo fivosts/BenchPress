@@ -668,9 +668,6 @@ class MaskLMBatchGenerator(object):
     #     """
     #     )
 
-    # expanded_sample = self._expandHoleToMasks(
-    #       input_sample, sequence_length - len(input_sample) + 1
-    #       )
     padded_sample = self._padToMaxPosition(input_sample)
     assert len(padded_sample) == self.max_position_embeddings, "Padded sequence does not match max_position_embeddings"
     self.sampleBatch = np.repeat(padded_sample[None, :], self.sampler.batch_size, axis = 0)
@@ -987,27 +984,6 @@ class MaskLMBatchGenerator(object):
                         np.asarray(masked_lm_positions), np.asarray(masked_lm_ids), 
                         np.asarray(masked_lm_weights),   next_sentence_label
                         )
-
-  def _expandHoleToMasks(self,
-                        sample: np.array, 
-                        length: int
-                        ) -> np.array:
-
-    ## TODO. Essentially this snippet below finds the indices of a random token
-    ## and instructs a function to replace that token  with a sequence of masks
-    ## That is too specific over "replacing holes with masks" but can/should be 
-    ## generalized to anything
-    hole_index = np.where(sample == self.atomizer.holeToken)[0]
-    if len(hole_index) == 0: ## Nothing to do, no holes found
-      return sample
-    if len(hole_index) > 1:
-      l.getLogger().warning("Multiple instances of {} are found. \
-                              Selecting the first one.".format(self.atomizer.holeLabel))
-
-    fhidx = hole_index[0]
-    return np.concatenate([sample[:fhidx], 
-                            np.array([self.atomizer.maskToken] * length, dtype = np.int32),
-                            sample[fhidx + 1:]])
 
   def _padToMaxPosition(self, input_sample):
     return np.concatenate([input_sample, 
