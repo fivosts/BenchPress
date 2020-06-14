@@ -86,22 +86,25 @@ class tfBert(backends.BackendBase):
   def __init__(self, *args, **kwargs):
 
     super(tfBert, self).__init__(*args, **kwargs)
-    self.train                              = None
-    self.sample                             = None
-    self.predict_generator                  = None
-    self.sampler                            = None
+    
+    self.bertAttrs                       = None
+    self.bert_config                     = None
 
-    self.sequence_length                    = None
-    self.train_batch_size                   = None
-    self.eval_batch_size                    = None
-    self.learning_rate                      = None
-    self.num_train_steps                    = None
-    self.num_warmup_steps                   = None
-    self.telemetry                          = None
+    self.train                           = None
+    self.sample                          = None
+    self.predict_generator               = None
+    self.sampler                         = None
 
-    self.ckpt_path                          = self.cache.path / "checkpoints"
-    self.logfile_path                       = self.cache.path / "logs"
-    self.sample_path                        = self.cache.path / "samples"
+    self.train_batch_size                = None
+    self.eval_batch_size                 = None
+    self.learning_rate                   = None
+    self.num_train_steps                 = None
+    self.num_warmup_steps                = None
+    self.telemetry                       = None
+
+    self.ckpt_path                       = self.cache.path / "checkpoints"
+    self.logfile_path                    = self.cache.path / "logs"
+    self.sample_path                     = self.cache.path / "samples"
 
     l.getLogger().info("BERT Model config initialized.")
     l.getLogger().info("Checkpoint path: \n{}".format(self.ckpt_path))
@@ -110,19 +113,19 @@ class tfBert(backends.BackendBase):
 
   def _ConfigModelParams(self):
     self.bertAttrs = {
-          "vocab_size"                      : self.atomizer.vocab_size,
-          "hidden_size"                     : self.config.architecture.hidden_size,
-          "num_hidden_layers"               : self.config.architecture.num_hidden_layers,
-          "num_attention_heads"             : self.config.architecture.num_attention_heads,
-          "intermediate_size"               : self.config.architecture.intermediate_size,
-          "hidden_act"                      : self.config.architecture.hidden_act,
-          "hidden_dropout_prob"             : 1.0 - self.config.architecture.hidden_dropout_prob,
-          "attention_probs_dropout_prob"    : 1.0 - self.config.architecture.attention_probs_dropout_prob,
-          "max_position_embeddings"         : self.config.architecture.max_position_embeddings,
-          "type_vocab_size"                 : self.config.architecture.type_vocab_size,
-          "initializer_range"               : self.config.architecture.initializer_range,
+          "vocab_size"                   : self.atomizer.vocab_size,
+          "hidden_size"                  : self.config.architecture.hidden_size,
+          "num_hidden_layers"            : self.config.architecture.num_hidden_layers,
+          "num_attention_heads"          : self.config.architecture.num_attention_heads,
+          "intermediate_size"            : self.config.architecture.intermediate_size,
+          "hidden_act"                   : self.config.architecture.hidden_act,
+          "hidden_dropout_prob"          : 1.0 - self.config.architecture.hidden_dropout_prob,
+          "attention_probs_dropout_prob" : 1.0 - self.config.architecture.attention_probs_dropout_prob,
+          "max_position_embeddings"      : self.config.architecture.max_position_embeddings,
+          "type_vocab_size"              : self.config.architecture.type_vocab_size,
+          "initializer_range"            : self.config.architecture.initializer_range,
     }
-    self.bert_config                        = model.BertConfig.from_dict(self.bertAttrs)
+    self.bert_config                     = model.BertConfig.from_dict(self.bertAttrs)
     return
 
   def _ConfigTrainParams(self, 
@@ -131,9 +134,9 @@ class tfBert(backends.BackendBase):
     """
     Model parameter initialization for training and validation.
     """
-    self._ConfigModelParams()
+    if self.bert_config is None:
+      self._ConfigModelParams()
 
-    self.sequence_length                  = self.config.training.sequence_length
     self.train_batch_size                 = self.config.training.batch_size
     self.eval_batch_size                  = self.config.training.batch_size
     self.learning_rate                    = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
@@ -182,7 +185,6 @@ class tfBert(backends.BackendBase):
                             params   = None,
                             train_batch_size   = self.train_batch_size,
                             eval_batch_size    = self.eval_batch_size,
-                            predict_batch_size = 1, # Used when sampling online, during training
                             ),
                  data_generator
                  )
@@ -196,16 +198,15 @@ class tfBert(backends.BackendBase):
     """
     Model parameter initialization for inference.
     """
-    self._ConfigModelParams()
+    if self.bert_config is None:
+      self._ConfigModelParams()
+    self.sampler = sampler
 
-    self.sequence_length = sampler.sequence_length
-    self.sampler         = sampler
-
-    if self.sequence_length > self.bertAttrs['max_position_embeddings']:
+    if sampler.sequence_length > self.bertAttrs['max_position_embeddings']:
       raise ValueError(
           "Cannot use sequence length %d because the BERT model "
           "was only trained up to sequence length %d" %
-          (self.sequence_length, self.bertAttrs['max_position_embeddings']))
+          (sampler.sequence_length, self.bertAttrs['max_position_embeddings']))
       
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
@@ -229,7 +230,7 @@ class tfBert(backends.BackendBase):
                             use_tpu  = FLAGS.use_tpu,
                             model_fn = model_fn,
                             config   = run_config,
-                            params   = None,
+                            params   = {'sampling_temperature': sampler.temperature_micros / 1e6},
                             predict_batch_size = sampler.batch_size
                             ),
                   data_generator
@@ -261,8 +262,8 @@ class tfBert(backends.BackendBase):
       # gpu_scheduler.LockExclusiveProcessGpuAccess()
 
       train_input_fn = self.train.data_generator.generateTfDataset(
-          sequence_length = self.sequence_length,
-          num_cpu_threads = 8,
+          sequence_length = self.config.training.sequence_length,
+          num_cpu_threads = os.cpu_count(),
           use_tpu = FLAGS.use_tpu,
           is_training = True)
 
@@ -270,58 +271,27 @@ class tfBert(backends.BackendBase):
                                         self.num_train_steps, self.num_epochs, self.steps_per_epoch
                                         )
                         )
-      if FLAGS.sample_per_epoch > 0:
-
-        def getMockSampler():
-          from labm8.py import pbutil
-          sampler_str = [
-              "start_text: \"kernel void A(const double g, const double i){\\n  [HOLE] = [HOLE]\\n  int a = g + [HOLE]\"",
-              "batch_size: 1",
-              "sequence_length: {}".format(self.sequence_length),
-              "temperature_micros: 800000",
-              "termination_criteria {",
-                "symtok {",
-                  "depth_increase_token: \"{\"",
-                  "depth_decrease_token: \"}\"",
-                "}",
-              "}",
-              "termination_criteria {",
-                "maxlen {",
-                  "maximum_tokens_in_sample: 500",
-                "}",
-              "}",
-          ]
-          return pbutil.FromString('\n'.join(sampler_str), sampler_pb2.Sampler())
-
-        sampler = samplers.Sampler(getMockSampler())
-        sampler.Specialize(self.atomizer)
-        self.sample = tfBert.BertEstimator(
-                        self.train.estimator,
-                        data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
-                          sampler, self.atomizer, 0, self.config.architecture.max_position_embeddings
-                          )
-                        )
+      if FLAGS.sample_per_epoch == 0:
+        self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps)
+      else:
+        self.InitSampling(self._getMockSampler(self.config.training.sequence_length, self.config.training.random_seed))
         for _ in range(self.num_epochs):
           self.train.estimator.train(input_fn = train_input_fn, steps = self.steps_per_epoch)
           for _ in range(FLAGS.sample_per_epoch):
-            self.InitSampleBatch(sampler)
-            done = False
-            while not done:
-              step_seq, done = self.SampleNextIndices()
-            for batch in step_seq:
+            self.InitSampleBatch()
+            sample, done = self.SampleNextIndices()
+            for batch in sample:
               print(
                 self.atomizer.DeatomizeIndices(batch, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
                 end = "\n\n"
                 )
-      else:
-        self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps)
 
       l.getLogger().info("BERT Validation")
 
       eval_input_fn = self.train.data_generator.generateTfDataset(
-          sequence_length = self.sequence_length,
-          num_cpu_threads = 8,
-          is_training=False)
+          sequence_length = self.config.training.sequence_length,
+          num_cpu_threads = os.cpu_count(),
+          is_training     = False)
 
       result = self.train.estimator.evaluate(input_fn=eval_input_fn, steps=self.max_eval_steps)
       self._writeValidation(result)
@@ -330,8 +300,8 @@ class tfBert(backends.BackendBase):
     return
 
   def InitSampling(self,
-                   sampler: samplers.Sampler,
-                   seed: typing.Optional[int] = None
+                   sampler : samplers.Sampler,
+                   seed    : typing.Optional[int] = None
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
     if self.sample is None or sampler != self.sampler:
@@ -344,54 +314,38 @@ class tfBert(backends.BackendBase):
     l.getLogger().info("Initialized BERT sampler in {}".format(self.sample_path))
     return 
 
-  def InitSampleBatch(self,
-                      sampler: samplers.Sampler,
-                      ) -> None:
+  def InitSampleBatch(self, **unused_kwargs) -> None:
     """Batch-specific initialization. Called once when a new batch is going to be generated"""
-    self.predict_generator = None
-    self.sample.data_generator.InitSampleBatch(
-        input_sample = sampler.encoded_start_text,
-        sequence_length = self.sequence_length,
-        )
+    del unused_kwargs
+    self.sample.data_generator.InitSampleBatch()
     return 
 
-  def SampleNextIndices(self, **unused_kwargs): #sampler: samplers.Sampler, done):
+  def SampleNextIndices(self, **unused_kwargs) -> tuple(np.array, bool): #sampler: samplers.Sampler, done):
     """Called iteratively to build a single batch of samples, until termination criteria stops calling"""
     del unused_kwargs
     if self.sample is None:
       raise ValueError("Bert sampler has not been initialized.")
 
-    predict_input_fn = self.sample.data_generator.generateTfSamples()
-    self.predict_generator = self.sample.estimator.predict(input_fn = predict_input_fn)
+    predict_input_fn  = self.sample.data_generator.generateTfSamples()
+    predict_generator = self.sample.estimator.predict(input_fn = predict_input_fn)
 
-    # l.getLogger().warning("TODO!")
-    # l.getLogger().warning("When all data are fetched, the input_fn function should raise an exception")
-    # l.getLogger().warning("B) Are you able to handle the generated sentence and forward it back to the input ?")
+    for step in predict_generator:
+      output_seq, done = self.sample.data_generator.updateSampleBatch(
+        step['input_ids'], step['masked_lm_predictions']
+        )
+    return output_seq, done
 
-    result = next(self.predict_generator)
-
-    outp_seq, done = self.sample.data_generator.updateSampleBatch(
-      result['input_ids'], result['masked_lm_predictions']
-    )
-
-    ### DEBUG
-    # for batch in outp_seq:
-    #   pad_idx = np.where(batch == self.atomizer.padToken)[0]
-    #   if len(pad_idx) > 0:
-    #     print(self.atomizer.DeatomizeIndices(batch[:pad_idx[0]]))
-    #   else:
-    #     print(self.atomizer.DeatomizeIndices(batch))
-
-    # for inp, pred in zip(result['input_ids'], result['masked_lm_predictions']):
-    #   l.getLogger().info(self.atomizer.DeatomizeIndices([inp]))
-    #   l.getLogger().info(self.atomizer.DeatomizeIndices([pred]))
-
-    # for batch in result['next_sentence_predictions']:
-    #   l.getLogger().info(batch)
-    # l.getLogger().warning("TODO! Right here you must forward output back to input.")
-    #### 
-
-    return outp_seq, done
+    def _getMockSampler(self, sequence_length):
+      from labm8.py import pbutil
+      sampler_str = [
+          "start_text: \"kernel void A(const double g, const double i){\\n  [HOLE] = [HOLE]\\n  int a = g + [HOLE]\"",
+          "batch_size: 2",
+          "sequence_length: {}".format(sequence_length),
+          "temperature_micros: 800000",
+      ]
+      sampler = pbutil.FromString('\n'.join(sampler_str), sampler_pb2.Sampler())
+      sampler.Specialize(self.atomizer)
+      return sampler
 
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
@@ -478,8 +432,7 @@ class tfBert(backends.BackendBase):
 
           scaffold_fn = _tpu_scaffold
         else:
-          if mode != tf.compat.v1.estimator.ModeKeys.PREDICT:
-            l.getLogger().info("Loading model checkpoint from: {}".format(str(self.ckpt_path)))
+          l.getLogger().info("Loading model checkpoint from: {}".format(str(self.ckpt_path)))
           tf.compat.v1.train.init_from_checkpoint(str(self.ckpt_path), assignment_map)
 
       output_spec = None
@@ -572,8 +525,8 @@ class tfBert(backends.BackendBase):
 
           if FLAGS.categorical_sampling:
 
-            mlm_sampler = tfp.distributions.Categorical(logits = masked_lm_log_probs)
-            nsp_sampler = tfp.distributions.Categorical(logits = next_sentence_log_probs)
+            mlm_sampler = tfp.distributions.Categorical(logits = masked_lm_log_probs / params['sampling_temperature'])
+            nsp_sampler = tfp.distributions.Categorical(logits = next_sentence_log_probs / params['sampling_temperature'])
 
             masked_lm_predictions     = mlm_sampler.sample()
             next_sentence_predictions = nsp_sampler.sample()
