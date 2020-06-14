@@ -368,9 +368,8 @@ class MaskLMBatchGenerator(object):
 
     self.training_opts              = None
     self.steps_per_epoch            = None
-    self.batch_size                 = None
+
     self.max_position_embeddings    = None
-    self.sequence_length            = None
     self.target_predictions         = None
 
     self.tfRecord                   = None
@@ -387,6 +386,7 @@ class MaskLMBatchGenerator(object):
                                training_opts: model_pb2.TrainingOptions,
                                cache_path
                                ) -> "data_generators.MaskLMBatchGenerator":
+    """Initializes data generator for training."""
     d                     = MaskLMBatchGenerator()
     d.corpus              = corpus
     d.atomizer            = corpus.atomizer
@@ -407,9 +407,10 @@ class MaskLMBatchGenerator(object):
   def SampleMaskLMBatchGenerator(cls,
                                 sampler,
                                 atomizer,
-                                seed,
-                                max_position_embeddings,
+                                seed: int,
+                                max_position_embeddings: int,
                                 ) -> "data_generators.MaskLMBatchGenerator":
+    """Initializes data generator for inference."""
     d                         = MaskLMBatchGenerator()
     d.sampler                 = sampler
     d.atomizer                = atomizer
@@ -423,7 +424,7 @@ class MaskLMBatchGenerator(object):
                       num_cpu_threads,
                       use_tpu = False,
                       ) -> "tf.Dataset":
-
+    """Wrapper function that constructs a tf.Dataset used for training BERT."""
     def _decode_record(record, name_to_features):
       """Decodes a record to a TensorFlow example."""
       ## This function assumes record is still a file (expressed as TF dataset)
@@ -439,7 +440,9 @@ class MaskLMBatchGenerator(object):
       return example
 
     def input_fn(params):
-
+      """
+      function used by tf.estimator to generate inputs for training.
+      """
       batch_size = params["batch_size"]
       name_to_features = {
           "input_ids"               : tf.io.FixedLenFeature([sequence_length], tf.int64),
@@ -491,8 +494,29 @@ class MaskLMBatchGenerator(object):
     return input_fn
 
   def generateTfSamples(self):
+    """
+    Contains input_fn closure function for estimator
+    
+    Returns:
+      input_fn callable.
+    """
 
-    def sample_gen(batch_size):
+    def sample_gen(batch_size: int):
+      """
+      This generator yields iteratively the inference input blob for each step.
+      In the first iteration, it yields sampler.encoded_start_text and then for each step,
+      self.sampleBatch is updated with the model's current output through self.updateVocabulary.
+      The generator stops when the model has filled all mask or hole tokens with predictions.
+
+      Arguments:
+        batch_size: The batch size used during inference.
+
+      Yields:
+        Current step's inference input for model.
+
+      Returns:
+        None
+      """
       assert batch_size == len(self.sampleBatch), "{}, {}".format(batch_size, len(self.sampleBatch))
       while True:
 
@@ -518,12 +542,15 @@ class MaskLMBatchGenerator(object):
           masked_lm_positions.append(list(sample_masks) + [0] * len_offset)
           masked_lm_ids.append([self.atomizer.maskToken] * actual_mask_len + [self.atomizer.padToken] * len_offset)
           masked_lm_weights.append([0.0] * (actual_mask_len + len_offset))
-        l.getLogger().warn(self.atomizer.DeatomizeIndices(input_ids, ignore_token = self.atomizer.padToken))
+
         yield (input_ids, input_mask, 
           masked_lm_positions, masked_lm_ids, 
           masked_lm_weights, np.zeros([batch_size, 1]))
 
     def input_fn(params):
+      """
+      function used by tf.estimator to generate inputs for inference.
+      """
       batch_size = params['batch_size']
 
       sample = tf.data.Dataset.from_generator(
@@ -548,12 +575,18 @@ class MaskLMBatchGenerator(object):
     return input_fn
 
   def CreateCorpus(self) -> None:
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.CreateBatches()")
+    """
+    Constructs training corpus in text format, stores it in
+    self.shaped_corpus
+
+    Each corpus datapoint is either a single kernel or a random
+    sequence of size sequence_length (legacy).
+    """
     start_time = time.time()
 
     # Set corpus dimension parameters
-    self.sequence_length        = self.training_opts.sequence_length
-    self.batch_size             = self.training_opts.batch_size
+    sequence_length             = self.training_opts.sequence_length
+    batch_size             = self.training_opts.batch_size
     dupe_factor                 = self.training_opts.dupe_factor
     shuffle                     = self.training_opts.shuffle_corpus_contentfiles_between_epochs
     pad                         = [self.atomizer.padToken   ]
@@ -568,13 +601,13 @@ class MaskLMBatchGenerator(object):
       # Reject larger than sequence length
       initial_length       = copy.deepcopy(len(encoded_corpus))
       encoded_corpus       = [list(x) for x in encoded_corpus if 
-                             len(x) <= self.sequence_length - (2 if FLAGS.use_start_end_metatokens else 0)] # Account for start and end token
+                             len(x) <= sequence_length - (2 if FLAGS.use_start_end_metatokens else 0)] # Account for start and end token
       reduced_length       = copy.deepcopy(len(encoded_corpus))
       # Add start/end tokens
       if FLAGS.use_start_end_metatokens:
         encoded_corpus     = [self._addStartEndToken(kf) for kf in encoded_corpus]
       # pad sequences to sequence length
-      encoded_corpus       = np.array([x + pad * (self.sequence_length - len(x)) for x in encoded_corpus])
+      encoded_corpus       = np.array([x + pad * (sequence_length - len(x)) for x in encoded_corpus])
       # Clone datapoints dupe_factor times
       self.shaped_corpus   = np.repeat(encoded_corpus, dupe_factor, axis = 0)
       # Shuffle
@@ -587,7 +620,7 @@ class MaskLMBatchGenerator(object):
       self.num_epochs      = int(self.training_opts.num_train_steps / self.steps_per_epoch)
 
       assert self.shaped_corpus.ndim     == 2, "corpus dim: {}".format(self.shaped_corpus.shape)
-      assert self.shaped_corpus.shape[1] == self.sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(encoded_corpus.shape[1], self.sequence_length)
+      assert self.shaped_corpus.shape[1] == sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(encoded_corpus.shape[1], sequence_length)
 
       l.getLogger().info("{} kernels were rejected (larger than sequence_length)".format(initial_length - reduced_length))
       l.getLogger().info(
@@ -607,18 +640,18 @@ class MaskLMBatchGenerator(object):
       encoded_corpus = np.tile(encoded_corpus, dupe_factor)
 
       # Set corpus dimension parameters
-      self.steps_per_epoch        = int(len(encoded_corpus) / (self.batch_size * self.sequence_length * dupe_factor))
+      self.steps_per_epoch        = int(len(encoded_corpus) / (batch_size * sequence_length * dupe_factor))
       assert self.steps_per_epoch != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
       self.num_epochs             = int(self.training_opts.num_train_steps / self.steps_per_epoch)
 
-      clipped_corpus_length       = dupe_factor * self.steps_per_epoch * self.batch_size * self.sequence_length
+      clipped_corpus_length       = dupe_factor * self.steps_per_epoch * batch_size * sequence_length
       clipped_corpus              = encoded_corpus[:clipped_corpus_length]
 
-      self.shaped_corpus = np.split(clipped_corpus, self.batch_size * self.steps_per_epoch * dupe_factor, 0)
+      self.shaped_corpus = np.split(clipped_corpus, batch_size * self.steps_per_epoch * dupe_factor, 0)
 
       np_corpus = np.asarray(self.shaped_corpus)
       assert np_corpus.ndim == 2, "Wrong dimensions for shaped_corpus: {}".format(np_corpus.shape)
-      assert np_corpus.shape[1] == self.sequence_length, "Second dimension is not equal to sequence length: {}".format(np_corpus.shape[1])
+      assert np_corpus.shape[1] == sequence_length, "Second dimension is not equal to sequence length: {}".format(np_corpus.shape[1])
 
       l.getLogger().info(
         "Loaded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
@@ -634,37 +667,16 @@ class MaskLMBatchGenerator(object):
     return
 
   def InitSampleBatch(self) -> None:
+    """
+    Initializes data_generator for inference.
+    self.sampleBatch is initialized with sampler.encoded_start_text
+    """
 
     input_sample = self.sampler.encoded_start_text
     assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
 
     target_idx = np.where(np.in1d(input_sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
     assert len(target_idx) != 0, "No target prediction in sample text"
-
-    # if len(target_idx) > 1:
-    #   raise NotImplementedError(
-    #     """\
-    #       Having more than one [MASK]/[HOLE] tokens in a to-be-predicted \
-    #       text is something I cannot handle now (and don't know if I should \
-    #       anyway). There are some reasons for this:
-    #       a) When two any of [MASK] or [HOLE] appear in a sampling text \
-    #       one should think through which should be given first for inference.\
-    #       This, should make a difference given the model takes into account the context \
-    #       of the whole sentence.
-    #       b) generateTfSamples constructs the arrays that hold indices of all masks/holes \
-    #       to be predicted. If a text contains multiple masks/holes in a single timestep, \
-    #       then some algorithm will have to be embedded to make a queue of these many masks/holes \
-    #       to provide them one at a time. Alternatively, they could be provided alltogether in a \
-    #       batched timestep fashion. Now, that sounds weird so, let me provide an example:
-    #       If the sampler encounters this: 'kernel [HOLE] A([HOLE)', then this could be fed \
-    #       into the model with both holes at the same time, and then ask for a single prediction for \
-    #       each. Then two predictions replace the HOLES, a new HOLE is appended after the predicted \
-    #       token for any of these two predictions does not match the ENDHOLE token, and that goes on \
-    #       in this batched-timestep fashion. 
-
-    #       But for now, let's assume input_sample contains either one MASK or one HOLE.
-    #     """
-    #     )
 
     padded_sample = self._padToMaxPosition(input_sample)
     assert len(padded_sample) == self.max_position_embeddings, "Padded sequence does not match max_position_embeddings"
@@ -675,6 +687,11 @@ class MaskLMBatchGenerator(object):
                         input_ids     : np.array,
                         masked_lm_ids : np.array,
                         ) -> np.array:
+    """
+    Updates self.sampleBatch with the model's output prediction.
+    The output, if still contains hole or mask tokens, is fed back
+    to the model's input through the input_fn's sample_gen generator.
+    """
     assert len(input_ids) == len(masked_lm_ids), "Inputs and predictions do not have the same batch size."
 
     updated_sequence = []
@@ -722,7 +739,7 @@ class MaskLMBatchGenerator(object):
       input_ids  = instance.input_ids
       input_mask = instance.input_mask
 
-      assert len(input_ids) == self.sequence_length, "len(input_ids):  {}, self.sequence_length: {}".format(len(input_ids), self.sequence_length)
+      assert len(input_ids) == self.training_opts.sequence_length, "len(input_ids):  {}, sequence_length: {}".format(len(input_ids), self.training_opts.sequence_length)
 
       masked_lm_positions   = instance.masked_lm_positions
       masked_lm_ids         = instance.masked_lm_ids
@@ -763,13 +780,19 @@ class MaskLMBatchGenerator(object):
     if FLAGS.write_text_dataset:
       file_writer.close()
     l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
-                      .format(inst_index, self.steps_per_epoch, self.batch_size, self.tfRecord))
+                      .format(inst_index, self.steps_per_epoch, self.training_opts.batch_size, self.tfRecord))
     return
 
   def _MaskCorpus(self, 
                  corpus: np.array
                 )-> None:
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator._MaskCorpus()")
+    """
+    Entrypoint function that inserts masks or holes to the corpus.
+
+    Arguments:
+      corpus: [num_datapoints, sequence_length], 
+              where num_datapoints = num_batches * dupe_factor * batch_size
+    """
     self.masked_corpus = []
 
     with progressbar.ProgressBar(max_value = len(corpus)) as bar:
@@ -782,13 +805,15 @@ class MaskLMBatchGenerator(object):
             raise AttributeError("target predictions cannot be {}".format(self.target_predictions))
           self.masked_corpus.append(masked_seq)
           bar.update(idx)
-    self.masked_corpus[0].LogBatchTelemetry(self.batch_size, self.steps_per_epoch, self.num_epochs)
+    self.masked_corpus[0].LogBatchTelemetry(self.training_opts.batch_size, self.steps_per_epoch, self.num_epochs)
     return
 
   def _holeSequence(self,
                     seq: np.array,
                     ) -> MaskSequence:
-
+    """
+    Inserts hole tokens to a given sequence.
+    """
     assert seq.ndim == 1, "Input for masking must be single-dimension array."
 
     ## Tuple representation of mask id/position for easy sorting
@@ -911,7 +936,7 @@ class MaskLMBatchGenerator(object):
   def _maskSequence(self,
                     seq: np.array,
                     ) -> MaskSequence:
-
+    """Inserts masks to a given sequence."""
     assert seq.ndim == 1, "Input for masking must be single-dimension array."
 
     ## Tuple representation of mask id/position for easy sorting
@@ -984,12 +1009,30 @@ class MaskLMBatchGenerator(object):
                         )
 
   def _padToMaxPosition(self, input_sample):
+    """
+    Pads a given sequence to the maximum allowed sequence length, which is max_position_embeddings
+    
+    Arguments:
+      input_sample: np.array or list that represents a sequence
+
+    Returns:
+      padded sequence in np.array format
+    """
     return np.concatenate([input_sample, 
                           np.array([self.atomizer.padToken] * 
                               (self.max_position_embeddings - len(input_sample)), dtype = np.int32)
                           ])
 
   def _addStartEndToken(self, inp: list) -> list:
+    """
+    Inserts [START] and [END] token at the beginnning and end of a sequence
+    
+    Arguments:
+      inp: input_sequence
+
+    Returns:
+      [START] + input_sequence + [END]
+    """
     assert len(inp) != 0, "Empty list provided."
     assert self.atomizer.padToken not in inp, "Use this function before padding a sequence!"
 
