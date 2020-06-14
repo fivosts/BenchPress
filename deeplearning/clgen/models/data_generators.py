@@ -524,7 +524,7 @@ class MaskLMBatchGenerator(object):
           masked_lm_weights, np.zeros([batch_size, 1]))
 
     def input_fn(params):
-      batch_size = params['batch_size's]
+      batch_size = params['batch_size']
 
       sample = tf.data.Dataset.from_generator(
                 lambda: sample_gen(batch_size), 
@@ -710,8 +710,6 @@ class MaskLMBatchGenerator(object):
       # Then, concat it back.
       # BTW, should you chop on sampler sequence length or maxposemb ?
       batch = batch[:self.max_position_embeddings]
-      assert (len(masked_lm_ids[batch_idx]) == mask_id_index,
-        "Not all predicted masks have been popped: {} remaining".format(len(masked_lm_ids)))
       updated_sequence.append(batch)
 
     self.sampleBatch = np.asarray(updated_sequence)
