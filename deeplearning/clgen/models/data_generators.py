@@ -708,6 +708,7 @@ class MaskLMBatchGenerator(object):
       # If a sequence is bigger than it should, crop one or both edges,
       # save them and send max_position_embeddings for next step.
       # Then, concat it back.
+      # BTW, should you chop on sampler sequence length or maxposemb ?
       batch = batch[:self.max_position_embeddings]
       assert (len(masked_lm_ids[batch_idx]) == mask_id_index,
         "Not all predicted masks have been popped: {} remaining".format(len(masked_lm_ids)))
