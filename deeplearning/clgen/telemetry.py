@@ -62,7 +62,7 @@ class TrainingLogger(object):
     from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
     event_acc = EventAccumulator(str(self.logdir))
     event_acc.Reload()
-    wall_time, step_nums, loss = zip(*event_acc.Scalars('total_loss'))
+    wall_time, step_nums, loss = zip(*event_acc.Scalars('training/total_loss'))
     assert len(wall_time) == len(step_nums)
     assert len(step_nums) == len(loss)
 
