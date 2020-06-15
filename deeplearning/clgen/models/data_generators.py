@@ -679,7 +679,7 @@ class MaskLMBatchGenerator(object):
     assert len(target_idx) != 0, "No target prediction in sample text"
 
     padded_sample = self._padToMaxPosition(input_sample)
-    assert len(padded_sample) == self.max_position_embeddings, "Padded sequence does not match max_position_embeddings"
+    padded_sample = padded_sample[:self.sampler.sequence_length]
     self.sampleBatch = np.repeat(padded_sample[None, :], self.sampler.batch_size, axis = 0)
     return
 
@@ -720,8 +720,7 @@ class MaskLMBatchGenerator(object):
       # If a sequence is bigger than it should, crop one or both edges,
       # save them and send max_position_embeddings for next step.
       # Then, concat it back.
-      # BTW, should you chop on sampler sequence length or maxposemb ?
-      batch = batch[:self.max_position_embeddings]
+      batch = batch[:self.sampler.sequence_length]
       updated_sequence.append(batch)
 
     self.sampleBatch = np.asarray(updated_sequence)
