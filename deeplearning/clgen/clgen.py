@@ -169,7 +169,7 @@ class Instance(object):
       test_sampler_config.termination_criteria.extend(
         [
           sampler_pb2.SampleTerminationCriterion(
-            maxlen=sampler_pb2.MaxTokenLength(maximum_tokens_in_sample=512)
+            maxlen=sampler_pb2.MaxTokenLength(maximum_tokens_in_sample=self.sampler.sequence_length)
           ),
         ]
       )
@@ -177,7 +177,7 @@ class Instance(object):
 
       # We inject the `test_sampler` argument so that we can create samples
       # during training.
-      self.model.Train(*args, test_sampler=test_sampler, **kwargs)
+      self.model.Train(*args, test_sampler = test_sampler, **kwargs)
 
   def Sample(self, *args, **kwargs) -> typing.List[model_pb2.Sample]:
     self.Train()
