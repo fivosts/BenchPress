@@ -106,7 +106,7 @@ class tfBert(backends.BackendBase):
 
     self.ckpt_path                       = self.cache.path / "checkpoints"
     self.logfile_path                    = self.cache.path / "logs"
-    self.sample_base_path                = self.cache.path / "samples"
+    self.sample_path                     = self.cache.path / "samples"
 
     l.getLogger().info("BERT Model config initialized.")
     l.getLogger().info("Checkpoint path: \n{}".format(self.ckpt_path))
@@ -237,8 +237,6 @@ class tfBert(backends.BackendBase):
                             ),
                   data_generator
                   )
-    self.sample_path = self.sample_base_path / self.sampler.hash
-    self.sample_path.mkdir(parents = True, exist_ok = True)
     return
 
   @property
@@ -311,7 +309,7 @@ class tfBert(backends.BackendBase):
                    seed    : typing.Optional[int] = None
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
-    if self.sample is None or sampler.sha != self.sampler.sha:
+    if self.sample is None or sampler.hash != self.sampler.hash:
       data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
                          sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings
                        )
@@ -338,6 +336,7 @@ class tfBert(backends.BackendBase):
     predict_input_fn  = self.sample.data_generator.generateTfSamples()
     predict_generator = self.sample.estimator.predict(input_fn = predict_input_fn)
 
+    output_seq, done = None, False
     for step in predict_generator:
       output_seq, done = self.sample.data_generator.updateSampleBatch(
         step['input_ids'], step['masked_lm_predictions']
