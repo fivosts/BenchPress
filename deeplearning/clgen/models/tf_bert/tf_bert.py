@@ -560,11 +560,9 @@ class tfBert(backends.BackendBase):
               'masked_lm_predictions'     : masked_lm_predictions,
               'next_sentence_predictions' : next_sentence_predictions,
           }
-          prediction_hooks = []#self.GetPredictionHooks()
           output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
               mode = mode,
               predictions = prediction_metrics,
-              prediction_hooks = prediction_hooks,
               scaffold_fn = scaffold_fn)
       else:
         raise ValueError("{} is not a valid mode".format(mode))
@@ -700,19 +698,3 @@ class tfBert(backends.BackendBase):
     return [
             hooks.tfProgressBar(max_length = max_steps, mode = tf.compat.v1.estimator.ModeKeys.EVAL)
             ]
-
-  def GetPredictionHooks(self,
-                         samples    : typing.List[int],
-                         output_dir : str = None
-                        ) -> typing.List[tf.estimator.SessionRunHook]:
-    if output_dir is None:
-      output_dir = self.sample_path
-    return [
-            tf.estimator.SummarySaverHook(save_steps = 1,
-                                          output_dir = output_dir,
-                                          summary_op = [ tf.compat.v1.summary.text(self.atomizer.DeatomizeIndices(s))
-                                                            for s in samples
-                                                       ]
-                                         )
-           ]
-
