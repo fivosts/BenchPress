@@ -443,7 +443,8 @@ class tfBert(backends.BackendBase):
 
           scaffold_fn = _tpu_scaffold
         else:
-          l.getLogger().info("Loading model checkpoint from: {}".format(str(self.ckpt_path)))
+          if mode != tf.compat.v1.estimator.ModeKeys.PREDICT:
+            l.getLogger().info("Loading model checkpoint from: {}".format(str(self.ckpt_path)))
           tf.compat.v1.train.init_from_checkpoint(str(self.ckpt_path), assignment_map)
 
       output_spec = None
