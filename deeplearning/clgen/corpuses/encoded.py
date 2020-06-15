@@ -76,19 +76,16 @@ class EncodedContentFile(Base):
 
   @staticmethod
   def DataStringToNumpyArray(data: str) -> np.ndarray:
-    # l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFile.DataStringToNumpyArray()")
     """Convert the 'data' string to a numpy array."""
     return np.array([int(x) for x in data.split(".")], dtype=np.int32)
 
   @staticmethod
   def NumpyArrayToDataString(array: np.ndarray) -> str:
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFile.NumpyArrayToDataString()")
     """Convert the 'data' string to a numpy array."""
     return ".".join(str(x) for x in array)
 
   @property
   def indices_array(self) -> np.ndarray:
-    # l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFile.indices_array()")
     """The numpy array of the encoded data."""
     return self.DataStringToNumpyArray(self.data)
 
@@ -109,7 +106,6 @@ class EncodedContentFile(Base):
     Returns:
       An EncodedContentFile instance.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFile.FromPreprocessed()")
     start_time = time.time()
     data = atomizer.AtomizeString(preprocessed_cf.text)
     encoding_time_ms = int((time.time() - start_time) * 1000)
@@ -137,7 +133,6 @@ def EncoderWorker(
   # derived atomizer is not always capable of encoding the preprocessed files.
   # Once this has been fixed, there is no need to catch the VocabError here,
   # and EncoderWorker can always return an EncodedContentFile instance.
-  l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncoderWorker()")
   try:
     return EncodedContentFile.FromPreprocessed(
       preprocessed.PreprocessedContentFile(id=job.id, text=job.text),
@@ -152,7 +147,6 @@ class EncodedContentFiles(sqlutil.Database):
   """A database of encoded pre-processed contentfiles."""
 
   def __init__(self, url: str, must_exist: bool = False):
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.__init__()")
     super(EncodedContentFiles, self).__init__(url, Base, must_exist=must_exist)
 
   def Create(
@@ -175,7 +169,6 @@ class EncodedContentFiles(sqlutil.Database):
       EmptyCorpusException: If the PreprocessedContentFiles database has
         no files.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.Create()")
     with self.Session() as session:
       if not self.IsDone(session):
         self.Import(session, p, atomizer, contentfile_separator)
@@ -206,7 +199,6 @@ class EncodedContentFiles(sqlutil.Database):
 
   @property
   def size(self):
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.size()")
     """Return the total number of files in the encoded corpus."""
     with self.Session() as session:
       return session.query(EncodedContentFile).count()
@@ -217,19 +209,16 @@ class EncodedContentFiles(sqlutil.Database):
 
     This excludes the EOF markers which are appended to each encoded text.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.token_count()")
     with self.Session() as session:
       return session.query(func.sum(EncodedContentFile.tokencount)).scalar()
 
   def IsDone(self, session: sqlutil.Session):
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.IsDone()")
     if session.query(Meta).filter(Meta.key == "done").first():
       return True
     else:
       return False
 
   def SetDone(self, session: sqlutil.Session):
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.SetDone()")
     session.add(Meta(key="done", value="yes"))
 
   def Import(
@@ -239,7 +228,6 @@ class EncodedContentFiles(sqlutil.Database):
     atomizer: atomizers.AtomizerBase,
     contentfile_separator: str,
   ) -> None:
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.Import()")
     with preprocessed_db.Session() as p_session:
       query = p_session.query(preprocessed.PreprocessedContentFile).filter(
         preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
@@ -299,7 +287,6 @@ class EncodedContentFiles(sqlutil.Database):
 
   @staticmethod
   def GetVocabFromMetaTable(session) -> typing.Dict[str, int]:
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.GetVocabFromMetaTable()")
     """Read a vocabulary dictionary from the 'Meta' table of a database."""
     q = session.query(Meta.value).filter(Meta.key == "vocab_size")
     if not q.first():
@@ -316,7 +303,6 @@ class EncodedContentFiles(sqlutil.Database):
     session: sqlutil.Session, vocabulary: typing.Dict[str, int]
   ) -> None:
     """Store a vocabulary dictionary in the 'Meta' table of a database."""
-    l.getLogger().debug("deeplearning.clgen.corpuses.encoded.EncodedContentFiles.StoreVocabInMetaTable()")
     q = session.query(encoded.Meta).filter(encoded.Meta.key.like("vocab_%"))
     q.delete(synchronize_session=False)
 
