@@ -25,6 +25,7 @@ from absl import app, flags
 from deeplearning.clgen import sample_observers as sample_observers_lib
 from deeplearning.clgen import samplers
 from deeplearning.clgen import pbutil
+from deeplearning.clgen import tf
 from deeplearning.clgen.dashboard import dashboard
 from deeplearning.clgen.models import models
 from deeplearning.clgen.models import pretrained
@@ -308,6 +309,7 @@ def initMain(*args, **kwargs):
     **kwargs: Arguments to be passed to the function.
   """
   l.initLogger(name = "clgen", lvl = FLAGS.level, colorize = FLAGS.color, step = FLAGS.step)
+  tf.initTensorflow()
   if FLAGS.clgen_debug:
     # Enable verbose stack traces. See: https://pymotw.com/2/cgitb/
     import cgitb
