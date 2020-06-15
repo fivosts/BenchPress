@@ -671,7 +671,7 @@ class MaskLMBatchGenerator(object):
     Initializes data_generator for inference.
     self.sampleBatch is initialized with sampler.encoded_start_text
     """
-
+    assert self.sampler.sequence_length <= self.max_position_embeddings, "Sampler sequence length exceeds max position embeddings."
     input_sample = self.sampler.encoded_start_text
     assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
 
