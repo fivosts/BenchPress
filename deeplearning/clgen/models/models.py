@@ -24,6 +24,7 @@ from deeplearning.clgen import cache
 from deeplearning.clgen import sample_observers as sample_observers_lib
 from deeplearning.clgen import samplers
 from deeplearning.clgen import telemetry
+from deeplearning.clgen import pbutil
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.dashboard import dashboard_db
@@ -39,8 +40,7 @@ from labm8.py import crypto
 from labm8.py import humanize
 from labm8.py import labdate
 from labm8.py import lockfile
-from labm8.py import logutil
-from deeplearning.clgen import pbutil
+from labm8.py import sqlutil
 from labm8.py import system
 
 from eupy.native import logger as l
@@ -82,7 +82,6 @@ class Model(object):
     # Create the necessary cache directories.
     (self.cache.path / "checkpoints").mkdir(exist_ok=True)
     (self.cache.path / "samples").mkdir(exist_ok=True)
-    (self.cache.path / "logs").mkdir(exist_ok=True)
 
     self._created = False
     self.dashboard_db = dashboard_db.GetDatabase()
@@ -224,7 +223,6 @@ class Model(object):
     self.Create()
     with self.training_lock.acquire():
       self.backend.Train(self.corpus, **kwargs)
-    # telemetry_logs = self.TrainingTelemetry()[: self.backend.num_epochs]
     telemetry_logs = self.backend.telemetry.EpochTelemetry()
 
     if len(telemetry_logs) != self.backend.num_epochs:
@@ -286,18 +284,19 @@ class Model(object):
 
     self.Train()
 
-    with logutil.TeeLogsToFile(
-      f"sampler_{sampler.hash}", self.cache.path / "logs"
-    ):
-      l.getLogger().info("Sampling: '{}'".format(sampler.start_text))
+    l.getLogger().info("Sampling: '{}'".format(sampler.start_text))
 
-      atomizer = self.corpus.atomizer
-      sampler.Specialize(atomizer)
-      self.backend.InitSampling(sampler, seed)
-      [obs.Specialize(self, sampler) for obs in sample_observers]
+    (self.cache.path / "samples" / sampler.hash).mkdir(exist_ok = True)
+    atomizer = self.corpus.atomizer
+    sampler.Specialize(atomizer)
+    sampler.initSampleDB(self.cache.path / "samples" / sampler.hash)
+    sampler.symlinkModelDB(self.hash)
+    self.backend.InitSampling(sampler, seed)
+    [obs.Specialize(self, sampler) for obs in sample_observers]
 
+    with sampler.db.Session(commit = True) as db_sess:
       batch_count = 1
-      while self._SampleBatch(sampler, atomizer, sample_observers):
+      while self._SampleBatch(sampler, db_sess, atomizer, sample_observers):
         batch_count += 1
 
       time_now = labdate.MillisecondsTimestamp()
@@ -311,9 +310,11 @@ class Model(object):
   def _SampleBatch(
     self,
     sampler: samplers.Sampler,
+    session: sqlutil.Session,
     atomizer: atomizers.AtomizerBase,
     sample_observers: typing.List[sample_observers_lib.SampleObserver],
   ) -> bool:
+    ## This function needs a hell of refactoring.
     """Run a single iteration of the batched sample inner-loop."""
     l.getLogger().debug("deeplearning.clgen.models.Model._SampleBatch()")
     samples_in_progress = [
@@ -332,7 +333,6 @@ class Model(object):
     # Sampling loop. Continues until all samples in the batch are done.
     while not done.all():
       indices = self.backend.SampleNextIndices(sampler, done)
-
       # Iterate over all samples in batch to determine whether they're
       # done.
       for i in range(sampler.batch_size):
@@ -340,17 +340,31 @@ class Model(object):
           continue
 
         for index in indices[i]:
-          samples_in_progress[i].append(atomizer.decoder[index])
+          ## Legacy operation for sequential returning single token
+          if isinstance(index, int):
+            samples_in_progress[i].append(atomizer.decoder[index])
+          else: # if list or np.array
+            samples_in_progress[i] = [atomizer.decoder[x] for x in index]
+
           if sampler.SampleIsComplete(samples_in_progress[i]):
-            end_time = labdate.MillisecondsTimestamp()
-            done[i] = 1
-            sample = model_pb2.Sample(
-              text="".join(samples_in_progress[i]),
-              sample_start_epoch_ms_utc=start_time,
-              sample_time_ms=end_time - start_time,
-              wall_time_ms=end_time - wall_time_start,
-              num_tokens=len(samples_in_progress[i]),
+            end_time  = labdate.MillisecondsTimestamp()
+            done[i]   = 1
+            sample    = model_pb2.Sample(
+              text                      = "".join(samples_in_progress[i]),
+              sample_start_epoch_ms_utc = start_time,
+              sample_time_ms            = end_time - start_time,
+              wall_time_ms              = end_time - wall_time_start,
+              num_tokens                = len(samples_in_progress[i]),
             )
+            sample_db = samplers.SamplerDBFile(
+              id              = sampler.db_file_count,
+              text            = "".join(samples_in_progress[i]),
+              encoded_text    = ",".join([str(atomizer.vocab[x]) for x in samples_in_progress[i]]),
+              num_tokens      = len(samples_in_progress[i]),
+              sample_time_ms  = end_time - start_time,
+              wall_time_ms    = end_time - wall_time_start,
+            )
+            session.add(sample_db)
             # Notify sample observers.
             continue_sampling &= all(
               [obs.OnSample(sample) for obs in sample_observers]
@@ -360,7 +374,7 @@ class Model(object):
             # sample and the end of the current sample.
             wall_time_start = labdate.MillisecondsTimestamp()
             break
-
+    session.commit()
     return continue_sampling
 
   def SamplerCache(self, sampler: samplers.Sampler) -> pathlib.Path:
@@ -373,17 +387,10 @@ class Model(object):
       A path to a directory. Note that this directory may not exist - it is
       created only after a call to Sample().
     """
-    l.getLogger().debug("deeplearning.clgen.models.Model.SamplerCache()")
     return self.cache.path / "samples" / sampler.hash
 
   def _WriteMetafile(self) -> None:
-    l.getLogger().debug("deeplearning.clgen.models.Model._WriteMetafile()")
     pbutil.ToFile(self.meta, pathlib.Path(self.cache.keypath("META.pbtxt")))
-
-  def TrainingTelemetry(self) -> typing.List[telemetry_pb2.ModelEpochTelemetry]:
-    """Get the training telemetry data."""
-    l.getLogger().debug("deeplearning.clgen.models.Model.TrainingTelemetry()")
-    return telemetry.TrainingLogger(self.cache.path / "logs").EpochTelemetry()
 
   def InferenceManifest(self) -> typing.List[pathlib.Path]:
     """Return the list of files which are required for model inference.
@@ -391,7 +398,6 @@ class Model(object):
     Returns:
       A list of absolute paths.
     """
-    l.getLogger().debug("deeplearning.clgen.models.Model.InferenceManifest()")
     return sorted(
       [self.cache.path / "atomizer", self.cache.path / "META.pbtxt",]
       + self.backend.InferenceManifest()
@@ -399,31 +405,25 @@ class Model(object):
 
   @property
   def atomizer(self) -> atomizers.AtomizerBase:
-    l.getLogger().debug("deeplearning.clgen.models.Model.atomizer()")
     return self.corpus.atomizer
 
   @property
   def training_lock(self) -> lockfile.LockFile:
-    l.getLogger().debug("deeplearning.clgen.models.Model.training_lock()")
     """A lockfile for exclusive training."""
     return lockfile.LockFile(self.cache.keypath("LOCK"))
 
   @property
   def is_trained(self) -> bool:
-    l.getLogger().debug("deeplearning.clgen.models.Model.is_trained()")
     return self.backend.is_trained
 
   def __repr__(self) -> str:
     """String representation."""
-    l.getLogger().debug("deeplearning.clgen.models.Model.__repr__()")
     return f"model[{self.hash}]"
 
   def __eq__(self, rhs) -> bool:
-    l.getLogger().debug("deeplearning.clgen.models.Model.__eq__()")
     if not isinstance(rhs, Model):
       return False
     return rhs.hash == self.hash
 
   def __ne__(self, rhs) -> bool:
-    l.getLogger().debug("deeplearning.clgen.models.Model.__ne__()")
     return not self.__eq__(rhs)
