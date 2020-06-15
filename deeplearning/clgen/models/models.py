@@ -363,7 +363,6 @@ class Model(object):
               encoded_text    = ",".join([str(atomizer.vocab[x]) for x in samples_in_progress[i]]),
               num_tokens      = len(samples_in_progress[i]),
               sample_time_ms  = end_time - start_time,
-              wall_time_ms    = end_time - wall_time_start,
               date_added      = datetime.datetime.utcnow(),
             )
             session.add(sample_db)

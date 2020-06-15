@@ -395,25 +395,12 @@ class Sampler(object):
 
 class SamplerDBFile(Base):
   """Single inference file entry"""
-  __tablename__ = "inference_contentfiles"
-
-  # The ID of the PreprocessedContentFile.
+  __tablename__    = "inference_contentfiles"
   id               : int = sql.Column(sql.Integer, primary_key=True)
-  # We store the vocabulary indices array as a string of period-separated
-  # integers, e.g. '0.1.2.0.1'. To access the values as an array of integers,
-  # use SamplerDBFile.indices_array.
   encoded_text     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   text             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   num_tokens       : int = sql.Column(sql.Integer, nullable=False)
-  # The number of milliseconds encoding took.
   sample_time_ms   : int = sql.Column(sql.Integer, nullable=False)
-  # Encoding is parallelizable, so the actual wall time of encoding may be much
-  # less than the sum of all encoding_time_ms. This column counts the effective
-  # number of "real" milliseconds during encoding between the last encoded
-  # result and this result coming in. The idea is that summing this column
-  # provides an accurate total of the actual time spent encoding an entire
-  # corpus. Will be <= encoding_time_ms.
-  wall_time_ms     : int = sql.Column(sql.Integer, nullable=False)
   date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
 class SamplerDB(sqlutil.Database):
