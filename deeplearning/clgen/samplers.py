@@ -18,6 +18,7 @@ A Sampler is an object which, when passed to a mode's Sample() method,
 determines the shape of the generated samples.
 """
 import os
+import datetime
 import typing
 import sqlalchemy as sql
 from absl import flags
@@ -413,6 +414,7 @@ class SamplerDBFile(Base):
   # provides an accurate total of the actual time spent encoding an entire
   # corpus. Will be <= encoding_time_ms.
   wall_time_ms     : int = sql.Column(sql.Integer, nullable=False)
+  date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
 class SamplerDB(sqlutil.Database):
   """A database of sampling inference files."""
