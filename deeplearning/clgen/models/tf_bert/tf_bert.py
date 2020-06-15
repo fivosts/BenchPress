@@ -23,12 +23,14 @@ import typing
 import pathlib
 import tensorflow_probability as tfp
 import numpy as np
+from absl import flags
 
 from deeplearning.clgen import samplers
 from deeplearning.clgen import telemetry
 from deeplearning.clgen.tf import tf
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
+from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import data_generators
 from deeplearning.clgen.models.tf_bert import model
@@ -36,7 +38,7 @@ from deeplearning.clgen.models.tf_bert import optimizer
 from deeplearning.clgen.models.tf_bert import hooks
 
 from eupy.native import logger as l
-from absl import flags
+from labm8.py import pbutil
 from labm8.py import gpu_scheduler
 
 FLAGS = flags.FLAGS
@@ -104,7 +106,7 @@ class tfBert(backends.BackendBase):
 
     self.ckpt_path                       = self.cache.path / "checkpoints"
     self.logfile_path                    = self.cache.path / "logs"
-    self.sample_path                     = self.cache.path / "samples"
+    self.sample_base_path                = self.cache.path / "samples"
 
     l.getLogger().info("BERT Model config initialized.")
     l.getLogger().info("Checkpoint path: \n{}".format(self.ckpt_path))
@@ -235,6 +237,8 @@ class tfBert(backends.BackendBase):
                             ),
                   data_generator
                   )
+    self.sample_path = self.sample_base_path / self.sampler.hash
+    self.sample_path.mkdir(parents = True, exist_ok = True)
     return
 
   @property
@@ -247,17 +251,19 @@ class tfBert(backends.BackendBase):
           return True
     return False  
 
-  def Train(self, corpus, **unused_kwargs) -> None:
+  def Train(self, corpus, 
+                  test_sampler: typing.Optional[samplers.Sampler] = None,
+                  **unused_kwargs) -> None:
 
     del unused_kwargs
 
-    if not self.is_trained:
-      if self.train is None:
-        data_generator = data_generators.MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
-                           corpus, self.config.training, self.cache.path
-                          )
-        self._ConfigTrainParams(data_generator)
+    if self.train is None:
 
+      data_generator = data_generators.MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
+                         corpus, self.config.training, self.cache.path)
+      self._ConfigTrainParams(data_generator)
+
+    if not self.is_trained:
       ## Acquire GPU Lock before anything else is done
       # gpu_scheduler.LockExclusiveProcessGpuAccess()
 
@@ -274,7 +280,8 @@ class tfBert(backends.BackendBase):
       if FLAGS.sample_per_epoch == 0:
         self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps)
       else:
-        self.InitSampling(self._getMockSampler(self.config.training.sequence_length), self.config.training.random_seed)
+        sampler = self._getTestSampler(test_sampler, self.config.training.sequence_length)
+        self.InitSampling(sampler, self.config.training.random_seed)
         for _ in range(self.num_epochs):
           self.train.estimator.train(input_fn = train_input_fn, steps = 10)
           for _ in range(FLAGS.sample_per_epoch):
@@ -304,7 +311,7 @@ class tfBert(backends.BackendBase):
                    seed    : typing.Optional[int] = None
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
-    if self.sample is None or sampler != self.sampler:
+    if self.sample is None or sampler.sha != self.sampler.sha:
       data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
                          sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings
                        )
@@ -314,15 +321,17 @@ class tfBert(backends.BackendBase):
     l.getLogger().info("Initialized BERT sampler in {}".format(self.sample_path))
     return 
 
-  def InitSampleBatch(self, **unused_kwargs) -> None:
+  def InitSampleBatch(self, *unused_args, **unused_kwargs) -> None:
     """Batch-specific initialization. Called once when a new batch is going to be generated"""
+    del unused_args
     del unused_kwargs
     self.sample.data_generator.InitSampleBatch()
     return 
 
-  def SampleNextIndices(self, **unused_kwargs):
+  def SampleNextIndices(self, *unused_args, **unused_kwargs):
     """Called iteratively to build a single batch of samples, until termination criteria stops calling"""
     del unused_kwargs
+    del unused_args
     if self.sample is None:
       raise ValueError("Bert sampler has not been initialized.")
 
@@ -335,15 +344,18 @@ class tfBert(backends.BackendBase):
         )
     return output_seq, done
 
-  def _getMockSampler(self, sequence_length):
-    from labm8.py import pbutil
+  def _getTestSampler(self, test_sampler, sequence_length):
     sampler_str = [
         "start_text: \"kernel void A(const double g, const double i){\\n  [HOLE] = [HOLE]\\n  int a = g + [HOLE]\"",
         "batch_size: 2",
         "sequence_length: {}".format(sequence_length),
         "temperature_micros: 800000",
     ]
-    sampler = samplers.Sampler(pbutil.FromString('\n'.join(sampler_str), sampler_pb2.Sampler()))
+    if test_sampler is None:
+      mock_config = pbutil.FromString('\n'.join(sampler_str), sampler_pb2.Sampler())
+      sampler = samplers.Sampler(mock_config)
+    else:
+      sampler = test_sampler
     sampler.Specialize(self.atomizer)
     return sampler
 
@@ -368,7 +380,7 @@ class tfBert(backends.BackendBase):
     l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.InferenceManifest()")
     paths = [ path.absolute() for path in (self.cache.path / "checkpoints").iterdir() ]
     paths += [ path.absolute() for path in (self.cache.path / "logs").iterdir() ]
-    paths += [ self.data_generator.tfRecord ] ## TODO!!! Warning this can be a bug
+    paths += [ path.absolute() for path in (self.cache.path / "samples").iterdir() ]
     return sorted(paths)
 
   def _writeValidation(self,
@@ -548,9 +560,11 @@ class tfBert(backends.BackendBase):
               'masked_lm_predictions'     : masked_lm_predictions,
               'next_sentence_predictions' : next_sentence_predictions,
           }
+          prediction_hooks = []#self.GetPredictionHooks()
           output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
               mode = mode,
               predictions = prediction_metrics,
+              prediction_hooks = prediction_hooks,
               scaffold_fn = scaffold_fn)
       else:
         raise ValueError("{} is not a valid mode".format(mode))
@@ -686,3 +700,19 @@ class tfBert(backends.BackendBase):
     return [
             hooks.tfProgressBar(max_length = max_steps, mode = tf.compat.v1.estimator.ModeKeys.EVAL)
             ]
+
+  def GetPredictionHooks(self,
+                         samples    : typing.List[int],
+                         output_dir : str = None
+                        ) -> typing.List[tf.estimator.SessionRunHook]:
+    if output_dir is None:
+      output_dir = self.sample_path
+    return [
+            tf.estimator.SummarySaverHook(save_steps = 1,
+                                          output_dir = output_dir,
+                                          summary_op = [ tf.compat.v1.summary.text(self.atomizer.DeatomizeIndices(s))
+                                                            for s in samples
+                                                       ]
+                                         )
+           ]
+
