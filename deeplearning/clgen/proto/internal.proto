@@ -43,7 +43,6 @@ message ModelMeta {
 
 // The schema for a sampler metafile. An instance of this proto is created with
 // name META.pbtxt in the cache directory of each model that samples it.
-// TODO(cec): Re-implement sampler metafile creation and comparison.
 message SamplerMeta {
   optional Sampler config = 1;
 }
