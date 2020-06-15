@@ -505,10 +505,13 @@ class tfBert(backends.BackendBase):
                 name = "next_sentence_mean_loss")
 
             return {
-                "masked_lm_accuracy"    : masked_lm_accuracy,
-                "masked_lm_loss"        : masked_lm_mean_loss,
-                "next_sentence_accuracy": next_sentence_accuracy,
-                "next_sentence_loss"    : next_sentence_mean_loss,
+                # 'input_ids'                 : input_ids,
+                # 'masked_lm_predictions'     : masked_lm_predictions,
+                # 'next_sentence_predictions' : next_sentence_predictions,
+                'masked_lm_accuracy'        : masked_lm_accuracy,
+                'masked_lm_loss'            : masked_lm_mean_loss,
+                'next_sentence_accuracy'    : next_sentence_accuracy,
+                'next_sentence_loss'        : next_sentence_mean_loss,
             }
 
           eval_metrics = (_metric_fn, [
