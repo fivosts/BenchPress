@@ -19,12 +19,13 @@ determines the shape of the generated samples.
 """
 import typing
 
-
+from deeplearning.clgen import cache
+from deeplearning.clgen import pbutil
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.proto import sampler_pb2
+from deeplearning.clgen.proto import internal_pb2
 from absl import flags
 from labm8.py import crypto
-from deeplearning.clgen import pbutil
 
 FLAGS = flags.FLAGS
 
@@ -262,6 +263,12 @@ class Sampler(object):
     self.temperature = self.config.temperature_micros / 1e6
     self.batch_size = self.config.batch_size
     self.sequence_length = self.config.sequence_length
+    # Create the necessary cache directories.
+    self.cache = cache.mkcache("sampler", self.hash)
+    (self.cache.path / "samples").mkdir(exist_ok=True)
+    meta = internal_pb2.SamplerMeta()
+    meta.config.CopyFrom(self.config)
+    pbutil.ToFile(meta, path = self.cache.path / "META.pbtxt")
     # Set in Specialize().
     self.encoded_start_text = None
     self.tokenized_start_text = None
