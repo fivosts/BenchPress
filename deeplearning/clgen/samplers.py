@@ -17,18 +17,24 @@
 A Sampler is an object which, when passed to a mode's Sample() method,
 determines the shape of the generated samples.
 """
+import os
 import typing
+import sqlalchemy as sql
+from absl import flags
+from sqlalchemy.ext import declarative
 
 from deeplearning.clgen import cache
 from deeplearning.clgen import pbutil
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
-from absl import flags
+
 from labm8.py import crypto
+from labm8.py import sqlutil
 
 FLAGS = flags.FLAGS
 
+Base = declarative.declarative_base()
 
 def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
   """Assert that a sampler configuration contains no invalid values.
@@ -182,7 +188,7 @@ class SymmetricalTokenDepthCriterion(TerminationCriterionBase):
 
   def SampleIsComplete(self, sample_in_progress: typing.List[str]) -> bool:
     """Determine whether to stop sampling."""
-    if not sample_in_progress:
+    if len(sample_in_progress) == 0:
       return False
     if not sample_in_progress[-1] == self.right_token:
       return False
@@ -263,15 +269,23 @@ class Sampler(object):
     self.temperature = self.config.temperature_micros / 1e6
     self.batch_size = self.config.batch_size
     self.sequence_length = self.config.sequence_length
+    
     # Create the necessary cache directories.
     self.cache = cache.mkcache("sampler", self.hash)
-    (self.cache.path / "samples").mkdir(exist_ok=True)
+    self.samples_directory = self.cache.path / "samples"
+    self.samples_directory.mkdir(exist_ok=True)
+    
     meta = internal_pb2.SamplerMeta()
     meta.config.CopyFrom(self.config)
     pbutil.ToFile(meta, path = self.cache.path / "META.pbtxt")
+    
     # Set in Specialize().
     self.encoded_start_text = None
     self.tokenized_start_text = None
+    # Set in initSampleDB
+    self.sample_db = None
+    self.db_name   = None
+    self.db_path   = None
 
   def Specialize(self, atomizer: atomizers.AtomizerBase) -> None:
     """Specialize a sampler a vocabulary.
@@ -307,6 +321,49 @@ class Sampler(object):
 
     [terminator.Specialize(atomizer) for terminator in self.terminators]
 
+  def initSampleDB(self, 
+                   url_path   : str, 
+                   db_name    : str = "samples.db", 
+                   must_exist : bool = False
+                   ) -> None:
+    """Initialize sampling file database"""
+    self.db_name   = db_name
+    self.db_path   = url_path
+    self.sample_db = SamplerDB(url_path, db_name, must_exist)
+    return
+
+  def symlinkModelDB(self,
+                     model_hash: int,
+                     ) -> None:
+    """
+    Create symbolic link entry in sampler workspace. In one 
+    model's workspace, there is one sampler.dbfor each different
+    sampler. Each sampler holds a directory of all models it has 
+    sampled with symbolic links created in this function.
+    """
+    (self.samples_directory / model_hash).mkdir(exist_ok = True)
+    symlink = self.samples_directory / model_hash / self.db_name
+    if not symlink.is_symlink():
+      os.symlink(
+        os.path.relpath(
+          self.db_path / self.db_name,
+          self.samples_directory / model_hash
+        ),
+        symlink
+      )
+    return
+  
+  @property
+  def db(self):
+    return self.sample_db
+
+  @property
+  def db_file_count(self):
+    if self.db is None:
+      return 0
+    else:
+      return self.db.file_count
+  
   def SampleIsComplete(self, sample_in_progress: typing.List[str]) -> bool:
     """Determine whether to stop sampling.
 
@@ -334,3 +391,50 @@ class Sampler(object):
 
   def __ne__(self, rhs) -> bool:
     return not self.__eq__(rhs)
+
+class SamplerDBFile(Base):
+  """Single inference file entry"""
+  __tablename__ = "inference_contentfiles"
+
+  # The ID of the PreprocessedContentFile.
+  id               : int = sql.Column(sql.Integer, primary_key=True)
+  # We store the vocabulary indices array as a string of period-separated
+  # integers, e.g. '0.1.2.0.1'. To access the values as an array of integers,
+  # use SamplerDBFile.indices_array.
+  encoded_text     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  text             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  num_tokens       : int = sql.Column(sql.Integer, nullable=False)
+  # The number of milliseconds encoding took.
+  sample_time_ms   : int = sql.Column(sql.Integer, nullable=False)
+  # Encoding is parallelizable, so the actual wall time of encoding may be much
+  # less than the sum of all encoding_time_ms. This column counts the effective
+  # number of "real" milliseconds during encoding between the last encoded
+  # result and this result coming in. The idea is that summing this column
+  # provides an accurate total of the actual time spent encoding an entire
+  # corpus. Will be <= encoding_time_ms.
+  wall_time_ms     : int = sql.Column(sql.Integer, nullable=False)
+
+class SamplerDB(sqlutil.Database):
+  """A database of sampling inference files."""
+  def __init__(self, 
+               url_path   : str, 
+               db_name    : str = "samples.db", 
+               must_exist : bool = False
+              ) -> None:
+    url = "sqlite:///{}".format(str(url_path / db_name))
+    super(SamplerDB, self).__init__(url, Base, must_exist = must_exist)
+
+  @property
+  def file_count(self):
+    """Return the total number of files in the encoded corpus."""
+    with self.Session() as session:
+      return session.query(SamplerDBFile).count()
+
+  @property
+  def token_count(self) -> int:
+    """Return the total number of tokens in the encoded corpus.
+
+    This excludes the EOF markers which are appended to each encoded text.
+    """
+    with self.Session() as session:
+      return session.query(func.sum(SamplerDBFile.tokencount)).scalar()
