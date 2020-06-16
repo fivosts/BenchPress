@@ -496,7 +496,7 @@ class GithubFetcher():
           outlines.append(include_src)
         else:
           if not include_url:
-            outlines.append('// [FETCH] didnt find: ' + line)
+            outlines.append('// [FETCH] didnt find: \n' + line)
           else:
             outlines.append('// [FETCH] skipped: ' + line)
       else:
