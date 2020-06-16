@@ -72,6 +72,7 @@ def DataPath(
   real_path = runfiles / path if runfiles else pathlib.Path(path).absolute()
   if must_exist and not (real_path.is_file() or real_path.is_dir()):
     raise FileNotFoundError(f"No such file or directory: '{path}'")
+  l.getLogger().warn("bazlutil:\ninput: {} \ntarget: {}".format(str(path), real_path))
   return real_path
 
 
