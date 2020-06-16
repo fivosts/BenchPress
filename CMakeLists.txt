@@ -1,23 +1,23 @@
-## Download tar
+cmake_minimum_required(VERSION 3.5)
+
+project(CLGEN, 
+        VERSION 0.0.1
+        DESCRIPTION "Programming language model with machine learning")
+
+cmake_policy(SET CMP0076 NEW)
+
+
+# Base path of third_party deps
+set(third_party ${CMAKE_BINARY_DIR}/third_party)
+
 include(ExternalProject)
-
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(3rdParty_SUBDIR x64)
-else()
-  set(3rdParty_SUBDIR x86)
-endif()
-
-# https://cmake.org/cmake/help/latest/module/ExternalProject.html
 ExternalProject_Add(llvm
   URL https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND ${CMAKE_COMMAND} -E copy_directory ${3rdParty_SUBDIR}/${CMAKE_INSTALL_PREFIX}
+  PREFIX  ${third_party}
+  TMP_DIR ${third_party}/llvm/logs/tmp
+  DOWNLOAD_DIR ${third_party}/llvm
+  SOURCE_DIR   ${third_party}/llvm/llvm
+  CONFIGURE_COMMAND ""
   BUILD_COMMAND ""
   INSTALL_COMMAND ""
-)
-
-# Unzip files
-execute_process(
-COMMAND ${CMAKE_COMMAND} -E tar xzf path/to/file.tar.gz
-WORKING_DIRECTORY ${3rdParty_SUBDIR}/${CMAKE_INSTALL_PREFIX}/llvm
 )
