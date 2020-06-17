@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.5)
 project(CLGEN, 
         VERSION 0.0.1
         DESCRIPTION "Programming language model using machine learning")
+# TODO check
+# https://cmake.org/cmake/help/v3.0/module/FindPythonInterp.html
 
 cmake_policy(SET CMP0076 NEW)
 
