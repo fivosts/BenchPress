@@ -2,10 +2,9 @@ cmake_minimum_required(VERSION 3.5)
 
 project(CLGEN, 
         VERSION 0.0.1
-        DESCRIPTION "Programming language model with machine learning")
+        DESCRIPTION "Programming language model using machine learning")
 
 cmake_policy(SET CMP0076 NEW)
-
 
 # Base path of third_party deps
 set(third_party ${CMAKE_BINARY_DIR}/third_party)
@@ -13,13 +12,45 @@ set(third_party ${CMAKE_BINARY_DIR}/third_party)
 # Local folder with all included binaries and libraries
 set(local_include ${CMAKE_BINARY_DIR}/local)
 
+# Base path of python environment
+set(python_path ${local_include}/env)
+
+### Build and install system dependencies
 include(ExternalProject)
+
+# Build gcc-9 from source
+ExternalProject_Add(gcc
+  GIT
+  GIT_TAG releases/gcc-9.3.0
+  PREFIX       ${third_party}
+  TMP_DIR      ${third_party}/tmp
+  STAMP_DIR    ${third_party}/stamp
+  SOURCE_DIR   ${third_party}/gcc/gcc
+  BINARY_DIR   ${third_party}/gcc/build
+  INSTALL_DIR  ${local_include}
+  CONFIGURE_COMMAND ${CMAKE_COMMAND} -E ${third_party}/gcc/gcc/configure --prefix=${local_include} --enable-languages=c,c++,fortran,go
+)
+
+# Python 3.7.5 from source
+ExternalProject_Add(python
+  URL https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tar.xz
+  URL_MD5 	   08ed8030b1183107c48f2092e79a87e2
+  PREFIX       ${third_party}
+  TMP_DIR      ${third_party}/tmp
+  STAMP_DIR    ${third_party}/stamp
+  DOWNLOAD_DIR ${third_party}/python
+  SOURCE_DIR   ${third_party}/python/python
+  BUILD_IN_SOURCE 1
+  INSTALL_DIR  ${local_include}
+  CONFIGURE_COMMAND ${CMAKE_COMMAND} -E ${third_party}/python/python/configure --prefix=${local_include}
+)
+
 # Clang and LLVM 6 pre-compiled binaries and libraries.
 ExternalProject_Add(llvm
   URL https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
   PREFIX       ${third_party}
   TMP_DIR      ${third_party}/tmp
-  STAMP_DIR    ${third_party}/stamp  
+  STAMP_DIR    ${third_party}/stamp
   DOWNLOAD_DIR ${third_party}/llvm
   SOURCE_DIR   ${third_party}/llvm/llvm
   INSTALL_DIR  ${local_include}
@@ -37,6 +68,7 @@ ExternalProject_Add(boost
   STAMP_DIR ${third_party}/stamp
   DOWNLOAD_DIR ${third_party}/boost
   SOURCE_DIR   ${third_party}/boost/boost
+  BUILD_IN_SOURCE 1
   INSTALL_DIR  ${local_include}
   CONFIGURE_COMMAND ${CMAKE_COMMAND} -E ${third_party}/boost/boost/bootstrap.sh --prefix=${local_include}
   BUILD_COMMAND     ${CMAKE_COMMAND} -E ${third_party}/boost/boost/b2 && ${third_party}/boost/boost/b2 headers
