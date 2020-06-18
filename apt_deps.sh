@@ -38,6 +38,7 @@ timidity \
 libwildmidi-dev \
 libboost-all-dev \
 libsdl2-dev \
+lzma-dev \
 mysql-server \
 libmysqlclient-dev \
 
