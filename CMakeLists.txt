@@ -47,7 +47,7 @@ function(install_external_deps)
       SOURCE_DIR        ${THIRD_PARTY}/python/python
       BUILD_IN_SOURCE   true
       INSTALL_DIR       ${LOCAL}
-      CONFIGURE_COMMAND ${THIRD_PARTY}/python/python/configure --prefix=${LOCAL} --enable-optimizations --without-PACKAGE
+      CONFIGURE_COMMAND ${THIRD_PARTY}/python/python/configure --prefix=${LOCAL} --enable-optimizations
     )
     set(PYTHON          ${LOCAL}/bin/python3)
   
