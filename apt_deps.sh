@@ -7,6 +7,8 @@ ca-certificates \
 curl \
 wget \
 g++ \
+libmpc-dev \
+flex \
 ocl-icd-opencl-dev \
 opencl-c-headers  \
 pkg-config \

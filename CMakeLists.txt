@@ -8,6 +8,8 @@ project(CLGEN,
 
 cmake_policy(SET CMP0076 NEW)
 
+OPTION(BUILD_FROM_SOURCE "Select to build necessary system wide packages from source locally (gcc, python, boost, protoc)" OFF)
+
 # Base path of third_party deps
 set(third_party ${CMAKE_BINARY_DIR}/third_party)
 
@@ -21,33 +23,62 @@ function(install_external_deps install_path)
   ### Build and install third_party system dependencies
   include(ExternalProject)
 
-  # Build gcc-9 from source
-  ExternalProject_Add(gcc
-    GIT_REPOSITORY 	git://gcc.gnu.org/git/gcc.git
-    GIT_TAG 		releases/gcc-9.3.0
-    PREFIX       ${third_party}
-    TMP_DIR      ${third_party}/tmp
-    STAMP_DIR    ${third_party}/stamp
-    SOURCE_DIR   ${third_party}/gcc/gcc
-    BINARY_DIR   ${third_party}/gcc/build
-    INSTALL_DIR  ${install_path}
-    CONFIGURE_COMMAND ${third_party}/gcc/gcc/configure --prefix=${install_path} --enable-languages=c,c++,fortran,go
-  )
-
-  # Python 3.7.5 from source
-  ExternalProject_Add(python
-    URL https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tar.xz
-    URL_MD5      08ed8030b1183107c48f2092e79a87e2
-    PREFIX       ${third_party}
-    TMP_DIR      ${third_party}/tmp
-    STAMP_DIR    ${third_party}/stamp
-    DOWNLOAD_DIR ${third_party}/python
-    SOURCE_DIR   ${third_party}/python/python
-    BUILD_IN_SOURCE 1
-    INSTALL_DIR  ${install_path}
-    CONFIGURE_COMMAND ${third_party}/python/python/configure --prefix=${install_path} --enable-optimizations
-  )
-
+  if (BUILD_FROM_SOURCE)
+    # Build gcc-9 from source
+    # Only 64-bit compiler build
+    ExternalProject_Add(gcc
+      GIT_REPOSITORY  git://gcc.gnu.org/git/gcc.git
+      GIT_TAG         releases/gcc-9.3.0
+      PREFIX       ${third_party}
+      TMP_DIR      ${third_party}/tmp
+      STAMP_DIR    ${third_party}/stamp
+      SOURCE_DIR   ${third_party}/gcc/gcc
+      BINARY_DIR   ${third_party}/gcc/build
+      INSTALL_DIR  ${install_path}
+      CONFIGURE_COMMAND ${third_party}/gcc/gcc/configure --prefix=${install_path} --disable-multilib --enable-languages=c,c++,fortran,go
+    )
+    # Python 3.7.5 from source
+    ExternalProject_Add(python
+      URL https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tar.xz
+      URL_MD5      08ed8030b1183107c48f2092e79a87e2
+      PREFIX       ${third_party}
+      TMP_DIR      ${third_party}/tmp
+      STAMP_DIR    ${third_party}/stamp
+      DOWNLOAD_DIR ${third_party}/python
+      SOURCE_DIR   ${third_party}/python/python
+      BUILD_IN_SOURCE 1
+      INSTALL_DIR  ${install_path}
+      CONFIGURE_COMMAND ${third_party}/python/python/configure --prefix=${install_path} --enable-optimizations
+    )
+    # Boost lib 
+    ExternalProject_Add(boost
+      URL https://dl.bintray.com/boostorg/release/1.73.0/source/boost_1_73_0.tar.gz
+      URL_HASH SHA256=9995e192e68528793755692917f9eb6422f3052a53c5e13ba278a228af6c7acf
+      PREFIX  ${third_party}
+      TMP_DIR ${third_party}/tmp
+      STAMP_DIR ${third_party}/stamp
+      DOWNLOAD_DIR ${third_party}/boost
+      SOURCE_DIR   ${third_party}/boost/boost
+      BUILD_IN_SOURCE 1
+      INSTALL_DIR  ${install_path}
+      CONFIGURE_COMMAND ${CMAKE_COMMAND} -E ${third_party}/boost/boost/bootstrap.sh --prefix=${install_path}
+      BUILD_COMMAND     ${CMAKE_COMMAND} -E ${third_party}/boost/boost/b2 && ${third_party}/boost/boost/b2 headers
+      INSTALL_COMMAND   ${CMAKE_COMMAND} -E ${third_party}/boost/boost/b2 install
+    )
+    # protoc compiler
+    ExternalProject_Add(protobuf
+      GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
+      GIT_TAG        31ebe2ac71400344a5db91ffc13c4ddfb7589f92
+      GIT_SUBMODULES_RECURSE 1
+      PREFIX       ${third_party}
+      TMP_DIR      ${third_party}/tmp
+      STAMP_DIR    ${third_party}/stamp
+      SOURCE_DIR   ${third_party}/protobuf/protobuf
+      BINARY_DIR   ${third_party}/protobuf/build
+      INSTALL_DIR  ${install_path}
+      CONFIGURE_COMMAND ${CMAKE_COMMAND} -E ${third_party}/protobuf/protobuf/configure --prefix=${install_path}
+    )
+  endif()
   # Clang and LLVM 6 pre-compiled binaries and libraries.
   ExternalProject_Add(llvm
     URL https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
@@ -61,23 +92,6 @@ function(install_external_deps install_path)
     BUILD_COMMAND     ""
     INSTALL_COMMAND cp -R ${third_party}/llvm/llvm/* ${install_path}
   )
-
-  # Boost lib 
-  ExternalProject_Add(boost
-    URL https://dl.bintray.com/boostorg/release/1.73.0/source/boost_1_73_0.tar.gz
-    URL_HASH SHA256=9995e192e68528793755692917f9eb6422f3052a53c5e13ba278a228af6c7acf
-    PREFIX  ${third_party}
-    TMP_DIR ${third_party}/tmp
-    STAMP_DIR ${third_party}/stamp
-    DOWNLOAD_DIR ${third_party}/boost
-    SOURCE_DIR   ${third_party}/boost/boost
-    BUILD_IN_SOURCE 1
-    INSTALL_DIR  ${install_path}
-    CONFIGURE_COMMAND ${CMAKE_COMMAND} -E ${third_party}/boost/boost/bootstrap.sh --prefix=${install_path}
-    BUILD_COMMAND     ${CMAKE_COMMAND} -E ${third_party}/boost/boost/b2 && ${third_party}/boost/boost/b2 headers
-    INSTALL_COMMAND   ${CMAKE_COMMAND} -E ${third_party}/boost/boost/b2 install
-  )
-
   #include <OpenCL/*>
   ExternalProject_Add(opencl-headers
     GIT_REPOSITORY https://github.com/KhronosGroup/OpenCL-Headers.git
@@ -89,7 +103,7 @@ function(install_external_deps install_path)
     INSTALL_DIR  ${install_path}
     CONFIGURE_COMMAND ""
     BUILD_COMMAND     ""
-    INSTALL_COMMAND cp -r ${third_party}/opencl_headers/opencl_headers/ ${install_path}
+    INSTALL_COMMAND cp -Rn ${third_party}/opencl_headers/opencl_headers/ ${install_path}
   )
 
   # TODO check if needed.
@@ -108,21 +122,6 @@ function(install_external_deps install_path)
   #   INSTALL_COMMAND   ${CMAKE_COMMAND} -E ${third_party}/boost/boost/b2 install
   # )
 
-  # protoc compiler
-  # ExternalProject_Add(protobuf
-  #   GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
-  #   GIT_TAG        31ebe2ac71400344a5db91ffc13c4ddfb7589f92
-  #   GIT_SUBMODULES_RECURSE 1
-  #   PREFIX       ${third_party}
-  #   TMP_DIR      ${third_party}/tmp
-  #   STAMP_DIR    ${third_party}/stamp
-  #   SOURCE_DIR   ${third_party}/protobuf/protobuf
-  #   BINARY_DIR   ${third_party}/protobuf/build
-  #   INSTALL_DIR  ${install_path}
-  #   CONFIGURE_COMMAND ${CMAKE_COMMAND} -E ${third_party}/protobuf/protobuf/configure --prefix=${install_path}
-  # )
 endfunction()
-
 install_external_deps(${local_include})
 # add_subdirectory(deeplearning/clgen)
-
