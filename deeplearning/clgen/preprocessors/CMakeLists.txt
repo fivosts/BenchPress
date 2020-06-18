@@ -1,1 +1,1 @@
-target_sources(clang_rewriter PUBLIC clang_rewriter.cpp)
+add_executable(clang_rewriter clang_rewriter.cpp)
