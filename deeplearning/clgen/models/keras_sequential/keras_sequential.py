@@ -26,7 +26,6 @@ from deeplearning.clgen.models import builders
 from deeplearning.clgen.models import data_generators
 from absl import flags
 from labm8.py import humanize
-from labm8.py import logutil
 from eupy.native import logger as l
 FLAGS = flags.FLAGS
 
@@ -126,55 +125,55 @@ class kerasSequential(backends.BackendBase):
       return model
 
     # Now entering the point at which training is inevitable.
-    with logutil.TeeLogsToFile("train", self.cache.path / "logs"):
-      # Deferred importing of Keras so that we don't have to activate the
-      # TensorFlow backend every time we import this module.
-      import keras
+    # with logutil.TeeLogsToFile("train", self.cache.path / "logs"):
+    # Deferred importing of Keras so that we don't have to activate the
+    # TensorFlow backend every time we import this module.
+    import keras
 
-      if epoch_checkpoints:
-        # We have already trained a model at least part of the way to our target
-        # number of epochs, so load the most recent one.
-        starting_epoch = len(epoch_checkpoints)
-        l.getLogger().info("Resuming training from epoch {}.".format(starting_epoch))
-        model.load_weights(epoch_checkpoints[-1])
+    if epoch_checkpoints:
+      # We have already trained a model at least part of the way to our target
+      # number of epochs, so load the most recent one.
+      starting_epoch = len(epoch_checkpoints)
+      l.getLogger().info("Resuming training from epoch {}.".format(starting_epoch))
+      model.load_weights(epoch_checkpoints[-1])
 
-      callbacks = [
-        keras.callbacks.ModelCheckpoint(
-          str(self.cache.path / "checkpoints" / "{epoch:03d}.hdf5"),
-          verbose=1,
-          mode="min",
-          save_best_only=False,
-        ),
-        keras.callbacks.TensorBoard(
-          str(self.cache.path / "embeddings"),
-          write_graph=True,
-          embeddings_freq=1,
-          embeddings_metadata={
-            "embedding_1": str(self.cache.path / "embeddings" / "metadata.tsv"),
-          },
-        ),
-        self.telemetry.TrainingLogger(self.cache.path / "logs").KerasCallback(keras),
-      ]
+    callbacks = [
+      keras.callbacks.ModelCheckpoint(
+        str(self.cache.path / "checkpoints" / "{epoch:03d}.hdf5"),
+        verbose=1,
+        mode="min",
+        save_best_only=False,
+      ),
+      keras.callbacks.TensorBoard(
+        str(self.cache.path / "embeddings"),
+        write_graph=True,
+        embeddings_freq=1,
+        embeddings_metadata={
+          "embedding_1": str(self.cache.path / "embeddings" / "metadata.tsv"),
+        },
+      ),
+      self.telemetry.TrainingLogger(self.cache.path / "logs").KerasCallback(keras),
+    ]
 
-      generator = data_generators.KerasBatchGenerator()
-      steps_per_epoch = (corpus.encoded.token_count - 1) // (
-        self.config.training.batch_size * self.config.training.sequence_length
-      )
-      l.getLogger().info(
-        "Step counts: {} per epoch, {} left to do, {} total"
-              .format(
-                  humanize.Commas(steps_per_epoch),
-                  humanize.Commas((self.num_epochs - starting_epoch) * steps_per_epoch),
-                  humanize.Commas(self.num_epochs * steps_per_epoch),
-              )
-      )
-      model.fit_generator(
-        generator.AutoGenerator(corpus, self.config.training),
-        steps_per_epoch=steps_per_epoch,
-        callbacks=callbacks,
-        initial_epoch=starting_epoch,
-        epochs=self.num_epochs,
-      )
+    generator = data_generators.KerasBatchGenerator()
+    steps_per_epoch = (corpus.encoded.token_count - 1) // (
+      self.config.training.batch_size * self.config.training.sequence_length
+    )
+    l.getLogger().info(
+      "Step counts: {} per epoch, {} left to do, {} total"
+            .format(
+                humanize.Commas(steps_per_epoch),
+                humanize.Commas((self.num_epochs - starting_epoch) * steps_per_epoch),
+                humanize.Commas(self.num_epochs * steps_per_epoch),
+            )
+    )
+    model.fit_generator(
+      generator.AutoGenerator(corpus, self.config.training),
+      steps_per_epoch=steps_per_epoch,
+      callbacks=callbacks,
+      initial_epoch=starting_epoch,
+      epochs=self.num_epochs,
+    )
     return model
 
   def GetInferenceModel(self) -> "keras.models.Sequential":

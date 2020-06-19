@@ -3,6 +3,7 @@ try:
   LLVM                = os.environ['LLVM']
   LIBCXX_HEADERS      = os.environ['LIBCXX_HEADERS']
   CLANG               = os.environ['CLANG']
+  CLANG_FORMAT        = os.environ['CLANG_FORMAT']
   CLANG_HEADERS       = os.environ['CLANG_HEADERS']
   CLANG_REWRITER      = os.environ['CLANG_REWRITER']
   LIBCLC              = os.environ['LIBCLC']

@@ -14,21 +14,19 @@
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """Preprocessor passes for the OpenCL programming language."""
 import typing
+import os
 
+from deeplearning.clgen import environment
 from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import normalizer
 from deeplearning.clgen.preprocessors import public
 from absl import flags
-from labm8.py import bazelutil
 
 FLAGS = flags.FLAGS
 
-LIBCLC = bazelutil.DataPath("phd/third_party/libclc/generic/include")
-OPENCL_H = bazelutil.DataPath("phd/deeplearning/clgen/data/include/opencl.h")
-SHIMFILE = bazelutil.DataPath(
-  "phd/deeplearning/clgen/data/include/opencl-shim.h"
-)
-
+LIBCLC = environment.LIBCLC
+OPENCL_H = os.path.join(environment.DATA_CL_INCLUDE, "opencl.h")
+SHIMFILE = os.path.join(environment.DATA_CL_INCLUDE, "opencl-shim.h")
 
 def GetClangArgs(use_shim: bool) -> typing.List[str]:
   """Get the arguments to pass to clang for handling OpenCL.

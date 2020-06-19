@@ -12,7 +12,6 @@ from deeplearning.clgen import environment
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.dashboard import dashboard_db
 from absl import flags
-from labm8.py import bazelutil
 from labm8.py import humanize
 
 from eupy.native import logger as l

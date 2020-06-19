@@ -14,22 +14,17 @@
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """Unit tests for //deeplearning/clgen/preprocessors/opencl.py."""
 import subprocess
-
+import os
 import pytest
 
-import deeplearning.clgen
-
+from deeplearning.clgen import environment
 from deeplearning.clgen.preprocessors import opencl
 from absl import flags
-from labm8.py import bazelutil
 from labm8.py import test
 
 FLAGS = flags.FLAGS
 
-SHIMFILE = bazelutil.DataPath(
-  "phd/deeplearning/clgen/data/include/opencl-shim.h"
-)
-
+SHIMFILE = os.path.join(environment.DATA_CL_INCLUDE, "opencl-shim.h")
 
 class MockProcess:
   """Mock class for subprocess.Popen() return."""

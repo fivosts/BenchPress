@@ -16,17 +16,17 @@
 import re
 import sys
 
+from deeplearning.clgen import environment
 from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import normalizer
 from deeplearning.clgen.preprocessors import public
 from absl import flags
-from labm8.py import bazelutil
 
 FLAGS = flags.FLAGS
 
 _UNAME = "mac" if sys.platform == "darwin" else "linux"
-LIBCXX_HEADERS = bazelutil.DataPath(f"libcxx_{_UNAME}/include/c++/v1")
-CLANG_HEADERS = bazelutil.DataPath(f"libcxx_{_UNAME}/lib/clang/6.0.0/include")
+LIBCXX_HEADERS = environment.LIBCXX_HEADERS
+CLANG_HEADERS = environment.CLANG_HEADERS
 
 C_COMMENT_RE = re.compile(
   r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',

@@ -25,9 +25,8 @@ import subprocess
 import tempfile
 import typing
 from absl import flags
-
+from deeplearning.clgen import environment
 from eupy.native import  logger as l
-from labm8.py import bazelutil
 
 # The marker used to mark stdin from clang pre-processor output.
 CLANG_STDIN_MARKER = re.compile(r'# \d+ "<stdin>" 2')
@@ -50,9 +49,8 @@ CLANG_FORMAT_CONFIG = {
   "AlwaysBreakAfterReturnType": "None",
   "AlwaysBreakAfterDefinitionReturnType": "None",
 }
-CLANG = bazelutil.DataPath("phd/external/llvm_linux/bin/clang")
-CLANG_FORMAT = bazelutil.DataPath("phd/external/llvm_linux/bin/clang-format")
-
+CLANG = environment.CLANG
+CLANG_FORMAT = environment.CLANG_FORMAT
 
 def StripPreprocessorLines(src: str) -> str:
   """Strip preprocessor remnants from clang frontend output.
