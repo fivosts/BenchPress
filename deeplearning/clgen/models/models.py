@@ -221,8 +221,8 @@ class Model(object):
     """
     l.getLogger().debug("deeplearning.clgen.models.Model.Train()")
     self.Create()
-    with self.training_lock.acquire():
-      self.backend.Train(self.corpus, **kwargs)
+    # with self.training_lock.acquire():
+    self.backend.Train(self.corpus, **kwargs)
     telemetry_logs = self.backend.telemetry.EpochTelemetry()
 
     if len(telemetry_logs) != self.backend.num_epochs:
