@@ -35,7 +35,7 @@ tf = tensorflow
 def initTensorflow():
   tensorflow.python.util.deprecation._PRINT_DEPRECATION_WARNINGS = FLAGS.tf_print_deprecation
   os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(FLAGS.tf_logging_level).lower()
-  os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = str(FLAGS.tf_gpu_allow_growth)
+  os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = str(FLAGS.tf_gpu_allow_growth).lower()
   if FLAGS.tf_disable_eager:
     tensorflow.compat.v1.disable_eager_execution()
   tf = tensorflow
