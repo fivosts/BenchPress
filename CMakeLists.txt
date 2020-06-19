@@ -184,6 +184,11 @@ function(clgen)
   get_target_property(DATA_CL_INCLUDE     data_cl_include     path)
 
   string(CONCAT CLGEN 
+  		 "##############################\n"
+  		 "# Auto generated bash binary #\n"
+  		 "# ---------  CLGEN ----------#\n"
+  		 "#       Not to be edited     #\n"
+  		 "##############################\n"
          "PYTHON_BINARY="  ${PYTHON}  "\n"
          "CLGEN_BINARY=" ${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH} "/clgen.py\n"
          "GCC="                 ${GCC} "\n"
