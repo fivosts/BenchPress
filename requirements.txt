@@ -201,7 +201,6 @@ terminado==0.8.1
 testpath==0.3.1
 TogglPy==0.1.1
 toml==0.10.0
-torch==1.4.0
 tornado==5.0
 tqdm==4.38.0
 traitlets==4.3.2
