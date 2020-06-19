@@ -32,7 +32,6 @@ import copy
 
 from base64 import b64decode
 from functools import partial
-from labm8.py import fs
 from eupy.native import logger as l
 from absl import flags
 
@@ -589,12 +588,12 @@ class GithubFetcher():
     db = dbutil.connect(db_path)
     c = db.cursor()
 
-    l.getLogger().info("fetch {path}".format(path=fs.abspath(path)))
+    l.getLogger().info("fetch {path}".format(path=os.path.abspath(path)))
     try:
       contents = inline_fs_headers(path, [])
     except IOError:
       raise IOError(
-        "cannot read file '{path}'".format(path=fs.abspath(path)))
+        "cannot read file '{path}'".format(path=os.path.abspath(path)))
     c.execute('INSERT OR IGNORE INTO ContentFiles VALUES(?,?)',
           (path, contents))
 
@@ -625,7 +624,7 @@ class GithubFetcher():
       except IOError:
         db.commit()
         raise IOError(
-          "cannot read file '{path}'".format(path=fs.abspath(path)))
+          "cannot read file '{path}'".format(path=os.path.abspath(path)))
       c.execute('INSERT OR IGNORE INTO ContentFiles VALUES(?,?)',
             (path, contents))
 
