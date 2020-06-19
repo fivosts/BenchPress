@@ -8,33 +8,44 @@ project(CLGEN,
 cmake_policy(SET CMP0076 NEW)
 
 OPTION(BUILD_FROM_SOURCE "Select to build necessary system wide packages from source locally (gcc, python, boost, protoc)" OFF)
-set(PYTHON "/usr/bin/python3" CACHE FILEPATH "Provide specific python for application. Default: [/usr/bin/python3]. Ignored if BUILD_FROM_SOURCE is enabled." FORCE)
-set(GCC    "/usr/bin/gcc"     CACHE FILEPATH "Provide specific gcc for application. Default: [/usr/bin/gcc]. Ignored if BUILD_FROM_SOURCE is enabled." FORCE)
-set(PROTOC "/usr/bin/protoc"  CACHE FILEPATH "Provide specific protobuf compiler for application. Default: [/usr/bin/protoc]. Ignored if BUILD_FROM_SOURCE is enabled." FORCE)
+set(PYTHON "/usr/bin/python3" CACHE FILEPATH 
+  "Provide specific python for application. Default: [/usr/bin/python3]. Ignored if BUILD_FROM_SOURCE is enabled."
+  FORCE
+)
+set(GCC    "/usr/bin/gcc"     CACHE FILEPATH 
+  "Provide specific gcc for application. Default: [/usr/bin/gcc]. Ignored if BUILD_FROM_SOURCE is enabled."
+  FORCE
+)
+set(PROTOC "/usr/bin/protoc"  CACHE FILEPATH 
+  "Provide specific protobuf compiler for application. Default: [/usr/bin/protoc]. Ignored if BUILD_FROM_SOURCE is enabled."
+  FORCE
+)
 
 # Base path of third_party deps
 set(THIRD_PARTY ${CMAKE_BINARY_DIR}/third_party)
-# Local folder with all included binaries and libraries
+# Local bin folder for application binaries and libraries
 set(LOCAL ${CMAKE_BINARY_DIR}/local)
 
 function(install_external_deps)
+
   ### Build and install third_party system dependencies
+  #   Installs: gcc-9, python-3.7.5, clangtooling-6, boost-1.73.0 protobuf-compilers and opencl-headers
   include(ExternalProject)
   if (BUILD_FROM_SOURCE)
     # Build gcc-9 from source
     # Only 64-bit compiler build
-    ExternalProject_Add(gcc
-      GIT_REPOSITORY    git://gcc.gnu.org/git/gcc.git
-      GIT_TAG           releases/gcc-9.3.0
-      PREFIX            ${THIRD_PARTY}
-      TMP_DIR           ${THIRD_PARTY}/tmp
-      STAMP_DIR         ${THIRD_PARTY}/stamp
-      SOURCE_DIR        ${THIRD_PARTY}/gcc/gcc
-      BINARY_DIR        ${THIRD_PARTY}/gcc/build
-      INSTALL_DIR       ${LOCAL}
-      CONFIGURE_COMMAND ${THIRD_PARTY}/gcc/gcc/configure --prefix=${LOCAL} --disable-multilib --enable-languages=c,c++,fortran,go
-    )
-    set(GCC             ${LOCAL}/bin/gcc-9 PARENT_SCOPE)
+    # ExternalProject_Add(gcc
+    #   GIT_REPOSITORY    git://gcc.gnu.org/git/gcc.git
+    #   GIT_TAG           releases/gcc-9.3.0
+    #   PREFIX            ${THIRD_PARTY}
+    #   TMP_DIR           ${THIRD_PARTY}/tmp
+    #   STAMP_DIR         ${THIRD_PARTY}/stamp
+    #   SOURCE_DIR        ${THIRD_PARTY}/gcc/gcc
+    #   BINARY_DIR        ${THIRD_PARTY}/gcc/build
+    #   INSTALL_DIR       ${LOCAL}
+    #   CONFIGURE_COMMAND ${THIRD_PARTY}/gcc/gcc/configure --prefix=${LOCAL} --disable-multilib --enable-languages=c,c++,fortran,go
+    # )
+    # set(GCC             ${LOCAL}/bin/gcc-9 PARENT_SCOPE)
   
     # Python 3.7.5 from source
     ExternalProject_Add(python
@@ -49,8 +60,8 @@ function(install_external_deps)
       INSTALL_DIR       ${LOCAL}
       CONFIGURE_COMMAND ${THIRD_PARTY}/python/python/configure --prefix=${LOCAL} --enable-optimizations
     )
-    set(PYTHON          ${LOCAL}/bin/python3 PARENT_SCOPE)
-  
+    set(PYTHON          ${LOCAL}/bin/python3               PARENT_SCOPE)
+
     # Boost lib
     # TODO make sure this version is visible when compiling kernels
     ExternalProject_Add(boost
@@ -134,19 +145,43 @@ function(install_external_deps)
   # )
 endfunction()
 
-function(install_python_deps)
-  add_custom_target(requirements
-    ${PYTHON} -m pip install -r ${CMAKE_SOURCE_DIR}/requirements.txt
-  )
+function(setup_python)
+
+  ### Initialize python environment for application
+  # 1. Create virtual environment for python (depends on 'venv')
+  # 2. Pip install requirements.txt
+  # 3. Set python binary to virtual environment's bin folder
+
+  set (PYTHON_ENV ${LOCAL}/env/bin/python)
+  if (BUILD_FROM_SOURCE)
+    file(MAKE_DIRECTORY ${LOCAL}/lib/python)
+    add_custom_target(requirements ALL
+      COMMAND ${PYTHON} -m venv ${LOCAL}/env
+      COMMAND ${PYTHON_ENV} -m pip install -r ${CMAKE_SOURCE_DIR}/requirements.txt ${LOCAL}/lib/python
+      DEPENDS python
+      COMMENT "Installing python package dependencies"
+    )
+  else ()
+    add_custom_target(requirements ALL
+      COMMAND ${PYTHON} -m venv ${LOCAL}/env
+      COMMAND ${PYTHON_ENV} -m pip install -r ${CMAKE_SOURCE_DIR}/requirements.txt
+      COMMENT "Installing python package dependencies"
+    )
+  endif ()
+  set(${PYTHON} ${PYTHON_ENV})
 endfunction()
 
 function(clgen)
+
+  ### Auto-generates clgen binary that initializes app environment and deploys app.
+  
+  get_target_property(CLANG_REWRITER clang_rewriter path)
   string(CONCAT CLGEN 
          "PYTHON_BINARY=" \" ${PYTHON} \" "\n"
          "CLGEN_BINARY=\"deeplearning/clgen/clgen.py\"\n"
          "GCC=" ${GCC} "\n"
          "LLVM=" ${LLVM} "\n"
-         "CLANG_REWRITER=" clang_rewriter "\n"
+         "CLANG_REWRITER=" ${CLANG_REWRITER} "\n"
          "export LLVM\n"
          "export CLANG_REWRITER\n"
          "eval $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
@@ -156,6 +191,6 @@ function(clgen)
 endfunction()
 
 install_external_deps()
-install_python_deps()
+setup_python()
 add_subdirectory(deeplearning/clgen/preprocessors)
 clgen()
