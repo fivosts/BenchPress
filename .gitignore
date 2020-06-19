@@ -12,6 +12,7 @@ bazel-testlogs
 
 # Build files
 *pyc
+*_pb2.py
 
 # Model folders
 model_*
