@@ -481,7 +481,6 @@ def ExpandConfigPath(path: str, path_prefix: str = None) -> pathlib.Path:
   l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.ExpandConfigPath()")
   if "HOME" not in os.environ:
     os.environ["HOME"] = str(pathlib.Path("~").expanduser())
-  os.environ["BAZEL_RUNFILES"] = str(bazelutil.DataPath("."))
   return (
     pathlib.Path(os.path.expandvars((path_prefix or "") + path))
     .expanduser()
