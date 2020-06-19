@@ -21,10 +21,12 @@ set(PROTOC "/usr/bin/protoc"  CACHE FILEPATH
   FORCE
 )
 
+# Python application relative base path
+set(APP_PATH    deeplearning/clgen)
 # Base path of third_party deps
 set(THIRD_PARTY ${CMAKE_BINARY_DIR}/third_party)
 # Local bin folder for application binaries and libraries
-set(LOCAL ${CMAKE_BINARY_DIR}/local)
+set(LOCAL       ${CMAKE_BINARY_DIR}/local)
 
 function(install_external_deps)
 
@@ -175,32 +177,57 @@ function(clgen)
 
   ### Auto-generates clgen binary that initializes app environment and deploys app.
 
-  get_target_property(CLANG_REWRITER clang_rewriter path)
+  get_target_property(CLANG_REWRITER      clang_rewriter      path)
+  get_target_property(DASHBOARD_STATIC    dashboard_static    path)
+  get_target_property(DASHBOARD_TEMPLATES dashboard_templates path)
+  get_target_property(LIBCLC              libclc              path)
+  get_target_property(DATA_CL_INCLUDE     data_cl_include     path)
+
   string(CONCAT CLGEN 
          "PYTHON_BINARY="  ${PYTHON}  "\n"
-         "CLGEN_BINARY=" ${CMAKE_CURRENT_SOURCE_DIR} "/deeplearning/clgen/clgen.py\n"
+         "CLGEN_BINARY=" ${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH} "/clgen.py\n"
          "GCC=" ${GCC} "\n"
          "LLVM=" ${LLVM}/bin/clang "\n"
+         "LIBCXX_HEADERS=" ${LLVM}/include/c++/v1 "\n"
+         "LIBCLC=" ${LIBCLC} "\n"
+         "DASHBOARD_TEMPLATES=" ${DASHBOARD_TEMPLATES} "\n"
+         "DASHBOARD_STATIC=" ${DASHBOARD_STATIC} "\n"
+         "DATA_CL_INCLUDE=" ${DATA_CL_INCLUDE} "\n"
          "CLANG=" ${LLVM} "\n"
+         "CLANG_HEADERS=" ${LLVM}/lib/clang/6.0.0/include "\n"
          "CLANG_REWRITER=" ${CLANG_REWRITER} "\n"
          "export LLVM\n"
+         "export LIBCXX_HEADERS\n"
+         "export LIBCLC\n"
+         "export DASHBOARD_TEMPLATES\n"
+         "export DASHBOARD_STATIC\n"
+         "export DATA_CL_INCLUDE\n"
          "export CLANG\n"
+         "export CLANG_HEADERS\n"
          "export CLANG_REWRITER\n"
          "eval $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
          "unset LLVM\n"
-         "unset CLANG_REWRITER"
-         "unset CLANG"
+         "unset LIBCXX_HEADERS\n"
+         "unset CLANG\n"
+         "unset CLANG_HEADERS\n"
+         "unset CLANG_REWRITER\n"
+         "unset LIBCLC\n"
+         "unset DASHBOARD_TEMPLATES\n"
+         "unset DASHBOARD_STATIC\n"
+         "unset DATA_CL_INCLUDE\n"
   )
   file(
-    WRITE ${CMAKE_BINARY_DIR}/deeplearning/clgen/clgen ${CLGEN}
+    WRITE ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CLGEN}
     FILE_PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
   add_custom_target(link_target ALL
-      COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_BINARY_DIR}/deeplearning/clgen/clgen ${CMAKE_CURRENT_SOURCE_DIR}/clgen
+      COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CMAKE_CURRENT_SOURCE_DIR}/clgen
   )
 endfunction()
 
 install_external_deps()
 setup_python()
-add_subdirectory(deeplearning/clgen/preprocessors)
+add_subdirectory(${APP_PATH}/preprocessors)
+add_subdirectory(${APP_PATH}/dashboard)
+add_subdirectory(${APP_PATH}/data)
 clgen()
