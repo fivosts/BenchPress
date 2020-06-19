@@ -8,9 +8,9 @@ project(CLGEN,
 cmake_policy(SET CMP0076 NEW)
 
 OPTION(BUILD_FROM_SOURCE "Select to build necessary system wide packages from source locally (gcc, python, boost, protoc)" OFF)
-set(PYTHON "/usr/bin/python3" CACHE STRING "Provide specific python for application. Default: [/usr/bin/python3]. Ignored if BUILD_FROM_SOURCE is enabled.")
-set(GCC    "/usr/bin/gcc"     CACHE STRING "Provide specific gcc for application. Default: [/usr/bin/gcc]. Ignored if BUILD_FROM_SOURCE is enabled.")
-set(PROTOC "/usr/bin/protoc"  CACHE STRING "Provide specific protobuf compiler for application. Default: [/usr/bin/protoc]. Ignored if BUILD_FROM_SOURCE is enabled.")
+set(PYTHON "/usr/bin/python3" CACHE FILEPATH "Provide specific python for application. Default: [/usr/bin/python3]. Ignored if BUILD_FROM_SOURCE is enabled." FORCE)
+set(GCC    "/usr/bin/gcc"     CACHE FILEPATH "Provide specific gcc for application. Default: [/usr/bin/gcc]. Ignored if BUILD_FROM_SOURCE is enabled." FORCE)
+set(PROTOC "/usr/bin/protoc"  CACHE FILEPATH "Provide specific protobuf compiler for application. Default: [/usr/bin/protoc]. Ignored if BUILD_FROM_SOURCE is enabled." FORCE)
 
 # Base path of third_party deps
 set(THIRD_PARTY ${CMAKE_BINARY_DIR}/third_party)
@@ -144,10 +144,9 @@ function(clgen)
   string(CONCAT CLGEN 
          "PYTHON_BINARY=" \" ${PYTHON} \" "\n"
          "CLGEN_BINARY=\"deeplearning/clgen/clgen.py\"\n"
-         "LLVM="
-         ${LLVM} "\n"
-         "CLANG_REWRITER="
-         clang_rewriter "\n"
+         "GCC=" ${GCC} "\n"
+         "LLVM=" ${LLVM} "\n"
+         "CLANG_REWRITER=" clang_rewriter "\n"
          "export LLVM\n"
          "export CLANG_REWRITER\n"
          "eval $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
