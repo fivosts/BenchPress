@@ -44,13 +44,14 @@ def GetClangArgs(use_shim: bool) -> typing.List[str]:
     str(OPENCL_H),
     "-target",
     "nvptx64-nvidia-nvcl",
-    f"-ferror-limit=1",
+    f"-ferror-limit=0",
     "-xcl",
-    "-Wno-ignored-pragmas",
-    "-Wno-implicit-function-declaration",
-    "-Wno-incompatible-library-redeclaration",
-    "-Wno-macro-redefined",
-    "-Wno-unused-parameter",
+    "-Wno-everything",
+    # "-Wno-ignored-pragmas",
+    # "-Wno-implicit-function-declaration",
+    # "-Wno-incompatible-library-redeclaration",
+    # "-Wno-macro-redefined",
+    # "-Wno-unused-parameter",
   ]
   if use_shim:
     args += ["-include", str(SHIMFILE)]
