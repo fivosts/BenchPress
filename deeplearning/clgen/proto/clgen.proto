@@ -24,8 +24,8 @@ option java_multiple_files = true;
 option java_outer_classname = "ClgenProto";
 option java_package = "com.clgen";
 
-import "model.proto";
-import "sampler.proto";
+import "deeplearning/clgen/proto/model.proto";
+import "deeplearning/clgen/proto/sampler.proto";
 
 // A CLgen instance encapsulates all of the settings for training and sampling
 // a language model.

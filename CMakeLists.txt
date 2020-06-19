@@ -186,16 +186,17 @@ function(clgen)
   string(CONCAT CLGEN 
          "PYTHON_BINARY="  ${PYTHON}  "\n"
          "CLGEN_BINARY=" ${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH} "/clgen.py\n"
-         "GCC=" ${GCC} "\n"
-         "LLVM=" ${LLVM}/bin/clang "\n"
-         "LIBCXX_HEADERS=" ${LLVM}/include/c++/v1 "\n"
-         "LIBCLC=" ${LIBCLC} "\n"
+         "GCC="                 ${GCC} "\n"
+         "LLVM="                ${LLVM} "\n"
+         "LIBCXX_HEADERS="      ${LLVM}/include/c++/v1 "\n"
+         "LIBCLC="              ${LIBCLC} "\n"
          "DASHBOARD_TEMPLATES=" ${DASHBOARD_TEMPLATES} "\n"
-         "DASHBOARD_STATIC=" ${DASHBOARD_STATIC} "\n"
-         "DATA_CL_INCLUDE=" ${DATA_CL_INCLUDE} "\n"
-         "CLANG=" ${LLVM} "\n"
-         "CLANG_HEADERS=" ${LLVM}/lib/clang/6.0.0/include "\n"
-         "CLANG_REWRITER=" ${CLANG_REWRITER} "\n"
+         "DASHBOARD_STATIC="    ${DASHBOARD_STATIC} "\n"
+         "DATA_CL_INCLUDE="     ${DATA_CL_INCLUDE} "\n"
+         "CLANG="               ${LLVM}/bin/clang "\n"
+         "CLANG_FORMAT="        ${LLVM}/bin/clang-format "\n"
+         "CLANG_HEADERS="       ${LLVM}/lib/clang/6.0.0/include "\n"
+         "CLANG_REWRITER="      ${CLANG_REWRITER} "\n"
          "export LLVM\n"
          "export LIBCXX_HEADERS\n"
          "export LIBCLC\n"
@@ -203,12 +204,14 @@ function(clgen)
          "export DASHBOARD_STATIC\n"
          "export DATA_CL_INCLUDE\n"
          "export CLANG\n"
+         "export CLANG_FORMAT\n"
          "export CLANG_HEADERS\n"
          "export CLANG_REWRITER\n"
          "eval PYTHONPATH=" ${CMAKE_CURRENT_SOURCE_DIR}:${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH}/proto " $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
          "unset LLVM\n"
          "unset LIBCXX_HEADERS\n"
          "unset CLANG\n"
+         "unset CLANG_FORMAT\n"
          "unset CLANG_HEADERS\n"
          "unset CLANG_REWRITER\n"
          "unset LIBCLC\n"
@@ -218,7 +221,7 @@ function(clgen)
   )
   file(
     WRITE ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CLGEN}
-    FILE_PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+    # FILE_PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
   add_custom_target(link_target ALL
       COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CMAKE_CURRENT_SOURCE_DIR}/clgen
