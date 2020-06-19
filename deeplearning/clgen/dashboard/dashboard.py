@@ -8,6 +8,7 @@ import flask_sqlalchemy
 import portpicker
 import sqlalchemy as sql
 
+from deeplearning.clgen import environment
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.dashboard import dashboard_db
 from absl import flags
@@ -28,10 +29,8 @@ flags.DEFINE_integer(
 
 flask_app = flask.Flask(
   __name__,
-  template_folder=bazelutil.DataPath(
-    "phd/deeplearning/clgen/dashboard/templates"
-  ),
-  static_folder=bazelutil.DataPath("phd/deeplearning/clgen/dashboard/static"),
+  template_folder = environment.DASHBOARD_TEMPLATES,
+  static_folder = environment.DASHBOARD_STATIC,
 )
 
 db = flask_sqlalchemy.SQLAlchemy(flask_app)
