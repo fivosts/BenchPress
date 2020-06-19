@@ -17,7 +17,7 @@ import pathlib
 
 from deeplearning.clgen.proto import model_pb2
 from absl import flags
-from labm8.py import crypto
+from deeplearning.clgen import crypto
 from labm8.py import fs
 from deeplearning.clgen import pbutil
 

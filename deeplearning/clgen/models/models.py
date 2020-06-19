@@ -37,7 +37,7 @@ from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import telemetry_pb2
 from absl import flags
-from labm8.py import crypto
+from deeplearning.clgen import crypto
 import humanize
 from labm8.py import labdate
 from labm8.py import sqlutil

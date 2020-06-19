@@ -30,7 +30,7 @@ from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
 
-from labm8.py import crypto
+from deeplearning.clgen import crypto
 from labm8.py import sqlutil
 
 FLAGS = flags.FLAGS
