@@ -75,9 +75,9 @@ class DataBatch(typing.NamedTuple):
     l.getLogger().info("Step shape: X: {}, y" ": {}.".format(batch.X.shape, batch.y.shape))
     l.getLogger().info(
       "Memory: {} per batch, {} per epoch, {} total.".format(
-              humanize.naturalsize(self.sizeof_batch, "B"),
-              humanize.naturalsize(self.sizeof_batch * steps_per_epoch, "B"),
-              humanize.naturalsize(self.sizeof_batch * steps_per_epoch * num_epochs, "B"),
+              humanize.naturalsize(self.sizeof_batch, binary = True),
+              humanize.naturalsize(self.sizeof_batch * steps_per_epoch, binary = True),
+              humanize.naturalsize(self.sizeof_batch * steps_per_epoch * num_epochs, binary = True),
           )
     )
     return
@@ -141,9 +141,9 @@ class MaskSequence(typing.NamedTuple):
                         )
     l.getLogger().info(
       "Memory: {} per batch, {} per epoch, {} total.".format(
-              humanize.naturalsize(self.sizeof_sequence * batch_size, "B"),
-              humanize.naturalsize(self.sizeof_sequence * batch_size * steps_per_epoch, "B"),
-              humanize.naturalsize(self.sizeof_sequence * batch_size * steps_per_epoch * num_epochs, "B"),
+              humanize.naturalsize(self.sizeof_sequence * batch_size, binary = True),
+              humanize.naturalsize(self.sizeof_sequence * batch_size * steps_per_epoch, binary = True),
+              humanize.naturalsize(self.sizeof_sequence * batch_size * steps_per_epoch * num_epochs, binary = True),
           )
     )
 

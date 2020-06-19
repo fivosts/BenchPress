@@ -204,9 +204,7 @@ class Corpus(object):
 
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.GetShortSummary()")
-    corpus_size = humanize.naturalsize(
-      self.encoded.token_count, "", separator=""
-    )
+    corpus_size = humanize.naturalsize(self.encoded.token_count)
     return (
       f"{corpus_size} token corpus with {self.vocab_size}-element vocabulary"
     )
