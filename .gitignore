@@ -1,8 +1,9 @@
-# Bazel symbolic links
+# Binary symbolic links
 bazel-bin
 bazel-clgen
 bazel-out
 bazel-testlogs
+clgen
 
 # Build folders
 *__pycache__*
