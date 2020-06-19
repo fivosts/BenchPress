@@ -8,15 +8,15 @@ project(CLGEN,
 cmake_policy(SET CMP0076 NEW)
 
 OPTION(BUILD_FROM_SOURCE "Select to build necessary system wide packages from source locally (gcc, python, boost, protoc)" OFF)
-set(PYTHON "/usr/bin/python3" CACHE FILEPATH 
+set(PYTHON "python3" CACHE FILEPATH 
   "Provide specific python for application. Default: [/usr/bin/python3]. Ignored if BUILD_FROM_SOURCE is enabled."
   FORCE
 )
-set(GCC    "/usr/bin/gcc"     CACHE FILEPATH 
+set(GCC    "gcc"     CACHE FILEPATH 
   "Provide specific gcc for application. Default: [/usr/bin/gcc]. Ignored if BUILD_FROM_SOURCE is enabled."
   FORCE
 )
-set(PROTOC "/usr/bin/protoc"  CACHE FILEPATH 
+set(PROTOC "protoc"  CACHE FILEPATH 
   "Provide specific protobuf compiler for application. Default: [/usr/bin/protoc]. Ignored if BUILD_FROM_SOURCE is enabled."
   FORCE
 )
