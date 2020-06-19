@@ -24,7 +24,6 @@ from datasets.github.scrape_repos.preprocessors import extractors
 from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import public
 from absl import flags
-from labm8.py import bazelutil
 from eupy.native import logger as l
 
 FLAGS = flags.FLAGS

@@ -20,7 +20,6 @@ import tempfile
 import deeplearning.clgen.errors
 from deeplearning.clgen.corpuses import atomizers
 from absl import flags
-from labm8.py import bazelutil
 from labm8.py import test
 
 FLAGS = flags.FLAGS
