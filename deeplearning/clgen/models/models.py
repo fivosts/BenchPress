@@ -40,7 +40,6 @@ from absl import flags
 from labm8.py import crypto
 from labm8.py import humanize
 from labm8.py import labdate
-from labm8.py import lockfile
 from labm8.py import sqlutil
 from labm8.py import system
 
@@ -407,11 +406,6 @@ class Model(object):
   @property
   def atomizer(self) -> atomizers.AtomizerBase:
     return self.corpus.atomizer
-
-  @property
-  def training_lock(self) -> lockfile.LockFile:
-    """A lockfile for exclusive training."""
-    return lockfile.LockFile(self.cache.keypath("LOCK"))
 
   @property
   def is_trained(self) -> bool:

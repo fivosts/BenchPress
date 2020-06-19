@@ -42,7 +42,6 @@ from absl import flags
 from labm8.py import crypto
 from labm8.py import hashcache
 from labm8.py import humanize
-from labm8.py import lockfile
 from deeplearning.clgen import pbutil
 from labm8.py import prof
 from labm8.py import sqlutil
@@ -248,8 +247,7 @@ class Corpus(object):
     preprocessed_lock_path = (
       pathlib.Path(self.preprocessed.url[len("sqlite:///") :]).parent / "LOCK"
     )
-    with lockfile.LockFile(preprocessed_lock_path):
-      self.preprocessed.Create(self.config)
+    self.preprocessed.Create(self.config)
     if not self.preprocessed.size:
       raise ValueError(
         f"Pre-processed corpus contains no files: '{self.preprocessed.url}'"
@@ -257,19 +255,18 @@ class Corpus(object):
     encoded_lock_path = (
       pathlib.Path(self.encoded.url[len("sqlite:///") :]).parent / "LOCK"
     )
-    with lockfile.LockFile(encoded_lock_path):
-      start_time = time.time()
-      atomizer = self.atomizer
-      l.getLogger().info(
-        "{}: {} tokens in {} ms".format(
-            type(atomizer).__name__,
-            humanize.Commas(atomizer.vocab_size),
-            humanize.Commas(int((time.time() - start_time) * 1000)),
-          )
-      )
-      self.encoded.Create(
-        self.preprocessed, atomizer, self.config.contentfile_separator
-      )
+    start_time = time.time()
+    atomizer = self.atomizer
+    l.getLogger().info(
+      "{}: {} tokens in {} ms".format(
+          type(atomizer).__name__,
+          humanize.Commas(atomizer.vocab_size),
+          humanize.Commas(int((time.time() - start_time) * 1000)),
+        )
+    )
+    self.encoded.Create(
+      self.preprocessed, atomizer, self.config.contentfile_separator
+    )
 
     # Add entry to dashboard database
     with self.dashboard_db.Session(commit=True) as session:
@@ -297,22 +294,6 @@ class Corpus(object):
     if not self._created:
       raise TypeError("Cannot access dashboard_db_id before Create() called")
     return self._dashboard_db_id
-
-  @property
-  def is_locked(self) -> bool:
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.is_locked()")
-    """Return whether the corpus is locked."""
-    preprocessed_lock_path = (
-      pathlib.Path(self.preprocessed.url[len("sqlite:///") :]).parent / "LOCK"
-    )
-    if lockfile.LockFile(preprocessed_lock_path).islocked:
-      return True
-    encoded_lock_path = (
-      pathlib.Path(self.encoded.url[len("sqlite:///") :]).parent / "LOCK"
-    )
-    if lockfile.LockFile(encoded_lock_path).islocked:
-      return True
-    return False
 
   def GetTextCorpus(self, shuffle: bool) -> str:
     """Concatenate the entire corpus into a string.
