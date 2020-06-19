@@ -125,7 +125,7 @@ function(install_external_deps)
     BUILD_COMMAND     ""
     INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/opencl_headers/opencl_headers/ ${LOCAL}
   )
-  set(OPENCL_HEADERS  ${LOCAL}/opencl_headers] PARENT_SCOPE)
+  set(OPENCL_HEADERS  ${LOCAL}/opencl_headers PARENT_SCOPE)
 
   # TODO check if needed.
   # ExternalProject_Add(opencl-icd-loader
@@ -157,24 +157,24 @@ function(setup_python)
     file(MAKE_DIRECTORY ${LOCAL}/lib/python)
     add_custom_target(requirements ALL
       COMMAND ${PYTHON} -m venv ${LOCAL}/env
-      COMMAND ${PYTHON_ENV} -m pip install -r ${CMAKE_SOURCE_DIR}/requirements.txt ${LOCAL}/lib/python
+      COMMAND ${PYTHON_ENV} -m pip install --disable-pip-version-check -r ${CMAKE_SOURCE_DIR}/requirements.txt
       DEPENDS python
       COMMENT "Installing python package dependencies"
     )
   else ()
     add_custom_target(requirements ALL
       COMMAND ${PYTHON} -m venv ${LOCAL}/env
-      COMMAND ${PYTHON_ENV} -m pip install -r ${CMAKE_SOURCE_DIR}/requirements.txt
+      COMMAND ${PYTHON_ENV} -m pip install --disable-pip-version-check -r ${CMAKE_SOURCE_DIR}/requirements.txt
       COMMENT "Installing python package dependencies"
     )
   endif ()
-  set(${PYTHON} ${PYTHON_ENV})
+  set(PYTHON ${PYTHON_ENV} PARENT_SCOPE)
 endfunction()
 
 function(clgen)
 
   ### Auto-generates clgen binary that initializes app environment and deploys app.
-  
+
   get_target_property(CLANG_REWRITER clang_rewriter path)
   string(CONCAT CLGEN 
          "PYTHON_BINARY=" \" ${PYTHON} \" "\n"
