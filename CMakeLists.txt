@@ -8,9 +8,9 @@ project(CLGEN,
 cmake_policy(SET CMP0076 NEW)
 
 OPTION(BUILD_FROM_SOURCE "Select to build necessary system wide packages from source locally (gcc, python, boost, protoc)" OFF)
-OPTION(PYTHON "Provide specific python for application. Default: [/usr/bin/python3]. Ignored if BUILD_FROM_SOURCE is enabled."           "/usr/bin/python3")
-OPTION(GCC    "Provide specific gcc for application. Default: [/usr/bin/gcc]. Ignored if BUILD_FROM_SOURCE is enabled."                  "/usr/bin/gcc")
-OPTION(PROTOC "Provide specific protobuf compiler for application. Default: [/usr/bin/protoc]. Ignored if BUILD_FROM_SOURCE is enabled." "/usr/bin/protoc")
+set(PYTHON "/usr/bin/python3" CACHE STRING "Provide specific python for application. Default: [/usr/bin/python3]. Ignored if BUILD_FROM_SOURCE is enabled.")
+set(GCC    "/usr/bin/gcc"     CACHE STRING "Provide specific gcc for application. Default: [/usr/bin/gcc]. Ignored if BUILD_FROM_SOURCE is enabled.")
+set(PROTOC "/usr/bin/protoc"  CACHE STRING "Provide specific protobuf compiler for application. Default: [/usr/bin/protoc]. Ignored if BUILD_FROM_SOURCE is enabled.")
 
 # Base path of third_party deps
 set(THIRD_PARTY ${CMAKE_BINARY_DIR}/third_party)
@@ -34,7 +34,7 @@ function(install_external_deps)
       INSTALL_DIR       ${LOCAL}
       CONFIGURE_COMMAND ${THIRD_PARTY}/gcc/gcc/configure --prefix=${LOCAL} --disable-multilib --enable-languages=c,c++,fortran,go
     )
-    set(GCC             ${LOCAL}/bin/gcc-9)
+    set(GCC             ${LOCAL}/bin/gcc-9 PARENT_SCOPE)
   
     # Python 3.7.5 from source
     ExternalProject_Add(python
@@ -49,7 +49,7 @@ function(install_external_deps)
       INSTALL_DIR       ${LOCAL}
       CONFIGURE_COMMAND ${THIRD_PARTY}/python/python/configure --prefix=${LOCAL} --enable-optimizations
     )
-    set(PYTHON          ${LOCAL}/bin/python3)
+    set(PYTHON          ${LOCAL}/bin/python3 PARENT_SCOPE)
   
     # Boost lib
     # TODO make sure this version is visible when compiling kernels
@@ -67,6 +67,8 @@ function(install_external_deps)
       BUILD_COMMAND     ${THIRD_PARTY}/boost/boost/b2 && ${THIRD_PARTY}/boost/boost/b2 headers
       INSTALL_COMMAND   ${THIRD_PARTY}/boost/boost/b2 install
     )
+    # set(BOOST           ${LOCAL} PARENT_SCOPE)
+
     # protoc compiler
     ExternalProject_Add(protobuf
       GIT_REPOSITORY    https://github.com/protocolbuffers/protobuf.git
@@ -80,7 +82,7 @@ function(install_external_deps)
       INSTALL_DIR       ${LOCAL}
       CONFIGURE_COMMAND cd ${THIRD_PARTY}/protobuf/protobuf && ./autogen.sh && ${THIRD_PARTY}/protobuf/protobuf/configure --prefix=${LOCAL}
     )
-    set(PROTOC          ${LOCAL}/bin/protoc)
+    set(PROTOC          ${LOCAL}/bin/protoc PARENT_SCOPE)
 
   endif ()
   # Clang and LLVM 6 pre-compiled binaries and libraries.
@@ -96,7 +98,8 @@ function(install_external_deps)
     BUILD_COMMAND     ""
     INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/llvm/llvm/ ${LOCAL}
   )
-  set(LLVM            ${LOCAL}/llvm)
+  set(LLVM            ${LOCAL}/llvm PARENT_SCOPE)
+
   #include <OpenCL/*>
   ExternalProject_Add(opencl-headers
     GIT_REPOSITORY    https://github.com/KhronosGroup/OpenCL-Headers.git
@@ -111,7 +114,8 @@ function(install_external_deps)
     BUILD_COMMAND     ""
     INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/opencl_headers/opencl_headers/ ${LOCAL}
   )
-  set(OPENCL_HEADERS  ${LOCAL}/opencl_headers])
+  set(OPENCL_HEADERS  ${LOCAL}/opencl_headers] PARENT_SCOPE)
+
   # TODO check if needed.
   # ExternalProject_Add(opencl-icd-loader
   #   GIT_REPOSITORY    https://https://github.com/KhronosGroup/OpenCL-ICD-Loader
@@ -136,6 +140,23 @@ function(install_python_deps)
   )
 endfunction()
 
+function(clgen)
+  string(CONCAT CLGEN 
+         "PYTHON_BINARY=" \" ${PYTHON} \" "\n"
+         "CLGEN_BINARY=\"deeplearning/clgen/clgen.py\"\n"
+         "LLVM="
+         ${LLVM} "\n"
+         "CLANG_REWRITER="
+         clang_rewriter "\n"
+         "export LLVM\n"
+         "export CLANG_REWRITER\n"
+         "eval $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
+         "unset LLVM\n"
+         "unset CLANG_REWRITER")
+  file(WRITE ${CMAKE_SOURCE_DIR}/clgen ${CLGEN})
+endfunction()
+
 install_external_deps()
 install_python_deps()
 add_subdirectory(deeplearning/clgen/preprocessors)
+clgen()
