@@ -3,7 +3,7 @@ bazel-bin
 bazel-clgen
 bazel-out
 bazel-testlogs
-./clgen
+/clgen
 
 # Build folders
 *__pycache__*
