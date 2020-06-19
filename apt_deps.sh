@@ -41,6 +41,7 @@ libsdl2-dev \
 lzma-dev \
 mysql-server \
 libmysqlclient-dev \
+libsqlite3-dev \
 
 ##
 sudo rm /usr/bin/python3

@@ -60,7 +60,7 @@ function(install_external_deps)
       SOURCE_DIR        ${THIRD_PARTY}/python/python
       BUILD_IN_SOURCE   true
       INSTALL_DIR       ${LOCAL}
-      CONFIGURE_COMMAND ${THIRD_PARTY}/python/python/configure --prefix=${LOCAL} --enable-optimizations
+      CONFIGURE_COMMAND ${THIRD_PARTY}/python/python/configure --prefix=${LOCAL} --enable-optimizations --enable-loadable-sqlite-extensions
     )
     set(PYTHON          ${LOCAL}/bin/python3               PARENT_SCOPE)
 
@@ -205,7 +205,7 @@ function(clgen)
          "export CLANG\n"
          "export CLANG_HEADERS\n"
          "export CLANG_REWRITER\n"
-         "eval $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
+         "eval PYTHONPATH=" ${CMAKE_CURRENT_SOURCE_DIR}:${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH}/proto " $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
          "unset LLVM\n"
          "unset LIBCXX_HEADERS\n"
          "unset CLANG\n"

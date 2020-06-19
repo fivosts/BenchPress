@@ -73,7 +73,6 @@ from absl import logging as absl_logging
 from labm8.py import shell
 from labm8.py.internal import flags_parsers
 from labm8.py.internal import labm8_logging as logging
-from labm8.py.internal import workspace_status
 
 FLAGS = absl_flags.FLAGS
 
