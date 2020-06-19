@@ -1,9 +1,1 @@
-PYTHON_BINARY="/usr/bin/python3"
-CLGEN_BINARY="deeplearning/clgen/clgen.py"
-LLVM=/home/fivosts/PhD/Code/clgen/cmake_build/local/llvm
-CLANG_REWRITER=clang_rewriter
-export LLVM
-export CLANG_REWRITER
-eval $PYTHON_BINARY $CLGEN_BINARY "$@"
-unset LLVM
-unset CLANG_REWRITER
+/home/fivosts/PhD/Code/clgen/cmake_build/deeplearning/clgen/clgen
