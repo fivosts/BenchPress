@@ -207,7 +207,7 @@ function(clgen)
          "export CLANG_FORMAT\n"
          "export CLANG_HEADERS\n"
          "export CLANG_REWRITER\n"
-         "eval PYTHONPATH=" ${CMAKE_CURRENT_SOURCE_DIR}:${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH}/proto " $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
+         "eval PYTHONPATH=" ${CMAKE_CURRENT_SOURCE_DIR} " $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
          "unset LLVM\n"
          "unset LIBCXX_HEADERS\n"
          "unset CLANG\n"
