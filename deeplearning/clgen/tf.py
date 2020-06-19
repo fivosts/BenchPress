@@ -1,7 +1,7 @@
 """A wrapper module to include tensorflow with some options"""
 from absl import flags
 import os
-## TODO find a way to init absl flags
+
 FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean(
