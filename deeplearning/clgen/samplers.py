@@ -396,11 +396,12 @@ class Sampler(object):
 class SamplerDBFile(Base):
   """Single inference file entry"""
   __tablename__    = "inference_contentfiles"
-  id               : int = sql.Column(sql.Integer, primary_key=True)
+  id               : int = sql.Column(sql.Integer, primary_key = True)
+  train_step       : int = sql.Column(sql.Integer, nullable = False)
   encoded_text     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   text             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  num_tokens       : int = sql.Column(sql.Integer, nullable=False)
-  sample_time_ms   : int = sql.Column(sql.Integer, nullable=False)
+  num_tokens       : int = sql.Column(sql.Integer, nullable = False)
+  sample_time_ms   : int = sql.Column(sql.Integer, nullable = False)
   date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
 class SamplerDB(sqlutil.Database):

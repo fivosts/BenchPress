@@ -358,6 +358,7 @@ class Model(object):
             )
             sample_db = samplers.SamplerDBFile(
               id              = sampler.db_file_count,
+              train_step      = -1, # TODO
               text            = "".join(samples_in_progress[i]),
               encoded_text    = ",".join([str(atomizer.vocab[x]) for x in samples_in_progress[i]]),
               num_tokens      = len(samples_in_progress[i]),
