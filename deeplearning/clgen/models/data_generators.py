@@ -12,16 +12,14 @@ import random
 import progressbar
 import collections
 import copy
+import humanize
 
 import numpy as np
 
 from deeplearning.clgen import cache
 from deeplearning.clgen.tf import tf
 from deeplearning.clgen.proto import model_pb2
-
 from absl import flags
-from labm8.py import humanize
-
 from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
@@ -77,9 +75,9 @@ class DataBatch(typing.NamedTuple):
     l.getLogger().info("Step shape: X: {}, y" ": {}.".format(batch.X.shape, batch.y.shape))
     l.getLogger().info(
       "Memory: {} per batch, {} per epoch, {} total.".format(
-              humanize.BinaryPrefix(self.sizeof_batch, "B"),
-              humanize.BinaryPrefix(self.sizeof_batch * steps_per_epoch, "B"),
-              humanize.BinaryPrefix(self.sizeof_batch * steps_per_epoch * num_epochs, "B"),
+              humanize.naturalsize(self.sizeof_batch, "B"),
+              humanize.naturalsize(self.sizeof_batch * steps_per_epoch, "B"),
+              humanize.naturalsize(self.sizeof_batch * steps_per_epoch * num_epochs, "B"),
           )
     )
     return
@@ -143,9 +141,9 @@ class MaskSequence(typing.NamedTuple):
                         )
     l.getLogger().info(
       "Memory: {} per batch, {} per epoch, {} total.".format(
-              humanize.BinaryPrefix(self.sizeof_sequence * batch_size, "B"),
-              humanize.BinaryPrefix(self.sizeof_sequence * batch_size * steps_per_epoch, "B"),
-              humanize.BinaryPrefix(self.sizeof_sequence * batch_size * steps_per_epoch * num_epochs, "B"),
+              humanize.naturalsize(self.sizeof_sequence * batch_size, "B"),
+              humanize.naturalsize(self.sizeof_sequence * batch_size * steps_per_epoch, "B"),
+              humanize.naturalsize(self.sizeof_sequence * batch_size * steps_per_epoch * num_epochs, "B"),
           )
     )
 
@@ -257,9 +255,9 @@ class KerasBatchGenerator():
 
     l.getLogger().info(
       "Encoded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
-              humanize.Commas(clipped_corpus_length),
-              humanize.Commas(corpus_length - clipped_corpus_length),
-              humanize.Commas(int((time.time() - start_time) * 1000)),
+              humanize.intcomma(clipped_corpus_length),
+              humanize.intcomma(corpus_length - clipped_corpus_length),
+              humanize.intcomma(int((time.time() - start_time) * 1000)),
           )
     )
     return x, y, steps_per_epoch
@@ -338,9 +336,9 @@ class TensorflowBatchGenerator(object):
     ]
     l.getLogger().info(
       "Encoded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
-                humanize.Commas(clipped_corpus_length),
-                humanize.Commas(len(self.encoded_corpus) - clipped_corpus_length),
-                humanize.Commas(int((time.time() - start_time) * 1000)),
+                humanize.intcomma(clipped_corpus_length),
+                humanize.intcomma(len(self.encoded_corpus) - clipped_corpus_length),
+                humanize.intcomma(int((time.time() - start_time) * 1000)),
             )
     )
     return
@@ -628,7 +626,7 @@ class MaskLMBatchGenerator(object):
                   self.shaped_corpus.shape,
                   reduced_length,
                   dupe_factor,
-                  humanize.Commas(int((time.time() - start_time) * 1000)),
+                  humanize.intcomma(int((time.time() - start_time) * 1000)),
               )
       )
     elif FLAGS.datapoint_type == "statement":
@@ -655,9 +653,9 @@ class MaskLMBatchGenerator(object):
 
       l.getLogger().info(
         "Loaded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
-                  humanize.Commas(clipped_corpus_length),
-                  humanize.Commas(len(encoded_corpus) - clipped_corpus_length),
-                  humanize.Commas(int((time.time() - start_time) * 1000)),
+                  humanize.intcomma(clipped_corpus_length),
+                  humanize.intcomma(len(encoded_corpus) - clipped_corpus_length),
+                  humanize.intcomma(int((time.time() - start_time) * 1000)),
               )
       )
 

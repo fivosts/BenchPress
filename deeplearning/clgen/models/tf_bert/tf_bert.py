@@ -28,6 +28,7 @@ from absl import flags
 from deeplearning.clgen import samplers
 from deeplearning.clgen import telemetry
 from deeplearning.clgen.tf import tf
+from deeplearning.clgen import pbutil
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
@@ -38,8 +39,6 @@ from deeplearning.clgen.models.tf_bert import optimizer
 from deeplearning.clgen.models.tf_bert import hooks
 
 from eupy.native import logger as l
-from labm8.py import pbutil
-from labm8.py import gpu_scheduler
 
 FLAGS = flags.FLAGS
 
@@ -262,8 +261,6 @@ class tfBert(backends.BackendBase):
       self._ConfigTrainParams(data_generator)
 
     if not self.is_trained:
-      ## Acquire GPU Lock before anything else is done
-      # gpu_scheduler.LockExclusiveProcessGpuAccess()
 
       train_input_fn = self.train.data_generator.generateTfDataset(
           sequence_length = self.config.training.sequence_length,

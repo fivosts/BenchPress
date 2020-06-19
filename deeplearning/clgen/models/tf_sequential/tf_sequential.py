@@ -18,6 +18,7 @@ import os
 import pathlib
 import time
 import typing
+import humanize
 
 from eupy.native import logger as l
 
@@ -33,9 +34,6 @@ from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import data_generators
 from deeplearning.clgen.proto import model_pb2
 from absl import flags
-from labm8.py import gpu_scheduler
-from labm8.py import humanize
-
 
 FLAGS = flags.FLAGS
 
@@ -120,8 +118,6 @@ class tfSequential(backends.BackendBase):
       The imported TensorFlow module.
     """
     l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.InitTfGraph()")
-    # Lock exclusive access to a GPU, if present.
-    gpu_scheduler.LockExclusiveProcessGpuAccess()
 
     start_time = time.time()
 
@@ -239,8 +235,8 @@ class tfSequential(backends.BackendBase):
     l.getLogger().info(
       "Instantiated TensorFlow graph with {} trainable parameters " "in {} ms."
         .format(
-          humanize.Commas(num_trainable_params),
-          humanize.Commas(int((time.time() - start_time) * 1000)),
+          humanize.intcomma(num_trainable_params),
+          humanize.intcomma(int((time.time() - start_time) * 1000)),
           )
     )
 
@@ -470,7 +466,7 @@ class tfSequential(backends.BackendBase):
           "Saved checkpoint {} in {} ms."
             .format(
               checkpoint_path,
-              humanize.Commas(int((time.time() - start_time) * 1000)),
+              humanize.intcomma(int((time.time() - start_time) * 1000)),
               )
         )
         dbs.query(dashboard_db.TrainingTelemetry).filter(
