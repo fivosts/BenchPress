@@ -178,7 +178,7 @@ function(clgen)
   get_target_property(CLANG_REWRITER clang_rewriter path)
   string(CONCAT CLGEN 
          "PYTHON_BINARY=" \" ${PYTHON} \" "\n"
-         "CLGEN_BINARY=\"deeplearning/clgen/clgen.py\"\n"
+         "CLGEN_BINARY=\"" ${CMAKE_CURRENT_SOURCE_DIR} "/deeplearning/clgen/clgen.py\"\n"
          "GCC=" ${GCC} "\n"
          "LLVM=" ${LLVM} "\n"
          "CLANG_REWRITER=" ${CLANG_REWRITER} "\n"
@@ -187,7 +187,13 @@ function(clgen)
          "eval $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
          "unset LLVM\n"
          "unset CLANG_REWRITER")
-  file(WRITE ${CMAKE_SOURCE_DIR}/clgen ${CLGEN})
+  file(
+    WRITE ${CMAKE_BINARY_DIR}/deeplearning/clgen/clgen ${CLGEN}
+    FILE_PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+  )
+  add_custom_target(link_target ALL
+      COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_BINARY_DIR}/deeplearning/clgen/clgen ${CMAKE_CURRENT_SOURCE_DIR}/clgen
+  )
 endfunction()
 
 install_external_deps()
