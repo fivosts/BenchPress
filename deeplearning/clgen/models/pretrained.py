@@ -31,7 +31,7 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import telemetry_pb2
 from absl import flags
 from labm8.py import cache
-from labm8.py import humanize
+import humanize
 from labm8.py import labdate
 from deeplearning.clgen import pbutil
 
@@ -168,7 +168,7 @@ class PreTrainedModel(object):
 
     time_now = labdate.MillisecondsTimestamp()
     l.getLogger().info("Produced {} sample batches at a rate of {} ms / batch.".format(
-    	humanize.Commas(batch_count), humanize.Commas(int((time_now - sample_start_time) / max(batch_count, 1)))
+    	humanize.intcomma(batch_count), humanize.intcomma(int((time_now - sample_start_time) / max(batch_count, 1)))
     	))
 
   def SamplerCache(self, sampler: samplers.Sampler) -> pathlib.Path:

@@ -41,7 +41,7 @@ from deeplearning.clgen.proto import corpus_pb2
 from absl import flags
 from labm8.py import crypto
 from labm8.py import hashcache
-from labm8.py import humanize
+import humanize
 from deeplearning.clgen import pbutil
 from labm8.py import prof
 from labm8.py import sqlutil
@@ -204,7 +204,7 @@ class Corpus(object):
 
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.GetShortSummary()")
-    corpus_size = humanize.DecimalPrefix(
+    corpus_size = humanize.naturalsize(
       self.encoded.token_count, "", separator=""
     )
     return (
@@ -260,8 +260,8 @@ class Corpus(object):
     l.getLogger().info(
       "{}: {} tokens in {} ms".format(
           type(atomizer).__name__,
-          humanize.Commas(atomizer.vocab_size),
-          humanize.Commas(int((time.time() - start_time) * 1000)),
+          humanize.intcomma(atomizer.vocab_size),
+          humanize.intcomma(int((time.time() - start_time) * 1000)),
         )
     )
     self.encoded.Create(
@@ -567,7 +567,7 @@ def ResolveContentId(
   l.getLogger().warning(
     "Resolved Content ID {} in {} ms.".format(
           content_id,
-          humanize.Commas(int((time.time() - start_time) * 1000)),
+          humanize.intcomma(int((time.time() - start_time) * 1000)),
         )
   )
   return content_id

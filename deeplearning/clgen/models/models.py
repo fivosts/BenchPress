@@ -38,7 +38,7 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import telemetry_pb2
 from absl import flags
 from labm8.py import crypto
-from labm8.py import humanize
+import humanize
 from labm8.py import labdate
 from labm8.py import sqlutil
 from labm8.py import system
@@ -238,7 +238,7 @@ class Model(object):
       "Trained model for {} epochs in {} ms. " "Training loss: {}."
         .format(
           self.backend.num_epochs,
-          humanize.Commas(total_time_ms),
+          humanize.intcomma(total_time_ms),
           final_loss,
           )
     )
@@ -302,8 +302,8 @@ class Model(object):
       time_now = labdate.MillisecondsTimestamp()
       l.getLogger().info( "Produced {} sample batches at a rate of {} ms / batch."
                           .format(
-                            humanize.Commas(batch_count),
-                            humanize.Commas(int((time_now - sample_start_time) / max(batch_count, 1)))
+                            humanize.intcomma(batch_count),
+                            humanize.intcomma(int((time_now - sample_start_time) / max(batch_count, 1)))
                           )
       )
 

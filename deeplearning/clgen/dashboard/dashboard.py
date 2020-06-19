@@ -12,7 +12,7 @@ from deeplearning.clgen import environment
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.dashboard import dashboard_db
 from absl import flags
-from labm8.py import humanize
+import humanize
 
 from eupy.native import logger as l
 
@@ -150,11 +150,11 @@ def report(corpus_id: int, model_id: int):
     {
       "timestamp": r2.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
       "epoch": r2.epoch,
-      "step": humanize.Commas(r2.step),
+      "step": humanize.intcomma(r2.step),
       "learning_rate": f"{r2.learning_rate:.5E}",
       "training_loss": f"{r2.training_loss:.6f}",
       "pending": r2.pending,
-      "us_per_step": humanize.Duration(r3.us_per_step / 1e6),
+      "us_per_step": humanize.naturaldelta(r3.us_per_step / 1e6),
     }
     for r2, r3 in zip(q2, q3)
   ]
@@ -228,7 +228,7 @@ def encoded_contentfile(corpus_id: int, encoded_id: int):
     text = "".join(tokens)
     encoded_cf = {
       "id": cf.id,
-      "tokencount": humanize.Commas(cf.tokencount),
+      "tokencount": humanize.intcomma(cf.tokencount),
       "indices": indices,
       "text": text,
       "tokens": tokens,

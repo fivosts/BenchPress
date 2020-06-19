@@ -30,7 +30,7 @@ from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.proto import internal_pb2
 from absl import flags
-from labm8.py import humanize
+import humanize
 from labm8.py import sqlutil
 
 from eupy.native import logger as l
@@ -184,15 +184,15 @@ class EncodedContentFiles(sqlutil.Database):
       ).first()
     l.getLogger().info("Encoded {} files in {} ms ({:.2f}x speedup)"
                         .format(
-                            humanize.Commas(num_files),
-                            humanize.Commas(total_walltime),
+                            humanize.intcomma(num_files),
+                            humanize.intcomma(total_walltime),
                             total_time / total_walltime,
                           )
                       )
     l.getLogger().info("Encoded corpus: {} tokens, {} files."
                         .format(
-                            humanize.Commas(token_count),
-                            humanize.Commas(num_files),
+                            humanize.intcomma(token_count),
+                            humanize.intcomma(num_files),
                           )
                       )
     return
@@ -251,8 +251,8 @@ class EncodedContentFiles(sqlutil.Database):
 
       l.getLogger().info("Encoding {} of {} preprocessed files"
                           .format(
-                              humanize.Commas(query.count()),
-                              humanize.Commas(
+                              humanize.intcomma(query.count()),
+                              humanize.intcomma(
                                 p_session.query(preprocessed.PreprocessedContentFile)
                                 .filter(preprocessed.PreprocessedContentFile.preprocessing_succeeded == True)
                                 .count()

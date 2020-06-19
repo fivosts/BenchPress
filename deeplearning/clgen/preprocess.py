@@ -30,7 +30,7 @@ from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.preprocessors import preprocessors
 from deeplearning.clgen.proto import internal_pb2
 from absl import flags, app
-from labm8.py import humanize
+import humanize
 from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
@@ -63,8 +63,8 @@ def Preprocess(
   todo = relpaths - done
   l.getLogger().info("Preprocessing {} of {} content files"
                           .format(
-                              humanize.Commas(len(todo)),
-                              humanize.Commas(len(relpaths))
+                              humanize.intcomma(len(todo)),
+                              humanize.intcomma(len(relpaths))
                             )
                     )
   jobs = [
@@ -91,8 +91,8 @@ def Preprocess(
 
   l.getLogger().info("Successfully preprocessed {} of {} files ({.2f} %%)"
                           .format(
-                              humanize.Commas(succeeded_count),
-                              humanize.Commas(len(todo)),
+                              humanize.intcomma(succeeded_count),
+                              humanize.intcomma(len(todo)),
                               (succeeded_count / min(len(todo), 1)) * 100,
                             )
                     )

@@ -12,7 +12,7 @@ from eupy.native import logger as l
 
 from deeplearning.clgen.corpuses import preprocessed
 from labm8.py import fs
-from labm8.py import humanize
+import humanize
 from labm8.py import ppar
 from labm8.py import sqlutil
 
@@ -76,7 +76,7 @@ def ExportPreprocessedFiles(
         sql.func.distinct(preprocessed.PreprocessedContentFile.sha256)
       )
     ).scalar()
-    l.getLogger().info("{} files to export", humanize.Commas(max_rows))
+    l.getLogger().info("{} files to export", humanize.intcomma(max_rows))
 
   # Create a new session because we are going to hand over the session object
   # to a background thread, which is not supported in SQLite.
@@ -115,9 +115,9 @@ def ExportPreprocessedFiles(
           fs.Write(outdir / f"{sha256}{file_suffix}", text.encode("utf-8"))
 
       l.getLogger().info("Exported pre-processed files {}..{} of {} ({:.2f})".format(
-				    humanize.Commas(batch.offset),
-				    humanize.Commas(batch.offset + len(batch.rows)),
-				    humanize.Commas(max_rows),
+				    humanize.intcomma(batch.offset),
+				    humanize.intcomma(batch.offset + len(batch.rows)),
+				    humanize.intcomma(max_rows),
 				    ((batch.offset + len(batch.rows)) / max_rows) * 100,
       				))
 

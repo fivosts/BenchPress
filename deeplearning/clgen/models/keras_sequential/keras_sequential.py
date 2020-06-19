@@ -25,7 +25,7 @@ from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import builders
 from deeplearning.clgen.models import data_generators
 from absl import flags
-from labm8.py import humanize
+import humanize
 from eupy.native import logger as l
 FLAGS = flags.FLAGS
 
@@ -162,9 +162,9 @@ class kerasSequential(backends.BackendBase):
     l.getLogger().info(
       "Step counts: {} per epoch, {} left to do, {} total"
             .format(
-                humanize.Commas(steps_per_epoch),
-                humanize.Commas((self.num_epochs - starting_epoch) * steps_per_epoch),
-                humanize.Commas(self.num_epochs * steps_per_epoch),
+                humanize.intcomma(steps_per_epoch),
+                humanize.intcomma((self.num_epochs - starting_epoch) * steps_per_epoch),
+                humanize.intcomma(self.num_epochs * steps_per_epoch),
             )
     )
     model.fit_generator(

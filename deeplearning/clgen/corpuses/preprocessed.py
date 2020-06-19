@@ -34,7 +34,7 @@ from deeplearning.clgen.proto import corpus_pb2
 from deeplearning.clgen.proto import internal_pb2
 from absl import flags
 from labm8.py import fs
-from labm8.py import humanize
+import humanize
 from labm8.py import sqlutil
 from eupy.native import logger as l
 
@@ -167,29 +167,29 @@ class PreprocessedContentFiles(sqlutil.Database):
       )
     l.getLogger().info(
       "Content files: {} chars, {} lines, {} files.".format(
-              humanize.Commas(input_chars),
-              humanize.Commas(input_lines),
-              humanize.Commas(num_input_files),
+              humanize.intcomma(input_chars),
+              humanize.intcomma(input_lines),
+              humanize.intcomma(num_input_files),
             )
     )
     l.getLogger().info(
       "Pre-processed {} files in {} ({:.2f}x speedup).".format(
-              humanize.Commas(num_input_files),
-              humanize.Duration((total_walltime or 0) / 1000),
+              humanize.intcomma(num_input_files),
+              humanize.naturaldelta((total_walltime or 0) / 1000),
               (total_time or 1) / (total_walltime or 1),
           )
     )
     l.getLogger().info(
       "Pre-processing discard rate: {:.1f}% ({} files).".format(
               (1 - (num_files / max(num_input_files, 1))) * 100,
-              humanize.Commas(num_input_files - num_files),
+              humanize.intcomma(num_input_files - num_files),
           )
     )
     l.getLogger().info(
       "Pre-processed corpus: {} chars, {} lines, {} files.".format(
-              humanize.Commas(char_count),
-              humanize.Commas(line_count),
-              humanize.Commas(num_files),
+              humanize.intcomma(char_count),
+              humanize.intcomma(line_count),
+              humanize.intcomma(num_files),
           )
     )
 
@@ -211,8 +211,8 @@ class PreprocessedContentFiles(sqlutil.Database):
       todo = relpaths - done
       l.getLogger().info(
         "Preprocessing {} of {} content files".format(
-                humanize.Commas(len(todo)),
-                humanize.Commas(len(relpaths)),
+                humanize.intcomma(len(todo)),
+                humanize.intcomma(len(relpaths)),
             )
       )
       jobs = [
@@ -277,7 +277,7 @@ class PreprocessedContentFiles(sqlutil.Database):
         l.getLogger().info(
           "Unpacked {} in {} ms".format(
                   ExpandConfigPath(config.local_tar_archive).name,
-                  humanize.Commas(int((time.time() - start_time) * 1000)),
+                  humanize.intcomma(int((time.time() - start_time) * 1000)),
               )
         )
         yield pathlib.Path(d)
