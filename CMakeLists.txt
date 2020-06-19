@@ -77,7 +77,7 @@ function(install_external_deps)
       BUILD_IN_SOURCE   true
       INSTALL_DIR       ${LOCAL}
       CONFIGURE_COMMAND ${THIRD_PARTY}/boost/boost/bootstrap.sh --prefix=${LOCAL}
-      BUILD_COMMAND     ${THIRD_PARTY}/boost/boost/b2 && ${THIRD_PARTY}/boost/boost/b2 headers
+      BUILD_COMMAND     ${THIRD_PARTY}/boost/boost/b2  --prefix=${LOCAL} && ${THIRD_PARTY}/boost/boost/b2 --prefix=${LOCAL} headers
       INSTALL_COMMAND   ${THIRD_PARTY}/boost/boost/b2 install
     )
     # set(BOOST           ${LOCAL} PARENT_SCOPE)
