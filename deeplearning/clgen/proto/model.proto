@@ -30,7 +30,7 @@ option java_multiple_files = true;
 option java_outer_classname = "ModelProto";
 option java_package = "com.clgen";
 
-import "deeplearning/clgen/proto/corpus.proto";
+import "corpus.proto";
 
 // The specification of a CLgen model.
 message Model {

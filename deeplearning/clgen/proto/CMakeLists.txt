@@ -1,0 +1,24 @@
+if (BUILD_FROM_SOURCE)
+  add_custom_target(clgen_protobufs ALL
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/clgen.proto --proto_path=${CMAKE_CURRENT_LIST_DIR} --python_out=${CMAKE_CURRENT_LIST_DIR}
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/corpus.proto --proto_path=${CMAKE_CURRENT_LIST_DIR} --python_out=${CMAKE_CURRENT_LIST_DIR}
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/internal.proto --proto_path=${CMAKE_CURRENT_LIST_DIR} --python_out=${CMAKE_CURRENT_LIST_DIR}
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/model.proto --proto_path=${CMAKE_CURRENT_LIST_DIR} --python_out=${CMAKE_CURRENT_LIST_DIR}
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/sampler.proto --proto_path=${CMAKE_CURRENT_LIST_DIR} --python_out=${CMAKE_CURRENT_LIST_DIR}
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/scrape_repos.proto --proto_path=${CMAKE_CURRENT_LIST_DIR} --python_out=${CMAKE_CURRENT_LIST_DIR}
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/telemetry.proto --proto_path=${CMAKE_CURRENT_LIST_DIR} --python_out=${CMAKE_CURRENT_LIST_DIR}
+    DEPENDS protobuf
+    COMMENT "Compiling clgen protobuf files"
+  )
+else ()
+  add_custom_target(clgen_protobufs ALL
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/clgen.proto --proto_path=${CMAKE_CURRENT_LIST_DIR} --python_out=${CMAKE_CURRENT_LIST_DIR}
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/corpus.proto --proto_path=${CMAKE_CURRENT_LIST_DIR} --python_out=${CMAKE_CURRENT_LIST_DIR}
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/internal.proto --proto_path=${CMAKE_CURRENT_LIST_DIR} --python_out=${CMAKE_CURRENT_LIST_DIR}
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/model.proto --proto_path=${CMAKE_CURRENT_LIST_DIR} --python_out=${CMAKE_CURRENT_LIST_DIR}
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/sampler.proto --proto_path=${CMAKE_CURRENT_LIST_DIR} --python_out=${CMAKE_CURRENT_LIST_DIR}
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/scrape_repos.proto --proto_path=${CMAKE_CURRENT_LIST_DIR} --python_out=${CMAKE_CURRENT_LIST_DIR}
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/telemetry.proto --proto_path=${CMAKE_CURRENT_LIST_DIR} --python_out=${CMAKE_CURRENT_LIST_DIR}
+    COMMENT "Compiling clgen protobuf files"
+  )
+endif ()
