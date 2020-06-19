@@ -2,7 +2,7 @@ add_executable  (clang_rewriter clang_rewriter.cpp)
 add_dependencies(clang_rewriter llvm)
 
 set_target_properties(clang_rewriter PROPERTIES
-    path ${CMAKE_CURRENT_LIST_DIR}/clang_rewriter
+    path ${CMAKE_CURRENT_BINARY_DIR}/clang_rewriter
 )
 
 set(CMAKE_CXX_FLAGS        "-fno-rtti")
