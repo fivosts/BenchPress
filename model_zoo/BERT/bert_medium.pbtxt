@@ -1,8 +1,7 @@
-working_dir: "tiny_maskLM" ## This path is relative to "workspace_dir", which is an app FLAG
+working_dir: "BERT" ## This path is relative to "workspace_dir", which is an app FLAG
 model {
   corpus {
-    # local_tar_archive: "$PWD/corpus.tar.bz2"
-    local_tar_archive: "$PWD/git_corpus/corpus.tar"
+    local_tar_archive: "$PWD/../corpus/corpus_17k.tar"
     atomizer {
       token_type: "word"
       token_list: "deeplearning/clgen/corpuses/token_lists.json"

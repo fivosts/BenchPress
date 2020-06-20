@@ -1,1 +1,1 @@
-./clgen --config deeplearning/clgen/tests/data/tiny_maskLM/config.pbtxt --level 20 --min_samples 10 --workspace_dir ./model_bert
+./clgen --config model_zoo/BERT/bert_tiny.pbtxt --level 20 --min_samples 10 --workspace_dir ./workspace
