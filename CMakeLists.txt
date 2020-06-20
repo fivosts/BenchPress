@@ -146,6 +146,7 @@ function(setup_python)
   else ()
     add_custom_target(requirements ALL
       COMMAND ${PYTHON} -m venv ${LOCAL}/env
+      COMMAND ${PYTHON_ENV} -m pip install --upgrade pip==20.1
       COMMAND ${PYTHON_ENV} -m pip install --disable-pip-version-check -r ${CMAKE_SOURCE_DIR}/requirements.pip
       COMMENT "Installing python package dependencies"
     )
