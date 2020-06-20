@@ -18,9 +18,9 @@ opencl-c-headers  \
 pkg-config \
 python3.7 \
 python3.7-dev \
+python3.7-venv \
 python3-distutils \
 python3-numpy \
-python3-venv \
 zlib1g-dev \
 libexempi-dev \
 libmpc-dev \
