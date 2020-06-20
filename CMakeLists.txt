@@ -131,7 +131,7 @@ function(setup_python)
 
   ### Initialize python environment for application
   # 1. Create virtual environment for python (depends on 'venv')
-  # 2. Pip install requirements.txt
+  # 2. Pip install requirements.pip
   # 3. Set python binary to virtual environment's bin folder
 
   set (PYTHON_ENV ${LOCAL}/env/bin/python)
@@ -139,14 +139,14 @@ function(setup_python)
     file(MAKE_DIRECTORY ${LOCAL}/lib/python)
     add_custom_target(requirements ALL
       COMMAND ${PYTHON} -m venv ${LOCAL}/env
-      COMMAND ${PYTHON_ENV} -m pip install --disable-pip-version-check -r ${CMAKE_SOURCE_DIR}/requirements.txt
+      COMMAND ${PYTHON_ENV} -m pip install --disable-pip-version-check -r ${CMAKE_SOURCE_DIR}/requirements.pip
       DEPENDS python
       COMMENT "Installing python package dependencies"
     )
   else ()
     add_custom_target(requirements ALL
       COMMAND ${PYTHON} -m venv ${LOCAL}/env
-      COMMAND ${PYTHON_ENV} -m pip install --disable-pip-version-check -r ${CMAKE_SOURCE_DIR}/requirements.txt
+      COMMAND ${PYTHON_ENV} -m pip install --disable-pip-version-check -r ${CMAKE_SOURCE_DIR}/requirements.pip
       COMMENT "Installing python package dependencies"
     )
   endif ()
