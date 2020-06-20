@@ -15,7 +15,7 @@
 """This file defines the PreTrainedModel class."""
 import pathlib
 import typing
-
+import datetime
 import numpy as np
 
 
@@ -32,7 +32,7 @@ from deeplearning.clgen.proto import telemetry_pb2
 from absl import flags
 from labm8.py import cache
 import humanize
-from labm8.py import labdate
+
 from deeplearning.clgen import pbutil
 
 FLAGS = flags.FLAGS
@@ -76,7 +76,7 @@ class PreTrainedModel(object):
       sampler.tokenized_start_text.copy() for _ in range(sampler.batch_size)
     ]
     done = np.zeros(sampler.batch_size, dtype=np.bool)
-    start_time = labdate.MillisecondsTimestamp()
+    start_time = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
     wall_time_start = start_time
 
     self.backend.InitSampleBatch(sampler)
@@ -98,7 +98,7 @@ class PreTrainedModel(object):
         for index in indices[i]:
           samples_in_progress[i].append(atomizer.decoder[index])
           if sampler.SampleIsComplete(samples_in_progress[i]):
-            end_time = labdate.MillisecondsTimestamp()
+            end_time = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
             done[i] = 1
             sample = model_pb2.Sample(
               text="".join(samples_in_progress[i]),
@@ -114,7 +114,7 @@ class PreTrainedModel(object):
 
             # Wall sample time is the difference between the end of the previous
             # sample and the end of the current sample.
-            wall_time_start = labdate.MillisecondsTimestamp()
+            wall_time_start = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
             break
 
     return continue_sampling
@@ -154,7 +154,7 @@ class PreTrainedModel(object):
     if not sample_observers:
       raise ValueError("Cannot sample without any observers")
 
-    sample_start_time = labdate.MillisecondsTimestamp()
+    sample_start_time = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
     l.getLogger().info("Sampling: '{}'".format(sampler.start_text))
 
     atomizer = self.atomizer
@@ -166,7 +166,7 @@ class PreTrainedModel(object):
     while self._SampleBatch(sampler, atomizer, sample_observers):
       batch_count += 1
 
-    time_now = labdate.MillisecondsTimestamp()
+    time_now = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
     l.getLogger().info("Produced {} sample batches at a rate of {} ms / batch.".format(
     	humanize.intcomma(batch_count), humanize.intcomma(int((time_now - sample_start_time) / max(batch_count, 1)))
     	))

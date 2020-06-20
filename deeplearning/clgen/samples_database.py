@@ -5,12 +5,11 @@ import typing
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
+from absl import flags
 
 from deeplearning.clgen import sample_observers
 from deeplearning.clgen.proto import model_pb2
-from absl import flags
 from deeplearning.clgen import crypto
-from labm8.py import labdate
 from labm8.py import sqlutil
 
 FLAGS = flags.FLAGS
@@ -45,9 +44,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
     proto.text = self.text
     proto.num_tokens = self.num_tokens
     proto.wall_time_ms = self.wall_time_ms
-    proto.sample_start_epoch_ms_utc = labdate.MillisecondsTimestamp(
-      self.sample_date
-    )
+    proto.sample_start_epoch_ms_utc = int(date.strftime("%s%f")[:-3])
 
   @classmethod
   def FromProto(cls, proto: model_pb2.Sample) -> typing.Dict[str, typing.Any]:
@@ -57,9 +54,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "num_tokens": proto.num_tokens,
       "sample_time_ms": proto.sample_time_ms,
       "wall_time_ms": proto.wall_time_ms,
-      "sample_date": labdate.DatetimeFromMillisecondsTimestamp(
-        proto.sample_start_epoch_ms_utc
-      ),
+      "sample_date": int(date.strftime("%s%f")[:-3]),
     }
 
 

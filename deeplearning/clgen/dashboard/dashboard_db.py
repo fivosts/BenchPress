@@ -5,7 +5,6 @@ import sqlalchemy as sql
 from sqlalchemy.dialects import mysql
 
 from absl import flags
-from labm8.py import labdate
 from labm8.py import sqlutil
 
 from eupy.native import logger as l
@@ -70,7 +69,7 @@ class TrainingTelemetry(Base):
   timestamp: datetime.datetime = sql.Column(
     sql.DateTime().with_variant(mysql.DATETIME(fsp=3), "mysql"),
     nullable=False,
-    default=labdate.GetUtcMillisecondsNow,
+    default=lambda x: datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000),
   )
   epoch: int = sql.Column(sql.Integer, nullable=False)
   step: int = sql.Column(sql.Integer, nullable=False)

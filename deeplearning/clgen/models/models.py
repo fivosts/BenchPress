@@ -14,6 +14,8 @@
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """The CLgen language model."""
 import os
+import socket
+import getpass
 import pathlib
 import typing
 import datetime
@@ -39,9 +41,7 @@ from deeplearning.clgen.proto import telemetry_pb2
 from absl import flags
 from deeplearning.clgen import crypto
 import humanize
-from labm8.py import labdate
 from labm8.py import sqlutil
-from labm8.py import system
 
 from eupy.native import logger as l
 
@@ -193,7 +193,7 @@ class Model(object):
         config_proto_sha1=crypto.sha1(config_to_store.SerializeToString()),
         config_proto=str(config_to_store),
         cache_path=(
-          f"ssh://{system.USERNAME}@{system.HOSTNAME}" f"/{self.cache.path}"
+          f"ssh://{socket.gethostname()}@{getpass.getuser()}" f"/{self.cache.path}"
         ),
         summary=self.GetShortSummary(),
       )
@@ -280,7 +280,7 @@ class Model(object):
     if not sample_observers:
       raise ValueError("Cannot sample without any observers")
 
-    sample_start_time = labdate.MillisecondsTimestamp()
+    sample_start_time = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
 
     self.Train()
 
@@ -299,7 +299,7 @@ class Model(object):
       while self._SampleBatch(sampler, db_sess, atomizer, sample_observers):
         batch_count += 1
 
-      time_now = labdate.MillisecondsTimestamp()
+      time_now = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
       l.getLogger().info( "Produced {} sample batches at a rate of {} ms / batch."
                           .format(
                             humanize.intcomma(batch_count),
@@ -321,7 +321,7 @@ class Model(object):
       sampler.tokenized_start_text.copy() for _ in range(sampler.batch_size)
     ]
     done = np.zeros(sampler.batch_size, dtype=np.bool)
-    start_time = labdate.MillisecondsTimestamp()
+    start_time = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
     wall_time_start = start_time
 
     self.backend.InitSampleBatch(sampler)
@@ -347,7 +347,7 @@ class Model(object):
             samples_in_progress[i] = [atomizer.decoder[x] for x in index]
 
           if sampler.SampleIsComplete(samples_in_progress[i]):
-            end_time  = labdate.MillisecondsTimestamp()
+            end_time  = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
             done[i]   = 1
             sample    = model_pb2.Sample(
               text                      = "".join(samples_in_progress[i]),
@@ -373,7 +373,7 @@ class Model(object):
 
             # Wall sample time is the difference between the end of the previous
             # sample and the end of the current sample.
-            wall_time_start = labdate.MillisecondsTimestamp()
+            wall_time_start = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
             break
     session.commit()
     return continue_sampling

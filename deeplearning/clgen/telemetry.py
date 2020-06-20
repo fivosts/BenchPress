@@ -2,11 +2,10 @@
 import pathlib
 import re
 import typing
+import datetime
+from absl import flags
 
 from deeplearning.clgen.proto import telemetry_pb2
-from absl import flags
-from labm8.py import jsonutil
-from labm8.py import labdate
 from deeplearning.clgen import pbutil
 
 FLAGS = flags.FLAGS
@@ -27,10 +26,10 @@ class TrainingLogger(object):
     self.telemetry = None
 
   def EpochBeginCallback(self) -> None:
-    self.last_epoch_begin_timestamp = labdate.MillisecondsTimestamp()
+    self.last_epoch_begin_timestamp = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
 
   def EpochEndCallback(self, epoch: int, loss: float):
-    now = labdate.MillisecondsTimestamp()
+    now = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
     epoch_time_ms = now - self.last_epoch_begin_timestamp
     telemetry = telemetry_pb2.ModelEpochTelemetry(
       timestamp_unix_epoch_ms=now,
@@ -40,13 +39,13 @@ class TrainingLogger(object):
     )
     pbutil.ToFile(telemetry, self.logdir / f"epoch_{epoch:03d}_telemetry.pbtxt")
 
-  def KerasEpochBeginCallback(self, epoch: int, logs: jsonutil.JSON) -> None:
+  def KerasEpochBeginCallback(self, epoch: int, logs: typing.Union[typing.List[typing.Any], typing.Dict[str, typing.Any]]) -> None:
     """A Keras "on_epoch_end" callback."""
     del epoch
     del logs
     self.EpochBeginCallback()
 
-  def KerasEpochEndCallback(self, epoch: int, logs: jsonutil.JSON) -> None:
+  def KerasEpochEndCallback(self, epoch: int, logs: typing.Union[typing.List[typing.Any], typing.Dict[str, typing.Any]]) -> None:
     """A Keras "on_epoch_end" callback."""
     # Keras epoch numbers are zero indexed.
     self.EpochEndCallback(epoch + 1, logs["loss"])

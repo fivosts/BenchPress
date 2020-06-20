@@ -255,7 +255,7 @@ def ToFile(
   return message
 
 
-def ToJson(message: ProtocolBuffer) -> "jsonutil.JSON":
+def ToJson(message: ProtocolBuffer) -> "typing.Union[typing.List[typing.Any], typing.Dict[str, typing.Any]]":
   """Return a JSON encoded representation of a protocol buffer.
 
   Args:
@@ -286,8 +286,8 @@ def _TruncatedString(string: str, n: int = 80) -> str:
 
 
 def _TruncateDictionaryStringValues(
-  data: "jsonutil.JSON", n: int = 62,
-) -> "jsonutil.JSON":
+  data: "typing.Union[typing.List[typing.Any], typing.Dict[str, typing.Any]]", n: int = 62,
+) -> "typing.Union[typing.List[typing.Any], typing.Dict[str, typing.Any]]":
   """Truncate all string values in a nested dictionary.
 
   Args:
