@@ -15,4 +15,7 @@ bazel-testlogs
 *_pb2.py
 
 # Model folders
-model_*
+/workspace
+
+# Big corpus folders
+/model_zoo/corpus
