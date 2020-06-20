@@ -1,0 +1,20 @@
+------------------------------------------------------------------------------------------------
+Error:
+
+./boost/python/detail/wrap_python.hpp:57:11: fatal error: pyconfig.h: No such file or directory
+   57 | # include <pyconfig.h>
+
+Solution:
+ a) Using apt: sudo apt-get install python-dev
+ b) Using local files: export CPLUS_INCLUDE_PATH="$CPLUS_INCLUDE_PATH:/path/to/folder/where/pyconfig.h/resides"
+
+------------------------------------------------------------------------------------------------
+ Error:
+
+./boost/python/detail/wrap_python.hpp:57:11: fatal error: pyconfig.h: No such file or directory
+   57 | # include <pyconfig.h>
+
+Solution:
+ a) Using apt: sudo apt-get install python-dev
+ b) Using local files: export CPLUS_INCLUDE_PATH="$CPLUS_INCLUDE_PATH:/path/to/folder/where/pyconfig.h/resides"
+ 
