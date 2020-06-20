@@ -14,10 +14,11 @@ pkg-config \
 python3.7 \
 python3.7-dev \
 python3-distutils \
+python3-numpy \
+python3-venv \
 zlib1g-dev \
 m4 \
 libexempi-dev \
-python3-numpy \
 build-essential \
 libsdl2-dev \
 libjpeg-dev \
