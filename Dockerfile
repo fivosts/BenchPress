@@ -9,7 +9,9 @@ RUN git clone https://3f2defbceff83ef75197a0d924fd2d96ef86e327@github.com/fivost
 
 WORKDIR /home/clgen
 RUN bash apt_deps.sh
-RUN bazel build //deeplearning/clgen
+RUN mkdir build
+WORKDIR /home/clgen/build
+RUN cmake ..
 
 # Run a simple example
 CMD ./clgen --min_samples 10 --config model_zoo/BERT/tiny.pbtxt
