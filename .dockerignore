@@ -1,0 +1,21 @@
+# Binary symbolic links
+bazel-bin
+bazel-clgen
+bazel-out
+bazel-testlogs
+/clgen
+
+# Build folders
+*__pycache__*
+*build/
+*env/
+
+# Build files
+*pyc
+*_pb2.py
+
+# Model folders
+/workspace
+
+# Big corpus folders
+/model_zoo/corpus
