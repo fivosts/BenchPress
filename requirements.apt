@@ -37,3 +37,6 @@ lzma-dev \
 mysql-server \
 libmysqlclient-dev \
 libsqlite3-dev \
+
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python3.7 get-pip.py
