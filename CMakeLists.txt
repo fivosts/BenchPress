@@ -9,11 +9,11 @@ cmake_policy(SET CMP0076 NEW)
 
 OPTION(BUILD_FROM_SOURCE "Select to build necessary system wide packages from source locally (python, boost, protoc)" OFF)
 
-set(PYTHON "$(which python3)" CACHE FILEPATH 
+set(PYTHON python  CACHE FILEPATH 
   "Provide specific python for application. Default: [python]. Ignored if BUILD_FROM_SOURCE is enabled."
   FORCE
 )
-set(PROTOC "$(which protoc)"  CACHE FILEPATH 
+set(PROTOC protoc  CACHE FILEPATH 
   "Provide specific protobuf compiler for application. Default: [protoc]. Ignored if BUILD_FROM_SOURCE is enabled."
   FORCE
 )
@@ -79,26 +79,13 @@ function(install_external_deps)
 
   endif ()
   # Clang and LLVM 6 pre-compiled binaries and libraries.
-  # ExternalProject_Add(llvm
-  #   URL               https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
-  #   PREFIX            ${THIRD_PARTY}
-  #   TMP_DIR           ${THIRD_PARTY}/tmp
-  #   STAMP_DIR         ${THIRD_PARTY}/stamp
-  #   DOWNLOAD_DIR      ${THIRD_PARTY}/llvm
-  #   SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm
-  #   INSTALL_DIR       ${LOCAL}
-  #   CONFIGURE_COMMAND ""
-  #   BUILD_COMMAND     ""
-  #   INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/llvm/llvm/ ${LOCAL}
-  # )
   ExternalProject_Add(llvm
-    URL               https://releases.llvm.org/6.0.0/llvm-6.0.0.src.tar.xz
+    URL               https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
     PREFIX            ${THIRD_PARTY}
     TMP_DIR           ${THIRD_PARTY}/tmp
     STAMP_DIR         ${THIRD_PARTY}/stamp
     DOWNLOAD_DIR      ${THIRD_PARTY}/llvm
     SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm
-    BINARY_DIR        ${THIRD_PARTY}/llvm/build
     INSTALL_DIR       ${LOCAL}
     CONFIGURE_COMMAND ""
     BUILD_COMMAND     ""
