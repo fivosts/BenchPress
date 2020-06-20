@@ -7,17 +7,14 @@ project(CLGEN,
 # https://cmake.org/cmake/help/v3.0/module/FindPythonInterp.html
 cmake_policy(SET CMP0076 NEW)
 
-OPTION(BUILD_FROM_SOURCE "Select to build necessary system wide packages from source locally (gcc, python, boost, protoc)" OFF)
-set(PYTHON "python3" CACHE FILEPATH 
-  "Provide specific python for application. Default: [/usr/bin/python3]. Ignored if BUILD_FROM_SOURCE is enabled."
+OPTION(BUILD_FROM_SOURCE "Select to build necessary system wide packages from source locally (python, boost, protoc)" OFF)
+
+set(PYTHON "$(which python3)" CACHE FILEPATH 
+  "Provide specific python for application. Default: [python]. Ignored if BUILD_FROM_SOURCE is enabled."
   FORCE
 )
-set(GCC    "gcc"     CACHE FILEPATH 
-  "Provide specific gcc for application. Default: [/usr/bin/gcc]. Ignored if BUILD_FROM_SOURCE is enabled."
-  FORCE
-)
-set(PROTOC "protoc"  CACHE FILEPATH 
-  "Provide specific protobuf compiler for application. Default: [/usr/bin/protoc]. Ignored if BUILD_FROM_SOURCE is enabled."
+set(PROTOC "$(which protoc)"  CACHE FILEPATH 
+  "Provide specific protobuf compiler for application. Default: [protoc]. Ignored if BUILD_FROM_SOURCE is enabled."
   FORCE
 )
 
@@ -34,21 +31,6 @@ function(install_external_deps)
   #   Installs: gcc-9, python-3.7.5, clangtooling-6, boost-1.73.0 protobuf-compilers and opencl-headers
   include(ExternalProject)
   if (BUILD_FROM_SOURCE)
-    # Build gcc-9 from source
-    # Only 64-bit compiler build
-    # ExternalProject_Add(gcc
-    #   GIT_REPOSITORY    git://gcc.gnu.org/git/gcc.git
-    #   GIT_TAG           releases/gcc-9.3.0
-    #   PREFIX            ${THIRD_PARTY}
-    #   TMP_DIR           ${THIRD_PARTY}/tmp
-    #   STAMP_DIR         ${THIRD_PARTY}/stamp
-    #   SOURCE_DIR        ${THIRD_PARTY}/gcc/gcc
-    #   BINARY_DIR        ${THIRD_PARTY}/gcc/build
-    #   INSTALL_DIR       ${LOCAL}
-    #   CONFIGURE_COMMAND ${THIRD_PARTY}/gcc/gcc/configure --prefix=${LOCAL} --disable-multilib --enable-languages=c,c++,fortran,go
-    # )
-    # set(GCC             ${LOCAL}/bin/gcc-9 PARENT_SCOPE)
-  
     # Python 3.7.5 from source
     ExternalProject_Add(python
       URL               https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tar.xz
@@ -63,7 +45,6 @@ function(install_external_deps)
       CONFIGURE_COMMAND ${THIRD_PARTY}/python/python/configure --prefix=${LOCAL} --enable-optimizations --enable-loadable-sqlite-extensions
     )
     set(PYTHON          ${LOCAL}/bin/python3               PARENT_SCOPE)
-
     # Boost lib
     # TODO make sure this version is visible when compiling kernels
     ExternalProject_Add(boost
@@ -80,8 +61,7 @@ function(install_external_deps)
       BUILD_COMMAND     ${THIRD_PARTY}/boost/boost/b2  --prefix=${LOCAL} && ${THIRD_PARTY}/boost/boost/b2 --prefix=${LOCAL} headers
       INSTALL_COMMAND   ${THIRD_PARTY}/boost/boost/b2 install
     )
-    # set(BOOST           ${LOCAL} PARENT_SCOPE)
-
+    set(BOOST           ${LOCAL} PARENT_SCOPE)
     # protoc compiler
     ExternalProject_Add(protobuf
       GIT_REPOSITORY    https://github.com/protocolbuffers/protobuf.git
@@ -99,13 +79,26 @@ function(install_external_deps)
 
   endif ()
   # Clang and LLVM 6 pre-compiled binaries and libraries.
+  # ExternalProject_Add(llvm
+  #   URL               https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+  #   PREFIX            ${THIRD_PARTY}
+  #   TMP_DIR           ${THIRD_PARTY}/tmp
+  #   STAMP_DIR         ${THIRD_PARTY}/stamp
+  #   DOWNLOAD_DIR      ${THIRD_PARTY}/llvm
+  #   SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm
+  #   INSTALL_DIR       ${LOCAL}
+  #   CONFIGURE_COMMAND ""
+  #   BUILD_COMMAND     ""
+  #   INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/llvm/llvm/ ${LOCAL}
+  # )
   ExternalProject_Add(llvm
-    URL               https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+    URL               https://releases.llvm.org/6.0.0/llvm-6.0.0.src.tar.xz
     PREFIX            ${THIRD_PARTY}
     TMP_DIR           ${THIRD_PARTY}/tmp
     STAMP_DIR         ${THIRD_PARTY}/stamp
     DOWNLOAD_DIR      ${THIRD_PARTY}/llvm
     SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm
+    BINARY_DIR        ${THIRD_PARTY}/llvm/build
     INSTALL_DIR       ${LOCAL}
     CONFIGURE_COMMAND ""
     BUILD_COMMAND     ""
@@ -184,35 +177,24 @@ function(clgen)
   get_target_property(DATA_CL_INCLUDE     data_cl_include     path)
 
   string(CONCAT CLGEN 
-  		 "##############################\n"
-  		 "# Auto generated bash binary #\n"
-  		 "# ---------  CLGEN ----------#\n"
-  		 "#       Not to be edited     #\n"
-  		 "##############################\n"
-         "PYTHON_BINARY="  ${PYTHON}  "\n"
-         "CLGEN_BINARY=" ${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH} "/clgen.py\n"
-         "GCC="                 ${GCC} "\n"
-         "LLVM="                ${LLVM} "\n"
-         "LIBCXX_HEADERS="      ${LLVM}/include/c++/v1 "\n"
-         "LIBCLC="              ${LIBCLC} "\n"
-         "DASHBOARD_TEMPLATES=" ${DASHBOARD_TEMPLATES} "\n"
-         "DASHBOARD_STATIC="    ${DASHBOARD_STATIC} "\n"
-         "DATA_CL_INCLUDE="     ${DATA_CL_INCLUDE} "\n"
-         "CLANG="               ${LLVM}/bin/clang "\n"
-         "CLANG_FORMAT="        ${LLVM}/bin/clang-format "\n"
-         "CLANG_HEADERS="       ${LLVM}/lib/clang/6.0.0/include "\n"
-         "CLANG_REWRITER="      ${CLANG_REWRITER} "\n"
-         "export LLVM\n"
-         "export LIBCXX_HEADERS\n"
-         "export LIBCLC\n"
-         "export DASHBOARD_TEMPLATES\n"
-         "export DASHBOARD_STATIC\n"
-         "export DATA_CL_INCLUDE\n"
-         "export CLANG\n"
-         "export CLANG_FORMAT\n"
-         "export CLANG_HEADERS\n"
-         "export CLANG_REWRITER\n"
-         "eval PYTHONPATH=" ${CMAKE_CURRENT_SOURCE_DIR} " $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
+         "##############################\n"
+         "# Auto generated bash binary #\n"
+         "# ---------  CLGEN ----------#\n"
+         "#       Not to be edited     #\n"
+         "##############################\n"
+         "PYTHON_BINARY="              ${PYTHON}  "\n"
+         "CLGEN_BINARY="               ${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH} "/clgen.py\n"
+         "export LLVM="                ${LLVM} "\n"
+         "export LIBCXX_HEADERS="      ${LLVM}/include/c++/v1 "\n"
+         "export LIBCLC="              ${LIBCLC} "\n"
+         "export DASHBOARD_TEMPLATES=" ${DASHBOARD_TEMPLATES} "\n"
+         "export DASHBOARD_STATIC="    ${DASHBOARD_STATIC} "\n"
+         "export DATA_CL_INCLUDE="     ${DATA_CL_INCLUDE} "\n"
+         "export CLANG="               ${LLVM}/bin/clang "\n"
+         "export CLANG_FORMAT="        ${LLVM}/bin/clang-format "\n"
+         "export CLANG_HEADERS="       ${LLVM}/lib/clang/6.0.0/include "\n"
+         "export CLANG_REWRITER="      ${CLANG_REWRITER} "\n"
+         "eval PYTHONPATH="            ${CMAKE_CURRENT_SOURCE_DIR} " $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
          "unset LLVM\n"
          "unset LIBCXX_HEADERS\n"
          "unset CLANG\n"
