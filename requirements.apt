@@ -2,12 +2,17 @@
 
 sudo apt-get update
 sudo apt-get install -y \
+build-essential \
 ca-certificates \
 curl \
+cmake \
 wget \
+gcc \
 g++ \
-libmpc-dev \
 flex \
+nasm \
+tar \
+m4 \
 ocl-icd-opencl-dev \
 opencl-c-headers  \
 pkg-config \
@@ -17,23 +22,9 @@ python3-distutils \
 python3-numpy \
 python3-venv \
 zlib1g-dev \
-m4 \
 libexempi-dev \
-build-essential \
-libsdl2-dev \
-libjpeg-dev \
-nasm \
-tar \
-libbz2-dev \
-libgtk2.0-dev \
-cmake \
-libgme-dev \
-libopenal-dev \
-timidity \
-libwildmidi-dev \
+libmpc-dev \
 libboost-all-dev \
-libsdl2-dev \
-lzma-dev \
 mysql-server \
 libmysqlclient-dev \
 libsqlite3-dev \
