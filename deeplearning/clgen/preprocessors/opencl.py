@@ -182,7 +182,6 @@ def NormalizeIdentifiers(text: str) -> str:
 #   InternalError
 #       If GPUverify fails.
 #   """
-#   from labm8.py import system
 #   if not system.is_linux():
 #     raise SystemError("GPUVerify only supported on Linux!")
 #
