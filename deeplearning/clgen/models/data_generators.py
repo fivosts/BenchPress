@@ -51,6 +51,12 @@ flags.DEFINE_string(
   "Set target prediction of MaskLM as [MASK] tokens or [HOLE] sequences."
 )
 
+flags.DEFINE_integer(
+  "hole_length",
+  3,
+  "In case sequences are hole-d, choose upper bound range of possible hole length (will be [0, hole_length])."
+)
+
 flags.DEFINE_string(
   "datapoint_type",
   "kernel",
@@ -859,7 +865,7 @@ class MaskLMBatchGenerator(object):
               .format(seq[pos_index], input_ids[input_id_idx]))
 
       # Random number to represent the length of this hole.
-      hole_length = self.rngen.randint(0, 3)
+      hole_length = self.rngen.randint(0, FLAGS.hole_length)
       # Inside range, make sure hole length does not run over input_id_idx bounds
       hole_length = min(hole_length, len(input_ids) - input_id_idx)
       # Confirm there is no conflict with another hole, further down the sequence.
