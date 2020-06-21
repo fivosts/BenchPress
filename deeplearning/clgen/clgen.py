@@ -164,7 +164,7 @@ class Instance(object):
     with self.Session():
       test_sampler_config = sampler_pb2.Sampler()
       test_sampler_config.CopyFrom(self.sampler.config)
-      # Make all test samples the same 512-token length.
+      # Make all test samples the same sequence_length length.
       del test_sampler_config.termination_criteria[:]
       test_sampler_config.termination_criteria.extend(
         [
