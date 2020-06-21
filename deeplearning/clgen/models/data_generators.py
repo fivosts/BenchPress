@@ -53,7 +53,7 @@ flags.DEFINE_string(
 
 flags.DEFINE_integer(
   "hole_length",
-  3,
+  2,
   "In case sequences are hole-d, choose upper bound range of possible hole length (will be [0, hole_length])."
 )
 
