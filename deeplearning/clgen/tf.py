@@ -18,7 +18,7 @@ flags.DEFINE_boolean(
 
 flags.DEFINE_integer(
   "tf_logging_level",
-  1,
+  3,
   "Logging level of tensorflow logger"
 )
 
