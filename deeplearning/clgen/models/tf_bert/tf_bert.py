@@ -278,7 +278,7 @@ class tfBert(backends.BackendBase):
         sampler = self._getTestSampler(test_sampler, self.config.training.sequence_length)
         self.InitSampling(sampler, self.config.training.random_seed)
         for _ in range(self.num_epochs):
-          self.train.estimator.train(input_fn = train_input_fn, steps = self.num_train_steps)
+          self.train.estimator.train(input_fn = train_input_fn, steps = self.steps_per_epoch)
           for _ in range(FLAGS.sample_per_epoch):
             self.InitSampleBatch()
             sample, done = self.SampleNextIndices()
