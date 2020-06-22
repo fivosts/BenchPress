@@ -16,7 +16,6 @@ FLAGS = flags.FLAGS
 
 Base = declarative.declarative_base()
 
-
 class Sample(Base, sqlutil.ProtoBackedMixin):
   """A database row representing a CLgen sample.
 
@@ -57,7 +56,6 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "sample_date": int(date.strftime("%s%f")[:-3]),
     }
 
-
 class SamplesDatabase(sqlutil.Database):
   """A database of CLgen samples."""
 
@@ -70,35 +68,3 @@ class SamplesDatabase(sqlutil.Database):
     observer = SamplesDatabaseObserver(self)
     yield observer
     observer.Flush()
-
-
-class SamplesDatabaseObserver(sample_observers.SampleObserver):
-  """A sample observer that imports samples to a database.
-
-  The observer buffers the records that it recieves and commits them to the
-  database in batches.
-  """
-
-  def __init__(
-    self,
-    db: SamplesDatabase,
-    flush_secs: int = 30,
-    commit_sample_frequency: int = 1024,
-  ):
-    self._writer = sqlutil.BufferedDatabaseWriter(
-      db,
-      max_seconds_since_flush=flush_secs,
-      max_buffer_length=commit_sample_frequency,
-    )
-
-  def __del__(self):
-    self._writer.Close()
-
-  def OnSample(self, sample: model_pb2.Sample) -> bool:
-    """Sample receive callback."""
-    self._writer.AddOne(Sample(**Sample.FromProto(sample)))
-    return True
-
-  def Flush(self) -> None:
-    """Commit all pending records to database."""
-    self._writer.Flush()

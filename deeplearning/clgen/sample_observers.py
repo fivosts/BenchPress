@@ -18,11 +18,12 @@ import pathlib
 from deeplearning.clgen.proto import model_pb2
 from absl import flags
 from deeplearning.clgen import crypto
-from labm8.py import fs
 from deeplearning.clgen import pbutil
+from deeplearning.clgen import samples_database
+from labm8.py import sqlutil
+from labm8.py import fs
 
 FLAGS = flags.FLAGS
-
 
 class SampleObserver(object):
   """An observer that is notified when new samples are produced.
@@ -61,7 +62,6 @@ class SampleObserver(object):
     """
     raise NotImplementedError("abstract class")
 
-
 class MaxSampleCountObserver(SampleObserver):
   """An observer that terminates sampling after a finite number of samples."""
 
@@ -79,7 +79,6 @@ class MaxSampleCountObserver(SampleObserver):
     self._sample_count += 1
     return self._sample_count < self._min_sample_count
 
-
 class SaveSampleTextObserver(SampleObserver):
   """An observer that creates a file of the sample text for each sample."""
 
@@ -94,7 +93,6 @@ class SaveSampleTextObserver(SampleObserver):
     fs.Write(path, sample.text.encode("utf-8"))
     return True
 
-
 class PrintSampleObserver(SampleObserver):
   """An observer that prints the text of each sample that is generated."""
 
@@ -102,7 +100,6 @@ class PrintSampleObserver(SampleObserver):
     """Sample receive callback. Returns True if sampling should continue."""
     print(f"=== CLGEN SAMPLE ===\n\n{sample.text}\n")
     return True
-
 
 class InMemorySampleSaver(SampleObserver):
   """An observer that saves all samples in-memory."""
@@ -115,6 +112,36 @@ class InMemorySampleSaver(SampleObserver):
     self.samples.append(sample)
     return True
 
+class SamplesDatabaseObserver(SampleObserver):
+  """A sample observer that imports samples to a database.
+
+  The observer buffers the records that it recieves and commits them to the
+  database in batches.
+  """
+
+  def __init__(
+    self,
+    db: samples_database.SamplesDatabase,
+    flush_secs: int = 30,
+    commit_sample_frequency: int = 1024,
+  ):
+    self._writer = sqlutil.BufferedDatabaseWriter(
+      db,
+      max_seconds_since_flush=flush_secs,
+      max_buffer_length=commit_sample_frequency,
+    )
+
+  def __del__(self):
+    self._writer.Close()
+
+  def OnSample(self, sample: model_pb2.Sample) -> bool:
+    """Sample receive callback."""
+    self._writer.AddOne(Sample(**Sample.FromProto(sample)))
+    return True
+
+  def Flush(self) -> None:
+    """Commit all pending records to database."""
+    self._writer.Flush()
 
 class LegacySampleCacheObserver(SampleObserver):
   """Backwards compatability implementation of the old sample caching behavior.
