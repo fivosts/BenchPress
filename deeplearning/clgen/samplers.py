@@ -249,7 +249,7 @@ class Sampler(object):
   can lead to bad things happening.
   """
 
-  def __init__(self, config: sampler_pb2.Sampler):
+  def __init__(self, config: sampler_pb2.Sampler, sample_db_name = "samples.db"):
     """Instantiate a sampler.
 
     Args:
@@ -270,6 +270,7 @@ class Sampler(object):
     self.temperature = self.config.temperature_micros / 1e6
     self.batch_size = self.config.batch_size
     self.sequence_length = self.config.sequence_length
+    self.sample_db_name = sample_db_name
     
     # Create the necessary cache directories.
     self.cache = cache.mkcache("sampler", self.hash)
@@ -283,10 +284,6 @@ class Sampler(object):
     # Set in Specialize().
     self.encoded_start_text = None
     self.tokenized_start_text = None
-    # Set in initSampleDB
-    self.sample_db = None
-    self.db_name   = None
-    self.db_path   = None
 
   def Specialize(self, atomizer: atomizers.AtomizerBase) -> None:
     """Specialize a sampler a vocabulary.
@@ -322,18 +319,8 @@ class Sampler(object):
 
     [terminator.Specialize(atomizer) for terminator in self.terminators]
 
-  def initSampleDB(self, 
-                   url_path   : str, 
-                   db_name    : str = "samples.db", 
-                   must_exist : bool = False
-                   ) -> None:
-    """Initialize sampling file database"""
-    self.db_name   = db_name
-    self.db_path   = url_path
-    self.sample_db = SamplerDB(url_path, db_name, must_exist)
-    return
-
   def symlinkModelDB(self,
+                     db_path   : pathlib.Path,
                      model_hash: int,
                      ) -> None:
     """
@@ -343,27 +330,16 @@ class Sampler(object):
     sampled with symbolic links created in this function.
     """
     (self.samples_directory / model_hash).mkdir(exist_ok = True)
-    symlink = self.samples_directory / model_hash / self.db_name
+    symlink = self.samples_directory / model_hash / self.sample_db_name
     if not symlink.is_symlink():
       os.symlink(
         os.path.relpath(
-          self.db_path / self.db_name,
+          self.db_path / self.sample_db_name,
           self.samples_directory / model_hash
         ),
         symlink
       )
     return
-  
-  @property
-  def db(self):
-    return self.sample_db
-
-  @property
-  def db_file_count(self):
-    if self.db is None:
-      return 0
-    else:
-      return self.db.file_count
   
   def SampleIsComplete(self, sample_in_progress: typing.List[str]) -> bool:
     """Determine whether to stop sampling.
@@ -392,24 +368,3 @@ class Sampler(object):
 
   def __ne__(self, rhs) -> bool:
     return not self.__eq__(rhs)
-
-class SamplerDBFile(Base):
-  """Single inference file entry"""
-  __tablename__    = "inference_contentfiles"
-  id               : int = sql.Column(sql.Integer, primary_key = True)
-  train_step       : int = sql.Column(sql.Integer, nullable = False)
-  encoded_text     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  text             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  num_tokens       : int = sql.Column(sql.Integer, nullable = False)
-  sample_time_ms   : int = sql.Column(sql.Integer, nullable = False)
-  date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
-
-class SamplerDB(sqlutil.Database):
-  """A database of sampling inference files."""
-  def __init__(self, 
-               url_path   : str, 
-               db_name    : str = "samples.db", 
-               must_exist : bool = False
-              ) -> None:
-    url = "sqlite:///{}".format(str(url_path / db_name))
-    super(SamplerDB, self).__init__(url, Base, must_exist = must_exist)
