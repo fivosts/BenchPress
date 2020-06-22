@@ -289,28 +289,30 @@ class Model(object):
     (self.cache.path / "samples" / sampler.hash).mkdir(exist_ok = True)
     atomizer = self.corpus.atomizer
     sampler.Specialize(atomizer)
-    sampler.initSampleDB(self.cache.path / "samples" / sampler.hash)
-    sampler.symlinkModelDB(self.hash)
+    # sampler.initSampleDB(self.cache.path / "samples" / sampler.hash)
+    sampler.symlinkModelDB(
+      instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.db_name, 
+      self.hash
+    )
     self.backend.InitSampling(sampler, seed)
     [obs.Specialize(self, sampler) for obs in sample_observers]
 
-    with sampler.db.Session(commit = True) as db_sess:
-      batch_count = 1
-      while self._SampleBatch(sampler, db_sess, atomizer, sample_observers):
-        batch_count += 1
+    # with sampler.db.Session(commit = True) as db_sess:
+    batch_count = 1
+    while self._SampleBatch(sampler, atomizer, sample_observers):
+      batch_count += 1
 
-      time_now = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
-      l.getLogger().info( "Produced {} sample batches at a rate of {} ms / batch."
-                          .format(
-                            humanize.intcomma(batch_count),
-                            humanize.intcomma(int((time_now - sample_start_time) / max(batch_count, 1)))
-                          )
-      )
+    time_now = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
+    l.getLogger().info( "Produced {} sample batches at a rate of {} ms / batch."
+                        .format(
+                          humanize.intcomma(batch_count),
+                          humanize.intcomma(int((time_now - sample_start_time) / max(batch_count, 1)))
+                        )
+    )
 
   def _SampleBatch(
     self,
     sampler: samplers.Sampler,
-    session: sqlutil.Session,
     atomizer: atomizers.AtomizerBase,
     sample_observers: typing.List[sample_observers_lib.SampleObserver],
   ) -> bool:
@@ -350,22 +352,15 @@ class Model(object):
             end_time  = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
             done[i]   = 1
             sample    = model_pb2.Sample(
+              train_step                = -1, # TODO self.telemetry.num_train_steps
               text                      = "".join(samples_in_progress[i]),
+              encoded_text              = ",".join([str(atomizer.vocab[x]) for x in samples_in_progress[i]]),
               sample_start_epoch_ms_utc = start_time,
               sample_time_ms            = end_time - start_time,
               wall_time_ms              = end_time - wall_time_start,
               num_tokens                = len(samples_in_progress[i]),
+              date_added                = datetime.datetime.utcnow(),
             )
-            sample_db = samplers.SamplerDBFile(
-              id              = sampler.db_file_count,
-              train_step      = -1, # TODO
-              text            = "".join(samples_in_progress[i]),
-              encoded_text    = ",".join([str(atomizer.vocab[x]) for x in samples_in_progress[i]]),
-              num_tokens      = len(samples_in_progress[i]),
-              sample_time_ms  = end_time - start_time,
-              date_added      = datetime.datetime.utcnow(),
-            )
-            session.add(sample_db)
             # Notify sample observers.
             continue_sampling &= all(
               [obs.OnSample(sample) for obs in sample_observers]
@@ -375,7 +370,6 @@ class Model(object):
             # sample and the end of the current sample.
             wall_time_start = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
             break
-    session.commit()
     return continue_sampling
 
   def SamplerCache(self, sampler: samplers.Sampler) -> pathlib.Path:
