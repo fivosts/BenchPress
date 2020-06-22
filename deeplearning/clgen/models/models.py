@@ -289,11 +289,11 @@ class Model(object):
     (self.cache.path / "samples" / sampler.hash).mkdir(exist_ok = True)
     atomizer = self.corpus.atomizer
     sampler.Specialize(atomizer)
-    # sampler.initSampleDB(self.cache.path / "samples" / sampler.hash)
-    sampler.symlinkModelDB(
-      instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.db_name, 
-      self.hash
-    )
+    if os.path.exists(instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.db_name):
+      sampler.symlinkModelDB(
+        instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.db_name, 
+        self.hash
+      )
     self.backend.InitSampling(sampler, seed)
     [obs.Specialize(self, sampler) for obs in sample_observers]
 
