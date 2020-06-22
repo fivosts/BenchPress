@@ -121,12 +121,14 @@ class SamplesDatabaseObserver(SampleObserver):
 
   def __init__(
     self,
-    db: samples_database.SamplesDatabase,
+    url: pathlib.Path,
+    must_exist: bool = False,
     flush_secs: int = 30,
     commit_sample_frequency: int = 1024,
   ):
+    self.sample_id = 0
     self._writer = sqlutil.BufferedDatabaseWriter(
-      db,
+      samples_database.Sample(url, must_exist = must_exist),
       max_seconds_since_flush=flush_secs,
       max_buffer_length=commit_sample_frequency,
     )
@@ -136,7 +138,8 @@ class SamplesDatabaseObserver(SampleObserver):
 
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback."""
-    self._writer.AddOne(Sample(**Sample.FromProto(sample)))
+    self._writer.AddOne(id, Sample(**Sample.FromProto(sample)))
+    self.sample_id += 1
     return True
 
   def Flush(self) -> None:
