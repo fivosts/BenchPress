@@ -32,9 +32,9 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
   date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
-  def FromProto(cls, proto: model_pb2.Sample) -> typing.Dict[str, typing.Any]:
+  def FromProto(cls, id: int, proto: model_pb2.Sample) -> typing.Dict[str, typing.Any]:
     return {
-      "id"             : proto.id
+      "id"             : id,
       "sha256"         : crypto.sha256_str(proto.text),
       "train_step"     : proto.train_step,
       "encoded_text"   : proto.encoded_text,
