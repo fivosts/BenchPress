@@ -31,6 +31,12 @@ flags.DEFINE_boolean(
 )
 
 flags.DEFINE_boolean(
+  "force_remake_dataset",
+  False,
+  "Force data generator to re-mask encoded dataset and store tfRecord."
+)
+
+flags.DEFINE_boolean(
   "randomize_mask_placement",
   True,
   "When selecting an index in the input tensor, the original BERT model gives 80% chance "
@@ -402,7 +408,7 @@ class MaskLMBatchGenerator(object):
 
     d.tfRecord.parent.mkdir(exist_ok = True, parents = True)
     d.CreateCorpus()
-    if not d.tfRecord.exists():
+    if not d.tfRecord.exists() or flags.force_remake_dataset:
       d._MaskCorpus(d.shaped_corpus)
       d._saveCorpusTfRecord()
     return d
