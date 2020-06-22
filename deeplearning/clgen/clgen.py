@@ -70,6 +70,9 @@ flags.DEFINE_boolean(
   "print_samples", True, "If set, print the generated samples."
 )
 flags.DEFINE_boolean(
+  "store_samples_db", True, "If set, store generated samples to database."
+)
+flags.DEFINE_boolean(
   "cache_samples", False, "If set, cache the generated sample protobufs."
 )
 flags.DEFINE_string(
@@ -231,6 +234,10 @@ def SampleObserversFromFlags() -> typing.List[
     )
   if FLAGS.print_samples:
     sample_observers.append(sample_observers_lib.PrintSampleObserver())
+  if FLAGS.store_samples_db:
+    sample_observers.append(sample_observers_lib.SamplesDatabaseObserver(
+      instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.db_name)
+    )
   if FLAGS.cache_samples:
     sample_observers.append(sample_observers_lib.LegacySampleCacheObserver())
   if FLAGS.sample_text_dir:
