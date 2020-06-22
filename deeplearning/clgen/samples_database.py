@@ -21,50 +21,31 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
 
   This is the clgen.Sample protocol buffer in SQL format.
   """
-
-  __tablename__ = "samples"
-  proto_t = model_pb2.Sample
-
-  id: int = sql.Column(sql.Integer, primary_key=True)
-  text: str = sql.Column(
-    sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable=False
-  )
-  # Checksum of the sample text.
-  sha256: str = sql.Column(sql.String(64), nullable=False, index=True)
-  num_tokens: int = sql.Column(sql.Integer, nullable=False)
-  sample_time_ms: int = sql.Column(sql.Integer, nullable=False)
-  wall_time_ms: int = sql.Column(sql.Integer, nullable=False)
-  sample_date: datetime.datetime = sql.Column(sql.DateTime, nullable=False)
-  date_added: datetime.datetime = sql.Column(
-    sql.DateTime, nullable=False, default=datetime.datetime.utcnow
-  )
-
-  def SetProto(self, proto: model_pb2.Sample) -> None:
-    proto.text = self.text
-    proto.num_tokens = self.num_tokens
-    proto.wall_time_ms = self.wall_time_ms
-    proto.sample_start_epoch_ms_utc = int(date.strftime("%s%f")[:-3])
+  __tablename__    = "samples"
+  id               : int = sql.Column(sql.Integer,    primary_key = True)
+  sha256           : str = sql.Column(sql.String(64), nullable = False, index = True)
+  train_step       : int = sql.Column(sql.Integer,    nullable = False)
+  encoded_text     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  text             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  num_tokens       : int = sql.Column(sql.Integer,    nullable = False)
+  sample_time_ms   : int = sql.Column(sql.Integer,    nullable = False)
+  date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
   def FromProto(cls, proto: model_pb2.Sample) -> typing.Dict[str, typing.Any]:
     return {
-      "text": proto.text,
-      "sha256": crypto.sha256_str(proto.text),
-      "num_tokens": proto.num_tokens,
-      "sample_time_ms": proto.sample_time_ms,
-      "wall_time_ms": proto.wall_time_ms,
-      "sample_date": int(date.strftime("%s%f")[:-3]),
+      "id"             : proto.id
+      "sha256"         : crypto.sha256_str(proto.text),
+      "train_step"     : proto.train_step,
+      "encoded_text"   : proto.encoded_text,
+      "text"           : proto.text,
+      "num_tokens"     : proto.num_tokens,
+      "sample_time_ms" : proto.sample_time_ms,
+      "date_added"     : proto.date_added,
     }
 
 class SamplesDatabase(sqlutil.Database):
   """A database of CLgen samples."""
 
   def __init__(self, url: str, must_exist: bool = False):
-    super(SamplesDatabase, self).__init__(url, Base, must_exist=must_exist)
-
-  @contextlib.contextmanager
-  def Observer(self) -> sample_observers.SampleObserver:
-    """Return an observer that imports samples into database."""
-    observer = SamplesDatabaseObserver(self)
-    yield observer
-    observer.Flush()
+    super(SamplesDatabase, self).__init__(url, Base, must_exist = must_exist)

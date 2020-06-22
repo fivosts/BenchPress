@@ -413,18 +413,3 @@ class SamplerDB(sqlutil.Database):
               ) -> None:
     url = "sqlite:///{}".format(str(url_path / db_name))
     super(SamplerDB, self).__init__(url, Base, must_exist = must_exist)
-
-  @property
-  def file_count(self):
-    """Return the total number of files in the encoded corpus."""
-    with self.Session() as session:
-      return session.query(SamplerDBFile).count()
-
-  @property
-  def token_count(self) -> int:
-    """Return the total number of tokens in the encoded corpus.
-
-    This excludes the EOF markers which are appended to each encoded text.
-    """
-    with self.Session() as session:
-      return session.query(func.sum(SamplerDBFile.tokencount)).scalar()
