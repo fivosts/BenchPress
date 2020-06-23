@@ -354,7 +354,7 @@ class Model(object):
               sample_time_ms            = end_time - start_time,
               wall_time_ms              = end_time - wall_time_start,
               num_tokens                = len(samples_in_progress[i]),
-              date_added                = datetime.datetime.utcnow(),
+              date_added                = str(datetime.datetime.utcnow()),
             )
             # Notify sample observers.
             continue_sampling &= all(
