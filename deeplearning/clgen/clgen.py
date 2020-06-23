@@ -176,7 +176,7 @@ class Instance(object):
           ),
         ]
       )
-      test_sampler = samplers.Sampler(test_sampler_config)
+      test_sampler = samplers.Sampler(test_sampler_config, sample_db_name = "epoch_samples.db")
 
       # We inject the `test_sampler` argument so that we can create samples
       # during training.
@@ -241,7 +241,7 @@ def SampleObserversFromFlags(instance: Instance) -> typing.List[
       )
     )
     instance.sampler.symlinkModelDB(
-      instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.sample_db_name, 
+      instance.model.cache.path / "samples" / instance.sampler.hash,
       instance.model.hash
     )
   if FLAGS.cache_samples:
