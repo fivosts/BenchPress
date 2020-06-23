@@ -36,10 +36,12 @@ class BackendBase(object):
     self,
     config: model_pb2.Model,
     fs_cache: cache.FSCache,
+    hash: str,
     atomizer: atomizers.AtomizerBase = None,
   ):
     self.config = config
     self.cache = fs_cache
+    self.hash = hash
     self.atomizer = atomizer
 
   ## Legacy function to support lazy creation of corpus
