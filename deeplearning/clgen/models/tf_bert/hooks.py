@@ -1,5 +1,6 @@
 import progressbar
 import six 
+import humanizer
 
 from deeplearning.clgen.tf import tf
 from eupy.native import logger as l
@@ -221,7 +222,7 @@ class tfLogTensorHook(_tfEstimatorHooks):
     for tag in self.tensor_tags:
       stats.append("{}: {:.5f}".format(tag, tensor_values[tag]))
     if elapsed_secs is not None:
-      l.getLogger().info("Epoch {} {} - {:.3f} sec".format(self.current_epoch, ", ".join(stats), elapsed_secs))
+      l.getLogger().info("Epoch {} {} - {}".format(self.current_epoch, ", ".join(stats), humanize.naturaldelta(elapsed_secs)))
     elif self.current_epoch > 0:
       l.getLogger().info("Epoch {} {}".format(self.current_epoch, ", ".join(stats)))
     else:
