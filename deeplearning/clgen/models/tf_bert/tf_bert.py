@@ -344,12 +344,12 @@ class tfBert(backends.BackendBase):
     predict_generator = self.sample.estimator.predict(input_fn = predict_input_fn)
 
     output_seq, done = None, False
-    start_time = datetime.datetime.utcnow().replace(microsecond=int(datetime.microsecond / 1000) * 1000)
+    start_time = datetime.datetime.utcnow()
     for step in predict_generator:
       output_seq, done = self.sample.data_generator.updateSampleBatch(
         step['input_ids'], step['masked_lm_predictions']
         )
-    end_time = datetime.datetime.utcnow().replace(microsecond=int(datetime.microsecond / 1000) * 1000)
+    end_time = datetime.datetime.utcnow()
     return output_seq, end_time - start_time
 
   def _getTestSampler(self, test_sampler, sequence_length):

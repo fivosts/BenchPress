@@ -26,10 +26,10 @@ class TrainingLogger(object):
     self.telemetry = None
 
   def EpochBeginCallback(self) -> None:
-    self.last_epoch_begin_timestamp = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
+    self.last_epoch_begin_timestamp = datetime.datetime.utcnow()
 
   def EpochEndCallback(self, epoch: int, loss: float):
-    now = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
+    now = datetime.datetime.utcnow()
     epoch_time_ms = now - self.last_epoch_begin_timestamp
     telemetry = telemetry_pb2.ModelEpochTelemetry(
       timestamp_unix_epoch_ms=now,

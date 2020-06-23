@@ -280,7 +280,7 @@ class Model(object):
     if not sample_observers:
       raise ValueError("Cannot sample without any observers")
 
-    sample_start_time = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
+    sample_start_time = datetime.datetime.utcnow()
 
     self.Train()
 
@@ -297,7 +297,7 @@ class Model(object):
     while self._SampleBatch(sampler, atomizer, sample_observers):
       batch_count += 1
 
-    time_now = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
+    time_now = datetime.datetime.utcnow()
     l.getLogger().info( "Produced {} sample batches at a rate of {} ms / batch."
                         .format(
                           humanize.intcomma(batch_count),
@@ -318,7 +318,7 @@ class Model(object):
       sampler.tokenized_start_text.copy() for _ in range(sampler.batch_size)
     ]
     done = np.zeros(sampler.batch_size, dtype=np.bool)
-    start_time = datetime.datetime.utcnow().replace(microsecond=int(datetime.microsecond / 1000) * 1000)
+    start_time = datetime.datetime.utcnow()
     wall_time_start = start_time
 
     self.backend.InitSampleBatch(sampler)
@@ -344,7 +344,7 @@ class Model(object):
             samples_in_progress[i] = [atomizer.decoder[x] for x in index]
 
           if sampler.SampleIsComplete(samples_in_progress[i]):
-            end_time  = datetime.datetime.utcnow().replace(microsecond=int(datetime.microsecond / 1000) * 1000)
+            end_time  = datetime.datetime.utcnow()
             done[i]   = 1
             sample    = model_pb2.Sample(
               train_step                = -1, # TODO self.telemetry.num_train_steps
@@ -363,7 +363,7 @@ class Model(object):
 
             # Wall sample time is the difference between the end of the previous
             # sample and the end of the current sample.
-            wall_time_start = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
+            wall_time_start = datetime.datetime.utcnow()
             break
     return continue_sampling
 

@@ -69,7 +69,7 @@ class TrainingTelemetry(Base):
   timestamp: datetime.datetime = sql.Column(
     sql.DateTime().with_variant(mysql.DATETIME(fsp=3), "mysql"),
     nullable=False,
-    default=lambda x: datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000),
+    default=lambda x: datetime.datetime.utcnow(),
   )
   epoch: int = sql.Column(sql.Integer, nullable=False)
   step: int = sql.Column(sql.Integer, nullable=False)
