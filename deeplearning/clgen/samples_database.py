@@ -41,7 +41,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "text"           : proto.text,
       "num_tokens"     : proto.num_tokens,
       "sample_time_ms" : proto.sample_time_ms,
-      "date_added"     : proto.date_added,
+      "date_added"     : datetime.datetime.strptime(proto.date_added, "%m/%d/%Y, %H:%M:%S"),
     }
 
 class SamplesDatabase(sqlutil.Database):
@@ -49,3 +49,6 @@ class SamplesDatabase(sqlutil.Database):
 
   def __init__(self, url: str, must_exist: bool = False):
     super(SamplesDatabase, self).__init__(url, Base, must_exist = must_exist)
+
+  # def get_id(self):
+    
