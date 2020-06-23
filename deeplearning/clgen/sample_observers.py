@@ -20,7 +20,6 @@ from absl import flags
 from deeplearning.clgen import crypto
 from deeplearning.clgen import pbutil
 from deeplearning.clgen import samples_database
-from labm8.py import sqlutil
 from labm8.py import fs
 
 FLAGS = flags.FLAGS
@@ -127,24 +126,17 @@ class SamplesDatabaseObserver(SampleObserver):
     commit_sample_frequency: int = 1024,
   ):
     self.sample_id = 0
-    self._writer = sqlutil.BufferedDatabaseWriter(
-      samples_database.SamplesDatabase(url, must_exist = must_exist),
-      max_seconds_since_flush=flush_secs,
-      max_buffer_length=commit_sample_frequency,
-    )
-
-  def __del__(self):
-    self._writer.Close()
+    self.db = samples_database.SamplesDatabase(url, must_exist = must_exist)
 
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback."""
-    self._writer.AddOne(id, Sample(**Sample.FromProto(sample)))
+    with self.db.Session(commit = True) as session:
+      db_sample = samples_database.Sample(
+        **samples_database.Sample.FromProto(self.sample_id, sample)
+      )
+      session.add(db_sample)
     self.sample_id += 1
     return True
-
-  def Flush(self) -> None:
-    """Commit all pending records to database."""
-    self._writer.Flush()
 
 class LegacySampleCacheObserver(SampleObserver):
   """Backwards compatability implementation of the old sample caching behavior.
