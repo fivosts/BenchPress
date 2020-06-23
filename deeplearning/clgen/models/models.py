@@ -141,7 +141,7 @@ class Model(object):
       model_pb2.NetworkArchitecture.TENSORFLOW_SEQ: tf_sequential.tfSequential,
       model_pb2.NetworkArchitecture.KERAS_SEQ: keras_sequential.kerasSequential,
       model_pb2.NetworkArchitecture.TENSORFLOW_BERT: tf_bert.tfBert,
-    }[config.architecture.backend](self.config, self.cache)
+    }[config.architecture.backend](self.config, self.cache, self.hash)
 
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.Model.GetShortSummary()")
@@ -289,11 +289,6 @@ class Model(object):
     (self.cache.path / "samples" / sampler.hash).mkdir(exist_ok = True)
     atomizer = self.corpus.atomizer
     sampler.Specialize(atomizer)
-    if os.path.exists(instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.db_name):
-      sampler.symlinkModelDB(
-        instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.db_name, 
-        self.hash
-      )
     self.backend.InitSampling(sampler, seed)
     [obs.Specialize(self, sampler) for obs in sample_observers]
 
@@ -323,7 +318,7 @@ class Model(object):
       sampler.tokenized_start_text.copy() for _ in range(sampler.batch_size)
     ]
     done = np.zeros(sampler.batch_size, dtype=np.bool)
-    start_time = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
+    start_time = datetime.datetime.utcnow().replace(microsecond=int(datetime.microsecond / 1000) * 1000)
     wall_time_start = start_time
 
     self.backend.InitSampleBatch(sampler)
@@ -349,7 +344,7 @@ class Model(object):
             samples_in_progress[i] = [atomizer.decoder[x] for x in index]
 
           if sampler.SampleIsComplete(samples_in_progress[i]):
-            end_time  = datetime.datetime.utcnow().replace(microsecond=int(d.microsecond / 1000) * 1000)
+            end_time  = datetime.datetime.utcnow().replace(microsecond=int(datetime.microsecond / 1000) * 1000)
             done[i]   = 1
             sample    = model_pb2.Sample(
               train_step                = -1, # TODO self.telemetry.num_train_steps
