@@ -371,7 +371,7 @@ class tfBert(backends.BackendBase):
         )
       )
       sampler.symlinkModelDB(
-        self.sample_path / sampler.hash / sampler.sample_db_name,
+        self.sample_path / sampler.hash,
         self.hash
       )
     return sampler, observers
