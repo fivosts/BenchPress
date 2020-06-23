@@ -240,6 +240,10 @@ def SampleObserversFromFlags(instance: Instance) -> typing.List[
       "sqlite:///{}".format(instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.sample_db_name)
       )
     )
+    instance.sampler.symlinkModelDB(
+      instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.sample_db_name, 
+      instance.model.hash
+    )
   if FLAGS.cache_samples:
     sample_observers.append(sample_observers_lib.LegacySampleCacheObserver())
   if FLAGS.sample_text_dir:
