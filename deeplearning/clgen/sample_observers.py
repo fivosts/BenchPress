@@ -125,8 +125,8 @@ class SamplesDatabaseObserver(SampleObserver):
     flush_secs: int = 30,
     commit_sample_frequency: int = 1024,
   ):
-    self.sample_id = 0
     self.db = samples_database.SamplesDatabase(url, must_exist = must_exist)
+    self.sample_id = self.db.count
 
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback."""

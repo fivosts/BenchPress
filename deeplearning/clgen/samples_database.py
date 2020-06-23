@@ -2,6 +2,7 @@
 import contextlib
 import datetime
 import typing
+import sqlite3
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
@@ -50,5 +51,8 @@ class SamplesDatabase(sqlutil.Database):
   def __init__(self, url: str, must_exist: bool = False):
     super(SamplesDatabase, self).__init__(url, Base, must_exist = must_exist)
 
-  # def get_id(self):
-    
+  @property
+  def count(self):
+    with self.Session() as s:
+      count = s.query(Sample).count()
+    return count
