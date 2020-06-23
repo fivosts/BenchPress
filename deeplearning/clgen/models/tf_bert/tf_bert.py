@@ -289,17 +289,16 @@ class tfBert(backends.BackendBase):
             for sample in sample_batch:
               sample_proto = model_pb2.Sample(
                 train_step                = (ep + 1) * self.steps_per_epoch,
-                text                      = self.atomizer.DeatomizeIndices(sample).replace("\\n", "\n"),
-                encoded_text              = ",".join(sample),
-                sample_time_ms            = (sample_time) / sampler.batch_size,
+                text                      = self.atomizer.DeatomizeIndices(sample, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
+                encoded_text              = ",".join([str(t) for t in sample]),
+                sample_time_ms            = int(round(1000 * ((sample_time) / sampler.batch_size).total_seconds())),
                 num_tokens                = len(sample),
-                date_added                = datetime.datetime.utcnow(),
+                date_added                = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
               )
-              observation &= all(
-                [obs.OnSample(sample_proto) for obs in sample_observers]
-              )
-      l.getLogger().info("BERT Validation")
+              for obs in observers:
+                obs.OnSample(sample_proto)
 
+      l.getLogger().info("BERT Validation")
       eval_input_fn = self.train.data_generator.generateTfDataset(
           sequence_length = self.config.training.sequence_length,
           num_cpu_threads = os.cpu_count(),
