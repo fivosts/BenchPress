@@ -335,7 +335,7 @@ class Sampler(object):
     if not symlink.is_symlink():
       os.symlink(
         os.path.relpath(
-          self.db_path / self.sample_db_name,
+          db_path / self.sample_db_name,
           self.samples_directory / model_hash
         ),
         symlink

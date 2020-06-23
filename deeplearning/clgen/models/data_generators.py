@@ -408,7 +408,7 @@ class MaskLMBatchGenerator(object):
 
     d.tfRecord.parent.mkdir(exist_ok = True, parents = True)
     d.CreateCorpus()
-    if not d.tfRecord.exists() or flags.force_remake_dataset:
+    if not d.tfRecord.exists() or FLAGS.force_remake_dataset:
       d._MaskCorpus(d.shaped_corpus)
       d._saveCorpusTfRecord()
     return d

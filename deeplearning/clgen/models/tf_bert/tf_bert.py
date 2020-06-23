@@ -27,6 +27,7 @@ import numpy as np
 from absl import flags
 
 from deeplearning.clgen import samplers
+from deeplearning.clgen import sample_observers
 from deeplearning.clgen import telemetry
 from deeplearning.clgen.tf import tf
 from deeplearning.clgen import pbutil
@@ -364,17 +365,17 @@ class tfBert(backends.BackendBase):
     else:
       sampler = test_sampler
     sampler.Specialize(self.atomizer)
-    sample_observers = [sample_observers.PrintSampleObserver()]
+    observers = [sample_observers.PrintSampleObserver()]
     if FLAGS.store_samples_db:
-      sample_observers.append(sample_observers.SamplesDatabaseObserver(
-        "sqlite:///{}".format(self.sample_path / sampler.hash / sample_db_name)
+      observers.append(sample_observers.SamplesDatabaseObserver(
+        "sqlite:///{}".format(self.sample_path / sampler.hash / sampler.sample_db_name)
         )
       )
       sampler.symlinkModelDB(
         self.sample_path / sampler.hash / sampler.sample_db_name,
         self.hash
       )
-    return sampler, sample_observers
+    return sampler, observers
 
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
