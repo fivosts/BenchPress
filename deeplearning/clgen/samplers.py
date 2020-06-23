@@ -20,6 +20,7 @@ determines the shape of the generated samples.
 import os
 import datetime
 import typing
+import pathlib
 import sqlalchemy as sql
 from absl import flags
 from sqlalchemy.ext import declarative

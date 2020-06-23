@@ -1,6 +1,6 @@
 import progressbar
 import six 
-import humanizer
+import humanize
 
 from deeplearning.clgen.tf import tf
 from eupy.native import logger as l

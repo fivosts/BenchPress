@@ -128,7 +128,7 @@ class SamplesDatabaseObserver(SampleObserver):
   ):
     self.sample_id = 0
     self._writer = sqlutil.BufferedDatabaseWriter(
-      samples_database.Sample(url, must_exist = must_exist),
+      samples_database.SamplesDatabase(url, must_exist = must_exist),
       max_seconds_since_flush=flush_secs,
       max_buffer_length=commit_sample_frequency,
     )

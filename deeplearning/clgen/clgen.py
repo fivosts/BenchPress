@@ -219,7 +219,7 @@ def ConfigFromFlags() -> clgen_pb2.Instance:
   os.environ["PWD"] = str(config_path.parent)
   return config
 
-def SampleObserversFromFlags() -> typing.List[
+def SampleObserversFromFlags(instance: Instance) -> typing.List[
   sample_observers_lib.SampleObserver
 ]:
   """Instantiate sample observers from flag values."""
@@ -235,8 +235,10 @@ def SampleObserversFromFlags() -> typing.List[
   if FLAGS.print_samples:
     sample_observers.append(sample_observers_lib.PrintSampleObserver())
   if FLAGS.store_samples_db:
+    (instance.model.cache.path / "samples" / instance.sampler.hash).mkdir(exist_ok = True)
     sample_observers.append(sample_observers_lib.SamplesDatabaseObserver(
-      instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.db_name)
+      "sqlite:///{}".format(instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.sample_db_name)
+      )
     )
   if FLAGS.cache_samples:
     sample_observers.append(sample_observers_lib.LegacySampleCacheObserver())
@@ -303,7 +305,7 @@ def main():
   instance = Instance(
     ConfigFromFlags(), dashboard_opts={"debug": FLAGS.clgen_dashboard_only,}
   )
-  sample_observers = SampleObserversFromFlags()
+  sample_observers = SampleObserversFromFlags(instance)
   DoFlagsAction(instance, sample_observers)
   return
 
