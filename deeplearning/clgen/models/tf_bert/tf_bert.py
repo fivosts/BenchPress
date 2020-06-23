@@ -21,6 +21,7 @@ from __future__ import print_function
 import os
 import typing
 import pathlib
+import datetime
 import tensorflow_probability as tfp
 import numpy as np
 from absl import flags
@@ -248,9 +249,11 @@ class tfBert(backends.BackendBase):
           return True
     return False  
 
-  def Train(self, corpus, 
-                  test_sampler: typing.Optional[samplers.Sampler] = None,
-                  **unused_kwargs) -> None:
+  def Train(self,
+            corpus,
+            test_sampler: typing.Optional[samplers.Sampler] = None,
+            **unused_kwargs
+            ) -> None:
 
     del unused_kwargs
 
@@ -275,19 +278,25 @@ class tfBert(backends.BackendBase):
       if FLAGS.sample_per_epoch == 0:
         self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps)
       else:
-        sampler = self._getTestSampler(test_sampler, self.config.training.sequence_length)
+        sampler, observers = self._getTestSampler(test_sampler, self.config.training.sequence_length)
         self.InitSampling(sampler, self.config.training.random_seed)
-        for _ in range(self.num_epochs):
+        for ep in range(self.num_epochs):
           self.train.estimator.train(input_fn = train_input_fn, steps = self.steps_per_epoch)
           for _ in range(FLAGS.sample_per_epoch):
             self.InitSampleBatch()
-            sample, done = self.SampleNextIndices()
-            for batch in sample:
-              print(
-                self.atomizer.DeatomizeIndices(batch, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
-                end = "\n\n"
-                )
-
+            sample_batch, sample_time = self.SampleNextIndices()
+            for sample in sample_batch:
+              sample_proto = model_pb2.Sample(
+                train_step                = (ep + 1) * self.steps_per_epoch,
+                text                      = self.atomizer.DeatomizeIndices(sample).replace("\\n", "\n"),
+                encoded_text              = ",".join(sample),
+                sample_time_ms            = (sample_time) / sampler.batch_size,
+                num_tokens                = len(sample),
+                date_added                = datetime.datetime.utcnow(),
+              )
+              observation &= all(
+                [obs.OnSample(sample_proto) for obs in sample_observers]
+              )
       l.getLogger().info("BERT Validation")
 
       eval_input_fn = self.train.data_generator.generateTfDataset(
@@ -334,26 +343,38 @@ class tfBert(backends.BackendBase):
     predict_generator = self.sample.estimator.predict(input_fn = predict_input_fn)
 
     output_seq, done = None, False
+    start_time = datetime.datetime.utcnow().replace(microsecond=int(datetime.microsecond / 1000) * 1000)
     for step in predict_generator:
       output_seq, done = self.sample.data_generator.updateSampleBatch(
         step['input_ids'], step['masked_lm_predictions']
         )
-    return output_seq, done
+    end_time = datetime.datetime.utcnow().replace(microsecond=int(datetime.microsecond / 1000) * 1000)
+    return output_seq, end_time - start_time
 
   def _getTestSampler(self, test_sampler, sequence_length):
-    sampler_str = [
-        "start_text: \"kernel void A(const double g, const double i){\\n  [HOLE] = [HOLE]\\n  int a = g + [HOLE]\"",
-        "batch_size: 2",
-        "sequence_length: {}".format(sequence_length),
-        "temperature_micros: 800000",
-    ]
     if test_sampler is None:
+      sampler_str = [
+          "start_text: \"kernel void A(const double g, const double i){\\n  [HOLE] = [HOLE]\\n  int a = g + [HOLE]\"",
+          "batch_size: 2",
+          "sequence_length: {}".format(sequence_length),
+          "temperature_micros: 800000",
+      ]
       mock_config = pbutil.FromString('\n'.join(sampler_str), sampler_pb2.Sampler())
-      sampler = samplers.Sampler(mock_config)
+      sampler = samplers.Sampler(mock_config, sample_db_name = "epoch_samples.db")
     else:
       sampler = test_sampler
     sampler.Specialize(self.atomizer)
-    return sampler
+    sample_observers = [sample_observers.PrintSampleObserver()]
+    if FLAGS.store_samples_db:
+      sample_observers.append(sample_observers.SamplesDatabaseObserver(
+        "sqlite:///{}".format(self.sample_path / sampler.hash / sample_db_name)
+        )
+      )
+      sampler.symlinkModelDB(
+        self.sample_path / sampler.hash / sampler.sample_db_name,
+        self.hash
+      )
+    return sampler, sample_observers
 
   def GetShortSummary(self) -> str:
     l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
