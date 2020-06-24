@@ -402,8 +402,8 @@ class MaskLMBatchGenerator(object):
     d.atomizer            = corpus.atomizer
     d.training_opts       = training_opts
     d.target_predictions  = FLAGS.mask_or_hole
-    d.tfRecord            = cache_path / "dataset" / "maskedDataset.tf_record"
-    d.txtRecord           = cache_path / "dataset" / "maskedDataset.txt"
+    d.tfRecord            = cache_path / "dataset" / "Dataset.tf_record"
+    d.txtRecord           = cache_path / "dataset" / "Dataset.txt"
     d.rngen               = random.Random(training_opts.random_seed)
 
     d.tfRecord.parent.mkdir(exist_ok = True, parents = True)
