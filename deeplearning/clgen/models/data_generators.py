@@ -777,7 +777,7 @@ class MaskLMBatchGenerator(object):
       tf_example = tf.train.Example(features = tf.train.Features(feature = features))
       writer.write(tf_example.SerializeToString())
       if FLAGS.write_text_dataset:
-        file_writer.write("'input_ids': {}\n'input_mask': {}\n'masked_lm_positions': {}\n'masked_lm_ids': {}\'nmasked_lm_weights': {}\n'next_sentence_labels': {}\n\n"
+        file_writer.write("'input_ids': {}\n'input_mask': {}\n'masked_lm_positions': {}\n'masked_lm_ids': {}\n'masked_lm_weights': {}\n'next_sentence_labels': {}\n\n"
                             .format(self.atomizer.DeatomizeIndices(input_ids),
                                     input_mask, 
                                     masked_lm_positions, 
