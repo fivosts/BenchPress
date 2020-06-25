@@ -386,6 +386,8 @@ class tfBert(backends.BackendBase):
       f"h_act: {self.config.architecture.hidden_act}, "
       f"{model_pb2.NetworkArchitecture.Backend.Name(self.config.architecture.backend)} "
       "network"
+      "\n"
+      self.data_generator.GetShortSummary() # TODO
     )
 
   def InferenceManifest(self) -> typing.List[pathlib.Path]:
@@ -398,6 +400,7 @@ class tfBert(backends.BackendBase):
     paths = [ path.absolute() for path in (self.cache.path / "checkpoints").iterdir() ]
     paths += [ path.absolute() for path in (self.cache.path / "logs").iterdir() ]
     paths += [ path.absolute() for path in (self.cache.path / "samples").iterdir() ]
+    paths += self.data_generator.InferenceManifest # TODO
     return sorted(paths)
 
   def _writeValidation(self,
