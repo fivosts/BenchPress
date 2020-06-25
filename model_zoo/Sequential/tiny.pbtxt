@@ -21,7 +21,9 @@ working_dir: "Sequential"
 model {
   corpus {
     local_tar_archive: "$PWD/../corpus/corpus_250.tar.bz2"
-    ascii_character_atomizer: true
+    atomizer {
+      token_type: "character"
+    }
     contentfile_separator: "\n\n"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
