@@ -41,6 +41,12 @@ message ModelMeta {
   optional Model config = 1;
 }
 
+// The schema for a data generator metafile. An instance of this proto is created with
+// name META.pbtxt in the cache directory of each data generator.
+message DataGeneratorMeta {
+  optional DataGenerator config = 1;
+}
+
 // The schema for a sampler metafile. An instance of this proto is created with
 // name META.pbtxt in the cache directory of each model that samples it.
 message SamplerMeta {
