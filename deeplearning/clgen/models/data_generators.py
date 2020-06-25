@@ -17,9 +17,11 @@ import humanize
 import numpy as np
 
 from deeplearning.clgen import cache
+from deeplearning.clgen import pbutil
 from deeplearning.clgen import crypto
 from deeplearning.clgen.tf import tf
 from deeplearning.clgen.proto import model_pb2
+from deeplearning.clgen.proto import internal_pb2
 from absl import flags
 from eupy.native import logger as l
 
@@ -38,7 +40,7 @@ flags.DEFINE_boolean(
 )
 
 # flags.DEFINE_boolean(
-#   "randomize_mask_placement",
+#   "random_placed_mask",
 #   True,
 #   "When selecting an index in the input tensor, the original BERT model gives 80% chance "
 #   "to replace it with a MASK, a 10% chance to replace it with another random token "
@@ -47,7 +49,7 @@ flags.DEFINE_boolean(
 # )
 
 # flags.DEFINE_boolean(
-#   "use_start_end_metatokens", 
+#   "use_start_end", 
 #   True, 
 #   "Use [START] and [END] meta tokens at the beginning and end of each sequence."
 # )
@@ -375,6 +377,7 @@ class MaskLMBatchGenerator(object):
     self.corpus                  = None
     self.atomizer                = None
     self.config                  = None
+    self.cache                   = None
     self.hash                    = None
     self.shaped_corpus           = None
     self.masked_corpus           = None
@@ -403,12 +406,33 @@ class MaskLMBatchGenerator(object):
     d                     = MaskLMBatchGenerator()
     d.corpus              = corpus
     d.atomizer            = corpus.atomizer
+
     d.config              = training_opts.data_generator
     d.hash                = MaskLMBatchGenerator._ComputeHash(d.corpus, d.config)
+    d.cache               = cache.mkcache(cache_path, "dataset", d.hash)
+
+    if d.cache.get("META.pbtxt"):
+      cached_meta = pbutil.FromFile(
+        pathlib.Path(d.cache["META.pbtxt"]), internal_pb2.DataGeneratorMeta()
+      )
+      config_to_compare = model_pb2.DataGenerator()
+      config_to_compare.CopyFrom(d.config)
+
+      cached_to_compare = model_pb2.DataGenerator()
+      cached_to_compare.CopyFrom(cached_meta.config)
+
+      if config_to_compare != cached_to_compare:
+        raise SystemError("Metadata mismatch: {} \n\n {}".format(config_to_compare, cached_to_compare))
+      d.meta = cached_meta
+    else:
+      d.meta = internal_pb2.DataGeneratorMeta()
+      d.meta.config.CopyFrom(d.config)
+      d._WriteMetafile()
+
     d.training_opts       = training_opts
     d.target_predictions  = FLAGS.mask_or_hole
-    d.tfRecord            = cache_path / "dataset" / "Dataset.tf_record"
-    d.txtRecord           = cache_path / "dataset" / "Dataset.txt"
+    d.tfRecord            = d.cache.path / "Dataset.tf_record"
+    d.txtRecord           = d.cache.path / "Dataset.txt"
     d.rngen               = random.Random(training_opts.random_seed)
 
     d.tfRecord.parent.mkdir(exist_ok = True, parents = True)
@@ -416,6 +440,7 @@ class MaskLMBatchGenerator(object):
     if not d.tfRecord.exists() or FLAGS.force_remake_dataset:
       d._MaskCorpus(d.shaped_corpus)
       d._saveCorpusTfRecord()
+
     return d
 
   @classmethod
@@ -433,8 +458,11 @@ class MaskLMBatchGenerator(object):
     d.max_position_embeddings = max_position_embeddings
     return d
 
+  def _WriteMetafile(self) -> None:
+    pbutil.ToFile(self.meta, self.cache.path / "META.pbtxt")
+
   @staticmethod
-  def _ComputeHash(corpus: corpuses.Corpus, config: model_pb2.DataGenerator) -> str:
+  def _ComputeHash(corpus, config: model_pb2.DataGenerator) -> str:
     """Compute data_generator hash.
   
     Hash is only used on training mode to differentiate among different tf Datasets.
@@ -637,10 +665,10 @@ class MaskLMBatchGenerator(object):
       # Reject larger than sequence length
       initial_length       = copy.deepcopy(len(encoded_corpus))
       encoded_corpus       = [list(x) for x in encoded_corpus if 
-                             len(x) <= sequence_length - (2 if self.config.use_start_end_metatokens else 0)] # Account for start and end token
+                             len(x) <= sequence_length - (2 if self.config.use_start_end else 0)] # Account for start and end token
       reduced_length       = copy.deepcopy(len(encoded_corpus))
       # Add start/end tokens
-      if self.config.use_start_end_metatokens:
+      if self.config.use_start_end:
         encoded_corpus     = [self._addStartEndToken(kf) for kf in encoded_corpus]
       # pad sequences to sequence length
       encoded_corpus       = np.array([x + pad * (sequence_length - len(x)) for x in encoded_corpus])
@@ -794,7 +822,7 @@ class MaskLMBatchGenerator(object):
       target = input_ids[input_id_idx] if hole_length > 0 else self.atomizer.endholeToken
 
       ## TODO. Think about '== self.atomizer.holeToken' condition.
-      # if self.config.mask.randomize_mask_placement and hole_length != 0:
+      # if self.config.mask.random_placed_mask and hole_length != 0:
       #   if self.rngen.random() < 0.8:
       #     replacement_token = self.atomizer.holeToken
       #   else:
@@ -813,7 +841,7 @@ class MaskLMBatchGenerator(object):
                    input_ids[input_id_idx + hole_length:])
 
       masked_lms.append(MaskedLmInstance(pos_index=input_id_idx, token_id=target))
-      if not self.config.mask.randomize_mask_placement:
+      if not self.config.mask.random_placed_mask:
         assert (input_ids[input_id_idx] == self.atomizer.holeToken, 
               "target index does not correspond to hole token: {}".format(self.atomizer.DeatomizeIndices([input_ids[input_id_idx]])))
 
@@ -881,7 +909,7 @@ class MaskLMBatchGenerator(object):
       if len(masked_lms) >= masks_to_predict:
         break
 
-      if self.config.mask.randomize_mask_placement:
+      if self.config.mask.random_placed_mask:
         # 80% of the time, replace with [MASK]
         if self.rngen.random() < 0.8:
           input_ids[pos_index] = self.atomizer.maskToken
