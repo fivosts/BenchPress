@@ -66,12 +66,6 @@ sampler {
   sequence_length: 1024
   temperature_micros: 800000  # = 0.8 real value
   termination_criteria {
-    symtok {
-      depth_increase_token: "{"
-      depth_decrease_token: "}"
-    }
-  }
-  termination_criteria {
     maxlen {
       maximum_tokens_in_sample: 500
     }

@@ -57,16 +57,10 @@ model {
   }
 }
 sampler {
-  start_text: "kernel void A(const double g, const double i) {\n    int k = [HOLE]"
+  start_text: "kernel void A(const double g, const double i) {\n    int k [MASK] get_global_id([MASK])[MASK]\n}"
   batch_size: 16
   sequence_length: 512
   temperature_micros: 800000  # = 0.8 real value
-  termination_criteria {
-    symtok {
-      depth_increase_token: "{"
-      depth_decrease_token: "}"
-    }
-  }
   termination_criteria {
     maxlen {
       maximum_tokens_in_sample: 500
