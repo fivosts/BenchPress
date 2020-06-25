@@ -17,6 +17,7 @@ import humanize
 import numpy as np
 
 from deeplearning.clgen import cache
+from deeplearning.clgen import crypto
 from deeplearning.clgen.tf import tf
 from deeplearning.clgen.proto import model_pb2
 from absl import flags
@@ -371,35 +372,39 @@ class MaskLMBatchGenerator(object):
   def __init__(self):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.__init__()")
 
-    self.corpus                     = None
-    self.atomizer                   = None
-    self.shaped_corpus              = None
-    self.masked_corpus              = None
+    self.corpus                  = None
+    self.atomizer                = None
+    self.config                  = None
+    self.hash                    = None
+    self.shaped_corpus           = None
+    self.masked_corpus           = None
 
-    self.training_opts              = None
-    self.steps_per_epoch            = None
+    self.training_opts           = None
+    self.steps_per_epoch         = None
 
-    self.max_position_embeddings    = None
-    self.target_predictions         = None
+    self.max_position_embeddings = None
+    self.target_predictions      = None
 
-    self.tfRecord                   = None
-    self.txtRecord                  = None
-    self.sampleBatch                = None
+    self.tfRecord                = None
+    self.txtRecord               = None
+    self.sampleBatch             = None
 
-    self.sampler                    = None
-    self.rngen                      = None
+    self.sampler                 = None
+    self.rngen                   = None
     return
 
   @classmethod
   def TrainMaskLMBatchGenerator(cls,
                                corpus: "corpuses.Corpus",
                                training_opts: model_pb2.TrainingOptions,
-                               cache_path
+                               cache_path,
                                ) -> "data_generators.MaskLMBatchGenerator":
     """Initializes data generator for training."""
     d                     = MaskLMBatchGenerator()
     d.corpus              = corpus
     d.atomizer            = corpus.atomizer
+    d.config              = training_opts.data_generator
+    d.hash                = MaskLMBatchGenerator._ComputeHash(d.corpus, d.config)
     d.training_opts       = training_opts
     d.target_predictions  = FLAGS.mask_or_hole
     d.tfRecord            = cache_path / "dataset" / "Dataset.tf_record"
@@ -427,6 +432,27 @@ class MaskLMBatchGenerator(object):
     d.rngen                   = random.Random(seed)
     d.max_position_embeddings = max_position_embeddings
     return d
+
+  @staticmethod
+  def _ComputeHash(corpus: corpuses.Corpus, config: model_pb2.DataGenerator) -> str:
+    """Compute data_generator hash.
+  
+    Hash is only used on training mode to differentiate among different tf Datasets.
+    While sampling, an on-line data generator is created, based on model specs.
+  
+    The hash is computed from the ID of the corpus and the data_generator
+    proto config.
+
+    Args:
+      corpus: A corpus instance.
+      config: A data_generator config proto.
+
+    Returns:
+      The unique model ID.
+    """
+    config_to_hash = model_pb2.DataGenerator()
+    config_to_hash.CopyFrom(config)
+    return crypto.sha1_list(corpus.hash, config_to_hash.SerializeToString())
 
   def generateTfDataset(self,
                       sequence_length,
@@ -676,122 +702,6 @@ class MaskLMBatchGenerator(object):
 
     return
 
-  def InitSampleBatch(self) -> None:
-    """
-    Initializes data_generator for inference.
-    self.sampleBatch is initialized with sampler.encoded_start_text
-    """
-    assert self.sampler.sequence_length <= self.max_position_embeddings, "Sampler sequence length exceeds max position embeddings."
-    input_sample = self.sampler.encoded_start_text
-    assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
-
-    target_idx = np.where(np.in1d(input_sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
-    assert len(target_idx) != 0, "No target prediction in sample text"
-
-    padded_sample = self._padToMaxPosition(input_sample)
-    padded_sample = padded_sample[:self.sampler.sequence_length]
-    self.sampleBatch = np.repeat(padded_sample[None, :], self.sampler.batch_size, axis = 0)
-    return
-
-  def updateSampleBatch(self, 
-                        input_ids     : np.array,
-                        masked_lm_ids : np.array,
-                        ) -> np.array:
-    """
-    Updates self.sampleBatch with the model's output prediction.
-    The output, if still contains hole or mask tokens, is fed back
-    to the model's input through the input_fn's sample_gen generator.
-    """
-    assert len(input_ids) == len(masked_lm_ids), "Inputs and predictions do not have the same batch size."
-
-    updated_sequence = []
-    done = True
-
-    for batch_idx, _ in enumerate(input_ids):
-      batch = []
-      mask_id_index = 0
-      for idx, token in enumerate(input_ids[batch_idx]):
-        if   token == self.atomizer.maskToken:
-          mt = masked_lm_ids[batch_idx][mask_id_index]
-          mask_id_index += 1
-          batch.append(mt)
-        elif token == self.atomizer.holeToken:
-          mt = masked_lm_ids[batch_idx][mask_id_index]
-          mask_id_index += 1
-          if mt != self.atomizer.endholeToken:
-            batch.append(mt)
-            batch.append(self.atomizer.holeToken)
-            done = False
-        else:
-          batch.append(token)
-      batch = np.asarray(batch)
-      batch = self._padToMaxPosition(batch)
-      # TODO, chop sequence for now, but TODO it: 
-      # If a sequence is bigger than it should, crop one or both edges,
-      # save them and send max_position_embeddings for next step.
-      # Then, concat it back.
-      batch = batch[:self.sampler.sequence_length]
-      updated_sequence.append(batch)
-
-    self.sampleBatch = np.asarray(updated_sequence)
-    return self.sampleBatch, done
-
-  def _saveCorpusTfRecord(self) -> None:
-    """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator._saveCorpusTfRecord()")
-     
-    writer = tf.io.TFRecordWriter(str(self.tfRecord))
-    if FLAGS.write_text_dataset:
-      file_writer = open(self.txtRecord, 'w')
-
-    for (inst_index, instance) in enumerate(self.masked_corpus):
-      input_ids  = instance.input_ids
-      input_mask = instance.input_mask
-
-      assert len(input_ids) == self.training_opts.sequence_length, "len(input_ids):  {}, sequence_length: {}".format(len(input_ids), self.training_opts.sequence_length)
-
-      masked_lm_positions   = instance.masked_lm_positions
-      masked_lm_ids         = instance.masked_lm_ids
-      masked_lm_weights     = instance.masked_lm_weights
-      next_sentence_label   = instance.next_sentence_label
-      features              = collections.OrderedDict()
-
-      features["input_ids"]             = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list(input_ids)))
-
-      features["input_mask"]            = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list(input_mask)))
-
-      features["masked_lm_positions"]   = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list(masked_lm_positions)))
-
-      features["masked_lm_ids"]         = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list(masked_lm_ids)))
-
-      features["masked_lm_weights"]     = tf.train.Feature(float_list = tf.train.FloatList(
-                                                                value = list(masked_lm_weights)))
-
-      features["next_sentence_labels"]  = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list([next_sentence_label])))
-
-      tf_example = tf.train.Example(features = tf.train.Features(feature = features))
-      writer.write(tf_example.SerializeToString())
-      if FLAGS.write_text_dataset:
-        file_writer.write("'input_ids': {}\n'input_mask': {}\n'masked_lm_positions': {}\n'masked_lm_ids': {}\n'masked_lm_weights': {}\n'next_sentence_labels': {}\n\n"
-                            .format(self.atomizer.DeatomizeIndices(input_ids),
-                                    input_mask, 
-                                    masked_lm_positions, 
-                                    self.atomizer.DeatomizeIndices(masked_lm_ids), 
-                                    masked_lm_weights, 
-                                    next_sentence_label)
-                            )
-    writer.close()
-    if FLAGS.write_text_dataset:
-      file_writer.close()
-    l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
-                      .format(inst_index, self.steps_per_epoch, self.training_opts.batch_size, self.tfRecord))
-    return
-
   def _MaskCorpus(self, 
                  corpus: np.array
                 )-> None:
@@ -1016,6 +926,122 @@ class MaskLMBatchGenerator(object):
                         np.asarray(masked_lm_positions), np.asarray(masked_lm_ids), 
                         np.asarray(masked_lm_weights),   next_sentence_label
                         )
+
+  def InitSampleBatch(self) -> None:
+    """
+    Initializes data_generator for inference.
+    self.sampleBatch is initialized with sampler.encoded_start_text
+    """
+    assert self.sampler.sequence_length <= self.max_position_embeddings, "Sampler sequence length exceeds max position embeddings."
+    input_sample = self.sampler.encoded_start_text
+    assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
+
+    target_idx = np.where(np.in1d(input_sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
+    assert len(target_idx) != 0, "No target prediction in sample text"
+
+    padded_sample = self._padToMaxPosition(input_sample)
+    padded_sample = padded_sample[:self.sampler.sequence_length]
+    self.sampleBatch = np.repeat(padded_sample[None, :], self.sampler.batch_size, axis = 0)
+    return
+
+  def updateSampleBatch(self, 
+                        input_ids     : np.array,
+                        masked_lm_ids : np.array,
+                        ) -> np.array:
+    """
+    Updates self.sampleBatch with the model's output prediction.
+    The output, if still contains hole or mask tokens, is fed back
+    to the model's input through the input_fn's sample_gen generator.
+    """
+    assert len(input_ids) == len(masked_lm_ids), "Inputs and predictions do not have the same batch size."
+
+    updated_sequence = []
+    done = True
+
+    for batch_idx, _ in enumerate(input_ids):
+      batch = []
+      mask_id_index = 0
+      for idx, token in enumerate(input_ids[batch_idx]):
+        if   token == self.atomizer.maskToken:
+          mt = masked_lm_ids[batch_idx][mask_id_index]
+          mask_id_index += 1
+          batch.append(mt)
+        elif token == self.atomizer.holeToken:
+          mt = masked_lm_ids[batch_idx][mask_id_index]
+          mask_id_index += 1
+          if mt != self.atomizer.endholeToken:
+            batch.append(mt)
+            batch.append(self.atomizer.holeToken)
+            done = False
+        else:
+          batch.append(token)
+      batch = np.asarray(batch)
+      batch = self._padToMaxPosition(batch)
+      # TODO, chop sequence for now, but TODO it: 
+      # If a sequence is bigger than it should, crop one or both edges,
+      # save them and send max_position_embeddings for next step.
+      # Then, concat it back.
+      batch = batch[:self.sampler.sequence_length]
+      updated_sequence.append(batch)
+
+    self.sampleBatch = np.asarray(updated_sequence)
+    return self.sampleBatch, done
+
+  def _saveCorpusTfRecord(self) -> None:
+    """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
+    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator._saveCorpusTfRecord()")
+     
+    writer = tf.io.TFRecordWriter(str(self.tfRecord))
+    if FLAGS.write_text_dataset:
+      file_writer = open(self.txtRecord, 'w')
+
+    for (inst_index, instance) in enumerate(self.masked_corpus):
+      input_ids  = instance.input_ids
+      input_mask = instance.input_mask
+
+      assert len(input_ids) == self.training_opts.sequence_length, "len(input_ids):  {}, sequence_length: {}".format(len(input_ids), self.training_opts.sequence_length)
+
+      masked_lm_positions   = instance.masked_lm_positions
+      masked_lm_ids         = instance.masked_lm_ids
+      masked_lm_weights     = instance.masked_lm_weights
+      next_sentence_label   = instance.next_sentence_label
+      features              = collections.OrderedDict()
+
+      features["input_ids"]             = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                                value = list(input_ids)))
+
+      features["input_mask"]            = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                                value = list(input_mask)))
+
+      features["masked_lm_positions"]   = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                                value = list(masked_lm_positions)))
+
+      features["masked_lm_ids"]         = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                                value = list(masked_lm_ids)))
+
+      features["masked_lm_weights"]     = tf.train.Feature(float_list = tf.train.FloatList(
+                                                                value = list(masked_lm_weights)))
+
+      features["next_sentence_labels"]  = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                                value = list([next_sentence_label])))
+
+      tf_example = tf.train.Example(features = tf.train.Features(feature = features))
+      writer.write(tf_example.SerializeToString())
+      if FLAGS.write_text_dataset:
+        file_writer.write("'input_ids': {}\n'input_mask': {}\n'masked_lm_positions': {}\n'masked_lm_ids': {}\n'masked_lm_weights': {}\n'next_sentence_labels': {}\n\n"
+                            .format(self.atomizer.DeatomizeIndices(input_ids),
+                                    input_mask, 
+                                    masked_lm_positions, 
+                                    self.atomizer.DeatomizeIndices(masked_lm_ids), 
+                                    masked_lm_weights, 
+                                    next_sentence_label)
+                            )
+    writer.close()
+    if FLAGS.write_text_dataset:
+      file_writer.close()
+    l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
+                      .format(inst_index, self.steps_per_epoch, self.training_opts.batch_size, self.tfRecord))
+    return
 
   def _padToMaxPosition(self, input_sample):
     """
