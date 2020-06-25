@@ -77,6 +77,37 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         "TrainingOptions.num_epochs must be > 0",
       )
     elif config.architecture.backend == model_pb2.NetworkArchitecture.TENSORFLOW_BERT:
+      # Data generator is needed when using bert.
+      pbutil.AssertFieldIsSet(config.training, "data_generator")
+      # Parse data_generator params.
+      pbutil.AssertFieldIsSet(
+        config.training.data_generator,
+        "datapoint_type",
+        lambda x: x == "kernel" or x == "statement",
+        "Valid options for datapoint_type are 'kernel' and 'statement'"
+      )
+      pbutil.AssertFieldIsSet(
+        config.training.data_generator,
+        "use_start_end",
+      )
+      # Parse masking technique for bert's data generator
+      pbutil.AssertFieldIsSet(config.training.data_generator, mask_technique)
+      if config.training.data_generator.HasField("mask"):
+        pbutil.AssertFieldIsSet(
+          config.training.data_generator.mask,
+          "random_placed_mask",
+        )
+      elif config.training.data_generator.HasField("hole"):
+        pbutil.AssertFieldIsSet(
+          config.training.data_generator.hole,
+          "hole_length",
+          lambda x : x > 0,
+          "hole_length is the upper bound range of a hole's length. Therefore should be > 0."
+        )
+        pbutil.AssertFieldIsSet(
+          config.training.data_generator.hole,
+          "stage_training",
+        )
       ## .architecture params
       pbutil.AssertFieldIsSet(
         config.architecture,
