@@ -32,10 +32,10 @@ class TrainingLogger(object):
     now = datetime.datetime.utcnow()
     epoch_time_ms = now - self.last_epoch_begin_timestamp
     telemetry = telemetry_pb2.ModelEpochTelemetry(
-      timestamp_unix_epoch_ms=now,
-      epoch_num=epoch,
-      epoch_wall_time_ms=epoch_time_ms,
-      loss=loss,
+      timestamp_unix_epoch_ms = now.strftime("%m/%d/%Y, %H:%M:%S"),
+      epoch_num = epoch,
+      epoch_wall_time_ms = int(round(epoch_time_ms.total_seconds()*1000)),
+      loss = loss,
     )
     pbutil.ToFile(telemetry, self.logdir / f"epoch_{epoch:03d}_telemetry.pbtxt")
 
