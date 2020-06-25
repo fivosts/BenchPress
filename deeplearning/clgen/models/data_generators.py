@@ -87,7 +87,7 @@ class DataBatch(typing.NamedTuple):
                         ) -> None:
 
     """Log analytics about the batch."""
-    l.getLogger().info("Step shape: X: {}, y" ": {}.".format(X.shape, y.shape))
+    l.getLogger().info("Step shape: X: {}, y" ": {}.".format(self.X.shape, self.y.shape))
     l.getLogger().info(
       "Memory: {} per batch, {} per epoch, {} total.".format(
               humanize.naturalsize(self.sizeof_batch, binary = True),
