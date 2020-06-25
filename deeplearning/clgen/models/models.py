@@ -171,6 +171,8 @@ class Model(object):
     config_to_hash.ClearField("corpus")
     config_to_hash.training.ClearField("num_epochs")
     config_to_hash.training.ClearField("num_train_steps")
+    config_to_hash.training.ClearField("data_generator")
+    l.getLogger().critical(config_to_hash)
     return crypto.sha1_list(corpus_.hash, config_to_hash.SerializeToString())
 
   def Create(self) -> bool:
