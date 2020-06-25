@@ -44,6 +44,17 @@ model {
     masked_lm_prob: 0.25
     random_seed: 12345
     shuffle_corpus_contentfiles_between_epochs: true
+    data_generator {
+      datapoint_type: "kernel"
+      use_start_end : true
+      # mask {
+      #   random_placed_mask: true
+      # }
+      hole {
+        hole_length: 3
+        stage_training: false
+      }
+    }
     adam_optimizer {
       initial_learning_rate_micros: 2000  # = 0.02 real value
     }
