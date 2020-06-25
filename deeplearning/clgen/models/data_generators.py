@@ -37,20 +37,20 @@ flags.DEFINE_boolean(
   "Force data generator to re-mask encoded dataset and store tfRecord."
 )
 
-flags.DEFINE_boolean(
-  "randomize_mask_placement",
-  True,
-  "When selecting an index in the input tensor, the original BERT model gives 80% chance "
-  "to replace it with a MASK, a 10% chance to replace it with another random token "
-  "and another 10% to leave it be after all. Set True to enable this behavior. Otherwise, "
-  "when selecting an index in the input, this will be replaced by a MASK.",
-)
+# flags.DEFINE_boolean(
+#   "randomize_mask_placement",
+#   True,
+#   "When selecting an index in the input tensor, the original BERT model gives 80% chance "
+#   "to replace it with a MASK, a 10% chance to replace it with another random token "
+#   "and another 10% to leave it be after all. Set True to enable this behavior. Otherwise, "
+#   "when selecting an index in the input, this will be replaced by a MASK.",
+# )
 
-flags.DEFINE_boolean(
-  "use_start_end_metatokens", 
-  True, 
-  "Use [START] and [END] meta tokens at the beginning and end of each sequence."
-)
+# flags.DEFINE_boolean(
+#   "use_start_end_metatokens", 
+#   True, 
+#   "Use [START] and [END] meta tokens at the beginning and end of each sequence."
+# )
 
 flags.DEFINE_string(
   "mask_or_hole",
@@ -58,17 +58,17 @@ flags.DEFINE_string(
   "Set target prediction of MaskLM as [MASK] tokens or [HOLE] sequences."
 )
 
-flags.DEFINE_integer(
-  "hole_length",
-  2,
-  "In case sequences are hole-d, choose upper bound range of possible hole length (will be [0, hole_length])."
-)
+# flags.DEFINE_integer(
+#   "hole_length",
+#   2,
+#   "In case sequences are hole-d, choose upper bound range of possible hole length (will be [0, hole_length])."
+# )
 
-flags.DEFINE_string(
-  "datapoint_type",
-  "kernel",
-  "Represent single training instance as whole padded kernel, or arbitrary statement sequences."
-)
+# flags.DEFINE_string(
+#   "datapoint_type",
+#   "kernel",
+#   "Represent single training instance as whole padded kernel, or arbitrary statement sequences."
+# )
 
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
@@ -632,15 +632,15 @@ class MaskLMBatchGenerator(object):
     # generate a kernel corpus
     encoded_corpus       = self.corpus.GetTrainingData()
 
-    if FLAGS.datapoint_type == "kernel":
+    if self.config.datapoint_type == "kernel":
 
       # Reject larger than sequence length
       initial_length       = copy.deepcopy(len(encoded_corpus))
       encoded_corpus       = [list(x) for x in encoded_corpus if 
-                             len(x) <= sequence_length - (2 if FLAGS.use_start_end_metatokens else 0)] # Account for start and end token
+                             len(x) <= sequence_length - (2 if self.config.use_start_end_metatokens else 0)] # Account for start and end token
       reduced_length       = copy.deepcopy(len(encoded_corpus))
       # Add start/end tokens
-      if FLAGS.use_start_end_metatokens:
+      if self.config.use_start_end_metatokens:
         encoded_corpus     = [self._addStartEndToken(kf) for kf in encoded_corpus]
       # pad sequences to sequence length
       encoded_corpus       = np.array([x + pad * (sequence_length - len(x)) for x in encoded_corpus])
@@ -667,7 +667,7 @@ class MaskLMBatchGenerator(object):
                   humanize.intcomma(int((time.time() - start_time) * 1000)),
               )
       )
-    elif FLAGS.datapoint_type == "statement":
+    elif self.config.datapoint_type == "statement":
     ## This branch is legacy data processing
 
       if shuffle:
@@ -698,7 +698,7 @@ class MaskLMBatchGenerator(object):
       )
 
     else:
-      raise ValueError("Unrecognized datapoint_type: {}".format(FLAGS.datapoint_type))
+      raise ValueError("Unrecognized datapoint_type: {}".format(self.config.datapoint_type))
 
     return
 
@@ -716,12 +716,12 @@ class MaskLMBatchGenerator(object):
 
     with progressbar.ProgressBar(max_value = len(corpus)) as bar:
         for idx, kernel in enumerate(corpus):
-          if self.target_predictions == "mask":
+          if self.config.HasField("mask"):
             masked_seq = self._maskSequence(kernel)
-          elif self.target_predictions == "hole":
+          elif self.config.HasField("hole"):
             masked_seq = self._holeSequence(kernel)
           else:
-            raise AttributeError("target predictions cannot be {}".format(self.target_predictions))
+            raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
           self.masked_corpus.append(masked_seq)
           bar.update(idx)
     self.masked_corpus[0].LogBatchTelemetry(self.training_opts.batch_size, self.steps_per_epoch, self.num_epochs)
@@ -781,7 +781,7 @@ class MaskLMBatchGenerator(object):
               .format(seq[pos_index], input_ids[input_id_idx]))
 
       # Random number to represent the length of this hole.
-      hole_length = self.rngen.randint(0, FLAGS.hole_length)
+      hole_length = self.rngen.randint(0, self.config.hole.hole_length)
       # Inside range, make sure hole length does not run over input_id_idx bounds
       hole_length = min(hole_length, len(input_ids) - input_id_idx)
       # Confirm there is no conflict with another hole, further down the sequence.
@@ -794,7 +794,7 @@ class MaskLMBatchGenerator(object):
       target = input_ids[input_id_idx] if hole_length > 0 else self.atomizer.endholeToken
 
       ## TODO. Think about '== self.atomizer.holeToken' condition.
-      # if FLAGS.randomize_mask_placement and hole_length != 0:
+      # if self.config.mask.randomize_mask_placement and hole_length != 0:
       #   if self.rngen.random() < 0.8:
       #     replacement_token = self.atomizer.holeToken
       #   else:
@@ -813,7 +813,7 @@ class MaskLMBatchGenerator(object):
                    input_ids[input_id_idx + hole_length:])
 
       masked_lms.append(MaskedLmInstance(pos_index=input_id_idx, token_id=target))
-      if not FLAGS.randomize_mask_placement:
+      if not self.config.mask.randomize_mask_placement:
         assert (input_ids[input_id_idx] == self.atomizer.holeToken, 
               "target index does not correspond to hole token: {}".format(self.atomizer.DeatomizeIndices([input_ids[input_id_idx]])))
 
@@ -881,7 +881,7 @@ class MaskLMBatchGenerator(object):
       if len(masked_lms) >= masks_to_predict:
         break
 
-      if FLAGS.randomize_mask_placement:
+      if self.config.mask.randomize_mask_placement:
         # 80% of the time, replace with [MASK]
         if self.rngen.random() < 0.8:
           input_ids[pos_index] = self.atomizer.maskToken
