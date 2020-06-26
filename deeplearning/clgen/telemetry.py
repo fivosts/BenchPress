@@ -58,7 +58,7 @@ class TrainingLogger(object):
       on_epoch_end=self.KerasEpochEndCallback,
     )
 
-  def TfRecordEpochs(self):
+  def TfRecordEpochs(self) -> None:
     from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
     event_acc = EventAccumulator(str(self.logdir))
     event_acc.Reload()
@@ -74,7 +74,7 @@ class TrainingLogger(object):
         continue
       else:
         self.telemetry.append(telemetry_pb2.ModelEpochTelemetry(
-                                  timestamp_unix_epoch_ms = round_wt,
+                                  timestamp_unix_epoch_ms = str(round_wt),
                                   epoch_num = indx,
                                   epoch_wall_time_ms = round_wt - current_time,
                                   loss = ls,
