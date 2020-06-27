@@ -47,8 +47,9 @@ model {
     data_generator {
       datapoint_type: "kernel"
       use_start_end : true
-      mask {
-        random_placed_mask: true
+      hole {
+        hole_length: 3
+        stage_training: false
       }
     }
     adam_optimizer {
