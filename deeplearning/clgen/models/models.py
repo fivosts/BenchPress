@@ -114,7 +114,6 @@ class Model(object):
       config_to_compare = model_pb2.Model()
       config_to_compare.CopyFrom(self.config)
       config_to_compare.corpus.ClearField("contentfiles")
-      config_to_compare.training.ClearField("data_generator")
       config_to_compare.training.ClearField("num_epochs")
       config_to_compare.training.ClearField("num_train_steps")
       # These fields should have already been cleared, but we'll do it again
@@ -136,7 +135,6 @@ class Model(object):
     else:
       self.meta = internal_pb2.ModelMeta()
       self.meta.config.CopyFrom(self.config)
-      self.meta.config.training.ClearField("data_generator")
       self._WriteMetafile()
 
     self.backend = {
@@ -173,7 +171,6 @@ class Model(object):
     config_to_hash.ClearField("corpus")
     config_to_hash.training.ClearField("num_epochs")
     config_to_hash.training.ClearField("num_train_steps")
-    config_to_hash.training.ClearField("data_generator")
     return crypto.sha1_list(corpus_.hash, config_to_hash.SerializeToString())
 
   def Create(self) -> bool:

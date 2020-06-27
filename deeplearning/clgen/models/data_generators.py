@@ -18,10 +18,8 @@ import numpy as np
 
 from deeplearning.clgen import cache
 from deeplearning.clgen import pbutil
-from deeplearning.clgen import crypto
 from deeplearning.clgen.tf import tf
 from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.proto import internal_pb2
 from absl import flags
 from eupy.native import logger as l
 
@@ -378,7 +376,6 @@ class MaskLMBatchGenerator(object):
     self.atomizer                = None
     self.config                  = None
     self.cache                   = None
-    self.hash                    = None
     self.shaped_corpus           = None
     self.masked_corpus           = None
 
@@ -408,26 +405,7 @@ class MaskLMBatchGenerator(object):
     d.atomizer            = corpus.atomizer
 
     d.config              = training_opts.data_generator
-    d.hash                = MaskLMBatchGenerator._ComputeHash(d.corpus, d.config)
-    d.cache               = cache.mkcache(cache_path, "dataset", d.hash)
-
-    if d.cache.get("META.pbtxt"):
-      cached_meta = pbutil.FromFile(
-        pathlib.Path(d.cache["META.pbtxt"]), internal_pb2.DataGeneratorMeta()
-      )
-      config_to_compare = model_pb2.DataGenerator()
-      config_to_compare.CopyFrom(d.config)
-
-      cached_to_compare = model_pb2.DataGenerator()
-      cached_to_compare.CopyFrom(cached_meta.config)
-
-      if config_to_compare != cached_to_compare:
-        raise SystemError("Metadata mismatch: {} \n\n {}".format(config_to_compare, cached_to_compare))
-      d.meta = cached_meta
-    else:
-      d.meta = internal_pb2.DataGeneratorMeta()
-      d.meta.config.CopyFrom(d.config)
-      d._WriteMetafile()
+    d.cache               = cache.mkcache(cache_path, "dataset")
 
     d.training_opts       = training_opts
     d.target_predictions  = FLAGS.mask_or_hole
@@ -457,30 +435,6 @@ class MaskLMBatchGenerator(object):
     d.rngen                   = random.Random(seed)
     d.max_position_embeddings = max_position_embeddings
     return d
-
-  def _WriteMetafile(self) -> None:
-    pbutil.ToFile(self.meta, self.cache.path / "META.pbtxt")
-
-  @staticmethod
-  def _ComputeHash(corpus, config: model_pb2.DataGenerator) -> str:
-    """Compute data_generator hash.
-  
-    Hash is only used on training mode to differentiate among different tf Datasets.
-    While sampling, an on-line data generator is created, based on model specs.
-  
-    The hash is computed from the ID of the corpus and the data_generator
-    proto config.
-
-    Args:
-      corpus: A corpus instance.
-      config: A data_generator config proto.
-
-    Returns:
-      The unique model ID.
-    """
-    config_to_hash = model_pb2.DataGenerator()
-    config_to_hash.CopyFrom(config)
-    return crypto.sha1_list(corpus.hash, config_to_hash.SerializeToString())
 
   def generateTfDataset(self,
                       sequence_length,
