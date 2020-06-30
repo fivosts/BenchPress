@@ -350,12 +350,20 @@ def initMain(*args, **kwargs):
   except Exception as e:
     l.getLogger().error(e)
     if mail:
-      mail.send_message("clgen", e)
+      if FLAGS.config is not None:
+        job = pathlib.Path(FLAGS.config)
+      else:
+        job = ""
+      mail.send_message("clgen:{}".format(str(job.stem)), e)
     raise
     sys.exit(1)
 
   if mail:
-    mail.send_message("clgen", "Program terminated successfully at {}.".format(datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S")))
+    if FLAGS.config is not None:
+      job = pathlib.Path(FLAGS.config)
+    else:
+      job = ""
+    mail.send_message("clgen: {}".format(str(job.stem)), "Program terminated successfully at {}.".format(datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S")))
   sys.exit(0)
 
 if __name__ == "__main__":
