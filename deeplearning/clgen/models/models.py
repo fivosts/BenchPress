@@ -231,13 +231,6 @@ class Model(object):
     self.backend.Train(self.corpus, **kwargs)
     telemetry_logs = self.backend.telemetry.EpochTelemetry()
 
-    if len(telemetry_logs) != self.backend.num_epochs:
-      raise ValueError("Epoch telemetry logs contain {} epoch entries, but model has {} epochs!"
-                              .format(
-                                  len(telemetry_logs),
-                                  self.backend.num_epochs,
-                                )
-                              )
     final_loss = telemetry_logs[-1].loss
     total_time_ms = sum(t.epoch_wall_time_ms for t in telemetry_logs)
     l.getLogger().info(
@@ -352,12 +345,13 @@ class Model(object):
             raise TypeError("Backend type check failed: {}".format(type(self.backend)))
 
           if sampler.SampleIsComplete(samples_in_progress[i]):
-            end_time  = datetime.datetime.utcnow()
-            done[i]   = 1
+            end_time      = datetime.datetime.utcnow()
+            done[i]       = 1
+            sample_kernel = [x for x in samples_in_progress[i] if x != atomizer.metaTokens['padToken']]
             sample    = model_pb2.Sample(
               train_step                = -1, # TODO self.telemetry.num_train_steps
-              text                      = "".join(samples_in_progress[i]),
-              encoded_text              = ",".join([str(atomizer.vocab[x]) for x in samples_in_progress[i]]),
+              text                      = "".join(sample_kernel),
+              encoded_text              = ",".join([str(atomizer.vocab[x]) for x in sample_kernel]),
               sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               wall_time_ms              = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
