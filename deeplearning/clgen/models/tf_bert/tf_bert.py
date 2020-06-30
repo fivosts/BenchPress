@@ -143,12 +143,12 @@ class tfBert(backends.BackendBase):
     self.train_batch_size                 = self.config.training.batch_size
     self.eval_batch_size                  = self.config.training.batch_size
     self.learning_rate                    = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
-    self.num_train_steps                  = self.config.training.num_train_steps
     self.num_warmup_steps                 = self.config.training.num_warmup_steps
 
     self.telemetry                        = telemetry.TrainingLogger(self.logfile_path)
     self.steps_per_epoch                  = data_generator.steps_per_epoch
     self.num_epochs                       = data_generator.num_epochs
+    self.num_train_steps                  = self.steps_per_epoch * self.num_epochs
     self.max_eval_steps                   = FLAGS.max_eval_steps
 
     self.validation_results_file          = "val_results.txt"
@@ -246,7 +246,7 @@ class tfBert(backends.BackendBase):
       filename = file_path.stem
       if "model.ckpt-" in filename:
         step_ckpt = int(filename.replace("model.ckpt-", ""))
-        if step_ckpt >= self.config.training.num_train_steps:
+        if step_ckpt >= self.num_train_steps:
           return True
     return False  
 
@@ -272,8 +272,9 @@ class tfBert(backends.BackendBase):
           use_tpu = FLAGS.use_tpu,
           is_training = True)
 
-      l.getLogger().info("Splitting {} steps into {} equivalent epochs, {} steps each".format(
-                                        self.num_train_steps, self.num_epochs, self.steps_per_epoch
+      l.getLogger().info("Splitting {} steps into {} equivalent epochs, {} steps each. Rejected {} redundant step(s)".format(
+                                        self.num_train_steps, self.num_epochs, 
+                                        self.steps_per_epoch, self.config.training.num_train_steps - self.num_train_steps
                                         )
                         )
       if FLAGS.sample_per_epoch == 0:
