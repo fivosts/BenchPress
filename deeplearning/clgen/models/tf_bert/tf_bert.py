@@ -284,14 +284,16 @@ class tfBert(backends.BackendBase):
         for ep in range(self.num_epochs):
           self.train.estimator.train(input_fn = train_input_fn, steps = self.steps_per_epoch)
           for _ in range(FLAGS.sample_per_epoch):
+            start_time   = datetime.datetime.utcnow()
             self.InitSampleBatch()
-            sample_batch, sample_time = self.SampleNextIndices()
+            sample_batch = self.SampleNextIndices()
+            end_time     = datetime.datetime.utcnow()
             for sample in sample_batch:
               sample_proto = model_pb2.Sample(
                 train_step                = (ep + 1) * self.steps_per_epoch,
                 text                      = self.atomizer.DeatomizeIndices(sample, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
                 encoded_text              = ",".join([str(t) for t in sample]),
-                sample_time_ms            = int(round(1000 * ((sample_time) / sampler.batch_size).total_seconds())),
+                sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
                 num_tokens                = len(sample),
                 date_added                = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
               )
@@ -343,13 +345,11 @@ class tfBert(backends.BackendBase):
     predict_generator = self.sample.estimator.predict(input_fn = predict_input_fn)
 
     output_seq, done = None, False
-    start_time = datetime.datetime.utcnow()
     for step in predict_generator:
       output_seq, done = self.sample.data_generator.updateSampleBatch(
         step['input_ids'], step['masked_lm_predictions']
         )
-    end_time = datetime.datetime.utcnow()
-    return output_seq, end_time - start_time
+    return output_seq
 
   def _getTestSampler(self, test_sampler, sequence_length):
     if test_sampler is None:
