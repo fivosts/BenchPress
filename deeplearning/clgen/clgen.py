@@ -269,7 +269,7 @@ def DoFlagsAction(
     --export_model=<path>: Train the model and export it to the requested path.
 
   Args:
-    config: The CLgen instance to act on.
+    instance: The CLgen instance to act on.
     sample_observer: A list of sample observers. Unused if no sampling occurs.
   """
 
