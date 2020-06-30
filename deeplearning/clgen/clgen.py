@@ -19,6 +19,7 @@ import pathlib
 import shutil
 import sys
 import typing
+import datetime
 
 from absl import app, flags
 
@@ -34,6 +35,7 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 
 from eupy.native import logger as l
+from eupy.hermes import client
 
 FLAGS = flags.FLAGS
 
@@ -41,6 +43,12 @@ flags.DEFINE_integer(
   "level",
   20,
   "Define logging level of logger"
+)
+
+flags.DEFINE_string(
+  "notify_me",
+  None,
+  "Set receiver mail address to notify for program failures or termination."
 )
 
 flags.DEFINE_boolean(
@@ -323,6 +331,9 @@ def initMain(*args, **kwargs):
   """
   l.initLogger(name = "clgen", lvl = FLAGS.level, colorize = FLAGS.color, step = FLAGS.step)
   tf.initTensorflow()
+  mail = None
+  if FLAGS.notify_me:
+    mail = client.gmail(FLAGS.notify_me)
   if FLAGS.clgen_debug:
     # Enable verbose stack traces. See: https://pymotw.com/2/cgitb/
     import cgitb
@@ -338,8 +349,13 @@ def initMain(*args, **kwargs):
     sys.exit(1)
   except Exception as e:
     l.getLogger().error(e)
+    if mail:
+      mail.send_message("clgen", e)
     raise
     sys.exit(1)
+
+  if mail:
+    mail.send_message("clgen", "Program terminated successfully at {}.".format(datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S")))
   sys.exit(0)
 
 if __name__ == "__main__":
