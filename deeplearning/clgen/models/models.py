@@ -338,10 +338,12 @@ class Model(object):
 
         for index in indices[i]:
           ## Legacy operation for sequential returning single token
-          if isinstance(index, int):
+          if isinstance(index, np.int32) or isinstance(index, np.int64):
             samples_in_progress[i].append(atomizer.decoder[index])
-          else: # if list or np.array
+          elif isinstance(index, np.array):
             samples_in_progress[i] = [atomizer.decoder[x] for x in index]
+          else:
+            raise TypeError("SampleNextIndices return type is wrong: {}".format(type(index)))
 
           if sampler.SampleIsComplete(samples_in_progress[i]):
             end_time  = datetime.datetime.utcnow()
@@ -350,11 +352,11 @@ class Model(object):
               train_step                = -1, # TODO self.telemetry.num_train_steps
               text                      = "".join(samples_in_progress[i]),
               encoded_text              = ",".join([str(atomizer.vocab[x]) for x in samples_in_progress[i]]),
-              sample_start_epoch_ms_utc = start_time,
-              sample_time_ms            = end_time - start_time,
-              wall_time_ms              = end_time - wall_time_start,
+              sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
+              sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
+              wall_time_ms              = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               num_tokens                = len(samples_in_progress[i]),
-              date_added                = str(datetime.datetime.utcnow()),
+              date_added                = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
             )
             # Notify sample observers.
             continue_sampling &= all(
