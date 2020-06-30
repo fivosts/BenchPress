@@ -90,6 +90,10 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         config.training.data_generator,
         "use_start_end",
       )
+      pbutil.AssertFieldIsSet(
+        config.training.data_generator,
+        "steps_per_epoch",
+      )
       # Parse masking technique for bert's data generator
       pbutil.AssertFieldIsSet(config.training.data_generator, "mask_technique")
       if config.training.data_generator.HasField("mask"):

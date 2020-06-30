@@ -37,12 +37,6 @@ flags.DEFINE_boolean(
   "Force data generator to re-mask encoded dataset and store tfRecord."
 )
 
-flags.DEFINE_integer(
-  "steps_per_epoch",
-  1000,
-  "Set how many train steps consist an epoch. Checkpoints and Loss reports have once every epoch."
-)
-
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
   X: np.array
@@ -605,7 +599,7 @@ class MaskLMBatchGenerator(object):
       assert len(self.shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
 
       # Set corpus epoch parameters
-      self.steps_per_epoch = min(self.training_opts.num_train_steps, FLAGS.steps_per_epoch)
+      self.steps_per_epoch = min(self.training_opts.num_train_steps, self.config.steps_per_epoch)
       self.num_epochs      = int(self.training_opts.num_train_steps / self.steps_per_epoch)
 
       assert self.shaped_corpus.ndim     == 2, "corpus dim: {}".format(self.shaped_corpus.shape)
