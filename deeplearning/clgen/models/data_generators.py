@@ -39,7 +39,7 @@ flags.DEFINE_boolean(
 
 flags.DEFINE_integer(
   "steps_per_epoch",
-  1500,
+  1000,
   "Set how many train steps consist an epoch. Checkpoints and Loss reports have once every epoch."
 )
 
