@@ -54,6 +54,12 @@ flags.DEFINE_boolean("mirror_gpus", False, "Set True to distribute training acro
 
 flags.DEFINE_boolean("categorical_sampling", True, "Use categorical distribution on logits when sampling.")
 
+flags.DEFINE_integer(
+    "select_checkpoint", 
+    -1,
+    "Choose an explicit checkpoint step to restart training or sampling from."
+    )
+
 flags.DEFINE_string(
     "tpu_name", None,
     "The Cloud TPU to use for training. This should be either the name "
@@ -106,6 +112,10 @@ class tfBert(backends.BackendBase):
     self.telemetry                       = None
 
     self.ckpt_path                       = self.cache.path / "checkpoints"
+    if FLAGS.select_checkpoint > 0:
+      self.ckpt_path                     = self.ckpt_path  / "model.ckpt-{}".format(FLAGS.select_checkpoint)
+      if not self.ckpt_path.exists():
+        raise ValueError("Checkpoint {} does not exist".format(self.ckpt_path))
     self.logfile_path                    = self.cache.path / "logs"
     self.sample_path                     = self.cache.path / "samples"
 
