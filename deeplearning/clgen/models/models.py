@@ -116,8 +116,8 @@ class Model(object):
       config_to_compare.corpus.ClearField("contentfiles")
       config_to_compare.training.ClearField("num_epochs")
       config_to_compare.training.ClearField("num_train_steps")
-      if config_to_compare.HasField("data_generator"):
-        config_to_compare.training.data_generator.ClearField("num_train_steps")
+      if config_to_compare.training.HasField("data_generator"):
+        config_to_compare.training.data_generator.ClearField("steps_per_epoch")
       # These fields should have already been cleared, but we'll do it again
       # so that metadata comparisons don't fail when the cached meta schema
       # is updated.
@@ -126,8 +126,8 @@ class Model(object):
       cached_to_compare.corpus.ClearField("contentfiles")
       cached_to_compare.training.ClearField("num_epochs")
       cached_to_compare.training.ClearField("num_train_steps")
-      if cached_to_compare.HasField("data_generator"):
-        cached_to_compare.training.data_generator.ClearField("num_train_steps")
+      if cached_to_compare.training.HasField("data_generator"):
+        cached_to_compare.training.data_generator.ClearField("steps_per_epoch")
       if cached_to_compare.training.sequence_length != config_to_compare.training.sequence_length:
         l.getLogger().warning("Mismatch between pre-trained and current config sequence_length!\
           This can only be intended in tfBert model!")
@@ -175,6 +175,8 @@ class Model(object):
     config_to_hash.ClearField("corpus")
     config_to_hash.training.ClearField("num_epochs")
     config_to_hash.training.ClearField("num_train_steps")
+    if config_to_hash.training.HasField("data_generator"):
+      config_to_hash.training.data_generator.ClearField("steps_per_epoch")
     return crypto.sha1_list(corpus_.hash, config_to_hash.SerializeToString())
 
   def Create(self) -> bool:
