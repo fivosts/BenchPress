@@ -37,10 +37,10 @@ flags.DEFINE_boolean(
   "Force data generator to re-mask encoded dataset and store tfRecord."
 )
 
-flags.DEFINE_string(
-  "mask_or_hole",
-  "hole",
-  "Set target prediction of MaskLM as [MASK] tokens or [HOLE] sequences."
+flags.DEFINE_integer(
+  "steps_per_epoch",
+  1500,
+  "Set how many train steps consist an epoch. Checkpoints and Loss reports have once every epoch."
 )
 
 class DataBatch(typing.NamedTuple):
@@ -356,7 +356,6 @@ class MaskLMBatchGenerator(object):
     self.steps_per_epoch         = None
 
     self.max_position_embeddings = None
-    self.target_predictions      = None
 
     self.tfRecord                = None
     self.txtRecord               = None
@@ -381,7 +380,6 @@ class MaskLMBatchGenerator(object):
     d.cache               = cache.mkcache(cache_path, "dataset")
 
     d.training_opts       = training_opts
-    d.target_predictions  = FLAGS.mask_or_hole
     d.tfRecord            = d.cache.path / "Dataset.tf_record"
     d.txtRecord           = d.cache.path / "Dataset.txt"
     d.rngen               = random.Random(training_opts.random_seed)
@@ -607,7 +605,7 @@ class MaskLMBatchGenerator(object):
       assert len(self.shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
 
       # Set corpus epoch parameters
-      self.steps_per_epoch = min(self.training_opts.num_train_steps, 1000) ## TODO add this as flag or pb param
+      self.steps_per_epoch = min(self.training_opts.num_train_steps, FLAGS.steps_per_epoch)
       self.num_epochs      = int(self.training_opts.num_train_steps / self.steps_per_epoch)
 
       assert self.shaped_corpus.ndim     == 2, "corpus dim: {}".format(self.shaped_corpus.shape)
