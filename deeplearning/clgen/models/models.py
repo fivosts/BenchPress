@@ -301,7 +301,7 @@ class Model(object):
     l.getLogger().info( "Produced {} sample batches at a rate of {} ms / batch."
                         .format(
                           humanize.intcomma(batch_count),
-                          humanize.intcomma(int((time_now - sample_start_time) / max(batch_count, 1)))
+                          humanize.intcomma(int(1000 * ((time_now - sample_start_time) / max(batch_count, 1)).total_seconds()))
                         )
     )
 
