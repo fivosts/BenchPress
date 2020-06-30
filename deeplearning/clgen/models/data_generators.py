@@ -37,38 +37,11 @@ flags.DEFINE_boolean(
   "Force data generator to re-mask encoded dataset and store tfRecord."
 )
 
-# flags.DEFINE_boolean(
-#   "random_placed_mask",
-#   True,
-#   "When selecting an index in the input tensor, the original BERT model gives 80% chance "
-#   "to replace it with a MASK, a 10% chance to replace it with another random token "
-#   "and another 10% to leave it be after all. Set True to enable this behavior. Otherwise, "
-#   "when selecting an index in the input, this will be replaced by a MASK.",
-# )
-
-# flags.DEFINE_boolean(
-#   "use_start_end", 
-#   True, 
-#   "Use [START] and [END] meta tokens at the beginning and end of each sequence."
-# )
-
 flags.DEFINE_string(
   "mask_or_hole",
   "hole",
   "Set target prediction of MaskLM as [MASK] tokens or [HOLE] sequences."
 )
-
-# flags.DEFINE_integer(
-#   "hole_length",
-#   2,
-#   "In case sequences are hole-d, choose upper bound range of possible hole length (will be [0, hole_length])."
-# )
-
-# flags.DEFINE_string(
-#   "datapoint_type",
-#   "kernel",
-#   "Represent single training instance as whole padded kernel, or arbitrary statement sequences."
-# )
 
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
@@ -634,7 +607,7 @@ class MaskLMBatchGenerator(object):
       assert len(self.shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
 
       # Set corpus epoch parameters
-      self.steps_per_epoch = min(self.training_opts.num_train_steps, 5000) ## TODO add this as flag or pb param
+      self.steps_per_epoch = min(self.training_opts.num_train_steps, 1000) ## TODO add this as flag or pb param
       self.num_epochs      = int(self.training_opts.num_train_steps / self.steps_per_epoch)
 
       assert self.shaped_corpus.ndim     == 2, "corpus dim: {}".format(self.shaped_corpus.shape)
