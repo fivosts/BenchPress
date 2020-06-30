@@ -599,8 +599,8 @@ class MaskLMBatchGenerator(object):
       assert len(self.shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
 
       # Set corpus epoch parameters
-      self.steps_per_epoch = min(self.training_opts.num_train_steps, self.config.steps_per_epoch)
-      self.num_epochs      = int(self.training_opts.num_train_steps / self.steps_per_epoch)
+      self.num_epochs      = int(self.training_opts.num_train_steps / self.config.steps_per_epoch)
+      self.steps_per_epoch = self.config.steps_per_epoch
 
       assert self.shaped_corpus.ndim     == 2, "corpus dim: {}".format(self.shaped_corpus.shape)
       assert self.shaped_corpus.shape[1] == sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(encoded_corpus.shape[1], sequence_length)
