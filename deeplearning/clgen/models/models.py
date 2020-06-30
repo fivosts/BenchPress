@@ -338,12 +338,12 @@ class Model(object):
 
         for index in indices[i]:
           ## Legacy operation for sequential returning single token
-          if isinstance(index, np.int32) or isinstance(index, np.int64):
+          if isinstance(self.backend, tf_bert.tfBert):
+            samples_in_progress[i] = [atomizer.decoder[x] for x in indices[i]]
+          elif isinstance(self.backend, tf_sequential.tfSequential) or isinstance(self.backend, keras_sequential.kerasSequential):
             samples_in_progress[i].append(atomizer.decoder[index])
-          elif isinstance(index, np.array):
-            samples_in_progress[i] = [atomizer.decoder[x] for x in index]
           else:
-            raise TypeError("SampleNextIndices return type is wrong: {}".format(type(index)))
+            raise TypeError("Backend type check failed: {}".format(type(self.backend)))
 
           if sampler.SampleIsComplete(samples_in_progress[i]):
             end_time  = datetime.datetime.utcnow()
