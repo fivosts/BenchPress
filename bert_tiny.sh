@@ -1,1 +1,1 @@
-./clgen --config model_zoo/BERT/tiny.pbtxt --min_samples 10 --workspace_dir ./workspace "$@"
+./clgen --config mask_1k.pbtxt --notify_me="fivos_ts@hotmail.com" --min_samples 10 --workspace_dir ./workspace "$@"
