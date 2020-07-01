@@ -593,6 +593,7 @@ class tfBert(backends.BackendBase):
           ])
           evaluation_hooks = self.GetValidationHooks(
             mode = mode, 
+            url  = self.logfile_path / "validation_samples.db",
             atomizer                  = self.atomizer,
             input_ids                 = input_ids, 
             input_mask                = input_mask, 
