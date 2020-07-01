@@ -537,14 +537,10 @@ class tfBert(backends.BackendBase):
       elif mode == tf.compat.v1.estimator.ModeKeys.EVAL:
         with tf.compat.v1.variable_scope("evaluation"):
 
-          def _metric_fn(masked_lm_example_loss, masked_lm_log_probs, masked_lm_ids,
+          def _metric_fn(masked_lm_example_loss, masked_lm_predictions, masked_lm_ids,
                         masked_lm_weights, next_sentence_example_loss,
-                        next_sentence_log_probs, next_sentence_labels):
-            """Computes the loss and accuracy of the model."""
-            masked_lm_log_probs = tf.reshape(masked_lm_log_probs,
-                                             [-1, masked_lm_log_probs.shape[-1]])
-            masked_lm_predictions = tf.argmax(
-                masked_lm_log_probs, axis=-1, output_type=tf.int32)
+                        next_sentence_predictions, next_sentence_labels):
+            """Computes the loss and accuracy of the model."""            
             masked_lm_example_loss = tf.reshape(masked_lm_example_loss, [-1])
             masked_lm_ids = tf.reshape(masked_lm_ids, [-1])
             masked_lm_weights = tf.reshape(masked_lm_weights, [-1])
@@ -558,10 +554,6 @@ class tfBert(backends.BackendBase):
                 weights=masked_lm_weights, 
                 name = "masked_lm_mean_loss")
 
-            next_sentence_log_probs = tf.reshape(
-                next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]])
-            next_sentence_predictions = tf.argmax(
-                next_sentence_log_probs, axis=-1, output_type=tf.int32)
             next_sentence_labels = tf.reshape(next_sentence_labels, [-1])
             next_sentence_accuracy = tf.compat.v1.metrics.accuracy(
                 labels=next_sentence_labels, 
@@ -581,13 +573,36 @@ class tfBert(backends.BackendBase):
                 'next_sentence_loss'        : next_sentence_mean_loss,
             }
 
-          eval_metrics = (_metric_fn, [
-              masked_lm_example_loss, masked_lm_log_probs, masked_lm_ids,
-              masked_lm_weights, next_sentence_example_loss,
-              next_sentence_log_probs, next_sentence_labels
-          ])
+          masked_lm_log_probs = tf.reshape(
+            masked_lm_log_probs, [-1, masked_lm_log_probs.shape[-1]]
+          )
+          masked_lm_predictions = tf.argmax(
+            masked_lm_log_probs, axis=-1, output_type=tf.int32,# name = "masked_lm_predictions"
+          )
+          next_sentence_log_probs = tf.reshape(
+            next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]]
+          )
+          next_sentence_predictions = tf.argmax(
+            next_sentence_log_probs, axis=-1, output_type=tf.int32,# name = "next_sentence_predictions"
+          )
 
-          evaluation_hooks = self.GetValidationHooks()
+          eval_metrics = (_metric_fn, [
+              masked_lm_example_loss, masked_lm_predictions, masked_lm_ids,
+              masked_lm_weights, next_sentence_example_loss,
+              next_sentence_predictions, next_sentence_labels
+          ])
+          evaluation_hooks = self.GetValidationHooks(
+            mode = mode, 
+            atomizer                  = self.atomizer,
+            input_ids                 = input_ids, 
+            input_mask                = input_mask, 
+            masked_lm_positions       = masked_lm_positions,
+            masked_lm_ids             = masked_lm_ids,
+            masked_lm_weights         = masked_lm_weights,
+            next_sentence_labels      = next_sentence_labels,
+            masked_lm_predictions     = masked_lm_predictions,
+            next_sentence_predictions = next_sentence_predictions,
+          ) 
 
           output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
               mode = mode,
@@ -762,9 +777,11 @@ class tfBert(backends.BackendBase):
   
   def GetValidationHooks(self,
                          max_steps = None,
+                         **kwargs
                          ) -> typing.List[tf.estimator.SessionRunHook]:
     if max_steps is None:
       max_steps = self.max_eval_steps
     return [
-            hooks.tfProgressBar(max_length = max_steps, mode = tf.compat.v1.estimator.ModeKeys.EVAL)
+            hooks.tfProgressBar(max_length = max_steps, mode = tf.compat.v1.estimator.ModeKeys.EVAL),
+            hooks.writeValidationDB(**kwargs)
             ]
