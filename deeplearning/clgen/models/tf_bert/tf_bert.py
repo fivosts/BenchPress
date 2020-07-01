@@ -111,6 +111,7 @@ class tfBert(backends.BackendBase):
     self.logfile_path                    = self.cache.path / "logs"
     self.sample_path                     = self.cache.path / "samples"
 
+    self.is_validated                    = False
     l.getLogger().info("BERT Model config initialized.")
     l.getLogger().info("Checkpoint path: \n{}".format(self.ckpt_path))
     l.getLogger().info("Logging path: \n{}".format(self.logfile_path))
@@ -305,7 +306,7 @@ class tfBert(backends.BackendBase):
       if not FLAGS.force_eval:
         self.Validate()
   
-    if FLAGS.force_eval:
+    if FLAGS.force_eval and not self.is_validated:
       self.Validate()
     self.telemetry.TfRecordEpochs()
     return
@@ -319,6 +320,7 @@ class tfBert(backends.BackendBase):
 
     result = self.train.estimator.evaluate(input_fn=eval_input_fn, steps=self.max_eval_steps)
     self._writeValidation(result)
+    self.is_validated = True
     return
 
   def InitSampling(self,
