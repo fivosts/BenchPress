@@ -141,11 +141,12 @@ class tfBert(backends.BackendBase):
       shutil.copy2(ckpt_current / "graph.pbtxt", ckpt_path)
       for ckpt_file in glob.glob(str(ckpt_current / "model.ckpt-{}.*".format(FLAGS.select_checkpoint_step))):
         shutil.copy2(ckpt_file, ckpt_path)
-
+      l.getLogger().warn("Explicit checkpoint selected. Explicit checkpoints can only be used for validation or sampling.")
     elif FLAGS.select_checkpoint_step == -1:
       ckpt_path = self.cache.path / "checkpoints"
     else:
       raise ValueError("Invalid value {} for --select_checkpoint_step".format(FLAGS.select_checkpoint_step))
+    l.getLogger().info("Configured model checkpoints in {}".format(ckpt_path))
     return ckpt_path
 
   def _ConfigModelParams(self):
