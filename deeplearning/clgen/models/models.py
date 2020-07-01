@@ -279,8 +279,9 @@ class Model(object):
     if not sample_observers:
       raise ValueError("Cannot sample without any observers")
 
-    sample_start_time = datetime.datetime.utcnow()
+    self.Create()
 
+    sample_start_time = datetime.datetime.utcnow()    
     l.getLogger().info("Sampling: '{}'".format(sampler.start_text))
 
     (self.cache.path / "samples" / sampler.hash).mkdir(exist_ok = True)
