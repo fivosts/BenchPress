@@ -91,6 +91,11 @@ flags.DEFINE_string(
   None,
   'Stop CLgen early. Valid options are: "corpus", or "train".',
 )
+flags.DEFINE_boolean(
+  "only_sample",
+  False,
+  "Select to deploy sampling without training."
+)
 flags.DEFINE_string(
   "print_cache_path",
   None,
@@ -191,7 +196,8 @@ class Instance(object):
       self.model.Train(*args, test_sampler = test_sampler, **kwargs)
 
   def Sample(self, *args, **kwargs) -> typing.List[model_pb2.Sample]:
-    self.Train()
+    if not FLAGS.only_sample:
+      self.Train()
     with self.Session():
       return self.model.Sample(self.sampler, *args, **kwargs)
 
