@@ -1,8 +1,10 @@
 import progressbar
 import six 
 import humanize
+import numpy as np
 
 from deeplearning.clgen.tf import tf
+from deeplearning.clgen import validation_database
 from eupy.native import logger as l
 """
 All hooks deployed for this implementation of BERT.
@@ -234,6 +236,7 @@ class writeValidationDB(_tfEstimatorHooks):
 
   def __init__(self,
                mode,
+               url,
                atomizer,
                input_ids,
                input_mask,
@@ -253,7 +256,11 @@ class writeValidationDB(_tfEstimatorHooks):
       All input and output tensors for each single validation step.
     """
     super(writeValidationDB, self).__init__(mode)
+
     self.atomizer                  = atomizer
+    self.val_db                    = validation_database.ValidationDatabase("sqlite:///{}".format(url))
+    self.val_id                    = self.val_db.count
+
     self.input_ids                 = input_ids
     self.input_mask                = input_mask
     self.masked_lm_positions       = masked_lm_positions
@@ -293,16 +300,43 @@ class writeValidationDB(_tfEstimatorHooks):
     """
     super(writeValidationDB, self).after_run(run_context, run_values)
 
-    # for bat, res in zip(run_values.results[self.input_ids], run_values.results[self.masked_lm_predictions]):
-    #   l.getLogger().warn(self.atomizer.DeatomizeIndices(bat, ignore_token = self.atomizer.padToken))
-    #   l.getLogger().warn(res)
-    # l.getLogger().warn(run_values.results[self.input_ids])
-    # l.getLogger().warn(run_values.results[self.input_mask])
-    # l.getLogger().warn(run_values.results[self.masked_lm_positions])
-    # l.getLogger().warn(run_values.results[self.masked_lm_ids])
-    # l.getLogger().warn(run_values.results[self.masked_lm_weights])
-    # l.getLogger().warn(run_values.results[self.next_sentence_labels])
-    # l.getLogger().warn(run_values.results[self.masked_lm_predictions])
-    # l.getLogger().warn(run_values.results[self.next_sentence_predictions])
-    # l.getLogger().warn(run_values.results[self.global_step])
+    batch_size = run_values.results[self.input_ids].shape[0]
+
+    masked_lm_predictions = np.reshape(
+      run_values.results[self.masked_lm_predictions],
+      (batch_size, int(len(run_values.results[self.masked_lm_predictions]) / batch_size))
+    )
+    next_sentence_predictions = np.reshape(
+      run_values.results[self.next_sentence_predictions],
+      (batch_size, int(len(run_values.results[self.next_sentence_predictions]) / batch_size))
+    )
+
+    assert run_values.results[self.input_ids].shape[0]            == batch_size
+    assert run_values.results[self.input_mask].shape[0]           == batch_size
+    assert run_values.results[self.masked_lm_positions].shape[0]  == batch_size
+    assert run_values.results[self.masked_lm_ids].shape[0]        == batch_size
+    assert run_values.results[self.masked_lm_weights].shape[0]    == batch_size
+    assert run_values.results[self.next_sentence_labels].shape[0] == batch_size
+    assert masked_lm_predictions.shape[0]                         == batch_size
+    assert next_sentence_predictions.shape[0]                     == batch_size
+
+    with self.val_db.Session(commit = True) as session:
+      for b in range(batch_size):
+        val_trace = validation_database.BERTValFile(
+          **validation_database.BERTValFile.FromArgs(
+            atomizer = self.atomizer,
+            id = self.val_id,
+            train_step                = run_values.results[self.global_step],
+            input_ids                 = run_values.results[self.input_ids][b],
+            input_mask                = run_values.results[self.input_mask][b],
+            masked_lm_positions       = run_values.results[self.masked_lm_positions][b],
+            masked_lm_ids             = run_values.results[self.masked_lm_ids][b],
+            masked_lm_weights         = run_values.results[self.masked_lm_weights][b],
+            next_sentence_labels      = run_values.results[self.next_sentence_labels][b],
+            masked_lm_predictions     = masked_lm_predictions[b],
+            next_sentence_predictions = next_sentence_predictions[b],
+          )
+        )
+        session.add(val_trace)
+        self.val_id += 1
     return
