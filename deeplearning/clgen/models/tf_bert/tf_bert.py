@@ -46,6 +46,8 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
 
+flags.DEFINE_boolean("force_eval", False, "Run Validation no matter what.")
+
 flags.DEFINE_integer("sample_per_epoch", 3, "Set above zero to sample model after every epoch.")
 
 flags.DEFINE_boolean("use_tpu", False, "Whether to use TPU or GPU/CPU.")
@@ -300,17 +302,23 @@ class tfBert(backends.BackendBase):
               )
               for obs in observers:
                 obs.OnSample(sample_proto)
-
-      l.getLogger().info("BERT Validation")
-      eval_input_fn = self.train.data_generator.generateTfDataset(
-          sequence_length = self.config.training.sequence_length,
-          num_cpu_threads = os.cpu_count(),
-          is_training     = False)
-
-      result = self.train.estimator.evaluate(input_fn=eval_input_fn, steps=self.max_eval_steps)
-      self._writeValidation(result)
-
+      if not FLAGS.force_eval:
+        self.Validate()
+  
+    if FLAGS.force_eval:
+      self.Validate()
     self.telemetry.TfRecordEpochs()
+    return
+
+  def Validate(self) -> None:
+    l.getLogger().info("BERT Validation")
+    eval_input_fn = self.train.data_generator.generateTfDataset(
+        sequence_length = self.config.training.sequence_length,
+        num_cpu_threads = os.cpu_count(),
+        is_training     = False)
+
+    result = self.train.estimator.evaluate(input_fn=eval_input_fn, steps=self.max_eval_steps)
+    self._writeValidation(result)
     return
 
   def InitSampling(self,
