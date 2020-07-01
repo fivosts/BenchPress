@@ -60,8 +60,7 @@ class _tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
     else:
       raise ValueError("mode for hook has not been provided")
 
-    if self.is_training:
-      self.global_step = _as_graph_element(tf.compat.v1.train.get_or_create_global_step())
+    self.global_step = _as_graph_element(tf.compat.v1.train.get_or_create_global_step())
     return
 
   def begin(self):
@@ -70,10 +69,9 @@ class _tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
       session_dict will be incremented by derived classes that
       need extra tensors to be evaluated
     """
-    if self.is_training:
-      self.session_dict = {
-        self.global_step: self.global_step
-      }
+    self.session_dict = {
+      self.global_step: self.global_step
+    }
     return
 
   def before_run(self, run_context):
@@ -230,3 +228,81 @@ class tfLogTensorHook(_tfEstimatorHooks):
         l.getLogger().info("Initialization: {}".format(", ".join(stats)))
       else:
         l.getLogger().info("Tensor Values: {}".format(", ".join(stats)))
+
+class writeValidationDB(_tfEstimatorHooks):
+  """Real time storage hook for validation results"""
+
+  def __init__(self,
+               mode,
+               atomizer,
+               input_ids,
+               input_mask,
+               masked_lm_positions,
+               masked_lm_ids,
+               masked_lm_weights,
+               next_sentence_labels,
+               masked_lm_predictions,
+               next_sentence_predictions,
+               ):
+    """
+    Initialize writeValidationDB
+    Stores input, target predictions, actual predictions, positions, step
+    during validation to database.
+
+    Args:
+      All input and output tensors for each single validation step.
+    """
+    super(writeValidationDB, self).__init__(mode)
+    self.atomizer                  = atomizer
+    self.input_ids                 = input_ids
+    self.input_mask                = input_mask
+    self.masked_lm_positions       = masked_lm_positions
+    self.masked_lm_ids             = masked_lm_ids
+    self.masked_lm_weights         = masked_lm_weights
+    self.next_sentence_labels      = next_sentence_labels
+    self.masked_lm_predictions     = masked_lm_predictions
+    self.next_sentence_predictions = next_sentence_predictions
+    return
+
+  def begin(self):
+    """
+        Called once at initialization stage
+    """
+    super(writeValidationDB, self).begin()
+    self.session_dict[self.input_ids]                 = self.input_ids
+    self.session_dict[self.input_mask]                = self.input_mask
+    self.session_dict[self.masked_lm_positions]       = self.masked_lm_positions
+    self.session_dict[self.masked_lm_ids]             = self.masked_lm_ids
+    self.session_dict[self.masked_lm_weights]         = self.masked_lm_weights
+    self.session_dict[self.next_sentence_labels]      = self.next_sentence_labels
+    self.session_dict[self.masked_lm_predictions]     = self.masked_lm_predictions
+    self.session_dict[self.next_sentence_predictions] = self.next_sentence_predictions
+    return
+
+  def before_run(self, run_context):
+    """
+      Called before session.run()
+      Any tensor/op should be declared here in order to be evaluated
+      returns None or SessionRunArgs()
+    """
+    return tf.estimator.SessionRunArgs(self.session_dict)
+
+  def after_run(self, run_context, run_values):
+    """
+      Requested tensors are evaluated and their values are available
+    """
+    super(writeValidationDB, self).after_run(run_context, run_values)
+
+    # for bat, res in zip(run_values.results[self.input_ids], run_values.results[self.masked_lm_predictions]):
+    #   l.getLogger().warn(self.atomizer.DeatomizeIndices(bat, ignore_token = self.atomizer.padToken))
+    #   l.getLogger().warn(res)
+    # l.getLogger().warn(run_values.results[self.input_ids])
+    # l.getLogger().warn(run_values.results[self.input_mask])
+    # l.getLogger().warn(run_values.results[self.masked_lm_positions])
+    # l.getLogger().warn(run_values.results[self.masked_lm_ids])
+    # l.getLogger().warn(run_values.results[self.masked_lm_weights])
+    # l.getLogger().warn(run_values.results[self.next_sentence_labels])
+    # l.getLogger().warn(run_values.results[self.masked_lm_predictions])
+    # l.getLogger().warn(run_values.results[self.next_sentence_predictions])
+    # l.getLogger().warn(run_values.results[self.global_step])
+    return
