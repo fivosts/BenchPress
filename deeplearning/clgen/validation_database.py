@@ -21,7 +21,7 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
   """A database row representing a CLgen validation trace.
 
   """
-  __tablename__    = "validation_traces "
+  __tablename__    = "validation_traces"
   id                            : int = sql.Column(sql.Integer,    primary_key = True)
   sha256                        : str = sql.Column(sql.String(64), nullable = False, index = True)
   train_step                    : int = sql.Column(sql.Integer,    nullable = False)
@@ -60,7 +60,7 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
 
     return {
       "id"                            : id,
-      "sha256"                        : crypto.sha256_str(str_input_ids + str_masked_lm_ids + str_masked_lm_predictions),
+      "sha256"                        : crypto.sha256_str(str(int(train_step)) + str_input_ids + str_masked_lm_ids + str_masked_lm_predictions),
       "train_step"                    : int(train_step),
       "input_ids"                     : str_input_ids,
       "encoded_input_ids"             : ','.join([str(x) for x in input_ids]),
