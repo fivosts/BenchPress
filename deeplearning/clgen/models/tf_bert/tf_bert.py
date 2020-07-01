@@ -121,9 +121,7 @@ class tfBert(backends.BackendBase):
     self.sample_path                     = self.cache.path / "samples"
 
     self.is_validated                    = False
-    l.getLogger().info("BERT Model config initialized.")
-    l.getLogger().info("Checkpoint path: \n{}".format(self.ckpt_path))
-    l.getLogger().info("Logging path: \n{}".format(self.logfile_path))
+    l.getLogger().info("BERT Model config initialized in {}".format(self.cache.path))
     return
 
   def _ConfigCheckpointParams(self):
@@ -273,13 +271,12 @@ class tfBert(backends.BackendBase):
                             ),
                   data_generator
                   )
-    l.getLogger().info("Initialized Sample Params")
+    l.getLogger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
     return
 
   @property
   def is_trained(self):
     if FLAGS.select_checkpoint_step >= 0:
-      l.getLogger().warn("Explicit checkpoint step has been selected. Training is not allowed.")
       return True
     else:
       for file_path in self.ckpt_path.iterdir():
@@ -373,7 +370,7 @@ class tfBert(backends.BackendBase):
       self._ConfigSampleParams(data_generator, sampler)
 
     ## TODO save that stuff somewhere
-    l.getLogger().info("Initialized BERT sampler in {}".format(self.sample_path))
+    l.getLogger().info("Initialized model samples in {}".format(self.sample_path))
     return 
 
   def InitSampleBatch(self, *unused_args, **unused_kwargs) -> None:
