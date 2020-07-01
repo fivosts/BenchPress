@@ -281,8 +281,6 @@ class Model(object):
 
     sample_start_time = datetime.datetime.utcnow()
 
-    self.Train()
-
     l.getLogger().info("Sampling: '{}'".format(sampler.start_text))
 
     (self.cache.path / "samples" / sampler.hash).mkdir(exist_ok = True)
