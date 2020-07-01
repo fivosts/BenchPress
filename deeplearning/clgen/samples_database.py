@@ -27,6 +27,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
   sha256           : str = sql.Column(sql.String(64), nullable = False, index = True)
   train_step       : int = sql.Column(sql.Integer,    nullable = False)
   encoded_text     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  sample_feed      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   text             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   num_tokens       : int = sql.Column(sql.Integer,    nullable = False)
   sample_time_ms   : int = sql.Column(sql.Integer,    nullable = False)
@@ -39,6 +40,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "sha256"         : crypto.sha256_str(proto.text),
       "train_step"     : proto.train_step,
       "encoded_text"   : proto.encoded_text,
+      "sample_feed"    : proto.sample_feed,
       "text"           : proto.text,
       "num_tokens"     : proto.num_tokens,
       "sample_time_ms" : proto.sample_time_ms,
