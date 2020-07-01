@@ -19,6 +19,8 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import shutil
+import glob
 import typing
 import pathlib
 import datetime
@@ -43,6 +45,13 @@ from deeplearning.clgen.models.tf_bert import hooks
 from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
+
+flags.DEFINE_integer(
+  "select_checkpoint_step",
+  -1,
+  "Select step checkpoint for sample, validation or training."
+  "Default: -1, flag ignored and latest checkpoint is loaded."
+)
 
 flags.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
 
@@ -107,7 +116,7 @@ class tfBert(backends.BackendBase):
     self.num_warmup_steps                = None
     self.telemetry                       = None
 
-    self.ckpt_path                       = self.cache.path / "checkpoints"
+    self.ckpt_path                       = self._ConfigCheckpointParams()
     self.logfile_path                    = self.cache.path / "logs"
     self.sample_path                     = self.cache.path / "samples"
 
@@ -116,6 +125,28 @@ class tfBert(backends.BackendBase):
     l.getLogger().info("Checkpoint path: \n{}".format(self.ckpt_path))
     l.getLogger().info("Logging path: \n{}".format(self.logfile_path))
     return
+
+  def _ConfigCheckpointParams(self):
+    if FLAGS.select_checkpoint_step >= 0:
+
+      ckpt_current = self.cache.path / "checkpoints"
+      if not (ckpt_current / "model.ckpt-{}.index".format(FLAGS.select_checkpoint_step)).exists():
+        raise FileNotFoundError(ckpt_current / "model.ckpt-{}.index".format(FLAGS.select_checkpoint_step))
+
+      workspace_rel_path = self.cache.path.relative_to(pathlib.Path(os.environ.get("CLGEN_CACHE")).parent)
+      ckpt_path = pathlib.Path("/tmp" / workspace_rel_path / "checkpoints")
+      ckpt_path.mkdir(exist_ok = True, parents = True)
+
+      shutil.copy2(ckpt_current / "checkpoint" , ckpt_path)
+      shutil.copy2(ckpt_current / "graph.pbtxt", ckpt_path)
+      for ckpt_file in glob.glob(str(ckpt_current / "model.ckpt-{}.*".format(FLAGS.select_checkpoint_step))):
+        shutil.copy2(ckpt_file, ckpt_path)
+
+    elif FLAGS.select_checkpoint_step == -1:
+      ckpt_path = self.cache.path / "checkpoints"
+    else:
+      raise ValueError("Invalid value {} for --select_checkpoint_step".format(FLAGS.select_checkpoint_step))
+    return ckpt_path
 
   def _ConfigModelParams(self):
     self.bertAttrs = {
@@ -246,12 +277,16 @@ class tfBert(backends.BackendBase):
 
   @property
   def is_trained(self):
-    for file_path in self.ckpt_path.iterdir():
-      filename = file_path.stem
-      if "model.ckpt-" in filename:
-        step_ckpt = int(filename.replace("model.ckpt-", ""))
-        if step_ckpt >= self.num_train_steps:
-          return True
+    if FLAGS.select_checkpoint_step >= 0:
+      l.getLogger().warn("Explicit checkpoint step has been selected. Training is not allowed.")
+      return True
+    else:
+      for file_path in self.ckpt_path.iterdir():
+        filename = file_path.stem
+        if "model.ckpt-" in filename:
+          step_ckpt = int(filename.replace("model.ckpt-", ""))
+          if step_ckpt >= self.num_train_steps:
+            return True
     return False  
 
   def Train(self,
