@@ -241,6 +241,7 @@ class tfBert(backends.BackendBase):
                             ),
                   data_generator
                   )
+    l.getLogger().info("Initialized Sample Params")
     return
 
   @property
