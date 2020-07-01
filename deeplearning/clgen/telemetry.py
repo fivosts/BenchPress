@@ -7,6 +7,7 @@ from absl import flags
 
 from deeplearning.clgen.proto import telemetry_pb2
 from deeplearning.clgen import pbutil
+from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
@@ -62,7 +63,11 @@ class TrainingLogger(object):
     from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
     event_acc = EventAccumulator(str(self.logdir))
     event_acc.Reload()
-    wall_time, step_nums, loss = zip(*event_acc.Scalars('training/total_loss'))
+    try:
+      wall_time, step_nums, loss = zip(*event_acc.Scalars('training/total_loss'))
+    except KeyError as e:
+      l.getLogger().error("Available Tags: {}".format(event_acc.Tags()))
+      raise e
     assert len(wall_time) == len(step_nums)
     assert len(step_nums) == len(loss)
 
