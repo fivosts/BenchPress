@@ -66,8 +66,17 @@ class TrainingLogger(object):
     try:
       wall_time, step_nums, loss = zip(*event_acc.Scalars('training/total_loss'))
     except KeyError as e:
-      l.getLogger().error("Available Tags: {}".format(event_acc.Tags()))
-      raise e
+      l.getLogger().warn("Model loss log not found! Available Tags: {}".format(event_acc.Tags()))
+      self.telemetry = [
+        telemetry_pb2.ModelEpochTelemetry(
+          timestamp_unix_epoch_ms = str(0),
+          epoch_num = 0,
+          epoch_wall_time_ms = 0,
+          loss = -1,
+        )
+      ]
+      return
+      
     assert len(wall_time) == len(step_nums)
     assert len(step_nums) == len(loss)
 
