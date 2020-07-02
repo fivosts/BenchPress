@@ -25,6 +25,8 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
   id                            : int = sql.Column(sql.Integer,    primary_key = True)
   sha256                        : str = sql.Column(sql.String(64), nullable = False, index = True)
   train_step                    : int = sql.Column(sql.Integer,    nullable = False)
+  original_input                : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  encoded_original_input        : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   input_ids                     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   input_mask                    : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   encoded_input_ids             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
@@ -44,6 +46,7 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
                atomizer,
                id: int,
                train_step: int,
+               original_input,
                input_ids,
                input_mask,
                masked_lm_ids,
@@ -54,14 +57,17 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
                next_sentence_predictions,
                ) -> typing.Dict[str, typing.Any]:
 
+    str_original_input              = atomizer.DeatomizeIndices(original_input, ignore_token = atomizer.padToken)
     str_input_ids                   = atomizer.DeatomizeIndices(input_ids, ignore_token = atomizer.padToken)
     str_masked_lm_ids               = '\n'.join([atomizer.decoder[x] if x != atomizer.vocab['\n'] else '\\n' for x in masked_lm_ids])
     str_masked_lm_predictions       = '\n'.join([atomizer.decoder[x] if x != atomizer.vocab['\n'] else '\\n' for x in masked_lm_predictions])
 
     return {
       "id"                            : id,
-      "sha256"                        : crypto.sha256_str(str(int(train_step)) + str_input_ids + str_masked_lm_ids + str_masked_lm_predictions),
+      "sha256"                        : crypto.sha256_str(str(int(train_step)) + str_original_input + str_input_ids + str_masked_lm_ids + str_masked_lm_predictions),
       "train_step"                    : int(train_step),
+      "original_input"                : str_original_input,
+      "encoded_original_input"        : ','.join([str(x) for x in original_input]),
       "input_ids"                     : str_input_ids,
       "encoded_input_ids"             : ','.join([str(x) for x in input_ids]),
       "input_mask"                    : ','.join([str(x) for x in input_mask]),
@@ -73,7 +79,7 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
       "masked_lm_predictions"         : str_masked_lm_predictions,
       "encoded_masked_lm_predictions" : ','.join([str(x) for x in masked_lm_predictions]),
       "next_sentence_predictions"     : int(next_sentence_predictions),
-      "num_targets"                   : list(masked_lm_ids).index(atomizer.padToken),
+      "num_targets"                   : list(masked_lm_ids).index(atomizer.padToken) if atomizer.padToken in list(masked_lm_ids) else len(list(masked_lm_ids)),
       "date_added"                    : datetime.datetime.utcnow(),
     }
 

@@ -238,6 +238,7 @@ class writeValidationDB(_tfEstimatorHooks):
                mode,
                url,
                atomizer,
+               original_input,
                input_ids,
                input_mask,
                masked_lm_positions,
@@ -261,6 +262,7 @@ class writeValidationDB(_tfEstimatorHooks):
     self.val_db                    = validation_database.ValidationDatabase("sqlite:///{}".format(url))
     self.val_id                    = self.val_db.count
 
+    self.original_input            = original_input
     self.input_ids                 = input_ids
     self.input_mask                = input_mask
     self.masked_lm_positions       = masked_lm_positions
@@ -276,6 +278,7 @@ class writeValidationDB(_tfEstimatorHooks):
         Called once at initialization stage
     """
     super(writeValidationDB, self).begin()
+    self.session_dict[self.original_input]            = self.original_input
     self.session_dict[self.input_ids]                 = self.input_ids
     self.session_dict[self.input_mask]                = self.input_mask
     self.session_dict[self.masked_lm_positions]       = self.masked_lm_positions
@@ -311,6 +314,7 @@ class writeValidationDB(_tfEstimatorHooks):
       (batch_size, int(len(run_values.results[self.next_sentence_predictions]) / batch_size))
     )
 
+    assert run_values.results[self.original_input].shape[0]       == batch_size
     assert run_values.results[self.input_ids].shape[0]            == batch_size
     assert run_values.results[self.input_mask].shape[0]           == batch_size
     assert run_values.results[self.masked_lm_positions].shape[0]  == batch_size
@@ -327,6 +331,7 @@ class writeValidationDB(_tfEstimatorHooks):
             atomizer = self.atomizer,
             id       = self.val_id,
             train_step                = run_values.results[self.global_step],
+            original_input            = run_values.results[self.original_input][b],
             input_ids                 = run_values.results[self.input_ids][b],
             input_mask                = run_values.results[self.input_mask][b],
             masked_lm_positions       = run_values.results[self.masked_lm_positions][b],

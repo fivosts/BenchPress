@@ -343,7 +343,7 @@ class tfBert(backends.BackendBase):
   
     if FLAGS.force_eval and not self.is_validated:
       self.Validate()
-    self.telemetry.TfRecordEpochs()
+    # self.telemetry.TfRecordEpochs()
     return
 
   def Validate(self) -> None:
@@ -467,6 +467,7 @@ class tfBert(backends.BackendBase):
     def _model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
       """The `model_fn` for TPUEstimator."""
 
+      original_input = features["original_input"]
       input_ids = features["input_ids"]
       input_mask = features["input_mask"]
       # segment_ids = features["segment_ids"]
@@ -595,6 +596,7 @@ class tfBert(backends.BackendBase):
             mode = mode, 
             url  = self.logfile_path / "validation_samples.db",
             atomizer                  = self.atomizer,
+            original_input            = original_input,
             input_ids                 = input_ids, 
             input_mask                = input_mask, 
             masked_lm_positions       = masked_lm_positions,
