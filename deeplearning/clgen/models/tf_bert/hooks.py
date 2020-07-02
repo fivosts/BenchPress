@@ -268,6 +268,7 @@ class writeValidationDB(_tfEstimatorHooks):
     self.masked_lm_positions       = masked_lm_positions
     self.masked_lm_ids             = masked_lm_ids
     self.masked_lm_weights         = masked_lm_weights
+    self.masked_lm_lengths         = masked_lm_lengths
     self.next_sentence_labels      = next_sentence_labels
     self.masked_lm_predictions     = masked_lm_predictions
     self.next_sentence_predictions = next_sentence_predictions
@@ -284,6 +285,7 @@ class writeValidationDB(_tfEstimatorHooks):
     self.session_dict[self.masked_lm_positions]       = self.masked_lm_positions
     self.session_dict[self.masked_lm_ids]             = self.masked_lm_ids
     self.session_dict[self.masked_lm_weights]         = self.masked_lm_weights
+    self.session_dict[self.masked_lm_lengths]         = self.masked_lm_lengths
     self.session_dict[self.next_sentence_labels]      = self.next_sentence_labels
     self.session_dict[self.masked_lm_predictions]     = self.masked_lm_predictions
     self.session_dict[self.next_sentence_predictions] = self.next_sentence_predictions
@@ -320,6 +322,7 @@ class writeValidationDB(_tfEstimatorHooks):
     assert run_values.results[self.masked_lm_positions].shape[0]  == batch_size
     assert run_values.results[self.masked_lm_ids].shape[0]        == batch_size
     assert run_values.results[self.masked_lm_weights].shape[0]    == batch_size
+    assert run_values.results[self.masked_lm_lengths].shape[0]    == batch_size
     assert run_values.results[self.next_sentence_labels].shape[0] == batch_size
     assert masked_lm_predictions.shape[0]                         == batch_size
     assert next_sentence_predictions.shape[0]                     == batch_size
@@ -337,6 +340,7 @@ class writeValidationDB(_tfEstimatorHooks):
             masked_lm_positions       = run_values.results[self.masked_lm_positions][b],
             masked_lm_ids             = run_values.results[self.masked_lm_ids][b],
             masked_lm_weights         = run_values.results[self.masked_lm_weights][b],
+            masked_lm_lengths         = run_values.results[self.masked_lm_lengths][b],
             next_sentence_labels      = run_values.results[self.next_sentence_labels][b],
             masked_lm_predictions     = masked_lm_predictions[b],
             next_sentence_predictions = next_sentence_predictions[b],
