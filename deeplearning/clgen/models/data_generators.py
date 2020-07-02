@@ -103,7 +103,7 @@ class MaskSequence(typing.NamedTuple):
     return (sys.getsizeof(self) + self.original_input.nbytes + 
            self.input_ids.nbytes + self.input_mask.nbytes +
            self.masked_lm_positions.nbytes + self.masked_lm_ids.nbytes +
-           self.masked_lm_weights.nbytes   + self.masked_lm_lengths
+           self.masked_lm_weights.nbytes   + self.masked_lm_lengths.nbytes +
            self.next_sentence_label.nbytes
            )
 
@@ -442,7 +442,7 @@ class MaskLMBatchGenerator(object):
           "masked_lm_positions"     : tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
           "masked_lm_ids"           : tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
           "masked_lm_weights"       : tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.float32),
-          "masked_lm_lengths"       : tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.float32),
+          "masked_lm_lengths"       : tf.io.FixedLenFeature([self.training_opts.max_predictions_per_seq], tf.int64),
           "next_sentence_labels"    : tf.io.FixedLenFeature([1], tf.int64),
       }
 
