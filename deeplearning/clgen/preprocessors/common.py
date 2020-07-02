@@ -109,8 +109,8 @@ def ExtractSingleKernels(text: str) -> str:
       # we are certain that brackets will be paired
       num_lbrack, num_rbrack, chunk_idx = 0, 0, 0
       while ((num_lbrack  == 0 
-         or   num_lbrack  != num_rbrack)
-        and   chunk_idx   <  len(chunk)):
+      or      num_lbrack  != num_rbrack)
+      and     chunk_idx   <  len(chunk)):
 
         try:
           cur_tok = chunk[chunk_idx]
