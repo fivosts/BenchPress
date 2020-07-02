@@ -582,16 +582,16 @@ class MaskLMBatchGenerator(object):
     start_time = time.time()
 
     # Set corpus dimension parameters
-    sequence_length             = self.training_opts.sequence_length
-    batch_size                  = self.training_opts.batch_size
-    dupe_factor                 = self.training_opts.dupe_factor
-    shuffle                     = self.training_opts.shuffle_corpus_contentfiles_between_epochs
-    pad                         = [self.atomizer.padToken   ]
-    start                       = [self.atomizer.startToken ]
-    end                         = [self.atomizer.endToken   ]
+    sequence_length = self.training_opts.sequence_length
+    batch_size      = self.training_opts.batch_size
+    dupe_factor     = self.training_opts.dupe_factor
+    shuffle         = self.training_opts.shuffle_corpus_contentfiles_between_epochs
+    pad             = [self.atomizer.padToken   ]
+    start           = [self.atomizer.startToken ]
+    end             = [self.atomizer.endToken   ]
 
     # generate a kernel corpus
-    encoded_corpus       = self.corpus.GetTrainingData()
+    encoded_corpus  = self.corpus.GetTrainingData()
 
     if self.config.datapoint_type == "kernel":
 
