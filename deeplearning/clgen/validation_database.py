@@ -34,6 +34,7 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
   masked_lm_ids                 : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   encoded_mask_lm_ids           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   masked_lm_weights             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  masked_lm_lengths             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   next_sentence_labels          : int = sql.Column(sql.Integer,    nullable = False)
   masked_lm_predictions         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   encoded_masked_lm_predictions : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
@@ -52,6 +53,7 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
                masked_lm_ids,
                masked_lm_positions,
                masked_lm_weights,
+               masked_lm_lengths,
                next_sentence_labels,
                masked_lm_predictions,
                next_sentence_predictions,
@@ -64,7 +66,13 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
 
     return {
       "id"                            : id,
-      "sha256"                        : crypto.sha256_str(str(int(train_step)) + str_original_input + str_input_ids + str_masked_lm_ids + str_masked_lm_predictions),
+      "sha256"                        : crypto.sha256_str(
+                                              str(int(train_step)) + 
+                                              str_original_input + 
+                                              str_input_ids + 
+                                              str_masked_lm_ids + 
+                                              str_masked_lm_predictions
+                                            ),
       "train_step"                    : int(train_step),
       "original_input"                : str_original_input,
       "encoded_original_input"        : ','.join([str(x) for x in original_input]),
@@ -75,6 +83,7 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
       "masked_lm_ids"                 : str_masked_lm_ids,
       "encoded_mask_lm_ids"           : ','.join([str(x) for x in masked_lm_ids]),
       "masked_lm_weights"             : ','.join([str(int(x)) for x in masked_lm_weights]),
+      "masked_lm_lengths"             : ','.join([str(int(x)) for x in masked_lm_lengths]),
       "next_sentence_labels"          : int(next_sentence_labels),
       "masked_lm_predictions"         : str_masked_lm_predictions,
       "encoded_masked_lm_predictions" : ','.join([str(x) for x in masked_lm_predictions]),
