@@ -329,7 +329,7 @@ class tfBert(backends.BackendBase):
             for sample in sample_batch:
               sample_proto = model_pb2.Sample(
                 train_step                = (ep + 1) * self.steps_per_epoch,
-                sampler_feed              = sampler.start_text,
+                sample_feed              = sampler.start_text,
                 text                      = self.atomizer.DeatomizeIndices(sample, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
                 encoded_text              = ",".join([str(t) for t in sample]),
                 sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
