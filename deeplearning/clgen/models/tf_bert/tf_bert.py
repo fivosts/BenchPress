@@ -467,13 +467,14 @@ class tfBert(backends.BackendBase):
     def _model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
       """The `model_fn` for TPUEstimator."""
 
-      original_input = features["original_input"]
-      input_ids = features["input_ids"]
-      input_mask = features["input_mask"]
-      # segment_ids = features["segment_ids"]
-      masked_lm_positions = features["masked_lm_positions"]
-      masked_lm_ids = features["masked_lm_ids"]
-      masked_lm_weights = features["masked_lm_weights"]
+      original_input       = features["original_input"]
+      input_ids            = features["input_ids"]
+      input_mask           = features["input_mask"]
+      # segment_ids        = features["segment_ids"]
+      masked_lm_positions  = features["masked_lm_positions"]
+      masked_lm_ids        = features["masked_lm_ids"]
+      masked_lm_weights    = features["masked_lm_weights"]
+      masked_lm_lenghts    = features["masked_lm_lenghts"]
       next_sentence_labels = features["next_sentence_labels"]
 
       is_training = (mode == tf.compat.v1.estimator.ModeKeys.TRAIN)
@@ -602,6 +603,7 @@ class tfBert(backends.BackendBase):
             masked_lm_positions       = masked_lm_positions,
             masked_lm_ids             = masked_lm_ids,
             masked_lm_weights         = masked_lm_weights,
+            masked_lm_lenghts         = masked_lm_lenghts,
             next_sentence_labels      = next_sentence_labels,
             masked_lm_predictions     = masked_lm_predictions,
             next_sentence_predictions = next_sentence_predictions,
