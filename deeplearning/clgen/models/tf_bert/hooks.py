@@ -244,6 +244,7 @@ class writeValidationDB(_tfEstimatorHooks):
                masked_lm_positions,
                masked_lm_ids,
                masked_lm_weights,
+               masked_lm_lengths,
                next_sentence_labels,
                masked_lm_predictions,
                next_sentence_predictions,

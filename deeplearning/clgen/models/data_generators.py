@@ -557,7 +557,7 @@ class MaskLMBatchGenerator(object):
       it = tf.compat.v1.data.make_one_shot_iterator(sample)
       (original_input, input_ids, input_mask,
         masked_lm_positions, masked_lm_ids,
-        masked_lm_weights, next_sentence_labels) = it.get_next()
+        masked_lm_weights, masked_lm_lengths, next_sentence_labels) = it.get_next()
 
       return {
           'original_input'        : original_input,
