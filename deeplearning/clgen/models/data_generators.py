@@ -1033,7 +1033,7 @@ class MaskLMBatchGenerator(object):
     if FLAGS.write_text_dataset:
       file_writer.close()
     l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
-                      .format(inst_index, self.steps_per_epoch, self.training_opts.batch_size, self.tfRecord))
+                      .format(inst_index + 1, self.steps_per_epoch, self.training_opts.batch_size, self.tfRecord))
     return
 
   def _padToMaxPosition(self, input_sample):
