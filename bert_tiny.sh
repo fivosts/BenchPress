@@ -1,1 +1,1 @@
-./clgen --notify_me="fivos_ts@hotmail.com" --min_samples 50 --workspace_dir ./workspace --config "$@"
+./clgen  --min_samples 1 --workspace_dir ./workspace --config "$@"
