@@ -95,7 +95,7 @@ def parseModels(base_path):
 
 def parseMeta(meta):
   with open(meta, 'r') as f:
-    return f.readlines()
+    return f.read().splitlines()
 
 def parseModelSummary(meta):
   m = pbutil.FromString('\n'.join(meta), internal_pb2.ModelMeta())
@@ -197,24 +197,25 @@ def corpus(workspace: str, corpus_sha: str):
   dummy_data = data
   return flask.render_template("dashboard.html", data = dummy_data, **GetBaseTemplateArgs())
 
-@flask_app.route("/<string:workspace>/corpus/<string:corpus_sha>/model/<string:model_sha>/specs")
-def model_specs(workspace: str, corpus_sha: str, model_sha: str):
-
+@flask_app.route("/<string:workspace>/model/<string:model_sha>/model_specs")
+def model_specs(workspace: str, model_sha: str):
   global data
-  model_specs = lambda x: data['workspaces'][x] if 
+  if data == {}:
+    data = parseData()
+  current_model = {}
 
-  # What do I need ? A table, listing the model specs.
-  dummy_data = {
-    "workspaces": {
-      "corpuses": {
-        'name': "haha", 
-        'path': "xoxo", 
-        'corpuses': ['1', '2', '3'], 
-        'models': ['4', '5', '6']
-        }
-    },
+  for w in data['workspaces']:
+    if data['workspaces'][w]['name'] == workspace:
+      current_workspace = data['workspaces'][w]
+      for mod in current_workspace['models']:
+        if mod['sha'] == model_sha:
+          current_model = mod
+          break
+  spec_data ={
+    'config': current_model['config']
   }
-  return flask.render_template("model.html", data = dummy_data, **GetBaseTemplateArgs())
+  l.getLogger().critical(spec_data['config'])
+  return flask.render_template("model_specs.html", data = spec_data, **GetBaseTemplateArgs())
 
 @flask_app.route("/corpus/<int:corpus_id>/model/<int:model_id>/")
 def report(corpus_id: int, model_id: int):
