@@ -217,6 +217,26 @@ def model_specs(workspace: str, model_sha: str):
   l.getLogger().critical(spec_data['config'])
   return flask.render_template("model_specs.html", data = spec_data, **GetBaseTemplateArgs())
 
+@flask_app.route("/<string:workspace>/model/<string:model_sha>/validation")
+def validation_samples(workspace: str, model_sha: str):
+  global data
+  if data == {}:
+    data = parseData()
+  current_model = {}
+
+  for w in data['workspaces']:
+    if data['workspaces'][w]['name'] == workspace:
+      current_workspace = data['workspaces'][w]
+      for mod in current_workspace['models']:
+        if mod['sha'] == model_sha:
+          current_model = mod
+          break
+  spec_data ={
+    'config': current_model['config']
+  }
+  l.getLogger().critical(spec_data['config'])
+  return flask.render_template("validation_samples.html", data = spec_data, **GetBaseTemplateArgs())
+
 @flask_app.route("/corpus/<int:corpus_id>/model/<int:model_id>/")
 def report(corpus_id: int, model_id: int):
   l.getLogger().critical("deeplearning.clgen.dashboard.report()")

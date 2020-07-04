@@ -48,3 +48,10 @@ p.config {
   line-height: 18px; 
   white-space: pre;
 }
+
+p.code {
+  font-family: "Lucida Console", "Lucida Sans Typewriter", monaco, "Bitstream Vera Sans Mono", monospace; 
+  font-size: 16px; 
+  line-height: 19px; 
+  white-space: pre;
+}
