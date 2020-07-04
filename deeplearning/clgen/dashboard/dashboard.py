@@ -2,6 +2,8 @@
 import os
 import sys
 import threading
+import pathlib
+import glob
 
 import flask
 import flask_sqlalchemy
@@ -9,8 +11,12 @@ import portpicker
 import sqlalchemy as sql
 
 from deeplearning.clgen import environment
+from deeplearning.clgen import pbutil
+from deeplearning.clgen import validation_database
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.dashboard import dashboard_db
+from deeplearning.clgen.proto import model_pb2
+from deeplearning.clgen.proto import internal_pb2
 from absl import flags
 import humanize
 
@@ -38,55 +44,176 @@ def GetBaseTemplateArgs():
   l.getLogger().debug("deeplearning.clgen.dashboard.GetBaseTemplateArgs()")
   return {
     "urls": {
-      "cache_tag": str(int(app.TIMESTAMP.timestamp())),
-      "styles_css": flask.url_for("static", filename="bootstrap.css"),
+      "cache_tag": str(5),
       "site_css": flask.url_for("static", filename="site.css"),
       "site_js": flask.url_for("static", filename="site.js"),
     },
     "build_info": {
-      "html": app.FormatShortBuildDescription(html=True),
-      "version": app.VERSION,
+      "html": "Description",
+      "version": 2,
     },
-    "dashboard_info": {"db": "sqlite:///{}/dashboard.db".format(os.path.abspath(FLAGS.workspace_dir)),},
   }
 
+def parseCorpus(base_path):
+
+  corpuses = []
+  if (base_path / "corpus" / "encoded").exists():
+    corpus_path = base_path / "corpus" / "encoded"
+    for corpus_sha in corpus_path.iterdir():
+      encoded_db = encoded.EncodedContentFiles("sqlite:///{}".format(corpus_sha / "encoded.db"), must_exist = True)
+      corpuses.append(
+        {
+          'path': str(corpus_path / corpus_sha),
+          'sha' : str(corpus_sha.stem),
+          'datapoint_count': encoded_db.size,
+          'summary': "{} datapoint corpus, {}".format(encoded_db.size, str(corpus_sha.stem))
+        }
+      )
+  return corpuses
+
+def parseModels(base_path):
+
+  models = []
+  if (base_path / "model").exists():
+    for model_sha in (base_path / "model").iterdir():
+      model_path = base_path / "model" / model_sha
+      if (model_path / "META.pbtxt").exists():
+        meta = parseMeta(model_path / "META.pbtxt")
+        models.append(
+          {          
+            'path': str(model_path),
+            'sha' : str(model_sha.stem),
+            'config': meta,
+            'training_log': parseTrainLogs(model_path / "logs"),
+            'validation': parseValidationDB(model_path / "logs" / "validation_samples.db"),
+            'samples': parseSamples(base_path, model_path / "samples"),
+            'summary': parseModelSummary(meta)
+          }
+        )
+
+  return models
+
+def parseMeta(meta):
+  with open(meta, 'r') as f:
+    return f.readlines()
+
+def parseModelSummary(meta):
+  m = pbutil.FromString('\n'.join(meta), internal_pb2.ModelMeta())
+  if m.config.architecture.backend == model_pb2.NetworkArchitecture.TENSORFLOW_BERT:
+    summary = ("TF_BERT, h_s: {}, num_h_l: {}, heads: {}, intm_s: {}, max_pemb: {}, max_preds: {}, dupe: {}, mask_prob: {}, target: {}"
+        .format(m.config.architecture.hidden_size, m.config.architecture.num_hidden_layers, m.config.architecture.num_attention_heads,
+        m.config.architecture.intermediate_size, m.config.architecture.max_position_embeddings, m.config.training.max_predictions_per_seq, 
+        m.config.training.dupe_factor, round(m.config.training.masked_lm_prob, 3),
+        "mask" if m.config.training.data_generator.HasField("mask") else "hole-{}".format(m.config.training.data_generator.hole.hole_length)
+        )
+      )
+  else:
+    summary = "TODO"
+  return summary
+
+def parseTrainLogs(logs):
+
+  log_tensors = {}
+  if len(glob.glob(str(logs / "events.out.tfevents*"))) != 0:
+    from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+    event_acc = EventAccumulator(str(logs))
+    event_acc.Reload()
+    if 'scalars' in event_acc.Tags():
+      for tag in event_acc.Tags()['scalars']:
+        wall_time, steps, value = zip(*event_acc.Scalars(tag))
+        log_tensors[tag] = [{'wall_time': w, 'step_num': s, 'value': v} for w, s, v in zip(wall_time, steps, value)]
+  return log_tensors
+
+def parseValidationDB(db_path):
+
+  validation_db = {
+    'val_sample_count': int,
+    'val_samples': [],
+  }
+  try:
+    if db_path.exists():
+      val_db = validation_database.ValidationDatabase("sqlite:///{}".format(db_path), must_exist = True)
+      validation_db['val_sample_count'] = val_db.count
+  except:
+    validation_db['val_sample_count'] = -1
+  return validation_db
+
+def parseSamples(base_path, sample_path):
+
+  model_samplers = []
+
+  if sample_path.exists():
+    for sampler_sha in sample_path.iterdir():
+      if (base_path / "sampler" / sampler_sha / "META.pbtxt").exists():
+        for db_file in (sample_path / sampler_sha):
+          if db_file.stem == "epoch_samples.db" or db_file.stem == "samples.db":
+            samples_db = samples_database.SamplesDatabase("sqlite:///{}".format(db_file), must_exist = True)
+            model_samplers.append({
+                'sha': sampler_sha,
+                'config': parseMeta(str(base_path / "sampler" / sampler_sha / "META.pbtxt")),
+                'samples': ['todo', 'todo'],
+              }
+            )
+  return model_samplers
+
+data = {}
+def parseData():
+  dashboard_path = pathlib.Path(FLAGS.workspace_dir).absolute()
+  workspaces = [p for p in dashboard_path.iterdir() if p.is_dir()]
+  global data
+  data = {
+    "workspaces": {
+      p: {
+        'name': p.stem, 
+        'path': p, 
+        'corpuses': parseCorpus(p), 
+        'models': parseModels(p)
+        } for p in workspaces
+    },
+  }
+  return data
 
 @flask_app.route("/")
 def index():
-  l.getLogger().debug("deeplearning.clgen.dashboard.index()")
-  corpuses = db.session.query(
-    dashboard_db.Corpus.id,
-    dashboard_db.Corpus.encoded_url,
-    dashboard_db.Corpus.summary,
-  ).all()
-  models = db.session.query(
-    dashboard_db.Model.id,
-    dashboard_db.Model.cache_path,
-    dashboard_db.Model.corpus_id,
-    dashboard_db.Model.summary,
-  ).all()
-
-  data = {
-    "corpuses": {
-      x.id: {"name": x.encoded_url, "summary": x.summary, "models": {}}
-      for x in corpuses
-    },
-  }
-
-  for model in sorted(models, key=lambda x: x.id):
-    data["corpuses"][model.corpus_id]["models"][model.id] = {
-      "name": model.cache_path,
-      "summary": model.summary,
-    }
-
+  global data
+  data = parseData()
   return flask.render_template(
-    "dashboard.html", data=data, **GetBaseTemplateArgs()
+    "dashboard.html", data = data, **GetBaseTemplateArgs()
   )
 
+@flask_app.route("/corpus/<string:corpus_sha>/")
+def corpus(corpus_sha: str):
+  # dummy_data = {
+  #   "workspaces": {
+  #     "corpuses": {
+  #       'name': "haha", 
+  #       'path': "xoxo", 
+  #       'corpuses': ['1', '2', '3'], 
+  #       'models': ['4', '5', '6']
+  #       }
+  #   },
+  # }
+  global data
+  dummy_data = data
+  return flask.render_template("dashboard.html", data = dummy_data, **GetBaseTemplateArgs())
+
+@flask_app.route("/corpus/<string:corpus_sha>/model/<string:model_sha>")
+def model(corpus_sha: str, model_sha: str):
+  dummy_data = {
+    "workspaces": {
+      "corpuses": {
+        'name': "haha", 
+        'path': "xoxo", 
+        'corpuses': ['1', '2', '3'], 
+        'models': ['4', '5', '6']
+        }
+    },
+  }
+  return flask.render_template("model.html", data = dummy_data, **GetBaseTemplateArgs())
 
 @flask_app.route("/corpus/<int:corpus_id>/model/<int:model_id>/")
 def report(corpus_id: int, model_id: int):
-  l.getLogger().debug("deeplearning.clgen.dashboard.report()")
+  l.getLogger().critical("deeplearning.clgen.dashboard.report()")
   corpus, corpus_config_proto, preprocessed_url, encoded_url = (
     db.session.query(
       dashboard_db.Corpus.summary,
