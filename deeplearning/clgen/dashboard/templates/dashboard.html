@@ -21,7 +21,7 @@
         <ul>
           {% for corpus in data.workspaces[workspace].corpuses %}
           <li class="corpus">
-            <a href="/corpus/{{corpus.sha}}/">
+            <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/">
               <b>{{ corpus.summary }}</b><br>
             </a>
           </li>
@@ -32,9 +32,9 @@
           <li class="model">
               <b>{{ model.summary }}</b><br>
             <ul>
-              <a href="/corpus/{{corpus.sha}}/model/{{model.sha}}/specs">[Model Specs]</a>
-              <a href="/corpus/{{corpus.sha}}/model/{{model.sha}}/validation">[Validation]</a>
-              <a href="/corpus/{{corpus.sha}}/model/{{model.sha}}/sampling">[Sampling]</a>
+              <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/specs">[Model Specs]</a>
+              <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/validation">[Validation]</a>
+              <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/sampling">[Sampling]</a>
             </ul>
           </li>
           {% endfor %}
