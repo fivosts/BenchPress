@@ -19,31 +19,36 @@
         </li>
 
         <ul>
-          {% for corpus in data.workspaces[workspace].corpuses %}
-          <li class="corpus">
-            <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/">
-              <b>{{ corpus.summary }}</b><br>
-            </a>
-          </li>
-
+          <p><b>Corpus</b></p>
+          <ul>
+            {% for corpus in data.workspaces[workspace].corpuses %}
+            <li class="corpus">
+              <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/">
+                <b>{{ corpus.summary }}</b><br>
+              </a>
+            </li>
+          </ul>
+          {% endfor %}
+        </ul>
 
         <ul>
-          {% for model in data.workspaces[workspace].models %}
-          <li class="model">
-              <b>{{ model.summary }}</b><br>
-            <ul>
-              <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/specs">[Model Specs]</a>
-              <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/training">[Training]</a>
-              <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/validation">[Validation]</a>
-              <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/sampling">[Sampling]</a>
-            </ul>
-          </li>
-          {% endfor %}
+          <p><b>Models</b></p>
+          <ul>
+            {% for model in data.workspaces[workspace].models %}
+            <li class="model">
+                {{ model.summary }}<br>
+              <ul>
+                <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/model_specs">[Model Specs]</a>
+                <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/training">[Training]</a>
+                <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/validation">[Validation]</a>
+                <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/sampling">[Sampling]</a>
+              </ul>
+            </li>
+            {% endfor %}
+          </ul>
+          <br>
         </ul>
-
-          {% endfor %}
-        </ul>
-
+        <br>
         {% endfor %}
       </ul>
     </div>
