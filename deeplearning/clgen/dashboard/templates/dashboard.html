@@ -10,24 +10,39 @@
     <div class="col">
 
       <h3>Select a Model to inspect</h3>
-      <p>Models are categorised by the corpus that they are trained on.</p>
+      <p>Current Workspaces</p>
+
       <ul>
-        {% for corpus in data.corpuses %}
-        <li class="corpus">
-          <b>{{ data.corpuses[corpus].summary }}</b><br>
-          <pre>{{ data.corpuses[corpus].name }}</pre>
+        {% for workspace in data.workspaces %}
+        <li class="workspace">
+          <b>{{ data.workspaces[workspace].name }}</b><br>
         </li>
+
         <ul>
-          {% for model in data.corpuses[corpus].models %}
-          <li class="model">
-            <a href="/corpus/{{ corpus }}/model/{{ model }}/">
-              <b>{{ data.corpuses[corpus].models[model].summary }}</b><br>
-              <pre>{{ data.corpuses[corpus].models[model].name }}</pre>
+          {% for corpus in data.workspaces[workspace].corpuses %}
+          <li class="corpus">
+            <a href="/corpus/{{corpus.sha}}/">
+              <b>{{ corpus.summary }}</b><br>
             </a>
+          </li>
+
+
+        <ul>
+          {% for model in data.workspaces[workspace].models %}
+          <li class="model">
+              <b>{{ model.summary }}</b><br>
+            <ul>
+              <a href="/corpus/{{corpus.sha}}/model/{{model.sha}}/specs">[Model Specs]</a>
+              <a href="/corpus/{{corpus.sha}}/model/{{model.sha}}/validation">[Validation]</a>
+              <a href="/corpus/{{corpus.sha}}/model/{{model.sha}}/sampling">[Sampling]</a>
+            </ul>
           </li>
           {% endfor %}
         </ul>
-        </li>
+
+          {% endfor %}
+        </ul>
+
         {% endfor %}
       </ul>
     </div>

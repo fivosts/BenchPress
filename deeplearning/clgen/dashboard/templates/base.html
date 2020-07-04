@@ -12,7 +12,7 @@
   {% block header %}{% endblock %}
 </head>
 
-<body class="d-flex flex-column">
+<body style="background-color:#272822;color:grey;" class="d-flex flex-column">
 
   <main role="main" class="flex-shrink-0">
     <div id="page-content">
@@ -21,9 +21,6 @@
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <div class="navbar-nav mr-auto"></div>
           <p class="my-2 my-lg-0">
-            <span class="navbar-text">
-              {{ dashboard_info.db }}
-            </span>
           </p>
         </div>
       </nav>
@@ -36,17 +33,6 @@
   <script src="//stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
   <script src="{{ urls.site_js }}"></script>
 
-  <footer id="sticky-footer" class="footer py-3">
-    <hr>
-    <div class="container">
-      <div class="footer-copyright text-center text-muted">
-        © 2019 <a class="me" href="https://chriscummins.cc">Chris Cummins</a><br />
-        {{ build_info.html | safe }}
-      </div>
-    </div>
-  </footer>
-
-  {% block footer %}{% endblock %}
 </body>
 
 </html>
