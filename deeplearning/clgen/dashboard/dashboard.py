@@ -181,8 +181,8 @@ def index():
     "dashboard.html", data = data, **GetBaseTemplateArgs()
   )
 
-@flask_app.route("/corpus/<string:corpus_sha>/")
-def corpus(corpus_sha: str):
+@flask_app.route("/<string:workspace>/corpus/<string:corpus_sha>/")
+def corpus(workspace: str, corpus_sha: str):
   # dummy_data = {
   #   "workspaces": {
   #     "corpuses": {
@@ -197,8 +197,11 @@ def corpus(corpus_sha: str):
   dummy_data = data
   return flask.render_template("dashboard.html", data = dummy_data, **GetBaseTemplateArgs())
 
-@flask_app.route("/corpus/<string:corpus_sha>/model/<string:model_sha>/specs")
-def model_specs(corpus_sha: str, model_sha: str):
+@flask_app.route("/<string:workspace>/corpus/<string:corpus_sha>/model/<string:model_sha>/specs")
+def model_specs(workspace: str, corpus_sha: str, model_sha: str):
+
+  global data
+  model_specs = lambda x: data['workspaces'][x] if 
 
   # What do I need ? A table, listing the model specs.
   dummy_data = {
