@@ -197,8 +197,10 @@ def corpus(corpus_sha: str):
   dummy_data = data
   return flask.render_template("dashboard.html", data = dummy_data, **GetBaseTemplateArgs())
 
-@flask_app.route("/corpus/<string:corpus_sha>/model/<string:model_sha>")
-def model(corpus_sha: str, model_sha: str):
+@flask_app.route("/corpus/<string:corpus_sha>/model/<string:model_sha>/specs")
+def model_specs(corpus_sha: str, model_sha: str):
+
+  # What do I need ? A table, listing the model specs.
   dummy_data = {
     "workspaces": {
       "corpuses": {
