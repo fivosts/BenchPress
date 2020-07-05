@@ -242,19 +242,19 @@ def validation_samples(workspace: str, model_sha: str):
     val_db = validation_database.ValidationDatabase(str(validation['path']), must_exist = True)
     with val_db.Session() as session:
       validation['val_samples'] = session.query(validation_database.BERTValFile).all()
-      random.shuffle(validation['val_samples'])
+      # random.shuffle(validation['val_samples'])
     # except Exception as e:
     #   raise e
 
     for entry in validation['val_samples']:
       processed_input_ids = []
       if '[HOLE]' in entry.input_ids:
-        target = '[HOLE]'
+        mask_type = '[HOLE]'
       elif '[MASK]' in entry.input_ids:
-        target = '[MASK]'
+        mask_type = '[MASK]'
       else:
-        target = ''
-      input_ids = entry.input_ids.split(target)
+        mask_type = ''
+      input_ids = entry.input_ids.split(mask_type)
       mask_num = entry.num_targets
       # assert mask_num == len(input_ids) - 1, "{}, {}, {}".format(entry.input_ids, mask_num, len(input_ids))
       for i in range(mask_num):
@@ -264,22 +264,22 @@ def validation_samples(workspace: str, model_sha: str):
             'color': 'plain',
           },
           {
-            'text': target.replace('\n', '\\n'),
+            'text': mask_type,
             'color': 'mask',
           },
           {
-            'text': entry.masked_lm_predictions[i].replace('\n', '\\n'),
+            'text': entry.masked_lm_predictions.split('\n')[i].replace('\n', '\\n'),
             'color': 'prediction',
           },
           {
-            'text': entry.masked_lm_ids[i].replace('\n', '\\n'),
+            'text': entry.masked_lm_ids.split('\n')[i].replace('\n', '\\n'),
             'color': 'target',
           },
         ]
-      l.getLogger().info(entry.original_input)
+      # l.getLogger().info(entry.original_input)
       l.getLogger().info(entry.input_ids)
-      l.getLogger().info(entry.masked_lm_predictions)
-      l.getLogger().info(entry.masked_lm_ids)
+      # l.getLogger().info(entry.masked_lm_predictions)
+      # l.getLogger().info(entry.masked_lm_ids)
       l.getLogger().warn(processed_input_ids)
       entry.input_ids = processed_input_ids
   return flask.render_template("validation_samples.html", data = validation, **GetBaseTemplateArgs())

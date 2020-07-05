@@ -7,19 +7,20 @@
 
   <p class="config">I am expecting validation code here<br></p>
     {% for val in data.val_samples %}
+        <p class = "code">{{val.original_input}}</p>
 
       {% for chunk in val.input_ids %}
-        <p class = "code">{{val.original_input}}</p>
-        {% if chunk.color=="plain" %}
-          <p class="code">{{chunk.text}}</p>
-        {% elif chunk.color=="mask" %}
-          <p class="mask">{{chunk.text}}</p>
-        {% elif chunk.color=="prediction" %}
-          <p class="prediction">{{chunk.text}}</p>
-        {% elif chunk.color=="target" %}
-          <p class="target">{{chunk.text}}</p>
-        {% endif %}
-
+        {%- if chunk.color=="plain" -%}
+          <span class="code">{{chunk.text}}</span>
+        {%- elif chunk.color=="mask" -%}
+          <span class = "mask">{{chunk.text}}</span>
+        {%- elif chunk.color=="prediction" -%}
+          <span class = "prediction">{{chunk.text}}</span>
+        {%- elif chunk.color=="target" -%}
+          <span class = "target">{{chunk.text}}</span>
+        {%- else -%}
+          {{chunk.text}}
+        {%- endif -%}
       {% endfor %}
 
     {% endfor %}

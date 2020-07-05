@@ -49,7 +49,7 @@ p.config {
   white-space: pre;
 }
 
-p.code {
+.code {
   font-family: "Lucida Console", "Lucida Sans Typewriter", monaco, "Bitstream Vera Sans Mono", monospace; 
   font-size: 16px; 
   line-height: 19px; 
@@ -61,7 +61,7 @@ p.code {
   font-size: 16px; 
   font-weight: bold;
   line-height: 19px; 
-  white-space: pre;
+  white-space: nowrap;
   color: #ff0000;
 }
 
@@ -70,7 +70,7 @@ p.code {
   font-size: 16px;
   font-weight: bold;
   line-height: 19px; 
-  white-space: pre;
+  white-space: nowrap;
   color: #00FFFF;
 }
 
@@ -79,6 +79,6 @@ p.code {
   font-size: 16px;
   font-weight: bold;
   line-height: 19px; 
-  white-space: pre;
+  white-space: nowrap;
   color: #00FF00;
 }
