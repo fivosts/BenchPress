@@ -1,1 +1,1 @@
-sshfs -o auto_unmount -o cache=yes -o cache_max_size=1000000000 -o ssh_command=swift
+sshfs -o auto_cache,reconnect,no_readahead s1879742@swift.inf.ed.ac.uk:/afs/inf.ed.ac.uk/user/s18/s1879742 "$@"
