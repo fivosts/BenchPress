@@ -268,11 +268,11 @@ def validation_samples(workspace: str, model_sha: str):
             'color': 'mask',
           },
           {
-            'text': entry.masked_lm_predictions.split('\n')[i].replace('\n', '\\n'),
+            'text': entry.masked_lm_predictions.split('\n')[i].replace(' ', '[ ]').replace('\n', '\\n'),
             'color': 'prediction',
           },
           {
-            'text': entry.masked_lm_ids.split('\n')[i].replace('\n', '\\n'),
+            'text': entry.masked_lm_ids.split('\n')[i].replace(' ', '[ ]').replace('\n', '\\n'),
             'color': 'target',
           },
         ]
