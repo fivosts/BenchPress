@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+ 
+{% block body %}
+<div class="container">
+<div class="row">
+<div class="col">
+
+  <p class="config">I am expecting validation code here<br></p>
+    {% for val in data.val_samples %}
+
+      {% for chunk in val.input_ids %}
+        <p class = "code">{{val.original_input}}</p>
+        {% if chunk.color=="plain" %}
+          <p class="code">{{chunk.text}}</p>
+        {% elif chunk.color=="mask" %}
+          <p class="mask">{{chunk.text}}</p>
+        {% elif chunk.color=="prediction" %}
+          <p class="prediction">{{chunk.text}}</p>
+        {% elif chunk.color=="target" %}
+          <p class="target">{{chunk.text}}</p>
+        {% endif %}
+
+      {% endfor %}
+
+    {% endfor %}
+
+</div>
+</div>
+</div>
+{% endblock %}
