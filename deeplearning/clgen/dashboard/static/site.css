@@ -12,6 +12,11 @@ body {
   margin-top: 1em;
 }
 
+.code_container {
+  font-size: 0;
+  margin-top: 1em;
+}
+
 #page-content {
   flex: 1 0 auto;
 }
@@ -42,7 +47,7 @@ li.corpus::before {
   content: "\f07c";
 }
 
-p.config {
+.config {
   font-family: "Lucida Console", "Lucida Sans Typewriter", monaco, "Bitstream Vera Sans Mono", monospace; 
   font-size: 15px; 
   line-height: 18px; 
@@ -51,34 +56,44 @@ p.config {
 
 .code {
   font-family: "Lucida Console", "Lucida Sans Typewriter", monaco, "Bitstream Vera Sans Mono", monospace; 
-  font-size: 16px; 
-  line-height: 19px; 
+  font-size: 14px; 
+  line-height: 16px; 
   white-space: pre;
+  color: #F5F5F5;
 }
 
 .mask {
   font-family: "Lucida Console", "Lucida Sans Typewriter", monaco, "Bitstream Vera Sans Mono", monospace; 
-  font-size: 16px; 
+  font-size: 14px; 
   font-weight: bold;
-  line-height: 19px; 
+  line-height: 16px; 
+  white-space: nowrap;
+  color: #ff0000;
+}
+
+.mask_length {
+  font-family: "Lucida Console", "Lucida Sans Typewriter", monaco, "Bitstream Vera Sans Mono", monospace; 
+  font-size: 10px; 
+  font-weight: bold;
+  line-height: 16px; 
   white-space: nowrap;
   color: #ff0000;
 }
 
 .prediction {
   font-family: "Lucida Console", "Lucida Sans Typewriter", monaco, "Bitstream Vera Sans Mono", monospace; 
-  font-size: 16px;
+  font-size: 14px;
   font-weight: bold;
-  line-height: 19px; 
+  line-height: 16px; 
   white-space: nowrap;
   color: #00FFFF;
 }
 
 .target {
   font-family: "Lucida Console", "Lucida Sans Typewriter", monaco, "Bitstream Vera Sans Mono", monospace; 
-  font-size: 16px;
+  font-size: 14px;
   font-weight: bold;
-  line-height: 19px; 
+  line-height: 16px; 
   white-space: nowrap;
   color: #00FF00;
 }

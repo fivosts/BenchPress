@@ -262,26 +262,41 @@ def validation_samples(workspace: str, model_sha: str):
           {
             'text': input_ids[i],
             'color': 'plain',
+            'length': len(input_ids[i]),
           },
           {
             'text': mask_type,
             'color': 'mask',
+            'length': int(entry.masked_lm_lengths.split(',')[i]),
           },
           {
             'text': entry.masked_lm_predictions.split('\n')[i].replace(' ', '[ ]').replace('\n', '\\n'),
             'color': 'prediction',
+            'length': 1,
           },
           {
             'text': entry.masked_lm_ids.split('\n')[i].replace(' ', '[ ]').replace('\n', '\\n'),
             'color': 'target',
+            'length': 1,
           },
         ]
+      while i < len(input_ids) - 1:
+        i += 1
+        processed_input_ids.append(
+          {
+            'text': input_ids[i],
+            'color': 'plain',
+            'length': len(input_ids[i]),
+          },
+        )
       # l.getLogger().info(entry.original_input)
-      l.getLogger().info(entry.input_ids)
+      # l.getLogger().info(entry.input_ids)
       # l.getLogger().info(entry.masked_lm_predictions)
       # l.getLogger().info(entry.masked_lm_ids)
-      l.getLogger().warn(processed_input_ids)
+      # l.getLogger().warn(processed_input_ids)
       entry.input_ids = processed_input_ids
+  validation['workspace'] = workspace
+  validation['model_sha'] = model_sha
   return flask.render_template("validation_samples.html", data = validation, **GetBaseTemplateArgs())
 
 @flask_app.route("/corpus/<int:corpus_id>/model/<int:model_id>/")
