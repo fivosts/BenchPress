@@ -55,3 +55,30 @@ p.code {
   line-height: 19px; 
   white-space: pre;
 }
+
+.mask {
+  font-family: "Lucida Console", "Lucida Sans Typewriter", monaco, "Bitstream Vera Sans Mono", monospace; 
+  font-size: 16px; 
+  font-weight: bold;
+  line-height: 19px; 
+  white-space: pre;
+  color: #ff0000;
+}
+
+.prediction {
+  font-family: "Lucida Console", "Lucida Sans Typewriter", monaco, "Bitstream Vera Sans Mono", monospace; 
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 19px; 
+  white-space: pre;
+  color: #00FFFF;
+}
+
+.target {
+  font-family: "Lucida Console", "Lucida Sans Typewriter", monaco, "Bitstream Vera Sans Mono", monospace; 
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 19px; 
+  white-space: pre;
+  color: #00FF00;
+}

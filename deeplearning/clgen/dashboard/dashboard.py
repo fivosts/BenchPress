@@ -4,7 +4,7 @@ import sys
 import threading
 import pathlib
 import glob
-
+import random
 import flask
 import flask_sqlalchemy
 import portpicker
@@ -127,15 +127,18 @@ def parseTrainLogs(logs):
 def parseValidationDB(db_path):
 
   validation_db = {
-    'val_sample_count': int,
+    'val_sample_count': -1,
+    'path': None,
     'val_samples': [],
   }
   try:
     if db_path.exists():
-      val_db = validation_database.ValidationDatabase("sqlite:///{}".format(db_path), must_exist = True)
+      validation_db['path'] = "sqlite:///{}".format(db_path)
+      val_db = validation_database.ValidationDatabase(validation_db['path'], must_exist = True)
       validation_db['val_sample_count'] = val_db.count
   except:
     validation_db['val_sample_count'] = -1
+    validation_db['path'] = None
   return validation_db
 
 def parseSamples(base_path, sample_path):
@@ -195,7 +198,7 @@ def corpus(workspace: str, corpus_sha: str):
   # }
   global data
   dummy_data = data
-  return flask.render_template("dashboard.html", data = dummy_data, **GetBaseTemplateArgs())
+  return flask.render_template("corpus.html", data = dummy_data, **GetBaseTemplateArgs())
 
 @flask_app.route("/<string:workspace>/model/<string:model_sha>/model_specs")
 def model_specs(workspace: str, model_sha: str):
@@ -214,7 +217,6 @@ def model_specs(workspace: str, model_sha: str):
   spec_data ={
     'config': current_model['config']
   }
-  l.getLogger().critical(spec_data['config'])
   return flask.render_template("model_specs.html", data = spec_data, **GetBaseTemplateArgs())
 
 @flask_app.route("/<string:workspace>/model/<string:model_sha>/validation")
@@ -231,15 +233,59 @@ def validation_samples(workspace: str, model_sha: str):
         if mod['sha'] == model_sha:
           current_model = mod
           break
-  spec_data ={
-    'config': current_model['config']
-  }
-  l.getLogger().critical(spec_data['config'])
-  return flask.render_template("validation_samples.html", data = spec_data, **GetBaseTemplateArgs())
+
+  validation = current_model['validation']
+
+  if validation['path']:
+    # try:
+    l.getLogger().error(validation['path'])
+    val_db = validation_database.ValidationDatabase(str(validation['path']), must_exist = True)
+    with val_db.Session() as session:
+      validation['val_samples'] = session.query(validation_database.BERTValFile).all()
+      random.shuffle(validation['val_samples'])
+    # except Exception as e:
+    #   raise e
+
+    for entry in validation['val_samples']:
+      processed_input_ids = []
+      if '[HOLE]' in entry.input_ids:
+        target = '[HOLE]'
+      elif '[MASK]' in entry.input_ids:
+        target = '[MASK]'
+      else:
+        target = ''
+      input_ids = entry.input_ids.split(target)
+      mask_num = entry.num_targets
+      # assert mask_num == len(input_ids) - 1, "{}, {}, {}".format(entry.input_ids, mask_num, len(input_ids))
+      for i in range(mask_num):
+        processed_input_ids += [
+          {
+            'text': input_ids[i],
+            'color': 'plain',
+          },
+          {
+            'text': target.replace('\n', '\\n'),
+            'color': 'mask',
+          },
+          {
+            'text': entry.masked_lm_predictions[i].replace('\n', '\\n'),
+            'color': 'prediction',
+          },
+          {
+            'text': entry.masked_lm_ids[i].replace('\n', '\\n'),
+            'color': 'target',
+          },
+        ]
+      l.getLogger().info(entry.original_input)
+      l.getLogger().info(entry.input_ids)
+      l.getLogger().info(entry.masked_lm_predictions)
+      l.getLogger().info(entry.masked_lm_ids)
+      l.getLogger().warn(processed_input_ids)
+      entry.input_ids = processed_input_ids
+  return flask.render_template("validation_samples.html", data = validation, **GetBaseTemplateArgs())
 
 @flask_app.route("/corpus/<int:corpus_id>/model/<int:model_id>/")
 def report(corpus_id: int, model_id: int):
-  l.getLogger().critical("deeplearning.clgen.dashboard.report()")
   corpus, corpus_config_proto, preprocessed_url, encoded_url = (
     db.session.query(
       dashboard_db.Corpus.summary,

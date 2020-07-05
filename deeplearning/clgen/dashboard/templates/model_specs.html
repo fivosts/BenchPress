@@ -1,10 +1,11 @@
 {% extends "base.html" %}
-  <p>Model Specs</p>
  
 {% block body %}
 <div class="container">
 <div class="row">
 <div class="col">
+
+  <p><b>Model Specs:<br></b></p>
 
   <p class="config">{% for config in data.config %}{{config}}<br>{% endfor %}</p>
 
