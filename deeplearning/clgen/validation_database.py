@@ -17,9 +17,17 @@ FLAGS = flags.FLAGS
 
 Base = declarative.declarative_base()
 
-class BERTValFile(Base, sqlutil.ProtoBackedMixin):
-  """A database row representing a CLgen validation trace.
+class ValResults(Base):
+  __tablename__ = "validation_results"
+  """
+    DB Table for concentrated validation results.
+  """
+  key     : str = sql.Column(sql.String(1024), primary_key=True)
+  results : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
 
+class BERTValFile(Base, sqlutil.ProtoBackedMixin):
+  """
+    A database entry representing a CLgen validation trace.
   """
   __tablename__    = "validation_traces"
   id                            : int = sql.Column(sql.Integer,    primary_key = True)

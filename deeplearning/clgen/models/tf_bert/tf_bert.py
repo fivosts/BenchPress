@@ -30,6 +30,7 @@ from absl import flags
 
 from deeplearning.clgen import samplers
 from deeplearning.clgen import sample_observers
+from deeplearning.clgen import validation_database
 from deeplearning.clgen.util.tf import tf
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.proto import model_pb2
@@ -453,14 +454,12 @@ class tfBert(backends.BackendBase):
     # paths += self.data_generator.InferenceManifest # TODO
     return sorted(paths)
 
-  def _writeValidation(self,
-                       result
-                       ) -> None:
+  def _writeValidation(self, result) -> None:
     with tf.io.gfile.GFile(self.validation_results_path, "w") as writer:
-      l.getLogger().info("Validation set result summary")
-      for key in sorted(result.keys()):
-        l.getLogger().info("{}: {}".format(key, str(result[key])))
-        writer.write("{}: {}\n".format(key, str(result[key])))
+      db = validation_database.ValidationDatabase("sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")))
+      r = [ "{}: {}".format(key, str(result[key])) for key in result.keys() ]
+      with db.Session(commit = True) as session:
+        session.add(validation_database.ValResults(key = "done", results = "\n".join(r)))
     return 
 
   def _model_fn_builder(self,
@@ -571,9 +570,6 @@ class tfBert(backends.BackendBase):
                 name = "next_sentence_mean_loss")
 
             return {
-                # 'input_ids'                 : input_ids,
-                # 'masked_lm_predictions'     : masked_lm_predictions,
-                # 'next_sentence_predictions' : next_sentence_predictions,
                 'masked_lm_accuracy'        : masked_lm_accuracy,
                 'masked_lm_loss'            : masked_lm_mean_loss,
                 'next_sentence_accuracy'    : next_sentence_accuracy,
