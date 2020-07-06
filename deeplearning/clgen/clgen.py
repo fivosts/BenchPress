@@ -127,7 +127,7 @@ flags.DEFINE_boolean(
 class Instance(object):
   """A CLgen instance encapsulates a model, sampler, and working directory."""
 
-  def __init__(self, config: clgen_pb2.Instance, dashboard_opts={}):
+  def __init__(self, config: clgen_pb2.Instance):
     """Instantiate an instance.
 
     Args:
@@ -160,7 +160,7 @@ class Instance(object):
         )
       self.sampler: samplers.Sampler = samplers.Sampler(config.sampler)
 
-    self.dashboard = dashboard.Launch(**dashboard_opts)
+    self.dashboard = dashboard.Launch()
 
   @contextlib.contextmanager
   def Session(self) -> "Instance":
@@ -288,9 +288,6 @@ def DoFlagsAction(
   """
 
   with instance.Session():
-    if FLAGS.clgen_dashboard_only:
-      instance.Create()
-      return
     if FLAGS.print_cache_path == "corpus":
       print(instance.model.corpus.cache.path)
       return
@@ -320,12 +317,15 @@ def DoFlagsAction(
 
 def main():
   """Main entry point."""
-  instance = Instance(
-    ConfigFromFlags(), dashboard_opts={"debug": FLAGS.clgen_dashboard_only,}
-  )
-  sample_observers = SampleObserversFromFlags(instance)
-  DoFlagsAction(instance, sample_observers)
-  return
+  if FLAGS.clgen_dashboard_only:
+    dash = dashboard.Launch({"debug": True})
+  else:
+    instance = Instance(
+      ConfigFromFlags(), dashboard_opts={"debug": FLAGS.clgen_dashboard_only,}
+    )
+    sample_observers = SampleObserversFromFlags(instance)
+    DoFlagsAction(instance, sample_observers)
+return
 
 def initMain(*args, **kwargs):
   """
