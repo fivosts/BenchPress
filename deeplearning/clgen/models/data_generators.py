@@ -394,7 +394,7 @@ class MaskLMBatchGenerator(object):
     d.CreateCorpus()
     if not d.tfRecord.exists() or FLAGS.force_remake_dataset:
       if FLAGS.force_remake_dataset:
-        l.getLogger().warn("Force remaking the dataset can cause all sorts of problems on an already trained model. Are you sure you want to move forward ?")
+        l.getLogger().warn("Force remaking the dataset can cause all sorts of problems on an already trained model. Are you sure you want to move forward ? [y/n]")
         a = input()
         if a.lower() == "yes" or a.lower() == "y":
           d._MaskCorpus(d.shaped_corpus)
@@ -817,7 +817,11 @@ class MaskLMBatchGenerator(object):
 
     input_mask = np.ones(len(seq), dtype = np.int32)
     if self.atomizer.padToken in input_ids:
-      input_mask[input_ids.index(self.atomizer.padToken):] = 0
+      first_pad_index = input_ids.index(self.atomizer.padToken)
+      input_mask[first_pad_index:] = 0
+      # Check that the pad index is likely correct.
+      assert input_ids[first_pad_index + 1] == self.atomizer.padToken
+      assert input_ids[first_pad_index - 1] != self.atomizer.padToken
 
     seen_in_training    = np.int32(1)
     next_sentence_label = np.int32(0)
