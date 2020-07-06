@@ -102,6 +102,9 @@ class tfSequential(backends.BackendBase):
     )
     self.summary_writer = tf.compat.v1.summary.FileWriter(tensorboard_dir)
 
+  def samplesWithCategorical(self):
+    return True
+
   def InitTfGraph(
     self, sampler: typing.Optional[samplers.Sampler] = None
   ) -> "tf":

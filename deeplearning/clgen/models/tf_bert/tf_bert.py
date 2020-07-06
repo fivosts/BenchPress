@@ -49,7 +49,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer(
   "select_checkpoint_step",
   -1,
-  "Select step checkpoint for sample, validation or training."
+  "Select step checkpoint for sample. Re-training with this flag is not supported. "
+  "To restart from specific checkpoint, you have to manually remove the checkpoints after the desired one."
   "Default: -1, flag ignored and latest checkpoint is loaded."
 )
 
@@ -287,6 +288,9 @@ class tfBert(backends.BackendBase):
             return True
     return False  
 
+  def samplesWithCategorical(self):
+    return FLAGS.categorical_sampling
+
   def Train(self,
             corpus,
             test_sampler: typing.Optional[samplers.Sampler] = None,
@@ -328,13 +332,14 @@ class tfBert(backends.BackendBase):
             end_time     = datetime.datetime.utcnow()
             for sample in sample_batch:
               sample_proto = model_pb2.Sample(
-                train_step                = (ep + 1) * self.steps_per_epoch,
-                sample_feed              = sampler.start_text,
-                text                      = self.atomizer.DeatomizeIndices(sample, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
-                encoded_text              = ",".join([str(t) for t in sample]),
-                sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
-                num_tokens                = len(sample),
-                date_added                = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
+                train_step           = (ep + 1) * self.steps_per_epoch,
+                sample_feed          = sampler.start_text,
+                text                 = self.atomizer.DeatomizeIndices(sample, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
+                encoded_text         = ",".join([str(t) for t in sample]),
+                sample_time_ms       = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
+                num_tokens           = len(sample),
+                categorical_sampling = self.samplesWithCategorical(),
+                date_added           = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
               )
               for obs in observers:
                 obs.OnSample(sample_proto)

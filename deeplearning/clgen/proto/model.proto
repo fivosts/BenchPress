@@ -206,6 +206,7 @@ message Sample {
   optional int32 wall_time_ms              = 5;
   optional int64 sample_start_epoch_ms_utc = 6;
   optional int32 num_tokens                = 7;
-  optional int32 train_step                = 8;
-  optional string date_added               = 9;
+  optional bool  categorical_sampling      = 8;
+  optional int32 train_step                = 9;
+  optional string date_added               = 10;
 }

@@ -356,6 +356,7 @@ class Model(object):
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               wall_time_ms              = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               num_tokens                = len(samples_in_progress[i]),
+              categorical_sampling      = self.backend.samplesWithCategorical(),
               date_added                = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
             )
             # Notify sample observers.

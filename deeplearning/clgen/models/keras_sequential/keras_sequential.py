@@ -60,6 +60,9 @@ class kerasSequential(backends.BackendBase):
     self._training_model = self.Train()
     return self._training_model
 
+  def samplesWithCategorical(self):
+    return True
+
   def Train(self, corpus, **unused_kwargs) -> "keras.models.Sequential":
     """Locked training.
 
