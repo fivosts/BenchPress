@@ -325,7 +325,7 @@ def main():
     )
     sample_observers = SampleObserversFromFlags(instance)
     DoFlagsAction(instance, sample_observers)
-return
+  return
 
 def initMain(*args, **kwargs):
   """
