@@ -320,9 +320,7 @@ def main():
   if FLAGS.clgen_dashboard_only:
     dash = dashboard.Launch({"debug": True})
   else:
-    instance = Instance(
-      ConfigFromFlags(), dashboard_opts={"debug": FLAGS.clgen_dashboard_only,}
-    )
+    instance = Instance(ConfigFromFlags())
     sample_observers = SampleObserversFromFlags(instance)
     DoFlagsAction(instance, sample_observers)
   return
