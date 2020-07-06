@@ -28,7 +28,7 @@ import progressbar
 import tensorflow_addons as tfa
 
 from deeplearning.clgen import samplers
-from deeplearning.clgen import telemetry
+from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import data_generators

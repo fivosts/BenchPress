@@ -21,8 +21,8 @@ import numpy as np
 
 from deeplearning.clgen import sample_observers as sample_observers_lib
 from deeplearning.clgen import samplers
-from deeplearning.clgen import telemetry
 from deeplearning.clgen.corpuses import atomizers
+from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models.keras_sequential import keras_sequential
 from deeplearning.clgen.models.tf_sequential import tf_sequential
 from deeplearning.clgen.models.tf_bert import tf_bert

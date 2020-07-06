@@ -20,7 +20,7 @@ import typing
 import numpy as np
 
 from deeplearning.clgen import samplers
-from deeplearning.clgen import telemetry
+from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import builders
 from deeplearning.clgen.models import data_generators

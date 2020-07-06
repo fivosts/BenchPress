@@ -30,14 +30,14 @@ from absl import flags
 
 from deeplearning.clgen import samplers
 from deeplearning.clgen import sample_observers
-from deeplearning.clgen import telemetry
-from deeplearning.clgen.tf import tf
+from deeplearning.clgen.util.tf import tf
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import data_generators
+from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models.tf_bert import model
 from deeplearning.clgen.models.tf_bert import optimizer
 from deeplearning.clgen.models.tf_bert import hooks

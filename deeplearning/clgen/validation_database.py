@@ -91,7 +91,7 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
       "encoded_masked_lm_predictions" : ','.join([str(x) for x in masked_lm_predictions]),
       "next_sentence_predictions"     : int(next_sentence_predictions),
       "num_targets"                   : list(masked_lm_ids).index(atomizer.padToken) if atomizer.padToken in list(masked_lm_ids) else len(list(masked_lm_ids)),
-      "seen_in_training"              : "yes" if int(seen_in_training) == 1 else "no" if int(seen_in_training) == 0 else "unlikely"
+      "seen_in_training"              : "yes" if int(seen_in_training) == 1 else "no" if int(seen_in_training) == 0 else "unlikely",
       "date_added"                    : datetime.datetime.utcnow(),
     }
 
