@@ -256,7 +256,7 @@ def validation_samples(workspace: str, model_sha: str):
         mask_type = ''
       input_ids = sample.input_ids.split(mask_type)
       mask_num = sample.num_targets
-      # assert mask_num == len(input_ids) - 1, "{}, {}, {}".format(sample.input_ids, mask_num, len(input_ids))
+
       for i in range(mask_num):
         processed_input_ids += [
           {
