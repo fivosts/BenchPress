@@ -498,7 +498,7 @@ def Launch(debug: bool = False):
     "port": port,
     # Debugging must be disabled when run in a separate thread.
     "debug": debug,
-    "host": "0.0.0.0", # TODO try a url for this
+    "host": "0.0.0.0",
   }
 
   db.create_all()
