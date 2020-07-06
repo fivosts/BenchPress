@@ -25,7 +25,7 @@ import math
 import re
 import numpy as np
 import six
-from deeplearning.clgen.tf import tf
+from deeplearning.clgen.util.tf import tf
 
 class BertConfig(object):
   """Configuration for `BertModel`."""

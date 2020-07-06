@@ -3,7 +3,7 @@ import six
 import humanize
 import numpy as np
 
-from deeplearning.clgen.tf import tf
+from deeplearning.clgen.util.tf import tf
 from deeplearning.clgen import validation_database
 from eupy.native import logger as l
 """
