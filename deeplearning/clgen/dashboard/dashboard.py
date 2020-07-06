@@ -246,17 +246,17 @@ def validation_samples(workspace: str, model_sha: str):
     # except Exception as e:
     #   raise e
 
-    for entry in validation['val_samples']:
+    for sample in validation['val_samples']:
       processed_input_ids = []
-      if '[HOLE]' in entry.input_ids:
+      if '[HOLE]' in sample.input_ids:
         mask_type = '[HOLE]'
-      elif '[MASK]' in entry.input_ids:
+      elif '[MASK]' in sample.input_ids:
         mask_type = '[MASK]'
       else:
         mask_type = ''
-      input_ids = entry.input_ids.split(mask_type)
-      mask_num = entry.num_targets
-      # assert mask_num == len(input_ids) - 1, "{}, {}, {}".format(entry.input_ids, mask_num, len(input_ids))
+      input_ids = sample.input_ids.split(mask_type)
+      mask_num = sample.num_targets
+      # assert mask_num == len(input_ids) - 1, "{}, {}, {}".format(sample.input_ids, mask_num, len(input_ids))
       for i in range(mask_num):
         processed_input_ids += [
           {
@@ -267,15 +267,15 @@ def validation_samples(workspace: str, model_sha: str):
           {
             'text': mask_type,
             'color': 'mask',
-            'length': int(entry.masked_lm_lengths.split(',')[i]),
+            'length': int(sample.masked_lm_lengths.split(',')[i]),
           },
           {
-            'text': entry.masked_lm_predictions.split('\n')[i].replace(' ', '[ ]').replace('\n', '\\n'),
+            'text': sample.masked_lm_predictions.split('\n')[i].replace(' ', '[ ]').replace('\n', '\\n'),
             'color': 'prediction',
             'length': 1,
           },
           {
-            'text': entry.masked_lm_ids.split('\n')[i].replace(' ', '[ ]').replace('\n', '\\n'),
+            'text': sample.masked_lm_ids.split('\n')[i].replace(' ', '[ ]').replace('\n', '\\n'),
             'color': 'target',
             'length': 1,
           },
@@ -289,12 +289,12 @@ def validation_samples(workspace: str, model_sha: str):
             'length': len(input_ids[i]),
           },
         )
-      # l.getLogger().info(entry.original_input)
-      # l.getLogger().info(entry.input_ids)
-      # l.getLogger().info(entry.masked_lm_predictions)
-      # l.getLogger().info(entry.masked_lm_ids)
+      # l.getLogger().info(sample.original_input)
+      # l.getLogger().info(sample.input_ids)
+      # l.getLogger().info(sample.masked_lm_predictions)
+      # l.getLogger().info(sample.masked_lm_ids)
       # l.getLogger().warn(processed_input_ids)
-      entry.input_ids = processed_input_ids
+      sample.input_ids = processed_input_ids
   validation['workspace'] = workspace
   validation['model_sha'] = model_sha
   return flask.render_template("validation_samples.html", data = validation, **GetBaseTemplateArgs())
