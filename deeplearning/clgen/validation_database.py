@@ -10,7 +10,7 @@ from absl import flags
 
 from deeplearning.clgen import sample_observers
 from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen import crypto
+from deeplearning.clgen.util import crypto
 from labm8.py import sqlutil
 
 FLAGS = flags.FLAGS

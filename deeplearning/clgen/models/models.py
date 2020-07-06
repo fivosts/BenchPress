@@ -19,15 +19,16 @@ import getpass
 import pathlib
 import typing
 import datetime
+import humanize
 
 import numpy as np
-
-from deeplearning.clgen.util import cache
 
 from deeplearning.clgen import sample_observers as sample_observers_lib
 from deeplearning.clgen import samplers
 from deeplearning.clgen import telemetry
 from deeplearning.clgen.util import pbutil
+from deeplearning.clgen.util import cache
+from deeplearning.clgen.util import crypto
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.dashboard import dashboard_db
@@ -39,8 +40,6 @@ from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import telemetry_pb2
 from absl import flags
-from deeplearning.clgen import crypto
-import humanize
 from labm8.py import sqlutil
 
 from eupy.native import logger as l
