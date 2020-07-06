@@ -103,7 +103,7 @@ class MaskSequence(typing.NamedTuple):
   @property
   def sizeof_sequence(self):
     return (sys.getsizeof(self) + 
-           self.seen_in_training + self.original_input.nbytes + 
+           self.seen_in_training.nbytes + self.original_input.nbytes + 
            self.input_ids.nbytes + self.input_mask.nbytes +
            self.masked_lm_positions.nbytes + self.masked_lm_ids.nbytes +
            self.masked_lm_weights.nbytes   + self.masked_lm_lengths.nbytes +
@@ -814,6 +814,7 @@ class MaskLMBatchGenerator(object):
     if self.atomizer.padToken in input_ids:
       input_mask[input_ids.index(self.atomizer.padToken):] = 0
 
+    seen_in_training    = np.int32(1)
     next_sentence_label = np.int32(0)
     ## Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
     ## is intended on kernels. In any other case, check bert's create_instances_from_document
@@ -832,7 +833,7 @@ class MaskLMBatchGenerator(object):
         masked_lm_weights.append(0.0)
         masked_lm_lengths.append(-1)
 
-    return MaskSequence(seq, 
+    return MaskSequence(seen_in_training, seq,
                         np.asarray(input_ids[:len(seq)]), input_mask,
                         np.asarray(masked_lm_positions),  np.asarray(masked_lm_ids), 
                         np.asarray(masked_lm_weights),    np.asarray(masked_lm_lengths),
@@ -893,6 +894,8 @@ class MaskLMBatchGenerator(object):
     input_mask = np.ones(len(seq), dtype = np.int32)
     if self.atomizer.padToken in input_ids:
       input_mask[input_ids.index(self.atomizer.padToken):] = 0
+
+    seen_in_training    = np.int32(1)
     next_sentence_label = np.int32(0)
     ## Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
     ## is intended on kernels. In any other case, check bert's create_instances_from_document
@@ -911,7 +914,7 @@ class MaskLMBatchGenerator(object):
         masked_lm_weights.append(0.0)
         masked_lm_lengths.append(-1)
 
-    return MaskSequence(seq, 
+    return MaskSequence(seen_in_training, seq,
                         np.asarray(input_ids),           input_mask,
                         np.asarray(masked_lm_positions), np.asarray(masked_lm_ids), 
                         np.asarray(masked_lm_weights),   np.asarray(masked_lm_lengths),
@@ -1002,7 +1005,7 @@ class MaskLMBatchGenerator(object):
       features              = collections.OrderedDict()
 
       features["seen_in_training"]      = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list(seen_in_training)))
+                                                                value = list([seen_in_training])))
 
       features["original_input"]        = tf.train.Feature(int64_list = tf.train.Int64List(
                                                                 value = list(original_input)))

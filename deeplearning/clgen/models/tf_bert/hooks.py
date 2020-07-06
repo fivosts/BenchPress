@@ -338,7 +338,7 @@ class writeValidationDB(_tfEstimatorHooks):
             atomizer = self.atomizer,
             id       = self.val_id,
             train_step                = run_values.results[self.global_step],
-            seen_in_training          = run_values.results[self.seen_in_training],
+            seen_in_training          = run_values.results[self.seen_in_training][b],
             original_input            = run_values.results[self.original_input][b],
             input_ids                 = run_values.results[self.input_ids][b],
             input_mask                = run_values.results[self.input_mask][b],
