@@ -821,23 +821,37 @@ class MaskLMBatchGenerator(object):
 
     seen_in_training    = np.int32(1)
     next_sentence_label = np.int32(0)
-    ## Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
-    ## is intended on kernels. In any other case, check bert's create_instances_from_document
-    ## to see how next_sentence_labels are calculated.
-    ## Setting this to 0 means that next sentence is NOT random.
-    ## Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.
+    """
+      Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
+      is intended on kernels. In any other case, check bert's create_instances_from_document
+      to see how next_sentence_labels are calculated.
+      Setting this to 0 means that next sentence is NOT random.
+      Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.    
+    """
 
     for p in masked_lms:
-      masked_lm_positions.append(p.pos_index)
-      masked_lm_ids.append(p.token_id)
-      masked_lm_weights.append(1.0)
-      masked_lm_lengths.append(p.hole_length)
+      if p.pos_index < len(seq):
+        """
+          Adding holes can increase or decrease the length of the original sequence.
+          It is important in the end, to end up with an input sequence compatible
+          with the model's sequence length, i.e. len(seq). If any mask is found 
+          beyond that point, will have to be rejected.
+        """
+        masked_lm_positions.append(p.pos_index)
+        masked_lm_ids.append(p.token_id)
+        masked_lm_weights.append(1.0)
+        masked_lm_lengths.append(p.hole_length)
+    num_holes = len(masked_lm_positions)
     while len(masked_lm_positions) < self.training_opts.max_predictions_per_seq:
         masked_lm_positions.append(0)
         masked_lm_ids.append(self.atomizer.padToken)
         masked_lm_weights.append(0.0)
         masked_lm_lengths.append(-1)
 
+    assert (input_ids[:len(seq)].count(self.atomizer.holeToken) == num_holes,
+      "Number of targets {} does not correspond to hole number in final input sequence: {}"
+      .format(num_holes, input_ids[:len(seq)].count(self.atomizer.holeToken))
+    )
     return MaskSequence(seen_in_training, seq,
                         np.asarray(input_ids[:len(seq)]), input_mask,
                         np.asarray(masked_lm_positions),  np.asarray(masked_lm_ids), 
