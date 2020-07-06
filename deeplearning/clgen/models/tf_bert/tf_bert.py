@@ -467,6 +467,7 @@ class tfBert(backends.BackendBase):
     def _model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
       """The `model_fn` for TPUEstimator."""
 
+      seen_in_training     = features["seen_in_training"]
       original_input       = features["original_input"]
       input_ids            = features["input_ids"]
       input_mask           = features["input_mask"]
@@ -597,6 +598,7 @@ class tfBert(backends.BackendBase):
             mode = mode, 
             url  = self.logfile_path / "validation_samples.db",
             atomizer                  = self.atomizer,
+            seen_in_training          = seen_in_training,
             original_input            = original_input,
             input_ids                 = input_ids, 
             input_mask                = input_mask, 

@@ -22,25 +22,25 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
 
   """
   __tablename__    = "validation_traces"
-  id                            : int  = sql.Column(sql.Integer,    primary_key = True)
-  sha256                        : str  = sql.Column(sql.String(64), nullable = False, index = True)
-  train_step                    : int  = sql.Column(sql.Integer,    nullable = False)
-  original_input                : str  = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  encoded_original_input        : str  = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  input_ids                     : str  = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  input_mask                    : str  = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  encoded_input_ids             : str  = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  masked_lm_positions           : str  = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  masked_lm_ids                 : str  = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  encoded_mask_lm_ids           : str  = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  masked_lm_weights             : str  = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  masked_lm_lengths             : str  = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  next_sentence_labels          : int  = sql.Column(sql.Integer,    nullable = False)
-  masked_lm_predictions         : str  = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  encoded_masked_lm_predictions : str  = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  next_sentence_predictions     : int  = sql.Column(sql.Integer,    nullable = False)
-  num_targets                   : int  = sql.Column(sql.Integer,    nullable = False)
-  seen_in_training              : bool = sql.Column(sql.Boolean,    nullable = False)
+  id                            : int = sql.Column(sql.Integer,    primary_key = True)
+  sha256                        : str = sql.Column(sql.String(64), nullable = False, index = True)
+  train_step                    : int = sql.Column(sql.Integer,    nullable = False)
+  original_input                : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  encoded_original_input        : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  input_ids                     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  input_mask                    : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  encoded_input_ids             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  masked_lm_positions           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  masked_lm_ids                 : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  encoded_mask_lm_ids           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  masked_lm_weights             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  masked_lm_lengths             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  next_sentence_labels          : int = sql.Column(sql.Integer,    nullable = False)
+  masked_lm_predictions         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  encoded_masked_lm_predictions : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  next_sentence_predictions     : int = sql.Column(sql.Integer,    nullable = False)
+  num_targets                   : int = sql.Column(sql.Integer,    nullable = False)
+  seen_in_training              : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   date_added                    : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
@@ -48,7 +48,7 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
                atomizer,
                id: int,
                train_step: int,
-               seen_in_training: bool,
+               seen_in_training,
                original_input:            typing.List[int],
                input_ids:                 typing.List[int],
                input_mask:                typing.List[int],
@@ -91,7 +91,7 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
       "encoded_masked_lm_predictions" : ','.join([str(x) for x in masked_lm_predictions]),
       "next_sentence_predictions"     : int(next_sentence_predictions),
       "num_targets"                   : list(masked_lm_ids).index(atomizer.padToken) if atomizer.padToken in list(masked_lm_ids) else len(list(masked_lm_ids)),
-      "seen_in_training"              : 
+      "seen_in_training"              : "yes" if int(seen_in_training) == 1 else "no" if int(seen_in_training) == 0 else "unlikely"
       "date_added"                    : datetime.datetime.utcnow(),
     }
 

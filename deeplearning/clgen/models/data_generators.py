@@ -69,6 +69,7 @@ class MaskSequence(typing.NamedTuple):
   so this class represents a single instance!
   """
 
+  seen_in_training     : np.int32
   original_input       : np.array
   input_ids            : np.array
   input_mask           : np.array
@@ -80,15 +81,16 @@ class MaskSequence(typing.NamedTuple):
 
   @staticmethod
   def tfTypes():
-    return (tf.int32, tf.int32, tf.int32, tf.int32, tf.int32, tf.float32, tf.int32, tf.int32)
+    return (tf.int32, tf.int32, tf.int32, tf.int32, tf.int32, tf.int32, tf.float32, tf.int32, tf.int32)
 
   @staticmethod
   def npTypes():
-    return (np.int32, np.int32, np.int32, np.int32, np.int32, np.float32, np.int32, np.int32)
+    return (np.int32, np.int32, np.int32, np.int32, np.int32, np.int32, np.float32, np.int32, np.int32)
 
   @staticmethod
   def tfShapes(batch_size, sequence_length, max_position_embeddings = None):
-    return (tf.TensorShape([batch_size, sequence_length]),
+    return (tf.TensorShape([batch_size, 1]),
+            tf.TensorShape([batch_size, sequence_length]),
             tf.TensorShape([batch_size, sequence_length]),
             tf.TensorShape([batch_size, sequence_length]),
             tf.TensorShape([batch_size, max_position_embeddings]),
@@ -100,7 +102,8 @@ class MaskSequence(typing.NamedTuple):
 
   @property
   def sizeof_sequence(self):
-    return (sys.getsizeof(self) + self.original_input.nbytes + 
+    return (sys.getsizeof(self) + 
+           self.seen_in_training + self.original_input.nbytes + 
            self.input_ids.nbytes + self.input_mask.nbytes +
            self.masked_lm_positions.nbytes + self.masked_lm_ids.nbytes +
            self.masked_lm_weights.nbytes   + self.masked_lm_lengths.nbytes +
@@ -116,8 +119,9 @@ class MaskSequence(typing.NamedTuple):
                         num_epochs: int,
                         ) -> None:
     """Log analytics about the batch."""
-    l.getLogger().info("Step shape: Input_ids: {}, input_mask: {}, masked_lm_positions: {}, masked_lm_ids: {}, masked_lm_weights: {}, masked_lm_lengths: {}, next_sentence_label: {}"
-                        .format(self.shapeSeqToBatch(self.original_input,       batch_size),
+    l.getLogger().info("Step shape: seen_in_training: {}, original_input: {}, Input_ids: {}, input_mask: {}, masked_lm_positions: {}, masked_lm_ids: {}, masked_lm_weights: {}, masked_lm_lengths: {}, next_sentence_label: {}"
+                        .format(self.shapeSeqToBatch(self.seen_in_training,     batch_size),
+                                self.shapeSeqToBatch(self.original_input,       batch_size),
                                 self.shapeSeqToBatch(self.input_ids,            batch_size),
                                 self.shapeSeqToBatch(self.input_mask,           batch_size),
                                 self.shapeSeqToBatch(self.masked_lm_positions,  batch_size),
@@ -436,6 +440,7 @@ class MaskLMBatchGenerator(object):
       """
       batch_size = params["batch_size"]
       name_to_features = {
+          "seen_in_training"        : tf.io.FixedLenFeature([1], tf.int64),
           "original_input"          : tf.io.FixedLenFeature([sequence_length], tf.int64),
           "input_ids"               : tf.io.FixedLenFeature([sequence_length], tf.int64),
           "input_mask"              : tf.io.FixedLenFeature([sequence_length], tf.int64),
@@ -494,60 +499,61 @@ class MaskLMBatchGenerator(object):
       input_fn callable.
     """
 
-    def sample_gen(batch_size: int):
-      """
-      This generator yields iteratively the inference input blob for each step.
-      In the first iteration, it yields sampler.encoded_start_text and then for each step,
-      self.sampleBatch is updated with the model's current output through self.updateVocabulary.
-      The generator stops when the model has filled all mask or hole tokens with predictions.
-
-      Arguments:
-        batch_size: The batch size used during inference.
-
-      Yields:
-        Current step's inference input for model.
-
-      Returns:
-        None
-      """
-      assert batch_size == len(self.sampleBatch), "{}, {}".format(batch_size, len(self.sampleBatch))
-      original_input = [sample for sample in self.sampleBatch]
-      while True:
-
-        (input_ids, input_mask, masked_lm_positions,
-        masked_lm_ids, masked_lm_weights, masked_lm_lengths) = [], [], [], [], [], []
-
-        max_mask_len = max(
-        [len(np.where(np.in1d(np.asarray(x), [self.atomizer.maskToken, self.atomizer.holeToken]))[0]) for x in self.sampleBatch]
-        )
-        if max_mask_len == 0:
-          return
-        for sample in self.sampleBatch:
-          sample_masks = np.where(np.in1d(sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
-          actual_mask_len = len(sample_masks)
-          len_offset     = max_mask_len - actual_mask_len
-          pad_idx      = np.where(sample == self.atomizer.padToken)[0]
-          inp_mask     = np.ones(len(sample), dtype = np.int32)
-          if len(pad_idx) > 0:
-            inp_mask[pad_idx[0]:] = 0
-
-          input_ids.append(list(sample))
-          input_mask.append(list(inp_mask))
-          masked_lm_positions.append(list(sample_masks) + [0] * len_offset)
-          masked_lm_ids.append([self.atomizer.maskToken] * actual_mask_len + [self.atomizer.padToken] * len_offset)
-          masked_lm_weights.append([0.0] * (actual_mask_len + len_offset))
-          masked_lm_lengths.append([-1] * (actual_mask_len + len_offset))
-        yield (original_input, input_ids, input_mask,
-          masked_lm_positions, masked_lm_ids,
-          masked_lm_weights, masked_lm_lengths,
-          np.zeros([batch_size, 1]))
-
     def input_fn(params):
       """
       function used by tf.estimator to generate inputs for inference.
       """
-      batch_size = params['batch_size']
 
+      def sample_gen(batch_size: int):
+        """
+        This generator yields iteratively the inference input blob for each step.
+        In the first iteration, it yields sampler.encoded_start_text and then for each step,
+        self.sampleBatch is updated with the model's current output through self.updateVocabulary.
+        The generator stops when the model has filled all mask or hole tokens with predictions.
+
+        Arguments:
+          batch_size: The batch size used during inference.
+
+        Yields:
+          Current step's inference input for model.
+
+        Returns:
+          None
+        """
+        assert batch_size == len(self.sampleBatch), "{}, {}".format(batch_size, len(self.sampleBatch))
+        original_input = [sample for sample in self.sampleBatch]
+        while True:
+
+          (input_ids, input_mask, masked_lm_positions,
+          masked_lm_ids, masked_lm_weights, masked_lm_lengths) = [], [], [], [], [], []
+
+          max_mask_len = max(
+          [len(np.where(np.in1d(np.asarray(x), [self.atomizer.maskToken, self.atomizer.holeToken]))[0]) for x in self.sampleBatch]
+          )
+          if max_mask_len == 0:
+            return
+          for sample in self.sampleBatch:
+            sample_masks = np.where(np.in1d(sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
+            actual_mask_len = len(sample_masks)
+            len_offset     = max_mask_len - actual_mask_len
+            pad_idx      = np.where(sample == self.atomizer.padToken)[0]
+            inp_mask     = np.ones(len(sample), dtype = np.int32)
+            if len(pad_idx) > 0:
+              inp_mask[pad_idx[0]:] = 0
+
+            input_ids.append(list(sample))
+            input_mask.append(list(inp_mask))
+            masked_lm_positions.append(list(sample_masks) + [0] * len_offset)
+            masked_lm_ids.append([self.atomizer.maskToken] * actual_mask_len + [self.atomizer.padToken] * len_offset)
+            masked_lm_weights.append([0.0] * (actual_mask_len + len_offset))
+            masked_lm_lengths.append([-1] * (actual_mask_len + len_offset))
+          yield (np.full([batch_size, 1], -1), original_input, 
+            input_ids, input_mask,
+            masked_lm_positions, masked_lm_ids,
+            masked_lm_weights, masked_lm_lengths,
+            np.zeros([batch_size, 1]))
+
+      batch_size = params['batch_size']
       sample = tf.data.Dataset.from_generator(
                 lambda: sample_gen(batch_size), 
                 output_types = MaskSequence.tfTypes(),
@@ -555,11 +561,13 @@ class MaskLMBatchGenerator(object):
                 )
 
       it = tf.compat.v1.data.make_one_shot_iterator(sample)
-      (original_input, input_ids, input_mask,
+      (seen_in_training, original_input, 
+        input_ids, input_mask,
         masked_lm_positions, masked_lm_ids,
         masked_lm_weights, masked_lm_lengths, next_sentence_labels) = it.get_next()
 
       return {
+          'seen_in_training'      : seen_in_training,
           'original_input'        : original_input,
           'input_ids'             : input_ids,
           'input_mask'            : input_mask,
@@ -979,9 +987,10 @@ class MaskLMBatchGenerator(object):
       file_writer = open(self.txtRecord, 'w')
 
     for (inst_index, instance) in enumerate(self.masked_corpus):
-      original_input = instance.original_input
-      input_ids      = instance.input_ids
-      input_mask     = instance.input_mask
+      seen_in_training = instance.seen_in_training
+      original_input   = instance.original_input
+      input_ids        = instance.input_ids
+      input_mask       = instance.input_mask
 
       assert len(input_ids) == self.training_opts.sequence_length, "len(input_ids):  {}, sequence_length: {}".format(len(input_ids), self.training_opts.sequence_length)
 
@@ -991,6 +1000,9 @@ class MaskLMBatchGenerator(object):
       masked_lm_lengths     = instance.masked_lm_lengths
       next_sentence_label   = instance.next_sentence_label
       features              = collections.OrderedDict()
+
+      features["seen_in_training"]      = tf.train.Feature(int64_list = tf.train.Int64List(
+                                                                value = list(seen_in_training)))
 
       features["original_input"]        = tf.train.Feature(int64_list = tf.train.Int64List(
                                                                 value = list(original_input)))
@@ -1019,8 +1031,9 @@ class MaskLMBatchGenerator(object):
       tf_example = tf.train.Example(features = tf.train.Features(feature = features))
       writer.write(tf_example.SerializeToString())
       if FLAGS.write_text_dataset:
-        file_writer.write("'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'masked_lm_positions': {}\n'masked_lm_ids': {}\n'masked_lm_weights': {}\n'masked_lm_lengths': {}\n'next_sentence_labels': {}\n\n"
-                            .format(self.atomizer.DeatomizeIndices(original_input),
+        file_writer.write("'seen_in_training': {}\n'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'masked_lm_positions': {}\n'masked_lm_ids': {}\n'masked_lm_weights': {}\n'masked_lm_lengths': {}\n'next_sentence_labels': {}\n\n"
+                            .format((True if seen_in_training == 1 else False),
+                                    self.atomizer.DeatomizeIndices(original_input),
                                     self.atomizer.DeatomizeIndices(input_ids),
                                     input_mask, 
                                     masked_lm_positions, 
