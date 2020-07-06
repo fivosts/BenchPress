@@ -29,7 +29,7 @@ import checksumdir
 import numpy as np
 from sqlalchemy.sql.expression import func
 
-from deeplearning.clgen import cache
+from deeplearning.clgen.util import cache
 
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import github
@@ -42,7 +42,7 @@ from absl import flags
 from deeplearning.clgen import crypto
 from labm8.py import hashcache
 import humanize
-from deeplearning.clgen import pbutil
+from deeplearning.clgen.util import pbutil
 from labm8.py import prof
 from labm8.py import sqlutil
 from eupy.native import logger as l

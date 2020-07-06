@@ -16,7 +16,7 @@
 
 from deeplearning.clgen.proto import model_pb2
 from absl import flags
-from deeplearning.clgen import pbutil
+from deeplearning.clgen.util import pbutil
 
 FLAGS = flags.FLAGS
 

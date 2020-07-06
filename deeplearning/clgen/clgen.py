@@ -25,8 +25,8 @@ from absl import app, flags
 
 from deeplearning.clgen import sample_observers as sample_observers_lib
 from deeplearning.clgen import samplers
-from deeplearning.clgen import pbutil
-from deeplearning.clgen import tf
+from deeplearning.clgen.util import pbutil
+from deeplearning.clgen.util import tf
 from deeplearning.clgen.dashboard import dashboard
 from deeplearning.clgen.models import models
 from deeplearning.clgen.models import pretrained

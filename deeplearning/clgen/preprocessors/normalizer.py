@@ -18,7 +18,7 @@ import subprocess
 import tempfile
 import typing
 
-from deeplearning.clgen import environment
+from deeplearning.clgen.util import environment
 from absl import flags
 from eupy.native import logger as l
 

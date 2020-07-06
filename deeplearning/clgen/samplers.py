@@ -25,8 +25,8 @@ import sqlalchemy as sql
 from absl import flags
 from sqlalchemy.ext import declarative
 
-from deeplearning.clgen import cache
-from deeplearning.clgen import pbutil
+from deeplearning.clgen.util import cache
+from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2

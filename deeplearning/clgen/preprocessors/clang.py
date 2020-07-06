@@ -25,7 +25,7 @@ import subprocess
 import tempfile
 import typing
 from absl import flags
-from deeplearning.clgen import environment
+from deeplearning.clgen.util import environment
 from eupy.native import  logger as l
 
 # The marker used to mark stdin from clang pre-processor output.

@@ -16,7 +16,7 @@
 import re
 import sys
 
-from deeplearning.clgen import environment
+from deeplearning.clgen.util import environment
 from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import normalizer
 from deeplearning.clgen.preprocessors import public

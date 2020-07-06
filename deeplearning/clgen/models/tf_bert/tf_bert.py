@@ -32,7 +32,7 @@ from deeplearning.clgen import samplers
 from deeplearning.clgen import sample_observers
 from deeplearning.clgen import telemetry
 from deeplearning.clgen.tf import tf
-from deeplearning.clgen import pbutil
+from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2

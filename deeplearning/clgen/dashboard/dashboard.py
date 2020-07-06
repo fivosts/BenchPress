@@ -10,8 +10,8 @@ import flask_sqlalchemy
 import portpicker
 import sqlalchemy as sql
 
-from deeplearning.clgen import environment
-from deeplearning.clgen import pbutil
+from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import pbutil
 from deeplearning.clgen import validation_database
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.dashboard import dashboard_db

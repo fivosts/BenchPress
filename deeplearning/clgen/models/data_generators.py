@@ -16,8 +16,8 @@ import humanize
 
 import numpy as np
 
-from deeplearning.clgen import cache
-from deeplearning.clgen import pbutil
+from deeplearning.clgen.util import cache
+from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.tf import tf
 from deeplearning.clgen.proto import model_pb2
 from absl import flags

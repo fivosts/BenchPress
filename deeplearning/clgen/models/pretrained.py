@@ -33,7 +33,7 @@ from absl import flags
 from labm8.py import cache
 import humanize
 
-from deeplearning.clgen import pbutil
+from deeplearning.clgen.util import pbutil
 
 FLAGS = flags.FLAGS
 
