@@ -393,9 +393,14 @@ class MaskLMBatchGenerator(object):
     d.tfRecord.parent.mkdir(exist_ok = True, parents = True)
     d.CreateCorpus()
     if not d.tfRecord.exists() or FLAGS.force_remake_dataset:
-      d._MaskCorpus(d.shaped_corpus)
-      d._saveCorpusTfRecord()
-
+      if FLAGS.force_remake_dataset:
+        l.getLogger().warn("Force remaking the dataset can cause all sorts of problems on an already trained model. Are you sure you want to move forward ?")
+        a = input()
+        if a.lower() == "yes" or a.lower() == "y":
+          d._MaskCorpus(d.shaped_corpus)
+          d._saveCorpusTfRecord()
+        else:
+          l.getLogger().warn("Overwriting dataset process was aborted. Good call.")
     return d
 
   @classmethod
