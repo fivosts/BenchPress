@@ -262,7 +262,6 @@ class WordAtomizer(AtomizerBase):
 
     def _AddToVocab(token: str) -> int:
       """Add a token to the vocabulary and return its index."""
-      ## TODO this will crash if cond1 = False && cond2 = True.
       if self.determine_chars and token not in self.vocab:
         max_index = max(self.vocab.values())
         self.vocab[token] = max_index + 1

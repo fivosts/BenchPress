@@ -374,7 +374,6 @@ class tfBert(backends.BackendBase):
                        )
       self._ConfigSampleParams(data_generator, sampler)
 
-    ## TODO save that stuff somewhere
     l.getLogger().info("Initialized model samples in {}".format(self.sample_path))
     return 
 
