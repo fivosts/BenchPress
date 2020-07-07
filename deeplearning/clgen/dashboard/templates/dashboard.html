@@ -36,7 +36,7 @@
           <ul>
             {% for model in data.workspaces[workspace].models %}
             <li class="model">
-                {{ model.summary }}<br>
+                {{model.summary}}, {{model.sha}}<br>
               <ul>
                 <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/model_specs">[Model Specs]</a>
                 <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/training">[Training]</a>
