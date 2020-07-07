@@ -28,13 +28,20 @@ FLAGS = flags.FLAGS
 flags.DEFINE_boolean(
   "write_text_dataset", 
   False, 
-  "Set True for MaskLM data generator to write dataset in text format, along with the tfRecord."
+  "Set True for MaskLM data generator to write dataset in text format, along with the tf_record."
 )
 
 flags.DEFINE_boolean(
   "force_remake_dataset",
   False,
-  "Force data generator to re-mask encoded dataset and store tfRecord."
+  "Force data generator to re-mask encoded dataset and store tf_record."
+)
+
+flags.DEFINE_integer(
+  "validation_corpus_split",
+  0,
+  "Select percentage of initial corpus to be excluded from training for validation and sampling purposes. "
+  "Can be between 0 and 100."
 )
 
 class DataBatch(typing.NamedTuple):
@@ -351,20 +358,16 @@ class MaskLMBatchGenerator(object):
   def __init__(self):
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.__init__()")
 
+    self.dataset                 = None
     self.corpus                  = None
     self.atomizer                = None
     self.config                  = None
     self.cache                   = None
     self.shaped_corpus           = None
-    self.masked_corpus           = None
 
     self.training_opts           = None
     self.steps_per_epoch         = None
-
     self.max_position_embeddings = None
-
-    self.tfRecord                = None
-    self.txtRecord               = None
     self.sampleBatch             = None
 
     self.sampler                 = None
@@ -379,28 +382,40 @@ class MaskLMBatchGenerator(object):
                                ) -> "data_generators.MaskLMBatchGenerator":
     """Initializes data generator for training."""
     d                     = MaskLMBatchGenerator()
+    d.cache               = cache.mkcache(cache_path, "dataset")
+    d.cache.path.mkdir(exist_ok = True, parents = True)
+    d.dataset             = {
+      'train': {
+        'corpus'   : None,
+        'tf_record': d.cache.path / "train_dataset.tf_record",
+        'txt'      : d.cache.path / "train_dataset.txt",
+      },
+      'validation': {
+        'corpus'   : None,
+        'tf_record': d.cache.path / "validation_dataset.tf_record",
+        'txt'      : d.cache.path / "validation_dataset.txt",
+      },
+    }
     d.corpus              = corpus
     d.atomizer            = corpus.atomizer
-
     d.config              = training_opts.data_generator
-    d.cache               = cache.mkcache(cache_path, "dataset")
-
     d.training_opts       = training_opts
-    d.tfRecord            = d.cache.path / "Dataset.tf_record"
-    d.txtRecord           = d.cache.path / "Dataset.txt"
     d.rngen               = random.Random(training_opts.random_seed)
 
-    d.tfRecord.parent.mkdir(exist_ok = True, parents = True)
-    d.CreateCorpus()
-    if not d.tfRecord.exists() or FLAGS.force_remake_dataset:
-      if FLAGS.force_remake_dataset:
-        l.getLogger().warn("Force remaking the dataset can cause all sorts of problems on an already trained model. Are you sure you want to move forward ? [y/n]")
-        a = input()
-        if a.lower() == "yes" or a.lower() == "y":
-          d._MaskCorpus(d.shaped_corpus)
-          d._saveCorpusTfRecord()
-        else:
-          l.getLogger().warn("Overwriting dataset process was aborted. Good call.")
+    d.createCorpus()
+
+    if not any(d.dataset[s]['tf_record'].exists() for s in d.dataset):
+      # No datasets exist
+      d.configDataset()
+    elif FLAGS.force_remake_dataset:
+      # They do but forcefully re-make them
+      l.getLogger().warn("Force remaking the dataset can cause all sorts of problems on an already trained model. Are you sure you want to move forward ? [y/n]")
+      a = input()
+      if a.lower() != "yes" and a.lower() != "y":
+        l.getLogger().warn("Overwriting dataset process was aborted. Good call.")
+        return d
+      d.configDataset()
+
     return d
 
   @classmethod
@@ -418,31 +433,49 @@ class MaskLMBatchGenerator(object):
     d.max_position_embeddings = max_position_embeddings
     return d
 
+  def configDataset(self) -> None:
+
+    assert FLAGS.validation_corpus_split >= 0 and FLAGS.validation_corpus_split <= 100
+
+    if FLAGS.validation_corpus_split == 0:
+      train_corpus = self._maskCorpus(self.shaped_corpus)
+    else:
+      split_index  = int((len(self.shaped_corpus) / 100) * FLAGS.validation_corpus_split)
+      train_corpus = self._maskCorpus(self.shaped_corpus[split_index:])
+      validation_corpus = self._maskCorpus(self.shaped_corpus[:split_index], train_set = False)
+      self.dataset['validation']['corpus'] = validation_corpus
+      self._saveCorpusTfRecord(self.dataset['validation'])
+    self.dataset['train']['corpus'] = train_corpus
+    self._saveCorpusTfRecord(self.dataset['train'])
+    return
+
   def generateTfDataset(self,
                       sequence_length,
                       is_training,
                       num_cpu_threads,
+                      eval_set = None,
                       use_tpu = False,
                       ) -> "tf.Dataset":
     """Wrapper function that constructs a tf.Dataset used for training BERT."""
-    def _decode_record(record, name_to_features):
-      """Decodes a record to a TensorFlow example."""
-      ## This function assumes record is still a file (expressed as TF dataset)
-      ## It decodes this record to tf scalars.
-      example = tf.io.parse_single_example(record, name_to_features)
-      # tf.Example only supports tf.int64, but the TPU only supports tf.int32.
-      # So cast all int64 to int32.
-      for name in list(example.keys()):
-        t = example[name]
-        if t.dtype == tf.int64:
-          t = tf.cast(t, dtype = tf.int32)
-        example[name] = t
-      return example
 
     def input_fn(params):
       """
       function used by tf.estimator to generate inputs for training.
       """
+      def _decode_record(record, name_to_features):
+        """Decodes a record to a TensorFlow example."""
+        ## This function assumes record is still a file (expressed as TF dataset)
+        ## It decodes this record to tf scalars.
+        example = tf.io.parse_single_example(record, name_to_features)
+        # tf.Example only supports tf.int64, but the TPU only supports tf.int32.
+        # So cast all int64 to int32.
+        for name in list(example.keys()):
+          t = example[name]
+          if t.dtype == tf.int64:
+            t = tf.cast(t, dtype = tf.int32)
+          example[name] = t
+        return example
+
       batch_size = params["batch_size"]
       name_to_features = {
           "seen_in_training"        : tf.io.FixedLenFeature([1], tf.int64),
@@ -456,10 +489,10 @@ class MaskLMBatchGenerator(object):
           "next_sentence_labels"    : tf.io.FixedLenFeature([1], tf.int64),
       }
 
-      dataset = tf.io.gfile.glob(str(self.tfRecord))
       # For training, we want a lot of parallel reading and shuffling.
       # For eval, we want no shuffling and parallel reading doesn't matter.
       if is_training:
+        dataset = tf.io.gfile.glob(str(self.dataset['train']['tf_record']))
         d = tf.data.Dataset.from_tensor_slices(tf.constant(dataset))
         d = d.repeat()
         if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
@@ -478,6 +511,10 @@ class MaskLMBatchGenerator(object):
         if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
           d = d.shuffle(buffer_size=100)
       else:
+        if eval_set is None:
+          dataset = tf.io.gfile.glob([str(self.dataset[tf_set]['tf_record']) for tf_set in self.dataset])
+        else:
+          dataset = tf.io.gfile.glob(str(eval_set))
         d = tf.data.TFRecordDataset(dataset)
         # Since we evaluate for a fixed number of steps we don't want to encounter
         # out-of-range exceptions.
@@ -584,7 +621,7 @@ class MaskLMBatchGenerator(object):
       }
     return input_fn
 
-  def CreateCorpus(self) -> None:
+  def createCorpus(self) -> None:
     """
     Constructs training corpus in text format, stores it in
     self.shaped_corpus
@@ -676,33 +713,36 @@ class MaskLMBatchGenerator(object):
 
     return
 
-  def _MaskCorpus(self, 
-                 corpus: np.array
-                )-> None:
+  def _maskCorpus(self, 
+                  corpus: np.array,
+                  train_set = False,
+                  )-> np.array:
     """
     Entrypoint function that inserts masks or holes to the corpus.
 
     Arguments:
       corpus: [num_datapoints, sequence_length], 
               where num_datapoints = num_batches * dupe_factor * batch_size
+    Returns:
+      The masked corpus
     """
-    self.masked_corpus = []
-
+    masked_corpus = []
     with progressbar.ProgressBar(max_value = len(corpus)) as bar:
         for idx, kernel in enumerate(corpus):
           if self.config.HasField("mask"):
-            masked_seq = self._maskSequence(kernel)
+            masked_seq = self._maskSequence(kernel, train_set)
           elif self.config.HasField("hole"):
-            masked_seq = self._holeSequence(kernel)
+            masked_seq = self._holeSequence(kernel, train_set)
           else:
             raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
-          self.masked_corpus.append(masked_seq)
+          masked_corpus.append(masked_seq)
           bar.update(idx)
-    self.masked_corpus[0].LogBatchTelemetry(self.training_opts.batch_size, self.steps_per_epoch, self.num_epochs)
-    return
+    masked_corpus[0].LogBatchTelemetry(self.training_opts.batch_size, self.steps_per_epoch, self.num_epochs)
+    return masked_corpus
 
   def _holeSequence(self,
                     seq: np.array,
+                    train_set: bool,
                     ) -> MaskSequence:
     """
     Inserts hole tokens to a given sequence.
@@ -820,10 +860,10 @@ class MaskLMBatchGenerator(object):
       first_pad_index = input_ids.index(self.atomizer.padToken)
       input_mask[first_pad_index:] = 0
       # Check that the pad index is likely correct.
-      assert input_ids[first_pad_index + 1] == self.atomizer.padToken
+      assert input_ids[first_pad_index] == self.atomizer.padToken, "{}".format(self.atomizer.DeatomizeIndices(input_ids))
       assert input_ids[first_pad_index - 1] != self.atomizer.padToken
 
-    seen_in_training    = np.int32(1)
+    seen_in_training    = np.int32(1 if train_set else 0)
     next_sentence_label = np.int32(0)
     """
       Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
@@ -865,6 +905,7 @@ class MaskLMBatchGenerator(object):
 
   def _maskSequence(self,
                     seq: np.array,
+                    train_set: bool,
                     ) -> MaskSequence:
     """Inserts masks to a given sequence."""
     assert seq.ndim == 1, "Input for masking must be single-dimension array."
@@ -918,7 +959,7 @@ class MaskLMBatchGenerator(object):
     if self.atomizer.padToken in input_ids:
       input_mask[input_ids.index(self.atomizer.padToken):] = 0
 
-    seen_in_training    = np.int32(1)
+    seen_in_training    = np.int32(1 if train_set else 0)
     next_sentence_label = np.int32(0)
     ## Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
     ## is intended on kernels. In any other case, check bert's create_instances_from_document
@@ -1004,15 +1045,15 @@ class MaskLMBatchGenerator(object):
     self.sampleBatch = np.asarray(updated_sequence)
     return self.sampleBatch, done
 
-  def _saveCorpusTfRecord(self) -> None:
+  def _saveCorpusTfRecord(self, masked_corpus: typing.Dict) -> None:
     """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
     l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator._saveCorpusTfRecord()")
      
-    writer = tf.io.TFRecordWriter(str(self.tfRecord))
+    writer = tf.io.TFRecordWriter(str(masked_corpus['tf_record']))
     if FLAGS.write_text_dataset:
-      file_writer = open(self.txtRecord, 'w')
+      file_writer = open(masked_corpus['txt'], 'w')
 
-    for (inst_index, instance) in enumerate(self.masked_corpus):
+    for (inst_index, instance) in enumerate(masked_corpus['corpus']):
       seen_in_training = instance.seen_in_training
       original_input   = instance.original_input
       input_ids        = instance.input_ids
@@ -1072,7 +1113,7 @@ class MaskLMBatchGenerator(object):
     if FLAGS.write_text_dataset:
       file_writer.close()
     l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
-                      .format(inst_index + 1, self.steps_per_epoch, self.training_opts.batch_size, self.tfRecord))
+                      .format(inst_index + 1, self.steps_per_epoch, self.training_opts.batch_size, masked_corpus['tf_record']))
     return
 
   def _padToMaxPosition(self, input_sample):
