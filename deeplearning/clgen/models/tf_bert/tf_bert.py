@@ -354,13 +354,17 @@ class tfBert(backends.BackendBase):
 
   def Validate(self) -> None:
     l.getLogger().info("BERT Validation")
-    eval_input_fn = self.train.data_generator.generateTfDataset(
-        sequence_length = self.config.training.sequence_length,
-        num_cpu_threads = os.cpu_count(),
-        is_training     = False)
-
-    result = self.train.estimator.evaluate(input_fn=eval_input_fn, steps=self.max_eval_steps)
-    self._writeValidation(result)
+    for tf_set in self.train.data_generator.dataset:
+      tf_set_path = self.train.data_generator.dataset[tf_set]['tf_record']
+      l.getLogger().info("BERT Validation on {} dataset".format(tf_set_path.stem))
+      eval_input_fn = self.train.data_generator.generateTfDataset(
+          sequence_length = self.config.training.sequence_length,
+          num_cpu_threads = os.cpu_count(),
+          is_training     = False,
+          eval_set        = tf_set_path
+          )
+      result = self.train.estimator.evaluate(input_fn=eval_input_fn, steps=self.max_eval_steps)
+      self._writeValidation(result, tf_set_path)
     self.is_validated = True
     return
 
@@ -454,12 +458,18 @@ class tfBert(backends.BackendBase):
     # paths += self.data_generator.InferenceManifest # TODO
     return sorted(paths)
 
-  def _writeValidation(self, result) -> None:
+  def _writeValidation(self, result, tf_set) -> None:
     with tf.io.gfile.GFile(self.validation_results_path, "w") as writer:
       db = validation_database.ValidationDatabase("sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")))
       r = [ "{}: {}".format(key, str(result[key])) for key in result.keys() ]
       with db.Session(commit = True) as session:
-        session.add(validation_database.ValResults(key = "done", results = "\n".join(r)))
+        # exists = session.query(validation_database.BERTValFile.sha256).filter_by(sha256 = val_trace.sha256).scalar() is not None
+        exists = session.query(validation_database.ValResults.key).filter_by(key = str(tf_set.stem)).scalar() is not None
+        if exists:
+          entry = session.query(validation_database.ValResults).filter_by(key = str(tf_set.stem)).first()
+          entry.results = "\n".join(r)
+        else:
+          session.add(validation_database.ValResults(key = str(tf_set.stem), results = "\n".join(r)))
     return 
 
   def _model_fn_builder(self,
