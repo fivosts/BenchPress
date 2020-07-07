@@ -463,7 +463,6 @@ class tfBert(backends.BackendBase):
       db = validation_database.ValidationDatabase("sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")))
       r = [ "{}: {}".format(key, str(result[key])) for key in result.keys() ]
       with db.Session(commit = True) as session:
-        # exists = session.query(validation_database.BERTValFile.sha256).filter_by(sha256 = val_trace.sha256).scalar() is not None
         exists = session.query(validation_database.ValResults.key).filter_by(key = str(tf_set.stem)).scalar() is not None
         if exists:
           entry = session.query(validation_database.ValResults).filter_by(key = str(tf_set.stem)).first()
