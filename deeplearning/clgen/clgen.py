@@ -318,7 +318,7 @@ def DoFlagsAction(
 def main():
   """Main entry point."""
   if FLAGS.clgen_dashboard_only:
-    dash = dashboard.Launch({"debug": True})
+    dash = dashboard.Launch(debug = {"debug": True})
   else:
     instance = Instance(ConfigFromFlags())
     sample_observers = SampleObserversFromFlags(instance)

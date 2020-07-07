@@ -489,23 +489,27 @@ def samples(corpus_id: int, model_id: int, epoch: int):
   )
 
 
-def Launch(debug: bool = False):
+def Launch(host: str = "192.168.1.4",
+           debug: bool = False
+           ):
   l.getLogger().debug("deeplearning.clgen.dashboard.Launch()")
   """Launch dashboard in a separate thread."""
   port = FLAGS.clgen_dashboard_port or portpicker.pick_unused_port()
-  l.getLogger().info("Launching CLgen dashboard on http://127.0.0.1:{}".format(port))
+  l.getLogger().info("Launching CLgen dashboard on http://{}:{}".format(host, port))
   kwargs = {
     "port": port,
     # Debugging must be disabled when run in a separate thread.
-    "debug": debug,
-    "host": "0.0.0.0",
+    "debug": False,
+    "host": host,
   }
 
   db.create_all()
   if debug:
     flask_app.run(**kwargs)
   else:
-    thread = threading.Thread(target=flask_app.run, kwargs=kwargs)
+    thread = threading.Thread(
+      target = flask_app.run, kwargs = kwargs
+    )
     thread.setDaemon(True)
     thread.start()
     return thread
