@@ -429,7 +429,7 @@ class MaskLMBatchGenerator(object):
   def configDataset(self) -> None:
 
     assert self.config.validation_split >= 0 and self.config.validation_split <= 100
-
+    l.getLogger().warn("TODO: {}".format(self.config.validation_set))
     if self.config.validation_split == 0:
       train_corpus = self._maskCorpus(self.shaped_corpus)
     else:

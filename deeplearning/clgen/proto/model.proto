@@ -141,7 +141,7 @@ message DataGenerator {
     Mask mask = 5;
     Hole hole = 6;
   }
-  repeated ValidationOpts validation_opts = 7;
+  repeated ValidationOpts validation_set = 7;
 }
 
 message Mask {

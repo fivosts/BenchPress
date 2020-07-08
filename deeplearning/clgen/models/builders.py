@@ -98,8 +98,8 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         config.training.data_generator,
         "validation_split",
       )
-      if len(config.training.data_generator.validation_opts) > 0:
-        for val_opt in config.training.data_generator.validation_opts:
+      if len(config.training.data_generator.validation_set) > 0:
+        for val_opt in config.training.data_generator.validation_set:
           if val_opt.HasField("replicate_different_length"):
             pbutil.AssertFieldConstraint(
               val_opt,
