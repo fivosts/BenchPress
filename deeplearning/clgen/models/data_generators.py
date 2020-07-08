@@ -435,12 +435,12 @@ class MaskLMBatchGenerator(object):
 
   def configDataset(self) -> None:
 
-    assert FLAGS.validation_corpus_split >= 0 and FLAGS.validation_corpus_split <= 100
+    assert self.config.validation_split >= 0 and self.config.validation_split <= 100
 
-    if FLAGS.validation_corpus_split == 0:
+    if self.config.validation_split == 0:
       train_corpus = self._maskCorpus(self.shaped_corpus)
     else:
-      split_index  = int((len(self.shaped_corpus) / 100) * FLAGS.validation_corpus_split)
+      split_index  = int((len(self.shaped_corpus) / 100) * self.config.validation_split)
       train_corpus = self._maskCorpus(self.shaped_corpus[split_index:])
       validation_corpus = self._maskCorpus(self.shaped_corpus[:split_index], train_set = False)
       self.dataset['validation']['corpus'] = validation_corpus
