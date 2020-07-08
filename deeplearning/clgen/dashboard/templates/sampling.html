@@ -16,7 +16,9 @@
     <li class="sampler">
       <b>{{sampler.summary}}, {{sampler.sha}}</b><br>
         <a href="/{{data.workspace}}/sampler/{{sampler.sha}}/sampler_specs">[Sampler Specs]</a>
-        <a href="/{{data.workspace}}/model/{{data.model_sha}}/sampler/{{sampler.sha}}/samples">[Samples]</a>
+        {% for sample_db in sampler.sample_dbs %}
+        <a href="/{{data.workspace}}/model/{{data.model_sha}}/sampler/{{sampler.sha}}/{{sample_db}}">[{{sample_db}}]</a>
+        {% endfor %}
     </li>
     <br>
     {% endfor %}
