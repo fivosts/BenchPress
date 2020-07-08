@@ -164,6 +164,8 @@ message Hole {
 
 message ValidationOpts {
   oneof option {
+    // Pick the existing training set and replicate it but
+    // this time using lengthier holes but in the same positions.
     int32 replicate_different_length = 1;
     // TODO extend here for more val opts.
   }
