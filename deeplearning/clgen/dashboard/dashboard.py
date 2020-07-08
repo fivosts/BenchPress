@@ -13,6 +13,7 @@ import sqlalchemy as sql
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen import validation_database
+from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.proto import model_pb2
@@ -54,11 +55,11 @@ def GetBaseTemplateArgs():
     },
   }
 
-def parseCorpus(base_path):
+def parseCorpus(workspace_path):
 
   corpuses = []
-  if (base_path / "corpus" / "encoded").exists():
-    corpus_path = base_path / "corpus" / "encoded"
+  if (workspace_path / "corpus" / "encoded").exists():
+    corpus_path = workspace_path / "corpus" / "encoded"
     for corpus_sha in corpus_path.iterdir():
       encoded_db = encoded.EncodedContentFiles("sqlite:///{}".format(corpus_sha / "encoded.db"), must_exist = True)
       corpuses.append(
@@ -66,30 +67,33 @@ def parseCorpus(base_path):
           'path': str(corpus_path / corpus_sha),
           'sha' : str(corpus_sha.stem),
           'datapoint_count': encoded_db.size,
-          'summary': "{} datapoint corpus, {}".format(encoded_db.size, str(corpus_sha.stem))
+          'summary': "{} datapoint corpus, {}".format(encoded_db.size, str(corpus_sha.stem)),
+          'models' : parseModels(workspace_path, str(corpus_sha.stem))
         }
       )
   return corpuses
 
-def parseModels(base_path):
+def parseModels(workspace_path, corpus_sha: str):
 
   models = []
-  if (base_path / "model").exists():
-    for model_sha in (base_path / "model").iterdir():
-      model_path = base_path / "model" / model_sha
-      if (model_path / "META.pbtxt").exists():
-        meta = parseMeta(model_path / "META.pbtxt")
-        models.append(
-          {          
-            'path': str(model_path),
-            'sha' : str(model_sha.stem),
-            'config': meta,
-            'training_log': parseTrainLogs(model_path / "logs"),
-            'validation': parseValidationDB(model_path / "logs" / "validation_samples.db"),
-            'samples': parseSamples(base_path, model_path / "samples"),
-            'summary': parseModelSummary(meta)
-          }
-        )
+  if (workspace_path / "model").exists():
+    for model_sha in (workspace_path / "model").iterdir():
+      model_path = workspace_path / "model" / model_sha
+      if (model_path / "atomizer").exists() and pathlib.Path(os.readlink(model_path / "atomizer")).parent.name == corpus_sha:
+        if (model_path / "META.pbtxt").exists():
+          meta = parseMeta(model_path / "META.pbtxt")
+          models.append(
+            {          
+              'path'        : str(model_path),
+              'sha'         : str(model_sha.stem),
+              'config'      : meta,
+              'atomizer'    : atomizers.AtomizerBase.FromFile(pathlib.Path(os.readlink(model_path / "atomizer"))),
+              'training_log': parseTrainLogs(model_path / "logs"),
+              'validation'  : parseValidationDB(model_path / "logs" / "validation_samples.db"),
+              'samples'     : parseSamples(workspace_path, model_path / "samples"),
+              'summary'     : parseModelSummary(meta)
+            }
+          )
 
   return models
 
@@ -141,19 +145,19 @@ def parseValidationDB(db_path):
     validation_db['path'] = None
   return validation_db
 
-def parseSamples(base_path, sample_path):
+def parseSamples(workspace_path, sample_path):
 
   model_samplers = []
 
   if sample_path.exists():
     for sampler_sha in sample_path.iterdir():
-      if (base_path / "sampler" / sampler_sha / "META.pbtxt").exists():
+      if (workspace_path / "sampler" / sampler_sha / "META.pbtxt").exists():
         for db_file in (sample_path / sampler_sha):
           if db_file.stem == "epoch_samples.db" or db_file.stem == "samples.db":
             samples_db = samples_database.SamplesDatabase("sqlite:///{}".format(db_file), must_exist = True)
             model_samplers.append({
                 'sha': sampler_sha,
-                'config': parseMeta(str(base_path / "sampler" / sampler_sha / "META.pbtxt")),
+                'config': parseMeta(str(workspace_path / "sampler" / sampler_sha / "META.pbtxt")),
                 'samples': ['todo', 'todo'],
               }
             )
@@ -167,10 +171,9 @@ def parseData():
   data = {
     "workspaces": {
       p: {
-        'name': p.stem, 
-        'path': p, 
-        'corpuses': parseCorpus(p), 
-        'models': parseModels(p)
+        'name': p.stem,
+        'path': p,
+        'corpuses': parseCorpus(p),
         } for p in workspaces
     },
   }

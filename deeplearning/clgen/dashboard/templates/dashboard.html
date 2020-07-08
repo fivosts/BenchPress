@@ -27,25 +27,28 @@
                 <b>{{ corpus.summary }}</b><br>
               </a>
             </li>
+
+            <p><b>Models</b></p>
+            <ul>
+              {% for model in corpus.models %}
+              <li class="model">
+                  {{model.summary}}, {{model.sha}}<br>
+                <ul>
+                  <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/model_specs">[Model Specs]</a>
+                  <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/training">[Training]</a>
+                  <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/validation">[Validation]</a>
+                  <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/sampling">[Sampling]</a>
+                </ul>
+              </li>
+              {% endfor %}
+            </ul>
+
           </ul>
           {% endfor %}
         </ul>
 
         <ul>
-          <p><b>Models</b></p>
-          <ul>
-            {% for model in data.workspaces[workspace].models %}
-            <li class="model">
-                {{model.summary}}, {{model.sha}}<br>
-              <ul>
-                <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/model_specs">[Model Specs]</a>
-                <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/training">[Training]</a>
-                <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/validation">[Validation]</a>
-                <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/sampling">[Sampling]</a>
-              </ul>
-            </li>
-            {% endfor %}
-          </ul>
+
           <br>
         </ul>
         <br>
