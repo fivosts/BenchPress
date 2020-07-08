@@ -356,7 +356,7 @@ class tfBert(backends.BackendBase):
     l.getLogger().info("BERT Validation")
     for tf_set in self.train.data_generator.dataset:
       tf_set_path = self.train.data_generator.dataset[tf_set]['tf_record']
-      l.getLogger().info("BERT Validation on {} dataset".format(tf_set_path.stem))
+      l.getLogger().info("BERT Validation on {}".format(tf_set_path.stem))
       eval_input_fn = self.train.data_generator.generateTfDataset(
           sequence_length = self.config.training.sequence_length,
           num_cpu_threads = os.cpu_count(),
