@@ -5,7 +5,12 @@
 <div class="row">
 <div class="col">
 
-  <a href="/{{data.workspace}}/model/{{data.model_sha}}/model_specs"><p class="config">[Model Specs]<br><br><br></p></a>
+  <p class="config"><a href="/{{data.workspace}}/corpus/{{data.corpus_sha}}/model/{{data.model_sha}}/model_specs">[Model Specs]</a></p><br><br><br>
+
+    {% for met in data.val_metrics %}
+      <span class="config"><b>{{met.key}}:</b><br>{{met.results}}<br><br></span>
+    {% endfor %}
+
     {% for val in data.val_samples %}
         <p class = "code">Original input:<br><br>{{val.original_input}}<br><br><br>Validation sample: <br><br></p>
 
