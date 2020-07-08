@@ -95,7 +95,7 @@ def parseModels(workspace_path, corpus_sha: str):
             'summary'     : parseModelSummary(meta)
           }
           global cached_models
-          cached_models[crypto.sha256_str(str(workspace_path.name) + corpus_sha + str(model_sha.name))] = model
+          cached_models[crypto.sha256_str(str(workspace_path.name) + str(model_sha.name))] = model
           models.append(model)
 
 
@@ -169,12 +169,17 @@ def parseSamplers(workspace_path, sample_path, model_sha):
       if ((workspace_path / "sampler" / sampler_sha.name / "META.pbtxt").exists() and
           (workspace_path / "sampler" / sampler_sha.name / "samples" / model_sha).exists()):
         meta = parseMeta(str(workspace_path / "sampler" / sampler_sha.name / "META.pbtxt"))
+        path = (workspace_path / "sampler" / sampler_sha.name / "samples" / model_sha)
+        sample_dbs = {}
+        for db in path.iterdir():
+          if db.suffix == ".db":
+            sample_dbs[db.stem] = db
         sampler = {
-          'path': (workspace_path / "sampler" / sampler_sha.name / "samples" / model_sha),
+          'path': path,
           'sha': sampler_sha.name,
           'config': meta,
           'summary': parseSamplerSummary(meta),
-          'samples': [],
+          'sample_dbs': sample_dbs,
         }
         cached_samplers[sampler_sha.name] = sampler
         model_samplers.append(sampler)
@@ -223,14 +228,14 @@ def corpus(workspace: str, corpus_sha: str):
   dummy_data = data
   return flask.render_template("corpus.html", data = dummy_data, **GetBaseTemplateArgs())
 
-@flask_app.route("/<string:workspace>/corpus/<string:corpus_sha>/model/<string:model_sha>/model_specs")
-def model_specs(workspace: str, corpus_sha: str, model_sha: str):
+@flask_app.route("/<string:workspace>/model/<string:model_sha>/model_specs")
+def model_specs(workspace: str, model_sha: str):
   global data
   global cached_models
   if data == {}:
     data = parseData()
 
-  target_sha = crypto.sha256_str(str(workspace) + corpus_sha + model_sha)
+  target_sha = crypto.sha256_str(str(workspace) + model_sha)
   current_model = cached_models[target_sha]
   spec_data ={
     'config': current_model['config']
@@ -254,14 +259,14 @@ def sampler_specs(workspace: str, sampler_sha: str):
   }
   return flask.render_template("sampler_specs.html", data = spec_data, **GetBaseTemplateArgs())
 
-@flask_app.route("/<string:workspace>/corpus/<string:corpus_sha>/model/<string:model_sha>/validation")
-def validation_samples(workspace: str, corpus_sha: str, model_sha: str):
+@flask_app.route("/<string:workspace>/model/<string:model_sha>/validation")
+def validation_samples(workspace: str, model_sha: str):
   global data
   global cached_models
   if data == {}:
     data = parseData()
 
-  target_sha = crypto.sha256_str(str(workspace) + corpus_sha + model_sha)
+  target_sha = crypto.sha256_str(str(workspace) + model_sha)
   current_model = cached_models[target_sha]
   validation = current_model['validation']
 
@@ -318,28 +323,19 @@ def validation_samples(workspace: str, corpus_sha: str, model_sha: str):
         )
       sample.input_ids = processed_input_ids
   validation['workspace']  = workspace
-  validation['corpus_sha'] = corpus_sha
   validation['model_sha']  = model_sha
   return flask.render_template("validation_samples.html", data = validation, **GetBaseTemplateArgs())
 
-@flask_app.route("/<string:workspace>/corpus/<string:corpus_sha>/model/<string:model_sha>/sampling")
-def sampling(workspace: str, corpus_sha: str, model_sha: str):
+@flask_app.route("/<string:workspace>/model/<string:model_sha>/sampling")
+def sampling(workspace: str, model_sha: str):
   global data
   global cached_models
   if data == {}:
     data = parseData()
 
-  target_sha = crypto.sha256_str(str(workspace) + corpus_sha + model_sha)
+  target_sha = crypto.sha256_str(str(workspace) + model_sha)
   current_model = cached_models[target_sha]
   samplers = current_model['samplers']
-
-  for sampler in samplers:
-    for db_file in sampler['path'].iterdir():
-      if db_file.suffix == ".db":
-        # samplers['samples'].append(
-
-        # )
-        samples_db = samples_database.SamplesDatabase("sqlite:///{}".format(db_file), must_exist = True)
 
   data = {
     'workspace': workspace,
@@ -347,6 +343,32 @@ def sampling(workspace: str, corpus_sha: str, model_sha: str):
     'samplers' : samplers,
   }
   return flask.render_template("sampling.html", data = data, **GetBaseTemplateArgs())
+
+@flask_app.route("/<string:workspace>/model/<string:model_sha>/sampler/<string:sampler_sha>/<string:sample_db>")
+def sample_files(workspace: str, model_sha: str, sampler_sha: str, sample_db: str):
+
+  global data
+  global cached_models
+  if data == {}:
+    data = parseData()
+
+  current_sampler = {}
+  target_sha = crypto.sha256_str(str(workspace) + model_sha)
+
+  for sampler in cached_models[target_sha]['samplers']:
+    if sampler['sha'] == sampler_sha:
+      current_sampler = sampler
+      break
+
+  db_file = current_sampler['path'] / "{}.db".format(sample_db)
+  l.getLogger().error(db_file)
+  samples_db = samples_database.SamplesDatabase("sqlite:///{}".format(db_file), must_exist = True)
+
+  with samples_db.Session() as session:
+    sample_files = session.query(samples_database.Sample).all()
+
+  l.getLogger().warn(sample_files)
+  return flask.render_template("sample_files.html", data = sample_files, **GetBaseTemplateArgs())
 
 @flask_app.route("/corpus/<int:corpus_id>/model/<int:model_id>/")
 def report(corpus_id: int, model_id: int):
