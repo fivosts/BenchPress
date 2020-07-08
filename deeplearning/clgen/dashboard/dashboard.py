@@ -10,9 +10,11 @@ import flask_sqlalchemy
 import portpicker
 import sqlalchemy as sql
 
-from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import pbutil
+from deeplearning.clgen.util import crypto
+from deeplearning.clgen.util import environment
 from deeplearning.clgen import validation_database
+from deeplearning.clgen import samples_database
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.dashboard import dashboard_db
@@ -82,18 +84,20 @@ def parseModels(workspace_path, corpus_sha: str):
       if (model_path / "atomizer").exists() and pathlib.Path(os.readlink(model_path / "atomizer")).parent.name == corpus_sha:
         if (model_path / "META.pbtxt").exists():
           meta = parseMeta(model_path / "META.pbtxt")
-          models.append(
-            {          
-              'path'        : str(model_path),
-              'sha'         : str(model_sha.stem),
-              'config'      : meta,
-              'atomizer'    : atomizers.AtomizerBase.FromFile(pathlib.Path(os.readlink(model_path / "atomizer"))),
-              'training_log': parseTrainLogs(model_path / "logs"),
-              'validation'  : parseValidationDB(model_path / "logs" / "validation_samples.db"),
-              'samples'     : parseSamples(workspace_path, model_path / "samples"),
-              'summary'     : parseModelSummary(meta)
-            }
-          )
+          model = {          
+            'path'        : str(model_path),
+            'sha'         : str(model_sha.name),
+            'config'      : meta,
+            'atomizer'    : atomizers.AtomizerBase.FromFile(model_path / pathlib.Path(os.readlink(model_path / "atomizer"))),
+            'training_log': parseTrainLogs(model_path / "logs"),
+            'validation'  : parseValidationDB(model_path / "logs" / "validation_samples.db"),
+            'samplers'    : parseSamplers(workspace_path, model_path / "samples", str(model_sha.name)),
+            'summary'     : parseModelSummary(meta)
+          }
+          global cached_models
+          cached_models[crypto.sha256_str(str(workspace_path.name) + corpus_sha + str(model_sha.name))] = model
+          models.append(model)
+
 
   return models
 
@@ -115,6 +119,15 @@ def parseModelSummary(meta):
     summary = "TODO"
   return summary
 
+def parseSamplerSummary(meta):
+  m = pbutil.FromString('\n'.join(meta), internal_pb2.SamplerMeta())
+  summary = ("Sequence length: {}, temperature: {}".format(
+      m.config.sequence_length, 
+      m.config.temperature_micros / 1e6,
+    )
+  )
+  return summary
+
 def parseTrainLogs(logs):
 
   log_tensors = {}
@@ -133,6 +146,7 @@ def parseValidationDB(db_path):
   validation_db = {
     'val_sample_count': -1,
     'path': None,
+    'val_metrics': [],
     'val_samples': [],
   }
   try:
@@ -145,26 +159,32 @@ def parseValidationDB(db_path):
     validation_db['path'] = None
   return validation_db
 
-def parseSamples(workspace_path, sample_path):
+def parseSamplers(workspace_path, sample_path, model_sha):
 
+  global cached_samplers
   model_samplers = []
 
   if sample_path.exists():
     for sampler_sha in sample_path.iterdir():
-      if (workspace_path / "sampler" / sampler_sha / "META.pbtxt").exists():
-        for db_file in (sample_path / sampler_sha):
-          if db_file.stem == "epoch_samples.db" or db_file.stem == "samples.db":
-            samples_db = samples_database.SamplesDatabase("sqlite:///{}".format(db_file), must_exist = True)
-            model_samplers.append({
-                'sha': sampler_sha,
-                'config': parseMeta(str(workspace_path / "sampler" / sampler_sha / "META.pbtxt")),
-                'samples': ['todo', 'todo'],
-              }
-            )
+      if ((workspace_path / "sampler" / sampler_sha.name / "META.pbtxt").exists() and
+          (workspace_path / "sampler" / sampler_sha.name / "samples" / model_sha).exists()):
+        meta = parseMeta(str(workspace_path / "sampler" / sampler_sha.name / "META.pbtxt"))
+        sampler = {
+          'path': (workspace_path / "sampler" / sampler_sha.name / "samples" / model_sha),
+          'sha': sampler_sha.name,
+          'config': meta,
+          'summary': parseSamplerSummary(meta),
+          'samples': [],
+        }
+        cached_samplers[sampler_sha.name] = sampler
+        model_samplers.append(sampler)
   return model_samplers
 
 data = {}
+cached_models = {}
+cached_samplers = {}
 def parseData():
+
   dashboard_path = pathlib.Path(FLAGS.workspace_dir).absolute()
   workspaces = [p for p in dashboard_path.iterdir() if p.is_dir()]
   global data
@@ -203,51 +223,55 @@ def corpus(workspace: str, corpus_sha: str):
   dummy_data = data
   return flask.render_template("corpus.html", data = dummy_data, **GetBaseTemplateArgs())
 
-@flask_app.route("/<string:workspace>/model/<string:model_sha>/model_specs")
-def model_specs(workspace: str, model_sha: str):
+@flask_app.route("/<string:workspace>/corpus/<string:corpus_sha>/model/<string:model_sha>/model_specs")
+def model_specs(workspace: str, corpus_sha: str, model_sha: str):
   global data
+  global cached_models
   if data == {}:
     data = parseData()
-  current_model = {}
 
-  for w in data['workspaces']:
-    if data['workspaces'][w]['name'] == workspace:
-      current_workspace = data['workspaces'][w]
-      for mod in current_workspace['models']:
-        if mod['sha'] == model_sha:
-          current_model = mod
-          break
+  target_sha = crypto.sha256_str(str(workspace) + corpus_sha + model_sha)
+  current_model = cached_models[target_sha]
   spec_data ={
     'config': current_model['config']
   }
   return flask.render_template("model_specs.html", data = spec_data, **GetBaseTemplateArgs())
 
-@flask_app.route("/<string:workspace>/model/<string:model_sha>/validation")
-def validation_samples(workspace: str, model_sha: str):
+@flask_app.route("/<string:workspace>/sampler/<string:sampler_sha>/sampler_specs")
+def sampler_specs(workspace: str, sampler_sha: str):
   global data
+  global cached_samplers
   if data == {}:
     data = parseData()
-  current_model = {}
 
-  for w in data['workspaces']:
-    if data['workspaces'][w]['name'] == workspace:
-      current_workspace = data['workspaces'][w]
-      for mod in current_workspace['models']:
-        if mod['sha'] == model_sha:
-          current_model = mod
-          break
+  current_sampler = cached_samplers[sampler_sha]
+  for i, l in enumerate(current_sampler['config']):
+    if 'start_text' in l:
+      current_sampler['config'][i] = current_sampler['config'][i].replace("\\n", "\n")
 
+  spec_data ={
+    'config': current_sampler['config']
+  }
+  return flask.render_template("sampler_specs.html", data = spec_data, **GetBaseTemplateArgs())
+
+@flask_app.route("/<string:workspace>/corpus/<string:corpus_sha>/model/<string:model_sha>/validation")
+def validation_samples(workspace: str, corpus_sha: str, model_sha: str):
+  global data
+  global cached_models
+  if data == {}:
+    data = parseData()
+
+  target_sha = crypto.sha256_str(str(workspace) + corpus_sha + model_sha)
+  current_model = cached_models[target_sha]
   validation = current_model['validation']
 
   if validation['path']:
-    # try:
-    l.getLogger().error(validation['path'])
+
     val_db = validation_database.ValidationDatabase(str(validation['path']), must_exist = True)
     with val_db.Session() as session:
       validation['val_samples'] = session.query(validation_database.BERTValFile).all()
+      validation['val_metrics'] = session.query(validation_database.ValResults).all()
       # random.shuffle(validation['val_samples'])
-    # except Exception as e:
-    #   raise e
 
     for sample in validation['val_samples']:
       processed_input_ids = []
@@ -292,15 +316,37 @@ def validation_samples(workspace: str, model_sha: str):
             'length': len(input_ids[i]),
           },
         )
-      # l.getLogger().info(sample.original_input)
-      # l.getLogger().info(sample.input_ids)
-      # l.getLogger().info(sample.masked_lm_predictions)
-      # l.getLogger().info(sample.masked_lm_ids)
-      # l.getLogger().warn(processed_input_ids)
       sample.input_ids = processed_input_ids
-  validation['workspace'] = workspace
-  validation['model_sha'] = model_sha
+  validation['workspace']  = workspace
+  validation['corpus_sha'] = corpus_sha
+  validation['model_sha']  = model_sha
   return flask.render_template("validation_samples.html", data = validation, **GetBaseTemplateArgs())
+
+@flask_app.route("/<string:workspace>/corpus/<string:corpus_sha>/model/<string:model_sha>/sampling")
+def sampling(workspace: str, corpus_sha: str, model_sha: str):
+  global data
+  global cached_models
+  if data == {}:
+    data = parseData()
+
+  target_sha = crypto.sha256_str(str(workspace) + corpus_sha + model_sha)
+  current_model = cached_models[target_sha]
+  samplers = current_model['samplers']
+
+  for sampler in samplers:
+    for db_file in sampler['path'].iterdir():
+      if db_file.suffix == ".db":
+        # samplers['samples'].append(
+
+        # )
+        samples_db = samples_database.SamplesDatabase("sqlite:///{}".format(db_file), must_exist = True)
+
+  data = {
+    'workspace': workspace,
+    'model_sha': model_sha,
+    'samplers' : samplers,
+  }
+  return flask.render_template("sampling.html", data = data, **GetBaseTemplateArgs())
 
 @flask_app.route("/corpus/<int:corpus_id>/model/<int:model_id>/")
 def report(corpus_id: int, model_id: int):
@@ -492,8 +538,8 @@ def samples(corpus_id: int, model_id: int, epoch: int):
   )
 
 
-def Launch(host: str = "192.168.1.4",
-           debug: bool = False
+def Launch(host: str = "0.0.0.0",
+           debug: bool = True,
            ):
   l.getLogger().debug("deeplearning.clgen.dashboard.Launch()")
   """Launch dashboard in a separate thread."""
@@ -502,7 +548,7 @@ def Launch(host: str = "192.168.1.4",
   kwargs = {
     "port": port,
     # Debugging must be disabled when run in a separate thread.
-    "debug": False,
+    "debug": debug,
     "host": host,
   }
 
