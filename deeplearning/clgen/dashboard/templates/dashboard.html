@@ -6,54 +6,52 @@
 
 {% block body %}
 <div class="container">
-  <div class="row">
-    <div class="col">
+<div class="row">
+<div class="col">
 
-      <h3>Select a Model to inspect</h3>
-      <p>Current Workspaces</p>
+  <h3>Select a Model to inspect</h3>
+  <p>Current Workspaces</p>
 
+  <ul>
+    {% for workspace in data.workspaces %}
+    <li class="workspace">
+      <b>{{ data.workspaces[workspace].name }}</b><br>
+    </li>
+
+    <ul>
+      <p><b>Corpus</b></p>
       <ul>
-        {% for workspace in data.workspaces %}
-        <li class="workspace">
-          <b>{{ data.workspaces[workspace].name }}</b><br>
+        {% for corpus in data.workspaces[workspace].corpuses %}
+        <li class="corpus">
+          <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/">
+            <b>{{ corpus.summary }}</b><br>
+          </a>
         </li>
-
+        <p><b>Models</b></p>
         <ul>
-          <p><b>Corpus</b></p>
-          <ul>
-            {% for corpus in data.workspaces[workspace].corpuses %}
-            <li class="corpus">
-              <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/">
-                <b>{{ corpus.summary }}</b><br>
-              </a>
-            </li>
-            <p><b>Models</b></p>
-            <ul>
-              {% for model in corpus.models %}
-              <li class="model">
-                  {{model.summary}}, {{model.sha}}<br>
-                <ul>
-                  <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/model_specs">[Model Specs]</a>
-                  <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/training">[Training]</a>
-                  <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/validation">[Validation]</a>
-                  <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/sampling">[Sampling]</a>
-                </ul>
-              </li>
-              {% endfor %}
-            </ul>
-
-          </ul>
+          {% for model in corpus.models %}
+          <li class="model">
+            {{model.summary}}, {{model.sha}}<br>
+            <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/model_specs">[Model Specs]</a>
+            <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/training">[Training]</a>
+            <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/validation">[Validation]</a>
+            <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/model/{{model.sha}}/sampling">[Sampling]</a>
+          </li>
           {% endfor %}
         </ul>
 
-        <ul>
-
-          <br>
-        </ul>
-        <br>
-        {% endfor %}
       </ul>
-    </div>
-  </div>
+      {% endfor %}
+    </ul>
+
+    <ul>
+
+      <br>
+    </ul>
+    <br>
+    {% endfor %}
+  </ul>
+</div>
+</div>
 </div>
 {% endblock %}

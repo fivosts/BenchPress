@@ -41,6 +41,12 @@ li.model::before {
   content: "\f542";
 }
 
+li.sampler::before {
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+  content: "\f543";
+}
+
 li.corpus::before {
   font-family: "Font Awesome 5 Free";
   font-weight: 900;

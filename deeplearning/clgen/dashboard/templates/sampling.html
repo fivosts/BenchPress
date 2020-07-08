@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block header %}
+<title>Model Samplers</title>
+{% endblock %}
+
+{% block body %}
+<div class="container">
+<div class="row">
+<div class="col">
+
+  <h3>Available model samplers</h3>
+
+  <ul>
+    {% for sampler in data.samplers %}
+    <li class="sampler">
+      <b>{{sampler.summary}}, {{sampler.sha}}</b><br>
+        <a href="/{{data.workspace}}/sampler/{{sampler.sha}}/sampler_specs">[Sampler Specs]</a>
+        <a href="/{{data.workspace}}/model/{{data.model_sha}}/sampler/{{sampler.sha}}/samples">[Samples]</a>
+    </li>
+  </ul>
+
+    <br>
+    {% endfor %}
+  </ul>
+</div>
+</div>
+</div>
+{% endblock %}
