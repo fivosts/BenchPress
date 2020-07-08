@@ -770,18 +770,19 @@ class MaskLMBatchGenerator(object):
     self.rngen.shuffle(candidate_indexes)
 
     # total tokens to add in holes.
-    # No more than max_predictions_per_seq, 
-    # no less than actual seq length x the probability of hiding a token
+    # No more than max_predictions_per_seq, no less than actual seq length x the probability of hiding a token
     holes_to_predict  = min(self.training_opts.max_predictions_per_seq,
                            max(1, int(round(actual_length * self.training_opts.masked_lm_prob))))
 
     # Processed input sequence
     input_ids         = list(np.copy(seq))
-    # List of (seq_idx, token_id) tupless
+    # List of (seq_idx, token_id, hole_length) tuples
     masked_lms        = []
     # Offset array. Indices represent elements in the initial array (seq)
     # Values of indices represent current offset position in processed array (input_ids).
-    offset_idxs        = np.zeros(len(seq), dtype = np.int32)
+    offset_idxs       = np.zeros(len(seq), dtype = np.int32)
+    # Set with all candidate_indexes that have been holed.
+    visited_indices   = set()
     # Total masks placed so far.
     total_predictions = 0
     for pos_index in candidate_indexes:
@@ -791,9 +792,11 @@ class MaskLMBatchGenerator(object):
       input_id_idx = pos_index + offset_idxs[pos_index]
       if total_predictions >= holes_to_predict:
         break
-      ## TODO. This condition could be troublesome in case it gets False by accident
-      ## i.e. the index has gone wrong due to the whole, BUT still point to an identical element
-      elif seq[pos_index] != input_ids[input_id_idx]:
+      elif pos_index in visited_indices:
+        # Do not target an index, already holed
+        continue
+      elif input_id_idx > len(seq):
+        # Do not mask a part of input_ids that is going to be cropped.
         continue
 
       assert (input_ids[input_id_idx] == seq[pos_index], 
@@ -831,23 +834,28 @@ class MaskLMBatchGenerator(object):
       input_ids = (input_ids[:input_id_idx] + 
                    [replacement_token] + 
                    input_ids[input_id_idx + hole_length:])
-
       # This pos_index will get deprecated when someone before this index alters the offset array
       # So store position index, and after making all masks, update with updated offset array
       masked_lms.append(MaskedLmInstance(pos_index = pos_index, token_id = target, hole_length = hole_length))
-      if not self.config.mask.random_placed_mask:
-        assert (input_ids[input_id_idx] == self.atomizer.holeToken, 
-              "target index does not correspond to hole token: {}".format(self.atomizer.DeatomizeIndices([input_ids[input_id_idx]])))
 
       # Adjust the offset of all affected tokens, from pos_index and after.
       offset_idxs[pos_index + 1:] += 1 - hole_length
       # An empty hole is counted as a prediction of count 1.
       total_predictions           += max(1, hole_length)
+      visited_indices.update(range(pos_index, pos_index + hole_length))
+
+      for lm in masked_lms:
+        ## TODO, remove this extensive-expensive check after you make sure that this function is bug free.
+        test_index = lm.pos_index + offset_idxs[lm.pos_index]
+        if input_ids[test_index] != self.atomizer.holeToken:
+          assert False
 
     # Now update the entries with offset index.
     for lm in masked_lms:
+      prev_index = lm.pos_index
       lm.pos_index = lm.pos_index + offset_idxs[lm.pos_index]
       # Make sure everything points to a hole.
+      if input_ids[lm.pos_index] != self.atomizer.holeToken:
       assert input_ids[lm.pos_index] == self.atomizer.holeToken
 
     while len(input_ids) < len(seq):
