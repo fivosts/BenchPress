@@ -431,10 +431,10 @@ class MaskLMBatchGenerator(object):
     assert self.config.validation_split >= 0 and self.config.validation_split <= 100
     l.getLogger().warn("TODO: {}".format(self.config.validation_set))
     if self.config.validation_split == 0:
-      train_corpus = self._maskCorpus(self.shaped_corpus)
+      train_corpus = self._maskCorpus(self.shaped_corpus, train_set = True)
     else:
       split_index  = int((len(self.shaped_corpus) / 100) * self.config.validation_split)
-      train_corpus = self._maskCorpus(self.shaped_corpus[split_index:])
+      train_corpus = self._maskCorpus(self.shaped_corpus[split_index:], train_set = True)
       validation_corpus = self._maskCorpus(self.shaped_corpus[:split_index], train_set = False)
       self.dataset['validation']['corpus'] = validation_corpus
       self._saveCorpusTfRecord(self.dataset['validation'])
@@ -708,7 +708,7 @@ class MaskLMBatchGenerator(object):
 
   def _maskCorpus(self, 
                   corpus: np.array,
-                  train_set = False,
+                  train_set,
                   )-> np.array:
     """
     Entrypoint function that inserts masks or holes to the corpus.
