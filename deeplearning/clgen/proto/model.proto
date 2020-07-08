@@ -141,7 +141,7 @@ message DataGenerator {
     Mask mask = 5;
     Hole hole = 6;
   }
-  repeated ValidationOpts validation_set = 7;
+  repeated ValidationSet validation_set = 7;
 }
 
 message Mask {
@@ -162,7 +162,7 @@ message Hole {
   optional bool  stage_training = 2;
 }
 
-message ValidationOpts {
+message ValidationSet {
   oneof option {
     // Pick the existing training set and replicate it but
     // this time using lengthier holes but in the same positions.
