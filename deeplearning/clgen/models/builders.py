@@ -98,14 +98,15 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         config.training.data_generator,
         "validation_split",
       )
-      if config.training.data_generator.HasField("validation_opts"):
-        if config.training.data_generator.validation_opts.HasField("replicate_different_length"):
-          pbutil.AssertFieldConstraint(
-            config.training.data_generator.validation_opts,
-            "replicate_different_length",
-            lambda x: 0 <= x <= 100,
-            "Validation split percentage can only be between 0% and 100%.."
-          )   
+      if len(config.training.data_generator.validation_opts) > 0:
+        for val_opt in config.training.data_generator.validation_opts:
+          if val_opt.HasField("replicate_different_length"):
+            pbutil.AssertFieldConstraint(
+              val_opt,
+              "replicate_different_length",
+              lambda x: 0 <= x <= 100,
+              "Validation split percentage can only be between 0% and 100%.."
+            )   
       # Parse masking technique for bert's data generator
       pbutil.AssertFieldIsSet(config.training.data_generator, "mask_technique")
       if config.training.data_generator.HasField("mask"):

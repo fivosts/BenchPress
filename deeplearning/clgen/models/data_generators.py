@@ -37,13 +37,6 @@ flags.DEFINE_boolean(
   "Force data generator to re-mask encoded dataset and store tf_record."
 )
 
-flags.DEFINE_integer(
-  "validation_corpus_split",
-  0,
-  "Select percentage of initial corpus to be excluded from training for validation and sampling purposes. "
-  "Can be between 0 and 100."
-)
-
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
   X: np.array
@@ -855,7 +848,6 @@ class MaskLMBatchGenerator(object):
       prev_index = lm.pos_index
       lm.pos_index = lm.pos_index + offset_idxs[lm.pos_index]
       # Make sure everything points to a hole.
-      if input_ids[lm.pos_index] != self.atomizer.holeToken:
       assert input_ids[lm.pos_index] == self.atomizer.holeToken
 
     while len(input_ids) < len(seq):
