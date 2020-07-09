@@ -362,6 +362,7 @@ class MaskLMBatchGenerator(object):
     self.steps_per_epoch         = None
     self.max_position_embeddings = None
     self.sampleBatch             = None
+    self.sampleIndices           = None
 
     self.sampler                 = None
     self.rngen                   = None
@@ -997,9 +998,14 @@ class MaskLMBatchGenerator(object):
     target_idx = np.where(np.in1d(input_sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
     assert len(target_idx) != 0, "No target prediction in sample text"
 
+    num_masks = np.count_nonzero(input_sample == self.atomizer.maskToken)
+    num_holes = np.count_nonzero(input_sample == self.atomizer.holeToken)
+    num_targets = num_masks + num_holes
+
     padded_sample = self._padToMaxPosition(input_sample)
     padded_sample = padded_sample[:self.sampler.sequence_length]
-    self.sampleBatch = np.repeat(padded_sample[None, :], self.sampler.batch_size, axis = 0)
+    self.sampleBatch   = np.repeat(padded_sample[None, :], self.sampler.batch_size, axis = 0)
+    self.sampleIndices = [[] * num_targets] * self.sampler.batch_size
     return
 
   def updateSampleBatch(self, 
@@ -1022,10 +1028,12 @@ class MaskLMBatchGenerator(object):
       for idx, token in enumerate(input_ids[batch_idx]):
         if   token == self.atomizer.maskToken:
           mt = masked_lm_ids[batch_idx][mask_id_index]
+          self.sampleIndices[batch_idx][mask_id_index].append(mt)
           mask_id_index += 1
           batch.append(mt)
         elif token == self.atomizer.holeToken:
           mt = masked_lm_ids[batch_idx][mask_id_index]
+          self.sampleIndices[batch_idx][mask_id_index].append(mt)
           mask_id_index += 1
           if mt != self.atomizer.endholeToken:
             batch.append(mt)
@@ -1039,11 +1047,13 @@ class MaskLMBatchGenerator(object):
       # If a sequence is bigger than it should, crop one or both edges,
       # save them and send max_position_embeddings for next step.
       # Then, concat it back.
+      if self.sampler.sequence_length > len(batch):
+        l.getLogger().warn("Cropped {} tokens from sample batch".format(self.sampler.sequence_length - len(batch)))
       batch = batch[:self.sampler.sequence_length]
       updated_sequence.append(batch)
 
     self.sampleBatch = np.asarray(updated_sequence)
-    return self.sampleBatch, done
+    return self.sampleBatch, self.sampleIndices
 
   def _saveCorpusTfRecord(self, masked_corpus: typing.Dict) -> None:
     """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""

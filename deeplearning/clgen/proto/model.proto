@@ -205,20 +205,22 @@ message RmsPropOptimizer {
 // A generated sample. Instances of this proto are returned by a Model's
 // Sample() method.
 message Sample {
-  optional string sample_feed   = 1;
-  optional string text          = 2;
-  optional string encoded_text  = 3;
-  optional int32 sample_time_ms = 4;
+  optional string sample_feed            = 1;
+  optional string text                   = 2;
+  optional string encoded_text           = 3;
+  optional int32  sample_time_ms         = 4;
+  optional string sample_indices         = 5;
+  optional string encoded_sample_indices = 6;
   // Sampling may be batches, so that the sum of sample_time_ms over a range
   // of samples may be much higher than the actual amount of time required to
   // sample the set. This field contains the number of milliseconds between the
   // last sample completing and this sample completing, so that by summing
   // wall_time_ms, it is possible to get an accurate idea of the actual time
   // taken to produce a set of samples.
-  optional int32 wall_time_ms              = 5;
-  optional int64 sample_start_epoch_ms_utc = 6;
-  optional int32 num_tokens                = 7;
-  optional bool  categorical_sampling      = 8;
-  optional int32 train_step                = 9;
-  optional string date_added               = 10;
+  optional int32 wall_time_ms              = 7;
+  optional int64 sample_start_epoch_ms_utc = 8;
+  optional int32 num_tokens                = 9;
+  optional bool  categorical_sampling      = 10;
+  optional int32 train_step                = 11;
+  optional string date_added               = 12;
 }

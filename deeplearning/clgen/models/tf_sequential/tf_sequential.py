@@ -516,7 +516,7 @@ class tfSequential(backends.BackendBase):
       sample_in_progress = sampler.tokenized_start_text.copy()
 
       while not done[0]:
-        indices = self.SampleNextIndices(sampler, done)
+        indices, _ = self.SampleNextIndices(sampler, done)
         # Iterate over all samples in batch to determine whether they're
         # done.
         for index in indices[0]:
@@ -640,7 +640,7 @@ class tfSequential(backends.BackendBase):
     self.inference_indices = generated[:, -1].reshape((sampler.batch_size, 1))
     if length > 1:
       generated = generated[:, length - 1 :]
-    return generated
+    return generated, generated
 
   def RandomizeSampleState(self) -> None:
     l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.RandomizeSampleState()")

@@ -329,18 +329,20 @@ class tfBert(backends.BackendBase):
           for _ in range(FLAGS.sample_per_epoch):
             start_time   = datetime.datetime.utcnow()
             self.InitSampleBatch()
-            sample_batch = self.SampleNextIndices()
+            sample_batch, sample_indices = self.SampleNextIndices()
             end_time     = datetime.datetime.utcnow()
-            for sample in sample_batch:
+            for sample, sind in zip(sample_batch, sample_indices):
               sample_proto = model_pb2.Sample(
-                train_step           = (ep + 1) * self.steps_per_epoch,
-                sample_feed          = sampler.start_text,
-                text                 = self.atomizer.DeatomizeIndices(sample, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
-                encoded_text         = ",".join([str(t) for t in sample]),
-                sample_time_ms       = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
-                num_tokens           = len(sample),
-                categorical_sampling = self.samplesWithCategorical(),
-                date_added           = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
+                train_step             = (ep + 1) * self.steps_per_epoch,
+                sample_feed            = sampler.start_text,
+                text                   = self.atomizer.DeatomizeIndices(sample, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
+                encoded_text           = ",".join([str(t) for t in sample]),
+                sample_indices         = '\n'.join([self.atomizer.DeatomizeIndices(mind).replace('\n', '\\n') for mind in sind]),
+                encoded_sample_indices = '\n'.join([','.join(mind) for mind in sind ]),
+                sample_time_ms         = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
+                num_tokens             = len(sample),
+                categorical_sampling   = self.samplesWithCategorical(),
+                date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
               )
               for obs in observers:
                 obs.OnSample(sample_proto)
@@ -401,10 +403,10 @@ class tfBert(backends.BackendBase):
 
     output_seq, done = None, False
     for step in predict_generator:
-      output_seq, done = self.sample.data_generator.updateSampleBatch(
+      output_seq, sampleIndices = self.sample.data_generator.updateSampleBatch(
         step['input_ids'], step['masked_lm_predictions']
         )
-    return output_seq
+    return output_seq, sampleIndices
 
   def _getTestSampler(self, test_sampler, sequence_length):
     if test_sampler is None:

@@ -330,7 +330,7 @@ class Model(object):
 
     # Sampling loop. Continues until all samples in the batch are done.
     while not done.all():
-      indices = self.backend.SampleNextIndices(sampler, done)
+      indices, step_indices = self.backend.SampleNextIndices(sampler, done)
       # Iterate over all samples in batch to determine whether they're
       # done.
       for i in range(sampler.batch_size):
@@ -341,8 +341,12 @@ class Model(object):
           ## Legacy operation for sequential returning single token
           if isinstance(self.backend, tf_bert.tfBert):
             samples_in_progress[i] = [atomizer.decoder[x] for x in indices[i]]
+            step_indices           = '\n'.join([self.atomizer.DeatomizeIndices(mind).replace('\n', '\\n') for mind in step_indices[i]])
+            encoded_step_indices   = '\n'.join([','.join(mind) for mind in step_indices[i] ]),
           elif isinstance(self.backend, tf_sequential.tfSequential) or isinstance(self.backend, keras_sequential.kerasSequential):
             samples_in_progress[i].append(atomizer.decoder[index])
+            step_indices         = ""
+            encoded_step_indices = ""
           else:
             raise TypeError("Backend type check failed: {}".format(type(self.backend)))
 
@@ -353,6 +357,8 @@ class Model(object):
             sample    = model_pb2.Sample(
               train_step                = -1, # TODO self.telemetry.num_train_steps
               text                      = "".join(sample_kernel),
+              sample_indices            = step_indices,
+              encoded_sample_indices    = encoded_step_indices,
               sample_feed               = sampler.start_text,
               encoded_text              = ",".join([str(atomizer.vocab[x]) for x in sample_kernel]),
               sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
