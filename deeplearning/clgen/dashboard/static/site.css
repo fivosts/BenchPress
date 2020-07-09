@@ -95,6 +95,15 @@ li.corpus::before {
   color: #00FFFF;
 }
 
+.endhole_token {
+  font-family: "Lucida Console", "Lucida Sans Typewriter", monaco, "Bitstream Vera Sans Mono", monospace; 
+  font-size: 9px;
+  font-weight: bold;
+  line-height: 16px; 
+  white-space: nowrap;
+  color: #00FFFF;
+}
+
 .target {
   font-family: "Lucida Console", "Lucida Sans Typewriter", monaco, "Bitstream Vera Sans Mono", monospace; 
   font-size: 14px;

@@ -385,10 +385,10 @@ def sample_files(workspace: str, model_sha: str, sampler_sha: str, sample_db: st
             )
     prediction = sample.text
 
-    for i, chunk in enumerate(sample_feed):
+    for i in range(len(sample_feed) - 1):
       processed_sample += [
         {
-          'text' : ch,
+          'text' : sample_feed[i],
           'color': 'plain',
         },
         {
@@ -400,15 +400,14 @@ def sample_files(workspace: str, model_sha: str, sampler_sha: str, sample_db: st
           'color': 'prediction',
         },
       ]
-    # while i < len(text) - 1:
-    #   i += 1
-    #   processed_sample.append(
-    #     {
-    #       'text': text[i],
-    #       'color': 'plain',
-    #       'length': len(text[i]),
-    #     },
-    #   )
+    while i < len(sample_feed) - 1:
+      i += 1
+      processed_sample.append(
+        {
+          'text': sample_feed[i],
+          'color': 'plain',
+        },
+      )
     sample.sample_indices = processed_sample
 
   return flask.render_template("sample_files.html", data = sample_files, **GetBaseTemplateArgs())
