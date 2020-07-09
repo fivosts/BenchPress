@@ -361,13 +361,56 @@ def sample_files(workspace: str, model_sha: str, sampler_sha: str, sample_db: st
       break
 
   db_file = current_sampler['path'] / "{}.db".format(sample_db)
-  l.getLogger().error(db_file)
   samples_db = samples_database.SamplesDatabase("sqlite:///{}".format(db_file), must_exist = True)
 
   with samples_db.Session() as session:
     sample_files = session.query(samples_database.Sample).all()
 
-  l.getLogger().warn(sample_files)
+  for sample in sample_files:
+    processed_sample = []
+    if '[HOLE]' in sample.sample_feed:
+      mask_type = '[HOLE]'
+    elif '[MASK]' in sample.sample_feed:
+      mask_type = '[MASK]'
+    else:
+      mask_type = ''
+    sample_feed    = sample.sample_feed.split(mask_type)
+    sample_indices = sample.sample_indices.split('\n')
+    assert ((len(sample_feed) - 1) == len(sample_indices),
+            "sample hole length/generation mismatch: {}, {}"
+            .format(
+              len(sample_feed),
+              len(sample_indices),
+              )
+            )
+    prediction = sample.text
+
+    for i, chunk in enumerate(sample_feed):
+      processed_sample += [
+        {
+          'text' : ch,
+          'color': 'plain',
+        },
+        {
+          'text' : mask_type,
+          'color': 'mask',
+        },
+        {
+          'text' : sample_indices[i],
+          'color': 'prediction',
+        },
+      ]
+    # while i < len(text) - 1:
+    #   i += 1
+    #   processed_sample.append(
+    #     {
+    #       'text': text[i],
+    #       'color': 'plain',
+    #       'length': len(text[i]),
+    #     },
+    #   )
+    sample.sample_indices = processed_sample
+
   return flask.render_template("sample_files.html", data = sample_files, **GetBaseTemplateArgs())
 
 @flask_app.route("/corpus/<int:corpus_id>/model/<int:model_id>/")
