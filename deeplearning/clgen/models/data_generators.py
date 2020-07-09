@@ -1005,7 +1005,7 @@ class MaskLMBatchGenerator(object):
     padded_sample = self._padToMaxPosition(input_sample)
     padded_sample = padded_sample[:self.sampler.sequence_length]
     self.sampleBatch   = np.repeat(padded_sample[None, :], self.sampler.batch_size, axis = 0)
-    self.sampleIndices = [[] * num_targets] * self.sampler.batch_size
+    self.sampleIndices = [[[] for i in range(num_targets)] for j in range(self.sampler.batch_size)]
     return
 
   def updateSampleBatch(self, 
@@ -1021,19 +1021,25 @@ class MaskLMBatchGenerator(object):
 
     updated_sequence = []
     done = True
-
     for batch_idx, _ in enumerate(input_ids):
       batch = []
-      mask_id_index = 0
+      mask_id_index     = 0
+      closed_hole_index = 0
       for idx, token in enumerate(input_ids[batch_idx]):
         if   token == self.atomizer.maskToken:
           mt = masked_lm_ids[batch_idx][mask_id_index]
-          self.sampleIndices[batch_idx][mask_id_index].append(mt)
+          if len(self.sampleIndices[batch_idx][mask_id_index]) > 0:
+            while(self.sampleIndices[batch_idx][mask_id_index + closed_hole_index][-1]) == self.atomizer.endholeToken:
+              closed_hole_index += 1
+          self.sampleIndices[batch_idx][mask_id_index + closed_hole_index].append(mt)
           mask_id_index += 1
           batch.append(mt)
         elif token == self.atomizer.holeToken:
           mt = masked_lm_ids[batch_idx][mask_id_index]
-          self.sampleIndices[batch_idx][mask_id_index].append(mt)
+          if len(self.sampleIndices[batch_idx][mask_id_index]) > 0:
+            while(self.sampleIndices[batch_idx][mask_id_index + closed_hole_index][-1]) == self.atomizer.endholeToken:
+              closed_hole_index += 1
+          self.sampleIndices[batch_idx][mask_id_index + closed_hole_index].append(mt)
           mask_id_index += 1
           if mt != self.atomizer.endholeToken:
             batch.append(mt)

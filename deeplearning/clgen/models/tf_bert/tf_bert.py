@@ -338,7 +338,7 @@ class tfBert(backends.BackendBase):
                 text                   = self.atomizer.DeatomizeIndices(sample, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
                 encoded_text           = ",".join([str(t) for t in sample]),
                 sample_indices         = '\n'.join([self.atomizer.DeatomizeIndices(mind).replace('\n', '\\n') for mind in sind]),
-                encoded_sample_indices = '\n'.join([','.join(mind) for mind in sind ]),
+                encoded_sample_indices = '\n'.join([','.join([str(x) for x in mind]) for mind in sind ]),
                 sample_time_ms         = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
                 num_tokens             = len(sample),
                 categorical_sampling   = self.samplesWithCategorical(),
