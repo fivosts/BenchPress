@@ -367,7 +367,8 @@ def sample_files(workspace: str, model_sha: str, sampler_sha: str, sample_db: st
     sample_files = session.query(samples_database.Sample).all()
 
   for sample in sample_files:
-    processed_sample = []
+    processed_feed = []
+    processed_indices = []
     if '[HOLE]' in sample.sample_feed:
       mask_type = '[HOLE]'
     elif '[MASK]' in sample.sample_feed:
@@ -386,7 +387,17 @@ def sample_files(workspace: str, model_sha: str, sampler_sha: str, sample_db: st
     prediction = sample.text
 
     for i in range(len(sample_feed) - 1):
-      processed_sample += [
+      processed_feed += [
+        {
+          'text' : sample_feed[i],
+          'color': 'plain',
+        },
+        {
+          'text' : mask_type,
+          'color': 'mask',
+        },
+      ]
+      processed_indices += [
         {
           'text' : sample_feed[i],
           'color': 'plain',
@@ -402,13 +413,20 @@ def sample_files(workspace: str, model_sha: str, sampler_sha: str, sample_db: st
       ]
     while i < len(sample_feed) - 1:
       i += 1
-      processed_sample.append(
+      processed_indices.append(
         {
           'text': sample_feed[i],
           'color': 'plain',
         },
       )
-    sample.sample_indices = processed_sample
+      processed_feed.append(
+        {
+          'text': sample_feed[i],
+          'color': 'plain'
+        }
+      )
+    sample.sample_indices = processed_indices
+    sample.sample_feed = processed_feed
 
   return flask.render_template("sample_files.html", data = sample_files, **GetBaseTemplateArgs())
 
