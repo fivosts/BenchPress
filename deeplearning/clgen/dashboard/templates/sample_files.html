@@ -5,11 +5,11 @@
 <div class="row">
 <div class="col">
 
-  <p class="config"><a href="/{{data.workspace}}/model/{{data.model_sha}}/model_specs">[Model Specs]</a><br><br></p>
+  <p class="config"><a href="/{{data.workspace}}/model/{{data.model_sha}}/model_specs">[Model Specs]</a><br></p>
 
 
     {%- for sample in data -%}
-    <span class="code"><br><br>{{sample.text}}<br><br></span>
+    <span class="code"><br><br>Sample:<br><br>{{sample.text}}<br><br></span>
 
       {%- for chunk in sample.sample_indices -%}
         {%- if chunk.color=="plain" -%}
