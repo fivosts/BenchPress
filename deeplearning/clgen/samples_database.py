@@ -23,17 +23,29 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
   This is the clgen.Sample protocol buffer in SQL format.
   """
   __tablename__    = "samples"
+  # entry id
   id                     : int = sql.Column(sql.Integer,    primary_key = True)
+  # unique hash of sample text
   sha256                 : str = sql.Column(sql.String(64), nullable = False, index = True)
+  # model's train step that generated the sample
   train_step             : int = sql.Column(sql.Integer,    nullable = False)
+  # encoded sample text
   encoded_text           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Starting feed of model
   sample_feed            : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # String-format generated text
   text                   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Array of the actual generated tokens
   sample_indices         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Encoded generated tokens
   encoded_sample_indices : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Length of total sequence in number of tokens
   num_tokens             : int = sql.Column(sql.Integer,    nullable = False)
+  # If Bernoulli distribution was used during samplinng
   categorical_sampling   : str = sql.Column(sql.String(8),  nullable = False)
+  # Time
   sample_time_ms         : int = sql.Column(sql.Integer,    nullable = False)
+  # Date
   date_added             : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
