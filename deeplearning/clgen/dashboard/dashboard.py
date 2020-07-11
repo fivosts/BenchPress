@@ -286,41 +286,51 @@ def validation_samples(workspace: str, model_sha: str):
         mask_type = '[MASK]'
       else:
         mask_type = ''
-      input_ids = sample.input_ids.split(mask_type)
-      mask_num = sample.num_targets
 
-      for i in range(mask_num):
-        processed_input_ids += [
+      if mask_type == '[HOLE]':
+        input_ids = sample.input_ids.split(mask_type)
+        mask_num = sample.num_targets
+        for i in range(mask_num):
+          processed_input_ids += [
+            {
+              'text': input_ids[i],
+              'color': 'plain',
+              'length': len(input_ids[i]),
+            },
+            {
+              'text': mask_type,
+              'color': 'hole',
+              'length': int(sample.masked_lm_lengths.split(',')[i]),
+            },
+            {
+              'text': sample.masked_lm_predictions.split('\n')[i].replace(' ', '[ ]').replace('\n', '\\n'),
+              'color': 'prediction',
+              'length': 1,
+            },
+            {
+              'text': sample.masked_lm_ids.split('\n')[i].replace(' ', '[ ]').replace('\n', '\\n'),
+              'color': 'target',
+              'length': 1,
+            },
+          ]
+        while i < len(input_ids) - 1:
+          i += 1
+          processed_input_ids.append(
+            {
+              'text': input_ids[i],
+              'color': 'plain',
+              'length': len(input_ids[i]),
+            },
+          )
+
+      elif mask_type == '[MASK]':
+        processed_input_ids = [
           {
-            'text': input_ids[i],
+            'text': sample.input_ids,
             'color': 'plain',
-            'length': len(input_ids[i]),
-          },
-          {
-            'text': mask_type,
-            'color': 'mask',
-            'length': int(sample.masked_lm_lengths.split(',')[i]),
-          },
-          {
-            'text': sample.masked_lm_predictions.split('\n')[i].replace(' ', '[ ]').replace('\n', '\\n'),
-            'color': 'prediction',
-            'length': 1,
-          },
-          {
-            'text': sample.masked_lm_ids.split('\n')[i].replace(' ', '[ ]').replace('\n', '\\n'),
-            'color': 'target',
-            'length': 1,
-          },
+          }
         ]
-      while i < len(input_ids) - 1:
-        i += 1
-        processed_input_ids.append(
-          {
-            'text': input_ids[i],
-            'color': 'plain',
-            'length': len(input_ids[i]),
-          },
-        )
+
       sample.input_ids = processed_input_ids
   validation['workspace']  = workspace
   validation['model_sha']  = model_sha
