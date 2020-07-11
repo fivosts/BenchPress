@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block header %}
+<title>Training Status</title>
+{% endblock %}
+
+{% block body %}
+<div class="container">
+<div class="row">
+<div class="col">
+
+  <p class="config"><a href="/{{data.workspace}}/model/{{data.model_sha}}/model_specs">[Model Specs]</a></p><br><br><br>
+
+  <h3>Model training status</h3>
+
+  {% for plot in data.plots %}
+    <p class = "config">
+      {{plot}}
+    <img src = "file://{{plot}}" alt="My Pic">
+    </p>
+  {% endfor %}
+
+
+</div>
+</div>
+</div>
+{% endblock %}

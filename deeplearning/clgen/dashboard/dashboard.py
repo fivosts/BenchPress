@@ -354,6 +354,25 @@ def sampling(workspace: str, model_sha: str):
   }
   return flask.render_template("sampling.html", data = data, **GetBaseTemplateArgs())
 
+@flask_app.route("/<string:workspace>/model/<string:model_sha>/training")
+def training(workspace: str, model_sha: str):
+  global data
+  global cached_models
+  if data == {}:
+    data = parseData()
+  
+  data['plots'] = []
+
+  target_sha = crypto.sha256_str(str(workspace) + model_sha)
+  current_model_logdir = pathlib.Path(cached_models[target_sha]['path']) / "logs"
+  for file in current_model_logdir.iterdir():
+    if file.suffix == ".png":
+      data['plots'].append(file)
+
+  data['workspace'] = workspace
+  data['model_sha'] = model_sha
+  return flask.render_template("training.html", data = data, **GetBaseTemplateArgs())
+
 @flask_app.route("/<string:workspace>/model/<string:model_sha>/sampler/<string:sampler_sha>/<string:sample_db>")
 def sample_files(workspace: str, model_sha: str, sampler_sha: str, sample_db: str):
 
@@ -630,7 +649,7 @@ def samples(corpus_id: int, model_id: int, epoch: int):
   )
 
 
-def Launch(host: str = "0.0.0.0",
+def Launch(host: str = "localhost",
            debug: bool = True,
            ):
   l.getLogger().debug("deeplearning.clgen.dashboard.Launch()")
