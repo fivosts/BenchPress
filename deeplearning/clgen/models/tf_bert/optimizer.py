@@ -62,7 +62,7 @@ def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu):
       zip(grads, tvars), global_step=global_step)
 
   train_op = tf.group(train_op, [global_step])
-  return train_op
+  return train_op, learning_rate
 
 
 class AdamWeightDecayOptimizer(tf.compat.v1.train.Optimizer):
