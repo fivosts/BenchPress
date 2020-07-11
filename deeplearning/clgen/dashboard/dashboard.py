@@ -89,9 +89,9 @@ def parseModels(workspace_path, corpus_sha: str):
             'sha'         : str(model_sha.name),
             'config'      : meta,
             'atomizer'    : atomizers.AtomizerBase.FromFile(model_path / pathlib.Path(os.readlink(model_path / "atomizer"))),
-            'training_log': parseTrainLogs(model_path / "logs"),
+            'training_log': parseTrainLogs(model_path / "logs"), # TODO
             'validation'  : parseValidationDB(model_path / "logs" / "validation_samples.db"),
-            'samplers'    : parseSamplers(workspace_path, model_path / "samples", str(model_sha.name)),
+            'samplers'    : parseSamplers(workspace_path, model_path / "samples", str(model_sha.name)), # TODO sample_db ?
             'summary'     : parseModelSummary(meta)
           }
           global cached_models
