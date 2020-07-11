@@ -944,6 +944,9 @@ class MaskLMBatchGenerator(object):
             pass
           # 10% of the time, replace with random word
           else:
+            random_token = self.rngen.randint(0, self.atomizer.vocab_size - 1)
+            while any(self.atomizer.vocab[t] == random_token for (idx, t) in self.atomizer.metaTokens.items()):
+              random_token = self.rngen.randint(0, self.atomizer.vocab_size - 1)
             input_ids[pos_index] = self.rngen.randint(0, self.atomizer.vocab_size - 1)
       else:
         if self.rngen.random() < 0.8:
