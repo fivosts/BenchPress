@@ -326,8 +326,6 @@ class tfPlotTensorHook(_tfEstimatorHooks):
     _, _ = self.timer.update_last_triggered_step(self.trigger_step)
     for (key, value) in tensor_values.items():
       key_str = str(pathlib.Path(key).stem)
-      y_axis = value['value']
-      x_axis = value['step']
       plt.linesSingleAxis(
           {key_str: {'y': value['value'], 'x': value['step']}},
           y_label = (key_str, 13),
