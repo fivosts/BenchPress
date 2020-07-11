@@ -2,10 +2,15 @@ import progressbar
 import six 
 import humanize
 import numpy as np
+import glob
+import pathlib
+from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 from deeplearning.clgen.util.tf import tf
 from deeplearning.clgen import validation_database
 from eupy.native import logger as l
+from eupy.native import plotter as plt
+
 """
 All hooks deployed for this implementation of BERT.
 These hooks must be strictly called within model_fn function
@@ -120,14 +125,14 @@ class tfProgressBar(_tfEstimatorHooks):
       Requested tensors are evaluated and their values are available
     """
     super(tfProgressBar, self).after_run(run_context, run_values)
-    self.bar.update(self.current_step) 
+    self.bar.update(self.current_step)
     return
 
 class tfLogTensorHook(_tfEstimatorHooks):
 
   def __init__(self,
                tensors: dict,
-               log_steps: int = None,
+               log_steps: int,
                show_average: bool = True,
                at_end: bool = False,
                mode: tf.compat.v1.estimator.ModeKeys = tf.compat.v1.estimator.ModeKeys.TRAIN,
@@ -153,13 +158,7 @@ class tfLogTensorHook(_tfEstimatorHooks):
     self.step_triggered = False
     self.show_average   = show_average
 
-    if log_steps is None and not at_end:
-      raise ValueError("Neither log_steps nor at_end have been set. Select at least one.")
-
-    self.timer = tf.compat.v1.train.SecondOrStepTimer(
-      every_steps = (max_length if log_steps is None else log_steps)
-      )
-
+    self.timer = tf.compat.v1.train.SecondOrStepTimer(every_steps = log_steps)
     return
 
   def begin(self):
@@ -209,7 +208,13 @@ class tfLogTensorHook(_tfEstimatorHooks):
     super(tfLogTensorHook, self).end(session)
     if self.at_end:
       end_values = session.run(self.tensors)
-      self._log_tensors(end_values)
+      for tag in self.tensor_tags:
+        if self.show_average:
+          self.result[tag].append(end_values[tag])
+        else:
+          self.results[tag] = [end_values[tag]]
+
+      self.result = { k: (sum(v) / len(v)) for (k, v) in self.result.items() }
 
   def _log_tensors(self, tensor_values):
 
@@ -230,6 +235,113 @@ class tfLogTensorHook(_tfEstimatorHooks):
         l.getLogger().info("Initialization: {}".format(", ".join(stats)))
       else:
         l.getLogger().info("Tensor Values: {}".format(", ".join(stats)))
+
+class tfPlotTensorHook(_tfEstimatorHooks):
+  """Real time training hook that plots tensors against training step."""
+  def __init__(self,
+               tensors: dict,
+               log_steps: int,
+               output_dir: pathlib.Path,
+               mode: tf.compat.v1.estimator.ModeKeys = tf.compat.v1.estimator.ModeKeys.TRAIN,
+              ):
+    """
+    Args:
+      tensors: String to tf.Tensor dictionary for the plotted values.
+      log_steps: If set, logs tensor values once every defined number of estimator steps
+      mode: If hooks is used for training or evaluation
+    """
+    if mode != tf.compat.v1.estimator.ModeKeys.TRAIN:
+      raise ValueError("tfPlotTensorHook can only be used for training mode.")
+    super(tfPlotTensorHook, self).__init__(mode)
+    self.tensors = {
+      summary_tensor.name.replace(":0", ""): tensor 
+        for (summary_tensor, tensor) in zip(tensors[0], tensors[1])
+    }
+    self.epoch_values = {
+                          tag: {'value': [], 'step': []} 
+                            for tag in self.tensors
+                        }
+    self.results = {
+                     tag: {'value': [], 'step': []}
+                       for tag in self.tensors
+                   }
+
+    if len(glob.glob(str(output_dir / "events.out.tfevents*"))) != 0:
+      event_acc = EventAccumulator(str(output_dir))
+      event_acc.Reload()
+      for k in self.tensors:
+        wt, step, value = zip(*event_acc.Scalars(k))
+        self.results[k] = {
+          'value': list(value),
+          'step' : list(step),
+        }
+
+    self.log_steps    = log_steps
+    self.output_dir   = output_dir
+
+    self.step_triggered = False
+    self.timer = tf.compat.v1.train.SecondOrStepTimer(every_steps = log_steps)
+    return
+
+  def begin(self):
+    """
+        Called once at initialization stage
+    """
+    super(tfPlotTensorHook, self).begin()
+    self.trigger_step = 0
+    self.session_dict['tensors'] = self.tensors
+    self.timer.reset()
+    return
+
+  def before_run(self, run_context):
+    """
+      Called before session.run()
+      Any tensor/op should be declared here in order to be evaluated
+      returns None or SessionRunArgs()
+    """
+    self.step_triggered = self.timer.should_trigger_for_step(self.trigger_step)
+    return tf.estimator.SessionRunArgs(self.session_dict)
+  
+  def after_run(self, run_context, run_values):
+    """
+      Requested tensors are evaluated and their values are available
+    """
+    super(tfPlotTensorHook, self).after_run(run_context, run_values)
+
+    for tag in self.tensors:
+      self.epoch_values[tag]['value'].append(run_values.results['tensors'][tag])
+      self.epoch_values[tag]['step'].append(run_values.results[self.global_step])
+      if self.step_triggered:
+        self.results[tag]['value'].append(sum(self.epoch_values[tag]['value']) / 
+                                          len(self.epoch_values[tag]['value']))
+        self.results[tag]['step'].append(run_values.results[self.global_step])
+        self.epoch_values[tag] = {'value': [], 'step': []}
+
+    if self.step_triggered:
+      self._plot_tensors(self.results)
+    self.trigger_step += 1
+
+  def _plot_tensors(self, tensor_values):
+
+    _, _ = self.timer.update_last_triggered_step(self.trigger_step)
+    for (key, value) in tensor_values.items():
+      key_str = str(pathlib.Path(key).stem)
+      y_axis = value['value']
+      x_axis = value['step']
+      plt.linesSingleAxis(
+          {key_str: {'y': value['value'], 'x': value['step']}},
+          y_label = (key_str, 13),
+          x_label = ("Train step", 13),
+          plot_title = (key_str, 20),
+          x_lim = [0, value['step'][-1] + 0.01 * value['step'][-1]],
+          y_lim = 1.1 * max(value['value']),
+          legend = False,
+          showfig = False,
+          savefig = str(self.output_dir / "{}.png".format(key_str)),
+          force_init = True,
+        )
+    return
+
 
 class writeValidationDB(_tfEstimatorHooks):
   """Real time storage hook for validation results"""
