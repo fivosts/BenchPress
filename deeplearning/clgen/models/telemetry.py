@@ -65,6 +65,22 @@ class TrainingLogger(object):
     event_acc.Reload()
     try:
       wall_time, step_nums, loss = zip(*event_acc.Scalars('training/total_loss'))
+
+      for key in event_acc.Tags()['scalars']:
+        _, step, value = zip(*event_acc.Scalars(key))
+        key_str = str(pathlib.Path(key).stem)
+        plt.linesSingleAxis(
+          {key_str: {'y': value, 'x': step}},
+          y_label = (key_str, 13),
+          x_label = ("Train step", 13),
+          plot_title = (key_str, 20),
+          x_lim = [0, step[-1] + 0.01 * step[-1]],
+          y_lim = 1.1 * max(value),
+          legend = False,
+          showfig = False,
+          savefig = str(self.logdir / "{}.png".format(key_str)),
+          force_init = True,
+        )
     except KeyError as e:
       l.getLogger().warn("Model loss log not found! Available Tags: {}".format(event_acc.Tags()))
       self.telemetry = [
