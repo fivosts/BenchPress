@@ -535,14 +535,14 @@ class tfBert(backends.BackendBase):
       if mode == tf.compat.v1.estimator.ModeKeys.TRAIN:        
         with tf.compat.v1.variable_scope("training"):
 
-          train_op = optimizer.create_optimizer(
+          train_op, learning_rate = optimizer.create_optimizer(
               total_loss, self.learning_rate, self.num_train_steps, self.num_warmup_steps, FLAGS.use_tpu)
 
           training_hooks = self.GetTrainingHooks(tensors = {'Loss': total_loss},
-                                                masked_lm_loss = masked_lm_loss,
-                                                next_sentence_loss = next_sentence_loss,
-                                                total_loss = total_loss,
-                                                learning_rate = self.learning_rate,
+                                                 masked_lm_loss = masked_lm_loss,
+                                                 next_sentence_loss = next_sentence_loss,
+                                                 total_loss = total_loss,
+                                                 learning_rate = learning_rate,
                                                 )
 
           output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
@@ -677,7 +677,7 @@ class tfBert(backends.BackendBase):
                        tensors: typing.Dict[str, tf.Tensor],
                        log_steps:  int = None, 
                        max_steps:  int = None,
-                       output_dir: str = None,
+                       output_dir: pathlib.Path = None,
                        **kwargs
                        ) -> typing.List[tf.estimator.SessionRunHook]:
     if log_steps is None:
@@ -685,17 +685,25 @@ class tfBert(backends.BackendBase):
     if max_steps is None:
       max_steps = self.num_train_steps
     if output_dir is None:
-      output_dir = str(self.logfile_path)
+      output_dir = self.logfile_path
+
+    summary_tensors = ([ tf.compat.v1.summary.scalar(name, value) 
+                              for name, value in kwargs.items()
+                          ],
+                        [ value for (name, value) in kwargs.items()
+                        ])
     return [
             tf.estimator.SummarySaverHook(save_steps = log_steps,
-                                          output_dir = output_dir,
-                                          summary_op = [ tf.compat.v1.summary.scalar(name, value) 
-                                                          for name, value in kwargs.items()
-                                                        ]
+                                          output_dir = str(output_dir),
+                                          summary_op = summary_tensors[0],
                                           ),
             hooks.tfLogTensorHook(tensors = tensors, 
                                   log_steps = log_steps, 
-                                  at_end = True
+                                  at_end = True,
+                                  ),
+            hooks.tfPlotTensorHook(tensors = summary_tensors,
+                                   log_steps = log_steps,
+                                   output_dir = output_dir,
                                   ),
             hooks.tfProgressBar(max_length = max_steps),
            ]
