@@ -438,9 +438,29 @@ class MaskLMBatchGenerator(object):
       train_corpus = self._maskCorpus(self.shaped_corpus[split_index:], train_set = True)
       validation_corpus = self._maskCorpus(self.shaped_corpus[:split_index], train_set = False)
       self.dataset['validation']['corpus'] = validation_corpus
-      self._saveCorpusTfRecord(self.dataset['validation'])
+      # self._saveCorpusTfRecord(self.dataset['validation'])
     self.dataset['train']['corpus'] = train_corpus
-    self._saveCorpusTfRecord(self.dataset['train'])
+
+    self.configValidationSets(self.config.validation_set)
+
+    for (key, dataset) in self.dataset.items():
+      self._saveCorpusTfRecord(dataset)
+    return
+
+  def configValidationSets(self, valset_list):
+    for valset in valset_list:
+      set_name = "pred_{}_{}".format(
+        valset.max_predictions_per_seq,
+        "mask" if valset.HasField("mask") else "hole_{}".format(valset.hole.hole_length)
+      )
+      if set_name in self.dataset:
+        continue
+      masked_corpus = self._maskCorpus(self.shaped_corpus, train_set = False, config = valset)
+      self.dataset[set_name] = {
+        'corpus'   : masked_corpus,
+        'tf_record': self.cache.path / "{}.tf_record".format(set_name),
+        'txt': self.cache.path / "{}.txt".format(set_name),
+      }
     return
 
   def generateTfDataset(self,
@@ -709,7 +729,8 @@ class MaskLMBatchGenerator(object):
 
   def _maskCorpus(self, 
                   corpus: np.array,
-                  train_set,
+                  train_set: bool,
+                  config = None,
                   )-> np.array:
     """
     Entrypoint function that inserts masks or holes to the corpus.
@@ -720,13 +741,18 @@ class MaskLMBatchGenerator(object):
     Returns:
       The masked corpus
     """
+    if config is None:
+      config = self.config
+      max_predictions = self.training_opts.max_predictions_per_seq
+    else:
+      max_predictions = config.max_predictions_per_seq
     masked_corpus = []
     with progressbar.ProgressBar(max_value = len(corpus)) as bar:
         for idx, kernel in enumerate(corpus):
-          if self.config.HasField("mask"):
-            masked_seq = self._maskSequence(kernel, train_set)
-          elif self.config.HasField("hole"):
-            masked_seq = self._holeSequence(kernel, train_set)
+          if config.HasField("mask"):
+            masked_seq = self._maskSequence(kernel, train_set, config, max_predictions)
+          elif config.HasField("hole"):
+            masked_seq = self._holeSequence(kernel, train_set, config, max_predictions)
           else:
             raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
           masked_corpus.append(masked_seq)
@@ -737,6 +763,8 @@ class MaskLMBatchGenerator(object):
   def _holeSequence(self,
                     seq: np.array,
                     train_set: bool,
+                    config,
+                    max_predictions: int,
                     ) -> MaskSequence:
     """
     Inserts hole tokens to a given sequence.
@@ -764,8 +792,8 @@ class MaskLMBatchGenerator(object):
     self.rngen.shuffle(candidate_indexes)
 
     # total tokens to add in holes.
-    # No more than max_predictions_per_seq, no less than actual seq length x the probability of hiding a token
-    holes_to_predict  = min(self.training_opts.max_predictions_per_seq,
+    # No more than max_predictions_per_seq (or otherwise specified), no less than actual seq length x the probability of hiding a token
+    holes_to_predict  = min(max_predictions,
                            max(1, int(round(actual_length * self.training_opts.masked_lm_prob))))
 
     # Processed input sequence
@@ -798,7 +826,7 @@ class MaskLMBatchGenerator(object):
               .format(seq[pos_index], input_ids[input_id_idx]))
 
       # Random number to represent the length of this hole.
-      hole_length = self.rngen.randint(0, self.config.hole.hole_length)
+      hole_length = self.rngen.randint(0, config.hole.hole_length)
       # Inside range, make sure hole length does not run over input_id_idx bounds
       hole_length = min(hole_length, len(input_ids) - input_id_idx)
       # Confirm there is no conflict with another hole, further down the sequence.
@@ -811,7 +839,7 @@ class MaskLMBatchGenerator(object):
       target = input_ids[input_id_idx] if hole_length > 0 else self.atomizer.endholeToken
 
       ## TODO. Think about '== self.atomizer.holeToken' condition.
-      # if self.config.mask.random_placed_mask and hole_length != 0:
+      # if config.mask.random_placed_mask and hole_length != 0:
       #   if self.rngen.random() < 0.8:
       #     replacement_token = self.atomizer.holeToken
       #   else:
@@ -907,6 +935,8 @@ class MaskLMBatchGenerator(object):
   def _maskSequence(self,
                     seq: np.array,
                     train_set: bool,
+                    config,
+                    max_predictions: int,
                     ) -> MaskSequence:
     """Inserts masks to a given sequence."""
     assert seq.ndim == 1, "Input for masking must be single-dimension array."
@@ -925,7 +955,7 @@ class MaskLMBatchGenerator(object):
     candidate_indexes = np.arange(actual_length)
     self.rngen.shuffle(candidate_indexes)
 
-    masks_to_predict = min(self.training_opts.max_predictions_per_seq,
+    masks_to_predict = min(max_predictions,
                            max(1, int(round(actual_length * self.training_opts.masked_lm_prob))))
     input_ids = list(np.copy(seq))
     masked_lms = []
@@ -934,7 +964,7 @@ class MaskLMBatchGenerator(object):
       if len(masked_lms) >= masks_to_predict:
         break
 
-      if self.config.mask.random_placed_mask:
+      if config.mask.random_placed_mask:
         # 80% of the time, replace with [MASK]
         if self.rngen.random() < 0.8:
           input_ids[pos_index] = self.atomizer.maskToken
