@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block body %}
+
 <div class="container">
 <div class="row">
 <div class="col">
@@ -16,7 +17,9 @@
   {% for plot in data.plots %}
     <p class = "config">
       {{plot}}
-    <img src = "file://{{plot}}" alt="My Pic">
+    <!-- <img src="{{plot}}" height="200" alt="Image preview..."> -->
+    <img src="file://{{ user_image }}"  alt="Image preview...">
+
     </p>
   {% endfor %}
 

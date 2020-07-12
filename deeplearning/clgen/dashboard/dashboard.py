@@ -649,7 +649,7 @@ def samples(corpus_id: int, model_id: int, epoch: int):
   )
 
 
-def Launch(host: str = "localhost",
+def Launch(host: str = "0.0.0.0",
            debug: bool = True,
            ):
   l.getLogger().debug("deeplearning.clgen.dashboard.Launch()")
