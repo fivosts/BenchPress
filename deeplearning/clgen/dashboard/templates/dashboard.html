@@ -23,7 +23,7 @@
       <ul>
         {% for corpus in data.workspaces[workspace].corpuses %}
         <li class="corpus">
-          <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/">
+          <a href="/{{data.workspaces[workspace].name}}/corpus/{{corpus.sha}}/" style="color:pink">
             <b>{{ corpus.summary }}</b><br>
           </a>
         </li>
@@ -32,10 +32,10 @@
           {% for model in corpus.models %}
           <li class="model">
             {{model.summary}}, {{model.sha}}<br>
-            <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/model_specs">[Model Specs]</a>
-            <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/training">[Training]</a>
-            <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/validation">[Validation]</a>
-            <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/sampling">[Sampling]</a>
+            <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/model_specs" style="color:pink">[Model Specs]</a>
+            <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/training" style="color:pink">[Training]</a>
+            <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/validation" style="color:pink">[Validation]</a>
+            <a href="/{{data.workspaces[workspace].name}}/model/{{model.sha}}/sampling" style="color:pink">[Sampling]</a>
           </li>
           {% endfor %}
         </ul>
