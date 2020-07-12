@@ -8,6 +8,7 @@ import random
 import flask
 import flask_sqlalchemy
 import portpicker
+import shutil
 import sqlalchemy as sql
 
 from deeplearning.clgen.util import pbutil
@@ -35,6 +36,8 @@ flags.DEFINE_integer(
   "clgen_dashboard_port", None, "The port to launch the server on.",
 )
 
+MEDIA_PATH = pathlib.Path(environment.DASHBOARD_STATIC, "images")
+MEDIA_PATH.mkdir(exist_ok = True)
 flask_app = flask.Flask(
   __name__,
   template_folder = environment.DASHBOARD_TEMPLATES,
@@ -367,7 +370,11 @@ def training(workspace: str, model_sha: str):
   current_model_logdir = pathlib.Path(cached_models[target_sha]['path']) / "logs"
   for file in current_model_logdir.iterdir():
     if file.suffix == ".png":
-      data['plots'].append(file)
+      file_path = MEDIA_PATH / file.name
+      shutil.copyfile(file, str(file_path))
+      data['plots'].append(
+        "/" + str(file_path.relative_to(pathlib.Path(flask_app.static_folder).parent))
+      )
 
   data['workspace'] = workspace
   data['model_sha'] = model_sha
@@ -406,13 +413,14 @@ def sample_files(workspace: str, model_sha: str, sampler_sha: str, sample_db: st
       mask_type = ''
     sample_feed    = sample.sample_feed.split(mask_type)
     sample_indices = sample.sample_indices.split('\n')
-    assert ((len(sample_feed) - 1) == len(sample_indices),
-            "sample hole length/generation mismatch: {}, {}"
+    assert len(sample_feed) - 1 == len(sample_indices), ("sample hole length/generation mismatch: {}, {}"
             .format(
               len(sample_feed),
               len(sample_indices),
               )
             )
+
+            
     prediction = sample.text
 
     for i in range(len(sample_feed) - 1):
