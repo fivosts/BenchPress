@@ -375,41 +375,19 @@ class MaskLMBatchGenerator(object):
                                cache_path,
                                ) -> "data_generators.MaskLMBatchGenerator":
     """Initializes data generator for training."""
-    d                     = MaskLMBatchGenerator()
-    d.cache               = cache.mkcache(cache_path, "dataset")
+    d               = MaskLMBatchGenerator()
+    d.cache         = cache.mkcache(cache_path, "dataset")
     d.cache.path.mkdir(exist_ok = True, parents = True)
-    d.dataset             = {
-      'train': {
-        'corpus'   : None,
-        'tf_record': d.cache.path / "train_dataset.tf_record",
-        'txt'      : d.cache.path / "train_dataset.txt",
-      },
-      'validation': {
-        'corpus'   : None,
-        'tf_record': d.cache.path / "validation_dataset.tf_record",
-        'txt'      : d.cache.path / "validation_dataset.txt",
-      },
-    }
-    d.corpus              = corpus
-    d.atomizer            = corpus.atomizer
-    d.config              = training_opts.data_generator
-    d.training_opts       = training_opts
-    d.rngen               = random.Random(training_opts.random_seed)
+
+    d.dataset       = {}
+    d.corpus        = corpus
+    d.atomizer      = corpus.atomizer
+    d.config        = training_opts.data_generator
+    d.training_opts = training_opts
+    d.rngen         = random.Random(training_opts.random_seed)
 
     d.createCorpus()
-
-    if not any(d.dataset[s]['tf_record'].exists() for s in d.dataset):
-      # No datasets exist
-      d.configDataset()
-    elif FLAGS.force_remake_dataset:
-      # They do but forcefully re-make them
-      l.getLogger().warn("Force remaking the dataset can cause all sorts of problems on an already trained model. Are you sure you want to move forward ? [y/n]")
-      a = input()
-      if a.lower() != "yes" and a.lower() != "y":
-        l.getLogger().warn("Overwriting dataset process was aborted. Good call.")
-        return d
-      d.configDataset()
-
+    d.configDataset()
     return d
 
   @classmethod
@@ -431,19 +409,39 @@ class MaskLMBatchGenerator(object):
 
     assert self.config.validation_split >= 0 and self.config.validation_split <= 100
 
-    if self.config.validation_split == 0:
-      train_corpus = self._maskCorpus(self.shaped_corpus, train_set = True)
-    else:
-      split_index  = int((len(self.shaped_corpus) / 100) * self.config.validation_split)
-      train_corpus = self._maskCorpus(self.shaped_corpus[split_index:], train_set = True)
-      validation_corpus = self._maskCorpus(self.shaped_corpus[:split_index], train_set = False)
-      self.dataset['validation']['corpus'] = validation_corpus
-    self.dataset['train']['corpus'] = train_corpus
+    if FLAGS.force_remake_dataset:
+      l.getLogger().warn("Force remaking datasets can cause lots of problems on an already trained model. Are you sure you want to proceed ? [y/n]")
+      a = input()
+      if a.lower() != "yes" and a.lower() != "y":
+        l.getLogger().warn("Overwriting dataset process was aborted. Good call.")
+        return
+
+    train_corpus      = None
+    validation_corpus = None
+    if not (self.cache.path / "train_dataset.tf_record").exists() or FLAGS.force_remake_dataset:
+      if self.config.validation_split == 0:
+        train_corpus = self._maskCorpus(self.shaped_corpus, train_set = True)
+      else:
+        split_index  = int((len(self.shaped_corpus) / 100) * self.config.validation_split)
+        train_corpus = self._maskCorpus(self.shaped_corpus[split_index:], train_set = True)
+        validation_corpus = self._maskCorpus(self.shaped_corpus[:split_index], train_set = False)
+
+    self.dataset['validation'] = {
+      'corpus'   : validation_corpus,
+      'tf_record': self.cache.path / "validation_dataset.tf_record",
+      'txt'      : self.cache.path / "validation_dataset.txt",
+    }
+    self.dataset['train'] = {
+      'corpus'   : train_corpus,
+      'tf_record': self.cache.path / "train_dataset.tf_record",
+      'txt'      : self.cache.path / "train_dataset.txt",
+    }
 
     self.configValidationSets(self.config.validation_set)
 
     for (key, dataset) in self.dataset.items():
-      self._saveCorpusTfRecord(dataset)
+      if dataset['corpus']:
+        self._saveCorpusTfRecord(dataset)
     return
 
   def configValidationSets(self, valset_list):
@@ -452,7 +450,7 @@ class MaskLMBatchGenerator(object):
         valset.max_predictions_per_seq,
         "mask" if valset.HasField("mask") else "hole_{}".format(valset.hole.hole_length)
       )
-      if set_name in self.dataset:
+      if set_name in self.dataset or (self.cache.path / "{}.tf_record".format(set_name)).exists():
         continue
       masked_corpus = self._maskCorpus(self.shaped_corpus, train_set = False, config = valset)
       self.dataset[set_name] = {
@@ -1095,7 +1093,6 @@ class MaskLMBatchGenerator(object):
 
   def _saveCorpusTfRecord(self, masked_corpus: typing.Dict) -> None:
     """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator._saveCorpusTfRecord()")
      
     writer = tf.io.TFRecordWriter(str(masked_corpus['tf_record']))
     if FLAGS.write_text_dataset:
