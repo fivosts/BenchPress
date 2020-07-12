@@ -156,10 +156,24 @@ message Hole {
   // In case sequences are hole-d, choose upper 
   // bound range of possible hole length (will be [0, hole_length]).
   optional int32 hole_length = 1;
+  // Select distribution from which each hole length will be sampled.
+  oneof length_distribution {
+    Uniform uniform_distribution = 2;
+    Normal  normal_distribution  = 3;
+  }
   // Learning holes is a difficult task. Stage training to start from
   // many single-token holes (equivalent to masks) and slightly move to fewer
   // and increasingly lengthier holes.
-  optional bool  stage_training = 3;
+  optional bool stage_training = 4;
+}
+
+message Uniform {
+  optional float slope = 1;
+}
+
+message Normal {
+  optional float mean     = 1;
+  optional float variance = 2;
 }
 
 message ValidationSet {

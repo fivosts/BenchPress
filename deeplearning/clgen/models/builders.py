@@ -112,6 +112,20 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
               lambda x : x > 0,
               "hole_length is the upper bound range of a hole's length. Therefore should be > 0."
             )
+            if val_opt.hole.HasField("uniform_distribution"):
+              pbutil.AssertFieldIsSet(
+                val_opt.hole.uniform_distribution,
+                "slope",
+              )
+            elif val_opt.hole.HasField("normal_distribution"):
+              pbutil.AssertFieldIsSet(
+                val_opt.hole.normal_distribution,
+                "mean",
+              )
+              pbutil.AssertFieldIsSet(
+                val_opt.hole.normal_distribution,
+                "variance",
+              )
       # Parse masking technique for bert's data generator
       pbutil.AssertFieldIsSet(config.training.data_generator, "mask_technique")
       if config.training.data_generator.HasField("mask"):
@@ -126,6 +140,20 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
           lambda x : x > 0,
           "hole_length is the upper bound range of a hole's length. Therefore should be > 0."
         )
+        if val_opt.hole.HasField("uniform_distribution"):
+          pbutil.AssertFieldIsSet(
+            val_opt.hole.uniform_distribution,
+            "slope",
+          )
+        elif val_opt.hole.HasField("normal_distribution"):
+          pbutil.AssertFieldIsSet(
+            val_opt.hole.normal_distribution,
+            "mean",
+          )
+          pbutil.AssertFieldIsSet(
+            val_opt.hole.normal_distribution,
+            "variance",
+          )
         pbutil.AssertFieldIsSet(
           config.training.data_generator.hole,
           "stage_training",
