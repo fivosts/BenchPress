@@ -438,7 +438,6 @@ class MaskLMBatchGenerator(object):
       train_corpus = self._maskCorpus(self.shaped_corpus[split_index:], train_set = True)
       validation_corpus = self._maskCorpus(self.shaped_corpus[:split_index], train_set = False)
       self.dataset['validation']['corpus'] = validation_corpus
-      # self._saveCorpusTfRecord(self.dataset['validation'])
     self.dataset['train']['corpus'] = train_corpus
 
     self.configValidationSets(self.config.validation_set)
