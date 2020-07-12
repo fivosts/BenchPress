@@ -46,6 +46,17 @@ from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_integer(
+  "num_train_steps",
+  None,
+  "Bypass num_train_steps provided by protobuf file."
+)
+
+flags.DEFINE_integer(
+  "num_epochs",
+  None,
+  "Bypass num_epochs provided by protobuf file."
+)
 
 class Model(object):
   """A CLgen language model.
@@ -75,6 +86,11 @@ class Model(object):
     self.config = model_pb2.Model()
     # Validate config options.
     self.config.CopyFrom(builders.AssertIsBuildable(config))
+    if FLAGS.num_train_steps:
+      self.config.training.num_train_steps = FLAGS.num_train_steps
+    if FLAGS.num_epochs:
+      self.config.training.num_epochs = FLAGS.num_epochs
+      
     self.corpus = corpuses.Corpus(config.corpus)
     self.hash = self._ComputeHash(self.corpus, self.config)
     self.cache = cache.mkcache("model", self.hash)
