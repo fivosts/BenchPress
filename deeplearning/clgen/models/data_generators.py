@@ -823,6 +823,7 @@ class MaskLMBatchGenerator(object):
               .format(seq[pos_index], input_ids[input_id_idx]))
 
       # Random number to represent the length of this hole.
+      l.getLogger().critical("TODO: Add hole length distribution here.")
       hole_length = self.rngen.randint(0, config.hole.hole_length)
       # Inside range, make sure hole length does not run over input_id_idx bounds
       hole_length = min(hole_length, len(input_ids) - input_id_idx)
