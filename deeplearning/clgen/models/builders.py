@@ -100,13 +100,18 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
       )
       if len(config.training.data_generator.validation_set) > 0:
         for val_opt in config.training.data_generator.validation_set:
-          if val_opt.HasField("replicate_different_length"):
+          if val_opt.HasField("mask"):
+            pbutil.AssertFieldIsSet(
+              val_opt.mask,
+              "random_placed_mask",
+            )
+          elif val_opt.HasField("hole"):
             pbutil.AssertFieldConstraint(
-              val_opt,
-              "replicate_different_length",
-              lambda x: 0 <= x <= 100,
-              "Validation split percentage can only be between 0% and 100%.."
-            )   
+              val_opt.hole,
+              "hole_length",
+              lambda x : x > 0,
+              "hole_length is the upper bound range of a hole's length. Therefore should be > 0."
+            )
       # Parse masking technique for bert's data generator
       pbutil.AssertFieldIsSet(config.training.data_generator, "mask_technique")
       if config.training.data_generator.HasField("mask"):

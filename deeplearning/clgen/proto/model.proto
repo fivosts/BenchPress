@@ -159,15 +159,17 @@ message Hole {
   // Learning holes is a difficult task. Stage training to start from
   // many single-token holes (equivalent to masks) and slightly move to fewer
   // and increasingly lengthier holes.
-  optional bool  stage_training = 2;
+  optional bool  stage_training = 3;
 }
 
 message ValidationSet {
+  optional int32 max_predictions_per_seq = 1;
   oneof option {
-    // Pick the existing training set and replicate it but
-    // this time using lengthier holes but in the same positions.
-    int32 replicate_different_length = 1;
-    // TODO extend here for more val opts.
+    // Create new sets out of the original corpus,
+    // to use them for validation or sampling.
+    // Useful to test the model against different specs.
+    Mask mask = 3;
+    Hole hole = 4;
   }
 }
 
