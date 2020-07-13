@@ -18,6 +18,7 @@ import numpy as np
 
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import pbutil
+from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util.tf import tf
 from deeplearning.clgen.proto import model_pb2
 from absl import flags
@@ -420,11 +421,17 @@ class MaskLMBatchGenerator(object):
     validation_corpus = None
     if not (self.cache.path / "train_dataset.tf_record").exists() or FLAGS.force_remake_dataset:
       if self.config.validation_split == 0:
-        train_corpus = self._maskCorpus(self.shaped_corpus, train_set = True)
+        train_corpus = self._maskCorpus(
+          self.shaped_corpus, set_name = "train_dataset", train_set = True
+        )
       else:
         split_index  = int((len(self.shaped_corpus) / 100) * self.config.validation_split)
-        train_corpus = self._maskCorpus(self.shaped_corpus[split_index:], train_set = True)
-        validation_corpus = self._maskCorpus(self.shaped_corpus[:split_index], train_set = False)
+        train_corpus = self._maskCorpus(
+          self.shaped_corpus[split_index:], set_name = "train_dataset", train_set = True
+        )
+        validation_corpus = self._maskCorpus(
+          self.shaped_corpus[:split_index], set_name = "validation_dataset", train_set = False
+        )
 
     self.dataset['validation'] = {
       'corpus'   : validation_corpus,
@@ -452,7 +459,9 @@ class MaskLMBatchGenerator(object):
       )
       if set_name in self.dataset or (self.cache.path / "{}.tf_record".format(set_name)).exists():
         continue
-      masked_corpus = self._maskCorpus(self.shaped_corpus, train_set = False, config = valset)
+      masked_corpus = self._maskCorpus(
+        self.shaped_corpus, train_set = False, set_name = set_name, config = valset
+      )
       self.dataset[set_name] = {
         'corpus'   : masked_corpus,
         'tf_record': self.cache.path / "{}.tf_record".format(set_name),
@@ -727,7 +736,8 @@ class MaskLMBatchGenerator(object):
   def _maskCorpus(self, 
                   corpus: np.array,
                   train_set: bool,
-                  config = None,
+                  set_name: str,
+                  config   = None,
                   )-> np.array:
     """
     Entrypoint function that inserts masks or holes to the corpus.
@@ -743,25 +753,33 @@ class MaskLMBatchGenerator(object):
       max_predictions = self.training_opts.max_predictions_per_seq
     else:
       max_predictions = config.max_predictions_per_seq
+
+    distribution = None
+    if config.HasField("hole"):
+      distribution = distributions.Distribution.FromHoleConfig(config.hole, self.cache.path, set_name)
+      maskSequence = lambda x : self._holeSequence(x, train_set, max_predictions, distribution)
+    elif config.HasField("mask"):
+      maskSequence = lambda x : self._maskSequence(x, train_set, config.mask.random_placed_mask, max_predictions)
+    else:
+      raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
+
+    ## Core loop of masking.
     masked_corpus = []
     with progressbar.ProgressBar(max_value = len(corpus)) as bar:
-        for idx, kernel in enumerate(corpus):
-          if config.HasField("mask"):
-            masked_seq = self._maskSequence(kernel, train_set, config, max_predictions)
-          elif config.HasField("hole"):
-            masked_seq = self._holeSequence(kernel, train_set, config, max_predictions)
-          else:
-            raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
-          masked_corpus.append(masked_seq)
-          bar.update(idx)
+      for idx, kernel in enumerate(corpus):
+        masked_corpus.append(maskSequence(kernel))
+        bar.update(idx)
     masked_corpus[0].LogBatchTelemetry(self.training_opts.batch_size, self.steps_per_epoch, self.num_epochs)
+
+    if distribution:
+      distribution.plot()
     return masked_corpus
 
   def _holeSequence(self,
                     seq: np.array,
                     train_set: bool,
-                    config,
                     max_predictions: int,
+                    distribution: distributions.Distribution,
                     ) -> MaskSequence:
     """
     Inserts hole tokens to a given sequence.
@@ -773,7 +791,7 @@ class MaskLMBatchGenerator(object):
       def __init__(self, 
                    pos_index: int, 
                    token_id: int, 
-                   hole_length: int
+                   hole_length: int,
                    ):
         self.pos_index   = pos_index
         self.token_id    = token_id
@@ -822,9 +840,8 @@ class MaskLMBatchGenerator(object):
               "Original and offset-ted sequence have misaligned tokens: {}, {}"
               .format(seq[pos_index], input_ids[input_id_idx]))
 
-      # Random number to represent the length of this hole.
-      l.getLogger().critical("TODO: Add hole length distribution here.")
-      hole_length = self.rngen.randint(0, config.hole.hole_length)
+      # Sampled number from distribution to represent the actual hole length
+      hole_length = distribution.sample()
       # Inside range, make sure hole length does not run over input_id_idx bounds
       hole_length = min(hole_length, len(input_ids) - input_id_idx)
       # Confirm there is no conflict with another hole, further down the sequence.
@@ -832,7 +849,8 @@ class MaskLMBatchGenerator(object):
         if input_ids[input_id_idx + i] == self.atomizer.holeToken:
           hole_length = i
           break
-
+      distribution.register(hole_length)
+      
       # Target token for classifier is either the first token of the hole, or endholToken if hole is empty
       target = input_ids[input_id_idx] if hole_length > 0 else self.atomizer.endholeToken
 
@@ -933,7 +951,7 @@ class MaskLMBatchGenerator(object):
   def _maskSequence(self,
                     seq: np.array,
                     train_set: bool,
-                    config,
+                    random_placed_mask: bool,
                     max_predictions: int,
                     ) -> MaskSequence:
     """Inserts masks to a given sequence."""
@@ -962,7 +980,7 @@ class MaskLMBatchGenerator(object):
       if len(masked_lms) >= masks_to_predict:
         break
 
-      if config.mask.random_placed_mask:
+      if random_placed_mask:
         # 80% of the time, replace with [MASK]
         if self.rngen.random() < 0.8:
           input_ids[pos_index] = self.atomizer.maskToken
