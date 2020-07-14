@@ -30,11 +30,17 @@ option java_multiple_files = true;
 option java_outer_classname = "SamplerProto";
 option java_package = "com.clgen";
 
+import "deeplearning/clgen/proto/model.proto";
+
 // The specification of a CLgen sampler.
 message Sampler {
   // The initial text to the seed the language model with. Each sample will
   // begin with this text.
-  optional string start_text = 1;
+  oneof sample_feed {
+    string        start_text = 1;
+    bool          train_set  = 2;
+    ValidationSet sample_set = 3;
+  }
   // The sampling batch size.
   // TODO(cec): Always sample with max batch size.
   optional int32 batch_size = 2;

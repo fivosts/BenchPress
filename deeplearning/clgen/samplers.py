@@ -51,12 +51,15 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
     UserError: If there are configuration errors.
   """
   try:
-    pbutil.AssertFieldConstraint(
-      config,
-      "start_text",
-      lambda s: len(s),
-      "Sampler.start_text must be a string",
-    )
+    if config.HasField("start_text"):
+      pbutil.AssertFieldConstraint(
+        config,
+        "start_text",
+        lambda s: len(s),
+        "Sampler.start_text must be a string",
+      )
+    elif (not config.HasField("train_set")) and not config.HasField("sample_sets"):
+      raise ValueError(config)
     pbutil.AssertFieldConstraint(
       config, "batch_size", lambda x: 0 < x, "Sampler.batch_size must be > 0"
     )
@@ -239,7 +242,6 @@ def GetTerminationCriteria(
     else:
       raise SystemError("Unknown Sampler.termination_criteria")
   return terminators
-
 
 class Sampler(object):
   """CLgen sampler for models.
