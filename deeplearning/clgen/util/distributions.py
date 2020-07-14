@@ -54,7 +54,6 @@ class Distribution():
       }
     ]
     from eupy.native import logger as l
-    l.getLogger().critical(self.set_name)
     plt.plotBars(
       point_set, save_file = True, file_path = str(self.log_path / self.set_name),
       show_xlabels = True, file_extension = ""
