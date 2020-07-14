@@ -377,7 +377,7 @@ class tfBert(backends.BackendBase):
     """This is called only once. Performs basic initialization of sampling"""
     if self.sample is None or sampler.hash != self.sampler.hash:
       data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
-                         sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings
+                         sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings, self.cache.path
                        )
       self._ConfigSampleParams(data_generator, sampler)
 
