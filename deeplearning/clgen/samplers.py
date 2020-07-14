@@ -32,6 +32,7 @@ from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
 
+from eupy.native import logger as l
 from labm8.py import sqlutil
 
 FLAGS = flags.FLAGS
@@ -58,7 +59,9 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
         lambda s: len(s),
         "Sampler.start_text must be a string",
       )
-    elif (not config.HasField("train_set")) and not config.HasField("sample_sets"):
+    elif ((not config.HasField("train_set")) 
+      and (not config.HasField("validation_set")) 
+      and (not config.HasField("sample_set"))):
       raise ValueError(config)
     pbutil.AssertFieldConstraint(
       config, "batch_size", lambda x: 0 < x, "Sampler.batch_size must be > 0"
@@ -270,6 +273,14 @@ class Sampler(object):
     self.hash = self._ComputeHash(self.config)
     self.terminators = GetTerminationCriteria(self.config.termination_criteria)
     self.start_text = self.config.start_text
+    if config.HasField("start_text"):
+      self.start_text = self.config.start_text
+    else:
+      self.start_text = ""
+    self.isFixedStr = config.HasField("start_text") and not (
+          config.HasField("train_set") or config.HasField("validation_set") or config.HasField("sample_set")
+        )
+
     self.temperature = self.config.temperature_micros / 1e6
     self.batch_size = self.config.batch_size
     self.sequence_length = self.config.sequence_length
@@ -287,6 +298,15 @@ class Sampler(object):
     # Set in Specialize().
     self.encoded_start_text = None
     self.tokenized_start_text = None
+
+  def setStartText(self, start_text: str):
+    """
+      Assign current start_text used to sample. This function lazily assigns self.start_text and
+      is used when sampling from tf_record dataset instead of a simple fixed string. This 
+      function is usedin conjunction with BERT Data generator.
+    """
+    self.start_text = start_text
+    return
 
   def Specialize(self, atomizer: atomizers.AtomizerBase) -> None:
     """Specialize a sampler a vocabulary.
@@ -319,7 +339,7 @@ class Sampler(object):
         f"length. Sampler sequence length={self.sequence_length}, encoded "
         f"start text length={len(self.encoded_start_text)}"
       )
-
+    l.getLogger().info("Sampling: '{}'\n".format(self.start_text))
     [terminator.Specialize(atomizer) for terminator in self.terminators]
 
   def symlinkModelDB(self,
