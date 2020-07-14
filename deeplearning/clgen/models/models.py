@@ -301,11 +301,11 @@ class Model(object):
     self.Create()
 
     sample_start_time = datetime.datetime.utcnow()    
-    l.getLogger().info("Sampling: '{}'".format(sampler.start_text))
 
     (self.cache.path / "samples" / sampler.hash).mkdir(exist_ok = True)
     atomizer = self.corpus.atomizer
-    sampler.Specialize(atomizer)
+    if sampler.isFixedStr:
+      sampler.Specialize(atomizer)
     self.backend.InitSampling(sampler, seed)
     [obs.Specialize(self, sampler) for obs in sample_observers]
 
@@ -330,15 +330,13 @@ class Model(object):
   ) -> bool:
     ## This function needs a hell of refactoring.
     """Run a single iteration of the batched sample inner-loop."""
-    l.getLogger().debug("deeplearning.clgen.models.Model._SampleBatch()")
+    self.backend.InitSampleBatch(sampler)
     samples_in_progress = [
       sampler.tokenized_start_text.copy() for _ in range(sampler.batch_size)
     ]
     done = np.zeros(sampler.batch_size, dtype=np.bool)
     start_time = datetime.datetime.utcnow()
     wall_time_start = start_time
-
-    self.backend.InitSampleBatch(sampler)
 
     # The return value of this method. If any of the sample_observers return
     # False, this value is set to False.
