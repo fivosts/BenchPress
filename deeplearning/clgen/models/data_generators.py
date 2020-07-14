@@ -366,6 +366,7 @@ class MaskLMBatchGenerator(object):
     self.sampleIndices           = None
 
     self.sampler                 = None
+    self.tfRecordSampler         = None
     self.rngen                   = None
     return
 
@@ -397,9 +398,11 @@ class MaskLMBatchGenerator(object):
                                 atomizer,
                                 seed: int,
                                 max_position_embeddings: int,
+                                cache_path,
                                 ) -> "data_generators.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
     d                         = MaskLMBatchGenerator()
+    d.cache                   = cache.mkcache(cache_path, "dataset")
     d.sampler                 = sampler
     d.atomizer                = atomizer
     d.rngen                   = random.Random(seed)
@@ -451,7 +454,7 @@ class MaskLMBatchGenerator(object):
         self._saveCorpusTfRecord(dataset)
     return
 
-  def configValidationSets(self, valset_list):
+  def configValidationSets(self, valset_list) -> None:
     for valset in valset_list:
       set_name = "pred_{}_{}".format(
         valset.max_predictions_per_seq,
@@ -640,6 +643,30 @@ class MaskLMBatchGenerator(object):
           'next_sentence_labels'  : next_sentence_labels,
       }
     return input_fn
+
+  def tfRecordSampleGenerator(self):
+    assert not self.sampler.config.HasField("start_text")
+
+    if self.sampler.config.HasField("train_set"):
+      sampledDataset = "train_dataset"
+    elif self.sampler.config.HasField("validation_set"):
+      sampledDataset = "validation_dataset"
+    elif self.sampler.config.HasField("sample_set"):
+      sampledDataset = "pred_{}_{}".format(
+        self.sampler.config.sample_set.max_predictions_per_seq,
+        "mask" if self.sampler.config.sample_set.HasField("mask") 
+               else "hole_{}".format(self.sampler.config.sample_set.hole.hole_length)
+      )
+    path = self.cache.path / "{}.tf_record".format(sampledDataset)
+    if not path.exists():
+      raise FileNotFoundError(path)
+
+    for example in tf.compat.v1.io.tf_record_iterator(str(path)):
+      input_ids = np.asarray(tf.train.Example.FromString(example).features.feature['input_ids'].int64_list.value)
+      if self.atomizer.padToken in input_ids:
+        yield input_ids[:np.where(input_ids == self.atomizer.padToken)[0][0]]
+      else:
+        yield input_ids
 
   def createCorpus(self) -> None:
     """
@@ -1037,9 +1064,23 @@ class MaskLMBatchGenerator(object):
 
   def InitSampleBatch(self) -> None:
     """
-    Initializes data_generator for inference.
-    self.sampleBatch is initialized with sampler.encoded_start_text
+      Initializes data_generator for inference.
+      self.sampleBatch is initialized with sampler.encoded_start_text
     """
+    if not self.sampler.isFixedStr:
+      self.tfRecordSampler = self.tfRecordSampleGenerator()
+      try:
+        start_text = next(self.tfRecordSampler)[:self.sampler.sequence_length]
+      except StopIteration:
+        l.getLogger().warn("Repeating iterator on dataset...")
+        self.tfRecordSampler = self.tfRecordSampleGenerator()
+        try:
+          start_text = next(self.tfRecordSampler)[:self.sampler.sequence_length]
+        except Exception as e:
+          raise e
+      self.sampler.setStartText(self.atomizer.DeatomizeIndices(start_text))
+      self.sampler.Specialize(self.atomizer)
+    
     assert self.sampler.sequence_length <= self.max_position_embeddings, "Sampler sequence length exceeds max position embeddings."
     input_sample = self.sampler.encoded_start_text
     assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
