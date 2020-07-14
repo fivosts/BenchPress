@@ -88,7 +88,7 @@ def parseModels(workspace_path, corpus_sha: str):
         if (model_path / "META.pbtxt").exists():
           meta = parseMeta(model_path / "META.pbtxt")
           model = {          
-            'path'        : str(model_path),
+            'path'        : model_path,
             'sha'         : str(model_sha.name),
             'config'      : meta,
             'atomizer'    : atomizers.AtomizerBase.FromFile(model_path / pathlib.Path(os.readlink(model_path / "atomizer"))),
@@ -245,6 +245,43 @@ def model_specs(workspace: str, model_sha: str):
   }
   return flask.render_template("model_specs.html", data = spec_data, **GetBaseTemplateArgs())
 
+@flask_app.route("/<string:workspace>/model/<string:model_sha>/dataset")
+def dataset(workspace: str, model_sha: str):
+  global data
+  global cached_models
+  if data == {}:
+    data = parseData()
+
+  target_sha    = crypto.sha256_str(str(workspace) + model_sha)
+  current_model = cached_models[target_sha]
+
+  datasets = []
+  for d in glob.glob(str(current_model['path'] / "dataset" / "*.tf_record")):
+    set_path = pathlib.Path(d)
+    if (current_model['path'] / "dataset" / "{}.png".format(set_path.stem)).exists():
+      png_file = current_model['path'] / "dataset" / "{}.png".format(set_path.stem)
+      shutil.copyfile(
+        png_file,
+        str(MEDIA_PATH / png_file.name)
+      )
+
+    datasets.append(
+      {
+        'name': set_path.stem,
+        'plot': "/" + str(
+              (MEDIA_PATH / "{}.png".format(set_path.stem)).relative_to(
+                              pathlib.Path(flask_app.static_folder).parent
+                              )
+              )
+      }
+    )
+  spec_data = {
+    'workspace': workspace,
+    'model_sha': model_sha,
+    'datasets' : datasets,
+  }
+  return flask.render_template("dataset.html", data = spec_data, **GetBaseTemplateArgs())
+
 @flask_app.route("/<string:workspace>/sampler/<string:sampler_sha>/sampler_specs")
 def sampler_specs(workspace: str, sampler_sha: str):
   global data
@@ -367,7 +404,7 @@ def training(workspace: str, model_sha: str):
   data['plots'] = []
 
   target_sha = crypto.sha256_str(str(workspace) + model_sha)
-  current_model_logdir = pathlib.Path(cached_models[target_sha]['path']) / "logs"
+  current_model_logdir = cached_models[target_sha]['path'] / "logs"
   for file in current_model_logdir.iterdir():
     if file.suffix == ".png":
       file_path = MEDIA_PATH / file.name
