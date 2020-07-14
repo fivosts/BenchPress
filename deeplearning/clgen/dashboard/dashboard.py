@@ -695,7 +695,7 @@ def samples(corpus_id: int, model_id: int, epoch: int):
 
 
 def Launch(host: str = "0.0.0.0",
-           debug: bool = True,
+           debug: bool = False,
            ):
   l.getLogger().debug("deeplearning.clgen.dashboard.Launch()")
   """Launch dashboard in a separate thread."""
