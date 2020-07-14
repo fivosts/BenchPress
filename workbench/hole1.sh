@@ -1,5 +1,5 @@
 echo "GPU 0 on CC3"
-EXPORT CUDA_VISIBLE_DEVICES='0'
+export CUDA_VISIBLE_DEVICES='0'
 for i in {1..10};
 do
 	steps=$((20000*$i))
