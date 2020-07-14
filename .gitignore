@@ -16,7 +16,6 @@ bazel-testlogs
 
 # Working folders
 /workspace
-/workbench
 
 # Big corpus folders
 /model_zoo/corpus
