@@ -248,18 +248,19 @@ class Model(object):
     self.Create()
     # with self.training_lock.acquire():
     self.backend.Train(self.corpus, **kwargs)
-    # telemetry_logs = self.backend.telemetry.EpochTelemetry()
+    telemetry_logs = self.backend.telemetry.EpochTelemetry()
 
-    # final_loss = telemetry_logs[-1].loss
-    # total_time_ms = sum(t.epoch_wall_time_ms for t in telemetry_logs)
-    # l.getLogger().info(
-    #   "Trained model for {} epochs in {} ms. " "Training loss: {}."
-    #     .format(
-    #       self.backend.num_epochs,
-    #       humanize.intcomma(total_time_ms),
-    #       final_loss,
-    #       )
-    # )
+    final_loss = telemetry_logs[-1].loss
+    total_time_ms = sum(t.epoch_wall_time_ms for t in telemetry_logs)
+    l.getLogger().info(
+      "Trained model for {} {} in {} ms. " "Training loss: {}."
+        .format(
+          self.backend.num_epochs,
+          "steps" if isinstance(self.backend, tf_bert.tfBert) else "epochs",
+          humanize.intcomma(total_time_ms),
+          final_loss,
+          )
+    )
     return self
 
   def Sample(
