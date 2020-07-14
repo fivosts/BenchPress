@@ -37,23 +37,24 @@ message Sampler {
   // The initial text to the seed the language model with. Each sample will
   // begin with this text.
   oneof sample_feed {
-    string        start_text = 1;
-    bool          train_set  = 2;
-    ValidationSet sample_set = 3;
+    string        start_text      = 1;
+    bool          train_set       = 2;
+    bool          validation_set  = 3;
+    ValidationSet sample_set      = 4;
   }
   // The sampling batch size.
   // TODO(cec): Always sample with max batch size.
-  optional int32 batch_size = 2;
+  optional int32 batch_size = 5;
   // The length of sampling sequences.
-  optional int32 sequence_length = 5;
+  optional int32 sequence_length = 6;
   // The sampling temperature. Must be >= 0. A recommended starting value is
   // 1000000 (i.e. 1.0 in real values).
-  optional int32 temperature_micros = 3;
+  optional int32 temperature_micros = 7;
   // The criteria that determine when to terminate a sample, in the order in
   // which they will be executed. Duplicates are allowed, for example if you
   // would like to have symmetrical token depth counters for two pairs of
   // tokens.
-  repeated SampleTerminationCriterion termination_criteria = 4;
+  repeated SampleTerminationCriterion termination_criteria = 8;
 }
 
 // Criteria used for determining when to stop sampling.
