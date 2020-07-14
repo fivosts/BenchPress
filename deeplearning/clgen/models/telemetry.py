@@ -3,6 +3,7 @@ import pathlib
 import re
 import typing
 import datetime
+import glob
 from absl import flags
 
 from deeplearning.clgen.proto import telemetry_pb2
@@ -63,24 +64,44 @@ class TrainingLogger(object):
     from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
     event_acc = EventAccumulator(str(self.logdir))
     event_acc.Reload()
-    try:
-      wall_time, step_nums, loss = zip(*event_acc.Scalars('training/total_loss'))
+    self.tfAccumulateLoss(event_acc)
 
-      for key in event_acc.Tags()['scalars']:
-        _, step, value = zip(*event_acc.Scalars(key))
-        key_str = str(pathlib.Path(key).stem)
-        plt.linesSingleAxis(
-          {key_str: {'y': value, 'x': step}},
-          y_label = (key_str, 13),
-          x_label = ("Train step", 13),
-          plot_title = (key_str, 20),
-          x_lim = [0, step[-1] + 0.01 * step[-1]],
-          y_lim = 1.1 * max(value),
-          legend = False,
-          showfig = False,
-          savefig = str(self.logdir / "{}.png".format(key_str)),
-          force_init = True,
-        )
+    for key in event_acc.Tags()['scalars']:
+      _, step, value = zip(*event_acc.Scalars(key))
+      key_str = str(pathlib.Path(key).stem)
+      plt.linesSingleAxis(
+        {key_str: {'y': value, 'x': step}},
+        y_label = (key_str, 13),
+        x_label = ("Train step", 13),
+        plot_title = (key_str, 20),
+        x_lim = [0, step[-1] + 0.01 * step[-1]],
+        y_lim = 1.1 * max(value),
+        legend = False,
+        showfig = False,
+        savefig = str(self.logdir / "{}.png".format(key_str)),
+        force_init = True,
+      )
+    return
+
+  def tfAccumulateLoss(self, event_acc):
+    """Open accumulator and read total_loss scalar"""
+    try:
+      self.telemetry = []
+      wall_time, step_num, loss = zip(*event_acc.Scalars('training/total_loss'))
+      for (indx, (wt, st, ls)) in enumerate(zip(wall_time, step_num, loss)):
+        round_wt = int(round(wt, 0))
+        if indx == 0:
+          current_time = round_wt
+          continue
+        else:
+          self.telemetry.append(telemetry_pb2.ModelEpochTelemetry(
+                                    timestamp_unix_epoch_ms = str(round_wt),
+                                    epoch_num = st,
+                                    epoch_wall_time_ms = round_wt - current_time,
+                                    loss = ls,
+                                )
+            )
+          current_time = round_wt
     except KeyError as e:
       l.getLogger().warn("Model loss log not found! Available Tags: {}".format(event_acc.Tags()))
       self.telemetry = [
@@ -91,34 +112,30 @@ class TrainingLogger(object):
           loss = -1,
         )
       ]
-      return
-      
-    assert len(wall_time) == len(step_nums)
-    assert len(step_nums) == len(loss)
-
-    self.telemetry = []
-    for (indx, (wt, ls)) in enumerate(zip(wall_time, loss)):
-      round_wt = int(round(wt, 0))
-      if indx == 0:
-        current_time = round_wt
-        continue
-      else:
-        self.telemetry.append(telemetry_pb2.ModelEpochTelemetry(
-                                  timestamp_unix_epoch_ms = str(round_wt),
-                                  epoch_num = indx,
-                                  epoch_wall_time_ms = round_wt - current_time,
-                                  loss = ls,
-                              )
-          )
-        current_time = round_wt
+    return
 
   def EpochTelemetry(self) -> typing.List[telemetry_pb2.ModelEpochTelemetry]:
     """Return the epoch telemetry files."""
     if self.telemetry is None:
-      return [
-        pbutil.FromFile(self.logdir / p, telemetry_pb2.ModelEpochTelemetry())
-        for p in sorted(self.logdir.iterdir())
-        if re.match(r"epoch_\d\d+_telemetry\.pbtxt", str(p.name))
-      ]
-    else:
-      return self.telemetry
+      if len(glob.glob(str(self.logdir / "epoch_*_telemetry.pbtxt"))) > 0:
+        return [
+          pbutil.FromFile(self.logdir / p, telemetry_pb2.ModelEpochTelemetry())
+          for p in sorted(self.logdir.iterdir())
+          if re.match(r"epoch_\d\d+_telemetry\.pbtxt", str(p.name))
+        ]
+      elif len(glob.glob(str(self.logdir / "events.out.tfevents*"))) > 0:
+        from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+        event_acc = EventAccumulator(str(self.logdir))
+        event_acc.Reload()
+        self.tfAccumulateLoss(event_acc)
+      else:
+        l.getLogger().warn("Training logs have not been found. Invalid reported loss.")
+        self.telemetry = [
+          telemetry_pb2.ModelEpochTelemetry(
+            timestamp_unix_epoch_ms = str(0),
+            epoch_num = 0,
+            epoch_wall_time_ms = 0,
+            loss = -1,
+          )
+        ]
+    return self.telemetry
