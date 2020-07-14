@@ -302,7 +302,7 @@ class Sampler(object):
   def setStartText(self, start_text: str):
     """
       Assign current start_text used to sample. This function lazily assigns self.start_text and
-      is used when sampling from tf_record dataset instead of a simple fixed string. This 
+      is used when sampling from tf_record dataset instead of a simple fixed string. This
       function is usedin conjunction with BERT Data generator.
     """
     self.start_text = start_text
