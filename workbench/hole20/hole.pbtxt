@@ -40,7 +40,7 @@ model {
     sequence_length: 1024
     batch_size: 16
     max_predictions_per_seq: 2
-    dupe_factor: 2
+    dupe_factor: 1
     masked_lm_prob: 0.5
     random_seed: 12345
     shuffle_corpus_contentfiles_between_epochs: true
