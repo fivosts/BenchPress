@@ -261,7 +261,7 @@ def dataset(workspace: str, model_sha: str):
     if (current_model['path'] / "dataset" / "{}.png".format(set_path.stem)).exists():
       png_file = current_model['path'] / "dataset" / "{}.png".format(set_path.stem)
       dest_file = MEDIA_PATH / workspace / model_sha / "dataset" / png_file.name
-      dest_file.mkdir(exist_ok = True, parents = True)
+      dest_file.parent.mkdir(exist_ok = True, parents = True)
       shutil.copyfile(
         png_file,
         str(dest_file)
@@ -270,11 +270,8 @@ def dataset(workspace: str, model_sha: str):
     datasets.append(
       {
         'name': set_path.stem,
-        'plot': "/" + str(
-              (MEDIA_PATH / "{}.png".format(set_path.stem)).relative_to(
-                              pathlib.Path(flask_app.static_folder).parent
-                              )
-              )
+        'plot': 
+          "/" + str(dest_file.relative_to(pathlib.Path(flask_app.static_folder).parent))
       }
     )
   spec_data = {
@@ -410,10 +407,10 @@ def training(workspace: str, model_sha: str):
   for file in current_model_logdir.iterdir():
     if file.suffix == ".png":
       dest_file = MEDIA_PATH / workspace / model_sha / "logs" / file.name
-      dest_file.mkdir(exist_ok = True, parents = True)
+      dest_file.parent.mkdir(exist_ok = True, parents = True)
       shutil.copyfile(file, str(dest_file))
       data['plots'].append(
-        "/" + str(file_path.relative_to(pathlib.Path(flask_app.static_folder).parent))
+        "/" + str(dest_file.relative_to(pathlib.Path(flask_app.static_folder).parent))
       )
 
   data['workspace'] = workspace
