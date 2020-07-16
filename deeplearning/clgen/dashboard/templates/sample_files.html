@@ -7,8 +7,8 @@
 
   <p class="config"><a href="/{{data.workspace}}/model/{{data.model_sha}}/model_specs" style="color:pink">[Model Specs]</a><br></p>
 
-
-    {%- for sample in data -%}
+    <p class="config">Model: {{data.summary}}, {{data.model_sha}}<br><br></p>
+    {%- for sample in data.samples -%}
       <span class="config"><b><br><br>Sample feed:</b><br><br></span>
 
       {%- for chunk in sample.sample_feed -%}

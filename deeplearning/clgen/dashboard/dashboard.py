@@ -514,6 +514,15 @@ def sample_files(workspace: str, model_sha: str, sampler_sha: str, sample_db: st
     sample.sample_indices = processed_indices
     sample.sample_feed = processed_feed
 
+  sample_files['summary']   = 
+  sample_files['workspace'] = workspace
+  sample_files['model_sha'] = model_sha
+  sample_specs = {
+    'summary'   : cached_models[target_sha]['summary'],
+    'workspace' : workspace,
+    'model_sha' : model_sha,
+    'samples'   : sample_files,
+  }
   return flask.render_template("sample_files.html", data = sample_files, **GetBaseTemplateArgs())
 
 @flask_app.route("/corpus/<int:corpus_id>/model/<int:model_id>/")
