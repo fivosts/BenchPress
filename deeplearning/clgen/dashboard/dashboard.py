@@ -111,11 +111,19 @@ def parseMeta(meta):
 def parseModelSummary(meta):
   m = pbutil.FromString('\n'.join(meta), internal_pb2.ModelMeta())
   if m.config.architecture.backend == model_pb2.NetworkArchitecture.TENSORFLOW_BERT:
-    summary = ("TF_BERT, h_s: {}, num_h_l: {}, heads: {}, intm_s: {}, max_pemb: {}, max_preds: {}, dupe: {}, mask_prob: {}, target: {}"
+    summary = ("BERT, hs: {}, nhl: {}, atth: {}, imsz: {}, pemb: {}, preds: {}, dp: {}, mprob: {}, {}"
         .format(m.config.architecture.hidden_size, m.config.architecture.num_hidden_layers, m.config.architecture.num_attention_heads,
         m.config.architecture.intermediate_size, m.config.architecture.max_position_embeddings, m.config.training.max_predictions_per_seq, 
         m.config.training.dupe_factor, round(m.config.training.masked_lm_prob, 3),
-        "mask" if m.config.training.data_generator.HasField("mask") else "hole-{}".format(m.config.training.data_generator.hole.hole_length)
+        "mask" if m.config.training.data_generator.HasField("mask") else 
+            "hole-{},{}".format(
+                m.config.training.data_generator.hole.hole_length,
+                "unf" if m.config.training.data_generator.hole.HasField("uniform_distribution") else
+                  "norm-{},{}".format(
+                    round(m.config.training.data_generator.hole.normal_distrtibution.mean, 2), 
+                    round(m.config.training.data_generator.hole.normal_distrtibution.variance, 2)
+                    )
+                )
         )
       )
   else:
