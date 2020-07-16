@@ -275,7 +275,7 @@ def dataset(workspace: str, model_sha: str):
       }
     )
   spec_data = {
-    'summary'  : current_model['summary']
+    'summary'  : current_model['summary'],
     'workspace': workspace,
     'model_sha': model_sha,
     'datasets' : datasets,
