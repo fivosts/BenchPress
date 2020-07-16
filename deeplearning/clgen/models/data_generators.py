@@ -407,6 +407,9 @@ class MaskLMBatchGenerator(object):
     d.atomizer                = atomizer
     d.rngen                   = random.Random(seed)
     d.max_position_embeddings = max_position_embeddings
+    if not d.sampler.isFixedStr:
+      d.tfRecordSampler = d.tfRecordSampleGenerator()
+    l.getLogger().critical("Initialized")
     return d
 
   def configDataset(self) -> None:
@@ -944,7 +947,8 @@ class MaskLMBatchGenerator(object):
       Setting this to 0 means that next sentence is NOT random.
       Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.    
     """
-
+    if len(masked_lms) == 0:
+      l.getLogger().warn("No HOLE added to datapoint. Increase probability of hole occuring.")
     for p in masked_lms:
       if p.pos_index < len(seq):
         """
@@ -1068,7 +1072,6 @@ class MaskLMBatchGenerator(object):
       self.sampleBatch is initialized with sampler.encoded_start_text
     """
     if not self.sampler.isFixedStr:
-      self.tfRecordSampler = self.tfRecordSampleGenerator()
       try:
         start_text = next(self.tfRecordSampler)[:self.sampler.sequence_length]
       except StopIteration:
