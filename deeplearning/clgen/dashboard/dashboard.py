@@ -389,7 +389,7 @@ def sampling(workspace: str, model_sha: str):
   samplers = current_model['samplers']
 
   data = {
-    'summary'  : current_model['summary']
+    'summary'  : current_model['summary'],
     'workspace': workspace,
     'model_sha': model_sha,
     'samplers' : samplers,
