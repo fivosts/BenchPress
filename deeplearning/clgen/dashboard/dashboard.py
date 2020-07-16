@@ -120,8 +120,8 @@ def parseModelSummary(meta):
                 m.config.training.data_generator.hole.hole_length,
                 "unf" if m.config.training.data_generator.hole.HasField("uniform_distribution") else
                   "norm-{},{}".format(
-                    round(m.config.training.data_generator.hole.normal_distrtibution.mean, 2), 
-                    round(m.config.training.data_generator.hole.normal_distrtibution.variance, 2)
+                    round(m.config.training.data_generator.hole.normal_distribution.mean, 2), 
+                    round(m.config.training.data_generator.hole.normal_distribution.variance, 2)
                     )
                 )
         )
