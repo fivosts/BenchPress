@@ -244,7 +244,7 @@ def SampleObserversFromFlags(instance: Instance) -> typing.List[
     )
   else:
     sample_observers.append(
-      sample_observers_lib.MaxSampleCountObserver(FLAGS.min_samples)
+      sample_observers_lib.MaxSampleCountObserver(FLAGS.min_samples * instance.sampler.batch_size)
     )
   if FLAGS.print_samples:
     sample_observers.append(sample_observers_lib.PrintSampleObserver())
