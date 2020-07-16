@@ -6,7 +6,7 @@
 <div class="col">
 
   <p class="config"><a href="/{{data.workspace}}/model/{{data.model_sha}}/model_specs" style="color:pink">[Model Specs]</a></p><br><br><br>
-
+  	<h3>Model: data.summary, data.model_sha<br><br></h3>
     {% for met in data.val_metrics %}
       <span class="config"><b>{{met.key}}:</b><br>{{met.results}}<br><br></span>
     {% endfor %}

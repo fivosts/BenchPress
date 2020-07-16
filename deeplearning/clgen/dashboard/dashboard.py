@@ -275,6 +275,7 @@ def dataset(workspace: str, model_sha: str):
       }
     )
   spec_data = {
+    'summary'  : current_model['summary']
     'workspace': workspace,
     'model_sha': model_sha,
     'datasets' : datasets,
@@ -371,6 +372,7 @@ def validation_samples(workspace: str, model_sha: str):
         ]
 
       sample.input_ids = processed_input_ids
+  validation['summary']    = current_model['summary']
   validation['workspace']  = workspace
   validation['model_sha']  = model_sha
   return flask.render_template("validation_samples.html", data = validation, **GetBaseTemplateArgs())
@@ -387,6 +389,7 @@ def sampling(workspace: str, model_sha: str):
   samplers = current_model['samplers']
 
   data = {
+    'summary'  : current_model['summary']
     'workspace': workspace,
     'model_sha': model_sha,
     'samplers' : samplers,
@@ -413,6 +416,7 @@ def training(workspace: str, model_sha: str):
         "/" + str(dest_file.relative_to(pathlib.Path(flask_app.static_folder).parent))
       )
 
+  data['summary']   = cached_models[target_sha]['summary']
   data['workspace'] = workspace
   data['model_sha'] = model_sha
   return flask.render_template("training.html", data = data, **GetBaseTemplateArgs())
