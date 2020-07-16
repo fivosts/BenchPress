@@ -267,14 +267,17 @@ class tfPlotTensorHook(_tfEstimatorHooks):
                    }
 
     if len(glob.glob(str(output_dir / "events.out.tfevents*"))) != 0:
-      event_acc = EventAccumulator(str(output_dir))
-      event_acc.Reload()
-      for k in self.tensors:
-        wt, step, value = zip(*event_acc.Scalars(k))
-        self.results[k] = {
-          'value': list(value),
-          'step' : list(step),
-        }
+      try:
+        event_acc = EventAccumulator(str(output_dir))
+        event_acc.Reload()
+        for k in self.tensors:
+          wt, step, value = zip(*event_acc.Scalars(k))
+          self.results[k] = {
+            'value': list(value),
+            'step' : list(step),
+          }
+      except KeyError:
+        pass
 
     self.log_steps    = log_steps
     self.output_dir   = output_dir
