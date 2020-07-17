@@ -300,7 +300,7 @@ class Model(object):
       raise ValueError("Cannot sample without any observers")
 
     self.Create()
-
+    epoch = self.backend.telemetry.EpochTelemetry()[-1].epoch_num
     sample_start_time = datetime.datetime.utcnow()    
 
     (self.cache.path / "samples" / sampler.hash).mkdir(exist_ok = True)
@@ -312,7 +312,7 @@ class Model(object):
 
     # with sampler.db.Session(commit = True) as db_sess:
     batch_count = 1
-    while self._SampleBatch(sampler, atomizer, sample_observers):
+    while self._SampleBatch(sampler, atomizer, sample_observers, epoch):
       batch_count += 1
 
     time_now = datetime.datetime.utcnow()
@@ -328,6 +328,7 @@ class Model(object):
     sampler: samplers.Sampler,
     atomizer: atomizers.AtomizerBase,
     sample_observers: typing.List[sample_observers_lib.SampleObserver],
+    epoch: int,
   ) -> bool:
     ## This function needs a hell of refactoring.
     """Run a single iteration of the batched sample inner-loop."""
@@ -370,7 +371,7 @@ class Model(object):
             done[i]       = 1
             sample_kernel = [x for x in samples_in_progress[i] if x != atomizer.metaTokens['padToken']]
             sample    = model_pb2.Sample(
-              train_step                = -1, # TODO self.telemetry.num_train_steps
+              train_step                = epoch,
               text                      = "".join(sample_kernel),
               sample_indices            = step_ind,
               encoded_sample_indices    = encoded_step_indices,
