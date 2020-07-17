@@ -409,7 +409,6 @@ class MaskLMBatchGenerator(object):
     d.max_position_embeddings = max_position_embeddings
     if not d.sampler.isFixedStr:
       d.tfRecordSampler = d.tfRecordSampleGenerator()
-    l.getLogger().critical("Initialized")
     return d
 
   def configDataset(self) -> None:
