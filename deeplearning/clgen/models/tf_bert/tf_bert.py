@@ -359,6 +359,8 @@ class tfBert(backends.BackendBase):
 
   def Validate(self) -> None:
     l.getLogger().info("BERT Validation")
+    if self.max_eval_steps <= 0:
+      return
     for tf_set in self.train.data_generator.dataset:
       tf_set_path = self.train.data_generator.dataset[tf_set]['tf_record']
       l.getLogger().info("BERT Validation on {}".format(tf_set_path.stem))
@@ -378,12 +380,10 @@ class tfBert(backends.BackendBase):
                    seed    : typing.Optional[int] = None
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
-    if self.sample is None or sampler.hash != self.sampler.hash:
-      data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
-                         sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings, self.cache.path
-                       )
-      self._ConfigSampleParams(data_generator, sampler)
-
+    data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
+                       sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings, self.cache.path
+                     )
+    self._ConfigSampleParams(data_generator, sampler)
     l.getLogger().info("Initialized model samples in {}".format(self.sample_path))
     return 
 
@@ -423,7 +423,8 @@ class tfBert(backends.BackendBase):
       sampler = samplers.Sampler(mock_config, sample_db_name = "epoch_samples.db")
     else:
       sampler = test_sampler
-    sampler.Specialize(self.atomizer)
+    if sampler.isFixedStr:
+      sampler.Specialize(self.atomizer)
     observers = [sample_observers.PrintSampleObserver()]
     if FLAGS.store_samples_db:
       observers.append(sample_observers.SamplesDatabaseObserver(
