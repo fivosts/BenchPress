@@ -827,7 +827,9 @@ class MaskLMBatchGenerator(object):
         self.hole_length = hole_length
 
     # Actual length represents the sequence length before pad begins
-    if self.atomizer.padToken in seq:
+    if self.config.use_start_end:
+      actual_length   = np.where(seq == self.atomizer.endToken)[0][0]
+    elif self.atomizer.padToken in seq:
       actual_length   = np.where(seq == self.atomizer.padToken)[0][0]
     else:
       actual_length   = len(seq)
