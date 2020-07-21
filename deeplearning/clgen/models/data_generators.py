@@ -1122,6 +1122,8 @@ class MaskLMBatchGenerator(object):
       for idx, token in enumerate(input_ids[batch_idx]):
         if   token == self.atomizer.maskToken:
           mt = masked_lm_ids[batch_idx][mask_id_index]
+          if mt == self.atomizer.maskToken or mt == self.atomizer.holeToken:
+            continue
           if len(self.sampleIndices[batch_idx][mask_id_index]) > 0:
             while(self.sampleIndices[batch_idx][mask_id_index + closed_hole_index][-1]) == self.atomizer.endholeToken:
               closed_hole_index += 1
@@ -1130,6 +1132,8 @@ class MaskLMBatchGenerator(object):
           batch.append(mt)
         elif token == self.atomizer.holeToken:
           mt = masked_lm_ids[batch_idx][mask_id_index]
+          if mt == self.atomizer.maskToken or mt == self.atomizer.holeToken:
+            continue
           if len(self.sampleIndices[batch_idx][mask_id_index]) > 0:
             while(self.sampleIndices[batch_idx][mask_id_index + closed_hole_index][-1]) == self.atomizer.endholeToken:
               closed_hole_index += 1
