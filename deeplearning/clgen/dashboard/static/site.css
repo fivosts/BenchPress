@@ -91,7 +91,7 @@ li.corpus::before {
   font-size: 14px;
   font-weight: bold;
   line-height: 16px; 
-  white-space: nowrap;
+  white-space: pre;
   color: #00FFFF;
 }
 

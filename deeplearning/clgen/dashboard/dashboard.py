@@ -493,7 +493,7 @@ def sample_files(workspace: str, model_sha: str, sampler_sha: str, sample_db: st
           'color': 'mask',
         },
         {
-          'text' : sample_indices[i],
+          'text' : sample_indices[i].replace("\\n", "\n"),
           'color': 'prediction',
         },
       ]
