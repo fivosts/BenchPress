@@ -874,7 +874,7 @@ class MaskLMBatchGenerator(object):
       # Sampled number from distribution to represent the actual hole length
       hole_length = distribution.sample()
       # Inside range, make sure hole length does not run over input_id_idx bounds
-      hole_length = min(hole_length, len(input_ids) - input_id_idx)
+      hole_length = min(hole_length, actual_length - input_id_idx)
       # Confirm there is no conflict with another hole, further down the sequence.
       for i in range(hole_length):
         if input_ids[input_id_idx + i] == self.atomizer.holeToken:
