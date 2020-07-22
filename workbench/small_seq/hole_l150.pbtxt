@@ -1,4 +1,4 @@
-working_dir: "test_dupe" ## This path is relative to "workspace_dir", which is an app FLAG
+working_dir: "small_seq" ## This path is relative to "workspace_dir", which is an app FLAG
 model {
   corpus {
     local_tar_archive: "$PWD/../../model_zoo/corpus/corpus_1000.tar.bz2"
