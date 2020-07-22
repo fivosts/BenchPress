@@ -1,7 +1,7 @@
 working_dir: "more_masks" ## This path is relative to "workspace_dir", which is an app FLAG
 model {
   corpus {
-    local_tar_archive: "$PWD/../../model_zoo/corpus/corpus_17k.tar.bz2"
+    local_tar_archive: "$PWD/../../model_zoo/corpus/corpus_17k.tar"
     atomizer {
       token_type: "word"
       token_list: "deeplearning/clgen/corpuses/token_lists.json"
