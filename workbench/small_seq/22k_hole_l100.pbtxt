@@ -63,11 +63,11 @@ model {
 sampler {
   train_set: true
   batch_size: 2
-  sequence_length: 1024
+  sequence_length: 512
   temperature_micros: 500000  # = 0.8 real value
   termination_criteria {
     maxlen {
-      maximum_tokens_in_sample: 1024
+      maximum_tokens_in_sample: 512
     }
   }
 }
