@@ -1,0 +1,10 @@
+./clgen --min_samples 100 --workspace_dir $HOME/"$1"workspace --notify_me="fivos_ts@hotmail.com" --config workbench/"$2"/hole_l40.pbtxt
+./clgen --min_samples 100 --workspace_dir $HOME/"$1"workspace --notify_me="fivos_ts@hotmail.com" --config workbench/"$2"/hole_l60.pbtxt
+./clgen --min_samples 100 --workspace_dir $HOME/"$1"workspace --notify_me="fivos_ts@hotmail.com" --config workbench/"$2"/hole_l100.pbtxt
+./clgen --min_samples 100 --workspace_dir $HOME/"$1"workspace --notify_me="fivos_ts@hotmail.com" --config workbench/"$2"/hole_l150.pbtxt
+./clgen --min_samples 100 --workspace_dir $HOME/"$1"workspace --notify_me="fivos_ts@hotmail.com" --config workbench/"$2"/hole_l200.pbtxt
+./clgen --min_samples 100 --workspace_dir $HOME/"$1"workspace --notify_me="fivos_ts@hotmail.com" --config workbench/"$2"/22k_hole_l40.pbtxt
+./clgen --min_samples 100 --workspace_dir $HOME/"$1"workspace --notify_me="fivos_ts@hotmail.com" --config workbench/"$2"/22k_hole_l60.pbtxt
+./clgen --min_samples 100 --workspace_dir $HOME/"$1"workspace --notify_me="fivos_ts@hotmail.com" --config workbench/"$2"/22k_hole_l100.pbtxt
+./clgen --min_samples 100 --workspace_dir $HOME/"$1"workspace --notify_me="fivos_ts@hotmail.com" --config workbench/"$2"/22k_hole_l150.pbtxt
+./clgen --min_samples 100 --workspace_dir $HOME/"$1"workspace --notify_me="fivos_ts@hotmail.com" --config workbench/"$2"/22k_hole_l200.pbtxt
