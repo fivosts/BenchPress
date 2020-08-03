@@ -40,6 +40,46 @@ def _as_graph_element(obj):
                        "(at least 2)." % obj)
   return element
 
+class AverageSummarySaverHook(tf.estimator.SummarySaverHook):
+  """
+    Derived class from standard SummarySaverHook that 
+    stores averaged tensors instead of step-instant values.
+  """
+  def __init__(self,
+               save_steps=None,
+               save_secs=None,
+               output_dir=None,
+               summary_writer=None,
+               scaffold=None,
+               summary_op=None
+               ):
+    super(tfLogTensorHook, self).__init__(
+      save_steps, save_secs, output_dir,
+      summary_writer, scaffold, summary_op
+    )
+    self.averaged_summary = []
+
+  def after_run(self, run_context, run_values):
+    _ = run_context
+    if not self._summary_writer:
+      return
+
+    stale_global_step = run_values.results["global_step"]
+    global_step = stale_global_step + 1
+    if self._next_step is None or self._request_summary:
+      global_step = run_context.session.run(self._global_step_tensor)
+
+    if self._next_step is None:
+      self._summary_writer.add_session_log(
+          SessionLog(status=SessionLog.START), global_step)
+
+    if self._request_summary:
+      self._timer.update_last_triggered_step(global_step)
+      if "summary" in run_values.results:
+        for summary in self.averaged_summary:
+          self._summary_writer.add_summary(summary, global_step)
+
+    self._next_step = global_step + 1
 
 class _tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
   """Base class for Estimator Hooks, used for this BERT model"""
