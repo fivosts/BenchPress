@@ -412,7 +412,15 @@ class MaskLMBatchGenerator(object):
     return d
 
   def configDataset(self) -> None:
-
+    """
+      Configs all necessary training and validation 
+      sets described in the model protobuf.
+      First constructs training set and optionally 
+      splits it into validation set, if selected in config.
+      Then configValidationSets is called which
+      constructs any additional validation_set elements
+      provided in the model's config.
+    """
     assert self.config.validation_split >= 0 and self.config.validation_split <= 100
 
     if FLAGS.force_remake_dataset:
@@ -457,6 +465,23 @@ class MaskLMBatchGenerator(object):
     return
 
   def configValidationSets(self, valset_list) -> None:
+    """
+      Mask and store any extra validation datasets defined into
+      model protobuf.
+      Example:
+        validation_set {
+          max_predictions_per_seq: 10
+          hole {
+            hole_length: 15
+            uniform_distribution: true
+          }
+        }
+
+      Arguments:
+        valset_list: list of validation_set items
+      Returns:
+        None
+    """
     for valset in valset_list:
       set_name = "pred_{}_{}".format(
         valset.max_predictions_per_seq,
