@@ -356,7 +356,7 @@ class MaskLMBatchGenerator(object):
     self.atomizer                = None
     self.config                  = None
     self.cache                   = None
-    self.shaped_corpus           = None
+    # self.shaped_corpus           = None
 
     self.training_opts           = None
     self.steps_per_epoch         = None
@@ -387,8 +387,8 @@ class MaskLMBatchGenerator(object):
     d.training_opts = training_opts
     d.rngen         = random.Random(training_opts.random_seed)
 
-    d.createCorpus()
-    d.configDataset()
+    shaped_corpus = d.createCorpus()
+    d.configDataset(shaped_corpus)
     return d
 
   @classmethod
@@ -410,7 +410,7 @@ class MaskLMBatchGenerator(object):
       d.tfRecordSampler = d.tfRecordSampleGenerator()
     return d
 
-  def configDataset(self) -> None:
+  def configDataset(self, shaped_corpus) -> None:
     """
       Configs all necessary training and validation 
       sets described in the model protobuf.
@@ -434,15 +434,15 @@ class MaskLMBatchGenerator(object):
     if not (self.cache.path / "train_dataset.tf_record").exists() or FLAGS.force_remake_dataset:
       if self.config.validation_split == 0:
         train_corpus = self._maskCorpus(
-          self.shaped_corpus, set_name = "train_dataset", train_set = True
+          shaped_corpus, set_name = "train_dataset", train_set = True
         )
       else:
-        split_index  = int((len(self.shaped_corpus) / 100) * self.config.validation_split)
+        split_index  = int((len(shaped_corpus) / 100) * self.config.validation_split)
         train_corpus = self._maskCorpus(
-          self.shaped_corpus[split_index:], set_name = "train_dataset", train_set = True
+          shaped_corpus[split_index:], set_name = "train_dataset", train_set = True
         )
         validation_corpus = self._maskCorpus(
-          self.shaped_corpus[:split_index], set_name = "validation_dataset", train_set = False
+          shaped_corpus[:split_index], set_name = "validation_dataset", train_set = False
         )
 
     self.dataset['validation'] = {
@@ -456,14 +456,14 @@ class MaskLMBatchGenerator(object):
       'txt'      : self.cache.path / "train_dataset.txt",
     }
 
-    self.configValidationSets(self.config.validation_set)
+    self.configValidationSets(self.config.validation_set, shaped_corpus)
 
     for (key, dataset) in self.dataset.items():
       if dataset['corpus']:
         self._saveCorpusTfRecord(dataset)
     return
 
-  def configValidationSets(self, valset_list) -> None:
+  def configValidationSets(self, valset_list, shaped_corpus) -> None:
     """
       Mask and store any extra validation datasets defined into
       model protobuf.
@@ -489,7 +489,7 @@ class MaskLMBatchGenerator(object):
       if set_name in self.dataset or (self.cache.path / "{}.tf_record".format(set_name)).exists():
         continue
       masked_corpus = self._maskCorpus(
-        self.shaped_corpus, train_set = False, set_name = set_name, config = valset
+        shaped_corpus, train_set = False, set_name = set_name, config = valset
       )
       self.dataset[set_name] = {
         'corpus'   : masked_corpus,
@@ -697,7 +697,7 @@ class MaskLMBatchGenerator(object):
   def createCorpus(self) -> None:
     """
     Constructs training corpus in text format, stores it in
-    self.shaped_corpus
+    shaped_corpus
 
     Each corpus datapoint is either a single kernel or a random
     sequence of size sequence_length (legacy).
@@ -712,6 +712,7 @@ class MaskLMBatchGenerator(object):
     pad             = [self.atomizer.padToken   ]
     start           = [self.atomizer.startToken ]
     end             = [self.atomizer.endToken   ]
+    shaped_corpus   = None
 
     # generate a kernel corpus
     encoded_corpus  = self.corpus.GetTrainingData()
@@ -729,24 +730,24 @@ class MaskLMBatchGenerator(object):
       # pad sequences to sequence length
       encoded_corpus       = np.array([x + pad * (sequence_length - len(x)) for x in encoded_corpus])
       # Clone datapoints dupe_factor times
-      self.shaped_corpus   = np.repeat(encoded_corpus, dupe_factor, axis = 0)
+      # shaped_corpus   = np.repeat(encoded_corpus, dupe_factor, axis = 0)
+      shaped_corpus     = encoded_corpus
       # Shuffle
       if shuffle:
-        self.rngen.shuffle(self.shaped_corpus)
-      assert len(self.shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
+        self.rngen.shuffle(shaped_corpus)
+      assert len(shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
 
       # Set corpus epoch parameters
       self.num_epochs      = int(self.training_opts.num_train_steps / self.config.steps_per_epoch)
       self.steps_per_epoch = self.config.steps_per_epoch
 
-      assert self.shaped_corpus.ndim     == 2, "corpus dim: {}".format(self.shaped_corpus.shape)
-      assert self.shaped_corpus.shape[1] == sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(encoded_corpus.shape[1], sequence_length)
+      assert shaped_corpus.ndim     == 2, "corpus dim: {}".format(shaped_corpus.shape)
+      assert shaped_corpus.shape[1] == sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(encoded_corpus.shape[1], sequence_length)
 
       l.getLogger().info("{} kernels were rejected (larger than sequence_length)".format(initial_length - reduced_length))
       l.getLogger().info(
-        "Loaded corpus of shape {} ({} kernels remained, multiplied by dupe factor: {}) in {} ms.".format(
-                  self.shaped_corpus.shape,
-                  reduced_length,
+        "Loaded corpus of shape {} multiplied by dupe factor: {} in {} ms.".format(
+                  shaped_corpus.shape,
                   dupe_factor,
                   humanize.intcomma(int((time.time() - start_time) * 1000)),
               )
@@ -767,9 +768,10 @@ class MaskLMBatchGenerator(object):
       clipped_corpus_length       = dupe_factor * self.steps_per_epoch * batch_size * sequence_length
       clipped_corpus              = encoded_corpus[:clipped_corpus_length]
 
-      self.shaped_corpus = np.split(clipped_corpus, batch_size * self.steps_per_epoch * dupe_factor, 0)
+      # shaped_corpus = np.split(clipped_corpus, batch_size * self.steps_per_epoch * dupe_factor, 0)
+      shaped_corpus = np.split(clipped_corpus, batch_size * self.steps_per_epoch, 0)
 
-      np_corpus = np.asarray(self.shaped_corpus)
+      np_corpus = np.asarray(shaped_corpus)
       assert np_corpus.ndim == 2, "Wrong dimensions for shaped_corpus: {}".format(np_corpus.shape)
       assert np_corpus.shape[1] == sequence_length, "Second dimension is not equal to sequence length: {}".format(np_corpus.shape[1])
 
@@ -784,7 +786,7 @@ class MaskLMBatchGenerator(object):
     else:
       raise ValueError("Unrecognized datapoint_type: {}".format(self.config.datapoint_type))
 
-    return
+    return shaped_corpus
 
   def _maskCorpus(self, 
                   corpus: np.array,
