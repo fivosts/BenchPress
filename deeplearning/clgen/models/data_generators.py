@@ -217,7 +217,6 @@ class KerasBatchGenerator():
       UserError: If batch_size and sequence_length are too large for the corpus,
         yielding no batches.
     """
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.KerasBatchGenerator.GetTrainingCorpus()")
     start_time = time.time()
     encoded_corpus = np.concatenate(corpus.GetTrainingData(
           shuffle=training_opts.shuffle_corpus_contentfiles_between_epochs
