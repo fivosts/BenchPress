@@ -13,6 +13,8 @@ import progressbar
 import collections
 import copy
 import humanize
+import multiprocessing
+import functools
 
 import numpy as np
 
@@ -37,6 +39,11 @@ flags.DEFINE_boolean(
   False,
   "Force data generator to re-mask encoded dataset and store tf_record."
 )
+
+def foobar(kernel, a1, a2, a3, a4, a5, a6):
+  print(kernel)
+  print(cls)
+  return
 
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
@@ -818,9 +825,22 @@ class MaskLMBatchGenerator(object):
     else:
       raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
 
+    """
+    #### Issue #71
+
+    pool = multiprocessing.Pool()
+    """
+
     ## Core loop of masking.
     masked_corpus = []
     with progressbar.ProgressBar(max_value = len(corpus)) as bar:
+      """
+      #### Issue #71
+      for idx, kernel in enumerate(pool.imap_unordered(functools.partial(
+                                    foobar, a1 = self.config.use_start_end, a2 = self.atomizer.padToken, a3 = self.rngen, a4 = self.training_opts.masked_lm_prob,
+                                    a5 = self.atomizer.holeToken, a6 = self.atomizer.endholeToken
+            ), corpus)):
+      """
       for idx, kernel in enumerate(corpus):
         masked_corpus.append(maskSequence(kernel))
         bar.update(idx)
