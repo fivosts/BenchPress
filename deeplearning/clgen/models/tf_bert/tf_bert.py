@@ -362,16 +362,16 @@ class tfBert(backends.BackendBase):
     if self.max_eval_steps <= 0:
       return
     for tf_set in self.train.data_generator.dataset:
-      tf_set_path = self.train.data_generator.dataset[tf_set]['tf_record']
-      l.getLogger().info("BERT Validation on {}".format(tf_set_path.stem))
+      tf_set_paths = self.train.data_generator.dataset[tf_set]['tf_record']
+      l.getLogger().info("BERT Validation on {}".format(', '.join([x.stem for x in tf_set_paths])))
       eval_input_fn = self.train.data_generator.generateTfDataset(
           sequence_length = self.config.training.sequence_length,
           num_cpu_threads = os.cpu_count(),
           is_training     = False,
-          eval_set        = tf_set_path
+          eval_set        = tf_set_paths
           )
       result = self.train.estimator.evaluate(input_fn=eval_input_fn, steps=self.max_eval_steps)
-      self._writeValidation(result, tf_set_path)
+      self._writeValidation(result, tf_set)
     self.is_validated = True
     return
 
@@ -469,12 +469,12 @@ class tfBert(backends.BackendBase):
       db = validation_database.ValidationDatabase("sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")))
       r = [ "{}: {}".format(key, str(result[key])) for key in result.keys() ]
       with db.Session(commit = True) as session:
-        exists = session.query(validation_database.ValResults.key).filter_by(key = str(tf_set.stem)).scalar() is not None
+        exists = session.query(validation_database.ValResults.key).filter_by(key = str(tf_set)).scalar() is not None
         if exists:
-          entry = session.query(validation_database.ValResults).filter_by(key = str(tf_set.stem)).first()
+          entry = session.query(validation_database.ValResults).filter_by(key = str(tf_set)).first()
           entry.results = "\n".join(r)
         else:
-          session.add(validation_database.ValResults(key = str(tf_set.stem), results = "\n".join(r)))
+          session.add(validation_database.ValResults(key = str(tf_set), results = "\n".join(r)))
     return 
 
   def _model_fn_builder(self,
