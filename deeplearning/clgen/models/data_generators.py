@@ -47,11 +47,6 @@ flags.DEFINE_boolean(
   "Force data generator to re-mask encoded dataset and store tf_record."
 )
 
-def foobar(kernel, a1, a2, a3, a4, a5, a6):
-  print(kernel)
-  print(cls)
-  return
-
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
   X: np.array
@@ -1356,8 +1351,8 @@ class MaskLMBatchGenerator(object):
       if FLAGS.write_text_dataset:
         file_writer.write("'seen_in_training': {}\n'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'masked_lm_positions': {}\n'masked_lm_ids': {}\n'masked_lm_weights': {}\n'masked_lm_lengths': {}\n'next_sentence_labels': {}\n\n"
                             .format((True if seen_in_training == 1 else False),
-                                    self.atomizer.DeatomizeIndices(original_input),
-                                    self.atomizer.DeatomizeIndices(input_ids),
+                                    self.atomizer.DeatomizeIndices(original_input, ignore_token = self.atomizer.),
+                                    self.atomizer.DeatomizeIndices(input_ids, ignore_token = self.atomizer.),
                                     input_mask, 
                                     masked_lm_positions, 
                                     self.atomizer.DeatomizeIndices(masked_lm_ids), 
