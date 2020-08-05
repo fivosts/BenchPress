@@ -15,6 +15,7 @@ import copy
 import humanize
 import multiprocessing
 import functools
+import pickle
 
 import numpy as np
 
@@ -107,6 +108,14 @@ class MaskSequence(typing.NamedTuple):
             tf.TensorShape([batch_size, max_position_embeddings]),
             tf.TensorShape([batch_size, 1]),
            )
+
+  @staticmethod
+  def estimatedSize(batch_size, sequence_length, max_position_embeddings = None):
+    return (
+      2 * np.zeros([batch_size, 1], dtype = np.int32).nbytes + 
+      3 * np.zeros([batch_size, sequence_length]).nbytes + 
+      4 * np.zeros([batch_size, max_position_embeddings]).nbytes
+      )
 
   @property
   def sizeof_sequence(self):
@@ -353,6 +362,281 @@ class TensorflowBatchGenerator(object):
     self.i += 1
     assert 0 <= self.i <= self.num_batches
     return batch
+
+def _holeSequence(seq: np.array,
+                  train_set: bool,
+                  max_predictions: int,
+                  pickled_distribution: distributions.Distribution,
+                  pickled_atomizer,
+                  rngen: random.Random,
+                  use_start_end: bool,
+                  training_opts,
+                  ) -> MaskSequence:
+  """
+  Inserts hole tokens to a given sequence.
+  """
+  assert seq.ndim == 1, "Input for masking must be single-dimension array."
+
+  ## Tuple representation of mask id/position/hole_length for easy sorting
+  class MaskedLmInstance():
+    def __init__(self, 
+                 pos_index: int, 
+                 token_id: int, 
+                 hole_length: int,
+                 ):
+      self.pos_index   = pos_index
+      self.token_id    = token_id
+      self.hole_length = hole_length
+
+  # Unpack atomizer and sampler
+  distribution = pickle.loads(pickled_distribution)
+  atomizer     = pickle.loads(pickled_atomizer)
+
+  # Actual length represents the sequence length before pad begins
+  if use_start_end:
+    actual_length   = np.where(seq == atomizer.endToken)[0][0]
+  elif padToken in seq:
+    actual_length   = np.where(seq == atomizer.padToken)[0][0]
+  else:
+    actual_length   = len(seq)
+
+  candidate_indexes = np.arange(actual_length)
+  rngen.shuffle(candidate_indexes)
+
+  # total tokens to add in holes.
+  # No more than max_predictions_per_seq (or otherwise specified), no less than actual seq length x the probability of hiding a token
+  holes_to_predict  = min(max_predictions,
+                         max(1, int(round(actual_length * training_opts.masked_lm_prob))))
+
+  # Processed input sequence
+  input_ids         = list(np.copy(seq))
+  # List of (seq_idx, token_id, hole_length) tuples
+  masked_lms        = []
+  # Offset array. Indices represent elements in the initial array (seq)
+  # Values of indices represent current offset position in processed array (input_ids).
+  offset_idxs       = np.zeros(len(seq), dtype = np.int32)
+  # Set with all candidate_indexes that have been holed.
+  visited_indices   = set()
+  # Total masks placed so far.
+  total_predictions = 0
+  for pos_index in candidate_indexes:
+    assert pos_index < len(seq), "Candidate index is out of bounds: {} >= {}".format(pos_index, len(seq))
+    
+    # Element in processed array can be found in its original index +/- offset
+    input_id_idx = pos_index + offset_idxs[pos_index]
+    if total_predictions >= holes_to_predict:
+      break
+    elif pos_index in visited_indices:
+      # Do not target an index, already holed
+      continue
+    elif input_id_idx > len(seq):
+      # Do not mask a part of input_ids that is going to be cropped.
+      continue
+
+    assert (input_ids[input_id_idx] == seq[pos_index], 
+            "Original and offset-ted sequence have misaligned tokens: {}, {}"
+            .format(seq[pos_index], input_ids[input_id_idx]))
+
+    # Sampled number from distribution to represent the actual hole length
+    hole_length = distribution.sample()
+    # Inside range, make sure hole length does not run over input_id_idx bounds
+    hole_length = min(hole_length, actual_length - input_id_idx)
+    # Confirm there is no conflict with another hole, further down the sequence.
+    for i in range(hole_length):
+      if input_ids[input_id_idx + i] == atomizer.holeToken:
+        hole_length = i
+        break
+    distribution.register(hole_length)
+    
+    # Target token for classifier is either the first token of the hole, or endholToken if hole is empty
+    target = input_ids[input_id_idx] if hole_length > 0 else atomizer.endholeToken
+
+    ## TODO. Think about '== self.atomizer.holeToken' condition.
+    # if config.mask.random_placed_mask and hole_length != 0:
+    #   if self.rngen.random() < 0.8:
+    #     replacement_token = self.atomizer.holeToken
+    #   else:
+    #     if self.rngen.random() > 0.5:
+    #       # Sometimes keep the original token.
+    #       replacement_token = target
+    #     else:
+    #       # Other times add a random one.
+    #       replacement_token = self.rngen.randint(0, self.atomizer.vocab_size - 1)
+    # else:
+    #   replacement_token = self.atomizer.holeToken
+    replacement_token = atomizer.holeToken
+
+    input_ids = (input_ids[:input_id_idx] + 
+                 [replacement_token] + 
+                 input_ids[input_id_idx + hole_length:])
+    # This pos_index will get deprecated when someone before this index alters the offset array
+    # So store position index, and after making all masks, update with updated offset array
+    masked_lms.append(MaskedLmInstance(pos_index = pos_index, token_id = target, hole_length = hole_length))
+
+    # Adjust the offset of all affected tokens, from pos_index and after.
+    offset_idxs[pos_index + 1:] += 1 - hole_length
+    # An empty hole is counted as a prediction of count 1.
+    total_predictions           += max(1, hole_length)
+    visited_indices.update(range(pos_index, pos_index + hole_length))
+
+    for lm in masked_lms:
+      ## TODO, remove this extensive-expensive check after you make sure that this function is bug free.
+      test_index = lm.pos_index + offset_idxs[lm.pos_index]
+      if input_ids[test_index] != atomizer.holeToken:
+        assert False
+
+  # Now update the entries with offset index.
+  for lm in masked_lms:
+    prev_index = lm.pos_index
+    lm.pos_index = lm.pos_index + offset_idxs[lm.pos_index]
+    # Make sure everything points to a hole.
+    assert input_ids[lm.pos_index] == atomizer.holeToken
+
+  while len(input_ids) < len(seq):
+    input_ids.append(atomizer.padToken)
+  masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
+  masked_lm_positions, masked_lm_ids, masked_lm_weights, masked_lm_lengths = [], [], [], []
+
+  input_mask = np.ones(len(seq), dtype = np.int32)
+  if atomizer.padToken in input_ids:
+    first_pad_index = input_ids.index(atomizer.padToken)
+    input_mask[first_pad_index:] = 0
+    # Check that the pad index is likely correct.
+    assert input_ids[first_pad_index] == atomizer.padToken, "{}".format(input_ids)
+    assert input_ids[first_pad_index - 1] != atomizer.padToken
+
+  seen_in_training    = np.int32(1 if train_set else 0)
+  next_sentence_label = np.int32(0)
+  """
+    Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
+    is intended on kernels. In any other case, check bert's create_instances_from_document
+    to see how next_sentence_labels are calculated.
+    Setting this to 0 means that next sentence is NOT random.
+    Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.    
+  """
+  if len(masked_lms) == 0:
+    l.getLogger().warn("No HOLE added to datapoint. Increase probability of hole occuring.")
+  for p in masked_lms:
+    if p.pos_index < len(seq):
+      """
+        Adding holes can increase or decrease the length of the original sequence.
+        It is important in the end, to end up with an input sequence compatible
+        with the model's sequence length, i.e. len(seq). If any mask is found 
+        beyond that point, will have to be rejected.
+      """
+      masked_lm_positions.append(p.pos_index)
+      masked_lm_ids.append(p.token_id)
+      masked_lm_weights.append(1.0)
+      masked_lm_lengths.append(p.hole_length)
+  num_holes = len(masked_lm_positions)
+  while len(masked_lm_positions) < training_opts.max_predictions_per_seq:
+      masked_lm_positions.append(0)
+      masked_lm_ids.append(atomizer.padToken)
+      masked_lm_weights.append(0.0)
+      masked_lm_lengths.append(-1)
+
+  assert (input_ids[:len(seq)].count(atomizer.holeToken) == num_holes,
+    "Number of targets {} does not correspond to hole number in final input sequence: {}"
+    .format(num_holes, input_ids[:len(seq)].count(atomizer.holeToken))
+  )
+  return MaskSequence(seen_in_training, seq,
+                      np.asarray(input_ids[:len(seq)]), input_mask,
+                      np.asarray(masked_lm_positions),  np.asarray(masked_lm_ids), 
+                      np.asarray(masked_lm_weights),    np.asarray(masked_lm_lengths),
+                      next_sentence_label 
+                      )
+
+def _maskSequence(seq: np.array,
+                  train_set: bool,
+                  max_predictions: int,
+                  pickled_atomizer,
+                  rngen: random.Random,
+                  training_opts,
+                  config,
+                  ) -> MaskSequence:
+  """Inserts masks to a given sequence."""
+  assert seq.ndim == 1, "Input for masking must be single-dimension array."
+
+  ## Tuple representation of mask id/position for easy sorting
+  class MaskedLmInstance(typing.NamedTuple):
+    pos_index: int
+    token_id: int
+
+  # Unpack atomizer
+  atomizer = pickle.loads(pickled_atomizer)
+
+  # Actual length represents the sequence length before pad begins
+  if atomizer.padToken in seq:
+    actual_length = np.where(seq == atomizer.padToken)[0][0]
+  else:
+    actual_length = len(seq)
+
+  candidate_indexes = np.arange(actual_length)
+  rngen.shuffle(candidate_indexes)
+
+  masks_to_predict = min(max_predictions,
+                         max(1, int(round(actual_length * training_opts.masked_lm_prob))))
+  input_ids = list(np.copy(seq))
+  masked_lms = []
+
+  for pos_index in candidate_indexes:
+    if len(masked_lms) >= masks_to_predict:
+      break
+
+    if config.mask.random_placed_mask:
+      # 80% of the time, replace with [MASK]
+      if rngen.random() < 0.8:
+        input_ids[pos_index] = atomizer.maskToken
+      else:
+        # 10% of the time, keep original
+        if rngen.random() < 0.5:
+          pass
+        # 10% of the time, replace with random word
+        else:
+          random_token = rngen.randint(0, atomizer.vocab_size - 1)
+          while any(atomizer.vocab[t] == random_token for (idx, t) in atomizer.metaTokens.items()):
+            random_token = rngen.randint(0, atomizer.vocab_size - 1)
+          input_ids[pos_index] = rngen.randint(0, atomizer.vocab_size - 1)
+    else:
+      if rngen.random() < 0.8:
+        input_ids[pos_index] = atomizer.maskToken
+
+    masked_lms.append(MaskedLmInstance(pos_index=pos_index, token_id=seq[pos_index]))
+
+  assert len(masked_lms) <= masks_to_predict
+  masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
+
+  masked_lm_positions, masked_lm_ids, masked_lm_weights, masked_lm_lengths = [], [], [], []
+
+  input_mask = np.ones(len(seq), dtype = np.int32)
+  if atomizer.padToken in input_ids:
+    input_mask[input_ids.index(atomizer.padToken):] = 0
+
+  seen_in_training    = np.int32(1 if train_set else 0)
+  next_sentence_label = np.int32(0)
+  ## Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
+  ## is intended on kernels. In any other case, check bert's create_instances_from_document
+  ## to see how next_sentence_labels are calculated.
+  ## Setting this to 0 means that next sentence is NOT random.
+  ## Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.
+
+  for p in masked_lms:
+    masked_lm_positions.append(p.pos_index)
+    masked_lm_ids.append(p.token_id)
+    masked_lm_weights.append(1.0)
+    masked_lm_lengths.append(1)
+  while len(masked_lm_positions) < training_opts.max_predictions_per_seq:
+      masked_lm_positions.append(0)
+      masked_lm_ids.append(atomizer.padToken)
+      masked_lm_weights.append(0.0)
+      masked_lm_lengths.append(-1)
+
+  return MaskSequence(seen_in_training, seq,
+                      np.asarray(input_ids),           input_mask,
+                      np.asarray(masked_lm_positions), np.asarray(masked_lm_ids), 
+                      np.asarray(masked_lm_weights),   np.asarray(masked_lm_lengths),
+                      next_sentence_label
+                      )
 
 class MaskLMBatchGenerator(object):
   def __init__(self):
@@ -810,308 +1094,98 @@ class MaskLMBatchGenerator(object):
     Returns:
       The masked corpus
     """
+
+    # Set up max predictions
     if config is None:
       config = self.config
       max_predictions = self.training_opts.max_predictions_per_seq
     else:
       max_predictions = config.max_predictions_per_seq
 
+    # Apply dupe factor in stages to avoid stressing RAM.
+    # Limit has been set to 4GB.
+    single_item_bytes = MaskSequence.estimatedSize(
+      1, self.training_opts.sequence_length, self.training_opts.max_position_embeddings
+    )
+    corpus_bytes = single_item_bytes * len(corpus)
+    max_dupe     = min(int((4 * (1024**3)) / corpus_bytes), self.training_opts.dupe_factor)
+
+    iterations   = int(self.training_opts.dupe_factor / max_dupe)
+    remaining    = self.training_opts.dupe_factor % iterations
+
+    extended_corpus   = np.repeat(corpus, max_dupe, axis = 0)
+    remaining_corpus   = np.repeat(corpus, remaining, axis = 0)
+
+    l.getLogger().info("Dupe factor {} split into {} iterations ({} residual)".format(
+        self.training_opts.dupe_factor, iterations, remaining
+      )
+    )
+
+    pool = multiprocessing.Pool()
     distribution = None
+    # Specify the desired masking routine
     if config.HasField("hole"):
       distribution = distributions.Distribution.FromHoleConfig(config.hole, self.cache.path, set_name)
-      maskSequence = lambda x : self._holeSequence(x, train_set, max_predictions, distribution)
+      maskedSeq    = lambda c: pool.imap_unordered(
+        functools.partial(_holeSequence,
+                          train_set            = train_set,
+                          max_predictions      = max_predictions,
+                          pickled_distribution = pickle.dumps(distribution),
+                          pickled_atomizer     = pickle.dumps(self.atomizer),
+                          rngen                = self.rngen, 
+                          use_start_end        = self.config.use_start_end,
+                          training_opts        = self.training_opts,
+                          ), 
+        c
+      )
     elif config.HasField("mask"):
-      maskSequence = lambda x : self._maskSequence(x, train_set, config.mask.random_placed_mask, max_predictions)
+      maskedSeq    = lambda c: pool.imap_unordered(
+        functools.partial(_maskSequence,
+                          train_set          = train_set,
+                          max_predictions    = max_predictions,
+                          pickled_atomizer   = pickle.dumps(self.atomizer),
+                          rngen              = self.rngen, 
+                          training_opts      = self.training_opts,
+                          config             = config,
+                          ), 
+        c
+      )
     else:
       raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
 
-    """
-    #### Issue #71
-
-    pool = multiprocessing.Pool()
-    """
-
     ## Core loop of masking.
-    masked_corpus = []
-    with progressbar.ProgressBar(max_value = len(corpus)) as bar:
-      """
-      #### Issue #71
-      for idx, kernel in enumerate(pool.imap_unordered(functools.partial(
-                                    foobar, a1 = self.config.use_start_end, a2 = self.atomizer.padToken, a3 = self.rngen, a4 = self.training_opts.masked_lm_prob,
-                                    a5 = self.atomizer.holeToken, a6 = self.atomizer.endholeToken
-            ), corpus)):
-      """
-      for idx, kernel in enumerate(corpus):
-        masked_corpus.append(maskSequence(kernel))
-        bar.update(idx)
+    with progressbar.ProgressBar(max_value = len(corpus) * self.training_opts.dupe_factor) as bar:
+      if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
+        self.rngen.shuffle(extended_corpus)
+      kernel_idx = 0
+      for iteration in iterations:
+        masked_corpus = []
+        try:
+          for kernel in maskedSeq(extended_corpus):
+            masked_corpus.append(kernel)
+            bar.update(kernel_idx)
+            kernel_idx += 1
+          if iteration == 0:
+            for kernel in maskedSeq(remaining_corpus):
+              masked_corpus.append(kernel)
+              bar.update(kernel_idx)
+              kernel_idx += 1
+          pool.close()
+
+          # write masked_corpus before flushing
+
+        except KeyboardInterrupt as e:
+          pool.terminate()
+          raise e
+        except Exception as e:
+          pool.terminate()
+          raise e
+
     masked_corpus[0].LogBatchTelemetry(self.training_opts.batch_size, self.steps_per_epoch, self.num_epochs)
 
     if distribution:
       distribution.plot()
     return masked_corpus
-
-  def _holeSequence(self,
-                    seq: np.array,
-                    train_set: bool,
-                    max_predictions: int,
-                    distribution: distributions.Distribution,
-                    ) -> MaskSequence:
-    """
-    Inserts hole tokens to a given sequence.
-    """
-    assert seq.ndim == 1, "Input for masking must be single-dimension array."
-
-    ## Tuple representation of mask id/position/hole_length for easy sorting
-    class MaskedLmInstance():
-      def __init__(self, 
-                   pos_index: int, 
-                   token_id: int, 
-                   hole_length: int,
-                   ):
-        self.pos_index   = pos_index
-        self.token_id    = token_id
-        self.hole_length = hole_length
-
-    # Actual length represents the sequence length before pad begins
-    if self.config.use_start_end:
-      actual_length   = np.where(seq == self.atomizer.endToken)[0][0]
-    elif self.atomizer.padToken in seq:
-      actual_length   = np.where(seq == self.atomizer.padToken)[0][0]
-    else:
-      actual_length   = len(seq)
-
-    candidate_indexes = np.arange(actual_length)
-    self.rngen.shuffle(candidate_indexes)
-
-    # total tokens to add in holes.
-    # No more than max_predictions_per_seq (or otherwise specified), no less than actual seq length x the probability of hiding a token
-    holes_to_predict  = min(max_predictions,
-                           max(1, int(round(actual_length * self.training_opts.masked_lm_prob))))
-
-    # Processed input sequence
-    input_ids         = list(np.copy(seq))
-    # List of (seq_idx, token_id, hole_length) tuples
-    masked_lms        = []
-    # Offset array. Indices represent elements in the initial array (seq)
-    # Values of indices represent current offset position in processed array (input_ids).
-    offset_idxs       = np.zeros(len(seq), dtype = np.int32)
-    # Set with all candidate_indexes that have been holed.
-    visited_indices   = set()
-    # Total masks placed so far.
-    total_predictions = 0
-    for pos_index in candidate_indexes:
-      assert pos_index < len(seq), "Candidate index is out of bounds: {} >= {}".format(pos_index, len(seq))
-      
-      # Element in processed array can be found in its original index +/- offset
-      input_id_idx = pos_index + offset_idxs[pos_index]
-      if total_predictions >= holes_to_predict:
-        break
-      elif pos_index in visited_indices:
-        # Do not target an index, already holed
-        continue
-      elif input_id_idx > len(seq):
-        # Do not mask a part of input_ids that is going to be cropped.
-        continue
-
-      assert (input_ids[input_id_idx] == seq[pos_index], 
-              "Original and offset-ted sequence have misaligned tokens: {}, {}"
-              .format(seq[pos_index], input_ids[input_id_idx]))
-
-      # Sampled number from distribution to represent the actual hole length
-      hole_length = distribution.sample()
-      # Inside range, make sure hole length does not run over input_id_idx bounds
-      hole_length = min(hole_length, actual_length - input_id_idx)
-      # Confirm there is no conflict with another hole, further down the sequence.
-      for i in range(hole_length):
-        if input_ids[input_id_idx + i] == self.atomizer.holeToken:
-          hole_length = i
-          break
-      distribution.register(hole_length)
-      
-      # Target token for classifier is either the first token of the hole, or endholToken if hole is empty
-      target = input_ids[input_id_idx] if hole_length > 0 else self.atomizer.endholeToken
-
-      ## TODO. Think about '== self.atomizer.holeToken' condition.
-      # if config.mask.random_placed_mask and hole_length != 0:
-      #   if self.rngen.random() < 0.8:
-      #     replacement_token = self.atomizer.holeToken
-      #   else:
-      #     if self.rngen.random() > 0.5:
-      #       # Sometimes keep the original token.
-      #       replacement_token = target
-      #     else:
-      #       # Other times add a random one.
-      #       replacement_token = self.rngen.randint(0, self.atomizer.vocab_size - 1)
-      # else:
-      #   replacement_token = self.atomizer.holeToken
-      replacement_token = self.atomizer.holeToken
-
-      input_ids = (input_ids[:input_id_idx] + 
-                   [replacement_token] + 
-                   input_ids[input_id_idx + hole_length:])
-      # This pos_index will get deprecated when someone before this index alters the offset array
-      # So store position index, and after making all masks, update with updated offset array
-      masked_lms.append(MaskedLmInstance(pos_index = pos_index, token_id = target, hole_length = hole_length))
-
-      # Adjust the offset of all affected tokens, from pos_index and after.
-      offset_idxs[pos_index + 1:] += 1 - hole_length
-      # An empty hole is counted as a prediction of count 1.
-      total_predictions           += max(1, hole_length)
-      visited_indices.update(range(pos_index, pos_index + hole_length))
-
-      for lm in masked_lms:
-        ## TODO, remove this extensive-expensive check after you make sure that this function is bug free.
-        test_index = lm.pos_index + offset_idxs[lm.pos_index]
-        if input_ids[test_index] != self.atomizer.holeToken:
-          assert False
-
-    # Now update the entries with offset index.
-    for lm in masked_lms:
-      prev_index = lm.pos_index
-      lm.pos_index = lm.pos_index + offset_idxs[lm.pos_index]
-      # Make sure everything points to a hole.
-      assert input_ids[lm.pos_index] == self.atomizer.holeToken
-
-    while len(input_ids) < len(seq):
-      input_ids.append(self.atomizer.padToken)
-    masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
-    masked_lm_positions, masked_lm_ids, masked_lm_weights, masked_lm_lengths = [], [], [], []
-
-    input_mask = np.ones(len(seq), dtype = np.int32)
-    if self.atomizer.padToken in input_ids:
-      first_pad_index = input_ids.index(self.atomizer.padToken)
-      input_mask[first_pad_index:] = 0
-      # Check that the pad index is likely correct.
-      assert input_ids[first_pad_index] == self.atomizer.padToken, "{}".format(self.atomizer.DeatomizeIndices(input_ids))
-      assert input_ids[first_pad_index - 1] != self.atomizer.padToken
-
-    seen_in_training    = np.int32(1 if train_set else 0)
-    next_sentence_label = np.int32(0)
-    """
-      Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
-      is intended on kernels. In any other case, check bert's create_instances_from_document
-      to see how next_sentence_labels are calculated.
-      Setting this to 0 means that next sentence is NOT random.
-      Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.    
-    """
-    if len(masked_lms) == 0:
-      l.getLogger().warn("No HOLE added to datapoint. Increase probability of hole occuring.")
-    for p in masked_lms:
-      if p.pos_index < len(seq):
-        """
-          Adding holes can increase or decrease the length of the original sequence.
-          It is important in the end, to end up with an input sequence compatible
-          with the model's sequence length, i.e. len(seq). If any mask is found 
-          beyond that point, will have to be rejected.
-        """
-        masked_lm_positions.append(p.pos_index)
-        masked_lm_ids.append(p.token_id)
-        masked_lm_weights.append(1.0)
-        masked_lm_lengths.append(p.hole_length)
-    num_holes = len(masked_lm_positions)
-    while len(masked_lm_positions) < self.training_opts.max_predictions_per_seq:
-        masked_lm_positions.append(0)
-        masked_lm_ids.append(self.atomizer.padToken)
-        masked_lm_weights.append(0.0)
-        masked_lm_lengths.append(-1)
-
-    assert (input_ids[:len(seq)].count(self.atomizer.holeToken) == num_holes,
-      "Number of targets {} does not correspond to hole number in final input sequence: {}"
-      .format(num_holes, input_ids[:len(seq)].count(self.atomizer.holeToken))
-    )
-    return MaskSequence(seen_in_training, seq,
-                        np.asarray(input_ids[:len(seq)]), input_mask,
-                        np.asarray(masked_lm_positions),  np.asarray(masked_lm_ids), 
-                        np.asarray(masked_lm_weights),    np.asarray(masked_lm_lengths),
-                        next_sentence_label 
-                        )
-
-  def _maskSequence(self,
-                    seq: np.array,
-                    train_set: bool,
-                    random_placed_mask: bool,
-                    max_predictions: int,
-                    ) -> MaskSequence:
-    """Inserts masks to a given sequence."""
-    assert seq.ndim == 1, "Input for masking must be single-dimension array."
-
-    ## Tuple representation of mask id/position for easy sorting
-    class MaskedLmInstance(typing.NamedTuple):
-      pos_index: int
-      token_id: int
-
-    # Actual length represents the sequence length before pad begins
-    if self.atomizer.padToken in seq:
-      actual_length = np.where(seq == self.atomizer.padToken)[0][0]
-    else:
-      actual_length = len(seq)
-
-    candidate_indexes = np.arange(actual_length)
-    self.rngen.shuffle(candidate_indexes)
-
-    masks_to_predict = min(max_predictions,
-                           max(1, int(round(actual_length * self.training_opts.masked_lm_prob))))
-    input_ids = list(np.copy(seq))
-    masked_lms = []
-
-    for pos_index in candidate_indexes:
-      if len(masked_lms) >= masks_to_predict:
-        break
-
-      if random_placed_mask:
-        # 80% of the time, replace with [MASK]
-        if self.rngen.random() < 0.8:
-          input_ids[pos_index] = self.atomizer.maskToken
-        else:
-          # 10% of the time, keep original
-          if self.rngen.random() < 0.5:
-            pass
-          # 10% of the time, replace with random word
-          else:
-            random_token = self.rngen.randint(0, self.atomizer.vocab_size - 1)
-            while any(self.atomizer.vocab[t] == random_token for (idx, t) in self.atomizer.metaTokens.items()):
-              random_token = self.rngen.randint(0, self.atomizer.vocab_size - 1)
-            input_ids[pos_index] = self.rngen.randint(0, self.atomizer.vocab_size - 1)
-      else:
-        if self.rngen.random() < 0.8:
-          input_ids[pos_index] = self.atomizer.maskToken
-
-      masked_lms.append(MaskedLmInstance(pos_index=pos_index, token_id=seq[pos_index]))
-
-    assert len(masked_lms) <= masks_to_predict
-    masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
-
-    masked_lm_positions, masked_lm_ids, masked_lm_weights, masked_lm_lengths = [], [], [], []
-
-    input_mask = np.ones(len(seq), dtype = np.int32)
-    if self.atomizer.padToken in input_ids:
-      input_mask[input_ids.index(self.atomizer.padToken):] = 0
-
-    seen_in_training    = np.int32(1 if train_set else 0)
-    next_sentence_label = np.int32(0)
-    ## Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
-    ## is intended on kernels. In any other case, check bert's create_instances_from_document
-    ## to see how next_sentence_labels are calculated.
-    ## Setting this to 0 means that next sentence is NOT random.
-    ## Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.
-
-    for p in masked_lms:
-      masked_lm_positions.append(p.pos_index)
-      masked_lm_ids.append(p.token_id)
-      masked_lm_weights.append(1.0)
-      masked_lm_lengths.append(1)
-    while len(masked_lm_positions) < self.training_opts.max_predictions_per_seq:
-        masked_lm_positions.append(0)
-        masked_lm_ids.append(self.atomizer.padToken)
-        masked_lm_weights.append(0.0)
-        masked_lm_lengths.append(-1)
-
-    return MaskSequence(seen_in_training, seq,
-                        np.asarray(input_ids),           input_mask,
-                        np.asarray(masked_lm_positions), np.asarray(masked_lm_ids), 
-                        np.asarray(masked_lm_weights),   np.asarray(masked_lm_lengths),
-                        next_sentence_label
-                        )
 
   def InitSampleBatch(self) -> None:
     """
