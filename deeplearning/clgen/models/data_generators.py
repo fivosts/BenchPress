@@ -12,6 +12,7 @@ import random
 import progressbar
 import collections
 import copy
+import glob
 import humanize
 import multiprocessing
 import functools
@@ -35,6 +36,11 @@ flags.DEFINE_boolean(
   "Set True for MaskLM data generator to write dataset in text format, along with the tf_record."
 )
 
+flags.DEFINE_integer(
+  "memory_limit",
+  4,
+  "Set maximum amount of available memory used for masking sequences in Gb. [Default]: 4",
+)
 flags.DEFINE_boolean(
   "force_remake_dataset",
   False,
@@ -720,7 +726,7 @@ class MaskLMBatchGenerator(object):
         l.getLogger().warn("Overwriting dataset process was aborted. Good call.")
         return
 
-    if not (self.cache.path / "train_dataset.tf_record").exists() or FLAGS.force_remake_dataset:
+    if len(glob.glob(str(self.cache.path / "train_dataset_*.tf_record"))) == 0 or FLAGS.force_remake_dataset:
       if self.config.validation_split == 0:
         self._maskCorpus(
           shaped_corpus, set_name = "train_dataset", train_set = True
@@ -733,6 +739,16 @@ class MaskLMBatchGenerator(object):
         self._maskCorpus(
           shaped_corpus[:split_index], set_name = "validation_dataset", train_set = False
         )
+    else:
+      self.dataset["train_dataset"] = {
+        "tf_record": glob.glob(str(self.cache.path / "train_dataset_*.tf_record")),
+        "txt"      : glob.glob(str(self.cache.path / "train_dataset_*.txt")),
+      }
+      self.dataset["validation_dataset"] = {
+        "tf_record": glob.glob(str(self.cache.path / "validation_dataset_*.tf_record")),
+        "txt"      : glob.glob(str(self.cache.path / "validation_dataset_*.txt")),
+      }
+
     self.configValidationSets(self.config.validation_set, shaped_corpus)
     return
 
@@ -759,7 +775,7 @@ class MaskLMBatchGenerator(object):
         valset.max_predictions_per_seq,
         "mask" if valset.HasField("mask") else "hole_{}".format(valset.hole.hole_length)
       )
-      if set_name in self.dataset or len(glob.glob(str((self.cache.path / "{}_*.tf_record".format(set_name))))) > 0:
+      if set_name in self.dataset or len(glob.glob(str(self.cache.path / "{}_*.tf_record".format(set_name)))) > 0:
         continue
       self._maskCorpus(
         shaped_corpus, train_set = False, set_name = set_name, config = valset
@@ -953,16 +969,17 @@ class MaskLMBatchGenerator(object):
         "mask" if self.sampler.config.sample_set.HasField("mask") 
                else "hole_{}".format(self.sampler.config.sample_set.hole.hole_length)
       )
-    path = self.cache.path / "{}.tf_record".format(sampledDataset)
-    if not path.exists():
-      raise FileNotFoundError(path)
+    path_list = glob.glob(str(self.cache.path / "train_dataset_*.tf_record"))
+    if len(path_list) == 0:
+      raise FileNotFoundError(path_list)
 
-    for example in tf.compat.v1.io.tf_record_iterator(str(path)):
-      input_ids = np.asarray(tf.train.Example.FromString(example).features.feature['input_ids'].int64_list.value)
-      if self.atomizer.padToken in input_ids:
-        yield input_ids[:np.where(input_ids == self.atomizer.padToken)[0][0]]
-      else:
-        yield input_ids
+    for path in path_list:
+      for example in tf.compat.v1.io.tf_record_iterator(path):
+        input_ids = np.asarray(tf.train.Example.FromString(example).features.feature['input_ids'].int64_list.value)
+        if self.atomizer.padToken in input_ids:
+          yield input_ids[:np.where(input_ids == self.atomizer.padToken)[0][0]]
+        else:
+          yield input_ids
 
   def createCorpus(self) -> None:
     """
@@ -1093,7 +1110,7 @@ class MaskLMBatchGenerator(object):
       1, self.training_opts.sequence_length, self.training_opts.max_predictions_per_seq
     )
     corpus_bytes = single_item_bytes * len(corpus) + sys.getsizeof(corpus)
-    max_dupe     = min(int((4 * (1024**3)) / corpus_bytes), self.training_opts.dupe_factor)
+    max_dupe     = min(int((FLAGS.memory_limit * (1024**3)) / corpus_bytes), self.training_opts.dupe_factor)
     assert max_dupe != 0, "Increase RAM limit to fit corpus."
 
     iterations   = int(self.training_opts.dupe_factor / max_dupe)
@@ -1151,10 +1168,12 @@ class MaskLMBatchGenerator(object):
             multiproc_corpus = maskedSeq(extended_corpus)
             if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
               self.rngen.shuffle(extended_corpus)
-          else:
+          elif remaining != 0:
             multiproc_corpus = maskedSeq(remaining_corpus)
             if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
               self.rngen.shuffle(remaining_corpus)
+          else:
+            continue
 
           # Do parallel masking over corpus
           for kernel in multiproc_corpus:
@@ -1166,7 +1185,7 @@ class MaskLMBatchGenerator(object):
             masked_corpus[0].LogBatchTelemetry(
               self.training_opts.batch_size, self.steps_per_epoch, self.num_epochs
               )
-            
+
           # write masked_corpus before flushing the list
           self.dataset[set_name]['tf_record'].append(
             self.cache.path / "{}_{}.tf_record".format(set_name, iteration)
