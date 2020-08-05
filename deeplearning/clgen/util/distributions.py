@@ -63,21 +63,18 @@ class Distribution():
 class UniformDistribution(Distribution):
   def __init__(self, sample_length, log_path, set_name):
     super(UniformDistribution, self).__init__(sample_length, log_path, set_name)
-    self.sampler = lambda : np.random.randint(0, sample_length + 1)
 
   def sample(self):
-    sample = self.sampler()
-    return sample
+    return np.random.randint(0, self.sample_length + 1)
 
 class NormalDistribution(Distribution):
   def __init__(self, sample_length, mean, variance, log_path, set_name):
     super(NormalDistribution, self).__init__(sample_length, log_path, set_name)
     self.mean     = mean
     self.variance = variance
-    self.sampler  = lambda : np.random.normal(loc = mean, scale = variance)
 
   def sample(self):
-    sample = int(round(self.sampler()))
+    sample = int(round(np.random.normal(loc = self.mean, scale = self.variance)))
     while sample < 0 or sample > self.sample_length:
-      sample = int(round(self.sampler()))
+      sample = int(round(np.random.normal(loc = self.mean, scale = self.variance)))
     return sample
