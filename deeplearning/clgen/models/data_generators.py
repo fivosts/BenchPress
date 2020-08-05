@@ -1351,8 +1351,8 @@ class MaskLMBatchGenerator(object):
       if FLAGS.write_text_dataset:
         file_writer.write("'seen_in_training': {}\n'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'masked_lm_positions': {}\n'masked_lm_ids': {}\n'masked_lm_weights': {}\n'masked_lm_lengths': {}\n'next_sentence_labels': {}\n\n"
                             .format((True if seen_in_training == 1 else False),
-                                    self.atomizer.DeatomizeIndices(original_input, ignore_token = self.atomizer.),
-                                    self.atomizer.DeatomizeIndices(input_ids, ignore_token = self.atomizer.),
+                                    self.atomizer.DeatomizeIndices(original_input, ignore_token = self.atomizer.padToken),
+                                    self.atomizer.DeatomizeIndices(input_ids, ignore_token = self.atomizer.padToken),
                                     input_mask, 
                                     masked_lm_positions, 
                                     self.atomizer.DeatomizeIndices(masked_lm_ids), 
