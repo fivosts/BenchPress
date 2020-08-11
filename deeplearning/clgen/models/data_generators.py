@@ -417,7 +417,7 @@ def _holeSequence(seq: np.array,
   if reverse_sequence:
     input_ids         = list(np.copy(np.flip(seq)))
     candidate_indexes = (len(seq) - 1) - candidate_indexes
-    actual_length     = len(seq) - (2 if use_start_end else 1)
+    actual_length     = len(seq) - (1 if use_start_end else 0)
   else:
     input_ids       = list(np.copy(seq))
   # List of (seq_idx, token_id, hole_length) tuples
