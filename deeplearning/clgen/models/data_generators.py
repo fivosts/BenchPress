@@ -401,7 +401,10 @@ def _holeSequence(seq: np.array,
   else:
     actual_length   = len(seq)
 
-  candidate_indexes = np.arange(actual_length)
+  if use_start_end:
+    candidate_indexes = np.arange(1, actual_length)
+  else:
+    candidate_indexes = np.arange(actual_length)
   rngen.shuffle(candidate_indexes)
 
   # total tokens to add in holes.
@@ -409,8 +412,14 @@ def _holeSequence(seq: np.array,
   holes_to_predict  = min(max_predictions,
                          max(1, int(round(actual_length * training_opts.masked_lm_prob))))
 
-  # Processed input sequence
-  input_ids         = list(np.copy(seq))
+  # Flip input sequence to spread the hole lenghts to both directions uniformly.
+  reverse_sequence = True if rngen.random() > 0.5 else False
+  if reverse_sequence:
+    input_ids         = list(np.copy(np.flip(seq)))
+    candidate_indexes = (len(seq) - 1) - candidate_indexes
+    actual_length     = len(seq) - (2 if use_start_end else 1)
+  else:
+    input_ids       = list(np.copy(seq))
   # List of (seq_idx, token_id, hole_length) tuples
   masked_lms        = []
   # Offset array. Indices represent elements in the initial array (seq)
@@ -490,7 +499,15 @@ def _holeSequence(seq: np.array,
   for lm in masked_lms:
     prev_index = lm.pos_index
     lm.pos_index = lm.pos_index + offset_idxs[lm.pos_index]
-    # Make sure everything points to a hole.
+
+  # Un-reverse sequence
+  if reverse_sequence:
+    input_ids = list(reversed(input_ids))
+    for lm in masked_lms:
+      lm.pos_index = len(input_ids) - 1 - lm.pos_index
+
+  # Now check that targets point only hole tokens
+  for lm in masked_lms:
     assert input_ids[lm.pos_index] == atomizer.holeToken
 
   while len(input_ids) < len(seq):
