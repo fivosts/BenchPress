@@ -711,7 +711,7 @@ class tfBert(backends.BackendBase):
                                   ),
             hooks.tfProgressBar(max_length = max_steps),
            ]
-  
+
   def GetValidationHooks(self,
                          max_steps = None,
                          **kwargs
