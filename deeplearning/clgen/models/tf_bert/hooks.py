@@ -40,47 +40,6 @@ def _as_graph_element(obj):
                        "(at least 2)." % obj)
   return element
 
-class AverageSummarySaverHook(tf.estimator.SummarySaverHook):
-  """
-    Derived class from standard SummarySaverHook that 
-    stores averaged tensors instead of step-instant values.
-  """
-  def __init__(self,
-               save_steps=None,
-               save_secs=None,
-               output_dir=None,
-               summary_writer=None,
-               scaffold=None,
-               summary_op=None
-               ):
-    super(tfLogTensorHook, self).__init__(
-      save_steps, save_secs, output_dir,
-      summary_writer, scaffold, summary_op
-    )
-    self.averaged_summary = []
-
-  def after_run(self, run_context, run_values):
-    _ = run_context
-    if not self._summary_writer:
-      return
-
-    stale_global_step = run_values.results["global_step"]
-    global_step = stale_global_step + 1
-    if self._next_step is None or self._request_summary:
-      global_step = run_context.session.run(self._global_step_tensor)
-
-    if self._next_step is None:
-      self._summary_writer.add_session_log(
-          SessionLog(status=SessionLog.START), global_step)
-
-    if self._request_summary:
-      self._timer.update_last_triggered_step(global_step)
-      if "summary" in run_values.results:
-        for summary in self.averaged_summary:
-          self._summary_writer.add_summary(summary, global_step)
-
-    self._next_step = global_step + 1
-
 class _tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
   """Base class for Estimator Hooks, used for this BERT model"""
   def __init__(self,
@@ -133,6 +92,103 @@ class _tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
 
   def end(self, session):
     return
+
+class AverageSummarySaverHook(_tfEstimatorHooks):
+  """
+    Similar functionality to SummarySaverHook that
+    stores averaged tensors instead of step-instant values.
+  """
+  def __init__(self,
+               tensors: dict,
+               save_steps: int,
+               output_dir: str,
+               show_average: bool = True,
+               mode: tf.compat.v1.estimator.ModeKeys = tf.compat.v1.estimator.ModeKeys.TRAIN,
+              ):
+    """
+    Args:
+      tensors: Optional string to tf.Tensor dictionary for the tensor values desired to be monitored, if set.
+      save_steps: If set, logs tensor values once every defined number of estimator steps
+      output_dir: Location of tf.event summary files.
+      mode: If hooks is used for training or evaluation
+    """
+    super(AverageSummarySaverHook, self).__init__(mode)
+
+    self.tensors = {
+      summary_tensor.name.replace(":0", ""): tensor
+        for (summary_tensor, tensor) in zip(tensors[0], tensors[1])
+    }
+    self.result = {k: [] for k in self.tensors}
+
+    self.save_steps     = save_steps
+    self.step_triggered = False
+    self.show_average   = show_average
+    self.output_dir     = output_dir
+
+    self.timer = tf.compat.v1.train.SecondOrStepTimer(every_steps = save_steps)
+    return
+
+  def begin(self):
+    """
+        Called once at initialization stage
+    """
+    super(AverageSummarySaverHook, self).begin()
+    self.summary_writer = tf.python.training.summary_io.SummaryWriterCache.get(self.output_dir)
+    self.trigger_step = 0
+    self.session_dict['tensors'] = self.tensors
+    self.timer.reset()
+    return
+
+  def before_run(self, run_context):
+    """
+      Called before session.run()
+      Any tensor/op should be declared here in order to be evaluated
+      returns None or SessionRunArgs()
+    """
+    self.step_triggered = self.timer.should_trigger_for_step(self.trigger_step)
+    return tf.estimator.SessionRunArgs(self.session_dict)
+
+  def after_run(self, run_context, run_values):
+    """
+      Requested tensors are evaluated and their values are available
+    """
+    super(AverageSummarySaverHook, self).after_run(run_context, run_values)
+
+    for tag in self.tensors:
+      if self.show_average:
+        self.result[tag].append(run_values.results['tensors'][tag])
+      else:
+        self.result[tag] = [run_values.results['tensors'][tag]]
+
+    if self.trigger_step == 0:
+      self.summary_writer.add_session_log(
+        tf.core.util.event_pb2.SessionLog(status=tf.core.util.event_pb2.SessionLog.START),
+        self.current_step
+      )
+
+    if self.step_triggered:
+      self.result = { k: (sum(v) / len(v)) for (k, v) in self.result.items() }
+      self._save_summary(self.result)
+      self.result = {k: [] for k in self.result}
+
+    self.trigger_step += 1
+
+  def _save_summary(self, tensor_values):
+
+    if self.is_training:
+      elapsed_secs, _ = self.timer.update_last_triggered_step(self.trigger_step)
+    else:
+      elapsed_secs = None
+
+    tensor_summary = []
+    for (key, value) in tensor_values.items():
+      tensor_summary.append(
+        tf.core.framework.summary_pb2.Summary.Value(
+          tag = key, simple_value = value
+        )
+      )
+    summary = tf.core.framework.summary_pb2.Summary(value = tensor_summary)
+    self.summary_writer.add_summary(summary, self.current_step)
 
 class tfProgressBar(_tfEstimatorHooks):
   """Real time progressbar to capture tf Estimator training or validation"""

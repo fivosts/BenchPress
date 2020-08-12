@@ -697,9 +697,9 @@ class tfBert(backends.BackendBase):
                         [ value for (name, value) in kwargs.items()
                         ])
     return [
-            tf.estimator.SummarySaverHook(save_steps = min(250, log_steps),
+            hooks.AverageSummarySaverHook(tensors = summary_tensors,
+                                          save_steps = min(250, log_steps),
                                           output_dir = str(output_dir),
-                                          summary_op = summary_tensors[0],
                                           ),
             hooks.tfLogTensorHook(tensors = tensors, 
                                   log_steps = log_steps, 
