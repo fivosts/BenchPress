@@ -1087,7 +1087,7 @@ class MaskLMBatchGenerator(object):
 
     return shaped_corpus
 
-  def _maskCorpus(self, 
+  def _maskCorpus(self,
                   corpus: np.array,
                   train_set: bool,
                   set_name: str,
