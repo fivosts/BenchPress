@@ -45,7 +45,6 @@ def clgen_preprocessor(func: PreprocessorFunction) -> PreprocessorFunction:
       'def func(text: str) -> str:'.
   """
   type_hints = typing.get_type_hints(func)
-  print(type_hints)
   if not (type_hints == {"text": str, "return": str} or type_hints == {"text": str, "return": typing.List[str]}):
     raise SystemError(
       f"Preprocessor {func.__name__} does not have signature "
