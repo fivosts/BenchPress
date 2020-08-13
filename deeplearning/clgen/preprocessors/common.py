@@ -32,7 +32,6 @@ def _MinimumLineCount(text: str, min_line_count: int) -> str:
   Raises:
     NoCodeException: If src is less than min_line_count long.
   """
-  l.getLogger().debug("deeplearning.clgen.preprocessors.common._MinimumLineCount()")
   if len(text.strip().split("\n")) < min_line_count:
     raise ValueError
   return text
@@ -51,7 +50,6 @@ def MinimumLineCount3(text: str) -> str:
   Raises:
     NoCodeException: If src is less than min_line_count long.
   """
-  l.getLogger().debug("deeplearning.clgen.preprocessors.common.MinimumLineCount3()")
   return _MinimumLineCount(text, 3)
 
 
@@ -65,7 +63,6 @@ def StripDuplicateEmptyLines(text: str) -> str:
   Returns:
     The input text, where duplicate empty lines have been removed.
   """
-  l.getLogger().debug("deeplearning.clgen.preprocessors.common.StripDuplicateEmptyLines()")
   last_line = None
   lines = []
   for line in text.split("\n"):
@@ -88,7 +85,6 @@ def StripTrailingWhitespace(text: str) -> str:
   Returns:
     The input text, with trailing whitespace removed.
   """
-  l.getLogger().debug("deeplearning.clgen.preprocessors.common.StripTrailingWhitespace()")
   return "\n".join(l.rstrip() for l in text.split("\n")).rstrip()
 
 @public.clgen_preprocessor
