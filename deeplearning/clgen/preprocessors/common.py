@@ -92,8 +92,17 @@ def StripTrailingWhitespace(text: str) -> str:
   return "\n".join(l.rstrip() for l in text.split("\n")).rstrip()
 
 @public.clgen_preprocessor
-def ExtractSingleKernels(text: str) -> str:
+def ExtractSingleKernels(text: str) -> typing.List[str]:
+  """
+  A preprocessor that splits a single source file to discrete kernels
+  along with their potential global declarations.
 
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    List of kernels (strings).
+  """
   # OpenCL kernels can only be void
   kernel_specifier = 'kernel void'
   kernel_chunks = text.split(kernel_specifier)
@@ -139,8 +148,17 @@ def ExtractSingleKernels(text: str) -> str:
   return actual_kernels
 
 @public.clgen_preprocessor
-def ExtractOnlySingleKernels(text: str) -> str:
+def ExtractOnlySingleKernels(text: str) -> typing.List[str]:
+  """
+  A preprocessor that splits a single source file to discrete kernels
+  along without any global declarations..
 
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    List of kernels (strings).
+  """
   # OpenCL kernels can only be void
   kernel_specifier = 'kernel void'
   kernel_chunks  = text.split(kernel_specifier)
