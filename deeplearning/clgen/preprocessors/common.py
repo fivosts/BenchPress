@@ -88,6 +88,21 @@ def StripTrailingWhitespace(text: str) -> str:
   return "\n".join(l.rstrip() for l in text.split("\n")).rstrip()
 
 @public.clgen_preprocessor
+def DescaleWhitespace(text: str) -> str:
+  """
+  Preprocessor replaces sequences of whitespaces with a single whitespace.
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    The input text, with trailing whitespace removed.
+  """
+  while "  " in text:
+    text = text.replace('  ', ' ')
+  return text
+
+@public.clgen_preprocessor
 def ExtractSingleKernels(text: str) -> typing.List[str]:
   """
   A preprocessor that splits a single source file to discrete kernels
