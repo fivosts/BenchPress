@@ -45,9 +45,20 @@ class Meta(Base):
 
   __tablename__ = "meta"
 
-  key: str = sql.Column(sql.String(1024), primary_key=True)
-  value: str = sql.Column(sql.String(1024), nullable=False)
+  key: str = sql.Column(sql.String(1024), primary_key = True)
+  value: str = sql.Column(sql.String(1024), nullable = False)
 
+class EncodedContentFileStats(Base):
+  """Stats table for encoded content files."""
+
+  __tablename__ = "encoded_contentfiles_stats"
+
+  id               : int = sql.Column(sql.Integer,      primary_key = True)
+  file_count       : int = sql.Column(sql.Integer,      nullable = False)
+  length_frequency : str = sql.Column(sql.String(1024), nullable = False)
+  length_value     : str = sql.Column(sql.String(1024), nullable = False)
+  token_frequency  : str = sql.Column(sql.String(1024), nullable = False)
+  token_value      : str = sql.Column(sql.String(1024), nullable = False)
 
 class EncodedContentFile(Base):
   """A single encoded content file."""
@@ -108,6 +119,11 @@ class EncodedContentFile(Base):
     """
     start_time = time.time()
     data = atomizer.AtomizeString(preprocessed_cf.text)
+    ####
+    # TODO kernel analytics
+    # encoded_length = len(data)
+    # token_values = data.sorted()
+    ####
     encoding_time_ms = int((time.time() - start_time) * 1000)
     return EncodedContentFile(
       id=preprocessed_cf.id,
