@@ -89,7 +89,7 @@ def StripTrailingWhitespace(text: str) -> str:
   return "\n".join(l.rstrip() for l in text.split("\n")).rstrip()
 
 @public.clgen_preprocessor
-def DescaleWhitespaces(text: str) -> str:
+def StripMultipleWhitespaces(text: str) -> str:
   """
   Preprocessor replaces sequences of whitespaces with a single whitespace.
 
