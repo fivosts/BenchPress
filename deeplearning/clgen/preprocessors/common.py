@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """Common preprocessor passes."""
+import typing
 
 from deeplearning.clgen.preprocessors import public
 from absl import flags
