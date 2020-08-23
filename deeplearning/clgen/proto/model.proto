@@ -44,7 +44,8 @@ message NetworkArchitecture {
   enum Backend {
     TENSORFLOW_SEQ = 0;
     TENSORFLOW_BERT = 1;
-    KERAS_SEQ = 2;
+    TORCH_BERT = 2;
+    KERAS_SEQ = 3;
   }
   enum NeuronType {
     LSTM = 0;

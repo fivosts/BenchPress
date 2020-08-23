@@ -127,7 +127,7 @@ def parseModelSummary(meta):
         )
       )
   else:
-    summary = "TODO"
+    raise NotImplementedError
   return summary
 
 def parseSamplerSummary(meta):

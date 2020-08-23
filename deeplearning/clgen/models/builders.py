@@ -76,6 +76,8 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         lambda x: 0 < x,
         "TrainingOptions.num_epochs must be > 0",
       )
+    elif config.architecture.backend == model_pb2.NetworkArchitecture.TORCH_BERT:
+      raise NotImplementedError
     elif config.architecture.backend == model_pb2.NetworkArchitecture.TENSORFLOW_BERT:
       # Data generator is needed when using bert.
       pbutil.AssertFieldIsSet(config.training, "data_generator")

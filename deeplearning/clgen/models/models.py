@@ -147,7 +147,7 @@ class Model(object):
         cached_to_compare.training.data_generator.ClearField("validation_set")
       if cached_to_compare.training.sequence_length != config_to_compare.training.sequence_length:
         l.getLogger().warning("Mismatch between pre-trained and current config sequence_length!\
-          This can only be intended in tfBert model!")
+          This can only be intended in BERT model!")
       cached_to_compare.training.ClearField("sequence_length")
       config_to_compare.training.ClearField("sequence_length")
       if config_to_compare != cached_to_compare:
@@ -162,6 +162,7 @@ class Model(object):
       model_pb2.NetworkArchitecture.TENSORFLOW_SEQ: tf_sequential.tfSequential,
       model_pb2.NetworkArchitecture.KERAS_SEQ: keras_sequential.kerasSequential,
       model_pb2.NetworkArchitecture.TENSORFLOW_BERT: tf_bert.tfBert,
+      model_pb2.NetworkArchitecture.TORCH_BERT: torch_bert.torchBert,
     }[config.architecture.backend](self.config, self.cache, self.hash)
 
   def GetShortSummary(self) -> str:
@@ -256,7 +257,7 @@ class Model(object):
       "Trained model for {} {} in {} ms. " "Training loss: {}."
         .format(
           self.backend.num_epochs,
-          "steps" if isinstance(self.backend, tf_bert.tfBert) else "epochs",
+          "steps" if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert) else "epochs",
           humanize.intcomma(total_time_ms),
           final_loss,
           )
@@ -355,7 +356,7 @@ class Model(object):
 
         for index in indices[i]:
           ## Legacy operation for sequential returning single token
-          if isinstance(self.backend, tf_bert.tfBert):
+          if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert):
             samples_in_progress[i] = [atomizer.decoder[x] for x in indices[i]]
             step_ind               = '\n'.join([self.atomizer.DeatomizeIndices(mind).replace('\n', '\\n') for mind in step_indices[i]])
             encoded_step_indices   = '\n'.join([','.join([str(x) for x in mind]) for mind in step_indices[i]])
