@@ -164,6 +164,7 @@ class tfBert(backends.BackendBase):
           "initializer_range"            : self.config.architecture.initializer_range,
     }
     self.bert_config                     = model.BertConfig.from_dict(self.bertAttrs)
+    ## UPGRADING TODO: I AM HERE
     return
 
   def _ConfigTrainParams(self, 
