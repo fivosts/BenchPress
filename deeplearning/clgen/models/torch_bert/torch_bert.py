@@ -1,0 +1,478 @@
+# coding=utf-8
+# Copyright 2018 The Google AI Language Team Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Run masked LM/next sentence masked_lm pre-training for BERT."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import os
+import shutil
+import glob
+import typing
+import pathlib
+import datetime
+import tensorflow_probability as tfp
+import numpy as np
+from absl import flags
+
+from deeplearning.clgen import samplers
+from deeplearning.clgen import sample_observers
+from deeplearning.clgen import validation_database
+from deeplearning.clgen.util.tf import tf
+from deeplearning.clgen.util import pbutil
+from deeplearning.clgen.proto import model_pb2
+from deeplearning.clgen.proto import sampler_pb2
+from deeplearning.clgen.proto import internal_pb2
+from deeplearning.clgen.models import backends
+from deeplearning.clgen.models import data_generators
+from deeplearning.clgen.models import telemetry
+from deeplearning.clgen.models.tf_bert import model
+from deeplearning.clgen.models.tf_bert import optimizer
+from deeplearning.clgen.models.tf_bert import hooks
+
+from eupy.native import logger as l
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_integer(
+  "select_checkpoint_step",
+  -1,
+  "Select step checkpoint for sample. Re-training with this flag is not supported. "
+  "To restart from specific checkpoint, you have to manually remove the checkpoints after the desired one."
+  "Default: -1, flag ignored and latest checkpoint is loaded."
+)
+
+flags.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
+
+flags.DEFINE_boolean("force_eval", False, "Run Validation no matter what.")
+
+flags.DEFINE_integer("sample_per_epoch", 3, "Set above zero to sample model after every epoch.")
+
+flags.DEFINE_boolean("use_tpu", False, "Whether to use TPU or GPU/CPU.")
+
+flags.DEFINE_boolean("mirror_gpus", False, "Set True to distribute training across all system's GPUs. (Only usable when use_tpu is False).")
+
+flags.DEFINE_boolean("categorical_sampling", True, "Use categorical distribution on logits when sampling.")
+
+flags.DEFINE_string(
+    "tpu_name", None,
+    "The Cloud TPU to use for training. This should be either the name "
+    "used when creating the Cloud TPU, or a grpc://ip.address.of.tpu:8470 "
+    "url.")
+
+flags.DEFINE_string(
+    "tpu_zone", None,
+    "[Optional] GCE zone where the Cloud TPU is located in. If not "
+    "specified, we will attempt to automatically detect the GCE project from "
+    "metadata.")
+
+flags.DEFINE_string(
+    "gcp_project", None,
+    "[Optional] Project name for the Cloud TPU-enabled project. If not "
+    "specified, we will attempt to automatically detect the GCE project from "
+    "metadata.")
+
+flags.DEFINE_string("master", None, "[Optional] TensorFlow master URL.")
+
+flags.DEFINE_integer(
+    "num_tpu_cores", 8,
+    "Only used if `use_tpu` is True. Total number of TPU cores to use.")
+
+
+class tfBert(backends.BackendBase):
+
+  class BertEstimator(typing.NamedTuple):
+    """Named tuple to wrap BERT estimator pipeline."""
+    estimator      : tf.compat.v1.estimator.tpu.TPUEstimator
+    data_generator : data_generators.MaskLMBatchGenerator
+
+  def __init__(self, *args, **kwargs):
+
+    super(tfBert, self).__init__(*args, **kwargs)
+    
+    self.bertAttrs                       = None
+    self.bert_config                     = None
+
+    self.train                           = None
+    self.sample                          = None
+    self.predict_generator               = None
+    self.sampler                         = None
+
+    self.train_batch_size                = None
+    self.eval_batch_size                 = None
+    self.learning_rate                   = None
+    self.num_train_steps                 = None
+    self.num_warmup_steps                = None
+    self.telemetry                       = None
+
+    self.ckpt_path                       = self._ConfigCheckpointParams()
+    self.logfile_path                    = self.cache.path / "logs"
+    self.sample_path                     = self.cache.path / "samples"
+
+    self.is_validated                    = False
+    l.getLogger().info("BERT Model config initialized in {}".format(self.cache.path))
+    return
+
+  def _ConfigCheckpointParams(self):
+    if FLAGS.select_checkpoint_step >= 0:
+
+      ckpt_current = self.cache.path / "checkpoints"
+      if not (ckpt_current / "model.ckpt-{}.index".format(FLAGS.select_checkpoint_step)).exists():
+        raise FileNotFoundError(ckpt_current / "model.ckpt-{}.index".format(FLAGS.select_checkpoint_step))
+
+      workspace_rel_path = self.cache.path.relative_to(pathlib.Path(os.environ.get("CLGEN_CACHE")).parent)
+      ckpt_path = pathlib.Path("/tmp" / workspace_rel_path / "checkpoints")
+      ckpt_path.mkdir(exist_ok = True, parents = True)
+
+      shutil.copy2(ckpt_current / "checkpoint" , ckpt_path)
+      shutil.copy2(ckpt_current / "graph.pbtxt", ckpt_path)
+      for ckpt_file in glob.glob(str(ckpt_current / "model.ckpt-{}.*".format(FLAGS.select_checkpoint_step))):
+        shutil.copy2(ckpt_file, ckpt_path)
+      l.getLogger().warn("Explicit checkpoint selected. Explicit checkpoints can only be used for validation or sampling.")
+    elif FLAGS.select_checkpoint_step == -1:
+      ckpt_path = self.cache.path / "checkpoints"
+    else:
+      raise ValueError("Invalid value {} for --select_checkpoint_step".format(FLAGS.select_checkpoint_step))
+    l.getLogger().info("Configured model checkpoints in {}".format(ckpt_path))
+    return ckpt_path
+
+  def _ConfigModelParams(self):
+    self.bertAttrs = {
+          "vocab_size"                   : self.atomizer.vocab_size,
+          "hidden_size"                  : self.config.architecture.hidden_size,
+          "num_hidden_layers"            : self.config.architecture.num_hidden_layers,
+          "num_attention_heads"          : self.config.architecture.num_attention_heads,
+          "intermediate_size"            : self.config.architecture.intermediate_size,
+          "hidden_act"                   : self.config.architecture.hidden_act,
+          "hidden_dropout_prob"          : 1.0 - self.config.architecture.hidden_dropout_prob,
+          "attention_probs_dropout_prob" : 1.0 - self.config.architecture.attention_probs_dropout_prob,
+          "max_position_embeddings"      : self.config.architecture.max_position_embeddings,
+          "type_vocab_size"              : self.config.architecture.type_vocab_size,
+          "initializer_range"            : self.config.architecture.initializer_range,
+    }
+    self.bert_config                     = model.BertConfig.from_dict(self.bertAttrs)
+    return
+
+  def _ConfigTrainParams(self, 
+                         data_generator: data_generators.MaskLMBatchGenerator
+                        ) -> None:
+    """
+    Model parameter initialization for training and validation.
+    """
+    if self.bert_config is None:
+      self._ConfigModelParams()
+
+    self.train_batch_size                 = self.config.training.batch_size
+    self.eval_batch_size                  = self.config.training.batch_size
+    self.learning_rate                    = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
+    self.num_warmup_steps                 = self.config.training.num_warmup_steps
+
+    self.telemetry                        = telemetry.TrainingLogger(self.logfile_path)
+    self.steps_per_epoch                  = data_generator.steps_per_epoch
+    self.num_epochs                       = data_generator.num_epochs
+    self.num_train_steps                  = self.steps_per_epoch * self.num_epochs
+    self.max_eval_steps                   = FLAGS.max_eval_steps
+
+    self.validation_results_file          = "val_results.txt"
+    self.validation_results_path          = os.path.join(str(self.logfile_path), self.validation_results_file)
+
+    tpu_cluster_resolver = None
+    if FLAGS.use_tpu and FLAGS.tpu_name:
+      tpu_cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
+          FLAGS.tpu_name, zone = FLAGS.tpu_zone, project = FLAGS.gcp_project)
+
+    train_distribute = tf.distribute.MirroredStrategy(num_gpus = gpu.numGPUs()) if FLAGS.use_tpu and FLAGS.mirror_gpus else None
+
+    is_per_host      = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
+    run_config  = tf.compat.v1.estimator.tpu.RunConfig(
+                    cluster   = tpu_cluster_resolver,
+                    master    = FLAGS.master,
+                    model_dir = str(self.ckpt_path),
+                    save_checkpoints_steps  = self.steps_per_epoch,
+                    save_summary_steps      = self.steps_per_epoch,
+                    keep_checkpoint_max     = 0,
+                    log_step_count_steps    = self.steps_per_epoch,
+                    train_distribute        = train_distribute,
+                    tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
+                        iterations_per_loop = self.steps_per_epoch,
+                        num_shards          = FLAGS.num_tpu_cores,
+                        per_host_input_for_training = is_per_host)
+                    )
+    model_fn    = self._model_fn_builder(
+                    bert_config = self.bert_config
+                    )
+    # If TPU is not available, this will fall back to normal Estimator on CPU
+    # or GPU.
+    self.train = tfBert.BertEstimator(tf.compat.v1.estimator.tpu.TPUEstimator(
+                            use_tpu  = FLAGS.use_tpu,
+                            model_fn = model_fn,
+                            config   = run_config,
+                            params   = None,
+                            train_batch_size   = self.train_batch_size,
+                            eval_batch_size    = self.eval_batch_size,
+                            ),
+                 data_generator
+                 )
+    l.getLogger().info(self.GetShortSummary())
+    return
+
+  def _ConfigSampleParams(self,
+                          data_generator: data_generators.MaskLMBatchGenerator,
+                          sampler: samplers.Sampler,
+                          ) -> None:
+    """
+    Model parameter initialization for inference.
+    """
+    if self.bert_config is None:
+      self._ConfigModelParams()
+    self.sampler = sampler
+
+    if sampler.sequence_length > self.bertAttrs['max_position_embeddings']:
+      raise ValueError(
+          "Cannot use sequence length %d because the BERT model "
+          "was only trained up to sequence length %d" %
+          (sampler.sequence_length, self.bertAttrs['max_position_embeddings']))
+      
+    tpu_cluster_resolver = None
+    if FLAGS.use_tpu and FLAGS.tpu_name:
+      tpu_cluster_resolver = tf.compat.v1.cluster_resolver.TPUClusterResolver(
+          FLAGS.tpu_name, zone = FLAGS.tpu_zone, project = FLAGS.gcp_project)
+
+    is_per_host = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
+    run_config  = tf.compat.v1.estimator.tpu.RunConfig(
+        cluster    = tpu_cluster_resolver,
+        master     = FLAGS.master,
+        model_dir  = str(self.ckpt_path),
+        tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
+            num_shards = FLAGS.num_tpu_cores,
+            per_host_input_for_training = is_per_host))
+
+    model_fn = self._model_fn_builder(bert_config = self.bert_config)
+
+    # If TPU is not available, this will fall back to normal Estimator on CPU
+    # or GPU.
+    self.sample = tfBert.BertEstimator(tf.compat.v1.estimator.tpu.TPUEstimator(
+                            use_tpu  = FLAGS.use_tpu,
+                            model_fn = model_fn,
+                            config   = run_config,
+                            params   = {'sampling_temperature': sampler.temperature},
+                            predict_batch_size = sampler.batch_size
+                            ),
+                  data_generator
+                  )
+    l.getLogger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
+    return
+
+  @property
+  def is_trained(self):
+    if FLAGS.select_checkpoint_step >= 0:
+      return True
+    else:
+      for file_path in self.ckpt_path.iterdir():
+        filename = file_path.stem
+        if "model.ckpt-" in filename:
+          step_ckpt = int(filename.replace("model.ckpt-", ""))
+          if step_ckpt >= self.num_train_steps:
+            return True
+    return False  
+
+  def samplesWithCategorical(self):
+    return FLAGS.categorical_sampling
+
+  def Train(self,
+            corpus,
+            test_sampler: typing.Optional[samplers.Sampler] = None,
+            **unused_kwargs
+            ) -> None:
+
+    del unused_kwargs
+
+    if self.train is None:
+
+      data_generator = data_generators.MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
+                         corpus, self.config.training, self.cache.path)
+      self._ConfigTrainParams(data_generator)
+
+    if not self.is_trained:
+
+      train_input_fn = self.train.data_generator.generateTfDataset(
+          sequence_length = self.config.training.sequence_length,
+          num_cpu_threads = os.cpu_count(),
+          use_tpu = FLAGS.use_tpu,
+          is_training = True)
+
+      l.getLogger().info("Splitting {} steps into {} equivalent epochs, {} steps each. Rejected {} redundant step(s)".format(
+                                        self.num_train_steps, self.num_epochs, 
+                                        self.steps_per_epoch, self.config.training.num_train_steps - self.num_train_steps
+                                        )
+                        )
+      try:
+        if FLAGS.sample_per_epoch == 0:
+          self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps)
+        else:
+          sampler, observers = self._getTestSampler(test_sampler, self.config.training.sequence_length)
+          self.InitSampling(sampler, self.config.training.random_seed)
+          for ep in range(self.num_epochs):
+            self.train.estimator.train(input_fn = train_input_fn, steps = self.steps_per_epoch)
+            for _ in range(FLAGS.sample_per_epoch):
+              start_time   = datetime.datetime.utcnow()
+              self.InitSampleBatch()
+              sample_batch, sample_indices = self.SampleNextIndices()
+              end_time     = datetime.datetime.utcnow()
+              for sample, sind in zip(sample_batch, sample_indices):
+                sample_proto = model_pb2.Sample(
+                  train_step             = (ep + 1) * self.steps_per_epoch,
+                  sample_feed            = sampler.start_text,
+                  text                   = self.atomizer.DeatomizeIndices(sample, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
+                  encoded_text           = ",".join([str(t) for t in sample]),
+                  sample_indices         = '\n'.join([self.atomizer.DeatomizeIndices(mind).replace('\n', '\\n') for mind in sind]),
+                  encoded_sample_indices = '\n'.join([','.join([str(x) for x in mind]) for mind in sind ]),
+                  sample_time_ms         = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
+                  num_tokens             = len(sample),
+                  categorical_sampling   = self.samplesWithCategorical(),
+                  date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
+                )
+                for obs in observers:
+                  obs.OnSample(sample_proto)
+      except KeyboardInterrupt:
+        pass
+      if not FLAGS.force_eval:
+        self.Validate()
+  
+    if FLAGS.force_eval and not self.is_validated:
+      self.Validate()
+    # self.telemetry.TfRecordEpochs()
+    return
+
+  def Validate(self) -> None:
+    l.getLogger().info("BERT Validation")
+    if self.max_eval_steps <= 0:
+      return
+    for tf_set in self.train.data_generator.dataset:
+      tf_set_paths = self.train.data_generator.dataset[tf_set]['tf_record']
+      l.getLogger().info("BERT Validation on {}".format(', '.join([pathlib.Path(x).stem for x in tf_set_paths])))
+      eval_input_fn = self.train.data_generator.generateTfDataset(
+          sequence_length = self.config.training.sequence_length,
+          num_cpu_threads = os.cpu_count(),
+          is_training     = False,
+          eval_set        = tf_set_paths
+          )
+      result = self.train.estimator.evaluate(input_fn=eval_input_fn, steps=self.max_eval_steps)
+      self._writeValidation(result, tf_set)
+    self.is_validated = True
+    return
+
+  def InitSampling(self,
+                   sampler : samplers.Sampler,
+                   seed    : typing.Optional[int] = None
+                   ) -> None:
+    """This is called only once. Performs basic initialization of sampling"""
+    data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
+                       sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings, self.cache.path
+                     )
+    self._ConfigSampleParams(data_generator, sampler)
+    l.getLogger().info("Initialized model samples in {}".format(self.sample_path))
+    return 
+
+  def InitSampleBatch(self, *unused_args, **unused_kwargs) -> None:
+    """Batch-specific initialization. Called once when a new batch is going to be generated"""
+    del unused_args
+    del unused_kwargs
+    self.sample.data_generator.InitSampleBatch()
+    return 
+
+  def SampleNextIndices(self, *unused_args, **unused_kwargs):
+    """Called iteratively to build a single batch of samples, until termination criteria stops calling"""
+    del unused_kwargs
+    del unused_args
+    if self.sample is None:
+      raise ValueError("Bert sampler has not been initialized.")
+
+    predict_input_fn  = self.sample.data_generator.generateTfSamples()
+    predict_generator = self.sample.estimator.predict(input_fn = predict_input_fn)
+
+    output_seq, done = None, False
+    for step in predict_generator:
+      output_seq, sampleIndices = self.sample.data_generator.updateSampleBatch(
+        step['input_ids'], step['masked_lm_predictions']
+        )
+    return output_seq, sampleIndices
+
+  def _getTestSampler(self, test_sampler, sequence_length):
+    if test_sampler is None:
+      sampler_str = [
+          "start_text: \"kernel void A(const double g, const double i){\\n  [HOLE] = [HOLE]\\n  int a = g + [HOLE]\"",
+          "batch_size: 2",
+          "sequence_length: {}".format(sequence_length),
+          "temperature_micros: 800000",
+      ]
+      mock_config = pbutil.FromString('\n'.join(sampler_str), sampler_pb2.Sampler())
+      sampler = samplers.Sampler(mock_config, sample_db_name = "epoch_samples.db")
+    else:
+      sampler = test_sampler
+    if sampler.isFixedStr:
+      sampler.Specialize(self.atomizer)
+    observers = [sample_observers.PrintSampleObserver()]
+    if FLAGS.store_samples_db:
+      observers.append(sample_observers.SamplesDatabaseObserver(
+        "sqlite:///{}".format(self.sample_path / sampler.hash / sampler.sample_db_name)
+        )
+      )
+      sampler.symlinkModelDB(
+        self.sample_path / sampler.hash,
+        self.hash
+      )
+    return sampler, observers
+
+  def GetShortSummary(self) -> str:
+    l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
+    return (
+      f"h_s: {self.config.architecture.hidden_size}, "
+      f"#h_l: {self.config.architecture.num_hidden_layers}, "
+      f"#att_h: {self.config.architecture.num_attention_heads}, "
+      f"imd_s: {self.config.architecture.intermediate_size}, "
+      f"h_act: {self.config.architecture.hidden_act}, "
+      f"{model_pb2.NetworkArchitecture.Backend.Name(self.config.architecture.backend)} "
+      "network"
+      "\n"
+      # self.data_generator.GetShortSummary() # TODO
+    )
+
+  def InferenceManifest(self) -> typing.List[pathlib.Path]:
+    """Return the list of files which are required for model inference.
+    Returns:
+      A list of absolute paths.
+    """
+    # The TensorFlow save file.
+    l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.InferenceManifest()")
+    paths = [ path.absolute() for path in (self.cache.path / "checkpoints").iterdir() ]
+    paths += [ path.absolute() for path in (self.cache.path / "logs").iterdir() ]
+    paths += [ path.absolute() for path in (self.cache.path / "samples").iterdir() ]
+    # paths += self.data_generator.InferenceManifest # TODO
+    return sorted(paths)
+
+  def _writeValidation(self, result, tf_set) -> None:
+    with tf.io.gfile.GFile(self.validation_results_path, "w") as writer:
+      db = validation_database.ValidationDatabase("sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")))
+      r = [ "{}: {}".format(key, str(result[key])) for key in result.keys() ]
+      with db.Session(commit = True) as session:
+        exists = session.query(validation_database.ValResults.key).filter_by(key = str(tf_set)).scalar() is not None
+        if exists:
+          entry = session.query(validation_database.ValResults).filter_by(key = str(tf_set)).first()
+          entry.results = "\n".join(r)
+        else:
+          session.add(validation_database.ValResults(key = str(tf_set), results = "\n".join(r)))
+    return 
