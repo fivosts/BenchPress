@@ -305,64 +305,234 @@ class torchBert(backends.BackendBase):
             **unused_kwargs
             ) -> None:
 
-    del unused_kwargs
+    """
+    Main training entry point.
 
-    if self.train is None:
+    Args:
+      model_path (:obj:`str`, `optional`):
+        Local path to the model if the model to train has been instantiated from a local path. If present,
+        training will resume from the optimizer/scheduler states loaded here.
+    """
 
-      data_generator = data_generators.MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
-                         corpus, self.config.training, self.cache.path)
-      self._ConfigTrainParams(data_generator)
+    train_sampler = self._get_train_sampler()
 
-    if not self.is_trained:
+    train_dataloader = DataLoader(
+      self.train_dataset,
+      batch_size=self.args.train_batch_size,
+      sampler=train_sampler,
+      collate_fn=self.data_collator,
+      drop_last=self.args.dataloader_drop_last,
+    )
 
-      train_input_fn = self.train.data_generator.generateTfDataset(
-          sequence_length = self.config.training.sequence_length,
-          num_cpu_threads = os.cpu_count(),
-          use_tpu = FLAGS.use_tpu,
-          is_training = True)
+    # if self.args.max_steps > 0:
+    #   t_total = self.args.max_steps
+    #   num_train_epochs = (
+    #     self.args.max_steps // (len(train_dataloader) // self.args.gradient_accumulation_steps) + 1
+    #   )
+    # else:
+    #   t_total = int(len(train_dataloader) // self.args.gradient_accumulation_steps * self.args.num_train_epochs)
+    #   num_train_epochs = self.args.num_train_epochs
+    #   self.args.max_steps = t_total
 
-      l.getLogger().info("Splitting {} steps into {} equivalent epochs, {} steps each. Rejected {} redundant step(s)".format(
-                                        self.num_train_steps, self.num_epochs, 
-                                        self.steps_per_epoch, self.config.training.num_train_steps - self.num_train_steps
-                                        )
-                        )
+    self.create_optimizer_and_scheduler(num_training_steps=t_total)
+
+    # Check if saved optimizer or scheduler states exist
+    if (
+      model_path is not None
+      and os.path.isfile(os.path.join(model_path, "optimizer.pt"))
+      and os.path.isfile(os.path.join(model_path, "scheduler.pt"))
+    ):
+      # Load in optimizer and scheduler states
+      self.optimizer.load_state_dict(
+        torch.load(os.path.join(model_path, "optimizer.pt"), map_location=self.args.device)
+      )
+      self.lr_scheduler.load_state_dict(torch.load(os.path.join(model_path, "scheduler.pt")))
+
+    model = self.model
+    # if self.args.fp16 and _use_apex:
+    #   if not is_apex_available():
+    #     raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use fp16 training.")
+    #   model, self.optimizer = amp.initialize(model, self.optimizer, opt_level=self.args.fp16_opt_level)
+
+    # multi-gpu training (should be after apex fp16 initialization)
+    if self.args.n_gpu > 1:
+      model = torch.nn.DataParallel(model)
+
+    # Distributed training (should be after apex fp16 initialization)
+    if self.args.local_rank != -1:
+      model = torch.nn.parallel.DistributedDataParallel(
+        model,
+        device_ids=[self.args.local_rank],
+        output_device=self.args.local_rank,
+        find_unused_parameters=True,
+      )
+
+    # if self.tb_writer is not None:
+    #   self.tb_writer.add_text("args", self.args.to_json_string())
+    #   self.tb_writer.add_hparams(self.args.to_sanitized_dict(), metric_dict={})
+
+    # Train!
+    if is_torch_tpu_available():
+      total_train_batch_size = self.args.train_batch_size * xm.xrt_world_size()
+    else:
+      total_train_batch_size = (
+        self.args.train_batch_size
+        * self.args.gradient_accumulation_steps
+        * (torch.distributed.get_world_size() if self.args.local_rank != -1 else 1)
+      )
+    logger.info("***** Running training *****")
+    logger.info("  Num examples = %d", self.num_examples(train_dataloader))
+    logger.info("  Num Epochs = %d", num_train_epochs)
+    logger.info("  Instantaneous batch size per device = %d", self.args.per_device_train_batch_size)
+    logger.info("  Total train batch size (w. parallel, distributed & accumulation) = %d", total_train_batch_size)
+    logger.info("  Gradient Accumulation steps = %d", self.args.gradient_accumulation_steps)
+    logger.info("  Total optimization steps = %d", t_total)
+
+    self.global_step = 0
+    self.epoch = 0
+    epochs_trained = 0
+    steps_trained_in_current_epoch = 0
+    # Check if continuing training from a checkpoint
+    if model_path is not None:
+      # set global_step to global_step of last saved checkpoint from model path
       try:
-        if FLAGS.sample_per_epoch == 0:
-          self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps)
+        self.global_step = int(model_path.split("-")[-1].split("/")[0])
+        epochs_trained = self.global_step // (len(train_dataloader) // self.args.gradient_accumulation_steps)
+        steps_trained_in_current_epoch = self.global_step % (
+          len(train_dataloader) // self.args.gradient_accumulation_steps
+        )
+
+        logger.info("  Continuing training from checkpoint, will skip to saved global_step")
+        logger.info("  Continuing training from epoch %d", epochs_trained)
+        logger.info("  Continuing training from global step %d", self.global_step)
+        logger.info("  Will skip the first %d steps in the first epoch", steps_trained_in_current_epoch)
+      except ValueError:
+        self.global_step = 0
+        logger.info("  Starting fine-tuning.")
+
+    tr_loss = 0.0
+    logging_loss = 0.0
+    model.zero_grad()
+    train_iterator = trange(
+      epochs_trained, int(np.ceil(num_train_epochs)), desc="Epoch", disable=not self.is_local_process_zero()
+    )
+    for epoch in train_iterator:
+      if isinstance(train_dataloader, DataLoader) and isinstance(train_dataloader.sampler, DistributedSampler):
+        train_dataloader.sampler.set_epoch(epoch)
+
+      if is_torch_tpu_available():
+        parallel_loader = pl.ParallelLoader(train_dataloader, [self.args.device]).per_device_loader(
+          self.args.device
+        )
+        epoch_iterator = tqdm(parallel_loader, desc="Iteration", disable=not self.is_local_process_zero())
+      else:
+        epoch_iterator = tqdm(train_dataloader, desc="Iteration", disable=not self.is_local_process_zero())
+
+      # Reset the past mems state at the beginning of each epoch if necessary.
+      if self.args.past_index >= 0:
+        self._past = None
+
+      for step, inputs in enumerate(epoch_iterator):
+
+        # Skip past any already trained steps if resuming training
+        if steps_trained_in_current_epoch > 0:
+          steps_trained_in_current_epoch -= 1
+          continue
+
+        tr_loss += self.training_step(model, inputs)
+
+        if (step + 1) % self.args.gradient_accumulation_steps == 0 or (
+          # last step in epoch but step is always smaller than gradient_accumulation_steps
+          len(epoch_iterator) <= self.args.gradient_accumulation_steps
+          and (step + 1) == len(epoch_iterator)
+        ):
+          if self.args.fp16 and _use_native_amp:
+            self.scaler.unscale_(self.optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
+          elif self.args.fp16 and _use_apex:
+            torch.nn.utils.clip_grad_norm_(amp.master_params(self.optimizer), self.args.max_grad_norm)
+          else:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
+
+          if is_torch_tpu_available():
+            xm.optimizer_step(self.optimizer)
+          elif self.args.fp16 and _use_native_amp:
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+          else:
+            self.optimizer.step()
+
+          self.lr_scheduler.step()
+          model.zero_grad()
+          self.global_step += 1
+          self.epoch = epoch + (step + 1) / len(epoch_iterator)
+
+          if (self.args.logging_steps > 0 and self.global_step % self.args.logging_steps == 0) or (
+            self.global_step == 1 and self.args.logging_first_step
+          ):
+            logs: Dict[str, float] = {}
+            logs["loss"] = (tr_loss - logging_loss) / self.args.logging_steps
+            # backward compatibility for pytorch schedulers
+            logs["learning_rate"] = (
+              self.lr_scheduler.get_last_lr()[0]
+              if version.parse(torch.__version__) >= version.parse("1.4")
+              else self.lr_scheduler.get_lr()[0]
+            )
+            logging_loss = tr_loss
+
+            self.log(logs)
+
+          if self.args.evaluate_during_training and self.global_step % self.args.eval_steps == 0:
+            self.evaluate()
+
+          if self.args.save_steps > 0 and self.global_step % self.args.save_steps == 0:
+            # In all cases (even distributed/parallel), self.model is always a reference
+            # to the model we want to save.
+            if hasattr(model, "module"):
+              assert (
+                model.module is self.model
+              ), f"Module {model.module} should be a reference to self.model"
+            else:
+              assert model is self.model, f"Model {model} should be a reference to self.model"
+            # Save model checkpoint
+            output_dir = os.path.join(self.args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{self.global_step}")
+
+            self.save_model(output_dir)
+
+            if self.is_world_process_zero():
+              self._rotate_checkpoints()
+
+            if is_torch_tpu_available():
+              xm.rendezvous("saving_optimizer_states")
+              xm.save(self.optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
+              xm.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+            elif self.is_world_process_zero():
+              torch.save(self.optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
+              torch.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+
+        if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
+          epoch_iterator.close()
+          break
+      if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
+        train_iterator.close()
+        break
+      if self.args.tpu_metrics_debug or self.args.debug:
+        if is_torch_tpu_available():
+          # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
+          xm.master_print(met.metrics_report())
         else:
-          sampler, observers = self._getTestSampler(test_sampler, self.config.training.sequence_length)
-          self.InitSampling(sampler, self.config.training.random_seed)
-          for ep in range(self.num_epochs):
-            self.train.estimator.train(input_fn = train_input_fn, steps = self.steps_per_epoch)
-            for _ in range(FLAGS.sample_per_epoch):
-              start_time   = datetime.datetime.utcnow()
-              self.InitSampleBatch()
-              sample_batch, sample_indices = self.SampleNextIndices()
-              end_time     = datetime.datetime.utcnow()
-              for sample, sind in zip(sample_batch, sample_indices):
-                sample_proto = model_pb2.Sample(
-                  train_step             = (ep + 1) * self.steps_per_epoch,
-                  sample_feed            = sampler.start_text,
-                  text                   = self.atomizer.DeatomizeIndices(sample, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
-                  encoded_text           = ",".join([str(t) for t in sample]),
-                  sample_indices         = '\n'.join([self.atomizer.DeatomizeIndices(mind).replace('\n', '\\n') for mind in sind]),
-                  encoded_sample_indices = '\n'.join([','.join([str(x) for x in mind]) for mind in sind ]),
-                  sample_time_ms         = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
-                  num_tokens             = len(sample),
-                  categorical_sampling   = self.samplesWithCategorical(),
-                  date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
-                )
-                for obs in observers:
-                  obs.OnSample(sample_proto)
-      except KeyboardInterrupt:
-        pass
-      if not FLAGS.force_eval:
-        self.Validate()
-  
-    if FLAGS.force_eval and not self.is_validated:
-      self.Validate()
-    # self.telemetry.TfRecordEpochs()
-    return
+          logger.warning(
+            "You enabled PyTorch/XLA debug metrics but you don't have a TPU "
+            "configured. Check your training configuration if this is unexpected."
+          )
+
+    if self.tb_writer:
+      self.tb_writer.close()
+    if self.args.past_index and hasattr(self, "_past"):
+      # Clean the state at the end of training
+      delattr(self, "_past")
+
+    return TrainOutput(self.global_step, tr_loss / self.global_step)
 
   def Validate(self) -> None:
     l.getLogger().info("BERT Validation")
