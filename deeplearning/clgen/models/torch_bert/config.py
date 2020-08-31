@@ -293,6 +293,7 @@ class BertConfig(object):
       vocab_size                   = attr_dict['vocab_size'],
       hidden_size                  = attr_dict['hidden_size'],
       num_hidden_layers            = attr_dict['num_hidden_layers'],
+      num_attention_heads          = attr_dict['num_attention_heads'],
       intermediate_size            = attr_dict['intermediate_size'],
       hidden_act                   = attr_dict['hidden_act'],
       hidden_dropout_prob          = attr_dict['hidden_dropout_prob'],
@@ -301,7 +302,6 @@ class BertConfig(object):
       type_vocab_size              = attr_dict['type_vocab_size'],
       initializer_range            = attr_dict['initializer_range'],
       layer_norm_eps               = attr_dict['layer_norm_eps'],
-      pad_token_id                 = attr_dict['pad_token_id'],
       pad_token_id                 = attr_dict['pad_token_id'],
       **extra_args,
       )
