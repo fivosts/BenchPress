@@ -47,52 +47,52 @@ from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_integer(
-  "select_checkpoint_step",
-  -1,
-  "Select step checkpoint for sample. Re-training with this flag is not supported. "
-  "To restart from specific checkpoint, you have to manually remove the checkpoints after the desired one."
-  "Default: -1, flag ignored and latest checkpoint is loaded."
-)
+# flags.DEFINE_integer(
+#   "select_checkpoint_step",
+#   -1,
+#   "Select step checkpoint for sample. Re-training with this flag is not supported. "
+#   "To restart from specific checkpoint, you have to manually remove the checkpoints after the desired one."
+#   "Default: -1, flag ignored and latest checkpoint is loaded."
+# )
 
-flags.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
+# flags.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
 
-flags.DEFINE_boolean("force_eval", False, "Run Validation no matter what.")
+# flags.DEFINE_boolean("force_eval", False, "Run Validation no matter what.")
 
-flags.DEFINE_integer("sample_per_epoch", 3, "Set above zero to sample model after every epoch.")
+# flags.DEFINE_integer("sample_per_epoch", 3, "Set above zero to sample model after every epoch.")
 
-flags.DEFINE_boolean("use_tpu", False, "Whether to use TPU or GPU/CPU.")
+# flags.DEFINE_boolean("use_tpu", False, "Whether to use TPU or GPU/CPU.")
 
-flags.DEFINE_boolean("mirror_gpus", False, "Set True to distribute training across all system's GPUs. (Only usable when use_tpu is False).")
+# flags.DEFINE_boolean("mirror_gpus", False, "Set True to distribute training across all system's GPUs. (Only usable when use_tpu is False).")
 
-flags.DEFINE_boolean("categorical_sampling", True, "Use categorical distribution on logits when sampling.")
+# flags.DEFINE_boolean("categorical_sampling", True, "Use categorical distribution on logits when sampling.")
 
-flags.DEFINE_string(
-    "tpu_name", None,
-    "The Cloud TPU to use for training. This should be either the name "
-    "used when creating the Cloud TPU, or a grpc://ip.address.of.tpu:8470 "
-    "url.")
+# flags.DEFINE_string(
+#     "tpu_name", None,
+#     "The Cloud TPU to use for training. This should be either the name "
+#     "used when creating the Cloud TPU, or a grpc://ip.address.of.tpu:8470 "
+#     "url.")
 
-flags.DEFINE_string(
-    "tpu_zone", None,
-    "[Optional] GCE zone where the Cloud TPU is located in. If not "
-    "specified, we will attempt to automatically detect the GCE project from "
-    "metadata.")
+# flags.DEFINE_string(
+#     "tpu_zone", None,
+#     "[Optional] GCE zone where the Cloud TPU is located in. If not "
+#     "specified, we will attempt to automatically detect the GCE project from "
+#     "metadata.")
 
-flags.DEFINE_string(
-    "gcp_project", None,
-    "[Optional] Project name for the Cloud TPU-enabled project. If not "
-    "specified, we will attempt to automatically detect the GCE project from "
-    "metadata.")
+# flags.DEFINE_string(
+#     "gcp_project", None,
+#     "[Optional] Project name for the Cloud TPU-enabled project. If not "
+#     "specified, we will attempt to automatically detect the GCE project from "
+#     "metadata.")
 
-flags.DEFINE_string("master", None, "[Optional] TensorFlow master URL.")
+# flags.DEFINE_string("master", None, "[Optional] TensorFlow master URL.")
 
-flags.DEFINE_integer(
-    "num_tpu_cores", 8,
-    "Only used if `use_tpu` is True. Total number of TPU cores to use.")
+# flags.DEFINE_integer(
+#     "num_tpu_cores", 8,
+#     "Only used if `use_tpu` is True. Total number of TPU cores to use.")
 
 
-class tfBert(backends.BackendBase):
+class torchBert(backends.BackendBase):
 
   class BertEstimator(typing.NamedTuple):
     """Named tuple to wrap BERT estimator pipeline."""
@@ -101,7 +101,7 @@ class tfBert(backends.BackendBase):
 
   def __init__(self, *args, **kwargs):
 
-    super(tfBert, self).__init__(*args, **kwargs)
+    super(torchBert, self).__init__(*args, **kwargs)
     
     self.bertAttrs                       = None
     self.bert_config                     = None
