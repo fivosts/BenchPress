@@ -88,6 +88,8 @@ message NetworkArchitecture {
   optional int32 type_vocab_size = 15;
   // The stdev of the truncated_normal_initializer for initializing all weight matrices.
   optional float initializer_range = 16;
+  // The epsilon used by the layer normalization layers.
+  optional float layer_norm_eps = 17;
 }
 
 // Options used for training a CLgen language model.

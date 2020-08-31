@@ -198,6 +198,10 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         config.architecture,
         "initializer_range",
       )
+      pbutil.AssertFieldIsSet(
+        config.architecture,
+        "layer_norm_eps",
+      )
       ## .training params
       pbutil.AssertFieldIsSet(
         config.training,

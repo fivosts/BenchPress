@@ -162,6 +162,7 @@ class tfBert(backends.BackendBase):
           "max_position_embeddings"      : self.config.architecture.max_position_embeddings,
           "type_vocab_size"              : self.config.architecture.type_vocab_size,
           "initializer_range"            : self.config.architecture.initializer_range,
+          "layer_norm_eps"               : self.config.architecture.layer_norm_eps,
     }
     self.bert_config                     = model.BertConfig.from_dict(self.bertAttrs)
     return

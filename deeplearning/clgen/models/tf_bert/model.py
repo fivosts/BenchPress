@@ -41,7 +41,9 @@ class BertConfig(object):
                attention_probs_dropout_prob=0.1,
                max_position_embeddings=512,
                type_vocab_size=2,
-               initializer_range=0.02):
+               initializer_range=0.02,
+               layer_norm_eps=1e-12,
+               ):
     """Constructs BertConfig.
 
     Args:
@@ -65,18 +67,20 @@ class BertConfig(object):
         `BertModel`.
       initializer_range: The stdev of the truncated_normal_initializer for
         initializing all weight matrices.
+      layer_norm_eps: The epsilon used by the layer normalization layers.
     """
-    self.vocab_size = vocab_size
-    self.hidden_size = hidden_size
-    self.num_hidden_layers = num_hidden_layers
-    self.num_attention_heads = num_attention_heads
-    self.hidden_act = hidden_act
-    self.intermediate_size = intermediate_size
-    self.hidden_dropout_prob = hidden_dropout_prob
+    self.vocab_size                   = vocab_size
+    self.hidden_size                  = hidden_size
+    self.num_hidden_layers            = num_hidden_layers
+    self.num_attention_heads          = num_attention_heads
+    self.hidden_act                   = hidden_act
+    self.intermediate_size            = intermediate_size
+    self.hidden_dropout_prob          = hidden_dropout_prob
     self.attention_probs_dropout_prob = attention_probs_dropout_prob
-    self.max_position_embeddings = max_position_embeddings
-    self.type_vocab_size = type_vocab_size
-    self.initializer_range = initializer_range
+    self.max_position_embeddings      = max_position_embeddings
+    self.type_vocab_size              = type_vocab_size
+    self.initializer_range            = initializer_range
+    self.layer_norm_eps               = layer_norm_eps
 
   @classmethod
   def from_dict(cls, json_object):
@@ -190,7 +194,9 @@ class BertModel(object):
             position_embedding_name="position_embeddings",
             initializer_range=config.initializer_range,
             max_position_embeddings=config.max_position_embeddings,
-            dropout_prob=config.hidden_dropout_prob)
+            dropout_prob=config.hidden_dropout_prob,
+            layer_norm_eps=config.layer_norm_eps,
+            )
 
       with tf.compat.v1.variable_scope("encoder"):
         # This converts a 2D mask of shape [batch_size, seq_length] to a 3D
@@ -212,6 +218,7 @@ class BertModel(object):
             hidden_dropout_prob=config.hidden_dropout_prob,
             attention_probs_dropout_prob=config.attention_probs_dropout_prob,
             initializer_range=config.initializer_range,
+            layer_norm_eps=config.layer_norm_eps,
             do_return_all_layers=True)
 
       self.sequence_output = self.all_encoder_layers[-1]
@@ -279,7 +286,7 @@ def _get_masked_lm_output(bert_config,
           activation=get_activation(bert_config.hidden_act),
           kernel_initializer=create_initializer(
               bert_config.initializer_range))
-      input_tensor = layer_norm(input_tensor)
+      input_tensor = layer_norm(input_tensor, eps = bert_config.layer_norm_eps)
 
     # The output weights are the same as the input embeddings, but there is
     # an output-only bias for each token.
@@ -448,16 +455,16 @@ def dropout(input_tensor, dropout_prob):
   return output
 
 
-def layer_norm(input_tensor, name=None):
+def layer_norm(input_tensor, eps = 1e-12, name=None):
   """Run layer normalization on the last dimension of the tensor."""
   return tf.keras.layers.LayerNormalization(
-              axis = -1, epsilon=1e-12, dtype=tf.float32, name = name
+              axis = -1, epsilon=eps, dtype=tf.float32, name = name
           )(input_tensor)
 
 
-def layer_norm_and_dropout(input_tensor, dropout_prob, name=None):
+def layer_norm_and_dropout(input_tensor, dropout_prob, eps = 1e-12, name=None):
   """Runs layer normalization followed by dropout."""
-  output_tensor = layer_norm(input_tensor, name)
+  output_tensor = layer_norm(input_tensor, eps = eps, name = name)
   output_tensor = dropout(output_tensor, dropout_prob)
   return output_tensor
 
@@ -524,7 +531,9 @@ def embedding_postprocessor(input_tensor,
                             position_embedding_name="position_embeddings",
                             initializer_range=0.02,
                             max_position_embeddings=512,
-                            dropout_prob=0.1):
+                            dropout_prob=0.1,
+                            layer_norm_eps=1e-12,
+                            ):
   """Performs various post-processing on a word embedding tensor.
 
   Args:
@@ -607,7 +616,7 @@ def embedding_postprocessor(input_tensor,
                                        position_broadcast_shape)
       output += position_embeddings
 
-  output = layer_norm_and_dropout(output, dropout_prob)
+  output = layer_norm_and_dropout(output, dropout_prob, layer_norm_eps)
   return output
 
 
@@ -851,6 +860,7 @@ def transformer_model(input_tensor,
                       hidden_dropout_prob=0.1,
                       attention_probs_dropout_prob=0.1,
                       initializer_range=0.02,
+                      layer_norm_eps=1e-12,
                       do_return_all_layers=False):
   """Multi-headed, multi-layer Transformer from "Attention is All You Need".
 
@@ -950,7 +960,7 @@ def transformer_model(input_tensor,
               hidden_size,
               kernel_initializer=create_initializer(initializer_range))
           attention_output = dropout(attention_output, hidden_dropout_prob)
-          attention_output = layer_norm(attention_output + layer_input)
+          attention_output = layer_norm(attention_output + layer_input, eps = layer_norm_eps)
 
       # The activation is only applied to the "intermediate" hidden layer.
       with tf.compat.v1.variable_scope("intermediate"):
@@ -967,7 +977,7 @@ def transformer_model(input_tensor,
             hidden_size,
             kernel_initializer=create_initializer(initializer_range))
         layer_output = dropout(layer_output, hidden_dropout_prob)
-        layer_output = layer_norm(layer_output + attention_output)
+        layer_output = layer_norm(layer_output + attention_output, eps = layer_norm_eps)
         prev_output = layer_output
         all_layer_outputs.append(layer_output)
 
