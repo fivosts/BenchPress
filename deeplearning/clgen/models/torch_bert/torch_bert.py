@@ -162,7 +162,13 @@ class tfBert(backends.BackendBase):
           "max_position_embeddings"      : self.config.architecture.max_position_embeddings,
           "type_vocab_size"              : self.config.architecture.type_vocab_size,
           "initializer_range"            : self.config.architecture.initializer_range,
+          "layer_norm_eps"               : self.config.architecture.layer_norm_eps,
+          "pad_token_id"                 : self.atomizer.padToken,
     }
+    l.getLogger().error("Issue with TORCH dropout probs: TORCH might not need inverse dropout prob: {}".format(
+      self.config.architecture.hidden_dropout_prob
+      )
+    )
     self.bert_config                     = model.BertConfig.from_dict(self.bertAttrs)
     ## UPGRADING TODO: I AM HERE
     return
