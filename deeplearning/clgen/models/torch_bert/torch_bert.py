@@ -37,11 +37,11 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.models import backends
-from deeplearning.clgen.models import data_generators
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models.tf_bert import model
 from deeplearning.clgen.models.tf_bert import optimizer
 from deeplearning.clgen.models.tf_bert import hooks
+from deeplearning.clgen.models.tf_bert.data_generator import MaskLMBatchGenerator
 
 from eupy.native import logger as l
 
@@ -97,7 +97,7 @@ class torchBert(backends.BackendBase):
   class BertEstimator(typing.NamedTuple):
     """Named tuple to wrap BERT estimator pipeline."""
     estimator      : tf.compat.v1.estimator.tpu.TPUEstimator
-    data_generator : data_generators.MaskLMBatchGenerator
+    data_generator : MaskLMBatchGenerator
 
   def __init__(self, *args, **kwargs):
 
@@ -174,7 +174,7 @@ class torchBert(backends.BackendBase):
     return
 
   def _ConfigTrainParams(self, 
-                         data_generator: data_generators.MaskLMBatchGenerator
+                         data_generator: MaskLMBatchGenerator
                         ) -> None:
     """
     Model parameter initialization for training and validation.
@@ -237,7 +237,7 @@ class torchBert(backends.BackendBase):
     return
 
   def _ConfigSampleParams(self,
-                          data_generator: data_generators.MaskLMBatchGenerator,
+                          data_generator: MaskLMBatchGenerator,
                           sampler: samplers.Sampler,
                           ) -> None:
     """
@@ -557,7 +557,7 @@ class torchBert(backends.BackendBase):
                    seed    : typing.Optional[int] = None
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
-    data_generator = data_generators.MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
+    data_generator = MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
                        sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings, self.cache.path
                      )
     self._ConfigSampleParams(data_generator, sampler)

@@ -31,8 +31,8 @@ from deeplearning.clgen import samplers
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.models import backends
-from deeplearning.clgen.models import data_generators
 from deeplearning.clgen.proto import model_pb2
+from deeplearning.clgen.models.tf_sequential.data_generator import TensorflowBatchGenerator
 from absl import flags
 
 FLAGS = flags.FLAGS
@@ -351,7 +351,7 @@ class tfSequential(backends.BackendBase):
       return
 
     if self.data_generator is None:
-      self.data_generator = data_generators.TensorflowBatchGenerator(
+      self.data_generator = TensorflowBatchGenerator(
         corpus, self.config.training
       )
     tf = self.InitTfGraph()

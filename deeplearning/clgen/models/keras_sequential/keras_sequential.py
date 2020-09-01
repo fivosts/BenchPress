@@ -23,7 +23,7 @@ from deeplearning.clgen import samplers
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import builders
-from deeplearning.clgen.models import data_generators
+from deeplearning.clgen.models.keras_sequential.data_generator import KerasBatchGenerator
 from absl import flags
 import humanize
 from eupy.native import logger as l
@@ -158,7 +158,7 @@ class kerasSequential(backends.BackendBase):
       self.telemetry.TrainingLogger(self.cache.path / "logs").KerasCallback(keras),
     ]
 
-    generator = data_generators.KerasBatchGenerator()
+    generator = KerasBatchGenerator()
     steps_per_epoch = (corpus.encoded.token_count - 1) // (
       self.config.training.batch_size * self.config.training.sequence_length
     )
