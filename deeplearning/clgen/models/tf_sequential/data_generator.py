@@ -45,7 +45,6 @@ class TensorflowBatchGenerator(object):
   def __init__(
     self, corpus: "corpuses.Corpus", training_opts: model_pb2.TrainingOptions
   ):
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.TensorflowBatchGenerator.__init__()")
     self.corpus = corpus
     self.training_opts = training_opts
 
@@ -60,7 +59,6 @@ class TensorflowBatchGenerator(object):
     return
 
   def CreateBatches(self) -> None:
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.TensorflowBatchGenerator.CreateBatches()")
     start_time = time.time()
 
     self.i = 0
@@ -113,7 +111,6 @@ class TensorflowBatchGenerator(object):
     Returns:
       X, Y DataBatch.
     """
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.TensorflowBatchGenerator.NextBatch()")
     batch = self.batches[self.i]
     self.i += 1
     assert 0 <= self.i <= self.num_batches

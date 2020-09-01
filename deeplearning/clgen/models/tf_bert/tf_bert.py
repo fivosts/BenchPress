@@ -37,11 +37,11 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.models import backends
-from deeplearning.clgen.models.data_generators import MaskLMBatchGenerator
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models.tf_bert import model
 from deeplearning.clgen.models.tf_bert import optimizer
 from deeplearning.clgen.models.tf_bert import hooks
+from deeplearning.clgen.models.tf_bert.data_generator import MaskLMBatchGenerator
 
 from eupy.native import logger as l
 

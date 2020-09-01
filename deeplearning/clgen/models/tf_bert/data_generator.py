@@ -426,7 +426,6 @@ def _maskSequence(seq: np.array,
 
 class MaskLMBatchGenerator(object):
   def __init__(self):
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.MaskLMBatchGenerator.__init__()")
 
     self.dataset                 = None
     self.corpus                  = None
@@ -451,7 +450,7 @@ class MaskLMBatchGenerator(object):
                                corpus: "corpuses.Corpus",
                                training_opts: model_pb2.TrainingOptions,
                                cache_path,
-                               ) -> "data_generators.MaskLMBatchGenerator":
+                               ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for training."""
     d               = MaskLMBatchGenerator()
     d.cache         = cache.mkcache(cache_path, "dataset")
@@ -475,7 +474,7 @@ class MaskLMBatchGenerator(object):
                                 seed: int,
                                 max_position_embeddings: int,
                                 cache_path,
-                                ) -> "data_generators.MaskLMBatchGenerator":
+                                ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
     d                         = MaskLMBatchGenerator()
     d.cache                   = cache.mkcache(cache_path, "dataset")

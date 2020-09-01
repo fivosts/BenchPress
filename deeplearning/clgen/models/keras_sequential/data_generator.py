@@ -165,5 +165,4 @@ class KerasBatchGenerator():
       Returns:
         A 2D array of one-hot encoded tokens.
       """
-    l.getLogger().debug("deeplearning.clgen.models.data_generators.KerasBatchGenerator.OneHotEncode()")
     return np.eye(vocabulary_size)[indices]
