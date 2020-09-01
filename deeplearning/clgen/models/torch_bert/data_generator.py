@@ -413,7 +413,6 @@ class MaskLMBatchGenerator(object):
     self.atomizer                = None
     self.config                  = None
     self.cache                   = None
-    # self.shaped_corpus           = None
 
     self.training_opts           = None
     self.steps_per_epoch         = None
