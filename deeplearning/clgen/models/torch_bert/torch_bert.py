@@ -170,7 +170,6 @@ class torchBert(backends.BackendBase):
       )
     )
     self.bert_config                     = model.BertConfig.from_dict(self.bertAttrs)
-    ## UPGRADING TODO: I AM HERE
     return
 
   def _ConfigTrainParams(self, 
