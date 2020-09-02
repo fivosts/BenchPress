@@ -24,24 +24,23 @@ import glob
 import typing
 import pathlib
 import datetime
-import tensorflow_probability as tfp
 import numpy as np
 from absl import flags
+import torch
 
 from deeplearning.clgen import samplers
 from deeplearning.clgen import sample_observers
 from deeplearning.clgen import validation_database
-from deeplearning.clgen.util.tf import tf
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import telemetry
-from deeplearning.clgen.models.tf_bert import model
-from deeplearning.clgen.models.tf_bert import optimizer
-from deeplearning.clgen.models.tf_bert import hooks
-from deeplearning.clgen.models.tf_bert.data_generator import MaskLMBatchGenerator
+from deeplearning.clgen.models.torch_bert import model
+from deeplearning.clgen.models.torch_bert import config
+# from deeplearning.clgen.models.torch_bert import optimizer
+from deeplearning.clgen.models.torch_bert.data_generator import MaskLMBatchGenerator
 
 from eupy.native import logger as l
 
@@ -95,8 +94,8 @@ FLAGS = flags.FLAGS
 class torchBert(backends.BackendBase):
 
   class BertEstimator(typing.NamedTuple):
-    """Named tuple to wrap BERT estimator pipeline."""
-    estimator      : tf.compat.v1.estimator.tpu.TPUEstimator
+    """Named tuple to wrap BERT pipeline."""
+    estimator      : torch.nn.Module
     data_generator : MaskLMBatchGenerator
 
   def __init__(self, *args, **kwargs):
@@ -169,7 +168,12 @@ class torchBert(backends.BackendBase):
       self.config.architecture.hidden_dropout_prob
       )
     )
-    self.bert_config                     = model.BertConfig.from_dict(self.bertAttrs)
+    try:
+      import torch_xla.core.xla_model
+      torch_tpu_available = True
+    except ImportError:
+      torch_tpu_available = False
+    self.bert_config                     = config.BertConfig.from_dict(self.bertAttrs, xla_device = True if torch_tpu_available else False)
     return
 
   def _ConfigTrainParams(self, 
@@ -195,43 +199,10 @@ class torchBert(backends.BackendBase):
     self.validation_results_file          = "val_results.txt"
     self.validation_results_path          = os.path.join(str(self.logfile_path), self.validation_results_file)
 
-    tpu_cluster_resolver = None
-    if FLAGS.use_tpu and FLAGS.tpu_name:
-      tpu_cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
-          FLAGS.tpu_name, zone = FLAGS.tpu_zone, project = FLAGS.gcp_project)
+    torch.manual_seed(self.config.training.random_seed)
+    torch.cuda.manual_seed_all(self.config.training.random_seed)
 
-    train_distribute = tf.distribute.MirroredStrategy(num_gpus = gpu.numGPUs()) if FLAGS.use_tpu and FLAGS.mirror_gpus else None
-
-    is_per_host      = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
-    run_config  = tf.compat.v1.estimator.tpu.RunConfig(
-                    cluster   = tpu_cluster_resolver,
-                    master    = FLAGS.master,
-                    model_dir = str(self.ckpt_path),
-                    save_checkpoints_steps  = self.steps_per_epoch,
-                    save_summary_steps      = self.steps_per_epoch,
-                    keep_checkpoint_max     = 0,
-                    log_step_count_steps    = self.steps_per_epoch,
-                    train_distribute        = train_distribute,
-                    tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
-                        iterations_per_loop = self.steps_per_epoch,
-                        num_shards          = FLAGS.num_tpu_cores,
-                        per_host_input_for_training = is_per_host)
-                    )
-    model_fn    = self._model_fn_builder(
-                    bert_config = self.bert_config
-                    )
-    # If TPU is not available, this will fall back to normal Estimator on CPU
-    # or GPU.
-    self.train = tfBert.BertEstimator(tf.compat.v1.estimator.tpu.TPUEstimator(
-                            use_tpu  = FLAGS.use_tpu,
-                            model_fn = model_fn,
-                            config   = run_config,
-                            params   = None,
-                            train_batch_size   = self.train_batch_size,
-                            eval_batch_size    = self.eval_batch_size,
-                            ),
-                 data_generator
-                 )
+    self.train = torchBert.BertEstimator(model.BertForPreTraining(self.bert_config), data_generator)
     l.getLogger().info(self.GetShortSummary())
     return
 
@@ -312,6 +283,12 @@ class torchBert(backends.BackendBase):
         Local path to the model if the model to train has been instantiated from a local path. If present,
         training will resume from the optimizer/scheduler states loaded here.
     """
+
+    data_generator = MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
+                       corpus, self.config.training, self.cache.path)
+
+    self._ConfigTrainParams(data_generator)
+    raise ValueError
 
     train_sampler = self._get_train_sampler()
 
