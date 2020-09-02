@@ -202,6 +202,7 @@ testpath==0.3.1
 TogglPy==0.1.1
 toml==0.10.0
 tornado==5.0
+torch==1.6.0
 tqdm==4.38.0
 traitlets==4.3.2
 trash-cli==0.17.1.14
