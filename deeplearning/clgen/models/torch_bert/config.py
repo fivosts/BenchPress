@@ -200,7 +200,7 @@ class BertConfig(object):
     hidden_dropout_prob,
     attention_probs_dropout_prob,
     max_position_embeddings,
-    pad_token_ids,
+    pad_token_id,
     type_vocab_size,
     initializer_range,
     layer_norm_eps,
@@ -288,32 +288,24 @@ class BertConfig(object):
         raise err
 
   @classmethod
-  def from_dict(cls, bert_dict, extra_args = {}):
+  def from_dict(cls, bert_dict, **extra_args):
     config = BertConfig(
-      vocab_size                   = attr_dict['vocab_size'],
-      hidden_size                  = attr_dict['hidden_size'],
-      num_hidden_layers            = attr_dict['num_hidden_layers'],
-      num_attention_heads          = attr_dict['num_attention_heads'],
-      intermediate_size            = attr_dict['intermediate_size'],
-      hidden_act                   = attr_dict['hidden_act'],
-      hidden_dropout_prob          = attr_dict['hidden_dropout_prob'],
-      attention_probs_dropout_prob = attr_dict['attention_probs_dropout_prob'],
-      max_position_embeddings      = attr_dict['max_position_embeddings'],
-      type_vocab_size              = attr_dict['type_vocab_size'],
-      initializer_range            = attr_dict['initializer_range'],
-      layer_norm_eps               = attr_dict['layer_norm_eps'],
-      pad_token_id                 = attr_dict['pad_token_id'],
+      vocab_size                   = bert_dict['vocab_size'],
+      hidden_size                  = bert_dict['hidden_size'],
+      num_hidden_layers            = bert_dict['num_hidden_layers'],
+      num_attention_heads          = bert_dict['num_attention_heads'],
+      intermediate_size            = bert_dict['intermediate_size'],
+      hidden_act                   = bert_dict['hidden_act'],
+      hidden_dropout_prob          = bert_dict['hidden_dropout_prob'],
+      attention_probs_dropout_prob = bert_dict['attention_probs_dropout_prob'],
+      max_position_embeddings      = bert_dict['max_position_embeddings'],
+      type_vocab_size              = bert_dict['type_vocab_size'],
+      initializer_range            = bert_dict['initializer_range'],
+      layer_norm_eps               = bert_dict['layer_norm_eps'],
+      pad_token_id                 = bert_dict['pad_token_id'],
       **extra_args,
       )
     return config
-
-  @property
-  def use_return_dict(self) -> bool:
-    """
-    :obj:`bool`: Whether or not return :class:`~transformers.file_utils.ModelOutput` instead of tuples.
-    """
-    # If torchscript is set, force `return_dict=False` to avoid jit errors
-    return self.return_dict and not self.torchscript
 
   @property
   def num_labels(self) -> int:
