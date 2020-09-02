@@ -95,7 +95,7 @@ class torchBert(backends.BackendBase):
 
   class BertEstimator(typing.NamedTuple):
     """Named tuple to wrap BERT pipeline."""
-    estimator      : torch.nn.Module
+    model      : torch.nn.Module
     data_generator : MaskLMBatchGenerator
 
   def __init__(self, *args, **kwargs):
@@ -222,34 +222,18 @@ class torchBert(backends.BackendBase):
           "Cannot use sequence length %d because the BERT model "
           "was only trained up to sequence length %d" %
           (sampler.sequence_length, self.bertAttrs['max_position_embeddings']))
-      
-    tpu_cluster_resolver = None
-    if FLAGS.use_tpu and FLAGS.tpu_name:
-      tpu_cluster_resolver = tf.compat.v1.cluster_resolver.TPUClusterResolver(
-          FLAGS.tpu_name, zone = FLAGS.tpu_zone, project = FLAGS.gcp_project)
-
-    is_per_host = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
-    run_config  = tf.compat.v1.estimator.tpu.RunConfig(
-        cluster    = tpu_cluster_resolver,
-        master     = FLAGS.master,
-        model_dir  = str(self.ckpt_path),
-        tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
-            num_shards = FLAGS.num_tpu_cores,
-            per_host_input_for_training = is_per_host))
-
-    model_fn = self._model_fn_builder(bert_config = self.bert_config)
 
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
-    self.sample = tfBert.BertEstimator(tf.compat.v1.estimator.tpu.TPUEstimator(
-                            use_tpu  = FLAGS.use_tpu,
-                            model_fn = model_fn,
-                            config   = run_config,
-                            params   = {'sampling_temperature': sampler.temperature},
-                            predict_batch_size = sampler.batch_size
-                            ),
-                  data_generator
-                  )
+    # self.sample = tfBert.BertEstimator(tf.compat.v1.estimator.tpu.TPUEstimator(
+    #                         use_tpu  = FLAGS.use_tpu,
+    #                         model_fn = model_fn,
+    #                         config   = run_config,
+    #                         params   = {'sampling_temperature': sampler.temperature},
+    #                         predict_batch_size = sampler.batch_size
+    #                         ),
+    #               data_generator
+    #               )
     l.getLogger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
     return
 
