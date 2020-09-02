@@ -27,7 +27,6 @@ from .optimization import AdamW, get_linear_schedule_with_warmup
 from .trainer_utils import PREFIX_CHECKPOINT_DIR, EvalPrediction, PredictionOutput, TrainOutput, set_seed
 from .training_args import TrainingArguments
 
-
 _use_native_amp = False
 _use_apex = False
 
