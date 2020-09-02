@@ -972,7 +972,7 @@ class MaskLMBatchGenerator(object):
           self.dataset[set_name]['txt'].append(
             self.cache.path / "{}_{}.txt".format(set_name, iteration)
             )
-          self._saveCorpusTfRecord({
+          self._saveCorpusRecord({
               'corpus'   : masked_corpus,
               'tf_record': self.cache.path / "{}_{}.tf_record".format(set_name, iteration),
               'txt'      : self.cache.path / "{}_{}.txt".format(set_name, iteration)
@@ -1081,7 +1081,7 @@ class MaskLMBatchGenerator(object):
     self.sampleBatch = np.asarray(updated_sequence)
     return self.sampleBatch, self.sampleIndices
 
-  def _saveCorpusTfRecord(self, masked_corpus: typing.Dict) -> None:
+  def _saveCorpusRecord(self, masked_corpus: typing.Dict) -> None:
     """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
      
     writer = tf.io.TFRecordWriter(str(masked_corpus['tf_record']))
