@@ -17,7 +17,7 @@ import humanize
 import multiprocessing
 import functools
 import pickle
-
+import torch
 import numpy as np
 
 from deeplearning.clgen.util import cache
@@ -27,6 +27,25 @@ from deeplearning.clgen.util.tf import tf
 from deeplearning.clgen.proto import model_pb2
 from absl import flags
 from eupy.native import logger as l
+
+FLAGS = flags.FLAGS
+
+# flags.DEFINE_boolean(
+#   "write_text_dataset", 
+#   False, 
+#   "Set True for MaskLM data generator to write dataset in text format, along with the tf_record."
+# )
+
+# flags.DEFINE_integer(
+#   "memory_limit",
+#   4,
+#   "Set maximum amount of available memory used for masking sequences in Gb. [Default]: 4",
+# )
+# flags.DEFINE_boolean(
+#   "force_remake_dataset",
+#   False,
+#   "Force data generator to re-mask encoded dataset and store tf_record."
+# )
 
 class MaskSequence(typing.NamedTuple):
   """
@@ -307,9 +326,9 @@ def _holeSequence(seq: np.array,
     .format(num_holes, input_ids[:len(seq)].count(atomizer.holeToken))
   )
   return MaskSequence(seen_in_training, seq,
-                      np.asarray(input_ids[:len(seq)]), input_mask,
-                      np.asarray(masked_lm_positions),  np.asarray(masked_lm_ids), 
-                      np.asarray(masked_lm_weights),    np.asarray(masked_lm_lengths),
+                      np.asarray(input_ids[:len(seq)], dtype = np.int32), input_mask,
+                      np.asarray(masked_lm_positions, dtype = np.int32),  np.asarray(masked_lm_ids, dtype = np.int32), 
+                      np.asarray(masked_lm_weights, dtype = np.int32),    np.asarray(masked_lm_lengths, dtype = np.int32),
                       next_sentence_label 
                       )
 
@@ -882,7 +901,6 @@ class MaskLMBatchGenerator(object):
         humanize.naturalsize(single_item_bytes), self.training_opts.dupe_factor, iterations, max_dupe, remaining
       )
     )
-
     pool = multiprocessing.Pool()
     distribution = None
     # Specify the desired masking routine
@@ -939,11 +957,10 @@ class MaskLMBatchGenerator(object):
             masked_corpus.append(kernel)
             bar.update(kernel_idx)
             kernel_idx += 1
-
-          if kernel_idx == 1:
-            masked_corpus[0].LogBatchTelemetry(
-              self.training_opts.batch_size, self.steps_per_epoch, self.num_epochs
-              )
+            if kernel_idx == 1:
+              masked_corpus[0].LogBatchTelemetry(
+                self.training_opts.batch_size, self.steps_per_epoch, self.num_epochs
+                )
 
           # write masked_corpus before flushing the list
           self.dataset[set_name]['pt_record'].append(
@@ -1064,10 +1081,10 @@ class MaskLMBatchGenerator(object):
   def _saveCorpusRecord(self, masked_corpus: typing.Dict) -> None:
     """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
      
-    writer = tf.io.TFRecordWriter(str(masked_corpus['pt_record']))
     if FLAGS.write_text_dataset:
       file_writer = open(masked_corpus['txt'], 'w')
-
+    
+    feature_set = []
     for (inst_index, instance) in enumerate(masked_corpus['corpus']):
       seen_in_training = instance.seen_in_training
       original_input   = instance.original_input
@@ -1083,35 +1100,18 @@ class MaskLMBatchGenerator(object):
       next_sentence_label   = instance.next_sentence_label
       features              = collections.OrderedDict()
 
-      features["seen_in_training"]      = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list([seen_in_training])))
+      features["seen_in_training"]      = torch.LongTensor([seen_in_training])
+      features["original_input"]        = torch.from_numpy(original_input)
+      features["input_ids"]             = torch.from_numpy(input_ids)
+      features["input_mask"]            = torch.from_numpy(input_mask)
+      features["masked_lm_positions"]   = torch.from_numpy(masked_lm_positions)
+      features["masked_lm_ids"]         = torch.from_numpy(masked_lm_ids)
+      features["masked_lm_weights"]     = torch.from_numpy(masked_lm_weights)
+      features["masked_lm_lengths"]     = torch.from_numpy(masked_lm_lengths)
+      features["next_sentence_labels"]  = torch.LongTensor([next_sentence_label])
 
-      features["original_input"]        = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list(original_input)))
+      feature_set.append(features)
 
-      features["input_ids"]             = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list(input_ids)))
-
-      features["input_mask"]            = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list(input_mask)))
-
-      features["masked_lm_positions"]   = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list(masked_lm_positions)))
-
-      features["masked_lm_ids"]         = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list(masked_lm_ids)))
-
-      features["masked_lm_weights"]     = tf.train.Feature(float_list = tf.train.FloatList(
-                                                                value = list(masked_lm_weights)))
-
-      features["masked_lm_lengths"]     = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list(masked_lm_lengths)))
-
-      features["next_sentence_labels"]  = tf.train.Feature(int64_list = tf.train.Int64List(
-                                                                value = list([next_sentence_label])))
-
-      tf_example = tf.train.Example(features = tf.train.Features(feature = features))
-      writer.write(tf_example.SerializeToString())
       if FLAGS.write_text_dataset:
         file_writer.write("'seen_in_training': {}\n'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'masked_lm_positions': {}\n'masked_lm_ids': {}\n'masked_lm_weights': {}\n'masked_lm_lengths': {}\n'next_sentence_labels': {}\n\n"
                             .format((True if seen_in_training == 1 else False),
@@ -1124,7 +1124,8 @@ class MaskLMBatchGenerator(object):
                                     masked_lm_lengths, 
                                     next_sentence_label)
                             )
-    writer.close()
+
+    torch.save(feature_set, masked_corpus['pt_record'])
     if FLAGS.write_text_dataset:
       file_writer.close()
     l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
