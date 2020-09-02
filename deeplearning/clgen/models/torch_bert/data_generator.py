@@ -485,7 +485,7 @@ class MaskLMBatchGenerator(object):
         l.getLogger().warn("Overwriting dataset process was aborted. Good call.")
         return
 
-    if len(glob.glob(str(self.cache.path / "train_dataset_*.tf_record"))) == 0 or FLAGS.force_remake_dataset:
+    if len(glob.glob(str(self.cache.path / "train_dataset_*.pt_record"))) == 0 or FLAGS.force_remake_dataset:
       if self.config.validation_split == 0:
         self._maskCorpus(
           shaped_corpus, set_name = "train_dataset", train_set = True
@@ -500,11 +500,11 @@ class MaskLMBatchGenerator(object):
         )
     else:
       self.dataset["train_dataset"] = {
-        "tf_record": glob.glob(str(self.cache.path / "train_dataset_*.tf_record")),
+        "pt_record": glob.glob(str(self.cache.path / "train_dataset_*.pt_record")),
         "txt"      : glob.glob(str(self.cache.path / "train_dataset_*.txt")),
       }
       self.dataset["validation_dataset"] = {
-        "tf_record": glob.glob(str(self.cache.path / "validation_dataset_*.tf_record")),
+        "pt_record": glob.glob(str(self.cache.path / "validation_dataset_*.pt_record")),
         "txt"      : glob.glob(str(self.cache.path / "validation_dataset_*.txt")),
       }
 
@@ -534,7 +534,7 @@ class MaskLMBatchGenerator(object):
         valset.max_predictions_per_seq,
         "mask" if valset.HasField("mask") else "hole_{}".format(valset.hole.hole_length)
       )
-      if set_name in self.dataset or len(glob.glob(str(self.cache.path / "{}_*.tf_record".format(set_name)))) > 0:
+      if set_name in self.dataset or len(glob.glob(str(self.cache.path / "{}_*.pt_record".format(set_name)))) > 0:
         continue
       self._maskCorpus(
         shaped_corpus, train_set = False, set_name = set_name, config = valset
@@ -584,7 +584,7 @@ class MaskLMBatchGenerator(object):
       # For training, we want a lot of parallel reading and shuffling.
       # For eval, we want no shuffling and parallel reading doesn't matter.
       if is_training:
-        dataset = tf.io.gfile.glob([str(p) for p in self.dataset['train_dataset']['tf_record']])
+        dataset = tf.io.gfile.glob([str(p) for p in self.dataset['train_dataset']['pt_record']])
         d = tf.data.Dataset.from_tensor_slices(tf.constant(dataset))
         d = d.repeat()
         if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
@@ -605,7 +605,7 @@ class MaskLMBatchGenerator(object):
       else:
         if eval_set is None:
           dataset = tf.io.gfile.glob(
-            [str(path) for tf_set in self.dataset for path in self.dataset[tf_set]['tf_record']]
+            [str(path) for tf_set in self.dataset for path in self.dataset[tf_set]['pt_record']]
           )
         else:
           dataset = tf.io.gfile.glob([str(tf_set) for tf_set in eval_set])
@@ -728,12 +728,12 @@ class MaskLMBatchGenerator(object):
         "mask" if self.sampler.config.sample_set.HasField("mask") 
                else "hole_{}".format(self.sampler.config.sample_set.hole.hole_length)
       )
-    path_list = glob.glob(str(self.cache.path / "train_dataset_*.tf_record"))
+    path_list = glob.glob(str(self.cache.path / "train_dataset_*.pt_record"))
     if len(path_list) == 0:
       raise FileNotFoundError(path_list)
 
     for path in path_list:
-      for example in tf.compat.v1.io.tf_record_iterator(path):
+      for example in tf.compat.v1.io.pt_record_iterator(path):
         input_ids = np.asarray(tf.train.Example.FromString(example).features.feature['input_ids'].int64_list.value)
         if self.atomizer.padToken in input_ids:
           yield input_ids[:np.where(input_ids == self.atomizer.padToken)[0][0]]
@@ -852,7 +852,7 @@ class MaskLMBatchGenerator(object):
 
     # Set-up self.dataset entry
     self.dataset[set_name] = {
-      'tf_record': [],
+      'pt_record': [],
       'txt'      : [],
     }
 
@@ -946,15 +946,15 @@ class MaskLMBatchGenerator(object):
               )
 
           # write masked_corpus before flushing the list
-          self.dataset[set_name]['tf_record'].append(
-            self.cache.path / "{}_{}.tf_record".format(set_name, iteration)
+          self.dataset[set_name]['pt_record'].append(
+            self.cache.path / "{}_{}.pt_record".format(set_name, iteration)
             )
           self.dataset[set_name]['txt'].append(
             self.cache.path / "{}_{}.txt".format(set_name, iteration)
             )
-          self._saveCorpusTfRecord({
+          self._saveCorpusRecord({
               'corpus'   : masked_corpus,
-              'tf_record': self.cache.path / "{}_{}.tf_record".format(set_name, iteration),
+              'pt_record': self.cache.path / "{}_{}.pt_record".format(set_name, iteration),
               'txt'      : self.cache.path / "{}_{}.txt".format(set_name, iteration)
             })
         pool.close()
@@ -1061,10 +1061,10 @@ class MaskLMBatchGenerator(object):
     self.sampleBatch = np.asarray(updated_sequence)
     return self.sampleBatch, self.sampleIndices
 
-  def _saveCorpusTfRecord(self, masked_corpus: typing.Dict) -> None:
+  def _saveCorpusRecord(self, masked_corpus: typing.Dict) -> None:
     """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
      
-    writer = tf.io.TFRecordWriter(str(masked_corpus['tf_record']))
+    writer = tf.io.TFRecordWriter(str(masked_corpus['pt_record']))
     if FLAGS.write_text_dataset:
       file_writer = open(masked_corpus['txt'], 'w')
 
@@ -1128,7 +1128,7 @@ class MaskLMBatchGenerator(object):
     if FLAGS.write_text_dataset:
       file_writer.close()
     l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
-                      .format(inst_index + 1, self.steps_per_epoch, self.training_opts.batch_size, masked_corpus['tf_record']))
+                      .format(inst_index + 1, self.steps_per_epoch, self.training_opts.batch_size, masked_corpus['pt_record']))
     return
 
   def _padToMaxPosition(self, input_sample):
