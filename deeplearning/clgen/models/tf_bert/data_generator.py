@@ -959,11 +959,10 @@ class MaskLMBatchGenerator(object):
             masked_corpus.append(kernel)
             bar.update(kernel_idx)
             kernel_idx += 1
-
-          if kernel_idx == 1:
-            masked_corpus[0].LogBatchTelemetry(
-              self.training_opts.batch_size, self.steps_per_epoch, self.num_epochs
-              )
+            if kernel_idx == 1:
+              masked_corpus[0].LogBatchTelemetry(
+                self.training_opts.batch_size, self.steps_per_epoch, self.num_epochs
+                )
 
           # write masked_corpus before flushing the list
           self.dataset[set_name]['tf_record'].append(
