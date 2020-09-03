@@ -27,6 +27,7 @@ import datetime
 import numpy as np
 from absl import flags
 import torch
+import tqdm
 
 from deeplearning.clgen import samplers
 from deeplearning.clgen import sample_observers
@@ -39,7 +40,7 @@ from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models.torch_bert import model
 from deeplearning.clgen.models.torch_bert import config
-# from deeplearning.clgen.models.torch_bert import optimizer
+from deeplearning.clgen.models.torch_bert import optimizer
 from deeplearning.clgen.models.torch_bert.data_generator import MaskLMBatchGenerator
 
 from eupy.native import logger as l
@@ -170,10 +171,10 @@ class torchBert(backends.BackendBase):
     )
     try:
       import torch_xla.core.xla_model
-      torch_tpu_available = True
+      self.torch_tpu_available = True
     except ImportError:
-      torch_tpu_available = False
-    self.bert_config                     = config.BertConfig.from_dict(self.bertAttrs, xla_device = True if torch_tpu_available else False)
+      self.torch_tpu_available = False
+    self.bert_config                     = config.BertConfig.from_dict(self.bertAttrs, xla_device = self.torch_tpu_available)
     return
 
   def _ConfigTrainParams(self, 
@@ -253,6 +254,87 @@ class torchBert(backends.BackendBase):
   def samplesWithCategorical(self):
     return FLAGS.categorical_sampling
 
+  def create_optimizer_and_scheduler(self, 
+                                     num_train_steps: int,
+                                     warmup_steps: int,
+                                     learning_rate: float,
+                                     adam_beta1: float,
+                                     adam_beta2: float,
+                                     adam_epsilon: float,
+                                     weight_decay: float,
+                                     model,
+                                     ):
+    """
+    Setup the optimizer and the learning rate scheduler.
+
+    We provide a reasonable default that works well. If you want to use something else, you can pass a tuple in the
+    Trainer's init through :obj:`optimizers`, or subclass and override this method in a subclass.
+    """
+    no_decay = ["bias", "LayerNorm.weight"]
+    optimizer_grouped_parameters = [
+      {
+        "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+        "weight_decay": weight_decay,
+      },
+      {
+        "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+        "weight_decay": 0.0,
+      },
+    ]
+    opt = optimizer.AdamW(
+      optimizer_grouped_parameters,
+      lr = learning_rate,
+      betas = (adam_beta1, adam_beta2),
+      eps = adam_epsilon,
+    )
+    lr_scheduler = optimizer.get_linear_schedule_with_warmup(
+      opt, num_warmup_steps = warmup_steps, num_training_steps=num_train_steps
+    )
+    return opt, lr_scheduler
+
+  def training_step(self, 
+                    model: torch.nn.Module, 
+                    inputs: typing.Dict[str, typing.Union[torch.Tensor, typing.Any]]
+                    ) -> float:
+    """
+    Perform a training step on a batch of inputs.
+
+    Subclass and override to inject custom behavior.
+
+    Args:
+      model (:obj:`nn.Module`):
+        The model to train.
+      inputs (:obj:`Dict[str, Union[torch.Tensor, Any]]`):
+        The inputs and targets of the model.
+
+        The dictionary will be unpacked before being fed to the model. Most models expect the targets under the
+        argument :obj:`labels`. Check your model's documentation for all accepted arguments.
+
+    Return:
+      :obj:`float`: The training loss on this batch.
+    """
+    model.train()
+
+    # def _prepare_inputs(inputs: Dict[str, Union[torch.Tensor, Any]]) -> Dict[str, Union[torch.Tensor, Any]]:
+    #   for k, v in inputs.items():
+    #     if isinstance(v, torch.Tensor):
+    #       inputs[k] = v.to(self.args.device)
+    #   return inputs
+    # inputs = _prepare_inputs(inputs)
+
+    outputs = model(**inputs)
+    # We don't use .loss here since the model may return tuples instead of ModelOutput.
+    loss = outputs[0]
+
+    # if self.args.n_gpu > 1:
+    #   loss = loss.mean()  # mean() to average on multi-gpu parallel training
+
+    # if self.args.gradient_accumulation_steps > 1:
+    #   loss = loss / self.args.gradient_accumulation_steps
+
+    loss.backward()
+    return loss.item()
+
   def Train(self,
             corpus,
             test_sampler: typing.Optional[samplers.Sampler] = None,
@@ -272,58 +354,52 @@ class torchBert(backends.BackendBase):
                        corpus, self.config.training, self.cache.path)
 
     self._ConfigTrainParams(data_generator)
-    raise ValueError
 
-    train_sampler = self._get_train_sampler()
-
-    train_dataloader = DataLoader(
-      self.train_dataset,
-      batch_size=self.args.train_batch_size,
-      sampler=train_sampler,
-      collate_fn=self.data_collator,
-      drop_last=self.args.dataloader_drop_last,
-    )
-
-    # if self.args.max_steps > 0:
-    #   t_total = self.args.max_steps
-    #   num_train_epochs = (
-    #     self.args.max_steps // (len(train_dataloader) // self.args.gradient_accumulation_steps) + 1
-    #   )
+    # if self.torch_tpu_available:
+    #   train_sampler = get_tpu_sampler(self.train_dataset)
     # else:
-    #   t_total = int(len(train_dataloader) // self.args.gradient_accumulation_steps * self.args.num_train_epochs)
-    #   num_train_epochs = self.args.num_train_epochs
-    #   self.args.max_steps = t_total
+    #   train_sampler = RandomSampler(self.train_dataset)
 
-    self.create_optimizer_and_scheduler(num_training_steps=t_total)
+    train_dataloader = self.train.data_generator.trainDataLoader()
+
+    optimizer, lr_scheduler = self.create_optimizer_and_scheduler(
+      num_train_steps = self.num_train_steps,
+      warmup_steps    = self.num_warmup_steps,
+      learning_rate   = self.learning_rate,
+      adam_beta1      = 0.9,
+      adam_beta2      = 0.999,
+      adam_epsilon    = 1e-6,
+      weight_decay    = 0.0,
+      model           = self.train.model
+      )
 
     # Check if saved optimizer or scheduler states exist
-    if (
-      model_path is not None
-      and os.path.isfile(os.path.join(model_path, "optimizer.pt"))
-      and os.path.isfile(os.path.join(model_path, "scheduler.pt"))
-    ):
-      # Load in optimizer and scheduler states
-      self.optimizer.load_state_dict(
-        torch.load(os.path.join(model_path, "optimizer.pt"), map_location=self.args.device)
-      )
-      self.lr_scheduler.load_state_dict(torch.load(os.path.join(model_path, "scheduler.pt")))
+    # if (
+    #   model_path is not None
+    #   and os.path.isfile(os.path.join(model_path, "optimizer.pt"))
+    #   and os.path.isfile(os.path.join(model_path, "scheduler.pt"))
+    # ):
+    #   # Load in optimizer and scheduler states
+    #   optimizer.load_state_dict(
+    #     torch.load(os.path.join(model_path, "optimizer.pt"), map_location=self.args.device)
+    #   )
+    #   lr_scheduler.load_state_dict(torch.load(os.path.join(model_path, "scheduler.pt")))
 
-    model = self.model
-    # if self.args.fp16 and _use_apex:
-    #   if not is_apex_available():
-    #     raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use fp16 training.")
-    #   model, self.optimizer = amp.initialize(model, self.optimizer, opt_level=self.args.fp16_opt_level)
+    model = self.train.model
+    dummy_num_gpus = 1
+    dummy_num_machines = -1
+    dummy_gradient_accumulation_steps =1
 
     # multi-gpu training (should be after apex fp16 initialization)
-    if self.args.n_gpu > 1:
+    if dummy_num_gpus > 1:
       model = torch.nn.DataParallel(model)
 
     # Distributed training (should be after apex fp16 initialization)
-    if self.args.local_rank != -1:
+    if dummy_num_machines != -1:
       model = torch.nn.parallel.DistributedDataParallel(
         model,
-        device_ids=[self.args.local_rank],
-        output_device=self.args.local_rank,
+        device_ids=[dummy_num_machines],
+        output_device=dummy_num_machines,
         find_unused_parameters=True,
       )
 
@@ -331,66 +407,66 @@ class torchBert(backends.BackendBase):
     #   self.tb_writer.add_text("args", self.args.to_json_string())
     #   self.tb_writer.add_hparams(self.args.to_sanitized_dict(), metric_dict={})
 
+    # import torch_xla.core.xla_model as xm
+    # import torch_xla.debug.metrics as met
+    # import torch_xla.distributed.parallel_loader as pl
+
     # Train!
-    if is_torch_tpu_available():
-      total_train_batch_size = self.args.train_batch_size * xm.xrt_world_size()
+    if self.torch_tpu_available:
+      total_train_batch_size = self.train_batch_size * xm.xrt_world_size()
     else:
       total_train_batch_size = (
-        self.args.train_batch_size
-        * self.args.gradient_accumulation_steps
-        * (torch.distributed.get_world_size() if self.args.local_rank != -1 else 1)
+        self.train_batch_size
+        * dummy_gradient_accumulation_steps
+        * (torch.distributed.get_world_size() if dummy_num_machines != -1 else 1)
       )
-    logger.info("***** Running training *****")
-    logger.info("  Num examples = %d", self.num_examples(train_dataloader))
-    logger.info("  Num Epochs = %d", num_train_epochs)
-    logger.info("  Instantaneous batch size per device = %d", self.args.per_device_train_batch_size)
-    logger.info("  Total train batch size (w. parallel, distributed & accumulation) = %d", total_train_batch_size)
-    logger.info("  Gradient Accumulation steps = %d", self.args.gradient_accumulation_steps)
-    logger.info("  Total optimization steps = %d", t_total)
+    l.getLogger().info("***** Running training *****")
+    # logger.info("  Num examples = %d", self.num_examples(train_dataloader))
+    l.getLogger().info("  Num Epochs = {}".format(self.num_epochs))
+    # logger.info("  Instantaneous batch size per device = %d", self.args.per_device_train_batch_size)
+    l.getLogger().info("  Total train batch size (w. parallel, distributed & accumulation) = {}".format(self.train_batch_size))
+    l.getLogger().info("  Gradient Accumulation steps = {}".format(dummy_gradient_accumulation_steps))
+    l.getLogger().info("  Total optimization steps = {}".format(self.num_train_steps))
 
     self.global_step = 0
     self.epoch = 0
     epochs_trained = 0
     steps_trained_in_current_epoch = 0
     # Check if continuing training from a checkpoint
-    if model_path is not None:
-      # set global_step to global_step of last saved checkpoint from model path
-      try:
-        self.global_step = int(model_path.split("-")[-1].split("/")[0])
-        epochs_trained = self.global_step // (len(train_dataloader) // self.args.gradient_accumulation_steps)
-        steps_trained_in_current_epoch = self.global_step % (
-          len(train_dataloader) // self.args.gradient_accumulation_steps
-        )
+    # if model_path is not None:
+    #   # set global_step to global_step of last saved checkpoint from model path
+    #   try:
+    #     self.global_step = int(model_path.split("-")[-1].split("/")[0])
+    #     epochs_trained = self.global_step // (len(train_dataloader) // dummy_gradient_accumulation_steps)
+    #     steps_trained_in_current_epoch = self.global_step % (
+    #       len(train_dataloader) // dummy_gradient_accumulation_steps
+    #     )
 
-        logger.info("  Continuing training from checkpoint, will skip to saved global_step")
-        logger.info("  Continuing training from epoch %d", epochs_trained)
-        logger.info("  Continuing training from global step %d", self.global_step)
-        logger.info("  Will skip the first %d steps in the first epoch", steps_trained_in_current_epoch)
-      except ValueError:
-        self.global_step = 0
-        logger.info("  Starting fine-tuning.")
+    #     logger.info("  Continuing training from checkpoint, will skip to saved global_step")
+    #     logger.info("  Continuing training from epoch %d", epochs_trained)
+    #     logger.info("  Continuing training from global step %d", self.global_step)
+    #     logger.info("  Will skip the first %d steps in the first epoch", steps_trained_in_current_epoch)
+    #   except ValueError:
+    #     self.global_step = 0
+    #     logger.info("  Starting fine-tuning.")
 
     tr_loss = 0.0
     logging_loss = 0.0
     model.zero_grad()
-    train_iterator = trange(
-      epochs_trained, int(np.ceil(num_train_epochs)), desc="Epoch", disable=not self.is_local_process_zero()
+    train_iterator = tqdm.auto.trange(
+      epochs_trained, int(np.ceil(self.num_epochs)), desc="Epoch", disable=not True
     )
     for epoch in train_iterator:
-      if isinstance(train_dataloader, DataLoader) and isinstance(train_dataloader.sampler, DistributedSampler):
+      if isinstance(train_dataloader, torch.utils.data.DataLoader) and isinstance(train_dataloader.sampler, torch.utils.data.DistributedSampler):
         train_dataloader.sampler.set_epoch(epoch)
 
-      if is_torch_tpu_available():
+      if self.torch_tpu_available:
         parallel_loader = pl.ParallelLoader(train_dataloader, [self.args.device]).per_device_loader(
           self.args.device
         )
-        epoch_iterator = tqdm(parallel_loader, desc="Iteration", disable=not self.is_local_process_zero())
+        epoch_iterator = tqdm.auto.tqdm(parallel_loader, desc="Iteration", disable=not True)
       else:
-        epoch_iterator = tqdm(train_dataloader, desc="Iteration", disable=not self.is_local_process_zero())
-
-      # Reset the past mems state at the beginning of each epoch if necessary.
-      if self.args.past_index >= 0:
-        self._past = None
+        epoch_iterator = tqdm.auto.tqdm(train_dataloader, desc="Iteration", disable=not True)
 
       for step, inputs in enumerate(epoch_iterator):
 
@@ -401,28 +477,28 @@ class torchBert(backends.BackendBase):
 
         tr_loss += self.training_step(model, inputs)
 
-        if (step + 1) % self.args.gradient_accumulation_steps == 0 or (
+        if (step + 1) % dummy_gradient_accumulation_steps == 0 or (
           # last step in epoch but step is always smaller than gradient_accumulation_steps
-          len(epoch_iterator) <= self.args.gradient_accumulation_steps
+          len(epoch_iterator) <= dummy_gradient_accumulation_steps
           and (step + 1) == len(epoch_iterator)
         ):
           if self.args.fp16 and _use_native_amp:
-            self.scaler.unscale_(self.optimizer)
+            self.scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
           elif self.args.fp16 and _use_apex:
-            torch.nn.utils.clip_grad_norm_(amp.master_params(self.optimizer), self.args.max_grad_norm)
+            torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), self.args.max_grad_norm)
           else:
             torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
 
-          if is_torch_tpu_available():
-            xm.optimizer_step(self.optimizer)
+          if self.torch_tpu_available:
+            xm.optimizer_step(optimizer)
           elif self.args.fp16 and _use_native_amp:
-            self.scaler.step(self.optimizer)
+            self.scaler.step(optimizer)
             self.scaler.update()
           else:
-            self.optimizer.step()
+            optimizer.step()
 
-          self.lr_scheduler.step()
+          lr_scheduler.step()
           model.zero_grad()
           self.global_step += 1
           self.epoch = epoch + (step + 1) / len(epoch_iterator)
@@ -434,9 +510,9 @@ class torchBert(backends.BackendBase):
             logs["loss"] = (tr_loss - logging_loss) / self.args.logging_steps
             # backward compatibility for pytorch schedulers
             logs["learning_rate"] = (
-              self.lr_scheduler.get_last_lr()[0]
+              lr_scheduler.get_last_lr()[0]
               if version.parse(torch.__version__) >= version.parse("1.4")
-              else self.lr_scheduler.get_lr()[0]
+              else lr_scheduler.get_lr()[0]
             )
             logging_loss = tr_loss
 
@@ -462,13 +538,13 @@ class torchBert(backends.BackendBase):
             if self.is_world_process_zero():
               self._rotate_checkpoints()
 
-            if is_torch_tpu_available():
+            if self.torch_tpu_available:
               xm.rendezvous("saving_optimizer_states")
-              xm.save(self.optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
-              xm.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+              xm.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
+              xm.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
             elif self.is_world_process_zero():
-              torch.save(self.optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
-              torch.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+              torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
+              torch.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
 
         if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
           epoch_iterator.close()
@@ -477,7 +553,7 @@ class torchBert(backends.BackendBase):
         train_iterator.close()
         break
       if self.args.tpu_metrics_debug or self.args.debug:
-        if is_torch_tpu_available():
+        if self.torch_tpu_available:
           # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
           xm.master_print(met.metrics_report())
         else:
