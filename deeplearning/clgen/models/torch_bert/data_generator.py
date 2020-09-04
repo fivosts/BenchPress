@@ -55,32 +55,30 @@ class MaskSequence(typing.NamedTuple):
   so this class represents a single instance!
   """
 
-  seen_in_training     : np.int32
+  seen_in_training     : np.int64
   original_input       : np.array
   input_ids            : np.array
   input_mask           : np.array
-  masked_lm_positions  : np.array
-  masked_lm_ids        : np.array
-  masked_lm_weights    : np.array
+  position_ids         : np.array
+  mask_labels          : np.array
   masked_lm_lengths    : np.array
-  next_sentence_label  : np.int32
+  next_sentence_label  : np.int64
 
   @staticmethod
-  def estimatedSize(batch_size, sequence_length, max_position_embeddings = None):
+  def estimatedSize(batch_size, sequence_length, max_predictions_per_seq = None):
     return (
-      2 * np.zeros([batch_size, 1], dtype = np.int32).nbytes + 
-      3 * np.zeros([batch_size, sequence_length]).nbytes + 
-      4 * np.zeros([batch_size, max_position_embeddings]).nbytes
+      2 * np.zeros([batch_size, 1], dtype = np.int64).nbytes + 
+      5 * np.zeros([batch_size, sequence_length]).nbytes + 
+      1 * np.zeros([batch_size, max_predictions_per_seq]).nbytes
       )
 
   @property
   def sizeof_sequence(self):
     return (sys.getsizeof(self) + 
-           self.seen_in_training.nbytes + self.original_input.nbytes + 
-           self.input_ids.nbytes + self.input_mask.nbytes +
-           self.masked_lm_positions.nbytes + self.masked_lm_ids.nbytes +
-           self.masked_lm_weights.nbytes   + self.masked_lm_lengths.nbytes +
-           self.next_sentence_label.nbytes
+           self.seen_in_training.nbytes  + self.original_input.nbytes + 
+           self.input_ids.nbytes         + self.input_mask.nbytes +
+           self.position_ids.nbytes      + self.mask_labels.nbytes +
+           self.masked_lm_lengths.nbytes + self.next_sentence_label.nbytes
            )
 
   def shapeSeqToBatch(self, inp, batch_size):
@@ -92,16 +90,15 @@ class MaskSequence(typing.NamedTuple):
                         num_epochs: int,
                         ) -> None:
     """Log analytics about the batch."""
-    l.getLogger().info("Step shape: seen_in_training: {}, original_input: {}, Input_ids: {}, input_mask: {}, masked_lm_positions: {}, masked_lm_ids: {}, masked_lm_weights: {}, masked_lm_lengths: {}, next_sentence_label: {}"
-                        .format(self.shapeSeqToBatch(self.seen_in_training,     batch_size),
-                                self.shapeSeqToBatch(self.original_input,       batch_size),
-                                self.shapeSeqToBatch(self.input_ids,            batch_size),
-                                self.shapeSeqToBatch(self.input_mask,           batch_size),
-                                self.shapeSeqToBatch(self.masked_lm_positions,  batch_size),
-                                self.shapeSeqToBatch(self.masked_lm_ids,        batch_size),
-                                self.shapeSeqToBatch(self.masked_lm_weights,    batch_size),
-                                self.shapeSeqToBatch(self.masked_lm_lengths,    batch_size),
-                                self.shapeSeqToBatch(self.next_sentence_label,  batch_size),
+    l.getLogger().info("Step shape: seen_in_training: {}, original_input: {}, Input_ids: {}, input_mask: {}, position_ids: {}, mask_labels: {}, masked_lm_lengths: {}, next_sentence_label: {}"
+                        .format(self.shapeSeqToBatch(self.seen_in_training,    batch_size),
+                                self.shapeSeqToBatch(self.original_input,      batch_size),
+                                self.shapeSeqToBatch(self.input_ids,           batch_size),
+                                self.shapeSeqToBatch(self.input_mask,          batch_size),
+                                self.shapeSeqToBatch(self.position_ids,        batch_size),
+                                self.shapeSeqToBatch(self.mask_labels,         batch_size),
+                                self.shapeSeqToBatch(self.masked_lm_lengths,   batch_size),
+                                self.shapeSeqToBatch(self.next_sentence_label, batch_size),
                           )
                         )
     l.getLogger().info(
@@ -172,7 +169,7 @@ def _holeSequence(seq: np.array,
   masked_lms        = []
   # Offset array. Indices represent elements in the initial array (seq)
   # Values of indices represent current offset position in processed array (input_ids).
-  offset_idxs       = np.zeros(len(seq), dtype = np.int32)
+  offset_idxs       = np.zeros(len(seq), dtype = np.int64)
   # Set with all candidate_indexes that have been holed.
   visited_indices   = set()
   # Total masks placed so far.
@@ -261,9 +258,8 @@ def _holeSequence(seq: np.array,
   while len(input_ids) < len(seq):
     input_ids.append(atomizer.padToken)
   masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
-  masked_lm_positions, masked_lm_ids, masked_lm_weights, masked_lm_lengths = [], [], [], []
 
-  input_mask = np.ones(len(seq), dtype = np.int32)
+  input_mask = np.ones(len(seq), dtype = np.int64)
   if atomizer.padToken in input_ids:
     first_pad_index = input_ids.index(atomizer.padToken)
     input_mask[first_pad_index:] = 0
@@ -271,8 +267,8 @@ def _holeSequence(seq: np.array,
     assert input_ids[first_pad_index] == atomizer.padToken, "{}".format(input_ids)
     assert input_ids[first_pad_index - 1] != atomizer.padToken
 
-  seen_in_training    = np.int32(1 if train_set else 0)
-  next_sentence_label = np.int32(0)
+  seen_in_training    = np.int64(1 if train_set else 0)
+  next_sentence_label = np.int64(0)
   """
     Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
     is intended on kernels. In any other case, check bert's create_instances_from_document
@@ -282,35 +278,24 @@ def _holeSequence(seq: np.array,
   """
   if len(masked_lms) == 0:
     l.getLogger().warn("No HOLE added to datapoint. Increase probability of hole occuring.")
+
+  masked_lm_lengths = np.full(max_predictions, -1, dtype = np.int64)
+  mask_labels = np.full(len(seq), -100, dtype = np.int64)
+  ind = 0
   for p in masked_lms:
     if p.pos_index < len(seq):
-      """
-        Adding holes can increase or decrease the length of the original sequence.
-        It is important in the end, to end up with an input sequence compatible
-        with the model's sequence length, i.e. len(seq). If any mask is found 
-        beyond that point, will have to be rejected.
-      """
-      masked_lm_positions.append(p.pos_index)
-      masked_lm_ids.append(p.token_id)
-      masked_lm_weights.append(1.0)
-      masked_lm_lengths.append(p.hole_length)
-  num_holes = len(masked_lm_positions)
-  while len(masked_lm_positions) < training_opts.max_predictions_per_seq:
-      masked_lm_positions.append(0)
-      masked_lm_ids.append(atomizer.padToken)
-      masked_lm_weights.append(0.0)
-      masked_lm_lengths.append(-1)
+      mask_labels[p.pos_index] = p.token_id
+      masked_lm_lengths[ind]   = p.hole_length
+      ind += 1
 
-  assert (input_ids[:len(seq)].count(atomizer.holeToken) == num_holes,
-    "Number of targets {} does not correspond to hole number in final input sequence: {}"
-    .format(num_holes, input_ids[:len(seq)].count(atomizer.holeToken))
-  )
   return MaskSequence(seen_in_training, seq,
-                      np.asarray(input_ids[:len(seq)], dtype = np.int32), input_mask,
-                      np.asarray(masked_lm_positions, dtype = np.int32),  np.asarray(masked_lm_ids, dtype = np.int32), 
-                      np.asarray(masked_lm_weights, dtype = np.int32),    np.asarray(masked_lm_lengths, dtype = np.int32),
-                      next_sentence_label 
-                      )
+                      np.asarray(input_ids[:len(seq)], dtype = np.int64),
+                      input_mask,
+                      np.arange(len(seq),              dtype = np.int64),
+                      np.asarray(mask_labels,          dtype = np.int64), 
+                      np.asarray(masked_lm_lengths,    dtype = np.int64),
+                      next_sentence_label
+                     )
 
 def _maskSequence(seq: np.array,
                   train_set: bool,
@@ -374,12 +359,12 @@ def _maskSequence(seq: np.array,
 
   masked_lm_positions, masked_lm_ids, masked_lm_weights, masked_lm_lengths = [], [], [], []
 
-  input_mask = np.ones(len(seq), dtype = np.int32)
+  input_mask = np.ones(len(seq), dtype = np.int64)
   if atomizer.padToken in input_ids:
     input_mask[input_ids.index(atomizer.padToken):] = 0
 
-  seen_in_training    = np.int32(1 if train_set else 0)
-  next_sentence_label = np.int32(0)
+  seen_in_training    = np.int64(1 if train_set else 0)
+  next_sentence_label = np.int64(0)
   ## Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
   ## is intended on kernels. In any other case, check bert's create_instances_from_document
   ## to see how next_sentence_labels are calculated.
@@ -881,41 +866,37 @@ class MaskLMBatchGenerator(object):
     
     feature_set = []
     for (inst_index, instance) in enumerate(masked_corpus['corpus']):
-      seen_in_training = instance.seen_in_training
-      original_input   = instance.original_input
-      input_ids        = instance.input_ids
-      input_mask       = instance.input_mask
+
+      seen_in_training    = instance.seen_in_training
+      original_input      = instance.original_input
+      input_ids           = instance.input_ids
+      input_mask          = instance.input_mask
+      position_ids        = instance.position_ids
+      mask_labels         = instance.mask_labels
+      masked_lm_lengths   = instance.masked_lm_lengths
+      next_sentence_label = instance.next_sentence_label
 
       assert len(input_ids) == self.training_opts.sequence_length, "len(input_ids):  {}, sequence_length: {}".format(len(input_ids), self.training_opts.sequence_length)
 
-      masked_lm_positions   = instance.masked_lm_positions
-      masked_lm_ids         = instance.masked_lm_ids
-      masked_lm_weights     = instance.masked_lm_weights
-      masked_lm_lengths     = instance.masked_lm_lengths
-      next_sentence_label   = instance.next_sentence_label
-      features              = collections.OrderedDict()
-
-      features["seen_in_training"]      = torch.LongTensor([seen_in_training])
-      features["original_input"]        = torch.from_numpy(original_input)
-      features["input_ids"]             = torch.from_numpy(input_ids)
-      features["input_mask"]            = torch.from_numpy(input_mask)
-      features["masked_lm_positions"]   = torch.from_numpy(masked_lm_positions)
-      features["masked_lm_ids"]         = torch.from_numpy(masked_lm_ids)
-      features["masked_lm_weights"]     = torch.from_numpy(masked_lm_weights)
-      features["masked_lm_lengths"]     = torch.from_numpy(masked_lm_lengths)
-      features["next_sentence_labels"]  = torch.LongTensor([next_sentence_label])
-
+      features = collections.OrderedDict()
+      features["seen_in_training"]     = torch.LongTensor([seen_in_training])
+      features["original_input"]       = torch.from_numpy(original_input)
+      features["input_ids"]            = torch.from_numpy(input_ids)
+      features["input_mask"]           = torch.from_numpy(input_mask)
+      features["position_ids"]         = torch.from_numpy(position_ids)
+      features["mask_labels"]          = torch.from_numpy(mask_labels)
+      features["masked_lm_lengths"]    = torch.from_numpy(masked_lm_lengths)
+      features["next_sentence_label"] = torch.LongTensor([next_sentence_label])
       feature_set.append(features)
 
       if FLAGS.write_text_dataset:
-        file_writer.write("'seen_in_training': {}\n'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'masked_lm_positions': {}\n'masked_lm_ids': {}\n'masked_lm_weights': {}\n'masked_lm_lengths': {}\n'next_sentence_labels': {}\n\n"
+        file_writer.write("'seen_in_training': {}\n'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'position_ids': {}\n'mask_labels': {}\n'masked_lm_lengths': {}\n'next_sentence_label': {}\n\n"
                             .format((True if seen_in_training == 1 else False),
                                     self.atomizer.DeatomizeIndices(original_input, ignore_token = self.atomizer.padToken),
                                     self.atomizer.DeatomizeIndices(input_ids, ignore_token = self.atomizer.padToken),
                                     input_mask, 
-                                    masked_lm_positions, 
-                                    self.atomizer.DeatomizeIndices(masked_lm_ids), 
-                                    masked_lm_weights, 
+                                    position_ids, 
+                                    mask_labels, 
                                     masked_lm_lengths, 
                                     next_sentence_label)
                             )
@@ -939,7 +920,7 @@ class MaskLMBatchGenerator(object):
     """
     return np.concatenate([input_sample, 
                           np.array([self.atomizer.padToken] * 
-                              (self.max_position_embeddings - len(input_sample)), dtype = np.int32)
+                              (self.max_position_embeddings - len(input_sample)), dtype = np.int64)
                           ])
 
   def _addStartEndToken(self, inp: list) -> list:
