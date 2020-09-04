@@ -322,10 +322,16 @@ class torchBert(backends.BackendBase):
     #   return inputs
     # inputs = _prepare_inputs(inputs)
 
-    outputs = model(**inputs)
+    outputs = model(
+                input_ids           = inputs['input_ids'],
+                attention_mask      = inputs['input_mask'],
+                position_ids        = inputs['position_ids'],
+                labels              = inputs['mask_labels'],
+                next_sentence_label = inputs['next_sentence_label']
+              )
     # We don't use .loss here since the model may return tuples instead of ModelOutput.
     loss = outputs[0]
-
+    l.getLogger().warn(loss)
     # if self.args.n_gpu > 1:
     #   loss = loss.mean()  # mean() to average on multi-gpu parallel training
 
@@ -361,16 +367,17 @@ class torchBert(backends.BackendBase):
     #   train_sampler = RandomSampler(self.train_dataset)
 
     train_dataloader = self.train.data_generator.trainDataLoader()
+    model = self.train.model
 
     optimizer, lr_scheduler = self.create_optimizer_and_scheduler(
       num_train_steps = self.num_train_steps,
-      warmup_steps    = self.num_warmup_steps,
+      warmup_steps    = 2,
       learning_rate   = self.learning_rate,
       adam_beta1      = 0.9,
       adam_beta2      = 0.999,
       adam_epsilon    = 1e-6,
       weight_decay    = 0.0,
-      model           = self.train.model
+      model           = model
       )
 
     # Check if saved optimizer or scheduler states exist
@@ -385,10 +392,11 @@ class torchBert(backends.BackendBase):
     #   )
     #   lr_scheduler.load_state_dict(torch.load(os.path.join(model_path, "scheduler.pt")))
 
-    model = self.train.model
     dummy_num_gpus = 1
     dummy_num_machines = -1
-    dummy_gradient_accumulation_steps =1
+    dummy_gradient_accumulation_steps = 1
+    dummy_max_grad_norm = 1.0
+    dummy_logging_steps = 20
 
     # multi-gpu training (should be after apex fp16 initialization)
     if dummy_num_gpus > 1:
@@ -477,90 +485,91 @@ class torchBert(backends.BackendBase):
 
         tr_loss += self.training_step(model, inputs)
 
-        if (step + 1) % dummy_gradient_accumulation_steps == 0 or (
-          # last step in epoch but step is always smaller than gradient_accumulation_steps
-          len(epoch_iterator) <= dummy_gradient_accumulation_steps
-          and (step + 1) == len(epoch_iterator)
-        ):
-          if self.args.fp16 and _use_native_amp:
-            self.scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
-          elif self.args.fp16 and _use_apex:
-            torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), self.args.max_grad_norm)
-          else:
-            torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
-
-          if self.torch_tpu_available:
-            xm.optimizer_step(optimizer)
-          elif self.args.fp16 and _use_native_amp:
-            self.scaler.step(optimizer)
-            self.scaler.update()
-          else:
-            optimizer.step()
-
-          lr_scheduler.step()
-          model.zero_grad()
-          self.global_step += 1
-          self.epoch = epoch + (step + 1) / len(epoch_iterator)
-
-          if (self.args.logging_steps > 0 and self.global_step % self.args.logging_steps == 0) or (
-            self.global_step == 1 and self.args.logging_first_step
-          ):
-            logs: Dict[str, float] = {}
-            logs["loss"] = (tr_loss - logging_loss) / self.args.logging_steps
-            # backward compatibility for pytorch schedulers
-            logs["learning_rate"] = (
-              lr_scheduler.get_last_lr()[0]
-              if version.parse(torch.__version__) >= version.parse("1.4")
-              else lr_scheduler.get_lr()[0]
-            )
-            logging_loss = tr_loss
-
-            self.log(logs)
-
-          if self.args.evaluate_during_training and self.global_step % self.args.eval_steps == 0:
-            self.evaluate()
-
-          if self.args.save_steps > 0 and self.global_step % self.args.save_steps == 0:
-            # In all cases (even distributed/parallel), self.model is always a reference
-            # to the model we want to save.
-            if hasattr(model, "module"):
-              assert (
-                model.module is self.model
-              ), f"Module {model.module} should be a reference to self.model"
-            else:
-              assert model is self.model, f"Model {model} should be a reference to self.model"
-            # Save model checkpoint
-            output_dir = os.path.join(self.args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{self.global_step}")
-
-            self.save_model(output_dir)
-
-            if self.is_world_process_zero():
-              self._rotate_checkpoints()
-
-            if self.torch_tpu_available:
-              xm.rendezvous("saving_optimizer_states")
-              xm.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
-              xm.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
-            elif self.is_world_process_zero():
-              torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
-              torch.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
-
-        if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
-          epoch_iterator.close()
-          break
-      if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
-        train_iterator.close()
-        break
-      if self.args.tpu_metrics_debug or self.args.debug:
-        if self.torch_tpu_available:
-          # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
-          xm.master_print(met.metrics_report())
+        # if (step + 1) % dummy_gradient_accumulation_steps == 0 or (
+        #   # last step in epoch but step is always smaller than gradient_accumulation_steps
+        #   len(epoch_iterator) <= dummy_gradient_accumulation_steps
+        #   and (step + 1) == len(epoch_iterator)
+        # ):
+        # if self.args.fp16 and _use_native_amp:
+        if False:
+          self.scaler.unscale_(optimizer)
+          torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
+        # elif self.args.fp16 and _use_apex:
+        elif False:
+          torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), dummy_max_grad_norm)
         else:
-          logger.warning(
-            "You enabled PyTorch/XLA debug metrics but you don't have a TPU "
-            "configured. Check your training configuration if this is unexpected."
-          )
+          torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
+
+        if self.torch_tpu_available:
+          xm.optimizer_step(optimizer)
+        # elif self.args.fp16 and _use_native_amp:
+        elif False:
+          self.scaler.step(optimizer)
+          self.scaler.update()
+        else:
+          # optimizer.step()
+          pass
+
+        optimizer.step()
+        lr_scheduler.step()
+        model.zero_grad()
+        self.global_step += 1
+        self.epoch = epoch + (step + 1) / len(epoch_iterator)
+
+        # if (self.args.logging_steps > 0 and self.global_step % self.args.logging_steps == 0) or (
+        #   self.global_step == 1 and self.args.logging_first_step
+        # ):
+        if self.global_step == 1 or (self.global_step % 20 == 0):
+          logs: Dict[str, float] = {}
+          logs["loss"] = (tr_loss - logging_loss) / dummy_logging_steps
+          # backward compatibility for pytorch schedulers
+          logs["learning_rate"] = lr_scheduler.get_last_lr()[0]
+          logging_loss = tr_loss
+          # self.log(logs)
+
+          # if self.args.evaluate_during_training and self.global_step % self.args.eval_steps == 0:
+          #   self.evaluate()
+
+          # if self.args.save_steps > 0 and self.global_step % self.args.save_steps == 0:
+          #   # In all cases (even distributed/parallel), self.model is always a reference
+          #   # to the model we want to save.
+          #   if hasattr(model, "module"):
+          #     assert (
+          #       model.module is self.model
+          #     ), f"Module {model.module} should be a reference to self.model"
+          #   else:
+          #     assert model is self.model, f"Model {model} should be a reference to self.model"
+          #   # Save model checkpoint
+          #   output_dir = os.path.join(self.args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{self.global_step}")
+
+          #   self.save_model(output_dir)
+
+          #   if self.is_world_process_zero():
+          #     self._rotate_checkpoints()
+
+          #   if self.torch_tpu_available:
+          #     xm.rendezvous("saving_optimizer_states")
+          #     xm.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
+          #     xm.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+          #   elif self.is_world_process_zero():
+          #     torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
+          #     torch.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+
+        # if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
+        #   epoch_iterator.close()
+        #   break
+      # if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
+      #   train_iterator.close()
+      #   break
+      # if self.args.tpu_metrics_debug or self.args.debug:
+      #   if self.torch_tpu_available:
+      #     # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
+      #     xm.master_print(met.metrics_report())
+      #   else:
+      #     logger.warning(
+      #       "You enabled PyTorch/XLA debug metrics but you don't have a TPU "
+      #       "configured. Check your training configuration if this is unexpected."
+      #     )
 
     if self.tb_writer:
       self.tb_writer.close()
