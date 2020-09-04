@@ -308,6 +308,14 @@ class BertConfig(object):
     return config
 
   @property
+  def use_return_dict(self) -> bool:
+    """
+    :obj:`bool`: Whether or not return :class:`~transformers.file_utils.ModelOutput` instead of tuples.
+    """
+    # If torchscript is set, force `return_dict=False` to avoid jit errors
+    return self.return_dict and not self.torchscript
+
+  @property
   def num_labels(self) -> int:
     """
     :obj:`int`: The number of labels for classification models.
@@ -318,3 +326,270 @@ class BertConfig(object):
   def num_labels(self, num_labels: int):
     self.id2label = {i: "LABEL_{}".format(i) for i in range(num_labels)}
     self.label2id = dict(zip(self.id2label.values(), self.id2label.keys()))
+
+  # def save_pretrained(self, save_directory: str):
+  #   """
+  #   Save a configuration object to the directory ``save_directory``, so that it can be re-loaded using the
+  #   :func:`~transformers.PretrainedConfig.from_pretrained` class method.
+  #   Args:
+  #     save_directory (:obj:`str`):
+  #       Directory where the configuration JSON file will be saved (will be created if it does not exist).
+  #   """
+  #   if os.path.isfile(save_directory):
+  #     raise AssertionError("Provided path ({}) should be a directory, not a file".format(save_directory))
+  #   os.makedirs(save_directory, exist_ok=True)
+  #   # If we save using the predefined names, we can load using `from_pretrained`
+  #   output_config_file = os.path.join(save_directory, CONFIG_NAME)
+
+  #   self.to_json_file(output_config_file, use_diff=True)
+  #   l.getLogger().info("Configuration saved in {}".format(output_config_file))
+
+  # @classmethod
+  # def from_pretrained(cls, pretrained_model_name_or_path: str, **kwargs) -> "PretrainedConfig":
+  #   r"""
+  #   Instantiate a :class:`~transformers.PretrainedConfig` (or a derived class) from a pretrained model
+  #   configuration.
+  #   Args:
+  #     pretrained_model_name_or_path (:obj:`str`):
+  #       This can be either:
+  #       - the `shortcut name` of a pretrained model configuration to load from cache or download, e.g.,
+  #         ``bert-base-uncased``.
+  #       - the `identifier name` of a pretrained model configuration that was uploaded to our S3 by any user,
+  #         e.g., ``dbmdz/bert-base-german-cased``.
+  #       - a path to a `directory` containing a configuration file saved using the
+  #         :func:`~transformers.PretrainedConfig.save_pretrained` method, e.g., ``./my_model_directory/``.
+  #       - a path or url to a saved configuration JSON `file`, e.g.,
+  #         ``./my_model_directory/configuration.json``.
+  #     cache_dir (:obj:`str`, `optional`):
+  #       Path to a directory in which a downloaded pretrained model configuration should be cached if the
+  #       standard cache should not be used.
+  #     force_download (:obj:`bool`, `optional`, defaults to :obj:`False`):
+  #       Wheter or not to force to (re-)download the configuration files and override the cached versions if they
+  #       exist.
+  #     resume_download (:obj:`bool`, `optional`, defaults to :obj:`False`):
+  #       Whether or not to delete incompletely received file. Attempts to resume the download if such a file
+  #       exists.
+  #     proxies (:obj:`Dict[str, str]`, `optional`):
+  #       A dictionary of proxy servers to use by protocol or endpoint, e.g.,
+  #       :obj:`{'http': 'foo.bar:3128', 'http://hostname': 'foo.bar:4012'}.`
+  #       The proxies are used on each request.
+  #     return_unused_kwargs (:obj:`bool`, `optional`, defaults to :obj:`False`):
+  #       If :obj:`False`, then this function returns just the final configuration object.
+  #       If :obj:`True`, then this functions returns a :obj:`Tuple(config, unused_kwargs)` where `unused_kwargs`
+  #       is a dictionary consisting of the key/value pairs whose keys are not configuration attributes: i.e.,
+  #       the part of ``kwargs`` which has not been used to update ``config`` and is otherwise ignored.
+  #     kwargs (:obj:`Dict[str, Any]`, `optional`):
+  #       The values in kwargs of any keys which are configuration attributes will be used to override the loaded
+  #       values. Behavior concerning key/value pairs whose keys are *not* configuration attributes is
+  #       controlled by the ``return_unused_kwargs`` keyword parameter.
+  #   Returns:
+  #     :class:`PretrainedConfig`: The configuration object instantiated from this pretrained model.
+  #   Examples::
+  #     # We can't instantiate directly the base class `PretrainedConfig` so let's show the examples on a
+  #     # derived class: BertConfig
+  #     config = BertConfig.from_pretrained('bert-base-uncased')  # Download configuration from S3 and cache.
+  #     config = BertConfig.from_pretrained('./test/saved_model/')  # E.g. config (or model) was saved using `save_pretrained('./test/saved_model/')`
+  #     config = BertConfig.from_pretrained('./test/saved_model/my_configuration.json')
+  #     config = BertConfig.from_pretrained('bert-base-uncased', output_attentions=True, foo=False)
+  #     assert config.output_attentions == True
+  #     config, unused_kwargs = BertConfig.from_pretrained('bert-base-uncased', output_attentions=True,
+  #                                foo=False, return_unused_kwargs=True)
+  #     assert config.output_attentions == True
+  #     assert unused_kwargs == {'foo': False}
+  #   """
+  #   config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
+  #   return cls.from_dict(config_dict, **kwargs)
+
+  # @classmethod
+  # def get_config_dict(cls, pretrained_model_name_or_path: str, **kwargs) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+  #   """
+  #   From a ``pretrained_model_name_or_path``, resolve to a dictionary of parameters, to be used
+  #   for instantiating a :class:`~transformers.PretrainedConfig` using ``from_dict``.
+  #   Parameters:
+  #     pretrained_model_name_or_path (:obj:`str`):
+  #       The identifier of the pre-trained checkpoint from which we want the dictionary of parameters.
+  #   Returns:
+  #     :obj:`Tuple[Dict, Dict]`: The dictionary(ies) that will be used to instantiate the configuration object.
+  #   """
+  #   cache_dir = kwargs.pop("cache_dir", None)
+  #   force_download = kwargs.pop("force_download", False)
+  #   resume_download = kwargs.pop("resume_download", False)
+  #   proxies = kwargs.pop("proxies", None)
+  #   local_files_only = kwargs.pop("local_files_only", False)
+
+  #   if os.path.isdir(pretrained_model_name_or_path):
+  #     config_file = os.path.join(pretrained_model_name_or_path, CONFIG_NAME)
+  #   elif os.path.isfile(pretrained_model_name_or_path) or is_remote_url(pretrained_model_name_or_path):
+  #     config_file = pretrained_model_name_or_path
+  #   else:
+  #     config_file = hf_bucket_url(pretrained_model_name_or_path, filename=CONFIG_NAME, use_cdn=False)
+
+  #   try:
+  #     # Load from URL or cache if already cached
+  #     resolved_config_file = cached_path(
+  #       config_file,
+  #       cache_dir=cache_dir,
+  #       force_download=force_download,
+  #       proxies=proxies,
+  #       resume_download=resume_download,
+  #       local_files_only=local_files_only,
+  #     )
+  #     # Load config dict
+  #     if resolved_config_file is None:
+  #       raise EnvironmentError
+  #     config_dict = cls._dict_from_json_file(resolved_config_file)
+
+  #   except EnvironmentError:
+  #     msg = (
+  #       f"Can't load config for '{pretrained_model_name_or_path}'. Make sure that:\n\n"
+  #       f"- '{pretrained_model_name_or_path}' is a correct model identifier listed on 'https://huggingface.co/models'\n\n"
+  #       f"- or '{pretrained_model_name_or_path}' is the correct path to a directory containing a {CONFIG_NAME} file\n\n"
+  #     )
+  #     raise EnvironmentError(msg)
+
+  #   except json.JSONDecodeError:
+  #     msg = (
+  #       "Couldn't reach server at '{}' to download configuration file or "
+  #       "configuration file is not a valid JSON file. "
+  #       "Please check network or file content here: {}.".format(config_file, resolved_config_file)
+  #     )
+  #     raise EnvironmentError(msg)
+
+  #   if resolved_config_file == config_file:
+  #     l.getLogger().info("loading configuration file {}".format(config_file))
+  #   else:
+  #     l.getLogger().info("loading configuration file {} from cache at {}".format(config_file, resolved_config_file))
+
+  #   return config_dict, kwargs
+
+  # @classmethod
+  # def from_dict(cls, config_dict: Dict[str, Any], **kwargs) -> "PretrainedConfig":
+  #   """
+  #   Instantiates a :class:`~transformers.PretrainedConfig` from a Python dictionary of parameters.
+  #   Args:
+  #     config_dict (:obj:`Dict[str, Any]`):
+  #       Dictionary that will be used to instantiate the configuration object. Such a dictionary can be
+  #       retrieved from a pretrained checkpoint by leveraging the
+  #       :func:`~transformers.PretrainedConfig.get_config_dict` method.
+  #     kwargs (:obj:`Dict[str, Any]`):
+  #       Additional parameters from which to initialize the configuration object.
+  #   Returns:
+  #     :class:`PretrainedConfig`: The configuration object instantiated from those parameters.
+  #   """
+  #   return_unused_kwargs = kwargs.pop("return_unused_kwargs", False)
+
+  #   config = cls(**config_dict)
+
+  #   if hasattr(config, "pruned_heads"):
+  #     config.pruned_heads = dict((int(key), value) for key, value in config.pruned_heads.items())
+
+  #   # Update config with kwargs if needed
+  #   to_remove = []
+  #   for key, value in kwargs.items():
+  #     if hasattr(config, key):
+  #       setattr(config, key, value)
+  #       to_remove.append(key)
+  #   for key in to_remove:
+  #     kwargs.pop(key, None)
+
+  #   l.getLogger().info("Model config %s", str(config))
+  #   if return_unused_kwargs:
+  #     return config, kwargs
+  #   else:
+  #     return config
+
+  # @classmethod
+  # def from_json_file(cls, json_file: str) -> "PretrainedConfig":
+  #   """
+  #   Instantiates a :class:`~transformers.PretrainedConfig` from the path to a JSON file of parameters.
+  #   Args:
+  #     json_file (:obj:`str`):
+  #       Path to the JSON file containing the parameters.
+  #   Returns:
+  #     :class:`PretrainedConfig`: The configuration object instantiated from that JSON file.
+  #   """
+  #   config_dict = cls._dict_from_json_file(json_file)
+  #   return cls(**config_dict)
+
+  # @classmethod
+  # def _dict_from_json_file(cls, json_file: str):
+  #   with open(json_file, "r", encoding="utf-8") as reader:
+  #     text = reader.read()
+  #   return json.loads(text)
+
+  # def __eq__(self, other):
+  #   return self.__dict__ == other.__dict__
+
+  # def __repr__(self):
+  #   return "{} {}".format(self.__class__.__name__, self.to_json_string())
+
+  # def to_diff_dict(self) -> Dict[str, Any]:
+  #   """
+  #   Removes all attributes from config which correspond to the default
+  #   config attributes for better readability and serializes to a Python
+  #   dictionary.
+  #   Returns:
+  #     :obj:`Dict[str, Any]`: Dictionary of all the attributes that make up this configuration instance,
+  #   """
+  #   config_dict = self.to_dict()
+
+  #   # get the default config dict
+  #   default_config_dict = PretrainedConfig().to_dict()
+
+  #   serializable_config_dict = {}
+
+  #   # only serialize values that differ from the default config
+  #   for key, value in config_dict.items():
+  #     if key not in default_config_dict or value != default_config_dict[key]:
+  #       serializable_config_dict[key] = value
+
+  #   return serializable_config_dict
+
+  # def to_dict(self) -> Dict[str, Any]:
+  #   """
+  #   Serializes this instance to a Python dictionary.
+  #   Returns:
+  #     :obj:`Dict[str, Any]`: Dictionary of all the attributes that make up this configuration instance.
+  #   """
+  #   output = copy.deepcopy(self.__dict__)
+  #   if hasattr(self.__class__, "model_type"):
+  #     output["model_type"] = self.__class__.model_type
+  #   return output
+
+  # def to_json_string(self, use_diff: bool = True) -> str:
+  #   """
+  #   Serializes this instance to a JSON string.
+  #   Args:
+  #     use_diff (:obj:`bool`, `optional`, defaults to :obj:`True`):
+  #       If set to ``True``, only the difference between the config instance and the default
+  #       ``PretrainedConfig()`` is serialized to JSON string.
+  #   Returns:
+  #     :obj:`str`: String containing all the attributes that make up this configuration instance in JSON format.
+  #   """
+  #   if use_diff is True:
+  #     config_dict = self.to_diff_dict()
+  #   else:
+  #     config_dict = self.to_dict()
+  #   return json.dumps(config_dict, indent=2, sort_keys=True) + "\n"
+
+  # def to_json_file(self, json_file_path: str, use_diff: bool = True):
+  #   """
+  #   Save this instance to a JSON file.
+  #   Args:
+  #     json_file_path (:obj:`str`):
+  #       Path to the JSON file in which this configuration instance's parameters will be saved.
+  #     use_diff (:obj:`bool`, `optional`, defaults to :obj:`True`):
+  #       If set to ``True``, only the difference between the config instance and the default
+  #       ``PretrainedConfig()`` is serialized to JSON file.
+  #   """
+  #   with open(json_file_path, "w", encoding="utf-8") as writer:
+  #     writer.write(self.to_json_string(use_diff=use_diff))
+
+  # def update(self, config_dict: Dict[str, Any]):
+  #   """
+  #   Updates attributes of this class with attributes from ``config_dict``.
+  #   Args:
+  #     config_dict (:obj:`Dict[str, Any]`): Dictionary of attributes that shall be updated for this class.
+  #   """
+  #   for key, value in config_dict.items():
+  #     setattr(self, key, value)
