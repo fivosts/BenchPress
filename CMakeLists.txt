@@ -9,8 +9,8 @@ cmake_policy(SET CMP0076 NEW)
 
 OPTION(BUILD_FROM_SOURCE "Select to build necessary system wide packages from source locally (python, boost, protoc)" OFF)
 
-set(PYTHON python3  CACHE FILEPATH 
-  "Provide specific python for application. Default: [python3]. Ignored if BUILD_FROM_SOURCE is enabled."
+set(PYTHON python3.7  CACHE FILEPATH 
+  "Provide specific python for application. Default: [python3.7]. Ignored if BUILD_FROM_SOURCE is enabled."
   FORCE
 )
 set(PROTOC protoc  CACHE FILEPATH 
@@ -44,7 +44,7 @@ function(install_external_deps)
       INSTALL_DIR       ${LOCAL}
       CONFIGURE_COMMAND ${THIRD_PARTY}/python/python/configure --prefix=${LOCAL} --enable-optimizations --enable-loadable-sqlite-extensions
     )
-    set(PYTHON          ${LOCAL}/bin/python3               PARENT_SCOPE)
+    set(PYTHON          ${LOCAL}/bin/python3.7               PARENT_SCOPE)
     # Boost lib
     # TODO make sure this version is visible when compiling kernels
     ExternalProject_Add(boost
