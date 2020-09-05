@@ -134,7 +134,7 @@ function(setup_python)
   # 2. Pip install requirements.pip
   # 3. Set python binary to virtual environment's bin folder
 
-  set (PYTHON_ENV ${LOCAL}/env/bin/python)
+  set (PYTHON_ENV ${LOCAL}/env/bin/python3)
   if (BUILD_FROM_SOURCE)
     file(MAKE_DIRECTORY ${LOCAL}/lib/python)
     add_custom_target(requirements ALL
