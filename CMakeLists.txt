@@ -9,8 +9,8 @@ cmake_policy(SET CMP0076 NEW)
 
 OPTION(BUILD_FROM_SOURCE "Select to build necessary system wide packages from source locally (python, boost, protoc)" OFF)
 
-set(PYTHON python  CACHE FILEPATH 
-  "Provide specific python for application. Default: [python]. Ignored if BUILD_FROM_SOURCE is enabled."
+set(PYTHON python3  CACHE FILEPATH 
+  "Provide specific python for application. Default: [python3]. Ignored if BUILD_FROM_SOURCE is enabled."
   FORCE
 )
 set(PROTOC protoc  CACHE FILEPATH 
@@ -134,7 +134,7 @@ function(setup_python)
   # 2. Pip install requirements.pip
   # 3. Set python binary to virtual environment's bin folder
 
-  set (PYTHON_ENV ${LOCAL}/env/bin/python3)
+  set (PYTHON_ENV ${LOCAL}/env/bin/python)
   if (BUILD_FROM_SOURCE)
     file(MAKE_DIRECTORY ${LOCAL}/lib/python)
     add_custom_target(requirements ALL
