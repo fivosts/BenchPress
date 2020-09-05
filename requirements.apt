@@ -15,6 +15,7 @@ tar \
 m4 \
 ocl-icd-opencl-dev \
 opencl-c-headers  \
+protobuf-compiler \
 pkg-config \
 python3.7 \
 python3.7-dev \
