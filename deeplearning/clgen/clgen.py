@@ -26,7 +26,6 @@ from absl import app, flags
 from deeplearning.clgen import sample_observers as sample_observers_lib
 from deeplearning.clgen import samplers
 from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.util import tf
 from deeplearning.clgen.dashboard import dashboard
 from deeplearning.clgen.models import models
 from deeplearning.clgen.models import pretrained
@@ -334,7 +333,6 @@ def initMain(*args, **kwargs):
     **kwargs: Arguments to be passed to the function.
   """
   l.initLogger(name = "clgen", lvl = FLAGS.level, colorize = FLAGS.color, step = FLAGS.step)
-  tf.initTensorflow()
   mail = None
   if FLAGS.notify_me:
     mail = client.gmail(FLAGS.notify_me)
