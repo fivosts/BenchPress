@@ -18,7 +18,6 @@ import humanize
 import multiprocessing
 import functools
 import pickle
-import torch
 import numpy as np
 
 from deeplearning.clgen.util import cache
@@ -392,6 +391,8 @@ def _maskSequence(seq: np.array,
 class MaskLMBatchGenerator(object):
   def __init__(self):
 
+    self.pytorch                 = None
+    self.torch                   = None
     self.dataset                 = None
     self.corpus                  = None
     self.atomizer                = None
@@ -411,12 +412,15 @@ class MaskLMBatchGenerator(object):
 
   @classmethod
   def TrainMaskLMBatchGenerator(cls,
+                               pytorch,
                                corpus: "corpuses.Corpus",
                                training_opts: model_pb2.TrainingOptions,
                                cache_path,
                                ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for training."""
     d               = MaskLMBatchGenerator()
+    d.pytorch       = pytorch
+    d.torch         = pytorch.torch
     d.cache         = cache.mkcache(cache_path, "dataset")
     d.cache.path.mkdir(exist_ok = True, parents = True)
 
@@ -433,6 +437,7 @@ class MaskLMBatchGenerator(object):
 
   @classmethod
   def SampleMaskLMBatchGenerator(cls,
+                                pytorch,
                                 sampler,
                                 atomizer,
                                 seed: int,
@@ -441,6 +446,8 @@ class MaskLMBatchGenerator(object):
                                 ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
     d                         = MaskLMBatchGenerator()
+    d.pytorch       = pytorch
+    d.torch                   = pytorch.torch
     d.cache                   = cache.mkcache(cache_path, "dataset")
     d.sampler                 = sampler
     d.atomizer                = atomizer
@@ -527,13 +534,21 @@ class MaskLMBatchGenerator(object):
 
   def trainDataLoader(self):
     """Pytorch dataloader that assembles all dataset files into a single-mapped dataset."""
-    dataset = torch.utils.data.ConcatDataset(
-                [torch.load(x) for x in self.dataset['train_dataset']['pt_record']]
+    dataset = self.torch.utils.data.ConcatDataset(
+                [self.torch.load(x) for x in self.dataset['train_dataset']['pt_record']]
               )
-    loader = torch.utils.data.dataloader.DataLoader(
+    loader = self.torch.utils.data.dataloader.DataLoader(
       dataset     = dataset,
       batch_size  = self.training_opts.batch_size,
-      sampler     = torch.utils.data.RandomSampler(dataset, replacement = False),
+      sampler     = (
+            self.torch.utils.data.RandomSampler(dataset, replacement = False)
+            if not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
+            else self.torch.utils.data.distributed.DistributedSampler(
+                  dataset, 
+                  num_replicas = self.pytorch.torch_xla.xrt_world_size(), 
+                  rank = self.pytorch.torch_xla.get_ordinal()
+                 )
+            ),
       num_workers = os.cpu_count(),
       drop_last   = True,
     )
@@ -879,14 +894,14 @@ class MaskLMBatchGenerator(object):
       assert len(input_ids) == self.training_opts.sequence_length, "len(input_ids):  {}, sequence_length: {}".format(len(input_ids), self.training_opts.sequence_length)
 
       features = collections.OrderedDict()
-      features["seen_in_training"]     = torch.LongTensor([seen_in_training])
-      features["original_input"]       = torch.from_numpy(original_input)
-      features["input_ids"]            = torch.from_numpy(input_ids)
-      features["input_mask"]           = torch.from_numpy(input_mask)
-      features["position_ids"]         = torch.from_numpy(position_ids)
-      features["mask_labels"]          = torch.from_numpy(mask_labels)
-      features["masked_lm_lengths"]    = torch.from_numpy(masked_lm_lengths)
-      features["next_sentence_label"] = torch.LongTensor([next_sentence_label])
+      features["seen_in_training"]     = self.torch.LongTensor([seen_in_training])
+      features["original_input"]       = self.torch.from_numpy(original_input)
+      features["input_ids"]            = self.torch.from_numpy(input_ids)
+      features["input_mask"]           = self.torch.from_numpy(input_mask)
+      features["position_ids"]         = self.torch.from_numpy(position_ids)
+      features["mask_labels"]          = self.torch.from_numpy(mask_labels)
+      features["masked_lm_lengths"]    = self.torch.from_numpy(masked_lm_lengths)
+      features["next_sentence_label"]  = self.torch.LongTensor([next_sentence_label])
       feature_set.append(features)
 
       if FLAGS.write_text_dataset:
@@ -901,7 +916,7 @@ class MaskLMBatchGenerator(object):
                                     next_sentence_label)
                             )
 
-    torch.save(feature_set, masked_corpus['pt_record'])
+    self.torch.save(feature_set, masked_corpus['pt_record'])
     if FLAGS.write_text_dataset:
       file_writer.close()
     l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
