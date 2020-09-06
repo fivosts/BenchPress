@@ -26,7 +26,6 @@ import pathlib
 import datetime
 import numpy as np
 from absl import flags
-import torch
 import tqdm
 
 from deeplearning.clgen import samplers
@@ -96,31 +95,36 @@ class torchBert(backends.BackendBase):
 
   class BertEstimator(typing.NamedTuple):
     """Named tuple to wrap BERT pipeline."""
-    model      : torch.nn.Module
+    model      : typing.Any
     data_generator : MaskLMBatchGenerator
 
   def __init__(self, *args, **kwargs):
 
     super(torchBert, self).__init__(*args, **kwargs)
     
-    self.bertAttrs                       = None
-    self.bert_config                     = None
+    from deeplearning.clgen.util import pytorch
+    self.pytorch             = pytorch
+    self.torch               = pytorch.torch
+    self.torch_tpu_available = pytorch.torch_tpu_available
 
-    self.train                           = None
-    self.sample                          = None
-    self.predict_generator               = None
-    self.sampler                         = None
+    self.bertAttrs           = None
+    self.bert_config         = None
 
-    self.train_batch_size                = None
-    self.eval_batch_size                 = None
-    self.learning_rate                   = None
-    self.num_train_steps                 = None
-    self.num_warmup_steps                = None
-    self.telemetry                       = None
+    self.train               = None
+    self.sample              = None
+    self.predict_generator   = None
+    self.sampler             = None
 
-    self.ckpt_path                       = self._ConfigCheckpointParams()
-    self.logfile_path                    = self.cache.path / "logs"
-    self.sample_path                     = self.cache.path / "samples"
+    self.train_batch_size    = None
+    self.eval_batch_size     = None
+    self.learning_rate       = None
+    self.num_train_steps     = None
+    self.num_warmup_steps    = None
+    self.telemetry           = None
+
+    self.ckpt_path         = self._ConfigCheckpointParams()
+    self.logfile_path      = self.cache.path / "logs"
+    self.sample_path       = self.cache.path / "samples"
 
     self.is_validated                    = False
     l.getLogger().info("BERT Model config initialized in {}".format(self.cache.path))
@@ -200,10 +204,13 @@ class torchBert(backends.BackendBase):
     self.validation_results_file          = "val_results.txt"
     self.validation_results_path          = os.path.join(str(self.logfile_path), self.validation_results_file)
 
-    torch.manual_seed(self.config.training.random_seed)
-    torch.cuda.manual_seed_all(self.config.training.random_seed)
+    self.torch.manual_seed(self.config.training.random_seed)
+    self.torch.cuda.manual_seed_all(self.config.training.random_seed)
 
-    self.train = torchBert.BertEstimator(model.BertForPreTraining(self.bert_config), data_generator)
+    self.train = torchBert.BertEstimator(
+                    model.BertForPreTraining(self.bert_config).to(self.pytorch.device), 
+                    data_generator
+                )
     l.getLogger().info(self.GetShortSummary())
     return
 
@@ -254,47 +261,11 @@ class torchBert(backends.BackendBase):
   def samplesWithCategorical(self):
     return FLAGS.categorical_sampling
 
-  def create_optimizer_and_scheduler(self, 
-                                     num_train_steps: int,
-                                     warmup_steps: int,
-                                     learning_rate: float,
-                                     adam_beta1: float,
-                                     adam_beta2: float,
-                                     adam_epsilon: float,
-                                     weight_decay: float,
-                                     model,
-                                     ):
-    """
-    Setup the optimizer and the learning rate scheduler.
 
-    We provide a reasonable default that works well. If you want to use something else, you can pass a tuple in the
-    Trainer's init through :obj:`optimizers`, or subclass and override this method in a subclass.
-    """
-    no_decay = ["bias", "LayerNorm.weight"]
-    optimizer_grouped_parameters = [
-      {
-        "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
-        "weight_decay": weight_decay,
-      },
-      {
-        "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
-        "weight_decay": 0.0,
-      },
-    ]
-    opt = optimizer.AdamW(
-      optimizer_grouped_parameters,
-      lr = learning_rate,
-      betas = (adam_beta1, adam_beta2),
-      eps = adam_epsilon,
-    )
-    lr_scheduler = optimizer.get_linear_schedule_with_warmup(
-      opt, num_warmup_steps = warmup_steps, num_training_steps=num_train_steps
-    )
-    return opt, lr_scheduler
 
   def training_step(self, 
-                    model: torch.nn.Module, 
-                    inputs: typing.Dict[str, typing.Union[torch.Tensor, typing.Any]]
+                    model: typing.Any,# self.torch.nn.Module, 
+                    inputs,#: typing.Dict[str, typing.Union[self.torch.Tensor, typing.Any]]
                     ) -> float:
     """
     Perform a training step on a batch of inputs.
@@ -304,7 +275,7 @@ class torchBert(backends.BackendBase):
     Args:
       model (:obj:`nn.Module`):
         The model to train.
-      inputs (:obj:`Dict[str, Union[torch.Tensor, Any]]`):
+      inputs (:obj:`Dict[str, Union[self.torch.Tensor, Any]]`):
         The inputs and targets of the model.
 
         The dictionary will be unpacked before being fed to the model. Most models expect the targets under the
@@ -315,24 +286,41 @@ class torchBert(backends.BackendBase):
     """
     model.train()
 
-    # def _prepare_inputs(inputs: Dict[str, Union[torch.Tensor, Any]]) -> Dict[str, Union[torch.Tensor, Any]]:
+    # def _prepare_inputs(inputs: Dict[str, Union[self.torch.Tensor, Any]]) -> Dict[str, Union[self.torch.Tensor, Any]]:
     #   for k, v in inputs.items():
-    #     if isinstance(v, torch.Tensor):
+    #     if isinstance(v, self.torch.Tensor):
     #       inputs[k] = v.to(self.args.device)
     #   return inputs
     # inputs = _prepare_inputs(inputs)
 
+
+    # input()
+    dummy_inp = {}
+    for k, v in inputs.items():
+      dummy_inp[k] = v.to(self.pytorch.device)
+
+    # l.getLogger().warn(self.atomizer.DeatomizeIndices(self.dummy_inp['input_ids'][0].numpy()))
+    # l.getLogger().warn(self.atomizer.DeatomizeIndices([x for x in self.dummy_inp['mask_labels'][0].numpy() if x != -100]))
+    # l.getLogger().error(self.dummy_inp['mask_labels'][0])
+    # l.getLogger().error(self.dummy_inp['input_mask'][0])
+    # l.getLogger().error(self.dummy_inp['next_sentence_label'][0])
+
     outputs = model(
-                input_ids           = inputs['input_ids'],
-                attention_mask      = inputs['input_mask'],
-                position_ids        = inputs['position_ids'],
-                labels              = inputs['mask_labels'],
-                next_sentence_label = inputs['next_sentence_label']
+                input_ids           = dummy_inp['input_ids'],
+                attention_mask      = dummy_inp['input_mask'],
+                # position_ids        = dummy_inp['position_ids'],
+                labels              = dummy_inp['mask_labels'],
+                next_sentence_label = dummy_inp['next_sentence_label'],
+                atomizer = self.atomizer
               )
     # We don't use .loss here since the model may return tuples instead of ModelOutput.
     loss = outputs[0]
-    l.getLogger().warn(loss)
-    # if self.args.n_gpu > 1:
+
+    if self.counter % 50 == 0:
+      l.getLogger().warn("Total loss: {}".format(loss))
+    self.counter += 1
+
+    # if self.pytorch.num_gpus > 1:
     #   loss = loss.mean()  # mean() to average on multi-gpu parallel training
 
     # if self.args.gradient_accumulation_steps > 1:
@@ -355,7 +343,7 @@ class torchBert(backends.BackendBase):
         Local path to the model if the model to train has been instantiated from a local path. If present,
         training will resume from the optimizer/scheduler states loaded here.
     """
-
+    self.counter = 0
     data_generator = MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
                        corpus, self.config.training, self.cache.path)
 
@@ -367,18 +355,14 @@ class torchBert(backends.BackendBase):
     #   train_sampler = RandomSampler(self.train_dataset)
 
     train_dataloader = self.train.data_generator.trainDataLoader()
-    model = self.train.model
+    model = self.train.model.to(self.pytorch.device)
 
-    optimizer, lr_scheduler = self.create_optimizer_and_scheduler(
+    opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
+      model           = model,
       num_train_steps = self.num_train_steps,
-      warmup_steps    = 2,
+      warmup_steps    = self.num_warmup_steps,
       learning_rate   = self.learning_rate,
-      adam_beta1      = 0.9,
-      adam_beta2      = 0.999,
-      adam_epsilon    = 1e-6,
-      weight_decay    = 0.0,
-      model           = model
-      )
+    )
 
     # Check if saved optimizer or scheduler states exist
     # if (
@@ -387,10 +371,10 @@ class torchBert(backends.BackendBase):
     #   and os.path.isfile(os.path.join(model_path, "scheduler.pt"))
     # ):
     #   # Load in optimizer and scheduler states
-    #   optimizer.load_state_dict(
-    #     torch.load(os.path.join(model_path, "optimizer.pt"), map_location=self.args.device)
+    #   opt.load_state_dict(
+    #     self.torch.load(os.path.join(model_path, "optimizer.pt"), map_location=self.args.device)
     #   )
-    #   lr_scheduler.load_state_dict(torch.load(os.path.join(model_path, "scheduler.pt")))
+    #   lr_scheduler.load_state_dict(self.torch.load(os.path.join(model_path, "scheduler.pt")))
 
     dummy_num_gpus = 1
     dummy_num_machines = -1
@@ -400,11 +384,11 @@ class torchBert(backends.BackendBase):
 
     # multi-gpu training (should be after apex fp16 initialization)
     if dummy_num_gpus > 1:
-      model = torch.nn.DataParallel(model)
+      model = self.torch.nn.DataParallel(model)
 
     # Distributed training (should be after apex fp16 initialization)
     if dummy_num_machines != -1:
-      model = torch.nn.parallel.DistributedDataParallel(
+      model = self.torch.nn.parallel.DistributedDataParallel(
         model,
         device_ids=[dummy_num_machines],
         output_device=dummy_num_machines,
@@ -426,7 +410,7 @@ class torchBert(backends.BackendBase):
       total_train_batch_size = (
         self.train_batch_size
         * dummy_gradient_accumulation_steps
-        * (torch.distributed.get_world_size() if dummy_num_machines != -1 else 1)
+        * (self.torch.distributed.get_world_size() if dummy_num_machines != -1 else 1)
       )
     l.getLogger().info("***** Running training *****")
     # logger.info("  Num examples = %d", self.num_examples(train_dataloader))
@@ -465,7 +449,7 @@ class torchBert(backends.BackendBase):
       epochs_trained, int(np.ceil(self.num_epochs)), desc="Epoch", disable=not True
     )
     for epoch in train_iterator:
-      if isinstance(train_dataloader, torch.utils.data.DataLoader) and isinstance(train_dataloader.sampler, torch.utils.data.DistributedSampler):
+      if isinstance(train_dataloader, self.torch.utils.data.DataLoader) and isinstance(train_dataloader.sampler, self.torch.utils.data.DistributedSampler):
         train_dataloader.sampler.set_epoch(epoch)
 
       if self.torch_tpu_available:
@@ -492,25 +476,25 @@ class torchBert(backends.BackendBase):
         # ):
         # if self.args.fp16 and _use_native_amp:
         if False:
-          self.scaler.unscale_(optimizer)
-          torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
+          self.scaler.unscale_(opt)
+          self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
         # elif self.args.fp16 and _use_apex:
         elif False:
-          torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), dummy_max_grad_norm)
+          self.torch.nn.utils.clip_grad_norm_(amp.master_params(opt), dummy_max_grad_norm)
         else:
-          torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
+          self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
 
         if self.torch_tpu_available:
-          xm.optimizer_step(optimizer)
+          xm.optimizer_step(opt)
         # elif self.args.fp16 and _use_native_amp:
         elif False:
-          self.scaler.step(optimizer)
+          self.scaler.step(opt)
           self.scaler.update()
         else:
-          # optimizer.step()
+          # opt.step()
           pass
 
-        optimizer.step()
+        opt.step()
         lr_scheduler.step()
         model.zero_grad()
         self.global_step += 1
@@ -549,11 +533,11 @@ class torchBert(backends.BackendBase):
 
           #   if self.torch_tpu_available:
           #     xm.rendezvous("saving_optimizer_states")
-          #     xm.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
+          #     xm.save(opt.state_dict(), os.path.join(output_dir, "optimizer.pt"))
           #     xm.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
           #   elif self.is_world_process_zero():
-          #     torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
-          #     torch.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+          #     self.torch.save(opt.state_dict(), os.path.join(output_dir, "optimizer.pt"))
+          #     self.torch.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
 
         # if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
         #   epoch_iterator.close()
