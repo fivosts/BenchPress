@@ -457,29 +457,7 @@ class torchBert(backends.BackendBase):
           #   self.evaluate()
 
           # if self.args.save_steps > 0 and global_step % self.args.save_steps == 0:
-          #   # In all cases (even distributed/parallel), self.model is always a reference
-          #   # to the model we want to save.
-          #   if hasattr(model, "module"):
-          #     assert (
-          #       model.module is self.model
-          #     ), f"Module {model.module} should be a reference to self.model"
-          #   else:
-          #     assert model is self.model, f"Model {model} should be a reference to self.model"
-          #   # Save model checkpoint
-          #   output_dir = os.path.join(self.args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{global_step}")
 
-          #   self.save_model(output_dir)
-
-          #   if self.is_world_process_zero():
-          #     self._rotate_checkpoints()
-
-          #   if self.torch_tpu_available:
-          #     self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
-          #     self.pytorch.torch_xla.save(opt.state_dict(), os.path.join(output_dir, "optimizer.pt"))
-          #     self.pytorch.torch_xla.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
-          #   elif self.is_world_process_zero():
-          #     self.torch.save(opt.state_dict(), os.path.join(output_dir, "optimizer.pt"))
-          #     self.torch.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
       if self.torch_tpu_available:
         self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
       else:
@@ -487,6 +465,26 @@ class torchBert(backends.BackendBase):
           "You enabled PyTorch/XLA debug metrics but you don't have a TPU configured. Check your training configuration if this is unexpected."
         )
     return
+
+  def checkpointModel(self, global_step):
+    # Save model checkpoint
+
+    output_dir = lambda x: self.ckpt_path / "{}-{}.pt".format(x, global_step)
+    self.save_model(output_dir)
+
+    if self.is_world_process_zero():
+      self._rotate_checkpoints()
+
+    if self.torch_tpu_available:
+      self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
+      self.pytorch.torch_xla.save(self.train.optimizer.state_dict(), output_dir("optimizer"))
+      self.pytorch.torch_xla.save(self.train.scheduler.state_dict(), output_dir("scheduler"))
+    elif self.is_world_process_zero():
+      self.torch.save(self.train.optimizer.state_dict(), output_dir("optimizer"))
+      self.torch.save(self.train.scheduler.state_dict(), output_dir("scheduler"))
+
+    return
+
 
   def Validate(self) -> None:
     l.getLogger().info("BERT Validation")
