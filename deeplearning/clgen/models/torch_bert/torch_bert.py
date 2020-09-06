@@ -154,6 +154,7 @@ class torchBert(backends.BackendBase):
     return ckpt_path
 
   def _ConfigModelParams(self):
+    """General model hyperparameters initialization."""
     self.bertAttrs = {
           "vocab_size"                   : self.atomizer.vocab_size,
           "hidden_size"                  : self.config.architecture.hidden_size,
@@ -173,12 +174,9 @@ class torchBert(backends.BackendBase):
       self.config.architecture.hidden_dropout_prob
       )
     )
-    try:
-      import torch_xla.core.xla_model
-      self.torch_tpu_available = True
-    except ImportError:
-      self.torch_tpu_available = False
-    self.bert_config                     = config.BertConfig.from_dict(self.bertAttrs, xla_device = self.torch_tpu_available)
+    self.bert_config = config.BertConfig.from_dict(
+      self.bertAttrs, xla_device = self.torch_tpu_available
+    )
     return
 
   def _ConfigTrainParams(self, 
