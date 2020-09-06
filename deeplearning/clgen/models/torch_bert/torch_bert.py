@@ -122,11 +122,11 @@ class torchBert(backends.BackendBase):
     self.num_warmup_steps    = None
     self.telemetry           = None
 
-    self.ckpt_path         = self._ConfigCheckpointParams()
-    self.logfile_path      = self.cache.path / "logs"
-    self.sample_path       = self.cache.path / "samples"
+    self.ckpt_path           = self._ConfigCheckpointParams()
+    self.logfile_path        = self.cache.path / "logs"
+    self.sample_path         = self.cache.path / "samples"
 
-    self.is_validated                    = False
+    self.is_validated        = False
     l.getLogger().info("BERT Model config initialized in {}".format(self.cache.path))
     return
 
@@ -162,8 +162,8 @@ class torchBert(backends.BackendBase):
           "num_attention_heads"          : self.config.architecture.num_attention_heads,
           "intermediate_size"            : self.config.architecture.intermediate_size,
           "hidden_act"                   : self.config.architecture.hidden_act,
-          "hidden_dropout_prob"          : 1.0 - self.config.architecture.hidden_dropout_prob,
-          "attention_probs_dropout_prob" : 1.0 - self.config.architecture.attention_probs_dropout_prob,
+          "hidden_dropout_prob"          : self.config.architecture.hidden_dropout_prob,
+          "attention_probs_dropout_prob" : self.config.architecture.attention_probs_dropout_prob,
           "max_position_embeddings"      : self.config.architecture.max_position_embeddings,
           "type_vocab_size"              : self.config.architecture.type_vocab_size,
           "initializer_range"            : self.config.architecture.initializer_range,
@@ -259,8 +259,6 @@ class torchBert(backends.BackendBase):
   def samplesWithCategorical(self):
     return FLAGS.categorical_sampling
 
-
-
   def training_step(self, 
                     model: typing.Any,# self.torch.nn.Module, 
                     inputs,#: typing.Dict[str, typing.Union[self.torch.Tensor, typing.Any]]
@@ -283,33 +281,15 @@ class torchBert(backends.BackendBase):
       :obj:`float`: The training loss on this batch.
     """
     model.train()
-
-    # def _prepare_inputs(inputs: Dict[str, Union[self.torch.Tensor, Any]]) -> Dict[str, Union[self.torch.Tensor, Any]]:
-    #   for k, v in inputs.items():
-    #     if isinstance(v, self.torch.Tensor):
-    #       inputs[k] = v.to(self.args.device)
-    #   return inputs
-    # inputs = _prepare_inputs(inputs)
-
-
-    # input()
-    dummy_inp = {}
-    for k, v in inputs.items():
-      dummy_inp[k] = v.to(self.pytorch.device)
-
-    # l.getLogger().warn(self.atomizer.DeatomizeIndices(self.dummy_inp['input_ids'][0].numpy()))
-    # l.getLogger().warn(self.atomizer.DeatomizeIndices([x for x in self.dummy_inp['mask_labels'][0].numpy() if x != -100]))
-    # l.getLogger().error(self.dummy_inp['mask_labels'][0])
-    # l.getLogger().error(self.dummy_inp['input_mask'][0])
-    # l.getLogger().error(self.dummy_inp['next_sentence_label'][0])
+    for key, value in inputs.items():
+      inputs[k] = value.to(self.pytorch.device)
 
     outputs = model(
-                input_ids           = dummy_inp['input_ids'],
-                attention_mask      = dummy_inp['input_mask'],
-                # position_ids        = dummy_inp['position_ids'],
-                labels              = dummy_inp['mask_labels'],
-                next_sentence_label = dummy_inp['next_sentence_label'],
-                atomizer = self.atomizer
+                input_ids           = inputs['input_ids'],
+                attention_mask      = inputs['input_mask'],
+                position_ids        = inputs['position_ids'],
+                labels              = inputs['mask_labels'],
+                next_sentence_label = inputs['next_sentence_label']
               )
     # We don't use .loss here since the model may return tuples instead of ModelOutput.
     loss = outputs[0]
@@ -318,11 +298,8 @@ class torchBert(backends.BackendBase):
       l.getLogger().warn("Total loss: {}".format(loss))
     self.counter += 1
 
-    # if self.pytorch.num_gpus > 1:
-    #   loss = loss.mean()  # mean() to average on multi-gpu parallel training
-
-    # if self.args.gradient_accumulation_steps > 1:
-    #   loss = loss / self.args.gradient_accumulation_steps
+    if self.pytorch.num_gpus > 1:
+      loss = loss.mean()  # mean() to average on multi-gpu parallel training
 
     loss.backward()
     return loss.item()
@@ -332,25 +309,15 @@ class torchBert(backends.BackendBase):
             test_sampler: typing.Optional[samplers.Sampler] = None,
             **unused_kwargs
             ) -> None:
-
     """
     Main training entry point.
-
-    Args:
-      model_path (:obj:`str`, `optional`):
-        Local path to the model if the model to train has been instantiated from a local path. If present,
-        training will resume from the optimizer/scheduler states loaded here.
     """
     self.counter = 0
     data_generator = MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
-                       corpus, self.config.training, self.cache.path)
+                       self.pytorch, corpus, self.config.training, self.cache.path
+                     )
 
     self._ConfigTrainParams(data_generator)
-
-    # if self.torch_tpu_available:
-    #   train_sampler = get_tpu_sampler(self.train_dataset)
-    # else:
-    #   train_sampler = RandomSampler(self.train_dataset)
 
     train_dataloader = self.train.data_generator.trainDataLoader()
     model = self.train.model.to(self.pytorch.device)
@@ -362,6 +329,9 @@ class torchBert(backends.BackendBase):
       learning_rate   = self.learning_rate,
     )
 
+    """
+    WARNING
+    """
     # Check if saved optimizer or scheduler states exist
     # if (
     #   model_path is not None
@@ -373,15 +343,17 @@ class torchBert(backends.BackendBase):
     #     self.torch.load(os.path.join(model_path, "optimizer.pt"), map_location=self.args.device)
     #   )
     #   lr_scheduler.load_state_dict(self.torch.load(os.path.join(model_path, "scheduler.pt")))
+    """
+    WARNING
+    """
 
-    dummy_num_gpus = 1
     dummy_num_machines = -1
     dummy_gradient_accumulation_steps = 1
     dummy_max_grad_norm = 1.0
     dummy_logging_steps = 20
 
     # multi-gpu training (should be after apex fp16 initialization)
-    if dummy_num_gpus > 1:
+    if self.pytorch.num_gpus > 1:
       model = self.torch.nn.DataParallel(model)
 
     # Distributed training (should be after apex fp16 initialization)
@@ -393,21 +365,12 @@ class torchBert(backends.BackendBase):
         find_unused_parameters=True,
       )
 
-    # if self.tb_writer is not None:
-    #   self.tb_writer.add_text("args", self.args.to_json_string())
-    #   self.tb_writer.add_hparams(self.args.to_sanitized_dict(), metric_dict={})
-
-    # import torch_xla.core.xla_model as xm
-    # import torch_xla.debug.metrics as met
-    # import torch_xla.distributed.parallel_loader as pl
-
     # Train!
     if self.torch_tpu_available:
-      total_train_batch_size = self.train_batch_size * xm.xrt_world_size()
+      total_train_batch_size = self.train_batch_size * self.pytorch.torch_xla.xrt_world_size()
     else:
       total_train_batch_size = (
         self.train_batch_size
-        * dummy_gradient_accumulation_steps
         * (self.torch.distributed.get_world_size() if dummy_num_machines != -1 else 1)
       )
     l.getLogger().info("***** Running training *****")
@@ -422,6 +385,12 @@ class torchBert(backends.BackendBase):
     self.epoch = 0
     epochs_trained = 0
     steps_trained_in_current_epoch = 0
+
+
+
+    """
+    WARNING
+    """
     # Check if continuing training from a checkpoint
     # if model_path is not None:
     #   # set global_step to global_step of last saved checkpoint from model path
@@ -439,60 +408,39 @@ class torchBert(backends.BackendBase):
     #   except ValueError:
     #     self.global_step = 0
     #     logger.info("  Starting fine-tuning.")
+    """
+    WARNING
+    """
+
 
     tr_loss = 0.0
     logging_loss = 0.0
     model.zero_grad()
     train_iterator = tqdm.auto.trange(
-      epochs_trained, int(np.ceil(self.num_epochs)), desc="Epoch", disable=not True
-    )
+      epochs_trained, int(np.ceil(self.num_epochs)), desc="Epoch")
     for epoch in train_iterator:
-      if isinstance(train_dataloader, self.torch.utils.data.DataLoader) and isinstance(train_dataloader.sampler, self.torch.utils.data.DistributedSampler):
+      if isinstance(train_dataloader.sampler, self.torch.utils.data.distributed.DistributedSampler):
         train_dataloader.sampler.set_epoch(epoch)
 
       if self.torch_tpu_available:
-        parallel_loader = pl.ParallelLoader(train_dataloader, [self.args.device]).per_device_loader(
-          self.args.device
-        )
-        epoch_iterator = tqdm.auto.tqdm(parallel_loader, desc="Iteration", disable=not True)
+        parallel_loader = self.pytorch.torch_ploader.ParallelLoader(
+                            train_dataloader, [self.args.device]
+                          ).per_device_loader(self.args.device)
+        epoch_iterator = tqdm.auto.tqdm(parallel_loader, desc="Batch")
       else:
-        epoch_iterator = tqdm.auto.tqdm(train_dataloader, desc="Iteration", disable=not True)
+        epoch_iterator = tqdm.auto.tqdm(train_dataloader, desc="Batch")
 
       for step, inputs in enumerate(epoch_iterator):
 
-        # Skip past any already trained steps if resuming training
-        if steps_trained_in_current_epoch > 0:
-          steps_trained_in_current_epoch -= 1
-          continue
-
         tr_loss += self.training_step(model, inputs)
 
-        # if (step + 1) % dummy_gradient_accumulation_steps == 0 or (
-        #   # last step in epoch but step is always smaller than gradient_accumulation_steps
-        #   len(epoch_iterator) <= dummy_gradient_accumulation_steps
-        #   and (step + 1) == len(epoch_iterator)
-        # ):
-        # if self.args.fp16 and _use_native_amp:
-        if False:
-          self.scaler.unscale_(opt)
-          self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
-        # elif self.args.fp16 and _use_apex:
-        elif False:
-          self.torch.nn.utils.clip_grad_norm_(amp.master_params(opt), dummy_max_grad_norm)
-        else:
-          self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
+        self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
 
         if self.torch_tpu_available:
-          xm.optimizer_step(opt)
-        # elif self.args.fp16 and _use_native_amp:
-        elif False:
-          self.scaler.step(opt)
-          self.scaler.update()
+          self.pytorch.torch_xla.optimizer_step(opt)
         else:
-          # opt.step()
-          pass
+          opt.step()
 
-        opt.step()
         lr_scheduler.step()
         model.zero_grad()
         self.global_step += 1
@@ -530,9 +478,9 @@ class torchBert(backends.BackendBase):
           #     self._rotate_checkpoints()
 
           #   if self.torch_tpu_available:
-          #     xm.rendezvous("saving_optimizer_states")
-          #     xm.save(opt.state_dict(), os.path.join(output_dir, "optimizer.pt"))
-          #     xm.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+          #     self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
+          #     self.pytorch.torch_xla.save(opt.state_dict(), os.path.join(output_dir, "optimizer.pt"))
+          #     self.pytorch.torch_xla.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
           #   elif self.is_world_process_zero():
           #     self.torch.save(opt.state_dict(), os.path.join(output_dir, "optimizer.pt"))
           #     self.torch.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
@@ -546,20 +494,13 @@ class torchBert(backends.BackendBase):
       # if self.args.tpu_metrics_debug or self.args.debug:
       #   if self.torch_tpu_available:
       #     # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
-      #     xm.master_print(met.metrics_report())
+      #     self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
       #   else:
       #     logger.warning(
       #       "You enabled PyTorch/XLA debug metrics but you don't have a TPU "
       #       "configured. Check your training configuration if this is unexpected."
       #     )
-
-    if self.tb_writer:
-      self.tb_writer.close()
-    if self.args.past_index and hasattr(self, "_past"):
-      # Clean the state at the end of training
-      delattr(self, "_past")
-
-    return TrainOutput(self.global_step, tr_loss / self.global_step)
+    return
 
   def Validate(self) -> None:
     l.getLogger().info("BERT Validation")
@@ -585,7 +526,8 @@ class torchBert(backends.BackendBase):
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
     data_generator = MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
-                       sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings, self.cache.path
+                       self.pytorch, sampler, self.atomizer, seed, 
+                       self.config.architecture.max_position_embeddings, self.cache.path
                      )
     self._ConfigSampleParams(data_generator, sampler)
     l.getLogger().info("Initialized model samples in {}".format(self.sample_path))
