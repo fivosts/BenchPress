@@ -31,7 +31,6 @@ from absl import flags
 from deeplearning.clgen import samplers
 from deeplearning.clgen import sample_observers
 from deeplearning.clgen import validation_database
-from deeplearning.clgen.util.tf import tf
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
@@ -96,13 +95,17 @@ class tfBert(backends.BackendBase):
 
   class BertEstimator(typing.NamedTuple):
     """Named tuple to wrap BERT estimator pipeline."""
-    estimator      : tf.compat.v1.estimator.tpu.TPUEstimator
+    estimator      : typing.Any # tf.compat.v1.estimator.tpu.TPUEstimator
     data_generator : MaskLMBatchGenerator
 
   def __init__(self, *args, **kwargs):
 
     super(tfBert, self).__init__(*args, **kwargs)
-    
+
+    from deeplearning.clgen.util import tf
+    tf.initTensorflow()
+
+    self.tf                              = tf.tf
     self.bertAttrs                       = None
     self.bert_config                     = None
 
@@ -192,13 +195,13 @@ class tfBert(backends.BackendBase):
 
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
-      tpu_cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
+      tpu_cluster_resolver = self.tf.distribute.cluster_resolver.TPUClusterResolver(
           FLAGS.tpu_name, zone = FLAGS.tpu_zone, project = FLAGS.gcp_project)
 
-    train_distribute = tf.distribute.MirroredStrategy(num_gpus = gpu.numGPUs()) if FLAGS.use_tpu and FLAGS.mirror_gpus else None
+    train_distribute = self.tf.distribute.MirroredStrategy(num_gpus = gpu.numGPUs()) if FLAGS.use_tpu and FLAGS.mirror_gpus else None
 
-    is_per_host      = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
-    run_config  = tf.compat.v1.estimator.tpu.RunConfig(
+    is_per_host      = self.tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
+    run_config  = self.tf.compat.v1.estimator.tpu.RunConfig(
                     cluster   = tpu_cluster_resolver,
                     master    = FLAGS.master,
                     model_dir = str(self.ckpt_path),
@@ -207,7 +210,7 @@ class tfBert(backends.BackendBase):
                     keep_checkpoint_max     = 0,
                     log_step_count_steps    = self.steps_per_epoch,
                     train_distribute        = train_distribute,
-                    tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
+                    tpu_config = self.tf.compat.v1.estimator.tpu.TPUConfig(
                         iterations_per_loop = self.steps_per_epoch,
                         num_shards          = FLAGS.num_tpu_cores,
                         per_host_input_for_training = is_per_host)
@@ -217,7 +220,7 @@ class tfBert(backends.BackendBase):
                     )
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
-    self.train = tfBert.BertEstimator(tf.compat.v1.estimator.tpu.TPUEstimator(
+    self.train = tfBert.BertEstimator(self.tf.compat.v1.estimator.tpu.TPUEstimator(
                             use_tpu  = FLAGS.use_tpu,
                             model_fn = model_fn,
                             config   = run_config,
@@ -249,15 +252,15 @@ class tfBert(backends.BackendBase):
       
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
-      tpu_cluster_resolver = tf.compat.v1.cluster_resolver.TPUClusterResolver(
+      tpu_cluster_resolver = self.tf.compat.v1.cluster_resolver.TPUClusterResolver(
           FLAGS.tpu_name, zone = FLAGS.tpu_zone, project = FLAGS.gcp_project)
 
-    is_per_host = tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
-    run_config  = tf.compat.v1.estimator.tpu.RunConfig(
+    is_per_host = self.tf.compat.v1.estimator.tpu.InputPipelineConfig.PER_HOST_V2
+    run_config  = self.tf.compat.v1.estimator.tpu.RunConfig(
         cluster    = tpu_cluster_resolver,
         master     = FLAGS.master,
         model_dir  = str(self.ckpt_path),
-        tpu_config = tf.compat.v1.estimator.tpu.TPUConfig(
+        tpu_config = self.tf.compat.v1.estimator.tpu.TPUConfig(
             num_shards = FLAGS.num_tpu_cores,
             per_host_input_for_training = is_per_host))
 
@@ -265,7 +268,7 @@ class tfBert(backends.BackendBase):
 
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
-    self.sample = tfBert.BertEstimator(tf.compat.v1.estimator.tpu.TPUEstimator(
+    self.sample = tfBert.BertEstimator(self.tf.compat.v1.estimator.tpu.TPUEstimator(
                             use_tpu  = FLAGS.use_tpu,
                             model_fn = model_fn,
                             config   = run_config,
@@ -466,7 +469,7 @@ class tfBert(backends.BackendBase):
     return sorted(paths)
 
   def _writeValidation(self, result, tf_set) -> None:
-    with tf.io.gfile.GFile(self.validation_results_path, "w") as writer:
+    with self.tf.io.gfile.GFile(self.validation_results_path, "w") as writer:
       db = validation_database.ValidationDatabase("sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")))
       r = [ "{}: {}".format(key, str(result[key])) for key in result.keys() ]
       with db.Session(commit = True) as session:
@@ -497,7 +500,7 @@ class tfBert(backends.BackendBase):
       masked_lm_lengths    = features["masked_lm_lengths"]
       next_sentence_labels = features["next_sentence_labels"]
 
-      is_training = (mode == tf.compat.v1.estimator.ModeKeys.TRAIN)
+      is_training = (mode == self.tf.compat.v1.estimator.ModeKeys.TRAIN)
 
       bert_model = model.BertModel(
           config=bert_config,
@@ -517,7 +520,7 @@ class tfBert(backends.BackendBase):
            bert_config, bert_model.get_pooled_output(), next_sentence_labels)
 
       total_loss = masked_lm_loss + next_sentence_loss
-      tvars = tf.compat.v1.trainable_variables()
+      tvars = self.tf.compat.v1.trainable_variables()
 
       initialized_variable_names = {}
       scaffold_fn = None
@@ -527,18 +530,18 @@ class tfBert(backends.BackendBase):
         if FLAGS.use_tpu:
 
           def _tpu_scaffold():
-            tf.compat.v1.train.init_from_checkpoint(str(self.ckpt_path), assignment_map)
-            return tf.train.Scaffold()
+            self.tf.compat.v1.train.init_from_checkpoint(str(self.ckpt_path), assignment_map)
+            return self.tf.train.Scaffold()
 
           scaffold_fn = _tpu_scaffold
         else:
-          if mode != tf.compat.v1.estimator.ModeKeys.PREDICT:
+          if mode != self.tf.compat.v1.estimator.ModeKeys.PREDICT:
             l.getLogger().info("Loading model checkpoint from: {}".format(str(self.ckpt_path)))
-          tf.compat.v1.train.init_from_checkpoint(str(self.ckpt_path), assignment_map)
+          self.tf.compat.v1.train.init_from_checkpoint(str(self.ckpt_path), assignment_map)
 
       output_spec = None
-      if mode == tf.compat.v1.estimator.ModeKeys.TRAIN:        
-        with tf.compat.v1.variable_scope("training"):
+      if mode == self.tf.compat.v1.estimator.ModeKeys.TRAIN:        
+        with self.tf.compat.v1.variable_scope("training"):
 
           train_op, learning_rate = optimizer.create_optimizer(
               total_loss, self.learning_rate, self.num_train_steps, self.num_warmup_steps, FLAGS.use_tpu)
@@ -550,38 +553,38 @@ class tfBert(backends.BackendBase):
                                                  learning_rate = learning_rate,
                                                 )
 
-          output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
+          output_spec = self.tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
               mode = mode,
               loss = total_loss,
               train_op = train_op,
               training_hooks = training_hooks,
               scaffold_fn = scaffold_fn)
-      elif mode == tf.compat.v1.estimator.ModeKeys.EVAL:
-        with tf.compat.v1.variable_scope("evaluation"):
+      elif mode == self.tf.compat.v1.estimator.ModeKeys.EVAL:
+        with self.tf.compat.v1.variable_scope("evaluation"):
 
           def _metric_fn(masked_lm_example_loss, masked_lm_predictions, masked_lm_ids,
                         masked_lm_weights, next_sentence_example_loss,
                         next_sentence_predictions, next_sentence_labels):
             """Computes the loss and accuracy of the model."""            
-            masked_lm_example_loss = tf.reshape(masked_lm_example_loss, [-1])
-            masked_lm_ids = tf.reshape(masked_lm_ids, [-1])
-            masked_lm_weights = tf.reshape(masked_lm_weights, [-1])
-            masked_lm_accuracy = tf.compat.v1.metrics.accuracy(
+            masked_lm_example_loss = self.tf.reshape(masked_lm_example_loss, [-1])
+            masked_lm_ids = self.tf.reshape(masked_lm_ids, [-1])
+            masked_lm_weights = self.tf.reshape(masked_lm_weights, [-1])
+            masked_lm_accuracy = self.tf.compat.v1.metrics.accuracy(
                 labels=masked_lm_ids,
                 predictions=masked_lm_predictions,
                 weights=masked_lm_weights, 
                 name = "masked_lm_mean_loss")
-            masked_lm_mean_loss = tf.compat.v1.metrics.mean(
+            masked_lm_mean_loss = self.tf.compat.v1.metrics.mean(
                 values=masked_lm_example_loss, 
                 weights=masked_lm_weights, 
                 name = "masked_lm_mean_loss")
 
-            next_sentence_labels = tf.reshape(next_sentence_labels, [-1])
-            next_sentence_accuracy = tf.compat.v1.metrics.accuracy(
+            next_sentence_labels = self.tf.reshape(next_sentence_labels, [-1])
+            next_sentence_accuracy = self.tf.compat.v1.metrics.accuracy(
                 labels=next_sentence_labels, 
                 predictions=next_sentence_predictions, 
                 name = "next_sentence_accuracy")
-            next_sentence_mean_loss = tf.compat.v1.metrics.mean(
+            next_sentence_mean_loss = self.tf.compat.v1.metrics.mean(
                 values=next_sentence_example_loss, 
                 name = "next_sentence_mean_loss")
 
@@ -592,17 +595,17 @@ class tfBert(backends.BackendBase):
                 'next_sentence_loss'        : next_sentence_mean_loss,
             }
 
-          masked_lm_log_probs = tf.reshape(
+          masked_lm_log_probs = self.tf.reshape(
             masked_lm_log_probs, [-1, masked_lm_log_probs.shape[-1]]
           )
-          masked_lm_predictions = tf.argmax(
-            masked_lm_log_probs, axis=-1, output_type=tf.int32,# name = "masked_lm_predictions"
+          masked_lm_predictions = self.tf.argmax(
+            masked_lm_log_probs, axis=-1, output_type=self.tf.int32,# name = "masked_lm_predictions"
           )
-          next_sentence_log_probs = tf.reshape(
+          next_sentence_log_probs = self.tf.reshape(
             next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]]
           )
-          next_sentence_predictions = tf.argmax(
-            next_sentence_log_probs, axis=-1, output_type=tf.int32,# name = "next_sentence_predictions"
+          next_sentence_predictions = self.tf.argmax(
+            next_sentence_log_probs, axis=-1, output_type=self.tf.int32,# name = "next_sentence_predictions"
           )
 
           eval_metrics = (_metric_fn, [
@@ -627,21 +630,21 @@ class tfBert(backends.BackendBase):
             next_sentence_predictions = next_sentence_predictions,
           ) 
 
-          output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
+          output_spec = self.tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
               mode = mode,
               loss = total_loss,
               evaluation_hooks = evaluation_hooks,
               eval_metrics = eval_metrics,
               scaffold_fn = scaffold_fn)
-      elif mode == tf.compat.v1.estimator.ModeKeys.PREDICT:
+      elif mode == self.tf.compat.v1.estimator.ModeKeys.PREDICT:
 
-        with tf.compat.v1.variable_scope("predict"):
+        with self.tf.compat.v1.variable_scope("predict"):
 
           mask_batch_size, mask_seq_length = model.get_shape_list(masked_lm_positions,  expected_rank = 2)
           next_batch_size, next_seq_length = model.get_shape_list(next_sentence_labels, expected_rank = 2)
 
-          masked_lm_log_probs       = tf.reshape(masked_lm_log_probs,     [-1, masked_lm_log_probs.shape[-1]])
-          next_sentence_log_probs   = tf.reshape(next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]])
+          masked_lm_log_probs       = self.tf.reshape(masked_lm_log_probs,     [-1, masked_lm_log_probs.shape[-1]])
+          next_sentence_log_probs   = self.tf.reshape(next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]])
 
           if FLAGS.categorical_sampling:
 
@@ -653,22 +656,22 @@ class tfBert(backends.BackendBase):
 
           else:
 
-            masked_lm_predictions     = tf.argmax(masked_lm_log_probs,     axis = -1, output_type = tf.int32)
-            next_sentence_predictions = tf.argmax(next_sentence_log_probs, axis = -1, output_type = tf.int32)
+            masked_lm_predictions     = self.tf.argmax(masked_lm_log_probs,     axis = -1, output_type = self.tf.int32)
+            next_sentence_predictions = self.tf.argmax(next_sentence_log_probs, axis = -1, output_type = self.tf.int32)
 
-          masked_lm_predictions     = tf.reshape(masked_lm_predictions,     shape = [mask_batch_size, mask_seq_length])
-          next_sentence_predictions = tf.reshape(next_sentence_predictions, shape = [next_batch_size, next_seq_length])
+          masked_lm_predictions     = self.tf.reshape(masked_lm_predictions,     shape = [mask_batch_size, mask_seq_length])
+          next_sentence_predictions = self.tf.reshape(next_sentence_predictions, shape = [next_batch_size, next_seq_length])
 
-          input_ids                 = tf.expand_dims(input_ids,                 0, name = "input_ids")
-          masked_lm_predictions     = tf.expand_dims(masked_lm_predictions,     0, name = "masked_lm_predictions")
-          next_sentence_predictions = tf.expand_dims(next_sentence_predictions, 0, name = "next_sentence_predictions")
+          input_ids                 = self.tf.expand_dims(input_ids,                 0, name = "input_ids")
+          masked_lm_predictions     = self.tf.expand_dims(masked_lm_predictions,     0, name = "masked_lm_predictions")
+          next_sentence_predictions = self.tf.expand_dims(next_sentence_predictions, 0, name = "next_sentence_predictions")
 
           prediction_metrics = {
               'input_ids'                 : input_ids,
               'masked_lm_predictions'     : masked_lm_predictions,
               'next_sentence_predictions' : next_sentence_predictions,
           }
-          output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
+          output_spec = self.tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
               mode = mode,
               predictions = prediction_metrics,
               scaffold_fn = scaffold_fn)
@@ -679,12 +682,12 @@ class tfBert(backends.BackendBase):
     return _model_fn
 
   def GetTrainingHooks(self,
-                       tensors: typing.Dict[str, tf.Tensor],
+                       tensors: typing.Dict[str, typing.Any],
                        log_steps:  int = None, 
                        max_steps:  int = None,
                        output_dir: pathlib.Path = None,
                        **kwargs
-                       ) -> typing.List[tf.estimator.SessionRunHook]:
+                       ):# -> typing.List[typing.Any("tfBert.tf.estimator.SessionRunHook")]:
     if log_steps is None:
       log_steps = self.steps_per_epoch
     if max_steps is None:
@@ -692,7 +695,7 @@ class tfBert(backends.BackendBase):
     if output_dir is None:
       output_dir = self.logfile_path
 
-    summary_tensors = ([ tf.compat.v1.summary.scalar(name, value) 
+    summary_tensors = ([ self.tf.compat.v1.summary.scalar(name, value) 
                               for name, value in kwargs.items()
                           ],
                         [ value for (name, value) in kwargs.items()
@@ -716,10 +719,10 @@ class tfBert(backends.BackendBase):
   def GetValidationHooks(self,
                          max_steps = None,
                          **kwargs
-                         ) -> typing.List[tf.estimator.SessionRunHook]:
+                         ):# -> typing.List[self.tf.estimator.SessionRunHook]:
     if max_steps is None:
       max_steps = self.max_eval_steps
     return [
-            hooks.tfProgressBar(max_length = max_steps, mode = tf.compat.v1.estimator.ModeKeys.EVAL),
+            hooks.tfProgressBar(max_length = max_steps, mode = self.tf.compat.v1.estimator.ModeKeys.EVAL),
             hooks.writeValidationDB(**kwargs)
             ]
