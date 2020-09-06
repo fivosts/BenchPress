@@ -25,6 +25,42 @@ from torch.optim.lr_scheduler import LambdaLR
 
 logger = logging.getLogger(__name__)
 
+def create_optimizer_and_scheduler(model,
+                                   num_train_steps: int,
+                                   warmup_steps: int,
+                                   learning_rate: float,
+                                   adam_beta1 = 0.9,
+                                   adam_beta2 = 0.999,
+                                   adam_epsilon = 1e-6,
+                                   weight_decay = 0.01,
+                                   ):
+  """
+  Setup the optimizer and the learning rate scheduler.
+
+  We provide a reasonable default that works well. If you want to use something else, you can pass a tuple in the
+  Trainer's init through :obj:`optimizers`, or subclass and override this method in a subclass.
+  """
+  no_decay = ["bias", "LayerNorm.weight"]
+  optimizer_grouped_parameters = [
+    {
+      "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+      "weight_decay": weight_decay,
+    },
+    {
+      "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+      "weight_decay": 0.0,
+    },
+  ]
+  opt = AdamW(
+    optimizer_grouped_parameters,
+    lr = learning_rate,
+    betas = (adam_beta1, adam_beta2),
+    eps = adam_epsilon,
+  )
+  lr_scheduler = get_linear_schedule_with_warmup(
+    opt, num_warmup_steps = warmup_steps, num_training_steps = num_train_steps
+  )
+  return opt, lr_scheduler
 
 def get_constant_schedule(optimizer: Optimizer, last_epoch: int = -1):
   """
