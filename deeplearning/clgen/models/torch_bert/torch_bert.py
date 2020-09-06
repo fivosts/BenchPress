@@ -381,8 +381,7 @@ class torchBert(backends.BackendBase):
     l.getLogger().info("  Gradient Accumulation steps = {}".format(dummy_gradient_accumulation_steps))
     l.getLogger().info("  Total optimization steps = {}".format(self.num_train_steps))
 
-    self.global_step = 0
-    self.epoch = 0
+    global_step = 0
     epochs_trained = 0
     steps_trained_in_current_epoch = 0
 
@@ -395,18 +394,18 @@ class torchBert(backends.BackendBase):
     # if model_path is not None:
     #   # set global_step to global_step of last saved checkpoint from model path
     #   try:
-    #     self.global_step = int(model_path.split("-")[-1].split("/")[0])
-    #     epochs_trained = self.global_step // (len(train_dataloader) // dummy_gradient_accumulation_steps)
-    #     steps_trained_in_current_epoch = self.global_step % (
+    #     global_step = int(model_path.split("-")[-1].split("/")[0])
+    #     epochs_trained = global_step // (len(train_dataloader) // dummy_gradient_accumulation_steps)
+    #     steps_trained_in_current_epoch = global_step % (
     #       len(train_dataloader) // dummy_gradient_accumulation_steps
     #     )
 
     #     logger.info("  Continuing training from checkpoint, will skip to saved global_step")
     #     logger.info("  Continuing training from epoch %d", epochs_trained)
-    #     logger.info("  Continuing training from global step %d", self.global_step)
+    #     logger.info("  Continuing training from global step %d", global_step)
     #     logger.info("  Will skip the first %d steps in the first epoch", steps_trained_in_current_epoch)
     #   except ValueError:
-    #     self.global_step = 0
+    #     global_step = 0
     #     logger.info("  Starting fine-tuning.")
     """
     WARNING
@@ -419,13 +418,12 @@ class torchBert(backends.BackendBase):
     train_iterator = tqdm.auto.trange(
       epochs_trained, int(np.ceil(self.num_epochs)), desc="Epoch")
     for epoch in train_iterator:
-      if isinstance(train_dataloader.sampler, self.torch.utils.data.distributed.DistributedSampler):
-        train_dataloader.sampler.set_epoch(epoch)
 
       if self.torch_tpu_available:
         parallel_loader = self.pytorch.torch_ploader.ParallelLoader(
                             train_dataloader, [self.args.device]
                           ).per_device_loader(self.args.device)
+        train_dataloader.sampler.set_epoch(epoch)
         epoch_iterator = tqdm.auto.tqdm(parallel_loader, desc="Batch")
       else:
         epoch_iterator = tqdm.auto.tqdm(train_dataloader, desc="Batch")
@@ -433,7 +431,6 @@ class torchBert(backends.BackendBase):
       for step, inputs in enumerate(epoch_iterator):
 
         tr_loss += self.training_step(model, inputs)
-
         self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
 
         if self.torch_tpu_available:
@@ -443,13 +440,12 @@ class torchBert(backends.BackendBase):
 
         lr_scheduler.step()
         model.zero_grad()
-        self.global_step += 1
-        self.epoch = epoch + (step + 1) / len(epoch_iterator)
+        global_step += 1
 
-        # if (self.args.logging_steps > 0 and self.global_step % self.args.logging_steps == 0) or (
-        #   self.global_step == 1 and self.args.logging_first_step
+        # if (self.args.logging_steps > 0 and global_step % self.args.logging_steps == 0) or (
+        #   global_step == 1 and self.args.logging_first_step
         # ):
-        if self.global_step == 1 or (self.global_step % 20 == 0):
+        if global_step == 1 or (global_step % 20 == 0):
           logs: Dict[str, float] = {}
           logs["loss"] = (tr_loss - logging_loss) / dummy_logging_steps
           # backward compatibility for pytorch schedulers
@@ -457,10 +453,10 @@ class torchBert(backends.BackendBase):
           logging_loss = tr_loss
           # self.log(logs)
 
-          # if self.args.evaluate_during_training and self.global_step % self.args.eval_steps == 0:
+          # if self.args.evaluate_during_training and global_step % self.args.eval_steps == 0:
           #   self.evaluate()
 
-          # if self.args.save_steps > 0 and self.global_step % self.args.save_steps == 0:
+          # if self.args.save_steps > 0 and global_step % self.args.save_steps == 0:
           #   # In all cases (even distributed/parallel), self.model is always a reference
           #   # to the model we want to save.
           #   if hasattr(model, "module"):
@@ -470,7 +466,7 @@ class torchBert(backends.BackendBase):
           #   else:
           #     assert model is self.model, f"Model {model} should be a reference to self.model"
           #   # Save model checkpoint
-          #   output_dir = os.path.join(self.args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{self.global_step}")
+          #   output_dir = os.path.join(self.args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{global_step}")
 
           #   self.save_model(output_dir)
 
@@ -484,22 +480,12 @@ class torchBert(backends.BackendBase):
           #   elif self.is_world_process_zero():
           #     self.torch.save(opt.state_dict(), os.path.join(output_dir, "optimizer.pt"))
           #     self.torch.save(lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
-
-        # if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
-        #   epoch_iterator.close()
-        #   break
-      # if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
-      #   train_iterator.close()
-      #   break
-      # if self.args.tpu_metrics_debug or self.args.debug:
-      #   if self.torch_tpu_available:
-      #     # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
-      #     self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
-      #   else:
-      #     logger.warning(
-      #       "You enabled PyTorch/XLA debug metrics but you don't have a TPU "
-      #       "configured. Check your training configuration if this is unexpected."
-      #     )
+      if self.torch_tpu_available:
+        self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
+      else:
+        l.getLogger().warning(
+          "You enabled PyTorch/XLA debug metrics but you don't have a TPU configured. Check your training configuration if this is unexpected."
+        )
     return
 
   def Validate(self) -> None:
