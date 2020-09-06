@@ -568,7 +568,6 @@ class torchBert(backends.BackendBase):
     return sampler, observers
 
   def GetShortSummary(self) -> str:
-    l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
     return (
       f"h_s: {self.config.architecture.hidden_size}, "
       f"#h_l: {self.config.architecture.num_hidden_layers}, "
@@ -587,7 +586,6 @@ class torchBert(backends.BackendBase):
       A list of absolute paths.
     """
     # The TensorFlow save file.
-    l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.InferenceManifest()")
     paths = [ path.absolute() for path in (self.cache.path / "checkpoints").iterdir() ]
     paths += [ path.absolute() for path in (self.cache.path / "logs").iterdir() ]
     paths += [ path.absolute() for path in (self.cache.path / "samples").iterdir() ]
