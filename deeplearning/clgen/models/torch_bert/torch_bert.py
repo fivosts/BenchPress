@@ -458,7 +458,6 @@ class torchBert(backends.BackendBase):
 
     return
 
-
   def Validate(self) -> None:
     l.getLogger().info("BERT Validation")
     if self.max_eval_steps <= 0:
