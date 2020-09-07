@@ -7,7 +7,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_boolean(
   "pt_cpu_only",
   False,
-  "Do not use GPU in pytorch session."
+  "Do not use GPU/TPU in pytorch session."
 )
 
 import torch
