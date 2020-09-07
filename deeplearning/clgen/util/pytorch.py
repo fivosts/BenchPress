@@ -23,8 +23,13 @@ try:
 except ImportError:
   torch_tpu_available = False
 
+device   = None
+num_gpus = None
+
 def initPytorch(local_rank = -1):
   global torch_tpu_available
+  global device
+  global num_gpus
   if FLAGS.pt_cpu_only:
     device = torch.device("cpu")
     num_gpus = 0
@@ -49,5 +54,3 @@ def initPytorch(local_rank = -1):
 
   if device.type == "cuda":
     torch.cuda.set_device(device)
-  return device, num_gpus
-device, num_gpus = initPytorch()
