@@ -67,8 +67,8 @@ class MaskSequence(typing.NamedTuple):
   def estimatedSize(batch_size, sequence_length, max_predictions_per_seq = None):
     return (
       2 * np.zeros([batch_size, 1], dtype = np.int64).nbytes + 
-      5 * np.zeros([batch_size, sequence_length]).nbytes + 
-      1 * np.zeros([batch_size, max_predictions_per_seq]).nbytes
+      5 * np.zeros([batch_size, sequence_length], dtype = np.int64).nbytes +
+      1 * np.zeros([batch_size, max_predictions_per_seq], dtype = np.int64).nbytes
       )
 
   @property
@@ -538,9 +538,9 @@ class MaskLMBatchGenerator(object):
                 [self.torch.load(x) for x in self.dataset['train_dataset']['pt_record']]
               )
     loader = self.torch.utils.data.dataloader.DataLoader(
-      dataset     = dataset,
-      batch_size  = self.training_opts.batch_size,
-      sampler     = (
+      dataset    = dataset,
+      batch_size = self.training_opts.batch_size,
+      sampler    = (
             self.torch.utils.data.RandomSampler(dataset, replacement = False)
             if not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
             else self.torch.utils.data.distributed.DistributedSampler(
@@ -692,7 +692,7 @@ class MaskLMBatchGenerator(object):
     extended_corpus   = np.repeat(corpus, max_dupe, axis = 0)
     remaining_corpus   = np.repeat(corpus, remaining, axis = 0)
 
-    l.getLogger().info("Estimated element size: {}. Dupe factor {} split into {} iterations of {} (plus {} remaining)".format(
+    l.getLogger().info("Estimated element size: {}. Dupe factor {} split into {} dupes of {} (plus {} remaining)".format(
         humanize.naturalsize(single_item_bytes), self.training_opts.dupe_factor, iterations, max_dupe, remaining
       )
     )
