@@ -356,8 +356,6 @@ def _maskSequence(seq: np.array,
   assert len(masked_lms) <= masks_to_predict
   masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
 
-  masked_lm_positions, masked_lm_ids, masked_lm_weights, masked_lm_lengths = [], [], [], []
-
   input_mask = np.ones(len(seq), dtype = np.int64)
   if atomizer.padToken in input_ids:
     input_mask[input_ids.index(atomizer.padToken):] = 0
@@ -370,23 +368,23 @@ def _maskSequence(seq: np.array,
   ## Setting this to 0 means that next sentence is NOT random.
   ## Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.
 
+  masked_lm_lengths = np.full(max_predictions, -1, dtype = np.int64)
+  mask_labels = np.full(len(seq), -100, dtype = np.int64)
+  ind = 0
   for p in masked_lms:
-    masked_lm_positions.append(p.pos_index)
-    masked_lm_ids.append(p.token_id)
-    masked_lm_weights.append(1.0)
-    masked_lm_lengths.append(1)
-  while len(masked_lm_positions) < training_opts.max_predictions_per_seq:
-      masked_lm_positions.append(0)
-      masked_lm_ids.append(atomizer.padToken)
-      masked_lm_weights.append(0.0)
-      masked_lm_lengths.append(-1)
+    if p.pos_index < len(seq):
+      mask_labels[p.pos_index] = p.token_id
+      masked_lm_lengths[ind]   = p.hole_length
+      ind += 1
 
   return MaskSequence(seen_in_training, seq,
-                      np.asarray(input_ids),           input_mask,
-                      np.asarray(masked_lm_positions), np.asarray(masked_lm_ids), 
-                      np.asarray(masked_lm_weights),   np.asarray(masked_lm_lengths),
+                      np.asarray(input_ids[:len(seq)], dtype = np.int64),
+                      input_mask,
+                      np.arange(len(seq),              dtype = np.int64),
+                      np.asarray(mask_labels,          dtype = np.int64), 
+                      np.asarray(masked_lm_lengths,    dtype = np.int64),
                       next_sentence_label
-                      )
+                     )
 
 class MaskLMBatchGenerator(object):
   def __init__(self):
