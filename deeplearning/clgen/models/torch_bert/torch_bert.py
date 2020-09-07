@@ -78,6 +78,8 @@ class torchBert(backends.BackendBase):
     super(torchBert, self).__init__(*args, **kwargs)
     
     from deeplearning.clgen.util import pytorch
+    pytorch.initPytorch()
+
     self.pytorch             = pytorch
     self.torch               = pytorch.torch
     self.torch_tpu_available = pytorch.torch_tpu_available
@@ -257,7 +259,7 @@ class torchBert(backends.BackendBase):
     """
     model.train()
     for key, value in inputs.items():
-      inputs[k] = value.to(self.pytorch.device)
+      inputs[key] = value.to(self.pytorch.device)
 
     outputs = model(
                 input_ids           = inputs['input_ids'],
@@ -289,7 +291,7 @@ class torchBert(backends.BackendBase):
     """
     self.counter = 0
     data_generator = MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
-                       self.pytorch, corpus, self.config.training, self.cache.path
+                       corpus, self.config.training, self.cache.path
                      )
 
     self._ConfigTrainParams(data_generator)
@@ -435,10 +437,6 @@ class torchBert(backends.BackendBase):
 
       if self.torch_tpu_available:
         self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
-      else:
-        l.getLogger().warning(
-          "You enabled PyTorch/XLA debug metrics but you don't have a TPU configured. Check your training configuration if this is unexpected."
-        )
     return
 
   def checkpointModel(self, global_step):
@@ -485,7 +483,7 @@ class torchBert(backends.BackendBase):
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
     data_generator = MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
-                       self.pytorch, sampler, self.atomizer, seed, 
+                       sampler, self.atomizer, seed,
                        self.config.architecture.max_position_embeddings, self.cache.path
                      )
     self._ConfigSampleParams(data_generator, sampler)
