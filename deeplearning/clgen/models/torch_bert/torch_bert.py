@@ -435,6 +435,8 @@ class torchBert(backends.BackendBase):
 
           # if self.args.save_steps > 0 and global_step % self.args.save_steps == 0:
 
+      # End of Epoch
+      self.checkpointModel(global_step)
       if self.torch_tpu_available:
         self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
     return
@@ -443,10 +445,12 @@ class torchBert(backends.BackendBase):
     # Save model checkpoint
 
     output_dir = lambda x: self.ckpt_path / "{}-{}.pt".format(x, global_step)
-    self.save_model(output_dir)
 
-    if self.is_world_process_zero():
-      self._rotate_checkpoints()
+    if self.is_torch_tpu_available:
+      if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
+        self.pytorch.torch_xla_model.save(self.train.model, output_dir("model"))
+    elif self.is_world_process_zero():
+      torch.save(self.train.model.state_dict(), output_dir("model"))
 
     if self.torch_tpu_available:
       self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
@@ -457,6 +461,18 @@ class torchBert(backends.BackendBase):
       self.torch.save(self.train.scheduler.state_dict(), output_dir("scheduler"))
 
     return
+
+  def is_world_process_zero(self) -> bool:
+    """
+    Whether or not this process is the global main process (when training in a distributed fashion on
+    several machines, this is only going to be :obj:`True` for one process).
+    """
+    if self.is_torch_tpu_available:
+      return self.pytorch.torch_xla_model.is_master_ordinal(local=False)
+    else:
+      # TODO
+      dummy_local_rank = -1
+      return dummy_local_rank == -1 or self.torch.distributed.get_rank() == 0
 
   def Validate(self) -> None:
     l.getLogger().info("BERT Validation")
