@@ -70,8 +70,10 @@ class torchBert(backends.BackendBase):
 
   class BertEstimator(typing.NamedTuple):
     """Named tuple to wrap BERT pipeline."""
-    model      : typing.Any
+    model          : typing.TypeVar('nn.Module')
     data_generator : MaskLMBatchGenerator
+    optimizer      : typing.Any
+    scheduler      : typing.Any
 
   def __init__(self, *args, **kwargs):
 
@@ -182,9 +184,16 @@ class torchBert(backends.BackendBase):
     self.torch.manual_seed(self.config.training.random_seed)
     self.torch.cuda.manual_seed_all(self.config.training.random_seed)
 
+    m = model.BertForPreTraining(self.bert_config).to(self.pytorch.device)
+    opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
+      model           = m,
+      num_train_steps = self.num_train_steps,
+      warmup_steps    = self.num_warmup_steps,
+      learning_rate   = self.learning_rate,
+    )
+
     self.train = torchBert.BertEstimator(
-                    model.BertForPreTraining(self.bert_config).to(self.pytorch.device), 
-                    data_generator
+                  m, data_generator, opt, lr_scheduler
                 )
     l.getLogger().info(self.GetShortSummary())
     return
@@ -297,14 +306,11 @@ class torchBert(backends.BackendBase):
     self._ConfigTrainParams(data_generator)
 
     train_dataloader = self.train.data_generator.trainDataLoader()
-    model = self.train.model.to(self.pytorch.device)
 
-    opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
-      model           = model,
-      num_train_steps = self.num_train_steps,
-      warmup_steps    = self.num_warmup_steps,
-      learning_rate   = self.learning_rate,
-    )
+    current_step = self.loadCheckpoint()
+
+    l.getLogger().warn("Loaded step {}".format(current_step))
+    model = self.train.model.to(self.pytorch.device)
 
     """
     WARNING
@@ -316,10 +322,10 @@ class torchBert(backends.BackendBase):
     #   and os.path.isfile(os.path.join(model_path, "scheduler.pt"))
     # ):
     #   # Load in optimizer and scheduler states
-    #   opt.load_state_dict(
+    #   self.train.optimizer.load_state_dict(
     #     self.torch.load(os.path.join(model_path, "optimizer.pt"), map_location=self.args.device)
     #   )
-    #   lr_scheduler.load_state_dict(self.torch.load(os.path.join(model_path, "scheduler.pt")))
+    #   self.train.scheduler.load_state_dict(self.torch.load(os.path.join(model_path, "scheduler.pt")))
     """
     WARNING
     """
@@ -388,7 +394,6 @@ class torchBert(backends.BackendBase):
     WARNING
     """
 
-
     tr_loss = 0.0
     logging_loss = 0.0
     model.zero_grad()
@@ -413,9 +418,9 @@ class torchBert(backends.BackendBase):
         if self.torch_tpu_available:
           self.pytorch.torch_xla.optimizer_step(opt)
         else:
-          opt.step()
+          self.train.optimizer.step()
 
-        lr_scheduler.step()
+        self.train.scheduler.step()
         model.zero_grad()
         global_step += 1
 
@@ -426,7 +431,7 @@ class torchBert(backends.BackendBase):
           logs: Dict[str, float] = {}
           logs["loss"] = (tr_loss - logging_loss) / dummy_logging_steps
           # backward compatibility for pytorch schedulers
-          logs["learning_rate"] = lr_scheduler.get_last_lr()[0]
+          logs["learning_rate"] = self.train.scheduler.get_last_lr()[0]
           logging_loss = tr_loss
           # self.log(logs)
 
@@ -436,30 +441,62 @@ class torchBert(backends.BackendBase):
           # if self.args.save_steps > 0 and global_step % self.args.save_steps == 0:
 
       # End of Epoch
-      self.checkpointModel(global_step)
+      self.saveCheckpoint(global_step)
       if self.torch_tpu_available:
         self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
     return
 
-  def checkpointModel(self, global_step):
+  def loadCheckpoint(self):
+    """
+      Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
+    """
+    if not (self.ckpt_path / "checkpoint.meta").exists():
+      return
+
+    with open(self.ckpt_path / "checkpoint.meta", 'r') as mf:
+      get_step  = lambda x: int(x.replace("\n", "").replace("train_step: ", ""))
+      entries   = set({get_step(x) for x in mf.readlines()})
+
+    if FLAGS.select_checkpoint_step == -1:
+      ckpt_step = max(entries)
+    else:
+      if FLAGS.select_checkpoint_step in entries:
+        ckpt_step = FLAGS.select_checkpoint_step
+      else:
+        raise ValueError("{} not found in checkpoint folder.".format(FLAGS.select_checkpoint_step))
+
+    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, ckpt_step)
+
+    self.train.optimizer.load_state_dict(
+      self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
+    )
+    self.train.scheduler.load_state_dict(
+      self.torch.load(ckpt_comp("scheduler"))
+    )
+    # self.train.model = model.BertModel.from_pretrained(ckpt_comp("model"))
+    self.train.model.load_state_dict(
+      self.torch.load(ckpt_comp("model"))
+    )
+    return ckpt_step
+
+  def saveCheckpoint(self, global_step):
     # Save model checkpoint
 
-    output_dir = lambda x: self.ckpt_path / "{}-{}.pt".format(x, global_step)
-
-    if self.is_torch_tpu_available:
-      if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
-        self.pytorch.torch_xla_model.save(self.train.model, output_dir("model"))
-    elif self.is_world_process_zero():
-      torch.save(self.train.model.state_dict(), output_dir("model"))
+    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, global_step)
 
     if self.torch_tpu_available:
+      if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
+        self.pytorch.torch_xla_model.save(self.train.model, ckpt_comp("model"))
       self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
-      self.pytorch.torch_xla.save(self.train.optimizer.state_dict(), output_dir("optimizer"))
-      self.pytorch.torch_xla.save(self.train.scheduler.state_dict(), output_dir("scheduler"))
+      self.pytorch.torch_xla.save(self.train.optimizer.state_dict(), ckpt_comp("optimizer"))
+      self.pytorch.torch_xla.save(self.train.scheduler.state_dict(), ckpt_comp("scheduler"))
     elif self.is_world_process_zero():
-      self.torch.save(self.train.optimizer.state_dict(), output_dir("optimizer"))
-      self.torch.save(self.train.scheduler.state_dict(), output_dir("scheduler"))
+      self.torch.save(self.train.model.state_dict(), ckpt_comp("model"))
+      self.torch.save(self.train.optimizer.state_dict(), ckpt_comp("optimizer"))
+      self.torch.save(self.train.scheduler.state_dict(), ckpt_comp("scheduler"))
 
+    with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
+      mf.write("train_step: {}\n".format(global_step))
     return
 
   def is_world_process_zero(self) -> bool:
@@ -467,7 +504,7 @@ class torchBert(backends.BackendBase):
     Whether or not this process is the global main process (when training in a distributed fashion on
     several machines, this is only going to be :obj:`True` for one process).
     """
-    if self.is_torch_tpu_available:
+    if self.torch_tpu_available:
       return self.pytorch.torch_xla_model.is_master_ordinal(local=False)
     else:
       # TODO
