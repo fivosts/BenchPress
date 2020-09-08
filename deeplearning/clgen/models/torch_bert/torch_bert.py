@@ -251,20 +251,6 @@ class torchBert(backends.BackendBase):
                     ) -> float:
     """
     Perform a training step on a batch of inputs.
-
-    Subclass and override to inject custom behavior.
-
-    Args:
-      model (:obj:`nn.Module`):
-        The model to train.
-      inputs (:obj:`Dict[str, Union[self.torch.Tensor, Any]]`):
-        The inputs and targets of the model.
-
-        The dictionary will be unpacked before being fed to the model. Most models expect the targets under the
-        argument :obj:`labels`. Check your model's documentation for all accepted arguments.
-
-    Return:
-      :obj:`float`: The training loss on this batch.
     """
     model.train()
     for key, value in inputs.items():
@@ -277,18 +263,12 @@ class torchBert(backends.BackendBase):
                 labels              = inputs['mask_labels'],
                 next_sentence_label = inputs['next_sentence_label']
               )
-    # We don't use .loss here since the model may return tuples instead of ModelOutput.
-    loss = outputs[0]
-
-    if self.counter % 50 == 0:
-      l.getLogger().warn("Total loss: {}".format(loss))
-    self.counter += 1
-
+    masked_lm_loss, next_sentence_loss = outputs[0], outputs[1]
+    total_loss = masked_lm_loss + next_sentence_loss
     if self.pytorch.num_gpus > 1:
-      loss = loss.mean()  # mean() to average on multi-gpu parallel training
-
-    loss.backward()
-    return loss.item()
+      total_loss = total_loss.mean()  # mean() to average on multi-gpu parallel training
+    total_loss.backward()
+    return masked_lm_loss.item(), next_sentence_loss.item()
 
   def Train(self,
             corpus,
@@ -298,7 +278,6 @@ class torchBert(backends.BackendBase):
     """
     Main training entry point.
     """
-    self.counter = 0
     data_generator = MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
                        corpus, self.config.training, self.cache.path
                      )
@@ -334,13 +313,9 @@ class torchBert(backends.BackendBase):
         * (self.torch.distributed.get_world_size() if dummy_num_machines != -1 else 1)
       )
 
-    global_step = 0
-    epochs_trained = 0
-    tr_loss = 0.0
-    logging_loss = 0.0
-
     model.zero_grad()
-
+    average_masked_lm_loss = 0.0
+    average_next_sentence_loss = 0.0
     epoch_iterator = tqdm.auto.trange(current_step // self.steps_per_epoch, self.num_epochs, desc="Epoch")
     batch_iterator = iter(self.train.data_generator.dataloader)
     for epoch in epoch_iterator:
@@ -352,8 +327,6 @@ class torchBert(backends.BackendBase):
         self.train.data_generator.dataloader.sampler.set_epoch(epoch)
 
       batch_counter = tqdm.auto.trange(0, self.steps_per_epoch, desc="Batch")
-      # batch_iterator = tqdm.auto.tqdm(self.train.data_generator.dataloader, desc="Batch")
-
       for step in batch_counter:
         try:
           inputs = next(batch_iterator)
@@ -361,7 +334,7 @@ class torchBert(backends.BackendBase):
           batch_iterator = iter(self.train.data_generator.dataloader)
           inputs = next(batch_iterator)
 
-        tr_loss += self.training_step(model, inputs)
+        step_mask_loss, step_ns_loss = self.training_step(model, inputs)
         self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
 
         if self.torch_tpu_available:
@@ -371,28 +344,27 @@ class torchBert(backends.BackendBase):
 
         self.train.scheduler.step()
         model.zero_grad()
-        global_step += 1
 
-        # if (self.args.logging_steps > 0 and global_step % self.args.logging_steps == 0) or (
-        #   global_step == 1 and self.args.logging_first_step
-        # ):
-        if global_step == 1 or (global_step % 20 == 0):
-          logs: Dict[str, float] = {}
-          logs["loss"] = (tr_loss - logging_loss) / dummy_logging_steps
-          # backward compatibility for pytorch schedulers
-          logs["learning_rate"] = self.train.scheduler.get_last_lr()[0]
-          logging_loss = tr_loss
-          # self.log(logs)
+        self.logTraining(current_step,
+                         masked_lm_loss = average_masked_lm_loss,
+                         next_sentence_loss = average_next_sentence_loss,
+                         total_loss = average_masked_lm_loss + average_next_sentence_loss,
+                         learning_rate = self.train.scheduler.get_last_lr()[0]
+        )
 
-          # if self.args.evaluate_during_training and global_step % self.args.eval_steps == 0:
-          #   self.evaluate()
-
-          # if self.args.save_steps > 0 and global_step % self.args.save_steps == 0:
+        # if self.args.evaluate_during_training and global_step % self.args.eval_steps == 0:
+        #   self.evaluate()
 
       # End of Epoch
-      self.saveCheckpoint(global_step)
+      self.saveCheckpoint(current_step)
       if self.torch_tpu_available:
         self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
+    return
+
+  def logTraining(self, step, **tensors):
+    """
+      Hook function that logs training data when triggered.
+    """
     return
 
   def loadCheckpoint(self):
@@ -426,12 +398,14 @@ class torchBert(backends.BackendBase):
     self.train.model.load_state_dict(
       self.torch.load(ckpt_comp("model"))
     )
+    self.train.model.eval()
     return ckpt_step
 
-  def saveCheckpoint(self, global_step):
-    # Save model checkpoint
-
-    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, global_step)
+  def saveCheckpoint(self, step):
+    """
+      Saves model, scheduler, optimizer checkpoints per epoch.
+    """
+    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, step)
 
     if self.torch_tpu_available:
       if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
@@ -445,7 +419,7 @@ class torchBert(backends.BackendBase):
       self.torch.save(self.train.scheduler.state_dict(), ckpt_comp("scheduler"))
 
     with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
-      mf.write("train_step: {}\n".format(global_step))
+      mf.write("train_step: {}\n".format(step))
     return
 
   def is_world_process_zero(self) -> bool:
