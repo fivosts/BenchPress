@@ -342,6 +342,7 @@ class torchBert(backends.BackendBase):
     model.zero_grad()
 
     epoch_iterator = tqdm.auto.trange(current_step // self.steps_per_epoch, self.num_epochs, desc="Epoch")
+    batch_iterator = iter(self.train.data_generator.dataloader)
     for epoch in epoch_iterator:
 
       if self.torch_tpu_available:
@@ -350,16 +351,21 @@ class torchBert(backends.BackendBase):
                           ).per_device_loader(self.pytorch.device)
         self.train.data_generator.dataloader.sampler.set_epoch(epoch)
 
-      # batch_iterator = tqdm.auto.trange(0, self.steps_per_epoch, desc="Batch")
-      batch_iterator = tqdm.auto.tqdm(self.train.data_generator.dataloader, desc="Batch")
-      l.getLogger().warn(len(self.train.data_generator.dataloader))
-      for step, inputs in enumerate(batch_iterator):
-        # inputs = next(iter(self.train.data_generator.dataloader))  
+      batch_counter = tqdm.auto.trange(0, self.steps_per_epoch, desc="Batch")
+      # batch_iterator = tqdm.auto.tqdm(self.train.data_generator.dataloader, desc="Batch")
+
+      for step in batch_counter:
+        try:
+          inputs = next(batch_iterator)
+        except StopIteration:
+          batch_iterator = iter(self.train.data_generator.dataloader)
+          inputs = next(batch_iterator)
+
         tr_loss += self.training_step(model, inputs)
         self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
 
         if self.torch_tpu_available:
-          self.pytorch.torch_xla.optimizer_step(opt)
+          self.pytorch.torch_xla.optimizer_step(self.train.optimizer)
         else:
           self.train.optimizer.step()
 
