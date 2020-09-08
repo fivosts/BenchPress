@@ -28,7 +28,6 @@ from deeplearning.clgen import samplers
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.dashboard import dashboard
 from deeplearning.clgen.models import models
-from deeplearning.clgen.models import pretrained
 from deeplearning.clgen.proto import clgen_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
@@ -101,13 +100,6 @@ flags.DEFINE_string(
   'Print the directory of a cache and exit. Valid options are: "corpus", '
   '"model", or "sampler".',
 )
-flags.DEFINE_string(
-  "export_model",
-  None,
-  "Path to export a trained TensorFlow model to. This exports all of the "
-  "files required for sampling to specified directory. The directory can "
-  "then be used as the pretrained_model field of an Instance proto config.",
-)
 flags.DEFINE_boolean(
   "clgen_debug",
   False,
@@ -154,9 +146,7 @@ class Instance(object):
       if config.HasField("model"):
         self.model: models.Model = models.Model(config.model)
       else:
-        self.model: pretrained.PreTrainedModel = pretrained.PreTrainedModel(
-          pathlib.Path(config.pretrained_model)
-        )
+        raise ValueError("Config has no declared model.")
       self.sampler: samplers.Sampler = samplers.Sampler(config.sampler)
 
     self.dashboard = dashboard.Launch()
@@ -199,17 +189,6 @@ class Instance(object):
       self.Train()
     with self.Session():
       return self.model.Sample(self.sampler, *args, **kwargs)
-
-  def ExportPretrainedModel(self, export_dir: pathlib.Path) -> None:
-    """Export a trained model."""
-    if isinstance(self.model, pretrained.PreTrainedModel):
-      shutil.copytree(self.config.pretrained_model, export_dir / "model")
-    else:
-      self.Train()
-      for path in self.model.InferenceManifest():
-        relpath = pathlib.Path(os.path.relpath(path, self.model.cache.path))
-        (export_dir / relpath.parent).mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(path, export_dir / relpath)
 
   def ToProto(self) -> clgen_pb2.Instance:
     """Get the proto config for the instance."""
@@ -309,8 +288,6 @@ def DoFlagsAction(
       raise ValueError(
         f"Invalid --stop_after argument: '{FLAGS.stop_after}'"
       )
-    elif FLAGS.export_model:
-      instance.ExportPretrainedModel(pathlib.Path(FLAGS.export_model))
     else:
       instance.Sample(sample_observers)
 
