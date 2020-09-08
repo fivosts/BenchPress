@@ -509,7 +509,8 @@ class BertForPreTrainingOutput(ModelOutput):
       heads.
   """
 
-  loss: Optional[torch.FloatTensor] = None
+  masked_lm_loss: Optional[torch.FloatTensor] = None
+  next_sentence_loss: Optional[torch.FloatTensor] = None
   prediction_logits: torch.FloatTensor = None
   seq_relationship_logits: torch.FloatTensor = None
   hidden_states: Optional[Tuple[torch.FloatTensor]] = None
@@ -801,7 +802,8 @@ class BertForPreTraining(BertPreTrainedModel):
       return ((total_loss,) + output) if total_loss is not None else output
 
     return BertForPreTrainingOutput(
-      loss=total_loss,
+      masked_lm_loss = masked_lm_loss,
+      next_sentence_loss = next_sentence_loss,
       prediction_logits=prediction_scores,
       seq_relationship_logits=seq_relationship_score,
       hidden_states=outputs.hidden_states,
