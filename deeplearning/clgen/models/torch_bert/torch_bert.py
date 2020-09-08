@@ -305,41 +305,19 @@ class torchBert(backends.BackendBase):
 
     self._ConfigTrainParams(data_generator)
 
-    train_dataloader = self.train.data_generator.trainDataLoader()
-
     current_step = self.loadCheckpoint()
 
     l.getLogger().warn("Loaded step {}".format(current_step))
     model = self.train.model.to(self.pytorch.device)
-
-    """
-    WARNING
-    """
-    # Check if saved optimizer or scheduler states exist
-    # if (
-    #   model_path is not None
-    #   and os.path.isfile(os.path.join(model_path, "optimizer.pt"))
-    #   and os.path.isfile(os.path.join(model_path, "scheduler.pt"))
-    # ):
-    #   # Load in optimizer and scheduler states
-    #   self.train.optimizer.load_state_dict(
-    #     self.torch.load(os.path.join(model_path, "optimizer.pt"), map_location=self.args.device)
-    #   )
-    #   self.train.scheduler.load_state_dict(self.torch.load(os.path.join(model_path, "scheduler.pt")))
-    """
-    WARNING
-    """
 
     dummy_num_machines = -1
     dummy_gradient_accumulation_steps = 1
     dummy_max_grad_norm = 1.0
     dummy_logging_steps = 20
 
-    # multi-gpu training (should be after apex fp16 initialization)
     if self.pytorch.num_gpus > 1:
       model = self.torch.nn.DataParallel(model)
 
-    # Distributed training (should be after apex fp16 initialization)
     if dummy_num_machines != -1:
       model = self.torch.nn.parallel.DistributedDataParallel(
         model,
@@ -348,7 +326,6 @@ class torchBert(backends.BackendBase):
         find_unused_parameters=True,
       )
 
-    # Train!
     if self.torch_tpu_available:
       total_train_batch_size = self.train_batch_size * self.pytorch.torch_xla.xrt_world_size()
     else:
@@ -356,62 +333,28 @@ class torchBert(backends.BackendBase):
         self.train_batch_size
         * (self.torch.distributed.get_world_size() if dummy_num_machines != -1 else 1)
       )
-    l.getLogger().info("***** Running training *****")
-    # logger.info("  Num examples = %d", self.num_examples(train_dataloader))
-    l.getLogger().info("  Num Epochs = {}".format(self.num_epochs))
-    # logger.info("  Instantaneous batch size per device = %d", self.args.per_device_train_batch_size)
-    l.getLogger().info("  Total train batch size (w. parallel, distributed & accumulation) = {}".format(self.train_batch_size))
-    l.getLogger().info("  Gradient Accumulation steps = {}".format(dummy_gradient_accumulation_steps))
-    l.getLogger().info("  Total optimization steps = {}".format(self.num_train_steps))
 
     global_step = 0
     epochs_trained = 0
-    steps_trained_in_current_epoch = 0
-
-
-
-    """
-    WARNING
-    """
-    # Check if continuing training from a checkpoint
-    # if model_path is not None:
-    #   # set global_step to global_step of last saved checkpoint from model path
-    #   try:
-    #     global_step = int(model_path.split("-")[-1].split("/")[0])
-    #     epochs_trained = global_step // (len(train_dataloader) // dummy_gradient_accumulation_steps)
-    #     steps_trained_in_current_epoch = global_step % (
-    #       len(train_dataloader) // dummy_gradient_accumulation_steps
-    #     )
-
-    #     logger.info("  Continuing training from checkpoint, will skip to saved global_step")
-    #     logger.info("  Continuing training from epoch %d", epochs_trained)
-    #     logger.info("  Continuing training from global step %d", global_step)
-    #     logger.info("  Will skip the first %d steps in the first epoch", steps_trained_in_current_epoch)
-    #   except ValueError:
-    #     global_step = 0
-    #     logger.info("  Starting fine-tuning.")
-    """
-    WARNING
-    """
-
     tr_loss = 0.0
     logging_loss = 0.0
+
     model.zero_grad()
-    train_iterator = tqdm.auto.trange(
-      epochs_trained, int(np.ceil(self.num_epochs)), desc="Epoch")
-    for epoch in train_iterator:
+
+    epoch_iterator = tqdm.auto.trange(current_step // self.steps_per_epoch, self.num_epochs, desc="Epoch")
+    for epoch in epoch_iterator:
 
       if self.torch_tpu_available:
         parallel_loader = self.pytorch.torch_ploader.ParallelLoader(
-                            train_dataloader, [self.args.device]
-                          ).per_device_loader(self.args.device)
-        train_dataloader.sampler.set_epoch(epoch)
-        epoch_iterator = tqdm.auto.tqdm(parallel_loader, desc="Batch")
-      else:
-        epoch_iterator = tqdm.auto.tqdm(train_dataloader, desc="Batch")
+                            self.train.data_generator.dataloader, [self.pytorch.device]
+                          ).per_device_loader(self.pytorch.device)
+        self.train.data_generator.dataloader.sampler.set_epoch(epoch)
 
-      for step, inputs in enumerate(epoch_iterator):
-
+      # batch_iterator = tqdm.auto.trange(0, self.steps_per_epoch, desc="Batch")
+      batch_iterator = tqdm.auto.tqdm(self.train.data_generator.dataloader, desc="Batch")
+      l.getLogger().warn(len(self.train.data_generator.dataloader))
+      for step, inputs in enumerate(batch_iterator):
+        # inputs = next(iter(self.train.data_generator.dataloader))  
         tr_loss += self.training_step(model, inputs)
         self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
 
@@ -451,7 +394,7 @@ class torchBert(backends.BackendBase):
       Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
     """
     if not (self.ckpt_path / "checkpoint.meta").exists():
-      return
+      return 0
 
     with open(self.ckpt_path / "checkpoint.meta", 'r') as mf:
       get_step  = lambda x: int(x.replace("\n", "").replace("train_step: ", ""))
