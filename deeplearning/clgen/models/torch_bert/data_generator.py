@@ -65,7 +65,7 @@ class MaskSequence(typing.NamedTuple):
   next_sentence_label  : np.int64
 
   @staticmethod
-  def estimatedSize(batch_size, sequence_length, max_predictions_per_seq = None):
+  def estimatedSize(batch_size, sequence_length, max_predictions_per_seq):
     return (
       2 * np.zeros([batch_size, 1], dtype = np.int64).nbytes + 
       5 * np.zeros([batch_size, sequence_length], dtype = np.int64).nbytes +
@@ -81,31 +81,19 @@ class MaskSequence(typing.NamedTuple):
            self.masked_lm_lengths.nbytes + self.next_sentence_label.nbytes
            )
 
-  def shapeSeqToBatch(self, inp, batch_size):
-    return "(" + str(batch_size) + ", " + ", ".join([str(s) for s in inp.shape]) + ")"
-
-  def LogBatchTelemetry(self,
-                        batch_size: int,
+  @staticmethod
+  def LogBatchTelemetry(batch_size: int,
+                        sequence_length: int,
+                        max_predictions_per_seq: int,
                         steps_per_epoch: int,
                         num_epochs: int,
                         ) -> None:
     """Log analytics about the batch."""
-    l.getLogger().info("Step shape: seen_in_training: {}, original_input: {}, Input_ids: {}, input_mask: {}, position_ids: {}, mask_labels: {}, masked_lm_lengths: {}, next_sentence_label: {}"
-                        .format(self.shapeSeqToBatch(self.seen_in_training,    batch_size),
-                                self.shapeSeqToBatch(self.original_input,      batch_size),
-                                self.shapeSeqToBatch(self.input_ids,           batch_size),
-                                self.shapeSeqToBatch(self.input_mask,          batch_size),
-                                self.shapeSeqToBatch(self.position_ids,        batch_size),
-                                self.shapeSeqToBatch(self.mask_labels,         batch_size),
-                                self.shapeSeqToBatch(self.masked_lm_lengths,   batch_size),
-                                self.shapeSeqToBatch(self.next_sentence_label, batch_size),
-                          )
-                        )
     l.getLogger().info(
       "Memory: {} per batch, {} per epoch, {} total.".format(
-              humanize.naturalsize(self.sizeof_sequence * batch_size, binary = True),
-              humanize.naturalsize(self.sizeof_sequence * batch_size * steps_per_epoch, binary = True),
-              humanize.naturalsize(self.sizeof_sequence * batch_size * steps_per_epoch * num_epochs, binary = True),
+              humanize.naturalsize(MaskSequence.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size, binary = True),
+              humanize.naturalsize(MaskSequence.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size * steps_per_epoch, binary = True),
+              humanize.naturalsize(MaskSequence.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size * steps_per_epoch * num_epochs, binary = True),
           )
     )
 
@@ -117,7 +105,7 @@ def _holeSequence(seq: np.array,
                   rngen: random.Random,
                   use_start_end: bool,
                   training_opts,
-                  ) -> MaskSequence:
+                  ) -> typing.Dict:
   """
   Inserts hole tokens to a given sequence.
   """
@@ -267,12 +255,12 @@ def _holeSequence(seq: np.array,
     assert input_ids[first_pad_index] == atomizer.padToken, "{}".format(input_ids)
     assert input_ids[first_pad_index - 1] != atomizer.padToken
 
-  seen_in_training    = np.int64(1 if train_set else 0)
-  next_sentence_label = np.int64(0)
+  seen_in_training    = np.ones([1]) if train_set else np.zeros([1])
+  next_sentence_label = np.zeros([1])
   """
     Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
     is intended on kernels. In any other case, check bert's create_instances_from_document
-    to see how next_sentence_labels are calculated.
+    to see how next_sentence_label are calculated.
     Setting this to 0 means that next sentence is NOT random.
     Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.    
   """
@@ -288,14 +276,16 @@ def _holeSequence(seq: np.array,
       masked_lm_lengths[ind]   = p.hole_length
       ind += 1
 
-  return MaskSequence(seen_in_training, seq,
-                      np.asarray(input_ids[:len(seq)], dtype = np.int64),
-                      input_mask,
-                      np.arange(len(seq),              dtype = np.int64),
-                      np.asarray(mask_labels,          dtype = np.int64),
-                      np.asarray(masked_lm_lengths,    dtype = np.int64),
-                      next_sentence_label
-                     )
+  return {
+    'seen_in_training'   : seen_in_training,
+    'original_input'     : seq,
+    'input_ids'          : np.asarray(input_ids[:len(seq)], dtype = np.int64),
+    'input_mask'         : input_mask,
+    'position_ids'       : np.arange(len(seq), dtype = np.int64),
+    'mask_labels'        : mask_labels,
+    'masked_lm_lengths'  : masked_lm_lengths,
+    'next_sentence_label': next_sentence_label,
+  }
 
 def _maskSequence(seq: np.array,
                   train_set: bool,
@@ -304,7 +294,7 @@ def _maskSequence(seq: np.array,
                   rngen: random.Random,
                   training_opts,
                   config,
-                  ) -> MaskSequence:
+                  ) -> typing.Dict:
   """Inserts masks to a given sequence."""
   assert seq.ndim == 1, "Input for masking must be single-dimension array."
 
@@ -361,11 +351,11 @@ def _maskSequence(seq: np.array,
   if atomizer.padToken in input_ids:
     input_mask[input_ids.index(atomizer.padToken):] = 0
 
-  seen_in_training    = np.int64(1 if train_set else 0)
-  next_sentence_label = np.int64(0)
+  seen_in_training    = np.ones([1]) if train_set else np.zeros([1])
+  next_sentence_label = np.zeros([1])
   ## Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
   ## is intended on kernels. In any other case, check bert's create_instances_from_document
-  ## to see how next_sentence_labels are calculated.
+  ## to see how next_sentence_label are calculated.
   ## Setting this to 0 means that next sentence is NOT random.
   ## Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.
 
@@ -378,14 +368,16 @@ def _maskSequence(seq: np.array,
       masked_lm_lengths[ind]   = p.hole_length
       ind += 1
 
-  return MaskSequence(seen_in_training, seq,
-                      np.asarray(input_ids[:len(seq)], dtype = np.int64),
-                      input_mask,
-                      np.arange(len(seq),              dtype = np.int64),
-                      np.asarray(mask_labels,          dtype = np.int64),
-                      np.asarray(masked_lm_lengths,    dtype = np.int64),
-                      next_sentence_label
-                     )
+  return {
+    'seen_in_training'   : seen_in_training,
+    'original_input'     : seq,
+    'input_ids'          : np.asarray(input_ids[:len(seq)], dtype = np.int64),
+    'input_mask'         : input_mask,
+    'position_ids'       : np.arange(len(seq), dtype = np.int64),
+    'mask_labels'        : mask_labels,
+    'masked_lm_lengths'  : masked_lm_lengths,
+    'next_sentence_label': next_sentence_label,
+  }
 
 class MaskLMBatchGenerator(object):
   def __init__(self):
@@ -399,6 +391,8 @@ class MaskLMBatchGenerator(object):
     self.training_opts           = None
     self.steps_per_epoch         = None
     self.max_position_embeddings = None
+
+    self.dataloader              = None
     self.sampleBatch             = None
     self.sampleIndices           = None
 
@@ -416,8 +410,6 @@ class MaskLMBatchGenerator(object):
     """Initializes data generator for training."""
     d               = MaskLMBatchGenerator()
     d.cache         = cache.mkcache(cache_path, "dataset")
-    d.cache.path.mkdir(exist_ok = True, parents = True)
-
     d.dataset       = {}
     d.corpus        = corpus
     d.atomizer      = corpus.atomizer
@@ -425,8 +417,10 @@ class MaskLMBatchGenerator(object):
     d.training_opts = training_opts
     d.rngen         = random.Random(training_opts.random_seed)
 
+    d.cache.path.mkdir(exist_ok = True, parents = True)
     shaped_corpus = d.createCorpus()
     d.configDataset(shaped_corpus)
+    d.initDataloader()
     return d
 
   @classmethod
@@ -523,15 +517,15 @@ class MaskLMBatchGenerator(object):
       )
     return
 
-  def trainDataLoader(self):
+  def initDataloader(self) -> None:
     """Pytorch dataloader that assembles all dataset files into a single-mapped dataset."""
     dataset = torch.utils.data.ConcatDataset(
                 [torch.load(x) for x in self.dataset['train_dataset']['pt_record']]
               )
-    loader = torch.utils.data.dataloader.DataLoader(
-      dataset     = dataset,
-      batch_size  = self.training_opts.batch_size,
-      sampler     = (
+    self.dataloader = torch.utils.data.dataloader.DataLoader(
+      dataset    = dataset,
+      batch_size = self.training_opts.batch_size,
+      sampler    = (
             torch.utils.data.RandomSampler(dataset, replacement = False)
             if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
             else torch.utils.data.distributed.DistributedSampler(
@@ -543,7 +537,7 @@ class MaskLMBatchGenerator(object):
       num_workers = os.cpu_count(),
       drop_last   = True,
     )
-    return loader
+    return
 
   def createCorpus(self) -> None:
     """
@@ -701,7 +695,7 @@ class MaskLMBatchGenerator(object):
                           rngen                = self.rngen, 
                           use_start_end        = self.config.use_start_end,
                           training_opts        = self.training_opts,
-                          ), 
+                          ),
         c
       )
     elif config.HasField("mask"):
@@ -713,7 +707,7 @@ class MaskLMBatchGenerator(object):
                           rngen              = self.rngen, 
                           training_opts      = self.training_opts,
                           config             = config,
-                          ), 
+                          ),
         c
       )
     else:
@@ -744,8 +738,9 @@ class MaskLMBatchGenerator(object):
             bar.update(kernel_idx)
             kernel_idx += 1
             if kernel_idx == 1:
-              masked_corpus[0].LogBatchTelemetry(
-                self.training_opts.batch_size, self.steps_per_epoch, self.num_epochs
+              MaskSequence.LogBatchTelemetry(
+                self.training_opts.batch_size, self.training_opts.sequence_length,
+                max_predictions, self.steps_per_epoch, self.num_epochs
                 )
 
           # write masked_corpus before flushing the list
@@ -866,52 +861,27 @@ class MaskLMBatchGenerator(object):
 
   def _saveCorpusRecord(self, masked_corpus: typing.Dict) -> None:
     """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
-     
+
+    torch.save(
+      [{k: torch.from_numpy(v)} for x in masked_corpus['corpus'] for k, v in x.items()], 
+      masked_corpus['pt_record']
+    )
     if FLAGS.write_text_dataset:
-      file_writer = open(masked_corpus['txt'], 'w')
-    
-    feature_set = []
-    for (inst_index, instance) in enumerate(masked_corpus['corpus']):
-
-      seen_in_training    = instance.seen_in_training
-      original_input      = instance.original_input
-      input_ids           = instance.input_ids
-      input_mask          = instance.input_mask
-      position_ids        = instance.position_ids
-      mask_labels         = instance.mask_labels
-      masked_lm_lengths   = instance.masked_lm_lengths
-      next_sentence_label = instance.next_sentence_label
-
-      assert len(input_ids) == self.training_opts.sequence_length, "len(input_ids):  {}, sequence_length: {}".format(len(input_ids), self.training_opts.sequence_length)
-
-      features = collections.OrderedDict()
-      features["seen_in_training"]     = torch.LongTensor([seen_in_training])
-      features["original_input"]       = torch.from_numpy(original_input)
-      features["input_ids"]            = torch.from_numpy(input_ids)
-      features["input_mask"]           = torch.from_numpy(input_mask)
-      features["position_ids"]         = torch.from_numpy(position_ids)
-      features["mask_labels"]          = torch.from_numpy(mask_labels)
-      features["masked_lm_lengths"]    = torch.from_numpy(masked_lm_lengths)
-      features["next_sentence_label"]  = torch.LongTensor([next_sentence_label])
-      feature_set.append(features)
-
-      if FLAGS.write_text_dataset:
-        file_writer.write("'seen_in_training': {}\n'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'position_ids': {}\n'mask_labels': {}\n'masked_lm_lengths': {}\n'next_sentence_label': {}\n\n"
-                            .format((True if seen_in_training == 1 else False),
-                                    self.atomizer.DeatomizeIndices(original_input, ignore_token = self.atomizer.padToken),
-                                    self.atomizer.DeatomizeIndices(input_ids, ignore_token = self.atomizer.padToken),
-                                    input_mask, 
-                                    position_ids, 
-                                    mask_labels, 
-                                    masked_lm_lengths, 
-                                    next_sentence_label)
-                            )
-
-    torch.save(feature_set, masked_corpus['pt_record'])
-    if FLAGS.write_text_dataset:
-      file_writer.close()
+      with open(masked_corpus['txt'], 'w') as file_writer:
+        for instance in masked_corpus['corpus']:
+          file_writer.write("'seen_in_training': {}\n'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'position_ids': {}\n'mask_labels': {}\n'masked_lm_lengths': {}\n'next_sentence_label': {}\n\n"
+                              .format((True if instance['seen_in_training'] == 1 else False),
+                                      self.atomizer.DeatomizeIndices(instance['original_input'], ignore_token = self.atomizer.padToken),
+                                      self.atomizer.DeatomizeIndices(instance['input_ids'], ignore_token = self.atomizer.padToken),
+                                      instance['input_mask'],
+                                      instance['position_ids'],
+                                      instance['mask_labels'],
+                                      instance['masked_lm_lengths'],
+                                      instance['next_sentence_label']
+                                    )
+                              )
     l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
-                      .format(inst_index + 1, self.steps_per_epoch, self.training_opts.batch_size, masked_corpus['pt_record']))
+                 .format(len(masked_corpus['corpus']), self.steps_per_epoch, self.training_opts.batch_size, masked_corpus['pt_record']))
     return
 
   def _padToMaxPosition(self, input_sample):
