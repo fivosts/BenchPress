@@ -46,13 +46,12 @@ from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
-# flags.DEFINE_integer(
-#   "select_checkpoint_step",
-#   -1,
-#   "Select step checkpoint for sample. Re-training with this flag is not supported. "
-#   "To restart from specific checkpoint, you have to manually remove the checkpoints after the desired one."
-#   "Default: -1, flag ignored and latest checkpoint is loaded."
-# )
+flags.DEFINE_integer(
+  "monitor_frequency",
+  500,
+  "Choose frequency (in steps) in which tensors will be logged during training. "
+  "Default: 500"
+)
 
 # flags.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
 
@@ -281,18 +280,13 @@ class torchBert(backends.BackendBase):
     data_generator = MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
                        corpus, self.config.training, self.cache.path
                      )
-
     self._ConfigTrainParams(data_generator)
-
     current_step = self.loadCheckpoint()
-
-    l.getLogger().warn("Loaded step {}".format(current_step))
     model = self.train.model.to(self.pytorch.device)
 
     dummy_num_machines = -1
     dummy_gradient_accumulation_steps = 1
     dummy_max_grad_norm = 1.0
-    dummy_logging_steps = 20
 
     if self.pytorch.num_gpus > 1:
       model = self.torch.nn.DataParallel(model)
@@ -304,6 +298,7 @@ class torchBert(backends.BackendBase):
         output_device=dummy_num_machines,
         find_unused_parameters=True,
       )
+    model.zero_grad()
 
     if self.torch_tpu_available:
       total_train_batch_size = self.train_batch_size * self.pytorch.torch_xla.xrt_world_size()
@@ -313,11 +308,14 @@ class torchBert(backends.BackendBase):
         * (self.torch.distributed.get_world_size() if dummy_num_machines != -1 else 1)
       )
 
-    model.zero_grad()
     average_masked_lm_loss = 0.0
     average_next_sentence_loss = 0.0
+    average_time, start, finish = 0.0, 0.0, 0.0
+    
     epoch_iterator = tqdm.auto.trange(current_step // self.steps_per_epoch, self.num_epochs, desc="Epoch")
     batch_iterator = iter(self.train.data_generator.dataloader)
+    
+    start = datetime.datetime.utcnow()
     for epoch in epoch_iterator:
 
       if self.torch_tpu_available:
@@ -331,30 +329,39 @@ class torchBert(backends.BackendBase):
         try:
           inputs = next(batch_iterator)
         except StopIteration:
+          # dataloader has different len() than steps_per_epoch.
+          # This is the easisest way to infinite-loop dataloaders in pytorch.
           batch_iterator = iter(self.train.data_generator.dataloader)
           inputs = next(batch_iterator)
 
         step_mask_loss, step_ns_loss = self.training_step(model, inputs)
-        self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
+        average_masked_lm_loss += step_mask_loss
+        average_next_sentence_loss += step_ns_loss
 
+        self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
         if self.torch_tpu_available:
           self.pytorch.torch_xla.optimizer_step(self.train.optimizer)
         else:
           self.train.optimizer.step()
-
         self.train.scheduler.step()
         model.zero_grad()
 
-        self.logTraining(current_step,
-                         masked_lm_loss = average_masked_lm_loss,
-                         next_sentence_loss = average_next_sentence_loss,
-                         total_loss = average_masked_lm_loss + average_next_sentence_loss,
-                         learning_rate = self.train.scheduler.get_last_lr()[0]
-        )
+        if current_step % FLAGS.monitor_frequency:
+          finish = datetime.datetime.utcnow()
+          average_time = int(round((finish - start).total_seconds() * 1000 / FLAGS.monitor_frequency))
+          average_masked_lm_loss /= FLAGS.monitor_frequency
+          average_next_sentence_loss /= FLAGS.monitor_frequency
+          self.logTraining(current_step,
+                           masked_lm_loss = average_masked_lm_loss,
+                           next_sentence_loss = average_next_sentence_loss,
+                           total_loss = average_masked_lm_loss + average_next_sentence_loss,
+                           learning_rate = self.train.scheduler.get_last_lr()[0],
+                           execution_time_ms = average_time,
+          )
+          start = datetime.datetime.utcnow()
 
         # if self.args.evaluate_during_training and global_step % self.args.eval_steps == 0:
         #   self.evaluate()
-
       # End of Epoch
       self.saveCheckpoint(current_step)
       if self.torch_tpu_available:
