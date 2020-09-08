@@ -255,8 +255,8 @@ def _holeSequence(seq: np.array,
     assert input_ids[first_pad_index] == atomizer.padToken, "{}".format(input_ids)
     assert input_ids[first_pad_index - 1] != atomizer.padToken
 
-  seen_in_training    = np.ones([1]) if train_set else np.zeros([1])
-  next_sentence_label = np.zeros([1])
+  seen_in_training    = np.ones([1], dtype = np.int64) if train_set else np.zeros([1], dtype = np.int64)
+  next_sentence_label = np.zeros([1], dtype = np.int64)
   """
     Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
     is intended on kernels. In any other case, check bert's create_instances_from_document
@@ -351,8 +351,8 @@ def _maskSequence(seq: np.array,
   if atomizer.padToken in input_ids:
     input_mask[input_ids.index(atomizer.padToken):] = 0
 
-  seen_in_training    = np.ones([1]) if train_set else np.zeros([1])
-  next_sentence_label = np.zeros([1])
+  seen_in_training    = np.ones([1], dtype = np.int64) if train_set else np.zeros([1], dtype = np.int64)
+  next_sentence_label = np.zeros([1], dtype = np.int64)
   ## Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
   ## is intended on kernels. In any other case, check bert's create_instances_from_document
   ## to see how next_sentence_label are calculated.
@@ -459,7 +459,7 @@ class MaskLMBatchGenerator(object):
       a = input()
       if a.lower() != "yes" and a.lower() != "y":
         l.getLogger().warn("Overwriting dataset process was aborted. Good call.")
-        return
+        exit()
 
     if len(glob.glob(str(self.cache.path / "train_dataset_*.pt_record"))) == 0 or FLAGS.force_remake_dataset:
       if self.config.validation_split == 0:
@@ -863,7 +863,7 @@ class MaskLMBatchGenerator(object):
     """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
 
     torch.save(
-      [{k: torch.from_numpy(v)} for x in masked_corpus['corpus'] for k, v in x.items()], 
+      [{k: torch.from_numpy(v) for (k, v) in inst.items()} for inst in masked_corpus['corpus']],
       masked_corpus['pt_record']
     )
     if FLAGS.write_text_dataset:
