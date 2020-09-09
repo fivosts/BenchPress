@@ -40,6 +40,7 @@ from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models.torch_bert import model
 from deeplearning.clgen.models.torch_bert import config
 from deeplearning.clgen.models.torch_bert import optimizer
+from deeplearning.clgen.models.torch_bert import hooks
 from deeplearning.clgen.models.torch_bert.data_generator import MaskLMBatchGenerator
 
 from eupy.native import logger as l
@@ -48,9 +49,9 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_integer(
   "monitor_frequency",
-  500,
+  250,
   "Choose frequency (in steps) in which tensors will be logged during training. "
-  "Default: 500"
+  "Default: 250"
 )
 
 # flags.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
@@ -275,12 +276,11 @@ class torchBert(backends.BackendBase):
                 labels              = inputs['mask_labels'],
                 next_sentence_label = inputs['next_sentence_label']
               )
-    masked_lm_loss, next_sentence_loss = outputs[0], outputs[1]
-    total_loss = masked_lm_loss + next_sentence_loss
+    total_loss, masked_lm_loss, next_sentence_loss = outputs[0], outputs[1], outputs[2]
     if self.pytorch.num_gpus > 1:
       total_loss = total_loss.mean()  # mean() to average on multi-gpu parallel training
     total_loss.backward()
-    return masked_lm_loss.item(), next_sentence_loss.item()
+    return total_loss.item(), masked_lm_loss.item(), next_sentence_loss.item()
 
   def Train(self,
             corpus,
@@ -304,15 +304,12 @@ class torchBert(backends.BackendBase):
     if self.torch_tpu_available:
       total_train_batch_size = self.train_batch_size * self.pytorch.torch_xla.xrt_world_size()
     else:
+      dummy_num_machines = -1
       total_train_batch_size = (
         self.train_batch_size
         * (self.torch.distributed.get_world_size() if dummy_num_machines != -1 else 1)
       )
 
-    # average_masked_lm_loss = 0.0
-    # average_next_sentence_loss = 0.0
-    # average_time, start, finish = 0.0, 0.0, 0.0
-    
     epoch_iterator = tqdm.auto.trange(current_step // self.steps_per_epoch, self.num_epochs, desc="Epoch")
 
     if self.torch_tpu_available:
@@ -324,14 +321,14 @@ class torchBert(backends.BackendBase):
     else:
       batch_iterator = iter(self.train.data_generator.dataloader)
     
-    hooks = hooks.torchTrainingHook(
-      self.logfile_path, current_step, 250
+    train_hook = hooks.torchTrainingHook(
+      self.logfile_path, current_step, FLAGS.monitor_frequency
     )
-    # start = datetime.datetime.utcnow()
     for epoch in epoch_iterator:
 
       batch_counter = tqdm.auto.trange(0, self.steps_per_epoch, desc="Batch")
       for step in batch_counter:
+        start = datetime.datetime.utcnow()
         try:
           inputs = next(batch_iterator)
         except StopIteration:
@@ -340,13 +337,9 @@ class torchBert(backends.BackendBase):
           batch_iterator = iter(self.train.data_generator.dataloader)
           inputs = next(batch_iterator)
 
-        step_mask_loss, step_ns_loss = self.training_step(model, inputs)
-        hooks.step(
-          step_mask_loss, step_ns_loss, step_mask_loss + step_ns_loss,
-          self.train.scheduler.get_last_lr()[0]
-        )
-        # average_masked_lm_loss += step_mask_loss
-        # average_next_sentence_loss += step_ns_loss
+        ####### Train step.  
+        _, step_mask_loss, step_ns_loss = self.training_step(model, inputs)
+        #######
 
         self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
         if self.torch_tpu_available:
@@ -354,21 +347,17 @@ class torchBert(backends.BackendBase):
         else:
           self.train.optimizer.step()
         self.train.scheduler.step()
-        model.zero_grad()
 
-        # if current_step % FLAGS.monitor_frequency:
-        #   finish = datetime.datetime.utcnow()
-        #   average_time = int(round((finish - start).total_seconds() * 1000 / FLAGS.monitor_frequency))
-        #   average_masked_lm_loss /= FLAGS.monitor_frequency
-        #   average_next_sentence_loss /= FLAGS.monitor_frequency
-        #   self.logTraining(current_step,
-        #                    masked_lm_loss = average_masked_lm_loss,
-        #                    next_sentence_loss = average_next_sentence_loss,
-        #                    total_loss = average_masked_lm_loss + average_next_sentence_loss,
-        #                    learning_rate = self.train.scheduler.get_last_lr()[0],
-        #                    execution_time_ms = average_time,
-        #   )
-        #   start = datetime.datetime.utcnow()
+        train_hook.step(
+          masked_lm_loss = step_mask_loss,
+          next_sentence_loss = step_ns_loss,
+          total_loss = step_mask_loss + step_ns_loss,
+          learning_rate = self.train.scheduler.get_last_lr()[0],
+          execution_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
+        )
+
+        model.zero_grad()
+        current_step += 1
 
         # if self.args.evaluate_during_training and global_step % self.args.eval_steps == 0:
         #   self.evaluate()
