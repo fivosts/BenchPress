@@ -405,11 +405,29 @@ class torchBert(backends.BackendBase):
       loader = self.train.data_generator.dataloader
     eval_iterator = iter(loader)
 
+    def prediction_step(self, 
+                        model: typing.TypeVar("torch.nn.Module"),
+                        inputs: Dict[str, torch.Tensor]
+                        ):
+      """
+      Perform an evaluation step on :obj:`model` using obj:`inputs`.
+      """
+      for key, value in inputs.items():
+        if isinstance(value, self.torch.Tensor):
+          inputs[key] = value.to(self.pytorch.device)
+      with self.torch.no_grad():
+        outputs = model(**inputs)
+        loss, logits = outputs[:2]
+        loss = loss.mean().item()
+      labels = inputs.get("labels")
+      labels = labels.detach()
+      return (loss, logits.detach(), labels)
+
     for step in tqdm.auto.trange(FLAGS.max_eval_steps, desc = "Validation"):
       try:
         inputs = next(eval_iterator)
       except StopIteration:
-        eval_iterator = iter(self.train.data_generator.dataloader)
+        eval_iterator = iter(loader)
         inputs = next(eval_iterator)
 
       loss, preds, label_ids = self.prediction_step(model, inputs)
@@ -430,7 +448,6 @@ class torchBert(backends.BackendBase):
       preds = self.pytorch.torch_xla_model.mesh_reduce("eval_preds", preds, self.torch.cat)
       label_ids = self.pytorch.torch_xla_model.mesh_reduce("eval_label_ids", label_ids, self.torch.cat)
 
-    # Finally, turn the aggregated tensors into numpy arrays.
     preds     = preds.cpu().numpy()
     label_ids = label_ids.cpu().numpy()
 
