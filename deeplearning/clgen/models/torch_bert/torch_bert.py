@@ -106,6 +106,7 @@ class torchBert(backends.BackendBase):
     self.sample_path         = self.cache.path / "samples"
 
     self.is_validated        = False
+    self.trained             = False
     l.getLogger().info("BERT Model config initialized in {}".format(self.cache.path))
     return
 
@@ -171,6 +172,7 @@ class torchBert(backends.BackendBase):
     self.eval_batch_size                  = self.config.training.batch_size
     self.learning_rate                    = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
     self.num_warmup_steps                 = self.config.training.num_warmup_steps
+    self.max_grad_norm                    = 1.0
 
     self.telemetry                        = telemetry.TrainingLogger(self.logfile_path)
     self.steps_per_epoch                  = data_generator.steps_per_epoch
@@ -242,45 +244,21 @@ class torchBert(backends.BackendBase):
     l.getLogger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
     return
 
-  @property
-  def is_trained(self):
-    if FLAGS.select_checkpoint_step >= 0:
-      return True
-    else:
-      for file_path in self.ckpt_path.iterdir():
-        filename = file_path.stem
-        if "model.ckpt-" in filename:
-          step_ckpt = int(filename.replace("model.ckpt-", ""))
-          if step_ckpt >= self.num_train_steps:
-            return True
-    return False
+  # @property
+  # def is_trained(self):
+  #   if FLAGS.select_checkpoint_step >= 0:
+  #     return True
+  #   else:
+  #     for file_path in self.ckpt_path.iterdir():
+  #       filename = file_path.stem
+  #       if "model.ckpt-" in filename:
+  #         step_ckpt = int(filename.replace("model.ckpt-", ""))
+  #         if step_ckpt >= self.num_train_steps:
+  #           return True
+  #   return False
 
   def samplesWithCategorical(self):
     return FLAGS.categorical_sampling
-
-  def training_step(self, 
-                    model: typing.TypeVar('nn.Module'), 
-                    inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
-                    ) -> float:
-    """
-    Perform a training step on a batch of inputs.
-    """
-    model.train()
-    for key, value in inputs.items():
-      inputs[key] = value.to(self.pytorch.device)
-
-    outputs = model(
-                input_ids           = inputs['input_ids'],
-                attention_mask      = inputs['input_mask'],
-                position_ids        = inputs['position_ids'],
-                labels              = inputs['mask_labels'],
-                next_sentence_label = inputs['next_sentence_label']
-              )
-    total_loss, masked_lm_loss, next_sentence_loss = outputs[0], outputs[1], outputs[2]
-    if self.pytorch.num_gpus > 1:
-      total_loss = total_loss.mean()  # mean() to average on multi-gpu parallel training
-    total_loss.backward()
-    return total_loss.item(), masked_lm_loss.item(), next_sentence_loss.item()
 
   def Train(self,
             corpus,
@@ -290,84 +268,108 @@ class torchBert(backends.BackendBase):
     """
     Main training entry point.
     """
-    data_generator = MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
-                       corpus, self.config.training, self.cache.path
-                     )
-    self._ConfigTrainParams(data_generator)
+    if self.train is None:
+      self._ConfigTrainParams(
+        MaskLMBatchGenerator.TrainMaskLMBatchGenerator(corpus, self.config.training, self.cache.path)
+      )
     current_step = self.loadCheckpoint()
-    model = self.train.model.to(self.pytorch.device)
-    model.zero_grad()
+    self.is_trained = True if current_step >= self.num_train_steps else False
 
-    dummy_gradient_accumulation_steps = 1
-    dummy_max_grad_norm = 1.0
+    if not self.is_trained:
+      model = self.train.model.to(self.pytorch.device)
+      model.zero_grad()
 
-    if self.torch_tpu_available:
-      total_train_batch_size = self.train_batch_size * self.pytorch.torch_xla.xrt_world_size()
-    else:
-      dummy_num_machines = -1
-      total_train_batch_size = (
-        self.train_batch_size
-        * (self.torch.distributed.get_world_size() if dummy_num_machines != -1 else 1)
+      if self.torch_tpu_available:
+        total_train_batch_size = self.train_batch_size * self.pytorch.torch_xla.xrt_world_size()
+      else:
+        dummy_num_machines = -1
+        total_train_batch_size = (
+          self.train_batch_size
+          * (self.torch.distributed.get_world_size() if dummy_num_machines != -1 else 1)
+        )
+
+      if self.torch_tpu_available:
+        loader = self.pytorch.torch_ploader.ParallelLoader(
+                            self.train.data_generator.dataloader, [self.pytorch.device]
+                          ).per_device_loader(self.pytorch.device)
+        self.train.data_generator.dataloader.sampler.set_epoch(epoch)
+      else:
+        loader = self.train.data_generator.dataloader
+
+      epoch_iterator = tqdm.auto.trange(current_step // self.steps_per_epoch, self.num_epochs, desc="Epoch")
+      batch_iterator = iter(loader)    
+      train_hook = hooks.torchTrainingHook(
+        self.logfile_path, current_step, FLAGS.monitor_frequency
       )
 
-    epoch_iterator = tqdm.auto.trange(current_step // self.steps_per_epoch, self.num_epochs, desc="Epoch")
+      def training_step(self, 
+                        model: typing.TypeVar('nn.Module'), 
+                        inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
+                        ) -> float:
+        """
+        Perform a training step on a batch of inputs.
+        """
+        for key, value in inputs.items():
+          inputs[key] = value.to(self.pytorch.device)
 
-    if self.torch_tpu_available:
-      loader = self.pytorch.torch_ploader.ParallelLoader(
-                          self.train.data_generator.dataloader, [self.pytorch.device]
-                        ).per_device_loader(self.pytorch.device)
-      self.train.data_generator.dataloader.sampler.set_epoch(epoch)
-    else:
-      loader = self.train.data_generator.dataloader
+        outputs = model(
+                    input_ids           = inputs['input_ids'],
+                    attention_mask      = inputs['input_mask'],
+                    position_ids        = inputs['position_ids'],
+                    labels              = inputs['mask_labels'],
+                    next_sentence_label = inputs['next_sentence_label']
+                  )
+        total_loss, masked_lm_loss, next_sentence_loss = outputs[0], outputs[1], outputs[2]
+        if self.pytorch.num_gpus > 1:
+          total_loss = total_loss.mean()  # mean() to average on multi-gpu parallel training
+        total_loss.backward()
+        return total_loss.item(), masked_lm_loss.item(), next_sentence_loss.item()
 
-    batch_iterator = iter(loader)    
-    train_hook = hooks.torchTrainingHook(
-      self.logfile_path, current_step, FLAGS.monitor_frequency
-    )
-    try:
-      for epoch in epoch_iterator:
+      try:
+        model.train()
+        for epoch in epoch_iterator:
 
-        batch_counter = tqdm.auto.trange(0, self.steps_per_epoch, desc="Batch")
-        for step in batch_counter:
-          start = datetime.datetime.utcnow()
-          try:
-            inputs = next(batch_iterator)
-          except StopIteration:
-            # dataloader has different len() than steps_per_epoch.
-            # This is the easiest way to infinite-loop dataloaders in pytorch.
-            batch_iterator = iter(loader)
-            inputs = next(batch_iterator)
+          batch_counter = tqdm.auto.trange(0, self.steps_per_epoch, desc="Batch")
+          for step in batch_counter:
+            start = datetime.datetime.utcnow()
+            try:
+              inputs = next(batch_iterator)
+            except StopIteration:
+              # dataloader has different len() than steps_per_epoch.
+              # This is the easiest way to infinite-loop dataloaders in pytorch.
+              batch_iterator = iter(loader)
+              inputs = next(batch_iterator)
 
-          ####### Train step.  
-          _, step_mask_loss, step_ns_loss = self.training_step(model, inputs)
-          #######
+            _, step_mask_loss, step_ns_loss = self.training_step(model, inputs)
 
-          self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
+            self.torch.nn.utils.clip_grad_norm_(model.parameters(), self.max_grad_norm)
+            if self.torch_tpu_available:
+              self.pytorch.torch_xla.optimizer_step(self.train.optimizer)
+            else:
+              self.train.optimizer.step()
+            self.train.scheduler.step()
+
+            train_hook.step(
+              masked_lm_loss = step_mask_loss,
+              next_sentence_loss = step_ns_loss,
+              total_loss = step_mask_loss + step_ns_loss,
+              learning_rate = self.train.scheduler.get_last_lr()[0],
+              execution_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
+            )
+
+            model.zero_grad()
+            current_step += 1
+
+            # if self.args.evaluate_during_training and global_step % self.args.eval_steps == 0:
+            #   self.evaluate()
+          # End of Epoch
+          self.saveCheckpoint(current_step)
           if self.torch_tpu_available:
-            self.pytorch.torch_xla.optimizer_step(self.train.optimizer)
-          else:
-            self.train.optimizer.step()
-          self.train.scheduler.step()
+            self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
 
-          train_hook.step(
-            masked_lm_loss = step_mask_loss,
-            next_sentence_loss = step_ns_loss,
-            total_loss = step_mask_loss + step_ns_loss,
-            learning_rate = self.train.scheduler.get_last_lr()[0],
-            execution_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
-          )
-
-          model.zero_grad()
-          current_step += 1
-
-          # if self.args.evaluate_during_training and global_step % self.args.eval_steps == 0:
-          #   self.evaluate()
-        # End of Epoch
-        self.saveCheckpoint(current_step)
-        if self.torch_tpu_available:
-          self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
-    except KeyboardInterrupt:
-      pass
+        self.is_trained = True
+      except KeyboardInterrupt:
+        pass
     return
 
   def Validate(self) -> None:
