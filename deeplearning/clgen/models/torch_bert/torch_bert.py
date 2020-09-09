@@ -302,8 +302,15 @@ class torchBert(backends.BackendBase):
         self.logfile_path, current_step, FLAGS.monitor_frequency
       )
 
-      def training_step(self, 
-                        model: typing.TypeVar('nn.Module'), 
+      l.getLogger().info(
+        "Splitting {} steps into {} equivalent epochs, {} steps each. Rejected {} redundant step(s)".format(
+          self.num_train_steps, self.num_epochs, 
+          self.steps_per_epoch, self.config.training.num_train_steps - self.num_train_steps
+        )
+      )
+
+      def training_step(self,
+                        model: typing.TypeVar('nn.Module'),
                         inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
                         ) -> float:
         """
@@ -370,6 +377,7 @@ class torchBert(backends.BackendBase):
         self.is_trained = True
       except KeyboardInterrupt:
         pass
+    self.Validate()
     return
 
   def Validate(self) -> None:
