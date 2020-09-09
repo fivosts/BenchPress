@@ -404,7 +404,6 @@ class torchBert(backends.BackendBase):
 
       loss, preds, label_ids = self.prediction_step(model, inputs)
       batch_size = inputs[list(inputs.keys())[0]].shape[0]
-
       eval_losses.append(loss * batch_size)
 
     dummy_local_rank == -1
