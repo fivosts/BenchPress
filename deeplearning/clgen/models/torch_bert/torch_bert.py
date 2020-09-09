@@ -428,8 +428,7 @@ class torchBert(backends.BackendBase):
                   EvalPrediction(predictions=preds, label_ids=label_ids)
                 )
 
-    if len(eval_losses) > 0:
-      metrics["eval_loss"] = np.sum(eval_losses) / (FLAGS.max_eval_steps * self.eval_batch_size)
+    metrics["eval_loss"] = np.sum(eval_losses) / (FLAGS.max_eval_steps * self.eval_batch_size)
 
     # Prefix all keys with eval_
     for key in list(metrics.keys()):
