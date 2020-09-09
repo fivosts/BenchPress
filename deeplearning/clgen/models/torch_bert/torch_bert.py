@@ -292,7 +292,7 @@ class torchBert(backends.BackendBase):
         loader = self.pytorch.torch_ploader.ParallelLoader(
                             self.train.data_generator.dataloader, [self.pytorch.device]
                           ).per_device_loader(self.pytorch.device)
-        self.train.data_generator.dataloader.sampler.set_epoch(epoch)
+        self.train.data_generator.dataloader.sampler.set_epoch(current_step // self.steps_per_epoch)
       else:
         loader = self.train.data_generator.dataloader
 
