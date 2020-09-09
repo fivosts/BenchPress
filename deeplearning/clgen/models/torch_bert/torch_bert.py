@@ -296,7 +296,7 @@ class torchBert(backends.BackendBase):
       else:
         loader = self.train.data_generator.dataloader
 
-      epoch_iterator = tqdm.auto.trange(current_step // self.steps_per_epoch, self.num_epochs, desc="Epoch")
+      epoch_iterator = tqdm.auto.trange(self.num_epochs, desc="Epoch")
       batch_iterator = iter(loader)    
       train_hook = hooks.torchTrainingHook(
         self.logfile_path, current_step, FLAGS.monitor_frequency
@@ -335,7 +335,9 @@ class torchBert(backends.BackendBase):
       try:
         model.train()
         for epoch in epoch_iterator:
-
+          while epoch < current_step // self.steps_per_epoch:
+            continue # Stupid bar won't resume.
+          
           batch_counter = tqdm.auto.trange(0, self.steps_per_epoch, desc="Batch")
           for step in batch_counter:
             start = datetime.datetime.utcnow()
@@ -391,18 +393,12 @@ class torchBert(backends.BackendBase):
 
     ###############
     model = self.model
-    # multi-gpu eval
     if self.pytorch.num_gpus > 1:
       model = self.torch.nn.DataParallel(model)
-    else:
-      model = self.model
-    # Note: in torch.distributed mode, there's no point in wrapping the model
-    # inside a DistributedDataParallel as we'll be under `no_grad` anyways.
 
-    batch_size = self.eval_batch_size
-    eval_losses: List[float] = []
-    preds: self.torch.Tensor = None
-    label_ids: self.torch.Tensor = None
+    eval_losses = []
+    preds       = None
+    label_ids   = None
     model.eval()
 
     if self.torch_tpu_available:
@@ -413,7 +409,7 @@ class torchBert(backends.BackendBase):
       loader = self.train.data_generator.dataloader
     eval_iterator = iter(loader)
 
-    for step in tqdm.auto.trange(0, FLAGS.max_eval_steps, desc="Validation"):
+    for step in tqdm.auto.trange(0, FLAGS.max_eval_steps, desc = "Validation"):
       try:
         inputs = next(eval_iterator)
       except StopIteration:
