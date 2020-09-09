@@ -31,25 +31,27 @@ class torchTrainingHook(object):
     if current_step >= 0:
       if (self.cache_path / "training.json").exists():
         with open(self.cache_path / "training.json", 'r') as js:
-          # Read json into self.tensors.
-          # self.tensors should be:
-          """
-            [
-              {
-                'exec time': int,
-                'step' :int,
-                etc.
-              },
-              {
-  
-              }
-            ]
-          """
-          pass
+          self.tensors = json.load(js)
       else:
         raise FileNotFoundError(self.cache_path / "training.json")
     return
 
+  def _step_triggered(self):
+    self.current_step += 1
+    if (self.current_step - 1) % self.step_freq == 0:
+      return True
+    return False
+
   def step(self, **tensors):
-    for key, value in tensors.items():
-      self.tensors[key] += value
+    self.tensors.append(tensors)
+    if self._step_triggered():
+      self._logTensors()
+    return
+
+  def _logTensors(self):
+    if self.current_step - 1 == 0:
+      # log me as it is
+      pass
+    else:
+      # Average me by step_freq and then log me
+      pass
