@@ -324,47 +324,50 @@ class torchBert(backends.BackendBase):
     train_hook = hooks.torchTrainingHook(
       self.logfile_path, current_step, FLAGS.monitor_frequency
     )
-    for epoch in epoch_iterator:
+    try:
+      for epoch in epoch_iterator:
 
-      batch_counter = tqdm.auto.trange(0, self.steps_per_epoch, desc="Batch")
-      for step in batch_counter:
-        start = datetime.datetime.utcnow()
-        try:
-          inputs = next(batch_iterator)
-        except StopIteration:
-          # dataloader has different len() than steps_per_epoch.
-          # This is the easiest way to infinite-loop dataloaders in pytorch.
-          batch_iterator = iter(loader)
-          inputs = next(batch_iterator)
+        batch_counter = tqdm.auto.trange(0, self.steps_per_epoch, desc="Batch")
+        for step in batch_counter:
+          start = datetime.datetime.utcnow()
+          try:
+            inputs = next(batch_iterator)
+          except StopIteration:
+            # dataloader has different len() than steps_per_epoch.
+            # This is the easiest way to infinite-loop dataloaders in pytorch.
+            batch_iterator = iter(loader)
+            inputs = next(batch_iterator)
 
-        ####### Train step.  
-        _, step_mask_loss, step_ns_loss = self.training_step(model, inputs)
-        #######
+          ####### Train step.  
+          _, step_mask_loss, step_ns_loss = self.training_step(model, inputs)
+          #######
 
-        self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
+          self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
+          if self.torch_tpu_available:
+            self.pytorch.torch_xla.optimizer_step(self.train.optimizer)
+          else:
+            self.train.optimizer.step()
+          self.train.scheduler.step()
+
+          train_hook.step(
+            masked_lm_loss = step_mask_loss,
+            next_sentence_loss = step_ns_loss,
+            total_loss = step_mask_loss + step_ns_loss,
+            learning_rate = self.train.scheduler.get_last_lr()[0],
+            execution_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
+          )
+
+          model.zero_grad()
+          current_step += 1
+
+          # if self.args.evaluate_during_training and global_step % self.args.eval_steps == 0:
+          #   self.evaluate()
+        # End of Epoch
+        self.saveCheckpoint(current_step)
         if self.torch_tpu_available:
-          self.pytorch.torch_xla.optimizer_step(self.train.optimizer)
-        else:
-          self.train.optimizer.step()
-        self.train.scheduler.step()
-
-        train_hook.step(
-          masked_lm_loss = step_mask_loss,
-          next_sentence_loss = step_ns_loss,
-          total_loss = step_mask_loss + step_ns_loss,
-          learning_rate = self.train.scheduler.get_last_lr()[0],
-          execution_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
-        )
-
-        model.zero_grad()
-        current_step += 1
-
-        # if self.args.evaluate_during_training and global_step % self.args.eval_steps == 0:
-        #   self.evaluate()
-      # End of Epoch
-      self.saveCheckpoint(current_step)
-      if self.torch_tpu_available:
-        self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
+          self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
+    except KeyboardInterrupt:
+      pass
     return
 
   def Validate(self) -> None:
