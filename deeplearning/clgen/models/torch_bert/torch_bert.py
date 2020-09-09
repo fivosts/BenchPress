@@ -309,9 +309,9 @@ class torchBert(backends.BackendBase):
         * (self.torch.distributed.get_world_size() if dummy_num_machines != -1 else 1)
       )
 
-    average_masked_lm_loss = 0.0
-    average_next_sentence_loss = 0.0
-    average_time, start, finish = 0.0, 0.0, 0.0
+    # average_masked_lm_loss = 0.0
+    # average_next_sentence_loss = 0.0
+    # average_time, start, finish = 0.0, 0.0, 0.0
     
     epoch_iterator = tqdm.auto.trange(current_step // self.steps_per_epoch, self.num_epochs, desc="Epoch")
 
@@ -324,7 +324,10 @@ class torchBert(backends.BackendBase):
     else:
       batch_iterator = iter(self.train.data_generator.dataloader)
     
-    start = datetime.datetime.utcnow()
+    hooks = hooks.torchTrainingHook(
+      self.logfile_path, current_step, 250
+    )
+    # start = datetime.datetime.utcnow()
     for epoch in epoch_iterator:
 
       batch_counter = tqdm.auto.trange(0, self.steps_per_epoch, desc="Batch")
@@ -338,8 +341,12 @@ class torchBert(backends.BackendBase):
           inputs = next(batch_iterator)
 
         step_mask_loss, step_ns_loss = self.training_step(model, inputs)
-        average_masked_lm_loss += step_mask_loss
-        average_next_sentence_loss += step_ns_loss
+        hooks.step(
+          step_mask_loss, step_ns_loss, step_mask_loss + step_ns_loss,
+          self.train.scheduler.get_last_lr()[0]
+        )
+        # average_masked_lm_loss += step_mask_loss
+        # average_next_sentence_loss += step_ns_loss
 
         self.torch.nn.utils.clip_grad_norm_(model.parameters(), dummy_max_grad_norm)
         if self.torch_tpu_available:
@@ -349,19 +356,19 @@ class torchBert(backends.BackendBase):
         self.train.scheduler.step()
         model.zero_grad()
 
-        if current_step % FLAGS.monitor_frequency:
-          finish = datetime.datetime.utcnow()
-          average_time = int(round((finish - start).total_seconds() * 1000 / FLAGS.monitor_frequency))
-          average_masked_lm_loss /= FLAGS.monitor_frequency
-          average_next_sentence_loss /= FLAGS.monitor_frequency
-          self.logTraining(current_step,
-                           masked_lm_loss = average_masked_lm_loss,
-                           next_sentence_loss = average_next_sentence_loss,
-                           total_loss = average_masked_lm_loss + average_next_sentence_loss,
-                           learning_rate = self.train.scheduler.get_last_lr()[0],
-                           execution_time_ms = average_time,
-          )
-          start = datetime.datetime.utcnow()
+        # if current_step % FLAGS.monitor_frequency:
+        #   finish = datetime.datetime.utcnow()
+        #   average_time = int(round((finish - start).total_seconds() * 1000 / FLAGS.monitor_frequency))
+        #   average_masked_lm_loss /= FLAGS.monitor_frequency
+        #   average_next_sentence_loss /= FLAGS.monitor_frequency
+        #   self.logTraining(current_step,
+        #                    masked_lm_loss = average_masked_lm_loss,
+        #                    next_sentence_loss = average_next_sentence_loss,
+        #                    total_loss = average_masked_lm_loss + average_next_sentence_loss,
+        #                    learning_rate = self.train.scheduler.get_last_lr()[0],
+        #                    execution_time_ms = average_time,
+        #   )
+        #   start = datetime.datetime.utcnow()
 
         # if self.args.evaluate_during_training and global_step % self.args.eval_steps == 0:
         #   self.evaluate()
