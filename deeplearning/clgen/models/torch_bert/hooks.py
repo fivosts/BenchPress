@@ -10,14 +10,18 @@ class torchTrainingHook(object):
   def __init__(self, 
                cache_path: pathlib.Path, 
                current_step: int, 
-               step_freq: int
+               step_freq: int,
+               flush_freq: int = None,
                ):
-    self.cache_path    = cache_path
-    self.jsonfile      = cache_path / "training.json"
-    self.current_step  = current_step
-    self.step_freq     = step_freq
-    self.tensors       = []
-    self.epoch_tensors = {}
+    self.cache_path       = cache_path
+    self.jsonfile         = cache_path / "training.json"
+    self.current_step     = current_step
+    self.step_freq        = step_freq
+    self.flush_freq       = step_freq if flush_freq is None else flush_freq
+    self.tensors          = []
+    self.plot_tensors     = {}
+    self.epoch_tensors    = {}
+    self.delay_checkpoint = True if current_step != 0 else False
     self._initTensors()
 
     self.monitor_func = [
@@ -27,7 +31,6 @@ class torchTrainingHook(object):
     return
 
   def step(self, **tensors):
-
     for key, value in tensors.items():
       if key in self.epoch_tensors:
         self.epoch_tensors[key] += value
@@ -36,51 +39,71 @@ class torchTrainingHook(object):
 
     if self._step_triggered():
       self._logTensors()
+      self.epoch_tensors = {}
     return
 
   def _initTensors(self):
-    if current_step >= 0:
+    if self.current_step > 0:
       if self.jsonfile.exists():
         with open(self.jsonfile, 'r') as js:
-          self.tensors = json.load(js)
+          loaded_tensors = json.load(js)
+          if loaded_tensors[-1]['step'] > self.current_step:
+            # If previous sessions have written beyond current step, overwrite them.
+            back_index = -2
+            while loaded_tensors[back_index]['step'] > self.current_step:
+              back_index -= 1
+            self.tensors = loaded_tensors[:back_index + 1]
+          else:
+            self.tensors = loaded_tensors
       else:
         raise FileNotFoundError(self.jsonfile)
     return
 
   def _step_triggered(self):
     self.current_step += 1
+    if self.delay_checkpoint:
+      self.delay_checkpoint = False
+      return False
     if (self.current_step - 1) % self.step_freq == 0:
       return True
     return False
 
   def _logTensors(self):
-    if self.current_step - 1 == 0:
-      self.tensors.append(self.epoch_tensors)
-    else:
-      self.tensors.append(
-        {k: v / self.step_freq for k, v in self.epoch_tensors.items()}
-      )
+
+    epoch_tensors = (self.epoch_tensors if self.current_step - 1 == 0
+                     else {k: v / self.step_freq for k, v in self.epoch_tensors.items()})
+
+    self.tensors.append(epoch_tensors)
+    self.tensors[-1]['step'] = self.current_step - 1
+    
+    for key, value in epoch_tensors.items():
+      if key not in self.plot_tensors:
+        self.plot_tensors[key] = {'value': [], 'step': []}
+      self.plot_tensors[key]['value'].append(value)
+      self.plot_tensors[key]['step'].append(self.current_step - 1)
+
     for func in self.monitor_func:
       func()
     return
 
   def _tensor2JSON(self):
     with open(self.jsonfile, 'w') as js:
-      js.dump(self.tensors, indent = 2, sort_keys = True)
+      json.dump(self.tensors, js, indent = 2, sort_keys = True)
     return
 
   def _tensor2plot(self):
-    for (key, value) in self.tensors.items():
-      plt.linesSingleAxis(
-        {key: {'y': value, 'x': np.arange(len(self.tensors), step = self.step_freq)}},
-        y_label = (key, 13),
-        x_label = ("Train step", 13),
-        plot_title = (key, 20),
-        x_lim   = [0, value['step'][-1] + 0.01 * value['step'][-1]],
-        y_lim   = 1.1 * max(value['value']),
-        legend  = False,
-        showfig = False,
-        savefig = str(self.cache_path / "{}.png".format(key)),
-        force_init = True,
-      )
+    for (key, value) in self.plot_tensors.items():
+      if key == "masked_lm_loss":
+        plt.linesSingleAxis(
+          {key: {'y': value['value'], 'x': value['step'] } },
+          y_label = (key, 13),
+          x_label = ("Train step", 13),
+          plot_title = (key, 20),
+          x_lim   = [0, 1.01 * value['step'][-1]],
+          y_lim   = 1.1 * max(value['value']),
+          legend  = False,
+          showfig = False,
+          savefig = str(self.cache_path / "{}.png".format(key)),
+          force_init = True,
+        )
     return
