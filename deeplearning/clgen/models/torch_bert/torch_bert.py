@@ -296,7 +296,6 @@ class torchBert(backends.BackendBase):
       else:
         loader = self.train.data_generator.dataloader
 
-      epoch_iterator = tqdm.auto.trange(self.num_epochs, desc="Epoch")
       batch_iterator = iter(loader)    
       train_hook = hooks.torchTrainingHook(
         self.logfile_path, current_step, FLAGS.monitor_frequency
@@ -334,12 +333,11 @@ class torchBert(backends.BackendBase):
 
       try:
         model.train()
-        for epoch in epoch_iterator:
+        for epoch in tqdm.auto.trange(self.num_epochs, desc="Epoch"):
           while epoch < current_step // self.steps_per_epoch:
             continue # Stupid bar won't resume.
           
-          batch_counter = tqdm.auto.trange(0, self.steps_per_epoch, desc="Batch")
-          for step in batch_counter:
+          for step in tqdm.auto.trange(self.steps_per_epoch, desc="Batch"):
             start = datetime.datetime.utcnow()
             try:
               inputs = next(batch_iterator)
@@ -389,8 +387,6 @@ class torchBert(backends.BackendBase):
 
   def Validate(self) -> None:
 
-    eval_dataloader = self.get_eval_dataloader(eval_dataset)
-
     ###############
     model = self.model
     if self.pytorch.num_gpus > 1:
@@ -409,7 +405,7 @@ class torchBert(backends.BackendBase):
       loader = self.train.data_generator.dataloader
     eval_iterator = iter(loader)
 
-    for step in tqdm.auto.trange(0, FLAGS.max_eval_steps, desc = "Validation"):
+    for step in tqdm.auto.trange(FLAGS.max_eval_steps, desc = "Validation"):
       try:
         inputs = next(eval_iterator)
       except StopIteration:
