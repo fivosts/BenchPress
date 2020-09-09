@@ -93,7 +93,7 @@ class torchTrainingHook(object):
 
   def _tensor2plot(self):
     for (key, value) in self.plot_tensors.items():
-      if key == "masked_lm_loss":
+      if key != "step":
         plt.linesSingleAxis(
           {key: {'y': value['value'], 'x': value['step'] } },
           y_label = (key, 13),
