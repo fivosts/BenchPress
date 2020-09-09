@@ -313,14 +313,14 @@ class torchBert(backends.BackendBase):
     epoch_iterator = tqdm.auto.trange(current_step // self.steps_per_epoch, self.num_epochs, desc="Epoch")
 
     if self.torch_tpu_available:
-      parallel_loader = self.pytorch.torch_ploader.ParallelLoader(
+      loader = self.pytorch.torch_ploader.ParallelLoader(
                           self.train.data_generator.dataloader, [self.pytorch.device]
                         ).per_device_loader(self.pytorch.device)
       self.train.data_generator.dataloader.sampler.set_epoch(epoch)
-      batch_iterator = iter(parallel_loader)
     else:
-      batch_iterator = iter(self.train.data_generator.dataloader)
-    
+      loader = self.train.data_generator.dataloader
+
+    batch_iterator = iter(loader)    
     train_hook = hooks.torchTrainingHook(
       self.logfile_path, current_step, FLAGS.monitor_frequency
     )
@@ -334,7 +334,7 @@ class torchBert(backends.BackendBase):
         except StopIteration:
           # dataloader has different len() than steps_per_epoch.
           # This is the easiest way to infinite-loop dataloaders in pytorch.
-          batch_iterator = iter(self.train.data_generator.dataloader)
+          batch_iterator = iter(loader)
           inputs = next(batch_iterator)
 
         ####### Train step.  
@@ -388,46 +388,44 @@ class torchBert(backends.BackendBase):
     model.eval()
 
     if self.torch_tpu_available:
-      parallel_loader = self.pytorch.torch_ploader.ParallelLoader(
-                                                   self.train.data_generator.dataloader, [self.pytorch.device]
-                                                 ).per_device_loader(self.pytorch.device)
+      loader = self.pytorch.torch_ploader.ParallelLoader(
+                        self.train.data_generator.dataloader, [self.pytorch.device]
+                  ).per_device_loader(self.pytorch.device)
+    else:
+      loader = self.train.data_generator.dataloader
+    eval_iterator = iter(loader)
 
-    samples_count = 0
-    for inputs in tqdm(self.train.data_generator.dataloader, desc=description):
+    for step in tqdm.auto.trange(0, FLAGS.max_eval_steps, desc="Validation"):
+      try:
+        inputs = next(eval_iterator)
+      except StopIteration:
+        eval_iterator = iter(self.train.data_generator.dataloader)
+        inputs = next(eval_iterator)
+
       loss, logits, labels = self.prediction_step(model, inputs)
       batch_size = inputs[list(inputs.keys())[0]].shape[0]
-      samples_count += batch_size
-      # if loss is not None:
+
       eval_losses.append(loss * batch_size)
-      # if logits is not None:
       preds = logits if preds is None else self.torch.cat((preds, logits), dim=0)
-      # if labels is not None:
       label_ids = labels if label_ids is None else self.torch.cat((label_ids, labels), dim=0)
 
     if self.args.local_rank != -1:
       # In distributed mode, concatenate all results from all nodes:
-      # if preds is not None:
       preds = self.distributed_concat(preds, num_total_examples=self.num_examples(self.train.data_generator.dataloader))
-      # if label_ids is not None:
       label_ids = self.distributed_concat(label_ids, num_total_examples=self.num_examples(self.train.data_generator.dataloader))
     elif self.torch_tpu_available:
       # tpu-comment: Get all predictions and labels from all worker shards of eval dataset
-      # if preds is not None:
       preds = self.pytorch.torch_xla_model.mesh_reduce("eval_preds", preds, self.torch.cat)
-      # if label_ids is not None:
       label_ids = self.pytorch.torch_xla_model.mesh_reduce("eval_label_ids", label_ids, self.torch.cat)
 
     # Finally, turn the aggregated tensors into numpy arrays.
-    # if preds is not None:
     preds = preds.cpu().numpy()
-    # if label_ids is not None:
     label_ids = label_ids.cpu().numpy()
 
-    # if self.compute_metrics is not None and preds is not None and label_ids is not None:
     metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=label_ids))
 
     if len(eval_losses) > 0:
-      metrics["eval_loss"] = np.sum(eval_losses) / samples_count
+      metrics["eval_loss"] = np.sum(eval_losses) / (FLAGS.max_eval_steps * self.eval_batch_size)
 
     # Prefix all keys with eval_
     for key in list(metrics.keys()):
