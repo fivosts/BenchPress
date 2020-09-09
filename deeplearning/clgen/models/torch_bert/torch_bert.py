@@ -402,27 +402,32 @@ class torchBert(backends.BackendBase):
         eval_iterator = iter(self.train.data_generator.dataloader)
         inputs = next(eval_iterator)
 
-      loss, logits, labels = self.prediction_step(model, inputs)
+      loss, preds, label_ids = self.prediction_step(model, inputs)
       batch_size = inputs[list(inputs.keys())[0]].shape[0]
 
       eval_losses.append(loss * batch_size)
-      preds = logits if preds is None else self.torch.cat((preds, logits), dim=0)
-      label_ids = labels if label_ids is None else self.torch.cat((label_ids, labels), dim=0)
 
-    if self.args.local_rank != -1:
+    dummy_local_rank == -1
+    if dummy_local_rank != -1:
       # In distributed mode, concatenate all results from all nodes:
-      preds = self.distributed_concat(preds, num_total_examples=self.num_examples(self.train.data_generator.dataloader))
-      label_ids = self.distributed_concat(label_ids, num_total_examples=self.num_examples(self.train.data_generator.dataloader))
+      preds     = self.distributed_concat(
+                      preds, num_total_examples=self.num_examples(loader)
+                  )
+      label_ids = self.distributed_concat(
+                      label_ids, num_total_examples=self.num_examples(loader)
+                  )
     elif self.torch_tpu_available:
       # tpu-comment: Get all predictions and labels from all worker shards of eval dataset
       preds = self.pytorch.torch_xla_model.mesh_reduce("eval_preds", preds, self.torch.cat)
       label_ids = self.pytorch.torch_xla_model.mesh_reduce("eval_label_ids", label_ids, self.torch.cat)
 
     # Finally, turn the aggregated tensors into numpy arrays.
-    preds = preds.cpu().numpy()
+    preds     = preds.cpu().numpy()
     label_ids = label_ids.cpu().numpy()
 
-    metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=label_ids))
+    metrics   = self.compute_metrics(
+                  EvalPrediction(predictions=preds, label_ids=label_ids)
+                )
 
     if len(eval_losses) > 0:
       metrics["eval_loss"] = np.sum(eval_losses) / (FLAGS.max_eval_steps * self.eval_batch_size)
