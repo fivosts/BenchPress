@@ -184,6 +184,19 @@ class torchBert(backends.BackendBase):
     self.torch.cuda.manual_seed_all(self.config.training.random_seed)
 
     m = model.BertForPreTraining(self.bert_config).to(self.pytorch.device)
+
+    if self.pytorch.num_gpus > 1:
+      m = self.torch.nn.DataParallel(m)
+
+    dummy_num_machines = -1
+    if dummy_num_machines != -1:
+      m = self.torch.nn.parallel.DistributedDataParallel(
+        m,
+        device_ids=[dummy_num_machines],
+        output_device=dummy_num_machines,
+        find_unused_parameters=True,
+      )
+
     opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
       model           = m,
       num_train_steps = self.num_train_steps,
@@ -245,8 +258,8 @@ class torchBert(backends.BackendBase):
     return FLAGS.categorical_sampling
 
   def training_step(self, 
-                    model: typing.Any,# self.torch.nn.Module, 
-                    inputs,#: typing.Dict[str, typing.Union[self.torch.Tensor, typing.Any]]
+                    model: typing.TypeVar('nn.Module'), 
+                    inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
                     ) -> float:
     """
     Perform a training step on a batch of inputs.
@@ -283,22 +296,10 @@ class torchBert(backends.BackendBase):
     self._ConfigTrainParams(data_generator)
     current_step = self.loadCheckpoint()
     model = self.train.model.to(self.pytorch.device)
+    model.zero_grad()
 
-    dummy_num_machines = -1
     dummy_gradient_accumulation_steps = 1
     dummy_max_grad_norm = 1.0
-
-    if self.pytorch.num_gpus > 1:
-      model = self.torch.nn.DataParallel(model)
-
-    if dummy_num_machines != -1:
-      model = self.torch.nn.parallel.DistributedDataParallel(
-        model,
-        device_ids=[dummy_num_machines],
-        output_device=dummy_num_machines,
-        find_unused_parameters=True,
-      )
-    model.zero_grad()
 
     if self.torch_tpu_available:
       total_train_batch_size = self.train_batch_size * self.pytorch.torch_xla.xrt_world_size()
@@ -313,16 +314,18 @@ class torchBert(backends.BackendBase):
     average_time, start, finish = 0.0, 0.0, 0.0
     
     epoch_iterator = tqdm.auto.trange(current_step // self.steps_per_epoch, self.num_epochs, desc="Epoch")
-    batch_iterator = iter(self.train.data_generator.dataloader)
+
+    if self.torch_tpu_available:
+      parallel_loader = self.pytorch.torch_ploader.ParallelLoader(
+                          self.train.data_generator.dataloader, [self.pytorch.device]
+                        ).per_device_loader(self.pytorch.device)
+      self.train.data_generator.dataloader.sampler.set_epoch(epoch)
+      batch_iterator = iter(parallel_loader)
+    else:
+      batch_iterator = iter(self.train.data_generator.dataloader)
     
     start = datetime.datetime.utcnow()
     for epoch in epoch_iterator:
-
-      if self.torch_tpu_available:
-        parallel_loader = self.pytorch.torch_ploader.ParallelLoader(
-                            self.train.data_generator.dataloader, [self.pytorch.device]
-                          ).per_device_loader(self.pytorch.device)
-        self.train.data_generator.dataloader.sampler.set_epoch(epoch)
 
       batch_counter = tqdm.auto.trange(0, self.steps_per_epoch, desc="Batch")
       for step in batch_counter:
@@ -330,7 +333,7 @@ class torchBert(backends.BackendBase):
           inputs = next(batch_iterator)
         except StopIteration:
           # dataloader has different len() than steps_per_epoch.
-          # This is the easisest way to infinite-loop dataloaders in pytorch.
+          # This is the easiest way to infinite-loop dataloaders in pytorch.
           batch_iterator = iter(self.train.data_generator.dataloader)
           inputs = next(batch_iterator)
 
