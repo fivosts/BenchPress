@@ -253,7 +253,7 @@ class torchBert(backends.BackendBase):
           step_ckpt = int(filename.replace("model.ckpt-", ""))
           if step_ckpt >= self.num_train_steps:
             return True
-    return False  
+    return False
 
   def samplesWithCategorical(self):
     return FLAGS.categorical_sampling
@@ -367,11 +367,84 @@ class torchBert(backends.BackendBase):
         self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
     return
 
-  def logTraining(self, step, **tensors):
-    """
-      Hook function that logs training data when triggered.
-    """
-    return
+  def Validate(self) -> None:
+
+    eval_dataloader = self.get_eval_dataloader(eval_dataset)
+
+    ###############
+    model = self.model
+    # multi-gpu eval
+    if self.pytorch.num_gpus > 1:
+      model = self.torch.nn.DataParallel(model)
+    else:
+      model = self.model
+    # Note: in torch.distributed mode, there's no point in wrapping the model
+    # inside a DistributedDataParallel as we'll be under `no_grad` anyways.
+
+    batch_size = self.eval_batch_size
+    eval_losses: List[float] = []
+    preds: self.torch.Tensor = None
+    label_ids: self.torch.Tensor = None
+    model.eval()
+
+    if self.torch_tpu_available:
+      parallel_loader = self.pytorch.torch_ploader.ParallelLoader(
+                                                   self.train.data_generator.dataloader, [self.pytorch.device]
+                                                 ).per_device_loader(self.pytorch.device)
+
+    samples_count = 0
+    for inputs in tqdm(self.train.data_generator.dataloader, desc=description):
+      loss, logits, labels = self.prediction_step(model, inputs)
+      batch_size = inputs[list(inputs.keys())[0]].shape[0]
+      samples_count += batch_size
+      # if loss is not None:
+      eval_losses.append(loss * batch_size)
+      # if logits is not None:
+      preds = logits if preds is None else self.torch.cat((preds, logits), dim=0)
+      # if labels is not None:
+      label_ids = labels if label_ids is None else self.torch.cat((label_ids, labels), dim=0)
+
+    if self.args.local_rank != -1:
+      # In distributed mode, concatenate all results from all nodes:
+      # if preds is not None:
+      preds = self.distributed_concat(preds, num_total_examples=self.num_examples(self.train.data_generator.dataloader))
+      # if label_ids is not None:
+      label_ids = self.distributed_concat(label_ids, num_total_examples=self.num_examples(self.train.data_generator.dataloader))
+    elif self.torch_tpu_available:
+      # tpu-comment: Get all predictions and labels from all worker shards of eval dataset
+      # if preds is not None:
+      preds = self.pytorch.torch_xla_model.mesh_reduce("eval_preds", preds, self.torch.cat)
+      # if label_ids is not None:
+      label_ids = self.pytorch.torch_xla_model.mesh_reduce("eval_label_ids", label_ids, self.torch.cat)
+
+    # Finally, turn the aggregated tensors into numpy arrays.
+    # if preds is not None:
+    preds = preds.cpu().numpy()
+    # if label_ids is not None:
+    label_ids = label_ids.cpu().numpy()
+
+    # if self.compute_metrics is not None and preds is not None and label_ids is not None:
+    metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=label_ids))
+
+    if len(eval_losses) > 0:
+      metrics["eval_loss"] = np.sum(eval_losses) / samples_count
+
+    # Prefix all keys with eval_
+    for key in list(metrics.keys()):
+      if not key.startswith("eval_"):
+        metrics[f"eval_{key}"] = metrics.pop(key)
+
+    output = PredictionOutput(predictions=preds, label_ids=label_ids, metrics=metrics)
+    ###############
+
+    self.log(output.metrics)
+
+    if self.pytorch.torch_tpu_available:
+      # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
+      self.pytorch.torch_xla_model.master_print(met.metrics_report())
+
+    self.is_validated = True
+    return output.metrics
 
   def loadCheckpoint(self):
     """
@@ -439,24 +512,6 @@ class torchBert(backends.BackendBase):
       # TODO
       dummy_local_rank = -1
       return dummy_local_rank == -1 or self.torch.distributed.get_rank() == 0
-
-  def Validate(self) -> None:
-    l.getLogger().info("BERT Validation")
-    if self.max_eval_steps <= 0:
-      return
-    for tf_set in self.train.data_generator.dataset:
-      tf_set_paths = self.train.data_generator.dataset[tf_set]['tf_record']
-      l.getLogger().info("BERT Validation on {}".format(', '.join([pathlib.Path(x).stem for x in tf_set_paths])))
-      eval_input_fn = self.train.data_generator.generateTfDataset(
-          sequence_length = self.config.training.sequence_length,
-          num_cpu_threads = os.cpu_count(),
-          is_training     = False,
-          eval_set        = tf_set_paths
-          )
-      result = self.train.estimator.evaluate(input_fn=eval_input_fn, steps=self.max_eval_steps)
-      self._writeValidation(result, tf_set)
-    self.is_validated = True
-    return
 
   def InitSampling(self,
                    sampler : samplers.Sampler,
