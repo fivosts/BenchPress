@@ -377,7 +377,12 @@ class torchBert(backends.BackendBase):
         self.is_trained = True
       except KeyboardInterrupt:
         pass
-    self.Validate()
+
+      if not FLAGS.force_eval:
+        self.Validate()
+
+    if FLAGS.force_eval and not self.is_validated:
+      self.Validate()
     return
 
   def Validate(self) -> None:
