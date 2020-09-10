@@ -421,13 +421,12 @@ class torchBert(backends.BackendBase):
                     labels              = inputs['mask_labels'],
                     next_sentence_label = inputs['next_sentence_label']
                   )
-        loss, masked_lm_loss, next_sentence_loss, logits = outputs[:4]
-        loss = loss.mean().item()
+        total_loss, masked_lm_loss, next_sentence_loss, logits = outputs[:4]
+        total_loss = total_loss.mean().item()
       labels = inputs['mask_labels']
-      labels = labels.detach()
-      return (loss, logits.detach(), labels)
+      return (total_loss, logits.detach(), labels.detach())
 
-    for step in tqdm.auto.trange(FLAGS.max_eval_steps, desc = "Validation"):
+    for step in tqdm.auto.trange(FLAGS.max_eval_steps, desc = "Validation", leave = False):
       try:
         inputs = next(eval_iterator)
       except StopIteration:
@@ -438,7 +437,7 @@ class torchBert(backends.BackendBase):
       batch_size = inputs[list(inputs.keys())[0]].shape[0]
       eval_losses.append(loss * batch_size)
 
-    dummy_local_rank == -1
+    dummy_local_rank = -1
     if dummy_local_rank != -1:
       # In distributed mode, concatenate all results from all nodes:
       preds     = self.distributed_concat(
@@ -455,21 +454,21 @@ class torchBert(backends.BackendBase):
     preds     = preds.cpu().numpy()
     label_ids = label_ids.cpu().numpy()
 
-    metrics   = self.compute_metrics(
-                  EvalPrediction(predictions=preds, label_ids=label_ids)
-                )
+    # metrics   = self.compute_metrics(
+    #               EvalPrediction(predictions=preds, label_ids=label_ids)
+    #             )
 
-    metrics["eval_loss"] = np.sum(eval_losses) / (FLAGS.max_eval_steps * self.eval_batch_size)
+    # metrics["eval_loss"] = np.sum(eval_losses) / (FLAGS.max_eval_steps * self.eval_batch_size)
 
     # Prefix all keys with eval_
-    for key in list(metrics.keys()):
-      if not key.startswith("eval_"):
-        metrics[f"eval_{key}"] = metrics.pop(key)
+    # for key in list(metrics.keys()):
+    #   if not key.startswith("eval_"):
+    #     metrics[f"eval_{key}"] = metrics.pop(key)
 
-    output = PredictionOutput(predictions=preds, label_ids=label_ids, metrics=metrics)
+    # output = PredictionOutput(predictions=preds, label_ids=label_ids, metrics=metrics)
     ###############
 
-    self.log(output.metrics)
+    # self.log(output.metrics)
 
     if self.pytorch.torch_tpu_available:
       # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
