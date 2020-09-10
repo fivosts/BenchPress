@@ -799,12 +799,16 @@ class BertForPreTraining(BertPreTrainedModel):
     #   temp_array.append(np.argmax(pred_score))
     # l.getLogger().warn(self.atomizer.DeatomizeIndices(temp_array))
     """
+    # Pass mask_lm_lengths to set upper limit for each generated hole
     # For each batch:
       # scan input ids for hole tokens
-      # get the argmax of the hole token index in prediction_scores
-      # replace the hole token with the predicted token + another hole token
-      # add offset += 1 when searching prediction_scores: idx_in_pred_score = idx_in_input_ids - 1
+        # get the argmax of the hole token index in prediction_scores
+        # replace the hole token with the predicted token + another hole token
+        # Subtract the hole_index's mask_lm_length entry by 1.
+        # add offset += 1 when searching prediction_scores: idx_in_pred_score = idx_in_input_ids - 1
+      # Scan mask_lm_length. Delete entries that are zero. Assert negative.
       # Chop input_ids to [:sequence_length]
+      # Change attention_mask to the refreshed pad_index
     """
 
     # l.getLogger().warn(prediction_scores.shape)
