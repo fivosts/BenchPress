@@ -469,10 +469,10 @@ class torchBert(backends.BackendBase):
 
     if self.pytorch.torch_tpu_available:
       # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
-      self.pytorch.torch_xla_model.master_print(met.metrics_report())
+      self.pytorch.torch_xla_model.master_print(self.pytorch.torch_xla_met.metrics_report())
 
     self.is_validated = True
-    return output.metrics
+    return
 
   def loadCheckpoint(self):
     """
