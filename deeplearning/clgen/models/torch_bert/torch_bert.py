@@ -308,8 +308,7 @@ class torchBert(backends.BackendBase):
         )
       )
 
-      def training_step(self,
-                        model: typing.TypeVar('nn.Module'),
+      def training_step(model: typing.TypeVar('nn.Module'),
                         inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
                         ) -> float:
         """
@@ -333,11 +332,11 @@ class torchBert(backends.BackendBase):
 
       try:
         model.train()
-        for epoch in tqdm.auto.trange(self.num_epochs, desc="Epoch"):
-          while epoch < current_step // self.steps_per_epoch:
+        for epoch in tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False):
+          if epoch < current_step // self.steps_per_epoch:
             continue # Stupid bar won't resume.
           
-          for step in tqdm.auto.trange(self.steps_per_epoch, desc="Batch"):
+          for step in tqdm.auto.trange(self.steps_per_epoch, desc="Batch", leave = False):
             start = datetime.datetime.utcnow()
             try:
               inputs = next(batch_iterator)
@@ -347,7 +346,7 @@ class torchBert(backends.BackendBase):
               batch_iterator = iter(loader)
               inputs = next(batch_iterator)
 
-            _, step_mask_loss, step_ns_loss = self.training_step(model, inputs)
+            _, step_mask_loss, step_ns_loss = training_step(model, inputs)
 
             self.torch.nn.utils.clip_grad_norm_(model.parameters(), self.max_grad_norm)
             if self.torch_tpu_available:
@@ -388,7 +387,7 @@ class torchBert(backends.BackendBase):
   def Validate(self) -> None:
 
     ###############
-    model = self.model
+    model = self.train.model
     if self.pytorch.num_gpus > 1:
       model = self.torch.nn.DataParallel(model)
 
@@ -405,9 +404,8 @@ class torchBert(backends.BackendBase):
       loader = self.train.data_generator.dataloader
     eval_iterator = iter(loader)
 
-    def prediction_step(self, 
-                        model: typing.TypeVar("torch.nn.Module"),
-                        inputs: Dict[str, torch.Tensor]
+    def prediction_step(model: typing.TypeVar("torch.nn.Module"),
+                        inputs: typing.Dict[str, typing.TypeVar("torch.Tensor")]
                         ):
       """
       Perform an evaluation step on :obj:`model` using obj:`inputs`.
@@ -416,10 +414,16 @@ class torchBert(backends.BackendBase):
         if isinstance(value, self.torch.Tensor):
           inputs[key] = value.to(self.pytorch.device)
       with self.torch.no_grad():
-        outputs = model(**inputs)
-        loss, logits = outputs[:2]
+        outputs = model(
+                    input_ids           = inputs['input_ids'],
+                    attention_mask      = inputs['input_mask'],
+                    position_ids        = inputs['position_ids'],
+                    labels              = inputs['mask_labels'],
+                    next_sentence_label = inputs['next_sentence_label']
+                  )
+        loss, masked_lm_loss, next_sentence_loss, logits = outputs[:4]
         loss = loss.mean().item()
-      labels = inputs.get("labels")
+      labels = inputs['mask_labels']
       labels = labels.detach()
       return (loss, logits.detach(), labels)
 
@@ -430,7 +434,7 @@ class torchBert(backends.BackendBase):
         eval_iterator = iter(loader)
         inputs = next(eval_iterator)
 
-      loss, preds, label_ids = self.prediction_step(model, inputs)
+      loss, preds, label_ids = prediction_step(model, inputs)
       batch_size = inputs[list(inputs.keys())[0]].shape[0]
       eval_losses.append(loss * batch_size)
 
