@@ -711,12 +711,12 @@ class BertModel(BertPreTrainedModel):
     )
 
 class BertForPreTraining(BertPreTrainedModel):
-  def __init__(self, config):
+  def __init__(self, config, atomizer = None):
     super().__init__(config)
 
     self.bert = BertModel(config)
     self.cls = BertPreTrainingHeads(config)
-
+    self.atomizer = atomizer
     self.init_weights()
 
   def get_output_embeddings(self):
@@ -790,6 +790,28 @@ class BertForPreTraining(BertPreTrainedModel):
 
     sequence_output, pooled_output = outputs[:2]
     prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
+
+    # from eupy.native import logger as l
+    # l.getLogger().warn(self.atomizer.DeatomizeIndices(input_ids[0].cpu().numpy(), ignore_token = self.atomizer.padToken))
+    # temp_array = []
+    # import numpy as np
+    # for pred_score in prediction_scores[0].detach().cpu().numpy():
+    #   temp_array.append(np.argmax(pred_score))
+    # l.getLogger().warn(self.atomizer.DeatomizeIndices(temp_array))
+    """
+    # For each batch:
+      # scan input ids for hole tokens
+      # get the argmax of the hole token index in prediction_scores
+      # replace the hole token with the predicted token + another hole token
+      # add offset += 1 when searching prediction_scores: idx_in_pred_score = idx_in_input_ids - 1
+      # Chop input_ids to [:sequence_length]
+    """
+
+    # l.getLogger().warn(prediction_scores.shape)
+    # l.getLogger().warn(prediction_scores.view(-1, self.config.vocab_size).shape)
+    # l.getLogger().warn(labels.shape)
+    # l.getLogger().warn(labels.view(-1).shape)
+
 
     total_loss = None
     if labels is not None and next_sentence_label is not None:
