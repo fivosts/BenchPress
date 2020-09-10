@@ -64,23 +64,24 @@ class torchTrainingHook(object):
     if self.delay_checkpoint:
       self.delay_checkpoint = False
       return False
-    if (self.current_step - 1) % self.step_freq == 0:
+    if (self.current_step) % self.step_freq == 0 or self.current_step - 1 == 0:
       return True
     return False
 
   def _logTensors(self):
 
-    epoch_tensors = (self.epoch_tensors if self.current_step - 1 == 0
+    effective_step = self.current_step if self.current_step - 1 != 0 else 0
+    epoch_tensors = (self.epoch_tensors if effective_step == 0
                      else {k: v / self.step_freq for k, v in self.epoch_tensors.items()})
 
     self.tensors.append(epoch_tensors)
-    self.tensors[-1]['step'] = self.current_step - 1
+    self.tensors[-1]['step'] = effective_step
     
     for key, value in epoch_tensors.items():
       if key not in self.plot_tensors:
         self.plot_tensors[key] = {'value': [], 'step': []}
       self.plot_tensors[key]['value'].append(value)
-      self.plot_tensors[key]['step'].append(self.current_step - 1)
+      self.plot_tensors[key]['step'].append(effective_step)
 
     for func in self.monitor_func:
       func()
