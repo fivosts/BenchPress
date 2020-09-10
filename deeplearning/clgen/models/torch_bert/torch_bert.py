@@ -182,7 +182,7 @@ class torchBert(backends.BackendBase):
     self.torch.manual_seed(self.config.training.random_seed)
     self.torch.cuda.manual_seed_all(self.config.training.random_seed)
 
-    m = model.BertForPreTraining(self.bert_config).to(self.pytorch.device)
+    m = model.BertForPreTraining(self.bert_config, atomizer = self.atomizer).to(self.pytorch.device)
 
     if self.pytorch.num_gpus > 1:
       m = self.torch.nn.DataParallel(m)
@@ -239,19 +239,6 @@ class torchBert(backends.BackendBase):
     #               )
     l.getLogger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
     return
-
-  # @property
-  # def is_trained(self):
-  #   if FLAGS.select_checkpoint_step >= 0:
-  #     return True
-  #   else:
-  #     for file_path in self.ckpt_path.iterdir():
-  #       filename = file_path.stem
-  #       if "model.ckpt-" in filename:
-  #         step_ckpt = int(filename.replace("model.ckpt-", ""))
-  #         if step_ckpt >= self.num_train_steps:
-  #           return True
-  #   return False
 
   def samplesWithCategorical(self):
     return FLAGS.categorical_sampling
