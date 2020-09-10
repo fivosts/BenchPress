@@ -1,6 +1,7 @@
 """This file defines telemetry data gathers."""
 import pathlib
 import re
+import json
 import typing
 import datetime
 import glob
@@ -128,6 +129,17 @@ class TrainingLogger(object):
         event_acc = EventAccumulator(str(self.logdir))
         event_acc.Reload()
         self.tfAccumulateLoss(event_acc)
+      elif len(glob.glob(str(self.logdir / "training.json"))) == 1:
+        with open(self.logdir / "training.json", 'r') as jsf:
+          data = json.load(jsf)
+        self.telemetry = [
+          telemetry_pb2.ModelEpochTelemetry(
+            timestamp_unix_epoch_ms = '0',
+            epoch_num = x['step'],
+            epoch_wall_time_ms = int(round(x['execution_time_ms'])),
+            loss = x['total_loss'],
+          ) for x in data
+        ]
       else:
         l.getLogger().warn("Training logs have not been found. Invalid reported loss.")
         self.telemetry = [
