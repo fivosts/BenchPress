@@ -150,10 +150,6 @@ class torchBert(backends.BackendBase):
           "layer_norm_eps"               : self.config.architecture.layer_norm_eps,
           "pad_token_id"                 : self.atomizer.padToken,
     }
-    l.getLogger().error("Issue with TORCH dropout probs: TORCH might not need inverse dropout prob: {}".format(
-      self.config.architecture.hidden_dropout_prob
-      )
-    )
     self.bert_config = config.BertConfig.from_dict(
       self.bertAttrs, xla_device = self.torch_tpu_available
     )
@@ -273,6 +269,7 @@ class torchBert(backends.BackendBase):
         MaskLMBatchGenerator.TrainMaskLMBatchGenerator(corpus, self.config.training, self.cache.path)
       )
     current_step = self.loadCheckpoint()
+    l.getLogger().info("Loaded checkpoint step {}".format(current_step))
     self.is_trained = True if current_step >= self.num_train_steps else False
 
     if not self.is_trained:
@@ -298,7 +295,7 @@ class torchBert(backends.BackendBase):
 
       batch_iterator = iter(loader)    
       train_hook = hooks.torchTrainingHook(
-        self.logfile_path, current_step, FLAGS.monitor_frequency
+        self.logfile_path, current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
 
       l.getLogger().info(
