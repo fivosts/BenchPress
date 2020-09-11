@@ -791,10 +791,73 @@ class BertForPreTraining(BertPreTrainedModel):
     sequence_output, pooled_output = outputs[:2]
     prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
 
-    # from eupy.native import logger as l
+    from eupy.native import logger as l
+    import numpy as np
+
+    def fillSequence(input_ids,
+                     prediction_scores,
+                     # masked_lm_labels,
+                     input_mask,
+                     masked_lm_lengths
+                     ):
+      """
+      Takes a single sequence of the batch.
+      """
+      add_hole_idx = []
+      new_input_ids = []
+      hole_idx = 0
+      change = False
+
+      for tok_idx, token in enumerate(input_ids):
+        if token == self.atomizer.holeToken:
+          change = True
+          pred = prediction_scores[tok_idx]
+          if pred != self.atomizer.endholeToken:
+            if masked_lm_lengths[hole_idx] > 0:
+              new_input_ids.append(pred)
+              new_input_ids.append(self.atomizer.holeToken)
+              masked_lm_lengths[hole_idx] -= 1
+          else:
+            masked_lm_lengths[hole_idx] = 0
+          hole_idx += 1
+        else:
+          new_input_ids.append(token)
+
+      while len(new_input_ids) < len(input_ids):
+        new_input_ids.append(self.atomizer.padToken)
+      
+      new_input_ids = new_input_ids[:len(input_ids)]
+      try:
+        pad_idx = new_input_ids.index(self.atomizer.padToken)
+        new_input_mask = [1] * pad_idx + [0] * (len(new_input_ids) - pad_idx)
+      except ValueError:
+        new_input_mask = [1] * len(new_input_ids)
+
+      masked_lm_lengths = [x for x in masked_lm_lengths if x != 0]
+      return change, new_input_ids, new_input_mask, masked_lm_lengths
+
+    for batch, _ in enumerate(input_ids):
+      fake_lengths = []
+      for i in input_ids[batch].cpu().numpy():
+        if i == self.atomizer.holeToken:
+          fake_lengths.append(3)
+
+      l.getLogger().warn(self.atomizer.DeatomizeIndices(input_ids[batch].cpu().numpy()))
+      l.getLogger().warn(self.atomizer.DeatomizeIndices([np.argmax(x) for x in (prediction_scores.detach().cpu().numpy())[batch]]))
+      changed, new_inp, new_inp_mask, leng = fillSequence(
+        input_ids[batch].cpu().numpy(), 
+        [np.argmax(x) for x in (prediction_scores.detach().cpu().numpy())[batch]],
+        attention_mask.cpu().numpy(),
+        fake_lengths,
+      )
+      l.getLogger().error(changed)
+      l.getLogger().error(self.atomizer.DeatomizeIndices(new_inp))
+      l.getLogger().error(new_inp_mask)
+      l.getLogger().error(leng)
+      # exit()
+
     # l.getLogger().warn(self.atomizer.DeatomizeIndices(input_ids[0].cpu().numpy(), ignore_token = self.atomizer.padToken))
     # temp_array = []
-    # import numpy as np
     # for pred_score in prediction_scores[0].detach().cpu().numpy():
     #   temp_array.append(np.argmax(pred_score))
     # l.getLogger().warn(self.atomizer.DeatomizeIndices(temp_array))
