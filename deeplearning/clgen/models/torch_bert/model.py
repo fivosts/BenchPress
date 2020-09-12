@@ -750,11 +750,16 @@ class BertForPreTraining(BertPreTrainedModel):
           changed = True
           pred = prediction_scores[batch][tok_idx]
           if pred != self.atomizer.endholeToken:
-            if masked_lm_lengths[batch][hole_idx] > 0:
+            if masked_lm_lengths[batch][hole_idx] >= 2:
               new_input_ids[batch][tok_idx + input_idx] = pred
-              new_input_ids[batch][tok_idx + input_idx + 1] = self.atomizer.holeToken
               masked_lm_lengths[batch][hole_idx] -= 1
+              new_input_ids[batch][tok_idx + input_idx + 1] = self.atomizer.holeToken
               input_idx += 1
+            elif masked_lm_lengths[batch][hole_idx] == 1:
+              new_input_ids[batch][tok_idx + input_idx] = pred
+              masked_lm_lengths[batch][hole_idx] -= 1
+            else:
+              input_idx -= 1
           else:
             masked_lm_lengths[batch][hole_idx] = 0
           hole_idx += 1
@@ -870,6 +875,9 @@ class BertForPreTraining(BertPreTrainedModel):
         attention_mask,
         masked_lm_lengths,
       )
+
+    code_batch = [self.atomizer.ArrayToCode(x) for x in new_input_ids.cpu().numpy()]
+    # Check for compilation: new_input_ids
 
     total_loss = None
     if labels is not None and next_sentence_label is not None:
