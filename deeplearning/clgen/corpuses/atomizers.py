@@ -150,6 +150,21 @@ class AtomizerBase(object):
     with open(path, "wb") as f:
       pickle.dump(self, f)
 
+  def ArrayToCode(self,
+                  encoded: np.array,
+                  ) -> str:
+    """
+    Convert encoded array to compilable code.
+    Removes meta tokens and converts to string.
+
+    Args:
+      encoded: nparray of encoded vocabulary indices.
+    Returns:
+      Code in string format.
+    """
+    metaTokenValues = set(value for key, value in self.__dict__.items() if key in self.metaTokens)
+    return self.DeatomizeIndices([x for x in encoded if x not in metaTokenValues])
+
   @classmethod
   def FromText(cls, text: str) -> "AtomizerBase":
     """Instantiate and specialize an atomizer from a corpus text.
