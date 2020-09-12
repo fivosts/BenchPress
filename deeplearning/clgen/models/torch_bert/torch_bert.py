@@ -306,7 +306,8 @@ class torchBert(backends.BackendBase):
                     attention_mask      = inputs['input_mask'],
                     position_ids        = inputs['position_ids'],
                     labels              = inputs['mask_labels'],
-                    next_sentence_label = inputs['next_sentence_label']
+                    next_sentence_label = inputs['next_sentence_label'],
+                    masked_lm_lengths   = inputs['masked_lm_lengths'],
                   )
         total_loss, masked_lm_loss, next_sentence_loss = outputs[0], outputs[1], outputs[2]
         if self.pytorch.num_gpus > 1:
@@ -403,7 +404,8 @@ class torchBert(backends.BackendBase):
                     attention_mask      = inputs['input_mask'],
                     position_ids        = inputs['position_ids'],
                     labels              = inputs['mask_labels'],
-                    next_sentence_label = inputs['next_sentence_label']
+                    next_sentence_label = inputs['next_sentence_label'],
+                    masked_lm_lengths   = inputs['masked_lm_lengths'],
                   )
         total_loss, masked_lm_loss, next_sentence_loss, logits = outputs[:4]
         total_loss = total_loss.mean().item()
