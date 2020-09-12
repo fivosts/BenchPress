@@ -724,6 +724,56 @@ class BertForPreTraining(BertPreTrainedModel):
   def get_output_embeddings(self):
     return self.cls.predictions.decoder
 
+  def fillSequence(self,
+                   input_ids,
+                   prediction_scores,
+                   attention_mask,
+                   masked_lm_lengths
+                   ):
+    """
+    Takes a single sequence of the batch.
+    """
+    batch_size, sequence_length = tuple(input_ids.shape)
+    new_input_ids = torch.full(
+      [batch_size, sequence_length], self.atomizer.padToken, dtype = torch.int64, device = pytorch.device
+    )
+    changed = False
+    for batch, _ in enumerate(input_ids):
+
+      hole_idx, input_idx, pad_idx = 0, 0, None
+
+      for tok_idx, token in enumerate(input_ids[batch]):
+        if token == self.atomizer.padToken:
+          pad_idx = tok_idx + input_idx
+          break
+        if token == self.atomizer.holeToken:
+          changed = True
+          pred = prediction_scores[batch][tok_idx]
+          if pred != self.atomizer.endholeToken:
+            if masked_lm_lengths[batch][hole_idx] > 0:
+              new_input_ids[batch][tok_idx + input_idx] = pred
+              new_input_ids[batch][tok_idx + input_idx + 1] = self.atomizer.holeToken
+              masked_lm_lengths[batch][hole_idx] -= 1
+              input_idx += 1
+          else:
+            masked_lm_lengths[batch][hole_idx] = 0
+          hole_idx += 1
+        else:
+          new_input_ids[batch][tok_idx + input_idx] = token
+
+      attention_mask[batch] = (torch.full([sequence_length], 1, dtype = torch.int64)
+                        if pad_idx is None else
+                        torch.cat(
+                            (torch.full([pad_idx], 1, dtype = torch.int64), 
+                             torch.full([sequence_length - pad_idx], 0, dtype = torch.int64)
+                            )
+                          )
+                        ) 
+      masked_lm_lengths[batch] = torch.LongTensor(
+        [x for x in masked_lm_lengths[batch] if x != 0] + [x for x in masked_lm_lengths[batch] if x == 0]
+      )
+    return changed, new_input_ids, attention_mask, masked_lm_lengths.to(pytorch.device)
+
   def forward(
     self,
     input_ids=None,
@@ -794,101 +844,32 @@ class BertForPreTraining(BertPreTrainedModel):
     sequence_output, pooled_output = outputs[:2]
     prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
 
-    from eupy.native import logger as l
-    import numpy as np
-
-    def fillSequence(input_ids,
-                     prediction_scores,
-                     masked_lm_lengths
-                     ):
-      """
-      Takes a single sequence of the batch.
-      """
-      add_hole_idx = []
-      # new_input_ids = []
-      new_input_ids = torch.full(
-        [len(input_ids)], self.atomizer.padToken, dtype = torch.int64, device = pytorch.device
+    changed, new_input_ids, new_attention_mask, new_masked_lengths = self.fillSequence(
+      input_ids, 
+      [[torch.argmax(x) for x in b] for b in prediction_scores],
+      attention_mask,
+      masked_lm_lengths,
+    )
+    while changed:
+      new_outputs = self.bert(
+        new_input_ids,
+        attention_mask=new_attention_mask,
+        token_type_ids=token_type_ids,
+        position_ids=position_ids,
+        head_mask=head_mask,
+        inputs_embeds=inputs_embeds,
+        output_attentions=output_attentions,
+        output_hidden_states=output_hidden_states,
+        return_dict=return_dict,
       )
-      hole_idx = 0
-      input_idx = 0
-      pad_idx = None
-      change = False
-
-      for tok_idx, token in enumerate(input_ids):
-        if token == self.atomizer.padToken:
-          pad_idx = tok_idx
-          break
-        if token == self.atomizer.holeToken:
-          change = True
-          pred = prediction_scores[tok_idx]
-          if pred != self.atomizer.endholeToken:
-            if masked_lm_lengths[hole_idx] > 0:
-              # new_input_ids.append(pred)
-              # new_input_ids.append(self.atomizer.holeToken)
-              new_input_ids[tok_idx + input_idx] = pred
-              new_input_ids[tok_idx + input_idx + 1] = self.atomizer.holeToken
-              masked_lm_lengths[hole_idx] -= 1
-              input_idx += 1
-          else:
-            masked_lm_lengths[hole_idx] = 0
-          hole_idx += 1
-        else:
-          # new_input_ids.append(token)
-          new_input_ids[tok_idx + input_idx] = token
-
-      attention_mask = (torch.full([len(new_input_ids)], 1, dtype = torch.int64)
-                        if pad_idx is None else
-                        torch.cat(
-                            (torch.full([pad_idx], 1, dtype = torch.int64), 
-                             torch.full([len(new_input_ids) - pad_idx], 0, dtype = torch.int64)
-                            )
-                          )
-                        ) 
-
-      masked_lm_lengths = [x for x in masked_lm_lengths if x != 0]
-      return change, new_input_ids, attention_mask, masked_lm_lengths
-
-    for batch, _ in enumerate(input_ids):
-
-      l.getLogger().warn(self.atomizer.DeatomizeIndices(input_ids[batch].cpu().numpy()))
-      l.getLogger().warn(self.atomizer.DeatomizeIndices([np.argmax(x) for x in (prediction_scores.detach().cpu().numpy())[batch]]))
-      changed, new_inp, new_inp_mask, leng = fillSequence(
-        input_ids[batch].cpu().numpy(), 
-        [np.argmax(x) for x in (prediction_scores.detach().cpu().numpy())[batch]],
-        masked_lm_lengths[batch],
+      new_sequence_output, new_pooled_output = new_outputs[:2]
+      new_prediction_scores, new_seq_relationship_score = self.cls(new_sequence_output, new_pooled_output)
+      changed, new_input_ids, new_attention_mask, new_masked_lengths = self.fillSequence(
+        new_input_ids, 
+        [[torch.argmax(x) for x in b] for b in new_prediction_scores],
+        attention_mask,
+        masked_lm_lengths,
       )
-      l.getLogger().error(changed)
-      l.getLogger().error(self.atomizer.DeatomizeIndices(new_inp.cpu().numpy()))
-      input_ids[batch] = new_inp
-      l.getLogger().critical(input_ids[batch])
-      l.getLogger().critical(new_inp)
-      l.getLogger().error(new_inp_mask)
-      l.getLogger().error(leng)
-      exit()
-
-    # l.getLogger().warn(self.atomizer.DeatomizeIndices(input_ids[0].cpu().numpy(), ignore_token = self.atomizer.padToken))
-    # temp_array = []
-    # for pred_score in prediction_scores[0].detach().cpu().numpy():
-    #   temp_array.append(np.argmax(pred_score))
-    # l.getLogger().warn(self.atomizer.DeatomizeIndices(temp_array))
-    """
-    # Pass mask_lm_lengths to set upper limit for each generated hole
-    # For each batch:
-      # scan input ids for hole tokens
-        # get the argmax of the hole token index in prediction_scores
-        # replace the hole token with the predicted token + another hole token
-        # Subtract the hole_index's mask_lm_length entry by 1.
-        # add offset += 1 when searching prediction_scores: idx_in_pred_score = idx_in_input_ids - 1
-      # Scan mask_lm_length. Delete entries that are zero. Assert negative.
-      # Chop input_ids to [:sequence_length]
-      # Change attention_mask to the refreshed pad_index
-    """
-
-    # l.getLogger().warn(prediction_scores.shape)
-    # l.getLogger().warn(prediction_scores.view(-1, self.config.vocab_size).shape)
-    # l.getLogger().warn(labels.shape)
-    # l.getLogger().warn(labels.view(-1).shape)
-
 
     total_loss = None
     if labels is not None and next_sentence_label is not None:
