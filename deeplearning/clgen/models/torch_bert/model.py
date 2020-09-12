@@ -27,6 +27,7 @@ from typing import Optional, Tuple
 
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
+from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.models.torch_bert.activations import gelu, gelu_new, swish
 from deeplearning.clgen.models.torch_bert.config import BertConfig
 from deeplearning.clgen.models.torch_bert.modeling_outputs import (
@@ -878,6 +879,16 @@ class BertForPreTraining(BertPreTrainedModel):
 
     code_batch = [self.atomizer.ArrayToCode(x) for x in new_input_ids.cpu().numpy()]
     # Check for compilation: new_input_ids
+    batch_size, _ = tuple(new_input_ids.shape)
+    compile_flag = torch.zeros([batch_size], dtype = torch.int64, device = pytorch.device)
+    for b in range(batch_size):
+      try:
+        stdout = opencl.Compile(code_batch[b])
+        compile_flag[b] = 1
+        from eupy.native import logger as l
+        l.getLogger().warn(stdout)
+      except ValueError:
+        compile_flag[b] = 0
 
     total_loss = None
     if labels is not None and next_sentence_label is not None:
