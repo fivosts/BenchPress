@@ -244,7 +244,8 @@ class torchBert(backends.BackendBase):
         MaskLMBatchGenerator.TrainMaskLMBatchGenerator(corpus, self.config.training, self.cache.path)
       )
     current_step = self.loadCheckpoint()
-    l.getLogger().info("Loaded checkpoint step {}".format(current_step))
+    if current_step > 0:
+      l.getLogger().info("Loaded checkpoint step {}".format(current_step))
     self.is_trained = True if current_step >= self.num_train_steps else False
 
     if not self.is_trained:
@@ -367,11 +368,12 @@ class torchBert(backends.BackendBase):
                 num_correct_samples = correct_sample_obs.sample_id,
               )
             model.zero_grad()
+            if current_step == 0:
+              l.getLogger().info("Starting Loss: {}".format(step_mask_loss + step_ns_loss))
             current_step += 1
-
-            # if self.args.evaluate_during_training and global_step % self.args.eval_steps == 0:
-            #   self.evaluate()
+            
           # End of Epoch
+          l.getLogger().info("Epoch {} Loss: {}".format(current_step // self.steps_per_epoch, train_hook.current_loss))
           self.saveCheckpoint(current_step)
           if self.torch_tpu_available:
             self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
