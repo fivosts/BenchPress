@@ -54,6 +54,16 @@ flags.DEFINE_integer(
   "Default: 250"
 )
 
+flags.DEFINE_boolean(
+  "reward_compilation",
+  True,
+  "Select to integrate LLVM compiler into training regime."
+  "During training, the target token will be asked to fill the first token of the hole."
+  "If this flag is selected to True, the model will fill entirely the hole, as in inference."
+  "The fully generated sample will be checked for syntactic correctness with LLVM."
+  "If the sample compiles, then loss will be zero-ed for that instance, hence will be rewarded."
+)
+
 # flags.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
 
 # flags.DEFINE_boolean("force_eval", False, "Run Validation no matter what.")
@@ -101,7 +111,7 @@ class torchBert(backends.BackendBase):
     self.num_warmup_steps    = None
     self.telemetry           = None
 
-    self.ckpt_path           = self._ConfigCheckpointParams()
+    self.ckpt_path           = self.cache.path / "checkpoints"
     self.logfile_path        = self.cache.path / "logs"
     self.sample_path         = self.cache.path / "samples"
 
@@ -109,29 +119,6 @@ class torchBert(backends.BackendBase):
     self.trained             = False
     l.getLogger().info("BERT Model config initialized in {}".format(self.cache.path))
     return
-
-  def _ConfigCheckpointParams(self):
-    if FLAGS.select_checkpoint_step >= 0:
-
-      ckpt_current = self.cache.path / "checkpoints"
-      if not (ckpt_current / "model.ckpt-{}.index".format(FLAGS.select_checkpoint_step)).exists():
-        raise FileNotFoundError(ckpt_current / "model.ckpt-{}.index".format(FLAGS.select_checkpoint_step))
-
-      workspace_rel_path = self.cache.path.relative_to(pathlib.Path(os.environ.get("CLGEN_CACHE")).parent)
-      ckpt_path = pathlib.Path("/tmp" / workspace_rel_path / "checkpoints")
-      ckpt_path.mkdir(exist_ok = True, parents = True)
-
-      shutil.copy2(ckpt_current / "checkpoint" , ckpt_path)
-      shutil.copy2(ckpt_current / "graph.pbtxt", ckpt_path)
-      for ckpt_file in glob.glob(str(ckpt_current / "model.ckpt-{}.*".format(FLAGS.select_checkpoint_step))):
-        shutil.copy2(ckpt_file, ckpt_path)
-      l.getLogger().warn("Explicit checkpoint selected. Explicit checkpoints can only be used for validation or sampling.")
-    elif FLAGS.select_checkpoint_step == -1:
-      ckpt_path = self.cache.path / "checkpoints"
-    else:
-      raise ValueError("Invalid value {} for --select_checkpoint_step".format(FLAGS.select_checkpoint_step))
-    l.getLogger().info("Configured model checkpoints in {}".format(ckpt_path))
-    return ckpt_path
 
   def _ConfigModelParams(self):
     """General model hyperparameters initialization."""
@@ -151,7 +138,8 @@ class torchBert(backends.BackendBase):
           "pad_token_id"                 : self.atomizer.padToken,
     }
     self.bert_config = config.BertConfig.from_dict(
-      self.bertAttrs, xla_device = self.torch_tpu_available
+      self.bertAttrs, xla_device = self.torch_tpu_available,
+      reward_compilation = FLAGS.reward_compilation
     )
     return
 
@@ -284,9 +272,13 @@ class torchBert(backends.BackendBase):
       train_hook = hooks.tensorMonitorHook(
         self.logfile_path, current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
-      correct_sample_hook = hooks.tensorMonitorHook(
-        self.logfile_path, current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency), False
-      )
+      if FLAGS.reward_compilation:
+        correct_sample_hook = hooks.tensorMonitorHook(
+          self.logfile_path, current_step, max(self.steps_per_epoch, FLAGS.monitor_frequency), False
+        )
+        correct_sample_obs = sample_observers.SamplesDatabaseObserver(
+          "sqlite:///{}".format(self.logfile_path / "correct_samples.db")
+        )
 
       l.getLogger().info(
         "Splitting {} steps into {} equivalent epochs, {} steps each. Rejected {} redundant step(s)".format(
@@ -323,9 +315,6 @@ class torchBert(backends.BackendBase):
 
       try:
         model.train()
-        correct_sample_obs = sample_observers.SamplesDatabaseObserver(
-          "sqlite:///{}".format(self.logfile_path / "correct_samples.db")
-        )
         for epoch in tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False):
           if epoch < current_step // self.steps_per_epoch:
             continue # Stupid bar won't resume.
@@ -350,32 +339,33 @@ class torchBert(backends.BackendBase):
             self.train.scheduler.step()
 
             exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
-            for s in correct_samples:
-              correct_sample_obs.OnSample(model_pb2.Sample(
-                  train_step             = current_step,
-                  sample_feed            = self.atomizer.DeatomizeIndices(s[0], ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
-                  text                   = self.atomizer.DeatomizeIndices(s[1], ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
-                  encoded_text           = ",".join([str(t) for t in s[1]]),
-                  sample_indices         = '',
-                  encoded_sample_indices = '',
-                  sample_time_ms         = int(round(exec_time_ms / self.train_batch_size)),
-                  num_tokens             = len([x for x in s[1] if x != self.atomizer.padToken]),
-                  categorical_sampling   = False,
-                  date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
-                )
-              )
-            correct_sample_hook.step(
-              num_correct_samples = correct_sample_obs.sample_id,
-            )
             train_hook.step(
               masked_lm_loss = step_mask_loss,
               next_sentence_loss = step_ns_loss,
               total_loss = step_mask_loss + step_ns_loss,
               learning_rate = self.train.scheduler.get_last_lr()[0],
               compilation_rate = b_comp_rate,
-              execution_time_ms = exec_time_ms
+              execution_time_ms = exec_time_ms,
+              time_per_sample_ms = exec_time_ms / self.train_batch_size,
             )
-
+            if FLAGS.reward_compilation:
+              for s in correct_samples:
+                correct_sample_obs.OnSample(model_pb2.Sample(
+                    train_step             = current_step,
+                    sample_feed            = self.atomizer.DeatomizeIndices(s[0], ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
+                    text                   = self.atomizer.DeatomizeIndices(s[1], ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
+                    encoded_text           = ",".join([str(t) for t in s[1]]),
+                    sample_indices         = '',
+                    encoded_sample_indices = '',
+                    sample_time_ms         = int(round(exec_time_ms / self.train_batch_size)),
+                    num_tokens             = len([x for x in s[1] if x != self.atomizer.padToken]),
+                    categorical_sampling   = False,
+                    date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
+                  )
+                )
+              correct_sample_hook.step(
+                num_correct_samples = correct_sample_obs.sample_id,
+              )
             model.zero_grad()
             current_step += 1
 
