@@ -160,6 +160,7 @@ class torchBert(backends.BackendBase):
 
     self.telemetry                        = telemetry.TrainingLogger(self.logfile_path)
     self.steps_per_epoch                  = data_generator.steps_per_epoch
+    self.current_step                     = None
     self.num_epochs                       = data_generator.num_epochs
     self.num_train_steps                  = self.steps_per_epoch * self.num_epochs
     self.max_eval_steps                   = FLAGS.max_eval_steps
@@ -296,10 +297,10 @@ class torchBert(backends.BackendBase):
       self._ConfigTrainParams(
         MaskLMBatchGenerator.TrainMaskLMBatchGenerator(corpus, self.config.training, self.cache.path)
       )
-    current_step = self.loadCheckpoint()
-    if current_step > 0:
-      l.getLogger().info("Loaded checkpoint step {}".format(current_step))
-    self.is_trained = True if current_step >= self.num_train_steps else False
+    self.current_step = self.loadCheckpoint()
+    if self.current_step > 0:
+      l.getLogger().info("Loaded checkpoint step {}".format(self.current_step))
+    self.is_trained = True if self.current_step >= self.num_train_steps else False
 
     if not self.is_trained:
       self.train.model.zero_grad()
@@ -319,18 +320,18 @@ class torchBert(backends.BackendBase):
         loader = self.pytorch.torch_ploader.ParallelLoader(
                             self.train.data_generator.dataloader, [self.pytorch.device]
                           ).per_device_loader(self.pytorch.device)
-        self.train.data_generator.dataloader.sampler.set_epoch(current_step // self.steps_per_epoch)
+        self.train.data_generator.dataloader.sampler.set_epoch(self.current_step // self.steps_per_epoch)
       else:
         loader = self.train.data_generator.dataloader
 
       # Get dataloader iterator and setup hooks.
       batch_iterator = iter(loader)    
       train_hook = hooks.tensorMonitorHook(
-        self.logfile_path, current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
+        self.logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
       if FLAGS.reward_compilation:
         correct_sample_hook = hooks.tensorMonitorHook(
-          self.logfile_path, current_step, max(self.steps_per_epoch, FLAGS.monitor_frequency), False
+          self.logfile_path, self.current_step, max(self.steps_per_epoch, FLAGS.monitor_frequency), False
         )
         correct_sample_obs = sample_observers.SamplesDatabaseObserver(
           "sqlite:///{}".format(self.logfile_path / "correct_samples.db")
@@ -346,7 +347,7 @@ class torchBert(backends.BackendBase):
       try:
         self.train.model.train()
         for epoch in tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False):
-          if epoch < current_step // self.steps_per_epoch:
+          if epoch < self.current_step // self.steps_per_epoch:
             continue # Stupid bar won't resume.
           
           for step in tqdm.auto.trange(self.steps_per_epoch, desc="Batch", leave = False):
@@ -381,7 +382,7 @@ class torchBert(backends.BackendBase):
             if FLAGS.reward_compilation:
               for s in correct_samples:
                 correct_sample_obs.OnSample(model_pb2.Sample(
-                    train_step             = current_step,
+                    train_step             = self.current_step,
                     sample_feed            = self.atomizer.DeatomizeIndices(s[0], ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
                     text                   = self.atomizer.DeatomizeIndices(s[1], ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
                     encoded_text           = ",".join([str(t) for t in s[1]]),
@@ -397,13 +398,13 @@ class torchBert(backends.BackendBase):
                 num_correct_samples = correct_sample_obs.sample_id,
               )
             self.train.model.zero_grad()
-            if current_step == 0:
+            if self.current_step == 0:
               l.getLogger().info("Starting Loss: {}".format(step_mask_loss + step_ns_loss))
-            current_step += 1
+            self.current_step += 1
 
           # End of Epoch
-          l.getLogger().info("Epoch {} Loss: {}".format(current_step // self.steps_per_epoch, train_hook.current_loss))
-          self.saveCheckpoint(current_step)
+          l.getLogger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.current_loss))
+          self.saveCheckpoint()
           if self.torch_tpu_available:
             self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
 
@@ -421,14 +422,13 @@ class torchBert(backends.BackendBase):
   def Validate(self) -> None:
 
     ###############
-    model = self.train.model
     if self.pytorch.num_gpus > 1:
-      model = self.torch.nn.DataParallel(model)
+      model = self.torch.nn.DataParallel(self.train.model)
 
     eval_losses = []
     preds       = None
     label_ids   = None
-    model.eval()
+    self.train.model.eval()
 
     if self.torch_tpu_available:
       loader = self.pytorch.torch_ploader.ParallelLoader(
@@ -446,7 +446,7 @@ class torchBert(backends.BackendBase):
         inputs = next(eval_iterator)
 
       # PLZ FIX ME
-      loss, preds, label_ids, _, _, _, _ = self.prediction_step(model, inputs)
+      loss, preds, label_ids, _, _, _, _ = self.prediction_step(self.train.model, inputs)
       batch_size = inputs[list(inputs.keys())[0]].shape[0]
       eval_losses.append(loss * batch_size)
 
@@ -524,11 +524,11 @@ class torchBert(backends.BackendBase):
     self.train.model.eval()
     return ckpt_step
 
-  def saveCheckpoint(self, step):
+  def saveCheckpoint(self):
     """
       Saves model, scheduler, optimizer checkpoints per epoch.
     """
-    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, step)
+    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, self.current_step)
 
     if self.torch_tpu_available:
       if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
@@ -542,7 +542,7 @@ class torchBert(backends.BackendBase):
       self.torch.save(self.train.scheduler.state_dict(), ckpt_comp("scheduler"))
 
     with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
-      mf.write("train_step: {}\n".format(step))
+      mf.write("train_step: {}\n".format(self.current_step))
     return
 
   def is_world_process_zero(self) -> bool:
