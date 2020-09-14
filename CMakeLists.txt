@@ -202,7 +202,7 @@ function(clgen)
     # FILE_PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
   add_custom_target(link_target ALL
-      COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CMAKE_CURRENT_SOURCE_DIR}/clgen
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CMAKE_CURRENT_SOURCE_DIR}/clgen
   )
 endfunction()
 
