@@ -25,7 +25,7 @@ class ValResults(Base):
   key     : str = sql.Column(sql.String(1024), primary_key=True)
   results : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
 
-class BERTValFile(Base, sqlutil.ProtoBackedMixin):
+class BERTtfValFile(Base, sqlutil.ProtoBackedMixin):
   """
     A database entry representing a CLgen validation trace.
   """
@@ -112,5 +112,5 @@ class ValidationDatabase(sqlutil.Database):
   @property
   def count(self):
     with self.Session() as s:
-      count = s.query(BERTValFile).count()
+      count = s.query(BERTtfValFile).count()
     return count
