@@ -884,14 +884,15 @@ class BertForPreTraining(BertPreTrainedModel):
 
       code_batch = [self.atomizer.ArrayToCode(x) for x in new_input_ids.cpu().numpy()]
       # Check for compilation: new_input_ids
-      batch_size, _ = tuple(new_input_ids.shape)
+      batch_size, sequence_length = tuple(new_input_ids.shape)
       compile_flag = torch.zeros([batch_size], dtype = torch.int64, device = pytorch.device)
       for b in range(batch_size):
         try:
           stdout = opencl.Compile(code_batch[b])
           compile_flag[b] = 1
-          from eupy.native import logger as l
-          l.getLogger().warn(stdout)
+          labels[b] = torch.full(
+            [sequence_length], -100, dtype = torch.int64, device = pytorch.device
+          )
         except ValueError:
           compile_flag[b] = 0
 
