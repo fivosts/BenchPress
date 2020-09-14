@@ -231,6 +231,33 @@ class torchBert(backends.BackendBase):
   def samplesWithCategorical(self):
     return FLAGS.categorical_sampling
 
+  def training_step(self,
+                    model: typing.TypeVar('nn.Module'),
+                    inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
+                    ) -> float:
+    """
+    Perform a training step on a batch of inputs.
+    """
+    for key, value in inputs.items():
+      inputs[key] = value.to(self.pytorch.device)
+
+    outputs = model(
+                input_ids           = inputs['input_ids'],
+                attention_mask      = inputs['input_mask'],
+                position_ids        = inputs['position_ids'],
+                labels              = inputs['mask_labels'],
+                next_sentence_label = inputs['next_sentence_label'],
+                masked_lm_lengths   = inputs['masked_lm_lengths'],
+              )
+    total_loss = outputs.total_loss
+    correct_samples = [(x, y) for x, y in zip(outputs.compiled_input_ids, outputs.compiled_samples)]
+    if self.pytorch.num_gpus > 1:
+      total_loss = total_loss.mean()  # mean() to average on multi-gpu parallel training
+    total_loss.backward()
+    return (total_loss.item(), outputs.masked_lm_loss.item(), 
+            outputs.next_sentence_loss.item(), 
+            outputs.batch_compilation_rate, correct_samples)
+
   def Train(self,
             corpus,
             test_sampler: typing.Optional[samplers.Sampler] = None,
@@ -249,9 +276,9 @@ class torchBert(backends.BackendBase):
     self.is_trained = True if current_step >= self.num_train_steps else False
 
     if not self.is_trained:
-      model = self.train.model.to(self.pytorch.device)
-      model.zero_grad()
+      self.train.model.zero_grad()
 
+      ## Set batch size in case of TPU training or distributed training.
       if self.torch_tpu_available:
         total_train_batch_size = self.train_batch_size * self.pytorch.torch_xla.xrt_world_size()
       else:
@@ -261,6 +288,7 @@ class torchBert(backends.BackendBase):
           * (self.torch.distributed.get_world_size() if dummy_num_machines != -1 else 1)
         )
 
+      # Set dataloader in case of TPU training.
       if self.torch_tpu_available:
         loader = self.pytorch.torch_ploader.ParallelLoader(
                             self.train.data_generator.dataloader, [self.pytorch.device]
@@ -269,6 +297,7 @@ class torchBert(backends.BackendBase):
       else:
         loader = self.train.data_generator.dataloader
 
+      # Get dataloader iterator and setup hooks.
       batch_iterator = iter(loader)    
       train_hook = hooks.tensorMonitorHook(
         self.logfile_path, current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
@@ -288,34 +317,8 @@ class torchBert(backends.BackendBase):
         )
       )
 
-      def training_step(model: typing.TypeVar('nn.Module'),
-                        inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
-                        ) -> float:
-        """
-        Perform a training step on a batch of inputs.
-        """
-        for key, value in inputs.items():
-          inputs[key] = value.to(self.pytorch.device)
-
-        outputs = model(
-                    input_ids           = inputs['input_ids'],
-                    attention_mask      = inputs['input_mask'],
-                    position_ids        = inputs['position_ids'],
-                    labels              = inputs['mask_labels'],
-                    next_sentence_label = inputs['next_sentence_label'],
-                    masked_lm_lengths   = inputs['masked_lm_lengths'],
-                  )
-        total_loss = outputs.total_loss
-        correct_samples = [(x, y) for x, y in zip(outputs.compiled_input_ids, outputs.compiled_samples)]
-        if self.pytorch.num_gpus > 1:
-          total_loss = total_loss.mean()  # mean() to average on multi-gpu parallel training
-        total_loss.backward()
-        return (total_loss.item(), outputs.masked_lm_loss.item(), 
-                outputs.next_sentence_loss.item(), 
-                outputs.batch_compilation_rate, correct_samples)
-
       try:
-        model.train()
+        self.train.model.train()
         for epoch in tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False):
           if epoch < current_step // self.steps_per_epoch:
             continue # Stupid bar won't resume.
@@ -330,9 +333,9 @@ class torchBert(backends.BackendBase):
               batch_iterator = iter(loader)
               inputs = next(batch_iterator)
 
-            _, step_mask_loss, step_ns_loss, b_comp_rate, correct_samples = training_step(model, inputs)
+            _, step_mask_loss, step_ns_loss, b_comp_rate, correct_samples = self.training_step(self.train.model, inputs)
 
-            self.torch.nn.utils.clip_grad_norm_(model.parameters(), self.max_grad_norm)
+            self.torch.nn.utils.clip_grad_norm_(self.train.model.parameters(), self.max_grad_norm)
             if self.torch_tpu_available:
               self.pytorch.torch_xla.optimizer_step(self.train.optimizer)
             else:
@@ -367,11 +370,11 @@ class torchBert(backends.BackendBase):
               correct_sample_hook.step(
                 num_correct_samples = correct_sample_obs.sample_id,
               )
-            model.zero_grad()
+            self.train.model.zero_grad()
             if current_step == 0:
               l.getLogger().info("Starting Loss: {}".format(step_mask_loss + step_ns_loss))
             current_step += 1
-            
+
           # End of Epoch
           l.getLogger().info("Epoch {} Loss: {}".format(current_step // self.steps_per_epoch, train_hook.current_loss))
           self.saveCheckpoint(current_step)
