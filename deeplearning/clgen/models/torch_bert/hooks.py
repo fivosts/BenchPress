@@ -136,3 +136,79 @@ class tensorMonitorHook(torchSessionHook):
           force_init = True,
         )
     return
+
+class validationSampleHook(object):
+  """Real time storage hook for validation results"""
+
+  def __init__(self, url, atomizer):
+
+    self.atomizer = atomizer
+    self.val_db = validation_database.ValidationDatabase("sqlite:///{}".format(url))
+    self.val_id = self.val_db.count
+    return
+
+  def step(self,
+           original_input
+           input_ids,
+           input_mask,
+           position_ids,
+           mask_labels,
+           next_sentence_label,
+           masked_lm_lengths,
+           seen_in_training,
+           ):
+    """
+      Requested tensors are evaluated and their values are available
+    """
+
+    batch_size = run_values.results[self.input_ids].shape[0]
+
+    masked_lm_predictions = np.reshape(
+      run_values.results[self.masked_lm_predictions],
+      (batch_size, int(len(run_values.results[self.masked_lm_predictions]) / batch_size))
+    )
+    next_sentence_predictions = np.reshape(
+      run_values.results[self.next_sentence_predictions],
+      (batch_size, int(len(run_values.results[self.next_sentence_predictions]) / batch_size))
+    )
+
+    assert run_values.results[self.original_input].shape[0]       == batch_size
+    assert run_values.results[self.input_ids].shape[0]            == batch_size
+    assert run_values.results[self.input_mask].shape[0]           == batch_size
+    assert run_values.results[self.masked_lm_positions].shape[0]  == batch_size
+    assert run_values.results[self.masked_lm_ids].shape[0]        == batch_size
+    assert run_values.results[self.masked_lm_weights].shape[0]    == batch_size
+    assert run_values.results[self.masked_lm_lengths].shape[0]    == batch_size
+    assert run_values.results[self.next_sentence_labels].shape[0] == batch_size
+    assert masked_lm_predictions.shape[0]                         == batch_size
+    assert next_sentence_predictions.shape[0]                     == batch_size
+
+    with self.val_db.Session(commit = True) as session:
+      for b in range(batch_size):
+        val_trace = validation_database.BERTtfValFile(
+          **validation_database.BERTtfValFile.FromArgs(
+            atomizer = self.atomizer,
+            id       = self.val_id,
+            train_step                = run_values.results[self.global_step],
+            seen_in_training          = run_values.results[self.seen_in_training][b],
+            original_input            = run_values.results[self.original_input][b],
+            input_ids                 = run_values.results[self.input_ids][b],
+            input_mask                = run_values.results[self.input_mask][b],
+            masked_lm_positions       = run_values.results[self.masked_lm_positions][b],
+            masked_lm_ids             = run_values.results[self.masked_lm_ids][b],
+            masked_lm_weights         = run_values.results[self.masked_lm_weights][b],
+            masked_lm_lengths         = run_values.results[self.masked_lm_lengths][b],
+            next_sentence_labels      = run_values.results[self.next_sentence_labels][b],
+            masked_lm_predictions     = masked_lm_predictions[b],
+            next_sentence_predictions = next_sentence_predictions[b],
+          )
+        )
+        try:
+          exists = session.query(validation_database.BERTtfValFile.sha256).filter_by(sha256 = val_trace.sha256).scalar() is not None
+        except sqlalchemy.orm.exc.MultipleResultsFound as e:
+          l.getLogger().error("Selected sha256 has been already found more than once.")
+          raise e
+        if not exists:
+          session.add(val_trace)
+          self.val_id += 1
+    return
