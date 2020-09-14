@@ -1,34 +1,93 @@
 #!/bin/bash
 
-sudo apt-get update
-sudo apt-get install -y \
-build-essential \
-ca-certificates \
-curl \
-cmake \
-wget \
-gcc \
-g++ \
-flex \
-nasm \
-tar \
-m4 \
-ocl-icd-opencl-dev \
-opencl-c-headers  \
-protobuf-compiler \
-pkg-config \
-python3.7 \
-python3.7-dev \
-python3.7-venv \
-python3-distutils \
-python3-numpy \
-zlib1g-dev \
-libexempi-dev \
-libmpc-dev \
-libboost-all-dev \
-mysql-server \
-libmysqlclient-dev \
-libsqlite3-dev \
+# curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+# python3.7 get-pip.py
 
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-python3.7 get-pip.py
+function install_apt_deps()
+{
+
+  echo "-- Do you have sudo rights ?"
+  read $is_sudo
+  if [[ $is_sudo == "y" || $is_sudo == "Y" || $is_sudo == "yes" || $is_sudo == "Yes" || $is_sudo == "YES" ]]
+  then
+    echo "-- Installing all apt dependencies"
+    sudo apt-get update
+    sudo apt-get install -y \
+    build-essential \
+    ca-certificates \
+    curl \
+    cmake \
+    wget \
+    gcc \
+    g++ \
+    flex \
+    nasm \
+    tar \
+    m4 \
+    ocl-icd-opencl-dev \
+    opencl-c-headers  \
+    protobuf-compiler \
+    pkg-config \
+    python3.7 \
+    python3.7-dev \
+    python3.7-venv \
+    python3-distutils \
+    python3-numpy \
+    zlib1g-dev \
+    libexempi-dev \
+    libmpc-dev \
+    libboost-all-dev \
+    mysql-server \
+    libmysqlclient-dev \
+    libsqlite3-dev
+  else
+    # echo "-- The existence of gcc >= 7 will be checked. If not found, gcc-9 will be installed from source."
+    echo "-- You have no sudo rights, which means the following things:"
+    echo "-- You better have a modern version of gcc (gcc >= 7 definitely works, 6 should work, 5 could work, =< 4 will NOT work."
+    echo "-- This script could install gcc from source, but will not. The complexity would rise significantly and weird dependencies would come up (installing gcc from source needs cmake, but cmake will be updated in the next step, if version >= 3.13 is not found."
+    echo "-- If you do not have have gcc >= 6, it means your machine has not been updated since April 27, 2016 (https://www.gnu.org/software/gcc/gcc-6/)."
+    echo -e "   In this case, \e[4m$(tput bold)failure to build this project is not my concern!$(tput sgr0)\e[0m"
+    echo "-- python3.7 and protobuf compiler CAN be installed from source during cmake phase. If you desire this, all you need to do is run cmake with -DBUILD_FROM_SOURCE=ON flag."
+    echo "-- If any of the remaining packages are missing and the building process crashes"
+    echo -e "   \e[4m$(tput bold)It is not of my concern!$(tput sgr0)\e[0m"
+    echo "-- "
+    echo "-- "
+    echo "-- "
+    echo "-- TLDR; Ask your admin for gcc >= 7 (6 should be ok too) or install from source. Fear not about python3.7 and protobuf compiler; will be installed from source during cmake process. If anything crashes or command not found, ask your admin to install the apt packages included in this script."
+  fi
+}
+
+function check_cmake()
+{
+  if (echo base version 3.13; cmake --version) | head -2 | sort -Vk3 | tail -1 | grep -q cmake
+  then
+    echo "-- Up to date CMake found in $(which cmake)"
+  else
+    echo "-- Installing CMake from source..."
+    echo "-- Specify binary path for cmake. CMake will install /bin, /lib, /shared folders in the specified folder."
+    echo "-- For that reason, make sure that:"
+    echo "   A) You specify the parent of a bin folder, e.g. (/usr/ instead of /usr/bin/)"
+    echo "   B) The specified folder is in your \$PATH"
+    echo "-- Installation folder:"
+    read path
+    cmake_bin=$(realpath $path)
+    mkdir -p $cmake_bin
+    cpwd=$(pwd)
+    cd /tmp
+    wget https://cmake.org/files/v3.13/cmake-3.13.4.tar.gz
+    tar -xvf cmake-3.13.4.tar.gz
+    cd cmake-3.13.4
+    ./bootstrap --prefix=${cmake_bin}
+    make -j $(nproc)
+    make install
+    cd ..
+    cmake --version
+    rm cmake-3.13.4.tar.gz
+    rm -rf cmake-3.13.4
+    cd $cpwd
+    echo "-- CMake installed successfully"
+  fi
+}
+
+check_cmake
+install_apt_deps
