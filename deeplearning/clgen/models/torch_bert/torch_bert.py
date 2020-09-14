@@ -258,6 +258,32 @@ class torchBert(backends.BackendBase):
             outputs.next_sentence_loss.item(), 
             outputs.batch_compilation_rate, correct_samples)
 
+  def prediction_step(self,
+                      model: typing.TypeVar("torch.nn.Module"),
+                      inputs: typing.Dict[str, typing.TypeVar("torch.Tensor")]
+                      ):
+    """
+    Perform an evaluation step on :obj:`model` using obj:`inputs`.
+    """
+    for key, value in inputs.items():
+      inputs[key] = value.to(self.pytorch.device)
+    with self.torch.no_grad():
+      outputs = model(
+                  input_ids           = inputs['input_ids'],
+                  attention_mask      = inputs['input_mask'],
+                  position_ids        = inputs['position_ids'],
+                  labels              = inputs['mask_labels'],
+                  next_sentence_label = inputs['next_sentence_label'],
+                  masked_lm_lengths   = inputs['masked_lm_lengths'],
+                )
+      total_loss = outputs.total_loss.mean().item()
+      correct_samples = [(x, y) for x, y in zip(outputs.compiled_input_ids, outputs.compiled_samples)]
+      logits = outputs.prediction_logits
+    
+    return (total_loss, logits.detach(), inputs['mask_labels'],
+            outputs.masked_lm_loss.item(), outputs.next_sentence_loss.item(), 
+            outputs.batch_compilation_rate, correct_samples)
+
   def Train(self,
             corpus,
             test_sampler: typing.Optional[samplers.Sampler] = None,
@@ -412,29 +438,6 @@ class torchBert(backends.BackendBase):
       loader = self.train.data_generator.dataloader
     eval_iterator = iter(loader)
 
-    def prediction_step(model: typing.TypeVar("torch.nn.Module"),
-                        inputs: typing.Dict[str, typing.TypeVar("torch.Tensor")]
-                        ):
-      """
-      Perform an evaluation step on :obj:`model` using obj:`inputs`.
-      """
-      for key, value in inputs.items():
-        if isinstance(value, self.torch.Tensor):
-          inputs[key] = value.to(self.pytorch.device)
-      with self.torch.no_grad():
-        outputs = model(
-                    input_ids           = inputs['input_ids'],
-                    attention_mask      = inputs['input_mask'],
-                    position_ids        = inputs['position_ids'],
-                    labels              = inputs['mask_labels'],
-                    next_sentence_label = inputs['next_sentence_label'],
-                    masked_lm_lengths   = inputs['masked_lm_lengths'],
-                  )
-        total_loss, masked_lm_loss, next_sentence_loss, logits = outputs[:4]
-        total_loss = total_loss.mean().item()
-      labels = inputs['mask_labels']
-      return (total_loss, logits.detach(), labels.detach())
-
     for step in tqdm.auto.trange(FLAGS.max_eval_steps, desc = "Validation", leave = False):
       try:
         inputs = next(eval_iterator)
@@ -442,7 +445,8 @@ class torchBert(backends.BackendBase):
         eval_iterator = iter(loader)
         inputs = next(eval_iterator)
 
-      loss, preds, label_ids = prediction_step(model, inputs)
+      # PLZ FIX ME
+      loss, preds, label_ids, _, _, _, _ = self.prediction_step(model, inputs)
       batch_size = inputs[list(inputs.keys())[0]].shape[0]
       eval_losses.append(loss * batch_size)
 
