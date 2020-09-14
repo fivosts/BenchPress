@@ -281,7 +281,7 @@ class torchBert(backends.BackendBase):
         loader = self.train.data_generator.dataloader
 
       batch_iterator = iter(loader)    
-      train_hook = hooks.torchTrainingHook(
+      train_hook = hooks.tensorMonitorHook(
         self.logfile_path, current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
 
