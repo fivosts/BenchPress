@@ -18,6 +18,7 @@
 import logging
 import math
 import os
+import typing
 import warnings
 from dataclasses import dataclass
 from typing import Optional, Tuple
@@ -486,8 +487,8 @@ class BertPreTrainedModel(PreTrainedModel):
       module.bias.data.zero_()
 
 
-@dataclass
-class BertForPreTrainingOutput(ModelOutput):
+# @dataclass
+class BertForPreTrainingOutput(typing.NamedTuple):
   """
   Output type of :class:`~transformers.BertForPreTrainingModel`.
 
@@ -519,6 +520,9 @@ class BertForPreTrainingOutput(ModelOutput):
   seq_relationship_logits: torch.FloatTensor = None
   hidden_states: Optional[Tuple[torch.FloatTensor]] = None
   attentions: Optional[Tuple[torch.FloatTensor]] = None
+  batch_compilation_rate: float = None
+  compiled_input_ids: typing.List = None
+  compiled_samples: typing.List = None
 
 
 BERT_START_DOCSTRING = r"""
@@ -897,18 +901,17 @@ class BertForPreTraining(BertPreTrainedModel):
       next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_label.view(-1))
       total_loss = masked_lm_loss + next_sentence_loss
 
-    if not return_dict:
-      output = (prediction_scores, seq_relationship_score) + outputs[2:]
-      return ((total_loss, masked_lm_loss, next_sentence_loss) + output) if total_loss is not None else output
-
     return BertForPreTrainingOutput(
       masked_lm_loss = masked_lm_loss,
       next_sentence_loss = next_sentence_loss,
       total_loss = total_loss,
       prediction_logits=prediction_scores,
       seq_relationship_logits=seq_relationship_score,
-      hidden_states=outputs.hidden_states,
-      attentions=outputs.attentions,
+      hidden_states=outputs[0],
+      attentions=outputs[1],
+      batch_compilation_rate = float(sum(compile_flag)) / batch_size,
+      compiled_input_ids = [x for en, x in enumerate(input_ids.cpu().numpy()) if compile_flag[en] == 1],
+      compiled_samples = [x for en, x in enumerate(new_input_ids.cpu().numpy()) if compile_flag[en] == 1],
     )
 
 class BertLMHeadModel(BertPreTrainedModel):
