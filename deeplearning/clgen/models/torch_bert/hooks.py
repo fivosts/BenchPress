@@ -11,12 +11,14 @@ class torchSessionHook(object):
                cache_path: pathlib.Path, 
                current_step: int, 
                step_freq: int,
-               flush_freq: int = None
+               flush_freq: int = None,
+               average: bool = True,
                ):
     self.cache_path   = cache_path
     self.current_step = current_step
     self.step_freq    = step_freq
     self.flush_freq   = flush_freq
+    self.average      = average
     return
 
   def step(self, **unused_kwargs):
@@ -29,9 +31,10 @@ class tensorMonitorHook(torchSessionHook):
                current_step: int, 
                step_freq: int,
                flush_freq: int = None,
+               average: bool = True,
                ):
     super(tensorMonitorHook, self).__init__(
-      cache_path, current_step, step_freq, flush_freq
+      cache_path, current_step, step_freq, flush_freq, average
       )
     self.jsonfile         = cache_path / "training.json"
     self.tensors          = []
@@ -87,8 +90,13 @@ class tensorMonitorHook(torchSessionHook):
   def _logTensors(self):
 
     effective_step = self.current_step if self.current_step - 1 != 0 else 0
-    epoch_tensors = (self.epoch_tensors if effective_step == 0
+  
+    if self.average is True:
+      epoch_tensors = (self.epoch_tensors if effective_step == 0
                      else {k: v / self.step_freq for k, v in self.epoch_tensors.items()})
+    else:
+      epoch_tensors = (self.epoch_tensors if effective_step == 0
+                     else {k: v for k, v in self.epoch_tensors.items()})
 
     self.tensors.append(epoch_tensors)
     self.tensors[-1]['step'] = effective_step
