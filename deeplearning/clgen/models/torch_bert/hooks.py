@@ -49,6 +49,10 @@ class tensorMonitorHook(torchSessionHook):
     ]
     return
 
+  @property
+  def current_loss(self):
+    return self.tensors[-1]['total_loss']
+
   def step(self, **tensors):
     for key, value in tensors.items():
       if key in self.epoch_tensors:
