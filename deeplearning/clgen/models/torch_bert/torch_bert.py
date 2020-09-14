@@ -421,7 +421,6 @@ class torchBert(backends.BackendBase):
 
   def Validate(self) -> None:
 
-    ###############
     if self.pytorch.num_gpus > 1:
       model = self.torch.nn.DataParallel(self.train.model)
 
@@ -436,6 +435,10 @@ class torchBert(backends.BackendBase):
                   ).per_device_loader(self.pytorch.device)
     else:
       loader = self.train.data_generator.dataloader
+
+    val_hook = hooks.validationSampleHook(
+      "sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")), self.atomizer
+    )
     eval_iterator = iter(loader)
 
     for step in tqdm.auto.trange(FLAGS.max_eval_steps, desc = "Validation", leave = False):
@@ -449,20 +452,21 @@ class torchBert(backends.BackendBase):
       loss, preds, label_ids, _, _, _, _ = self.prediction_step(self.train.model, inputs)
       batch_size = inputs[list(inputs.keys())[0]].shape[0]
       eval_losses.append(loss * batch_size)
+      val_hook.step("""Place here whatever you need. You have inputs + outputs from step function""")
 
-    dummy_local_rank = -1
-    if dummy_local_rank != -1:
-      # In distributed mode, concatenate all results from all nodes:
-      preds     = self.distributed_concat(
-                      preds, num_total_examples=self.num_examples(loader)
-                  )
-      label_ids = self.distributed_concat(
-                      label_ids, num_total_examples=self.num_examples(loader)
-                  )
-    elif self.torch_tpu_available:
-      # tpu-comment: Get all predictions and labels from all worker shards of eval dataset
-      preds = self.pytorch.torch_xla_model.mesh_reduce("eval_preds", preds, self.torch.cat)
-      label_ids = self.pytorch.torch_xla_model.mesh_reduce("eval_label_ids", label_ids, self.torch.cat)
+    # dummy_local_rank = -1
+    # if dummy_local_rank != -1:
+    #   # In distributed mode, concatenate all results from all nodes:
+    #   preds     = self.distributed_concat(
+    #                   preds, num_total_examples=self.num_examples(loader)
+    #               )
+    #   label_ids = self.distributed_concat(
+    #                   label_ids, num_total_examples=self.num_examples(loader)
+    #               )
+    # elif self.torch_tpu_available:
+    #   # tpu-comment: Get all predictions and labels from all worker shards of eval dataset
+    #   preds = self.pytorch.torch_xla_model.mesh_reduce("eval_preds", preds, self.torch.cat)
+    #   label_ids = self.pytorch.torch_xla_model.mesh_reduce("eval_label_ids", label_ids, self.torch.cat)
 
     preds     = preds.cpu().numpy()
     label_ids = label_ids.cpu().numpy()
