@@ -284,6 +284,9 @@ class torchBert(backends.BackendBase):
       train_hook = hooks.tensorMonitorHook(
         self.logfile_path, current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
+      correct_sample_hook = hooks.tensorMonitorHook(
+        self.logfile_path, current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency), False
+      )
 
       l.getLogger().info(
         "Splitting {} steps into {} equivalent epochs, {} steps each. Rejected {} redundant step(s)".format(
@@ -309,14 +312,20 @@ class torchBert(backends.BackendBase):
                     next_sentence_label = inputs['next_sentence_label'],
                     masked_lm_lengths   = inputs['masked_lm_lengths'],
                   )
-        total_loss, masked_lm_loss, next_sentence_loss = outputs[0], outputs[1], outputs[2]
+        total_loss = outputs.total_loss
+        correct_samples = [(x, y) for x, y in zip(outputs.compiled_input_ids, outputs.compiled_samples)]
         if self.pytorch.num_gpus > 1:
           total_loss = total_loss.mean()  # mean() to average on multi-gpu parallel training
         total_loss.backward()
-        return total_loss.item(), masked_lm_loss.item(), next_sentence_loss.item()
+        return (total_loss.item(), outputs.masked_lm_loss.item(), 
+                outputs.next_sentence_loss.item(), 
+                outputs.batch_compilation_rate, correct_samples)
 
       try:
         model.train()
+        correct_sample_obs = sample_observers.SamplesDatabaseObserver(
+          "sqlite:///{}".format(self.logfile_path / "correct_samples.db")
+        )
         for epoch in tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False):
           if epoch < current_step // self.steps_per_epoch:
             continue # Stupid bar won't resume.
@@ -331,7 +340,7 @@ class torchBert(backends.BackendBase):
               batch_iterator = iter(loader)
               inputs = next(batch_iterator)
 
-            _, step_mask_loss, step_ns_loss = training_step(model, inputs)
+            _, step_mask_loss, step_ns_loss, b_comp_rate, correct_samples = training_step(model, inputs)
 
             self.torch.nn.utils.clip_grad_norm_(model.parameters(), self.max_grad_norm)
             if self.torch_tpu_available:
@@ -340,12 +349,31 @@ class torchBert(backends.BackendBase):
               self.train.optimizer.step()
             self.train.scheduler.step()
 
+            exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
+            for s in correct_samples:
+              correct_sample_obs.OnSample(model_pb2.Sample(
+                  train_step             = current_step,
+                  sample_feed            = self.atomizer.DeatomizeIndices(s[0], ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
+                  text                   = self.atomizer.DeatomizeIndices(s[1], ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
+                  encoded_text           = ",".join([str(t) for t in s[1]]),
+                  sample_indices         = '',
+                  encoded_sample_indices = '',
+                  sample_time_ms         = int(round(exec_time_ms / self.train_batch_size)),
+                  num_tokens             = len([x for x in s[1] if x != self.atomizer.padToken]),
+                  categorical_sampling   = False,
+                  date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
+                )
+              )
+            correct_sample_hook.step(
+              num_correct_samples = correct_sample_obs.sample_id,
+            )
             train_hook.step(
               masked_lm_loss = step_mask_loss,
               next_sentence_loss = step_ns_loss,
               total_loss = step_mask_loss + step_ns_loss,
               learning_rate = self.train.scheduler.get_last_lr()[0],
-              execution_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
+              compilation_rate = b_comp_rate,
+              execution_time_ms = exec_time_ms
             )
 
             model.zero_grad()
