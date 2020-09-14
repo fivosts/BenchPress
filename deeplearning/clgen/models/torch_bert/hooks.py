@@ -6,18 +6,34 @@ from deeplearning.clgen import validation_database
 from eupy.native import logger as l
 from eupy.native import plotter as plt
 
-class torchTrainingHook(object):
+class torchSessionHook(object):
+  def __init__(self,
+               cache_path: pathlib.Path, 
+               current_step: int, 
+               step_freq: int,
+               flush_freq: int = None
+               ):
+    self.cache_path   = cache_path
+    self.current_step = current_step
+    self.step_freq    = step_freq
+    self.flush_freq   = flush_freq
+    return
+
+  def step(self, **unused_kwargs):
+    del unused_kwargs
+    raise NotImplementedError("Abstract hook step function")
+
+class tensorMonitorHook(torchSessionHook):
   def __init__(self, 
                cache_path: pathlib.Path, 
                current_step: int, 
                step_freq: int,
                flush_freq: int = None,
                ):
-    self.cache_path       = cache_path
+    super(tensorMonitorHook, self).__init__(
+      cache_path, current_step, step_freq, flush_freq
+      )
     self.jsonfile         = cache_path / "training.json"
-    self.current_step     = current_step
-    self.step_freq        = step_freq
-    self.flush_freq       = step_freq if flush_freq is None else flush_freq
     self.tensors          = []
     self.plot_tensors     = {}
     self.epoch_tensors    = {}
@@ -108,3 +124,5 @@ class torchTrainingHook(object):
           force_init = True,
         )
     return
+
+class 
