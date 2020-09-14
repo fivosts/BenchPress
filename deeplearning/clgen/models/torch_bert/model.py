@@ -854,45 +854,46 @@ class BertForPreTraining(BertPreTrainedModel):
     sequence_output, pooled_output = outputs[:2]
     prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
 
-    changed, new_input_ids, new_attention_mask, new_masked_lengths = self.fillSequence(
-      input_ids, 
-      [[torch.argmax(x) for x in b] for b in prediction_scores],
-      attention_mask,
-      masked_lm_lengths,
-    )
-    while changed:
-      new_outputs = self.bert(
-        new_input_ids,
-        attention_mask=new_attention_mask,
-        token_type_ids=token_type_ids,
-        position_ids=position_ids,
-        head_mask=head_mask,
-        inputs_embeds=inputs_embeds,
-        output_attentions=output_attentions,
-        output_hidden_states=output_hidden_states,
-        return_dict=return_dict,
-      )
-      new_sequence_output, new_pooled_output = new_outputs[:2]
-      new_prediction_scores, new_seq_relationship_score = self.cls(new_sequence_output, new_pooled_output)
+    if self.config.reward_compilation:
       changed, new_input_ids, new_attention_mask, new_masked_lengths = self.fillSequence(
-        new_input_ids, 
-        [[torch.argmax(x) for x in b] for b in new_prediction_scores],
+        input_ids, 
+        [[torch.argmax(x) for x in b] for b in prediction_scores],
         attention_mask,
         masked_lm_lengths,
       )
+      while changed:
+        new_outputs = self.bert(
+          new_input_ids,
+          attention_mask=new_attention_mask,
+          token_type_ids=token_type_ids,
+          position_ids=position_ids,
+          head_mask=head_mask,
+          inputs_embeds=inputs_embeds,
+          output_attentions=output_attentions,
+          output_hidden_states=output_hidden_states,
+          return_dict=return_dict,
+        )
+        new_sequence_output, new_pooled_output = new_outputs[:2]
+        new_prediction_scores, new_seq_relationship_score = self.cls(new_sequence_output, new_pooled_output)
+        changed, new_input_ids, new_attention_mask, new_masked_lengths = self.fillSequence(
+          new_input_ids, 
+          [[torch.argmax(x) for x in b] for b in new_prediction_scores],
+          attention_mask,
+          masked_lm_lengths,
+        )
 
-    code_batch = [self.atomizer.ArrayToCode(x) for x in new_input_ids.cpu().numpy()]
-    # Check for compilation: new_input_ids
-    batch_size, _ = tuple(new_input_ids.shape)
-    compile_flag = torch.zeros([batch_size], dtype = torch.int64, device = pytorch.device)
-    for b in range(batch_size):
-      try:
-        stdout = opencl.Compile(code_batch[b])
-        compile_flag[b] = 1
-        from eupy.native import logger as l
-        l.getLogger().warn(stdout)
-      except ValueError:
-        compile_flag[b] = 0
+      code_batch = [self.atomizer.ArrayToCode(x) for x in new_input_ids.cpu().numpy()]
+      # Check for compilation: new_input_ids
+      batch_size, _ = tuple(new_input_ids.shape)
+      compile_flag = torch.zeros([batch_size], dtype = torch.int64, device = pytorch.device)
+      for b in range(batch_size):
+        try:
+          stdout = opencl.Compile(code_batch[b])
+          compile_flag[b] = 1
+          from eupy.native import logger as l
+          l.getLogger().warn(stdout)
+        except ValueError:
+          compile_flag[b] = 0
 
     total_loss = None
     if labels is not None and next_sentence_label is not None:
@@ -909,9 +910,9 @@ class BertForPreTraining(BertPreTrainedModel):
       seq_relationship_logits=seq_relationship_score,
       hidden_states=outputs[0],
       attentions=outputs[1],
-      batch_compilation_rate = float(sum(compile_flag)) / batch_size,
-      compiled_input_ids = [x for en, x in enumerate(input_ids.cpu().numpy()) if compile_flag[en] == 1],
-      compiled_samples = [x for en, x in enumerate(new_input_ids.cpu().numpy()) if compile_flag[en] == 1],
+      batch_compilation_rate = float(sum(compile_flag)) / batch_size if self.config.reward_compilation else -1,
+      compiled_input_ids = [x for en, x in enumerate(input_ids.cpu().numpy()) if compile_flag[en] == 1] if self.config.reward_compilation else [],
+      compiled_samples = [x for en, x in enumerate(new_input_ids.cpu().numpy()) if compile_flag[en] == 1] if self.config.reward_compilation else [],
     )
 
 class BertLMHeadModel(BertPreTrainedModel):
