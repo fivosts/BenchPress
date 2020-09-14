@@ -132,5 +132,3 @@ class tensorMonitorHook(torchSessionHook):
           force_init = True,
         )
     return
-
-class 
