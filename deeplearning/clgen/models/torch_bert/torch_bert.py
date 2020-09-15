@@ -241,14 +241,13 @@ class torchBert(backends.BackendBase):
     """
     for key, value in inputs.items():
       inputs[key] = value.to(self.pytorch.device)
-
     outputs = model(
-                input_ids           = inputs['input_ids'],
-                attention_mask      = inputs['input_mask'],
-                position_ids        = inputs['position_ids'],
-                labels              = inputs['mask_labels'],
-                next_sentence_label = inputs['next_sentence_label'],
-                masked_lm_lengths   = inputs['masked_lm_lengths'],
+                input_ids            = inputs['input_ids'],
+                attention_mask       = inputs['input_mask'],
+                position_ids         = inputs['position_ids'],
+                labels               = inputs['mask_labels'],
+                next_sentence_labels = inputs['next_sentence_labels'],
+                masked_lm_lengths    = inputs['masked_lm_lengths'],
               )
     return outputs
 

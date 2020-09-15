@@ -55,14 +55,14 @@ class MaskSequence(typing.NamedTuple):
   so this class represents a single instance!
   """
 
-  seen_in_training     : np.int64
-  original_input       : np.array
-  input_ids            : np.array
-  input_mask           : np.array
-  position_ids         : np.array
-  mask_labels          : np.array
-  masked_lm_lengths    : np.array
-  next_sentence_label  : np.int64
+  seen_in_training      : np.int64
+  original_input        : np.array
+  input_ids             : np.array
+  input_mask            : np.array
+  position_ids          : np.array
+  mask_labels           : np.array
+  masked_lm_lengths     : np.array
+  next_sentence_labels  : np.int64
 
   @staticmethod
   def estimatedSize(batch_size, sequence_length, max_predictions_per_seq):
@@ -78,7 +78,7 @@ class MaskSequence(typing.NamedTuple):
            self.seen_in_training.nbytes  + self.original_input.nbytes + 
            self.input_ids.nbytes         + self.input_mask.nbytes +
            self.position_ids.nbytes      + self.mask_labels.nbytes +
-           self.masked_lm_lengths.nbytes + self.next_sentence_label.nbytes
+           self.masked_lm_lengths.nbytes + self.next_sentence_labels.nbytes
            )
 
   @staticmethod
@@ -255,12 +255,12 @@ def _holeSequence(seq: np.array,
     assert input_ids[first_pad_index] == atomizer.padToken, "{}".format(input_ids)
     assert input_ids[first_pad_index - 1] != atomizer.padToken
 
-  seen_in_training    = np.ones([1], dtype = np.int64) if train_set else np.zeros([1], dtype = np.int64)
-  next_sentence_label = np.zeros([1], dtype = np.int64)
+  seen_in_training     = np.ones([1], dtype = np.int64) if train_set else np.zeros([1], dtype = np.int64)
+  next_sentence_labels = np.zeros([1], dtype = np.int64)
   """
-    Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
+    Related to next_sentence_labels: Fix it to 0 for now, as no next_sentence prediction
     is intended on kernels. In any other case, check bert's create_instances_from_document
-    to see how next_sentence_label are calculated.
+    to see how next_sentence_labels are calculated.
     Setting this to 0 means that next sentence is NOT random.
     Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.    
   """
@@ -277,14 +277,14 @@ def _holeSequence(seq: np.array,
       ind += 1
 
   return {
-    'seen_in_training'   : seen_in_training,
-    'original_input'     : seq,
-    'input_ids'          : np.asarray(input_ids[:len(seq)], dtype = np.int64),
-    'input_mask'         : input_mask,
-    'position_ids'       : np.arange(len(seq), dtype = np.int64),
-    'mask_labels'        : mask_labels,
-    'masked_lm_lengths'  : masked_lm_lengths,
-    'next_sentence_label': next_sentence_label,
+    'seen_in_training'    : seen_in_training,
+    'original_input'      : seq,
+    'input_ids'           : np.asarray(input_ids[:len(seq)], dtype = np.int64),
+    'input_mask'          : input_mask,
+    'position_ids'        : np.arange(len(seq), dtype = np.int64),
+    'mask_labels'         : mask_labels,
+    'masked_lm_lengths'   : masked_lm_lengths,
+    'next_sentence_labels': next_sentence_labels,
   }
 
 def _maskSequence(seq: np.array,
@@ -351,11 +351,11 @@ def _maskSequence(seq: np.array,
   if atomizer.padToken in input_ids:
     input_mask[input_ids.index(atomizer.padToken):] = 0
 
-  seen_in_training    = np.ones([1], dtype = np.int64) if train_set else np.zeros([1], dtype = np.int64)
-  next_sentence_label = np.zeros([1], dtype = np.int64)
-  ## Related to next_sentence_label: Fix it to 0 for now, as no next_sentence prediction
+  seen_in_training     = np.ones([1], dtype = np.int64) if train_set else np.zeros([1], dtype = np.int64)
+  next_sentence_labels = np.zeros([1], dtype = np.int64)
+  ## Related to next_sentence_labels: Fix it to 0 for now, as no next_sentence prediction
   ## is intended on kernels. In any other case, check bert's create_instances_from_document
-  ## to see how next_sentence_label are calculated.
+  ## to see how next_sentence_labels are calculated.
   ## Setting this to 0 means that next sentence is NOT random.
   ## Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.
 
@@ -369,14 +369,14 @@ def _maskSequence(seq: np.array,
       ind += 1
 
   return {
-    'seen_in_training'   : seen_in_training,
-    'original_input'     : seq,
-    'input_ids'          : np.asarray(input_ids[:len(seq)], dtype = np.int64),
-    'input_mask'         : input_mask,
-    'position_ids'       : np.arange(len(seq), dtype = np.int64),
-    'mask_labels'        : mask_labels,
-    'masked_lm_lengths'  : masked_lm_lengths,
-    'next_sentence_label': next_sentence_label,
+    'seen_in_training'    : seen_in_training,
+    'original_input'      : seq,
+    'input_ids'           : np.asarray(input_ids[:len(seq)], dtype = np.int64),
+    'input_mask'          : input_mask,
+    'position_ids'        : np.arange(len(seq), dtype = np.int64),
+    'mask_labels'         : mask_labels,
+    'masked_lm_lengths'   : masked_lm_lengths,
+    'next_sentence_labels': next_sentence_labels,
   }
 
 class MaskLMBatchGenerator(object):
@@ -869,7 +869,7 @@ class MaskLMBatchGenerator(object):
     if FLAGS.write_text_dataset:
       with open(masked_corpus['txt'], 'w') as file_writer:
         for instance in masked_corpus['corpus']:
-          file_writer.write("'seen_in_training': {}\n'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'position_ids': {}\n'mask_labels': {}\n'masked_lm_lengths': {}\n'next_sentence_label': {}\n\n"
+          file_writer.write("'seen_in_training': {}\n'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'position_ids': {}\n'mask_labels': {}\n'masked_lm_lengths': {}\n'next_sentence_labels': {}\n\n"
                               .format((True if instance['seen_in_training'] == 1 else False),
                                       self.atomizer.DeatomizeIndices(instance['original_input'], ignore_token = self.atomizer.padToken),
                                       self.atomizer.DeatomizeIndices(instance['input_ids'], ignore_token = self.atomizer.padToken),
@@ -877,7 +877,7 @@ class MaskLMBatchGenerator(object):
                                       instance['position_ids'],
                                       instance['mask_labels'],
                                       instance['masked_lm_lengths'],
-                                      instance['next_sentence_label']
+                                      instance['next_sentence_labels']
                                     )
                               )
     l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
