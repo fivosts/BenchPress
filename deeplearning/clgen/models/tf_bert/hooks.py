@@ -542,7 +542,7 @@ class writeValidationDB(_tfEstimatorHooks):
 
     with self.val_db.Session(commit = True) as session:
       for b in range(batch_size):
-        val_trace = validation_database.BERTtfValFile(
+        val_trace = validation_database.BERTValFile(
           **validation_database.BERTtfValFile.FromArgs(
             atomizer = self.atomizer,
             id       = self.val_id,
