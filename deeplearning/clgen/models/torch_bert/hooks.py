@@ -132,49 +132,50 @@ class validationSampleHook(object):
                ):
 
     self.atomizer   = atomizer
-    self.val_db     = validation_database.ValidationDatabase("sqlite:///{}".format(url))
+    self.val_db     = validation_database.ValidationDatabase(url)
     self.val_id     = self.val_db.count
     self.batch_size = batch_size
     self.model_step = model_step
     return
 
   def step(self,
-           seen_in_training,
-           original_input,
-           input_ids,
-           input_mask,
-           position_ids,
-           mask_labels,
-           masked_lm_lengths,
-           next_sentence_labels,
-           masked_lm_predictions,
-           next_sentence_predictions,
+           inputs,
+           outputs,
            ) -> None:
     """
       Requested tensors are evaluated and their values are available
     """
-    masked_lm_predictions = np.reshape(
-      self.masked_lm_predictions,
-      (batch_size, int(len(self.masked_lm_predictions) / batch_size))
-    )
-    next_sentence_predictions = np.reshape(
-      self.next_sentence_predictions,
-      (batch_size, int(len(self.next_sentence_predictions) / batch_size))
-    )
+
+    seen_in_training      = inputs['seen_in_training'].cpu().numpy()
+    original_input        = inputs['original_input'].cpu().numpy()
+    input_ids             = inputs['input_ids'].cpu().numpy()
+    input_mask            = inputs['input_mask'].cpu().numpy()
+    masked_lm_lengths     = inputs['masked_lm_lengths'].cpu().numpy()
+    next_sentence_labels  = inputs['next_sentence_labels'].cpu().numpy()
+    
+    masked_lm_ids = [[x for x in batch if x != -100] for batch in inputs['mask_labels'].cpu().numpy()]
+    masked_lm_positions = [[idx for idx, x in enumerate(batch) if x != -100] for batch in inputs['mask_labels'].cpu().numpy()]
+
+    masked_lm_predictions = [
+          [np.argmax(outputs.prediction_logits.cpu().numpy()[batch][x]) for x in masked_lm_positions[batch]] 
+          for batch in range(self.batch_size)
+        ]
+    next_sentence_predictions = [[np.argmax(x) for x in batch][-1] for batch in outputs.seq_relationship_logits.cpu().numpy()]
 
     with self.val_db.Session(commit = True) as session:
       for b in range(self.batch_size):
-        val_trace = validation_database.BERTtorchValFile(
-          **validation_database.BERTtorchValFile.FromArgs(
+        val_trace = validation_database.BERTValFile(
+          **validation_database.BERTValFile.FromArgs(
             atomizer = self.atomizer,
             id       = self.val_id,
             train_step                = self.model_step,
-            seen_in_training          = seen_in_training,
+            seen_in_training          = seen_in_training[b],
             original_input            = original_input[b],
             input_ids                 = input_ids[b],
             input_mask                = input_mask[b],
-            position_ids              = position_ids[b],
-            mask_labels               = mask_labels[b],
+            masked_lm_positions       = masked_lm_positions[b],
+            masked_lm_ids             = masked_lm_ids[b],
+            masked_lm_weights         = [],
             masked_lm_lengths         = masked_lm_lengths[b],
             next_sentence_labels      = next_sentence_labels[b],
             masked_lm_predictions     = masked_lm_predictions[b],
@@ -182,7 +183,7 @@ class validationSampleHook(object):
           )
         )
         try:
-          exists = session.query(validation_database.BERTtorchValFile.sha256).filter_by(sha256 = val_trace.sha256).scalar() is not None
+          exists = session.query(validation_database.BERTValFile.sha256).filter_by(sha256 = val_trace.sha256).scalar() is not None
         except sqlalchemy.orm.exc.MultipleResultsFound as e:
           l.getLogger().error("Selected sha256 has been already found more than once.")
           raise e
