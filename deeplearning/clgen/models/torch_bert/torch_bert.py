@@ -405,8 +405,12 @@ class torchBert(backends.BackendBase):
     else:
       loader = self.train.data_generator.dataloader
 
+    l.getLogger().warn(self.logfile_path)
     val_hook = hooks.validationSampleHook(
-      "sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")), self.atomizer
+      url = "sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")),
+      atomizer = self.atomizer,
+      batch_size = self.eval_batch_size,
+      model_step = self.current_step
     )
     eval_iterator = iter(loader)
 
@@ -427,8 +431,8 @@ class torchBert(backends.BackendBase):
 
       label_ids = inputs['mask_labels']
       batch_size = inputs[list(inputs.keys())[0]].shape[0]
-      eval_losses.append(loss * batch_size)
-      val_hook.step("""Place here whatever you need. You have inputs + outputs from step function""")
+      eval_losses.append(total_loss * batch_size)
+      val_hook.step(inputs, step_out)
 
     # dummy_local_rank = -1
     # if dummy_local_rank != -1:
