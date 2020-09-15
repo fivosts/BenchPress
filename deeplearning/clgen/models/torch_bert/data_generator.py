@@ -54,7 +54,6 @@ class MaskSequence(typing.NamedTuple):
   This is not batch! generateTfDataset applies native batching,
   so this class represents a single instance!
   """
-
   seen_in_training      : np.int64
   original_input        : np.array
   input_ids             : np.array
