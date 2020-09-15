@@ -232,10 +232,10 @@ class torchBert(backends.BackendBase):
   def samplesWithCategorical(self):
     return FLAGS.categorical_sampling
 
-  def training_step(self,
-                    model: typing.TypeVar('nn.Module'),
-                    inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
-                    ) -> float:
+  def model_step(self,
+                 model: typing.TypeVar('nn.Module'),
+                 inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
+                 ) -> float:
     """
     Perform a training step on a batch of inputs.
     """
@@ -250,40 +250,7 @@ class torchBert(backends.BackendBase):
                 next_sentence_label = inputs['next_sentence_label'],
                 masked_lm_lengths   = inputs['masked_lm_lengths'],
               )
-    total_loss = outputs.total_loss
-    correct_samples = [(x, y) for x, y in zip(outputs.compiled_input_ids, outputs.compiled_samples)]
-    if self.pytorch.num_gpus > 1:
-      total_loss = total_loss.mean()  # mean() to average on multi-gpu parallel training
-    total_loss.backward()
-    return (total_loss.item(), outputs.masked_lm_loss.item(), 
-            outputs.next_sentence_loss.item(), 
-            outputs.batch_compilation_rate, correct_samples)
-
-  def prediction_step(self,
-                      model: typing.TypeVar("torch.nn.Module"),
-                      inputs: typing.Dict[str, typing.TypeVar("torch.Tensor")]
-                      ):
-    """
-    Perform an evaluation step on :obj:`model` using obj:`inputs`.
-    """
-    for key, value in inputs.items():
-      inputs[key] = value.to(self.pytorch.device)
-    with self.torch.no_grad():
-      outputs = model(
-                  input_ids           = inputs['input_ids'],
-                  attention_mask      = inputs['input_mask'],
-                  position_ids        = inputs['position_ids'],
-                  labels              = inputs['mask_labels'],
-                  next_sentence_label = inputs['next_sentence_label'],
-                  masked_lm_lengths   = inputs['masked_lm_lengths'],
-                )
-      total_loss = outputs.total_loss.mean().item()
-      correct_samples = [(x, y) for x, y in zip(outputs.compiled_input_ids, outputs.compiled_samples)]
-      logits = outputs.prediction_logits
-    
-    return (total_loss, logits.detach(), inputs['mask_labels'],
-            outputs.masked_lm_loss.item(), outputs.next_sentence_loss.item(), 
-            outputs.batch_compilation_rate, correct_samples)
+    return outputs
 
   def Train(self,
             corpus,
@@ -360,7 +327,9 @@ class torchBert(backends.BackendBase):
               batch_iterator = iter(loader)
               inputs = next(batch_iterator)
 
-            _, step_mask_loss, step_ns_loss, b_comp_rate, correct_samples = self.training_step(self.train.model, inputs)
+            step_out = self.model_step(self.train.model, inputs)
+            total_loss = step_out.total_loss.mean() if self.pytorch.num_gpus > 1 else step_out.total_loss
+            total_loss.backward()
 
             self.torch.nn.utils.clip_grad_norm_(self.train.model.parameters(), self.max_grad_norm)
             if self.torch_tpu_available:
@@ -371,15 +340,16 @@ class torchBert(backends.BackendBase):
 
             exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
             train_hook.step(
-              masked_lm_loss = step_mask_loss,
-              next_sentence_loss = step_ns_loss,
-              total_loss = step_mask_loss + step_ns_loss,
+              masked_lm_loss = step_out.masked_lm_loss.item(),
+              next_sentence_loss = step_out.next_sentence_loss.item(),
+              total_loss = total_loss.item(),
               learning_rate = self.train.scheduler.get_last_lr()[0],
-              compilation_rate = b_comp_rate,
+              compilation_rate = step_out.batch_compilation_rate,
               execution_time_ms = exec_time_ms,
               time_per_sample_ms = exec_time_ms / self.train_batch_size,
             )
             if FLAGS.reward_compilation:
+              correct_samples = [(x, y) for x, y in zip(step_out.compiled_input_ids, step_out.compiled_samples)]
               for s in correct_samples:
                 correct_sample_obs.OnSample(model_pb2.Sample(
                     train_step             = self.current_step,
@@ -399,7 +369,7 @@ class torchBert(backends.BackendBase):
               )
             self.train.model.zero_grad()
             if self.current_step == 0:
-              l.getLogger().info("Starting Loss: {}".format(step_mask_loss + step_ns_loss))
+              l.getLogger().info("Starting Loss: {}".format(total_loss.item()))
             self.current_step += 1
 
           # End of Epoch
@@ -449,7 +419,14 @@ class torchBert(backends.BackendBase):
         inputs = next(eval_iterator)
 
       # PLZ FIX ME
-      loss, preds, label_ids, _, _, _, _ = self.prediction_step(self.train.model, inputs)
+      with self.torch.no_grad():
+        step_out = self.model_step(self.train.model, inputs)
+
+      total_loss = step_out.total_loss.mean().item()
+      correct_samples = [(x, y) for x, y in zip(step_out.compiled_input_ids, step_out.compiled_samples)]
+      preds = step_out.prediction_logits.detach()
+
+      label_ids = inputs['mask_labels']
       batch_size = inputs[list(inputs.keys())[0]].shape[0]
       eval_losses.append(loss * batch_size)
       val_hook.step("""Place here whatever you need. You have inputs + outputs from step function""")
