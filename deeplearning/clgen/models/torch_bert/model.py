@@ -794,7 +794,7 @@ class BertForPreTraining(BertPreTrainedModel):
     head_mask=None,
     inputs_embeds=None,
     labels=None,
-    next_sentence_label=None,
+    next_sentence_labels=None,
     output_attentions=None,
     output_hidden_states=None,
     return_dict=None,
@@ -806,7 +806,7 @@ class BertForPreTraining(BertPreTrainedModel):
       Indices should be in ``[-100, 0, ..., config.vocab_size]`` (see ``input_ids`` docstring)
       Tokens with indices set to ``-100`` are ignored (masked), the loss is only computed for the tokens with labels
       in ``[0, ..., config.vocab_size]``
-    next_sentence_label (``torch.LongTensor`` of shape ``(batch_size,)``, `optional`, defaults to :obj:`None`):
+    next_sentence_labels (``torch.LongTensor`` of shape ``(batch_size,)``, `optional`, defaults to :obj:`None`):
       Labels for computing the next sequence prediction (classification) loss. Input should be a sequence pair (see :obj:`input_ids` docstring)
       Indices should be in ``[0, 1]``.
       ``0`` indicates sequence B is a continuation of sequence A,
@@ -897,10 +897,10 @@ class BertForPreTraining(BertPreTrainedModel):
           compile_flag[b] = 0
 
     total_loss = None
-    if labels is not None and next_sentence_label is not None:
+    if labels is not None and next_sentence_labels is not None:
       loss_fct = torch.nn.CrossEntropyLoss()
       masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
-      next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_label.view(-1))
+      next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
       total_loss = masked_lm_loss + next_sentence_loss
 
     return BertForPreTrainingOutput(
