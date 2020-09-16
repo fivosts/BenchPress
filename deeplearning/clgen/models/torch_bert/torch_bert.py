@@ -235,6 +235,7 @@ class torchBert(backends.BackendBase):
   def model_step(self,
                  model: typing.TypeVar('nn.Module'),
                  inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
+                 is_training: bool = True,
                  ) -> float:
     """
     Perform a training step on a batch of inputs.
@@ -248,6 +249,7 @@ class torchBert(backends.BackendBase):
                 labels               = inputs['mask_labels'],
                 next_sentence_labels = inputs['next_sentence_labels'],
                 masked_lm_lengths    = inputs['masked_lm_lengths'],
+                is_training          = is_training,
               )
     return outputs
 
@@ -425,7 +427,7 @@ class torchBert(backends.BackendBase):
           inputs = next(eval_iterator)
 
         with self.torch.no_grad():
-          step_out = self.model_step(self.train.model, inputs)
+          step_out = self.model_step(self.train.model, inputs, is_training = False)
 
         val_hook.step(inputs, step_out)
         avg_mask_loss.append(step_out.masked_lm_loss.mean().item())
@@ -551,7 +553,7 @@ class torchBert(backends.BackendBase):
       pred_iterator = iter(loader)
       inputs = next(pred_iterator)
     with self.torch.no_grad():
-      step_out = self.model_step(self.sample.model, inputs)
+      step_out = self.model_step(self.sample.model, inputs, is_training = False)
       raise NotImplementedError("Get the filled out kernel here in one step.")
     return full_kernel
 
