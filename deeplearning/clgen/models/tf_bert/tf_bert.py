@@ -119,11 +119,11 @@ class tfBert(backends.BackendBase):
     self.learning_rate                   = None
     self.num_train_steps                 = None
     self.num_warmup_steps                = None
-    self.telemetry                       = None
 
     self.ckpt_path                       = self._ConfigCheckpointParams()
     self.logfile_path                    = self.cache.path / "logs"
     self.sample_path                     = self.cache.path / "samples"
+    self.telemetry                       = telemetry.TrainingLogger(self.logfile_path)
 
     self.is_validated                    = False
     l.getLogger().info("BERT Model config initialized in {}".format(self.cache.path))
@@ -184,7 +184,6 @@ class tfBert(backends.BackendBase):
     self.learning_rate                    = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
     self.num_warmup_steps                 = self.config.training.num_warmup_steps
 
-    self.telemetry                        = telemetry.TrainingLogger(self.logfile_path)
     self.steps_per_epoch                  = data_generator.steps_per_epoch
     self.num_epochs                       = data_generator.num_epochs
     self.num_train_steps                  = self.steps_per_epoch * self.num_epochs
