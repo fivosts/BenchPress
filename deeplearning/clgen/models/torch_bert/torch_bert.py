@@ -393,7 +393,7 @@ class torchBert(backends.BackendBase):
     if self.pytorch.num_gpus > 1:
       model = self.torch.nn.DataParallel(self.train.model)
 
-    eval_losses = []
+    loss        = []
     preds       = None
     label_ids   = None
     self.train.model.eval()
@@ -429,43 +429,8 @@ class torchBert(backends.BackendBase):
       correct_samples = [(x, y) for x, y in zip(step_out.compiled_input_ids, step_out.compiled_samples)]
       preds = step_out.prediction_logits.detach()
 
-      label_ids = inputs['mask_labels']
-      batch_size = inputs[list(inputs.keys())[0]].shape[0]
-      eval_losses.append(total_loss * batch_size)
+      loss.append(total_loss)
       val_hook.step(inputs, step_out)
-
-    # dummy_local_rank = -1
-    # if dummy_local_rank != -1:
-    #   # In distributed mode, concatenate all results from all nodes:
-    #   preds     = self.distributed_concat(
-    #                   preds, num_total_examples=self.num_examples(loader)
-    #               )
-    #   label_ids = self.distributed_concat(
-    #                   label_ids, num_total_examples=self.num_examples(loader)
-    #               )
-    # elif self.torch_tpu_available:
-    #   # tpu-comment: Get all predictions and labels from all worker shards of eval dataset
-    #   preds = self.pytorch.torch_xla_model.mesh_reduce("eval_preds", preds, self.torch.cat)
-    #   label_ids = self.pytorch.torch_xla_model.mesh_reduce("eval_label_ids", label_ids, self.torch.cat)
-
-    preds     = preds.cpu().numpy()
-    label_ids = label_ids.cpu().numpy()
-
-    # metrics   = self.compute_metrics(
-    #               EvalPrediction(predictions=preds, label_ids=label_ids)
-    #             )
-
-    # metrics["eval_loss"] = np.sum(eval_losses) / (FLAGS.max_eval_steps * self.eval_batch_size)
-
-    # Prefix all keys with eval_
-    # for key in list(metrics.keys()):
-    #   if not key.startswith("eval_"):
-    #     metrics[f"eval_{key}"] = metrics.pop(key)
-
-    # output = PredictionOutput(predictions=preds, label_ids=label_ids, metrics=metrics)
-    ###############
-
-    # self.log(output.metrics)
 
     if self.pytorch.torch_tpu_available:
       # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
