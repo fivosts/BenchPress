@@ -742,7 +742,7 @@ class BertForPreTraining(BertPreTrainedModel):
     new_input_ids = torch.full(
       [batch_size, sequence_length], self.atomizer.padToken, dtype = torch.int64, device = pytorch.device
     )
-    changed = False
+    there_are_holes = False
     for batch, _ in enumerate(input_ids):
 
       hole_idx, input_idx, pad_idx = 0, 0, None
@@ -752,7 +752,7 @@ class BertForPreTraining(BertPreTrainedModel):
           pad_idx = tok_idx + input_idx
           break
         if token == self.atomizer.holeToken:
-          changed = True
+          there_are_holes = True
           pred = prediction_scores[batch][tok_idx]
           if pred != self.atomizer.endholeToken:
             if masked_lm_lengths[batch][hole_idx] >= 2:
@@ -782,7 +782,7 @@ class BertForPreTraining(BertPreTrainedModel):
       masked_lm_lengths[batch] = torch.LongTensor(
         [x for x in masked_lm_lengths[batch] if x != 0] + [x for x in masked_lm_lengths[batch] if x == 0]
       )
-    return changed, new_input_ids, attention_mask, masked_lm_lengths.to(pytorch.device)
+    return there_are_holes, new_input_ids, attention_mask, masked_lm_lengths.to(pytorch.device)
 
   def forward(
     self,
@@ -799,6 +799,7 @@ class BertForPreTraining(BertPreTrainedModel):
     output_hidden_states=None,
     return_dict=None,
     is_training = True,
+    use_categorical = False,
     **kwargs
   ):
     r"""
@@ -839,6 +840,15 @@ class BertForPreTraining(BertPreTrainedModel):
       labels = kwargs.pop("masked_lm_labels")
     assert kwargs == {}, f"Unexpected keyword arguments: {list(kwargs.keys())}."
     return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+    use_categorical = use_categorical and not is_training
+    iterate_compiler = self.config.reward_compilation and is_training
+
+    if use_categorical:
+      # argmax_func = lambda x: torch.multinomial(x, 1)
+      ## TODO
+      argmax_func = lambda x: torch.argmax(x)
+    else:
+      argmax_func = lambda x: torch.argmax(x)
 
     outputs = self.bert(
       input_ids,
@@ -855,15 +865,14 @@ class BertForPreTraining(BertPreTrainedModel):
     sequence_output, pooled_output = outputs[:2]
     prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
 
-    iterate_compiler = self.config.reward_compilation and is_training
     if iterate_compiler:
-      changed, new_input_ids, new_attention_mask, new_masked_lengths = self.fillSequence(
+      there_are_holes, new_input_ids, new_attention_mask, new_masked_lengths = self.fillSequence(
         input_ids, 
-        [[torch.argmax(x) for x in b] for b in prediction_scores],
+        [[argmax_func(x) for x in b] for b in prediction_scores],
         attention_mask,
         masked_lm_lengths,
       )
-      while changed:
+      while there_are_holes:
         new_outputs = self.bert(
           new_input_ids,
           attention_mask=new_attention_mask,
@@ -877,9 +886,9 @@ class BertForPreTraining(BertPreTrainedModel):
         )
         new_sequence_output, new_pooled_output = new_outputs[:2]
         new_prediction_scores, new_seq_relationship_score = self.cls(new_sequence_output, new_pooled_output)
-        changed, new_input_ids, new_attention_mask, new_masked_lengths = self.fillSequence(
+        there_are_holes, new_input_ids, new_attention_mask, new_masked_lengths = self.fillSequence(
           new_input_ids, 
-          [[torch.argmax(x) for x in b] for b in new_prediction_scores],
+          [[argmax_func(x) for x in b] for b in new_prediction_scores],
           attention_mask,
           masked_lm_lengths,
         )
