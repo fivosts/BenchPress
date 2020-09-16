@@ -392,6 +392,7 @@ class MaskLMBatchGenerator(object):
     self.max_position_embeddings = None
 
     self.dataloader              = None
+    self.eval_dataloader         = None
     self.sampleBatch             = None
     self.sampleIndices           = None
 
@@ -478,10 +479,11 @@ class MaskLMBatchGenerator(object):
         "pt_record": glob.glob(str(self.cache.path / "train_dataset_*.pt_record")),
         "txt"      : glob.glob(str(self.cache.path / "train_dataset_*.txt")),
       }
-      self.dataset["validation_dataset"] = {
-        "pt_record": glob.glob(str(self.cache.path / "validation_dataset_*.pt_record")),
-        "txt"      : glob.glob(str(self.cache.path / "validation_dataset_*.txt")),
-      }
+      if len(glob.glob(str(self.cache.path / "validation_dataset_*.pt_record"))) != 0:
+        self.dataset["validation_dataset"] = {
+          "pt_record": glob.glob(str(self.cache.path / "validation_dataset_*.pt_record")),
+          "txt"      : glob.glob(str(self.cache.path / "validation_dataset_*.txt")),
+        }
 
     self.configValidationSets(self.config.validation_set, shaped_corpus)
     return
@@ -537,6 +539,29 @@ class MaskLMBatchGenerator(object):
       drop_last   = True,
     )
     return
+
+  def eval_dataloaders(self):
+    for set_name in self.dataset:
+      l.getLogger().info(set_name)
+      dataset = torch.utils.data.ConcatDataset(
+                  [torch.load(x) for x in self.dataset[set_name]['pt_record']]
+                )
+      dataloader = torch.utils.data.dataloader.DataLoader(
+        dataset    = dataset,
+        batch_size = self.training_opts.batch_size,
+        sampler    = (
+              torch.utils.data.RandomSampler(dataset, replacement = False)
+              if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
+              else torch.utils.data.distributed.DistributedSampler(
+                    dataset, 
+                    num_replicas = pytorch.torch_xla.xrt_world_size(), 
+                    rank = pytorch.torch_xla.get_ordinal()
+                   )
+              ),
+        num_workers = os.cpu_count(),
+        drop_last   = True,
+      )
+      yield set_name, dataloader
 
   def createCorpus(self) -> None:
     """

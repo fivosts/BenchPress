@@ -399,40 +399,42 @@ class torchBert(backends.BackendBase):
     label_ids   = None
     self.train.model.eval()
 
-    if self.torch_tpu_available:
-      loader = self.pytorch.torch_ploader.ParallelLoader(
-                        self.train.data_generator.dataloader, [self.pytorch.device]
-                  ).per_device_loader(self.pytorch.device)
-    else:
-      loader = self.train.data_generator.dataloader
+    for set_name, dataloader in self.train.data_generator.eval_dataloaders():
+      l.getLogger().info("BERT Validation on {}".format(set_name))
+      if self.torch_tpu_available:
+        loader = self.pytorch.torch_ploader.ParallelLoader(
+                          self.train.data_generator.dataloader, [self.pytorch.device]
+                    ).per_device_loader(self.pytorch.device)
+      else:
+        loader = self.train.data_generator.dataloader
 
-    l.getLogger().warn(self.logfile_path)
-    val_hook = hooks.validationSampleHook(
-      url = "sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")),
-      atomizer = self.atomizer,
-      batch_size = self.eval_batch_size,
-      model_step = self.current_step
-    )
-    eval_iterator = iter(loader)
+      l.getLogger().warn(self.logfile_path)
+      val_hook = hooks.validationSampleHook(
+        url = "sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")),
+        atomizer = self.atomizer,
+        batch_size = self.eval_batch_size,
+        model_step = self.current_step
+      )
+      eval_iterator = iter(loader)
 
-    for step in tqdm.auto.trange(FLAGS.max_eval_steps, desc = "Validation", leave = False):
-      try:
-        inputs = next(eval_iterator)
-      except StopIteration:
-        eval_iterator = iter(loader)
-        inputs = next(eval_iterator)
+      for step in tqdm.auto.trange(FLAGS.max_eval_steps, desc = "Validation", leave = False):
+        try:
+          inputs = next(eval_iterator)
+        except StopIteration:
+          eval_iterator = iter(loader)
+          inputs = next(eval_iterator)
 
-      with self.torch.no_grad():
-        step_out = self.model_step(self.train.model, inputs)
+        with self.torch.no_grad():
+          step_out = self.model_step(self.train.model, inputs)
 
-      val_hook.step(inputs, step_out)
-      avg_mask_loss.append(step_out.masked_lm_loss.mean().item())
-      avg_nsp_loss.append(step_out.next_sentence_loss.mean().item())
+        val_hook.step(inputs, step_out)
+        avg_mask_loss.append(step_out.masked_lm_loss.mean().item())
+        avg_nsp_loss.append(step_out.next_sentence_loss.mean().item())
 
-    val_hook.final("train_set", avg_mask_loss, avg_nsp_loss) ## TODO
-    if self.pytorch.torch_tpu_available:
-      # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
-      self.pytorch.torch_xla_model.master_print(self.pytorch.torch_xla_met.metrics_report())
+      val_hook.final(set_name, avg_mask_loss, avg_nsp_loss)
+      if self.pytorch.torch_tpu_available:
+        # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
+        self.pytorch.torch_xla_model.master_print(self.pytorch.torch_xla_met.metrics_report())
 
     self.is_validated = True
     return
