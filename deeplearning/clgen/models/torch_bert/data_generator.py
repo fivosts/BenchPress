@@ -420,7 +420,7 @@ class MaskLMBatchGenerator(object):
     d.cache.path.mkdir(exist_ok = True, parents = True)
     shaped_corpus = d.createCorpus()
     d.configDataset(shaped_corpus)
-    d.initDataloader()
+    d.train_dataloader()
     return d
 
   @classmethod
@@ -438,8 +438,7 @@ class MaskLMBatchGenerator(object):
     d.atomizer                = atomizer
     d.rngen                   = random.Random(seed)
     d.max_position_embeddings = max_position_embeddings
-    if not d.sampler.isFixedStr:
-      d.tfRecordSampler = d.tfRecordSampleGenerator()
+    d.predict_dataloader()
     return d
 
   def configDataset(self, shaped_corpus) -> None:
@@ -518,7 +517,7 @@ class MaskLMBatchGenerator(object):
       )
     return
 
-  def initDataloader(self) -> None:
+  def train_dataloader(self) -> None:
     """Pytorch dataloader that assembles all dataset files into a single-mapped dataset."""
     dataset = torch.utils.data.ConcatDataset(
                 [torch.load(x) for x in self.dataset['train_dataset']['pt_record']]
@@ -562,6 +561,75 @@ class MaskLMBatchGenerator(object):
         drop_last   = True,
       )
       yield set_name, dataloader
+
+  def predict_dataloader(self):
+
+    if self.sampler.isFixedStr:
+      input_sample = self.sampler.encoded_start_text
+      assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
+
+      target_idx = np.where(np.in1d(input_sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
+      assert len(target_idx) != 0, "No target prediction in sample text"
+      num_targets = (np.count_nonzero(input_sample == self.atomizer.maskToken) + 
+                     np.count_nonzero(input_sample == self.atomizer.holeToken))
+
+      seen_in_training     = 0
+      original_input       = np.full((self.sampler.sequence_length), 0, dtype = np.int64)
+      input_ids = self._padToMaxPosition(input_sample)[:self.sampler.sequence_length]
+      input_mask           = np.concatenate([
+                                  np.ones(len(input_sample), dtype = np.int64),
+                                  np.zeros(len(input_ids) - len(input_sample), dtype = np.int64)
+                                ])      
+      position_ids         = np.arange(self.sampler.sequence_length, dtype = np.int64)
+      mask_labels          = np.array(
+                                [x for x in input_ids if x == self.atomizer.maskToken or x == self.atomizer.holeToken else -100],
+                                dtype = np.int64
+                              )
+      masked_lm_lengths    = np.full((self.sampler.sequence_length), -1, dtype = np.int64)
+      next_sentence_labels = 0
+
+      sample_element = MaskSequence(seen_in_training, original_input, input_ids,
+                                    input_mask, position_ids, mask_labels, masked_lm_lengths,
+                                    next_sentence_labels
+                                   )
+      sample_batch = np.asarray([sample_element for _ in range(self.sampler.batch_size)])
+      dataset = [{k: torch.from_numpy(v) for (k, v) in inst.items()} for inst in masked_corpus['corpus']]
+    else:
+      if self.sampler.config.HasField("train_set"):
+        sampledDataset = "train_dataset"
+      elif self.sampler.config.HasField("validation_set"):
+        sampledDataset = "validation_dataset"
+      elif self.sampler.config.HasField("sample_set"):
+        sampledDataset = "pred_{}_{}".format(
+          self.sampler.config.sample_set.max_predictions_per_seq,
+          "mask" if self.sampler.config.sample_set.HasField("mask") 
+                 else "hole_{}".format(self.sampler.config.sample_set.hole.hole_length)
+        )
+      path_list = glob.glob(str(self.cache.path / "{}_*.pt_record".format(sampledDataset)))
+      if len(path_list) == 0:
+        # Config dataset
+        raise FileNotFoundError
+        shaped_corpus = self.createCorpus()
+        self.configValidationSets(self.sampler.config.sample_set, shaped_corpus)
+      dataset = torch.utils.data.ConcatDataset(
+                  [torch.load(x) for x in path_list]
+                )
+    self.dataloader = torch.utils.data.dataloader.DataLoader(
+      dataset    = dataset,
+      batch_size = self.training_opts.batch_size,
+      sampler    = (
+            torch.utils.data.RandomSampler(dataset, replacement = False)
+            if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
+            else torch.utils.data.distributed.DistributedSampler(
+                  dataset, 
+                  num_replicas = pytorch.torch_xla.xrt_world_size(), 
+                  rank = pytorch.torch_xla.get_ordinal()
+                 )
+            ),
+      num_workers = os.cpu_count(),
+      drop_last   = True,
+      )
+    return
 
   def createCorpus(self) -> None:
     """
@@ -789,41 +857,6 @@ class MaskLMBatchGenerator(object):
 
     if distribution:
       distribution.plot()
-    return
-
-  def InitSampleBatch(self) -> None:
-    """
-      Initializes data_generator for inference.
-      self.sampleBatch is initialized with sampler.encoded_start_text
-    """
-    if not self.sampler.isFixedStr:
-      try:
-        start_text = next(self.tfRecordSampler)[:self.sampler.sequence_length]
-      except StopIteration:
-        l.getLogger().warn("Repeating iterator on dataset...")
-        self.tfRecordSampler = self.tfRecordSampleGenerator()
-        try:
-          start_text = next(self.tfRecordSampler)[:self.sampler.sequence_length]
-        except Exception as e:
-          raise e
-      self.sampler.setStartText(self.atomizer.DeatomizeIndices(start_text))
-      self.sampler.Specialize(self.atomizer)
-    
-    assert self.sampler.sequence_length <= self.max_position_embeddings, "Sampler sequence length exceeds max position embeddings."
-    input_sample = self.sampler.encoded_start_text
-    assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
-
-    target_idx = np.where(np.in1d(input_sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
-    assert len(target_idx) != 0, "No target prediction in sample text"
-
-    num_masks = np.count_nonzero(input_sample == self.atomizer.maskToken)
-    num_holes = np.count_nonzero(input_sample == self.atomizer.holeToken)
-    num_targets = num_masks + num_holes
-
-    padded_sample = self._padToMaxPosition(input_sample)
-    padded_sample = padded_sample[:self.sampler.sequence_length]
-    self.sampleBatch   = np.repeat(padded_sample[None, :], self.sampler.batch_size, axis = 0)
-    self.sampleIndices = [[[] for i in range(num_targets)] for j in range(self.sampler.batch_size)]
     return
 
   def updateSampleBatch(self, 
