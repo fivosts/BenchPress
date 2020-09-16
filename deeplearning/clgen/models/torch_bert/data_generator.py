@@ -581,13 +581,10 @@ class MaskLMBatchGenerator(object):
                                   np.zeros(len(input_ids) - len(input_sample), dtype = np.int64)
                                 ])      
       position_ids         = np.arange(self.sampler.sequence_length, dtype = np.int64)
-      mask_labels          = np.array(
-                                [x for x in input_ids if x == self.atomizer.maskToken or x == self.atomizer.holeToken else -100],
-                                dtype = np.int64
-                              )
+      mask_labels          = np.full((self.sampler.sequence_length), -100, dtype = np.int64)
       masked_lm_lengths    = np.full((self.sampler.sequence_length), -1, dtype = np.int64)
       next_sentence_labels = 0
-
+      raise ValuError("Check here that the metrics are correct.")
       sample_element = MaskSequence(seen_in_training, original_input, input_ids,
                                     input_mask, position_ids, mask_labels, masked_lm_lengths,
                                     next_sentence_labels
