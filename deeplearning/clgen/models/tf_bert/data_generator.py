@@ -748,7 +748,7 @@ class MaskLMBatchGenerator(object):
         "mask" if self.sampler.config.sample_set.HasField("mask") 
                else "hole_{}".format(self.sampler.config.sample_set.hole.hole_length)
       )
-    path_list = glob.glob(str(self.cache.path / "train_dataset_*.tf_record"))
+    path_list = glob.glob(str(self.cache.path / "{}_*.tf_record".format(sampledDataset)))
     if len(path_list) == 0:
       raise FileNotFoundError(path_list)
 
