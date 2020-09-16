@@ -530,17 +530,7 @@ class torchBert(backends.BackendBase):
     del unused_kwargs
     del unused_args
     if self.sample is None:
-      raise ValueError("Bert sampler has not been initialized.")
-
-    # predict_input_fn  = self.sample.data_generator.generateTfSamples()
-    # predict_generator = self.sample.estimator.predict(input_fn = predict_input_fn)
-
-    # output_seq, done = None, False
-    # for step in predict_generator:
-    #   output_seq, sampleIndices = self.sample.data_generator.updateSampleBatch(
-    #     step['input_ids'], step['masked_lm_predictions']
-    #     )
-    # return output_seq, sampleIndices
+      raise ValueError("Bert sampler has not been initialized.")s
 
     if self.pytorch.num_gpus > 1:
       model = self.torch.nn.DataParallel(self.sample.model)
