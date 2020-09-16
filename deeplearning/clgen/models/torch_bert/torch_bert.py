@@ -109,11 +109,11 @@ class torchBert(backends.BackendBase):
     self.learning_rate       = None
     self.num_train_steps     = None
     self.num_warmup_steps    = None
-    self.telemetry           = None
 
     self.ckpt_path           = self.cache.path / "checkpoints"
     self.logfile_path        = self.cache.path / "logs"
     self.sample_path         = self.cache.path / "samples"
+    self.telemetry           = telemetry.TrainingLogger(self.logfile_path)
 
     self.is_validated        = False
     self.trained             = False
@@ -158,7 +158,6 @@ class torchBert(backends.BackendBase):
     self.num_warmup_steps                 = self.config.training.num_warmup_steps
     self.max_grad_norm                    = 1.0
 
-    self.telemetry                        = telemetry.TrainingLogger(self.logfile_path)
     self.steps_per_epoch                  = data_generator.steps_per_epoch
     self.current_step                     = None
     self.num_epochs                       = data_generator.num_epochs
@@ -242,6 +241,7 @@ class torchBert(backends.BackendBase):
                  model: typing.TypeVar('nn.Module'),
                  inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
                  is_training: bool = True,
+                 is_prediction: bool = False,
                  ) -> float:
     """
     Perform a training step on a batch of inputs.
@@ -256,6 +256,7 @@ class torchBert(backends.BackendBase):
                 next_sentence_labels = inputs['next_sentence_labels'],
                 masked_lm_lengths    = inputs['masked_lm_lengths'],
                 is_training          = is_training,
+                is_prediction        = is_prediction,
               )
     return outputs
 
@@ -356,7 +357,7 @@ class torchBert(backends.BackendBase):
               time_per_sample_ms = exec_time_ms / self.train_batch_size,
             )
             if FLAGS.reward_compilation:
-              correct_samples = [(x, y) for x, y in zip(step_out.compiled_input_ids, step_out.compiled_samples)]
+              correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out.generated_samples)) if step_out.compile_status[en] == 1]
               for s in correct_samples:
                 correct_sample_obs.OnSample(model_pb2.Sample(
                     train_step             = self.current_step,
@@ -568,9 +569,8 @@ class torchBert(backends.BackendBase):
     #   model = self.torch.nn.DataParallel(self.sample.model)
     self.sample.model.eval()
     with self.torch.no_grad():
-      step_out = self.model_step(self.sample.model, self.step_inputs, is_training = False)
-      raise NotImplementedError("Get the filled out kernel here in one step.")
-    return full_kernel
+      step_out = self.model_step(self.sample.model, self.step_inputs, is_training = False, is_prediction = True)
+    return step_out.generated_samples, step_out.sample_indices
 
   def _getTestSampler(self, test_sampler, sequence_length):
     if test_sampler is None:
