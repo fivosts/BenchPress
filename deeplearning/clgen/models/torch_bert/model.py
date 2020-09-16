@@ -898,12 +898,10 @@ class BertForPreTraining(BertPreTrainedModel):
         except ValueError:
           compile_flag[b] = 0
 
-    total_loss = None
-    if labels is not None and next_sentence_labels is not None:
-      loss_fct = torch.nn.CrossEntropyLoss()
-      masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
-      next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
-      total_loss = masked_lm_loss + next_sentence_loss
+    loss_fct = torch.nn.CrossEntropyLoss()
+    masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+    next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
+    total_loss = masked_lm_loss + next_sentence_loss
 
     return BertForPreTrainingOutput(
       masked_lm_loss = masked_lm_loss,
