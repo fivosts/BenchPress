@@ -263,7 +263,7 @@ class torchBert(backends.BackendBase):
       self._ConfigTrainParams(
         MaskLMBatchGenerator.TrainMaskLMBatchGenerator(corpus, self.config.training, self.cache.path)
       )
-    self.current_step = self.loadCheckpoint()
+    self.current_step = self.loadCheckpoint(self.train)
     if self.current_step > 0:
       l.getLogger().info("Loaded checkpoint step {}".format(self.current_step))
     self.is_trained = True if self.current_step >= self.num_train_steps else False
@@ -373,7 +373,7 @@ class torchBert(backends.BackendBase):
 
           # End of Epoch
           l.getLogger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.current_loss))
-          self.saveCheckpoint()
+          self.saveCheckpoint(self.train)
           if self.torch_tpu_available:
             self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
 
@@ -439,7 +439,7 @@ class torchBert(backends.BackendBase):
     self.is_validated = True
     return
 
-  def loadCheckpoint(self):
+  def loadCheckpoint(self, estimator):
     """
       Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
     """
@@ -460,20 +460,20 @@ class torchBert(backends.BackendBase):
 
     ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, ckpt_step)
 
-    self.train.optimizer.load_state_dict(
+    estimator.optimizer.load_state_dict(
       self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
     )
-    self.train.scheduler.load_state_dict(
+    estimator.scheduler.load_state_dict(
       self.torch.load(ckpt_comp("scheduler"))
     )
     # self.train.model = model.BertModel.from_pretrained(ckpt_comp("model"))
-    self.train.model.load_state_dict(
+    estimator.model.load_state_dict(
       self.torch.load(ckpt_comp("model"))
     )
-    self.train.model.eval()
+    estimator.model.eval()
     return ckpt_step
 
-  def saveCheckpoint(self):
+  def saveCheckpoint(self, estimator):
     """
       Saves model, scheduler, optimizer checkpoints per epoch.
     """
@@ -481,14 +481,14 @@ class torchBert(backends.BackendBase):
 
     if self.torch_tpu_available:
       if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
-        self.pytorch.torch_xla_model.save(self.train.model, ckpt_comp("model"))
+        self.pytorch.torch_xla_model.save(estimator.model, ckpt_comp("model"))
       self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
-      self.pytorch.torch_xla.save(self.train.optimizer.state_dict(), ckpt_comp("optimizer"))
-      self.pytorch.torch_xla.save(self.train.scheduler.state_dict(), ckpt_comp("scheduler"))
+      self.pytorch.torch_xla.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
+      self.pytorch.torch_xla.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
     elif self.is_world_process_zero():
-      self.torch.save(self.train.model.state_dict(), ckpt_comp("model"))
-      self.torch.save(self.train.optimizer.state_dict(), ckpt_comp("optimizer"))
-      self.torch.save(self.train.scheduler.state_dict(), ckpt_comp("scheduler"))
+      self.torch.save(estimator.model.state_dict(), ckpt_comp("model"))
+      self.torch.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
+      self.torch.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
 
     with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
       mf.write("train_step: {}\n".format(self.current_step))
@@ -523,8 +523,7 @@ class torchBert(backends.BackendBase):
     """Batch-specific initialization. Called once when a new batch is going to be generated"""
     del unused_args
     del unused_kwargs
-    self.sample.data_generator.InitSampleBatch()
-    return 
+    return
 
   def SampleNextIndices(self, *unused_args, **unused_kwargs):
     """Called iteratively to build a single batch of samples, until termination criteria stops calling"""
@@ -533,15 +532,38 @@ class torchBert(backends.BackendBase):
     if self.sample is None:
       raise ValueError("Bert sampler has not been initialized.")
 
-    predict_input_fn  = self.sample.data_generator.generateTfSamples()
-    predict_generator = self.sample.estimator.predict(input_fn = predict_input_fn)
+    # predict_input_fn  = self.sample.data_generator.generateTfSamples()
+    # predict_generator = self.sample.estimator.predict(input_fn = predict_input_fn)
 
-    output_seq, done = None, False
-    for step in predict_generator:
-      output_seq, sampleIndices = self.sample.data_generator.updateSampleBatch(
-        step['input_ids'], step['masked_lm_predictions']
-        )
-    return output_seq, sampleIndices
+    # output_seq, done = None, False
+    # for step in predict_generator:
+    #   output_seq, sampleIndices = self.sample.data_generator.updateSampleBatch(
+    #     step['input_ids'], step['masked_lm_predictions']
+    #     )
+    # return output_seq, sampleIndices
+
+    if self.pytorch.num_gpus > 1:
+      model = self.torch.nn.DataParallel(self.sample.model)
+
+    self.sample.model.eval()
+    step = self.loadCheckpoint(self.sample)
+
+    if self.torch_tpu_available:
+      loader = self.pytorch.torch_ploader.ParallelLoader(
+                        self.sample.data_generator.dataloader, [self.pytorch.device]
+                  ).per_device_loader(self.pytorch.device)
+    else:
+      loader = self.sample.data_generator.dataloader
+    pred_iterator = iter(loader)
+    try:
+      inputs = next(pred_iterator)
+    except StopIteration:
+      pred_iterator = iter(loader)
+      inputs = next(pred_iterator)
+    with self.torch.no_grad():
+      step_out = self.model_step(self.sample.model, inputs)
+      raise NotImplementedError("Get the filled out kernel here in one step.")
+    return full_kernel
 
   def _getTestSampler(self, test_sampler, sequence_length):
     if test_sampler is None:
