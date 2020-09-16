@@ -136,6 +136,8 @@ class validationSampleHook(object):
     self.val_id     = self.val_db.count
     self.batch_size = batch_size
     self.model_step = model_step
+    self.mask_accuracy = [0, 0]
+    self.nsp_accuracy  = [0, 0]
     return
 
   def step(self,
@@ -161,6 +163,16 @@ class validationSampleHook(object):
           for batch in range(self.batch_size)
         ]
     next_sentence_predictions = [[np.argmax(x) for x in batch][-1] for batch in outputs.seq_relationship_logits.cpu().numpy()]
+
+    for target, prediction in zip(masked_lm_ids, masked_lm_predictions):
+      if target == prediction:
+        self.mask_accuracy[0] += 1
+      self.mask_accuracy[1] += 1
+
+    for target, prediction in zip(next_sentence_labels, next_sentence_predictions):
+      if target == prediction:
+        self.nsp_accuracy[0] += 1
+      self.nsp_accuracy[1] += 1
 
     with self.val_db.Session(commit = True) as session:
       for b in range(self.batch_size):
@@ -191,3 +203,24 @@ class validationSampleHook(object):
           session.add(val_trace)
           self.val_id += 1
     return
+
+  def final(self,
+            val_set: str,
+            masked_lm_loss: float,
+            next_sentence_loss: float,
+           ) -> None:
+    masked_lm_accuracy = self.mask_accuracy[0] / self.mask_accuracy[1]
+    next_sentence_accuracy = self.nsp_accuracy[0] / self.nsp_accuracy[1]
+    r = [
+      "masked_lm_accuracy: {}".format(masked_lm_accuracy),
+      "masked_lm_loss: {}".format(masked_lm_loss),
+      "next_sentence_accuracy: {}".format(next_sentence_accuracy),
+      "next_sentence_loss: {}".format(next_sentence_loss),
+    ]
+    with self.val_db.Session(commit = True) as session:
+      exists = session.query(validation_database.ValResults.key).filter_by(key = val_set).scalar() is not None
+      if exists:
+        entry = session.query(validation_database.ValResults).filter_by(key = val_set).first()
+        entry.results = "\n".join(r)
+      else:
+        session.add(validation_database.ValResults(key = val_set, results = "\n".join(r)))

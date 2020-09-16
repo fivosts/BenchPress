@@ -393,7 +393,8 @@ class torchBert(backends.BackendBase):
     if self.pytorch.num_gpus > 1:
       model = self.torch.nn.DataParallel(self.train.model)
 
-    loss        = []
+    avg_mask_loss = []
+    avg_nsp_loss  = []
     preds       = None
     label_ids   = None
     self.train.model.eval()
@@ -421,17 +422,14 @@ class torchBert(backends.BackendBase):
         eval_iterator = iter(loader)
         inputs = next(eval_iterator)
 
-      # PLZ FIX ME
       with self.torch.no_grad():
         step_out = self.model_step(self.train.model, inputs)
 
-      total_loss = step_out.total_loss.mean().item()
-      correct_samples = [(x, y) for x, y in zip(step_out.compiled_input_ids, step_out.compiled_samples)]
-      preds = step_out.prediction_logits.detach()
-
-      loss.append(total_loss)
       val_hook.step(inputs, step_out)
+      avg_mask_loss.append(step_out.masked_lm_loss.mean().item())
+      avg_nsp_loss.append(step_out.next_sentence_loss.mean().item())
 
+    val_hook.final("train_set", avg_mask_loss, avg_nsp_loss) ## TODO
     if self.pytorch.torch_tpu_available:
       # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
       self.pytorch.torch_xla_model.master_print(self.pytorch.torch_xla_met.metrics_report())
