@@ -541,7 +541,6 @@ class MaskLMBatchGenerator(object):
 
   def eval_dataloaders(self):
     for set_name in self.dataset:
-      l.getLogger().info(set_name)
       dataset = torch.utils.data.ConcatDataset(
                   [torch.load(x) for x in self.dataset[set_name]['pt_record']]
                 )

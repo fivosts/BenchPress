@@ -215,17 +215,23 @@ class torchBert(backends.BackendBase):
           "was only trained up to sequence length %d" %
           (sampler.sequence_length, self.bertAttrs['max_position_embeddings']))
 
-    # If TPU is not available, this will fall back to normal Estimator on CPU
-    # or GPU.
-    # self.sample = tfBert.BertEstimator(tf.compat.v1.estimator.tpu.TPUEstimator(
-    #                         use_tpu  = FLAGS.use_tpu,
-    #                         model_fn = model_fn,
-    #                         config   = run_config,
-    #                         params   = {'sampling_temperature': sampler.temperature},
-    #                         predict_batch_size = sampler.batch_size
-    #                         ),
-    #               data_generator
-    #               )
+    self.temperature = sampler.temperature
+
+    m = model.BertForPreTraining(self.bert_config, atomizer = self.atomizer).to(self.pytorch.device)
+    if self.pytorch.num_gpus > 1:
+      m = self.torch.nn.DataParallel(m)
+
+    dummy_num_machines = -1
+    if dummy_num_machines != -1:
+      m = self.torch.nn.parallel.DistributedDataParallel(
+        m,
+        device_ids=[dummy_num_machines],
+        output_device=dummy_num_machines,
+        find_unused_parameters=True,
+      )
+    self.sample = torchBert.BertEstimator(
+                    m, data_generator, None, None
+                  )
     l.getLogger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
     return
 
@@ -462,16 +468,17 @@ class torchBert(backends.BackendBase):
 
     ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, ckpt_step)
 
-    estimator.optimizer.load_state_dict(
-      self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
-    )
-    estimator.scheduler.load_state_dict(
-      self.torch.load(ckpt_comp("scheduler"))
-    )
     # self.train.model = model.BertModel.from_pretrained(ckpt_comp("model"))
     estimator.model.load_state_dict(
       self.torch.load(ckpt_comp("model"))
     )
+    if estimator.optimizer is not None and estimator.scheduler is not None:
+      estimator.optimizer.load_state_dict(
+        self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
+      )
+      estimator.scheduler.load_state_dict(
+        self.torch.load(ckpt_comp("scheduler"))
+      )
     estimator.model.eval()
     return ckpt_step
 
@@ -518,13 +525,37 @@ class torchBert(backends.BackendBase):
                        self.config.architecture.max_position_embeddings, self.cache.path
                      )
     self._ConfigSampleParams(data_generator, sampler)
+    ckpt_step = self.loadCheckpoint(self.sample)
+    self.step_inputs   = None
+    self.loader        = None
+    self.pred_iterator = None
     l.getLogger().info("Initialized model samples in {}".format(self.sample_path))
-    return 
+    return
 
   def InitSampleBatch(self, *unused_args, **unused_kwargs) -> None:
     """Batch-specific initialization. Called once when a new batch is going to be generated"""
     del unused_args
     del unused_kwargs
+
+    if self.loader is None:
+      if self.torch_tpu_available:
+        self.loader = self.pytorch.torch_ploader.ParallelLoader(
+                          self.sample.data_generator.dataloader, [self.pytorch.device]
+                    ).per_device_loader(self.pytorch.device)
+      else:
+        self.loader = self.sample.data_generator.dataloader
+
+    if self.pred_iterator is None:
+      self.pred_iterator = iter(self.loader)
+  
+    try:
+      self.step_inputs = next(self.pred_iterator)
+    except StopIteration:
+      self.pred_iterator = iter(self.loader)
+      self.step_inputs = next(self.pred_iterator)
+
+    self.sampler.setStartText(self.atomizer.DeatomizeIndices(self.step_inputs['input_ids'][0].cpu().numpy(), ignore_token = self.atomizer.padToken))
+    self.sampler.Specialize(self.atomizer)
     return
 
   def SampleNextIndices(self, *unused_args, **unused_kwargs):
@@ -533,27 +564,11 @@ class torchBert(backends.BackendBase):
     del unused_args
     if self.sample is None:
       raise ValueError("Bert sampler has not been initialized.")
-
-    if self.pytorch.num_gpus > 1:
-      model = self.torch.nn.DataParallel(self.sample.model)
-
+    # if self.pytorch.num_gpus > 1:
+    #   model = self.torch.nn.DataParallel(self.sample.model)
     self.sample.model.eval()
-    step = self.loadCheckpoint(self.sample)
-
-    if self.torch_tpu_available:
-      loader = self.pytorch.torch_ploader.ParallelLoader(
-                        self.sample.data_generator.dataloader, [self.pytorch.device]
-                  ).per_device_loader(self.pytorch.device)
-    else:
-      loader = self.sample.data_generator.dataloader
-    pred_iterator = iter(loader)
-    try:
-      inputs = next(pred_iterator)
-    except StopIteration:
-      pred_iterator = iter(loader)
-      inputs = next(pred_iterator)
     with self.torch.no_grad():
-      step_out = self.model_step(self.sample.model, inputs, is_training = False)
+      step_out = self.model_step(self.sample.model, self.step_inputs, is_training = False)
       raise NotImplementedError("Get the filled out kernel here in one step.")
     return full_kernel
 
