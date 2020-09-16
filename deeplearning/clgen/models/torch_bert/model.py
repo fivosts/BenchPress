@@ -798,6 +798,7 @@ class BertForPreTraining(BertPreTrainedModel):
     output_attentions=None,
     output_hidden_states=None,
     return_dict=None,
+    is_training = True,
     **kwargs
   ):
     r"""
@@ -854,7 +855,8 @@ class BertForPreTraining(BertPreTrainedModel):
     sequence_output, pooled_output = outputs[:2]
     prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
 
-    if self.config.reward_compilation:
+    iterate_compiler = self.config.reward_compilation and is_training
+    if iterate_compiler:
       changed, new_input_ids, new_attention_mask, new_masked_lengths = self.fillSequence(
         input_ids, 
         [[torch.argmax(x) for x in b] for b in prediction_scores],
@@ -911,9 +913,9 @@ class BertForPreTraining(BertPreTrainedModel):
       seq_relationship_logits=seq_relationship_score,
       hidden_states=outputs[0],
       attentions=outputs[1],
-      batch_compilation_rate = float(sum(compile_flag)) / batch_size if self.config.reward_compilation else -1,
-      compiled_input_ids = [x for en, x in enumerate(input_ids.cpu().numpy()) if compile_flag[en] == 1] if self.config.reward_compilation else [],
-      compiled_samples = [x for en, x in enumerate(new_input_ids.cpu().numpy()) if compile_flag[en] == 1] if self.config.reward_compilation else [],
+      batch_compilation_rate = float(sum(compile_flag)) / batch_size if iterate_compiler else -1,
+      compiled_input_ids = [x for en, x in enumerate(input_ids.cpu().numpy()) if compile_flag[en] == 1] if iterate_compiler else [],
+      compiled_samples = [x for en, x in enumerate(new_input_ids.cpu().numpy()) if compile_flag[en] == 1] if iterate_compiler else [],
     )
 
 class BertLMHeadModel(BertPreTrainedModel):
