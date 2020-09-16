@@ -469,16 +469,15 @@ class tfBert(backends.BackendBase):
     return sorted(paths)
 
   def _writeValidation(self, result, tf_set) -> None:
-    with self.tf.io.gfile.GFile(self.validation_results_path, "w") as writer:
-      db = validation_database.ValidationDatabase("sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")))
-      r = [ "{}: {}".format(key, str(result[key])) for key in result.keys() ]
-      with db.Session(commit = True) as session:
-        exists = session.query(validation_database.ValResults.key).filter_by(key = str(tf_set)).scalar() is not None
-        if exists:
-          entry = session.query(validation_database.ValResults).filter_by(key = str(tf_set)).first()
-          entry.results = "\n".join(r)
-        else:
-          session.add(validation_database.ValResults(key = str(tf_set), results = "\n".join(r)))
+    db = validation_database.ValidationDatabase("sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")))
+    r = [ "{}: {}".format(key, str(result[key])) for key in result.keys() ]
+    with db.Session(commit = True) as session:
+      exists = session.query(validation_database.ValResults.key).filter_by(key = str(tf_set)).scalar() is not None
+      if exists:
+        entry = session.query(validation_database.ValResults).filter_by(key = str(tf_set)).first()
+        entry.results = "\n".join(r)
+      else:
+        session.add(validation_database.ValResults(key = str(tf_set), results = "\n".join(r)))
     return 
 
   def _model_fn_builder(self,
