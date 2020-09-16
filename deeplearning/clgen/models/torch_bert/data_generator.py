@@ -613,7 +613,7 @@ class MaskLMBatchGenerator(object):
                 )
     self.dataloader = torch.utils.data.dataloader.DataLoader(
       dataset    = dataset,
-      batch_size = self.training_opts.batch_size,
+      batch_size = self.sampler.batch_size,
       sampler    = (
             torch.utils.data.RandomSampler(dataset, replacement = False)
             if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1

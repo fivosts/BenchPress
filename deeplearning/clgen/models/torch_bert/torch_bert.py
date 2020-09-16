@@ -532,7 +532,7 @@ class torchBert(backends.BackendBase):
     del unused_kwargs
     del unused_args
     if self.sample is None:
-      raise ValueError("Bert sampler has not been initialized.")s
+      raise ValueError("Bert sampler has not been initialized.")
 
     if self.pytorch.num_gpus > 1:
       model = self.torch.nn.DataParallel(self.sample.model)
