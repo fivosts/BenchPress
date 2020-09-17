@@ -242,6 +242,7 @@ class torchBert(backends.BackendBase):
                  inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
                  is_training: bool = True,
                  is_prediction: bool = False,
+                 sampling_temperature: bool = None
                  ) -> float:
     """
     Perform a training step on a batch of inputs.
@@ -257,6 +258,7 @@ class torchBert(backends.BackendBase):
                 masked_lm_lengths    = inputs['masked_lm_lengths'],
                 is_training          = is_training,
                 is_prediction        = is_prediction,
+                sampling_temperature = sampling_temperature,
               )
     return outputs
 
@@ -550,12 +552,13 @@ class torchBert(backends.BackendBase):
       self.pred_iterator = iter(self.loader)
   
     try:
-      self.step_inputs = next(self.pred_iterator)
+      inputs = next(self.pred_iterator)
     except StopIteration:
       self.pred_iterator = iter(self.loader)
-      self.step_inputs = next(self.pred_iterator)
+      inputs = next(self.pred_iterator)
 
-    self.sampler.setStartText(self.atomizer.DeatomizeIndices(self.step_inputs['input_ids'][0].cpu().numpy(), ignore_token = self.atomizer.padToken))
+    self.step_inputs = {x: inputs[x].repeat((self.sampler.batch_size, 1)) for x in inputs}
+    self.sampler.setStartText(self.atomizer.DeatomizeIndices(inputs['input_ids'][0].cpu().numpy(), ignore_token = self.atomizer.padToken))
     self.sampler.Specialize(self.atomizer)
     return
 
@@ -569,7 +572,11 @@ class torchBert(backends.BackendBase):
     #   model = self.torch.nn.DataParallel(self.sample.model)
     self.sample.model.eval()
     with self.torch.no_grad():
-      step_out = self.model_step(self.sample.model, self.step_inputs, is_training = False, is_prediction = True)
+      step_out = self.model_step(
+          self.sample.model, self.step_inputs,
+          is_training = False, is_prediction = True,
+          sampling_temperature = self.sampler.temperature
+      )
     return step_out.generated_samples, step_out.sample_indices
 
   def _getTestSampler(self, test_sampler, sequence_length):
