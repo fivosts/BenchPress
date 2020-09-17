@@ -320,7 +320,7 @@ class Model(object):
       l.getLogger().info("Wrapping up sampling...")
 
     for obs in sample_observers:
-      obs.EndSample()
+      obs.endSample()
 
     time_now = datetime.datetime.utcnow()
     l.getLogger().info( "Produced {} sample batches at a rate of {} ms / batch."
@@ -379,7 +379,7 @@ class Model(object):
             sample_kernel = [x for x in samples_in_progress[i] if x != atomizer.metaTokens['padToken']]
 
             try:
-              stdout = opencl.Compile(self.atomizer.StringToCode(sample_kernel))
+              stdout = opencl.Compile(self.atomizer.StringArrToCode(sample_kernel))
               compile_flag = True
             except ValueError:
               compile_flag = False
