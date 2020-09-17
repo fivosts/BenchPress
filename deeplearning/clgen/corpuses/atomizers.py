@@ -165,6 +165,23 @@ class AtomizerBase(object):
     metaTokenValues = set(value for key, value in self.__dict__.items() if key in self.metaTokens)
     return self.DeatomizeIndices([x for x in encoded if x not in metaTokenValues])
 
+  def StringToCode(self,
+                   text: str,
+                   ) -> str:
+    """
+    Convert string array to compilable code.
+    Removes meta tokens and converts to string.
+
+    Args:
+      text: String representation of encoded array. (May contain metaTokens)
+    Returns:
+      Code in string format.
+    """
+    metaTokenStrValues = set(value for key, value in self.metaTokens.items())
+    print(''.join([x for x in text.split() if x not in metaTokenStrValues]))
+    exit()
+    return ''.join([x for x in text.split() if x not in metaTokenStrValues])
+
   @classmethod
   def FromText(cls, text: str) -> "AtomizerBase":
     """Instantiate and specialize an atomizer from a corpus text.
