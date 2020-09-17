@@ -893,6 +893,7 @@ class BertForPreTraining(BertPreTrainedModel):
     is_training = True,
     is_prediction = False,
     use_categorical = False,
+    sampling_temperature = None,
     **kwargs
   ):
     r"""
@@ -938,9 +939,9 @@ class BertForPreTraining(BertPreTrainedModel):
     iterate_compiler = (self.config.reward_compilation and is_training) or (is_prediction and not is_training)
 
     if use_categorical:
-      # argmax_func = lambda x: torch.multinomial(x, 1)
-      ## TODO
-      argmax_func = lambda x: torch.argmax(x)
+      argmax_func = lambda x: torch.argmax(torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
+        temperature = sampling_temperature if sampling_temperature is not None else 1.0, logits = x)
+      )
     else:
       argmax_func = lambda x: torch.argmax(x)
 
