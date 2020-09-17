@@ -588,8 +588,7 @@ class MaskLMBatchGenerator(object):
                                     input_mask, position_ids, mask_labels, masked_lm_lengths,
                                     next_sentence_labels
                                    )
-      sample_batch = np.asarray([sample_element for _ in range(self.sampler.batch_size)])
-      dataset = [{k: torch.from_numpy(v) for (k, v) in inst.items()} for inst in masked_corpus['corpus']]
+      dataset = [{k: torch.from_numpy(v) for (k, v) in sample_element.items()}]
     else:
       if self.sampler.config.HasField("train_set"):
         sampledDataset = "train_dataset"
@@ -612,7 +611,7 @@ class MaskLMBatchGenerator(object):
                 )
     self.dataloader = torch.utils.data.dataloader.DataLoader(
       dataset    = dataset,
-      batch_size = self.sampler.batch_size,
+      batch_size = 1,
       sampler    = (
             torch.utils.data.RandomSampler(dataset, replacement = False)
             if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
