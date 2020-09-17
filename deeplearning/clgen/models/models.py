@@ -40,6 +40,7 @@ from deeplearning.clgen.models.torch_bert import torch_bert
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import telemetry_pb2
+from deeplearning.clgen.preprocessors import opencl
 from absl import flags
 from labm8.py import sqlutil
 
@@ -370,6 +371,13 @@ class Model(object):
             end_time      = datetime.datetime.utcnow()
             done[i]       = 1
             sample_kernel = [x for x in samples_in_progress[i] if x != atomizer.metaTokens['padToken']]
+
+            try:
+              stdout = opencl.Compile(self.atomizer.StringToCode(sample_kernel))
+              compile_flag = 1
+            except ValueError:
+              compile_flag = 0
+
             sample    = model_pb2.Sample(
               train_step                = epoch,
               text                      = "".join(sample_kernel),
@@ -381,6 +389,7 @@ class Model(object):
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               wall_time_ms              = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               num_tokens                = len(samples_in_progress[i]),
+              compile_status            = compile_flag,
               categorical_sampling      = self.backend.samplesWithCategorical(),
               date_added                = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
             )

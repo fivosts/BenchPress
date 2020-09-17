@@ -35,6 +35,7 @@ from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
+from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models.tf_bert import model
@@ -336,6 +337,13 @@ class tfBert(backends.BackendBase):
               sample_batch, sample_indices = self.SampleNextIndices()
               end_time     = datetime.datetime.utcnow()
               for sample, sind in zip(sample_batch, sample_indices):
+
+                try:
+                  stdout = opencl.Compile(self.atomizer.ArrayToCode(sample))
+                  compile_flag = 1
+                except ValueError:
+                  compile_flag = 0
+
                 sample_proto = model_pb2.Sample(
                   train_step             = (ep + 1) * self.steps_per_epoch,
                   sample_feed            = sampler.start_text,
@@ -345,6 +353,7 @@ class tfBert(backends.BackendBase):
                   encoded_sample_indices = '\n'.join([','.join([str(x) for x in mind]) for mind in sind ]),
                   sample_time_ms         = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
                   num_tokens             = len(sample),
+                  compile_statues        = compile_flag,
                   categorical_sampling   = self.samplesWithCategorical(),
                   date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
                 )
