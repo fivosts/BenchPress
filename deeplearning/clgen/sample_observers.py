@@ -154,7 +154,7 @@ class SamplesDatabaseObserver(SampleObserver):
 
   def endSample(self):
     r = [
-      'compilation rate: {}'.format(self.compiled_count / self.sample_id)
+      'compilation rate: {}'.format(self.compiled_count / self.sample_id),
       'total compilable samples: {}'.format(self.compiled_count)
     ]
     with self.db.Session(commit = True) as session:

@@ -165,9 +165,9 @@ class AtomizerBase(object):
     metaTokenValues = set(value for key, value in self.__dict__.items() if key in self.metaTokens)
     return self.DeatomizeIndices([x for x in encoded if x not in metaTokenValues])
 
-  def StringToCode(self,
-                   text: str,
-                   ) -> str:
+  def StringArrToCode(self,
+                      text: typing.List[str],
+                      ) -> str:
     """
     Convert string array to compilable code.
     Removes meta tokens and converts to string.
@@ -178,9 +178,9 @@ class AtomizerBase(object):
       Code in string format.
     """
     metaTokenStrValues = set(value for key, value in self.metaTokens.items())
-    print(''.join([x for x in text.split() if x not in metaTokenStrValues]))
+    print(''.join([x for x in text if x not in metaTokenStrValues]))
     exit()
-    return ''.join([x for x in text.split() if x not in metaTokenStrValues])
+    return ''.join([x for x in text if x not in metaTokenStrValues])
 
   @classmethod
   def FromText(cls, text: str) -> "AtomizerBase":
