@@ -41,6 +41,8 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
   encoded_sample_indices : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Length of total sequence in number of tokens
   num_tokens             : int = sql.Column(sql.Integer,    nullable = False)
+  # Whether the generated sample compiles or not.
+  compile_status         : str = sql.Column(sql.String(8),  nullable = False)
   # If Bernoulli distribution was used during samplinng
   categorical_sampling   : str = sql.Column(sql.String(8),  nullable = False)
   # Time
@@ -60,6 +62,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "sample_indices"         : proto.sample_indices,
       "encoded_sample_indices" : proto.encoded_sample_indices,
       "num_tokens"             : proto.num_tokens,
+      "compile_status"         : proto.compile_status,
       "categorical_sampling"   : proto.categorical_sampling,
       "sample_time_ms"         : proto.sample_time_ms,
       "date_added"             : datetime.datetime.strptime(proto.date_added, "%m/%d/%Y, %H:%M:%S"),

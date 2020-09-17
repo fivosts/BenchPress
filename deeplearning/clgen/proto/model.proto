@@ -235,7 +235,8 @@ message Sample {
   optional int32 wall_time_ms              = 7;
   optional int64 sample_start_epoch_ms_utc = 8;
   optional int32 num_tokens                = 9;
-  optional bool  categorical_sampling      = 10;
-  optional int32 train_step                = 11;
-  optional string date_added               = 12;
+  optional bool  compile_status            = 10;
+  optional bool  categorical_sampling      = 11;
+  optional int32 train_step                = 12;
+  optional string date_added               = 13;
 }
