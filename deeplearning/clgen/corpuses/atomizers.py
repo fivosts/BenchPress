@@ -178,8 +178,6 @@ class AtomizerBase(object):
       Code in string format.
     """
     metaTokenStrValues = set(value for key, value in self.metaTokens.items())
-    print(''.join([x for x in text if x not in metaTokenStrValues]))
-    exit()
     return ''.join([x for x in text if x not in metaTokenStrValues])
 
   @classmethod
