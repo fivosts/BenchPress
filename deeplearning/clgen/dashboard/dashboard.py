@@ -266,22 +266,22 @@ def dataset(workspace: str, model_sha: str):
   datasets = []
   for d in glob.glob(str(current_model['path'] / "dataset" / "*.tf_record")):
     set_path = pathlib.Path(d)
-    if (current_model['path'] / "dataset" / "{}.png".format(set_path.stem)).exists():
-      png_file = current_model['path'] / "dataset" / "{}.png".format(set_path.stem)
+    png_name = ''.join(set_path.stem.split('-')[:-1])
+    if (current_model['path'] / "dataset" / "{}.png".format(png_name)).exists():
+      png_file = current_model['path'] / "dataset" / "{}.png".format(png_name)
       dest_file = MEDIA_PATH / workspace / model_sha / "dataset" / png_file.name
       dest_file.parent.mkdir(exist_ok = True, parents = True)
       shutil.copyfile(
         png_file,
         str(dest_file)
       )
-
-    datasets.append(
-      {
-        'name': set_path.stem,
-        'plot': 
-          "/" + str(dest_file.relative_to(pathlib.Path(flask_app.static_folder).parent))
-      }
-    )
+      datasets.append(
+        {
+          'name': png_name,
+          'plot': 
+            "/" + str(dest_file.relative_to(pathlib.Path(flask_app.static_folder).parent))
+        }
+      )
   spec_data = {
     'summary'  : current_model['summary'],
     'workspace': workspace,
