@@ -307,10 +307,13 @@ class torchBert(backends.BackendBase):
         self.logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
       if FLAGS.reward_compilation:
+        correct_sample_count = 0
         correct_sample_obs = sample_observers.SamplesDatabaseObserver(
           "sqlite:///{}".format(self.logfile_path / "correct_samples.db")
         )
-
+      else:
+        correct_sample_obs = None
+        
       l.getLogger().info(
         "Splitting {} steps into {} equivalent epochs, {} steps each. Rejected {} redundant step(s)".format(
           self.num_train_steps, self.num_epochs, 
@@ -363,6 +366,8 @@ class torchBert(backends.BackendBase):
                     date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
                   )
                 )
+                incr_corr_samples    = correct_sample_count - correct_sample_obs.sample_id
+                correct_sample_count = correct_sample_obs.sample_id
             train_hook.step(
               masked_lm_loss = step_out.masked_lm_loss.item(),
               next_sentence_loss = step_out.next_sentence_loss.item(),
@@ -371,7 +376,7 @@ class torchBert(backends.BackendBase):
               compilation_rate = step_out.batch_compilation_rate,
               batch_execution_time_ms = exec_time_ms,
               time_per_sample_ms = exec_time_ms / self.train_batch_size,
-              num_correct_samples = (correct_sample_obs.sample_id * min(self.steps_per_epoch, FLAGS.monitor_frequency)
+              num_correct_samples = (incr_corr_samples * min(self.steps_per_epoch, FLAGS.monitor_frequency)
                                      if correct_sample_obs is not None else None)
             )
             self.train.model.zero_grad()
