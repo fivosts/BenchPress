@@ -39,6 +39,8 @@ class tensorMonitorHook(object):
 
   def step(self, **tensors):
     for key, value in tensors.items():
+      if value is None:
+        continue
       if key in self.epoch_tensors:
         self.epoch_tensors[key] += value
       else:
