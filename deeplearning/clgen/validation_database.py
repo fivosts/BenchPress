@@ -107,7 +107,6 @@ class ValidationDatabase(sqlutil.Database):
   """A database of CLgen samples."""
 
   def __init__(self, url: str, must_exist: bool = False):
-    print(url)
     super(ValidationDatabase, self).__init__(url, Base, must_exist = must_exist)
 
   @property

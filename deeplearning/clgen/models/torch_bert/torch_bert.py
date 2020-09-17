@@ -419,7 +419,6 @@ class torchBert(backends.BackendBase):
       else:
         loader = self.train.data_generator.dataloader
 
-      l.getLogger().warn(self.logfile_path)
       val_hook = hooks.validationSampleHook(
         url = "sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")),
         atomizer = self.atomizer,
