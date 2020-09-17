@@ -313,8 +313,14 @@ class Model(object):
 
     # with sampler.db.Session(commit = True) as db_sess:
     batch_count = 1
-    while self._SampleBatch(sampler, atomizer, sample_observers, epoch):
-      batch_count += 1
+    try:
+      while self._SampleBatch(sampler, atomizer, sample_observers, epoch):
+        batch_count += 1
+    except KeyboardInterrupt:
+      l.getLogger().info("Wrapping up sampling...")
+
+    for obs in sample_observers:
+      obs.EndSample()
 
     time_now = datetime.datetime.utcnow()
     l.getLogger().info( "Produced {} sample batches at a rate of {} ms / batch."
@@ -374,9 +380,9 @@ class Model(object):
 
             try:
               stdout = opencl.Compile(self.atomizer.StringToCode(sample_kernel))
-              compile_flag = 1
+              compile_flag = True
             except ValueError:
-              compile_flag = 0
+              compile_flag = False
 
             sample    = model_pb2.Sample(
               train_step                = epoch,

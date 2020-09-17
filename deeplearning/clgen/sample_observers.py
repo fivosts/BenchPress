@@ -61,6 +61,9 @@ class SampleObserver(object):
     """
     raise NotImplementedError("abstract class")
 
+  def endSample(self) -> None:
+    pass
+
 class MaxSampleCountObserver(SampleObserver):
   """An observer that terminates sampling after a finite number of samples."""
 
@@ -126,10 +129,15 @@ class SamplesDatabaseObserver(SampleObserver):
     commit_sample_frequency: int = 1024,
   ):
     self.db = samples_database.SamplesDatabase(url, must_exist = must_exist)
+    self.compiled_count = 0
     self.sample_id = self.db.count
 
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback."""
+
+    if sample.compile_status is True:
+      self.compiled_count += 1
+
     with self.db.Session(commit = True) as session:
       db_sample = samples_database.Sample(
         **samples_database.Sample.FromProto(self.sample_id, sample)
@@ -143,6 +151,21 @@ class SamplesDatabaseObserver(SampleObserver):
         session.add(db_sample)
         self.sample_id += 1
     return True
+
+  def endSample(self):
+    r = [
+      'compilation rate: {}'.format(self.compiled_count / self.sample_id)
+      'total compilable samples: {}'.format(self.compiled_count)
+    ]
+    with self.db.Session(commit = True) as session:
+      exists = session.query(samples_database.SampleResults.key).filter_by(key = "meta").scalar() is not None
+      entry = session.query(samples_database.SampleResults).filter_by(key = "meta").first()
+      if exists:
+        entry = session.query(samples_database.SampleResults).filter_by(key = "meta").first()
+        entry.results = "\n".join(r)
+      else:
+        session.add(samples_database.SampleResults(key = "meta", results = "\n".join(r)))
+    return    
 
 class LegacySampleCacheObserver(SampleObserver):
   """Backwards compatability implementation of the old sample caching behavior.

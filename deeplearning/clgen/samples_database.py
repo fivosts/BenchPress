@@ -17,6 +17,14 @@ FLAGS = flags.FLAGS
 
 Base = declarative.declarative_base()
 
+class SampleResults(Base):
+  __tablename__ = "sampling_results"
+  """
+    DB Table for concentrated validation results.
+  """
+  key     : str = sql.Column(sql.String(1024), primary_key=True)
+  results : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+
 class Sample(Base, sqlutil.ProtoBackedMixin):
   """A database row representing a CLgen sample.
 
