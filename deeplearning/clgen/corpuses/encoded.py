@@ -18,6 +18,7 @@ import multiprocessing
 import pickle
 import time
 import typing
+import pathlib
 
 import numpy as np
 import progressbar
@@ -29,6 +30,7 @@ from sqlalchemy.sql import func
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.proto import internal_pb2
+from deeplearning.clgen.util import distributions
 from absl import flags
 import humanize
 from labm8.py import sqlutil
@@ -163,6 +165,7 @@ class EncodedContentFiles(sqlutil.Database):
   """A database of encoded pre-processed contentfiles."""
 
   def __init__(self, url: str, must_exist: bool = False):
+    self.encoded_path = pathlib.Path(url.replace("sqlite:///", "")).parent
     super(EncodedContentFiles, self).__init__(url, Base, must_exist=must_exist)
 
   def Create(
@@ -245,6 +248,7 @@ class EncodedContentFiles(sqlutil.Database):
     contentfile_separator: str,
   ) -> None:
     with preprocessed_db.Session() as p_session:
+      distribution = distributions.PassiveMonitor(self.encoded_path, "encoded_kernel_length")
       query = p_session.query(preprocessed.PreprocessedContentFile).filter(
         preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
         ~preprocessed.PreprocessedContentFile.id.in_(
@@ -289,17 +293,22 @@ class EncodedContentFiles(sqlutil.Database):
               (wall_time_end - wall_time_start) * 1000
             )
             session.add(encoded_cf)
+            distribution.register(encoded_cf.tokencount)
           wall_time_start = wall_time_end
           if wall_time_end - last_commit > 10:
             session.commit()
             last_commit = wall_time_end
+        distribution.plot()
         pool.close()
       except KeyboardInterrupt as e:
         pool.terminate()
+        distribution.plot()
         raise e
       except Exception as e:
         pool.terminate()
+        distribution.plot()
         raise e
+    return
 
   @staticmethod
   def GetVocabFromMetaTable(session) -> typing.Dict[str, int]:
