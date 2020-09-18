@@ -38,10 +38,14 @@ class Distribution():
     raise NotImplementedError
 
   def register(self, actual_sample):
-    if actual_sample not in self.sample_counter:
-      self.sample_counter[actual_sample] =  1
+    if isinstance(actual_sample, list):
+      for s in actual_sample:
+        self.register(s)
     else:
-      self.sample_counter[actual_sample] += 1
+      if actual_sample not in self.sample_counter:
+        self.sample_counter[actual_sample] =  1
+      else:
+        self.sample_counter[actual_sample] += 1
     return
 
   def plot(self):
@@ -53,7 +57,6 @@ class Distribution():
         'label': [str(y) for (_, y) in sorted_dict],
       }
     ]
-    from eupy.native import logger as l
     plt.plotBars(
       point_set, save_file = True, file_path = str(self.log_path / self.set_name),
       show_xlabels = True, file_extension = ""
