@@ -135,9 +135,6 @@ class SamplesDatabaseObserver(SampleObserver):
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback."""
 
-    if sample.compile_status is True:
-      self.compiled_count += 1
-
     with self.db.Session(commit = True) as session:
       db_sample = samples_database.Sample(
         **samples_database.Sample.FromProto(self.sample_id, sample)
@@ -150,6 +147,8 @@ class SamplesDatabaseObserver(SampleObserver):
       if not exists:
         session.add(db_sample)
         self.sample_id += 1
+        if sample.compile_status is True:
+          self.compiled_count += 1
     return True
 
   def endSample(self):
