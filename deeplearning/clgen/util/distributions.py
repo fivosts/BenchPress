@@ -63,7 +63,18 @@ class Distribution():
     )
     return
 
+class PassiveMonitor(Distribution):
+  """
+  Not an actual sampling distribution.
+  This subclass is used to register values of a specific type, keep track of them
+  and bar plot them. E.g. length distribution of a specific encoded corpus.
+  """
+
 class UniformDistribution(Distribution):
+  """
+  A uniform distribution sampler. Get a random number from distribution calling sample()
+  Upper range of sampling is defined as [0, sample_length].
+  """
   def __init__(self, sample_length, log_path, set_name):
     super(UniformDistribution, self).__init__(sample_length, log_path, set_name)
 
@@ -71,6 +82,10 @@ class UniformDistribution(Distribution):
     return np.random.randint(0, self.sample_length + 1)
 
 class NormalDistribution(Distribution):
+  """
+  Normal distribution sampler. Initialized with mean, variance.
+  Upper range of sampling is defined as [0, sample_length].
+  """
   def __init__(self, sample_length, mean, variance, log_path, set_name):
     super(NormalDistribution, self).__init__(sample_length, log_path, set_name)
     self.mean     = mean
