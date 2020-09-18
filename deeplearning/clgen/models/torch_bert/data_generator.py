@@ -161,6 +161,8 @@ def _holeSequence(seq: np.array,
   visited_indices   = set()
   # Total masks placed so far.
   total_predictions = 0
+  # Workaround for hole length distributions in multiprocessing environment.
+  hole_length_list = []
   for pos_index in candidate_indexes:
     assert pos_index < len(seq), "Candidate index is out of bounds: {} >= {}".format(pos_index, len(seq))
     
@@ -189,6 +191,7 @@ def _holeSequence(seq: np.array,
         hole_length = i
         break
     distribution.register(hole_length)
+    hole_length_list.append(hole_length)
     
     # Target token for classifier is either the first token of the hole, or endholToken if hole is empty
     target = input_ids[input_id_idx] if hole_length > 0 else atomizer.endholeToken
@@ -275,16 +278,16 @@ def _holeSequence(seq: np.array,
       masked_lm_lengths[ind]   = p.hole_length
       ind += 1
 
-  return {
-    'seen_in_training'    : seen_in_training,
-    'original_input'      : seq,
-    'input_ids'           : np.asarray(input_ids[:len(seq)], dtype = np.int64),
-    'input_mask'          : input_mask,
-    'position_ids'        : np.arange(len(seq), dtype = np.int64),
-    'mask_labels'         : mask_labels,
-    'masked_lm_lengths'   : masked_lm_lengths,
-    'next_sentence_labels': next_sentence_labels,
-  }
+  return ({
+      'seen_in_training'    : seen_in_training,
+      'original_input'      : seq,
+      'input_ids'           : np.asarray(input_ids[:len(seq)], dtype = np.int64),
+      'input_mask'          : input_mask,
+      'position_ids'        : np.arange(len(seq), dtype = np.int64),
+      'mask_labels'         : mask_labels,
+      'masked_lm_lengths'   : masked_lm_lengths,
+      'next_sentence_labels': next_sentence_labels,
+    }, hole_length_list)
 
 def _maskSequence(seq: np.array,
                   train_set: bool,
@@ -367,16 +370,16 @@ def _maskSequence(seq: np.array,
       masked_lm_lengths[ind]   = p.hole_length
       ind += 1
 
-  return {
-    'seen_in_training'    : seen_in_training,
-    'original_input'      : seq,
-    'input_ids'           : np.asarray(input_ids[:len(seq)], dtype = np.int64),
-    'input_mask'          : input_mask,
-    'position_ids'        : np.arange(len(seq), dtype = np.int64),
-    'mask_labels'         : mask_labels,
-    'masked_lm_lengths'   : masked_lm_lengths,
-    'next_sentence_labels': next_sentence_labels,
-  }
+  return ({
+      'seen_in_training'    : seen_in_training,
+      'original_input'      : seq,
+      'input_ids'           : np.asarray(input_ids[:len(seq)], dtype = np.int64),
+      'input_mask'          : input_mask,
+      'position_ids'        : np.arange(len(seq), dtype = np.int64),
+      'mask_labels'         : mask_labels,
+      'masked_lm_lengths'   : masked_lm_lengths,
+      'next_sentence_labels': next_sentence_labels,
+    }, [])
 
 class MaskLMBatchGenerator(object):
   def __init__(self):
@@ -820,7 +823,9 @@ class MaskLMBatchGenerator(object):
             continue
 
           # Do parallel masking over corpus
-          for kernel in multiproc_corpus:
+          for kernel, l_list in multiproc_corpus:
+            if distribution:
+              distribution.register(l_list)
             masked_corpus.append(kernel)
             bar.update(kernel_idx)
             kernel_idx += 1
