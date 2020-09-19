@@ -25,7 +25,10 @@ flags.DEFINE_boolean(
 
 class MaskLMDataGenerator(object):
   """Abstract class, shared among TORCH and TF BERT data generators."""
-  def __init__():
+  def __init__(file_extension: str):
+
+    self.file_extension          = file_extension
+
     self.dataset                 = None
     self.corpus                  = None
     self.atomizer                = None
@@ -35,7 +38,6 @@ class MaskLMDataGenerator(object):
     self.training_opts           = None
     self.steps_per_epoch         = None
     self.max_position_embeddings = None
-
 
     self.sampler                 = None
     self.rngen                   = None
@@ -98,7 +100,7 @@ class MaskLMDataGenerator(object):
         l.getLogger().warn("Overwriting dataset process was aborted. Good call.")
         exit()
 
-    if len(glob.glob(str(self.cache.path / "train_dataset_*.pt_record"))) == 0 or FLAGS.force_remake_dataset:
+    if len(glob.glob(str(self.cache.path / "train_dataset_*.{}".format(self.file_extension)))) == 0 or FLAGS.force_remake_dataset:
       if self.config.validation_split == 0:
         self._maskCorpus(
           shaped_corpus, set_name = "train_dataset", train_set = True
@@ -113,13 +115,13 @@ class MaskLMDataGenerator(object):
         )
     else:
       self.dataset["train_dataset"] = {
-        "pt_record": glob.glob(str(self.cache.path / "train_dataset_*.pt_record")),
-        "txt"      : glob.glob(str(self.cache.path / "train_dataset_*.txt")),
+        "file": glob.glob(str(self.cache.path / "train_dataset_*.{}".format(self.file_extension))),
+        "txt" : glob.glob(str(self.cache.path / "train_dataset_*.txt")),
       }
-      if len(glob.glob(str(self.cache.path / "validation_dataset_*.pt_record"))) != 0:
+      if len(glob.glob(str(self.cache.path / "validation_dataset_*.{}".format(self.file_extension)))) != 0:
         self.dataset["validation_dataset"] = {
-          "pt_record": glob.glob(str(self.cache.path / "validation_dataset_*.pt_record")),
-          "txt"      : glob.glob(str(self.cache.path / "validation_dataset_*.txt")),
+          "file": glob.glob(str(self.cache.path / "validation_dataset_*.{}".format(self.file_extension))),
+          "txt" : glob.glob(str(self.cache.path / "validation_dataset_*.txt")),
         }
 
     self.configValidationSets(self.config.validation_set, shaped_corpus)
@@ -148,7 +150,7 @@ class MaskLMDataGenerator(object):
         valset.max_predictions_per_seq,
         "mask" if valset.HasField("mask") else "hole_{}".format(valset.hole.hole_length)
       )
-      if set_name in self.dataset or len(glob.glob(str(self.cache.path / "{}_*.pt_record".format(set_name)))) > 0:
+      if set_name in self.dataset or len(glob.glob(str(self.cache.path / "{}_*.{}".format(set_name, self.file_extension)))) > 0:
         continue
       self._maskCorpus(
         shaped_corpus, train_set = False, set_name = set_name, config = valset
@@ -267,8 +269,8 @@ class MaskLMDataGenerator(object):
 
     # Set-up self.dataset entry
     self.dataset[set_name] = {
-      'pt_record': [],
-      'txt'      : [],
+      'file': [],
+      'txt' : [],
     }
 
     # Set up max predictions
@@ -362,16 +364,16 @@ class MaskLMDataGenerator(object):
                 )
 
           # write masked_corpus before flushing the list
-          self.dataset[set_name]['pt_record'].append(
-            self.cache.path / "{}_{}.pt_record".format(set_name, iteration)
+          self.dataset[set_name]['file'].append(
+            self.cache.path / "{}_{}.{}".format(set_name, iteration, self.file_extension)
             )
           self.dataset[set_name]['txt'].append(
             self.cache.path / "{}_{}.txt".format(set_name, iteration)
             )
           self._saveCorpusRecord({
-              'corpus'   : masked_corpus,
-              'pt_record': self.cache.path / "{}_{}.pt_record".format(set_name, iteration),
-              'txt'      : self.cache.path / "{}_{}.txt".format(set_name, iteration)
+              'corpus': masked_corpus,
+              'file'  : self.cache.path / "{}_{}.{}".format(set_name, iteration, self.file_extension),
+              'txt'   : self.cache.path / "{}_{}.txt".format(set_name, iteration)
             })
         pool.close()
       except KeyboardInterrupt as e:
