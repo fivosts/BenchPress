@@ -7,12 +7,28 @@ project(CLGEN,
 # https://cmake.org/cmake/help/v3.0/module/FindPythonInterp.html
 cmake_policy(SET CMP0076 NEW)
 
-OPTION(BUILD_FROM_SOURCE "Select to build necessary system wide packages from source locally (python, boost, protoc)" OFF)
-
-set(PYTHON python3.7  CACHE FILEPATH 
-  "Provide specific python for application. Default: [python3.7]. Ignored if BUILD_FROM_SOURCE is enabled."
-  FORCE
+OPTION(BUILD_FROM_SOURCE 
+       "Select to build necessary system wide packages from source locally (python, boost, protoc)" 
+       OFF
 )
+
+if ("${PYTHON}" STREQUAL "")
+  set(PYTHON python3.7  CACHE FILEPATH
+    "Provide specific python for application. Default: [python3.7]. Ignored if BUILD_FROM_SOURCE is enabled."
+    FORCE
+  )
+endif()
+
+find_program(PYTHON_FOUND ${PYTHON})
+
+if (PYTHON_FOUND)
+  message("-- Python binary found in " ${PYTHON_FOUND})
+elseif (NOT PYTHON_FOUND)
+  message(FATAL_ERROR "-- Provided python binary " ${PYTHON_FOUND} " does not exist")
+else()
+    message(FATAL_ERROR "-- Unknown python binary error. Aborting.")
+endif()
+
 set(PROTOC protoc  CACHE FILEPATH 
   "Provide specific protobuf compiler for application. Default: [protoc]. Ignored if BUILD_FROM_SOURCE is enabled."
   FORCE
