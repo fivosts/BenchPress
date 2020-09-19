@@ -12,6 +12,7 @@ OPTION(BUILD_FROM_SOURCE
        OFF
 )
 
+# Append to python default if PYTHON variable is not explicitly defined.
 if ("${PYTHON}" STREQUAL "")
   set(PYTHON python3.7  CACHE FILEPATH
     "Provide specific python for application. Default: [python3.7]. Ignored if BUILD_FROM_SOURCE is enabled."
@@ -19,8 +20,8 @@ if ("${PYTHON}" STREQUAL "")
   )
 endif()
 
+# Python binary exists or crash.
 find_program(PYTHON_FOUND ${PYTHON})
-
 if (PYTHON_FOUND)
   message("-- Python binary found in " ${PYTHON_FOUND})
 elseif (NOT PYTHON_FOUND)
