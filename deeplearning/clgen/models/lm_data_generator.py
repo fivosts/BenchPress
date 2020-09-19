@@ -6,6 +6,7 @@ import progressbar
 import copy
 import glob
 import humanize
+import typing
 import multiprocessing
 import functools
 import pickle
@@ -174,6 +175,40 @@ class MaskLMDataGenerator(object):
         shaped_corpus, train_set = False, set_name = set_name, config = valset
       )
     return
+
+  def configSampleSets(self) -> typing.List[str]:
+    """
+    Parses the types of datasets asked from sampler.
+
+    These can be training, validation or a custom sample set
+    (defined by type of target and hole/mask specs). 
+    
+    If the set does not exist, it is constructed.
+
+    Returns:
+      A list of paths for the requested datasets.
+    Raises:
+      FileNotFoundError: 
+        In case sampler asks for validation set, 
+        but this had not been constructed during training.
+    """
+    if self.sampler.config.HasField("train_set"):
+      sampledDataset = "train_dataset"
+    elif self.sampler.config.HasField("validation_set"):
+      sampledDataset = "validation_dataset"
+    elif self.sampler.config.HasField("sample_set"):
+      sampledDataset = "pred_{}_{}".format(
+        self.sampler.config.sample_set.max_predictions_per_seq,
+        "mask" if self.sampler.config.sample_set.HasField("mask") 
+               else "hole_{}".format(self.sampler.config.sample_set.hole.hole_length)
+      )
+    path_list = glob.glob(str(self.cache.path / "{}_*.{}".format(sampledDataset, self.file_extension)))
+    if len(path_list) == 0 and sampledDataset == "validation_dataset":
+      raise FileNotFoundError("Corpus had not been split in train-val, therefore validation dataset is not found.")
+    elif len(path_list) == 0:
+      shaped_corpus = self.createCorpus()
+      self.configValidationSets(self.sampler.config.sample_set, shaped_corpus)
+    return path_list
 
   def createCorpus(self) -> None:
     """
