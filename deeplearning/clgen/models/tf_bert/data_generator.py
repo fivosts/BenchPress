@@ -232,20 +232,9 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
     if self.sampler.isFixedStr:
       return None
-
     assert not self.sampler.config.HasField("start_text")
-
-    if self.sampler.config.HasField("train_set"):
-      sampledDataset = "train_dataset"
-    elif self.sampler.config.HasField("validation_set"):
-      sampledDataset = "validation_dataset"
-    elif self.sampler.config.HasField("sample_set"):
-      sampledDataset = "pred_{}_{}".format(
-        self.sampler.config.sample_set.max_predictions_per_seq,
-        "mask" if self.sampler.config.sample_set.HasField("mask") 
-               else "hole_{}".format(self.sampler.config.sample_set.hole.hole_length)
-      )
-    path_list = glob.glob(str(self.cache.path / "{}_*.{}".format(sampledDataset, self.file_extension)))
+    
+    path_list = self.configSampleSets()
     if len(path_list) == 0:
       raise FileNotFoundError(path_list)
 

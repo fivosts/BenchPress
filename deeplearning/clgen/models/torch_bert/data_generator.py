@@ -133,22 +133,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       }
       dataset = [{k: torch.from_numpy(v) for (k, v) in sample_element.items()}]
     else:
-      if self.sampler.config.HasField("train_set"):
-        sampledDataset = "train_dataset"
-      elif self.sampler.config.HasField("validation_set"):
-        sampledDataset = "validation_dataset"
-      elif self.sampler.config.HasField("sample_set"):
-        sampledDataset = "pred_{}_{}".format(
-          self.sampler.config.sample_set.max_predictions_per_seq,
-          "mask" if self.sampler.config.sample_set.HasField("mask") 
-                 else "hole_{}".format(self.sampler.config.sample_set.hole.hole_length)
-        )
-      path_list = glob.glob(str(self.cache.path / "{}_*.{}".format(sampledDataset, self.file_extension)))
-      if len(path_list) == 0:
-        # Config dataset
-        raise FileNotFoundError
-        shaped_corpus = self.createCorpus()
-        self.configValidationSets(self.sampler.config.sample_set, shaped_corpus)
+      path_list = self.configSampleSets()
       dataset = torch.utils.data.ConcatDataset(
                   [torch.load(x) for x in path_list]
                 )
