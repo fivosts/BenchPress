@@ -197,6 +197,7 @@ def _holeSequence(seq: np.array,
   visited_indices   = set()
   # Total masks placed so far.
   total_predictions = 0
+  hole_length_list = []
   for pos_index in candidate_indexes:
     assert pos_index < len(seq), "Candidate index is out of bounds: {} >= {}".format(pos_index, len(seq))
     
@@ -225,6 +226,7 @@ def _holeSequence(seq: np.array,
         hole_length = i
         break
     distribution.register(hole_length)
+    hole_length_list.append(hole_length)
     
     # Target token for classifier is either the first token of the hole, or endholToken if hole is empty
     target = input_ids[input_id_idx] if hole_length > 0 else atomizer.endholeToken
@@ -330,7 +332,7 @@ def _holeSequence(seq: np.array,
                       np.asarray(masked_lm_positions),  np.asarray(masked_lm_ids), 
                       np.asarray(masked_lm_weights),    np.asarray(masked_lm_lengths),
                       next_sentence_label 
-                      )
+                      ), hole_length_list
 
 def _maskSequence(seq: np.array,
                   train_set: bool,
