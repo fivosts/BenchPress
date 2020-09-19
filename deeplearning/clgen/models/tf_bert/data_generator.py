@@ -426,25 +426,12 @@ def _maskSequence(seq: np.array,
                       next_sentence_label
                       )
 
-class MaskLMBatchGenerator(object):
+class tfLMDataGenerator(object):
   def __init__(self):
-
-    self.dataset                 = None
-    self.corpus                  = None
-    self.atomizer                = None
-    self.config                  = None
-    self.cache                   = None
-
-    self.training_opts           = None
-    self.steps_per_epoch         = None
-    self.max_position_embeddings = None
-
+    super(self, tfLMDataGenerator).__init__("tf_record")
     self.sampleBatch             = None # Extra
     self.sampleIndices           = None # Extra
-
-    self.sampler                 = None
     self.tfRecordSampler         = None # Extra
-    self.rngen                   = None
     return
 
   @classmethod
@@ -454,20 +441,9 @@ class MaskLMBatchGenerator(object):
                                cache_path,
                                ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for training."""
-    d               = MaskLMBatchGenerator()
-    d.cache         = cache.mkcache(cache_path, "dataset")
-    d.cache.path.mkdir(exist_ok = True, parents = True)
-
-    d.dataset       = {}
-    d.corpus        = corpus
-    d.atomizer      = corpus.atomizer
-    d.config        = training_opts.data_generator
-    d.training_opts = training_opts
-    d.rngen         = random.Random(training_opts.random_seed)
-
-    shaped_corpus = d.createCorpus()
-    d.configDataset(shaped_corpus)
-    return d
+    return super(self, tfLMDataGenerator).TrainMaskLMBatchGenerator(
+              corpus, training_opts, cache_path
+            )
 
   @classmethod
   def SampleMaskLMBatchGenerator(cls,
@@ -478,91 +454,11 @@ class MaskLMBatchGenerator(object):
                                 cache_path,
                                 ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
-    d                         = MaskLMBatchGenerator()
-    d.cache                   = cache.mkcache(cache_path, "dataset")
-    d.cache.path.mkdir(exist_ok = True, parents = True)
-
-    d.sampler                 = sampler
-    d.atomizer                = atomizer
-    d.rngen                   = random.Random(seed)
-    d.max_position_embeddings = max_position_embeddings
+    d = super(self, tfLMDataGenerator).SampleMaskLMBatchGenerator(
+          sampler, atomizer, seed, max_position_embeddings,
+        )
     d.tfRecordSampler = d.tfRecordSampleGenerator() # Extra
     return d
-
-  def configDataset(self, shaped_corpus) -> None:
-    """
-      Configs all necessary training and validation 
-      sets described in the model protobuf.
-      First constructs training set and optionally 
-      splits it into validation set, if selected in config.
-      Then configValidationSets is called which
-      constructs any additional validation_set elements
-      provided in the model's config.
-    """
-    assert self.config.validation_split >= 0 and self.config.validation_split <= 100
-
-    if FLAGS.force_remake_dataset:
-      l.getLogger().warn("Force remaking datasets can cause lots of problems on an already trained model. Are you sure you want to proceed ? [y/n]")
-      a = input()
-      if a.lower() != "yes" and a.lower() != "y":
-        l.getLogger().warn("Overwriting dataset process was aborted. Good call.")
-        return
-
-    if len(glob.glob(str(self.cache.path / "train_dataset_*.tf_record"))) == 0 or FLAGS.force_remake_dataset:
-      if self.config.validation_split == 0:
-        self._maskCorpus(
-          shaped_corpus, set_name = "train_dataset", train_set = True
-        )
-      else:
-        split_index  = int((len(shaped_corpus) / 100) * self.config.validation_split)
-        self._maskCorpus(
-          shaped_corpus[split_index:], set_name = "train_dataset", train_set = True
-        )
-        self._maskCorpus(
-          shaped_corpus[:split_index], set_name = "validation_dataset", train_set = False
-        )
-    else:
-      self.dataset["train_dataset"] = {
-        "tf_record": glob.glob(str(self.cache.path / "train_dataset_*.tf_record")),
-        "txt"      : glob.glob(str(self.cache.path / "train_dataset_*.txt")),
-      }
-      self.dataset["validation_dataset"] = {
-        "tf_record": glob.glob(str(self.cache.path / "validation_dataset_*.tf_record")),
-        "txt"      : glob.glob(str(self.cache.path / "validation_dataset_*.txt")),
-      }
-
-    self.configValidationSets(self.config.validation_set, shaped_corpus)
-    return
-
-  def configValidationSets(self, valset_list, shaped_corpus) -> None:
-    """
-      Mask and store any extra validation datasets defined into
-      model protobuf.
-      Example:
-        validation_set {
-          max_predictions_per_seq: 10
-          hole {
-            hole_length: 15
-            uniform_distribution: true
-          }
-        }
-
-      Arguments:
-        valset_list: list of validation_set items
-      Returns:
-        None
-    """
-    for valset in valset_list:
-      set_name = "pred_{}_{}".format(
-        valset.max_predictions_per_seq,
-        "mask" if valset.HasField("mask") else "hole_{}".format(valset.hole.hole_length)
-      )
-      if set_name in self.dataset or len(glob.glob(str(self.cache.path / "{}_*.tf_record".format(set_name)))) > 0:
-        continue
-      self._maskCorpus(
-        shaped_corpus, train_set = False, set_name = set_name, config = valset
-      )
-    return
 
   # Extra
   def generateTfDataset(self,
@@ -608,7 +504,7 @@ class MaskLMBatchGenerator(object):
       # For training, we want a lot of parallel reading and shuffling.
       # For eval, we want no shuffling and parallel reading doesn't matter.
       if is_training:
-        dataset = tf.io.gfile.glob([str(p) for p in self.dataset['train_dataset']['tf_record']])
+        dataset = tf.io.gfile.glob([str(p) for p in self.dataset['train_dataset']['file']])
         d = tf.data.Dataset.from_tensor_slices(tf.constant(dataset))
         d = d.repeat()
         if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
@@ -629,7 +525,7 @@ class MaskLMBatchGenerator(object):
       else:
         if eval_set is None:
           dataset = tf.io.gfile.glob(
-            [str(path) for tf_set in self.dataset for path in self.dataset[tf_set]['tf_record']]
+            [str(path) for tf_set in self.dataset for path in self.dataset[tf_set]['file']]
           )
         else:
           dataset = tf.io.gfile.glob([str(tf_set) for tf_set in eval_set])
@@ -758,7 +654,7 @@ class MaskLMBatchGenerator(object):
         "mask" if self.sampler.config.sample_set.HasField("mask") 
                else "hole_{}".format(self.sampler.config.sample_set.hole.hole_length)
       )
-    path_list = glob.glob(str(self.cache.path / "{}_*.tf_record".format(sampledDataset)))
+    path_list = glob.glob(str(self.cache.path / "{}_*.{}".format(sampledDataset, self.file_extension)))
     if len(path_list) == 0:
       raise FileNotFoundError(path_list)
 
@@ -769,237 +665,6 @@ class MaskLMBatchGenerator(object):
           yield input_ids[:np.where(input_ids == self.atomizer.padToken)[0][0]]
         else:
           yield input_ids
-
-  def createCorpus(self) -> None:
-    """
-    Constructs training corpus in text format, stores it in
-    shaped_corpus
-
-    Each corpus datapoint is either a single kernel or a random
-    sequence of size sequence_length (legacy).
-    """
-    start_time = time.time()
-
-    # Set corpus dimension parameters
-    sequence_length = self.training_opts.sequence_length
-    batch_size      = self.training_opts.batch_size
-    dupe_factor     = self.training_opts.dupe_factor
-    shuffle         = self.training_opts.shuffle_corpus_contentfiles_between_epochs
-    pad             = [self.atomizer.padToken   ]
-    start           = [self.atomizer.startToken ]
-    end             = [self.atomizer.endToken   ]
-    shaped_corpus   = None
-
-    # generate a kernel corpus
-    encoded_corpus  = self.corpus.GetTrainingData()
-
-    if self.config.datapoint_type == "kernel":
-
-      # Reject larger than sequence length
-      initial_length       = copy.deepcopy(len(encoded_corpus))
-      encoded_corpus       = [list(x) for x in encoded_corpus if 
-                             len(x) <= sequence_length - (2 if self.config.use_start_end else 0)] # Account for start and end token
-      reduced_length       = copy.deepcopy(len(encoded_corpus))
-      # Add start/end tokens
-      if self.config.use_start_end:
-        encoded_corpus     = [self._addStartEndToken(kf) for kf in encoded_corpus]
-      # pad sequences to sequence length
-      encoded_corpus       = np.array([x + pad * (sequence_length - len(x)) for x in encoded_corpus])
-      # Clone datapoints dupe_factor times
-      # shaped_corpus   = np.repeat(encoded_corpus, dupe_factor, axis = 0)
-      shaped_corpus     = encoded_corpus
-      # Shuffle
-      if shuffle:
-        self.rngen.shuffle(shaped_corpus)
-      assert len(shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
-
-      # Set corpus epoch parameters
-      self.num_epochs      = int(self.training_opts.num_train_steps / self.config.steps_per_epoch)
-      self.steps_per_epoch = self.config.steps_per_epoch
-
-      assert shaped_corpus.ndim     == 2, "corpus dim: {}".format(shaped_corpus.shape)
-      assert shaped_corpus.shape[1] == sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(encoded_corpus.shape[1], sequence_length)
-
-      l.getLogger().info("{} kernels were rejected (larger than sequence_length)".format(initial_length - reduced_length))
-      l.getLogger().info(
-        "Loaded corpus of shape {} multiplied by dupe factor: {} in {} ms.".format(
-                  shaped_corpus.shape,
-                  dupe_factor,
-                  humanize.intcomma(int((time.time() - start_time) * 1000)),
-              )
-      )
-    elif self.config.datapoint_type == "statement":
-    ## This branch is legacy data processing
-
-      if shuffle:
-        self.rngen.shuffle(encoded_corpus)
-      encoded_corpus = np.concatenate(encoded_corpus)
-      encoded_corpus = np.tile(encoded_corpus, dupe_factor)
-
-      # Set corpus dimension parameters
-      self.steps_per_epoch        = int(len(encoded_corpus) / (batch_size * sequence_length * dupe_factor))
-      assert self.steps_per_epoch != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
-      self.num_epochs             = int(self.training_opts.num_train_steps / self.steps_per_epoch)
-
-      clipped_corpus_length       = dupe_factor * self.steps_per_epoch * batch_size * sequence_length
-      clipped_corpus              = encoded_corpus[:clipped_corpus_length]
-
-      # shaped_corpus = np.split(clipped_corpus, batch_size * self.steps_per_epoch * dupe_factor, 0)
-      shaped_corpus = np.split(clipped_corpus, batch_size * self.steps_per_epoch, 0)
-
-      np_corpus = np.asarray(shaped_corpus)
-      assert np_corpus.ndim == 2, "Wrong dimensions for shaped_corpus: {}".format(np_corpus.shape)
-      assert np_corpus.shape[1] == sequence_length, "Second dimension is not equal to sequence length: {}".format(np_corpus.shape[1])
-
-      l.getLogger().info(
-        "Loaded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
-                  humanize.intcomma(clipped_corpus_length),
-                  humanize.intcomma(len(encoded_corpus) - clipped_corpus_length),
-                  humanize.intcomma(int((time.time() - start_time) * 1000)),
-              )
-      )
-
-    else:
-      raise ValueError("Unrecognized datapoint_type: {}".format(self.config.datapoint_type))
-
-    return shaped_corpus
-
-  def _maskCorpus(self,
-                  corpus: np.array,
-                  train_set: bool,
-                  set_name: str,
-                  config   = None,
-                  )-> None:
-    """
-    Entrypoint function that inserts masks or holes to the corpus.
-
-    Arguments:
-      corpus: [num_datapoints, sequence_length], 
-              where num_datapoints = num_batches * dupe_factor * batch_size
-    Returns:
-      The masked corpus
-    """
-
-    # Set-up self.dataset entry
-    self.dataset[set_name] = {
-      'tf_record': [],
-      'txt'      : [],
-    }
-
-    # Set up max predictions
-    if config is None:
-      config = self.config
-      max_predictions = self.training_opts.max_predictions_per_seq
-    else:
-      max_predictions = config.max_predictions_per_seq
-
-    # Apply dupe factor in stages to avoid stressing RAM.
-    # Limit has been set to 4GB.
-    single_item_bytes = MaskSequence.estimatedSize(
-      1, self.training_opts.sequence_length, self.training_opts.max_predictions_per_seq
-    )
-    corpus_bytes = single_item_bytes * len(corpus) + sys.getsizeof(corpus)
-    max_dupe     = min(int((FLAGS.memory_limit * (1024**3)) / corpus_bytes), self.training_opts.dupe_factor)
-    assert max_dupe != 0, "Increase RAM limit to fit corpus."
-
-    iterations   = int(self.training_opts.dupe_factor / max_dupe)
-    remaining    = self.training_opts.dupe_factor % max_dupe
-
-    extended_corpus   = np.repeat(corpus, max_dupe, axis = 0)
-    remaining_corpus   = np.repeat(corpus, remaining, axis = 0)
-
-    l.getLogger().info("Estimated element size: {}. Dupe factor {} split into {} iterations of {} (plus {} remaining)".format(
-        humanize.naturalsize(single_item_bytes), self.training_opts.dupe_factor, iterations, max_dupe, remaining
-      )
-    )
-
-    pool = multiprocessing.Pool()
-    distribution = None
-    # Specify the desired masking routine
-    if config.HasField("hole"):
-      distribution = distributions.Distribution.FromHoleConfig(config.hole, self.cache.path, set_name)
-      maskedSeq    = lambda c: pool.imap_unordered(
-        functools.partial(_holeSequence,
-                          train_set            = train_set,
-                          max_predictions      = max_predictions,
-                          pickled_distribution = pickle.dumps(distribution),
-                          pickled_atomizer     = pickle.dumps(self.atomizer),
-                          rngen                = self.rngen, 
-                          use_start_end        = self.config.use_start_end,
-                          training_opts        = self.training_opts,
-                          ), 
-        c
-      )
-    elif config.HasField("mask"):
-      maskedSeq    = lambda c: pool.imap_unordered(
-        functools.partial(_maskSequence,
-                          train_set          = train_set,
-                          max_predictions    = max_predictions,
-                          pickled_atomizer   = pickle.dumps(self.atomizer),
-                          rngen              = self.rngen, 
-                          training_opts      = self.training_opts,
-                          config             = config,
-                          ), 
-        c
-      )
-    else:
-      raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
-
-    ## Core loop of masking.
-    masked_corpus = []
-    with progressbar.ProgressBar(max_value = len(corpus) * self.training_opts.dupe_factor) as bar:
-      kernel_idx = 0
-      try:
-        for iteration in range(iterations + 1):
-          masked_corpus = []
-          # Select between normal iterations or dupe factor residual and shuffle
-          if iteration != iterations:
-            multiproc_corpus = maskedSeq(extended_corpus)
-            if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
-              self.rngen.shuffle(extended_corpus)
-          elif remaining != 0:
-            multiproc_corpus = maskedSeq(remaining_corpus)
-            if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
-              self.rngen.shuffle(remaining_corpus)
-          else:
-            continue
-
-          # Do parallel masking over corpus
-          for kernel, l_list in multiproc_corpus:
-            if distribution:
-              distribution.register(l_list)
-            masked_corpus.append(kernel)
-            bar.update(kernel_idx)
-            kernel_idx += 1
-            if kernel_idx == 1:
-              self.LogBatchTelemetry(
-                self.training_opts.batch_size, self.training_opts.sequence_length,
-                max_predictions, self.steps_per_epoch, self.num_epochs
-                )
-
-          # write masked_corpus before flushing the list
-          self.dataset[set_name]['tf_record'].append(
-            self.cache.path / "{}_{}.tf_record".format(set_name, iteration)
-            )
-          self.dataset[set_name]['txt'].append(
-            self.cache.path / "{}_{}.txt".format(set_name, iteration)
-            )
-          self._saveCorpusRecord({
-              'corpus'   : masked_corpus,
-              'tf_record': self.cache.path / "{}_{}.tf_record".format(set_name, iteration),
-              'txt'      : self.cache.path / "{}_{}.txt".format(set_name, iteration)
-            })
-        pool.close()
-      except KeyboardInterrupt as e:
-        pool.terminate()
-        raise e
-      except Exception as e:
-        pool.terminate()
-        raise e
-
-    if distribution:
-      distribution.plot()
-    return
 
   def InitSampleBatch(self) -> None:
     """
@@ -1096,7 +761,7 @@ class MaskLMBatchGenerator(object):
   def _saveCorpusRecord(self, masked_corpus: typing.Dict) -> None:
     """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
      
-    writer = tf.io.TFRecordWriter(str(masked_corpus['tf_record']))
+    writer = tf.io.TFRecordWriter(str(masked_corpus['file']))
     if FLAGS.write_text_dataset:
       file_writer = open(masked_corpus['txt'], 'w')
 
@@ -1160,40 +825,5 @@ class MaskLMBatchGenerator(object):
     if FLAGS.write_text_dataset:
       file_writer.close()
     l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
-                      .format(inst_index + 1, self.steps_per_epoch, self.training_opts.batch_size, masked_corpus['tf_record']))
+                      .format(inst_index + 1, self.steps_per_epoch, self.training_opts.batch_size, masked_corpus['file']))
     return
-
-  def _padToMaxPosition(self, input_sample):
-    """
-    Pads a given sequence to the maximum allowed sequence length, which is max_position_embeddings
-    
-    Arguments:
-      input_sample: np.array or list that represents a sequence
-
-    Returns:
-      padded sequence in np.array format
-    """
-    return np.concatenate([input_sample, 
-                          np.array([self.atomizer.padToken] * 
-                              (self.max_position_embeddings - len(input_sample)), dtype = np.int32)
-                          ])
-
-  def _addStartEndToken(self, inp: list) -> list:
-    """
-    Inserts [START] and [END] token at the beginnning and end of a sequence
-    
-    Arguments:
-      inp: input_sequence
-
-    Returns:
-      [START] + input_sequence + [END]
-    """
-    assert len(inp) != 0, "Empty list provided."
-    assert self.atomizer.padToken not in inp, "Use this function before padding a sequence!"
-
-    start = [self.atomizer.startToken] if inp[0]  != self.atomizer.startToken else []
-    end   = [self.atomizer.endToken  ] if inp[-1] != self.atomizer.endToken   else []
-    if isinstance(inp, list):
-      return start + inp + end
-    elif isinstance(inp, np.ndarray):
-      raise NotImplementedError
