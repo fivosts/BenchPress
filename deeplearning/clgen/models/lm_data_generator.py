@@ -28,6 +28,12 @@ class MaskLMDataGenerator(object):
   def __init__(file_extension: str):
 
     self.file_extension          = file_extension
+    if file_extension == "pt_record":
+      self.maskfunc_parent = torch_generator
+    elif file_extension == "tf_record":
+      self.maskfunc_parent = tf_generator
+    else:
+      raise ValueError("{} not found as potential record extension".format(file_extension))
 
     self.dataset                 = None
     self.corpus                  = None
@@ -305,7 +311,7 @@ class MaskLMDataGenerator(object):
     if config.HasField("hole"):
       distribution = distributions.Distribution.FromHoleConfig(config.hole, self.cache.path, set_name)
       maskedSeq    = lambda c: pool.imap_unordered(
-        functools.partial(_holeSequence,
+        functools.partial(self.maskfunc_parent._holeSequence,
                           train_set            = train_set,
                           max_predictions      = max_predictions,
                           pickled_distribution = pickle.dumps(distribution),
@@ -318,7 +324,7 @@ class MaskLMDataGenerator(object):
       )
     elif config.HasField("mask"):
       maskedSeq    = lambda c: pool.imap_unordered(
-        functools.partial(_maskSequence,
+        functools.partial(self.maskfunc_parent._maskSequence,
                           train_set          = train_set,
                           max_predictions    = max_predictions,
                           pickled_atomizer   = pickle.dumps(self.atomizer),
