@@ -526,7 +526,7 @@ class torchBert(backends.BackendBase):
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
     data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
-                       sampler, self.atomizer, seed,
+                       self.config.training, sampler, self.atomizer, seed,
                        self.config.architecture.max_position_embeddings, self.cache.path
                      )
     self._ConfigSampleParams(data_generator, sampler)
