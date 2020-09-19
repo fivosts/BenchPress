@@ -432,16 +432,16 @@ class MaskLMBatchGenerator(object):
     self.atomizer                = None
     self.config                  = None
     self.cache                   = None
-    # self.shaped_corpus           = None
 
     self.training_opts           = None
     self.steps_per_epoch         = None
     self.max_position_embeddings = None
-    self.sampleBatch             = None
-    self.sampleIndices           = None
+
+    self.sampleBatch             = None # Extra
+    self.sampleIndices           = None # Extra
 
     self.sampler                 = None
-    self.tfRecordSampler         = None
+    self.tfRecordSampler         = None # Extra
     self.rngen                   = None
     return
 
@@ -478,12 +478,13 @@ class MaskLMBatchGenerator(object):
     """Initializes data generator for inference."""
     d                         = MaskLMBatchGenerator()
     d.cache                   = cache.mkcache(cache_path, "dataset")
+    d.cache.path.mkdir(exist_ok = True, parents = True)
+
     d.sampler                 = sampler
     d.atomizer                = atomizer
     d.rngen                   = random.Random(seed)
     d.max_position_embeddings = max_position_embeddings
-    if not d.sampler.isFixedStr:
-      d.tfRecordSampler = d.tfRecordSampleGenerator()
+    d.tfRecordSampler = d.tfRecordSampleGenerator() # Extra
     return d
 
   def configDataset(self, shaped_corpus) -> None:
@@ -561,6 +562,7 @@ class MaskLMBatchGenerator(object):
       )
     return
 
+  # Extra
   def generateTfDataset(self,
                       sequence_length: int,
                       is_training    : bool,
@@ -647,6 +649,7 @@ class MaskLMBatchGenerator(object):
       return d
     return input_fn
 
+  # Extra
   def generateTfSamples(self):
     """
     Contains input_fn closure function for estimator
@@ -735,7 +738,12 @@ class MaskLMBatchGenerator(object):
       }
     return input_fn
 
+  # Extra
   def tfRecordSampleGenerator(self):
+
+    if self.sampler.isFixedStr:
+      return None
+
     assert not self.sampler.config.HasField("start_text")
 
     if self.sampler.config.HasField("train_set"):
@@ -955,13 +963,16 @@ class MaskLMBatchGenerator(object):
             continue
 
           # Do parallel masking over corpus
-          for kernel in multiproc_corpus:
+          for kernel, l_list in multiproc_corpus:
+            if distribution:
+              distribution.register(l_list)
             masked_corpus.append(kernel)
             bar.update(kernel_idx)
             kernel_idx += 1
             if kernel_idx == 1:
-              masked_corpus[0].LogBatchTelemetry(
-                self.training_opts.batch_size, self.steps_per_epoch, self.num_epochs
+              self.LogBatchTelemetry(
+                self.training_opts.batch_size, self.training_opts.sequence_length,
+                max_predictions, self.steps_per_epoch, self.num_epochs
                 )
 
           # write masked_corpus before flushing the list

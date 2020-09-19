@@ -48,54 +48,6 @@ FLAGS = flags.FLAGS
 #   "Force data generator to re-mask encoded dataset and store tf_record."
 # )
 
-class MaskSequence(typing.NamedTuple):
-  """
-  Tuple representation of a single MaskLM Instance. 
-  This is not batch! generateTfDataset applies native batching,
-  so this class represents a single instance!
-  """
-  seen_in_training      : np.int64
-  original_input        : np.array
-  input_ids             : np.array
-  input_mask            : np.array
-  position_ids          : np.array
-  mask_labels           : np.array
-  masked_lm_lengths     : np.array
-  next_sentence_labels  : np.int64
-
-  @staticmethod
-  def estimatedSize(batch_size, sequence_length, max_predictions_per_seq):
-    return (
-      2 * np.zeros([batch_size, 1], dtype = np.int64).nbytes + 
-      5 * np.zeros([batch_size, sequence_length], dtype = np.int64).nbytes +
-      1 * np.zeros([batch_size, max_predictions_per_seq], dtype = np.int64).nbytes
-      )
-
-  @property
-  def sizeof_sequence(self):
-    return (sys.getsizeof(self) + 
-           self.seen_in_training.nbytes  + self.original_input.nbytes + 
-           self.input_ids.nbytes         + self.input_mask.nbytes +
-           self.position_ids.nbytes      + self.mask_labels.nbytes +
-           self.masked_lm_lengths.nbytes + self.next_sentence_labels.nbytes
-           )
-
-  @staticmethod
-  def LogBatchTelemetry(batch_size: int,
-                        sequence_length: int,
-                        max_predictions_per_seq: int,
-                        steps_per_epoch: int,
-                        num_epochs: int,
-                        ) -> None:
-    """Log analytics about the batch."""
-    l.getLogger().info(
-      "Memory: {} per batch, {} per epoch, {} total.".format(
-              humanize.naturalsize(MaskSequence.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size, binary = True),
-              humanize.naturalsize(MaskSequence.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size * steps_per_epoch, binary = True),
-              humanize.naturalsize(MaskSequence.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size * steps_per_epoch * num_epochs, binary = True),
-          )
-    )
-
 def _holeSequence(seq: np.array,
                   train_set: bool,
                   max_predictions: int,
@@ -394,13 +346,10 @@ class MaskLMBatchGenerator(object):
     self.steps_per_epoch         = None
     self.max_position_embeddings = None
 
-    self.dataloader              = None
-    self.eval_dataloader         = None
-    self.sampleBatch             = None
-    self.sampleIndices           = None
+    self.dataloader              = None # Extra
+    self.eval_dataloader         = None # Extra
 
     self.sampler                 = None
-    self.tfRecordSampler         = None
     self.rngen                   = None
     return
 
@@ -413,6 +362,8 @@ class MaskLMBatchGenerator(object):
     """Initializes data generator for training."""
     d               = MaskLMBatchGenerator()
     d.cache         = cache.mkcache(cache_path, "dataset")
+    d.cache.path.mkdir(exist_ok = True, parents = True)
+
     d.dataset       = {}
     d.corpus        = corpus
     d.atomizer      = corpus.atomizer
@@ -420,10 +371,9 @@ class MaskLMBatchGenerator(object):
     d.training_opts = training_opts
     d.rngen         = random.Random(training_opts.random_seed)
 
-    d.cache.path.mkdir(exist_ok = True, parents = True)
     shaped_corpus = d.createCorpus()
     d.configDataset(shaped_corpus)
-    d.train_dataloader()
+    d.train_dataloader() # Extra
     return d
 
   @classmethod
@@ -437,11 +387,13 @@ class MaskLMBatchGenerator(object):
     """Initializes data generator for inference."""
     d                         = MaskLMBatchGenerator()
     d.cache                   = cache.mkcache(cache_path, "dataset")
+    d.cache.path.mkdir(exist_ok = True, parents = True)
+
     d.sampler                 = sampler
     d.atomizer                = atomizer
     d.rngen                   = random.Random(seed)
     d.max_position_embeddings = max_position_embeddings
-    d.predict_dataloader()
+    d.predict_dataloader() # Extra
     return d
 
   def configDataset(self, shaped_corpus) -> None:
@@ -520,6 +472,7 @@ class MaskLMBatchGenerator(object):
       )
     return
 
+  # Extra
   def train_dataloader(self) -> None:
     """Pytorch dataloader that assembles all dataset files into a single-mapped dataset."""
     dataset = torch.utils.data.ConcatDataset(
@@ -542,6 +495,7 @@ class MaskLMBatchGenerator(object):
     )
     return
 
+  # Extra
   def eval_dataloaders(self):
     for set_name in self.dataset:
       dataset = torch.utils.data.ConcatDataset(
@@ -564,6 +518,7 @@ class MaskLMBatchGenerator(object):
       )
       yield set_name, dataloader
 
+  # Extra
   def predict_dataloader(self):
 
     if self.sampler.isFixedStr:
@@ -577,7 +532,7 @@ class MaskLMBatchGenerator(object):
 
       seen_in_training     = 0
       original_input       = np.full((self.sampler.sequence_length), 0, dtype = np.int64)
-      input_ids = self._padToMaxPosition(input_sample)[:self.sampler.sequence_length]
+      input_ids            = self._padToMaxPosition(input_sample)[:self.sampler.sequence_length]
       input_mask           = np.concatenate([
                                   np.ones(len(input_sample), dtype = np.int64),
                                   np.zeros(len(input_ids) - len(input_sample), dtype = np.int64)
@@ -587,10 +542,16 @@ class MaskLMBatchGenerator(object):
       masked_lm_lengths    = np.full((self.sampler.sequence_length), -1, dtype = np.int64)
       next_sentence_labels = 0
       raise ValuError("Check here that the metrics are correct.")
-      sample_element = MaskSequence(seen_in_training, original_input, input_ids,
-                                    input_mask, position_ids, mask_labels, masked_lm_lengths,
-                                    next_sentence_labels
-                                   )
+      sample_element = {
+        'seen_in_training'    : seen_in_training,
+        'original_input'      : original_input,
+        'input_ids'           : input_ids,
+        'input_mask'          : input_mask,
+        'position_ids'        : position_ids,
+        'mask_labels'         : mask_labels,
+        'masked_lm_lengths'   : masked_lm_lengths,
+        'next_sentence_labels': next_sentence_labels,
+      }
       dataset = [{k: torch.from_numpy(v) for (k, v) in sample_element.items()}]
     else:
       if self.sampler.config.HasField("train_set"):
@@ -754,7 +715,7 @@ class MaskLMBatchGenerator(object):
 
     # Apply dupe factor in stages to avoid stressing RAM.
     # Limit has been set to 4GB.
-    single_item_bytes = MaskSequence.estimatedSize(
+    single_item_bytes = self.estimatedSize(
       1, self.training_opts.sequence_length, self.training_opts.max_predictions_per_seq
     )
     corpus_bytes = single_item_bytes * len(corpus) + sys.getsizeof(corpus)
@@ -830,7 +791,7 @@ class MaskLMBatchGenerator(object):
             bar.update(kernel_idx)
             kernel_idx += 1
             if kernel_idx == 1:
-              MaskSequence.LogBatchTelemetry(
+              self.LogBatchTelemetry(
                 self.training_opts.batch_size, self.training_opts.sequence_length,
                 max_predictions, self.steps_per_epoch, self.num_epochs
                 )
@@ -859,63 +820,6 @@ class MaskLMBatchGenerator(object):
       distribution.plot()
     return
 
-  def updateSampleBatch(self, 
-                        input_ids     : np.array,
-                        masked_lm_ids : np.array,
-                        ) -> np.array:
-    """
-    Updates self.sampleBatch with the model's output prediction.
-    The output, if still contains hole or mask tokens, is fed back
-    to the model's input through the input_fn's sample_gen generator.
-    """
-    assert len(input_ids) == len(masked_lm_ids), "Inputs and predictions do not have the same batch size."
-
-    updated_sequence = []
-    done = True
-    for batch_idx, _ in enumerate(input_ids):
-      batch = []
-      mask_id_index     = 0
-      closed_hole_index = 0
-      for idx, token in enumerate(input_ids[batch_idx]):
-        if   token == self.atomizer.maskToken:
-          mt = masked_lm_ids[batch_idx][mask_id_index]
-          if mt == self.atomizer.maskToken or mt == self.atomizer.holeToken:
-            continue
-          if len(self.sampleIndices[batch_idx][mask_id_index]) > 0:
-            while(self.sampleIndices[batch_idx][mask_id_index + closed_hole_index][-1]) == self.atomizer.endholeToken:
-              closed_hole_index += 1
-          self.sampleIndices[batch_idx][mask_id_index + closed_hole_index].append(mt)
-          mask_id_index += 1
-          batch.append(mt)
-        elif token == self.atomizer.holeToken:
-          mt = masked_lm_ids[batch_idx][mask_id_index]
-          if mt == self.atomizer.maskToken or mt == self.atomizer.holeToken:
-            continue
-          if len(self.sampleIndices[batch_idx][mask_id_index]) > 0:
-            while(self.sampleIndices[batch_idx][mask_id_index + closed_hole_index][-1]) == self.atomizer.endholeToken:
-              closed_hole_index += 1
-          self.sampleIndices[batch_idx][mask_id_index + closed_hole_index].append(mt)
-          mask_id_index += 1
-          if mt != self.atomizer.endholeToken:
-            batch.append(mt)
-            batch.append(self.atomizer.holeToken)
-            done = False
-        else:
-          batch.append(token)
-      batch = np.asarray(batch)
-      batch = self._padToMaxPosition(batch)
-      # TODO, chop sequence for now, but TODO it: 
-      # If a sequence is bigger than it should, crop one or both edges,
-      # save them and send max_position_embeddings for next step.
-      # Then, concat it back.
-      if self.sampler.sequence_length > len(batch):
-        l.getLogger().warn("Cropped {} tokens from sample batch".format(self.sampler.sequence_length - len(batch)))
-      batch = batch[:self.sampler.sequence_length]
-      updated_sequence.append(batch)
-
-    self.sampleBatch = np.asarray(updated_sequence)
-    return self.sampleBatch, self.sampleIndices
-
   def _saveCorpusRecord(self, masked_corpus: typing.Dict) -> None:
     """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
 
@@ -940,6 +844,32 @@ class MaskLMBatchGenerator(object):
     l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
                  .format(len(masked_corpus['corpus']), self.steps_per_epoch, self.training_opts.batch_size, masked_corpus['pt_record']))
     return
+
+  def estimatedSize(batch_size, sequence_length, max_predictions_per_seq):
+    """
+    Calculate estimated size of single training example as a dictionary.
+    """
+    return (
+      2 * np.zeros([batch_size, 1], dtype = np.int64).nbytes + 
+      5 * np.zeros([batch_size, sequence_length], dtype = np.int64).nbytes +
+      1 * np.zeros([batch_size, max_predictions_per_seq], dtype = np.int64).nbytes
+      )
+
+  def LogBatchTelemetry(self,
+                        batch_size: int,
+                        sequence_length: int,
+                        max_predictions_per_seq: int,
+                        steps_per_epoch: int,
+                        num_epochs: int,
+                        ) -> None:
+    """Log analytics about the batch."""
+    l.getLogger().info(
+      "Memory: {} per batch, {} per epoch, {} total.".format(
+              humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size, binary = True),
+              humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size * steps_per_epoch, binary = True),
+              humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size * steps_per_epoch * num_epochs, binary = True),
+          )
+    )
 
   def _padToMaxPosition(self, input_sample):
     """
