@@ -41,7 +41,7 @@ from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models.tf_bert import model
 from deeplearning.clgen.models.tf_bert import optimizer
 from deeplearning.clgen.models.tf_bert import hooks
-from deeplearning.clgen.models.tf_bert.data_generator import MaskLMBatchGenerator
+from deeplearning.clgen.models.tf_bert.data_generator import tfLMDataGenerator
 
 from eupy.native import logger as l
 
@@ -97,7 +97,7 @@ class tfBert(backends.BackendBase):
   class BertEstimator(typing.NamedTuple):
     """Named tuple to wrap BERT estimator pipeline."""
     estimator      : typing.Any # tf.compat.v1.estimator.tpu.TPUEstimator
-    data_generator : MaskLMBatchGenerator
+    data_generator : tfLMDataGenerator
 
   def __init__(self, *args, **kwargs):
 
@@ -172,7 +172,7 @@ class tfBert(backends.BackendBase):
     return
 
   def _ConfigTrainParams(self, 
-                         data_generator: MaskLMBatchGenerator
+                         data_generator: tfLMDataGenerator
                         ) -> None:
     """
     Model parameter initialization for training and validation.
@@ -234,7 +234,7 @@ class tfBert(backends.BackendBase):
     return
 
   def _ConfigSampleParams(self,
-                          data_generator: MaskLMBatchGenerator,
+                          data_generator: tfLMDataGenerator,
                           sampler: samplers.Sampler,
                           ) -> None:
     """
@@ -306,7 +306,7 @@ class tfBert(backends.BackendBase):
 
     if self.train is None:
 
-      data_generator = MaskLMBatchGenerator.TrainMaskLMBatchGenerator(
+      data_generator = tfLMDataGenerator.TrainMaskLMBatchGenerator(
                          corpus, self.config.training, self.cache.path)
       self._ConfigTrainParams(data_generator)
 
@@ -392,7 +392,7 @@ class tfBert(backends.BackendBase):
                    seed    : typing.Optional[int] = None
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
-    data_generator = MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
+    data_generator = tfLMDataGenerator.SampleMaskLMBatchGenerator(
                        sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings, self.cache.path
                      )
     self._ConfigSampleParams(data_generator, sampler)

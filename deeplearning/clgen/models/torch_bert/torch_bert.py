@@ -41,7 +41,7 @@ from deeplearning.clgen.models.torch_bert import model
 from deeplearning.clgen.models.torch_bert import config
 from deeplearning.clgen.models.torch_bert import optimizer
 from deeplearning.clgen.models.torch_bert import hooks
-from deeplearning.clgen.models.torch_bert.data_generator import MaskLMBatchGenerator
+from deeplearning.clgen.models.torch_bert.data_generator import torchLMDataGenerator
 
 from eupy.native import logger as l
 
@@ -81,7 +81,7 @@ class torchBert(backends.BackendBase):
   class BertEstimator(typing.NamedTuple):
     """Named tuple to wrap BERT pipeline."""
     model          : typing.TypeVar('nn.Module')
-    data_generator : MaskLMBatchGenerator
+    data_generator : torchLMDataGenerator
     optimizer      : typing.Any
     scheduler      : typing.Any
 
@@ -144,7 +144,7 @@ class torchBert(backends.BackendBase):
     return
 
   def _ConfigTrainParams(self, 
-                         data_generator: MaskLMBatchGenerator
+                         data_generator: torchLMDataGenerator
                         ) -> None:
     """
     Model parameter initialization for training and validation.
@@ -198,7 +198,7 @@ class torchBert(backends.BackendBase):
     return
 
   def _ConfigSampleParams(self,
-                          data_generator: MaskLMBatchGenerator,
+                          data_generator: torchLMDataGenerator,
                           sampler: samplers.Sampler,
                           ) -> None:
     """
@@ -272,7 +272,7 @@ class torchBert(backends.BackendBase):
     """
     if self.train is None:
       self._ConfigTrainParams(
-        MaskLMBatchGenerator.TrainMaskLMBatchGenerator(corpus, self.config.training, self.cache.path)
+        torchLMDataGenerator.TrainMaskLMBatchGenerator(corpus, self.config.training, self.cache.path)
       )
     self.current_step = self.loadCheckpoint(self.train)
     if self.current_step > 0:
@@ -323,6 +323,7 @@ class torchBert(backends.BackendBase):
 
       try:
         self.train.model.train()
+        incr_corr_samples = 0
         for epoch in tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False):
           if epoch < self.current_step // self.steps_per_epoch:
             continue # Stupid bar won't resume.
@@ -524,7 +525,7 @@ class torchBert(backends.BackendBase):
                    seed    : typing.Optional[int] = None
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
-    data_generator = MaskLMBatchGenerator.SampleMaskLMBatchGenerator(
+    data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
                        sampler, self.atomizer, seed,
                        self.config.architecture.max_position_embeddings, self.cache.path
                      )
