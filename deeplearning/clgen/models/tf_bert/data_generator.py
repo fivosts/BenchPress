@@ -41,6 +41,7 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
   @classmethod
   def SampleMaskLMBatchGenerator(cls,
+                                model_opts,
                                 sampler,
                                 atomizer,
                                 seed: int,
@@ -49,7 +50,7 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                 ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
     d = super(tfLMDataGenerator, tfLMDataGenerator()).SampleMaskLMBatchGenerator(
-          sampler, atomizer, seed, max_position_embeddings, cache_path
+          model_opts, sampler, atomizer, seed, max_position_embeddings, cache_path
         )
     d.tfRecordSampler = d.tfRecordSampleGenerator()
     return d
@@ -233,7 +234,7 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     if self.sampler.isFixedStr:
       return None
     assert not self.sampler.config.HasField("start_text")
-    
+
     path_list = self.configSampleSets()
     if len(path_list) == 0:
       raise FileNotFoundError(path_list)

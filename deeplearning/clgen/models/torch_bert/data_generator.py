@@ -41,6 +41,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
   @classmethod
   def SampleMaskLMBatchGenerator(cls,
+                                model_opts,
                                 sampler,
                                 atomizer,
                                 seed: int,
@@ -49,7 +50,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                 ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
     d = super(torchLMDataGenerator, torchLMDataGenerator()).SampleMaskLMBatchGenerator(
-              sampler, atomizer, seed, max_position_embeddings, cache_path
+              model_opts, sampler, atomizer, seed, max_position_embeddings, cache_path
         )
     d.predict_dataloader()
     return d
