@@ -1,6 +1,20 @@
 """Data generator specifically used for Mask LM models (namely BERT)."""
+import sys
+import time
+import random
+import progressbar
+import copy
+import glob
+import humanize
+import multiprocessing
+import functools
+import pickle
 import numpy as np
 
+from deeplearning.clgen.util import cache
+from deeplearning.clgen.util import distributions
+from deeplearning.clgen.proto import model_pb2
+from deeplearning.clgen.models import sequence_masking
 from absl import flags
 from eupy.native import logger as l
 
@@ -9,7 +23,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_boolean(
   "write_text_dataset", 
   False, 
-  "Set True for MaskLM data generator to write dataset in text format, along with the tf_record."
+  "Set True for MaskLM data generator to write dataset in text format, along with the dataset record."
 )
 
 flags.DEFINE_integer(
@@ -20,18 +34,20 @@ flags.DEFINE_integer(
 flags.DEFINE_boolean(
   "force_remake_dataset",
   False,
-  "Force data generator to re-mask encoded dataset and store tf_record."
+  "Force data generator to re-mask encoded dataset and store dataset record."
 )
 
 class MaskLMDataGenerator(object):
   """Abstract class, shared among TORCH and TF BERT data generators."""
-  def __init__(file_extension: str):
+  def __init__(self, file_extension: str):
 
     self.file_extension          = file_extension
     if file_extension == "pt_record":
-      self.maskfunc_parent = torch_generator
+      self.mask_func = sequence_masking.torchMaskSequence
+      self.hole_func = sequence_masking.torchHoleSequence
     elif file_extension == "tf_record":
-      self.maskfunc_parent = tf_generator
+      self.mask_func = sequence_masking.tfMaskSequence
+      self.hole_func = sequence_masking.tfHoleSequence
     else:
       raise ValueError("{} not found as potential record extension".format(file_extension))
 
@@ -49,30 +65,27 @@ class MaskLMDataGenerator(object):
     self.rngen                   = None
     return
 
-  @classmethod
-  def TrainMaskLMBatchGenerator(cls,
+  def TrainMaskLMBatchGenerator(self,
                                corpus: "corpuses.Corpus",
                                training_opts: model_pb2.TrainingOptions,
                                cache_path,
-                               ) -> "data_generator.MaskLMBatchGenerator":
+                               ) -> "data_generator.MaskLMDataGenerator":
     """Initializes data generator for training."""
-    d               = MaskLMBatchGenerator()
-    d.cache         = cache.mkcache(cache_path, "dataset")
-    d.cache.path.mkdir(exist_ok = True, parents = True)
+    self.cache         = cache.mkcache(cache_path, "dataset")
+    self.cache.path.mkdir(exist_ok = True, parents = True)
 
-    d.dataset       = {}
-    d.corpus        = corpus
-    d.atomizer      = corpus.atomizer
-    d.config        = training_opts.data_generator
-    d.training_opts = training_opts
-    d.rngen         = random.Random(training_opts.random_seed)
+    self.dataset       = {}
+    self.corpus        = corpus
+    self.atomizer      = corpus.atomizer
+    self.config        = training_opts.data_generator
+    self.training_opts = training_opts
+    self.rngen         = random.Random(training_opts.random_seed)
 
-    shaped_corpus = d.createCorpus()
-    d.configDataset(shaped_corpus)
-    return d
+    shaped_corpus = self.createCorpus()
+    self.configDataset(shaped_corpus)
+    return self
 
-  @classmethod
-  def SampleMaskLMBatchGenerator(cls,
+  def SampleMaskLMBatchGenerator(self,
                                 sampler,
                                 atomizer,
                                 seed: int,
@@ -80,15 +93,14 @@ class MaskLMDataGenerator(object):
                                 cache_path,
                                 ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
-    d                         = MaskLMBatchGenerator()
-    d.cache                   = cache.mkcache(cache_path, "dataset")
-    d.cache.path.mkdir(exist_ok = True, parents = True)
+    self.cache                   = cache.mkcache(cache_path, "dataset")
+    self.cache.path.mkdir(exist_ok = True, parents = True)
 
-    d.sampler                 = sampler
-    d.atomizer                = atomizer
-    d.rngen                   = random.Random(seed)
-    d.max_position_embeddings = max_position_embeddings
-    return d
+    self.sampler                 = sampler
+    self.atomizer                = atomizer
+    self.rngen                   = random.Random(seed)
+    self.max_position_embeddings = max_position_embeddings
+    return self
 
   def configDataset(self, shaped_corpus) -> None:
     """
@@ -311,7 +323,7 @@ class MaskLMDataGenerator(object):
     if config.HasField("hole"):
       distribution = distributions.Distribution.FromHoleConfig(config.hole, self.cache.path, set_name)
       maskedSeq    = lambda c: pool.imap_unordered(
-        functools.partial(self.maskfunc_parent._holeSequence,
+        functools.partial(self.hole_func,
                           train_set            = train_set,
                           max_predictions      = max_predictions,
                           pickled_distribution = pickle.dumps(distribution),
@@ -324,7 +336,7 @@ class MaskLMDataGenerator(object):
       )
     elif config.HasField("mask"):
       maskedSeq    = lambda c: pool.imap_unordered(
-        functools.partial(self.maskfunc_parent._maskSequence,
+        functools.partial(self.mask_func._maskSequence,
                           train_set          = train_set,
                           max_predictions    = max_predictions,
                           pickled_atomizer   = pickle.dumps(self.atomizer),
@@ -392,6 +404,32 @@ class MaskLMDataGenerator(object):
     if distribution:
       distribution.plot()
     return
+
+  def estimatedSize(self, batch_size, sequence_length, max_predictions_per_seq):
+    """
+    Calculate estimated size of single training example as a dictionary.
+    """
+    return (
+      2 * np.zeros([batch_size, 1], dtype = np.int64).nbytes + 
+      5 * np.zeros([batch_size, sequence_length], dtype = np.int64).nbytes +
+      2 * np.zeros([batch_size, max_predictions_per_seq], dtype = np.int64).nbytes
+      )
+
+  def LogBatchTelemetry(self,
+                        batch_size: int,
+                        sequence_length: int,
+                        max_predictions_per_seq: int,
+                        steps_per_epoch: int,
+                        num_epochs: int,
+                        ) -> None:
+    """Log analytics about the batch."""
+    l.getLogger().info(
+      "Memory: {} per batch, {} per epoch, {} total.".format(
+              humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size, binary = True),
+              humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size * steps_per_epoch, binary = True),
+              humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size * steps_per_epoch * num_epochs, binary = True),
+          )
+    )
 
   def _padToMaxPosition(self, input_sample):
     """
