@@ -56,7 +56,6 @@ def tfHoleSequence(seq: np.array,
                   pickled_distribution: distributions.Distribution,
                   pickled_atomizer,
                   rngen: random.Random,
-                  use_start_end: bool,
                   training_opts,
                   ) -> MaskSequence:
   """
@@ -76,8 +75,9 @@ def tfHoleSequence(seq: np.array,
       self.hole_length = hole_length
 
   # Unpack atomizer and sampler
-  distribution = pickle.loads(pickled_distribution)
-  atomizer     = pickle.loads(pickled_atomizer)
+  distribution  = pickle.loads(pickled_distribution)
+  atomizer      = pickle.loads(pickled_atomizer)
+  use_start_end = True if seq[0] == atomizer.startToken else False
 
   # Actual length represents the sequence length before pad begins
   if use_start_end:
@@ -350,7 +350,6 @@ def torchHoleSequence(seq: np.array,
                       pickled_distribution: distributions.Distribution,
                       pickled_atomizer,
                       rngen: random.Random,
-                      use_start_end: bool,
                       training_opts,
                       ) -> typing.Dict:
   """
@@ -372,6 +371,7 @@ def torchHoleSequence(seq: np.array,
   # Unpack atomizer and sampler
   distribution = pickle.loads(pickled_distribution)
   atomizer     = pickle.loads(pickled_atomizer)
+  use_start_end = True if seq[0] == atomizer.startToken else False
 
   # Actual length represents the sequence length before pad begins
   if use_start_end:
