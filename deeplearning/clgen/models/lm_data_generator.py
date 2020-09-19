@@ -61,6 +61,8 @@ class MaskLMDataGenerator(object):
     self.training_opts           = None
     self.steps_per_epoch         = None
     self.max_position_embeddings = None
+    self.num_epochs              = None
+    self.steps_per_epoch         = None
 
     self.sampler                 = None
     self.rngen                   = None
@@ -87,6 +89,7 @@ class MaskLMDataGenerator(object):
     return self
 
   def SampleMaskLMBatchGenerator(self,
+                                model_opts,
                                 sampler,
                                 atomizer,
                                 seed: int,
@@ -97,10 +100,15 @@ class MaskLMDataGenerator(object):
     self.cache                   = cache.mkcache(cache_path, "dataset")
     self.cache.path.mkdir(exist_ok = True, parents = True)
 
+    self.dataset                 = {}
     self.sampler                 = sampler
     self.atomizer                = atomizer
     self.rngen                   = random.Random(seed)
     self.max_position_embeddings = max_position_embeddings
+
+    self.training_opts                 = model_opts
+    self.training_opts.sequence_length = sampler.sequence_length
+    self.training_opts.batch_size      = sampler.batch_size
     return self
 
   def configDataset(self, shaped_corpus) -> None:
@@ -207,8 +215,8 @@ class MaskLMDataGenerator(object):
       raise FileNotFoundError("Corpus had not been split in train-val, therefore validation dataset is not found.")
     elif len(path_list) == 0:
       shaped_corpus = self.createCorpus()
-      self.configValidationSets(self.sampler.config.sample_set, shaped_corpus)
-    return path_list
+      self.configValidationSets([self.sampler.config.sample_set], shaped_corpus)
+    return glob.glob(str(self.cache.path / "{}_*.{}".format(sampledDataset, self.file_extension)))
 
   def createCorpus(self) -> None:
     """
@@ -377,9 +385,8 @@ class MaskLMDataGenerator(object):
                           max_predictions      = max_predictions,
                           pickled_distribution = pickle.dumps(distribution),
                           pickled_atomizer     = pickle.dumps(self.atomizer),
-                          rngen                = self.rngen, 
-                          use_start_end        = self.config.use_start_end,
                           training_opts        = self.training_opts,
+                          rngen                = self.rngen,
                           ),
         c
       )
@@ -388,10 +395,10 @@ class MaskLMDataGenerator(object):
         functools.partial(self.mask_func._maskSequence,
                           train_set          = train_set,
                           max_predictions    = max_predictions,
-                          pickled_atomizer   = pickle.dumps(self.atomizer),
-                          rngen              = self.rngen, 
-                          training_opts      = self.training_opts,
                           config             = config,
+                          pickled_atomizer   = pickle.dumps(self.atomizer),
+                          training_opts      = self.training_opts,
+                          rngen              = self.rngen,
                           ),
         c
       )
@@ -472,13 +479,20 @@ class MaskLMDataGenerator(object):
                         num_epochs: int,
                         ) -> None:
     """Log analytics about the batch."""
-    l.getLogger().info(
-      "Memory: {} per batch, {} per epoch, {} total.".format(
-              humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size, binary = True),
-              humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size * steps_per_epoch, binary = True),
-              humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size * steps_per_epoch * num_epochs, binary = True),
-          )
-    )
+    if steps_per_epoch is not None and num_epochs is not None:
+      l.getLogger().info(
+        "Memory: {} per batch, {} per epoch, {} total.".format(
+                humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size, binary = True),
+                humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size * steps_per_epoch, binary = True),
+                humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size * steps_per_epoch * num_epochs, binary = True),
+            )
+      )
+    else:
+      l.getLogger().info(
+        "Memory: {} per batch.".format(
+                humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size, binary = True),
+            )
+      )
 
   def _padToMaxPosition(self, input_sample):
     """
