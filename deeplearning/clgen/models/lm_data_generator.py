@@ -222,8 +222,8 @@ class MaskLMDataGenerator(object):
     """
     start_time = time.time()
 
-    if (self.cache / "corpus.pkl").exists():
-      with open(self.cache / "corpus.pkl", 'rb') as infile:
+    if (self.cache.path / "corpus.pkl").exists():
+      with open(self.cache.path / "corpus.pkl", 'rb') as infile:
         shaped_corpus = pickle.load(infile)
         l.getLogger().info(
           "Loaded from file corpus of {} examples in {} ms.".format(
@@ -314,7 +314,7 @@ class MaskLMDataGenerator(object):
     else:
       raise ValueError("Unrecognized datapoint_type: {}".format(self.config.datapoint_type))
 
-    with open(self.cache / "corpus.pkl", 'wb') as outf:
+    with open(self.cache.path / "corpus.pkl", 'wb') as outf:
       pickle.dump(shaped_corpus, outf)
     return shaped_corpus
 
