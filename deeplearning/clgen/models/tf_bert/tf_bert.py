@@ -374,7 +374,7 @@ class tfBert(backends.BackendBase):
     if self.max_eval_steps <= 0:
       return
     for tf_set in self.train.data_generator.dataset:
-      tf_set_paths = self.train.data_generator.dataset[tf_set]['tf_record']
+      tf_set_paths = self.train.data_generator.dataset[tf_set]['file']
       l.getLogger().info("BERT Validation on {}".format(', '.join([pathlib.Path(x).stem for x in tf_set_paths])))
       eval_input_fn = self.train.data_generator.generateTfDataset(
           sequence_length = self.config.training.sequence_length,
