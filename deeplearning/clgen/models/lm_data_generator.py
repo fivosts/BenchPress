@@ -182,9 +182,21 @@ class MaskLMDataGenerator(object):
 
     Each corpus datapoint is either a single kernel or a random
     sequence of size sequence_length (legacy).
+
+    If corpus has been previously pickled and stored, then it is loaded.
     """
     start_time = time.time()
 
+    if (self.cache / "corpus.pkl").exists():
+      with open(self.cache / "corpus.pkl", 'rb') as infile:
+        shaped_corpus = pickle.load(infile)
+        l.getLogger().info(
+          "Loaded from file corpus of {} examples in {} ms.".format(
+                    humanize.intcomma(len(shaped_corpus)),
+                    humanize.intcomma(int((time.time() - start_time) * 1000)),
+                )
+        )
+      return shaped_corpus
     # Set corpus dimension parameters
     sequence_length = self.training_opts.sequence_length
     batch_size      = self.training_opts.batch_size
@@ -267,6 +279,8 @@ class MaskLMDataGenerator(object):
     else:
       raise ValueError("Unrecognized datapoint_type: {}".format(self.config.datapoint_type))
 
+    with open(self.cache / "corpus.pkl", 'wb') as outf:
+      pickle.dump(shaped_corpus, outf)
     return shaped_corpus
 
   def _maskCorpus(self,
