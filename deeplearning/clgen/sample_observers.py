@@ -171,7 +171,7 @@ class SamplesDatabaseObserver(SampleObserver):
         entry.results = "\n".join(r)
       else:
         session.add(samples_database.SampleResults(key = "meta", results = "\n".join(r)))
-    return    
+    return
 
 class LegacySampleCacheObserver(SampleObserver):
   """Backwards compatability implementation of the old sample caching behavior.
