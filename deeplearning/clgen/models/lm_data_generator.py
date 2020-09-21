@@ -127,7 +127,7 @@ class MaskLMDataGenerator(object):
           shaped_corpus, set_name = "train_dataset", train_set = True
         )
       else:
-        split_index  = int((len(shaped_corpus) / 100) * self.config.validation_split)
+        split_index  = (len(shaped_corpus) // 100) * self.config.validation_split
         self._maskCorpus(
           shaped_corpus[split_index:], set_name = "train_dataset", train_set = True
         )
@@ -224,16 +224,6 @@ class MaskLMDataGenerator(object):
     """
     start_time = time.time()
 
-    if (self.cache.path / "corpus.pkl").exists():
-      with open(self.cache.path / "corpus.pkl", 'rb') as infile:
-        shaped_corpus = pickle.load(infile)
-        l.getLogger().info(
-          "Loaded from file corpus of {} examples in {} ms.".format(
-                    humanize.intcomma(len(shaped_corpus)),
-                    humanize.intcomma(int((time.time() - start_time) * 1000)),
-                )
-        )
-      return shaped_corpus
     # Set corpus dimension parameters
     sequence_length = self.training_opts.sequence_length
     batch_size      = self.training_opts.batch_size
@@ -243,6 +233,19 @@ class MaskLMDataGenerator(object):
     start           = [self.atomizer.startToken ]
     end             = [self.atomizer.endToken   ]
     shaped_corpus   = None
+
+    if (self.cache.path / "corpus.pkl").exists():
+      with open(self.cache.path / "corpus.pkl", 'rb') as infile:
+        shaped_corpus = pickle.load(infile)
+        self.num_epochs      = self.training_opts.num_train_steps // self.config.steps_per_epoch
+        self.steps_per_epoch = self.config.steps_per_epoch
+        l.getLogger().info(
+          "Loaded from file corpus of {} examples in {} ms.".format(
+                    humanize.intcomma(len(shaped_corpus)),
+                    humanize.intcomma(int((time.time() - start_time) * 1000)),
+                )
+        )
+      return shaped_corpus
 
     # generate a kernel corpus
     encoded_corpus  = self.corpus.GetTrainingData()
@@ -268,7 +271,7 @@ class MaskLMDataGenerator(object):
       assert len(shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
 
       # Set corpus epoch parameters
-      self.num_epochs      = int(self.training_opts.num_train_steps / self.config.steps_per_epoch)
+      self.num_epochs      = self.training_opts.num_train_steps // self.config.steps_per_epoch
       self.steps_per_epoch = self.config.steps_per_epoch
 
       assert shaped_corpus.ndim     == 2, "corpus dim: {}".format(shaped_corpus.shape)
@@ -291,9 +294,9 @@ class MaskLMDataGenerator(object):
       encoded_corpus = np.tile(encoded_corpus, dupe_factor)
 
       # Set corpus dimension parameters
-      self.steps_per_epoch        = int(len(encoded_corpus) / (batch_size * sequence_length * dupe_factor))
+      self.steps_per_epoch        = len(encoded_corpus) // (batch_size * sequence_length * dupe_factor)
       assert self.steps_per_epoch != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
-      self.num_epochs             = int(self.training_opts.num_train_steps / self.steps_per_epoch)
+      self.num_epochs             = self.training_opts.num_train_steps // self.steps_per_epoch
 
       clipped_corpus_length       = dupe_factor * self.steps_per_epoch * batch_size * sequence_length
       clipped_corpus              = encoded_corpus[:clipped_corpus_length]
@@ -355,10 +358,10 @@ class MaskLMDataGenerator(object):
       1, self.training_opts.sequence_length, self.training_opts.max_predictions_per_seq
     )
     corpus_bytes = single_item_bytes * len(corpus) + sys.getsizeof(corpus)
-    max_dupe     = min(int((FLAGS.memory_limit * (1024**3)) / corpus_bytes), self.training_opts.dupe_factor)
+    max_dupe     = min((FLAGS.memory_limit * (1024**3)) // corpus_bytes, self.training_opts.dupe_factor)
     assert max_dupe != 0, "Increase RAM limit to fit corpus."
 
-    iterations   = int(self.training_opts.dupe_factor / max_dupe)
+    iterations   = self.training_opts.dupe_factor // max_dupe
     remaining    = self.training_opts.dupe_factor % max_dupe
 
     extended_corpus   = np.repeat(corpus, max_dupe, axis = 0)
@@ -381,7 +384,7 @@ class MaskLMDataGenerator(object):
                           pickled_atomizer     = pickle.dumps(self.atomizer),
                           training_opts        = self.training_opts,
                           rngen                = self.rngen,
-                          is_torch             = True if self.file_extension == "pt_record" else False
+                          is_torch             = True if self.file_extension == "pt_record" else False,
                           ),
         c
       )
@@ -394,7 +397,7 @@ class MaskLMDataGenerator(object):
                           pickled_atomizer   = pickle.dumps(self.atomizer),
                           training_opts      = self.training_opts,
                           rngen              = self.rngen,
-                          is_torch             = True if self.file_extension == "pt_record" else False
+                          is_torch             = True if self.file_extension == "pt_record" else False,
                           ),
         c
       )
