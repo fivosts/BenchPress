@@ -69,6 +69,9 @@ class PassiveMonitor(Distribution):
   This subclass is used to register values of a specific type, keep track of them
   and bar plot them. E.g. length distribution of a specific encoded corpus.
   """
+  def __init__(self, log_path, set_name):
+    super(PassiveMonitor, self).__init__(None, log_path, set_name)
+    return
 
 class UniformDistribution(Distribution):
   """
