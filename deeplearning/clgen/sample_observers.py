@@ -152,10 +152,17 @@ class SamplesDatabaseObserver(SampleObserver):
     return True
 
   def endSample(self):
-    r = [
-      'compilation rate: {}'.format(self.compiled_count / self.sample_id),
-      'total compilable samples: {}'.format(self.compiled_count)
-    ]
+    try:
+      r = [
+        'compilation rate: {}'.format(self.compiled_count / self.sample_id),
+        'total compilable samples: {}'.format(self.compiled_count)
+      ]
+    except ZeroDivisionError:
+      r = [
+        'compilation rate: +/-inf',
+        'total compilable samples: {}'.format(self.compiled_count)
+      ]
+
     with self.db.Session(commit = True) as session:
       exists = session.query(samples_database.SampleResults.key).filter_by(key = "meta").scalar() is not None
       entry = session.query(samples_database.SampleResults).filter_by(key = "meta").first()
