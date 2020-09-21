@@ -18,4 +18,5 @@ bazel-testlogs
 /workspace
 
 # Large corpus files
-/model_zoo/corpus
+/model_zoo/corpus/*.tar
+/model_zoo/corpus/*.tar.bz2
