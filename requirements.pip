@@ -54,6 +54,7 @@ funcsigs==1.0.2
 futures==3.1.1
 fuzzywuzzy==0.16.0
 gast==0.3.3
+gdown==3.12.2
 GitPython==2.1.11
 GPUtil==1.4.0
 graph_nets==1.0.2

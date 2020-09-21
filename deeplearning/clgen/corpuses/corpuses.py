@@ -24,6 +24,8 @@ import subprocess
 import tempfile
 import time
 import typing
+import json
+import gdown
 
 import checksumdir
 import numpy as np
@@ -73,7 +75,6 @@ def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
   Raises:
     UserError: If the config is invalid.
   """
-  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.AssertConfigIsValid()")
   try:
     # Early-exit to support corpuses derived from databases of pre-encoded
     # content files.
@@ -616,8 +617,14 @@ def GetHashOfArchiveContents(archive: pathlib.Path) -> str:
   Raises:
     UserError: If the requested archive does not exist, or cannot be unpacked.
   """
-  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.GetHashOfArchiveContents()")
   if not archive.is_file():
+    if (archive.parent / "corpus_registry.json").exists():
+      with open(archive.parent / "corpus_registry.json", 'r') as js:
+        reg = json.load(js)
+      if archive.name in reg:
+        l.getLogger().info("Corpus found in registry. Downloading...")
+        gdown.download("https://drive.google.com/uc?id={}".format(reg[archive.name]), str(archive))
+        return GetHashOfArchiveContents(archive)
     raise ValueError(f"Archive not found: '{archive}'")
 
   with tempfile.TemporaryDirectory(prefix="clgen_corpus_") as d:
