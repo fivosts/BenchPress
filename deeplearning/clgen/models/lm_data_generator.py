@@ -42,15 +42,9 @@ class MaskLMDataGenerator(object):
   """Abstract class, shared among TORCH and TF BERT data generators."""
   def __init__(self, file_extension: str):
 
-    self.file_extension          = file_extension
-    if file_extension == "pt_record":
-      self.mask_func = sequence_masking.torchMaskSequence
-      self.hole_func = sequence_masking.torchHoleSequence
-    elif file_extension == "tf_record":
-      self.mask_func = sequence_masking.tfMaskSequence
-      self.hole_func = sequence_masking.tfHoleSequence
-    else:
-      raise ValueError("{} not found as potential record extension".format(file_extension))
+    self.file_extension = file_extension
+    self.mask_func      = sequence_masking.MaskSequence
+    self.hole_func      = sequence_masking.HoleSequence
 
     self.dataset                 = None
     self.corpus                  = None
@@ -387,6 +381,7 @@ class MaskLMDataGenerator(object):
                           pickled_atomizer     = pickle.dumps(self.atomizer),
                           training_opts        = self.training_opts,
                           rngen                = self.rngen,
+                          is_torch             = True if self.file_extension == "pt_record" else False
                           ),
         c
       )
@@ -399,6 +394,7 @@ class MaskLMDataGenerator(object):
                           pickled_atomizer   = pickle.dumps(self.atomizer),
                           training_opts      = self.training_opts,
                           rngen              = self.rngen,
+                          is_torch             = True if self.file_extension == "pt_record" else False
                           ),
         c
       )
