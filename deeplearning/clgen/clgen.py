@@ -185,8 +185,7 @@ class Instance(object):
       self.model.Train(*args, test_sampler = test_sampler, **kwargs)
 
   def Sample(self, *args, **kwargs) -> typing.List[model_pb2.Sample]:
-    if not FLAGS.only_sample:
-      self.Train()
+    self.Train()
     with self.Session():
       return self.model.Sample(self.sampler, *args, **kwargs)
 

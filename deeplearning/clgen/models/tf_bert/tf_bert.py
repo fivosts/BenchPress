@@ -310,6 +310,9 @@ class tfBert(backends.BackendBase):
                          corpus, self.config.training, self.cache.path)
       self._ConfigTrainParams(data_generator)
 
+    if FLAGS.only_sample:
+      return
+
     if not self.is_trained:
 
       train_input_fn = self.train.data_generator.generateTfDataset(

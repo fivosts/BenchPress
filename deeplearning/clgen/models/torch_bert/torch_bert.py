@@ -274,6 +274,10 @@ class torchBert(backends.BackendBase):
       self._ConfigTrainParams(
         torchLMDataGenerator.TrainMaskLMBatchGenerator(corpus, self.config.training, self.cache.path)
       )
+
+    if FLAGS.only_sample:
+      return
+      
     self.current_step = self.loadCheckpoint(self.train)
     if self.current_step > 0:
       l.getLogger().info("Loaded checkpoint step {}".format(self.current_step))
