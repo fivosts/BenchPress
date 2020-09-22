@@ -50,6 +50,18 @@ class MaskSequence(typing.NamedTuple):
             tf.TensorShape([batch_size, 1]),
            )
 
+## Tuple representation of mask id/position/hole_length for easy sorting
+class MaskedLmInstance():
+  def __init__(self, 
+               pos_index: int, 
+               token_id: int, 
+               hole_length: int,
+               ):
+    self.pos_index   = pos_index
+    self.token_id    = token_id
+    self.hole_length = hole_length
+
+## Tuple representation of mask id/position/hole_length for easy sorting
 def HoleSequence(seq: np.array,
                       train_set: bool,
                       max_predictions: int,
@@ -64,17 +76,6 @@ def HoleSequence(seq: np.array,
   """
   assert seq.ndim == 1, "Input for masking must be single-dimension array."
 
-  ## Tuple representation of mask id/position/hole_length for easy sorting
-  class MaskedLmInstance():
-    def __init__(self, 
-                 pos_index: int, 
-                 token_id: int, 
-                 hole_length: int,
-                 ):
-      self.pos_index   = pos_index
-      self.token_id    = token_id
-      self.hole_length = hole_length
-
   # Unpack atomizer and sampler
   distribution = pickle.loads(pickled_distribution)
   atomizer     = pickle.loads(pickled_atomizer)
@@ -88,25 +89,13 @@ def HoleSequence(seq: np.array,
   else:
     actual_length   = len(seq)
 
-  if use_start_end:
-    candidate_indexes = np.arange(1, actual_length)
-  else:
-    candidate_indexes = np.arange(actual_length)
-  rngen.shuffle(candidate_indexes)
-
   # total tokens to add in holes.
   # No more than max_predictions_per_seq (or otherwise specified), no less than actual seq length x the probability of hiding a token
   holes_to_predict  = min(max_predictions,
                          max(1, int(round(actual_length * training_opts.masked_lm_prob))))
 
-  # Flip input sequence to spread the hole lenghts to both directions uniformly.
-  reverse_sequence = True if rngen.random() > 0.5 else False
-  if reverse_sequence:
-    input_ids         = list(np.copy(np.flip(seq)))
-    candidate_indexes = (len(seq) - 1) - candidate_indexes
-    actual_length     = len(seq) - (1 if use_start_end else 0)
-  else:
-    input_ids       = list(np.copy(seq))
+  extend_left = True if rngen.random() > 0.5 else False
+  input_ids   = list(np.copy(seq))
   # List of (seq_idx, token_id, hole_length) tuples
   masked_lms        = []
   # Offset array. Indices represent elements in the initial array (seq)
@@ -118,7 +107,8 @@ def HoleSequence(seq: np.array,
   total_predictions = 0
   # Workaround for hole length distributions in multiprocessing environment.
   hole_length_list = []
-  for pos_index in candidate_indexes:
+  while total_predictions < holes_to_predict:
+    pos_index = np.random.randint(0, actual_length - 1) # Fixed seed doesn't work!
     assert pos_index < len(seq), "Candidate index is out of bounds: {} >= {}".format(pos_index, len(seq))
     
     # Element in processed array can be found in its original index +/- offset
@@ -142,63 +132,48 @@ def HoleSequence(seq: np.array,
     hole_length = min(hole_length, actual_length - input_id_idx)
     # Confirm there is no conflict with another hole, further down the sequence.
     for i in range(hole_length):
-      if input_ids[input_id_idx + i] == atomizer.holeToken:
-        hole_length = i
-        break
-    distribution.register(hole_length)
+      if extend_left:
+        if (input_ids[input_id_idx - i] == atomizer.holeToken
+         or input_ids[input_id_idx - i] == atomizer.startToken
+         or input_ids[input_id_idx - i] == atomizer.endToken
+         or input_id_idx - i == 0
+         ):
+          hole_length = i
+          break
+      else:
+        if (input_ids[input_id_idx + i] == atomizer.holeToken
+         or input_ids[input_id_idx + i] == atomizer.startToken
+         or input_ids[input_id_idx + i] == atomizer.endToken
+         or input_id_idx + i == len(input_ids)
+         ):
+          hole_length = i
+          break
     hole_length_list.append(hole_length)
-    
-    # Target token for classifier is either the first token of the hole, or endholToken if hole is empty
+    pos_index  -= hole_length - 1 if hole_length != 0 and extend_left else 0
+    input_id_idx = pos_index + offset_idxs[pos_index]
+
+    # Target token for classifier is either the first token of the hole, or endholeToken if hole is empty
     target = input_ids[input_id_idx] if hole_length > 0 else atomizer.endholeToken
+    input_ids = input_ids[:input_id_idx] + [atomizer.holeToken] + input_ids[input_id_idx + hole_length:]
 
-    ## TODO. Think about '== self.atomizer.holeToken' condition.
-    # if config.mask.random_placed_mask and hole_length != 0:
-    #   if self.rngen.random() < 0.8:
-    #     replacement_token = self.atomizer.holeToken
-    #   else:
-    #     if self.rngen.random() > 0.5:
-    #       # Sometimes keep the original token.
-    #       replacement_token = target
-    #     else:
-    #       # Other times add a random one.
-    #       replacement_token = self.rngen.randint(0, self.atomizer.vocab_size - 1)
-    # else:
-    #   replacement_token = self.atomizer.holeToken
-    replacement_token = atomizer.holeToken
-
-    input_ids = (input_ids[:input_id_idx] + 
-                 [replacement_token] + 
-                 input_ids[input_id_idx + hole_length:])
-    # This pos_index will get deprecated when someone before this index alters the offset array
-    # So store position index, and after making all masks, update with updated offset array
+    # Store position index, and after making all masks, update with updated offset array
     masked_lms.append(MaskedLmInstance(pos_index = pos_index, token_id = target, hole_length = hole_length))
 
     # Adjust the offset of all affected tokens, from pos_index and after.
     offset_idxs[pos_index + 1:] += 1 - hole_length
-    # An empty hole is counted as a prediction of count 1.
     total_predictions           += max(1, hole_length)
     visited_indices.update(range(pos_index, pos_index + hole_length))
 
-    for lm in masked_lms:
-      ## TODO, remove this extensive-expensive check after you make sure that this function is bug free.
-      test_index = lm.pos_index + offset_idxs[lm.pos_index]
-      if input_ids[test_index] != atomizer.holeToken:
-        assert False
+  hole_analytics = copy.deepcopy(masked_lms)
+  if extend_left:
+    for lm in hole_analytics:
+      lm.pos_index += lm.hole_length - 1 if lm.hole_length != 0 else 0
 
   # Now update the entries with offset index.
   for lm in masked_lms:
     prev_index = lm.pos_index
     lm.pos_index = lm.pos_index + offset_idxs[lm.pos_index]
-
-  # Un-reverse sequence
-  if reverse_sequence:
-    input_ids = list(reversed(input_ids))
-    for lm in masked_lms:
-      lm.pos_index = len(input_ids) - 1 - lm.pos_index
-
-  # Now check that targets point only hole tokens
-  for lm in masked_lms:
-    assert input_ids[lm.pos_index] == atomizer.holeToken
+    assert input_ids[lm.pos_index] == atomizer.holeToken, "{}".format(lm.hole_length)
 
   while len(input_ids) < len(seq):
     input_ids.append(atomizer.padToken)
@@ -244,7 +219,7 @@ def HoleSequence(seq: np.array,
         'mask_labels'         : mask_labels,
         'masked_lm_lengths'   : masked_lm_lengths,
         'next_sentence_labels': next_sentence_labels,
-      }, hole_length_list)
+      }, hole_length_list, hole_analytics)
   
   else: # TF 1.X, 2.[0-2]
     
