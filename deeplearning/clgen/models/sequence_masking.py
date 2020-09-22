@@ -151,7 +151,8 @@ def HoleSequence(seq: np.array,
     hole_length_list.append(hole_length)
     pos_index  -= hole_length - 1 if hole_length != 0 and extend_left else 0
     input_id_idx = pos_index + offset_idxs[pos_index]
-
+    # TODO plz check that target changes correctly.
+    
     # Target token for classifier is either the first token of the hole, or endholeToken if hole is empty
     target = input_ids[input_id_idx] if hole_length > 0 else atomizer.endholeToken
     input_ids = input_ids[:input_id_idx] + [atomizer.holeToken] + input_ids[input_id_idx + hole_length:]
