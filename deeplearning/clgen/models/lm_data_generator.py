@@ -404,11 +404,13 @@ class MaskLMDataGenerator(object):
     else:
       raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
 
-    ## Core loop of masking.
-    masked_corpus = []
+    # Masking generation data monitors
     start_idx_monitor = distributions.PassiveMonitor(self.cache.path, "target_mask_idx")
     idx_monitor       = distributions.PassiveMonitor(self.cache.path, "mask_idx")
-    
+    direction_monitor = distributions.PassiveMonitor(self.cache.path, "masking_direction")
+
+    ## Core loop of masking.
+    masked_corpus = []
     with progressbar.ProgressBar(max_value = len(corpus) * self.training_opts.dupe_factor) as bar:
       kernel_idx = 0
       try:
@@ -431,13 +433,19 @@ class MaskLMDataGenerator(object):
             if distribution:
               distribution.register(l_list)
 
-            actual_length = np.where(kernel['original_input'] == self.atomizer.padToken)[0][0]
-            if actual_length is None:
-              actual_length = len(kernel)
+            try:
+              actual_length = np.where(kernel['original_input'] == self.atomizer.padToken)[0][0]
+            except IndexError:
+              actual_length = len(kernel['original_input'])
             for hole in masked_idxs:
-              start_idx = hole.pos_index
-              start_idx_monitor.register(int(4 * round((100 * start_idx) / (4.0 * actual_length))))
-              idx_monitor.register([int(4 * round((100 * start_idx + i) / (4.0 * actual_length))) for i in range(hole.hole_length)])
+              hole_idx = hole.pos_index
+              selected_idx = hole.pos_index
+              if hole.extend_left:
+                selected_idx += hole.hole_length - 1 if hole.hole_length != 0 else 0
+
+              start_idx_monitor.register(int(2 * round(100.0 * (selected_idx / actual_length) / 2.0)))
+              idx_monitor.register([int(2 * round(100.0 * ((hole_idx + i) / actual_length) / 2.0)) for i in range(hole.hole_length)])
+              direction_monitor.register(1 if hole.extend_left else 0)
 
             masked_corpus.append(kernel)
             bar.update(kernel_idx)
@@ -472,6 +480,7 @@ class MaskLMDataGenerator(object):
       distribution.plot()
     start_idx_monitor.plot()
     idx_monitor.plot()
+    direction_monitor.plot()
     return
 
   def estimatedSize(self, batch_size, sequence_length, max_predictions_per_seq):
