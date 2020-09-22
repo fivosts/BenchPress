@@ -406,6 +406,9 @@ class MaskLMDataGenerator(object):
 
     ## Core loop of masking.
     masked_corpus = []
+    start_idx_monitor = distributions.PassiveMonitor(self.cache.path, "target_mask_idx")
+    idx_monitor       = distributions.PassiveMonitor(self.cache.path, "mask_idx")
+    
     with progressbar.ProgressBar(max_value = len(corpus) * self.training_opts.dupe_factor) as bar:
       kernel_idx = 0
       try:
@@ -424,9 +427,18 @@ class MaskLMDataGenerator(object):
             continue
 
           # Do parallel masking over corpus
-          for kernel, l_list in multiproc_corpus:
+          for kernel, l_list, masked_idxs in multiproc_corpus:
             if distribution:
               distribution.register(l_list)
+
+            actual_length = np.where(kernel['original_input'] == self.atomizer.padToken)[0][0]
+            if actual_length is None:
+              actual_length = len(kernel)
+            for hole in masked_idxs:
+              start_idx = hole.pos_index
+              start_idx_monitor.register(int(4 * round((100 * start_idx) / (4.0 * actual_length))))
+              idx_monitor.register([int(4 * round((100 * start_idx + i) / (4.0 * actual_length))) for i in range(hole.hole_length)])
+
             masked_corpus.append(kernel)
             bar.update(kernel_idx)
             kernel_idx += 1
@@ -458,6 +470,8 @@ class MaskLMDataGenerator(object):
 
     if distribution:
       distribution.plot()
+    start_idx_monitor.plot()
+    idx_monitor.plot()
     return
 
   def estimatedSize(self, batch_size, sequence_length, max_predictions_per_seq):
