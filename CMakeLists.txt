@@ -15,40 +15,65 @@ set(THIRD_PARTY ${CMAKE_BINARY_DIR}/third_party)
 # Local bin folder for application binaries and libraries
 set(LOCAL       ${CMAKE_BINARY_DIR}/local)
 
-OPTION(BUILD_FROM_SOURCE 
-       "Select to build necessary system wide packages from source locally (python, boost, protoc)" 
+OPTION(BOOST_FROM_SOURCE 
+       "Select to build boost locally from source." 
        OFF
 )
 
-# Append to python default if PYTHON variable is not explicitly defined.
-if ("${PYTHON}" STREQUAL "")
-  set(PYTHON python3.7  CACHE FILEPATH
-    "Provide specific python for application. Default: [python3.7]. Ignored if BUILD_FROM_SOURCE is enabled."
-    FORCE
-  )
-endif()
+function(find_binaries)
 
-# Python binary exists or crash.
-find_program(PYTHON_FOUND ${PYTHON})
-if (PYTHON_FOUND)
-  message("-- Python binary found in " ${PYTHON_FOUND})
-elseif (NOT PYTHON_FOUND)
-  message(FATAL_ERROR "-- Provided python binary " ${PYTHON_FOUND} " does not exist")
-else()
-    message(FATAL_ERROR "-- Unknown python binary error. Aborting.")
-endif()
+	## For python and protoc executables:
+	# 1. Find if the provided or default binaries exist.
+	# 2. If they don't set flags to install from source locally.
 
-set(PROTOC protoc  CACHE FILEPATH 
-  "Provide specific protobuf compiler for application. Default: [protoc]. Ignored if BUILD_FROM_SOURCE is enabled."
-  FORCE
-)
+	# Append to python default if PYTHON variable is not explicitly defined.
+	if ("${PYTHON}" STREQUAL "")
+	  set(PYTHON python3 CACHE FILEPATH
+	    "Provide specific python for application. Default: [python3]. Ignored if BUILD_FROM_SOURCE is enabled."
+	    FORCE
+	  )
+	endif()
+
+	# Append to protoc default if PROTOC variable is not explicitly defined.
+	if ("${PROTOC}" STREQUAL "")
+	  set(PROTOC protoc CACHE FILEPATH
+	    "Provide specific protobuf compiler for application. Default: [protoc]. Ignored if BUILD_FROM_SOURCE is enabled."
+	    FORCE
+	  )
+	endif()
+
+	# Python binary exists or crash.
+	find_program(PYTHON_FOUND ${PYTHON})
+	if (PYTHON_FOUND)
+	  message("-- Python binary found in " ${PYTHON_FOUND})
+	  set(PYTHON_FROM_SOURCE OFF)
+	elseif (NOT PYTHON_FOUND)
+	  message(WARNING "-- Python binary " ${PYTHON_FOUND} " not found. Will install python3.7 from source.")
+	  set(PYTHON_FROM_SOURCE ON)
+	else()
+	    message(FATAL_ERROR "-- Unknown python binary error. Aborting.")
+	endif()
+
+	# protoc binary exists or crash.
+	find_program(PROTOC_FOUND ${PROTOC})
+	if (PROTOC_FOUND)
+	  message("-- protoc binary found in " ${PROTOC_FOUND})
+	  set(PROTOC_FROM_SOURCE OFF)
+	elseif (NOT PROTOC_FOUND)
+	  message(WARNING "-- protoc binary " ${PROTOC_FOUND} " not found. Will install from source.")
+	  set(PROTOC_FROM_SOURCE ON)
+	else()
+	    message(FATAL_ERROR "-- Unknown protoc binary error. Aborting.")
+	endif()
+endfunction()
 
 function(install_external_deps)
 
-  ### Build and install third_party system dependencies
-  #   Installs: gcc-9, python-3.7.5, clangtooling-6, boost-1.73.0 protobuf-compilers and opencl-headers
+  ## If triggered, install python, protoc, boost from source and set paths.
+  # Also, install opencl-headers and llvm-6 locally.
+
   include(ExternalProject)
-  if (BUILD_FROM_SOURCE)
+  if (PYTHON_FROM_SOURCE)
     # Python 3.7.5 from source
     ExternalProject_Add(python
       URL               https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tar.xz
@@ -62,7 +87,10 @@ function(install_external_deps)
       INSTALL_DIR       ${LOCAL}
       CONFIGURE_COMMAND ${THIRD_PARTY}/python/python/configure --prefix=${LOCAL} --enable-optimizations --enable-loadable-sqlite-extensions
     )
-    set(PYTHON          ${LOCAL}/bin/python3.7               PARENT_SCOPE)
+    set(PYTHON          ${LOCAL}/bin/python3.7 PARENT_SCOPE)
+  endif()
+
+  if (BOOST_FROM_SOURCE)
     # Boost lib
     # TODO make sure this version is visible when compiling kernels
     ExternalProject_Add(boost
@@ -80,6 +108,9 @@ function(install_external_deps)
       INSTALL_COMMAND   ${THIRD_PARTY}/boost/boost/b2 install
     )
     set(BOOST           ${LOCAL} PARENT_SCOPE)
+  endif()
+
+  if (PROTOC_FROM_SOURCE)
     # protoc compiler
     ExternalProject_Add(protobuf
       GIT_REPOSITORY    https://github.com/protocolbuffers/protobuf.git
@@ -94,8 +125,8 @@ function(install_external_deps)
       CONFIGURE_COMMAND cd ${THIRD_PARTY}/protobuf/protobuf && ./autogen.sh && ${THIRD_PARTY}/protobuf/protobuf/configure --prefix=${LOCAL}
     )
     set(PROTOC          ${LOCAL}/bin/protoc PARENT_SCOPE)
-
   endif ()
+
   # Clang and LLVM 6 pre-compiled binaries and libraries.
   ExternalProject_Add(llvm
     URL               https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
@@ -153,7 +184,7 @@ function(setup_python)
   # 3. Set python binary to virtual environment's bin folder
 
   set (PYTHON_ENV ${LOCAL}/env/bin/python)
-  if (BUILD_FROM_SOURCE)
+  if (PYTHON_FROM_SOURCE)
     file(MAKE_DIRECTORY ${LOCAL}/lib/python)
     add_custom_target(requirements ALL
       COMMAND ${PYTHON} -m venv ${LOCAL}/env
@@ -166,8 +197,8 @@ function(setup_python)
   else ()
     add_custom_target(requirements ALL
       COMMAND ${PYTHON} -m venv ${LOCAL}/env
-      COMMAND ${PYTHON_ENV} -m pip install wheel setuptools==47.3.1
-      COMMAND ${PYTHON_ENV} -m pip install --upgrade pip==20.1.1
+      COMMAND ${PYTHON_ENV} -m pip install wheel setuptools==50.3.0
+      COMMAND ${PYTHON_ENV} -m pip install --upgrade pip==20.2.3
       COMMAND ${PYTHON_ENV} -m pip install --disable-pip-version-check --upgrade -r ${CMAKE_SOURCE_DIR}/requirements.pip
       COMMENT "Installing python package dependencies"
     )
@@ -224,6 +255,7 @@ function(clgen)
   )
 endfunction()
 
+find_binaries()
 install_external_deps()
 setup_python()
 add_subdirectory(${APP_PATH}/preprocessors)
