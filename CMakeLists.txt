@@ -7,6 +7,14 @@ project(CLGEN,
 # https://cmake.org/cmake/help/v3.0/module/FindPythonInterp.html
 cmake_policy(SET CMP0076 NEW)
 
+###### Important app paths
+# Python application relative base path
+set(APP_PATH    deeplearning/clgen)
+# Base path of third_party deps
+set(THIRD_PARTY ${CMAKE_BINARY_DIR}/third_party)
+# Local bin folder for application binaries and libraries
+set(LOCAL       ${CMAKE_BINARY_DIR}/local)
+
 OPTION(BUILD_FROM_SOURCE 
        "Select to build necessary system wide packages from source locally (python, boost, protoc)" 
        OFF
@@ -34,13 +42,6 @@ set(PROTOC protoc  CACHE FILEPATH
   "Provide specific protobuf compiler for application. Default: [protoc]. Ignored if BUILD_FROM_SOURCE is enabled."
   FORCE
 )
-
-# Python application relative base path
-set(APP_PATH    deeplearning/clgen)
-# Base path of third_party deps
-set(THIRD_PARTY ${CMAKE_BINARY_DIR}/third_party)
-# Local bin folder for application binaries and libraries
-set(LOCAL       ${CMAKE_BINARY_DIR}/local)
 
 function(install_external_deps)
 
