@@ -217,7 +217,7 @@ def HoleSequence(seq: np.array,
         masked_lm_lengths[ind]   = p.hole_length
         ind += 1
 
-    return ({
+    return {
         'seen_in_training'    : seen_in_training,
         'original_input'      : seq,
         'input_ids'           : np.asarray(input_ids[:len(seq)], dtype = np.int64),
@@ -226,7 +226,7 @@ def HoleSequence(seq: np.array,
         'mask_labels'         : mask_labels,
         'masked_lm_lengths'   : masked_lm_lengths,
         'next_sentence_labels': next_sentence_labels,
-      }, hole_length_list, hole_analytics)
+      }, hole_length_list, hole_analytics
   
   else: # TF 1.X, 2.[0-2]
     
@@ -258,10 +258,10 @@ def HoleSequence(seq: np.array,
     )
     return MaskSequence(seen_in_training, seq,
                         np.asarray(input_ids[:len(seq)]), input_mask,
-                        np.asarray(masked_lm_positions),  np.asarray(masked_lm_ids), 
+                        np.asarray(masked_lm_positions),  np.asarray(masked_lm_ids),
                         np.asarray(masked_lm_weights),    np.asarray(masked_lm_lengths),
-                        next_sentence_label 
-                        ), hole_length_list
+                        next_sentence_label
+                        ), hole_length_list, hole_analytics
 
 def MaskSequence(seq: np.array,
                       train_set: bool,
