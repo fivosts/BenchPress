@@ -434,7 +434,10 @@ class MaskLMDataGenerator(object):
               distribution.register(l_list)
 
             try:
-              actual_length = np.where(kernel['original_input'] == self.atomizer.padToken)[0][0]
+              if self.file_extension == "pt_record":
+                actual_length = np.where(kernel['original_input'] == self.atomizer.padToken)[0][0]
+              else:
+                actual_length = np.where(kernel.original_input == self.atomizer.padToken)[0][0]
             except IndexError:
               actual_length = len(kernel['original_input'])
             for hole in masked_idxs:
