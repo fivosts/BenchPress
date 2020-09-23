@@ -12,7 +12,7 @@ from deeplearning.clgen.util.tf import tf
 from eupy.native import logger as l
 
 
-class MaskSequence(typing.NamedTuple):
+class tfSequence(typing.NamedTuple):
   """
   Tuple representation of a single MaskLM Instance. 
   This is not batch! generateTfDataset applies native batching,
@@ -256,7 +256,7 @@ def HoleSequence(seq: np.array,
       "Number of targets {} does not correspond to hole number in final input sequence: {}"
       .format(num_holes, input_ids[:len(seq)].count(atomizer.holeToken))
     )
-    return MaskSequence(seen_in_training, seq,
+    return tfSequence(seen_in_training, seq,
                         np.asarray(input_ids[:len(seq)]), input_mask,
                         np.asarray(masked_lm_positions),  np.asarray(masked_lm_ids),
                         np.asarray(masked_lm_weights),    np.asarray(masked_lm_lengths),
@@ -374,7 +374,7 @@ def MaskSequence(seq: np.array,
         masked_lm_weights.append(0.0)
         masked_lm_lengths.append(-1)
 
-    return MaskSequence(seen_in_training, seq,
+    return tfSequence(seen_in_training, seq,
                         np.asarray(input_ids),           input_mask,
                         np.asarray(masked_lm_positions), np.asarray(masked_lm_ids), 
                         np.asarray(masked_lm_weights),   np.asarray(masked_lm_lengths),

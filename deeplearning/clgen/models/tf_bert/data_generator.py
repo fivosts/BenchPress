@@ -206,8 +206,8 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       batch_size = params['batch_size']
       sample = tf.data.Dataset.from_generator(
                 lambda: sample_gen(batch_size), 
-                output_types = sequence_masking.MaskSequence.tfTypes(),
-                output_shapes = sequence_masking.MaskSequence.tfShapes(batch_size, self.sampler.sequence_length)
+                output_types = sequence_masking.tfSequence.tfTypes(),
+                output_shapes = sequence_masking.tfSequence.tfShapes(batch_size, self.sampler.sequence_length)
                 )
 
       it = tf.compat.v1.data.make_one_shot_iterator(sample)
