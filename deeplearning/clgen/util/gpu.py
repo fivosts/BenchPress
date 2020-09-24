@@ -44,6 +44,9 @@ def getGPUID():
   """
   output = subprocess.check_output(NVIDIA_SMI_GET_GPUS.split())
   gpus = getGPUs(output.decode("utf-8").split(os.linesep))
-  selected_gpu = sorted(gpus, key=lambda x: x['mem_used'])[0]
-  l.getLogger().info("Selected GPU:{} {}".format(selected_gpu['id'], selected_gpu['gpu_name']))
-  return int(selected_gpu['id'])
+  if len(gpus) > 0:
+    selected_gpu = sorted(gpus, key=lambda x: x['mem_used'])[0]
+    l.getLogger().info("Selected GPU:{} {}".format(selected_gpu['id'], selected_gpu['gpu_name']))
+    return int(selected_gpu['id'])
+  else:
+    return None
