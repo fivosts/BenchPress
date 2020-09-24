@@ -53,15 +53,9 @@ def initTensorflow():
       raise NotImplementedError
     elif FLAGS.tf_device == "gpu" and available_gpu is not None:
       os.environ['CUDA_VISIBLE_DEVICES'] = str(available_gpu)
-      tensorflow.config.set_visible_devices(
-        tensorflow.config.list_physical_devices('GPU')[available_gpu], 'GPU'
-      )
     else:
       l.getLogger().info("Selected CPU device.")
       os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
-      tensorflow.config.set_visible_devices(
-        tensorflow.config.list_physical_devices('CPU'), 'CPU'
-      )
   except RuntimeError as e:
     raise e
 
