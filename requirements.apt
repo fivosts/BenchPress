@@ -54,6 +54,8 @@ function install_apt_deps()
     echo "-- "
     echo "-- "
     echo "-- TLDR; Ask your admin for gcc >= 7 (6 should be ok too) or install from source. Fear not about python3.7 and protobuf compiler; will be installed from source during cmake process. If anything crashes or command not found, ask your admin to install the apt packages included in this script."
+    echo "-- Press any key to continue."
+    read $hit_continue
   fi
 }
 
