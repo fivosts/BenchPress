@@ -367,7 +367,7 @@ class torchBert(backends.BackendBase):
                     sample_time_ms         = int(round(exec_time_ms / self.train_batch_size)),
                     num_tokens             = len([x for x in s[1] if x != self.atomizer.padToken]),
                     categorical_sampling   = False,
-                    compile_status         = True,
+                    compile_status         = "Yes",
                     date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
                   )
                 )
