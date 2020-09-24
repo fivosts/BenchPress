@@ -5,7 +5,16 @@
 <div class="row">
 <div class="col">
 
-  <p class="code">This is corpus<br></p>
+  <h3>Corpus: {{data.summary}}<br></h3>
+
+  {% for stat in data.stats %}
+  	<ul>
+  		<p class="config"><b>{{stat.name}}</b></p>
+    <img src="{{stat.plot}}" width = "500">
+    <span class="config"><br><br><br><br><br></span>
+  	</ul>
+  {% endfor %}
+
 
 </div>
 </div>
