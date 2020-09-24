@@ -46,6 +46,11 @@ flask_app = flask.Flask(
 
 db = flask_sqlalchemy.SQLAlchemy(flask_app)
 
+data = {}
+cached_models = {}
+cached_corpuses = {}
+cached_samplers = {}
+
 def GetBaseTemplateArgs():
   l.getLogger().debug("deeplearning.clgen.dashboard.GetBaseTemplateArgs()")
   return {
@@ -67,15 +72,16 @@ def parseCorpus(workspace_path):
     corpus_path = workspace_path / "corpus" / "encoded"
     for corpus_sha in corpus_path.iterdir():
       encoded_db = encoded.EncodedContentFiles("sqlite:///{}".format(corpus_sha / "encoded.db"), must_exist = True)
-      corpuses.append(
-        {
-          'path': str(corpus_path / corpus_sha),
-          'sha' : str(corpus_sha.stem),
-          'datapoint_count': encoded_db.size,
-          'summary': "{} datapoint corpus, {}".format(encoded_db.size, str(corpus_sha.stem)),
-          'models' : parseModels(workspace_path, str(corpus_sha.stem))
-        }
-      )
+      corpus = {
+        'path': corpus_path / corpus_sha,
+        'sha' : str(corpus_sha.stem),
+        'datapoint_count': encoded_db.size,
+        'summary': "{} datapoint corpus, {}".format(encoded_db.size, str(corpus_sha.stem)),
+        'models' : parseModels(workspace_path, str(corpus_sha.stem))
+      }
+      global cached_corpuses
+      cached_corpuses[crypto.sha256_str(str(workspace_path.name) + str(corpus_sha.name))] = corpus
+      corpuses.append(corpus)
   return corpuses
 
 def parseModels(workspace_path, corpus_sha: str):
@@ -196,9 +202,6 @@ def parseSamplers(workspace_path, sample_path, model_sha):
         model_samplers.append(sampler)
   return model_samplers
 
-data = {}
-cached_models = {}
-cached_samplers = {}
 def parseData():
 
   dashboard_path = pathlib.Path(FLAGS.workspace_dir).absolute()
@@ -225,19 +228,33 @@ def index():
 
 @flask_app.route("/<string:workspace>/corpus/<string:corpus_sha>/")
 def corpus(workspace: str, corpus_sha: str):
-  # dummy_data = {
-  #   "workspaces": {
-  #     "corpuses": {
-  #       'name': "haha", 
-  #       'path': "xoxo", 
-  #       'corpuses': ['1', '2', '3'], 
-  #       'models': ['4', '5', '6']
-  #       }
-  #   },
-  # }
   global data
-  dummy_data = data
-  return flask.render_template("corpus.html", data = dummy_data, **GetBaseTemplateArgs())
+  global cached_corpuses
+  if data == {}:
+    data = parseData()
+
+  target_sha = crypto.sha256_str(str(workspace) + corpus_sha)
+  corpus = cached_corpuses[target_sha]
+  corpus_stats = []
+
+  for d in glob.glob(str(corpus['path'] / "*.png")):
+    png_path = pathlib.Path(d)
+    dest_file = MEDIA_PATH / workspace / corpus_sha / png_path.name
+    dest_file.parent.mkdir(exist_ok = True, parents = True)
+    shutil.copyfile(
+      png_path,
+      str(dest_file)
+    )
+    corpus_stats.append(
+      {
+        'name': png_path.stem,
+        'plot':
+          "/" + str(dest_file.relative_to(pathlib.Path(flask_app.static_folder).parent))
+      }
+    )
+  corpus['stats'] = corpus_stats
+  print(corpus['summary'])
+  return flask.render_template("corpus.html", data = corpus, **GetBaseTemplateArgs())
 
 @flask_app.route("/<string:workspace>/model/<string:model_sha>/model_specs")
 def model_specs(workspace: str, model_sha: str):
@@ -264,7 +281,6 @@ def dataset(workspace: str, model_sha: str):
   current_model = cached_models[target_sha]
 
   datasets = []
-  l.getLogger().warn(glob.glob(str(current_model['path'] / "dataset" / "*.tf_record")))
   for d in glob.glob(str(current_model['path'] / "dataset" / "*.png")):
     png_path = pathlib.Path(d)
     dest_file = MEDIA_PATH / workspace / model_sha / "dataset" / png_path.name
@@ -519,98 +535,6 @@ def sample_files(workspace: str, model_sha: str, sampler_sha: str, sample_db: st
   }
   return flask.render_template("sample_files.html", data = sample_specs, **GetBaseTemplateArgs())
 
-@flask_app.route("/corpus/<int:corpus_id>/model/<int:model_id>/")
-def report(corpus_id: int, model_id: int):
-  corpus, corpus_config_proto, preprocessed_url, encoded_url = (
-    db.session.query(
-      dashboard_db.Corpus.summary,
-      dashboard_db.Corpus.config_proto,
-      dashboard_db.Corpus.preprocessed_url,
-      dashboard_db.Corpus.encoded_url,
-    )
-    .filter(dashboard_db.Corpus.id == corpus_id)
-    .one()
-  )
-  model, model_config_proto = (
-    db.session.query(
-      dashboard_db.Model.summary, dashboard_db.Model.config_proto
-    )
-    .filter(dashboard_db.Model.id == model_id)
-    .one()
-  )
-
-  telemetry = (
-    db.session.query(
-      dashboard_db.TrainingTelemetry.timestamp,
-      dashboard_db.TrainingTelemetry.epoch,
-      dashboard_db.TrainingTelemetry.step,
-      dashboard_db.TrainingTelemetry.training_loss,
-    )
-    .filter(dashboard_db.TrainingTelemetry.model_id == model_id)
-    .all()
-  )
-
-  q1 = (
-    db.session.query(sql.func.max(dashboard_db.TrainingTelemetry.id))
-    .filter(dashboard_db.TrainingTelemetry.model_id == model_id)
-    .group_by(dashboard_db.TrainingTelemetry.epoch)
-  )
-
-  q2 = (
-    db.session.query(
-      dashboard_db.TrainingTelemetry.timestamp,
-      dashboard_db.TrainingTelemetry.epoch,
-      dashboard_db.TrainingTelemetry.step,
-      dashboard_db.TrainingTelemetry.learning_rate,
-      dashboard_db.TrainingTelemetry.training_loss,
-      dashboard_db.TrainingTelemetry.pending,
-    )
-    .filter(dashboard_db.TrainingTelemetry.id.in_(q1))
-    .order_by(dashboard_db.TrainingTelemetry.id)
-  )
-
-  q3 = (
-    db.session.query(
-      sql.sql.expression.cast(
-        sql.func.avg(dashboard_db.TrainingTelemetry.ns_per_batch), sql.Integer
-      ).label("us_per_step"),
-    )
-    .group_by(dashboard_db.TrainingTelemetry.epoch)
-    .filter(dashboard_db.TrainingTelemetry.model_id == model_id)
-    .order_by(dashboard_db.TrainingTelemetry.id)
-  )
-
-  epoch_telemetry = [
-    {
-      "timestamp": r2.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-      "epoch": r2.epoch,
-      "step": humanize.intcomma(r2.step),
-      "learning_rate": f"{r2.learning_rate:.5E}",
-      "training_loss": f"{r2.training_loss:.6f}",
-      "pending": r2.pending,
-      "us_per_step": humanize.naturaldelta(r3.us_per_step / 1e6),
-    }
-    for r2, r3 in zip(q2, q3)
-  ]
-
-  data = GetBaseTemplateArgs()
-  data["corpus_id"] = corpus_id
-  data["model_id"] = model_id
-  data["corpus"] = corpus
-  data["model"] = model
-  data["data"] = {
-    "corpus_config_proto": corpus_config_proto,
-    "model_config_proto": model_config_proto,
-    "telemetry": telemetry,
-    "epoch_telemetry": epoch_telemetry,
-    "preprocessed_url": preprocessed_url,
-    "encoded_url": encoded_url,
-  }
-  data["urls"]["view_encoded_file"] = f"/corpus/{corpus_id}/encoded/random/"
-
-  return flask.render_template("report.html", **data)
-
-
 @flask_app.route("/corpus/<int:corpus_id>/encoded/random/")
 def random_encoded_contentfile(corpus_id: int):
   l.getLogger().debug("deeplearning.clgen.dashboard.random_encoded_contentfile()")
@@ -631,83 +555,6 @@ def random_encoded_contentfile(corpus_id: int):
     )
 
   return flask.redirect(f"/corpus/{corpus_id}/encoded/{random_id}/", code=302)
-
-
-@flask_app.route("/corpus/<int:corpus_id>/encoded/<int:encoded_id>/")
-def encoded_contentfile(corpus_id: int, encoded_id: int):
-  l.getLogger().debug("deeplearning.clgen.dashboard.encoded_contentfile()")
-  (encoded_url,) = (
-    db.session.query(dashboard_db.Corpus.encoded_url)
-    .filter(dashboard_db.Corpus.id == corpus_id)
-    .one()
-  )
-
-  encoded_db = encoded.EncodedContentFiles(encoded_url, must_exist=True)
-
-  with encoded_db.Session() as session:
-    cf = (
-      session.query(encoded.EncodedContentFile)
-      .filter(encoded.EncodedContentFile.id == encoded_id)
-      .limit(1)
-      .one()
-    )
-    indices = cf.indices_array
-    vocab = {
-      v: k
-      for k, v in encoded.EncodedContentFiles.GetVocabFromMetaTable(
-        session
-      ).items()
-    }
-    tokens = [vocab[i] for i in indices]
-    text = "".join(tokens)
-    encoded_cf = {
-      "id": cf.id,
-      "tokencount": humanize.intcomma(cf.tokencount),
-      "indices": indices,
-      "text": text,
-      "tokens": tokens,
-    }
-    vocab = {
-      "table": [(k, v) for k, v in vocab.items()],
-      "size": len(vocab),
-    }
-
-  data = GetBaseTemplateArgs()
-  data["encoded"] = encoded_cf
-  data["vocab"] = vocab
-  data["urls"]["view_encoded_file"] = f"/corpus/{corpus_id}/encoded/random/"
-  return flask.render_template("encoded_contentfile.html", **data)
-
-
-@flask_app.route(
-  "/corpus/<int:corpus_id>/model/<int:model_id>/samples/<int:epoch>"
-)
-def samples(corpus_id: int, model_id: int, epoch: int):
-  l.getLogger().debug("deeplearning.clgen.dashboard.samples()")
-  samples = (
-    db.session.query(
-      dashboard_db.TrainingSample.sample,
-      dashboard_db.TrainingSample.token_count,
-      dashboard_db.TrainingSample.sample_time,
-    )
-    .filter(
-      dashboard_db.TrainingSample.model_id == model_id,
-      dashboard_db.TrainingSample.epoch == epoch,
-    )
-    .all()
-  )
-
-  data = {
-    "samples": samples,
-  }
-
-  opts = GetBaseTemplateArgs()
-  opts["urls"]["back"] = f"/corpus/{corpus_id}/model/{model_id}/"
-
-  return flask.render_template(
-    "samples.html", data=data, corpus_id=corpus_id, model_id=model_id, **opts
-  )
-
 
 def Launch(host: str = "0.0.0.0",
            debug: bool = False,
