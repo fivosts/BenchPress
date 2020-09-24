@@ -48,16 +48,14 @@ def initTensorflow():
   os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(FLAGS.tf_logging_level).lower()
   os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = str(FLAGS.tf_gpu_allow_growth).lower()
   available_gpu = gpu.getGPUID()
-
   try:
     if FLAGS.tf_device == "tpu":
       raise NotImplementedError
-    elif FLAGS.tf_device == "gpu" and available_gpu:
-      if available_gpu:
-        os.environ['CUDA_VISIBLE_DEVICES'] = str(available_gpu)
-        tensorflow.config.set_visible_devices(
-          tensorflow.config.list_physical_devices('GPU')[available_gpu], 'GPU'
-        )
+    elif FLAGS.tf_device == "gpu" and available_gpu is not None:
+      os.environ['CUDA_VISIBLE_DEVICES'] = str(available_gpu)
+      tensorflow.config.set_visible_devices(
+        tensorflow.config.list_physical_devices('GPU')[available_gpu], 'GPU'
+      )
     else:
       l.getLogger().info("Selected CPU device.")
       os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
