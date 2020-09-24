@@ -1,4 +1,4 @@
-if (NOT PROTOC_FOUND)
+if (PROTOC_FROM_SOURCE)
   add_custom_target(clgen_protobufs ALL
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/clgen.proto        --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/corpus.proto       --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
