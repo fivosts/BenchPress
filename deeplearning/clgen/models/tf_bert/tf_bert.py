@@ -396,7 +396,8 @@ class tfBert(backends.BackendBase):
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
     data_generator = tfLMDataGenerator.SampleMaskLMBatchGenerator(
-                       sampler, self.atomizer, seed, self.config.architecture.max_position_embeddings, self.cache.path
+                       self.config.training, sampler, self.atomizer, seed,
+                       self.config.architecture.max_position_embeddings, self.cache.path
                      )
     self._ConfigSampleParams(data_generator, sampler)
     l.getLogger().info("Initialized model samples in {}".format(self.sample_path))
