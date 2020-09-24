@@ -412,15 +412,14 @@ def training(workspace: str, model_sha: str):
   data['plots'] = []
 
   target_sha = crypto.sha256_str(str(workspace) + model_sha)
-  current_model_logdir = cached_models[target_sha]['path'] / "logs"
-  for file in current_model_logdir.iterdir():
-    if file.suffix == ".png":
-      dest_file = MEDIA_PATH / workspace / model_sha / "logs" / file.name
-      dest_file.parent.mkdir(exist_ok = True, parents = True)
-      shutil.copyfile(file, str(dest_file))
-      data['plots'].append(
-        "/" + str(dest_file.relative_to(pathlib.Path(flask_app.static_folder).parent))
-      )
+  for d in glob.glob(str(cached_models[target_sha]['path'] / "logs" / "*.png")):
+    png_file = pathlib.Path(d)
+    dest_file = MEDIA_PATH / workspace / model_sha / "logs" / png_file.name
+    dest_file.parent.mkdir(exist_ok = True, parents = True)
+    shutil.copyfile(png_file, dest_file)
+    data['plots'].append(
+      "/" + str(dest_file.relative_to(pathlib.Path(flask_app.static_folder).parent))
+    )
 
   data['summary']   = cached_models[target_sha]['summary']
   data['workspace'] = workspace
