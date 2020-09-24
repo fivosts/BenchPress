@@ -543,7 +543,7 @@ class writeValidationDB(_tfEstimatorHooks):
     with self.val_db.Session(commit = True) as session:
       for b in range(batch_size):
         val_trace = validation_database.BERTValFile(
-          **validation_database.BERTtfValFile.FromArgs(
+          **validation_database.BERTValFile.FromArgs(
             atomizer = self.atomizer,
             id       = self.val_id,
             train_step                = run_values.results[self.global_step],
@@ -561,7 +561,7 @@ class writeValidationDB(_tfEstimatorHooks):
           )
         )
         try:
-          exists = session.query(validation_database.BERTtfValFile.sha256).filter_by(sha256 = val_trace.sha256).scalar() is not None
+          exists = session.query(validation_database.BERTValFile.sha256).filter_by(sha256 = val_trace.sha256).scalar() is not None
         except sqlalchemy.orm.exc.MultipleResultsFound as e:
           l.getLogger().error("Selected sha256 has been already found more than once.")
           raise e
