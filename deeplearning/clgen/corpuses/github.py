@@ -70,7 +70,7 @@ class GithubRepo():
 
     if url != self.url:
       raise ValueError("Updated url of already existent repo does not match.")
-    self.ownner        = owner
+    self.owner        = owner
     self.name          = name
     self.fork          = fork
     self.stars         = stars
