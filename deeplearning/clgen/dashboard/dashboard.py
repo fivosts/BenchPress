@@ -264,24 +264,22 @@ def dataset(workspace: str, model_sha: str):
   current_model = cached_models[target_sha]
 
   datasets = []
-  for d in glob.glob(str(current_model['path'] / "dataset" / "*.tf_record")):
-    set_path = pathlib.Path(d)
-    png_name = ''.join(set_path.stem.split('-')[:-1])
-    if (current_model['path'] / "dataset" / "{}.png".format(png_name)).exists():
-      png_file = current_model['path'] / "dataset" / "{}.png".format(png_name)
-      dest_file = MEDIA_PATH / workspace / model_sha / "dataset" / png_file.name
-      dest_file.parent.mkdir(exist_ok = True, parents = True)
-      shutil.copyfile(
-        png_file,
-        str(dest_file)
-      )
-      datasets.append(
-        {
-          'name': png_name,
-          'plot': 
-            "/" + str(dest_file.relative_to(pathlib.Path(flask_app.static_folder).parent))
-        }
-      )
+  l.getLogger().warn(glob.glob(str(current_model['path'] / "dataset" / "*.tf_record")))
+  for d in glob.glob(str(current_model['path'] / "dataset" / "*.png")):
+    png_path = pathlib.Path(d)
+    dest_file = MEDIA_PATH / workspace / model_sha / "dataset" / png_path.name
+    dest_file.parent.mkdir(exist_ok = True, parents = True)
+    shutil.copyfile(
+      png_path,
+      str(dest_file)
+    )
+    datasets.append(
+      {
+        'name': png_path.stem,
+        'plot': 
+          "/" + str(dest_file.relative_to(pathlib.Path(flask_app.static_folder).parent))
+      }
+    )
   spec_data = {
     'summary'  : current_model['summary'],
     'workspace': workspace,
