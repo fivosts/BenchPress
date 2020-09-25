@@ -8,17 +8,25 @@ from eupy.native import logger as l
 # Construct a BigQuery client object.
 client = bigquery.Client()
 
-query = """
-    SELECT name, SUM(number) as total_people
-    FROM `bigquery-public-data.usa_names.usa_1910_2013`
-    WHERE state = 'TX'
-    GROUP BY name, state
-    ORDER BY total_people DESC
-    LIMIT 20
+count_query = """
+SELECT COUNT(*)
+FROM `bigquery-public-data.github_repos.files`
+WHERE substr(path, -3, 4) = '.cl'
 """
-query_job = client.query(query)  # Make an API request.
 
-print("The query data:")
-for row in query_job:
-    # Row values can be accessed by field name or index.
-    print("name={}, count={}".format(row[0], row["total_people"]))
+db_query = """
+SELECT file.repo_name, file.path, file.ref, file.mode, file.id, file.symlink_target, contentfile.size, contentfile.content, contentfile.binary, contentfile.copies
+FROM `bigquery-public-data.github_repos.contents` as contentfile
+INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id AND substr(file.path, -3, 4) = '.cl'
+LIMIT 10
+"""
+
+count_job = client.query(count_query)  # Make an API request.
+file_job  = client.query(db_query)  # Make an API request.
+
+for row in count_job:
+  for item in row:
+    l.getLogger().info(item)
+for row in file_job:
+  for item in row:
+    l.getLogger().info(item)
