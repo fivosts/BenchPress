@@ -14,4 +14,5 @@ clgen
 /workspace
 
 # Big corpus folders
-/model_zoo/corpus
+/model_zoo/corpus/*.tar.bz2
+/model_zoo/corpus/*.tar
