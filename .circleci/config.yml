@@ -13,8 +13,23 @@ jobs:
           name: Download Miniconda
           command: echo "HI"
       - run:
-          name: Check python version
-          command: python --version
+          name: LS
+          command: ls
+      - run:
+          name: PWD
+          command: pwd
+      - run:
+          name: Bootstrap application
+          command: |
+            "cmake y" | bash requirements.apt
+      - run:
+        command: mkdir build && cd build
+      - run:
+          name: Build application
+          command: ../cmake/bin/cmake .. -DPYTHON=python3
+      - run:
+          name: Compile application
+          command: make -j $(nproc)
 
 workflows:
   version: 2
