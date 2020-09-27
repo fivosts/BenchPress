@@ -10,18 +10,12 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Download Miniconda
-          command: echo "HI"
-      - run:
-          name: LS
-          command: ls
-      - run:
-          name: PWD
-          command: pwd
+          name: Matrix python version
+          command: python <<matrix.python_version>>
       - run:
           name: Bootstrap application
           command: |
-            "cmake y" | bash requirements.apt
+            "/tmp/cmake y" | bash requirements.apt
       - run:
           command: mkdir build && cd build
       - run:
@@ -38,7 +32,7 @@ workflows:
       - build_clgen:
           matrix:
             parameters:
-              python_version: ["3.8", "3.7", "3.6"]
+              python_version: ["3.5", "3.6", "3.7", "3.8"]
           name: python<< matrix.python_version >> python version
 
       # - run:

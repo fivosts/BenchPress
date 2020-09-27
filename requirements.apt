@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-# python3.7 get-pip.py
-
 function install_apt_deps()
 {
 
@@ -40,6 +37,9 @@ function install_apt_deps()
     mysql-server \
     libmysqlclient-dev \
     libsqlite3-dev
+
+    curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
+    python3.7 /tmp/get-pip.py
   else
     # echo "-- The existence of gcc >= 7 will be checked. If not found, gcc-9 will be installed from source."
     echo "-- You have no sudo rights, which means the following things:"
@@ -80,7 +80,7 @@ function check_cmake()
     tar -xvf cmake-3.13.4.tar.gz
     cd cmake-3.13.4
     ./bootstrap --prefix=${cmake_bin}
-    make -j $(nproc)
+    make -j #$(nproc)
     make install
     cd ..
     cmake --version
