@@ -63,8 +63,8 @@ def initTensorflow():
           selected_gpu = gp
       if selected_gpu is None:
         raise ValueError("Invalid GPU ID: {}".format(gpuid))
-      l.getLogger().info("Selected GPU:{} {}".format(available_gpus[gpuid]['id'], available_gpus[gpuid]['gpu_name']))
-      os.environ['CUDA_VISIBLE_DEVICES'] = str(available_gpus[gpuid])
+      l.getLogger().info("Selected GPU:{} {}".format(selected_gpu['id'], selected_gpu['gpu_name']))
+      os.environ['CUDA_VISIBLE_DEVICES'] = str(selected_gpu)
     else:
       l.getLogger().info("Selected CPU device.")
       os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
