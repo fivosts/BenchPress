@@ -18,7 +18,8 @@ jobs:
                 command: |
                   echo -e "cmake\nn\ny" | bash requirements.apt
       - when:
-          condition: not ["from_source", <<parameters.python_version>>]
+          condition: 
+            not equal: ["from_source", <<parameters.python_version>>]
           steps:
           - run:
               name: Bootstrap application with sudo
