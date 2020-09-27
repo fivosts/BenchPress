@@ -15,7 +15,7 @@ jobs:
       - run:
           name: Bootstrap application
           command: |
-            cmake y | sudo bash requirements.apt
+            echo "cmake y" | sudo bash requirements.apt
       - run:
           command: mkdir build && cd build
       - run:
