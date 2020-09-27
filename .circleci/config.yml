@@ -11,7 +11,7 @@ jobs:
       - checkout
       - run:
           name: Matrix python version
-          command: python <<python_version>>
+          command: python <<parameters.python_version>>
       - run:
           name: Bootstrap application
           command: |
