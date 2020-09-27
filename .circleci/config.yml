@@ -1,20 +1,23 @@
 version: 2.1
 
 workflows:
-  workflow:
+  build:
     jobs:
       - build:
           matrix:
             parameters:
               python: ["python3.5", "python3.6", "python3.7"]
-          filters:
-            branches:
-              only: master
+          # filters:
+          #   branches:
+          #     only: master
 
 jobs:
   build:
     machine:
       image: ubuntu-1604:202007-01
+    parameters:
+      python:
+        type: string
     steps:
       - checkout
       - run:
