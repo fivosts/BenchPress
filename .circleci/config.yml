@@ -16,14 +16,14 @@ jobs:
             - run:
                 name: Bootstrap application without sudo
                 command: |
-                  echo -e "cmake\nny" | bash requirements.apt
+                  echo -e "cmake\nn\ny" | bash requirements.apt
       - when:
           condition: not ["from_source", <<parameters.python_version>>]
           steps:
           - run:
               name: Bootstrap application with sudo
               command: |
-                echo -e "cmake\ny\n<<parameters.python_version>>y" | bash requirements.apt
+                echo -e "cmake\ny\n<<parameters.python_version>>\ny" | bash requirements.apt
       - run:
           command: mkdir build && cd build
       - run:
