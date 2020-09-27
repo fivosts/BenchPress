@@ -82,8 +82,8 @@ function check_cmake()
     echo "-- For that reason, make sure that:"
     echo "   A) You specify the parent of a bin folder, e.g. (/usr/ instead of /usr/bin/)"
     echo "   B) The specified folder is in your \$PATH"
-    echo "-- Installation folder:"
     read path
+    echo "-- Installation folder: $path"
     cmake_bin=$(realpath $path)
     mkdir -p $cmake_bin
     cpwd=$(pwd)
