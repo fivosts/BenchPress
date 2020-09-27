@@ -9,13 +9,21 @@ jobs:
       image: ubuntu-1604:202007-01
     steps:
       - checkout
-      - run:
-          name: Matrix python version
-          command: echo <<parameters.python_version>>
-      - run:
-          name: Bootstrap application
-          command: |
-            echo -e "cmake\ny\n<<parameters.python_version>>" | bash requirements.apt
+      - when:
+          condition: 
+            equal: ["from_source", <<parameters.python_version>>]
+          steps:
+            - run:
+                name: Bootstrap application without sudo
+                command: |
+                  echo -e "cmake\nn" | bash requirements.apt
+      - unless:
+          condition: <<parameters.python_version>>
+          steps:
+          - run:
+              name: Bootstrap application with sudo
+              command: |
+                echo -e "cmake\ny\n<<parameters.python_version>>" | bash requirements.apt
       - run:
           command: mkdir build && cd build
       - run:
@@ -32,5 +40,5 @@ workflows:
       - build_clgen:
           matrix:
             parameters:
-              python_version: ["python3.5", "python3.6", "python3.7", "python3.8"]
+              python_version: ["python3.5", "python3.6", "python3.7", "python3.8", "from_source"]
           name: << matrix.python_version >>
