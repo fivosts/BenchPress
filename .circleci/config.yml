@@ -13,8 +13,8 @@ jobs:
           name: Download Miniconda
           command: echo "HI"
       - run:
-        name: Check python version
-        command: python --version
+          name: Check python version
+          command: python --version
 
 workflows:
   version: 2
