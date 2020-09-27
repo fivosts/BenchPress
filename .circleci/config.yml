@@ -6,71 +6,63 @@ workflows:
       - build:
           matrix:
             parameters:
-              version: ["0.1", "0.2", "0.3"]
-              platform: ["macos", "windows", "linux"]
+              python: ["python3.5", "python3.6", "python3.7"]
           filters:
             branches:
               only: master
 
-
-
 jobs:
   build:
-    docker:
-      - image: circleci/python:3.6.2-stretch-browsers
-        environment:
-          FLASK_CONFIG: testing
-          TEST_DATABASE_URL: postgresql://ubuntu@localhost/circle_test?sslmode=disable
-      - image: circleci/postgres:9.6.5-alpine-ram
-        environment:
-          POSTGRES_USER: ubuntu
-          POSTGRES_DB: circle_test
-          POSTGRES_PASSWORD: ''
+    machine:
+      image: ubuntu-1604:202007-01
     steps:
       - checkout
-      - run: mkdir test-reports
       - run:
-          name: Download Selenium
-          command: |
-            curl -O http://selenium-release.storage.googleapis.com/3.5/selenium-server-standalone-3.5.3.jar
-      - run:
-          name: Start Selenium
-          command: |
-            java -jar selenium-server-standalone-3.5.3.jar -log test-reports/selenium.log
-          background: true
-      - restore_cache:
-          key: deps2-{{ checksum "requirements/dev.txt" }}
-      - run:
-          command: |
-            python3 -m venv venv
-            . venv/bin/activate
-            pip install -r requirements/dev.txt
+        name: "Test"
+        command: <<parameters.python>> --version
+      # - run: mkdir test-reports
+      # - run:
+      #     name: Download Selenium
+      #     command: |
+      #       curl -O http://selenium-release.storage.googleapis.com/3.5/selenium-server-standalone-3.5.3.jar
+      # - run:
+      #     name: Start Selenium
+      #     command: |
+      #       java -jar selenium-server-standalone-3.5.3.jar -log test-reports/selenium.log
+      #     background: true
+      # - restore_cache:
+      #     key: deps2-{{ checksum "requirements/dev.txt" }}
+      # - run:
+      #     command: |
+      #       python3 -m venv venv
+      #       . venv/bin/activate
+      #       pip install -r requirements/dev.txt
 
 
-os: linux
-dist: bionic
+# os: linux
+# dist: bionic
 
-language:
-  - python
+# language:
+#   - python
 
-python:
-  - "3.7"
+# python:
+#   - "3.7"
 
-services:
-  - mysql
+# services:
+#   - mysql
 
-install:
-  - bash apt_deps.sh
-  - sudo cp /usr/lib/python3/dist-packages/apt_pkg.cpython-{36m,37m}-x86_64-linux-gnu.so
-  - sudo cp /usr/lib/python3/dist-packages/apt_inst.cpython-{36m,37m}-x86_64-linux-gnu.so
-  - bazel build //deeplearning/clgen
+# install:
+#   - bash apt_deps.sh
+#   - sudo cp /usr/lib/python3/dist-packages/apt_pkg.cpython-{36m,37m}-x86_64-linux-gnu.so
+#   - sudo cp /usr/lib/python3/dist-packages/apt_inst.cpython-{36m,37m}-x86_64-linux-gnu.so
+#   - bazel build //deeplearning/clgen
 
-before_script:
-  - python3 --version
-  - python --version
-  - bazel --version
-  - gcc --version
-  - python -m pip list tensorflow | grep tensorflow
+# before_script:
+#   - python3 --version
+#   - python --version
+#   - bazel --version
+#   - gcc --version
+#   - python -m pip list tensorflow | grep tensorflow
 
-script:
-  - bazel-bin/deeplearning/clgen/clgen --min_samples 5 --config deeplearning/clgen/tests/data/tiny/config.pbtxt
+# script:
+#   - bazel-bin/deeplearning/clgen/clgen --min_samples 5 --config deeplearning/clgen/tests/data/tiny/config.pbtxt
