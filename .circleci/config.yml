@@ -1,28 +1,72 @@
 version: 2.1
 
-workflows:
-  build:
-    jobs:
-      - build:
-          matrix:
-            parameters:
-              python: ["python3.5", "python3.6", "python3.7"]
-          # filters:
-          #   branches:
-          #     only: master
-
 jobs:
-  build:
+  build_clgen:
+    parameters:
+      python_version:
+        type: string
     machine:
       image: ubuntu-1604:202007-01
-    parameters:
-      python:
-        type: string
     steps:
       - checkout
       - run:
-        name: "Test"
-        command: <<matrix.python>> --version
+          name: Download Miniconda
+          command: echo "HI"
+          
+workflows:
+  version: 2
+  python_versions:
+    jobs:
+      - build_clgen:
+          matrix:
+            parameters:
+              python_version: ["3.8", "3.7", "3.6"]
+          name: python<< matrix.python_version >> python version
+
+      # - run:
+      #     name: Install Miniconda
+      #     command: start /wait C:\featuretools\\<< parameters.miniconda_pkg_name >> /InstallationType=JustMe /RegisterPython=0 /S /D=%UserProfile%\Miniconda3
+      #     shell: cmd.exe
+      # - run:
+      #     name: Create New Python Environment
+      #     command: |
+      #         C:\Users\circleci\Miniconda3\shell\condabin\conda-hook.ps1
+      #         conda create -n featuretools python=<< parameters.python_version >>
+      # - run:
+      #     name: Install Graphviz
+      #     command: |
+      #         C:\Users\circleci\Miniconda3\shell\condabin\conda-hook.ps1
+      #         conda activate featuretools
+      #         conda config --add channels conda-forge
+      #         conda install python-graphviz -q -y
+      # - run:
+      #     name: Install Featuretools
+      #     command: |
+      #         C:\Users\circleci\Miniconda3\shell\condabin\conda-hook.ps1
+      #         conda activate featuretools
+      #         python -m pip install --upgrade pip
+      #         python -m pip install .
+      #         python -m pip install -r test-requirements.txt
+      # - run:
+      #     name: Run Unit Tests
+      #     command: |
+      #         C:\Users\circleci\Miniconda3\shell\condabin\conda-hook.ps1
+      #         conda activate featuretools
+      #         pytest featuretools\ -n 2
+
+
+# jobs:
+#   build:
+#     machine:
+#       image: ubuntu-1604:202007-01
+#     parameters:
+#       python:
+#         type: string
+#     steps:
+#       - checkout
+#       - run:
+#         name: "Test"
+#         command: <<matrix.python>> --version
       # - run: mkdir test-reports
       # - run:
       #     name: Download Selenium
