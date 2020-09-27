@@ -1,6 +1,7 @@
 """A wrapper module to include tensorflow with some options"""
 from absl import flags
 import os
+import re
 
 from deeplearning.clgen.util import gpu
 
@@ -47,12 +48,23 @@ def initTensorflow():
   tensorflow.python.util.deprecation._PRINT_DEPRECATION_WARNINGS = FLAGS.tf_print_deprecation
   os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(FLAGS.tf_logging_level).lower()
   os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = str(FLAGS.tf_gpu_allow_growth).lower()
-  available_gpu = gpu.getGPUID()
+  available_gpus = gpu.getGPUID()
   try:
     if FLAGS.tf_device == "tpu":
       raise NotImplementedError
-    elif FLAGS.tf_device == "gpu" and available_gpu is not None:
-      os.environ['CUDA_VISIBLE_DEVICES'] = str(available_gpu)
+    elif FLAGS.tf_device == "gpu" and available_gpus is not None:
+      l.getLogger().info("Selected GPU:{} {}".format(available_gpus[0]['id'], available_gpus[0]['gpu_name']))
+      os.environ['CUDA_VISIBLE_DEVICES'] = str(available_gpus[0])
+    elif re.search("gpu:[0-9]", FLAGS.tf_device) and available_gpus is not None:
+      gpuid = int(FLAGS.tf_device.split(':')[-1])
+      selected_gpu = None
+      for gp in available_gpus:
+        if int(gp['id']) == gpuid:
+          selected_gpu = gp
+      if selected_gpu is None:
+        raise ValueError("Invalid GPU ID: {}".format(gpuid))
+      l.getLogger().info("Selected GPU:{} {}".format(available_gpus[gpuid]['id'], available_gpus[gpuid]['gpu_name']))
+      os.environ['CUDA_VISIBLE_DEVICES'] = str(available_gpus[gpuid])
     else:
       l.getLogger().info("Selected CPU device.")
       os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
