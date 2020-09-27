@@ -80,7 +80,7 @@ function check_cmake()
     tar -xvf cmake-3.13.4.tar.gz
     cd cmake-3.13.4
     ./bootstrap --prefix=${cmake_bin}
-    make -j #$(nproc)
+    make -j $(nproc)
     make install
     cd ..
     cmake --version
