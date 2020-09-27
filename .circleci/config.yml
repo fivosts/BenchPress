@@ -23,7 +23,7 @@ jobs:
           command: |
             "cmake y" | bash requirements.apt
       - run:
-        command: mkdir build && cd build
+          command: mkdir build && cd build
       - run:
           name: Build application
           command: ../cmake/bin/cmake .. -DPYTHON=python3
