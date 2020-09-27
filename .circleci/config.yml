@@ -18,7 +18,7 @@ jobs:
                 command: |
                   echo -e "cmake\nny" | bash requirements.apt
       - unless:
-          condition: ["python*", <<parameters.python_version>>]
+          condition: true
           steps:
           - run:
               name: Bootstrap application with sudo
