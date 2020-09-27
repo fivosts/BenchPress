@@ -19,7 +19,7 @@ jobs:
       - checkout
       - run:
         name: "Test"
-        command: <<parameters.python>> --version
+        command: <<matrix.python>> --version
       # - run: mkdir test-reports
       # - run:
       #     name: Download Selenium
