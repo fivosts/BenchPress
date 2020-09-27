@@ -15,7 +15,7 @@ jobs:
       - run:
           name: Bootstrap application
           command: |
-            echo "cmake y" | bash requirements.apt
+            echo "cmake y <<parameters.python_version>>" | bash requirements.apt
       - run:
           command: mkdir build && cd build
       - run:
