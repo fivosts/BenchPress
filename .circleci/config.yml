@@ -5,8 +5,8 @@ jobs:
     parameters:
       python_version:
         type: string
-    machine:
-      image: ubuntu-1604:202007-01
+    docker:
+      image: cimg/base:2020.01
     steps:
       - checkout
       - when:
@@ -16,14 +16,14 @@ jobs:
             - run:
                 name: Bootstrap application without sudo
                 command: |
-                  echo -e "cmake\nn" | bash requirements.apt
+                  echo -e "cmake\nny" | bash requirements.apt
       - unless:
           condition: <<parameters.python_version>>
           steps:
           - run:
               name: Bootstrap application with sudo
               command: |
-                echo -e "cmake\ny\n<<parameters.python_version>>" | bash requirements.apt
+                echo -e "cmake\ny\n<<parameters.python_version>>y" | bash requirements.apt
       - run:
           command: mkdir build && cd build
       - run:
