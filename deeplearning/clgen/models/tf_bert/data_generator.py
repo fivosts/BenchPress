@@ -100,9 +100,9 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       if is_training:
         dataset = tf.io.gfile.glob([str(p) for p in self.dataset['train_dataset']['file']])
         d = tf.data.Dataset.from_tensor_slices(tf.constant(dataset))
-        d = d.repeat()
         if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
-          d = d.shuffle(buffer_size=len(dataset))
+          d = d.shuffle(buffer_size = len(dataset), reshuffle_each_iteration=True)
+        d = d.repeat()
 
         # `cycle_length` is the number of parallel files that get read.
         cycle_length = min(num_cpu_threads, len(dataset))
@@ -114,8 +114,6 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                 tf.data.TFRecordDataset,
                 sloppy=is_training,
                 cycle_length=cycle_length))
-        if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
-          d = d.shuffle(buffer_size=100)
       else:
         if eval_set is None:
           dataset = tf.io.gfile.glob(

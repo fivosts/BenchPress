@@ -370,6 +370,7 @@ class tfBert(backends.BackendBase):
     if FLAGS.force_eval and not self.is_validated:
       self.Validate()
     # self.telemetry.TfRecordEpochs()
+    self.train = None
     return
 
   def Validate(self) -> None:
