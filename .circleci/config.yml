@@ -17,8 +17,8 @@ jobs:
                 name: Bootstrap application without sudo
                 command: |
                   echo -e "cmake\nny" | bash requirements.apt
-      - unless:
-          condition: true
+      - when:
+          condition: not ["from_source", <<parameters.python_version>>]
           steps:
           - run:
               name: Bootstrap application with sudo
