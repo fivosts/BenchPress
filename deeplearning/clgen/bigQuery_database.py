@@ -31,6 +31,7 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
   id             : int = sql.Column(sql.Integer,    primary_key = True)
   sha256         : str = sql.Column(sql.String(64), nullable = False, index = True)
   repo_name      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  ref            : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   path           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   mode           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   symlink_target : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
@@ -43,27 +44,21 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
   @classmethod
   def FromArgs(cls, 
                id: int,
-               repo_name: str,
-               path: str,
-               mode: str,
-               symlink_target:str,
-               size   :str,
-               content:str,
-               binary :str,
-               copies :str,
+               row
                ) -> typing.Dict[str, typing.Any]:
 
     return {
       "id"             : id,
-      "sha256"         : crypto.sha256_str(content),
-      "repo_name"      : repo_name,
-      "path"           : path,
-      "mode"           : mode,
-      "symlink_target" : symlink_target,
-      "size"           : size,
-      "content"        : content,
-      "binary"         : binary,
-      "copies"         : copies,
+      "sha256"         : row['id'],
+      "repo_name"      : row['repo_name'],
+      "ref"            : row['ref']
+      "path"           : row['path'],
+      "mode"           : row['mode'],
+      "symlink_target" : row['symlink_target'],
+      "size"           : row['size'],
+      "content"        : row['content'],
+      "binary"         : row['binary'],
+      "copies"         : row['copies'],
       "date_added"     : datetime.datetime.utcnow(),
     }
 
