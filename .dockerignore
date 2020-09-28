@@ -1,5 +1,5 @@
 # Binary symbolic links
-clgen
+/clgen
 
 # Build folders
 *__pycache__*
