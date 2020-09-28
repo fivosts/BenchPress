@@ -539,12 +539,6 @@ def ResolveContentId(
     github_fetcher = github.GithubFetcher(gitfile_path)
 
     github_fetcher.fetch()
-    # After the first time we compute the hash of a directory, we write it into
-    # a file. This is a shortcut to work around the fact that computing the
-    # directory checksum is O(n) with respect to the number of files in the
-    # directory (even if the directory is already cached by the hash cache).
-    # This means that it is the responsibility of the user to delete this cached
-    # file if the directory is changed.
     hash_file_path = pathlib.Path(str(gitfile_path) + ".sha1.txt")
     if hash_file_path.is_file():
       l.getLogger().info("Reading directory hash: '{}'.".format(hash_file_path))
