@@ -15,7 +15,9 @@ WHERE substr(path, -3, 4) = '.cl'
 """
 
 db_query = """
-SELECT file.repo_name, file.path, file.ref, file.mode, file.id, file.symlink_target, contentfile.size, contentfile.content, contentfile.binary, contentfile.copies
+SELECT file.repo_name, file.path, file.ref, file.mode, 
+       file.id, file.symlink_target, contentfile.size, 
+       contentfile.content, contentfile.binary, contentfile.copies
 FROM `bigquery-public-data.github_repos.contents` as contentfile
 INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id AND substr(file.path, -3, 4) = '.cl'
 LIMIT 10
