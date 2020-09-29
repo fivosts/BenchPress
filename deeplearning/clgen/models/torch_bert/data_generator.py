@@ -36,7 +36,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     d = super(torchLMDataGenerator, torchLMDataGenerator()).TrainMaskLMBatchGenerator(
                 corpus, training_opts, cache_path
         )
-    d.train_dataloader()
+    d.dataloader = d.train_dataloader()
     return d
 
   @classmethod
@@ -52,15 +52,22 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     d = super(torchLMDataGenerator, torchLMDataGenerator()).SampleMaskLMBatchGenerator(
               model_opts, sampler, atomizer, seed, max_position_embeddings, cache_path
         )
-    d.predict_dataloader()
+    d.dataloader = d.predict_dataloader()
     return d
 
-  def train_dataloader(self) -> None:
-    """Pytorch dataloader that assembles all dataset files into a single-mapped dataset."""
+  def train_dataloader(self, set_name = 'train_dataset') -> None:
+    """
+    Pytorch dataloader used for training.
+  
+    set_name defaults to train_dataset, and that way this function
+    this dataloader's function is used for training.
+
+    eval_dataloaders sets set_name to reuse the function for all different sets.
+    """
     dataset = torch.utils.data.ConcatDataset(
-                [torch.load(x) for x in self.dataset['train_dataset']['file']]
+                [torch.load(x) for x in self.dataset[set_name]['file']]
               )
-    self.dataloader = torch.utils.data.dataloader.DataLoader(
+    dataloader = torch.utils.data.dataloader.DataLoader(
       dataset    = dataset,
       batch_size = self.training_opts.batch_size,
       sampler    = (
@@ -68,47 +75,36 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
             else torch.utils.data.distributed.DistributedSampler(
                   dataset, 
-                  num_replicas = pytorch.torch_xla.xrt_world_size(), 
+                  num_replicas = pytorch.torch_xla.xrt_world_size(),
                   rank = pytorch.torch_xla.get_ordinal()
                  )
             ),
       num_workers = os.cpu_count(),
       drop_last   = True,
     )
-    return
+    return dataloader
 
   def eval_dataloaders(self):
+    """Pytorch dataloader used for validation."""
     for set_name in self.dataset:
-      dataset = torch.utils.data.ConcatDataset(
-                  [torch.load(x) for x in self.dataset[set_name]['file']]
-                )
-      dataloader = torch.utils.data.dataloader.DataLoader(
-        dataset    = dataset,
-        batch_size = self.training_opts.batch_size,
-        sampler    = (
-              torch.utils.data.RandomSampler(dataset, replacement = False)
-              if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
-              else torch.utils.data.distributed.DistributedSampler(
-                    dataset, 
-                    num_replicas = pytorch.torch_xla.xrt_world_size(), 
-                    rank = pytorch.torch_xla.get_ordinal()
-                   )
-              ),
-        num_workers = os.cpu_count(),
-        drop_last   = True,
-      )
-      yield set_name, dataloader
+      yield set_name, self.train_dataloader(set_name)
 
   def predict_dataloader(self):
-
+    """
+    Pytorch dataloader used for inference.
+    
+    isFixedStr == True means there is a fixed sample feed, e.g. 'kernel void [HOLE]'
+    Otherwise, a set has been given to provide random samples from it.
+    """
     if self.sampler.isFixedStr:
-      input_sample = self.sampler.encoded_start_text
-      assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
 
-      target_idx = np.where(np.in1d(input_sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
-      assert len(target_idx) != 0, "No target prediction in sample text"
-      num_targets = (np.count_nonzero(input_sample == self.atomizer.maskToken) + 
+      input_sample = self.sampler.encoded_start_text
+      target_idx   = np.where(np.in1d(input_sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
+      num_targets  = (np.count_nonzero(input_sample == self.atomizer.maskToken) + 
                      np.count_nonzero(input_sample == self.atomizer.holeToken))
+
+      assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
+      assert len(target_idx)       != 0, "No target prediction in sample text"
 
       seen_in_training     = 0
       original_input       = np.full((self.sampler.sequence_length), 0, dtype = np.int64)
@@ -121,7 +117,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       mask_labels          = np.full((self.sampler.sequence_length), -100, dtype = np.int64)
       masked_lm_lengths    = np.full((self.sampler.sequence_length), -1, dtype = np.int64)
       next_sentence_labels = 0
-      raise ValuError("Check here that the metrics are correct.")
+      raise NotImplementedError("Check here that the metrics are correct.")
       sample_element = {
         'seen_in_training'    : seen_in_training,
         'original_input'      : original_input,
@@ -138,8 +134,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       dataset = torch.utils.data.ConcatDataset(
                   [torch.load(x) for x in path_list]
                 )
-    self.dataloader = torch.utils.data.dataloader.DataLoader(
+    dataloader = torch.utils.data.dataloader.DataLoader(
       dataset    = dataset,
+      # You are wondering why batch_size == 1 and not sampler.batch_size:
+      # By design, an inference batch contains the same feed.
+      # If dataloader's batch_size > 1, a batch will contain different feeds and so, is set to 1.
+      # Model will ask for a batch (of 1) and then replicate it.
       batch_size = 1,
       sampler    = (
             torch.utils.data.RandomSampler(dataset, replacement = False)
@@ -153,10 +153,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       num_workers = os.cpu_count(),
       drop_last   = True,
       )
-    return
+    return dataloader
 
   def _saveCorpusRecord(self, masked_corpus: typing.Dict) -> None:
-    """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
+    """Converts corpus nparrays to torch tensors and stores corpus to pt_record"""
 
     torch.save(
       [{k: torch.from_numpy(v) for (k, v) in inst.items()} for inst in masked_corpus['corpus']],
