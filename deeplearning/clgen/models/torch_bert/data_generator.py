@@ -65,14 +65,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
     eval_dataloaders sets set_name to reuse the function for all different sets.
     """
-    dataset = myBigDataDataset(
+    dataset = LazyConcatDataset(
                 [x for x in self.dataset[set_name]['file']]
               )
     dataloader = torch.utils.data.dataloader.DataLoader(
       dataset    = dataset,
       batch_size = self.training_opts.batch_size,
       sampler    = (
-            myRandomSampler(dataset, replacement = False)
+            LazyRandomSampler(dataset, replacement = False)
             if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
             else torch.utils.data.distributed.DistributedSampler(
                   dataset, 
@@ -132,7 +132,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       dataset = [{k: torch.from_numpy(v) for (k, v) in sample_element.items()}]
     else:
       path_list = self.configSampleSets()
-      dataset = myBigDataDataset(
+      dataset = LazyConcatDataset(
                   [x for x in path_list]
                 )
     dataloader = torch.utils.data.dataloader.DataLoader(
@@ -143,7 +143,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       # Model will ask for a batch (of 1) and then replicate it.
       batch_size = 1,
       sampler    = (
-            myRandomSampler(dataset, replacement = False)
+            LazyRandomSampler(dataset, replacement = False)
             if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
             else torch.utils.data.distributed.DistributedSampler(
                   dataset, 
@@ -181,7 +181,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                  .format(len(masked_corpus['corpus']), self.steps_per_epoch, self.training_opts.batch_size, masked_corpus['file']))
     return
 
-class myBigDataDataset(torch.utils.data.Dataset):
+class LazyConcatDataset(torch.utils.data.Dataset):
   r"""Dataset as a concatenation of multiple datasets.
 
   This class is useful to assemble different existing datasets.
@@ -202,7 +202,7 @@ class myBigDataDataset(torch.utils.data.Dataset):
     return ds_lens
 
   def __init__(self, dataset_paths: typing.List[pathlib.Path]):
-    super(myBigDataDataset, self).__init__()
+    super(LazyConcatDataset, self).__init__()
     assert len(dataset_paths) > 0, 'Empty list of datasets provided.'
     self.dataset_paths = dataset_paths
     self.cumulative_sizes = self.cumsum(self.dataset_paths)
@@ -245,7 +245,7 @@ class myBigDataDataset(torch.utils.data.Dataset):
                   "cumulative_sizes", DeprecationWarning, stacklevel=2)
     return self.cumulative_sizes
 
-class myRandomSampler(torch.utils.data.Sampler):
+class LazyRandomSampler(torch.utils.data.Sampler):
   r"""Samples elements randomly. If without replacement, then sample from a shuffled dataset.
   If with replacement, then user can specify :attr:`num_samples` to draw.
 
