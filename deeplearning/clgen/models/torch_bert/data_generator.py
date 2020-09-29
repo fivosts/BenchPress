@@ -10,6 +10,7 @@ import typing
 import glob
 import humanize
 import numpy as np
+import pathlib
 
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
@@ -64,14 +65,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
     eval_dataloaders sets set_name to reuse the function for all different sets.
     """
-    dataset = torch.utils.data.ConcatDataset(
-                [torch.load(x) for x in self.dataset[set_name]['file']]
+    dataset = myBigDataDataset(
+                [x for x in self.dataset[set_name]['file']]
               )
     dataloader = torch.utils.data.dataloader.DataLoader(
       dataset    = dataset,
       batch_size = self.training_opts.batch_size,
       sampler    = (
-            torch.utils.data.RandomSampler(dataset, replacement = False)
+            myRandomSampler(dataset, replacement = False)
             if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
             else torch.utils.data.distributed.DistributedSampler(
                   dataset, 
@@ -79,7 +80,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                   rank = pytorch.torch_xla.get_ordinal()
                  )
             ),
-      num_workers = os.cpu_count(),
+      num_workers = 1,
       drop_last   = True,
     )
     return dataloader
@@ -131,8 +132,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       dataset = [{k: torch.from_numpy(v) for (k, v) in sample_element.items()}]
     else:
       path_list = self.configSampleSets()
-      dataset = torch.utils.data.ConcatDataset(
-                  [torch.load(x) for x in path_list]
+      dataset = myBigDataDataset(
+                  [x for x in path_list]
                 )
     dataloader = torch.utils.data.dataloader.DataLoader(
       dataset    = dataset,
@@ -142,7 +143,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       # Model will ask for a batch (of 1) and then replicate it.
       batch_size = 1,
       sampler    = (
-            torch.utils.data.RandomSampler(dataset, replacement = False)
+            myRandomSampler(dataset, replacement = False)
             if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
             else torch.utils.data.distributed.DistributedSampler(
                   dataset, 
@@ -150,7 +151,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                   rank = pytorch.torch_xla.get_ordinal()
                  )
             ),
-      num_workers = os.cpu_count(),
+      num_workers = 1,
       drop_last   = True,
       )
     return dataloader
@@ -180,4 +181,134 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                  .format(len(masked_corpus['corpus']), self.steps_per_epoch, self.training_opts.batch_size, masked_corpus['file']))
     return
 
+class myBigDataDataset(torch.utils.data.Dataset):
+  r"""Dataset as a concatenation of multiple datasets.
 
+  This class is useful to assemble different existing datasets.
+
+  Arguments:
+      datasets (sequence): List of datasets to be concatenated
+  """
+
+  @staticmethod
+  def cumsum(dataset_paths):
+    ## Should return a list of cumulative file count.
+    ds_lens, cumlen = [], 0
+    for dp in dataset_paths:
+      ds = torch.load(dp)
+      curr_len = len(ds)
+      ds_lens.append(curr_len + cumlen)
+      cumlen += curr_len
+    return ds_lens
+
+  def __init__(self, dataset_paths: typing.List[pathlib.Path]):
+    super(myBigDataDataset, self).__init__()
+    assert len(dataset_paths) > 0, 'Empty list of datasets provided.'
+    self.dataset_paths = dataset_paths
+    self.cumulative_sizes = self.cumsum(self.dataset_paths)
+
+    self.curr_dset_idx = None
+    self.curr_dset     = None
+
+  def __len__(self):
+    return self.cumulative_sizes[-1]
+
+  @property
+  def dataset_sizes(self):
+    return len(self.dataset_paths), self.cumulative_sizes
+  
+
+  def __getitem__(self, idx):
+
+    import bisect
+    if idx < 0:
+      if -idx > len(self):
+        raise ValueError("absolute value of index should not exceed dataset length")
+      idx = len(self) + idx
+    dataset_idx = bisect.bisect_right(self.cumulative_sizes, idx)
+    
+    if self.curr_dset_idx != dataset_idx:
+      self.curr_dset_idx = dataset_idx
+      l.getLogger().info("Loading dataset: {}, {}".format(self.curr_dset_idx, self.dataset_paths[dataset_idx]))
+      self.curr_dset = torch.load(self.dataset_paths[dataset_idx])
+
+    if dataset_idx == 0:
+      sample_idx = idx
+    else:
+      sample_idx = idx - self.cumulative_sizes[dataset_idx - 1]
+    # self.monitor.plot()
+    return self.curr_dset[sample_idx]
+
+  @property
+  def cummulative_sizes(self):
+    warnings.warn("cummulative_sizes attribute is renamed to "
+                  "cumulative_sizes", DeprecationWarning, stacklevel=2)
+    return self.cumulative_sizes
+
+class myRandomSampler(torch.utils.data.Sampler):
+  r"""Samples elements randomly. If without replacement, then sample from a shuffled dataset.
+  If with replacement, then user can specify :attr:`num_samples` to draw.
+
+  Arguments:
+    data_source (Dataset): dataset to sample from
+    replacement (bool): samples are drawn with replacement if ``True``, default=``False``
+    num_samples (int): number of samples to draw, default=`len(dataset)`. This argument
+      is supposed to be specified only when `replacement` is ``True``.
+    generator (Generator): Generator used in sampling.
+  """
+
+  def __init__(self, data_source, replacement=False, num_samples=None, generator=None):
+    self.data_source = data_source
+    self.replacement = replacement
+    self._num_samples = num_samples
+    self.generator = generator
+
+    if not isinstance(self.replacement, bool):
+      raise TypeError("replacement should be a boolean value, but got "
+                      "replacement={}".format(self.replacement))
+
+    if self._num_samples is not None and not replacement:
+      raise ValueError("With replacement=False, num_samples should not be specified, "
+                       "since a random permute will be performed.")
+
+    # if not isinstance(self.num_samples, int) or self.num_samples <= 0:
+    #   raise ValueError("num_samples should be a positive integer "
+    #                    "value, but got num_samples={}".format(self.num_samples))
+
+  @property
+  def num_samples(self):
+    # dataset size might change at runtime
+    if self._num_samples is None:
+      return len(self.data_source)
+    return self._num_samples
+
+  def __iter__(self):
+    num_ds, ds_cum_sizes = self.data_source.dataset_sizes
+    l.getLogger().warn(num_ds)
+    l.getLogger().warn(ds_cum_sizes)
+    ds_tensors, curr_len = [], 0
+    for idx in range(num_ds):
+      
+      ds_bounds  = (curr_len, ds_cum_sizes[idx] - 1)
+      curr_len = ds_cum_sizes[idx]
+
+      if self.replacement:
+        if self._num_samples is None:
+          size = 1 + ds_bounds[1] - ds_bounds[0]
+        else:
+          size = self._num_samples // num_ds
+        ds_tensors.append(torch.randint(low = ds_bounds[0], high = ds_bounds[1], size = (size,), generator = self.generator).tolist())
+      else:
+        ds_tensors.append([x + ds_bounds[0] for x in torch.randperm(ds_bounds[1] - ds_bounds[0], generator = self.generator).tolist()])
+
+    shuffled_idx = torch.randperm(num_ds, generator = self.generator).tolist()
+    rand_tensor = []
+    for idx in shuffled_idx:
+      rand_tensor += ds_tensors[idx]
+
+    l.getLogger().error(rand_tensor)
+
+    return iter(rand_tensor)
+
+  def __len__(self):
+    return self.num_samples
