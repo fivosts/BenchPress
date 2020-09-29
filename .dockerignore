@@ -16,3 +16,4 @@
 # Big corpus folders
 /model_zoo/corpus/*.tar.bz2
 /model_zoo/corpus/*.tar
+/model_zoo/corpus/*.db
