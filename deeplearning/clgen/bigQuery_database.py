@@ -51,14 +51,14 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
       "id"             : id,
       "sha256"         : row['id'],
       "repo_name"      : row['repo_name'],
-      "ref"            : row['ref']
+      "ref"            : row['ref'],
       "path"           : row['path'],
-      "mode"           : row['mode'],
-      "symlink_target" : row['symlink_target'],
-      "size"           : row['size'],
-      "content"        : row['content'],
-      "binary"         : row['binary'],
-      "copies"         : row['copies'],
+      "mode"           : row['mode']           if row['mode']           else "None",
+      "symlink_target" : row['symlink_target'] if row['symlink_target'] else "None",
+      "size"           : row['size']           if row['size']           else "None",
+      "content"        : row['content']        if row['content']        else "None",
+      "binary"         : row['binary']         if row['binary']         else "None",
+      "copies"         : row['copies']         if row['copies']         else "None",
       "date_added"     : datetime.datetime.utcnow(),
     }
 
