@@ -55,6 +55,25 @@ class Distribution():
 
   def plot(self):
     sorted_dict = sorted(self.sample_counter.items(), key = lambda x: x[0])
+    if len(sorted_dict) > 128:
+      self._plot_lines(sorted_dict)
+    else:
+      self._plot_bars(sorted_dict)
+    return
+
+  def _plot_lines(self, sorted_dict):
+    point_set = {
+      self.set_name: {
+        'x': [x for (x, _) in sorted_dict],
+        'y': [y for (_, y) in sorted_dict],
+      }
+    }
+    plt.linesSingleAxis(point_set, 
+      savefig = str(self.log_path / self.set_name) + ".png",
+    )
+    return
+
+  def _plot_bars(self, sorted_dict):
     point_set = [
       {
         'x': [[x for (x, _) in sorted_dict]],
