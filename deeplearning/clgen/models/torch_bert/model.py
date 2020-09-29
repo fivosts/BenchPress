@@ -1012,8 +1012,11 @@ class BertForPreTraining(BertPreTrainedModel):
 
     loss_fct = torch.nn.CrossEntropyLoss()
     masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
-    next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
-    total_loss = masked_lm_loss + next_sentence_loss
+    if (next_sentence_labels != 0).any():
+      next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
+      total_loss = masked_lm_loss + next_sentence_loss
+    else:
+      total_loss = masked_lm_loss
 
     return BertForPreTrainingOutput(
       masked_lm_loss = masked_lm_loss,
