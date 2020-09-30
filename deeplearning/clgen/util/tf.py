@@ -54,7 +54,7 @@ def initTensorflow():
       raise NotImplementedError
     elif FLAGS.tf_device == "gpu" and available_gpus is not None:
       l.getLogger().info("Selected GPU:{} {}".format(available_gpus[0]['id'], available_gpus[0]['gpu_name']))
-      os.environ['CUDA_VISIBLE_DEVICES'] = str(available_gpus[0])
+      os.environ['CUDA_VISIBLE_DEVICES'] = str(available_gpus[0]['id'])
     elif re.search("gpu:[0-9]", FLAGS.tf_device) and available_gpus is not None:
       gpuid = int(FLAGS.tf_device.split(':')[-1])
       selected_gpu = None
@@ -68,6 +68,12 @@ def initTensorflow():
     else:
       l.getLogger().info("Selected CPU device.")
       os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
+
+    if FLAGS.tf_logging_level == 0:
+      lvl = l.getLogger().level
+      l.getLogger().level = 'DEBUG'
+      l.getLogger().debug("TF 'CUDA_VISIBLE_DEVICES': {}".format(os.environ['CUDA_VISIBLE_DEVICES']))
+      l.getLogger().level = lvl
   except RuntimeError as e:
     raise e
 
