@@ -28,6 +28,7 @@ from deeplearning.clgen import samplers
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import crypto
+from deeplearning.clgen.util import process
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.dashboard import dashboard_db
@@ -243,8 +244,7 @@ class Model(object):
         process currently modifying the model).
     """
     self.Create()
-    # with self.training_lock.acquire():
-    self.backend.Train(self.corpus, **kwargs)
+    process.isolate(lambda: self.backend.Train(self.corpus, **kwargs))
     telemetry_logs = self.backend.telemetry.EpochTelemetry()
 
     l.getLogger().info(

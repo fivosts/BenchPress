@@ -328,12 +328,7 @@ class tfBert(backends.BackendBase):
                         )
       try:
         if FLAGS.sample_per_epoch == 0:
-          input()
-          import multiprocessing
-          p = multiprocessing.Process(target = lambda: self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps))
-          p.start()
-          p.join()
-          # self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps)
+          self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps)
         else:
           sampler, observers = self._getTestSampler(test_sampler, self.config.training.sequence_length)
           self.InitSampling(sampler, self.config.training.random_seed)
