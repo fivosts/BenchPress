@@ -129,7 +129,6 @@ class SamplesDatabaseObserver(SampleObserver):
     commit_sample_frequency: int = 1024,
   ):
     self.db = samples_database.SamplesDatabase(url, must_exist = must_exist)
-    self.compiled_count = 0
     self.sample_id = self.db.count
 
   def OnSample(self, sample: model_pb2.Sample) -> bool:
@@ -147,20 +146,20 @@ class SamplesDatabaseObserver(SampleObserver):
       if not exists:
         session.add(db_sample)
         self.sample_id += 1
-        if sample.compile_status is True:
-          self.compiled_count += 1
     return True
 
   def endSample(self):
+    with self.db.Session() as session:
+      compiled_count = session.query(samples_database.Sample.compile_status).filter_by(compile_status = "Yes").count()
     try:
       r = [
-        'compilation rate: {}'.format(self.compiled_count / self.sample_id),
-        'total compilable samples: {}'.format(self.compiled_count)
+        'compilation rate: {}'.format(compiled_count / self.sample_id),
+        'total compilable samples: {}'.format(compiled_count)
       ]
     except ZeroDivisionError:
       r = [
         'compilation rate: +/-inf',
-        'total compilable samples: {}'.format(self.compiled_count)
+        'total compilable samples: {}'.format(compiled_count)
       ]
 
     with self.db.Session(commit = True) as session:
