@@ -1,3 +1,4 @@
+"""This module handles application's environment variables"""
 import os
 
 def check_exists(path):
