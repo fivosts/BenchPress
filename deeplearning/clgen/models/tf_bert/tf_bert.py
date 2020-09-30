@@ -32,6 +32,7 @@ from deeplearning.clgen import samplers
 from deeplearning.clgen import sample_observers
 from deeplearning.clgen import validation_database
 from deeplearning.clgen.util import pbutil
+from deeplearning.clgen.util import process
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
@@ -298,28 +299,32 @@ class tfBert(backends.BackendBase):
 
   def Train(self,
             corpus,
-            test_sampler: typing.Optional[samplers.Sampler] = None,
+            test_sampler: typing.Optional[samplers.sampler] = None,
             **unused_kwargs
             ) -> None:
-
+    """Training bootstrap function that isolates Train process space"""
     del unused_kwargs
-
     if self.train is None:
+      self._ConfigTrainParams(
+        tfLMDataGenerator.TrainMaskLMBatchGenerator(corpus, self.config.training, self.cache.path)
+      )
+    if not FLAGS.only_sample:
+      process.isolate(lambda: self._Train(corpus, test_sampler))
+    return
 
-      data_generator = tfLMDataGenerator.TrainMaskLMBatchGenerator(
-                         corpus, self.config.training, self.cache.path)
-      self._ConfigTrainParams(data_generator)
-
-    if FLAGS.only_sample:
-      return
-
+  def _Train(self,
+            corpus,
+            test_sampler: typing.Optional[samplers.Sampler],
+            ) -> None:
+    """Core training function"""
     if not self.is_trained:
 
       train_input_fn = self.train.data_generator.generateTfDataset(
           sequence_length = self.config.training.sequence_length,
           num_cpu_threads = os.cpu_count(),
           use_tpu = FLAGS.use_tpu,
-          is_training = True)
+          is_training = True
+      )
 
       l.getLogger().info("Splitting {} steps into {} equivalent epochs, {} steps each. Rejected {} redundant step(s)".format(
                                         self.num_train_steps, self.num_epochs, 
@@ -338,7 +343,7 @@ class tfBert(backends.BackendBase):
               start_time   = datetime.datetime.utcnow()
               self.InitSampleBatch()
               sample_batch, sample_indices = self.SampleNextIndices()
-              end_time     = datetime.datetime.utcnow()
+              end_time = datetime.datetime.utcnow()
               for sample, sind in zip(sample_batch, sample_indices):
 
                 try:
