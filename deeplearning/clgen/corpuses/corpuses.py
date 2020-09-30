@@ -131,7 +131,6 @@ class Corpus(object):
         options.
       EmptyCorpusException: In case the corpus contains no data.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.__init__()")
     if not isinstance(config, corpus_pb2.Corpus):
       raise TypeError(f"Config must be a Corpus proto. Received: '{type(config).__name__}'")
 
@@ -204,7 +203,6 @@ class Corpus(object):
     self.cache = cache.mkcache("corpus", "encoded", encoded_id)
 
   def GetShortSummary(self) -> str:
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.GetShortSummary()")
     corpus_size = humanize.naturalsize(self.encoded.token_count)
     return (
       f"{corpus_size} token corpus with {self.vocab_size}-element vocabulary"
@@ -217,7 +215,6 @@ class Corpus(object):
       EmptyCorpusException: If there are no content files, or no successfully
         pre-processed files.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.Create()")
     self._created = True
     l.getLogger().info("Content ID: {}".format(self.content_id))
 
@@ -289,7 +286,6 @@ class Corpus(object):
 
   @property
   def dashboard_db_id(self) -> int:
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.dashboard_db_id()")
     if not self._created:
       raise TypeError("Cannot access dashboard_db_id before Create() called")
     return self._dashboard_db_id
@@ -303,7 +299,6 @@ class Corpus(object):
     Returns:
       A concatenated corpus string.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.GetTextCorpus()")
     with self.preprocessed.Session() as session:
       query = session.query(preprocessed.PreprocessedContentFile.text).filter(
         preprocessed.PreprocessedContentFile.preprocessing_succeeded == True
@@ -323,7 +318,6 @@ class Corpus(object):
     Returns:
       The encoded corpus.
     """
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.GetTrainingData()")
     with prof.Profile("GetTrainingData()"):
       # Load all indices from the database into memory, and keep them there.
       # This is to remove the latency from reading the contents from a
@@ -344,13 +338,11 @@ class Corpus(object):
       return self._indices_arrays
 
   def GetNumContentFiles(self) -> int:
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.GetNumContentFiles()")
     """Get the number of contentfiles which were pre-processed."""
     with self.preprocessed.Session() as session:
       return session.query(preprocessed.PreprocessedContentFile).count()
 
   def GetNumPreprocessedFiles(self) -> int:
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.GetNumPreprocessedFiles()")
     """The number of succesfully pre-processed content files."""
     with self.preprocessed.Session() as session:
       return (
@@ -363,7 +355,6 @@ class Corpus(object):
 
   @property
   def atomizer(self) -> atomizers.AtomizerBase:
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.atomizer()")
     """Must call Create() first."""
     if not self._created:
       raise ValueError("Must call Create() before accessing atomizer property.")
@@ -375,7 +366,6 @@ class Corpus(object):
     return self._atomizer
 
   def _CreateAtomizer(self) -> atomizers.AtomizerBase:
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus._CreateAtomizer()")
     """Creates and caches an atomizer."""
     l.getLogger().info("Deriving atomizer from preprocessed corpus")
     corpus_txt = self.GetTextCorpus(shuffle=False)
@@ -393,13 +383,11 @@ class Corpus(object):
 
   @property
   def vocab_size(self) -> int:
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.vocab_size()")
     """Get the number of elements in the corpus vocabulary."""
     return self.atomizer.vocab_size
 
   @property
   def size(self) -> int:
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.size()")
     """Return the size of the atomized corpus."""
     with self.encoded.Session() as session:
       return session.query(
@@ -407,18 +395,15 @@ class Corpus(object):
       ).one()
 
   def __eq__(self, rhs) -> bool:
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.__eq__()")
     if not isinstance(rhs, Corpus):
       return False
     return rhs.hash == self.hash
 
   def __ne__(self, rhs) -> bool:
-    l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.Corpus.__ne__()")
     return not self.__eq__(rhs)
 
 
 def GetVocabFromMetaTable(session: sqlutil.Session) -> typing.Dict[str, int]:
-  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.GetVocabFromMetaTable()")
   """Read a vocabulary dictionary from the 'Meta' table of a database."""
   return encoded.EncodedContentFiles.GetVocabFromMetaTable(session)
 
@@ -427,7 +412,6 @@ def StoreVocabInMetaTable(
   session: sqlutil.Session, vocabulary: typing.Dict[str, int]
 ) -> None:
   """Store a vocabulary dictionary in the 'Meta' table of a database."""
-  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.StoreVocabInMetaTable()")
   return encoded.EncodedContentFiles.StoreVocabInMetaTable(session, vocabulary)
 
 
@@ -436,7 +420,6 @@ def GreedyAtomizerFromEncodedDb(encoded_db: encoded.EncodedContentFiles):
   """Create a greedy atomizer for the vocabulary of a given encoded_db."""
   # TODO(github.com/ChrisCummins/clgen/issues/130): This should be a method of
   # a concrete `DatabaseCorpus` class.
-  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.GreedyAtomizerFromEncodedDb()")
   with encoded_db.Session() as s:
     vocab = GetVocabFromMetaTable(s)
   l.getLogger().info("Loaded vocabulary of {} tokens from meta table".format(len(vocab)))
@@ -457,7 +440,6 @@ def ExpandConfigPath(path: str, path_prefix: str = None) -> pathlib.Path:
     An absolute path.
   """
   # Set a useful variable for expansion.
-  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.ExpandConfigPath()")
   if "HOME" not in os.environ:
     os.environ["HOME"] = str(pathlib.Path("~").expanduser())
   return (
@@ -484,7 +466,6 @@ def ResolveContentId(
   """
   # We can take a massive shortcut if the content ID is already set in the
   # config proto.
-  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.ResolveContentId()")
   if config.HasField("content_id"):
     # TODO(github.com/ChrisCummins/clgen/issues/130): Refactor this after splitting
     # out Corpus class.
@@ -574,7 +555,6 @@ def ResolvePreprocessedId(content_id: str, config: corpus_pb2.Corpus) -> str:
   """
   # TODO(github.com/ChrisCummins/clgen/issues/130): Refactor this after splitting
   # out Corpus class.
-  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.ResolvePreprocessedId()")
   if config.pre_encoded_corpus_url:
     return "null"
   return crypto.sha1_list(content_id, *config.preprocessor)
@@ -586,7 +566,6 @@ def ResolveEncodedId(content_id: str, config: corpus_pb2.Corpus) -> str:
   The hash is computed from the ID of the input files and the serialized
   representation of the config proto.
   """
-  l.getLogger().debug("deeplearning.clgen.corpuses.corpuses.ResolveEncodedId()")
   config_without_contentfiles = corpus_pb2.Corpus()
   config_without_contentfiles.CopyFrom(config)
   # Clear the contentfiles field, since we use the content_id to uniquely
