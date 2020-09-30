@@ -81,7 +81,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                  )
             ),
       num_workers = 0,
-      drop_last   = True,
+      drop_last   = False,
     )
     return dataloader
 
@@ -152,7 +152,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                  )
             ),
       num_workers = 0,
-      drop_last   = True,
+      drop_last   = False,
       )
     return dataloader
 
