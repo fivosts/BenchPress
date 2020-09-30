@@ -197,7 +197,7 @@ class LazyConcatDataset(torch.utils.data.Dataset):
     r, s = [], 0
     for e in sequence:
       lt = len(torch.load(e))
-      assert len(lt) > 0, "Dataset {} is empty".format(e)
+      assert lt > 0, "Dataset {} is empty".format(e)
       r.append(lt + s)
       s += lt
     l.getLogger().warn(r)
@@ -261,7 +261,7 @@ class LazyRandomSampler(torch.utils.data.Sampler):
     self.replacement = replacement
     self._num_samples = num_samples
     self.generator = generator
-
+    self.dataset_idx = self.__datasetIdx_iter__
     if not isinstance(self.replacement, bool):
       raise TypeError("replacement should be a boolean value, but got "
                       "replacement={}".format(self.replacement))
@@ -281,28 +281,34 @@ class LazyRandomSampler(torch.utils.data.Sampler):
       return len(self.data_source)
     return self._num_samples
 
+  @property
+  def num_datasets(self):
+    if isinstance(self.data_source, LazyConcatDataset):
+      return self.data_source.num_datasets
+    else:
+      return 1
+
+  @property
+  def __datasetIdx_iter__(self):
+    dataset_idx = torch.randperm(self.num_datasets, generator = self.generator).tolist()
+    self.dataset_tensor = iter(dataset_idx)
+    return self.dataset_tensor
+
   def __iter__(self):
+    try:
+      dataset_idx = next(self.dataset_tensor)
+    except StopIteration:
+      dataset_idx = next(self.__datasetIdx_iter__)
+    bounds = (self.data_source.cumulative_sizes[dataset_idx - 1] if dataset_idx else 0, self.data_source.cumulative_sizes[dataset_idx])
 
-    num_datasets     = self.data_source.num_datasets
-    cumulative_sizes = self.data_source.cumulative_sizes
-
-    ds_tensors, curr_len = [], 0
-    for idx in range(num_datasets):
-      bounds  = (curr_len, cumulative_sizes[idx])
-      curr_len = cumulative_sizes[idx]
-      if self.replacement:
-        if self._num_samples is None:
-          size = bounds[1] - bounds[0]
-        else:
-          size = self._num_samples // num_datasets
-        ds_tensors.append(torch.randint(low = bounds[0], high = bounds[1], size = (size,), generator = self.generator).tolist())
+    if self.replacement:
+      if self._num_samples is None:
+        size = bounds[1] - bounds[0]
       else:
-        ds_tensors.append([x + bounds[0] for x in torch.randperm(bounds[1] - bounds[0], generator = self.generator).tolist()])
-
-    shuffled_idx = torch.randperm(num_datasets, generator = self.generator).tolist()
-    rand_tensor = []
-    for idx in shuffled_idx:
-      rand_tensor += ds_tensors[idx]
+        size = self._num_samples // self.num_datasets
+      rand_tensor = torch.randint(low = bounds[0], high = bounds[1], size = (size,), generator = self.generator).tolist()
+    else:
+      rand_tensor = [x + bounds[0] for x in torch.randperm(bounds[1] - bounds[0], generator = self.generator).tolist()]
     return iter(rand_tensor)
 
   def __len__(self):
