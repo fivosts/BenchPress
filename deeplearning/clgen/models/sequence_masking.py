@@ -65,14 +65,14 @@ class MaskedLmInstance():
 
 ## Tuple representation of mask id/position/hole_length for easy sorting
 def HoleSequence(seq: np.array,
-                      train_set: bool,
-                      max_predictions: int,
-                      pickled_distribution: distributions.Distribution,
-                      pickled_atomizer,
-                      rngen: random.Random,
-                      training_opts,
-                      is_torch: bool,
-                      ) -> typing.Dict:
+                 train_set: bool,
+                 max_predictions: int,
+                 pickled_distribution: distributions.Distribution,
+                 pickled_atomizer,
+                 rngen: random.Random,
+                 training_opts,
+                 is_torch: bool,
+                 ) -> typing.Dict:
   """
   Inserts hole tokens to a given sequence.
   """
