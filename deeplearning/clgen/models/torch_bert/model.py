@@ -749,6 +749,7 @@ class BertForPreTraining(BertPreTrainedModel):
 
       for tok_idx, token in enumerate(input_ids[batch]):
         if token == self.atomizer.padToken:
+          # No need to go beyond 1st pad token.
           pad_idx = tok_idx + input_idx
           break
         if token == self.atomizer.holeToken:
