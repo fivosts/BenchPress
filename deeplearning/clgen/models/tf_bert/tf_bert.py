@@ -328,7 +328,12 @@ class tfBert(backends.BackendBase):
                         )
       try:
         if FLAGS.sample_per_epoch == 0:
-          self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps)
+          input()
+          import multiprocessing
+          p = multiprocessing.Process(target = lambda: self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps))
+          p.start()
+          p.join()
+          # self.train.estimator.train(input_fn = train_input_fn, max_steps = self.num_train_steps)
         else:
           sampler, observers = self._getTestSampler(test_sampler, self.config.training.sequence_length)
           self.InitSampling(sampler, self.config.training.random_seed)
@@ -370,7 +375,6 @@ class tfBert(backends.BackendBase):
     if FLAGS.force_eval and not self.is_validated:
       self.Validate()
     # self.telemetry.TfRecordEpochs()
-    self.train = None
     return
 
   def Validate(self) -> None:
@@ -492,6 +496,52 @@ class tfBert(backends.BackendBase):
       else:
         session.add(validation_database.ValResults(key = str(tf_set), results = "\n".join(r)))
     return 
+
+  def GetTrainingHooks(self,
+                       tensors: typing.Dict[str, typing.Any],
+                       log_steps:  int = None, 
+                       max_steps:  int = None,
+                       output_dir: pathlib.Path = None,
+                       **kwargs
+                       ):# -> typing.List[typing.Any("tfBert.tf.estimator.SessionRunHook")]:
+    if log_steps is None:
+      log_steps = self.steps_per_epoch
+    if max_steps is None:
+      max_steps = self.num_train_steps
+    if output_dir is None:
+      output_dir = self.logfile_path
+
+    summary_tensors = ([ self.tf.compat.v1.summary.scalar(name, value) 
+                              for name, value in kwargs.items()
+                          ],
+                        [ value for (name, value) in kwargs.items()
+                        ])
+    return [
+            hooks.AverageSummarySaverHook(tensors = summary_tensors,
+                                          save_steps = min(250, log_steps),
+                                          output_dir = str(output_dir),
+                                          ),
+            hooks.tfLogTensorHook(tensors = tensors, 
+                                  log_steps = log_steps, 
+                                  at_end = True,
+                                  ),
+            hooks.tfPlotTensorHook(tensors = summary_tensors,
+                                   log_steps = min(250, log_steps),
+                                   output_dir = output_dir,
+                                  ),
+            hooks.tfProgressBar(max_length = max_steps),
+           ]
+
+  def GetValidationHooks(self,
+                         max_steps = None,
+                         **kwargs
+                         ):# -> typing.List[self.tf.estimator.SessionRunHook]:
+    if max_steps is None:
+      max_steps = self.max_eval_steps
+    return [
+            hooks.tfProgressBar(max_length = max_steps, mode = self.tf.compat.v1.estimator.ModeKeys.EVAL),
+            hooks.writeValidationDB(**kwargs)
+            ]
 
   def _model_fn_builder(self,
                       bert_config, 
@@ -692,49 +742,3 @@ class tfBert(backends.BackendBase):
       return output_spec
 
     return _model_fn
-
-  def GetTrainingHooks(self,
-                       tensors: typing.Dict[str, typing.Any],
-                       log_steps:  int = None, 
-                       max_steps:  int = None,
-                       output_dir: pathlib.Path = None,
-                       **kwargs
-                       ):# -> typing.List[typing.Any("tfBert.tf.estimator.SessionRunHook")]:
-    if log_steps is None:
-      log_steps = self.steps_per_epoch
-    if max_steps is None:
-      max_steps = self.num_train_steps
-    if output_dir is None:
-      output_dir = self.logfile_path
-
-    summary_tensors = ([ self.tf.compat.v1.summary.scalar(name, value) 
-                              for name, value in kwargs.items()
-                          ],
-                        [ value for (name, value) in kwargs.items()
-                        ])
-    return [
-            hooks.AverageSummarySaverHook(tensors = summary_tensors,
-                                          save_steps = min(250, log_steps),
-                                          output_dir = str(output_dir),
-                                          ),
-            hooks.tfLogTensorHook(tensors = tensors, 
-                                  log_steps = log_steps, 
-                                  at_end = True,
-                                  ),
-            hooks.tfPlotTensorHook(tensors = summary_tensors,
-                                   log_steps = min(250, log_steps),
-                                   output_dir = output_dir,
-                                  ),
-            hooks.tfProgressBar(max_length = max_steps),
-           ]
-
-  def GetValidationHooks(self,
-                         max_steps = None,
-                         **kwargs
-                         ):# -> typing.List[self.tf.estimator.SessionRunHook]:
-    if max_steps is None:
-      max_steps = self.max_eval_steps
-    return [
-            hooks.tfProgressBar(max_length = max_steps, mode = self.tf.compat.v1.estimator.ModeKeys.EVAL),
-            hooks.writeValidationDB(**kwargs)
-            ]
