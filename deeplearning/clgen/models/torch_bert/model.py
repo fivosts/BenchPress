@@ -739,51 +739,44 @@ class BertForPreTraining(BertPreTrainedModel):
     Takes a single sequence of the batch.
     """
     batch_size, sequence_length = tuple(input_ids.shape)
-    new_input_ids = torch.full(
-      [batch_size, sequence_length], self.atomizer.padToken, dtype = torch.int64, device = pytorch.device
-    )
+    new_input_ids = torch.zeros([batch_size, sequence_length], dtype = torch.int64)
     there_are_holes = False
-    for batch, _ in enumerate(input_ids):
+    for batch, batch_input in enumerate(input_ids):
 
-      hole_idx, input_idx, pad_idx = 0, 0, None
+      new_inputs = []
+      if self.atomizer.padToken in batch_input:
+        allowed_adds = sequence_length - torch.where(batch_input==self.atomizer.padToken)[0][0]
+      else:
+        allowed_adds = 0
 
-      for tok_idx, token in enumerate(input_ids[batch]):
-        if token == self.atomizer.padToken:
-          # No need to go beyond 1st pad token.
-          pad_idx = tok_idx + input_idx
-          break
-        if token == self.atomizer.holeToken:
+      for token, prediction in zip(batch_input, prediction_scores[batch]):
+        if token != self.atomizer.holeToken:
+          # Not a hole, add to new sequence
+          new_inputs.append(token)
+        elif prediction == self.atomizer.endholeToken:
+          # Endhole token closes holes. 1 allowed addition is earned. -1 offset.
           there_are_holes = True
-          pred = prediction_scores[batch][tok_idx]
-          if pred != self.atomizer.endholeToken:
-            if masked_lm_lengths[batch][hole_idx] >= 2:
-              new_input_ids[batch][tok_idx + input_idx] = pred
-              masked_lm_lengths[batch][hole_idx] -= 1
-              new_input_ids[batch][tok_idx + input_idx + 1] = self.atomizer.holeToken
-              input_idx += 1
-            elif masked_lm_lengths[batch][hole_idx] == 1:
-              new_input_ids[batch][tok_idx + input_idx] = pred
-              masked_lm_lengths[batch][hole_idx] -= 1
-            else:
-              input_idx -= 1
-          else:
-            masked_lm_lengths[batch][hole_idx] = 0
-          hole_idx += 1
+          allowed_adds += 1
         else:
-          new_input_ids[batch][tok_idx + input_idx] = token
+          there_are_holes = True
+          new_inputs.append(prediction)
+          if allowed_adds:
+            # If you haven't ran out of available additions, add a hole too.
+            new_inputs.append(self.atomizer.holeToken)
+            allowed_adds += 1
 
-      attention_mask[batch] = (torch.full([sequence_length], 1, dtype = torch.int64)
-                        if pad_idx is None else
-                        torch.cat(
-                            (torch.full([pad_idx], 1, dtype = torch.int64), 
-                             torch.full([sequence_length - pad_idx], 0, dtype = torch.int64)
-                            )
-                          )
-                        ) 
-      masked_lm_lengths[batch] = torch.LongTensor(
-        [x for x in masked_lm_lengths[batch] if x != 0] + [x for x in masked_lm_lengths[batch] if x == 0]
-      )
-    return there_are_holes, new_input_ids, attention_mask, masked_lm_lengths.to(pytorch.device)
+      assert len(new_inputs) <= sequence_length
+      new_inputs             += [self.atomizer.padToken] * sequence_length - len(new_inputs)
+      new_input_ids[batch]    = torch.LongTensor(new_input)
+      if pad_idx is None:
+        attention_mask[batch] = torch.full([sequence_length], 1, dtype = torch.int64)
+      else:
+        attention_mask[batch] = torch.cat(
+          torch.ones ([pad_idx],                   dtype = torch.int64),
+          torch.zeros([sequence_length - pad_idx], dtype = torch.int64)
+        )
+
+    return there_are_holes, new_input_ids, attention_mask, masked_lm_lengths
 
   def checkIfBatchCompiles(self, sample, labels):
 
