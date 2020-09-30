@@ -203,8 +203,8 @@ class LazyConcatDataset(torch.utils.data.Dataset):
 
   def __init__(self, datasets: typing.List[pathlib.Path]):
     super(LazyConcatDataset, self).__init__()
-    assert len(dataset_paths) > 0, 'Empty list of datasets provided.'
-    self.datasets = dataset_paths
+    assert len(datasets) > 0, 'Empty list of datasets provided.'
+    self.datasets = datasets
     self.cumulative_sizes = self.cumsum(self.datasets)
 
     self.curr_dset_idx = None
