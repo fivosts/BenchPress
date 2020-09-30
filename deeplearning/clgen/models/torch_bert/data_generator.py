@@ -80,7 +80,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                   rank = pytorch.torch_xla.get_ordinal()
                  )
             ),
-      num_workers = 1,
+      num_workers = 0,
       drop_last   = True,
     )
     return dataloader
@@ -151,7 +151,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                   rank = pytorch.torch_xla.get_ordinal()
                  )
             ),
-      num_workers = 1,
+      num_workers = 0,
       drop_last   = True,
       )
     return dataloader
@@ -196,9 +196,11 @@ class LazyConcatDataset(torch.utils.data.Dataset):
   def cumsum(sequence):
     r, s = [], 0
     for e in sequence:
-      l = len(torch.load(e))
-      r.append(l + s)
-      s += l
+      lt = len(torch.load(e))
+      assert len(lt) > 0, "Dataset {} is empty".format(e)
+      r.append(lt + s)
+      s += lt
+    l.getLogger().warn(r)
     return r
 
   def __init__(self, datasets: typing.List[pathlib.Path]):
@@ -224,14 +226,12 @@ class LazyConcatDataset(torch.utils.data.Dataset):
     
     if self.curr_dset_idx != dataset_idx:
       self.curr_dset_idx = dataset_idx
-      l.getLogger().info("Loading dataset: {}, {}".format(self.curr_dset_idx, self.datasets[dataset_idx]))
       self.dataset = torch.load(self.datasets[dataset_idx])
 
     if dataset_idx == 0:
       sample_idx = idx
     else:
       sample_idx = idx - self.cumulative_sizes[dataset_idx - 1]
-    # self.monitor.plot()
     return self.dataset[sample_idx]
 
   @property
@@ -282,19 +282,17 @@ class LazyRandomSampler(torch.utils.data.Sampler):
     return self._num_samples
 
   def __iter__(self):
+
     num_datasets     = self.data_source.num_datasets
     cumulative_sizes = self.data_source.cumulative_sizes
-    l.getLogger().warn(num_datasets)
-    l.getLogger().warn(cumulative_sizes)
+
     ds_tensors, curr_len = [], 0
     for idx in range(num_datasets):
-      
-      bounds  = (curr_len, cumulative_sizes[idx] - 1)
+      bounds  = (curr_len, cumulative_sizes[idx])
       curr_len = cumulative_sizes[idx]
-
       if self.replacement:
         if self._num_samples is None:
-          size = 1 + bounds[1] - bounds[0]
+          size = bounds[1] - bounds[0]
         else:
           size = self._num_samples // num_datasets
         ds_tensors.append(torch.randint(low = bounds[0], high = bounds[1], size = (size,), generator = self.generator).tolist())
@@ -305,9 +303,6 @@ class LazyRandomSampler(torch.utils.data.Sampler):
     rand_tensor = []
     for idx in shuffled_idx:
       rand_tensor += ds_tensors[idx]
-
-    l.getLogger().error(rand_tensor)
-
     return iter(rand_tensor)
 
   def __len__(self):
