@@ -299,7 +299,7 @@ class tfBert(backends.BackendBase):
 
   def Train(self,
             corpus,
-            test_sampler: typing.Optional[samplers.sampler] = None,
+            test_sampler: typing.Optional[samplers.Sampler] = None,
             **unused_kwargs
             ) -> None:
     """Training bootstrap function that isolates Train process space"""
