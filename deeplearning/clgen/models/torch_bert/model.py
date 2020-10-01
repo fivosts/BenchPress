@@ -742,7 +742,6 @@ class BertForPreTraining(BertPreTrainedModel):
     new_input_ids          = torch.zeros([batch_size, seq_length], dtype = torch.int64).to(pytorch.device)
 
     for bidx, batch in enumerate(input_ids):
-      l.getLogger().info(self.atomizer.DeatomizeIndices([x for x in batch.cpu().numpy()], ignore_token = self.atomizer.padToken))
       allowed_incr = (seq_length - int(torch.where(batch==self.atomizer.padToken)[0][0]) 
                       if self.atomizer.padToken in batch 
                       else 0)
