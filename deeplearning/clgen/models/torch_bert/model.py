@@ -747,8 +747,9 @@ class BertForPreTraining(BertPreTrainedModel):
                       else 0)
       rem_adds = allowed_incr
 
-      for idx in torch.where((batch == self.atomizer.holeToken) | (batch == self.atomizer.maskToken))[0]:
-        prediction  = prediction_scores[bidx][idx].unsqueeze(0)
+      for target_idx in torch.where((batch == self.atomizer.holeToken) | (batch == self.atomizer.maskToken))[0]:
+        prediction  = prediction_scores[bidx][target_idx].unsqueeze(0)
+        idx = target_idx + allowed_incr - rem_adds
 
         if int(prediction) in {self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken}:
           # Model predicted sth that will close the hole.
@@ -764,7 +765,7 @@ class BertForPreTraining(BertPreTrainedModel):
           batch = torch.cat((batch[:idx], prediction, batch[idx:]))
         else:
           # Asked position is a hole and there is no room.
-          step_inputs = torch.cat((batch[:idx], prediction, batch[idx+1:]))
+          batch = torch.cat((batch[:idx], prediction, batch[idx+1:]))
 
       batch = batch[:len(batch) - (allowed_incr - rem_adds)]
       if len(batch) < seq_length:
