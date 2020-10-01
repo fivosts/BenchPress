@@ -733,62 +733,58 @@ class BertForPreTraining(BertPreTrainedModel):
                    input_ids,
                    prediction_scores,
                    attention_mask,
-                   masked_lm_lengths
                    ):
     """
     Takes a single sequence of the batch.
     """
-    batch_size, sequence_length = tuple(input_ids.shape)
-    new_input_ids = torch.zeros([batch_size, sequence_length], dtype = torch.int64)
-    there_are_holes = False
-    for batch, batch_input in enumerate(input_ids):
+    batch_size, seq_length = tuple(input_ids.shape)
+    holes_exist            = False
+    new_input_ids          = torch.zeros([batch_size, seq_length], dtype = torch.int64).to(pytorch.device)
 
-      if self.atomizer.padToken in batch_input:
-        initial_allowed_adds = sequence_length - torch.where(batch_input==self.atomizer.padToken)[0][0]
+    for bidx, batch in enumerate(input_ids):
+      l.getLogger().info(self.atomizer.DeatomizeIndices([x for x in batch.cpu().numpy()], ignore_token = self.atomizer.padToken))
+      allowed_incr = (seq_length - int(torch.where(batch==self.atomizer.padToken)[0][0]) 
+                      if self.atomizer.padToken in batch 
+                      else 0)
+      rem_adds = allowed_incr
+
+      for idx in torch.where((batch == self.atomizer.holeToken) | (batch == self.atomizer.maskToken))[0]:
+        prediction  = prediction_scores[bidx][idx].unsqueeze(0)
+
+        if int(prediction) in {self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken}:
+          # Model predicted sth that will close the hole.
+          rem_adds += 1
+          batch = torch.cat((batch[:idx], batch[idx+1:]))
+        elif batch[idx] == self.atomizer.maskToken:
+          # Asked position is a mask.
+          batch = torch.cat((batch[:idx], prediction, batch[idx+1:]))
+        elif rem_adds:
+          # Asked position is a hole and there is room.
+          rem_adds   -= 1
+          holes_exist = True
+          batch = torch.cat((batch[:idx], prediction, batch[idx:]))
+        else:
+          # Asked position is a hole and there is no room.
+          step_inputs = torch.cat((batch[:idx], prediction, batch[idx+1:]))
+
+      batch = batch[:len(batch) - (allowed_incr - rem_adds)]
+      if len(batch) < seq_length:
+        num_pads = seq_length - len(batch)
+        batch    = torch.cat((batch, torch.LongTensor([self.atomizer.padToken] * num_pads).to(pytorch.device)))
+
+      assert len(batch) == seq_length, "{} - {} - {}".format(len(batch), allowed_incr, rem_adds)
+      new_input_ids[bidx] = batch
+
+      if self.atomizer.padToken not in batch:
+        attention_mask[bidx] = torch.ones([seq_length], dtype = torch.int64)
       else:
-        initial_allowed_adds = 0
+        pad_idx = torch.where(batch == self.atomizer.padToken)[0][0]
+        attention_mask[bidx] = torch.cat((
+          torch.ones ([pad_idx],              dtype = torch.int64),
+          torch.zeros([seq_length - pad_idx], dtype = torch.int64)
+        ))
 
-      new_inputs   = batch_input
-      allowed_adds = initial_allowed_adds
-      while allowed_adds and (self.atomizer.holeToken in new_inputs or self.atomizer.maskToken in new_inputs):
-
-        there_are_holes = True
-        target_idxs = torch.where(new_inputs == self.atomizer.holeToken or new_inputs == self.atomizer.maskToken)[0]
-
-        step_inputs, prev_idx = [], 0
-        for idx in target_idxs:
-
-          prediction  = prediction_scores[batch][idx]
-          step_inputs += new_inputs[prev_idx:idx]
-          prev_idx    = 1 + idx
-
-          if prediction == self.atomizer.endholeToken:
-            allowed_adds += 1
-          else:
-            if new_inputs[idx] == self.atomizer.maskToken:
-              step_inputs   += [prediction]
-            elif allowed_adds:
-              step_inputs   += [prediction, self.atomizer.holeToken]
-              allowed_adds -= 1
-            else:
-              step_inputs   += [prediction]
-        step_inputs += new_inputs[prev_idx:]
-        new_inputs = step_inputs
-
-      new_inputs = new_inputs[:len(new_inputs) - (initial_allowed_adds - allowed_adds)]
-      assert len(new_inputs) == sequence_length
-      new_input_ids[batch]    = torch.LongTensor(new_inputs)
-
-      if self.atomizer.padToken not in new_inputs:
-        attention_mask[batch] = torch.ones([sequence_length], dtype = torch.int64)
-      else:
-        pad_idx = torch.where(new_inputs == self.atomizer.padToken)[0][0]
-        attention_mask[batch] = torch.cat(
-          torch.ones ([pad_idx],                   dtype = torch.int64),
-          torch.zeros([sequence_length - pad_idx], dtype = torch.int64)
-        )
-
-    return there_are_holes, new_input_ids, attention_mask, masked_lm_lengths
+    return holes_exist, new_input_ids, attention_mask
 
   def checkIfBatchCompiles(self, sample, labels):
 
@@ -968,11 +964,10 @@ class BertForPreTraining(BertPreTrainedModel):
 
     if iterate_compiler:
       if is_training:
-        there_are_holes, new_input_ids, new_attention_mask, new_masked_lengths = self.fillTrainSeq(
+        there_are_holes, new_input_ids, new_attention_mask = self.fillTrainSeq(
           input_ids,
           [[argmax_func(x) for x in b] for b in prediction_scores],
           attention_mask,
-          masked_lm_lengths,
         )
       else:
         num_targets = sum([x for x in input_ids[0] if x == self.atomizer.maskToken or x == self.atomizer.holeToken])
@@ -999,11 +994,10 @@ class BertForPreTraining(BertPreTrainedModel):
         new_sequence_output, new_pooled_output = new_outputs[:2]
         new_prediction_scores, new_seq_relationship_score = self.cls(new_sequence_output, new_pooled_output)
         if is_training:
-          there_are_holes, new_input_ids, new_attention_mask, new_masked_lengths = self.fillTrainSeq(
+          there_are_holes, new_input_ids, new_attention_mask = self.fillTrainSeq(
             new_input_ids,
             [[argmax_func(x) for x in b] for b in new_prediction_scores],
             new_attention_mask,
-            new_masked_lengths,
           )
         else:
           there_are_holes, new_input_ids, new_attention_mask, sample_indices = self.fillPredictionSeq(
@@ -1012,7 +1006,6 @@ class BertForPreTraining(BertPreTrainedModel):
             new_attention_mask,
             sample_indices,
           )
-
 
       compile_flag = self.checkIfBatchCompiles(new_input_ids.cpu().numpy(), labels)
 
