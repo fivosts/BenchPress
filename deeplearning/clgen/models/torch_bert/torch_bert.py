@@ -311,10 +311,10 @@ class torchBert(backends.BackendBase):
         self.logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
       if FLAGS.reward_compilation:
-        correct_sample_count = 0
         correct_sample_obs = sample_observers.SamplesDatabaseObserver(
           "sqlite:///{}".format(self.logfile_path / "correct_samples.db")
         )
+        correct_sample_count = correct_sample_obs.sample_id
       else:
         correct_sample_obs = None
         
