@@ -743,34 +743,46 @@ class BertForPreTraining(BertPreTrainedModel):
     there_are_holes = False
     for batch, batch_input in enumerate(input_ids):
 
-      new_inputs = []
       if self.atomizer.padToken in batch_input:
-        allowed_adds = sequence_length - torch.where(batch_input==self.atomizer.padToken)[0][0]
+        initial_allowed_adds = sequence_length - torch.where(batch_input==self.atomizer.padToken)[0][0]
       else:
-        allowed_adds = 0
+        initial_allowed_adds = 0
 
-      for token, prediction in zip(batch_input, prediction_scores[batch]):
-        if token != self.atomizer.holeToken:
-          # Not a hole, add to new sequence
-          new_inputs.append(token)
-        elif prediction == self.atomizer.endholeToken:
-          # Endhole token closes holes. 1 allowed addition is earned. -1 offset.
-          there_are_holes = True
-          allowed_adds += 1
-        else:
-          there_are_holes = True
-          new_inputs.append(prediction)
-          if allowed_adds:
-            # If you haven't ran out of available additions, add a hole too.
-            new_inputs.append(self.atomizer.holeToken)
+      new_inputs   = batch_input
+      allowed_adds = initial_allowed_adds
+      while allowed_adds and (self.atomizer.holeToken in new_inputs or self.atomizer.maskToken in new_inputs):
+
+        there_are_holes = True
+        target_idxs = torch.where(new_inputs == self.atomizer.holeToken or new_inputs == self.atomizer.maskToken)[0]
+
+        step_inputs, prev_idx = [], 0
+        for idx in target_idxs:
+
+          prediction  = prediction_scores[batch][idx]
+          step_inputs += new_inputs[prev_idx:idx]
+          prev_idx    = 1 + idx
+
+          if prediction == self.atomizer.endholeToken:
             allowed_adds += 1
+          else:
+            if new_inputs[idx] == self.atomizer.maskToken:
+              step_inputs   += [prediction]
+            elif allowed_adds:
+              step_inputs   += [prediction, self.atomizer.holeToken]
+              allowed_adds -= 1
+            else:
+              step_inputs   += [prediction]
+        step_inputs += new_inputs[prev_idx:]
+        new_inputs = step_inputs
 
-      assert len(new_inputs) <= sequence_length
-      new_inputs             += [self.atomizer.padToken] * sequence_length - len(new_inputs)
-      new_input_ids[batch]    = torch.LongTensor(new_input)
-      if pad_idx is None:
-        attention_mask[batch] = torch.full([sequence_length], 1, dtype = torch.int64)
+      new_inputs = new_inputs[:len(new_inputs) - (initial_allowed_adds - allowed_adds)]
+      assert len(new_inputs) == sequence_length
+      new_input_ids[batch]    = torch.LongTensor(new_inputs)
+
+      if self.atomizer.padToken not in new_inputs:
+        attention_mask[batch] = torch.ones([sequence_length], dtype = torch.int64)
       else:
+        pad_idx = torch.where(new_inputs == self.atomizer.padToken)[0][0]
         attention_mask[batch] = torch.cat(
           torch.ones ([pad_idx],                   dtype = torch.int64),
           torch.zeros([sequence_length - pad_idx], dtype = torch.int64)
