@@ -314,7 +314,6 @@ class torchBert(backends.BackendBase):
         correct_sample_obs = sample_observers.SamplesDatabaseObserver(
           "sqlite:///{}".format(self.logfile_path / "correct_samples.db")
         )
-        correct_sample_count = correct_sample_obs.sample_id
       else:
         correct_sample_obs = None
         
@@ -327,7 +326,6 @@ class torchBert(backends.BackendBase):
 
       try:
         self.train.model.train()
-        incr_corr_samples = 0
         for epoch in tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False):
           if epoch < self.current_step // self.steps_per_epoch:
             continue # Stupid bar won't resume.
@@ -371,8 +369,6 @@ class torchBert(backends.BackendBase):
                     date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
                   )
                 )
-              incr_corr_samples    = correct_sample_obs.sample_id - correct_sample_count
-              correct_sample_count = correct_sample_obs.sample_id
             train_hook.step(
               masked_lm_loss = step_out.masked_lm_loss.item(),
               next_sentence_loss = step_out.next_sentence_loss.item(),
@@ -381,7 +377,7 @@ class torchBert(backends.BackendBase):
               compilation_rate = step_out.batch_compilation_rate,
               batch_execution_time_ms = exec_time_ms,
               time_per_sample_ms = exec_time_ms / self.train_batch_size,
-              num_correct_samples = (incr_corr_samples * min(self.steps_per_epoch, FLAGS.monitor_frequency)
+              num_correct_samples = (correct_sample_obs.sample_id * min(self.steps_per_epoch, FLAGS.monitor_frequency)
                                      if correct_sample_obs is not None else None)
             )
             self.train.model.zero_grad()
