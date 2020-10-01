@@ -371,8 +371,8 @@ class torchBert(backends.BackendBase):
                     date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
                   )
                 )
-                incr_corr_samples    = correct_sample_count - correct_sample_obs.sample_id
-                correct_sample_count = correct_sample_obs.sample_id
+              incr_corr_samples    = correct_sample_obs.sample_id - correct_sample_count
+              correct_sample_count = correct_sample_obs.sample_id
             train_hook.step(
               masked_lm_loss = step_out.masked_lm_loss.item(),
               next_sentence_loss = step_out.next_sentence_loss.item(),
