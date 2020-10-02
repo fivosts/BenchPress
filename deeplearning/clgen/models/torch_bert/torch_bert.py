@@ -370,15 +370,15 @@ class torchBert(backends.BackendBase):
                   )
                 )
             train_hook.step(
-              masked_lm_loss = step_out.masked_lm_loss.item(),
-              next_sentence_loss = step_out.next_sentence_loss.item(),
-              total_loss = total_loss.item(),
-              learning_rate = self.train.scheduler.get_last_lr()[0],
-              compilation_rate = step_out.batch_compilation_rate,
+              masked_lm_loss          = step_out.masked_lm_loss.item(),
+              next_sentence_loss      = step_out.next_sentence_loss.item(),
+              total_loss              = total_loss.item(),
+              learning_rate           = self.train.scheduler.get_last_lr()[0],
+              compilation_rate        = step_out.batch_compilation_rate,
               batch_execution_time_ms = exec_time_ms,
-              time_per_sample_ms = exec_time_ms / self.train_batch_size,
-              num_correct_samples = (correct_sample_obs.sample_id * min(self.steps_per_epoch, FLAGS.monitor_frequency)
-                                     if correct_sample_obs is not None else None)
+              time_per_sample_ms      = exec_time_ms / self.train_batch_size,
+              num_correct_samples     = (correct_sample_obs.sample_id * min(self.steps_per_epoch, FLAGS.monitor_frequency)
+                                        if correct_sample_obs is not None else None)
             )
             self.train.model.zero_grad()
             if self.current_step == 0:
