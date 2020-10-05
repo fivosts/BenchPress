@@ -22,7 +22,7 @@ import typing
 import warnings
 from dataclasses import dataclass
 from typing import Optional, Tuple
-
+import concurrent.futures
 # import torch
 # import torch.utils.checkpoint
 
@@ -730,78 +730,66 @@ class BertForPreTraining(BertPreTrainedModel):
     return self.cls.predictions.decoder
 
   def fillTrainSeq(self,
-                   input_ids,
+                   batch,
                    prediction_scores,
                    attention_mask,
                    ):
     """
     Takes a single sequence of the batch.
     """
-    batch_size, seq_length = tuple(input_ids.shape)
-    holes_exist            = False
-    new_input_ids          = torch.zeros([batch_size, seq_length], dtype = torch.int64).to(pytorch.device)
+    seq_length    = tuple(batch.shape)[0]
+    holes_exist   = False
 
-    for bidx, batch in enumerate(input_ids):
-      allowed_incr = (seq_length - int(torch.where(batch==self.atomizer.padToken)[0][0]) 
-                      if self.atomizer.padToken in batch 
-                      else 0)
-      rem_adds = allowed_incr
+    allowed_incr = (seq_length - int(torch.where(batch==self.atomizer.padToken)[0][0])
+                    if self.atomizer.padToken in batch
+                    else 0)
+    rem_adds = allowed_incr
 
-      for target_idx in torch.where((batch == self.atomizer.holeToken) | (batch == self.atomizer.maskToken))[0]:
-        prediction  = prediction_scores[bidx][target_idx].unsqueeze(0)
-        idx = target_idx + allowed_incr - rem_adds
+    for target_idx in torch.where((batch == self.atomizer.holeToken) | (batch == self.atomizer.maskToken))[0]:
+      prediction  = prediction_scores[target_idx].unsqueeze(0)
+      idx = target_idx + allowed_incr - rem_adds
 
-        if int(prediction) in {self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken}:
-          # Model predicted sth that will close the hole.
-          rem_adds += 1
-          batch = torch.cat((batch[:idx], batch[idx+1:]))
-        elif batch[idx] == self.atomizer.maskToken:
-          # Asked position is a mask.
-          batch = torch.cat((batch[:idx], prediction, batch[idx+1:]))
-        elif rem_adds:
-          # Asked position is a hole and there is room.
-          rem_adds   -= 1
-          holes_exist = True
-          batch = torch.cat((batch[:idx], prediction, batch[idx:]))
-        else:
-          # Asked position is a hole and there is no room.
-          batch = torch.cat((batch[:idx], prediction, batch[idx+1:]))
-
-      batch = batch[:len(batch) - (allowed_incr - rem_adds)]
-      if len(batch) < seq_length:
-        num_pads = seq_length - len(batch)
-        batch    = torch.cat((batch, torch.LongTensor([self.atomizer.padToken] * num_pads).to(pytorch.device)))
-
-      assert len(batch) == seq_length, "{} - {} - {}".format(len(batch), allowed_incr, rem_adds)
-      new_input_ids[bidx] = batch
-
-      if self.atomizer.padToken not in batch:
-        attention_mask[bidx] = torch.ones([seq_length], dtype = torch.int64)
+      if int(prediction) in {self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken}:
+        # Model predicted sth that will close the hole.
+        rem_adds += 1
+        batch = torch.cat((batch[:idx], batch[idx+1:]))
+      elif batch[idx] == self.atomizer.maskToken:
+        # Asked position is a mask.
+        batch = torch.cat((batch[:idx], prediction, batch[idx+1:]))
+      elif rem_adds:
+        # Asked position is a hole and there is room.
+        rem_adds   -= 1
+        holes_exist = True
+        batch = torch.cat((batch[:idx], prediction, batch[idx:]))
       else:
-        pad_idx = torch.where(batch == self.atomizer.padToken)[0][0]
-        attention_mask[bidx] = torch.cat((
-          torch.ones ([pad_idx],              dtype = torch.int64),
-          torch.zeros([seq_length - pad_idx], dtype = torch.int64)
-        ))
+        # Asked position is a hole and there is no room.
+        batch = torch.cat((batch[:idx], prediction, batch[idx+1:]))
 
-    return holes_exist, new_input_ids, attention_mask
+    batch = batch[:len(batch) - (allowed_incr - rem_adds)]
+    if len(batch) < seq_length:
+      num_pads = seq_length - len(batch)
+      batch    = torch.cat((batch, torch.LongTensor([self.atomizer.padToken] * num_pads)))
 
-  def checkIfBatchCompiles(self, sample, labels):
+    assert len(batch) == seq_length, "{} - {} - {}".format(len(batch), allowed_incr, rem_adds)
 
-    # Check for compilation: new_input_ids
-    code_batch = [self.atomizer.ArrayToCode(x) for x in sample]
-    batch_size, sequence_length = tuple(sample.shape)
-    compile_flag = torch.zeros([batch_size], dtype = torch.int64, device = pytorch.device)
-    for b in range(batch_size):
-      try:
-        stdout = opencl.Compile(code_batch[b])
-        compile_flag[b] = 1
-        labels[b] = torch.full(
-          [sequence_length], -100, dtype = torch.int64, device = pytorch.device
-        )
-      except ValueError:
-        compile_flag[b] = 0
-    return compile_flag
+    if self.atomizer.padToken not in batch:
+      attention_mask = torch.ones([seq_length], dtype = torch.int64)
+    else:
+      pad_idx = torch.where(batch == self.atomizer.padToken)[0][0]
+      attention_mask = torch.cat((
+        torch.ones ([pad_idx],              dtype = torch.int64),
+        torch.zeros([seq_length - pad_idx], dtype = torch.int64)
+      ))
+
+    return holes_exist, batch, attention_mask
+
+  def checkIfBatchCompiles(self, sample):
+    """Check if generated sample compiles"""
+    try:
+      stdout = opencl.Compile(self.atomizer.ArrayToCode(sample))
+      return 1
+    except ValueError:
+      return 0
 
   def fillPredictionSeq(self, 
                         input_ids,
@@ -877,6 +865,40 @@ class BertForPreTraining(BertPreTrainedModel):
       updated_sequence.append(batch)
     new_input_ids = torch.LongTensor(updated_sequence).to(pytorch.device)
     return there_is_target, new_input_ids, attention_mask, sample_indices
+
+  def apply_batch(self, batch_input, batch_prediction, batch_attention, position_ids, label):
+
+    argmax_func = lambda x: torch.argmax(x)
+    holes_exist, new_batch_input, new_batch_attention = self.fillTrainSeq(
+      batch_input,
+      [argmax_func(x) for x in batch_prediction],
+      batch_attention
+    )
+    while holes_exist:
+      new_outputs = self.bert(
+        new_batch_input.unsqueeze(0).to('cuda'),
+        attention_mask=new_batch_attention.unsqueeze(0).to('cuda'),
+        token_type_ids=None,
+        position_ids=position_ids.unsqueeze(0).to('cuda'),
+        head_mask=None,
+        inputs_embeds=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
+      )
+      new_sequence_output, new_pooled_output = new_outputs[:2]
+      new_batch_prediction, new_seq_relationship_score = self.cls(new_sequence_output, new_pooled_output)
+
+      holes_exist, new_batch_input, new_batch_attention = self.fillTrainSeq(
+        new_batch_input,
+        [argmax_func(x) for x in new_batch_prediction.detach().cpu().squeeze(0)],
+        new_batch_attention,
+      )
+
+    compile_flag = self.checkIfBatchCompiles(new_batch_input.numpy())
+    if compile_flag:
+      label[:] = -100
+    return new_batch_input, compile_flag, label
 
   def forward(
     self,
@@ -958,18 +980,27 @@ class BertForPreTraining(BertPreTrainedModel):
       output_hidden_states=output_hidden_states,
       return_dict=return_dict,
     )
-
     sequence_output, pooled_output = outputs[:2]
     prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
 
     if iterate_compiler:
       if is_training:
-        there_are_holes, new_input_ids, new_attention_mask = self.fillTrainSeq(
-          input_ids,
-          [[argmax_func(x) for x in b] for b in prediction_scores],
-          attention_mask,
-        )
+        batch_size, sequence_length = tuple(input_ids.shape)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+          jobs = [executor.submit(self.apply_batch, 
+                              input_ids[i].detach().cpu(), 
+                              prediction_scores[i].detach().cpu(), 
+                              attention_mask[i].detach().cpu(),
+                              position_ids[i].detach().cpu(),
+                              labels[i].cpu().numpy())
+                 for i in range(batch_size)]
+          results = [j.result() for j in jobs]
+          samples      = [x.numpy() for (x, _, _) in results]
+          compile_flag = [y         for (_, y, _) in results]
+          labels       = torch.LongTensor([z for (_, _, z) in results]).to(pytorch.device)
+
       else:
+        compile_flag = [0] * len(input_ids)
         num_targets = sum([x for x in input_ids[0] if x == self.atomizer.maskToken or x == self.atomizer.holeToken])
         sample_indices = [[[] for i in range(num_targets)] for j in range(len(input_ids))]
         there_are_holes, new_input_ids, new_attention_mask, sample_indices = self.fillPredictionSeq(
@@ -978,44 +1009,36 @@ class BertForPreTraining(BertPreTrainedModel):
           attention_mask,
           sample_indices,
         )
-
-      while there_are_holes:
-        new_outputs = self.bert(
-          new_input_ids,
-          attention_mask=new_attention_mask,
-          token_type_ids=token_type_ids,
-          position_ids=position_ids,
-          head_mask=head_mask,
-          inputs_embeds=inputs_embeds,
-          output_attentions=output_attentions,
-          output_hidden_states=output_hidden_states,
-          return_dict=return_dict,
-        )
-        new_sequence_output, new_pooled_output = new_outputs[:2]
-        new_prediction_scores, new_seq_relationship_score = self.cls(new_sequence_output, new_pooled_output)
-        if is_training:
-          there_are_holes, new_input_ids, new_attention_mask = self.fillTrainSeq(
+        while there_are_holes:
+          new_outputs = self.bert(
             new_input_ids,
-            [[argmax_func(x) for x in b] for b in new_prediction_scores],
-            new_attention_mask,
+            attention_mask=new_attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
           )
-        else:
+          new_sequence_output, new_pooled_output = new_outputs[:2]
+          new_prediction_scores, new_seq_relationship_score = self.cls(new_sequence_output, new_pooled_output)
           there_are_holes, new_input_ids, new_attention_mask, sample_indices = self.fillPredictionSeq(
             new_input_ids,
             [[argmax_func(x) for x in b] for b in new_prediction_scores],
             new_attention_mask,
             sample_indices,
           )
+        for i in range(len(new_input_ids)):
+          compile_flag[i] = self.checkIfBatchCompiles(new_input_ids[i].cpu().numpy())
+          if compile_flag[i]:
+            labels[i][:] = -100
 
-      compile_flag = self.checkIfBatchCompiles(new_input_ids.cpu().numpy(), labels)
 
     loss_fct = torch.nn.CrossEntropyLoss()
-    masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
-    # if (next_sentence_labels != 0).any():
+    masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
     next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
     total_loss = masked_lm_loss + next_sentence_loss
-    # else:
-    #   total_loss = masked_lm_loss
 
     return BertForPreTrainingOutput(
       masked_lm_loss = masked_lm_loss,
@@ -1026,7 +1049,7 @@ class BertForPreTraining(BertPreTrainedModel):
       hidden_states=outputs[0],
       attentions=outputs[1],
       compile_status = compile_flag if iterate_compiler else [],
-      generated_samples = [x for en, x in enumerate(new_input_ids.cpu().numpy())] if iterate_compiler else [],
+      generated_samples = [x for en, x in enumerate(samples)] if iterate_compiler else [],
       batch_compilation_rate = float(sum(compile_flag)) / len(compile_flag) if iterate_compiler else -1,
       sample_indices = sample_indices if not is_training and is_prediction else []
     )
