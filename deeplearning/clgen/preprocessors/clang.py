@@ -24,10 +24,12 @@ import re
 import subprocess
 import tempfile
 import typing
+import clang.cindex
 from absl import flags
 from deeplearning.clgen.util import environment
 from eupy.native import  logger as l
 
+clang.cindex.Config.set_library_path("{}/lib".format(environment.LLVM))
 # The marker used to mark stdin from clang pre-processor output.
 CLANG_STDIN_MARKER = re.compile(r'# \d+ "<stdin>" 2')
 # Options to pass to clang-format.
@@ -127,8 +129,7 @@ def Preprocess(
   else:
     return stdout
 
-
-def CompileLlvmBytecode(
+def ProcessCompileLlvmBytecode(
   src: str, suffix: str, cflags: typing.List[str], timeout_seconds: int = 60
 ) -> str:
   """Compile input code into textual LLVM byte code.
@@ -158,7 +159,6 @@ def CompileLlvmBytecode(
       + builtin_cflags
       + cflags
     )
-
     process = subprocess.Popen(
       cmd,
       stdout=subprocess.PIPE,
@@ -172,6 +172,34 @@ def CompileLlvmBytecode(
     raise ValueError(stderr)
   return stdout
 
+def CompileLlvmBytecode(
+  src: str, suffix: str, cflags: typing.List[str], timeout_seconds: int = 60
+) -> str:
+  """Compile input code into textual LLVM byte code.
+
+  Args:
+    src: The source code to compile.
+    suffix: The suffix to append to the source code temporary file. E.g. '.c'
+      for a C program.
+    cflags: A list of flags to be passed to clang.
+    timeout_seconds: The number of seconds to allow before killing clang.
+
+  Returns:
+    The textual LLVM byte code.
+
+  """
+  builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
+  with tempfile.NamedTemporaryFile(
+    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
+  ) as f:
+    f.write(src)
+    f.flush()
+    unit = clang.cindex.TranslationUnit.from_source(f.name, args = builtin_cflags + cflags)
+    diagnostics = [str(d) for d in unit.diagnostics if d.severity > 2]
+    if len(diagnostics) > 0:
+      raise ValueError('\n'.join(diagnostics))
+    else:
+      return src
 
 def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
   """Run clang-format on a source to enforce code style.
