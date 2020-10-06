@@ -1003,7 +1003,7 @@ class BertForPreTraining(BertPreTrainedModel):
                               labels[i].cpu().numpy())
                  for i in range(batch_size)]
 
-          results = [j.result() for j in jobs]
+          results      = [j.result() for j in jobs]
           samples      = [x.numpy() for (x, _, _) in results]
           compile_flag = [y         for (_, y, _) in results]
           labels       = torch.LongTensor([z for (_, _, z) in results]).to(pytorch.device)
