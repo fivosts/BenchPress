@@ -150,12 +150,12 @@ class validationSampleHook(object):
       Requested tensors are evaluated and their values are available
     """
 
-    seen_in_training      = inputs['seen_in_training'].numpy()
-    original_input        = inputs['original_input'].numpy()
-    input_ids             = inputs['input_ids'].numpy()
-    input_mask            = inputs['input_mask'].numpy()
-    masked_lm_lengths     = inputs['masked_lm_lengths'].numpy()
-    next_sentence_labels  = inputs['next_sentence_labels'].numpy()
+    seen_in_training      = inputs['seen_in_training'].cpu().numpy()
+    original_input        = inputs['original_input'].cpu().numpy()
+    input_ids             = inputs['input_ids'].cpu().numpy()
+    input_mask            = inputs['input_mask'].cpu().numpy()
+    masked_lm_lengths     = inputs['masked_lm_lengths'].cpu().numpy()
+    next_sentence_labels  = inputs['next_sentence_labels'].cpu().numpy()
     
     masked_lm_ids = [[x for x in batch if x != -100] for batch in inputs['mask_labels'].numpy()]
     masked_lm_positions = [[idx for idx, x in enumerate(batch) if x != -100] for batch in inputs['mask_labels'].numpy()]
