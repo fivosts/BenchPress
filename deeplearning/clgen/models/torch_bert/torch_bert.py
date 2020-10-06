@@ -207,6 +207,7 @@ class torchBert(backends.BackendBase):
     if self.bert_config is None:
       self._ConfigModelParams()
     self.sampler = sampler
+    self.temperature = sampler.temperature
 
     if sampler.sequence_length > self.bertAttrs['max_position_embeddings']:
       raise ValueError(
@@ -214,9 +215,12 @@ class torchBert(backends.BackendBase):
           "was only trained up to sequence length %d" %
           (sampler.sequence_length, self.bertAttrs['max_position_embeddings']))
 
-    self.temperature = sampler.temperature
-
-    m = model.BertForPreTraining(self.bert_config, atomizer = self.atomizer).to(self.pytorch.device)
+    m = model.BertForPreTraining(
+        self.bert_config,
+        atomizer = self.atomizer,
+        use_categorical = FLAGS.categorical_sampling,
+        temperature = self.temperature
+      ).to(self.pytorch.device)
     if self.pytorch.num_gpus > 1:
       m = self.torch.nn.DataParallel(m)
 
@@ -247,18 +251,20 @@ class torchBert(backends.BackendBase):
     """
     Perform a training step on a batch of inputs.
     """
-    for key, value in inputs.items():
-      inputs[key] = value.to(self.pytorch.device)
+    inputs['input_ids']            = inputs['input_ids'].to(self.pytorch.device)
+    inputs['input_mask']           = inputs['input_mask'].to(self.pytorch.device)
+    inputs['position_ids']         = inputs['position_ids'].to(self.pytorch.device)
+    inputs['mask_labels']          = inputs['mask_labels'].to(self.pytorch.device)
+    inputs['next_sentence_labels'] = inputs['next_sentence_labels'].to(self.pytorch.device)
+
     outputs = model(
                 input_ids            = inputs['input_ids'],
                 attention_mask       = inputs['input_mask'],
                 position_ids         = inputs['position_ids'],
-                labels               = inputs['mask_labels'],
+                masked_lm_labels     = inputs['mask_labels'],
                 next_sentence_labels = inputs['next_sentence_labels'],
-                masked_lm_lengths    = inputs['masked_lm_lengths'],
                 is_training          = is_training,
                 is_prediction        = is_prediction,
-                sampling_temperature = sampling_temperature,
               )
     return outputs
 
