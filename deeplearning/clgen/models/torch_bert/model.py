@@ -744,44 +744,52 @@ class BertForPreTraining(BertPreTrainedModel):
                     if self.atomizer.padToken in batch
                     else 0)
     rem_adds = allowed_incr
+    ignore_idx, no_hole, with_hole = set(), {}, {}
 
     for target_idx in torch.where((batch == self.atomizer.holeToken) | (batch == self.atomizer.maskToken))[0]:
-      prediction  = prediction_scores[target_idx].unsqueeze(0)
-      idx = target_idx + allowed_incr - rem_adds
+      idx        = int(target_idx)
+      prediction = torch.argmax(prediction_scores[target_idx])
 
       if int(prediction) in {self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken}:
         # Model predicted sth that will close the hole.
         rem_adds += 1
-        batch = torch.cat((batch[:idx], batch[idx+1:]))
-      elif batch[idx] == self.atomizer.maskToken:
-        # Asked position is a mask.
-        batch = torch.cat((batch[:idx], prediction, batch[idx+1:]))
+        ignore_idx.add(idx)
+      elif batch[idx] == self.atomizer.maskToken or not rem_adds:
+        # Asked position is a mask, or it is a hole and there is no room.
+        no_hole[idx] = int(prediction)
       elif rem_adds:
-        # Asked position is a hole and there is room.
         rem_adds   -= 1
         holes_exist = True
-        batch = torch.cat((batch[:idx], prediction, batch[idx:]))
+        with_hole[idx] = int(prediction)
+
+    new_batch = []
+    for idx, t in enumerate(batch):
+      if idx in ignore_idx:
+        continue
+      elif idx in no_hole:
+        new_batch.append(no_hole[idx])
+      elif idx in with_hole:
+        new_batch += [with_hole[idx], self.atomizer.holeToken]
       else:
-        # Asked position is a hole and there is no room.
-        batch = torch.cat((batch[:idx], prediction, batch[idx+1:]))
+        new_batch.append(t)
 
-    batch = batch[:len(batch) - (allowed_incr - rem_adds)]
-    if len(batch) < seq_length:
-      num_pads = seq_length - len(batch)
-      batch    = torch.cat((batch, torch.LongTensor([self.atomizer.padToken] * num_pads)))
+    if len(new_batch) < seq_length:
+      new_batch += [self.atomizer.padToken] * (seq_length - len(new_batch))
+    else:
+      new_batch = new_batch[:len(new_batch) - (allowed_incr - rem_adds)]
+    assert len(new_batch) == seq_length, "{} - {} - {}".format(len(new_batch), allowed_incr, rem_adds)
+    new_batch = torch.LongTensor(new_batch)
 
-    assert len(batch) == seq_length, "{} - {} - {}".format(len(batch), allowed_incr, rem_adds)
-
-    if self.atomizer.padToken not in batch:
+    if self.atomizer.padToken not in new_batch:
       attention_mask = torch.ones([seq_length], dtype = torch.int64)
     else:
-      pad_idx = torch.where(batch == self.atomizer.padToken)[0][0]
+      pad_idx = torch.where(new_batch == self.atomizer.padToken)[0][0]
       attention_mask = torch.cat((
         torch.ones ([pad_idx],              dtype = torch.int64),
         torch.zeros([seq_length - pad_idx], dtype = torch.int64)
       ))
 
-    return holes_exist, batch, attention_mask
+    return holes_exist, new_batch, attention_mask
 
   def checkIfBatchCompiles(self, sample):
     """Check if generated sample compiles"""
@@ -868,10 +876,9 @@ class BertForPreTraining(BertPreTrainedModel):
 
   def apply_batch(self, batch_input, batch_prediction, batch_attention, position_ids, label):
 
-    argmax_func = lambda x: torch.argmax(x)
     holes_exist, new_batch_input, new_batch_attention = self.fillTrainSeq(
       batch_input,
-      [argmax_func(x) for x in batch_prediction],
+      batch_prediction,
       batch_attention
     )
     while holes_exist:
@@ -891,13 +898,14 @@ class BertForPreTraining(BertPreTrainedModel):
 
       holes_exist, new_batch_input, new_batch_attention = self.fillTrainSeq(
         new_batch_input,
-        [argmax_func(x) for x in new_batch_prediction.detach().cpu().squeeze(0)],
+        new_batch_prediction.detach().cpu().squeeze(0),
         new_batch_attention,
       )
 
     compile_flag = self.checkIfBatchCompiles(new_batch_input.numpy())
     if compile_flag:
       label[:] = -100
+
     return new_batch_input, compile_flag, label
 
   def forward(
@@ -994,11 +1002,11 @@ class BertForPreTraining(BertPreTrainedModel):
                               position_ids[i].detach().cpu(),
                               labels[i].cpu().numpy())
                  for i in range(batch_size)]
+
           results = [j.result() for j in jobs]
           samples      = [x.numpy() for (x, _, _) in results]
           compile_flag = [y         for (_, y, _) in results]
           labels       = torch.LongTensor([z for (_, _, z) in results]).to(pytorch.device)
-
       else:
         compile_flag = [0] * len(input_ids)
         num_targets = sum([x for x in input_ids[0] if x == self.atomizer.maskToken or x == self.atomizer.holeToken])
@@ -1033,7 +1041,6 @@ class BertForPreTraining(BertPreTrainedModel):
           compile_flag[i] = self.checkIfBatchCompiles(new_input_ids[i].cpu().numpy())
           if compile_flag[i]:
             labels[i][:] = -100
-
 
     loss_fct = torch.nn.CrossEntropyLoss()
     masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
