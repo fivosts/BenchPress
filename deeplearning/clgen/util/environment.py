@@ -8,6 +8,7 @@ def check_exists(path):
 
 try:
   LLVM                = check_exists(os.environ['LLVM'])
+  LLVM_LIB            = check_exists(os.environ['LLVM_LIB'])
   LIBCXX_HEADERS      = check_exists(os.environ['LIBCXX_HEADERS'])
   CLANG               = check_exists(os.environ['CLANG'])
   CLANG_FORMAT        = check_exists(os.environ['CLANG_FORMAT'])

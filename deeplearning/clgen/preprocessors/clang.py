@@ -29,7 +29,6 @@ from absl import flags
 from deeplearning.clgen.util import environment
 from eupy.native import  logger as l
 
-clang.cindex.Config.set_library_path("{}/lib".format(environment.LLVM))
 # The marker used to mark stdin from clang pre-processor output.
 CLANG_STDIN_MARKER = re.compile(r'# \d+ "<stdin>" 2')
 # Options to pass to clang-format.
@@ -51,6 +50,7 @@ CLANG_FORMAT_CONFIG = {
   "AlwaysBreakAfterReturnType": "None",
   "AlwaysBreakAfterDefinitionReturnType": "None",
 }
+clang.cindex.Config.set_library_path(environment.LLVM_LIB)
 CLANG = environment.CLANG
 CLANG_FORMAT = environment.CLANG_FORMAT
 
