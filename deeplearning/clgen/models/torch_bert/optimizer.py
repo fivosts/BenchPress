@@ -13,17 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """PyTorch optimization for BERT model."""
-
-import logging
 import math
-from typing import Callable, Iterable, Tuple
+import typing
 
-import torch
-from torch.optim import Optimizer
-from torch.optim.lr_scheduler import LambdaLR
-
-
-logger = logging.getLogger(__name__)
+from deeplearning.clgen.util.pytorch import torch
 
 def create_optimizer_and_scheduler(model,
                                    num_train_steps: int,
@@ -62,7 +55,7 @@ def create_optimizer_and_scheduler(model,
   )
   return opt, lr_scheduler
 
-def get_constant_schedule(optimizer: Optimizer, last_epoch: int = -1):
+def get_constant_schedule(optimizer: torch.optim.Optimizer, last_epoch: int = -1):
   """
   Create a schedule with a constant learning rate, using the learning rate set in optimizer.
 
@@ -75,10 +68,10 @@ def get_constant_schedule(optimizer: Optimizer, last_epoch: int = -1):
   Return:
     :obj:`torch.optim.lr_scheduler.LambdaLR` with the appropriate schedule.
   """
-  return LambdaLR(optimizer, lambda _: 1, last_epoch=last_epoch)
+  return torch.optim.lr_scheduler.LambdaLR(optimizer, lambda _: 1, last_epoch=last_epoch)
 
 
-def get_constant_schedule_with_warmup(optimizer: Optimizer, num_warmup_steps: int, last_epoch: int = -1):
+def get_constant_schedule_with_warmup(optimizer: torch.optim.Optimizer, num_warmup_steps: int, last_epoch: int = -1):
   """
   Create a schedule with a constant learning rate preceded by a warmup period during which the learning rate
   increases linearly between 0 and the initial lr set in the optimizer.
@@ -100,7 +93,7 @@ def get_constant_schedule_with_warmup(optimizer: Optimizer, num_warmup_steps: in
       return float(current_step) / float(max(1.0, num_warmup_steps))
     return 1.0
 
-  return LambdaLR(optimizer, lr_lambda, last_epoch=last_epoch)
+  return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda, last_epoch=last_epoch)
 
 
 def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_steps, last_epoch=-1):
@@ -129,11 +122,11 @@ def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_st
       0.0, float(num_training_steps - current_step) / float(max(1, num_training_steps - num_warmup_steps))
     )
 
-  return LambdaLR(optimizer, lr_lambda, last_epoch)
+  return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda, last_epoch)
 
 
 def get_cosine_schedule_with_warmup(
-  optimizer: Optimizer, num_warmup_steps: int, num_training_steps: int, num_cycles: float = 0.5, last_epoch: int = -1
+  optimizer: torch.optim.Optimizer, num_warmup_steps: int, num_training_steps: int, num_cycles: float = 0.5, last_epoch: int = -1
 ):
   """
   Create a schedule with a learning rate that decreases following the values of the cosine function between the
@@ -163,11 +156,11 @@ def get_cosine_schedule_with_warmup(
     progress = float(current_step - num_warmup_steps) / float(max(1, num_training_steps - num_warmup_steps))
     return max(0.0, 0.5 * (1.0 + math.cos(math.pi * float(num_cycles) * 2.0 * progress)))
 
-  return LambdaLR(optimizer, lr_lambda, last_epoch)
+  return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda, last_epoch)
 
 
 def get_cosine_with_hard_restarts_schedule_with_warmup(
-  optimizer: Optimizer, num_warmup_steps: int, num_training_steps: int, num_cycles: int = 1, last_epoch: int = -1
+  optimizer: torch.optim.Optimizer, num_warmup_steps: int, num_training_steps: int, num_cycles: int = 1, last_epoch: int = -1
 ):
   """
   Create a schedule with a learning rate that decreases following the values of the cosine function between the
@@ -198,20 +191,20 @@ def get_cosine_with_hard_restarts_schedule_with_warmup(
       return 0.0
     return max(0.0, 0.5 * (1.0 + math.cos(math.pi * ((float(num_cycles) * progress) % 1.0))))
 
-  return LambdaLR(optimizer, lr_lambda, last_epoch)
+  return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda, last_epoch)
 
 
-class AdamW(Optimizer):
+class AdamW(torch.optim.Optimizer):
   """
   Implements Adam algorithm with weight decay fix as introduced in
   `Decoupled Weight Decay Regularization <https://arxiv.org/abs/1711.05101>`__.
 
   Parameters:
-    params (:obj:`Iterable[torch.nn.parameter.Parameter]`):
-      Iterable of parameters to optimize or dictionaries defining parameter groups.
+    params (:obj:`typing.Iterable[torch.nn.parameter.Parameter]`):
+      typing.Iterable of parameters to optimize or dictionaries defining parameter groups.
     lr (:obj:`float`, `optional`, defaults to 1e-3):
       The learning rate to use.
-    betas (:obj:`Tuple[float,float]`, `optional`, defaults to (0.9, 0.999)):
+    betas (:obj:`typing.Tuple[float,float]`, `optional`, defaults to (0.9, 0.999)):
       Adam's betas parameters (b1, b2).
     eps (:obj:`float`, `optional`, defaults to 1e-6):
       Adam's epsilon for numerical stability.
@@ -223,9 +216,9 @@ class AdamW(Optimizer):
 
   def __init__(
     self,
-    params: Iterable[torch.nn.parameter.Parameter],
+    params: typing.Iterable[torch.nn.parameter.Parameter],
     lr: float = 1e-3,
-    betas: Tuple[float, float] = (0.9, 0.999),
+    betas: typing.Tuple[float, float] = (0.9, 0.999),
     eps: float = 1e-6,
     weight_decay: float = 0.0,
     correct_bias: bool = True,
@@ -241,12 +234,12 @@ class AdamW(Optimizer):
     defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias)
     super().__init__(params, defaults)
 
-  def step(self, closure: Callable = None):
+  def step(self, closure: typing.Callable = None):
     """
     Performs a single optimization step.
 
     Arguments:
-      closure (:obj:`Callable`, `optional`): A closure that reevaluates the model and returns the loss.
+      closure (:obj:`typing.Callable`, `optional`): A closure that reevaluates the model and returns the loss.
     """
     loss = None
     if closure is not None:
