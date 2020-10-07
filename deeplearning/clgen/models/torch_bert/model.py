@@ -787,16 +787,16 @@ class BertForPreTraining(BertPreTrainedModel):
     else:
       new_batch = new_batch[:len(new_batch) - (allowed_incr - rem_adds)]
     assert len(new_batch) == seq_length, "{} - {} - {}".format(len(new_batch), allowed_incr, rem_adds)
-    new_batch = torch.LongTensor(new_batch)
+    new_batch = torch.LongTensor([new_batch])
 
-    if self.atomizer.padToken not in new_batch:
-      attention_mask = torch.ones([seq_length], dtype = torch.int64)
+    if self.atomizer.padToken not in new_batch[0]:
+      attention_mask = torch.ones([1, seq_length], dtype = torch.int64)
     else:
-      pad_idx = torch.where(new_batch == self.atomizer.padToken)[0][0]
+      pad_idx = torch.where(new_batch[0] == self.atomizer.padToken)[0][0]
       attention_mask = torch.cat((
-        torch.ones ([pad_idx],              dtype = torch.int64),
-        torch.zeros([seq_length - pad_idx], dtype = torch.int64)
-      ))
+        torch.ones ([1, pad_idx],              dtype = torch.int64),
+        torch.zeros([1, seq_length - pad_idx], dtype = torch.int64)
+      ), axis = 1)
 
     return holes_exist, new_batch, attention_mask
 
@@ -883,34 +883,31 @@ class BertForPreTraining(BertPreTrainedModel):
     new_input_ids = torch.LongTensor(updated_sequence).to(pytorch.device)
     return there_is_target, new_input_ids, attention_mask, sample_indices
 
-  def apply_batch(self, batch_input, batch_prediction, batch_attention, position_ids, masked_lm_label):
+  def apply_batch(self, batch, prediction, attention, position_ids, masked_lm_label):
 
-    holes_exist, new_batch_input, new_batch_attention = self.fillTrainSeq(
-      batch_input,
-      batch_prediction,
-      batch_attention
+    holes, new_batch, new_attention = self.fillTrainSeq(
+      batch, prediction, attention
     )
-    while holes_exist:
-      new_outputs = self.bert(
-        input_ids      = new_batch_input.unsqueeze(0).to(pytorch.device),
-        attention_mask = new_batch_attention.unsqueeze(0).to(pytorch.device),
-        position_ids   = position_ids.unsqueeze(0).to(pytorch.device),
+    while holes:
+      outputs = self.bert(
+        input_ids      = new_batch.to(pytorch.device),
+        attention_mask = new_attention.to(pytorch.device),
+        position_ids   = position_ids.to(pytorch.device),
       )
-      new_sequence_output, new_pooled_output = new_outputs[:2]
-      new_batch_prediction, new_seq_relationship_score = self.cls(new_sequence_output, new_pooled_output)
+      seq_output, pooled_output = outputs[:2]
+      new_prediction, new_seq_relationship_score = self.cls(seq_output, pooled_output)
 
-      holes_exist, new_batch_input, new_batch_attention = self.fillTrainSeq(
-        new_batch_input,
-        new_batch_prediction.detach().cpu().squeeze(0),
-        new_batch_attention,
+      holes, new_batch, new_attention = self.fillTrainSeq(
+        new_batch[0],
+        new_prediction.detach().cpu()[0],
+        new_attention,
       )
-
-    compile_flag = self.checkIfBatchCompiles(new_batch_input.numpy())
+    compile_flag = self.checkIfBatchCompiles(new_batch[0].numpy())
     if compile_flag:
       for idx, t in enumerate(masked_lm_label):
         if t != -100:
           masked_lm_label[t] = -100
-    return new_batch_input, compile_flag, masked_lm_label
+    return new_batch[0], compile_flag, masked_lm_label
 
   def forward(
     self,
@@ -926,7 +923,6 @@ class BertForPreTraining(BertPreTrainedModel):
     output_hidden_states=None,
     is_training = True,
     is_prediction = False,
-    sampling_temperature = None,
     **kwargs
   ):
     r"""
@@ -982,7 +978,7 @@ class BertForPreTraining(BertPreTrainedModel):
                                   input_ids        [i].cpu(),
                                   prediction_scores[i].detach().cpu(),
                                   attention_mask   [i].cpu(),
-                                  position_ids     [i].cpu(),
+                                  position_ids     [i].cpu().unsqueeze(0),
                                   masked_lm_labels [i].cpu().numpy()
                               ) for i in range(batch_size)]
 
