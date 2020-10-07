@@ -31,18 +31,6 @@ from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.models.torch_bert.activations import gelu, gelu_new, swish
 from deeplearning.clgen.models.torch_bert.config import BertConfig
-from deeplearning.clgen.models.torch_bert.modeling_outputs import (
-  ModelOutput,
-  BaseModelOutput,
-  BaseModelOutputWithPooling,
-  CausalLMOutput,
-  MaskedLMOutput,
-  MultipleChoiceModelOutput,
-  NextSentencePredictorOutput,
-  QuestionAnsweringModelOutput,
-  SequenceClassifierOutput,
-  TokenClassifierOutput,
-)
 from deeplearning.clgen.models.torch_bert.modeling_utils import (
   PreTrainedModel,
   apply_chunking_to_forward,
@@ -376,9 +364,9 @@ class BertEncoder(torch.nn.Module):
 
     if not return_dict:
       return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
-    return BaseModelOutput(
-      last_hidden_state=hidden_states, hidden_states=all_hidden_states, attentions=all_attentions
-    )
+    # return BaseModelOutput(
+    #   last_hidden_state=hidden_states, hidden_states=all_hidden_states, attentions=all_attentions
+    # )
 
 
 class BertPooler(torch.nn.Module):
@@ -710,12 +698,12 @@ class BertModel(BertPreTrainedModel):
     if not return_dict:
       return (sequence_output, pooled_output) + encoder_outputs[1:]
 
-    return BaseModelOutputWithPooling(
-      last_hidden_state=sequence_output,
-      pooler_output=pooled_output,
-      hidden_states=encoder_outputs.hidden_states,
-      attentions=encoder_outputs.attentions,
-    )
+    # return BaseModelOutputWithPooling(
+    #   last_hidden_state=sequence_output,
+    #   pooler_output=pooled_output,
+    #   hidden_states=encoder_outputs.hidden_states,
+    #   attentions=encoder_outputs.attentions,
+    # )
 
 class BertForPreTraining(BertPreTrainedModel):
   def __init__(self, config, atomizer = None, use_categorical = False, temperature = None):
@@ -1132,9 +1120,9 @@ class BertLMHeadModel(BertPreTrainedModel):
       output = (prediction_scores,) + outputs[2:]
       return ((lm_loss,) + output) if lm_loss is not None else output
 
-    return CausalLMOutput(
-      loss=lm_loss, logits=prediction_scores, hidden_states=outputs.hidden_states, attentions=outputs.attentions,
-    )
+    # return CausalLMOutput(
+    #   loss=lm_loss, logits=prediction_scores, hidden_states=outputs.hidden_states, attentions=outputs.attentions,
+    # )
 
   def prepare_inputs_for_generation(self, input_ids, attention_mask=None, **model_kwargs):
     input_shape = input_ids.shape
@@ -1225,12 +1213,12 @@ class BertForMaskedLM(BertPreTrainedModel):
       output = (prediction_scores,) + outputs[2:]
       return ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
 
-    return MaskedLMOutput(
-      loss=masked_lm_loss,
-      logits=prediction_scores,
-      hidden_states=outputs.hidden_states,
-      attentions=outputs.attentions,
-    )
+    # return MaskedLMOutput(
+    #   loss=masked_lm_loss,
+    #   logits=prediction_scores,
+    #   hidden_states=outputs.hidden_states,
+    #   attentions=outputs.attentions,
+    # )
 
   def prepare_inputs_for_generation(self, input_ids, attention_mask=None, **model_kwargs):
     input_shape = input_ids.shape
@@ -1312,6 +1300,6 @@ class BertForTokenClassification(BertPreTrainedModel):
       output = (logits,) + outputs[2:]
       return ((loss,) + output) if loss is not None else output
 
-    return TokenClassifierOutput(
-      loss=loss, logits=logits, hidden_states=outputs.hidden_states, attentions=outputs.attentions,
-    )
+    # return TokenClassifierOutput(
+    #   loss=loss, logits=logits, hidden_states=outputs.hidden_states, attentions=outputs.attentions,
+    # )
