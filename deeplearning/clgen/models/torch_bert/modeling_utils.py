@@ -15,53 +15,30 @@
 # limitations under the License.
 
 import inspect
-import logging
 import os
 import re
-from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Set, Tuple, Union
+import typing
 
-import torch
-from torch import Tensor, device, dtype, nn
-from torch.nn import CrossEntropyLoss
-from torch.nn import functional as F
+from deeplearning.clgen.util import pytorch
+from deeplearning.clgen.util.pytorch import torch
+from deeplearning.clgen.models.torch_bert import generation_utils
 
-from deeplearning.clgen.models.torch_bert.activations import get_activation
-from deeplearning.clgen.models.torch_bert.generation_utils import GenerationMixin
-
-
-logger = logging.getLogger(__name__)
-
-
-try:
-  from torch.nn import Identity
-except ImportError:
-  # Older PyTorch compatibility
-  class Identity(nn.Module):
-    r"""A placeholder identity operator that is argument-insensitive.
-    """
-
-    def __init__(self, *args, **kwargs):
-      super().__init__()
-
-    def forward(self, input):
-      return input
-
+from eupy.native import logger as l
 
 def find_pruneable_heads_and_indices(
-  heads: List[int], n_heads: int, head_size: int, already_pruned_heads: Set[int]
-) -> Tuple[Set[int], torch.LongTensor]:
+  heads: typing.List[int], n_heads: int, head_size: int, already_pruned_heads: typing.Set[int]
+) -> typing.Tuple[typing.Set[int], torch.LongTensor]:
   """
   Finds the heads and their indices taking :obj:`already_pruned_heads` into account.
 
   Args:
-    heads (:obj:`List[int]`): List of the indices of heads to prune.
+    heads (:obj:`typing.List[int]`): typing.List of the indices of heads to prune.
     n_heads (:obj:`int`): The number of heads in the model.
     head_size (:obj:`int`): The size of each head.
-    already_pruned_heads (:obj:`Set[int]`): A set of already pruned heads.
+    already_pruned_heads (:obj:`typing.Set[int]`): A set of already pruned heads.
 
   Returns:
-    :obj:`Tuple[Set[int], torch.LongTensor]`: A tuple with the remaining heads and their corresponding indices.
+    :obj:`typing.Tuple[typing.Set[int], torch.LongTensor]`: A tuple with the remaining heads and their corresponding indices.
   """
   mask = torch.ones(n_heads, head_size)
   heads = set(heads) - already_pruned_heads  # Convert to set and remove already pruned heads
@@ -73,10 +50,9 @@ def find_pruneable_heads_and_indices(
   index: torch.LongTensor = torch.arange(len(mask))[mask].long()
   return heads, index
 
-
 class ModuleUtilsMixin:
   """
-  A few utilities for :obj:`torch.nn.Modules`, to be used as a mixin.
+  A few utilities for :obj:`torch.torch.nn.Modules`, to be used as a mixin.
   """
 
   def num_parameters(self, only_trainable: bool = False) -> int:
@@ -142,43 +118,43 @@ class ModuleUtilsMixin:
       module.mem_rss_pre_forward = 0
 
   @property
-  def device(self) -> device:
+  def device(self) -> pytorch.device:
     """
     :obj:`torch.device`: The device on which the module is (assuming that all the module parameters are on the same
     device).
     """
     try:
-      return next(self.parameters()).device
+      return next(self.parameters()).pytorch.device
     except StopIteration:
-      # For nn.DataParallel compatibility in PyTorch 1.5
+      # For torch.nn.DataParallel compatibility in PyTorch 1.5
 
-      def find_tensor_attributes(module: nn.Module) -> List[Tuple[str, Tensor]]:
+      def find_tensor_attributes(module: torch.nn.Module) -> typing.List[typing.Tuple[str, torch.Tensor]]:
         tuples = [(k, v) for k, v in module.__dict__.items() if torch.is_tensor(v)]
         return tuples
 
       gen = self._named_members(get_members_fn=find_tensor_attributes)
       first_tuple = next(gen)
-      return first_tuple[1].device
+      return first_tuple[1].pytorch.device
 
   @property
-  def dtype(self) -> dtype:
+  def dtype(self) -> torch.dtype:
     """
-    :obj:`torch.dtype`: The dtype of the module (assuming that all the module parameters have the same dtype).
+    :obj:`torch.torch.dtype`: The torch.dtype of the module (assuming that all the module parameters have the same torch.dtype).
     """
     try:
-      return next(self.parameters()).dtype
+      return next(self.parameters()).torch.dtype
     except StopIteration:
-      # For nn.DataParallel compatibility in PyTorch 1.5
+      # For torch.nn.DataParallel compatibility in PyTorch 1.5
 
-      def find_tensor_attributes(module: nn.Module) -> List[Tuple[str, Tensor]]:
+      def find_tensor_attributes(module: torch.nn.Module) -> typing.List[typing.Tuple[str, torch.Tensor]]:
         tuples = [(k, v) for k, v in module.__dict__.items() if torch.is_tensor(v)]
         return tuples
 
       gen = self._named_members(get_members_fn=find_tensor_attributes)
       first_tuple = next(gen)
-      return first_tuple[1].dtype
+      return first_tuple[1].torch.dtype
 
-  def invert_attention_mask(self, encoder_attention_mask: Tensor) -> Tensor:
+  def invert_attention_mask(self, encoder_attention_mask: torch.Tensor) -> torch.Tensor:
     """
     Invert an attention mask (e.g., switches 0. and 1.).
 
@@ -197,35 +173,35 @@ class ModuleUtilsMixin:
     # /transformer/transformer_layers.py#L270
     # encoder_extended_attention_mask = (encoder_extended_attention_mask ==
     # encoder_extended_attention_mask.transpose(-1, -2))
-    encoder_extended_attention_mask = encoder_extended_attention_mask.to(dtype=self.dtype)  # fp16 compatibility
+    encoder_extended_attention_mask = encoder_extended_attention_mask.to(torch.dtype=self.torch.dtype)  # fp16 compatibility
 
-    if self.dtype == torch.float16:
+    if self.torch.dtype == torch.float16:
       encoder_extended_attention_mask = (1.0 - encoder_extended_attention_mask) * -1e4
-    elif self.dtype == torch.float32:
+    elif self.torch.dtype == torch.float32:
       encoder_extended_attention_mask = (1.0 - encoder_extended_attention_mask) * -1e9
     else:
       raise ValueError(
-        "{} not recognized. `dtype` should be set to either `torch.float32` or `torch.float16`".format(
-          self.dtype
+        "{} not recognized. `torch.dtype` should be set to either `torch.float32` or `torch.float16`".format(
+          self.torch.dtype
         )
       )
 
     return encoder_extended_attention_mask
 
-  def get_extended_attention_mask(self, attention_mask: Tensor, input_shape: Tuple[int], device: device) -> Tensor:
+  def get_extended_attention_mask(self, attention_mask: torch.Tensor, input_shape: typing.Tuple[int], device: device) -> torch.Tensor:
     """
     Makes broadcastable attention and causal masks so that future and masked tokens are ignored.
 
     Arguments:
       attention_mask (:obj:`torch.Tensor`):
         Mask with ones indicating tokens to attend to, zeros for tokens to ignore.
-      input_shape (:obj:`Tuple[int]`):
+      input_shape (:obj:`typing.Tuple[int]`):
         The shape of the input to the model.
       device: (:obj:`torch.device`):
         The device of the input to the model.
 
     Returns:
-      :obj:`torch.Tensor` The extended attention mask, with a the same dtype as :obj:`attention_mask.dtype`.
+      :obj:`torch.Tensor` The extended attention mask, with a the same torch.dtype as :obj:`attention_mask.torch.dtype`.
     """
     # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
     # ourselves in which case we just need to make it broadcastable to all heads.
@@ -240,7 +216,7 @@ class ModuleUtilsMixin:
         seq_ids = torch.arange(seq_length, device=device)
         causal_mask = seq_ids[None, None, :].repeat(batch_size, seq_length, 1) <= seq_ids[None, :, None]
         # causal and attention masks must have same type with pytorch version < 1.3
-        causal_mask = causal_mask.to(attention_mask.dtype)
+        causal_mask = causal_mask.to(attention_mask.torch.dtype)
         extended_attention_mask = causal_mask[:, None, :, :] * attention_mask[:, None, None, :]
       else:
         extended_attention_mask = attention_mask[:, None, None, :]
@@ -256,13 +232,13 @@ class ModuleUtilsMixin:
     # positions we want to attend and -10000.0 for masked positions.
     # Since we are adding it to the raw scores before the softmax, this is
     # effectively the same as removing these entirely.
-    extended_attention_mask = extended_attention_mask.to(dtype=self.dtype)  # fp16 compatibility
+    extended_attention_mask = extended_attention_mask.to(torch.dtype=self.torch.dtype)  # fp16 compatibility
     extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
     return extended_attention_mask
 
   def get_head_mask(
-    self, head_mask: Optional[Tensor], num_hidden_layers: int, is_attention_chunked: bool = False
-  ) -> Tensor:
+    self, head_mask: typing.Optional[torch.Tensor], num_hidden_layers: int, is_attention_chunked: bool = False
+  ) -> torch.Tensor:
     """
     Prepare the head mask if needed.
 
@@ -295,11 +271,10 @@ class ModuleUtilsMixin:
     elif head_mask.dim() == 2:
       head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)  # We can specify head_mask for each layer
     assert head_mask.dim() == 5, f"head_mask.dim != 5, instead {head_mask.dim()}"
-    head_mask = head_mask.to(dtype=self.dtype)  # switch to fload if need + fp16 compatibility
+    head_mask = head_mask.to(torch.dtype=self.torch.dtype)  # switch to fload if need + fp16 compatibility
     return head_mask
 
-
-class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
+class PreTrainedModel(torch.nn.Module, ModuleUtilsMixin, generation_utils.GenerationMixin):
   r"""
   Base class for all models.
 
@@ -312,18 +287,18 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
   Class attributes (overridden by derived classes):
     - **config_class** (:class:`~transformers.PretrainedConfig`) -- A subclass of
       :class:`~transformers.PretrainedConfig` to use as configuration class for this model architecture.
-    - **load_tf_weights** (:obj:`Callable`) -- A python `method` for loading a TensorFlow checkpoint in a
+    - **load_tf_weights** (:obj:`typing.Callable`) -- A python `method` for loading a torch.TensorFlow checkpoint in a
       PyTorch model, taking as arguments:
 
       - **model** (:class:`~transformers.PreTrainedModel`) -- An instance of the model on which to load the
-        TensorFlow checkpoint.
+        torch.TensorFlow checkpoint.
       - **config** (:class:`~transformers.PreTrainedConfig`) -- An instance of the configuration associated
         to the model.
-      - **path** (:obj:`str`) -- A path to the TensorFlow checkpoint.
+      - **path** (:obj:`str`) -- A path to the torch.TensorFlow checkpoint.
 
     - **base_model_prefix** (:obj:`str`) -- A string indicating the attribute associated to the base model in
       derived classes of the same architecture adding modules on top of the base model.
-    - **authorized_missing_keys** (:obj:`Optional[List[str]]`) -- A list of re pattern of tensor names to ignore
+    - **authorized_missing_keys** (:obj:`typing.Optional[typing.List[str]]`) -- A list of re pattern of tensor names to ignore
       when loading the model (and avoid unnecessary warnings).
   """
   config_class = None
@@ -331,9 +306,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
   authorized_missing_keys = None
 
   @property
-  def dummy_inputs(self) -> Dict[str, torch.Tensor]:
+  def dummy_inputs(self) -> typing.Dict[str, torch.Tensor]:
     """
-    :obj:`Dict[str, torch.Tensor]`: Dummy inputs to do a forward pass in the network.
+    :obj:`typing.Dict[str, torch.Tensor]`: Dummy inputs to do a forward pass in the network.
     """
     return {"input_ids": torch.tensor(DUMMY_INPUTS)}
 
@@ -343,18 +318,18 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
     self.config = config
 
   @property
-  def base_model(self) -> nn.Module:
+  def base_model(self) -> torch.nn.Module:
     """
-    :obj:`torch.nn.Module`: The main body of the model.
+    :obj:`torch.torch.nn.Module`: The main body of the model.
     """
     return getattr(self, self.base_model_prefix, self)
 
-  def get_input_embeddings(self) -> nn.Module:
+  def get_input_embeddings(self) -> torch.nn.Module:
     """
     Returns the model's input embeddings.
 
     Returns:
-      :obj:`nn.Module`: A torch module mapping vocabulary to hidden states.
+      :obj:`torch.nn.Module`: A torch module mapping vocabulary to hidden states.
     """
     base_model = getattr(self, self.base_model_prefix, self)
     if base_model is not self:
@@ -362,12 +337,12 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
     else:
       raise NotImplementedError
 
-  def set_input_embeddings(self, value: nn.Module):
+  def set_input_embeddings(self, value: torch.nn.Module):
     """
-    Set model's input embeddings
+    typing.Set model's input embeddings
 
     Args:
-      value (:obj:`nn.Module`): A module mapping vocabulary to hidden states.
+      value (:obj:`torch.nn.Module`): A module mapping vocabulary to hidden states.
     """
     base_model = getattr(self, self.base_model_prefix, self)
     if base_model is not self:
@@ -375,12 +350,12 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
     else:
       raise NotImplementedError
 
-  def get_output_embeddings(self) -> nn.Module:
+  def get_output_embeddings(self) -> torch.nn.Module:
     """
     Returns the model's output embeddings.
 
     Returns:
-      :obj:`nn.Module`: A torch module mapping hidden states to vocabulary.
+      :obj:`torch.nn.Module`: A torch module mapping hidden states to vocabulary.
     """
     return None  # Overwrite for models with output embeddings
 
@@ -399,20 +374,20 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
       self._tie_encoder_decoder_weights(self.encoder, self.decoder, self.base_model_prefix)
 
   @staticmethod
-  def _tie_encoder_decoder_weights(encoder: nn.Module, decoder: nn.Module, base_model_prefix: str):
-    uninitialized_encoder_weights: List[str] = []
+  def _tie_encoder_decoder_weights(encoder: torch.nn.Module, decoder: torch.nn.Module, base_model_prefix: str):
+    uninitialized_encoder_weights: typing.List[str] = []
     assert decoder.__class__ == encoder.__class__, f"{decoder.__class__} and {encoder.__class__} have to be equal."
 
     def tie_encoder_to_decoder_recursively(
-      decoder_pointer: nn.Module,
-      encoder_pointer: nn.Module,
+      decoder_pointer: torch.nn.Module,
+      encoder_pointer: torch.nn.Module,
       module_name: str,
-      uninitialized_encoder_weights: List[str],
+      uninitialized_encoder_weights: typing.List[str],
       depth=0,
     ):
-      assert isinstance(decoder_pointer, nn.Module) and isinstance(
-        encoder_pointer, nn.Module
-      ), f"{decoder_pointer} and {encoder_pointer} have to be of type torch.nn.Module"
+      assert isinstance(decoder_pointer, torch.nn.Module) and isinstance(
+        encoder_pointer, torch.nn.Module
+      ), f"{decoder_pointer} and {encoder_pointer} have to be of type torch.torch.nn.Module"
       if hasattr(decoder_pointer, "weight"):
         assert hasattr(encoder_pointer, "weight")
         encoder_pointer.weight = decoder_pointer.weight
@@ -444,7 +419,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
             continue
           elif depth > 500:
             raise ValueError(
-              "Max depth of recursive function `tie_encoder_to_decoder` reached. It seems that there is a circular dependency between two or more `nn.Modules` of your model."
+              "Max depth of recursive function `tie_encoder_to_decoder` reached. It seems that there is a circular dependency between two or more `torch.nn.Modules` of your model."
             )
           else:
             decoder_name = encoder_name = name
@@ -462,7 +437,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
     # tie weights recursively
     tie_encoder_to_decoder_recursively(decoder, encoder, base_model_prefix, uninitialized_encoder_weights)
     if len(uninitialized_encoder_weights) > 0:
-      logger.warning(
+      l.getLogger().warning(
         f"The following encoder weights were not tied to the decoder {uninitialized_encoder_weights}"
       )
 
@@ -470,12 +445,12 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
     """ Tie or clone module weights depending of whether we are using TorchScript or not
     """
     if self.config.torchscript:
-      output_embeddings.weight = nn.Parameter(input_embeddings.weight.clone())
+      output_embeddings.weight = torch.nn.Parameter(input_embeddings.weight.clone())
     else:
       output_embeddings.weight = input_embeddings.weight
 
     if getattr(output_embeddings, "bias", None) is not None:
-      output_embeddings.bias.data = torch.nn.functional.pad(
+      output_embeddings.bias.data = torch.torch.nn.functional.pad(
         output_embeddings.bias.data,
         (0, output_embeddings.weight.shape[0] - output_embeddings.bias.shape[0],),
         "constant",
@@ -484,7 +459,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
     if hasattr(output_embeddings, "out_features") and hasattr(input_embeddings, "num_embeddings"):
       output_embeddings.out_features = input_embeddings.num_embeddings
 
-  def resize_token_embeddings(self, new_num_tokens: Optional[int] = None) -> torch.nn.Embedding:
+  def resize_token_embeddings(self, new_num_tokens: typing.Optional[int] = None) -> torch.torch.nn.Embedding:
     """
     Resizes input token embeddings matrix of the model if :obj:`new_num_tokens != config.vocab_size`.
 
@@ -494,11 +469,11 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
       new_num_tokens (:obj:`int`, `optional`):
         The number of new tokens in the embedding matrix. Increasing the size will add newly initialized
         vectors at the end. Reducing the size will remove vectors from the end. If not provided or :obj:`None`,
-        just returns a pointer to the input tokens :obj:`torch.nn.Embedding` module of the model wihtout doing
+        just returns a pointer to the input tokens :obj:`torch.torch.nn.Embedding` module of the model wihtout doing
         anything.
 
     Return:
-      :obj:`torch.nn.Embedding`: Pointer to the input tokens Embeddings Module of the model.
+      :obj:`torch.torch.nn.Embedding`: Pointer to the input tokens Embeddings Module of the model.
     """
     base_model = getattr(self, self.base_model_prefix, self)  # get the base model if needed
     model_embeds = base_model._resize_token_embeddings(new_num_tokens)
@@ -521,24 +496,24 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
     return self.get_input_embeddings()
 
   def _get_resized_embeddings(
-    self, old_embeddings: torch.nn.Embedding, new_num_tokens: Optional[int] = None
-  ) -> torch.nn.Embedding:
+    self, old_embeddings: torch.torch.nn.Embedding, new_num_tokens: typing.Optional[int] = None
+  ) -> torch.torch.nn.Embedding:
     """
     Build a resized Embedding Module from a provided token Embedding Module. Increasing the size will add newly
     initialized vectors at the end. Reducing the size will remove vectors from the end
 
     Args:
-      old_embeddings (:obj:`torch.nn.Embedding`):
+      old_embeddings (:obj:`torch.torch.nn.Embedding`):
         Old embeddings to be resized.
       new_num_tokens (:obj:`int`, `optional`):
         New number of tokens in the embedding matrix.
 
         Increasing the size will add newly initialized vectors at the end. Reducing the size will remove
         vectors from the end. If not provided or :obj:`None`, just returns a pointer to the input tokens
-        :obj:`torch.nn.Embedding`` module of the model wihtout doing anything.
+        :obj:`torch.torch.nn.Embedding`` module of the model wihtout doing anything.
 
     Return:
-      :obj:`torch.nn.Embedding`: Pointer to the resized Embedding Module or the old Embedding Module if
+      :obj:`torch.torch.nn.Embedding`: Pointer to the resized Embedding Module or the old Embedding Module if
       :obj:`new_num_tokens` is :obj:`None`
     """
     if new_num_tokens is None:
@@ -549,8 +524,8 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
       return old_embeddings
 
     # Build new embeddings
-    new_embeddings = nn.Embedding(new_num_tokens, old_embedding_dim)
-    new_embeddings.to(old_embeddings.weight.device)
+    new_embeddings = torch.nn.Embedding(new_num_tokens, old_embedding_dim)
+    new_embeddings.to(old_embeddings.weight.pytorch.device)
 
     # initialize all new embeddings (in particular added tokens)
     self._init_weights(new_embeddings)
@@ -575,13 +550,13 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
     # Tie weights if needed
     self.tie_weights()
 
-  def prune_heads(self, heads_to_prune: Dict[int, List[int]]):
+  def prune_heads(self, heads_to_prune: typing.Dict[int, typing.List[int]]):
     """
     Prunes heads of the base model.
 
     Arguments:
-      heads_to_prune (:obj:`Dict[int, List[int]]`):
-        Dictionary with keys being selected layer indices (:obj:`int`) and associated values being the list
+      heads_to_prune (:obj:`typing.Dict[int, typing.List[int]]`):
+        typing.Dictionary with keys being selected layer indices (:obj:`int`) and associated values being the list
         of heads to prune in said layer (list of :obj:`int`). For instance {1: [0, 2], 2: [2, 3]} will
         prune heads 0 and 2 on layer 1 and heads 2 and 3 on layer 2.
     """
@@ -602,7 +577,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
         Directory to which to save. Will be created if it doesn't exist.
     """
     if os.path.isfile(save_directory):
-      logger.error("Provided path ({}) should be a directory, not a file".format(save_directory))
+      l.getLogger().error("Provided path ({}) should be a directory, not a file".format(save_directory))
       return
     os.makedirs(save_directory, exist_ok=True)
 
@@ -616,18 +591,17 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
     output_model_file = os.path.join(save_directory, WEIGHTS_NAME)
 
     if getattr(self.config, "xla_device", False):
-      import torch_xla.core.xla_model as xm
 
-      if xm.is_master_ordinal():
+      if pytorch.xla_model.is_master_ordinal():
         # Save configuration file
         model_to_save.config.save_pretrained(save_directory)
-      # xm.save takes care of saving only from master
-      xm.save(model_to_save.state_dict(), output_model_file)
+      # pytorch.xla_model.save takes care of saving only from master
+      pytorch.xla_model.save(model_to_save.state_dict(), output_model_file)
     else:
       model_to_save.config.save_pretrained(save_directory)
       torch.save(model_to_save.state_dict(), output_model_file)
 
-    logger.info("Model weights saved in {}".format(output_model_file))
+    l.getLogger().info("Model weights saved in {}".format(output_model_file))
 
   @classmethod
   def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
@@ -656,13 +630,13 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
             :func:`~transformers.PreTrainedModel.save_pretrained`, e.g., ``./my_model_directory/``.
           - A path or url to a `tensorflow index checkpoint file` (e.g, ``./tf_model/model.ckpt.index``). In
             this case, ``from_tf`` should be set to :obj:`True` and a configuration object should be provided
-            as ``config`` argument. This loading path is slower than converting the TensorFlow checkpoint in
+            as ``config`` argument. This loading path is slower than converting the torch.TensorFlow checkpoint in
             a PyTorch model using the provided conversion scripts and loading the PyTorch model afterwards.
           - :obj:`None` if you are both providing the configuration and state dictionary (resp. with keyword
             arguments ``config`` and ``state_dict``).
       model_args (sequence of positional arguments, `optional`):
         All remaning positional arguments will be passed to the underlying model's ``__init__`` method.
-      config (:obj:`Union[PretrainedConfig, str]`, `optional`):
+      config (:obj:`typing.Union[PretrainedConfig, str]`, `optional`):
         Can be either:
 
           - an instance of a class derived from :class:`~transformers.PretrainedConfig`,
@@ -677,7 +651,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
             by suppling the save directory.
           - The model is loaded by suppling a local directory as ``pretrained_model_name_or_path`` and a
             configuration JSON file named `config.json` is found in the directory.
-      state_dict (:obj:`Dict[str, torch.Tensor]`, `optional`):
+      state_dict (:obj:`typing.Dict[str, torch.Tensor]`, `optional`):
         A state dictionary to use instead of a state dictionary loaded from saved weights file.
 
         This option can be used if you want to create a model from a pretrained configuration but load your own
@@ -688,7 +662,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
         Path to a directory in which a downloaded pretrained model configuration should be cached if the
         standard cache should not be used.
       from_tf (:obj:`bool`, `optional`, defaults to :obj:`False`):
-        Load the model weights from a TensorFlow checkpoint save file (see docstring of
+        Load the model weights from a torch.TensorFlow checkpoint save file (see docstring of
         ``pretrained_model_name_or_path`` argument).
       force_download (:obj:`bool`, `optional`, defaults to :obj:`False`):
         Whether or not to force the (re-)download of the model weights and configuration files, overriding the
@@ -696,7 +670,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
       resume_download (:obj:`bool`, `optional`, defaults to :obj:`False`):
         Whether or not to delete incompletely received files. Will attempt to resume the download if such a
         file exists.
-      proxies (:obj:`Dict[str, str], `optional`):
+      proxies (:obj:`typing.Dict[str, str], `optional`):
         A dictionary of proxy servers to use by protocol or endpoint, e.g.,
         :obj:`{'http': 'foo.bar:3128', 'http://hostname': 'foo.bar:4012'}`. The proxies are used on each
         request.
@@ -773,7 +747,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
       elif os.path.isfile(pretrained_model_name_or_path + ".index"):
         assert (
           from_tf
-        ), "We found a TensorFlow checkpoint at {}, please set from_tf to True to load from this checkpoint".format(
+        ), "We found a torch.TensorFlow checkpoint at {}, please set from_tf to True to load from this checkpoint".format(
           pretrained_model_name_or_path + ".index"
         )
         archive_file = pretrained_model_name_or_path + ".index"
@@ -805,9 +779,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
         raise EnvironmentError(msg)
 
       if resolved_archive_file == archive_file:
-        logger.info("loading weights file {}".format(archive_file))
+        l.getLogger().info("loading weights file {}".format(archive_file))
       else:
-        logger.info("loading weights file {} from cache at {}".format(archive_file, resolved_archive_file))
+        l.getLogger().info("loading weights file {} from cache at {}".format(archive_file, resolved_archive_file))
     else:
       resolved_archive_file = None
 
@@ -829,17 +803,17 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
 
     if from_tf:
       if resolved_archive_file.endswith(".index"):
-        # Load from a TensorFlow 1.X checkpoint - provided by original authors
+        # Load from a torch.TensorFlow 1.X checkpoint - provided by original authors
         model = cls.load_tf_weights(model, config, resolved_archive_file[:-6])  # Remove the '.index'
       else:
-        # Load from our TensorFlow 2.0 checkpoints
+        # Load from our torch.TensorFlow 2.0 checkpoints
         try:
           from transformers import load_tf2_checkpoint_in_pytorch_model
 
           model = load_tf2_checkpoint_in_pytorch_model(model, resolved_archive_file, allow_missing_keys=True)
         except ImportError:
-          logger.error(
-            "Loading a TensorFlow model in PyTorch, requires both PyTorch and TensorFlow to be installed. Please see "
+          l.getLogger().error(
+            "Loading a torch.TensorFlow model in PyTorch, requires both PyTorch and torch.TensorFlow to be installed. Please see "
             "https://pytorch.org/ and https://www.tensorflow.org/install/ for installation instructions."
           )
           raise
@@ -867,7 +841,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
 
       # PyTorch's `_load_from_state_dict` does not copy parameters in a module's descendants
       # so we need to apply the function recursively.
-      def load(module: nn.Module, prefix=""):
+      def load(module: torch.nn.Module, prefix=""):
         local_metadata = {} if metadata is None else metadata.get(prefix[:-1], {})
         module._load_from_state_dict(
           state_dict, prefix, local_metadata, True, missing_keys, unexpected_keys, error_msgs,
@@ -901,7 +875,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
           missing_keys = [k for k in missing_keys if re.search(pat, k) is None]
 
       if len(unexpected_keys) > 0:
-        logger.warning(
+        l.getLogger().warning(
           f"Some weights of the model checkpoint at {pretrained_model_name_or_path} were not used when "
           f"initializing {model.__class__.__name__}: {unexpected_keys}\n"
           f"- This IS expected if you are initializing {model.__class__.__name__} from the checkpoint of a model trained on another task "
@@ -910,15 +884,15 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
           f"to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model)."
         )
       else:
-        logger.info(f"All model checkpoint weights were used when initializing {model.__class__.__name__}.\n")
+        l.getLogger().info(f"All model checkpoint weights were used when initializing {model.__class__.__name__}.\n")
       if len(missing_keys) > 0:
-        logger.warning(
+        l.getLogger().warning(
           f"Some weights of {model.__class__.__name__} were not initialized from the model checkpoint at {pretrained_model_name_or_path} "
           f"and are newly initialized: {missing_keys}\n"
           f"You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference."
         )
       else:
-        logger.info(
+        l.getLogger().info(
           f"All the weights of {model.__class__.__name__} were initialized from the model checkpoint at {pretrained_model_name_or_path}.\n"
           f"If your task is similar to the task the model of the checkpoint was trained on, "
           f"you can already use {model.__class__.__name__} for predictions without further training."
@@ -932,7 +906,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
     # make sure token embedding weights are still tied if needed
     model.tie_weights()
 
-    # Set model in evaluation mode to deactivate DropOut modules by default
+    # typing.Set model in evaluation mode to deactivate DropOut modules by default
     model.eval()
 
     if output_loading_info:
@@ -944,28 +918,26 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
       return model, loading_info
 
     if hasattr(config, "xla_device") and config.xla_device and is_torch_tpu_available():
-      import torch_xla.core.xla_model as xm
-
-      model = xm.send_cpu_data_to_device(model, xm.xla_device())
-      model.to(xm.xla_device())
+      model = pytorch.xla_model.send_cpu_data_to_device(model, pytorch.xla_model.xla_device())
+      model.to(pytorch.xla_model.xla_device())
 
     return model
 
-def prune_linear_layer(layer: torch.nn.Linear, index: torch.LongTensor, dim: int = 0) -> torch.nn.Linear:
+def prune_linear_layer(layer: torch.torch.nn.Linear, index: torch.LongTensor, dim: int = 0) -> torch.torch.nn.Linear:
   """
   Prune a linear layer to keep only entries in index.
 
   Used to remove heads.
 
   Args:
-    layer (:obj:`torch.nn.Linear`): The layer to prune.
+    layer (:obj:`torch.torch.nn.Linear`): The layer to prune.
     index (:obj:`torch.LongTensor`): The indices to keep in the layer.
     dim (:obj:`int`, `optional`, defaults to 0): The dimension on which to keep the indices.
 
   Returns:
-    :obj:`torch.nn.Linear`: The pruned layer as a new layer with :obj:`requires_grad=True`.
+    :obj:`torch.torch.nn.Linear`: The pruned layer as a new layer with :obj:`requires_grad=True`.
   """
-  index = index.to(layer.weight.device)
+  index = index.to(layer.weight.pytorch.device)
   W = layer.weight.index_select(dim, index).clone().detach()
   if layer.bias is not None:
     if dim == 1:
@@ -974,7 +946,7 @@ def prune_linear_layer(layer: torch.nn.Linear, index: torch.LongTensor, dim: int
       b = layer.bias[index].clone().detach()
   new_size = list(layer.weight.size())
   new_size[dim] = len(index)
-  new_layer = nn.Linear(new_size[1], new_size[0], bias=layer.bias is not None).to(layer.weight.device)
+  new_layer = torch.nn.Linear(new_size[1], new_size[0], bias=layer.bias is not None).to(layer.weight.pytorch.device)
   new_layer.weight.requires_grad = False
   new_layer.weight.copy_(W.contiguous())
   new_layer.weight.requires_grad = True
@@ -985,7 +957,7 @@ def prune_linear_layer(layer: torch.nn.Linear, index: torch.LongTensor, dim: int
   return new_layer
 
 def apply_chunking_to_forward(
-  forward_fn: Callable[..., torch.Tensor], chunk_size: int, chunk_dim: int, *input_tensors
+  forward_fn: typing.Callable[..., torch.Tensor], chunk_size: int, chunk_dim: int, *input_tensors
 ) -> torch.Tensor:
   """
   This function chunks the :obj:`input_tensors` into smaller input tensor parts of size :obj:`chunk_size` over the
@@ -995,13 +967,13 @@ def apply_chunking_to_forward(
   directly applying :obj:`forward_fn` to :obj:`input_tensors`.
 
   Args:
-    forward_fn (:obj:`Callable[..., torch.Tensor]`):
+    forward_fn (:obj:`typing.Callable[..., torch.Tensor]`):
       The forward function of the model.
     chunk_size (:obj:`int`):
       The chunk size of a chunked tensor: :obj:`num_chunks = len(input_tensors[0]) / chunk_size`.
     chunk_dim (:obj:`int`):
       The dimension over which the :obj:`input_tensors` should be chunked.
-    input_tensors (:obj:`Tuple[torch.Tensor]`):
+    input_tensors (:obj:`typing.Tuple[torch.Tensor]`):
       The input tensors of ``forward_fn`` which will be chunked.
   Returns:
     :obj:`torch.Tensor`: A tensor with the same shape as the :obj:`foward_fn` would have given if applied`.
