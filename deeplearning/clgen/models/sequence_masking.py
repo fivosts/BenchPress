@@ -123,6 +123,9 @@ def HoleSequence(seq: np.array,
     elif input_id_idx > len(seq):
       # Do not mask a part of input_ids that is going to be cropped.
       continue
+    elif input_ids[input_id_idx] in {atomizer.startToken, atomizer.endToken}:
+      # Do not target [START] or [END] token
+      continue
 
     assert (input_ids[input_id_idx] == seq[pos_index], 
             "Original and offset-ted sequence have misaligned tokens: {}, {}"
