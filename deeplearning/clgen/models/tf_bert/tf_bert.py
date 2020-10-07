@@ -449,7 +449,7 @@ class tfBert(backends.BackendBase):
     observers = [sample_observers.PrintSampleObserver()]
     if FLAGS.store_samples_db:
       observers.append(sample_observers.SamplesDatabaseObserver(
-        "sqlite:///{}".format(self.sample_path / sampler.hash / sampler.sample_db_name)
+          self.sample_path / sampler.hash / sampler.sample_db_name
         )
       )
       sampler.symlinkModelDB(

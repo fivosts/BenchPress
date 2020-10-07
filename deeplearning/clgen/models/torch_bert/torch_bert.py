@@ -318,7 +318,7 @@ class torchBert(backends.BackendBase):
       )
       if FLAGS.reward_compilation:
         correct_sample_obs = sample_observers.SamplesDatabaseObserver(
-          "sqlite:///{}".format(self.logfile_path / "correct_samples.db")
+          self.logfile_path / "correct_samples.db"
         )
       else:
         correct_sample_obs = None
@@ -604,7 +604,7 @@ class torchBert(backends.BackendBase):
     observers = [sample_observers.PrintSampleObserver()]
     if FLAGS.store_samples_db:
       observers.append(sample_observers.SamplesDatabaseObserver(
-        "sqlite:///{}".format(self.sample_path / sampler.hash / sampler.sample_db_name)
+          self.sample_path / sampler.hash / sampler.sample_db_name
         )
       )
       sampler.symlinkModelDB(

@@ -228,7 +228,8 @@ def SampleObserversFromFlags(instance: Instance) -> typing.List[
   if FLAGS.store_samples_db:
     (instance.model.cache.path / "samples" / instance.sampler.hash).mkdir(exist_ok = True)
     sample_observers.append(sample_observers_lib.SamplesDatabaseObserver(
-      "sqlite:///{}".format(instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.sample_db_name)
+        instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.sample_db_name,
+        plot_sample_status = True
       )
     )
     instance.sampler.symlinkModelDB(
@@ -292,6 +293,9 @@ def DoFlagsAction(
 
 def main():
   """Main entry point."""
+  # from deeplearning.clgen.corpuses import bigQuery
+  # bigQuery.fetch("/home/fivosts/PhD/Code/clgen/", "c")
+  # exit()
   if FLAGS.clgen_dashboard_only:
     dash = dashboard.Launch(debug = {"debug": True})
   else:
