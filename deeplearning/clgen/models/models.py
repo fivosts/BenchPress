@@ -395,7 +395,6 @@ class Model(object):
             continue_sampling &= all(
               [obs.OnSample(sample) for obs in sample_observers]
             )
-
             # Wall sample time is the difference between the end of the previous
             # sample and the end of the current sample.
             wall_time_start = datetime.datetime.utcnow()
