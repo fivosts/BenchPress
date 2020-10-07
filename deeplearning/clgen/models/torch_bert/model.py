@@ -885,7 +885,7 @@ class BertForPreTraining(BertPreTrainedModel):
     if compile_flag:
       for idx, t in enumerate(masked_lm_label):
         if t != -100:
-          masked_lm_label[t] = -100
+          masked_lm_label[idx] = -100
     return new_batch[0], compile_flag, masked_lm_label
 
   def forward(
