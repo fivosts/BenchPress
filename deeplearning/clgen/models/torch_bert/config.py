@@ -14,16 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """ Configuration base class and utilities."""
-
-
-import copy
-import json
-import logging
-import os
-from typing import Any, Dict, Tuple
-from eupy.native import logger as l
-
-
 class BertConfig(object):
 
   r"""
