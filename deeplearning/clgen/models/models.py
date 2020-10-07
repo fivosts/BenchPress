@@ -376,7 +376,7 @@ class Model(object):
             except ValueError:
               compile_flag = False
 
-            sample    = model_pb2.Sample(
+            sample = model_pb2.Sample(
               train_step                = epoch,
               text                      = "".join(sample_kernel),
               sample_indices            = step_ind,
