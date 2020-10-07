@@ -200,7 +200,6 @@ class LazyConcatDataset(torch.utils.data.Dataset):
       assert lt > 0, "Dataset {} is empty".format(e)
       r.append(lt + s)
       s += lt
-    l.getLogger().warn(r)
     return r
 
   def __init__(self, datasets: typing.List[pathlib.Path]):
