@@ -9,8 +9,8 @@ from eupy.native import plotter as plt
 class Distribution():
   def __init__(self, 
                sample_length: int, 
-               log_path: typing.Union[pathlib.Path, str],
-               set_name: str
+               log_path     : typing.Union[pathlib.Path, str],
+               set_name     : str
                ):
     self.sample_length  = sample_length
     self.log_path       = log_path if isinstance(log_path, pathlib.Path) else pathlib.Path(log_path)
@@ -106,9 +106,10 @@ class UniformDistribution(Distribution):
   Upper range of sampling is defined as [0, sample_length].
   """
   def __init__(self, 
-               sample_length: int, log_path: typing.Union[pathlib.Path, str],
-              set_name: str
-              ):
+               sample_length: int,
+               log_path     : typing.Union[pathlib.Path, str],
+               set_name     : str
+               ):
     super(UniformDistribution, self).__init__(sample_length, log_path, set_name)
 
   def sample(self):
@@ -121,10 +122,10 @@ class NormalDistribution(Distribution):
   """
   def __init__(self,
                sample_length: int,
-               mean: float,
-               variance: float,
-               log_path: typing.Union[pathlib.Path, str],
-               set_name: str,
+               mean         : float,
+               variance     : float,
+               log_path     : typing.Union[pathlib.Path, str],
+               set_name     : str,
                ):
     super(NormalDistribution, self).__init__(sample_length, log_path, set_name)
     self.mean     = mean
