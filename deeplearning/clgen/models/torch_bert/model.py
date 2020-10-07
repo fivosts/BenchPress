@@ -15,35 +15,28 @@
 # limitations under the License.
 """PyTorch BERT model. """
 
-import logging
 import math
 import os
 import typing
-import warnings
-from dataclasses import dataclass
-from typing import Optional, Tuple
 import concurrent.futures
-# import torch
-# import torch.utils.checkpoint
 
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.models.torch_bert.activations import gelu, gelu_new, swish
-from deeplearning.clgen.models.torch_bert.config import BertConfig
-from deeplearning.clgen.models.torch_bert.modeling_utils import (
-  PreTrainedModel,
-  apply_chunking_to_forward,
-  find_pruneable_heads_and_indices,
-  prune_linear_layer,
-)
+from deeplearning.clgen.models.torch_bert import activations
+from deeplearning.clgen.models.torch_bert import config
+from deeplearning.clgen.models.torch_bert import modeling_utils
 
 def mish(x):
   return x * torch.tanh(torch.nn.functional.softplus(x))
 
-ACT2FN = {"gelu": gelu, "relu": torch.nn.functional.relu, "swish": swish, "gelu_new": gelu_new, "mish": mish}
-
-BertLayerNorm = torch.nn.LayerNorm
+ACT2FN = {
+  "gelu": activations.gelu,
+  "relu": torch.nn.functional.relu,
+  "swish": activations.swish,
+  "gelu_new": activations.gelu_new,
+  "mish": mish
+}
 
 class BertEmbeddings(torch.nn.Module):
   """Construct the embeddings from word, position and token_type embeddings.
@@ -57,7 +50,7 @@ class BertEmbeddings(torch.nn.Module):
 
     # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
     # any TensorFlow checkpoint file
-    self.LayerNorm = BertLayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+    self.LayerNorm = torch.nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
     self.dropout = torch.nn.Dropout(config.hidden_dropout_prob)
 
     # position_ids (1, len position emb) is contiguous in memory and exported when serialized
@@ -170,7 +163,7 @@ class BertSelfOutput(torch.nn.Module):
   def __init__(self, config):
     super().__init__()
     self.dense = torch.nn.Linear(config.hidden_size, config.hidden_size)
-    self.LayerNorm = BertLayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+    self.LayerNorm = torch.nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
     self.dropout = torch.nn.Dropout(config.hidden_dropout_prob)
 
   def forward(self, hidden_states, input_tensor):
@@ -190,15 +183,15 @@ class BertAttention(torch.nn.Module):
   def prune_heads(self, heads):
     if len(heads) == 0:
       return
-    heads, index = find_pruneable_heads_and_indices(
+    heads, index = modeling_utils.find_pruneable_heads_and_indices(
       heads, self.self.num_attention_heads, self.self.attention_head_size, self.pruned_heads
     )
 
     # Prune linear layers
-    self.self.query = prune_linear_layer(self.self.query, index)
-    self.self.key = prune_linear_layer(self.self.key, index)
-    self.self.value = prune_linear_layer(self.self.value, index)
-    self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
+    self.self.query = modeling_utils.prune_linear_layer(self.self.query, index)
+    self.self.key = modeling_utils.prune_linear_layer(self.self.key, index)
+    self.self.value = modeling_utils.prune_linear_layer(self.self.value, index)
+    self.output.dense = modeling_utils.prune_linear_layer(self.output.dense, index, dim=1)
 
     # Update hyper params and store pruned heads
     self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
@@ -241,7 +234,7 @@ class BertOutput(torch.nn.Module):
   def __init__(self, config):
     super().__init__()
     self.dense = torch.nn.Linear(config.intermediate_size, config.hidden_size)
-    self.LayerNorm = BertLayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+    self.LayerNorm = torch.nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
     self.dropout = torch.nn.Dropout(config.hidden_dropout_prob)
 
   def forward(self, hidden_states, input_tensor):
@@ -295,7 +288,7 @@ class BertLayer(torch.nn.Module):
       attention_output = cross_attention_outputs[0]
       outputs = outputs + cross_attention_outputs[1:]  # add cross attentions if we output attention weights
 
-    layer_output = apply_chunking_to_forward(
+    layer_output = modeling_utils.apply_chunking_to_forward(
       self.feed_forward_chunk, self.chunk_size_feed_forward, self.seq_len_dim, attention_output
     )
     outputs = (layer_output,) + outputs
@@ -392,7 +385,7 @@ class BertPredictionHeadTransform(torch.nn.Module):
       self.transform_act_fn = ACT2FN[config.hidden_act]
     else:
       self.transform_act_fn = config.hidden_act
-    self.LayerNorm = BertLayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+    self.LayerNorm = torch.nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
   def forward(self, hidden_states):
     hidden_states = self.dense(hidden_states)
@@ -453,12 +446,12 @@ class BertPreTrainingHeads(torch.nn.Module):
     return prediction_scores, seq_relationship_score
 
 
-class BertPreTrainedModel(PreTrainedModel):
+class BertPreTrainedModel(modeling_utils.PreTrainedModel):
   """ An abstract class to handle weights initialization and
     a simple interface for downloading and loading pretrained models.
   """
 
-  config_class = BertConfig
+  config_class = config.BertConfig
   base_model_prefix = "bert"
   authorized_missing_keys = [r"position_ids"]
 
@@ -468,14 +461,12 @@ class BertPreTrainedModel(PreTrainedModel):
       # Slightly different from the TF version which uses truncated_normal for initialization
       # cf https://github.com/pytorch/pytorch/pull/5617
       module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-    elif isinstance(module, BertLayerNorm):
+    elif isinstance(module, torch.nn.LayerNorm):
       module.bias.data.zero_()
       module.weight.data.fill_(1.0)
     if isinstance(module, torch.nn.Linear) and module.bias is not None:
       module.bias.data.zero_()
 
-
-# @dataclass
 class BertForPreTrainingOutput(typing.NamedTuple):
   """
   Output type of :class:`~transformers.BertForPreTrainingModel`.
@@ -489,25 +480,25 @@ class BertForPreTrainingOutput(typing.NamedTuple):
       Prediction scores of the next sequence prediction (classification) head (scores of True/False
       continuation before SoftMax).
     hidden_states (:obj:`tuple(torch.FloatTensor)`, `optional`, returned when ``output_hidden_states=True`` is passed or when ``config.output_hidden_states=True``):
-      Tuple of :obj:`torch.FloatTensor` (one for the output of the embeddings + one for the output of each layer)
+      typing.Tuple of :obj:`torch.FloatTensor` (one for the output of the embeddings + one for the output of each layer)
       of shape :obj:`(batch_size, sequence_length, hidden_size)`.
 
       Hidden-states of the model at the output of each layer plus the initial embedding outputs.
     attentions (:obj:`tuple(torch.FloatTensor)`, `optional`, returned when ``output_attentions=True`` is passed or when ``config.output_attentions=True``):
-      Tuple of :obj:`torch.FloatTensor` (one for each layer) of shape
+      typing.Tuple of :obj:`torch.FloatTensor` (one for each layer) of shape
       :obj:`(batch_size, num_heads, sequence_length, sequence_length)`.
 
       Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
       heads.
   """
 
-  masked_lm_loss: Optional[torch.FloatTensor] = None
-  next_sentence_loss: Optional[torch.FloatTensor] = None
-  total_loss: Optional[torch.FloatTensor] = None
+  masked_lm_loss: typing.Optional[torch.FloatTensor] = None
+  next_sentence_loss: typing.Optional[torch.FloatTensor] = None
+  total_loss: typing.Optional[torch.FloatTensor] = None
   prediction_logits: torch.FloatTensor = None
   seq_relationship_logits: torch.FloatTensor = None
-  hidden_states: Optional[Tuple[torch.FloatTensor]] = None
-  attentions: Optional[Tuple[torch.FloatTensor]] = None
+  hidden_states: typing.Optional[typing.Tuple[torch.FloatTensor]] = None
+  attentions: typing.Optional[typing.Tuple[torch.FloatTensor]] = None
   batch_compilation_rate: float = None
   compile_status: typing.List = None
   generated_samples: typing.List = None
@@ -1177,10 +1168,6 @@ class BertForMaskedLM(BertPreTrainedModel):
       Used to hide legacy arguments that have been deprecated.
     """
     if "masked_lm_labels" in kwargs:
-      warnings.warn(
-        "The `masked_lm_labels` argument is deprecated and will be removed in a future version, use `labels` instead.",
-        FutureWarning,
-      )
       labels = kwargs.pop("masked_lm_labels")
     assert "lm_labels" not in kwargs, "Use `BertWithLMHead` for autoregressive language modeling task."
     assert kwargs == {}, f"Unexpected keyword arguments: {list(kwargs.keys())}."
