@@ -303,7 +303,6 @@ class Model(object):
     self.backend.InitSampling(sampler, seed)
     [obs.Specialize(self, sampler) for obs in sample_observers]
 
-    # with sampler.db.Session(commit = True) as db_sess:
     batch_count = 1
     try:
       while self._SampleBatch(sampler, atomizer, sample_observers, epoch):
