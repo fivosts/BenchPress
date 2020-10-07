@@ -142,7 +142,7 @@ class ModuleUtilsMixin:
     :obj:`torch.torch.dtype`: The torch.dtype of the module (assuming that all the module parameters have the same torch.dtype).
     """
     try:
-      return next(self.parameters()).torch.dtype
+      return next(self.parameters()).dtype
     except StopIteration:
       # For torch.nn.DataParallel compatibility in PyTorch 1.5
 
@@ -152,7 +152,7 @@ class ModuleUtilsMixin:
 
       gen = self._named_members(get_members_fn=find_tensor_attributes)
       first_tuple = next(gen)
-      return first_tuple[1].torch.dtype
+      return first_tuple[1].dtype
 
   def invert_attention_mask(self, encoder_attention_mask: torch.Tensor) -> torch.Tensor:
     """
@@ -173,16 +173,16 @@ class ModuleUtilsMixin:
     # /transformer/transformer_layers.py#L270
     # encoder_extended_attention_mask = (encoder_extended_attention_mask ==
     # encoder_extended_attention_mask.transpose(-1, -2))
-    encoder_extended_attention_mask = encoder_extended_attention_mask.to(torch.dtype=self.torch.dtype)  # fp16 compatibility
+    encoder_extended_attention_mask = encoder_extended_attention_mask.to(dtype=self.dtype)  # fp16 compatibility
 
-    if self.torch.dtype == torch.float16:
+    if self.dtype == torch.float16:
       encoder_extended_attention_mask = (1.0 - encoder_extended_attention_mask) * -1e4
-    elif self.torch.dtype == torch.float32:
+    elif self.dtype == torch.float32:
       encoder_extended_attention_mask = (1.0 - encoder_extended_attention_mask) * -1e9
     else:
       raise ValueError(
         "{} not recognized. `torch.dtype` should be set to either `torch.float32` or `torch.float16`".format(
-          self.torch.dtype
+          self.dtype
         )
       )
 
@@ -216,7 +216,7 @@ class ModuleUtilsMixin:
         seq_ids = torch.arange(seq_length, device=device)
         causal_mask = seq_ids[None, None, :].repeat(batch_size, seq_length, 1) <= seq_ids[None, :, None]
         # causal and attention masks must have same type with pytorch version < 1.3
-        causal_mask = causal_mask.to(attention_mask.torch.dtype)
+        causal_mask = causal_mask.to(attention_mask.dtype)
         extended_attention_mask = causal_mask[:, None, :, :] * attention_mask[:, None, None, :]
       else:
         extended_attention_mask = attention_mask[:, None, None, :]
@@ -232,7 +232,7 @@ class ModuleUtilsMixin:
     # positions we want to attend and -10000.0 for masked positions.
     # Since we are adding it to the raw scores before the softmax, this is
     # effectively the same as removing these entirely.
-    extended_attention_mask = extended_attention_mask.to(torch.dtype=self.torch.dtype)  # fp16 compatibility
+    extended_attention_mask = extended_attention_mask.to(dtype = self.dtype)  # fp16 compatibility
     extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
     return extended_attention_mask
 
@@ -271,7 +271,7 @@ class ModuleUtilsMixin:
     elif head_mask.dim() == 2:
       head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)  # We can specify head_mask for each layer
     assert head_mask.dim() == 5, f"head_mask.dim != 5, instead {head_mask.dim()}"
-    head_mask = head_mask.to(torch.dtype=self.torch.dtype)  # switch to fload if need + fp16 compatibility
+    head_mask = head_mask.to(dtype = self.dtype)  # switch to fload if need + fp16 compatibility
     return head_mask
 
 class PreTrainedModel(torch.nn.Module, ModuleUtilsMixin, generation_utils.GenerationMixin):
