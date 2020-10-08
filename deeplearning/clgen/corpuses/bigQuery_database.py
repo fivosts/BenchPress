@@ -15,7 +15,7 @@ FLAGS = flags.FLAGS
 
 Base = declarative.declarative_base()
 
-class ValResults(Base):
+class bqData(Base):
   __tablename__ = "bq_data"
   """
     DB Table for concentrated validation results.
@@ -62,6 +62,28 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
       "date_added"     : datetime.datetime.utcnow(),
     }
 
+class bqRepo(Base, sqlutil.ProtoBackedMixin):
+  """
+    A database entry representing a CLgen validation trace.
+  """
+  __tablename__  = "bq_contentfiles"
+  id             : int = sql.Column(sql.Integer,    primary_key = True)
+  repo_name      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  ref            : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  date_added     : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
+
+  @classmethod
+  def FromArgs(cls, 
+               id: int,
+               row
+               ) -> typing.Dict[str, typing.Any]:
+    return {
+      "id"             : id,
+      "repo_name"      : row['repo_name'],
+      "ref"            : row['ref'],
+      "date_added"     : datetime.datetime.utcnow(),
+    }
+
 class bqDatabase(sqlutil.Database):
   """A database of BigQuery contentfiles."""
 
@@ -70,6 +92,15 @@ class bqDatabase(sqlutil.Database):
 
   @property
   def count(self):
+    return (self.repo_count, self.file_count)
+  @property
+  def file_count(self):
     with self.Session() as s:
-      count = s.query(bqFile).count()
-    return count
+      file_count = s.query(bqFile).count()
+    return file_count
+
+  @property
+  def repo_count(self):
+    with self.Session() as s:
+      repo_count = s.query(bqRepo).count()
+    return repo_count
