@@ -7,7 +7,7 @@ import pathlib
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 from deeplearning.clgen.util.tf import tf
-from deeplearning.clgen import validation_database
+from deeplearning.clgen.samplers import validation_database
 from eupy.native import logger as l
 from eupy.native import plotter as plt
 

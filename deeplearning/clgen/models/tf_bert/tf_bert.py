@@ -28,9 +28,9 @@ import tensorflow_probability as tfp
 import numpy as np
 from absl import flags
 
-from deeplearning.clgen import samplers
-from deeplearning.clgen import sample_observers
-from deeplearning.clgen import validation_database
+from deeplearning.clgen.samplers import samplers
+from deeplearning.clgen.samplers import sample_observers
+from deeplearning.clgen.samplers import validation_database
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import process
 from deeplearning.clgen.proto import model_pb2

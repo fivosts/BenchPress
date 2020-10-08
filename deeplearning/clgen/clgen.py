@@ -23,8 +23,8 @@ import datetime
 
 from absl import app, flags
 
-from deeplearning.clgen import sample_observers as sample_observers_lib
-from deeplearning.clgen import samplers
+from deeplearning.clgen.samplers import sample_observers as sample_observers_lib
+from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.dashboard import dashboard
 from deeplearning.clgen.models import models

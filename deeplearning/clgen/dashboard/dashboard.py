@@ -14,8 +14,8 @@ import sqlalchemy as sql
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import environment
-from deeplearning.clgen import validation_database
-from deeplearning.clgen import samples_database
+from deeplearning.clgen.samplers import validation_database
+from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.dashboard import dashboard_db

@@ -17,7 +17,7 @@ import typing
 
 import numpy as np
 
-from deeplearning.clgen import samplers
+from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.proto import model_pb2
 from absl import flags
