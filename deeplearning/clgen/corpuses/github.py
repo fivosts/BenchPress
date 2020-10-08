@@ -71,13 +71,13 @@ class GithubRepo():
     if url != self.url:
       raise ValueError("Updated url of already existent repo does not match.")
     self.owner        = owner
-    self.name          = name
-    self.fork          = fork
-    self.stars         = stars
-    self.contributors  = contributors
-    self.forks         = forks
-    self.created_at    = created_at
-    self.updated_at    = updated_at
+    self.name         = name
+    self.fork         = fork
+    self.stars        = stars
+    self.contributors = contributors
+    self.forks        = forks
+    self.created_at   = created_at
+    self.updated_at   = updated_at
     return
 
 class GithubFile():
