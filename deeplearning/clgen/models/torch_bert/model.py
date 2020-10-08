@@ -20,6 +20,8 @@ import os
 import typing
 import concurrent.futures
 
+import numpy as np
+
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.preprocessors import opencl
@@ -726,58 +728,48 @@ class BertForPreTraining(BertPreTrainedModel):
     Takes a single sequence of the batch.
     """
     seq_length    = tuple(batch.shape)[0]
-    holes_exist   = False
-
     allowed_incr = (seq_length - int(torch.where(batch==self.atomizer.padToken)[0][0])
                     if self.atomizer.padToken in batch
                     else 0)
-    rem_adds = allowed_incr
-    ignore_idx, no_hole, with_hole = set(), {}, {}
+
+    endTokens = [self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken]
+    closed_hole = np.zeros(seq_length, dtype=np.bool)
+    new_hole = np.zeros(seq_length, dtype=np.bool)
+    temp_batch = batch.cpu().detach().numpy().copy()
 
     for target_idx in torch.where((batch == self.atomizer.holeToken) | (batch == self.atomizer.maskToken))[0]:
       idx        = int(target_idx)
-      prediction = self.argmax(prediction_scores[target_idx])
+      prediction = int(self.argmax(prediction_scores[target_idx]))
+      is_hole = temp_batch[idx] == self.atomizer.holeToken
 
-      if int(prediction) in {self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken}:
+      if prediction in endTokens:
         # Model predicted sth that will close the hole.
-        rem_adds += 1
-        ignore_idx.add(idx)
-      elif batch[idx] == self.atomizer.maskToken or not rem_adds:
-        # Asked position is a mask, or it is a hole and there is no room.
-        no_hole[idx] = int(prediction)
-      elif rem_adds:
-        rem_adds   -= 1
-        holes_exist = True
-        with_hole[idx] = int(prediction)
-
-    new_batch = []
-    for idx, t in enumerate(batch):
-      if idx in ignore_idx:
+        closed_hole[idx] = True
         continue
-      elif idx in no_hole:
-        new_batch.append(no_hole[idx])
-      elif idx in with_hole:
-        new_batch += [with_hole[idx], self.atomizer.holeToken]
-      else:
-        new_batch.append(t)
 
-    if len(new_batch) < seq_length:
-      new_batch += [self.atomizer.padToken] * (seq_length - len(new_batch))
-    else:
-      new_batch = new_batch[:len(new_batch) - (allowed_incr - rem_adds)]
-    assert len(new_batch) == seq_length, "{} - {} - {}".format(len(new_batch), allowed_incr, rem_adds)
+      # We replace the hole with a prediction
+      temp_batch[idx] = prediction
+      rem_adds = allowed_incr + np.sum(closed_hole) - np.sum(new_hole)
+      if is_hole and rem_adds:
+        # if this was a hole and we have more empty space, reinsert the hole
+        new_hole[idx] = True
+
+    new_batch = np.full(seq_length, self.atomizer.padToken, dtype=np.int64)
+    new_idx = 0
+    for idx, t in enumerate(temp_batch):
+      if closed_hole[idx]:
+        continue
+      new_batch[new_idx] = t
+      new_idx += 1
+      if new_hole[idx]:
+        new_batch[new_idx] = self.atomizer.holeToken
+        new_idx += 1
+      if new_idx >= seq_length:
+        break
+
     new_batch = torch.LongTensor([new_batch])
-
-    if self.atomizer.padToken not in new_batch[0]:
-      attention_mask = torch.ones([1, seq_length], dtype = torch.int64)
-    else:
-      pad_idx = torch.where(new_batch[0] == self.atomizer.padToken)[0][0]
-      attention_mask = torch.cat((
-        torch.ones ([1, pad_idx],              dtype = torch.int64),
-        torch.zeros([1, seq_length - pad_idx], dtype = torch.int64)
-      ), axis = 1)
-
-    return holes_exist, new_batch, attention_mask
+    attention_mask = (new_batch != self.atomizer.padToken)
+    return np.any(new_hole), new_batch, attention_mask
 
   def checkIfBatchCompiles(self, sample):
     """Check if generated sample compiles"""

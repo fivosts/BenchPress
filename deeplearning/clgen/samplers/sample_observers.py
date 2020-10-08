@@ -132,7 +132,8 @@ class SamplesDatabaseObserver(SampleObserver):
   ):
     self.db = samples_database.SamplesDatabase("sqlite:///{}".format(str(path)), must_exist = must_exist)
     self.sample_id = self.db.count
-    if plot_sample_status:
+    self.plot_sample_status = plot_sample_status
+    if self.plot_sample_status:
       self.monitor = distributions.PassiveMonitor(path.parent, "cumulative_sample_count")
 
   def OnSample(self, sample: model_pb2.Sample) -> bool:
@@ -150,7 +151,7 @@ class SamplesDatabaseObserver(SampleObserver):
       if not exists:
         session.add(db_sample)
         self.sample_id += 1
-      if plot_sample_status:
+      if self.plot_sample_status:
         self.monitor.register(self.sample_id)
         self.monitor.plot()
     return True
