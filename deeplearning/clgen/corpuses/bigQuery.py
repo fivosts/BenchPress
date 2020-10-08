@@ -45,6 +45,12 @@ def fetch(path, lang: str = "opencl"):
   INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id AND {}
   """.format(substr_command)
 
+  repo_query = """
+  SELECT DISTINCT file.repo_name, file.ref
+  FROM `bigquery-public-data.github_repos.files` as file
+  WHERE {}
+  """.format(substr_command)
+
   # TODO(developer): Set table_id to the ID of the table to create.
 
   # dataset_id = "{}.your_dataset".format(client.project)
@@ -76,18 +82,31 @@ def fetch(path, lang: str = "opencl"):
 
   count_job = client.query(count_query)
   file_job  = client.query(db_query)
+  repo_job  = client.query(db_query)
 
-  for row in count_job:
-    file_count = row[0]
+  for f, r in zip(count_job, repo_job):
+    file_count = f[0]
+    repo_count = r[0]
 
-  l.getLogger().info("Fetching {} {} files...".format(humanize.intcomma(file_count), lang))
+  l.getLogger().info("Fetching {} {} files from {} repos".format(
+      humanize.intcomma(file_count), lang, humanize.intcomma(repo_count)
+    )
+  )
 
   url = "sqlite:///{}{}".format(path, "bqcorpus_{}.db".format(lang))
   db = bigQuery_database.bqDatabase(url)
   with db.Session(commit = True) as session, progressbar.ProgressBar(max_value = file_count) as bar:
-    for en,row in enumerate(file_job):
-      contentfile = bigQuery_database.bqFile(
-        **bigQuery_database.bqFile.FromArgs(en, row)
-      )
-      session.add(contentfile)
-      bar.update(en)
+    with progressbar.ProgressBar(max_value = file_count) as bar:
+      for en,row in enumerate(file_job):
+        contentfile = bigQuery_database.bqFile(
+          **bigQuery_database.bqFile.FromArgs(en, row)
+        )
+        session.add(contentfile)
+        bar.update(en)
+    with progressbar.ProgressBar(max_value = repo_count) as bar:
+      for en, row in enumerate(repo_job):
+        repofile = bigQuery_database.bqRepo(
+          **bigQuery_database.bqRepo.FromArgs(en, row)
+        )
+        session.add(repofile)
+        bar.update(en)
