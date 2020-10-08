@@ -39,8 +39,8 @@ def fetch(path, lang: str = None):
   l.getLogger().warn(config.allow_large_results)
   client = bigquery.Client(default_query_job_config = config)
 
+  substr_command = ""
   if lang is not None:
-    substr_command = ""
     for en, ext in enumerate(languages[lang]):
       if en == 0:
         substr_command = "substr(file.path, {}, {}) = '{}'".format(-len(ext), 1 + len(ext), ext)
@@ -50,22 +50,22 @@ def fetch(path, lang: str = None):
   count_query = """
   SELECT COUNT(*)
   FROM `bigquery-public-data.github_repos.files` as file
-  {} {}
-  """.format("WHERE" if lang is not None else "", substr_command)
+  {}
+  """.format("WHERE " + substr_command if lang is not None else "")
 
   db_query = """
   SELECT file.repo_name, file.path, file.ref, file.mode, 
          file.id, file.symlink_target, contentfile.size, 
          contentfile.content, contentfile.binary, contentfile.copies
   FROM `bigquery-public-data.github_repos.contents` as contentfile
-  INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {} {}
-  """.format("AND" if lang is not None else "", substr_command)
+  INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
+  """.format("AND " + substr_command if lang is not None else "")
 
   repo_query = """
   SELECT DISTINCT file.repo_name, file.ref
   FROM `bigquery-public-data.github_repos.files` as file
-  {} {}
-  """.format("WHERE" if lang is not None else "", substr_command)
+  {}
+  """.format("WHERE " + substr_command if lang is not None else "")
 
   # TODO(developer): Set table_id to the ID of the table to create.
 
