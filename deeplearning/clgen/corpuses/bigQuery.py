@@ -5,9 +5,24 @@ import progressbar
 import humanize
 
 from google.cloud import bigquery
-from eupy.native import logger as l
+from absl import flags
 
 from deeplearning.clgen import bigQuery_database
+from eupy.native import logger as l
+
+FLAGS = flags.FLAGS
+
+FLAGS.define_boolean(
+  "bq_only_repos",
+  False,
+  "Avoid huge queries, mine only repo entries for specified language."
+)
+
+FLAGS.define_boolean(
+  "bq_only_files",
+  False,
+  "Do not explicitly mine repository entries for contentfiles."
+)
 
 languages = {
   'opencl': ['.cl'],
@@ -17,39 +32,40 @@ languages = {
   'python': ['.py'],
 }
 
-def fetch(path, lang: str = "opencl"):
+def fetch(path, lang: str = None):
   # Construct a BigQuery client object.
   config = bigquery.QueryJobConfig(allowLargeResults = True)
   config.allow_large_results = True
   l.getLogger().warn(config.allow_large_results)
   client = bigquery.Client(default_query_job_config = config)
 
-  substr_command = ""
-  for en, ext in enumerate(languages[lang]):
-    if en == 0:
-      substr_command = "substr(file.path, {}, {}) = '{}'".format(-len(ext), 1 + len(ext), ext)
-    else:
-      substr_command += " OR substr(file.path, {}, {}) = '{}'".format(-len(ext), 1 + len(ext), ext)
+  if lang is not None:
+    substr_command = ""
+    for en, ext in enumerate(languages[lang]):
+      if en == 0:
+        substr_command = "substr(file.path, {}, {}) = '{}'".format(-len(ext), 1 + len(ext), ext)
+      else:
+        substr_command += " OR substr(file.path, {}, {}) = '{}'".format(-len(ext), 1 + len(ext), ext)
 
   count_query = """
   SELECT COUNT(*)
   FROM `bigquery-public-data.github_repos.files` as file
-  WHERE {}
-  """.format(substr_command)
+  {} {}
+  """.format("WHERE" if lang is not None else "", substr_command)
 
   db_query = """
   SELECT file.repo_name, file.path, file.ref, file.mode, 
          file.id, file.symlink_target, contentfile.size, 
          contentfile.content, contentfile.binary, contentfile.copies
   FROM `bigquery-public-data.github_repos.contents` as contentfile
-  INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id AND {}
-  """.format(substr_command)
+  INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {} {}
+  """.format("AND" if lang is not None else "", substr_command)
 
   repo_query = """
   SELECT DISTINCT file.repo_name, file.ref
   FROM `bigquery-public-data.github_repos.files` as file
-  WHERE {}
-  """.format(substr_command)
+  {} {}
+  """.format("WHERE" if lang is not None else "", substr_command)
 
   # TODO(developer): Set table_id to the ID of the table to create.
 
