@@ -126,3 +126,19 @@ def fetch(path, lang: str = None):
         )
         session.add(repofile)
         bar.update(en)
+    r = [
+      "total_contentfiles: {}".format(db.file_count),
+      "total_repositories: {}".format(db.repo_count),
+    ]
+    exists = session.query(
+        bigQuery_database.bqData.key
+      ).filter_by(key = lang if lang is not None else "All").scalar() is not None
+    if exists:
+      entry = session.query(
+          bigQuery_database.bqData
+        ).filter_by(key = lang if lang is not None else "All").first()
+      entry.value = "\n".join(r)
+    else:
+      session.add(
+        bigQuery_database.bqData(key = lang if lang is not None else "All", value = "\n".join(r))
+      )
