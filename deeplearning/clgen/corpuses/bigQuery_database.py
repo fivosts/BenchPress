@@ -6,12 +6,9 @@ import sqlite3
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
-from absl import flags
 
 from deeplearning.clgen.util import crypto
 from labm8.py import sqlutil
-
-FLAGS = flags.FLAGS
 
 Base = declarative.declarative_base()
 
