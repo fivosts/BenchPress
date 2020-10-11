@@ -20,6 +20,13 @@ class bqData(Base):
   key   : str = sql.Column(sql.String(1024), primary_key=True)
   value : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
 
+  @staticmethod
+  def bqScheme(cls) -> typing.List[bigquery.SchemaField]:
+    return [
+      bigquery.SchemaField("key",   "STRING", mode = "REQUIRED")
+      bigquery.SchemaField("value", "STRING", mode = "REQUIRED")
+    ]
+
 class bqFile(Base, sqlutil.ProtoBackedMixin):
   """
     A database entry representing a CLgen validation trace.
@@ -58,6 +65,23 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
       "copies"         : row['copies']         if row['copies']         else "None",
       "date_added"     : datetime.datetime.utcnow(),
     }
+  
+  @staticmethod
+  def bqScheme(cls) -> typing.List[bigquery.SchemaField]:
+    return [
+      bigquery.SchemaField("id",             "INTEGER", mode = "REQUIRED"),
+      bigquery.SchemaField("sha256",         "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("repo_name",      "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("ref",            "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("path",           "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("mode",           "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("symlink_target", "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("size",           "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("content",        "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("binary",         "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("copies",         "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("date_added",     "STRING",  mode = "REQUIRED"),
+    ]
 
 class bqRepo(Base, sqlutil.ProtoBackedMixin):
   """
@@ -80,6 +104,15 @@ class bqRepo(Base, sqlutil.ProtoBackedMixin):
       "ref"            : row['ref'],
       "date_added"     : datetime.datetime.utcnow(),
     }
+
+  @staticmethod
+  def bqScheme(cls) -> typing.List[bigquery.SchemaField]:
+    return [
+      bigquery.SchemaField("id",         "INTEGER", mode = "REQUIRED")
+      bigquery.SchemaField("repo_name",  "STRING",  mode = "REQUIRED")
+      bigquery.SchemaField("ref",        "STRING",  mode = "REQUIRED")
+      bigquery.SchemaField("date_added", "STRING",  mode = "REQUIRED")
+    ]
 
 class bqDatabase(sqlutil.Database):
   """A database of BigQuery contentfiles."""
