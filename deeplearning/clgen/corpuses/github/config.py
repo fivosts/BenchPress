@@ -40,6 +40,14 @@ def AssertConfig(config: github_miner_pb2.GitHubMiner) -> None:
     raise e
   return
 
-def FromConfig(config: github_miner_pb2.GithubMiner) -> miner.GithubMiner:
-  """Constructs github miner from protobuf configuration."""
-  AssertConfig(config)
+
+class GithubMiner(object):
+  def __init__(self):
+    return
+
+  @classmethod
+  def FromConfig(config: github_miner_pb2.GitHubMiner) -> GitHubMiner:
+    """Constructs github miner from protobuf configuration."""
+    AssertConfig(config)
+    return
+
