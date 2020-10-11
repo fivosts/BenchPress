@@ -31,11 +31,11 @@ class BigQuery(miner.GithubMiner):
     #     else:
     #       substr_command += " OR substr(file.path, {}, {}) = '{}'".format(-len(ext), 1 + len(ext), ext)
 
-    count_query = """
-    SELECT COUNT(*)
-    FROM `bigquery-public-data.github_repos.files` as file
-    {}
-    """.format("WHERE " + substr_command if lang is not None else "")
+    # count_query = """
+    # SELECT COUNT(*)
+    # FROM `bigquery-public-data.github_repos.files` as file
+    # {}
+    # """.format("WHERE " + substr_command if lang is not None else "")
 
     db_query = """
     SELECT file.repo_name, file.path, file.ref, file.mode, 
@@ -84,13 +84,13 @@ class BigQuery(miner.GithubMiner):
       "Created table {}.{}.{}".format(table.project, table.dataset_id, table.table_id)
     )
 
-    count_job = client.query(count_query)
+    # count_job = client.query(count_query)
     file_job  = client.query(db_query)
     repo_job  = client.query(db_query)
 
-    for f, r in zip(count_job, repo_job):
-      file_count = f[0]
-      repo_count = r[0]
+    # for f, r in zip(count_job, repo_job):
+    #   file_count = f[0]
+    #   repo_count = r[0]
 
     l.getLogger().info("Fetching {} {} files from {} repos".format(
         humanize.intcomma(file_count), lang, humanize.intcomma(repo_count)
