@@ -229,7 +229,15 @@ class GithubRepoHandler():
         ', mem_size: ',            self.file_size_counter, 'B',
         sep='', end='')
 
-class GithubFetcher():
+class GithubMiner(object):
+  def __init__(self):
+    return
+
+class BigQuery(GithubMiner):
+  def __init__(self, config):
+    return
+
+class RecursiveFetcher(GithubMiner):
   """GitHub API wrapper to pull from github a fresh corpus of OpenCL kernels"""
   def __init__(self,
                corpus_path: str
