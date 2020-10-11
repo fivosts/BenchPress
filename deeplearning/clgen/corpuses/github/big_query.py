@@ -35,7 +35,6 @@ languages = {
 
 class BigQuery(miner.GithubMiner):
   def __init__(self, config):
-    # config.data_formats
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(pathlib.Path(config.credentials, must_exist = True))
     self.cache_path = pathlib.Path(config.path, must_exist = False, parents = True)
     self.dataset    = datasets.FromArgs(self.language, config.data_format)
