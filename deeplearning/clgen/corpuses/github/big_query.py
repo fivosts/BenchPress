@@ -28,6 +28,7 @@ class BigQuery(miner.GithubMiner):
     self.dataset    = datasets.FromArgs(self.language, config.data_format)
     return
 
+## Refactor from this point below.
 def fetch(path, lang: str = None):
   # Construct a BigQuery client object.
   config = bigquery.QueryJobConfig(allowLargeResults = True)
