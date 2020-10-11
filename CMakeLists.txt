@@ -247,7 +247,6 @@ function(clgen)
     "unset CLANG_FORMAT\n"
     "unset CLANG_HEADERS\n"
     "unset CLANG_REWRITER\n"
-    "unset GOOGLE_APPLICATION_CREDENTIALS\n"
   )
   file(
     WRITE ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CLGEN}
