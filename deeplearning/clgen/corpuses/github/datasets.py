@@ -18,50 +18,72 @@ languages = {
 }
 
 class Dataset(object):
-  def __init__(self, data_format: int, dataset_id: str = None):
-    self.config = bigquery.QueryJobConfig()
-    self.config.allow_large_results = True
-    self.client = bigquery.Client(default_query_job_config = config)
-
-    self.project_id = self.client.project_id
-    self.dataset_id = "generic_github" if dataset_id is None else dataset_id
-    self.dataset_id = "{}_github".format(dataset_id or "generic")
-
-    self.data_format = data_format
-    return
-
+  """Representation of dataset instance in Big Query"""
   @classmethod
   def FromArgs(cls, lang, data_format):
     if lang not in languages:
       raise NotImplementedError(lang)
     return languages[lang](data_format)
+  
+  def __init__(self, data_format: int, dataset_id: str = None):
+
+    self.dataset_id = "generic_github" if dataset_id is None else dataset_id
+    self.dataset_id = "{}_github".format(dataset_id or "generic")
+    self.data_format = data_format
+
+    if self.extensions is not None:
+      self.query_file_id = " OR ".join(["substr(file.path, {}, {}) = '{}'".format(-len(ext), 1+len(ext), ext)
+                              for ext in self.extensions
+                        ])
+    else:
+      self.query_file_id = ""
+    return
+
+  def filecount_query(self, client) -> int:
+    """
+    Queries the file count of files intended to query.
+    Returns file count in int.
+    """
+    count_query = """
+    SELECT COUNT(*)
+    FROM `bigquery-public-data.github_repos.files` as file
+    {}
+    """.format(not self.query_file_id or "WHERE " + self.query_file_id)
+    job = client.query(count_query)
+    for f in job:
+      return f[0]
 
 class openclDataset(Dataset):
+  """Opencl Dataset"""
   def __init__(self, data_format: int):
+    self.extensions = ['.cl']
     super(openclDataset, self).__init__(data_format, "opencl")
-    self.extentions = ['.cl']
     return
 
 class cDataset(Dataset):
+  """C Dataset"""
   def __init__(self, data_format: int):
+    self.extensions = ['.c']
     super(cDataset, self).__init__(data_format, "c")
-    self.extentions = ['.c']
     return
 
 class cppDataset(Dataset):
+  """C++ Dataset"""
   def __init__(self, data_format: int):
+    self.extensions = ['.cc'. 'cpp', '.cxx', '.c++']
     super(cppDataset, self).__init__(data_format, "cpp")
-    self.extentions = ['.cc'. 'cpp', '.cxx', '.c++']
     return
 
 class javaDataset(Dataset):
+  """java Dataset"""
   def __init__(self, data_format: int):
+    self.extensions = ['.java']
     super(javaDataset, self).__init__(data_format, "java")
-    self.extentions = ['.java']
     return
 
 class pythonDataset(Dataset):
+  """python Dataset"""
   def __init__(self, data_format: int):
+    self.extensions = ['.py']
     super(pythonDataset, self).__init__(data_format, "python")
-    self.extentions = ['.py']
     return
