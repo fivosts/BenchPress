@@ -47,3 +47,6 @@ class GithubMiner(object):
 
   def __init__(self):
     return
+
+  def fetch(self) -> None:
+    raise NotImplementedError("Abstract class")
