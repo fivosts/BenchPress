@@ -18,7 +18,6 @@ try:
   DASHBOARD_TEMPLATES = check_exists(os.environ['DASHBOARD_TEMPLATES'])
   DASHBOARD_STATIC    = check_exists(os.environ['DASHBOARD_STATIC'])
   DATA_CL_INCLUDE     = check_exists(os.environ['DATA_CL_INCLUDE'])
-  GBQ_CREDENTIALS     = check_exists(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
 except Exception as e:
   raise e
   
