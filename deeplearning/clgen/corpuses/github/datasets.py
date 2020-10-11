@@ -1,5 +1,6 @@
 """BigQuery Dataset structures"""
 import os
+import typing
 import pathlib
 import progressbar
 import humanize
@@ -41,6 +42,7 @@ class Dataset(object):
 
   @property
   def filecount(self):
+    """Return file count of represented query."""
     if self.file_count == 0:
       return self.filecount_query()
     else:
@@ -61,6 +63,17 @@ class Dataset(object):
       for f in job:
         self.file_count = f[0]
         return self.file_count
+
+  def repository_query(self, client) -> typing.Generator[int, bigquery.Query]:
+    repo_query = """
+    SELECT DISTINCT file.repo_name, file.ref
+    FROM `bigquery-public-data.github_repos.files` as file
+    {}
+    """.format(not self.query_file_id or "WHERE " + self.query_file_id)
+
+    job = client.query(repo_query)
+    for en, row in enumerate(repo_query):
+      yield en, row
 
 class openclDataset(Dataset):
   """Opencl Dataset"""
