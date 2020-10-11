@@ -35,9 +35,9 @@ from deeplearning.clgen.util import cache
 
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.corpuses import atomizers
-from deeplearning.clgen.corpuses import github
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.corpuses import preprocessed
+from deeplearning.clgen.corpuses.github import miner
 from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.preprocessors import preprocessors
 from deeplearning.clgen.proto import corpus_pb2

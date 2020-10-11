@@ -293,9 +293,9 @@ def DoFlagsAction(
 
 def main():
   """Main entry point."""
-  # from deeplearning.clgen.corpuses import bigQuery
-  # bigQuery.fetch("/home/fivosts/PhD/Code/clgen/", "c")
-  # exit()
+  from deeplearning.clgen.corpuses.github import bigQuery
+  bigQuery.fetch("/home/fivosts/PhD/Code/clgen/", "opencl")
+  exit()
   if FLAGS.clgen_dashboard_only:
     dash = dashboard.Launch(debug = {"debug": True})
   else:

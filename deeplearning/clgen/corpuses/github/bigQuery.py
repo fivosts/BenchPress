@@ -7,18 +7,18 @@ import humanize
 from google.cloud import bigquery
 from absl import flags
 
-from deeplearning.clgen import bigQuery_database
+from deeplearning.clgen.corpuses.github import bigQuery_database
 from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
-FLAGS.define_boolean(
+flags.DEFINE_boolean(
   "bq_only_repos",
   False,
   "Avoid huge queries, mine only repo entries for specified language."
 )
 
-FLAGS.define_boolean(
+flags.DEFINE_boolean(
   "bq_only_files",
   False,
   "Do not explicitly mine repository entries for contentfiles."
@@ -67,34 +67,38 @@ def fetch(path, lang: str = None):
   {}
   """.format("WHERE " + substr_command if lang is not None else "")
 
+  if lang is None:
+    lang = "All"
   # TODO(developer): Set table_id to the ID of the table to create.
-
-  # dataset_id = "{}.your_dataset".format(client.project)
-
   # Construct a full Dataset object to send to the API.
-  # dataset = bigquery.Dataset(dataset_id)
-
   # TODO(developer): Specify the geographic location where the dataset should reside.
-  # dataset.location = "US"
 
-  # Send the dataset to the API for creation, with an explicit timeout.
-  # Raises google.api_core.exceptions.Conflict if the Dataset already
-  # exists within the project.
+  dataset_id = "{}.clgen_{}".format(client.project, lang)
+  dataset = bigquery.Dataset(dataset_id)
+  dataset.location = "US"
+
+
+  # # Send the dataset to the API for creation, with an explicit timeout.
+  # # Raises google.api_core.exceptions.Conflict if the Dataset already
+  # # exists within the project.
+  dataset = client.get_dataset(dataset_id)
+  print(dataset)
+  exit()
   # dataset = client.create_dataset(dataset, timeout=30)  # Make an API request.
-  # print("Created dataset {}.{}".format(client.project, dataset.dataset_id))
+  print("Created dataset {}.{}".format(client.project, dataset.dataset_id))
+  exit()
+  table_id = "{}.clgen_{}.bq_contentfiles".format(client.project, lang)
 
-  # table_id = "your-project.your_dataset.your_table_name"
+  schema = [
+    bigquery.SchemaField("full_name", "STRING", mode="REQUIRED"),
+    bigquery.SchemaField("age", "INTEGER", mode="REQUIRED"),
+  ]
 
-  # schema = [
-  #   bigquery.SchemaField("full_name", "STRING", mode="REQUIRED"),
-  #   bigquery.SchemaField("age", "INTEGER", mode="REQUIRED"),
-  # ]
-
-  # table = bigquery.Table(table_id, schema=schema)
-  # table = client.create_table(table)  # Make an API request.
-  # print(
-  #   "Created table {}.{}.{}".format(table.project, table.dataset_id, table.table_id)
-  # )
+  table = bigquery.Table(table_id, schema=schema)
+  table = client.create_table(table)  # Make an API request.
+  print(
+    "Created table {}.{}.{}".format(table.project, table.dataset_id, table.table_id)
+  )
 
   count_job = client.query(count_query)
   file_job  = client.query(db_query)
@@ -132,13 +136,13 @@ def fetch(path, lang: str = None):
     ]
     exists = session.query(
         bigQuery_database.bqData.key
-      ).filter_by(key = lang if lang is not None else "All").scalar() is not None
+      ).filter_by(key = lang).scalar() is not None
     if exists:
       entry = session.query(
           bigQuery_database.bqData
-        ).filter_by(key = lang if lang is not None else "All").first()
+        ).filter_by(key = lang).first()
       entry.value = "\n".join(r)
     else:
       session.add(
-        bigQuery_database.bqData(key = lang if lang is not None else "All", value = "\n".join(r))
+        bigQuery_database.bqData(key = lang, value = "\n".join(r))
       )
