@@ -36,9 +36,17 @@ class Dataset(object):
       self.query_file_id = " OR ".join(["substr(file.path, {}, {}) = '{}'".format(-len(ext), 1+len(ext), ext)
                               for ext in self.extensions
                         ])
+    self.file_count = 0
     return
 
-  def filecount_query(self, client) -> int:
+  @property
+  def filecount(self):
+    if self.file_count == 0:
+      return self.filecount_query()
+    else:
+      return self.file_count
+
+  def filecount_query(self) -> int:
     """
     Queries the file count of files intended to query.
     Returns file count in int.
@@ -48,9 +56,11 @@ class Dataset(object):
     FROM `bigquery-public-data.github_repos.files` as file
     {}
     """.format(not self.query_file_id or "WHERE " + self.query_file_id)
-    job = client.query(count_query)
-    for f in job:
-      return f[0]
+    with bigquery.Client() as client:
+      job = client.query(count_query)
+      for f in job:
+        self.file_count = f[0]
+        return self.file_count
 
 class openclDataset(Dataset):
   """Opencl Dataset"""
