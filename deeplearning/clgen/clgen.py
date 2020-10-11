@@ -293,7 +293,7 @@ def DoFlagsAction(
 
 def main():
   """Main entry point."""
-  from deeplearning.clgen.corpuses.github import bigQuery
+  from deeplearning.clgen.corpuses.github import big_query
   bigQuery.fetch("/home/fivosts/PhD/Code/clgen/", "opencl")
   exit()
   if FLAGS.clgen_dashboard_only:
