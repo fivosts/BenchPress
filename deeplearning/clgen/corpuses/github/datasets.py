@@ -133,6 +133,11 @@ class openclDataset(Dataset):
   def contentfile_query(self,
                         client,
                         ) -> typing.Tuple[typing.Callable, typing.Callable]:
+    """
+    Query contentfiles that tested positive for being CL.
+    CL has its own function, because two types of files are checked:
+    '.cl' files and any C/C++ file that contains the keyword 'kernel void'
+    """
     cl_file_it = super(openclDataset, self).contentfile_query(client)
     other_file_query = """
     SELECT file.repo_name, file.path, file.ref, file.mode, 
