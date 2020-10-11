@@ -6,7 +6,7 @@ from deeplearning.clgen.corpuses.github import recursive
 
 class GithubMiner(object):
   """Base abstract class of a github miner"""
-  
+
   @classmethod
   def FromConfig(cls, config: github_miner_pb2.GitHubMiner) -> GitHubMiner:
     """Constructs github miner from protobuf configuration."""
@@ -37,6 +37,8 @@ class GithubMiner(object):
           lambda x: x>0,
           "corpus size cannot be non-positive."
           )
+        if config.data_format != config.GitHubMiner.DataFormat.folder:
+          raise NotImplementedError("RecursiveFetcher only stores files in local folder.")
         return recursive.RecursiveFetcher(config)
       else:
         raise SystemError("{} miner not recognized".format(config.miner))
