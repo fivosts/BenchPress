@@ -72,7 +72,20 @@ class Dataset(object):
     """.format(not self.query_file_id or "WHERE " + self.query_file_id)
 
     job = client.query(repo_query)
-    for en, row in enumerate(repo_query):
+    for en, row in enumerate(job):
+      yield en, row
+
+  def contentfile_query(self, client) -> typing.Generator[int, bigquery.Query]:
+    contentfile_query = """
+    SELECT file.repo_name, file.path, file.ref, file.mode, 
+           file.id, file.symlink_target, contentfile.size, 
+           contentfile.content, contentfile.binary, contentfile.copies
+    FROM `bigquery-public-data.github_repos.contents` as contentfile
+    INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
+    """.format(not self.query_file_id or "AND " + self.query_file_id)
+
+    job = client.query(contentfile_query)
+    for en, row in enumerate(job):
       yield en, row
 
 class openclDataset(Dataset):
