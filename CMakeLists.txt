@@ -235,7 +235,6 @@ function(clgen)
     "export CLANG_FORMAT="                   ${LLVM}/bin/clang-format "\n"
     "export CLANG_HEADERS="                  ${LLVM}/lib/clang/6.0.0/include "\n"
     "export CLANG_REWRITER="                 ${CLANG_REWRITER} "\n"
-    "export GOOGLE_APPLICATION_CREDENTIALS=" ${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH} "/corpuses/BigQuery_credentials.json\n"
     "eval PYTHONPATH="                       ${CMAKE_CURRENT_SOURCE_DIR} " $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
     "unset LLVM\n"
     "unset LLVM_LIB\n"
