@@ -13,25 +13,13 @@ from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_boolean(
-  "bq_only_repos",
-  False,
-  "Avoid huge queries, mine only repo entries for specified language."
-)
-
-flags.DEFINE_boolean(
-  "bq_only_files",
-  False,
-  "Do not explicitly mine repository entries for contentfiles."
-)
-
-languages = {
-  'opencl': ['.cl'],
-  'c'     : ['.c'],
-  'cpp'   : ['.cc', '.cpp', '.cxx', '.c++'],
-  'java'  : ['.java'],
-  'python': ['.py'],
-}
+# languages = {
+#   'opencl': ['.cl'],
+#   'c'     : ['.c'],
+#   'cpp'   : ['.cc', '.cpp', '.cxx', '.c++'],
+#   'java'  : ['.java'],
+#   'python': ['.py'],
+# }
 
 class BigQuery(miner.GithubMiner):
   def __init__(self, config):
