@@ -33,23 +33,8 @@ import copy
 from base64 import b64decode
 from functools import partial
 from eupy.native import logger as l
-from absl import flags
 
 from deeplearning.clgen.corpuses.github import miner
-
-FLAGS = flags.FLAGS
-
-flags.DEFINE_string(
-  "github_corpus_size",
-  None,
-  "Set the target size of kernel files gathered from Github."
-)
-
-flags.DEFINE_integer(
-  "file_size_limit",
-  52428800,
-  "How often should the Github Handler flush memory data to the disk."
-)
 
 class GithubRepo():
   def __init__(self, **kwargs):
@@ -113,7 +98,11 @@ class GithubFile():
     return current_size
 
 class GithubRepoHandler():
-  def __init__(self, corpus_path: str):
+  def __init__(self, 
+               corpus_path: str,
+               corpus_size: int,
+               flush_limit: int,
+               ):
 
     ## Use this to read a json file with all current sha files
     ## And of course to append the json file every time you flush
@@ -136,10 +125,10 @@ class GithubRepoHandler():
     self.files_modified_counter   = 0
     self.files_unchanged_counter  = 0
     self.file_size_counter        = 0
-    self.file_size_limit          = FLAGS.file_size_limit
+    self.file_size_limit          = flush_limit
 
     self.collectHistory()
-    self.is_finished              = False if FLAGS.github_corpus_size is None else (self.updated_length >= FLAGS.github_corpus_size)
+    self.is_finished              = False if corpus_size is None else (self.updated_length >= corpus_size)
     return
 
   def collectHistory(self):
@@ -234,17 +223,15 @@ class GithubRepoHandler():
 class RecursiveFetcher(miner.GithubMiner):
   """GitHub API wrapper to pull from github a fresh corpus of OpenCL kernels"""
   def __init__(self,
-               corpus_path: str
+               config: github_miner_pb2.GitHubMiner
                ):
-
-    l.getLogger().info("Github fetcher initialized: {}".format(corpus_path))
-
-    self.corpus_path     = corpus_path
+    self.corpus_path     = config.path
     git_credentials = {
       'GITHUB_USERNAME'  : None,
       'GITHUB_PW'        : None,
       'GITHUB_TOKEN'     : None,
     }
+    l.getLogger().info("Github fetcher initialized: {}".format(corpus_path))
 
     if not all(k in os.environ for k in git_credentials.keys()):
       l.getLogger().warn("Export github credentials as environment variables to speed up the process")
@@ -259,7 +246,11 @@ class RecursiveFetcher(miner.GithubMiner):
     self.username        = git_credentials['GITHUB_USERNAME']
     self.password        = git_credentials['GITHUB_PW']
     self.token           = git_credentials['GITHUB_TOKEN']
-    self.repo_handler    = GithubRepoHandler(self.corpus_path)
+    self.repo_handler    = GithubRepoHandler(
+      self.corpus_path, 
+      config.miner.recursive.corpus_size_K * 1000,
+      config.miner.recursive.flush_limit_K * 1000,
+    )
 
     self.current_status  = ""
     self.errors_counter  = 0
