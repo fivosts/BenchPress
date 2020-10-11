@@ -63,7 +63,7 @@ class bqRepo(Base, sqlutil.ProtoBackedMixin):
   """
     A database entry representing a CLgen validation trace.
   """
-  __tablename__  = "bq_contentfiles"
+  __tablename__  = "bq_repofiles"
   id             : int = sql.Column(sql.Integer,    primary_key = True)
   repo_name      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   ref            : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
