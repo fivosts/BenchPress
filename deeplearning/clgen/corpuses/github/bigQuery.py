@@ -8,6 +8,7 @@ from google.cloud import bigquery
 from absl import flags
 
 from deeplearning.clgen.corpuses.github import bigQuery_database
+from deeplearning.clgen.corpuses.github import miner
 from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
@@ -31,6 +32,10 @@ languages = {
   'java'  : ['.java'],
   'python': ['.py'],
 }
+
+class BigQuery(miner.GithubMiner):
+  def __init__(self, config):
+    return
 
 def fetch(path, lang: str = None):
   # Construct a BigQuery client object.
