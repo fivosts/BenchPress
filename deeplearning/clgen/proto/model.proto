@@ -34,9 +34,10 @@ import "deeplearning/clgen/proto/corpus.proto";
 
 // The specification of a CLgen model.
 message Model {
-  optional clgen.Corpus corpus = 1;
-  optional NetworkArchitecture architecture = 2;
-  optional TrainingOptions training = 3;
+  optional clgen.GithubMiner   github_miner = 1
+  optional clgen.Corpus        corpus       = 2;
+  optional NetworkArchitecture architecture = 3;
+  optional TrainingOptions     training     = 4;
 }
 
 // The specification of a CLgen language model.
