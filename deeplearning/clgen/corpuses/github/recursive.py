@@ -35,6 +35,8 @@ from functools import partial
 from eupy.native import logger as l
 from absl import flags
 
+from deeplearning.clgen.corpuses.github import miner
+
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
@@ -229,15 +231,7 @@ class GithubRepoHandler():
         ', mem_size: ',            self.file_size_counter, 'B',
         sep='', end='')
 
-class GithubMiner(object):
-  def __init__(self):
-    return
-
-class BigQuery(GithubMiner):
-  def __init__(self, config):
-    return
-
-class RecursiveFetcher(GithubMiner):
+class RecursiveFetcher(miner.GithubMiner):
   """GitHub API wrapper to pull from github a fresh corpus of OpenCL kernels"""
   def __init__(self,
                corpus_path: str
