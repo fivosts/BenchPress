@@ -31,12 +31,11 @@ class Dataset(object):
     self.dataset_id = "{}_github".format(dataset_id or "generic")
     self.data_format = data_format
 
+    self.query_file_id = ""
     if self.extensions is not None:
       self.query_file_id = " OR ".join(["substr(file.path, {}, {}) = '{}'".format(-len(ext), 1+len(ext), ext)
                               for ext in self.extensions
                         ])
-    else:
-      self.query_file_id = ""
     return
 
   def filecount_query(self, client) -> int:
