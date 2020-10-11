@@ -122,13 +122,26 @@ class openclDataset(Dataset):
     CL has its own function, because two types of files are checked:
     '.cl' files and any C/C++ file that contains the keyword 'kernel void'
     """
-    cl_file_it = super(openclDataset, self).repository_query(client)
+    cl_repo_it = super(openclDataset, self).repository_query(client)
     other_repo_query = """
     SELECT DISTINCT file.repo_name, file.ref
     FROM `bigquery-public-data.github_repos.files` as file
     {} {}
     """.format(not self.query_file_id or "WHERE " + self.query_file_id, self.query_exception)
-    return (cl_file_it, client.query(repo_query))
+    return (cl_repo_it, client.query(other_repo_query))
+
+  def contentfile_query(self,
+                        client,
+                        ) -> typing.Tuple[typing.Callable, typing.Callable]:
+    cl_file_it = super(openclDataset, self).contentfile_query(client)
+    other_file_query = """
+    SELECT file.repo_name, file.path, file.ref, file.mode, 
+           file.id, file.symlink_target, contentfile.size, 
+           contentfile.content, contentfile.binary, contentfile.copies
+    FROM `bigquery-public-data.github_repos.files` as file
+    {} {}
+    """.format(not self.query_file_id or "WHERE " + self.query_file_id, self.query_exception)
+    return (cl_file_it, client.query(other_file_query))
 
 class cDataset(Dataset):
   """C Dataset"""
