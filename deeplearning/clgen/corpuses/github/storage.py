@@ -16,6 +16,7 @@ class Storage(object):
   @classmethod
   def FromArgs(cls,
                path: pathlib.Path,
+               name: str,
                extension: str,
                data_format: int
                ) -> Storage:
@@ -24,13 +25,16 @@ class Storage(object):
       github_miner_pb2.GithubMiner.DataFormat.folder: fileStorage,
       github_miner_pb2.GithubMiner.DataFormat.sql   : dbStorage,
       github_miner_pb2.GithubMiner.DataFormat.bq    : bqStorage,
-    }[data_format](path, extension)
+    }[data_format](path, name, extension)
     return
 
   def __init__(self,
                path: pathlib.Path,
+               name: str,
                extension: str):
     self.cache_path = path
+    self.cache_path.mkdir(exist_ok = True)
+    self.name       = name
     self.extension  = extension
     return
 
@@ -46,9 +50,10 @@ class Storage(object):
 class zipStorage(Storage):
   def __init__(self,
                path: pathlib.Path,
+               name: str,
                extension: str
                ):
-    super(zipStorage, self).__init__(path, extension)
+    super(zipStorage, self).__init__(path, name, extension)
     self.cached_content = []
     self.flush_counter  = 20000
     self.current_file   = 0
@@ -72,7 +77,7 @@ class zipStorage(Storage):
       with open(tmp_root / "{}.{}".format(en+1, self.extension), 'w') as f:
         f.write(cf)
     cmd = subprocess.Popen(
-      "zip -r -9 {}.zip {}".format(self.name, tmp_root).split(),
+      "zip -r -9 {} {}".format(self.cache_path / (self.name + ".zip"), tmp_root).split(),
       stdout = sys.stdout,
       stderr = sys.stderr
     )
@@ -88,16 +93,18 @@ class zipStorage(Storage):
 class fileStorage(Storage):
   def __init__(self,
                path: pathlib.Path,
+               name: str,
                extension: str
                ):
-    super(fileStorage, self).__init__(path, extension)
+    super(fileStorage, self).__init__(path, name, extension)
     self.file_counter = 0
+    (self.cache_path / self.name).mkdir(exist_ok = True)
 
   def save(self,
            contentfile: bigQuery_database.bqFile
            ) -> None:
     if contentfile.content is not None:
-      with open(self.cache_path / "{}{}".format(self.counter, self.extension)) as f:
+      with open(self.cache_path / self.name / "{}{}".format(self.counter, self.extension)) as f:
         f.write(contentfile.content)
       self.file_counter += 1
     else:
@@ -107,10 +114,11 @@ class fileStorage(Storage):
 class dbStorage(Storage):
   def __init__(self,
                path: pathlib.Path,
+               name: str,
                extension: str
                ):
-    super(dbStorage, self).__init__(path, extension)
-    self.db = bigQuery_database.bqDatabase("sqlite:///{}".format(self.cache_path / "bq_{}.db"))
+    super(dbStorage, self).__init__(path, name, extension)
+    self.db = bigQuery_database.bqDatabase("sqlite:///{}".format(self.cache_path / (self.name + ".db")))
 
   def save(self,
            contentfile: typing.Union[
