@@ -59,7 +59,7 @@ class Dataset(object):
     self.file_count = None
     return
 
-  def _setupDataset(self, dataset_id) -> bigquery.Dataset:
+  def _setupDataset(self, dataset_id: int) -> bigquery.Dataset:
     """API request to get or set bigquery.Dataset instance."""
     try:
       dataset = self.client.get_dataset(dataset_id)
