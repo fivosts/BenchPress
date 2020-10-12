@@ -6,30 +6,46 @@ import progressbar
 import humanize
 from google.cloud import bigquery
 
+from deeplearning.clgen.proto import github_miner_pb2
 from deeplearning.clgen.corpuses.github import bigQuery_database
 from eupy.native import logger as l
 
-class bqStorage(object):
+class Storage(object):
 
   @classmethod
-  def FromArgs(cls, ):
+  def FromArgs(cls, path, extension, data_format):
+    storage = {
+      github_miner_pb2.GithubMiner.DataFormat.zip   : zipStorage,
+      github_miner_pb2.GithubMiner.DataFormat.folder: fileStorage,
+      github_miner_pb2.GithubMiner.DataFormat.sql   : dbStorage,
+      github_miner_pb2.GithubMiner.DataFormat.bq    : bqStorage,
+    }[data_format](path, extension)
     return
 
-  def __init__(self):
+  def __init__(self, path, extension):
+    self.cache_path = path
+    self.extension  = extension
     return
 
-class zipStorage(bqStorage):
-  def __init__(self):
-    super(zipStorage, self).__init__()
+  def writeFile(self):
+    raise NotImplementedError("Abstract Class")
 
-class fileStorage(bqStorage):
-  def __init__(self):
-    super(fileStorage, self).__init__()
+class zipStorage(Storage):
+  def __init__(self, path, extension):
+    super(zipStorage, self).__init__(path, extension)
 
-class dbStorage(bqStorage):
-  def __init__(self):
-    super(dbStorage, self).__init__()
+class fileStorage(Storage):
+  def __init__(self, path, extension):
+    super(fileStorage, self).__init__(path, extension)
 
-class bqTableStorage(bqStorage):
-  def __init__(self):
-    super(bqTableStorage, self).__init__()
+  def writeFile(self, content):
+    with open(self.cache_path / "{}{}".format(self.counter, self.extension)) as f:
+      f.write(content)
+
+class dbStorage(Storage):
+  def __init__(self, path, extension):
+    super(dbStorage, self).__init__(path, extension)
+
+class bqStorage(Storage):
+  def __init__(self, path, extension):
+    super(bqTableStorage, self).__init__(path, extension)
