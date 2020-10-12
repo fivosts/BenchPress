@@ -1,6 +1,7 @@
 """BigQuery Dataset structures"""
 import os
 import typing
+import shutil
 import pathlib
 import progressbar
 import humanize
@@ -49,9 +50,39 @@ class zipStorage(Storage):
                ):
     super(zipStorage, self).__init__(path, extension)
     self.cached_content = []
+    self.flush_counter  = 20000
+    self.current_file   = 0
 
-  def save(self, content):
-    self.cached_content.append(content)
+  def save(self,
+           contentfile: bigQuery_database.bqFile
+           ) -> None:
+    if contentfile.content is not None:
+      self.cached_content.append(contentfile.content)
+      self.current_file += 1
+      if self.current_file >= self.flush_counter:
+        self.zipFiles()
+        self.current_file = 0
+    else:
+      raise ValueError("Wrong format of input contentfile.")
+    return
+
+  def zipFiles(self) -> None:
+    tmp_root = pathlib.Path("/tmp/bqZipStorageTMP/corpus").mkdir(exist_ok = True)
+    for en, cf in enumerate(self.cached_content):
+      with open(tmp_root / "{}.{}".format(en+1, self.extension), 'w') as f:
+        f.write(cf)
+    cmd = subprocess.Popen(
+      "zip -r -9 {}.zip {}".format(self.name, tmp_root).split(),
+      stdout = sys.stdout,
+      stderr = sys.stderr
+    )
+    try:
+      out, err = cmd.communicate()
+      if err:
+        raise OSError(err)
+      shutil.rmtree(tmp_root)
+    except Exception as e:
+      raise e
     return
 
 class fileStorage(Storage):
@@ -62,10 +93,15 @@ class fileStorage(Storage):
     super(fileStorage, self).__init__(path, extension)
     self.file_counter = 0
 
-  def save(self, content):
-    with open(self.cache_path / "{}{}".format(self.counter, self.extension)) as f:
-      f.write(content)
-    self.file_counter += 1
+  def save(self,
+           contentfile: bigQuery_database.bqFile
+           ) -> None:
+    if contentfile.content is not None:
+      with open(self.cache_path / "{}{}".format(self.counter, self.extension)) as f:
+        f.write(contentfile.content)
+      self.file_counter += 1
+    else:
+      raise ValueError("Wrong format of input contentfile.")
     return
 
 class dbStorage(Storage):
@@ -76,11 +112,14 @@ class dbStorage(Storage):
     super(dbStorage, self).__init__(path, extension)
     self.db = bigQuery_database.bqDatabase("sqlite:///{}".format(self.cache_path / "bq_{}.db"))
 
-  def save(self, content):
+  def save(self,
+           contentfile: typing.Union[
+                          bigQuery_database.bqData,
+                          bigQuery_database.bqFile,
+                          bigQuery_database.bqRepo
+                        ]
+           ) -> None:
     with self.db.Session(commit = True) as session:
-      contentfile = bigQuery_database.bqFile(
-        **bigQuery_database.bqFile.FromArgs(self.db.count + 1, content)
-      )
       session.add(contentfile)
     return
 
@@ -91,5 +130,7 @@ class bqStorage(Storage):
                ):
     super(bqTableStorage, self).__init__(path, extension)
 
-  def save(self, content):
+  def save(self,
+           contentfile: bigQuery_database.bqFile
+           ) -> None:
     raise NotImplementedError
