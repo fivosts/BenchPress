@@ -46,9 +46,9 @@ class Dataset(object):
                dataset_id: str = None
                ):
     """Generic Dataset class constructor. Not to be used directly."""
-    self.client     = client
-    self.dataset_id = "generic_github" if dataset_id is None else dataset_id
-    self.dataset_id = "{}_github".format(dataset_id or "generic")
+    self.client  = client    
+    self.dataset = self._setupDataset("clgen_{}_github".format(dataset_id or "generic"))
+
     self.data_format = data_format
 
     self.query_file_id = ""
@@ -58,6 +58,15 @@ class Dataset(object):
                         ])
     self.file_count = None
     return
+
+  def _setupDataset(self, dataset_id) -> bigquery.Dataset:
+    try:
+      dataset = self.client.get_dataset(dataset_id)
+      return dataset
+    except Exception as e:
+      raise e
+      dataset = bigquery.Dataset(dataset_id)
+    return dataset
 
   def filecount_query(self) -> typing.Tuple[int, int]:
     """
