@@ -20,7 +20,7 @@ class bqData(Base):
   value : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
 
   @staticmethod
-  def bqScheme(cls) -> typing.List[bigquery.SchemaField]:
+  def bqSchema(cls) -> typing.List[bigquery.SchemaField]:
     return [
       bigquery.SchemaField("key",   "STRING", mode = "REQUIRED")
       bigquery.SchemaField("value", "STRING", mode = "REQUIRED")
@@ -66,7 +66,7 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
     }
   
   @staticmethod
-  def bqScheme(cls) -> typing.List[bigquery.SchemaField]:
+  def bqSchema(cls) -> typing.List[bigquery.SchemaField]:
     return [
       bigquery.SchemaField("id",             "INTEGER", mode = "REQUIRED"),
       bigquery.SchemaField("sha256",         "STRING",  mode = "REQUIRED"),
@@ -105,7 +105,7 @@ class bqRepo(Base, sqlutil.ProtoBackedMixin):
     }
 
   @staticmethod
-  def bqScheme(cls) -> typing.List[bigquery.SchemaField]:
+  def bqSchema(cls) -> typing.List[bigquery.SchemaField]:
     return [
       bigquery.SchemaField("id",         "INTEGER", mode = "REQUIRED")
       bigquery.SchemaField("repo_name",  "STRING",  mode = "REQUIRED")
