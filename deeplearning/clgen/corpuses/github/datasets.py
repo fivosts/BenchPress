@@ -39,6 +39,14 @@ class Dataset(object):
     else:
       return self.file_count
 
+  @property
+  def name(self):
+    return self.dataset.dataset_id
+
+  @property
+  def extension(self):
+    return self.extensions[0]
+  
   def __init__(self,
                client: bigquery.Client,
                dataset_id: str = None
@@ -46,7 +54,7 @@ class Dataset(object):
     """Generic Dataset class constructor. Not to be used directly."""
     self.client  = client    
     self.dataset, self.tables = self._setupDataset(
-      "{}.clgen_{}_github".format(self.client.projectdataset_id or "generic")
+      "{}.clgen_{}_github".format(self.client.project, dataset_id or "generic")
     )
 
     self.query_file_id = ""
@@ -201,7 +209,7 @@ class cppDataset(Dataset):
   def __init__(self,
                client: bigquery.Client,
                ):
-    self.extensions = ['.cc'. 'cpp', '.cxx', '.c++']
+    self.extensions = ['.cpp'. 'cc', '.cxx', '.c++']
     super(cppDataset, self).__init__(client, "cpp")
     return
 
