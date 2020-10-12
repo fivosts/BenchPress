@@ -42,6 +42,11 @@ class zipStorage(Storage):
                extension: str
                ):
     super(zipStorage, self).__init__(path, extension)
+    self.cached_content = []
+
+  def writeFile(self, content):
+    self.cached_content.append(content)
+    return
 
 class fileStorage(Storage):
   def __init__(self,
@@ -49,10 +54,13 @@ class fileStorage(Storage):
                extension: str
                ):
     super(fileStorage, self).__init__(path, extension)
+    self.file_counter = 0
 
   def writeFile(self, content):
     with open(self.cache_path / "{}{}".format(self.counter, self.extension)) as f:
       f.write(content)
+    self.file_counter += 1
+    return
 
 class dbStorage(Storage):
   def __init__(self,
