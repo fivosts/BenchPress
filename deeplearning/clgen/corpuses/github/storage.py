@@ -132,7 +132,19 @@ class dbStorage(Storage):
                         ]
            ) -> None:
     with self.db.Session(commit = True) as session:
-      session.add(contentfile)
+      if isinstance(contentfile, bigQuery_database.bqData):
+        exists = session.query(
+          bigQuery_database.bqData.key
+        ).filter_by(key = contentfile.key).scalar() is not None
+        if exists:
+          entry = session.query(
+            bigQuery_database.bqData
+          ).filter_by(key = contentfile.key).first()
+          entry.value = contentfile.value
+        else:
+          session.add(contentfile)
+      else:
+        session.add(contentfile)
     return
 
 class bqStorage(Storage):
