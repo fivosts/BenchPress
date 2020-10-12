@@ -124,6 +124,11 @@ class Dataset(object):
 
   def contentfile_query(self) -> typing.Tuple[typing.Callable]:
     """Returns iterable of query files"""
+    if not self.query_file_id:
+      l.getLogger().warning(
+        "contentfile_query for generic language is not allowed, unless one wants to query the whole universe."
+      )
+      return None, None
     contentfile_query = """
     SELECT file.repo_name, file.path, file.ref, file.mode, 
            file.id, file.symlink_target, contentfile.size, 
