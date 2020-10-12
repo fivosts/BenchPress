@@ -116,7 +116,7 @@ class Dataset(object):
     FROM `bigquery-public-data.github_repos.files` as file
     {}
     """.format(not self.query_file_id or "WHERE " + self.query_file_id)
-    return self.client.query(repo_query,)
+    return (self.client.query(repo_query), None)
 
   def contentfile_query(self) -> typing.Tuple[typing.Callable]:
     """Returns iterable of query files"""
@@ -127,7 +127,7 @@ class Dataset(object):
     FROM `bigquery-public-data.github_repos.contents` as contentfile
     INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
     """.format(not self.query_file_id or "AND " + self.query_file_id)
-    return self.client.query(contentfile_query,)
+    return (self.client.query(contentfile_query), None)
 
 class openclDataset(Dataset):
   """Opencl Dataset"""
@@ -168,7 +168,7 @@ class openclDataset(Dataset):
     CL has its own function, because two types of files are checked:
     '.cl' files and any C/C++ file that contains the keyword 'kernel void'
     """
-    cl_repo_it = super(openclDataset, self).repository_query()
+    cl_repo_it, _ = super(openclDataset, self).repository_query()
     other_repo_query = """
     SELECT DISTINCT file.repo_name, file.ref
     FROM `bigquery-public-data.github_repos.files` as file
@@ -182,7 +182,7 @@ class openclDataset(Dataset):
     CL has its own function, because two types of files are checked:
     '.cl' files and any C/C++ file that contains the keyword 'kernel void'
     """
-    cl_file_it = super(openclDataset, self).contentfile_query()
+    cl_file_it, _ = super(openclDataset, self).contentfile_query()
     other_file_query = """
     SELECT file.repo_name, file.path, file.ref, file.mode, 
            file.id, file.symlink_target, contentfile.size, 
