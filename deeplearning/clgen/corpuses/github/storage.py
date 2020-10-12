@@ -61,6 +61,8 @@ class zipStorage(Storage):
   def save(self,
            contentfile: bigQuery_database.bqFile
            ) -> None:
+    if not isinstance(contentfile, bigQuery_database.bqFile):
+      return
     if contentfile.content is not None:
       self.cached_content.append(contentfile.content)
       self.current_file += 1
@@ -103,6 +105,8 @@ class fileStorage(Storage):
   def save(self,
            contentfile: bigQuery_database.bqFile
            ) -> None:
+    if not isinstance(contentfile, bigQuery_database.bqFile):
+      return
     if contentfile.content is not None:
       with open(self.cache_path / self.name / "{}{}".format(self.counter, self.extension)) as f:
         f.write(contentfile.content)
