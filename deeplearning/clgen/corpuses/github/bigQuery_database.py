@@ -3,11 +3,10 @@ import contextlib
 import datetime
 import typing
 import sqlite3
+from google.cloud import bigquery
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
-
-from deeplearning.clgen.util import crypto
 from labm8.py import sqlutil
 
 Base = declarative.declarative_base()
