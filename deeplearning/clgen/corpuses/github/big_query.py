@@ -14,19 +14,51 @@ class BigQuery(miner.GithubMiner):
   def __init__(self,
                config: github_miner_pb2.GithubMiner
                ):
-
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(pathlib.Path(config.credentials, must_exist = True))
     self.cache_path = pathlib.Path(config.path, must_exist = False, parents = True)
 
     self.config  = bigquery.QueryJobConfig(allowLargeResults = True)
     self.config.allow_large_results = True
-
     self.client  = bigquery.Client(default_query_job_config = config)
-    self.dataset = datasets.FromArgs(self.client, self.language, config.data_format)
+
+    self.dataset = datasets.Dataset.FromArgs(self.client, self.language)
+    self.storage = storage.Storage.FromArgs(self.cache_path, self.dataset.name, self.dataset.extension, config.data_format)
     return
 
   def fetch(self):
-    # Construct a BigQuery client object.
+
+    # Filecount of requested file specifications.
+    filecount = self.dataset.filecount
+
+    # Get repository list of requested file specifications.
+    mainrep_it, otherrep_it = self.dataset.repository_query()
+    if mainrep_it is not None:
+      for en, mr in enumerate(mainrep_it):
+        self.storage.save(bigQuery_database.bqRepo(
+            **bigQuery_database.bqRepo.FromArgs(en, mr)
+          )
+        )
+    if otherrep_it is not None:
+      for en, orep in enumerate(otherrep_it):
+        self.storage.save(bigQuery_database.bqRepo(
+            **bigQuery_database.bqRepo.FromArgs(en, orep)
+          )
+        )
+
+    # Get contentfiles.
+    mainf_it, otherf_it = self.dataset.contentfile_query()
+    if mainf_it is not None:
+      for en, mf in enumerate(mainf_it):
+        self.storage.save(bigQuery_database.bqFile(
+            **bigQuery_database.bqFile.FromArgs(en, mf)
+          )
+        )
+    if otherf_it is not None:
+      for en, of in enumerate(otherf_it):
+        self.storage.save(bigQuery_database.bqFile(
+            **bigQuery_database.bqFile.FromArgs(en, of)
+          )
+        )
 
     url = "sqlite:///{}{}".format(self.cache_path, "bqcorpus_{}.db".format(lang))
     db = bigQuery_database.bqDatabase(url)
