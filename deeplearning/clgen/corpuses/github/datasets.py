@@ -32,7 +32,7 @@ class Dataset(object):
     return languages[lang](client)
   
   @property
-  def filecount(self):
+  def filecount(self) -> typing.Tuple[int, int]:
     """Return file count of represented query."""
     if self.file_count is None:
       return self.filecount_query()
