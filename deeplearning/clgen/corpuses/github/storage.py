@@ -7,7 +7,7 @@ import progressbar
 import humanize
 from google.cloud import bigquery
 
-from deeplearning.clgen.proto import github_miner_pb2
+from deeplearning.clgen.proto import github_pb2
 from deeplearning.clgen.corpuses.github import bigQuery_database
 from eupy.native import logger as l
 
@@ -21,10 +21,10 @@ class Storage(object):
                data_format: int
                ) -> Storage:
     storage = {
-      github_miner_pb2.GithubMiner.DataFormat.zip   : zipStorage,
-      github_miner_pb2.GithubMiner.DataFormat.folder: fileStorage,
-      github_miner_pb2.GithubMiner.DataFormat.sql   : dbStorage,
-      github_miner_pb2.GithubMiner.DataFormat.bq    : bqStorage,
+      github_pb2.GithubMiner.DataFormat.zip   : zipStorage,
+      github_pb2.GithubMiner.DataFormat.folder: fileStorage,
+      github_pb2.GithubMiner.DataFormat.sql   : dbStorage,
+      github_pb2.GithubMiner.DataFormat.bq    : bqStorage,
     }[data_format](path, name, extension)
     return
 

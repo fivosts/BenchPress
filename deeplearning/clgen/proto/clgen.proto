@@ -26,6 +26,7 @@ option java_package = "com.clgen";
 
 import "deeplearning/clgen/proto/model.proto";
 import "deeplearning/clgen/proto/sampler.proto";
+import "deeplearning/clgen/proto/github.proto";
 
 // A CLgen instance encapsulates all of the settings for training and sampling
 // a language model.
@@ -37,6 +38,7 @@ message Instance {
   // The language model specification. Either the full description of a model,
   // or the path to a pretrained_model, as created by --export_tf_model option
   // of clgen.
+  optional clgen.GithubMiner github_miner = 1;
   oneof model_specification {
     Model model = 2;
     string pretrained_model = 4;

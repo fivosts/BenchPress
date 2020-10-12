@@ -1,6 +1,6 @@
 """Github mining configuration"""
 from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.proto import github_miner_pb2
+from deeplearning.clgen.proto import github_pb2
 from deeplearning.clgen.corpuses.github import big_query
 from deeplearning.clgen.corpuses.github import recursive
 
@@ -8,7 +8,7 @@ class GithubMiner(object):
   """Base abstract class of a github miner"""
 
   @classmethod
-  def FromConfig(cls, config: github_miner_pb2.GitHubMiner) -> GitHubMiner:
+  def FromConfig(cls, config: github_pb2.GitHubMiner) -> GitHubMiner:
     """Constructs github miner from protobuf configuration."""
     try:
       pbutil.AssertFieldIsSet(config, "path")

@@ -223,7 +223,7 @@ class GithubRepoHandler():
 class RecursiveFetcher(miner.GithubMiner):
   """GitHub API wrapper to pull from github a fresh corpus of OpenCL kernels"""
   def __init__(self,
-               config: github_miner_pb2.GitHubMiner
+               config: github_pb2.GitHubMiner
                ):
     self.corpus_path     = config.path
     git_credentials = {
