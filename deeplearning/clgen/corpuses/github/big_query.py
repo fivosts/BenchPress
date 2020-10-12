@@ -23,6 +23,7 @@ class BigQuery(miner.GithubMiner):
     config.allow_large_results = True
     client = bigquery.Client(default_query_job_config = config)
 
+    
     # substr_command = ""
     # if lang is not None:
     #   for en, ext in enumerate(languages[lang]):
@@ -37,22 +38,22 @@ class BigQuery(miner.GithubMiner):
     # {}
     # """.format("WHERE " + substr_command if lang is not None else "")
 
-    db_query = """
-    SELECT file.repo_name, file.path, file.ref, file.mode, 
-           file.id, file.symlink_target, contentfile.size, 
-           contentfile.content, contentfile.binary, contentfile.copies
-    FROM `bigquery-public-data.github_repos.contents` as contentfile
-    INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
-    """.format("AND " + substr_command if lang is not None else "")
+    # db_query = """
+    # SELECT file.repo_name, file.path, file.ref, file.mode, 
+    #        file.id, file.symlink_target, contentfile.size, 
+    #        contentfile.content, contentfile.binary, contentfile.copies
+    # FROM `bigquery-public-data.github_repos.contents` as contentfile
+    # INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
+    # """.format("AND " + substr_command if lang is not None else "")
 
-    repo_query = """
-    SELECT DISTINCT file.repo_name, file.ref
-    FROM `bigquery-public-data.github_repos.files` as file
-    {}
-    """.format("WHERE " + substr_command if lang is not None else "")
+    # repo_query = """
+    # SELECT DISTINCT file.repo_name, file.ref
+    # FROM `bigquery-public-data.github_repos.files` as file
+    # {}
+    # """.format("WHERE " + substr_command if lang is not None else "")
 
-    if lang is None:
-      lang = "All"
+    # if lang is None:
+    #   lang = "All"
     # TODO(developer): Set table_id to the ID of the table to create.
     # Construct a full Dataset object to send to the API.
     # TODO(developer): Specify the geographic location where the dataset should reside.
@@ -85,8 +86,8 @@ class BigQuery(miner.GithubMiner):
     )
 
     # count_job = client.query(count_query)
-    file_job  = client.query(db_query)
-    repo_job  = client.query(db_query)
+    # file_job  = client.query(db_query)
+    # repo_job  = client.query(db_query)
 
     # for f, r in zip(count_job, repo_job):
     #   file_count = f[0]
