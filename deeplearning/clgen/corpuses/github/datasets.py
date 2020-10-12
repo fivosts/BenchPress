@@ -25,12 +25,11 @@ class Dataset(object):
   def FromArgs(cls,
                client: bigquery.Client,
                lang: int,
-               data_format: str
                ) -> Dataset:
     """Use this classmethod to initialize a Dataset."""
     if lang not in languages:
       raise NotImplementedError(lang)
-    return languages[lang](client, data_format)
+    return languages[lang](client)
   
   @property
   def filecount(self):
@@ -42,7 +41,6 @@ class Dataset(object):
 
   def __init__(self,
                client: bigquery.Client,
-               data_format: int,
                dataset_id: str = None
                ):
     """Generic Dataset class constructor. Not to be used directly."""
@@ -50,8 +48,6 @@ class Dataset(object):
     self.dataset, self.tables = self._setupDataset(
       "{}.clgen_{}_github".format(self.client.projectdataset_id or "generic")
     )
-
-    self.data_format = data_format
 
     self.query_file_id = ""
     if self.extensions is not None:
@@ -133,7 +129,6 @@ class openclDataset(Dataset):
   """Opencl Dataset"""
   def __init__(self,
                client: bigquery.Client,
-               data_format: int
                ):
 
     self.extensions = ['.cl']
@@ -142,7 +137,7 @@ class openclDataset(Dataset):
           .format(-len(ext), 1+len(ext), ext)
       for ext in ['.c', '.cc', '.cpp', '.cxx', '.c++']
     ]
-    super(openclDataset, self).__init__(client, data_format, "opencl")
+    super(openclDataset, self).__init__(client, "opencl")
     return
 
   def filecount_query(self) -> typing.Tuple[int, int]:
@@ -196,38 +191,34 @@ class cDataset(Dataset):
   """C Dataset"""
   def __init__(self,
                client: bigquery.Client,
-               data_format: int
                ):
     self.extensions = ['.c']
-    super(cDataset, self).__init__(client, data_format, "c")
+    super(cDataset, self).__init__(client, "c")
     return
 
 class cppDataset(Dataset):
   """C++ Dataset"""
   def __init__(self,
                client: bigquery.Client,
-               data_format: int
                ):
     self.extensions = ['.cc'. 'cpp', '.cxx', '.c++']
-    super(cppDataset, self).__init__(client, data_format, "cpp")
+    super(cppDataset, self).__init__(client, "cpp")
     return
 
 class javaDataset(Dataset):
   """java Dataset"""
   def __init__(self,
                client: bigquery.Client,
-               data_format: int
                ):
     self.extensions = ['.java']
-    super(javaDataset, self).__init__(client, data_format, "java")
+    super(javaDataset, self).__init__(client, "java")
     return
 
 class pythonDataset(Dataset):
   """python Dataset"""
   def __init__(self,
                client: bigquery.Client,
-               data_format: int
                ):
     self.extensions = ['.py']
-    super(pythonDataset, self).__init__(client, data_format, "python")
+    super(pythonDataset, self).__init__(client, "python")
     return
