@@ -3,25 +3,31 @@ import os
 import pathlib
 import progressbar
 import humanize
-
 from google.cloud import bigquery
 
+from deeplearning.clgen.proto import github_miner_pb2
 from deeplearning.clgen.corpuses.github import bigQuery_database
 from deeplearning.clgen.corpuses.github import miner
 from eupy.native import logger as l
 
 class BigQuery(miner.GithubMiner):
-  def __init__(self, config):
+  def __init__(self,
+               config: github_miner_pb2.GithubMiner
+               ):
+
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(pathlib.Path(config.credentials, must_exist = True))
     self.cache_path = pathlib.Path(config.path, must_exist = False, parents = True)
-    self.dataset    = datasets.FromArgs(self.language, config.data_format)
+
+    self.config  = bigquery.QueryJobConfig(allowLargeResults = True)
+    self.config.allow_large_results = True
+
+    self.client  = bigquery.Client(default_query_job_config = config)
+    self.dataset = datasets.FromArgs(self.client, self.language, config.data_format)
     return
 
-  def fetch(self, lang: str = None):
+  def fetch(self):
     # Construct a BigQuery client object.
-    config = bigquery.QueryJobConfig(allowLargeResults = True)
-    config.allow_large_results = True
-    client = bigquery.Client(default_query_job_config = config)
+
 
     
     # substr_command = ""
