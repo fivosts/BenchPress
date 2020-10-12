@@ -74,7 +74,7 @@ class Dataset(object):
 
     return dataset, self._setupTables(self, dataset_id)
 
-  def _setupTable(self, dataset_id: str) -> typing.List[bigquery.Table]:
+  def _setupTable(self, dataset_id: str) -> typing.Dict[str, bigquery.Table]:
     """API request that gets or sets bigquery.Table instances."""
     table_reg = {
       'bq_contentfiles': bigQuery_database.bqFile.bqSchema
