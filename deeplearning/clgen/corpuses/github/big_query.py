@@ -28,7 +28,7 @@ class BigQuery(miner.GithubMiner):
   def fetch(self):
 
     # Filecount of requested file specifications.
-    filecount = self.dataset.filecount
+    mainfile_count, otherfile_count = self.dataset.filecount
 
     # Get repository list of requested file specifications.
     mainrep_it, otherrep_it = self.dataset.repository_query()
