@@ -81,7 +81,6 @@ class Dataset(object):
       'bq_repofiles'   : bigQuery_database.bqRepo.bqSchema,
       'bq_data'        : bigQuery_database.bqData.bqSchema,
     }
-    tables = {}
     for reg, sc in table_reg.items():
       table_id = "{}.{}".format(dataset_id, reg)
       table = bigquery.Table(table_id, schema = sc)
@@ -90,7 +89,7 @@ class Dataset(object):
       except Exception as e:
         raise e
         tables[reg] = client.create_table(table)
-    return tables
+    return table_reg
 
   def filecount_query(self) -> typing.Tuple[int, int]:
     """
