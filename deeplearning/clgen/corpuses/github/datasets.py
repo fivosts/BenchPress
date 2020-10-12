@@ -9,6 +9,7 @@ from google.cloud import bigquery
 from deeplearning.clgen.corpuses.github import bigQuery_database
 from eupy.native import logger as l
 
+# Currently available dataset subclasses.
 languages = {
   'generic': Dataset,
   'opencl' : openclDataset,
@@ -26,16 +27,25 @@ class Dataset(object):
                lang: int,
                data_format: str
                ) -> Dataset:
+    """Use this classmethod to initialize a Dataset."""
     if lang not in languages:
       raise NotImplementedError(lang)
     return languages[lang](client, data_format)
   
+  @property
+  def filecount(self):
+    """Return file count of represented query."""
+    if self.file_count is None:
+      return self.filecount_query()
+    else:
+      return self.file_count
+
   def __init__(self,
                client: bigquery.Client,
                data_format: int,
                dataset_id: str = None
                ):
-
+    """Generic Dataset class constructor. Not to be used directly."""
     self.client     = client
     self.dataset_id = "generic_github" if dataset_id is None else dataset_id
     self.dataset_id = "{}_github".format(dataset_id or "generic")
@@ -48,14 +58,6 @@ class Dataset(object):
                         ])
     self.file_count = None
     return
-
-  @property
-  def filecount(self):
-    """Return file count of represented query."""
-    if self.file_count is None:
-      return self.filecount_query()
-    else:
-      return self.file_count
 
   def filecount_query(self) -> typing.Tuple[int, int]:
     """
