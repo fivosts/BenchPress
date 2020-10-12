@@ -47,7 +47,9 @@ class Dataset(object):
                ):
     """Generic Dataset class constructor. Not to be used directly."""
     self.client  = client    
-    self.dataset = self._setupDataset("clgen_{}_github".format(dataset_id or "generic"))
+    self.dataset, self.tables = self._setupDataset(
+      "{}.clgen_{}_github".format(self.client.projectdataset_id or "generic")
+    )
 
     self.data_format = data_format
 
@@ -59,15 +61,36 @@ class Dataset(object):
     self.file_count = None
     return
 
-  def _setupDataset(self, dataset_id: int) -> bigquery.Dataset:
-    """API request to get or set bigquery.Dataset instance."""
+  def _setupDataset(self, dataset_id: str) -> bigquery.Dataset:
+    """API request to get or set bigquery.Dataset instance and bigquery.Table."""
+    dataset = bigquery.Dataset(dataset_id)
+    dataset.location = "US"
     try:
       dataset = self.client.get_dataset(dataset_id)
       return dataset
     except Exception as e:
       raise e
-      dataset = bigquery.Dataset(dataset_id)
-    return dataset
+      dataset = client.create_dataset(dataset, timeout = 30)
+
+    return dataset, self._setupTables(self, dataset_id)
+
+  def _setupTable(self, dataset_id: str) -> typing.List[bigquery.Table]:
+    """API request that gets or sets bigquery.Table instances."""
+    table_reg = {
+      'bq_contentfiles': bigQuery_database.bqFile.bqSchema
+      'bq_repofiles'   : bigQuery_database.bqRepo.bqSchema,
+      'bq_data'        : bigQuery_database.bqData.bqSchema,
+    }
+    tables = {}
+    for reg, sc in table_reg.items():
+      table_id = "{}.{}".format(dataset_id, reg)
+      table = bigquery.Table(table_id, schema = sc)
+      try:
+        tables[reg] = client.get_table(table_id)
+      except Exception as e:
+        raise e
+        tables[reg] = client.create_table(table)
+    return tables
 
   def filecount_query(self) -> typing.Tuple[int, int]:
     """
