@@ -13,7 +13,11 @@ from eupy.native import logger as l
 class Storage(object):
 
   @classmethod
-  def FromArgs(cls, path, extension, data_format):
+  def FromArgs(cls,
+               path: pathlib.Path,
+               extension: str,
+               data_format: int
+               ) -> Storage:
     storage = {
       github_miner_pb2.GithubMiner.DataFormat.zip   : zipStorage,
       github_miner_pb2.GithubMiner.DataFormat.folder: fileStorage,
@@ -22,7 +26,9 @@ class Storage(object):
     }[data_format](path, extension)
     return
 
-  def __init__(self, path, extension):
+  def __init__(self,
+               path: pathlib.Path,
+               extension: str):
     self.cache_path = path
     self.extension  = extension
     return
@@ -31,11 +37,17 @@ class Storage(object):
     raise NotImplementedError("Abstract Class")
 
 class zipStorage(Storage):
-  def __init__(self, path, extension):
+  def __init__(self,
+               path: pathlib.Path,
+               extension: str
+               ):
     super(zipStorage, self).__init__(path, extension)
 
 class fileStorage(Storage):
-  def __init__(self, path, extension):
+  def __init__(self,
+               path: pathlib.Path,
+               extension: str
+               ):
     super(fileStorage, self).__init__(path, extension)
 
   def writeFile(self, content):
@@ -43,9 +55,15 @@ class fileStorage(Storage):
       f.write(content)
 
 class dbStorage(Storage):
-  def __init__(self, path, extension):
+  def __init__(self,
+               path: pathlib.Path,
+               extension: str
+               ):
     super(dbStorage, self).__init__(path, extension)
 
 class bqStorage(Storage):
-  def __init__(self, path, extension):
+  def __init__(self,
+               path: pathlib.Path,
+               extension: str
+               ):
     super(bqTableStorage, self).__init__(path, extension)
