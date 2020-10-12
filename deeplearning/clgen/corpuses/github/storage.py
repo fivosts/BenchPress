@@ -90,3 +90,6 @@ class bqStorage(Storage):
                extension: str
                ):
     super(bqTableStorage, self).__init__(path, extension)
+
+  def save(self, content):
+    raise NotImplementedError
