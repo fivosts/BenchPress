@@ -85,10 +85,10 @@ class Dataset(object):
       table_id = "{}.{}".format(dataset_id, reg)
       table = bigquery.Table(table_id, schema = sc)
       try:
-        tables[reg] = client.get_table(table_id)
+        table_reg[reg] = client.get_table(table_id)
       except Exception as e:
         raise e
-        tables[reg] = client.create_table(table)
+        table_reg[reg] = client.create_table(table)
     return table_reg
 
   def filecount_query(self) -> typing.Tuple[int, int]:
