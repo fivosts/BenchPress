@@ -61,7 +61,9 @@ class Dataset(object):
     self.file_count = None
     return
 
-  def _setupDataset(self, dataset_id: str) -> bigquery.Dataset:
+  def _setupDataset(self, 
+                    dataset_id: str
+                    ) -> typing.Tuple[bigquery.Dataset, typing.Dict[str, bigquery.Table]]:
     """API request to get or set bigquery.Dataset instance and bigquery.Table."""
     dataset = bigquery.Dataset(dataset_id)
     dataset.location = "US"
