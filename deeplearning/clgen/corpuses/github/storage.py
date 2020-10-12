@@ -33,7 +33,13 @@ class Storage(object):
     self.extension  = extension
     return
 
-  def writeFile(self):
+  def __enter__(self):
+    return self
+
+  def __exit__(self):
+    return
+
+  def save(self):
     raise NotImplementedError("Abstract Class")
 
 class zipStorage(Storage):
@@ -44,7 +50,7 @@ class zipStorage(Storage):
     super(zipStorage, self).__init__(path, extension)
     self.cached_content = []
 
-  def writeFile(self, content):
+  def save(self, content):
     self.cached_content.append(content)
     return
 
@@ -56,7 +62,7 @@ class fileStorage(Storage):
     super(fileStorage, self).__init__(path, extension)
     self.file_counter = 0
 
-  def writeFile(self, content):
+  def save(self, content):
     with open(self.cache_path / "{}{}".format(self.counter, self.extension)) as f:
       f.write(content)
     self.file_counter += 1
@@ -68,6 +74,15 @@ class dbStorage(Storage):
                extension: str
                ):
     super(dbStorage, self).__init__(path, extension)
+    self.db = bigQuery_database.bqDatabase("sqlite:///{}".format(self.cache_path / "bq_{}.db"))
+
+  def save(self, content):
+    with self.db.Session(commit = True) as session:
+      contentfile = bigQuery_database.bqFile(
+        **bigQuery_database.bqFile.FromArgs(self.db.count + 1, content)
+      )
+      session.add(contentfile)
+    return
 
 class bqStorage(Storage):
   def __init__(self,
