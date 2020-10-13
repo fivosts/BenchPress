@@ -143,6 +143,15 @@ class dbStorage(Storage):
           entry.value = contentfile.value
         else:
           session.add(contentfile)
+      elif isinstance(contentfile, bigQuery_database.bqRepo):
+        exists = session.query(
+          bigQuery_database.bqRepo.repo_name,
+          bigQuery_database.bqRepo.ref
+        ).filter_by(
+          repo_name = contentfile.repo_name, ref = contentfile.ref
+        ).scalar() is not None
+        if not exists:
+          session.add(contentfile)
       else:
         session.add(contentfile)
     return
