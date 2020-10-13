@@ -68,18 +68,16 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
   @staticmethod
   def bqSchema() -> typing.List[bigquery.SchemaField]:
     return [
-      bigquery.SchemaField("id",             "INTEGER", mode = "REQUIRED"),
-      bigquery.SchemaField("sha256",         "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("id",             "STRING",  mode = "REQUIRED"),
       bigquery.SchemaField("repo_name",      "STRING",  mode = "REQUIRED"),
       bigquery.SchemaField("ref",            "STRING",  mode = "REQUIRED"),
       bigquery.SchemaField("path",           "STRING",  mode = "REQUIRED"),
       bigquery.SchemaField("mode",           "STRING",  mode = "REQUIRED"),
       bigquery.SchemaField("symlink_target", "STRING",  mode = "REQUIRED"),
-      bigquery.SchemaField("size",           "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("size",           "INTEGER", mode = "REQUIRED"),
       bigquery.SchemaField("content",        "STRING",  mode = "REQUIRED"),
-      bigquery.SchemaField("binary",         "STRING",  mode = "REQUIRED"),
-      bigquery.SchemaField("copies",         "STRING",  mode = "REQUIRED"),
-      bigquery.SchemaField("date_added",     "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("binary",         "BOOLEAN", mode = "REQUIRED"),
+      bigquery.SchemaField("copies",         "INTEGER", mode = "REQUIRED"),
     ]
 
 class bqRepo(Base, sqlutil.ProtoBackedMixin):
@@ -107,10 +105,8 @@ class bqRepo(Base, sqlutil.ProtoBackedMixin):
   @staticmethod
   def bqSchema() -> typing.List[bigquery.SchemaField]:
     return [
-      bigquery.SchemaField("id",         "INTEGER", mode = "REQUIRED"),
-      bigquery.SchemaField("repo_name",  "STRING",  mode = "REQUIRED"),
-      bigquery.SchemaField("ref",        "STRING",  mode = "REQUIRED"),
-      bigquery.SchemaField("date_added", "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("repo_name", "STRING", mode = "REQUIRED"),
+      bigquery.SchemaField("ref",       "STRING", mode = "REQUIRED"),
     ]
 
 class bqDatabase(sqlutil.Database):
