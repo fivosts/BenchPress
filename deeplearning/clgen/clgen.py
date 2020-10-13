@@ -31,6 +31,7 @@ from deeplearning.clgen.models import models
 from deeplearning.clgen.proto import clgen_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
+from deeplearning.clgen.corpuses.github import miner
 
 from eupy.native import logger as l
 from eupy.hermes import client
@@ -116,26 +117,24 @@ flags.DEFINE_boolean(
 )
 
 class Instance(object):
-  """A CLgen instance encapsulates a model, sampler, and working directory."""
+  """A CLgen instance encapsulates a github_miner, model, sampler, and working directory."""
 
   def __init__(self, config: clgen_pb2.Instance):
     """Instantiate an instance.
 
     Args:
       config: An Instance proto.
-
-    Raises:
-      UserError: If the instance proto contains invalid values, is missing
-        a model or sampler fields.
     """
-    try:
-      pbutil.AssertFieldIsSet(config, "model_specification")
-      pbutil.AssertFieldIsSet(config, "sampler")
-    except pbutil.ProtoValueError as e:
-      raise ValueError(e)
+    self.working_dir = None
+    self.github      = None
+    self.model       = None
+    self.sampler     = None
 
     self.config = config
-    self.working_dir = None
+
+    if config.HasField("github_miner"):
+      self.github = miner.GithubMiner.FromConfig(config.github_miner)
+
     if config.HasField("working_dir"):
       self.working_dir: pathlib.Path = pathlib.Path(
         os.path.join(FLAGS.workspace_dir, config.working_dir)
@@ -145,9 +144,8 @@ class Instance(object):
     with self.Session():
       if config.HasField("model"):
         self.model: models.Model = models.Model(config.model)
-      else:
-        raise ValueError("Config has no declared model.")
-      self.sampler: samplers.Sampler = samplers.Sampler(config.sampler)
+      if config.HasField("sampler"):
+        self.sampler: samplers.Sampler = samplers.Sampler(config.sampler)
 
     self.dashboard = dashboard.Launch()
 
@@ -214,6 +212,9 @@ def SampleObserversFromFlags(instance: Instance) -> typing.List[
   sample_observers_lib.SampleObserver
 ]:
   """Instantiate sample observers from flag values."""
+  if instance.sampler is None:
+    return []
+
   sample_observers = []
   if FLAGS.min_samples <= 0:
     l.getLogger().warning(
@@ -265,35 +266,50 @@ def DoFlagsAction(
     sample_observer: A list of sample observers. Unused if no sampling occurs.
   """
 
-  with instance.Session():
-    if FLAGS.print_cache_path == "corpus":
-      print(instance.model.corpus.cache.path)
-      return
-    elif FLAGS.print_cache_path == "model":
-      print(instance.model.cache.path)
-      return
-    elif FLAGS.print_cache_path == "sampler":
-      print(instance.model.SamplerCache(instance.sampler))
-      return
-    elif FLAGS.print_cache_path:
-      raise ValueError(f"Invalid --print_cache_path argument: '{FLAGS.print_cache_path}'")
+  if instance.github:
+    instance.github.fetch()
+
+  if instance.model:
+    with instance.Session():
+      if FLAGS.print_cache_path == "corpus":
+        print(instance.model.corpus.cache.path)
+        return
+      elif FLAGS.print_cache_path == "model":
+        print(instance.model.cache.path)
+        return
+      elif FLAGS.print_cache_path == "sampler":
+        if instance.sampler:
+          print(instance.model.SamplerCache(instance.sampler))
+        else:
+          raise ValueError("Sampler config has not been specified.")
+        return
+      elif FLAGS.print_cache_path:
+        raise ValueError(f"Invalid --print_cache_path argument: '{FLAGS.print_cache_path}'")
 
     # The default action is to sample the model.
-    if FLAGS.stop_after == "corpus":
-      instance.model.corpus.Create()
-    elif FLAGS.stop_after == "train":
-      instance.Train()
-      l.getLogger().info("Model: {}".format(instance.model.cache.path))
-    elif FLAGS.stop_after:
-      raise ValueError(
-        f"Invalid --stop_after argument: '{FLAGS.stop_after}'"
-      )
+      if FLAGS.stop_after == "corpus":
+        instance.model.corpus.Create()
+      elif FLAGS.stop_after == "train":
+        instance.Train()
+        l.getLogger().info("Model: {}".format(instance.model.cache.path))
+      elif FLAGS.stop_after:
+        raise ValueError(
+          f"Invalid --stop_after argument: '{FLAGS.stop_after}'"
+        )
+      else:
+        if instance.sampler:
+          instance.Sample(sample_observers)
+  else:
+    if FLAGS.stop_after in {"corpus", "train"}:
+      l.getLogger().warn("FLAGS.stop_after {} will be ignored without model config.".format(FLAGS.stop_after))
+    if FLAGS.print_cache_path in {"corpus", "model", "sampler"}:
+      raise ValueError("{} config has not been specified.".format(FLAGS.print_cache_path))
     else:
-      instance.Sample(sample_observers)
+      raise ValueError(f"Invalid --print_cache_path argument: '{FLAGS.print_cache_path}'")
+  return
 
 def main():
   """Main entry point."""
-  from deeplearning.clgen.corpuses.github import big_query
   bigQuery.fetch("/home/fivosts/PhD/Code/clgen/", "opencl")
   exit()
   if FLAGS.clgen_dashboard_only:
