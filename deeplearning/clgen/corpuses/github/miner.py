@@ -108,22 +108,20 @@ class BigQuery(GithubMiner):
       mainrep_it, otherrep_it = mainf_it, otherf_it
 
     if mainrep_it is not None:
-      main_repo_count = 0
       for en, mr in enumerate(mainrep_it):
         self.storage.save(bigQuery_database.bqRepo(
             **bigQuery_database.bqRepo.FromArgs(en, mr)
           )
         )
-        main_repo_count = en
+      main_repo_count = self.storage.repo_count
 
     if otherrep_it is not None:
-      other_repo_count = 0
       for en, orep in enumerate(otherrep_it):
         self.storage.save(bigQuery_database.bqRepo(
             **bigQuery_database.bqRepo.FromArgs(en, orep)
           )
         )
-        other_repo_count = en
+      other_repo_count = self.storage.repo_count - (main_repo_count or 0)
 
     # Filecount of requested file specifications.
     # Use cached results if contentfile has taken place.
