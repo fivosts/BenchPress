@@ -310,8 +310,6 @@ def DoFlagsAction(
 
 def main():
   """Main entry point."""
-  bigQuery.fetch("/home/fivosts/PhD/Code/clgen/", "opencl")
-  exit()
   if FLAGS.clgen_dashboard_only:
     dash = dashboard.Launch(debug = {"debug": True})
   else:
