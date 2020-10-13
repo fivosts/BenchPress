@@ -107,6 +107,7 @@ class Dataset(object):
     Queries the file count of files intended to query.
     Returns file count in int.
     """
+    l.getLogger().info("Running file count query...")
     count_query = """
     SELECT COUNT(*)
     FROM `bigquery-public-data.github_repos.files` as file
@@ -120,6 +121,7 @@ class Dataset(object):
 
   def repository_query(self) -> typing.Tuple[typing.Callable]:
     """Returns iterable of query files"""
+    l.getLogger().info("Retrieving repository list of specs...")
     repo_query = """
     SELECT DISTINCT file.repo_name, file.ref
     FROM `bigquery-public-data.github_repos.files` as file
@@ -129,6 +131,7 @@ class Dataset(object):
 
   def contentfile_query(self) -> typing.Tuple[typing.Callable]:
     """Returns iterable of query files"""
+    l.getLogger().info("Retrieving contentfiles...")
     if not self.query_file_id:
       l.getLogger().warning(
         "contentfile_query for generic language is not allowed, unless one wants to query the whole universe."
