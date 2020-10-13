@@ -3,6 +3,6 @@ github_miner {
   data_format: sql
   big_query {
     credentials: "/home/fivosts/PhD/Code/clgen/deeplearning/clgen/corpuses/BigQuery_credentials.json"
-    language: "opencl"
+    language: "generic"
   }
 }
