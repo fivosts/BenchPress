@@ -1,5 +1,7 @@
 """BigQuery Dataset structures"""
 import os
+import sys
+import subprocess
 import typing
 import shutil
 import pathlib
@@ -40,7 +42,7 @@ class Storage(object):
   def __enter__(self):
     return self
 
-  def __exit__(self):
+  def __exit__(self, path, name, extension):
     return
 
   def save(self):
@@ -54,7 +56,7 @@ class zipStorage(Storage):
 
   @property
   def filecount(self):
-    return self.filecount
+    return self.file_count
 
   def __init__(self,
                path: pathlib.Path,
@@ -64,7 +66,11 @@ class zipStorage(Storage):
     super(zipStorage, self).__init__(path, name, extension)
     self.cached_content = []
     self.flush_counter  = 20000
-    self.filecount      = 0
+    self.file_count      = 0
+
+  def __exit__(self, path, name, extension):
+    self.zipFiles()
+    return
 
   def save(self,
            contentfile: bigQuery_database.bqFile
@@ -73,20 +79,23 @@ class zipStorage(Storage):
       return
     if contentfile.content is not None:
       self.cached_content.append(contentfile.content)
-      self.filecount += 1
-      if self.filecount % self.flush_counter == 0:
+      self.file_count += 1
+      if self.file_count % self.flush_counter == 0:
         self.zipFiles()
     else:
       raise ValueError("Wrong format of input contentfile.")
     return
 
   def zipFiles(self) -> None:
-    tmp_root = pathlib.Path("/tmp/bqZipStorageTMP/corpus").mkdir(exist_ok = True)
+    tmp_root = pathlib.Path("/tmp/bqZipStorageTMP/corpus")
+    tmp_root.mkdir(exist_ok = True, parents = True)
     for en, cf in enumerate(self.cached_content):
-      with open(tmp_root / "{}.{}".format(en+1, self.extension), 'w') as f:
+      with open(tmp_root / "{}{}".format(en+1, self.extension), 'w') as f:
         f.write(cf)
+    p = os.getcwd()
+    os.chdir(tmp_root.parent)
     cmd = subprocess.Popen(
-      "zip -r -9 {} {}".format(self.cache_path / (self.name + ".zip"), tmp_root).split(),
+      "zip -qr -9 {} {}".format(self.cache_path / (self.name + ".zip"), tmp_root.name).split(),
       stdout = sys.stdout,
       stderr = sys.stderr
     )
@@ -97,6 +106,8 @@ class zipStorage(Storage):
       shutil.rmtree(tmp_root)
     except Exception as e:
       raise e
+    finally:
+      os.chdir(p)
     return
 
 class fileStorage(Storage):
@@ -107,7 +118,7 @@ class fileStorage(Storage):
 
   @property
   def filecount(self):
-    return self.filecount
+    return self.file_count
 
   def __init__(self,
                path: pathlib.Path,
@@ -115,7 +126,7 @@ class fileStorage(Storage):
                extension: str
                ):
     super(fileStorage, self).__init__(path, name, extension)
-    self.filecount = 0
+    self.file_count = 0
     (self.cache_path / self.name).mkdir(exist_ok = True)
 
   def save(self,
@@ -126,7 +137,7 @@ class fileStorage(Storage):
     if contentfile.content is not None:
       with open(self.cache_path / self.name / "{}{}".format(self.counter, self.extension)) as f:
         f.write(contentfile.content)
-      self.filecount += 1
+      self.file_count += 1
     else:
       raise ValueError("Wrong format of input contentfile.")
     return
