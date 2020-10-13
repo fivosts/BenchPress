@@ -3,6 +3,7 @@ import os
 import sys
 import subprocess
 import typing
+import json
 import shutil
 import pathlib
 import progressbar
@@ -52,7 +53,7 @@ class zipStorage(Storage):
 
   @property
   def repocount(self):
-    return 0 # TODO
+    return len(self.repos)
 
   @property
   def filecount(self):
@@ -68,6 +69,7 @@ class zipStorage(Storage):
     self.flush_counter  = 20000
     self.file_count     = 0
     self.data_file      = ""
+    self.repos          = set()
 
   def __exit__(self, path, name, extension):
     self.zipFiles()
@@ -90,6 +92,10 @@ class zipStorage(Storage):
         raise ValueError("Wrong format of input contentfile.")
     elif isinstance(contentfile, bigQuery_database.bqData):
       self.data_file = "{}\n\n{}".format(contentfile.key, contentfile.value)
+    elif isinstance(contentfile, bigQuery_database.bqRepo):
+      entry = "{}, {}".format(contentfile.repo_name, contentfile.ref)
+      if entry not in self.repos:
+        self.repos.add(entry)
     return
 
   def zipFiles(self) -> None:
@@ -100,6 +106,18 @@ class zipStorage(Storage):
         f.write(cf)
     with open(tmp_root / "data.txt", 'w') as f:
       f.write(self.data_file)
+    with open(tmp_root / "repos_list.json", 'w') as f:
+      json.dump(
+        [
+          {
+            'repo_name': x.split(', ')[0],
+            'ref': x.split(', ')[1]
+          } for x in self.repos
+        ],
+        f,
+        sort_keys = True,
+        indent = 2
+      )
     p = os.getcwd()
     os.chdir(tmp_root.parent)
     cmd = subprocess.Popen(
@@ -122,7 +140,7 @@ class fileStorage(Storage):
 
   @property
   def repocount(self):
-    return 0 # TODO
+    return len(self.repos)
 
   @property
   def filecount(self):
@@ -136,7 +154,22 @@ class fileStorage(Storage):
     super(fileStorage, self).__init__(path, name, extension)
     self.file_count = 0
     (self.cache_path / self.name).mkdir(exist_ok = True)
-    self.data_file  = ""
+    self.repos = set()
+
+  def __exit__(self, path, name, extension) -> None:
+    with open(self.cache_path / self.name / "repos_list.json", 'w') as f:
+      json.dump(
+        [
+          {
+            'repo_name': x.split(', ')[0],
+            'ref': x.split(', ')[1]
+          } for x in self.repos
+        ],
+        f,
+        sort_keys = True,
+        indent = 2
+      )
+    return
 
   def save(self,
            contentfile: typing.Union[
@@ -155,6 +188,10 @@ class fileStorage(Storage):
     elif isinstance(contentfile, bigQuery_database.bqData):
       with open(self.cache_path / self.name / "data.txt", 'w') as f:
         f.write("{}\n\n{}".format(contentfile.key, contentfile.value))
+    elif isinstance(contentfile, bigQuery_database.bqRepo):
+      entry = "{}, {}".format(contentfile.repo_name, contentfile.ref)
+      if entry not in self.repos:
+        self.repos.add(entry)
     return
 
 class dbStorage(Storage):
