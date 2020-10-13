@@ -56,9 +56,12 @@ class Dataset(object):
                dataset_id: str = None
                ):
     """Generic Dataset class constructor. Not to be used directly."""
-    self.client  = client    
+    self.client = client
     self.dataset, self.tables = self._setupDataset(
       "{}.clgen_{}_github".format(self.client.project, dataset_id or "generic")
+    )
+    self.queryConfig = lambda qt : bigquery.QueryJobConfig(
+      destination = self.tables[qt],
     )
 
     self.query_file_id = ""
@@ -132,7 +135,7 @@ class Dataset(object):
     {}
     """.format(not self.query_file_id or "WHERE " + self.query_file_id)
     try:
-      rows = self.client.query(query).result()
+      rows = self.client.query(query, job_config = self.queryConfig('bq_repofiles')).result()
     except google.api_core.exceptions.Forbidden as e:
       l.getLogger().error(e)
       exit()
@@ -154,7 +157,7 @@ class Dataset(object):
     INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
     """.format(not self.query_file_id or "AND (" + self.query_file_id + ")")
     try:
-      rows = self.client.query(query).result()
+      rows = self.client.query(query, job_config = self.queryConfig('bq_contentfiles')).result()
     except google.api_core.exceptions.Forbidden as e:
       l.getLogger().error(e)
       exit()
@@ -213,7 +216,7 @@ class openclDataset(Dataset):
     {}
     """.format(self.query_exception or "")
     try:
-      rows = self.client.query(query).result()
+      rows = self.client.query(query, job_config = self.queryConfig('bq_repofiles')).result()
     except google.api_core.exceptions.Forbidden as e:
       l.getLogger().error(e)
       exit()
@@ -236,7 +239,7 @@ class openclDataset(Dataset):
     {}
     """.format(self.query_exception or "")
     try:
-      rows = self.client.query(query).result()
+      rows = self.client.query(query, job_config = self.queryConfig('bq_contentfiles')).result()
     except google.api_core.exceptions.Forbidden as e:
       l.getLogger().error(e)
       exit()
