@@ -9,24 +9,22 @@ from google.cloud import bigquery
 from deeplearning.clgen.corpuses.github import bigQuery_database
 from eupy.native import logger as l
 
-# Currently available dataset subclasses.
-languages = {
-  'generic': Dataset,
-  'opencl' : openclDataset,
-  'c'      : cDataset,
-  'cpp'    : cppDataset,
-  'java'   : javaDataset,
-  'python' : pythonDataset,
-}
-
 class Dataset(object):
   """Representation of dataset instance in Big Query"""
   @classmethod
   def FromArgs(cls,
                client: bigquery.Client,
                lang: int,
-               ) -> Dataset:
+               ):
     """Use this classmethod to initialize a Dataset."""
+    languages = {
+      'generic': Dataset,
+      'opencl' : openclDataset,
+      'c'      : cDataset,
+      'cpp'    : cppDataset,
+      'java'   : javaDataset,
+      'python' : pythonDataset,
+    }
     if lang not in languages:
       raise NotImplementedError(lang)
     return languages[lang](client)
@@ -83,7 +81,7 @@ class Dataset(object):
   def _setupTable(self, dataset_id: str) -> typing.Dict[str, bigquery.Table]:
     """API request that gets or sets bigquery.Table instances."""
     table_reg = {
-      'bq_contentfiles': bigQuery_database.bqFile.bqSchema
+      'bq_contentfiles': bigQuery_database.bqFile.bqSchema,
       'bq_repofiles'   : bigQuery_database.bqRepo.bqSchema,
       'bq_data'        : bigQuery_database.bqData.bqSchema,
     }
@@ -214,7 +212,7 @@ class cppDataset(Dataset):
   def __init__(self,
                client: bigquery.Client,
                ):
-    self.extensions = ['.cpp'. 'cc', '.cxx', '.c++']
+    self.extensions = ['.cpp', 'cc', '.cxx', '.c++']
     super(cppDataset, self).__init__(client, "cpp")
     return
 
