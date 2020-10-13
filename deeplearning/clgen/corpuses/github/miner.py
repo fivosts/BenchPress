@@ -138,7 +138,7 @@ class BigQuery(GithubMiner):
         "main_contentfiles : {}".format(mainfile_count),
         "other_contentfiles: {}".format(otherfile_count),
         "total_contentfiles: {}".format(mainfile_count + otherfile_count),
-        "\n",
+        "",
         "main_repositories : {}".format(0 if not mainrep_it else main_repo_count),
         "other_repositories: {}".format(0 if not otherrep_it else other_repo_count),
         "total_repositories: {}".format(0 if not (mainrep_it or otherrep_it) else main_repo_count + other_repo_count),
