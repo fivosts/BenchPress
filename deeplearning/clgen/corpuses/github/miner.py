@@ -18,6 +18,7 @@ from google.cloud import bigquery
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.proto import github_pb2
 from deeplearning.clgen.corpuses.github import datasets
+from deeplearning.clgen.corpuses.github import storage
 
 class GithubMiner(object):
   """Base abstract class of a github miner"""
@@ -78,7 +79,7 @@ class BigQuery(GithubMiner):
     self.config.allow_large_results = True
     self.client  = bigquery.Client(default_query_job_config = config)
 
-    self.dataset = datasets.Dataset.FromArgs(self.client, self.language)
+    self.dataset = datasets.Dataset.FromArgs(self.client, config.big_query.language)
     self.storage = storage.Storage.FromArgs(self.cache_path, self.dataset.name, self.dataset.extension, config.data_format)
     return
 
