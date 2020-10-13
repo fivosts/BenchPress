@@ -38,6 +38,11 @@ class Dataset(object):
     else:
       return self.file_count
 
+  @x.setter
+  def filecount(self, value: typing.Tuple[int, int]) -> None:
+    self.file_count = value
+    return
+
   @property
   def name(self):
     return self.dataset.dataset_id
@@ -120,7 +125,7 @@ class Dataset(object):
     FROM `bigquery-public-data.github_repos.files` as file
     {}
     """.format(not self.query_file_id or "WHERE " + self.query_file_id)
-    return (self.client.query(repo_query), None)
+    return (self.client.query(repo_query).result(), None)
 
   def contentfile_query(self) -> typing.Tuple[typing.Callable]:
     """Returns iterable of query files"""
@@ -136,7 +141,7 @@ class Dataset(object):
     FROM `bigquery-public-data.github_repos.contents` as contentfile
     INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
     """.format(not self.query_file_id or "AND (" + self.query_file_id + ")")
-    return (self.client.query(contentfile_query), None)
+    return (self.client.query(contentfile_query).result(), None)
 
 class openclDataset(Dataset):
   """Opencl Dataset"""
@@ -145,11 +150,11 @@ class openclDataset(Dataset):
                ):
 
     self.extensions = ['.cl']
-    self.query_exception = ' AND ' + ' OR '.join([
+    self.query_exception = ' AND (' + ' OR '.join([
         "(substr(file.path, {}, {}) = '{}' AND contentfile.content LIKE '%kernel void%')"
           .format(-len(ext), 1+len(ext), ext)
       for ext in ['.c', '.cc', '.cpp', '.cxx', '.c++']
-    ])
+    ]) + ')'
     super(openclDataset, self).__init__(client, "opencl")
     return
 
@@ -186,7 +191,7 @@ class openclDataset(Dataset):
     ON file.id = contentfile.id
     {}
     """.format(self.query_exception or "")
-    return (cl_repo_it, self.client.query(other_repo_query))
+    return (cl_repo_it, self.client.query(other_repo_query).result())
 
   def contentfile_query(self) -> typing.Tuple[typing.Callable, typing.Callable]:
     """
@@ -204,7 +209,7 @@ class openclDataset(Dataset):
     ON file.id = contentfile.id
     {}
     """.format(self.query_exception or "")
-    return (cl_file_it, self.client.query(other_file_query))
+    return (cl_file_it, self.client.query(other_file_query).result())
 
 class cDataset(Dataset):
   """C Dataset"""
