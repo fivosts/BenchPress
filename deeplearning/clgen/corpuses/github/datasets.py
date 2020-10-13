@@ -135,7 +135,7 @@ class Dataset(object):
            contentfile.content, contentfile.binary, contentfile.copies
     FROM `bigquery-public-data.github_repos.contents` as contentfile
     INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
-    """.format(not self.query_file_id or "AND " + self.query_file_id)
+    """.format(not self.query_file_id or "AND (" + self.query_file_id + ")")
     return (self.client.query(contentfile_query), None)
 
 class openclDataset(Dataset):
@@ -145,7 +145,7 @@ class openclDataset(Dataset):
                ):
 
     self.extensions = ['.cl']
-    self.query_exception = 'OR' + ' OR '.join([
+    self.query_exception = ' AND ' + ' OR '.join([
         "(substr(file.path, {}, {}) = '{}' AND contentfile.content LIKE '%kernel void%')"
           .format(-len(ext), 1+len(ext), ext)
       for ext in ['.c', '.cc', '.cpp', '.cxx', '.c++']
@@ -162,8 +162,10 @@ class openclDataset(Dataset):
     other_count_query = """
     SELECT COUNT(*)
     FROM `bigquery-public-data.github_repos.files` as file
-    {} {}
-    """.format(not self.query_file_id or "WHERE " + self.query_file_id, self.query_exception or "")
+    INNER JOIN `bigquery-public-data.github_repos.contents` as contentfile
+    ON file.id = contentfile.id
+    {}
+    """.format(self.query_exception or "")
 
     job = self.client.query(other_count_query)
     for f in job:
@@ -180,8 +182,10 @@ class openclDataset(Dataset):
     other_repo_query = """
     SELECT DISTINCT file.repo_name, file.ref
     FROM `bigquery-public-data.github_repos.files` as file
-    {} {}
-    """.format(not self.query_file_id or "WHERE " + self.query_file_id, self.query_exception or "")
+    INNER JOIN `bigquery-public-data.github_repos.contents` as contentfile
+    ON file.id = contentfile.id
+    {}
+    """.format(self.query_exception or "")
     return (cl_repo_it, self.client.query(other_repo_query))
 
   def contentfile_query(self) -> typing.Tuple[typing.Callable, typing.Callable]:
@@ -196,8 +200,10 @@ class openclDataset(Dataset):
            file.id, file.symlink_target, contentfile.size, 
            contentfile.content, contentfile.binary, contentfile.copies
     FROM `bigquery-public-data.github_repos.files` as file
-    {} {}
-    """.format(not self.query_file_id or "WHERE " + self.query_file_id, self.query_exception or "")
+    INNER JOIN `bigquery-public-data.github_repos.contents` as contentfile
+    ON file.id = contentfile.id
+    {}
+    """.format(self.query_exception or "")
     return (cl_file_it, self.client.query(other_file_query))
 
 class cDataset(Dataset):
