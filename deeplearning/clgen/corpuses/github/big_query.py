@@ -14,6 +14,7 @@ class BigQuery(miner.GithubMiner):
   def __init__(self,
                config: github_miner_pb2.GithubMiner
                ):
+    super(BigQuery, self).__init__()
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(pathlib.Path(config.credentials, must_exist = True))
     self.cache_path = pathlib.Path(config.path, must_exist = False, parents = True)
 
