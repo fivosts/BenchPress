@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "soy-antenna-292523",
+  "private_key_id": "b2e1c64c024a00e38f851905dd2c56184d86b93b",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCwDr85s+QnqbhG\nxKsVvNzRfVDS8cFISmtlZctbJbosCIDV9ClPpypkQF20hVyFeoWZoZjwmds7yoou\nMz7QaLDl882RzgHWaLsVTRLuAWmEFWe4ycB8Aw9W3STFFFcNjeqcmZwfrmzXY8ZS\nG1q1UhyhvtIKUaZPq7FLJe0ER9DsYoxWIFQpzKQ6fSCrizpOydjLogl5ZMEka95h\nSyxBX37k8aa+pRGe+0/AehqBh0WC4jVITKMh3q0XbaR08k8fdVi8TRMpq6tTLg/a\njGcGezI0r/YubSoy3C3pa5AIRtInBDXmehrn8RmEHyAvSSBlKzsAPzNiYDVvJD4w\nbAA8F6UBAgMBAAECggEAA9SuUIEbi8ljmxaYamarn1tMsOpVvE7yO0iVviv5+w9M\nTlt7sqH+iCPmZhEozDa4RXmArGuMm6Zyj0LKMRq2DqrZZDzJSXMJ7xK4QLmDJD6a\n/ShWqdwfL1KshCVHJ6JY4oNtJDtVXvJq1EqIFL3upY5TX6obJkykFPCEUb2GTD5n\ndg5qasBoo9tQXuds9/IogUwPyl1t5RvHUwknJ923jEQ1KauNo5yR3aGsXNh39SHs\nY8uWlZAv54Q8E7tesPvKmZAGPAv45F/R15myvQHlPk5ig9AHXxXXYoLjwbEiqDKZ\nyBAGZBSp40MftEYsj1onwgEGJzU6FEryty9EjOeuYQKBgQDWa3keE9FGpCYdmIXw\n5z9YpTszhfF12ryvLjUmhH1/yovSLt1rmDyMf2Zz6nMSIst49SwVdRkjzcsMyBBM\nYZysLnBg4JLV7HpLFAZjP8ix6PIoAZQXn1xVhjv5o5eNBBYrRw5ZA49TOlBdcN3v\nTF+oZevS4Reqx764VVm4K5u+nQKBgQDSMtf045EydD0eroY1DTfWxycW3JyJqlOM\nw7IsVPY1UnPvgxWvgvALvtNh60441SjGEcjgxFSIQ4GiF/pZkTzsOKfz+m3CTzyG\nw7vPlnimUY2Lt1eadGdYgO/8+eNE5aqLZrnytBSV1JO0IYmPnG/RDFyvGDGwzI2O\nFwj+bctgtQKBgQChvCt9zoD7AfJmPJg7oJKdsPS45n294iKVGQuqZCGt9QAGqKcH\n86soZyjGor/tnCVStcxs2wj9gst4dqgklTRyhAzsZjkb9+Y/H3m5/3DJEecm2hn0\nv5YMRNaUdRtpmP2H428lIZRIuSHJectOJ5O4GDkLthH+FfD8ZhTo4Kv32QKBgQC5\nVQsEaQHEsqiRPOAoNpddUAsvJSUAXKV+H64hWGgda629KJ8eORzdvksysv4tLgTd\nXyD2zSSbYKoT+YBLKLvGq82qWMwd3y9Gw5380ndebdmXrvgWvzu/1S/Epa+1N6q/\nbrvVOuJLmTsCP+/CJ/SPJY8y8uodML4+4iCT9Mq1YQKBgAC82i7qOWaXQcUGNAaq\n8uRbx9XL0UuIjQN+ZfPlk2x7lQjPoK5nzb6PBsxoWrJXu2s+VNqrgE2RLseo6Ln5\nW810OMrN7C6N8bhhzm7WPn8m5zmimrKaZgSiBesA0sIHUW4Uh69boyNEvA0gwndp\nqH2ck8W+hOs10yQrPPiRItzb\n-----END PRIVATE KEY-----\n",
+  "client_email": "clgen-531@soy-antenna-292523.iam.gserviceaccount.com",
+  "client_id": "111730910161496715049",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/clgen-531%40soy-antenna-292523.iam.gserviceaccount.com"
+}
