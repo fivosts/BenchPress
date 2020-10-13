@@ -5,14 +5,14 @@ import progressbar
 import humanize
 from google.cloud import bigquery
 
-from deeplearning.clgen.proto import github_miner_pb2
+from deeplearning.clgen.proto import github_pb2
 from deeplearning.clgen.corpuses.github import bigQuery_database
 from deeplearning.clgen.corpuses.github import miner
 from eupy.native import logger as l
 
 class BigQuery(miner.GithubMiner):
   def __init__(self,
-               config: github_miner_pb2.GithubMiner
+               config: github_pb2.GithubMiner
                ):
     super(BigQuery, self).__init__()
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(pathlib.Path(config.credentials, must_exist = True))
