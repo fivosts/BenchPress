@@ -22,8 +22,8 @@ class bqData(Base):
   @staticmethod
   def bqSchema(cls) -> typing.List[bigquery.SchemaField]:
     return [
-      bigquery.SchemaField("key",   "STRING", mode = "REQUIRED")
-      bigquery.SchemaField("value", "STRING", mode = "REQUIRED")
+      bigquery.SchemaField("key",   "STRING", mode = "REQUIRED"),
+      bigquery.SchemaField("value", "STRING", mode = "REQUIRED"),
     ]
 
 class bqFile(Base, sqlutil.ProtoBackedMixin):
@@ -107,10 +107,10 @@ class bqRepo(Base, sqlutil.ProtoBackedMixin):
   @staticmethod
   def bqSchema(cls) -> typing.List[bigquery.SchemaField]:
     return [
-      bigquery.SchemaField("id",         "INTEGER", mode = "REQUIRED")
-      bigquery.SchemaField("repo_name",  "STRING",  mode = "REQUIRED")
-      bigquery.SchemaField("ref",        "STRING",  mode = "REQUIRED")
-      bigquery.SchemaField("date_added", "STRING",  mode = "REQUIRED")
+      bigquery.SchemaField("id",         "INTEGER", mode = "REQUIRED"),
+      bigquery.SchemaField("repo_name",  "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("ref",        "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("date_added", "STRING",  mode = "REQUIRED"),
     ]
 
 class bqDatabase(sqlutil.Database):
