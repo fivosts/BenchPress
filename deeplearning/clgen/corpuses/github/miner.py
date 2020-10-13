@@ -73,11 +73,11 @@ class BigQuery(GithubMiner):
                ):
     super(BigQuery, self).__init__()
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(pathlib.Path(config.big_query.credentials, must_exist = True))
-    self.cache_path = pathlib.Path(config.path, must_exist = False, parents = True)
+    self.cache_path = pathlib.Path(config.path, must_exist = False, parents = True).absolute()
 
-    self.config  = bigquery.QueryJobConfig(allowLargeResults = True)
-    self.config.allow_large_results = True
-    self.client  = bigquery.Client(default_query_job_config = config)
+    job_config = bigquery.QueryJobConfig(allowLargeResults = True)
+    job_config.allow_large_results = True
+    self.client = bigquery.Client(default_query_job_config = job_config)
 
     self.dataset = datasets.Dataset.FromArgs(self.client, config.big_query.language)
     self.storage = storage.Storage.FromArgs(self.cache_path, self.dataset.name, self.dataset.extension, config.data_format)
