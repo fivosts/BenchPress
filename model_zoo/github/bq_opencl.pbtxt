@@ -1,0 +1,7 @@
+github_miner {
+  path: "."
+  data_format: sql
+  big_query {
+    language: "opencl"
+  }
+}
