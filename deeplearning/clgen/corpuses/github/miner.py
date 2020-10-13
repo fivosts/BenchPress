@@ -19,6 +19,9 @@ from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.proto import github_pb2
 from deeplearning.clgen.corpuses.github import datasets
 from deeplearning.clgen.corpuses.github import storage
+from deeplearning.clgen.corpuses.github import bigQuery_database
+
+from eupy.native import logger as l
 
 class GithubMiner(object):
   """Base abstract class of a github miner"""
@@ -87,16 +90,16 @@ class BigQuery(GithubMiner):
 
     # Get contentfiles.
     mainf_it, otherf_it = self.dataset.contentfile_query()
-    if mainf_it is not None:
-      for en, mf in enumerate(mainf_it):
+    if mainf_it:
+      for mf in mainf_it:
         self.storage.save(bigQuery_database.bqFile(
-            **bigQuery_database.bqFile.FromArgs(en, mf)
+            **bigQuery_database.bqFile.FromArgs(self.storage.filecount, mf)
           )
         )
-    if otherf_it is not None:
-      for en, of in enumerate(otherf_it):
+    if otherf_it:
+      for of in otherf_it:
         self.storage.save(bigQuery_database.bqFile(
-            **bigQuery_database.bqFile.FromArgs(en, of)
+            **bigQuery_database.bqFile.FromArgs(self.storage.filecount, of)
           )
         )
 
@@ -107,21 +110,21 @@ class BigQuery(GithubMiner):
     else:
       mainrep_it, otherrep_it = mainf_it, otherf_it
 
-    if mainrep_it is not None:
-      for en, mr in enumerate(mainrep_it):
+    if mainrep_it:
+      for mr in mainrep_it:
         self.storage.save(bigQuery_database.bqRepo(
-            **bigQuery_database.bqRepo.FromArgs(en, mr)
+            **bigQuery_database.bqRepo.FromArgs(self.storage.repocount, mr)
           )
         )
-      main_repo_count = self.storage.repo_count
+      main_repo_count = self.storage.repocount
 
-    if otherrep_it is not None:
-      for en, orep in enumerate(otherrep_it):
+    if otherrep_it:
+      for orep in otherrep_it:
         self.storage.save(bigQuery_database.bqRepo(
-            **bigQuery_database.bqRepo.FromArgs(en, orep)
+            **bigQuery_database.bqRepo.FromArgs(self.storage.repocount, orep)
           )
         )
-      other_repo_count = self.storage.repo_count - (main_repo_count or 0)
+      other_repo_count = self.storage.repocount - (main_repo_count or 0)
 
     # Filecount of requested file specifications.
     # Use cached results if contentfile has taken place.
