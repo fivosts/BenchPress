@@ -66,24 +66,30 @@ class zipStorage(Storage):
     super(zipStorage, self).__init__(path, name, extension)
     self.cached_content = []
     self.flush_counter  = 20000
-    self.file_count      = 0
+    self.file_count     = 0
+    self.data_file      = ""
 
   def __exit__(self, path, name, extension):
     self.zipFiles()
     return
 
   def save(self,
-           contentfile: bigQuery_database.bqFile
+           contentfile: typing.Union[
+                          bigQuery_database.bqData,
+                          bigQuery_database.bqFile,
+                          bigQuery_database.bqRepo
+                        ]
            ) -> None:
-    if not isinstance(contentfile, bigQuery_database.bqFile):
-      return
-    if contentfile.content is not None:
-      self.cached_content.append(contentfile.content)
-      self.file_count += 1
-      if self.file_count % self.flush_counter == 0:
-        self.zipFiles()
-    else:
-      raise ValueError("Wrong format of input contentfile.")
+    if isinstance(contentfile, bigQuery_database.bqFile):
+      if contentfile.content is not None:
+        self.cached_content.append(contentfile.content)
+        self.file_count += 1
+        if self.file_count % self.flush_counter == 0:
+          self.zipFiles()
+      else:
+        raise ValueError("Wrong format of input contentfile.")
+    elif isinstance(contentfile, bigQuery_database.bqData):
+      self.data_file = "{}: {}".format(contentfile.key, contentfile.value)
     return
 
   def zipFiles(self) -> None:
@@ -92,6 +98,8 @@ class zipStorage(Storage):
     for en, cf in enumerate(self.cached_content):
       with open(tmp_root / "{}{}".format(en+1, self.extension), 'w') as f:
         f.write(cf)
+    with open(tmp_root / "data.txt", 'w') as f:
+      f.write(self.data_file)
     p = os.getcwd()
     os.chdir(tmp_root.parent)
     cmd = subprocess.Popen(
@@ -128,18 +136,25 @@ class fileStorage(Storage):
     super(fileStorage, self).__init__(path, name, extension)
     self.file_count = 0
     (self.cache_path / self.name).mkdir(exist_ok = True)
+    self.data_file  = ""
 
   def save(self,
-           contentfile: bigQuery_database.bqFile
+           contentfile: typing.Union[
+                          bigQuery_database.bqData,
+                          bigQuery_database.bqFile,
+                          bigQuery_database.bqRepo
+                        ]
            ) -> None:
-    if not isinstance(contentfile, bigQuery_database.bqFile):
-      return
-    if contentfile.content is not None:
-      with open(self.cache_path / self.name / "{}{}".format(self.file_count, self.extension)) as f:
-        f.write(contentfile.content)
-      self.file_count += 1
-    else:
-      raise ValueError("Wrong format of input contentfile.")
+    if isinstance(contentfile, bigQuery_database.bqFile):
+      if contentfile.content is not None:
+        with open(self.cache_path / self.name / "{}{}".format(self.file_count, self.extension), 'w') as f:
+          f.write(contentfile.content)
+        self.file_count += 1
+      else:
+        raise ValueError("Wrong format of input contentfile.")
+    elif isinstance(contentfile, bigQuery_database.bqData):
+      with open(self.cache_path / self.name / "data.txt", 'w') as f:
+        f.write("{}: {}".format(contentfile.key, contentfile.value))
     return
 
 class dbStorage(Storage):
