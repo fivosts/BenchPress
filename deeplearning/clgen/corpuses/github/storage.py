@@ -19,7 +19,7 @@ class Storage(object):
                name: str,
                extension: str,
                data_format: int
-               ) -> Storage:
+               ):
     storage = {
       github_pb2.GithubMiner.DataFormat.zip   : zipStorage,
       github_pb2.GithubMiner.DataFormat.folder: fileStorage,
