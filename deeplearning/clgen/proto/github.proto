@@ -22,19 +22,19 @@ package github;
 message GithubMiner {
   enum DataFormat {
     // zip file
-    zip    = 0,
+    zip    = 0;
     // folder with files
-    folder = 1,
+    folder = 1;
     // sqlite db
-    sql    = 2,
+    sql    = 2;
     // BigQuery remote table
-    bq     = 3,
+    bq     = 3;
   }
   oneof miner {
     // BigQuery API
     BigQuery  big_query = 4;
     // Exhaustive request miner
-    recursive recursive = 5;
+    Recursive recursive = 5;
   }
   // Base path of miner's data storage.
   optional string path = 6;
