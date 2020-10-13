@@ -4,6 +4,7 @@ import typing
 import pathlib
 import progressbar
 import humanize
+import google
 from google.cloud import bigquery
 
 from deeplearning.clgen.corpuses.github import bigQuery_database
@@ -72,13 +73,14 @@ class Dataset(object):
     try:
       dataset = self.client.get_dataset(dataset_id)
       return dataset
+    except google.api_core.exceptions.NotFound:
+      dataset = self.client.create_dataset(dataset, timeout = 30)
     except Exception as e:
       raise e
-      dataset = client.create_dataset(dataset, timeout = 30)
 
     return dataset, self._setupTables(self, dataset_id)
 
-  def _setupTable(self, dataset_id: str) -> typing.Dict[str, bigquery.Table]:
+  def _setupTables(self, dataset_id: str) -> typing.Dict[str, bigquery.Table]:
     """API request that gets or sets bigquery.Table instances."""
     table_reg = {
       'bq_contentfiles': bigQuery_database.bqFile.bqSchema,
@@ -89,10 +91,10 @@ class Dataset(object):
       table_id = "{}.{}".format(dataset_id, reg)
       table = bigquery.Table(table_id, schema = sc)
       try:
-        table_reg[reg] = client.get_table(table_id)
+        table_reg[reg] = self.client.get_table(table_id)
       except Exception as e:
         raise e
-        table_reg[reg] = client.create_table(table)
+        table_reg[reg] = self.client.create_table(table)
     return table_reg
 
   def filecount_query(self) -> typing.Tuple[int, int]:
