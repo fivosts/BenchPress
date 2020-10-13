@@ -304,7 +304,7 @@ def DoFlagsAction(
       l.getLogger().warn("FLAGS.stop_after {} will be ignored without model config.".format(FLAGS.stop_after))
     if FLAGS.print_cache_path in {"corpus", "model", "sampler"}:
       raise ValueError("{} config has not been specified.".format(FLAGS.print_cache_path))
-    else:
+    elif FLAGS.print_cache_path:
       raise ValueError(f"Invalid --print_cache_path argument: '{FLAGS.print_cache_path}'")
   return
 
