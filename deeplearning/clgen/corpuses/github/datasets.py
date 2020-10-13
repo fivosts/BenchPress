@@ -145,11 +145,11 @@ class openclDataset(Dataset):
                ):
 
     self.extensions = ['.cl']
-    self.query_exception = [
+    self.query_exception = 'OR' + ' OR '.join([
         "(substr(file.path, {}, {}) = '{}' AND contentfile.content LIKE '%kernel void%')"
           .format(-len(ext), 1+len(ext), ext)
       for ext in ['.c', '.cc', '.cpp', '.cxx', '.c++']
-    ]
+    ])
     super(openclDataset, self).__init__(client, "opencl")
     return
 
@@ -163,7 +163,7 @@ class openclDataset(Dataset):
     SELECT COUNT(*)
     FROM `bigquery-public-data.github_repos.files` as file
     {} {}
-    """.format(not self.query_file_id or "WHERE " + self.query_file_id, self.query_exception)
+    """.format(not self.query_file_id or "WHERE " + self.query_file_id, self.query_exception or "")
 
     job = self.client.query(other_count_query)
     for f in job:
@@ -181,7 +181,7 @@ class openclDataset(Dataset):
     SELECT DISTINCT file.repo_name, file.ref
     FROM `bigquery-public-data.github_repos.files` as file
     {} {}
-    """.format(not self.query_file_id or "WHERE " + self.query_file_id, self.query_exception)
+    """.format(not self.query_file_id or "WHERE " + self.query_file_id, self.query_exception or "")
     return (cl_repo_it, self.client.query(other_repo_query))
 
   def contentfile_query(self) -> typing.Tuple[typing.Callable, typing.Callable]:
@@ -197,7 +197,7 @@ class openclDataset(Dataset):
            contentfile.content, contentfile.binary, contentfile.copies
     FROM `bigquery-public-data.github_repos.files` as file
     {} {}
-    """.format(not self.query_file_id or "WHERE " + self.query_file_id, self.query_exception)
+    """.format(not self.query_file_id or "WHERE " + self.query_file_id, self.query_exception or "")
     return (cl_file_it, self.client.query(other_file_query))
 
 class cDataset(Dataset):
