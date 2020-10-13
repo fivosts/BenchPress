@@ -48,6 +48,11 @@ class Storage(object):
     raise NotImplementedError("Abstract Class")
 
 class zipStorage(Storage):
+
+  @property
+  def repo_count(self):
+    return 0 # TODO
+  
   def __init__(self,
                path: pathlib.Path,
                name: str,
@@ -93,6 +98,11 @@ class zipStorage(Storage):
     return
 
 class fileStorage(Storage):
+
+  @property
+  def repo_count(self):
+    return 0 # TODO
+
   def __init__(self,
                path: pathlib.Path,
                name: str,
@@ -116,6 +126,11 @@ class fileStorage(Storage):
     return
 
 class dbStorage(Storage):
+
+  @property
+  def repo_count(self):
+    return self.db.repo_count
+
   def __init__(self,
                path: pathlib.Path,
                name: str,
@@ -157,6 +172,11 @@ class dbStorage(Storage):
     return
 
 class bqStorage(Storage):
+
+  @property
+  def repo_count(self):
+    return 0 # TODO
+
   def __init__(self,
                path: pathlib.Path,
                extension: str
