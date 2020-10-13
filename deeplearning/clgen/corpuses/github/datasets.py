@@ -49,11 +49,15 @@ class Dataset(object):
 
   @property
   def extension(self):
-    return self.extensions[0]
-  
+    if self.extensions:
+      return self.extensions[0]
+    else:
+      return None
+
   def __init__(self,
                client: bigquery.Client,
-               dataset_id: str = None
+               dataset_id: str = None,
+               extensions: typing.List[str] = None,
                ):
     """Generic Dataset class constructor. Not to be used directly."""
     self.client = client
@@ -62,8 +66,10 @@ class Dataset(object):
     )
     self.queryConfig = lambda qt : bigquery.QueryJobConfig(
       destination = self.tables[qt],
+      write_disposition = 'WRITE_TRUNCATE',
     )
 
+    self.extensions = extensions
     self.query_file_id = ""
     if self.extensions is not None:
       self.query_file_id = " OR ".join(["substr(file.path, {}, {}) = '{}'".format(-len(ext), 1+len(ext), ext)
@@ -115,7 +121,7 @@ class Dataset(object):
     SELECT COUNT(*)
     FROM `bigquery-public-data.github_repos.files` as file
     {}
-    """.format(not self.query_file_id or "WHERE " + self.query_file_id)
+    """.format("" if not self.query_file_id else "WHERE " + self.query_file_id)
 
     try:
       job = self.client.query(query)
@@ -133,7 +139,7 @@ class Dataset(object):
     SELECT DISTINCT file.repo_name, file.ref
     FROM `bigquery-public-data.github_repos.files` as file
     {}
-    """.format(not self.query_file_id or "WHERE " + self.query_file_id)
+    """.format("" if not self.query_file_id else "WHERE " + self.query_file_id)
     try:
       rows = self.client.query(query, job_config = self.queryConfig('bq_repofiles')).result()
     except google.api_core.exceptions.Forbidden as e:
@@ -143,19 +149,14 @@ class Dataset(object):
 
   def contentfile_query(self) -> typing.Tuple[typing.Callable]:
     """Returns iterable of query files"""
-    l.getLogger().info("Retrieving contentfiles...")
-    if not self.query_file_id:
-      l.getLogger().warning(
-        "contentfile_query for generic language is not allowed, unless one wants to query the whole universe."
-      )
-      return None, None
+    l.getLogger().info("Retrieving {} contentfiles...".format(self.dataset.dataset_id))
     query = """
     SELECT file.repo_name, file.path, file.ref, file.mode, 
            file.id, file.symlink_target, contentfile.size, 
            contentfile.content, contentfile.binary, contentfile.copies
     FROM `bigquery-public-data.github_repos.contents` as contentfile
     INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
-    """.format(not self.query_file_id or "AND (" + self.query_file_id + ")")
+    """.format("" if not self.query_file_id else "AND (" + self.query_file_id + ")")
     try:
       rows = self.client.query(query, job_config = self.queryConfig('bq_contentfiles')).result()
     except google.api_core.exceptions.Forbidden as e:
@@ -169,13 +170,13 @@ class openclDataset(Dataset):
                client: bigquery.Client,
                ):
 
-    self.extensions = ['.cl']
+    extensions = ['.cl']
+    super(openclDataset, self).__init__(client, "opencl", extensions)
     self.query_exception = ' AND (' + ' OR '.join([
         "(substr(file.path, {}, {}) = '{}' AND contentfile.content LIKE '%kernel void%')"
           .format(-len(ext), 1+len(ext), ext)
       for ext in ['.c', '.cc', '.cpp', '.cxx', '.c++', '.h', '.hpp']
     ]) + ')'
-    super(openclDataset, self).__init__(client, "opencl")
     return
 
   def filecount_query(self) -> typing.Tuple[int, int]:
@@ -250,8 +251,8 @@ class cDataset(Dataset):
   def __init__(self,
                client: bigquery.Client,
                ):
-    self.extensions = ['.c', '.h']
-    super(cDataset, self).__init__(client, "c")
+    extensions = ['.c', '.h']
+    super(cDataset, self).__init__(client, "c", extensions)
     return
 
 class cppDataset(Dataset):
@@ -259,8 +260,8 @@ class cppDataset(Dataset):
   def __init__(self,
                client: bigquery.Client,
                ):
-    self.extensions = ['.cpp', 'cc', '.cxx', '.c++', '.h', '.hpp']
-    super(cppDataset, self).__init__(client, "cpp")
+    extensions = ['.cpp', 'cc', '.cxx', '.c++', '.h', '.hpp']
+    super(cppDataset, self).__init__(client, "cpp", extensions)
     return
 
 class javaDataset(Dataset):
@@ -268,8 +269,8 @@ class javaDataset(Dataset):
   def __init__(self,
                client: bigquery.Client,
                ):
-    self.extensions = ['.java']
-    super(javaDataset, self).__init__(client, "java")
+    extensions = ['.java']
+    super(javaDataset, self).__init__(client, "java", extensions)
     return
 
 class pythonDataset(Dataset):
@@ -277,6 +278,6 @@ class pythonDataset(Dataset):
   def __init__(self,
                client: bigquery.Client,
                ):
-    self.extensions = ['.py']
-    super(pythonDataset, self).__init__(client, "python")
+    extensions = ['.py']
+    super(pythonDataset, self).__init__(client, "python", extensions)
     return
