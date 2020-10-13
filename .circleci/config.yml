@@ -28,6 +28,9 @@ jobs:
       - run:
           command: mkdir build && cd build
       - run:
+          name: Remove global cmake
+          command: sudo apt remove cmake
+      - run:
           name: Build application
           command: ../cmake/bin/cmake .. -DPYTHON=<<parameters.python_version>>
       - run:
