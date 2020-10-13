@@ -89,7 +89,7 @@ class zipStorage(Storage):
       else:
         raise ValueError("Wrong format of input contentfile.")
     elif isinstance(contentfile, bigQuery_database.bqData):
-      self.data_file = "{}: {}".format(contentfile.key, contentfile.value)
+      self.data_file = "{}\n\n{}".format(contentfile.key, contentfile.value)
     return
 
   def zipFiles(self) -> None:
@@ -154,7 +154,7 @@ class fileStorage(Storage):
         raise ValueError("Wrong format of input contentfile.")
     elif isinstance(contentfile, bigQuery_database.bqData):
       with open(self.cache_path / self.name / "data.txt", 'w') as f:
-        f.write("{}: {}".format(contentfile.key, contentfile.value))
+        f.write("{}\n\n{}".format(contentfile.key, contentfile.value))
     return
 
 class dbStorage(Storage):
