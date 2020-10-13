@@ -47,7 +47,7 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
   @classmethod
   def FromArgs(cls,
                id: int,
-               row
+               row: bigquery.Row
                ) -> typing.Dict[str, typing.Any]:
 
     return {
@@ -95,7 +95,7 @@ class bqRepo(Base, sqlutil.ProtoBackedMixin):
   @classmethod
   def FromArgs(cls,
                id: int,
-               row
+               row: bigquery.Row
                ) -> typing.Dict[str, typing.Any]:
     return {
       "id"             : id,
