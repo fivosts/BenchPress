@@ -15,14 +15,12 @@ from functools import partial
 
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.proto import github_pb2
-from deeplearning.clgen.corpuses.github import big_query
-from deeplearning.clgen.corpuses.github import recursive
 
 class GithubMiner(object):
   """Base abstract class of a github miner"""
 
   @classmethod
-  def FromConfig(cls, config: github_pb2.GitHubMiner) -> GitHubMiner:
+  def FromConfig(cls, config: github_pb2.GithubMiner) -> GithubMiner:
     """Constructs github miner from protobuf configuration."""
     try:
       pbutil.AssertFieldIsSet(config, "path")
@@ -37,7 +35,7 @@ class GithubMiner(object):
           lambda x: x in {'generic', 'opencl', 'c', 'cpp', 'java', 'python'},
           "language must be one of opencl, c, cpp, java, python. 'generic' for language agnostic queries.",
         )
-        return big_query.BigQuery(config)
+        return BigQuery(config)
       elif config.miner.HasField("recursive"):
         pbutil.AssertFieldConstraint(
           config.miner.recursive,
@@ -51,9 +49,9 @@ class GithubMiner(object):
           lambda x: x>0,
           "corpus size cannot be non-positive."
           )
-        if config.data_format != config.GitHubMiner.DataFormat.folder:
+        if config.data_format != config.GithubMiner.DataFormat.folder:
           raise NotImplementedError("RecursiveFetcher only stores files in local folder.")
-        return recursive.RecursiveFetcher(config)
+        return RecursiveFetcher(config)
       else:
         raise SystemError("{} miner not recognized".format(config.miner))
     except Exception as e:
@@ -325,7 +323,7 @@ class RecursiveFetcher(GithubMiner):
 
 
   def __init__(self,
-               config: github_pb2.GitHubMiner
+               config: github_pb2.GithubMiner
                ):
     self.corpus_path     = config.path
     git_credentials = {
