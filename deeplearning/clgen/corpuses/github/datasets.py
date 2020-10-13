@@ -91,9 +91,10 @@ class Dataset(object):
       table = bigquery.Table(table_id, schema = get_sc())
       try:
         table_reg[reg] = self.client.get_table(table_id)
+      except google.api_core.exceptions.NotFound:
+        table_reg[reg] = self.client.create_table(table)
       except Exception as e:
         raise e
-        table_reg[reg] = self.client.create_table(table)
     return table_reg
 
   def filecount_query(self) -> typing.Tuple[int, int]:
