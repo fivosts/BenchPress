@@ -135,7 +135,7 @@ class fileStorage(Storage):
     if not isinstance(contentfile, bigQuery_database.bqFile):
       return
     if contentfile.content is not None:
-      with open(self.cache_path / self.name / "{}{}".format(self.counter, self.extension)) as f:
+      with open(self.cache_path / self.name / "{}{}".format(self.file_count, self.extension)) as f:
         f.write(contentfile.content)
       self.file_count += 1
     else:
