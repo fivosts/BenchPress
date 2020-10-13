@@ -45,7 +45,8 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
   date_added     : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
-  def FromArgs(id: int,
+  def FromArgs(cls,
+               id: int,
                row
                ) -> typing.Dict[str, typing.Any]:
 
@@ -65,7 +66,7 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
     }
   
   @staticmethod
-  def bqSchema(cls) -> typing.List[bigquery.SchemaField]:
+  def bqSchema() -> typing.List[bigquery.SchemaField]:
     return [
       bigquery.SchemaField("id",             "INTEGER", mode = "REQUIRED"),
       bigquery.SchemaField("sha256",         "STRING",  mode = "REQUIRED"),
@@ -92,7 +93,8 @@ class bqRepo(Base, sqlutil.ProtoBackedMixin):
   date_added     : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
-  def FromArgs(id: int,
+  def FromArgs(cls,
+               id: int,
                row
                ) -> typing.Dict[str, typing.Any]:
     return {
@@ -103,7 +105,7 @@ class bqRepo(Base, sqlutil.ProtoBackedMixin):
     }
 
   @staticmethod
-  def bqSchema(cls) -> typing.List[bigquery.SchemaField]:
+  def bqSchema() -> typing.List[bigquery.SchemaField]:
     return [
       bigquery.SchemaField("id",         "INTEGER", mode = "REQUIRED"),
       bigquery.SchemaField("repo_name",  "STRING",  mode = "REQUIRED"),
