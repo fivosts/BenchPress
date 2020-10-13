@@ -88,59 +88,62 @@ class BigQuery(GithubMiner):
 
   def fetch(self):
 
-    # Get contentfiles.
-    mainf_it, otherf_it = self.dataset.contentfile_query()
-    if mainf_it:
-      for mf in mainf_it:
-        self.storage.save(bigQuery_database.bqFile(
-            **bigQuery_database.bqFile.FromArgs(self.storage.filecount, mf)
+    with self.storage as st:
+      # Get contentfiles.
+      mainf_it, otherf_it = self.dataset.contentfile_query()
+      if mainf_it:
+        for mf in mainf_it:
+          st.save(bigQuery_database.bqFile(
+              **bigQuery_database.bqFile.FromArgs(self.storage.filecount, mf)
+            )
           )
-        )
-    if otherf_it:
-      for of in otherf_it:
-        self.storage.save(bigQuery_database.bqFile(
-            **bigQuery_database.bqFile.FromArgs(self.storage.filecount, of)
+      if otherf_it:
+        for of in otherf_it:
+          st.save(bigQuery_database.bqFile(
+              **bigQuery_database.bqFile.FromArgs(self.storage.filecount, of)
+            )
           )
-        )
 
-    # Get repository list of requested file specifications.
-    # If contentfile_query has taken place, use cached results instead of re-querying.
-    if not mainf_it and not otherf_it:
-      mainrep_it, otherrep_it = self.dataset.repository_query()
-    else:
-      mainrep_it, otherrep_it = mainf_it, otherf_it
+      # Get repository list of requested file specifications.
+      # If contentfile_query has taken place, use cached results instead of re-querying.
+      if mainf_it or otherf_it:
+        mainrep_it, otherrep_it = mainf_it, otherf_it
+      else:
+        mainrep_it, otherrep_it = self.dataset.repository_query()
 
-    if mainrep_it:
-      for mr in mainrep_it:
-        self.storage.save(bigQuery_database.bqRepo(
-            **bigQuery_database.bqRepo.FromArgs(self.storage.repocount, mr)
+      if mainrep_it:
+        for mr in mainrep_it:
+          st.save(bigQuery_database.bqRepo(
+              **bigQuery_database.bqRepo.FromArgs(self.storage.repocount, mr)
+            )
           )
-        )
-      main_repo_count = self.storage.repocount
+        main_repo_count = self.storage.repocount
 
-    if otherrep_it:
-      for orep in otherrep_it:
-        self.storage.save(bigQuery_database.bqRepo(
-            **bigQuery_database.bqRepo.FromArgs(self.storage.repocount, orep)
+      if otherrep_it:
+        for orep in otherrep_it:
+          st.save(bigQuery_database.bqRepo(
+              **bigQuery_database.bqRepo.FromArgs(self.storage.repocount, orep)
+            )
           )
-        )
-      other_repo_count = self.storage.repocount - (main_repo_count or 0)
+        other_repo_count = self.storage.repocount - (main_repo_count or 0)
 
-    # Filecount of requested file specifications.
-    # Use cached results if contentfile has taken place.
-    if not mainf_it and not otherf_it:
-      self.dataset.filecount = (mainf_it.page.num_items, otherf_it.page.num_items or 0)
-    mainfile_count, otherfile_count = self.dataset.filecount
+      # Filecount of requested file specifications.
+      # Use cached results if contentfile has taken place.
+      if mainf_it or otherf_it:
+        # self.dataset.filecount = (mainf_it.page.num_items or 0, otherf_it.page.num_items or 0)
+        self.dataset.filecount = (len(mainf_it) or 0, len(otherf_it) or 0)
+      mainfile_count, otherfile_count = self.dataset.filecount
 
-    query_data = [
-      "main_contentfiles : {}".format(mainfile_count),
-      "other_contentfiles: {}".format(otherfile_count),
-      "total_contentfiles: {}".format(mainfile_count + otherfile_count),
-      "main_repositories : {}".format(0 if not mainrep_it else main_repo_count),
-      "other_repositories: {}".format(0 if not otherrep_it else other_repo_count),
-      "total_repositories: {}".format(0 if not (mainrep_it or otherrep_it) else main_repo_count + other_repo_count),
-    ]
-    self.storage.save(bigQuery_database.bqData(key = self.dataset.name, value = '\n'.join(r)))
+      query_data = [
+        "main_contentfiles : {}".format(mainfile_count),
+        "other_contentfiles: {}".format(otherfile_count),
+        "total_contentfiles: {}".format(mainfile_count + otherfile_count),
+        "\n",
+        "main_repositories : {}".format(0 if not mainrep_it else main_repo_count),
+        "other_repositories: {}".format(0 if not otherrep_it else other_repo_count),
+        "total_repositories: {}".format(0 if not (mainrep_it or otherrep_it) else main_repo_count + other_repo_count),
+      ]
+      st.save(bigQuery_database.bqData(key = self.dataset.name, value = '\n'.join(query_data)))
     return
 
 class RecursiveFetcher(GithubMiner):
