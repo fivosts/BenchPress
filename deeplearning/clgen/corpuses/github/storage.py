@@ -20,13 +20,12 @@ class Storage(object):
                extension: str,
                data_format: int
                ):
-    storage = {
+    return {
       github_pb2.GithubMiner.DataFormat.zip   : zipStorage,
       github_pb2.GithubMiner.DataFormat.folder: fileStorage,
       github_pb2.GithubMiner.DataFormat.sql   : dbStorage,
       github_pb2.GithubMiner.DataFormat.bq    : bqStorage,
     }[data_format](path, name, extension)
-    return
 
   def __init__(self,
                path: pathlib.Path,
@@ -50,9 +49,13 @@ class Storage(object):
 class zipStorage(Storage):
 
   @property
-  def repo_count(self):
+  def repocount(self):
     return 0 # TODO
-  
+
+  @property
+  def filecount(self):
+    return self.filecount
+
   def __init__(self,
                path: pathlib.Path,
                name: str,
@@ -61,7 +64,7 @@ class zipStorage(Storage):
     super(zipStorage, self).__init__(path, name, extension)
     self.cached_content = []
     self.flush_counter  = 20000
-    self.current_file   = 0
+    self.filecount      = 0
 
   def save(self,
            contentfile: bigQuery_database.bqFile
@@ -70,10 +73,9 @@ class zipStorage(Storage):
       return
     if contentfile.content is not None:
       self.cached_content.append(contentfile.content)
-      self.current_file += 1
-      if self.current_file >= self.flush_counter:
+      self.filecount += 1
+      if self.filecount % self.flush_counter == 0:
         self.zipFiles()
-        self.current_file = 0
     else:
       raise ValueError("Wrong format of input contentfile.")
     return
@@ -100,8 +102,12 @@ class zipStorage(Storage):
 class fileStorage(Storage):
 
   @property
-  def repo_count(self):
+  def repocount(self):
     return 0 # TODO
+
+  @property
+  def filecount(self):
+    return self.filecount
 
   def __init__(self,
                path: pathlib.Path,
@@ -109,7 +115,7 @@ class fileStorage(Storage):
                extension: str
                ):
     super(fileStorage, self).__init__(path, name, extension)
-    self.file_counter = 0
+    self.filecount = 0
     (self.cache_path / self.name).mkdir(exist_ok = True)
 
   def save(self,
@@ -120,7 +126,7 @@ class fileStorage(Storage):
     if contentfile.content is not None:
       with open(self.cache_path / self.name / "{}{}".format(self.counter, self.extension)) as f:
         f.write(contentfile.content)
-      self.file_counter += 1
+      self.filecount += 1
     else:
       raise ValueError("Wrong format of input contentfile.")
     return
@@ -128,8 +134,12 @@ class fileStorage(Storage):
 class dbStorage(Storage):
 
   @property
-  def repo_count(self):
+  def repocount(self):
     return self.db.repo_count
+
+  @property
+  def filecount(self):
+    return self.db.file_count
 
   def __init__(self,
                path: pathlib.Path,
@@ -168,13 +178,21 @@ class dbStorage(Storage):
         if not exists:
           session.add(contentfile)
       else:
-        session.add(contentfile)
+        exists = session.query(
+          bigQuery_database.bqFile.sha256
+        ).filter_by(sha256 = contentfile.sha256).scalar() is not None
+        if not exists:
+          session.add(contentfile)
     return
 
 class bqStorage(Storage):
 
   @property
-  def repo_count(self):
+  def repocount(self):
+    return 0 # TODO
+
+  @property
+  def filecount(self):
     return 0 # TODO
 
   def __init__(self,
