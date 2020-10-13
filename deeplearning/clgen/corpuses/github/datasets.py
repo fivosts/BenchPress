@@ -38,7 +38,7 @@ class Dataset(object):
     else:
       return self.file_count
 
-  @x.setter
+  @filecount.setter
   def filecount(self, value: typing.Tuple[int, int]) -> None:
     self.file_count = value
     return
