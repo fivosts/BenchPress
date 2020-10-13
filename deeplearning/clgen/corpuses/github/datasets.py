@@ -108,26 +108,35 @@ class Dataset(object):
     Returns file count in int.
     """
     l.getLogger().info("Running file count query...")
-    count_query = """
+    query = """
     SELECT COUNT(*)
     FROM `bigquery-public-data.github_repos.files` as file
     {}
     """.format(not self.query_file_id or "WHERE " + self.query_file_id)
 
-    job = self.client.query(count_query)
-    for f in job:
-      self.file_count = (f[0], 0)
-      return self.file_count
+    try:
+      job = self.client.query(query)
+      for f in job:
+        self.file_count = (f[0], 0)
+        return self.file_count
+    except google.api_core.exceptions.Forbidden as e:
+      l.getLogger().error(e)
+      exit()
 
   def repository_query(self) -> typing.Tuple[typing.Callable]:
     """Returns iterable of query files"""
     l.getLogger().info("Retrieving repository list of specs...")
-    repo_query = """
+    query = """
     SELECT DISTINCT file.repo_name, file.ref
     FROM `bigquery-public-data.github_repos.files` as file
     {}
     """.format(not self.query_file_id or "WHERE " + self.query_file_id)
-    return (self.client.query(repo_query).result(), None)
+    try:
+      rows = self.client.query(query).result()
+    except google.api_core.exceptions.Forbidden as e:
+      l.getLogger().error(e)
+      exit()
+    return (rows, None)
 
   def contentfile_query(self) -> typing.Tuple[typing.Callable]:
     """Returns iterable of query files"""
@@ -137,14 +146,19 @@ class Dataset(object):
         "contentfile_query for generic language is not allowed, unless one wants to query the whole universe."
       )
       return None, None
-    contentfile_query = """
+    query = """
     SELECT file.repo_name, file.path, file.ref, file.mode, 
            file.id, file.symlink_target, contentfile.size, 
            contentfile.content, contentfile.binary, contentfile.copies
     FROM `bigquery-public-data.github_repos.contents` as contentfile
     INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
     """.format(not self.query_file_id or "AND (" + self.query_file_id + ")")
-    return (self.client.query(contentfile_query).result(), None)
+    try:
+      rows = self.client.query(query).result()
+    except google.api_core.exceptions.Forbidden as e:
+      l.getLogger().error(e)
+      exit()
+    return (rows, None)
 
 class openclDataset(Dataset):
   """Opencl Dataset"""
@@ -175,10 +189,14 @@ class openclDataset(Dataset):
     {}
     """.format(self.query_exception or "")
 
-    job = self.client.query(other_count_query)
-    for f in job:
-      self.file_count[1] = f[0]
-      return self.file_count
+    try:
+      job = self.client.query(other_count_query)
+      for f in job:
+        self.file_count[1] = f[0]
+        return self.file_count
+    except google.api_core.exceptions.Forbidden as e:
+      l.getLogger().error(e)
+      exit()
 
   def repository_query(self) -> typing.Tuple[typing.Callable, typing.Callable]:
     """
@@ -187,14 +205,19 @@ class openclDataset(Dataset):
     '.cl' files and any C/C++ file that contains the keyword 'kernel void'
     """
     cl_repo_it, _ = super(openclDataset, self).repository_query()
-    other_repo_query = """
+    query = """
     SELECT DISTINCT file.repo_name, file.ref
     FROM `bigquery-public-data.github_repos.files` as file
     INNER JOIN `bigquery-public-data.github_repos.contents` as contentfile
     ON file.id = contentfile.id
     {}
     """.format(self.query_exception or "")
-    return (cl_repo_it, self.client.query(other_repo_query).result())
+    try:
+      rows = self.client.query(query).result()
+    except google.api_core.exceptions.Forbidden as e:
+      l.getLogger().error(e)
+      exit()
+    return (cl_repo_it, rows)
 
   def contentfile_query(self) -> typing.Tuple[typing.Callable, typing.Callable]:
     """
@@ -203,7 +226,7 @@ class openclDataset(Dataset):
     '.cl' files and any C/C++ file that contains the keyword 'kernel void'
     """
     cl_file_it, _ = super(openclDataset, self).contentfile_query()
-    other_file_query = """
+    query = """
     SELECT file.repo_name, file.path, file.ref, file.mode, 
            file.id, file.symlink_target, contentfile.size, 
            contentfile.content, contentfile.binary, contentfile.copies
@@ -212,7 +235,12 @@ class openclDataset(Dataset):
     ON file.id = contentfile.id
     {}
     """.format(self.query_exception or "")
-    return (cl_file_it, self.client.query(other_file_query).result())
+    try:
+      rows = self.client.query(query).result()
+    except google.api_core.exceptions.Forbidden as e:
+      l.getLogger().error(e)
+      exit()
+    return (cl_file_it, rows)
 
 class cDataset(Dataset):
   """C Dataset"""
