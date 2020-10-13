@@ -6,7 +6,7 @@ if (PROTOC_FROM_SOURCE)
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/model.proto        --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/sampler.proto      --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/scrape_repos.proto --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
-    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/github_miner.proto --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/github.proto       --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/telemetry.proto    --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     DEPENDS protobuf
     COMMENT "Compiling clgen protobuf files"
@@ -19,7 +19,7 @@ else ()
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/model.proto        --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/sampler.proto      --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/scrape_repos.proto --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
-    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/github_miner.proto --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
+    COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/github.proto       --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/telemetry.proto    --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMENT "Compiling clgen protobuf files"
   )
