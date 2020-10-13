@@ -85,11 +85,28 @@ class BigQuery(GithubMiner):
 
   def fetch(self):
 
-    # Filecount of requested file specifications.
-    mainfile_count, otherfile_count = self.dataset.filecount
+    # Get contentfiles.
+    mainf_it, otherf_it = self.dataset.contentfile_query()
+    if mainf_it is not None:
+      for en, mf in enumerate(mainf_it):
+        self.storage.save(bigQuery_database.bqFile(
+            **bigQuery_database.bqFile.FromArgs(en, mf)
+          )
+        )
+    if otherf_it is not None:
+      for en, of in enumerate(otherf_it):
+        self.storage.save(bigQuery_database.bqFile(
+            **bigQuery_database.bqFile.FromArgs(en, of)
+          )
+        )
 
     # Get repository list of requested file specifications.
-    mainrep_it, otherrep_it = self.dataset.repository_query()
+    # If contentfile_query has taken place, use cached results instead of re-querying.
+    if not mainf_it and not otherf_it:
+      mainrep_it, otherrep_it = self.dataset.repository_query()
+    else:
+      mainrep_it, otherrep_it = mainf_it, otherf_it
+
     if mainrep_it is not None:
       main_repo_count = 0
       for en, mr in enumerate(mainrep_it):
@@ -108,20 +125,11 @@ class BigQuery(GithubMiner):
         )
         other_repo_count = en
 
-    # Get contentfiles.
-    mainf_it, otherf_it = self.dataset.contentfile_query()
-    if mainf_it is not None:
-      for en, mf in enumerate(mainf_it):
-        self.storage.save(bigQuery_database.bqFile(
-            **bigQuery_database.bqFile.FromArgs(en, mf)
-          )
-        )
-    if otherf_it is not None:
-      for en, of in enumerate(otherf_it):
-        self.storage.save(bigQuery_database.bqFile(
-            **bigQuery_database.bqFile.FromArgs(en, of)
-          )
-        )
+    # Filecount of requested file specifications.
+    # Use cached results if contentfile has taken place.
+    if not mainf_it and not otherf_it:
+      self.dataset.filecount = (mainf_it.page.num_items, otherf_it.page.num_items or 0)
+    mainfile_count, otherfile_count = self.dataset.filecount
 
     query_data = [
       "main_contentfiles : {}".format(mainfile_count),
