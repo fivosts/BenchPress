@@ -72,13 +72,12 @@ class Dataset(object):
     dataset.location = "US"
     try:
       dataset = self.client.get_dataset(dataset_id)
-      return dataset
     except google.api_core.exceptions.NotFound:
       dataset = self.client.create_dataset(dataset, timeout = 30)
     except Exception as e:
       raise e
 
-    return dataset, self._setupTables(self, dataset_id)
+    return dataset, self._setupTables(dataset_id)
 
   def _setupTables(self, dataset_id: str) -> typing.Dict[str, bigquery.Table]:
     """API request that gets or sets bigquery.Table instances."""
@@ -87,9 +86,9 @@ class Dataset(object):
       'bq_repofiles'   : bigQuery_database.bqRepo.bqSchema,
       'bq_data'        : bigQuery_database.bqData.bqSchema,
     }
-    for reg, sc in table_reg.items():
+    for reg, get_sc in table_reg.items():
       table_id = "{}.{}".format(dataset_id, reg)
-      table = bigquery.Table(table_id, schema = sc)
+      table = bigquery.Table(table_id, schema = get_sc())
       try:
         table_reg[reg] = self.client.get_table(table_id)
       except Exception as e:
