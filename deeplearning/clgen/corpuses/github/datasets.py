@@ -153,7 +153,7 @@ class openclDataset(Dataset):
     self.query_exception = ' AND (' + ' OR '.join([
         "(substr(file.path, {}, {}) = '{}' AND contentfile.content LIKE '%kernel void%')"
           .format(-len(ext), 1+len(ext), ext)
-      for ext in ['.c', '.cc', '.cpp', '.cxx', '.c++']
+      for ext in ['.c', '.cc', '.cpp', '.cxx', '.c++', '.h', '.hpp']
     ]) + ')'
     super(openclDataset, self).__init__(client, "opencl")
     return
@@ -216,7 +216,7 @@ class cDataset(Dataset):
   def __init__(self,
                client: bigquery.Client,
                ):
-    self.extensions = ['.c']
+    self.extensions = ['.c', '.h']
     super(cDataset, self).__init__(client, "c")
     return
 
@@ -225,7 +225,7 @@ class cppDataset(Dataset):
   def __init__(self,
                client: bigquery.Client,
                ):
-    self.extensions = ['.cpp', 'cc', '.cxx', '.c++']
+    self.extensions = ['.cpp', 'cc', '.cxx', '.c++', '.h', '.hpp']
     super(cppDataset, self).__init__(client, "cpp")
     return
 
