@@ -20,7 +20,7 @@ class bqData(Base):
   value : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
 
   @staticmethod
-  def bqSchema(cls) -> typing.List[bigquery.SchemaField]:
+  def bqSchema() -> typing.List[bigquery.SchemaField]:
     return [
       bigquery.SchemaField("key",   "STRING", mode = "REQUIRED"),
       bigquery.SchemaField("value", "STRING", mode = "REQUIRED"),
@@ -45,8 +45,7 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
   date_added     : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
-  def FromArgs(cls, 
-               id: int,
+  def FromArgs(id: int,
                row
                ) -> typing.Dict[str, typing.Any]:
 
@@ -93,8 +92,7 @@ class bqRepo(Base, sqlutil.ProtoBackedMixin):
   date_added     : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
-  def FromArgs(cls, 
-               id: int,
+  def FromArgs(id: int,
                row
                ) -> typing.Dict[str, typing.Any]:
     return {
