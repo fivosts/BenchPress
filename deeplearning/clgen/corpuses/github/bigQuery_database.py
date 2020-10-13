@@ -122,6 +122,7 @@ class bqDatabase(sqlutil.Database):
   @property
   def count(self):
     return (self.repo_count, self.file_count)
+
   @property
   def file_count(self):
     with self.Session() as s:
