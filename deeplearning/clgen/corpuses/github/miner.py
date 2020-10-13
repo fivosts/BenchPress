@@ -7,44 +7,47 @@ import time
 import requests
 import sys
 import typing
+import pathlib
 import github
 import copy
 
 from base64 import b64decode
 from functools import partial
+from google.cloud import bigquery
 
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.proto import github_pb2
+from deeplearning.clgen.corpuses.github import datasets
 
 class GithubMiner(object):
   """Base abstract class of a github miner"""
 
   @classmethod
-  def FromConfig(cls, config: github_pb2.GithubMiner) -> GithubMiner:
+  def FromConfig(cls, config: github_pb2.GithubMiner):
     """Constructs github miner from protobuf configuration."""
     try:
       pbutil.AssertFieldIsSet(config, "path")
       pbutil.AssertFieldIsSet(config, "data_format")
       pbutil.AssertFieldIsSet(config, "miner")
 
-      if config.miner.HasField("big_query"):
-        pbutil.AssertFieldIsSet(config.miner.big_query, "credentials")
+      if config.HasField("big_query"):
+        pbutil.AssertFieldIsSet(config.big_query, "credentials")
         pbutil.AssertFieldConstraint(
-          config.miner.big_query,
+          config.big_query,
           "language",
           lambda x: x in {'generic', 'opencl', 'c', 'cpp', 'java', 'python'},
           "language must be one of opencl, c, cpp, java, python. 'generic' for language agnostic queries.",
         )
         return BigQuery(config)
-      elif config.miner.HasField("recursive"):
+      elif config.HasField("recursive"):
         pbutil.AssertFieldConstraint(
-          config.miner.recursive,
+          config.recursive,
           "flush_limit_K",
           lambda x: x>0,
           "flush limit cannot be non-positive."
           )
         pbutil.AssertFieldConstraint(
-          config.miner.recursive,
+          config.recursive,
           "corpus_size_K",
           lambda x: x>0,
           "corpus size cannot be non-positive."
@@ -53,7 +56,7 @@ class GithubMiner(object):
           raise NotImplementedError("RecursiveFetcher only stores files in local folder.")
         return RecursiveFetcher(config)
       else:
-        raise SystemError("{} miner not recognized".format(config.miner))
+        raise SystemError("{} miner not recognized".format(config))
     except Exception as e:
       raise e
 
@@ -68,7 +71,7 @@ class BigQuery(GithubMiner):
                config: github_pb2.GithubMiner
                ):
     super(BigQuery, self).__init__()
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(pathlib.Path(config.credentials, must_exist = True))
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(pathlib.Path(config.big_query.credentials, must_exist = True))
     self.cache_path = pathlib.Path(config.path, must_exist = False, parents = True)
 
     self.config  = bigquery.QueryJobConfig(allowLargeResults = True)
@@ -348,8 +351,8 @@ class RecursiveFetcher(GithubMiner):
     self.token           = git_credentials['GITHUB_TOKEN']
     self.repo_handler    = GithubRepoHandler(
       self.corpus_path, 
-      config.miner.recursive.corpus_size_K * 1000,
-      config.miner.recursive.flush_limit_K * 1000,
+      config.recursive.corpus_size_K * 1000,
+      config.recursive.flush_limit_K * 1000,
     )
 
     self.current_status  = ""
