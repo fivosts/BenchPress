@@ -14,6 +14,9 @@ jobs:
             equal: ["from_source", <<parameters.python_version>>]
           steps:
             - run:
+                name: Remove global cmake
+                command: sudo apt remove cmake
+            - run:
                 name: Bootstrap application without sudo
                 command: |
                   echo -e "cmake\nn\ny" | bash requirements.apt
@@ -22,14 +25,14 @@ jobs:
             not equal: ["from_source", <<parameters.python_version>>]
           steps:
           - run:
+              name: Remove global cmake
+              command: sudo apt remove cmake
+          - run:
               name: Bootstrap application with sudo
               command: |
                 echo -e "cmake\ny\n<<parameters.python_version>>\ny" | bash requirements.apt
       - run:
           command: mkdir build && cd build
-      - run:
-          name: Remove global cmake
-          command: sudo apt remove cmake
       - run:
           name: Build application
           command: ../cmake/bin/cmake .. -DPYTHON=<<parameters.python_version>>
