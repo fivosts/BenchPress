@@ -32,13 +32,16 @@ jobs:
               command: |
                 echo -e "cmake\ny\n<<parameters.python_version>>\ny" | bash requirements.apt
       - run:
-          command: mkdir build && cd build
-      - run:
           name: Build application
-          command: ../cmake/bin/cmake .. -DPYTHON=<<parameters.python_version>>
+          command: |
+            mkdir build
+            cd build
+            ../cmake/bin/cmake .. -DPYTHON=<<parameters.python_version>>
       - run:
           name: Compile application
-          command: make -j $(nproc)
+          command: |
+            cd build
+            make -j $(nproc)
 
 workflows:
   version: 2
