@@ -45,7 +45,6 @@ from absl import flags
 from labm8.py import hashcache
 import humanize
 from deeplearning.clgen.util import pbutil
-from labm8.py import prof
 from labm8.py import sqlutil
 from eupy.native import logger as l
 
@@ -318,24 +317,23 @@ class Corpus(object):
     Returns:
       The encoded corpus.
     """
-    with prof.Profile("GetTrainingData()"):
-      # Load all indices from the database into memory, and keep them there.
-      # This is to remove the latency from reading the contents from a
-      # database.
-      #
-      # TODO(https://github.com/ChrisCummins/clgen/issues/128): Storing the
-      # entire corpus in memory like this prevents training on corpuses larger
-      # than system memory. Replace this method with an interface for streaming
-      # data from the encoded database.
-      if self._indices_arrays is None:
-        with self.encoded.Session() as session:
-          query = session.query(encoded.EncodedContentFile)
-          self._indices_arrays = np.array([x.indices_array for x in query])
+    # Load all indices from the database into memory, and keep them there.
+    # This is to remove the latency from reading the contents from a
+    # database.
+    #
+    # TODO(https://github.com/ChrisCummins/clgen/issues/128): Storing the
+    # entire corpus in memory like this prevents training on corpuses larger
+    # than system memory. Replace this method with an interface for streaming
+    # data from the encoded database.
+    if self._indices_arrays is None:
+      with self.encoded.Session() as session:
+        query = session.query(encoded.EncodedContentFile)
+        self._indices_arrays = np.array([x.indices_array for x in query])
 
-      if shuffle:
-        random.shuffle(self._indices_arrays)
+    if shuffle:
+      random.shuffle(self._indices_arrays)
 
-      return self._indices_arrays
+    return self._indices_arrays
 
   def GetNumContentFiles(self) -> int:
     """Get the number of contentfiles which were pre-processed."""
