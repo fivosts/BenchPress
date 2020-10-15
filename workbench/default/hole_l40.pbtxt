@@ -33,9 +33,10 @@ model {
     max_position_embeddings: 1024
     type_vocab_size: 16
     initializer_range: 0.02
+    layer_norm_eps: 1e-12
   }
   training {
-    num_train_steps: 120000
+    num_train_steps: 300000
     num_warmup_steps: 5000
     sequence_length: 1024
     batch_size: 16
@@ -61,7 +62,7 @@ model {
   }
 }
 sampler {
-  train_set: true
+  validation_set: true
   batch_size: 2
   sequence_length: 1024
   temperature_micros: 500000  # = 0.8 real value
