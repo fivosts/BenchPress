@@ -6,9 +6,18 @@ import progressbar
 import humanize
 import google
 from google.cloud import bigquery
+from absl import flags
 
 from deeplearning.clgen.corpuses.github import bigQuery_database
 from eupy.native import logger as l
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_boolean(
+  "bq_wait_permission",
+  True,
+  "Ask for permission every time a query is about to happen."
+)
 
 class Dataset(object):
   """Representation of dataset instance in Big Query"""
@@ -64,9 +73,10 @@ class Dataset(object):
     self.dataset, self.tables = self._setupDataset(
       "{}.clgen_{}_github".format(self.client.project, dataset_id or "generic")
     )
-    self.queryConfig = lambda qt : bigquery.QueryJobConfig(
+    self.queryConfig = lambda qt, dr = False : bigquery.QueryJobConfig(
       destination = self.tables[qt],
       write_disposition = 'WRITE_TRUNCATE',
+      dry_run = dr,
     )
 
     self.extensions = extensions
@@ -116,12 +126,21 @@ class Dataset(object):
     Queries the file count of files intended to query.
     Returns file count in int.
     """
-    l.getLogger().info("Running file count query...")
     query = """
     SELECT COUNT(*)
     FROM `bigquery-public-data.github_repos.files` as file
     {}
     """.format("" if not self.query_file_id else "WHERE " + self.query_file_id)
+
+    if FLAGS.bq_wait_permission:
+      dry_run_job = self.client.query(query, job_config = self.queryConfig('dry_run'))
+      l.getLogger().warn("This query is going to consume {}".format(
+          humanize.naturalsize(dry_run_job.total_bytes_processed)
+        )
+      )
+      l.getLogger().warn("Hit any button to continue...")
+      input()
+    l.getLogger().info("Running file count query...")
 
     try:
       job = self.client.query(query)
@@ -134,12 +153,22 @@ class Dataset(object):
 
   def repository_query(self) -> typing.Tuple[typing.Callable]:
     """Returns iterable of query files"""
-    l.getLogger().info("Retrieving repository list of specs...")
     query = """
     SELECT DISTINCT file.repo_name, file.ref
     FROM `bigquery-public-data.github_repos.files` as file
     {}
     """.format("" if not self.query_file_id else "WHERE " + self.query_file_id)
+
+    if FLAGS.bq_wait_permission:
+      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_repofiles', dr = True))
+      l.getLogger().warn("This query is going to consume {}".format(
+          humanize.naturalsize(dry_run_job.total_bytes_processed)
+        )
+      )
+      l.getLogger().warn("Hit any button to continue...")
+      input()
+    l.getLogger().info("Retrieving repository list of specs...")
+
     try:
       rows = self.client.query(query, job_config = self.queryConfig('bq_repofiles')).result()
     except google.api_core.exceptions.Forbidden as e:
@@ -149,7 +178,6 @@ class Dataset(object):
 
   def contentfile_query(self) -> typing.Tuple[typing.Callable]:
     """Returns iterable of query files"""
-    l.getLogger().info("Retrieving {} contentfiles...".format(self.dataset.dataset_id))
     query = """
     SELECT file.repo_name, file.path, file.ref, file.mode, 
            file.id, file.symlink_target, contentfile.size, 
@@ -157,6 +185,17 @@ class Dataset(object):
     FROM `bigquery-public-data.github_repos.contents` as contentfile
     INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
     """.format("" if not self.query_file_id else "AND (" + self.query_file_id + ")")
+
+    if FLAGS.bq_wait_permission:
+      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_contentfiles', dr = True))
+      l.getLogger().warn("This query is going to consume {}".format(
+          humanize.naturalsize(dry_run_job.total_bytes_processed)
+        )
+      )
+      l.getLogger().warn("Hit any button to continue...")
+      input()
+    l.getLogger().info("Retrieving {} contentfiles...".format(self.dataset.dataset_id))
+
     try:
       rows = self.client.query(query, job_config = self.queryConfig('bq_contentfiles')).result()
     except google.api_core.exceptions.Forbidden as e:
