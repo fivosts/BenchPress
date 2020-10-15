@@ -64,7 +64,7 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
       "copies"         : row['copies']         if row['copies']         else "None",
       "date_added"     : datetime.datetime.utcnow(),
     }
-  
+
   @staticmethod
   def bqSchema() -> typing.List[bigquery.SchemaField]:
     return [
@@ -79,6 +79,22 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
       bigquery.SchemaField("binary",         "BOOLEAN", mode = "REQUIRED"),
       bigquery.SchemaField("copies",         "INTEGER", mode = "REQUIRED"),
     ]
+
+  def ToDict(self) -> typing.Dict[str, typing.Any]:
+    return {
+      "id"             : self.id,
+      "sha256"         : self.sha256,
+      "repo_name"      : self.repo_name,
+      "ref"            : self.ref,
+      "path"           : self.path,
+      "mode"           : self.mode,
+      "symlink_target" : self.symlink_target,
+      "size"           : self.size,
+      "content"        : self.content,
+      "binary"         : self.binary,
+      "copies"         : self.copies,
+      "date_added"     : self.date_added,
+    }
 
 class bqRepo(Base, sqlutil.ProtoBackedMixin):
   """
@@ -108,6 +124,14 @@ class bqRepo(Base, sqlutil.ProtoBackedMixin):
       bigquery.SchemaField("repo_name", "STRING", mode = "REQUIRED"),
       bigquery.SchemaField("ref",       "STRING", mode = "REQUIRED"),
     ]
+
+  def ToDict(self) -> typing.Dict[str, typing.Any]:
+    return {
+      "id"             : self.id,
+      "repo_name"      : self.repo_name,
+      "ref"            : self.ref,
+      "date_added"     : self.date_added,
+    }
 
 class bqDatabase(sqlutil.Database):
   """A database of BigQuery contentfiles."""
