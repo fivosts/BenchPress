@@ -2,7 +2,7 @@ github_miner {
   path: "."
   data_format: sql
   big_query {
-    credentials: "/home/fivosts/PhD/Code/clgen/deeplearning/clgen/corpuses/BigQuery_credentials.json"
+    credentials: "/home/fivosts/PhD/Code/clgen/deeplearning/clgen/corpuses/2nd_acc_creds.json"
     language: "opencl"
   }
 }
