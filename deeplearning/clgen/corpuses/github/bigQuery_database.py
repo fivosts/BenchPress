@@ -80,7 +80,7 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
       bigquery.SchemaField("copies",         "INTEGER", mode = "REQUIRED"),
     ]
 
-  def ToDict(self) -> typing.Dict[str, typing.Any]:
+  def ToJSONDict(self) -> typing.Dict[str, typing.Any]:
     return {
       "id"             : self.id,
       "sha256"         : self.sha256,
@@ -93,7 +93,7 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
       "content"        : self.content,
       "binary"         : self.binary,
       "copies"         : self.copies,
-      "date_added"     : self.date_added,
+      "date_added"     : str(self.date_added.strftime("%m/%d/%Y, %H:%M:%S")),
     }
 
 class bqRepo(Base, sqlutil.ProtoBackedMixin):
@@ -125,12 +125,12 @@ class bqRepo(Base, sqlutil.ProtoBackedMixin):
       bigquery.SchemaField("ref",       "STRING", mode = "REQUIRED"),
     ]
 
-  def ToDict(self) -> typing.Dict[str, typing.Any]:
+  def ToJSONDict(self) -> typing.Dict[str, typing.Any]:
     return {
       "id"             : self.id,
       "repo_name"      : self.repo_name,
       "ref"            : self.ref,
-      "date_added"     : self.date_added,
+      "date_added"     : str(self.date_added.strftime("%m/%d/%Y, %H:%M:%S")),
     }
 
 class bqDatabase(sqlutil.Database):
