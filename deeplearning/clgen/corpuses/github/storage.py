@@ -194,6 +194,77 @@ class fileStorage(Storage):
         self.repos.add(entry)
     return
 
+class JSONStorage(Storage):
+
+  @property
+  def repocount(self):
+    return len(self.repos)
+
+  @property
+  def filecount(self):
+    return self.file_count
+
+  def __init__(self,
+               path: pathlib.Path,
+               name: str,
+               extension: str
+               ):
+    super(JSONStorage, self).__init__(path, name, extension)
+    self.jsonfile_count = 0
+    self.file_count = 0
+
+    self.data  = None
+    self.repos = set()
+    self.files = []
+
+    return
+
+  def __exit__(self, path, name, extension):
+    with open(self.path / "repos_list.json", 'w') as outf:
+      json.dump(
+        [
+          {
+            'repo_name': x.split(', ')[0],
+            'ref': x.split(', ')[1]
+          } for x in self.repos
+        ],
+        f,
+        sort_keys = True,
+        indent = 2
+      )
+    self.repos = set()
+    with open(self.path / "data.txt", 'w') as outf:
+      outf.write(self.data)
+    self.data = None
+    return
+
+  def save(self,
+           contentfile: typing.Union[
+                          bigQuery_database.bqData,
+                          bigQuery_database.bqFile,
+                          bigQuery_database.bqRepo
+                        ]
+           ) -> None:
+    if isinstance(contentfile, bigQuery_database.bqData):
+      self.data = "{}\n\n{}".format(contentfile.key, contentfile.value)
+    elif isinstance(contentfile, bigQuery_database.bqRepo):
+      entry = "{}, {}".format(contentfile.repo_name, contentfile.ref)
+      if entry not in self.repos:
+        self.repos.add(entry)
+    else:
+      self.files.append(contentfile.ToDict())
+      self.file_count += 1
+      if self.file_count % 500000:
+        self._flush_json()
+    return
+
+  def _flush_json(self) -> None:
+    with open(self.path / "{}.json".format(self.jsonfile_count), 'w') as outf:
+      json.dump(outf, self.files)
+    self.jsonfile_count += 1
+    self.files = []
+    return
+
 class dbStorage(Storage):
 
   @property
