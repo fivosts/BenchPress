@@ -8,6 +8,7 @@ import shutil
 import pathlib
 import progressbar
 import humanize
+import functools
 from google.cloud import bigquery
 
 from deeplearning.clgen.proto import github_pb2
@@ -24,10 +25,12 @@ class Storage(object):
                data_format: int
                ):
     return {
-      github_pb2.GithubMiner.DataFormat.zip   : zipStorage,
-      github_pb2.GithubMiner.DataFormat.folder: fileStorage,
-      github_pb2.GithubMiner.DataFormat.sql   : dbStorage,
-      github_pb2.GithubMiner.DataFormat.bq    : bqStorage,
+      github_pb2.GithubMiner.DataFormat.zip    : zipStorage,
+      github_pb2.GithubMiner.DataFormat.folder : fileStorage,
+      github_pb2.GithubMiner.DataFormat.json   : functools.partial(JSONStorage, with_zip = False),
+      github_pb2.GithubMiner.DataFormat.jsonzip: functools.partial(JSONStorage, with_zip = True),
+      github_pb2.GithubMiner.DataFormat.sql    : dbStorage,
+      github_pb2.GithubMiner.DataFormat.bq     : bqStorage,
     }[data_format](path, name, extension)
 
   def __init__(self,
@@ -153,11 +156,12 @@ class fileStorage(Storage):
                ):
     super(fileStorage, self).__init__(path, name, extension)
     self.file_count = 0
-    (self.cache_path / self.name).mkdir(exist_ok = True)
+    self.cache_path = self.cache_path / self.name
+    (self.cache_path).mkdir(exist_ok = True)
     self.repos = set()
 
   def __exit__(self, path, name, extension) -> None:
-    with open(self.cache_path / self.name / "repos_list.json", 'w') as f:
+    with open(self.cache_path / "repos_list.json", 'w') as f:
       json.dump(
         [
           {
@@ -180,13 +184,13 @@ class fileStorage(Storage):
            ) -> None:
     if isinstance(contentfile, bigQuery_database.bqFile):
       if contentfile.content is not None:
-        with open(self.cache_path / self.name / "{}{}".format(self.file_count, self.extension), 'w') as f:
+        with open(self.cache_path / "{}{}".format(self.file_count, self.extension), 'w') as f:
           f.write(contentfile.content)
         self.file_count += 1
       else:
         raise ValueError("Wrong format of input contentfile.")
     elif isinstance(contentfile, bigQuery_database.bqData):
-      with open(self.cache_path / self.name / "data.txt", 'w') as f:
+      with open(self.cache_path / "data.txt", 'w') as f:
         f.write("{}\n\n{}".format(contentfile.key, contentfile.value))
     elif isinstance(contentfile, bigQuery_database.bqRepo):
       entry = "{}, {}".format(contentfile.repo_name, contentfile.ref)
@@ -207,9 +211,13 @@ class JSONStorage(Storage):
   def __init__(self,
                path: pathlib.Path,
                name: str,
-               extension: str
+               extension: str,
+               with_zip: bool,
                ):
     super(JSONStorage, self).__init__(path, name, extension)
+    self.cache_path = self.cache_path / self.name
+    (self.cache_path).mkdir(exist_ok = True)
+
     self.jsonfile_count = 0
     self.file_count = 0
 
@@ -220,7 +228,11 @@ class JSONStorage(Storage):
     return
 
   def __exit__(self, path, name, extension):
-    with open(self.path / "repos_list.json", 'w') as outf:
+  
+    if len(self.files) > 0:
+      self._flush_json()
+  
+    with open(self.cache_path / "repos_list.json", 'w') as outf:
       json.dump(
         [
           {
@@ -233,9 +245,11 @@ class JSONStorage(Storage):
         indent = 2
       )
     self.repos = set()
-    with open(self.path / "data.txt", 'w') as outf:
+  
+    with open(self.cache_path / "data.txt", 'w') as outf:
       outf.write(self.data)
     self.data = None
+
     return
 
   def save(self,
@@ -259,8 +273,29 @@ class JSONStorage(Storage):
     return
 
   def _flush_json(self) -> None:
-    with open(self.path / "{}.json".format(self.jsonfile_count), 'w') as outf:
+
+    filename = lambda ext: "{}.{}".format(self.jsonfile_count, ext)
+
+    with open(self.cache_path / filename("json"), 'w') as outf:
       json.dump(outf, self.files)
+      if self.with_zip:
+        p = os.getcwd()
+        os.chdir(self.cache_path)
+        cmd = subprocess.Popen(
+          "zip -qr -9 {} {}".format(filename("zip"), filename("json")).split(),
+          stdout = sys.stdout,
+          stderr = sys.stderr
+        )
+        try:
+          out, err = cmd.communicate()
+          os.remove(filename("json"))
+          if err:
+            raise OSError(err)
+        except Exception as e:
+          raise e
+        finally:
+          os.chdir(p)
+
     self.jsonfile_count += 1
     self.files = []
     return

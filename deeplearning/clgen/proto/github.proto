@@ -22,13 +22,17 @@ package github;
 message GithubMiner {
   enum DataFormat {
     // zip file
-    zip    = 0;
+    zip     = 0;
     // folder with files
-    folder = 1;
+    folder  = 1;
+    // folder of multiple json files (equivalent data w/ sql)
+    json    = 2;
+    // Multiple json files, each one compressed to maximum to save space.
+    jsonzip = 3;
     // sqlite db
-    sql    = 2;
+    sql     = 4;
     // BigQuery remote table
-    bq     = 3;
+    bq      = 5;
   }
   oneof miner {
     // BigQuery API
