@@ -1,5 +1,5 @@
 github_miner {
-  path: "."
+  path: "/media/fivosts/Second sata disk"
   data_format: sql
   # data_format: jsonzip
   big_query {
