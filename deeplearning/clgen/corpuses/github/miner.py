@@ -119,6 +119,7 @@ class BigQuery(GithubMiner):
           )
         main_repo_count = self.storage.repocount
 
+      other_repo_count = 0
       if otherrep_it:
         for orep in otherrep_it:
           st.save(bigQuery_database.bqRepo(
@@ -131,7 +132,7 @@ class BigQuery(GithubMiner):
       # Use cached results if contentfile has taken place.
       if mainf_it or otherf_it:
         # self.dataset.filecount = (mainf_it.page.num_items or 0, otherf_it.page.num_items or 0)
-        self.dataset.filecount = (len(mainf_it) or 0, len(otherf_it) or 0)
+        self.dataset.filecount = (len(mainf_it) if mainf_it else 0, len(otherf_it) if otherf_it else 0)
       mainfile_count, otherfile_count = self.dataset.filecount
 
       query_data = [
