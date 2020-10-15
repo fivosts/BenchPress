@@ -225,6 +225,7 @@ function(clgen)
     "PYTHON_BINARY="                         ${PYTHON}  "\n"
     "CLGEN_BINARY="                          ${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH} "/clgen.py\n"
     "export LLVM="                           ${LLVM} "\n"
+    "export LLVM_LIB="                       ${LLVM}/lib "\n"
     "export LIBCXX_HEADERS="                 ${LLVM}/include/c++/v1 "\n"
     "export LIBCLC="                         ${LIBCLC} "\n"
     "export CLANG="                          ${LLVM}/bin/clang "\n"
@@ -234,9 +235,9 @@ function(clgen)
     "export CLANG_FORMAT="                   ${LLVM}/bin/clang-format "\n"
     "export CLANG_HEADERS="                  ${LLVM}/lib/clang/6.0.0/include "\n"
     "export CLANG_REWRITER="                 ${CLANG_REWRITER} "\n"
-    "export GOOGLE_APPLICATION_CREDENTIALS=" ${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH} "/corpuses/BigQuery_credentials.json\n"
     "eval PYTHONPATH="                       ${CMAKE_CURRENT_SOURCE_DIR} " $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
     "unset LLVM\n"
+    "unset LLVM_LIB\n"
     "unset LIBCXX_HEADERS\n"
     "unset LIBCLC\n"
     "unset CLANG\n"
@@ -246,7 +247,6 @@ function(clgen)
     "unset CLANG_FORMAT\n"
     "unset CLANG_HEADERS\n"
     "unset CLANG_REWRITER\n"
-    "unset GOOGLE_APPLICATION_CREDENTIALS\n"
   )
   file(
     WRITE ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CLGEN}

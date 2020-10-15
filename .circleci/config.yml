@@ -1,76 +1,54 @@
 version: 2.1
 
-workflows:
-  workflow:
-    jobs:
-      - build:
-          matrix:
-            parameters:
-              version: ["0.1", "0.2", "0.3"]
-              platform: ["macos", "windows", "linux"]
-          filters:
-            branches:
-              only: master
-
-
-
 jobs:
-  build:
-    docker:
-      - image: circleci/python:3.6.2-stretch-browsers
-        environment:
-          FLASK_CONFIG: testing
-          TEST_DATABASE_URL: postgresql://ubuntu@localhost/circle_test?sslmode=disable
-      - image: circleci/postgres:9.6.5-alpine-ram
-        environment:
-          POSTGRES_USER: ubuntu
-          POSTGRES_DB: circle_test
-          POSTGRES_PASSWORD: ''
+  build_clgen:
+    parameters:
+      python_version:
+        type: string
+    machine:
+      image: ubuntu-2004:202008-01
     steps:
       - checkout
-      - run: mkdir test-reports
+      - when:
+          condition: 
+            equal: ["from_source", <<parameters.python_version>>]
+          steps:
+            - run:
+                name: Remove global cmake
+                command: sudo apt remove cmake
+            - run:
+                name: Bootstrap application without sudo
+                command: |
+                  echo -e "cmake\nn\ny" | bash requirements.apt
+      - when:
+          condition: 
+            not equal: ["from_source", <<parameters.python_version>>]
+          steps:
+          - run:
+              name: Remove global cmake
+              command: sudo apt remove cmake
+          - run:
+              name: Bootstrap application with sudo
+              command: |
+                echo -e "cmake\ny\n<<parameters.python_version>>\ny" | bash requirements.apt
       - run:
-          name: Download Selenium
+          name: Build application
           command: |
-            curl -O http://selenium-release.storage.googleapis.com/3.5/selenium-server-standalone-3.5.3.jar
+            mkdir build
+            cd build
+            ../cmake/bin/cmake .. -DPYTHON=<<parameters.python_version>>
       - run:
-          name: Start Selenium
+          name: Compile application
           command: |
-            java -jar selenium-server-standalone-3.5.3.jar -log test-reports/selenium.log
-          background: true
-      - restore_cache:
-          key: deps2-{{ checksum "requirements/dev.txt" }}
-      - run:
-          command: |
-            python3 -m venv venv
-            . venv/bin/activate
-            pip install -r requirements/dev.txt
+            cd build
+            make -j $(nproc)
 
-
-os: linux
-dist: bionic
-
-language:
-  - python
-
-python:
-  - "3.7"
-
-services:
-  - mysql
-
-install:
-  - bash apt_deps.sh
-  - sudo cp /usr/lib/python3/dist-packages/apt_pkg.cpython-{36m,37m}-x86_64-linux-gnu.so
-  - sudo cp /usr/lib/python3/dist-packages/apt_inst.cpython-{36m,37m}-x86_64-linux-gnu.so
-  - bazel build //deeplearning/clgen
-
-before_script:
-  - python3 --version
-  - python --version
-  - bazel --version
-  - gcc --version
-  - python -m pip list tensorflow | grep tensorflow
-
-script:
-  - bazel-bin/deeplearning/clgen/clgen --min_samples 5 --config deeplearning/clgen/tests/data/tiny/config.pbtxt
+workflows:
+  version: 2
+  python_versions:
+    jobs:
+      - build_clgen:
+          matrix:
+            parameters:
+              python_version: ["python3.5", "python3.6", "python3.7", "python3.8", "from_source"]
+          name: << matrix.python_version >>

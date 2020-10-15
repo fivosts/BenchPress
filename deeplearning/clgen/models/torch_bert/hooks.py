@@ -2,7 +2,7 @@ import json
 import numpy as np
 import pathlib
 
-from deeplearning.clgen import validation_database
+from deeplearning.clgen.samplers import validation_database
 from eupy.native import logger as l
 from eupy.native import plotter as plt
 
@@ -157,14 +157,14 @@ class validationSampleHook(object):
     masked_lm_lengths     = inputs['masked_lm_lengths'].cpu().numpy()
     next_sentence_labels  = inputs['next_sentence_labels'].cpu().numpy()
     
-    masked_lm_ids = [[x for x in batch if x != -100] for batch in inputs['mask_labels'].cpu().numpy()]
-    masked_lm_positions = [[idx for idx, x in enumerate(batch) if x != -100] for batch in inputs['mask_labels'].cpu().numpy()]
+    masked_lm_ids = [[x for x in batch if x != -100] for batch in inputs['mask_labels'].numpy()]
+    masked_lm_positions = [[idx for idx, x in enumerate(batch) if x != -100] for batch in inputs['mask_labels'].numpy()]
 
     masked_lm_predictions = [
           [np.argmax(outputs.prediction_logits.cpu().numpy()[batch][x]) for x in masked_lm_positions[batch]] 
           for batch in range(self.batch_size)
         ]
-    next_sentence_predictions = [[np.argmax(x) for x in batch][-1] for batch in outputs.seq_relationship_logits.cpu().numpy()]
+    next_sentence_predictions = [[np.argmax(x) for x in batch][-1] for batch in outputs.seq_relationship_logits.numpy()]
 
     for target, prediction in zip(masked_lm_ids, masked_lm_predictions):
       if target == prediction:

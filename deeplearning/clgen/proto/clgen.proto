@@ -26,6 +26,7 @@ option java_package = "com.clgen";
 
 import "deeplearning/clgen/proto/model.proto";
 import "deeplearning/clgen/proto/sampler.proto";
+import "deeplearning/clgen/proto/github.proto";
 
 // A CLgen instance encapsulates all of the settings for training and sampling
 // a language model.
@@ -34,15 +35,17 @@ message Instance {
   // caches files, including the corpus, model checkpoints, and sampler outputs.
   // If not provided, the default value of $HOME/.cache/clgen is used.
   optional string working_dir = 1;
+  // Optionally, a github miner to scrape files with a requested specification.
+  optional github.GithubMiner github_miner = 2;
   // The language model specification. Either the full description of a model,
   // or the path to a pretrained_model, as created by --export_tf_model option
   // of clgen.
   oneof model_specification {
-    Model model = 2;
+    Model model = 3;
     string pretrained_model = 4;
   }
   // The sampler specification.
-  optional Sampler sampler = 3;
+  optional Sampler sampler = 5;
 }
 
 // A collection of instances.

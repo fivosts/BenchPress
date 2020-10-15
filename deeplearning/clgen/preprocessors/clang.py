@@ -24,6 +24,7 @@ import re
 import subprocess
 import tempfile
 import typing
+import clang.cindex
 from absl import flags
 from deeplearning.clgen.util import environment
 from eupy.native import  logger as l
@@ -49,6 +50,7 @@ CLANG_FORMAT_CONFIG = {
   "AlwaysBreakAfterReturnType": "None",
   "AlwaysBreakAfterDefinitionReturnType": "None",
 }
+clang.cindex.Config.set_library_path(environment.LLVM_LIB)
 CLANG = environment.CLANG
 CLANG_FORMAT = environment.CLANG_FORMAT
 
@@ -61,7 +63,6 @@ def StripPreprocessorLines(src: str) -> str:
   Returns:
     The output with preprocessor output stripped.
   """
-  l.getLogger().debug("deeplearning.clgen.preprocessors.clang.StripPreprocessorLines()")
   lines = src.split("\n")
   # Determine when the final included file ends.
   for i in range(len(lines) - 1, -1, -1):
@@ -97,7 +98,6 @@ def Preprocess(
     ClangException: In case of an error.
     ClangTimeout: If clang does not complete before timeout_seconds.
   """
-  l.getLogger().debug("deeplearning.clgen.preprocessors.clang.Preprocess()")
   cmd = [
     "timeout",
     "-s9",
@@ -129,8 +129,7 @@ def Preprocess(
   else:
     return stdout
 
-
-def CompileLlvmBytecode(
+def ProcessCompileLlvmBytecode(
   src: str, suffix: str, cflags: typing.List[str], timeout_seconds: int = 60
 ) -> str:
   """Compile input code into textual LLVM byte code.
@@ -149,7 +148,6 @@ def CompileLlvmBytecode(
     ClangException: In case of an error.
     ClangTimeout: If clang does not complete before timeout_seconds.
   """
-  l.getLogger().debug("deeplearning.clgen.preprocessors.clang.CompileLlvmBytecode()")
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
   with tempfile.NamedTemporaryFile(
     "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
@@ -161,7 +159,6 @@ def CompileLlvmBytecode(
       + builtin_cflags
       + cflags
     )
-
     process = subprocess.Popen(
       cmd,
       stdout=subprocess.PIPE,
@@ -175,6 +172,34 @@ def CompileLlvmBytecode(
     raise ValueError(stderr)
   return stdout
 
+def CompileLlvmBytecode(
+  src: str, suffix: str, cflags: typing.List[str], timeout_seconds: int = 60
+) -> str:
+  """Compile input code into textual LLVM byte code.
+
+  Args:
+    src: The source code to compile.
+    suffix: The suffix to append to the source code temporary file. E.g. '.c'
+      for a C program.
+    cflags: A list of flags to be passed to clang.
+    timeout_seconds: The number of seconds to allow before killing clang.
+
+  Returns:
+    The textual LLVM byte code.
+
+  """
+  builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
+  with tempfile.NamedTemporaryFile(
+    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
+  ) as f:
+    f.write(src)
+    f.flush()
+    unit = clang.cindex.TranslationUnit.from_source(f.name, args = builtin_cflags + cflags)
+    diagnostics = [str(d) for d in unit.diagnostics if d.severity > 2]
+    if len(diagnostics) > 0:
+      raise ValueError('\n'.join(diagnostics))
+    else:
+      return src
 
 def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
   """Run clang-format on a source to enforce code style.
@@ -192,7 +217,6 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
     ClangFormatException: In case of an error.
     ClangTimeout: If clang-format does not complete before timeout_seconds.
   """
-  l.getLogger().debug("deeplearning.clgen.preprocessors.clang.ClangFormat()")
 
   cmd = [
     "timeout",

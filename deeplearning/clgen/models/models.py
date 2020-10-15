@@ -23,8 +23,8 @@ import humanize
 
 import numpy as np
 
-from deeplearning.clgen import sample_observers as sample_observers_lib
-from deeplearning.clgen import samplers
+from deeplearning.clgen.samplers import sample_observers as sample_observers_lib
+from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import crypto
@@ -79,7 +79,6 @@ class Model(object):
       TypeError: If the config argument is not a Model proto.
       UserError: In case on an invalid config.
     """
-    l.getLogger().debug("deeplearning.clgen.models.Model.__init__()")
     # Error early, so that a cache isn't created.
     if not isinstance(config, model_pb2.Model):
       t = type(config).__name__
@@ -168,7 +167,6 @@ class Model(object):
     }[config.architecture.backend](self.config, self.cache, self.hash)
 
   def GetShortSummary(self) -> str:
-    l.getLogger().debug("deeplearning.clgen.models.Model.GetShortSummary()")
     return self.backend.GetShortSummary()
 
   @staticmethod
@@ -189,7 +187,6 @@ class Model(object):
     Returns:
       The unique model ID.
     """
-    l.getLogger().debug("deeplearning.clgen.models.Model._ComputeHash()")
     config_to_hash = model_pb2.Model()
     config_to_hash.CopyFrom(config)
     config_to_hash.ClearField("corpus")
@@ -202,7 +199,6 @@ class Model(object):
     return crypto.sha1_list(corpus_.hash, config_to_hash.SerializeToString())
 
   def Create(self) -> bool:
-    l.getLogger().debug("deeplearning.clgen.models.Model.Create()")
     if self._created:
       return False
     self._created = True
@@ -232,7 +228,6 @@ class Model(object):
 
   @property
   def dashboard_db_id(self) -> int:
-    l.getLogger().debug("deeplearning.clgen.models.Model.dashboard_db_id()")
     if not self._created:
       raise TypeError("Cannot access dashboard_db_id before Create() called")
     return self._dashboard_db_id
@@ -247,9 +242,7 @@ class Model(object):
       UnableToAcquireLockError: If the model is locked (i.e. there is another
         process currently modifying the model).
     """
-    l.getLogger().debug("deeplearning.clgen.models.Model.Train()")
     self.Create()
-    # with self.training_lock.acquire():
     self.backend.Train(self.corpus, **kwargs)
     telemetry_logs = self.backend.telemetry.EpochTelemetry()
 
@@ -296,7 +289,6 @@ class Model(object):
       InvalidSymtokTokens: If the sampler symmetrical depth tokens cannot be
         encoded.
     """
-    l.getLogger().debug("deeplearning.clgen.models.Model.Sample()")
     if not sample_observers:
       raise ValueError("Cannot sample without any observers")
 
@@ -311,7 +303,6 @@ class Model(object):
     self.backend.InitSampling(sampler, seed)
     [obs.Specialize(self, sampler) for obs in sample_observers]
 
-    # with sampler.db.Session(commit = True) as db_sess:
     batch_count = 1
     try:
       while self._SampleBatch(sampler, atomizer, sample_observers, epoch):
@@ -384,7 +375,7 @@ class Model(object):
             except ValueError:
               compile_flag = False
 
-            sample    = model_pb2.Sample(
+            sample = model_pb2.Sample(
               train_step                = epoch,
               text                      = "".join(sample_kernel),
               sample_indices            = step_ind,
@@ -403,7 +394,6 @@ class Model(object):
             continue_sampling &= all(
               [obs.OnSample(sample) for obs in sample_observers]
             )
-
             # Wall sample time is the difference between the end of the previous
             # sample and the end of the current sample.
             wall_time_start = datetime.datetime.utcnow()

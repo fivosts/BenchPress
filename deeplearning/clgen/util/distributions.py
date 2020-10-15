@@ -1,14 +1,19 @@
 """Statistical distributions used for sampling"""
 import pathlib
+import typing
 import numpy as np
 
 from deeplearning.clgen.proto import model_pb2
 from eupy.native import plotter as plt
 
 class Distribution():
-  def __init__(self, sample_length, log_path, set_name):
+  def __init__(self, 
+               sample_length: int, 
+               log_path     : typing.Union[pathlib.Path, str],
+               set_name     : str
+               ):
     self.sample_length  = sample_length
-    self.log_path       = log_path
+    self.log_path       = log_path if isinstance(log_path, pathlib.Path) else pathlib.Path(log_path)
     self.set_name       = set_name
     self.sample_counter = {}
     return
@@ -16,7 +21,7 @@ class Distribution():
   @classmethod
   def FromHoleConfig(cls, 
                      config: model_pb2.Hole,
-                     log_path: pathlib.Path,
+                     log_path: typing.Union[pathlib.Path, str],
                      set_name: str,
                      ):
     if config.HasField("uniform_distribution"):
@@ -50,6 +55,25 @@ class Distribution():
 
   def plot(self):
     sorted_dict = sorted(self.sample_counter.items(), key = lambda x: x[0])
+    if len(sorted_dict) > 128:
+      self._plot_lines(sorted_dict)
+    else:
+      self._plot_bars(sorted_dict)
+    return
+
+  def _plot_lines(self, sorted_dict):
+    point_set = {
+      self.set_name: {
+        'x': [x for (x, _) in sorted_dict],
+        'y': [y for (_, y) in sorted_dict],
+      }
+    }
+    plt.linesSingleAxis(point_set, 
+      savefig = str(self.log_path / self.set_name) + ".png",
+    )
+    return
+
+  def _plot_bars(self, sorted_dict):
     point_set = [
       {
         'x': [[x for (x, _) in sorted_dict]],
@@ -69,7 +93,10 @@ class PassiveMonitor(Distribution):
   This subclass is used to register values of a specific type, keep track of them
   and bar plot them. E.g. length distribution of a specific encoded corpus.
   """
-  def __init__(self, log_path, set_name):
+  def __init__(self, 
+               log_path: typing.Union[pathlib.Path, str], 
+               set_name: str,
+               ):
     super(PassiveMonitor, self).__init__(None, log_path, set_name)
     return
 
@@ -78,7 +105,11 @@ class UniformDistribution(Distribution):
   A uniform distribution sampler. Get a random number from distribution calling sample()
   Upper range of sampling is defined as [0, sample_length].
   """
-  def __init__(self, sample_length, log_path, set_name):
+  def __init__(self, 
+               sample_length: int,
+               log_path     : typing.Union[pathlib.Path, str],
+               set_name     : str
+               ):
     super(UniformDistribution, self).__init__(sample_length, log_path, set_name)
 
   def sample(self):
@@ -89,7 +120,13 @@ class NormalDistribution(Distribution):
   Normal distribution sampler. Initialized with mean, variance.
   Upper range of sampling is defined as [0, sample_length].
   """
-  def __init__(self, sample_length, mean, variance, log_path, set_name):
+  def __init__(self,
+               sample_length: int,
+               mean         : float,
+               variance     : float,
+               log_path     : typing.Union[pathlib.Path, str],
+               set_name     : str,
+               ):
     super(NormalDistribution, self).__init__(sample_length, log_path, set_name)
     self.mean     = mean
     self.variance = variance

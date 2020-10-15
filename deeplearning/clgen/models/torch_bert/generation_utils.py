@@ -13,13 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import logging
-from typing import Iterable, List, Optional, Tuple
-
-import torch
-from torch import Tensor
-from torch.nn import functional as F
+import typing
+from deeplearning.clgen.util.pytorch import torch
 
 class GenerationMixin:
   """
@@ -108,26 +103,26 @@ class GenerationMixin:
   @torch.no_grad()
   def generate(
     self,
-    input_ids: Optional[torch.LongTensor] = None,
-    max_length: Optional[int] = None,
-    min_length: Optional[int] = None,
-    do_sample: Optional[bool] = None,
-    early_stopping: Optional[bool] = None,
-    num_beams: Optional[int] = None,
-    temperature: Optional[float] = None,
-    top_k: Optional[int] = None,
-    top_p: Optional[float] = None,
-    repetition_penalty: Optional[float] = None,
-    bad_words_ids: Optional[Iterable[int]] = None,
-    bos_token_id: Optional[int] = None,
-    pad_token_id: Optional[int] = None,
-    eos_token_id: Optional[int] = None,
-    length_penalty: Optional[float] = None,
-    no_repeat_ngram_size: Optional[int] = None,
-    num_return_sequences: Optional[int] = None,
-    attention_mask: Optional[torch.LongTensor] = None,
-    decoder_start_token_id: Optional[int] = None,
-    use_cache: Optional[bool] = None,
+    input_ids: typing.Optional[torch.LongTensor] = None,
+    max_length: typing.Optional[int] = None,
+    min_length: typing.Optional[int] = None,
+    do_sample: typing.Optional[bool] = None,
+    early_stopping: typing.Optional[bool] = None,
+    num_beams: typing.Optional[int] = None,
+    temperature: typing.Optional[float] = None,
+    top_k: typing.Optional[int] = None,
+    top_p: typing.Optional[float] = None,
+    repetition_penalty: typing.Optional[float] = None,
+    bad_words_ids: typing.Optional[typing.Iterable[int]] = None,
+    bos_token_id: typing.Optional[int] = None,
+    pad_token_id: typing.Optional[int] = None,
+    eos_token_id: typing.Optional[int] = None,
+    length_penalty: typing.Optional[float] = None,
+    no_repeat_ngram_size: typing.Optional[int] = None,
+    num_return_sequences: typing.Optional[int] = None,
+    attention_mask: typing.Optional[torch.LongTensor] = None,
+    decoder_start_token_id: typing.Optional[int] = None,
+    use_cache: typing.Optional[bool] = None,
     **model_specific_kwargs
   ) -> torch.LongTensor:
     r"""
@@ -182,8 +177,8 @@ class GenerationMixin:
         order to encourage the model to produce longer sequences.
       no_repeat_ngram_size (:obj:`int`, `optional`, defaults to 0):
         If set to int > 0, all ngrams of that size can only occur once.
-      bad_words_ids(:obj:`List[int]`, `optional`):
-        List of token ids that are not allowed to be generated. In order to get the tokens of the words that
+      bad_words_ids(:obj:`typing.List[int]`, `optional`):
+        typing.List of token ids that are not allowed to be generated. In order to get the tokens of the words that
         should not appear in the generated text, use :obj:`tokenizer.encode(bad_word, add_prefix_space=True)`.
       num_return_sequences(:obj:`int`, `optional`, defaults to 1):
         The number of independently computed returned sequences for each element in the batch.
@@ -548,7 +543,7 @@ class GenerationMixin:
         # Top-p/top-k filtering
         next_token_logscores = top_k_top_p_filtering(scores, top_k=top_k, top_p=top_p)
         # Sample
-        probs = F.softmax(next_token_logscores, dim=-1)
+        probs = torch.nn.functional.softmax(next_token_logscores, dim=-1)
         next_token = torch.multinomial(probs, num_samples=1, replacement = True).squeeze(1)
       else:
         # Greedy decoding
@@ -650,7 +645,7 @@ class GenerationMixin:
           next_token_logits, cur_len=cur_len, max_length=max_length
         )
 
-      scores = F.log_softmax(next_token_logits, dim=-1)  # (batch_size * num_beams, vocab_size)
+      scores = torch.nn.functional.log_softmax(next_token_logits, dim=-1)  # (batch_size * num_beams, vocab_size)
 
       scores = self.postprocess_next_token_scores(
         scores=scores,
@@ -685,7 +680,7 @@ class GenerationMixin:
         )  # (batch_size, num_beams * vocab_size)
 
         # Sample 2 next tokens for each beam (so we have some spare tokens and match output of greedy beam search)
-        probs = F.softmax(_scores, dim=-1)
+        probs = torch.nn.functional.softmax(_scores, dim=-1)
         next_tokens = torch.multinomial(probs, num_samples=2 * num_beams)  # (batch_size, num_beams * 2)
         # Compute next scores
         next_scores = torch.gather(_scores, -1, next_tokens)  # (batch_size, num_beams * 2)
@@ -844,11 +839,11 @@ class GenerationMixin:
     return decoded
 
   @staticmethod
-  def _reorder_cache(past: Tuple, beam_idx: Tensor) -> Tuple[Tensor]:
+  def _reorder_cache(past: typing.Tuple, beam_idx: torch.Tensor) -> typing.Tuple[torch.Tensor]:
     return tuple(layer_past.index_select(1, beam_idx) for layer_past in past)
 
 
-def calc_banned_ngram_tokens(prev_input_ids: Tensor, num_hypos: int, no_repeat_ngram_size: int, cur_len: int) -> None:
+def calc_banned_ngram_tokens(prev_input_ids: torch.Tensor, num_hypos: int, no_repeat_ngram_size: int, cur_len: int) -> None:
   """Copied from fairseq for no_repeat_ngram in beam_search"""
   if cur_len + 1 < no_repeat_ngram_size:
     # return no banned tokens if we haven't generated no_repeat_ngram_size tokens yet
@@ -871,7 +866,7 @@ def calc_banned_ngram_tokens(prev_input_ids: Tensor, num_hypos: int, no_repeat_n
   return banned_tokens
 
 
-def calc_banned_bad_words_ids(prev_input_ids: Iterable[int], bad_words_ids: Iterable[int]) -> Iterable[int]:
+def calc_banned_bad_words_ids(prev_input_ids: typing.Iterable[int], bad_words_ids: typing.Iterable[int]) -> typing.Iterable[int]:
   banned_tokens = []
 
   def _tokens_match(prev_tokens, tokens):
@@ -907,7 +902,7 @@ def calc_banned_bad_words_ids(prev_input_ids: Iterable[int], bad_words_ids: Iter
   return banned_tokens
 
 
-def set_scores_to_inf_for_banned_tokens(scores: torch.Tensor, banned_tokens: List[List[int]]) -> None:
+def set_scores_to_inf_for_banned_tokens(scores: torch.Tensor, banned_tokens: typing.List[typing.List[int]]) -> None:
   """ Modifies the scores in place by setting the banned token positions to `-inf`. Banned token is expected to be
   a list of list of banned tokens to ban in the format [[batch index, vocabulary position],...]
     Args:
@@ -932,12 +927,12 @@ def set_scores_to_inf_for_banned_tokens(scores: torch.Tensor, banned_tokens: Lis
 
 
 def top_k_top_p_filtering(
-  logits: Tensor,
+  logits: torch.Tensor,
   top_k: int = 0,
   top_p: float = 1.0,
   filter_value: float = -float("Inf"),
   min_tokens_to_keep: int = 1,
-) -> Tensor:
+) -> torch.Tensor:
   """ Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
     Args:
       logits: logits distribution shape (batch size, vocabulary size)
@@ -955,7 +950,7 @@ def top_k_top_p_filtering(
 
   if top_p < 1.0:
     sorted_logits, sorted_indices = torch.sort(logits, descending=True)
-    cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+    cumulative_probs = torch.cumsum(torch.nn.functional.softmax(sorted_logits, dim=-1), dim=-1)
 
     # Remove tokens with cumulative probability above the threshold (token with 0 are kept)
     sorted_indices_to_remove = cumulative_probs > top_p

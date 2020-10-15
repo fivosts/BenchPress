@@ -28,9 +28,9 @@ import numpy as np
 from absl import flags
 import tqdm
 
-from deeplearning.clgen import samplers
-from deeplearning.clgen import sample_observers
-from deeplearning.clgen import validation_database
+from deeplearning.clgen.samplers import samplers
+from deeplearning.clgen.samplers import sample_observers
+from deeplearning.clgen.samplers import validation_database
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
@@ -207,6 +207,7 @@ class torchBert(backends.BackendBase):
     if self.bert_config is None:
       self._ConfigModelParams()
     self.sampler = sampler
+    self.temperature = sampler.temperature
 
     if sampler.sequence_length > self.bertAttrs['max_position_embeddings']:
       raise ValueError(
@@ -214,9 +215,12 @@ class torchBert(backends.BackendBase):
           "was only trained up to sequence length %d" %
           (sampler.sequence_length, self.bertAttrs['max_position_embeddings']))
 
-    self.temperature = sampler.temperature
-
-    m = model.BertForPreTraining(self.bert_config, atomizer = self.atomizer).to(self.pytorch.device)
+    m = model.BertForPreTraining(
+        self.bert_config,
+        atomizer = self.atomizer,
+        use_categorical = FLAGS.categorical_sampling,
+        temperature = self.temperature
+      ).to(self.pytorch.device)
     if self.pytorch.num_gpus > 1:
       m = self.torch.nn.DataParallel(m)
 
@@ -247,18 +251,20 @@ class torchBert(backends.BackendBase):
     """
     Perform a training step on a batch of inputs.
     """
-    for key, value in inputs.items():
-      inputs[key] = value.to(self.pytorch.device)
+    inputs['input_ids']            = inputs['input_ids'].to(self.pytorch.device)
+    inputs['input_mask']           = inputs['input_mask'].to(self.pytorch.device)
+    inputs['position_ids']         = inputs['position_ids'].to(self.pytorch.device)
+    inputs['mask_labels']          = inputs['mask_labels'].to(self.pytorch.device)
+    inputs['next_sentence_labels'] = inputs['next_sentence_labels'].to(self.pytorch.device)
+
     outputs = model(
                 input_ids            = inputs['input_ids'],
                 attention_mask       = inputs['input_mask'],
                 position_ids         = inputs['position_ids'],
-                labels               = inputs['mask_labels'],
+                masked_lm_labels     = inputs['mask_labels'],
                 next_sentence_labels = inputs['next_sentence_labels'],
-                masked_lm_lengths    = inputs['masked_lm_lengths'],
                 is_training          = is_training,
                 is_prediction        = is_prediction,
-                sampling_temperature = sampling_temperature,
               )
     return outputs
 
@@ -311,9 +317,8 @@ class torchBert(backends.BackendBase):
         self.logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
       if FLAGS.reward_compilation:
-        correct_sample_count = 0
         correct_sample_obs = sample_observers.SamplesDatabaseObserver(
-          "sqlite:///{}".format(self.logfile_path / "correct_samples.db")
+          self.logfile_path / "correct_samples.db"
         )
       else:
         correct_sample_obs = None
@@ -327,7 +332,6 @@ class torchBert(backends.BackendBase):
 
       try:
         self.train.model.train()
-        incr_corr_samples = 0
         for epoch in tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False):
           if epoch < self.current_step // self.steps_per_epoch:
             continue # Stupid bar won't resume.
@@ -371,18 +375,16 @@ class torchBert(backends.BackendBase):
                     date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
                   )
                 )
-                incr_corr_samples    = correct_sample_count - correct_sample_obs.sample_id
-                correct_sample_count = correct_sample_obs.sample_id
             train_hook.step(
-              masked_lm_loss = step_out.masked_lm_loss.item(),
-              next_sentence_loss = step_out.next_sentence_loss.item(),
-              total_loss = total_loss.item(),
-              learning_rate = self.train.scheduler.get_last_lr()[0],
-              compilation_rate = step_out.batch_compilation_rate,
+              masked_lm_loss          = step_out.masked_lm_loss.item(),
+              next_sentence_loss      = step_out.next_sentence_loss.item(),
+              total_loss              = total_loss.item(),
+              learning_rate           = self.train.scheduler.get_last_lr()[0],
+              compilation_rate        = step_out.batch_compilation_rate,
               batch_execution_time_ms = exec_time_ms,
-              time_per_sample_ms = exec_time_ms / self.train_batch_size,
-              num_correct_samples = (incr_corr_samples * min(self.steps_per_epoch, FLAGS.monitor_frequency)
-                                     if correct_sample_obs is not None else None)
+              time_per_sample_ms      = exec_time_ms / self.train_batch_size,
+              num_correct_samples     = (correct_sample_obs.sample_id * min(self.steps_per_epoch, FLAGS.monitor_frequency)
+                                        if correct_sample_obs is not None else None)
             )
             self.train.model.zero_grad()
             if self.current_step == 0:
@@ -602,7 +604,7 @@ class torchBert(backends.BackendBase):
     observers = [sample_observers.PrintSampleObserver()]
     if FLAGS.store_samples_db:
       observers.append(sample_observers.SamplesDatabaseObserver(
-        "sqlite:///{}".format(self.sample_path / sampler.hash / sampler.sample_db_name)
+          self.sample_path / sampler.hash / sampler.sample_db_name
         )
       )
       sampler.symlinkModelDB(

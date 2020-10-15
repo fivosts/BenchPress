@@ -7,7 +7,7 @@ import pathlib
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 from deeplearning.clgen.util.tf import tf
-from deeplearning.clgen import validation_database
+from deeplearning.clgen.samplers import validation_database
 from eupy.native import logger as l
 from eupy.native import plotter as plt
 
@@ -54,18 +54,16 @@ class _tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
     if mode == tf.compat.v1.estimator.ModeKeys.TRAIN:
       ## Training
       self.is_training = True
-      self.current_step = None
     elif mode == tf.compat.v1.estimator.ModeKeys.EVAL:
       ## Validation
       self.is_training = False
-      self.current_step = 0
     elif mode == tf.compat.v1.estimator.ModeKeys.PREDICT:
       ## Sampling
       self.is_training = False
-      self.current_step = None
     else:
       raise ValueError("mode for hook has not been provided")
 
+    self.current_step = None
     self.global_step = _as_graph_element(tf.compat.v1.train.get_or_create_global_step())
     return
 
@@ -87,7 +85,10 @@ class _tfEstimatorHooks(tf.compat.v1.train.SessionRunHook):
     if self.is_training:
       self.current_step = run_values.results[self.global_step]
     else:
-      self.current_step += 1
+      if self.current_step is None:
+        self.current_step = 0
+      else:
+        self.current_step += 1
     return
 
   def end(self, session):
@@ -145,7 +146,7 @@ class AverageSummarySaverHook(_tfEstimatorHooks):
       Any tensor/op should be declared here in order to be evaluated
       returns None or SessionRunArgs()
     """
-    self.step_triggered = self.timer.should_trigger_for_step(self.trigger_step)
+    self.step_triggered = True if self.trigger_step == 0 else self.timer.should_trigger_for_step(1 + self.trigger_step)
     return tf.estimator.SessionRunArgs(self.session_dict)
 
   def after_run(self, run_context, run_values):
@@ -160,13 +161,13 @@ class AverageSummarySaverHook(_tfEstimatorHooks):
       else:
         self.result[tag] = [run_values.results['tensors'][tag]]
 
-    if self.trigger_step == 0:
+    if self.current_step == 0:
       self.summary_writer.add_session_log(
         tf.core.util.event_pb2.SessionLog(status=tf.core.util.event_pb2.SessionLog.START),
         self.current_step
       )
 
-    if self.step_triggered:
+    if self.step_triggered and not (self.trigger_step == 0 and self.current_step > 0):
       self.result = { k: (sum(v) / len(v)) for (k, v) in self.result.items() }
       self._save_summary(self.result)
       self.result = {k: [] for k in self.result}
@@ -176,7 +177,7 @@ class AverageSummarySaverHook(_tfEstimatorHooks):
   def _save_summary(self, tensor_values):
 
     if self.is_training:
-      elapsed_secs, _ = self.timer.update_last_triggered_step(self.trigger_step)
+      elapsed_secs, _ = self.timer.update_last_triggered_step(1 + self.trigger_step if self.trigger_step else 0)
     else:
       elapsed_secs = None
 
@@ -189,6 +190,7 @@ class AverageSummarySaverHook(_tfEstimatorHooks):
       )
     summary = tf.core.framework.summary_pb2.Summary(value = tensor_summary)
     self.summary_writer.add_summary(summary, self.current_step)
+    self.summary_writer.flush()
 
 class tfProgressBar(_tfEstimatorHooks):
   """Real time progressbar to capture tf Estimator training or validation"""
@@ -221,7 +223,7 @@ class tfProgressBar(_tfEstimatorHooks):
       Requested tensors are evaluated and their values are available
     """
     super(tfProgressBar, self).after_run(run_context, run_values)
-    self.bar.update(self.current_step)
+    self.bar.update(1 + self.current_step)
     return
 
 class tfLogTensorHook(_tfEstimatorHooks):
@@ -274,7 +276,7 @@ class tfLogTensorHook(_tfEstimatorHooks):
       Any tensor/op should be declared here in order to be evaluated
       returns None or SessionRunArgs()
     """
-    self.step_triggered = self.timer.should_trigger_for_step(self.trigger_step)
+    self.step_triggered = True if self.trigger_step == 0 else self.timer.should_trigger_for_step(1 + self.trigger_step)
     return tf.estimator.SessionRunArgs(self.session_dict)
     
   def after_run(self, run_context, run_values):
@@ -282,7 +284,7 @@ class tfLogTensorHook(_tfEstimatorHooks):
       Requested tensors are evaluated and their values are available
     """
     super(tfLogTensorHook, self).after_run(run_context, run_values)
-    self.current_epoch = int(self.current_step / self.log_steps)
+    self.current_epoch = int((1 + self.current_step) / self.log_steps)
 
     for tag in self.tensor_tags:
       if self.show_average:
@@ -315,7 +317,7 @@ class tfLogTensorHook(_tfEstimatorHooks):
   def _log_tensors(self, tensor_values):
 
     if self.is_training:
-      elapsed_secs, _ = self.timer.update_last_triggered_step(self.trigger_step)
+      elapsed_secs, _ = self.timer.update_last_triggered_step(1 + self.trigger_step if self.trigger_step else 0)
     else:
       elapsed_secs = None
 
@@ -398,7 +400,7 @@ class tfPlotTensorHook(_tfEstimatorHooks):
       Any tensor/op should be declared here in order to be evaluated
       returns None or SessionRunArgs()
     """
-    self.step_triggered = self.timer.should_trigger_for_step(self.trigger_step)
+    self.step_triggered = True if self.trigger_step == 0 else self.timer.should_trigger_for_step(1 + self.trigger_step)
     return tf.estimator.SessionRunArgs(self.session_dict)
   
   def after_run(self, run_context, run_values):
@@ -406,23 +408,22 @@ class tfPlotTensorHook(_tfEstimatorHooks):
       Requested tensors are evaluated and their values are available
     """
     super(tfPlotTensorHook, self).after_run(run_context, run_values)
-
     for tag in self.tensors:
       self.epoch_values[tag]['value'].append(run_values.results['tensors'][tag])
       self.epoch_values[tag]['step'].append(run_values.results[self.global_step])
       if self.step_triggered:
         self.results[tag]['value'].append(sum(self.epoch_values[tag]['value']) / 
                                           len(self.epoch_values[tag]['value']))
-        self.results[tag]['step'].append(run_values.results[self.global_step])
+        self.results[tag]['step'].append(1 + run_values.results[self.global_step])
         self.epoch_values[tag] = {'value': [], 'step': []}
 
-    if self.step_triggered:
+    if self.step_triggered and not (self.trigger_step == 0 and self.current_step > 0):
       self._plot_tensors(self.results)
     self.trigger_step += 1
 
   def _plot_tensors(self, tensor_values):
 
-    _, _ = self.timer.update_last_triggered_step(self.trigger_step)
+    _, _ = self.timer.update_last_triggered_step(1 + self.trigger_step if self.trigger_step else 0)
     for (key, value) in tensor_values.items():
       key_str = str(pathlib.Path(key).stem)
       plt.linesSingleAxis(

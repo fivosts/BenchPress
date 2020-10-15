@@ -27,7 +27,7 @@ import progressbar
 
 import tensorflow_addons as tfa
 
-from deeplearning.clgen import samplers
+from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.models import backends
@@ -65,7 +65,6 @@ class tfSequential(backends.BackendBase):
       args: Arguments to be passed to BackendBase.__init__().
       kwargs: Arguments to be passed to BackendBase.__init__().
     """
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.__init__()")
     super(tfSequential, self).__init__(*args, **kwargs)
 
     # Attributes that will be lazily set.
@@ -120,7 +119,6 @@ class tfSequential(backends.BackendBase):
     Returns:
       The imported TensorFlow module.
     """
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.InitTfGraph()")
 
     start_time = time.time()
 
@@ -246,7 +244,6 @@ class tfSequential(backends.BackendBase):
     return tf
 
   def GetShortSummary(self) -> str:
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.GetShortSummary()")
     return (
       f"{self.config.architecture.neurons_per_layer}×"
       f"{self.config.architecture.num_layers} "
@@ -264,7 +261,6 @@ class tfSequential(backends.BackendBase):
     Returns:
       A mapping of epoch numbers to paths.
     """
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.epoch_checkpoints()")
     if not (self.cache.path / "checkpoints" / "checkpoints"):
       # No saver file means no checkpoints.
       return {}
@@ -284,7 +280,6 @@ class tfSequential(backends.BackendBase):
   ) -> typing.Tuple[typing.Optional[str], typing.List[str]]:
     """Return path to checkpoint closest to target num of epochs."""
     # Checkpoints are saved with relative path, so we must prepend cache paths.
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.GetParamsPath()")
     paths = [
       str(self.cache.path / "checkpoints" / p)
       for p in checkpoint_state.all_model_checkpoint_paths
@@ -303,7 +298,6 @@ class tfSequential(backends.BackendBase):
       A list of absolute paths.
     """
     # The TensorFlow save file.
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.InferenceManifest()")
     paths = [
       self.cache.path / "checkpoints" / "checkpoint",
     ]
@@ -343,7 +337,6 @@ class tfSequential(backends.BackendBase):
 
     This method must only be called when the model is locked.
     """
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.Train()")
     del unused_kwargs
 
     self.num_epochs = self.config.training.num_epochs
@@ -555,7 +548,6 @@ class tfSequential(backends.BackendBase):
 
   @staticmethod
   def FormatCodeAsMarkdown(text: str) -> str:
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.FormatCodeAsMarkdown()")
     return f"<pre>{text.strip()}</pre>"
 
   def InitSampling(
@@ -609,7 +601,6 @@ class tfSequential(backends.BackendBase):
     )
 
   def InitSampleBatch(self, sampler: samplers.Sampler) -> None:
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.InitSampleBatch()")
     if FLAGS.clgen_tf_backend_reset_inference_state_between_batches:
       self.inference_state = self.inference_sess.run(
         self.cell.get_initial_state(batch_size = sampler.batch_size, dtype = self.inference_tf.float32)
@@ -619,7 +610,6 @@ class tfSequential(backends.BackendBase):
     )
 
   def SampleNextIndices(self, sampler: samplers.Sampler, done: np.ndarray):
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.SampleNextIndices()")
     length = self.inference_indices.shape[1]
     assert length < sampler.sequence_length
     expanded_indices = np.zeros((sampler.batch_size, sampler.sequence_length))
@@ -643,7 +633,6 @@ class tfSequential(backends.BackendBase):
     return generated, generated
 
   def RandomizeSampleState(self) -> None:
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.RandomizeSampleState()")
     import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
 
@@ -656,12 +645,10 @@ class tfSequential(backends.BackendBase):
     ]
 
   def ResetSampleState(self, sampler: samplers.Sampler, state, seed) -> None:
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.ResetSampleState()")
     self.inference_state = copy.deepcopy(state)
     self.inference_indices = np.tile(seed, [sampler.batch_size, 1])
 
   def EvaluateSampleState(self, sampler: samplers.Sampler):
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.EvaluateSampleState()")
     length = self.inference_indices.shape[1] - 1
     if length == 0:
       return
@@ -690,7 +677,6 @@ class tfSequential(backends.BackendBase):
   def is_trained(self) -> bool:
     """Determine if model has been trained."""
     # Count the number of checkpoint files which TensorFlow has created.
-    l.getLogger().debug("deeplearning.clgen.models.tf_sequential.tfSequential.is_trained()")
     checkpoint_files = [
       f.stem
       for f in (self.cache.path / "checkpoints").iterdir()

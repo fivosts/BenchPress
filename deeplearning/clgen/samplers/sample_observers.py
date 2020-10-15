@@ -19,7 +19,8 @@ from deeplearning.clgen.proto import model_pb2
 from absl import flags
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import pbutil
-from deeplearning.clgen import samples_database
+from deeplearning.clgen.util import distributions
+from deeplearning.clgen.samplers import samples_database
 from labm8.py import fs
 
 FLAGS = flags.FLAGS
@@ -123,14 +124,17 @@ class SamplesDatabaseObserver(SampleObserver):
 
   def __init__(
     self,
-    url: pathlib.Path,
+    path: pathlib.Path,
     must_exist: bool = False,
     flush_secs: int = 30,
+    plot_sample_status = False,
     commit_sample_frequency: int = 1024,
   ):
-    self.db = samples_database.SamplesDatabase(url, must_exist = must_exist)
-    self.compiled_count = 0
+    self.db = samples_database.SamplesDatabase("sqlite:///{}".format(str(path)), must_exist = must_exist)
     self.sample_id = self.db.count
+    self.plot_sample_status = plot_sample_status
+    if self.plot_sample_status:
+      self.monitor = distributions.PassiveMonitor(path.parent, "cumulative_sample_count")
 
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback."""
@@ -147,27 +151,29 @@ class SamplesDatabaseObserver(SampleObserver):
       if not exists:
         session.add(db_sample)
         self.sample_id += 1
-        if sample.compile_status is True:
-          self.compiled_count += 1
+      if self.plot_sample_status:
+        self.monitor.register(self.sample_id)
+        self.monitor.plot()
     return True
 
   def endSample(self):
+    with self.db.Session() as session:
+      compiled_count = session.query(samples_database.Sample.compile_status).filter_by(compile_status = "Yes").count()
     try:
       r = [
-        'compilation rate: {}'.format(self.compiled_count / self.sample_id),
-        'total compilable samples: {}'.format(self.compiled_count)
+        'compilation rate: {}'.format(compiled_count / self.sample_id),
+        'total compilable samples: {}'.format(compiled_count)
       ]
     except ZeroDivisionError:
       r = [
         'compilation rate: +/-inf',
-        'total compilable samples: {}'.format(self.compiled_count)
+        'total compilable samples: {}'.format(compiled_count)
       ]
-
     with self.db.Session(commit = True) as session:
-      exists = session.query(samples_database.SampleResults.key).filter_by(key = "meta").scalar() is not None
-      entry = session.query(samples_database.SampleResults).filter_by(key = "meta").first()
+      exists  = session.query(samples_database.SampleResults.key).filter_by(key = "meta").scalar() is not None
+      entry   = session.query(samples_database.SampleResults    ).filter_by(key = "meta").first()
       if exists:
-        entry = session.query(samples_database.SampleResults).filter_by(key = "meta").first()
+        entry = session.query(samples_database.SampleResults    ).filter_by(key = "meta").first()
         entry.results = "\n".join(r)
       else:
         session.add(samples_database.SampleResults(key = "meta", results = "\n".join(r)))

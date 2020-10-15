@@ -1,15 +1,11 @@
 """A module for databases of CLgen samples."""
-import contextlib
 import datetime
 import typing
-import sqlite3
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from absl import flags
 
-from deeplearning.clgen import sample_observers
-from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.util import crypto
 from labm8.py import sqlutil
 

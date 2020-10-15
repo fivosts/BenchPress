@@ -14,7 +14,6 @@ Base = sqlutil.Base()
 
 class DashboardDatabase(sqlutil.Database):
   def __init__(self, url: str, must_exist: bool):
-    l.getLogger().debug("deeplearning.clgen.dashboard.dashboard_db.DashboardDatabase.__init__()")
     super(DashboardDatabase, self).__init__(url, Base, must_exist=must_exist)
 
 class Corpus(Base):
@@ -102,7 +101,6 @@ class TrainingSample(Base):
   model: Model = sql.orm.relationship("Model")
 
 def GetDatabase() -> DashboardDatabase:
-  l.getLogger().debug("deeplearning.clgen.dashboard.dashboard_db.GetDatabase()")
   db: DashboardDatabase = DashboardDatabase(
           url = "sqlite:///{}/dashboard.db".format(os.path.abspath(FLAGS.workspace_dir)), must_exist = False
           )

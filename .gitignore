@@ -1,5 +1,5 @@
 # Binary symbolic links
-clgen
+/clgen
 
 # Build folders
 *__pycache__*
@@ -16,3 +16,4 @@ clgen
 # Large corpus files
 /model_zoo/corpus/*.tar
 /model_zoo/corpus/*.tar.bz2
+/model_zoo/corpus/*.db

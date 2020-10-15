@@ -43,20 +43,18 @@ message Corpus {
     string local_tar_archive      = 3;
     // The path to a database of encoded files.
     string pre_encoded_corpus_url = 4;
-    // The path to a local directory where a new corpus will be fetched from github.
-    string fetch_github           = 5;
   }
-  required atomizer atomizer      = 6;
+  required atomizer atomizer      = 5;
   // A list of preprocessor passes to run on each contentfile in the corpus
   // prior to training, in the order in which they are run.
-  repeated string preprocessor          = 7;
-  optional string contentfile_separator = 8;
+  repeated string preprocessor          = 6;
+  optional string contentfile_separator = 7;
 }
 
 // The atomizer to use to encode the corpus.
 message atomizer{
-  required string token_type             = 10;
-  optional string token_list             = 11;
-  optional bool   mask_tokens            = 12;
-  optional bool   wordpiece_tokenization = 13;
+  required string token_type             = 8;
+  optional string token_list             = 9;
+  optional bool   mask_tokens            = 10;
+  optional bool   wordpiece_tokenization = 11;
 }

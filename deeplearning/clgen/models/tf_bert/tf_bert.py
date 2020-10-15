@@ -28,10 +28,11 @@ import tensorflow_probability as tfp
 import numpy as np
 from absl import flags
 
-from deeplearning.clgen import samplers
-from deeplearning.clgen import sample_observers
-from deeplearning.clgen import validation_database
+from deeplearning.clgen.samplers import samplers
+from deeplearning.clgen.samplers import sample_observers
+from deeplearning.clgen.samplers import validation_database
 from deeplearning.clgen.util import pbutil
+from deeplearning.clgen.util import process
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
@@ -301,25 +302,29 @@ class tfBert(backends.BackendBase):
             test_sampler: typing.Optional[samplers.Sampler] = None,
             **unused_kwargs
             ) -> None:
-
+    """Training bootstrap function that isolates Train process space"""
     del unused_kwargs
-
     if self.train is None:
+      self._ConfigTrainParams(
+        tfLMDataGenerator.TrainMaskLMBatchGenerator(corpus, self.config.training, self.cache.path)
+      )
+    if not FLAGS.only_sample:
+      process.isolate(lambda: self._Train(corpus, test_sampler))
+    return
 
-      data_generator = tfLMDataGenerator.TrainMaskLMBatchGenerator(
-                         corpus, self.config.training, self.cache.path)
-      self._ConfigTrainParams(data_generator)
-
-    if FLAGS.only_sample:
-      return
-
+  def _Train(self,
+            corpus,
+            test_sampler: typing.Optional[samplers.Sampler],
+            ) -> None:
+    """Core training function"""
     if not self.is_trained:
 
       train_input_fn = self.train.data_generator.generateTfDataset(
           sequence_length = self.config.training.sequence_length,
           num_cpu_threads = os.cpu_count(),
           use_tpu = FLAGS.use_tpu,
-          is_training = True)
+          is_training = True
+      )
 
       l.getLogger().info("Splitting {} steps into {} equivalent epochs, {} steps each. Rejected {} redundant step(s)".format(
                                         self.num_train_steps, self.num_epochs, 
@@ -338,7 +343,7 @@ class tfBert(backends.BackendBase):
               start_time   = datetime.datetime.utcnow()
               self.InitSampleBatch()
               sample_batch, sample_indices = self.SampleNextIndices()
-              end_time     = datetime.datetime.utcnow()
+              end_time = datetime.datetime.utcnow()
               for sample, sind in zip(sample_batch, sample_indices):
 
                 try:
@@ -370,7 +375,6 @@ class tfBert(backends.BackendBase):
     if FLAGS.force_eval and not self.is_validated:
       self.Validate()
     # self.telemetry.TfRecordEpochs()
-    self.train = None
     return
 
   def Validate(self) -> None:
@@ -445,7 +449,7 @@ class tfBert(backends.BackendBase):
     observers = [sample_observers.PrintSampleObserver()]
     if FLAGS.store_samples_db:
       observers.append(sample_observers.SamplesDatabaseObserver(
-        "sqlite:///{}".format(self.sample_path / sampler.hash / sampler.sample_db_name)
+          self.sample_path / sampler.hash / sampler.sample_db_name
         )
       )
       sampler.symlinkModelDB(
@@ -492,6 +496,52 @@ class tfBert(backends.BackendBase):
       else:
         session.add(validation_database.ValResults(key = str(tf_set), results = "\n".join(r)))
     return 
+
+  def GetTrainingHooks(self,
+                       tensors: typing.Dict[str, typing.Any],
+                       log_steps:  int = None, 
+                       max_steps:  int = None,
+                       output_dir: pathlib.Path = None,
+                       **kwargs
+                       ):# -> typing.List[typing.Any("tfBert.tf.estimator.SessionRunHook")]:
+    if log_steps is None:
+      log_steps = self.steps_per_epoch
+    if max_steps is None:
+      max_steps = self.num_train_steps
+    if output_dir is None:
+      output_dir = self.logfile_path
+
+    summary_tensors = ([ self.tf.compat.v1.summary.scalar(name, value) 
+                              for name, value in kwargs.items()
+                          ],
+                        [ value for (name, value) in kwargs.items()
+                        ])
+    return [
+            hooks.AverageSummarySaverHook(tensors = summary_tensors,
+                                          save_steps = min(250, log_steps),
+                                          output_dir = str(output_dir),
+                                          ),
+            hooks.tfLogTensorHook(tensors = tensors, 
+                                  log_steps = log_steps, 
+                                  at_end = True,
+                                  ),
+            hooks.tfPlotTensorHook(tensors = summary_tensors,
+                                   log_steps = min(250, log_steps),
+                                   output_dir = output_dir,
+                                  ),
+            hooks.tfProgressBar(max_length = max_steps),
+           ]
+
+  def GetValidationHooks(self,
+                         max_steps = None,
+                         **kwargs
+                         ):# -> typing.List[self.tf.estimator.SessionRunHook]:
+    if max_steps is None:
+      max_steps = self.max_eval_steps
+    return [
+            hooks.tfProgressBar(max_length = max_steps, mode = self.tf.compat.v1.estimator.ModeKeys.EVAL),
+            hooks.writeValidationDB(**kwargs)
+            ]
 
   def _model_fn_builder(self,
                       bert_config, 
@@ -692,49 +742,3 @@ class tfBert(backends.BackendBase):
       return output_spec
 
     return _model_fn
-
-  def GetTrainingHooks(self,
-                       tensors: typing.Dict[str, typing.Any],
-                       log_steps:  int = None, 
-                       max_steps:  int = None,
-                       output_dir: pathlib.Path = None,
-                       **kwargs
-                       ):# -> typing.List[typing.Any("tfBert.tf.estimator.SessionRunHook")]:
-    if log_steps is None:
-      log_steps = self.steps_per_epoch
-    if max_steps is None:
-      max_steps = self.num_train_steps
-    if output_dir is None:
-      output_dir = self.logfile_path
-
-    summary_tensors = ([ self.tf.compat.v1.summary.scalar(name, value) 
-                              for name, value in kwargs.items()
-                          ],
-                        [ value for (name, value) in kwargs.items()
-                        ])
-    return [
-            hooks.AverageSummarySaverHook(tensors = summary_tensors,
-                                          save_steps = min(250, log_steps),
-                                          output_dir = str(output_dir),
-                                          ),
-            hooks.tfLogTensorHook(tensors = tensors, 
-                                  log_steps = log_steps, 
-                                  at_end = True,
-                                  ),
-            hooks.tfPlotTensorHook(tensors = summary_tensors,
-                                   log_steps = min(250, log_steps),
-                                   output_dir = output_dir,
-                                  ),
-            hooks.tfProgressBar(max_length = max_steps),
-           ]
-
-  def GetValidationHooks(self,
-                         max_steps = None,
-                         **kwargs
-                         ):# -> typing.List[self.tf.estimator.SessionRunHook]:
-    if max_steps is None:
-      max_steps = self.max_eval_steps
-    return [
-            hooks.tfProgressBar(max_length = max_steps, mode = self.tf.compat.v1.estimator.ModeKeys.EVAL),
-            hooks.writeValidationDB(**kwargs)
-            ]

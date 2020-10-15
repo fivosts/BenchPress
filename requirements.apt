@@ -1,16 +1,28 @@
 #!/bin/bash
 
-# curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-# python3.7 get-pip.py
-
 function install_apt_deps()
 {
 
   echo "-- Do you have sudo rights ?"
-  read $is_sudo
+  read is_sudo
   if [[ $is_sudo == "y" || $is_sudo == "Y" || $is_sudo == "yes" || $is_sudo == "Yes" || $is_sudo == "YES" ]]
   then
+    echo "-- Select python version to install. [Default]: python3.7"
+    read python_version
+    if [[ $python_version == "" ]]
+    then
+      python_version="python3.7"
+    elif [[ $python_version != "python3.5" && $python_version != "python3.6" && $python_version != "python3.7" && $python_version != "python3.8" ]]
+    then
+      echo "-- $python_version not recognized. Exiting..."
+      exit
+    else
+      echo "-- Selected $python_version"
+    fi
     echo "-- Installing all apt dependencies"
+    sudo apt-get update
+    sudo apt install software-properties-common
+    sudo add-apt-repository ppa:deadsnakes/ppa
     sudo apt-get update
     sudo apt-get install -y \
     build-essential \
@@ -28,9 +40,9 @@ function install_apt_deps()
     opencl-c-headers  \
     protobuf-compiler \
     pkg-config \
-    python3.7 \
-    python3.7-dev \
-    python3.7-venv \
+    $python_version \
+    $python_version-dev \
+    $python_version-venv \
     python3-distutils \
     python3-numpy \
     zlib1g-dev \
@@ -40,6 +52,9 @@ function install_apt_deps()
     mysql-server \
     libmysqlclient-dev \
     libsqlite3-dev
+
+    curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
+    $python_version /tmp/get-pip.py
   else
     # echo "-- The existence of gcc >= 7 will be checked. If not found, gcc-9 will be installed from source."
     echo "-- You have no sudo rights, which means the following things:"
@@ -70,9 +85,9 @@ function check_cmake()
     echo "-- For that reason, make sure that:"
     echo "   A) You specify the parent of a bin folder, e.g. (/usr/ instead of /usr/bin/)"
     echo "   B) The specified folder is in your \$PATH"
-    echo "-- Installation folder:"
     read path
     cmake_bin=$(realpath $path)
+    echo "-- Installation folder: $cmake_bin"
     mkdir -p $cmake_bin
     cpwd=$(pwd)
     cd /tmp

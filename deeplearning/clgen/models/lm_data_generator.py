@@ -136,13 +136,13 @@ class MaskLMDataGenerator(object):
         )
     else:
       self.dataset["train_dataset"] = {
-        "file": glob.glob(str(self.cache.path / "train_dataset_*.{}".format(self.file_extension))),
-        "txt" : glob.glob(str(self.cache.path / "train_dataset_*.txt")),
+        "file": sorted(glob.glob(str(self.cache.path / "train_dataset_*.{}".format(self.file_extension)))),
+        "txt" : sorted(glob.glob(str(self.cache.path / "train_dataset_*.txt"))),
       }
       if len(glob.glob(str(self.cache.path / "validation_dataset_*.{}".format(self.file_extension)))) != 0:
         self.dataset["validation_dataset"] = {
-          "file": glob.glob(str(self.cache.path / "validation_dataset_*.{}".format(self.file_extension))),
-          "txt" : glob.glob(str(self.cache.path / "validation_dataset_*.txt")),
+          "file": sorted(glob.glob(str(self.cache.path / "validation_dataset_*.{}".format(self.file_extension)))),
+          "txt" : sorted(glob.glob(str(self.cache.path / "validation_dataset_*.txt"))),
         }
 
     self.configValidationSets(self.config.validation_set, shaped_corpus)
@@ -204,13 +204,13 @@ class MaskLMDataGenerator(object):
         "mask" if self.sampler.config.sample_set.HasField("mask") 
                else "hole_{}".format(self.sampler.config.sample_set.hole.hole_length)
       )
-    path_list = glob.glob(str(self.cache.path / "{}_*.{}".format(sampledDataset, self.file_extension)))
+    path_list = sorted(glob.glob(str(self.cache.path / "{}_*.{}".format(sampledDataset, self.file_extension))))
     if len(path_list) == 0 and sampledDataset == "validation_dataset":
       raise FileNotFoundError("Corpus had not been split in train-val, therefore validation dataset is not found.")
     elif len(path_list) == 0:
       shaped_corpus = self.createCorpus()
       self.configValidationSets([self.sampler.config.sample_set], shaped_corpus)
-    return glob.glob(str(self.cache.path / "{}_*.{}".format(sampledDataset, self.file_extension)))
+    return sorted(glob.glob(str(self.cache.path / "{}_*.{}".format(sampledDataset, self.file_extension))))
 
   def createCorpus(self) -> None:
     """
@@ -291,14 +291,15 @@ class MaskLMDataGenerator(object):
       if shuffle:
         self.rngen.shuffle(encoded_corpus)
       encoded_corpus = np.concatenate(encoded_corpus)
-      encoded_corpus = np.tile(encoded_corpus, dupe_factor)
+      # encoded_corpus = np.tile(encoded_corpus, dupe_factor)
 
       # Set corpus dimension parameters
       self.steps_per_epoch        = len(encoded_corpus) // (batch_size * sequence_length * dupe_factor)
       assert self.steps_per_epoch != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
       self.num_epochs             = self.training_opts.num_train_steps // self.steps_per_epoch
 
-      clipped_corpus_length       = dupe_factor * self.steps_per_epoch * batch_size * sequence_length
+      # clipped_corpus_length       = dupe_factor * self.steps_per_epoch * batch_size * sequence_length
+      clipped_corpus_length       = self.steps_per_epoch * batch_size * sequence_length
       clipped_corpus              = encoded_corpus[:clipped_corpus_length]
 
       # shaped_corpus = np.split(clipped_corpus, batch_size * self.steps_per_epoch * dupe_factor, 0)
@@ -358,6 +359,7 @@ class MaskLMDataGenerator(object):
       1, self.training_opts.sequence_length, self.training_opts.max_predictions_per_seq
     )
     corpus_bytes = single_item_bytes * len(corpus) + sys.getsizeof(corpus)
+    # max_dupe is how many times (dupes) the corpus can fit into a dataset record file.
     max_dupe     = min((FLAGS.memory_limit * (1024**3)) // corpus_bytes, self.training_opts.dupe_factor)
     assert max_dupe != 0, "Increase RAM limit to fit corpus."
 
