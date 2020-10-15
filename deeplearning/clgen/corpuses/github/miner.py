@@ -117,7 +117,7 @@ class BigQuery(GithubMiner):
         mainrep_it, otherrep_it = self.dataset.repository_query()
 
       if mainrep_it:
-        with progressbar.ProgressBar(max_value = mainf_it.total_rows, prefix = "Main Repos") as bar:
+        with progressbar.ProgressBar(max_value = mainrep_it.total_rows, prefix = "Main Repos") as bar:
           for en, mr in enumerate(mainrep_it):
             st.save(bigQuery_database.bqRepo(
                 **bigQuery_database.bqRepo.FromArgs(self.storage.repocount, mr)
@@ -128,7 +128,7 @@ class BigQuery(GithubMiner):
 
       other_repo_count = 0
       if otherrep_it:
-        with progressbar.ProgressBar(max_value = mainf_it.total_rows, prefix = "Other Repos") as bar:
+        with progressbar.ProgressBar(max_value = otherrep_it.total_rows, prefix = "Other Repos") as bar:
           for en, orep in enumerate(otherrep_it):
             st.save(bigQuery_database.bqRepo(
                 **bigQuery_database.bqRepo.FromArgs(self.storage.repocount, orep)
