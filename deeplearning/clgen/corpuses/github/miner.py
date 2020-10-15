@@ -9,6 +9,7 @@ import sys
 import typing
 import pathlib
 import github
+import progressbar
 import copy
 
 from base64 import b64decode
@@ -92,17 +93,21 @@ class BigQuery(GithubMiner):
       # Get contentfiles.
       mainf_it, otherf_it = self.dataset.contentfile_query()
       if mainf_it:
-        for mf in mainf_it:
-          st.save(bigQuery_database.bqFile(
-              **bigQuery_database.bqFile.FromArgs(self.storage.filecount, mf)
+        with progressbar.ProgressBar(max_value = mainf_it.total_rows, prefix = "Main Files") as bar:
+          for en, mf in enumerate(mainf_it):
+            st.save(bigQuery_database.bqFile(
+                **bigQuery_database.bqFile.FromArgs(self.storage.filecount, mf)
+              )
             )
-          )
+            bar.update(en)
       if otherf_it:
-        for of in otherf_it:
-          st.save(bigQuery_database.bqFile(
-              **bigQuery_database.bqFile.FromArgs(self.storage.filecount, of)
+        with progressbar.ProgressBar(max_value = otherf_it.total_rows, prefix = "Other Files") as bar:
+          for en, of in enumerate(otherf_it):
+            st.save(bigQuery_database.bqFile(
+                **bigQuery_database.bqFile.FromArgs(self.storage.filecount, of)
+              )
             )
-          )
+            bar.update(en)
 
       # Get repository list of requested file specifications.
       # If contentfile_query has taken place, use cached results instead of re-querying.
@@ -112,20 +117,24 @@ class BigQuery(GithubMiner):
         mainrep_it, otherrep_it = self.dataset.repository_query()
 
       if mainrep_it:
-        for mr in mainrep_it:
-          st.save(bigQuery_database.bqRepo(
-              **bigQuery_database.bqRepo.FromArgs(self.storage.repocount, mr)
+        with progressbar.ProgressBar(max_value = mainf_it.total_rows, prefix = "Main Repos") as bar:
+          for en, mr in enumerate(mainrep_it):
+            st.save(bigQuery_database.bqRepo(
+                **bigQuery_database.bqRepo.FromArgs(self.storage.repocount, mr)
+              )
             )
-          )
+            bar.update(en)
         main_repo_count = self.storage.repocount
 
       other_repo_count = 0
       if otherrep_it:
-        for orep in otherrep_it:
-          st.save(bigQuery_database.bqRepo(
-              **bigQuery_database.bqRepo.FromArgs(self.storage.repocount, orep)
+        with progressbar.ProgressBar(max_value = mainf_it.total_rows, prefix = "Other Repos") as bar:
+          for en, orep in enumerate(otherrep_it):
+            st.save(bigQuery_database.bqRepo(
+                **bigQuery_database.bqRepo.FromArgs(self.storage.repocount, orep)
+              )
             )
-          )
+            bar.update(en)
         other_repo_count = self.storage.repocount - (main_repo_count or 0)
 
       # Filecount of requested file specifications.
