@@ -218,10 +218,11 @@ class JSONStorage(Storage):
     self.cache_path = self.cache_path / self.name
     (self.cache_path).mkdir(exist_ok = True)
 
+    self.with_zip = with_zip
     self.jsonfile_count = 0
     self.file_count = 0
 
-    self.data  = None
+    self.data  = ""
     self.repos = set()
     self.files = []
 
@@ -240,7 +241,7 @@ class JSONStorage(Storage):
             'ref': x.split(', ')[1]
           } for x in self.repos
         ],
-        f,
+        outf,
         sort_keys = True,
         indent = 2
       )
@@ -248,7 +249,7 @@ class JSONStorage(Storage):
   
     with open(self.cache_path / "data.txt", 'w') as outf:
       outf.write(self.data)
-    self.data = None
+    self.data = ""
 
     return
 
@@ -266,7 +267,7 @@ class JSONStorage(Storage):
       if entry not in self.repos:
         self.repos.add(entry)
     else:
-      self.files.append(contentfile.ToDict())
+      self.files.append(contentfile.ToJSONDict())
       self.file_count += 1
       if self.file_count % 500000:
         self._flush_json()
@@ -277,7 +278,8 @@ class JSONStorage(Storage):
     filename = lambda ext: "{}.{}".format(self.jsonfile_count, ext)
 
     with open(self.cache_path / filename("json"), 'w') as outf:
-      json.dump(outf, self.files)
+
+      json.dump(self.files, outf, indent = 2)
       if self.with_zip:
         p = os.getcwd()
         os.chdir(self.cache_path)
