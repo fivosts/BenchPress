@@ -147,7 +147,7 @@ class BigQuery(GithubMiner):
       # Parse files from mined repos to get header files as well.
       header_includes_it = self.dataset.header_file_query(st.repoTuple)
       if header_includes_it:
-        with progressbar.ProgressBar(max_value = header_includes_it.total_rows, prefix "Header Files") as bar:
+        with progressbar.ProgressBar(max_value = header_includes_it.total_rows, prefix = "Header Files") as bar:
           for en, hf in enumerate(header_includes_it):
             st.save(bigQuery_database.bqHeaderFile(
                 **bigQuery_database.bqHeaderFile.FromArgs(st.filecount, hf)
