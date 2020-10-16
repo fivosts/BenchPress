@@ -284,6 +284,7 @@ class openclDataset(Dataset):
       l.getLogger().warn(query)
       l.getLogger().warn("Hit any button to continue...")
       input()
+    l.getLogger().info("Retrieving etc. repo list...")
 
     try:
       rows = self.client.query(query, job_config = self.queryConfig('bq_repofiles')).result()
@@ -308,6 +309,7 @@ class openclDataset(Dataset):
     ON file.id = contentfile.id
     {}
     """.format(self.query_exception or "")
+    l.getLogger().info("Retrieving etc. contentfiles...")
 
     if FLAGS.bq_wait_permission:
       dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_etc_contentfiles', dr = True))
