@@ -26,11 +26,10 @@ class bqData(Base):
       bigquery.SchemaField("value", "STRING", mode = "REQUIRED"),
     ]
 
-class bqFile(Base, sqlutil.ProtoBackedMixin):
+class bqFile(Base):
   """
     A database entry representing a CLgen validation trace.
   """
-  __tablename__  = "bq_contentfiles"
   id             : int = sql.Column(sql.Integer,    primary_key = True)
   sha256         : str = sql.Column(sql.String(64), nullable = False, index = True)
   repo_name      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
@@ -96,7 +95,19 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
       "date_added"     : str(self.date_added.strftime("%m/%d/%Y, %H:%M:%S")),
     }
 
-class bqRepo(Base, sqlutil.ProtoBackedMixin):
+class bqMainFile(bqFile):
+  """Abstract representation of main queried files."""
+  __tablename__  = "bq_main_contentfiles"
+
+class bqOtherFile(bqFile):
+  """Abstract representation of other-to-main-language queried files."""
+  __tablename__  = "bq_other_contentfiles"
+
+class bqHeaderFile(bqFile):
+  """Abstract representation of header file includes."""
+  __tablename__  = "bq_header_contentfiles"
+
+class bqRepo(Base):
   """
     A database entry representing a CLgen validation trace.
   """
@@ -146,8 +157,10 @@ class bqDatabase(sqlutil.Database):
   @property
   def file_count(self):
     with self.Session() as s:
-      file_count = s.query(bqFile).count()
-    return file_count
+      return (s.query(bqMainFile).count() +
+              s.query(bqOtherFile).count() +
+              s.query(bqHeaderFile).count()
+             )
 
   @property
   def repo_count(self):
