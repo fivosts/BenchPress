@@ -26,7 +26,7 @@ class bqData(Base):
       bigquery.SchemaField("value", "STRING", mode = "REQUIRED"),
     ]
 
-class bqFile(Base):
+class bqFile():
   """
     A database entry representing a CLgen validation trace.
   """
@@ -95,15 +95,15 @@ class bqFile(Base):
       "date_added"     : str(self.date_added.strftime("%m/%d/%Y, %H:%M:%S")),
     }
 
-class bqMainFile(bqFile):
+class bqMainFile(Base, bqFile):
   """Abstract representation of main queried files."""
   __tablename__  = "bq_main_contentfiles"
 
-class bqOtherFile(bqFile):
+class bqOtherFile(Base, bqFile):
   """Abstract representation of other-to-main-language queried files."""
   __tablename__  = "bq_other_contentfiles"
 
-class bqHeaderFile(bqFile):
+class bqHeaderFile(Base, bqFile):
   """Abstract representation of header file includes."""
   __tablename__  = "bq_header_contentfiles"
 
