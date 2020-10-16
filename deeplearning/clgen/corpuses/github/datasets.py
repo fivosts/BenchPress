@@ -106,10 +106,11 @@ class Dataset(object):
   def _setupTables(self, dataset_id: str) -> typing.Dict[str, bigquery.Table]:
     """API request that gets or sets bigquery.Table instances."""
     table_reg = {
-      'bq_main_contentfiles': bigQuery_database.bqFile.bqSchema,
-      'bq_etc_contentfiles' : bigQuery_database.bqFile.bqSchema,
-      'bq_repofiles'   : bigQuery_database.bqRepo.bqSchema,
-      'bq_data'        : bigQuery_database.bqData.bqSchema,
+      'bq_main_contentfiles'   : bigQuery_database.bqFile.bqSchema,
+      'bq_etc_contentfiles'    : bigQuery_database.bqFile.bqSchema,
+      'bq_header_contentfiles' : bigQuery_database.bqFile.bqSchema,
+      'bq_repofiles'           : bigQuery_database.bqRepo.bqSchema,
+      'bq_data'                : bigQuery_database.bqData.bqSchema,
     }
     for reg, get_sc in table_reg.items():
       table_id = "{}.{}".format(dataset_id, reg)
@@ -153,7 +154,7 @@ class Dataset(object):
       l.getLogger().error(e)
       exit()
 
-  def repository_query(self) -> typing.Tuple[typing.Callable]:
+  def repository_query(self) -> typing.Tuple[bigquery.RowIterator]:
     """Returns iterable of query files"""
     query = """
     SELECT DISTINCT file.repo_name, file.ref
@@ -179,7 +180,7 @@ class Dataset(object):
       exit()
     return (rows, None)
 
-  def contentfile_query(self) -> typing.Tuple[typing.Callable]:
+  def contentfile_query(self) -> typing.Tuple[bigquery.RowIterator]:
     """Returns iterable of query files"""
     query = """
     SELECT file.repo_name, file.path, file.ref, file.mode, 
@@ -206,6 +207,10 @@ class Dataset(object):
       l.getLogger().error(e)
       exit()
     return (rows, None)
+
+  def header_file_query(self) -> None:
+    """Override this method if you want header files fetched with the language's contentfiles."""
+    return None
 
 class openclDataset(Dataset):
   """Opencl Dataset"""
@@ -256,7 +261,7 @@ class openclDataset(Dataset):
       l.getLogger().error(e)
       exit()
 
-  def repository_query(self) -> typing.Tuple[typing.Callable, typing.Callable]:
+  def repository_query(self) -> typing.Tuple[bigquery.RowIterator, bigquery.RowIterator]:
     """
     Query repositories that tested positive for having CL.
     CL has its own function, because two types of files are checked:
@@ -289,7 +294,7 @@ class openclDataset(Dataset):
       exit()
     return (cl_repo_it, rows)
 
-  def contentfile_query(self) -> typing.Tuple[typing.Callable, typing.Callable]:
+  def contentfile_query(self) -> typing.Tuple[bigquery.RowIterator, bigquery.RowIterator]:
     """
     Query contentfiles that tested positive for being CL.
     CL has its own function, because two types of files are checked:
@@ -323,6 +328,36 @@ class openclDataset(Dataset):
       l.getLogger().error(e)
       exit()
     return (cl_file_it, rows)
+
+  def header_file_query(self, repos: typing.List[typing.Tuple[str, str]]) -> bigquery.RowIterator:
+    """From the repos you got contentfiles from, get header files as well that might need be included."""
+    # query = """
+    # SELECT file.repo_name, file.path, file.ref, file.mode, 
+    #        file.id, file.symlink_target, contentfile.size, 
+    #        contentfile.content, contentfile.binary, contentfile.copies
+    # FROM `bigquery-public-data.github_repos.files` as file
+    # INNER JOIN `bigquery-public-data.github_repos.contents` as contentfile
+    # ON file.id = contentfile.id
+    # {}
+    # """.format(self.query_exception or "")
+
+    if FLAGS.bq_wait_permission:
+      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_header_contentfiles', dr = True))
+      l.getLogger().warn("This query is going to consume {}".format(
+          humanize.naturalsize(dry_run_job.total_bytes_processed)
+        )
+      )
+      l.getLogger().warn(query)
+      l.getLogger().warn("Hit any button to continue...")
+      input()
+    l.getLogger().info("Retrieving etc. contentfiles...")
+
+    try:
+      rows = self.client.query(query, job_config = self.queryConfig('bq_header_contentfiles')).result()
+    except google.api_core.exceptions.Forbidden as e:
+      l.getLogger().error(e)
+      exit()
+    return rows
 
 class cDataset(Dataset):
   """C Dataset"""
