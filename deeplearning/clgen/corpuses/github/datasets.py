@@ -154,7 +154,7 @@ class Dataset(object):
       l.getLogger().error(e)
       exit()
 
-  def repository_query(self) -> typing.Tuple[bigquery.RowIterator]:
+  def repository_query(self) -> typing.Tuple[bigquery.table.RowIterator]:
     """Returns iterable of query files"""
     query = """
     SELECT DISTINCT file.repo_name, file.ref
@@ -180,7 +180,7 @@ class Dataset(object):
       exit()
     return (rows, None)
 
-  def contentfile_query(self) -> typing.Tuple[bigquery.RowIterator]:
+  def contentfile_query(self) -> typing.Tuple[bigquery.table.RowIterator]:
     """Returns iterable of query files"""
     query = """
     SELECT file.repo_name, file.path, file.ref, file.mode, 
@@ -266,7 +266,7 @@ class openclDataset(Dataset):
       l.getLogger().error(e)
       exit()
 
-  def repository_query(self) -> typing.Tuple[bigquery.RowIterator, bigquery.RowIterator]:
+  def repository_query(self) -> typing.Tuple[bigquery.table.RowIterator, bigquery.table.RowIterator]:
     """
     Query repositories that tested positive for having CL.
     CL has its own function, because two types of files are checked:
@@ -299,7 +299,7 @@ class openclDataset(Dataset):
       exit()
     return (cl_repo_it, rows)
 
-  def contentfile_query(self) -> typing.Tuple[bigquery.RowIterator, bigquery.RowIterator]:
+  def contentfile_query(self) -> typing.Tuple[bigquery.table.RowIterator, bigquery.table.RowIterator]:
     """
     Query contentfiles that tested positive for being CL.
     CL has its own function, because two types of files are checked:
@@ -334,7 +334,7 @@ class openclDataset(Dataset):
       exit()
     return (cl_file_it, rows)
 
-  def header_file_query(self, repos: typing.List[typing.Tuple[str, str]]) -> bigquery.RowIterator:
+  def header_file_query(self, repos: typing.List[typing.Tuple[str, str]]) -> bigquery.table.RowIterator:
     """From the repos you got contentfiles from, get header files as well that might need be included."""
 
     file_in_repo = "(" + ' OR '.join(
