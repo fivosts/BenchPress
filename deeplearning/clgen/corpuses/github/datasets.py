@@ -79,6 +79,7 @@ class Dataset(object):
       dry_run = dr,
     )
 
+    self.extensions = extensions
     self.query_file_id = ""
     if self.extensions is not None:
       self.query_file_id = " OR ".join(["substr(file.path, {}, {}) = '{}'".format(-len(ext), 1+len(ext), ext)
