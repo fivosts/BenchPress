@@ -346,8 +346,14 @@ class dbStorage(Storage):
           session.add(contentfile)
           self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
         if isinstance(contentfile, bigQuery_database.bqFile):
+          if isinstance(contentfile, bigQuery_database.bqMainFile):
+            tp = bigQuery_database.bqMainFile
+          elif isinstance(contentfile, bigQuery_database.bqOtherFile):
+            tp = bigQuery_database.bqOtherFile
+          else:
+            tp = bigQuery_database.bqHeadersFile
           exists = session.query(
-            bigQuery_database.bqFile.sha256
+            tp.sha256
           ).filter_by(sha256 = contentfile.sha256).scalar() is not None
           if not exists:
             session.add(contentfile)
