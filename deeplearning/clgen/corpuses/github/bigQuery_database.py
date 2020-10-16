@@ -36,11 +36,11 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
   repo_name      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   ref            : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   path           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  mode           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = True)
-  symlink_target : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = True)
-  size           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = True)
-  content        : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = True)
-  binary         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = True)
+  mode           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  symlink_target : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  size           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  content        : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  binary         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   copies         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   date_added     : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
@@ -56,12 +56,12 @@ class bqFile(Base, sqlutil.ProtoBackedMixin):
       "repo_name"      : row['repo_name'],
       "ref"            : row['ref'],
       "path"           : row['path'],
-      "mode"           : row['mode'],
-      "symlink_target" : row['symlink_target'],
-      "size"           : row['size'],
-      "content"        : row['content'],
-      "binary"         : row['binary'],
-      "copies"         : row['copies'],
+      "mode"           : row['mode']           if row['mode']           else "None",
+      "symlink_target" : row['symlink_target'] if row['symlink_target'] else "None",
+      "size"           : row['size']           if row['size']           else "None",
+      "content"        : row['content']        if row['content']        else "None",
+      "binary"         : row['binary']         if row['binary']         else "None",
+      "copies"         : row['copies']         if row['copies']         else "None",
       "date_added"     : datetime.datetime.utcnow(),
     }
 
