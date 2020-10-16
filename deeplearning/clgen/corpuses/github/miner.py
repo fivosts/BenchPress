@@ -100,7 +100,7 @@ class BigQuery(GithubMiner):
         with progressbar.ProgressBar(max_value = mainf_it.total_rows, prefix = "Main Files") as bar:
           for en, mf in enumerate(mainf_it):
             st.save(bigQuery_database.bqFile(
-                **bigQuery_database.bqFile.FromArgs(self.storage.filecount, mf)
+                **bigQuery_database.bqFile.FromArgs(st.filecount, mf)
               )
             )
             bar.update(en)
@@ -110,7 +110,7 @@ class BigQuery(GithubMiner):
         with progressbar.ProgressBar(max_value = otherf_it.total_rows, prefix = "Other Files") as bar:
           for en, of in enumerate(otherf_it):
             st.save(bigQuery_database.bqFile(
-                **bigQuery_database.bqFile.FromArgs(self.storage.filecount, of)
+                **bigQuery_database.bqFile.FromArgs(st.filecount, of)
               )
             )
             bar.update(en)
@@ -127,7 +127,7 @@ class BigQuery(GithubMiner):
         with progressbar.ProgressBar(max_value = mainrep_it.total_rows, prefix = "Main Repos") as bar:
           for en, mr in enumerate(mainrep_it):
             st.save(bigQuery_database.bqRepo(
-                **bigQuery_database.bqRepo.FromArgs(self.storage.repocount, mr)
+                **bigQuery_database.bqRepo.FromArgs(st.repocount, mr)
               )
             )
             bar.update(en)
@@ -138,22 +138,35 @@ class BigQuery(GithubMiner):
         with progressbar.ProgressBar(max_value = otherrep_it.total_rows, prefix = "Other Repos") as bar:
           for en, orep in enumerate(otherrep_it):
             st.save(bigQuery_database.bqRepo(
-                **bigQuery_database.bqRepo.FromArgs(self.storage.repocount, orep)
+                **bigQuery_database.bqRepo.FromArgs(st.repocount, orep)
               )
             )
             bar.update(en)
         other_repo_count = st.repocount - main_repo_count
+
+      # Parse files from mined repos to get header files as well.
+      header_includes_it = self.dataset.header_file_query(st.repoTuple)
+      if header_includes_it:
+        with progressbar.ProgressBar(max_value = header_includes_it.total_rows, prefix "Header Files") as bar:
+          for en, hf in enumerate(header_includes_it):
+            st.save(bigQuery_database.bqFile(
+                **bigQuery_database.bqFile.FromArgs(st.filecount, hf)
+              )
+            )
+            bar.update(en)
 
       # Filecount of requested file specifications.
       # Use cached results if contentfile has taken place.
       if mainf_it or otherf_it:
         self.dataset.filecount = (mainf_it.total_rows if mainf_it else 0, otherf_it.total_rows if otherf_it else 0)
       mainfile_count, otherfile_count = self.dataset.filecount
+      header_file_count = header_includes_it.total_rows if header_includes_it else 0
 
       query_data = [
         "main_contentfiles : {}".format(mainfile_count),
         "other_contentfiles: {}".format(otherfile_count),
-        "total_contentfiles: {}".format(mainfile_count + otherfile_count),
+        "include_contentfiles: {}".format(header_file_count),
+        "total_contentfiles: {}".format(mainfile_count + otherfile_count + header_file_count),
         "",
         "main_repositories : {}".format(main_repo_count),
         "other_repositories: {}".format(other_repo_count),
