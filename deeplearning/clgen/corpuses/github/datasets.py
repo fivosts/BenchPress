@@ -170,7 +170,11 @@ class Dataset(object):
       )
       l.getLogger().warn(query)
       l.getLogger().warn("Hit any button to continue...")
-      input()
+      try:
+        input()
+      except KeyboardInterrupt:
+        return (None, None)
+
     l.getLogger().info("Retrieving repository list of specs...")
 
     try:
@@ -198,7 +202,11 @@ class Dataset(object):
       )
       l.getLogger().warn(query)
       l.getLogger().warn("Hit any button to continue...")
-      input()
+      try:
+        input()
+      except KeyboardInterrupt:
+        return (None, None)
+
     l.getLogger().info("Retrieving {} contentfiles...".format(self.dataset.dataset_id))
 
     try:
@@ -255,7 +263,6 @@ class openclDataset(Dataset):
       )
       l.getLogger().warn(query)
       l.getLogger().warn("Hit any button to continue...")
-      input()
 
     try:
       job = self.client.query(query)
@@ -289,7 +296,11 @@ class openclDataset(Dataset):
       )
       l.getLogger().warn(query)
       l.getLogger().warn("Hit any button to continue...")
-      input()
+      try:
+        input()
+      except KeyboardInterrupt:
+        return (cl_repo_it, None)
+
     l.getLogger().info("Retrieving etc. repo list...")
 
     try:
@@ -324,7 +335,11 @@ class openclDataset(Dataset):
       )
       l.getLogger().warn(query)
       l.getLogger().warn("Hit any button to continue...")
-      input()
+      try:
+        input()
+      except KeyboardInterrupt:
+        return (cl_file_it, None)
+
     l.getLogger().info("Retrieving etc. contentfiles...")
 
     try:
@@ -358,7 +373,11 @@ class openclDataset(Dataset):
       )
       l.getLogger().warn(query)
       l.getLogger().warn("Hit any button to continue...")
-      input()
+      try:
+        input()
+      except KeyboardInterrupt:
+        return None
+
     l.getLogger().info("Retrieving header files from repository list...")
 
     try:
