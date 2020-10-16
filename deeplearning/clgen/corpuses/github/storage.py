@@ -340,7 +340,11 @@ class dbStorage(Storage):
         if not exists:
           session.add(contentfile)
         if isinstance(contentfile, bigQuery_database.bqFile):
-          session.add(contentfile)
+          exists = session.query(
+            bigQuery_database.bqFile.sha256
+          ).filter_by(sha256 = contentfile.sha256).scalar() is not None
+          if not exists:
+            session.add(contentfile)
     return
 
 class bqStorage(Storage):
