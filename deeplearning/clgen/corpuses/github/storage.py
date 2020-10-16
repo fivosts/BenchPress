@@ -33,6 +33,12 @@ class Storage(object):
       github_pb2.GithubMiner.DataFormat.bq     : bqStorage,
     }[data_format](path, name, extension)
 
+  @property
+  def repoTuple(self) -> typing.List[typing.Tuple[str, str]]:
+    # Returns repo list in type list of tuples.
+    # t[0] -> repo_name, t[1] -> ref
+    return [tuple(r.split(', ')) for r in self.repos]
+
   def __init__(self,
                path: pathlib.Path,
                name: str,
@@ -41,6 +47,8 @@ class Storage(object):
     self.cache_path.mkdir(exist_ok = True)
     self.name       = name
     self.extension  = extension
+
+    self.repos      = set()
     return
 
   def __enter__(self):
@@ -72,7 +80,6 @@ class zipStorage(Storage):
     self.flush_counter  = 20000
     self.file_count     = 0
     self.data_file      = ""
-    self.repos          = set()
 
   def __exit__(self, path, name, extension):
     self.zipFiles()
@@ -154,7 +161,6 @@ class fileStorage(Storage):
     self.file_count = 0
     self.cache_path = self.cache_path / self.name
     (self.cache_path).mkdir(exist_ok = True)
-    self.repos = set()
 
   def __exit__(self, path, name, extension) -> None:
     with open(self.cache_path / "repos_list.json", 'w') as f:
@@ -215,7 +221,6 @@ class JSONStorage(Storage):
     self.file_count = 0
 
     self.data  = ""
-    self.repos = set()
     self.files = []
 
     return
@@ -339,6 +344,7 @@ class dbStorage(Storage):
         ).scalar() is not None
         if not exists:
           session.add(contentfile)
+          self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
         if isinstance(contentfile, bigQuery_database.bqFile):
           exists = session.query(
             bigQuery_database.bqFile.sha256
