@@ -79,7 +79,6 @@ class Dataset(object):
       dry_run = dr,
     )
 
-    self.extensions = extensions
     self.query_file_id = ""
     if self.extensions is not None:
       self.query_file_id = " OR ".join(["substr(file.path, {}, {}) = '{}'".format(-len(ext), 1+len(ext), ext)
@@ -138,6 +137,7 @@ class Dataset(object):
           humanize.naturalsize(dry_run_job.total_bytes_processed)
         )
       )
+      l.getLogger().warn(query)
       l.getLogger().warn("Hit any button to continue...")
       input()
     l.getLogger().info("Running file count query...")
@@ -165,6 +165,7 @@ class Dataset(object):
           humanize.naturalsize(dry_run_job.total_bytes_processed)
         )
       )
+      l.getLogger().warn(query)
       l.getLogger().warn("Hit any button to continue...")
       input()
     l.getLogger().info("Retrieving repository list of specs...")
@@ -192,6 +193,7 @@ class Dataset(object):
           humanize.naturalsize(dry_run_job.total_bytes_processed)
         )
       )
+      l.getLogger().warn(query)
       l.getLogger().warn("Hit any button to continue...")
       input()
     l.getLogger().info("Retrieving {} contentfiles...".format(self.dataset.dataset_id))
@@ -224,7 +226,7 @@ class openclDataset(Dataset):
     Returns file count in int.
     """
     super(openclDataset, self).filecount_query()
-    other_count_query = """
+    query = """
     SELECT COUNT(*)
     FROM `bigquery-public-data.github_repos.files` as file
     INNER JOIN `bigquery-public-data.github_repos.contents` as contentfile
@@ -232,8 +234,18 @@ class openclDataset(Dataset):
     {}
     """.format(self.query_exception or "")
 
+    if FLAGS.bq_wait_permission:
+      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_repofiles', dr = True))
+      l.getLogger().warn("This query is going to consume {}".format(
+          humanize.naturalsize(dry_run_job.total_bytes_processed)
+        )
+      )
+      l.getLogger().warn(query)
+      l.getLogger().warn("Hit any button to continue...")
+      input()
+
     try:
-      job = self.client.query(other_count_query)
+      job = self.client.query(query)
       for f in job:
         self.file_count[1] = f[0]
         return self.file_count
@@ -255,6 +267,17 @@ class openclDataset(Dataset):
     ON file.id = contentfile.id
     {}
     """.format(self.query_exception or "")
+
+    if FLAGS.bq_wait_permission:
+      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_repofiles', dr = True))
+      l.getLogger().warn("This query is going to consume {}".format(
+          humanize.naturalsize(dry_run_job.total_bytes_processed)
+        )
+      )
+      l.getLogger().warn(query)
+      l.getLogger().warn("Hit any button to continue...")
+      input()
+
     try:
       rows = self.client.query(query, job_config = self.queryConfig('bq_repofiles')).result()
     except google.api_core.exceptions.Forbidden as e:
@@ -278,6 +301,17 @@ class openclDataset(Dataset):
     ON file.id = contentfile.id
     {}
     """.format(self.query_exception or "")
+
+    if FLAGS.bq_wait_permission:
+      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_repofiles', dr = True))
+      l.getLogger().warn("This query is going to consume {}".format(
+          humanize.naturalsize(dry_run_job.total_bytes_processed)
+        )
+      )
+      l.getLogger().warn(query)
+      l.getLogger().warn("Hit any button to continue...")
+      input()
+
     try:
       rows = self.client.query(query, job_config = self.queryConfig('bq_contentfiles')).result()
     except google.api_core.exceptions.Forbidden as e:
