@@ -99,8 +99,8 @@ class BigQuery(GithubMiner):
       if mainf_it:
         with progressbar.ProgressBar(max_value = mainf_it.total_rows, prefix = "Main Files") as bar:
           for en, mf in enumerate(mainf_it):
-            st.save(bigQuery_database.bqFile(
-                **bigQuery_database.bqFile.FromArgs(st.filecount, mf)
+            st.save(bigQuery_database.bqMainFile(
+                **bigQuery_database.bqMainFile.FromArgs(st.filecount, mf)
               )
             )
             bar.update(en)
@@ -109,8 +109,8 @@ class BigQuery(GithubMiner):
       if otherf_it:
         with progressbar.ProgressBar(max_value = otherf_it.total_rows, prefix = "Other Files") as bar:
           for en, of in enumerate(otherf_it):
-            st.save(bigQuery_database.bqFile(
-                **bigQuery_database.bqFile.FromArgs(st.filecount, of)
+            st.save(bigQuery_database.bqOtherFile(
+                **bigQuery_database.bqOtherFile.FromArgs(st.filecount, of)
               )
             )
             bar.update(en)
@@ -149,8 +149,8 @@ class BigQuery(GithubMiner):
       if header_includes_it:
         with progressbar.ProgressBar(max_value = header_includes_it.total_rows, prefix "Header Files") as bar:
           for en, hf in enumerate(header_includes_it):
-            st.save(bigQuery_database.bqFile(
-                **bigQuery_database.bqFile.FromArgs(st.filecount, hf)
+            st.save(bigQuery_database.bqHeaderFile(
+                **bigQuery_database.bqHeaderFile.FromArgs(st.filecount, hf)
               )
             )
             bar.update(en)
