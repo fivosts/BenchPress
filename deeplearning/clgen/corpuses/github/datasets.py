@@ -215,13 +215,9 @@ class openclDataset(Dataset):
 
     extensions = ['.cl']
     super(openclDataset, self).__init__(client, "opencl", extensions)
-    # self.query_exception = ' AND (' + ' OR '.join([
-    #     "(substr(file.path, {}, {}) = '{}' AND contentfile.content LIKE '%kernel void%')"
-    #       .format(-len(ext), 1+len(ext), ext)
-    #   for ext in ['.c', '.cc', '.cpp', '.cxx', '.c++', '.h', '.hpp']
-    # ]) + ')'
+    self.other_extensions = ['.c', '.cc', '.cpp', '.cxx', '.c++', '.h', '.hpp']
     self.query_exception = ' AND (' + ' OR '.join([
-        "substr(file.path, {}, {}) = '{}'"
+        "(substr(file.path, {}, {}) = '{}' AND contentfile.content LIKE '%kernel void%')"
           .format(-len(ext), 1+len(ext), ext)
       for ext in ['.c', '.cc', '.cpp', '.cxx', '.c++', '.h', '.hpp']
     ]) + ')'
