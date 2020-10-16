@@ -91,6 +91,10 @@ class BigQuery(GithubMiner):
 
     with self.storage as st:
       # Get contentfiles.
+
+      main_repo_count  = 0
+      other_repo_count = 0
+
       mainf_it, otherf_it = self.dataset.contentfile_query()
       if mainf_it:
         with progressbar.ProgressBar(max_value = mainf_it.total_rows, prefix = "Main Files") as bar:
@@ -100,6 +104,8 @@ class BigQuery(GithubMiner):
               )
             )
             bar.update(en)
+        main_repo_count = st.repocount
+
       if otherf_it:
         with progressbar.ProgressBar(max_value = otherf_it.total_rows, prefix = "Other Files") as bar:
           for en, of in enumerate(otherf_it):
@@ -108,11 +114,12 @@ class BigQuery(GithubMiner):
               )
             )
             bar.update(en)
+        other_repo_count = st.repocount - main_repo_count
 
       # Get repository list of requested file specifications.
       # If contentfile_query has taken place, use cached results instead of re-querying.
       if mainf_it or otherf_it:
-        mainrep_it, otherrep_it = mainf_it, otherf_it
+        mainrep_it, otherrep_it = None, None
       else:
         mainrep_it, otherrep_it = self.dataset.repository_query()
 
@@ -124,7 +131,7 @@ class BigQuery(GithubMiner):
               )
             )
             bar.update(en)
-        main_repo_count = self.storage.repocount
+        main_repo_count = st.repocount
 
       other_repo_count = 0
       if otherrep_it:
@@ -135,13 +142,13 @@ class BigQuery(GithubMiner):
               )
             )
             bar.update(en)
-        other_repo_count = self.storage.repocount - (main_repo_count or 0)
+        other_repo_count = st.repocount - main_repo_count
 
       # Filecount of requested file specifications.
       # Use cached results if contentfile has taken place.
       if mainf_it or otherf_it:
         # self.dataset.filecount = (mainf_it.page.num_items or 0, otherf_it.page.num_items or 0)
-        self.dataset.filecount = (len(mainf_it) if mainf_it else 0, len(otherf_it) if otherf_it else 0)
+        self.dataset.filecount = (mainf_it.total_rows if mainf_it else 0, otherf_it.total_rows if otherf_it else 0)
       mainfile_count, otherfile_count = self.dataset.filecount
 
       query_data = [
@@ -149,9 +156,9 @@ class BigQuery(GithubMiner):
         "other_contentfiles: {}".format(otherfile_count),
         "total_contentfiles: {}".format(mainfile_count + otherfile_count),
         "",
-        "main_repositories : {}".format(0 if not mainrep_it else main_repo_count),
-        "other_repositories: {}".format(0 if not otherrep_it else other_repo_count),
-        "total_repositories: {}".format(0 if not (mainrep_it or otherrep_it) else main_repo_count + other_repo_count),
+        "main_repositories : {}".format(main_repo_count),
+        "other_repositories: {}".format(other_repo_count),
+        "total_repositories: {}".format(main_repo_count + other_repo_count),
       ]
       st.save(bigQuery_database.bqData(key = self.dataset.name, value = '\n'.join(query_data)))
     return
