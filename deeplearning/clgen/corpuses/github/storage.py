@@ -86,19 +86,15 @@ class zipStorage(Storage):
                         ]
            ) -> None:
     if isinstance(contentfile, bigQuery_database.bqFile):
-      if contentfile.content is not None:
-        self.cached_content.append(contentfile.content)
-        self.file_count += 1
-        if self.file_count % self.flush_counter == 0:
-          self.zipFiles()
-      else:
-        raise ValueError("Wrong format of input contentfile.")
+      self.cached_content.append(contentfile.content)
+      self.file_count += 1
+      if self.file_count % self.flush_counter == 0:
+        self.zipFiles()
+      self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     elif isinstance(contentfile, bigQuery_database.bqData):
       self.data_file = "{}\n\n{}".format(contentfile.key, contentfile.value)
     elif isinstance(contentfile, bigQuery_database.bqRepo):
-      entry = "{}, {}".format(contentfile.repo_name, contentfile.ref)
-      if entry not in self.repos:
-        self.repos.add(entry)
+      self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     return
 
   def zipFiles(self) -> None:
@@ -183,19 +179,15 @@ class fileStorage(Storage):
                         ]
            ) -> None:
     if isinstance(contentfile, bigQuery_database.bqFile):
-      if contentfile.content is not None:
-        with open(self.cache_path / "{}{}".format(self.file_count, self.extension), 'w') as f:
-          f.write(contentfile.content)
-        self.file_count += 1
-      else:
-        raise ValueError("Wrong format of input contentfile.")
+      with open(self.cache_path / "{}{}".format(self.file_count, self.extension), 'w') as f:
+        f.write(contentfile.content)
+      self.file_count += 1
+      self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     elif isinstance(contentfile, bigQuery_database.bqData):
       with open(self.cache_path / "data.txt", 'w') as f:
         f.write("{}\n\n{}".format(contentfile.key, contentfile.value))
     elif isinstance(contentfile, bigQuery_database.bqRepo):
-      entry = "{}, {}".format(contentfile.repo_name, contentfile.ref)
-      if entry not in self.repos:
-        self.repos.add(entry)
+      self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     return
 
 class JSONStorage(Storage):
@@ -263,14 +255,13 @@ class JSONStorage(Storage):
     if isinstance(contentfile, bigQuery_database.bqData):
       self.data = "{}\n\n{}".format(contentfile.key, contentfile.value)
     elif isinstance(contentfile, bigQuery_database.bqRepo):
-      entry = "{}, {}".format(contentfile.repo_name, contentfile.ref)
-      if entry not in self.repos:
-        self.repos.add(entry)
+      self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     else:
       self.files.append(contentfile.ToJSONDict())
       self.file_count += 1
       if self.file_count % 500000:
         self._flush_json()
+      self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     return
 
   def _flush_json(self) -> None:
@@ -339,7 +330,7 @@ class dbStorage(Storage):
           entry.value = contentfile.value
         else:
           session.add(contentfile)
-      elif isinstance(contentfile, bigQuery_database.bqRepo):
+      else: # Do this for both bqRepo and bqFile.
         exists = session.query(
           bigQuery_database.bqRepo.repo_name,
           bigQuery_database.bqRepo.ref
@@ -348,12 +339,12 @@ class dbStorage(Storage):
         ).scalar() is not None
         if not exists:
           session.add(contentfile)
-      else:
-        exists = session.query(
-          bigQuery_database.bqFile.sha256
-        ).filter_by(sha256 = contentfile.sha256).scalar() is not None
-        if not exists:
-          session.add(contentfile)
+        if isinstance(contentfile, bigQuery_database.bqFile):
+          exists = session.query(
+            bigQuery_database.bqFile.sha256
+          ).filter_by(sha256 = contentfile.sha256).scalar() is not None
+          if not exists:
+            session.add(contentfile)
     return
 
 class bqStorage(Storage):
