@@ -147,7 +147,6 @@ class BigQuery(GithubMiner):
       # Filecount of requested file specifications.
       # Use cached results if contentfile has taken place.
       if mainf_it or otherf_it:
-        # self.dataset.filecount = (mainf_it.page.num_items or 0, otherf_it.page.num_items or 0)
         self.dataset.filecount = (mainf_it.total_rows if mainf_it else 0, otherf_it.total_rows if otherf_it else 0)
       mainfile_count, otherfile_count = self.dataset.filecount
 
