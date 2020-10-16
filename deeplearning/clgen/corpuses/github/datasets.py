@@ -106,7 +106,8 @@ class Dataset(object):
   def _setupTables(self, dataset_id: str) -> typing.Dict[str, bigquery.Table]:
     """API request that gets or sets bigquery.Table instances."""
     table_reg = {
-      'bq_contentfiles': bigQuery_database.bqFile.bqSchema,
+      'bq_main_contentfiles': bigQuery_database.bqFile.bqSchema,
+      'bq_etc_contentfiles' : bigQuery_database.bqFile.bqSchema,
       'bq_repofiles'   : bigQuery_database.bqRepo.bqSchema,
       'bq_data'        : bigQuery_database.bqData.bqSchema,
     }
@@ -189,7 +190,7 @@ class Dataset(object):
     """.format("" if not self.query_file_id else "AND (" + self.query_file_id + ")")
 
     if FLAGS.bq_wait_permission:
-      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_contentfiles', dr = True))
+      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_main_contentfiles', dr = True))
       l.getLogger().warn("This query is going to consume {}".format(
           humanize.naturalsize(dry_run_job.total_bytes_processed)
         )
@@ -200,7 +201,7 @@ class Dataset(object):
     l.getLogger().info("Retrieving {} contentfiles...".format(self.dataset.dataset_id))
 
     try:
-      rows = self.client.query(query, job_config = self.queryConfig('bq_contentfiles')).result()
+      rows = self.client.query(query, job_config = self.queryConfig('bq_main_contentfiles')).result()
     except google.api_core.exceptions.Forbidden as e:
       l.getLogger().error(e)
       exit()
@@ -309,7 +310,7 @@ class openclDataset(Dataset):
     """.format(self.query_exception or "")
 
     if FLAGS.bq_wait_permission:
-      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_repofiles', dr = True))
+      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_etc_contentfiles', dr = True))
       l.getLogger().warn("This query is going to consume {}".format(
           humanize.naturalsize(dry_run_job.total_bytes_processed)
         )
@@ -319,7 +320,7 @@ class openclDataset(Dataset):
       input()
 
     try:
-      rows = self.client.query(query, job_config = self.queryConfig('bq_contentfiles')).result()
+      rows = self.client.query(query, job_config = self.queryConfig('bq_etc_contentfiles')).result()
     except google.api_core.exceptions.Forbidden as e:
       l.getLogger().error(e)
       exit()
