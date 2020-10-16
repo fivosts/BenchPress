@@ -224,7 +224,12 @@ class openclDataset(Dataset):
     self.query_exception = ' AND (' + ' OR '.join([
         "(substr(file.path, {}, {}) = '{}' AND contentfile.content LIKE '%kernel void%')"
           .format(-len(ext), 1+len(ext), ext)
-      for ext in ['.c', '.cc', '.cpp', '.cxx', '.c++', '.h', '.hpp']
+      for ext in self.other_extensions
+    ]) + ')'
+    self.header_exception = ' AND (' + ' OR '.join([
+        "substr(file.path, {}, {}) = '{}'"
+          .format(-len(ext), 1+len(ext), ext)
+      for ext in self.other_extensions
     ]) + ')'
     return
 
@@ -331,15 +336,19 @@ class openclDataset(Dataset):
 
   def header_file_query(self, repos: typing.List[typing.Tuple[str, str]]) -> bigquery.RowIterator:
     """From the repos you got contentfiles from, get header files as well that might need be included."""
-    # query = """
-    # SELECT file.repo_name, file.path, file.ref, file.mode, 
-    #        file.id, file.symlink_target, contentfile.size, 
-    #        contentfile.content, contentfile.binary, contentfile.copies
-    # FROM `bigquery-public-data.github_repos.files` as file
-    # INNER JOIN `bigquery-public-data.github_repos.contents` as contentfile
-    # ON file.id = contentfile.id
-    # {}
-    # """.format(self.query_exception or "")
+
+    file_in_repo = "(" + ' OR '.join(
+                    ['file.repo_name = {} AND file.ref =  {}'.format(rn, ref)
+                      for (rn, ref) in repos]) + ")"
+    query = """
+    SELECT file.repo_name, file.path, file.ref, file.mode,
+           file.id, file.symlink_target, contentfile.size,
+           contentfile.content, contentfile.binary, contentfile.copies
+    FROM `bigquery-public-data.github_repos.files` as file
+    INNER JOIN `bigquery-public-data.github_repos.contents` as contentfile
+    ON file.id = contentfile.id
+    {} AND {}
+    """.format(self.header_exception or "", file_in_repo)
 
     if FLAGS.bq_wait_permission:
       dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_header_contentfiles', dr = True))
@@ -350,7 +359,7 @@ class openclDataset(Dataset):
       l.getLogger().warn(query)
       l.getLogger().warn("Hit any button to continue...")
       input()
-    l.getLogger().info("Retrieving etc. contentfiles...")
+    l.getLogger().info("Retrieving header files from repository list...")
 
     try:
       rows = self.client.query(query, job_config = self.queryConfig('bq_header_contentfiles')).result()
