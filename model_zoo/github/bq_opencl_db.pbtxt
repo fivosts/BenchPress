@@ -1,8 +1,8 @@
 github_miner {
-  path: "/media/fivosts/Second sata disk"
+  path: "/media/fivosts/Second sata disk/bq_opencl"
   data_format: sql
   big_query {
-    credentials: "/home/fivosts/PhD/Code/clgen/deeplearning/clgen/corpuses/2nd_acc_creds.json"
+    credentials: "/home/fivosts/PhD/Code/clgen/deeplearning/clgen/corpuses/4th_acc_creds.json"
     language: "opencl"
   }
 }
