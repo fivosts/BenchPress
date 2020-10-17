@@ -169,8 +169,32 @@ class bqDatabase(sqlutil.Database):
     return repo_count
 
   @property
+  def data(self) -> bqData:
+    with self.Session() as s:
+      data = s.query(bqData).first()
+      return data
+
+  @property
   def repo_entries(self) -> typing.Set[str]:
     with self.Session() as s:
       repos = s.query(bqRepo)
       return set("{}, {}".format(e.repo_name, e.ref) for e in s.query(bqRepo))
+
+  @property
+  def main_sha(self) -> typing.Set[str]:
+    with self.Session() as s:
+      repo_hash = s.query(bqMainFile.sha256)
+      return set(repo_hash)
+
+  @property
+  def other_sha(self) -> typing.Set[str]:
+    with self.Session() as s:
+      repo_hash = s.query(bqOtherFile.sha256)
+      return set(repo_hash)
+
+  @property
+  def header_sha(self) -> typing.Set[str]:
+    with self.Session() as s:
+      repo_hash = s.query(bqHeaderFile.sha256)
+      return set(repo_hash)
   
