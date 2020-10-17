@@ -11,6 +11,7 @@ import pathlib
 import github
 import progressbar
 import copy
+import numpy as np
 
 from base64 import b64decode
 from functools import partial
@@ -146,9 +147,9 @@ class BigQuery(GithubMiner):
         other_repo_count = st.repocount - main_repo_count
 
       # Parse files from mined repos to get header files as well.
-      repo_list = st.repoTuple
+      repo_list = np.random.shuffle(st.repoTuple)
       # Split repo list into chunks of 1K, in order to do queries in steps that will not timeout (6 hrs).
-      threshold = 1700
+      threshold = 1230
       repolist_chunks = []
 
       t = threshold
@@ -161,6 +162,7 @@ class BigQuery(GithubMiner):
 
       total_header_rows = 0
       for p, repo in enumerate(repolist_chunks):
+        st.flush()
         header_includes_it = self.dataset.header_file_query(repo)
         if header_includes_it:
           total_header_rows += header_includes_it.total_rows
