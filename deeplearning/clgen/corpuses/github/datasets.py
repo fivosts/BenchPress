@@ -140,13 +140,13 @@ class Dataset(object):
     {}
     """.format("" if not self.query_file_id else "WHERE " + self.query_file_id)
 
-    if FLAGS.bq_wait_permission:
-      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_main_contentfiles', dr = True))
-      l.getLogger().warn("This query is going to consume {}".format(
-          humanize.naturalsize(dry_run_job.total_bytes_processed)
-        )
+    dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_main_contentfiles', dr = True))
+    l.getLogger().warn("This query is going to consume {}".format(
+        humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
-      l.getLogger().warn(query)
+    )
+    l.getLogger().warn(query)
+    if FLAGS.bq_wait_permission:
       l.getLogger().warn("Hit any button to continue...")
       try:
         input()
@@ -172,13 +172,13 @@ class Dataset(object):
     {}
     """.format("" if not self.query_file_id else "WHERE " + self.query_file_id)
 
-    if FLAGS.bq_wait_permission:
-      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_repofiles', dr = True))
-      l.getLogger().warn("This query is going to consume {}".format(
-          humanize.naturalsize(dry_run_job.total_bytes_processed)
-        )
+    dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_repofiles', dr = True))
+    l.getLogger().warn("This query is going to consume {}".format(
+        humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
-      l.getLogger().warn(query)
+    )
+    l.getLogger().warn(query)
+    if FLAGS.bq_wait_permission:
       l.getLogger().warn("Hit any button to continue...")
       try:
         input()
@@ -204,13 +204,13 @@ class Dataset(object):
     INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
     """.format("" if not self.query_file_id else "AND (" + self.query_file_id + ")")
 
-    if FLAGS.bq_wait_permission:
-      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_main_contentfiles', dr = True))
-      l.getLogger().warn("This query is going to consume {}".format(
-          humanize.naturalsize(dry_run_job.total_bytes_processed)
-        )
+    dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_main_contentfiles', dr = True))
+    l.getLogger().warn("This query is going to consume {}".format(
+        humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
-      l.getLogger().warn(query)
+    )
+    l.getLogger().warn(query)
+    if FLAGS.bq_wait_permission:
       l.getLogger().warn("Hit any button to continue...")
       try:
         input()
@@ -274,13 +274,13 @@ class openclDataset(Dataset):
     {}
     """.format(self.query_exception or "")
 
-    if FLAGS.bq_wait_permission:
-      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_repofiles', dr = True))
-      l.getLogger().warn("This query is going to consume {}".format(
-          humanize.naturalsize(dry_run_job.total_bytes_processed)
-        )
+    dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_repofiles', dr = True))
+    l.getLogger().warn("This query is going to consume {}".format(
+        humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
-      l.getLogger().warn(query)
+    )
+    l.getLogger().warn(query)
+    if FLAGS.bq_wait_permission:
       l.getLogger().warn("Hit any button to continue...")
       try:
         input()
@@ -311,13 +311,13 @@ class openclDataset(Dataset):
     {}
     """.format(self.query_exception or "")
 
-    if FLAGS.bq_wait_permission:
-      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_repofiles', dr = True))
-      l.getLogger().warn("This query is going to consume {}".format(
-          humanize.naturalsize(dry_run_job.total_bytes_processed)
-        )
+    dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_repofiles', dr = True))
+    l.getLogger().warn("This query is going to consume {}".format(
+        humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
-      l.getLogger().warn(query)
+    )
+    l.getLogger().warn(query)
+    if FLAGS.bq_wait_permission:
       l.getLogger().warn("Hit any button to continue...")
       try:
         input()
@@ -350,13 +350,13 @@ class openclDataset(Dataset):
     {}
     """.format(self.query_exception or "")
 
-    if FLAGS.bq_wait_permission:
-      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_etc_contentfiles', dr = True))
-      l.getLogger().warn("This query is going to consume {}".format(
-          humanize.naturalsize(dry_run_job.total_bytes_processed)
-        )
+    dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_etc_contentfiles', dr = True))
+    l.getLogger().warn("This query is going to consume {}".format(
+        humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
-      l.getLogger().warn(query)
+    )
+    l.getLogger().warn(query)
+    if FLAGS.bq_wait_permission:
       l.getLogger().warn("Hit any button to continue...")
       try:
         input()
@@ -392,17 +392,17 @@ class openclDataset(Dataset):
       bigquery.ArrayQueryParameter("ref_list",  "STRING", [x for _, x in repos])
     ]
 
+    dry_run_job = self.client.query(
+      query, job_config = self.queryConfig(
+        'bq_header_contentfiles', qr = query_parameters, dr = True
+      )
+    )
+    l.getLogger().warn("This query is going to consume {}".format(
+        humanize.naturalsize(dry_run_job.total_bytes_processed)
+      )
+    )
+    l.getLogger().warn(query)
     if FLAGS.bq_wait_permission:
-      dry_run_job = self.client.query(
-        query, job_config = self.queryConfig(
-          'bq_header_contentfiles', qr = query_parameters, dr = True
-        )
-      )
-      l.getLogger().warn("This query is going to consume {}".format(
-          humanize.naturalsize(dry_run_job.total_bytes_processed)
-        )
-      )
-      l.getLogger().warn(query)
       l.getLogger().warn("Hit any button to continue...")
       try:
         input()
