@@ -328,7 +328,7 @@ class dbStorage(Storage):
     if not self.repos:
       self.repos = set()
 
-    self.flush_freq = 4000000
+    self.flush_freq = 500000
     self.main_sha   = self.db.main_sha
     self.main_files = set()
 
