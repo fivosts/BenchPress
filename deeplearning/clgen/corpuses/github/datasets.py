@@ -141,14 +141,18 @@ class Dataset(object):
     """.format("" if not self.query_file_id else "WHERE " + self.query_file_id)
 
     if FLAGS.bq_wait_permission:
-      dry_run_job = self.client.query(query, job_config = self.queryConfig('dry_run'))
+      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_main_contentfiles', dr = True))
       l.getLogger().warn("This query is going to consume {}".format(
           humanize.naturalsize(dry_run_job.total_bytes_processed)
         )
       )
       l.getLogger().warn(query)
       l.getLogger().warn("Hit any button to continue...")
-      input()
+      try:
+        input()
+      except KeyboardInterrupt:
+        return (0, 0)
+
     l.getLogger().info("Running file count query...")
 
     try:
@@ -278,6 +282,10 @@ class openclDataset(Dataset):
       )
       l.getLogger().warn(query)
       l.getLogger().warn("Hit any button to continue...")
+      try:
+        input()
+      except KeyboardInterrupt:
+        return (0, 0)
 
     try:
       job = self.client.query(query)
