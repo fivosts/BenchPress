@@ -305,11 +305,15 @@ class dbStorage(Storage):
 
   @property
   def repocount(self):
-    return self.db.repo_count
+    return len(self.repos)
 
   @property
   def filecount(self):
-    return self.db.file_count
+    return (self.db.file_count +
+            len(self.main_files) +
+            len(self.other_files) +
+            len(self.header_files)
+           )
 
   def __init__(self,
                path: pathlib.Path,
@@ -318,8 +322,51 @@ class dbStorage(Storage):
                ):
     super(dbStorage, self).__init__(path, name, extension)
     self.db = bigQuery_database.bqDatabase("sqlite:///{}".format(self.cache_path / (self.name + ".db")))
+
+    self.data  = None
     self.repos = self.db.repo_entries
+    if not self.repos:
+      self.repos = set()
+
+    self.flush_freq = 4000000
+    self.main_sha   = self.db.main_sha
+    self.main_files = set()
+
+    self.other_sha   = self.db.other_sha
+    self.other_files = set()
+
+    self.header_sha   = self.db.header_sha
+    self.header_files = set()
+
     l.getLogger().info("Set up SQL storage in {}".format(self.cache_path))
+
+  def __exit__(self, path, name, extension):
+    with self.db.Session(commit = True) as session:
+      ## Write data
+      if self.db.data is not None:
+        entry = session.query(
+          bigQuery_database.bqData
+        ).filter_by(key = self.data.key).first()
+        entr.value = self.data.value
+      else:
+        session.add(self.data)
+
+      ## Write repos
+      for en, repo in enumerate(self.repos):
+        repo_name, ref = repo.split(', ')
+        session.add(bigQuery_database.bqRepo(**bigQuery_database.bqRepo.FromArgs(
+            en,
+            {'repo_name': repo_name, 'ref': ref}
+          ))
+        )
+    # Flush remaining contentfiles.
+    self.flushToDB(self.main_files)
+    self.flushToDB(self.other_files)
+    self.flushToDB(self.header_files)
+    self.main_files   = set()
+    self.other_files  = set()
+    self.header_files = set()
+    return
 
   def save(self,
            contentfile: typing.Union[
@@ -328,47 +375,38 @@ class dbStorage(Storage):
                           bigQuery_database.bqRepo
                         ]
            ) -> None:
-    with self.db.Session(commit = True) as session:
-      if isinstance(contentfile, bigQuery_database.bqData):
-        exists = session.query(
-          bigQuery_database.bqData.key
-        ).filter_by(key = contentfile.key).scalar() is not None
-        if exists:
-          entry = session.query(
-            bigQuery_database.bqData
-          ).filter_by(key = contentfile.key).first()
-          entry.value = contentfile.value
-        else:
-          session.add(contentfile)
-      else: # Do this for both bqRepo and bqFile.
-        repo_exists = session.query(
-          bigQuery_database.bqRepo.repo_name,
-          bigQuery_database.bqRepo.ref
-        ).filter_by(
-          repo_name = contentfile.repo_name, ref = contentfile.ref
-        ).scalar() is not None
-        if not repo_exists:
-          session.add(bigQuery_database.bqRepo(
-              **bigQuery_database.bqRepo.FromArgs(
-                self.repocount,
-                {'repo_name': contentfile.repo_name, 'ref': contentfile.ref}
-              )
-            )
-          )
-          self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
+    if isinstance(contentfile, bigQuery_database.bqData):
+      self.data = contentfile
+    else: # Do this for both bqRepo and bqFile.
+      if isinstance(contentfile, bigQuery_database.bqMainFile):
+        self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
+        if contentfile.sha256 not in self.main_sha:
+          self.main_sha.add(contentfile.sha256)
+          self.main_files.add(contentfile)
+        if len(self.main_files) > self.flush_freq:
+          self.flushToDB(self.main_files)
+          self.main_files = set()
+      elif isinstance(contentfile, bigQuery_database.bqOtherFile):
+        self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
+        if contentfile.sha256 not in self.other_sha:
+          self.other_sha.add(contentfile.sha256)
+          self.other_files.add(contentfile)
+        if len(self.other_files) > self.flush_freq:
+          self.flushToDB(self.other_files)
+          self.other_files = set()
+      elif isinstance(contentfile, bigQuery_database.bqHeaderFile):
+        if contentfile.sha256 not in self.header_sha:
+          self.header_sha.add(contentfile.sha256)
+          self.header_files.add(contentfile)
+        if len(self.header_files) > self.flush_freq:
+          self.flushToDB(self.header_files)
+          self.header_files = set()
+    return
 
-        if isinstance(contentfile, bigQuery_database.bqFile):
-          if isinstance(contentfile, bigQuery_database.bqMainFile):
-            tp = bigQuery_database.bqMainFile
-          elif isinstance(contentfile, bigQuery_database.bqOtherFile):
-            tp = bigQuery_database.bqOtherFile
-          else:
-            tp = bigQuery_database.bqHeaderFile
-          exists = session.query(
-            tp.sha256
-          ).filter_by(sha256 = contentfile.sha256).scalar() is not None
-          if not exists:
-            session.add(contentfile)
+  def flushToDB(self, files: typing.Set[bigQuery_database.bqFile]) -> None:
+    with self.db.Session(commit = True) as session:
+      for en, file in enumerate(files):
+        session.add(file)
     return
 
 class bqStorage(Storage):
