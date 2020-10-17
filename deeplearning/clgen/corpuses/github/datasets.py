@@ -197,9 +197,8 @@ class Dataset(object):
   def contentfile_query(self) -> typing.Tuple[bigquery.table.RowIterator]:
     """Returns iterable of query files"""
     query = """
-    SELECT file.repo_name, file.path, file.ref, file.mode, 
-           file.id, file.symlink_target, contentfile.size, 
-           contentfile.content, contentfile.binary, contentfile.copies
+    SELECT file.repo_name, file.path, file.ref, 
+           file.id, contentfile.size, contentfile.content
     FROM `bigquery-public-data.github_repos.contents` as contentfile
     INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
     """.format("" if not self.query_file_id else "AND (" + self.query_file_id + ")")
@@ -341,9 +340,8 @@ class openclDataset(Dataset):
     """
     cl_file_it, _ = super(openclDataset, self).contentfile_query()
     query = """
-    SELECT file.repo_name, file.path, file.ref, file.mode, 
-           file.id, file.symlink_target, contentfile.size, 
-           contentfile.content, contentfile.binary, contentfile.copies
+    SELECT file.repo_name, file.path, file.ref, file.id,
+           contentfile.size, contentfile.content
     FROM `bigquery-public-data.github_repos.files` as file
     INNER JOIN `bigquery-public-data.github_repos.contents` as contentfile
     ON file.id = contentfile.id
@@ -376,9 +374,8 @@ class openclDataset(Dataset):
     """From the repos you got contentfiles from, get header files as well that might need be included."""
 
     query = """
-    SELECT file.repo_name, file.path, file.ref, file.mode,
-           file.id, file.symlink_target, contentfile.size,
-           contentfile.content, contentfile.binary, contentfile.copies
+    SELECT file.repo_name, file.path, file.ref,
+           file.id, contentfile.size, contentfile.content
     FROM `bigquery-public-data.github_repos.files` as file
     INNER JOIN `bigquery-public-data.github_repos.contents` as contentfile
     ON file.id = contentfile.id
