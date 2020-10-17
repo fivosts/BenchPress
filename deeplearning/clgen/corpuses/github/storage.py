@@ -347,18 +347,21 @@ class dbStorage(Storage):
         entry = session.query(
           bigQuery_database.bqData
         ).filter_by(key = self.data.key).first()
-        entr.value = self.data.value
+        entry.value = self.data.value
       else:
         session.add(self.data)
 
       ## Write repos
       for en, repo in enumerate(self.repos):
         repo_name, ref = repo.split(', ')
-        session.add(bigQuery_database.bqRepo(**bigQuery_database.bqRepo.FromArgs(
-            en,
-            {'repo_name': repo_name, 'ref': ref}
-          ))
+        content = bigQuery_database.bqRepo(**bigQuery_database.bqRepo.FromArgs(
+            en, {'repo_name': repo_name, 'ref': ref})
         )
+        exists = session.query(
+          bigQuery_database.bqRepo
+        ).filter_by(repo_name = content.repo_name, ref = content.ref).scalar() is not None
+        if not exists:
+          session.add(content)
     # Flush remaining contentfiles.
     self.flushToDB(self.main_files)
     self.flushToDB(self.other_files)
