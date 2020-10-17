@@ -336,15 +336,22 @@ class dbStorage(Storage):
         else:
           session.add(contentfile)
       else: # Do this for both bqRepo and bqFile.
-        exists = session.query(
+        repo_exists = session.query(
           bigQuery_database.bqRepo.repo_name,
           bigQuery_database.bqRepo.ref
         ).filter_by(
           repo_name = contentfile.repo_name, ref = contentfile.ref
         ).scalar() is not None
-        if not exists:
-          session.add(contentfile)
+        if not repo_exists:
+          session.add(bigQuery_database.bqRepo(
+              **bigQuery_database.bqRepo.FromArgs(
+                self.repocount,
+                {'repo_name': contentfile.repo_name, 'ref': contentfile.ref}
+              )
+            )
+          )
           self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
+
         if isinstance(contentfile, bigQuery_database.bqFile):
           if isinstance(contentfile, bigQuery_database.bqMainFile):
             tp = bigQuery_database.bqMainFile
