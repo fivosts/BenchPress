@@ -146,22 +146,38 @@ class BigQuery(GithubMiner):
         other_repo_count = st.repocount - main_repo_count
 
       # Parse files from mined repos to get header files as well.
-      header_includes_it = self.dataset.header_file_query(st.repoTuple)
-      if header_includes_it:
-        with progressbar.ProgressBar(max_value = header_includes_it.total_rows, prefix = "Header Files") as bar:
-          for en, hf in enumerate(header_includes_it):
-            st.save(bigQuery_database.bqHeaderFile(
-                **bigQuery_database.bqHeaderFile.FromArgs(st.filecount, hf)
+      repo_list = st.repoTuple
+      # Split repo list into chunks of 1K, in order to do queries in steps that will not timeout (6 hrs).
+      threshold = 1000
+      repolist_chunks = []
+
+      t = threshold
+      while True:
+        repolist_chunks.append(repo_list[len(repolist_chunks) * threshold: t])
+        t += threshold
+        if t > len(repo_list):
+          repolist_chunks.append(repo_list[len(repolist_chunks) * threshold:])
+          break
+
+      total_header_rows = 0
+      for p, repo in enumerate(repolist_chunks):
+        header_includes_it = self.dataset.header_file_query(repo)
+        if header_includes_it:
+          total_header_rows += header_includes_it.total_rows
+          with progressbar.ProgressBar(max_value = header_includes_it.total_rows, prefix = "Header Files: {}".format(p)) as bar:
+            for en, hf in enumerate(header_includes_it):
+              st.save(bigQuery_database.bqHeaderFile(
+                  **bigQuery_database.bqHeaderFile.FromArgs(st.filecount, hf)
+                )
               )
-            )
-            bar.update(en)
+              bar.update(en)
 
       # Filecount of requested file specifications.
       # Use cached results if contentfile has taken place.
       if mainf_it or otherf_it:
         self.dataset.filecount = (mainf_it.total_rows if mainf_it else 0, otherf_it.total_rows if otherf_it else 0)
       mainfile_count, otherfile_count = self.dataset.filecount
-      header_file_count = header_includes_it.total_rows if header_includes_it else 0
+      header_file_count = total_header_rows
 
       query_data = [
         "main_contentfiles : {}".format(mainfile_count),
