@@ -315,6 +315,7 @@ class dbStorage(Storage):
                ):
     super(dbStorage, self).__init__(path, name, extension)
     self.db = bigQuery_database.bqDatabase("sqlite:///{}".format(self.cache_path / (self.name + ".db")))
+    self.repos = self.db.repo_entries
 
   def save(self,
            contentfile: typing.Union[
