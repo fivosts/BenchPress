@@ -60,6 +60,9 @@ class Storage(object):
   def save(self):
     raise NotImplementedError("Abstract Class")
 
+  def flush(self):
+    pass
+
 class zipStorage(Storage):
 
   @property
@@ -352,10 +355,10 @@ class dbStorage(Storage):
         session.add(self.data)
 
       ## Write repos
-      for en, repo in enumerate(self.repos):
+      for repo in self.repos:
         repo_name, ref = repo.split(', ')
         content = bigQuery_database.bqRepo(**bigQuery_database.bqRepo.FromArgs(
-            en, {'repo_name': repo_name, 'ref': ref})
+            self.db.repo_count, {'repo_name': repo_name, 'ref': ref})
         )
         exists = session.query(
           bigQuery_database.bqRepo
@@ -404,6 +407,16 @@ class dbStorage(Storage):
         if len(self.header_files) > self.flush_freq:
           self.flushToDB(self.header_files)
           self.header_files = set()
+    return
+
+  def flush(self):
+    """Flushes all cached data to DB."""
+    self.flushToDB(self.main_files)
+    self.flushToDB(self.other_files)
+    self.flushToDB(self.header_files)
+    self.main_files   = set()
+    self.other_files  = set()
+    self.header_files = set()
     return
 
   def flushToDB(self, files: typing.Set[bigQuery_database.bqFile]) -> None:
