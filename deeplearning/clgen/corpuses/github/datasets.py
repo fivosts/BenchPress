@@ -353,7 +353,7 @@ class openclDataset(Dataset):
     """From the repos you got contentfiles from, get header files as well that might need be included."""
 
     file_in_repo = "(" + ' OR '.join(
-                    ['file.repo_name = {} AND file.ref =  {}'.format(rn, ref)
+                    ['(file.repo_name = "{}" AND file.ref = "{}")'.format(rn, ref)
                       for (rn, ref) in repos]) + ")"
     query = """
     SELECT file.repo_name, file.path, file.ref, file.mode,
