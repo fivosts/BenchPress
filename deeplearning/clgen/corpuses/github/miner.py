@@ -148,7 +148,7 @@ class BigQuery(GithubMiner):
       # Parse files from mined repos to get header files as well.
       repo_list = st.repoTuple
       # Split repo list into chunks of 1K, in order to do queries in steps that will not timeout (6 hrs).
-      threshold = 1000
+      threshold = 1700
       repolist_chunks = []
 
       t = threshold
