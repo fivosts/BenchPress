@@ -73,9 +73,10 @@ class Dataset(object):
     self.dataset, self.tables = self._setupDataset(
       "{}.clgen_{}_github".format(self.client.project, dataset_id or "generic")
     )
-    self.queryConfig = lambda qt, dr = False : bigquery.QueryJobConfig(
+    self.queryConfig = lambda qt, qr = [], dr = False : bigquery.QueryJobConfig(
       destination = self.tables[qt],
       write_disposition = 'WRITE_TRUNCATE',
+      query_parameters = qr,
       dry_run = dr,
     )
 
@@ -228,16 +229,20 @@ class openclDataset(Dataset):
 
     extensions = ['.cl']
     super(openclDataset, self).__init__(client, "opencl", extensions)
+
     self.other_extensions = ['.c', '.cc', '.cpp', '.cxx', '.c++', '.h', '.hpp']
+    self.header_extension = ['.h', '.hpp']
+
     self.query_exception = ' AND (' + ' OR '.join([
         "(substr(file.path, {}, {}) = '{}' AND contentfile.content LIKE '%kernel void%')"
           .format(-len(ext), 1+len(ext), ext)
       for ext in self.other_extensions
     ]) + ')'
+
     self.header_exception = ' AND (' + ' OR '.join([
         "substr(file.path, {}, {}) = '{}'"
           .format(-len(ext), 1+len(ext), ext)
-      for ext in self.other_extensions
+      for ext in self.header_extension
     ]) + ')'
     return
 
@@ -352,9 +357,6 @@ class openclDataset(Dataset):
   def header_file_query(self, repos: typing.List[typing.Tuple[str, str]]) -> bigquery.table.RowIterator:
     """From the repos you got contentfiles from, get header files as well that might need be included."""
 
-    file_in_repo = "(" + ' OR '.join(
-                    ['(file.repo_name = "{}" AND file.ref = "{}")'.format(rn, ref)
-                      for (rn, ref) in repos]) + ")"
     query = """
     SELECT file.repo_name, file.path, file.ref, file.mode,
            file.id, file.symlink_target, contentfile.size,
@@ -362,11 +364,22 @@ class openclDataset(Dataset):
     FROM `bigquery-public-data.github_repos.files` as file
     INNER JOIN `bigquery-public-data.github_repos.contents` as contentfile
     ON file.id = contentfile.id
-    {} AND {}
-    """.format(self.header_exception or "", file_in_repo)
+    {} 
+    AND file.repo_name in UNNEST(@repo_list)
+    AND file.ref in UNNEST(@ref_list)
+    """.format(self.header_exception or "")
+
+    query_parameters = [
+      bigquery.ArrayQueryParameter("repo_list", "STRING", [x for x, _ in repos]),
+      bigquery.ArrayQueryParameter("ref_list",  "STRING", [x for _, x in repos])
+    ]
 
     if FLAGS.bq_wait_permission:
-      dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_header_contentfiles', dr = True))
+      dry_run_job = self.client.query(
+        query, job_config = self.queryConfig(
+          'bq_header_contentfiles', qr = query_parameters, dr = True
+        )
+      )
       l.getLogger().warn("This query is going to consume {}".format(
           humanize.naturalsize(dry_run_job.total_bytes_processed)
         )
@@ -381,7 +394,11 @@ class openclDataset(Dataset):
     l.getLogger().info("Retrieving header files from repository list...")
 
     try:
-      rows = self.client.query(query, job_config = self.queryConfig('bq_header_contentfiles')).result()
+      rows = self.client.query(
+        query, job_config = self.queryConfig(
+          'bq_header_contentfiles', qr = query_parameters
+        )
+      ).result()
     except google.api_core.exceptions.Forbidden as e:
       l.getLogger().error(e)
       exit()
