@@ -366,8 +366,8 @@ class MaskLMDataGenerator(object):
     iterations   = self.training_opts.dupe_factor // max_dupe
     remaining    = self.training_opts.dupe_factor % max_dupe
 
-    extended_corpus   = np.repeat(corpus, max_dupe, axis = 0)
-    remaining_corpus   = np.repeat(corpus, remaining, axis = 0)
+    extended_corpus  = np.repeat(corpus, max_dupe, axis = 0)
+    remaining_corpus = np.repeat(corpus, remaining, axis = 0)
 
     l.getLogger().info("Estimated element size: {}. Dupe factor {} split into {} iterations of {} (plus {} remaining)".format(
         humanize.naturalsize(single_item_bytes), self.training_opts.dupe_factor, iterations, max_dupe, remaining
