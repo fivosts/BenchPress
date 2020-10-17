@@ -87,6 +87,7 @@ class Dataset(object):
                               for ext in self.extensions
                         ])
     self.file_count = None
+    l.getLogger().info("{} dataset initialized.")
     return
 
   def _setupDataset(self, 

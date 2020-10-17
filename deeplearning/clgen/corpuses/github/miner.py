@@ -79,6 +79,7 @@ class BigQuery(GithubMiner):
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(pathlib.Path(config.big_query.credentials, must_exist = True))
     self.cache_path = pathlib.Path(config.path, must_exist = False, parents = True).absolute()
 
+    l.getLogger().info("Initializing BigQuery miner in {}".format(self.cache_path))
     job_config = bigquery.QueryJobConfig(allowLargeResults = True)
     job_config.allow_large_results = True
     self.client = bigquery.Client(default_query_job_config = job_config)
