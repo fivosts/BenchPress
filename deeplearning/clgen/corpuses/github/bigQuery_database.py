@@ -35,12 +35,8 @@ class bqFile():
   repo_name      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   ref            : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   path           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  mode           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  symlink_target : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   size           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   content        : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  binary         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  copies         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   date_added     : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
@@ -55,12 +51,8 @@ class bqFile():
       "repo_name"      : row['repo_name'],
       "ref"            : row['ref'],
       "path"           : row['path'],
-      "mode"           : row['mode']           if row['mode']           else "None",
-      "symlink_target" : row['symlink_target'] if row['symlink_target'] else "None",
       "size"           : row['size']           if row['size']           else "None",
       "content"        : row['content']        if row['content']        else "None",
-      "binary"         : row['binary']         if row['binary']         else "None",
-      "copies"         : row['copies']         if row['copies']         else "None",
       "date_added"     : datetime.datetime.utcnow(),
     }
 
@@ -71,12 +63,8 @@ class bqFile():
       bigquery.SchemaField("repo_name",      "STRING",  mode = "REQUIRED"),
       bigquery.SchemaField("ref",            "STRING",  mode = "REQUIRED"),
       bigquery.SchemaField("path",           "STRING",  mode = "REQUIRED"),
-      bigquery.SchemaField("mode",           "STRING",  mode = "REQUIRED"),
-      bigquery.SchemaField("symlink_target", "STRING",  mode = "REQUIRED"),
       bigquery.SchemaField("size",           "INTEGER", mode = "REQUIRED"),
       bigquery.SchemaField("content",        "STRING",  mode = "REQUIRED"),
-      bigquery.SchemaField("binary",         "BOOLEAN", mode = "REQUIRED"),
-      bigquery.SchemaField("copies",         "INTEGER", mode = "REQUIRED"),
     ]
 
   def ToJSONDict(self) -> typing.Dict[str, typing.Any]:
@@ -86,12 +74,8 @@ class bqFile():
       "repo_name"      : self.repo_name,
       "ref"            : self.ref,
       "path"           : self.path,
-      "mode"           : self.mode,
-      "symlink_target" : self.symlink_target,
       "size"           : self.size,
       "content"        : self.content,
-      "binary"         : self.binary,
-      "copies"         : self.copies,
       "date_added"     : str(self.date_added.strftime("%m/%d/%Y, %H:%M:%S")),
     }
 
@@ -183,18 +167,18 @@ class bqDatabase(sqlutil.Database):
   @property
   def main_sha(self) -> typing.Set[str]:
     with self.Session() as s:
-      repo_hash = s.query(bqMainFile.sha256)
+      repo_hash = s.query(bqMainFile.sha256).all()
       return set(repo_hash)
 
   @property
   def other_sha(self) -> typing.Set[str]:
     with self.Session() as s:
-      repo_hash = s.query(bqOtherFile.sha256)
+      repo_hash = s.query(bqOtherFile.sha256).all()
       return set(repo_hash)
 
   @property
   def header_sha(self) -> typing.Set[str]:
     with self.Session() as s:
-      repo_hash = s.query(bqHeaderFile.sha256)
+      repo_hash = s.query(bqHeaderFile.sha256).all()
       return set(repo_hash)
   
