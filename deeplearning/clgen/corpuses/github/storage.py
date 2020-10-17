@@ -80,6 +80,7 @@ class zipStorage(Storage):
     self.flush_counter  = 20000
     self.file_count     = 0
     self.data_file      = ""
+    l.getLogger().info("Set up ZIP storage in {}".format(self.cache_path))
 
   def __exit__(self, path, name, extension):
     self.zipFiles()
@@ -161,6 +162,7 @@ class fileStorage(Storage):
     self.file_count = 0
     self.cache_path = self.cache_path / self.name
     (self.cache_path).mkdir(exist_ok = True)
+    l.getLogger().info("Set up folder storage in {}".format(self.cache_path))
 
   def __exit__(self, path, name, extension) -> None:
     with open(self.cache_path / "repos_list.json", 'w') as f:
@@ -222,6 +224,7 @@ class JSONStorage(Storage):
 
     self.data  = ""
     self.files = []
+    l.getLogger().info("Set up JSON storage in {}".format(self.cache_path))
 
     return
 
@@ -316,6 +319,7 @@ class dbStorage(Storage):
     super(dbStorage, self).__init__(path, name, extension)
     self.db = bigQuery_database.bqDatabase("sqlite:///{}".format(self.cache_path / (self.name + ".db")))
     self.repos = self.db.repo_entries
+    l.getLogger().info("Set up SQL storage in {}".format(self.cache_path))
 
   def save(self,
            contentfile: typing.Union[
