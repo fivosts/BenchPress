@@ -167,3 +167,10 @@ class bqDatabase(sqlutil.Database):
     with self.Session() as s:
       repo_count = s.query(bqRepo).count()
     return repo_count
+
+  @property
+  def repo_entries(self) -> typing.Set[str]:
+    with self.Session() as s:
+      repos = s.query(bqRepo)
+      return ["{}, {}".format(e.repo_name, e.ref) for e in s.query(bqRepo)]
+  
