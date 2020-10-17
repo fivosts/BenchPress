@@ -57,6 +57,10 @@ class Dataset(object):
     return self.dataset.dataset_id
 
   @property
+  def language(self):
+    return "generic"
+  
+  @property
   def extension(self):
     if self.extensions:
       return self.extensions[0]
@@ -87,7 +91,7 @@ class Dataset(object):
                               for ext in self.extensions
                         ])
     self.file_count = None
-    l.getLogger().info("{} dataset initialized.")
+    l.getLogger().info("{} dataset initialized.".format(self.language))
     return
 
   def _setupDataset(self, 
@@ -224,6 +228,11 @@ class Dataset(object):
 
 class openclDataset(Dataset):
   """Opencl Dataset"""
+
+  @property
+  def language(self):
+    return "openCL"
+
   def __init__(self,
                client: bigquery.Client,
                ):
@@ -407,6 +416,10 @@ class openclDataset(Dataset):
 
 class cDataset(Dataset):
   """C Dataset"""
+  @property
+  def language(self):
+    return "C"
+
   def __init__(self,
                client: bigquery.Client,
                ):
@@ -416,6 +429,10 @@ class cDataset(Dataset):
 
 class cppDataset(Dataset):
   """C++ Dataset"""
+  @property
+  def language(self):
+    return "C++"
+
   def __init__(self,
                client: bigquery.Client,
                ):
@@ -425,6 +442,10 @@ class cppDataset(Dataset):
 
 class javaDataset(Dataset):
   """java Dataset"""
+  @property
+  def language(self):
+    return "Java"
+
   def __init__(self,
                client: bigquery.Client,
                ):
@@ -434,6 +455,10 @@ class javaDataset(Dataset):
 
 class pythonDataset(Dataset):
   """python Dataset"""
+  @property
+  def language(self):
+    return "Python"
+
   def __init__(self,
                client: bigquery.Client,
                ):
