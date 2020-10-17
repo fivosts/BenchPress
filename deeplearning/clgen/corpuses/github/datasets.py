@@ -145,7 +145,7 @@ class Dataset(object):
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
     )
-    l.getLogger().warn(query)
+    l.getLogger().info(query)
     if FLAGS.bq_wait_permission:
       l.getLogger().warn("Hit any button to continue...")
       try:
@@ -177,7 +177,7 @@ class Dataset(object):
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
     )
-    l.getLogger().warn(query)
+    l.getLogger().info(query)
     if FLAGS.bq_wait_permission:
       l.getLogger().warn("Hit any button to continue...")
       try:
@@ -209,7 +209,7 @@ class Dataset(object):
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
     )
-    l.getLogger().warn(query)
+    l.getLogger().info(query)
     if FLAGS.bq_wait_permission:
       l.getLogger().warn("Hit any button to continue...")
       try:
@@ -279,7 +279,7 @@ class openclDataset(Dataset):
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
     )
-    l.getLogger().warn(query)
+    l.getLogger().info(query)
     if FLAGS.bq_wait_permission:
       l.getLogger().warn("Hit any button to continue...")
       try:
@@ -316,7 +316,7 @@ class openclDataset(Dataset):
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
     )
-    l.getLogger().warn(query)
+    l.getLogger().info(query)
     if FLAGS.bq_wait_permission:
       l.getLogger().warn("Hit any button to continue...")
       try:
@@ -355,7 +355,7 @@ class openclDataset(Dataset):
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
     )
-    l.getLogger().warn(query)
+    l.getLogger().info(query)
     if FLAGS.bq_wait_permission:
       l.getLogger().warn("Hit any button to continue...")
       try:
@@ -401,7 +401,7 @@ class openclDataset(Dataset):
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
     )
-    l.getLogger().warn(query)
+    l.getLogger().info(query)
     if FLAGS.bq_wait_permission:
       l.getLogger().warn("Hit any button to continue...")
       try:
