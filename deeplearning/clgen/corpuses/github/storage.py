@@ -359,7 +359,7 @@ class dbStorage(Storage):
           elif isinstance(contentfile, bigQuery_database.bqOtherFile):
             tp = bigQuery_database.bqOtherFile
           else:
-            tp = bigQuery_database.bqHeadersFile
+            tp = bigQuery_database.bqHeaderFile
           exists = session.query(
             tp.sha256
           ).filter_by(sha256 = contentfile.sha256).scalar() is not None
