@@ -342,35 +342,7 @@ class dbStorage(Storage):
     l.getLogger().info("Set up SQL storage in {}".format(self.cache_path))
 
   def __exit__(self, path, name, extension):
-    with self.db.Session(commit = True) as session:
-      ## Write data
-      if self.data is not None:
-        if self.db.data is not None:
-          entry = session.query(
-            bigQuery_database.bqData
-          ).filter_by(key = self.data.key).first()
-          entry.value = self.data.value
-        else:
-          session.add(self.data)
-
-      ## Write repos
-      for repo in self.repos:
-        repo_name, ref = repo.split(', ')
-        content = bigQuery_database.bqRepo(**bigQuery_database.bqRepo.FromArgs(
-            self.db.repo_count, {'repo_name': repo_name, 'ref': ref})
-        )
-        exists = session.query(
-          bigQuery_database.bqRepo
-        ).filter_by(repo_name = content.repo_name, ref = content.ref).scalar() is not None
-        if not exists:
-          session.add(content)
-    # Flush remaining contentfiles.
-    self.flushToDB(self.main_files)
-    self.flushToDB(self.other_files)
-    self.flushToDB(self.header_files)
-    self.main_files   = set()
-    self.other_files  = set()
-    self.header_files = set()
+    self.flush()
     return
 
   def save(self,
@@ -404,16 +376,47 @@ class dbStorage(Storage):
         if len(self.header_files) > self.flush_freq:
           self.flushToDB(self.header_files)
           self.header_files = set()
+      elif isinstance(contentfile, bigQuery_database.bqRepo):
+        self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     return
 
   def flush(self):
     """Flushes all cached data to DB."""
-    self.flushToDB(self.main_files)
-    self.flushToDB(self.other_files)
-    self.flushToDB(self.header_files)
-    self.main_files   = set()
-    self.other_files  = set()
-    self.header_files = set()
+    with self.db.Session(commit = True) as session:
+      ## Write data
+      if self.data is not None:
+        if self.db.data is not None:
+          entry = session.query(
+            bigQuery_database.bqData
+          ).filter_by(key = self.data.key).first()
+          entry.value = self.data.value
+        else:
+          session.add(self.data)
+
+      ## Write repos
+      if self.repocount > len(self.db.repo_entries):
+        for repo in self.repos:
+          repo_name, ref = repo.split(', ')
+          content = bigQuery_database.bqRepo(**bigQuery_database.bqRepo.FromArgs(
+              self.db.repo_count, {'repo_name': repo_name, 'ref': ref})
+          )
+          exists = session.query(
+            bigQuery_database.bqRepo
+          ).filter_by(repo_name = content.repo_name, ref = content.ref).scalar() is not None
+          if not exists:
+            session.add(content)
+
+    if len(self.main_files) > 0:
+      self.flushToDB(self.main_files)
+      self.main_files   = set()
+
+    if len(self.other_files) > 0:
+      self.flushToDB(self.other_files)
+      self.other_files  = set()
+
+    if len(self.header_files) > 0:
+      self.flushToDB(self.header_files)
+      self.header_files = set()
     return
 
   def flushToDB(self, files: typing.Set[bigQuery_database.bqFile]) -> None:
