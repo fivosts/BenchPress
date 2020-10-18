@@ -338,9 +338,8 @@ class dbStorage(Storage):
     self.other_sha   = self.db.other_sha
     self.other_files = set()
 
-    self.header_sha   = self.db.header_sha
     self.header_files = set()
-
+    self.db.get_includes
     l.getLogger().info("Set up SQL storage in {}".format(self.cache_path))
 
   def __exit__(self, path, name, extension):
@@ -401,9 +400,7 @@ class dbStorage(Storage):
           self.flushToDB(self.other_files)
           self.other_files = set()
       elif isinstance(contentfile, bigQuery_database.bqHeaderFile):
-        if contentfile.sha256 not in self.header_sha:
-          self.header_sha.add(contentfile.sha256)
-          self.header_files.add(contentfile)
+        self.header_files.add(contentfile)
         if len(self.header_files) > self.flush_freq:
           self.flushToDB(self.header_files)
           self.header_files = set()
