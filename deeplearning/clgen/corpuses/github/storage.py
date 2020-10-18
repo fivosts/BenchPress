@@ -331,7 +331,7 @@ class dbStorage(Storage):
     if not self.repos:
       self.repos = set()
 
-    self.flush_freq = 500000
+    self.flush_freq = 100000
     self.main_sha   = self.db.main_sha
     self.main_files = set()
 
@@ -339,19 +339,19 @@ class dbStorage(Storage):
     self.other_files = set()
 
     self.header_files = set()
-    self.db.get_includes
     l.getLogger().info("Set up SQL storage in {}".format(self.cache_path))
 
   def __exit__(self, path, name, extension):
     with self.db.Session(commit = True) as session:
       ## Write data
-      if self.db.data is not None:
-        entry = session.query(
-          bigQuery_database.bqData
-        ).filter_by(key = self.data.key).first()
-        entry.value = self.data.value
-      else:
-        session.add(self.data)
+      if self.data is not None:
+        if self.db.data is not None:
+          entry = session.query(
+            bigQuery_database.bqData
+          ).filter_by(key = self.data.key).first()
+          entry.value = self.data.value
+        else:
+          session.add(self.data)
 
       ## Write repos
       for repo in self.repos:

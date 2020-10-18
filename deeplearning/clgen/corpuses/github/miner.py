@@ -147,9 +147,10 @@ class BigQuery(GithubMiner):
         other_repo_count = st.repocount - main_repo_count
 
       # Parse files from mined repos to get header files as well.
-      repo_list = np.random.shuffle(st.repoTuple)
+      repo_list = st.repoTuple
+      np.random.shuffle(repo_list)
       # Split repo list into chunks of 1K, in order to do queries in steps that will not timeout (6 hrs).
-      threshold = 1230
+      threshold = 500
       repolist_chunks = []
 
       t = threshold
