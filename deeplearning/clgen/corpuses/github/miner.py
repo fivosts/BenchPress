@@ -107,6 +107,7 @@ class BigQuery(GithubMiner):
             )
             bar.update(en)
         main_repo_count = st.repocount
+        st.flush()
 
       if otherf_it:
         with progressbar.ProgressBar(max_value = otherf_it.total_rows, prefix = "Other Files") as bar:
@@ -117,6 +118,7 @@ class BigQuery(GithubMiner):
             )
             bar.update(en)
         other_repo_count = st.repocount - main_repo_count
+        st.flush()
 
       # Get repository list of requested file specifications.
       # If contentfile_query has taken place, use cached results instead of re-querying.
@@ -134,6 +136,7 @@ class BigQuery(GithubMiner):
             )
             bar.update(en)
         main_repo_count = st.repocount
+        st.flush()
 
       other_repo_count = 0
       if otherrep_it:
@@ -145,6 +148,7 @@ class BigQuery(GithubMiner):
             )
             bar.update(en)
         other_repo_count = st.repocount - main_repo_count
+        st.flush()
 
       # Parse files from mined repos to get header files as well.
       repo_list = st.repoTuple
@@ -163,7 +167,6 @@ class BigQuery(GithubMiner):
 
       total_header_rows = 0
       for p, repo in enumerate(repolist_chunks):
-        st.flush()
         header_includes_it = self.dataset.header_file_query(repo)
         if header_includes_it:
           total_header_rows += header_includes_it.total_rows
@@ -174,6 +177,7 @@ class BigQuery(GithubMiner):
                 )
               )
               bar.update(en)
+          st.flush()
 
       # Filecount of requested file specifications.
       # Use cached results if contentfile has taken place.
