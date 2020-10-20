@@ -154,7 +154,7 @@ class bqDatabase(sqlutil.Database):
              )
 
   @property
-  def repo_count(self) -> :
+  def repo_count(self) -> int:
     """
     Get number of repos in bqRepo table.
     """
