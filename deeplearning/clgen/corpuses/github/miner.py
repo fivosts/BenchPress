@@ -11,6 +11,7 @@ import pathlib
 import github
 import progressbar
 import copy
+import numpy as np
 
 from base64 import b64decode
 from functools import partial
@@ -106,6 +107,7 @@ class BigQuery(GithubMiner):
             )
             bar.update(en)
         main_repo_count = st.repocount
+        st.flush()
 
       if otherf_it:
         with progressbar.ProgressBar(max_value = otherf_it.total_rows, prefix = "Other Files") as bar:
@@ -116,6 +118,7 @@ class BigQuery(GithubMiner):
             )
             bar.update(en)
         other_repo_count = st.repocount - main_repo_count
+        st.flush()
 
       # Get repository list of requested file specifications.
       # If contentfile_query has taken place, use cached results instead of re-querying.
@@ -133,6 +136,7 @@ class BigQuery(GithubMiner):
             )
             bar.update(en)
         main_repo_count = st.repocount
+        st.flush()
 
       other_repo_count = 0
       if otherrep_it:
@@ -144,11 +148,13 @@ class BigQuery(GithubMiner):
             )
             bar.update(en)
         other_repo_count = st.repocount - main_repo_count
+        st.flush()
 
       # Parse files from mined repos to get header files as well.
       repo_list = st.repoTuple
+      np.random.shuffle(repo_list)
       # Split repo list into chunks of 1K, in order to do queries in steps that will not timeout (6 hrs).
-      threshold = 1000
+      threshold = 500
       repolist_chunks = []
 
       t = threshold
@@ -171,6 +177,7 @@ class BigQuery(GithubMiner):
                 )
               )
               bar.update(en)
+          st.flush()
 
       # Filecount of requested file specifications.
       # Use cached results if contentfile has taken place.

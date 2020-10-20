@@ -135,11 +135,18 @@ class bqDatabase(sqlutil.Database):
     super(bqDatabase, self).__init__(url, Base, must_exist = must_exist)
 
   @property
-  def count(self):
+  def count(self) -> typing.Tuple[int, int]:
+    """
+    Get number of repositories in bqRepo
+    and number of all contentfiles (inc. main, other & header)
+    """
     return (self.repo_count, self.file_count)
 
   @property
-  def file_count(self):
+  def file_count(self) -> int:
+    """
+    Get total number of contentfiles in DB.
+    """
     with self.Session() as s:
       return (s.query(bqMainFile).count() +
               s.query(bqOtherFile).count() +
@@ -147,38 +154,76 @@ class bqDatabase(sqlutil.Database):
              )
 
   @property
-  def repo_count(self):
+  def repo_count(self) -> :
+    """
+    Get number of repos in bqRepo table.
+    """
     with self.Session() as s:
-      repo_count = s.query(bqRepo).count()
-    return repo_count
+      return s.query(bqRepo).count()
 
   @property
   def data(self) -> bqData:
+    """
+    Get bqData entry from table.
+    """
     with self.Session() as s:
-      data = s.query(bqData).first()
-      return data
+      return s.query(bqData).first()
 
   @property
   def repo_entries(self) -> typing.Set[str]:
+    """
+    Get all repository/ref entries in bqRepo table in string format.
+    Returns a set of joint strings.
+    """
     with self.Session() as s:
       repos = s.query(bqRepo)
       return set("{}, {}".format(e.repo_name, e.ref) for e in s.query(bqRepo))
 
   @property
-  def main_sha(self) -> typing.Set[str]:
+  def main_repo_entries(self) -> typing.Set[str]:
+    """
+    Get distinct repository/ref list from bqMainFile table.
+    """
     with self.Session() as s:
-      repo_hash = s.query(bqMainFile.sha256).all()
-      return set(repo_hash)
+      return set("{}, {}".format(e.repo_name, e.ref) for e in s.query(bqMainFile))
+
+  @property
+  def other_repo_entries(self) -> typing.Set[str]:
+    """
+    Get distinct repository/ref list from bqOtherFile table.
+    """
+    with self.Session() as s:
+      return set("{}, {}".format(e.repo_name, e.ref) for e in s.query(bqOtherFile))
+
+  @property
+  def header_repo_entries(self) -> typing.Set[str]:
+    """
+    Get distinct repository/ref list from bqHeaderFile table.
+    """
+    with self.Session() as s:
+      return set("{}, {}".format(e.repo_name, e.ref) for e in s.query(bqHeaderFile))
+
+  @property
+  def main_sha(self) -> typing.Set[str]:
+    """
+    Returns set of all distinct sha256 entries from main files.
+    """
+    with self.Session() as s:
+      return set(s.query(bqMainFile.sha256).all())
 
   @property
   def other_sha(self) -> typing.Set[str]:
+    """
+    Returns set of all distinct sha256 entries from main files.
+    """
     with self.Session() as s:
-      repo_hash = s.query(bqOtherFile.sha256).all()
-      return set(repo_hash)
+      return set(s.query(bqOtherFile.sha256).all())
 
   @property
   def header_sha(self) -> typing.Set[str]:
+    """
+    Returns set of all distinct sha256 entries from main files.
+    """
     with self.Session() as s:
-      repo_hash = s.query(bqHeaderFile.sha256).all()
-      return set(repo_hash)
+      return set(s.query(bqHeaderFile.sha256).all())
   
