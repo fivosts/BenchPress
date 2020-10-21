@@ -70,6 +70,7 @@ class Distribution():
     }
     plt.linesSingleAxis(point_set, 
       savefig = str(self.log_path / self.set_name) + ".png",
+      force_init = True,
     )
     return
 
@@ -98,6 +99,38 @@ class PassiveMonitor(Distribution):
                set_name: str,
                ):
     super(PassiveMonitor, self).__init__(None, log_path, set_name)
+    return
+
+class TimestampMonitor(Distribution):
+  """
+  Not an actual sampling distribution.
+  In contrast to the rest, this subclass does not count frequency of a certain value.
+  It registers values and plots them against time.
+  """
+  def __init__(self, 
+               log_path: typing.Union[pathlib.Path, str], 
+               set_name: str,
+               ):
+    super(TimestampMonitor, self).__init__(None, log_path, set_name)
+    self.sample_list = []
+    return
+
+  def register(self, actual_sample: int) -> None:
+    # if isinstance(actual_sample, str):
+    #   actual_sample = int(actual_sample)
+    self.sample_list.append(float(actual_sample))
+    return
+
+  def plot(self):
+    plt.linesSingleAxis(
+      {
+        self.set_name: {
+          'y': self.sample_list
+        }
+      },
+      savefig = str(self.log_path / self.set_name) + ".png",
+      force_init = True,
+    )
     return
 
 class UniformDistribution(Distribution):
