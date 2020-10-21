@@ -59,4 +59,4 @@ def memUsageByPID(pids: typing.Iterable[int]) -> int:
   """
   output = subprocess.check_output("nvidia-smi pmon -c 1 -s m".split())
   pid_list = [i.split() for i in output.decode('utf-8').split(os.linesep)[2:]]
-  return sum([int(x[3]) for x in pid_list if x and int(x[1]) in pids])
+  return sum([int(x[3]) for x in pid_list if x and x[1] != '-' and x[3] != '-' and int(x[1]) in pids])
