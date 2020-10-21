@@ -1,6 +1,7 @@
 """Helper module for GPU system handling"""
 import os
 import subprocess
+import typing
 
 from eupy.native import logger as l
 
@@ -49,3 +50,13 @@ def getGPUID():
     return selected_gpus
   else:
     return None
+
+def memUsageByPID(pids: typing.Iterable[int]) -> int:
+  """
+  Get a python iterable (list, set, dict, tuple) of PIDs.
+
+  Returns the total GPU memory allocation in MB.
+  """
+  output = subprocess.check_output("nvidia-smi pmon -c 1 -s m".split())
+  pid_list = [i.split() for i in output.decode('utf-8').split(os.linesep)[2:]]
+  return sum([int(x[3]) for x in pid_list if x and int(x[1]) in pids])

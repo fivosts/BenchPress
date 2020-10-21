@@ -26,6 +26,7 @@ from absl import app, flags
 from deeplearning.clgen.samplers import sample_observers as sample_observers_lib
 from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.util import pbutil
+from deeplearning.clgen.util import memory
 from deeplearning.clgen.dashboard import dashboard
 from deeplearning.clgen.models import models
 from deeplearning.clgen.proto import clgen_pb2
@@ -327,6 +328,7 @@ def initMain(*args, **kwargs):
     **kwargs: Arguments to be passed to the function.
   """
   l.initLogger(name = "clgen", lvl = FLAGS.level, colorize = FLAGS.color, step = FLAGS.step)
+  mem_monitor_threads = memory.init_mem_monitors()
   mail = None
   if FLAGS.notify_me:
     mail = client.gmail(FLAGS.notify_me)
