@@ -709,7 +709,8 @@ class BertForPreTraining(BertPreTrainedModel):
     self.temperature     = temperature
     if self.use_categorical:
       self.argmax = lambda x: torch.argmax(torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
-        temperature = self.temperature if self.temperature is not None else 1.0, logits = x)
+          temperature = self.temperature if self.temperature is not None else 1.0, logits = x
+        ).sample()
       )
     else:
       self.argmax = lambda x: torch.argmax(x)
