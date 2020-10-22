@@ -71,8 +71,10 @@
 #include <clang/Basic/TargetOptions.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
+#include <clang/Frontend/FrontendOptions.h>
 #include <clang/Lex/Lexer.h>
 #include <clang/Lex/Preprocessor.h>
+#include <clang/Lex/PreprocessorOptions.h>
 #include <clang/Parse/ParseAST.h>
 #include <clang/Rewrite/Core/Rewriter.h>
 #include <clang/Rewrite/Frontend/Rewriters.h>
@@ -668,7 +670,8 @@ void extract_features(std::string path, std::ostream &out,
     argv.push_back(arg.c_str());
 
   // Create an invocation that passes any flags to preprocessor
-  clang::CompilerInvocation *Invocation = new clang::CompilerInvocation;
+  // clang::CompilerInvocation *Invocation = new clang::CompilerInvocation;
+  std::shared_ptr<clang::CompilerInvocation> Invocation(new clang::CompilerInvocation);
   clang::CompilerInvocation::CreateFromArgs(*Invocation,
                                             &(*argv.begin()), &(*argv.end()),
                                             compiler.getDiagnostics());
@@ -693,7 +696,7 @@ void extract_features(std::string path, std::ostream &out,
   llvm::Triple *triple = new llvm::Triple(llvm::sys::getDefaultTargetTriple());
   clang::PreprocessorOptions pproc;
 
-  Invocation->setLangDefaults(langOpts, clang::IK_OpenCL, *triple, pproc);
+  Invocation->setLangDefaults(langOpts, clang::InputKind::OpenCL, *triple, pproc);
 
   compiler.createPreprocessor(clang::TU_Complete);
   compiler.getPreprocessorOpts().UsePredefines = false;
