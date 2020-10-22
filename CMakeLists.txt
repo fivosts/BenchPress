@@ -215,6 +215,8 @@ function(clgen)
   get_target_property(DASHBOARD_TEMPLATES dashboard_templates path)
   get_target_property(LIBCLC              libclc              path)
   get_target_property(DATA_CL_INCLUDE     data_cl_include     path)
+  get_target_property(CLGEN_REWRITER      clgen_rewriter      path)
+  get_target_property(CLGEN_FEATURES      clgen_features      path)
 
   string(CONCAT CLGEN 
     "##############################\n"
@@ -235,6 +237,8 @@ function(clgen)
     "export CLANG_FORMAT="                   ${LLVM}/bin/clang-format "\n"
     "export CLANG_HEADERS="                  ${LLVM}/lib/clang/6.0.0/include "\n"
     "export CLANG_REWRITER="                 ${CLANG_REWRITER} "\n"
+    "export CLGEN_FEATURES="                 ${CLGEN_FEATURES} "\n"
+    "export CLGEN_REWRITER="                 ${CLGEN_REWRITER} "\n"
     "eval PYTHONPATH="                       ${CMAKE_CURRENT_SOURCE_DIR} " $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
     "unset LLVM\n"
     "unset LLVM_LIB\n"
@@ -247,6 +251,8 @@ function(clgen)
     "unset CLANG_FORMAT\n"
     "unset CLANG_HEADERS\n"
     "unset CLANG_REWRITER\n"
+    "unset CLGEN_FEATURES\n"
+    "unset CLGEN_REWRITER\n"
   )
   file(
     WRITE ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CLGEN}
@@ -260,8 +266,9 @@ endfunction()
 find_binaries()
 install_external_deps()
 setup_python()
-add_subdirectory(${APP_PATH}/preprocessors)
 add_subdirectory(${APP_PATH}/dashboard)
 add_subdirectory(${APP_PATH}/data)
+add_subdirectory(${APP_PATH}/features)
+add_subdirectory(${APP_PATH}/preprocessors)
 add_subdirectory(${APP_PATH}/proto)
 clgen()

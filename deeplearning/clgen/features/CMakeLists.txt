@@ -1,0 +1,2 @@
+add_executable(clgen_features clgen_features.cpp)
+add_executable(clgen_rewriter clgen_rewriter.cpp)
