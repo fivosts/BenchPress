@@ -193,7 +193,7 @@ class LazyConcatDataset(torch.utils.data.Dataset):
   """
 
   @staticmethod
-  def cumsum(sequence):
+  def cumsum(sequence: typing.List[pathlib.Path]):
     r, s = [], 0
     for e in sequence:
       lt = len(torch.load(e))
