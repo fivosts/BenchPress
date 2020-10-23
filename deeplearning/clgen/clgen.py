@@ -103,18 +103,23 @@ flags.DEFINE_string(
   '"model", or "sampler".',
 )
 flags.DEFINE_boolean(
-  "clgen_debug",
+  "debug",
   False,
   "Enable a debugging mode of CLgen python runtime. When enabled, errors "
   "which may otherwise be caught lead to program crashes and stack traces.",
 )
 flags.DEFINE_boolean(
-  "clgen_profiling",
+  "profiling",
   False,
   "Enable CLgen self profiling. Profiling results be logged.",
 )
 flags.DEFINE_boolean(
-  "clgen_dashboard_only", False, "If true, launch dashboard only."
+  "monitor_mem_usage",
+  False,
+  "Plot application RAM and GPU memory usage."
+)
+flags.DEFINE_boolean(
+  "dashboard_only", False, "If true, launch dashboard only."
 )
 
 class Instance(object):
@@ -139,7 +144,7 @@ class Instance(object):
     if config.HasField("working_dir"):
       self.working_dir: pathlib.Path = pathlib.Path(
         os.path.join(FLAGS.workspace_dir, config.working_dir)
-      ).expanduser().absolute()
+      ).expanduser().resolve()
     # Enter a session so that the cache paths are set relative to any requested
     # working directory.
     with self.Session():
@@ -311,7 +316,7 @@ def DoFlagsAction(
 
 def main():
   """Main entry point."""
-  if FLAGS.clgen_dashboard_only:
+  if FLAGS.dashboard_only:
     dash = dashboard.Launch(debug = {"debug": True})
   else:
     instance = Instance(ConfigFromFlags())
@@ -328,18 +333,21 @@ def initMain(*args, **kwargs):
     **kwargs: Arguments to be passed to the function.
   """
   l.initLogger(name = "clgen", lvl = FLAGS.level, colorize = FLAGS.color, step = FLAGS.step)
-  mem_monitor_threads = memory.init_mem_monitors()
+  if FLAGS.monitor_mem_usage:
+    mem_monitor_threads = memory.init_mem_monitors(
+      pathlib.Path(FLAGS.workspace_dir).resolve()
+    )
   mail = None
   if FLAGS.notify_me:
     mail = client.gmail(FLAGS.notify_me)
-  if FLAGS.clgen_debug:
+  if FLAGS.debug:
     # Enable verbose stack traces. See: https://pymotw.com/2/cgitb/
     import cgitb
     cgitb.enable(format="text")
     main()
     sys.exit(0)
   try:
-    if FLAGS.clgen_profiling:
+    if FLAGS.profiling:
       cProfile.runctx("main()", None, None, sort="tottime")
     else:
       main()
