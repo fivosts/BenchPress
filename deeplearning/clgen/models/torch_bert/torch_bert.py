@@ -56,7 +56,7 @@ flags.DEFINE_integer(
 
 flags.DEFINE_boolean(
   "reward_compilation",
-  True,
+  False,
   "Select to integrate LLVM compiler into training regime."
   "During training, the target token will be asked to fill the first token of the hole."
   "If this flag is selected to True, the model will fill entirely the hole, as in inference."
