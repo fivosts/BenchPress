@@ -22,49 +22,49 @@ OPTION(BOOST_FROM_SOURCE
 
 function(find_binaries)
 
-	## For python and protoc executables:
-	# 1. Find if the provided or default binaries exist.
-	# 2. If they don't set flags to install from source locally.
+    ## For python and protoc executables:
+    # 1. Find if the provided or default binaries exist.
+    # 2. If they don't set flags to install from source locally.
 
-	# Append to python default if PYTHON variable is not explicitly defined.
-	if ("${PYTHON}" STREQUAL "")
-	  set(PYTHON python3 CACHE FILEPATH
-	    "Provide specific python for application. Default: [python3]. Ignored if BUILD_FROM_SOURCE is enabled."
-	    FORCE
-	  )
-	endif()
+    # Append to python default if PYTHON variable is not explicitly defined.
+    if ("${PYTHON}" STREQUAL "")
+      set(PYTHON python3 CACHE FILEPATH
+        "Provide specific python for application. Default: [python3]. Ignored if BUILD_FROM_SOURCE is enabled."
+        FORCE
+      )
+    endif()
 
-	# Append to protoc default if PROTOC variable is not explicitly defined.
-	if ("${PROTOC}" STREQUAL "")
-	  set(PROTOC protoc CACHE FILEPATH
-	    "Provide specific protobuf compiler for application. Default: [protoc]. Ignored if BUILD_FROM_SOURCE is enabled."
-	    FORCE
-	  )
-	endif()
+    # Append to protoc default if PROTOC variable is not explicitly defined.
+    if ("${PROTOC}" STREQUAL "")
+      set(PROTOC protoc CACHE FILEPATH
+        "Provide specific protobuf compiler for application. Default: [protoc]. Ignored if BUILD_FROM_SOURCE is enabled."
+        FORCE
+      )
+    endif()
 
-	# Python binary exists or crash.
-	find_program(PYTHON_FOUND ${PYTHON})
-	if (PYTHON_FOUND)
-	  message("-- Python binary found in " ${PYTHON_FOUND})
-	  set(PYTHON_FROM_SOURCE OFF PARENT_SCOPE)
-	elseif (NOT PYTHON_FOUND)
-	  message(WARNING "-- Python binary " ${PYTHON_FOUND} " not found. Will install python3.7 from source.")
-	  set(PYTHON_FROM_SOURCE ON PARENT_SCOPE)
-	else()
-	    message(FATAL_ERROR "-- Unknown python binary error. Aborting.")
-	endif()
+    # Python binary exists or crash.
+    find_program(PYTHON_FOUND ${PYTHON})
+    if (PYTHON_FOUND)
+      message("-- Python binary found in " ${PYTHON_FOUND})
+      set(PYTHON_FROM_SOURCE OFF PARENT_SCOPE)
+    elseif (NOT PYTHON_FOUND)
+      message(WARNING "-- Python binary " ${PYTHON_FOUND} " not found. Will install python3.7 from source.")
+      set(PYTHON_FROM_SOURCE ON PARENT_SCOPE)
+    else()
+        message(FATAL_ERROR "-- Unknown python binary error. Aborting.")
+    endif()
 
-	# protoc binary exists or crash.
-	find_program(PROTOC_FOUND ${PROTOC})
-	if (PROTOC_FOUND)
-	  message("-- protoc binary found in " ${PROTOC_FOUND})
-	  set(PROTOC_FROM_SOURCE OFF PARENT_SCOPE)
-	elseif (NOT PROTOC_FOUND)
-	  message(WARNING "-- protoc binary " ${PROTOC_FOUND} " not found. Will install from source.")
-	  set(PROTOC_FROM_SOURCE ON PARENT_SCOPE)
-	else()
-	    message(FATAL_ERROR "-- Unknown protoc binary error. Aborting.")
-	endif()
+    # protoc binary exists or crash.
+    find_program(PROTOC_FOUND ${PROTOC})
+    if (PROTOC_FOUND)
+      message("-- protoc binary found in " ${PROTOC_FOUND})
+      set(PROTOC_FROM_SOURCE OFF PARENT_SCOPE)
+    elseif (NOT PROTOC_FOUND)
+      message(WARNING "-- protoc binary " ${PROTOC_FOUND} " not found. Will install from source.")
+      set(PROTOC_FROM_SOURCE ON PARENT_SCOPE)
+    else()
+        message(FATAL_ERROR "-- Unknown protoc binary error. Aborting.")
+    endif()
 endfunction()
 
 function(install_external_deps)
@@ -256,10 +256,10 @@ function(clgen)
   )
   file(
     WRITE ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CLGEN}
-    # FILE_PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
   add_custom_target(link_target ALL
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CMAKE_CURRENT_SOURCE_DIR}/clgen
+    COMMAND chmod 551 ${CMAKE_CURRENT_SOURCE_DIR}/clgen
   )
 endfunction()
 
