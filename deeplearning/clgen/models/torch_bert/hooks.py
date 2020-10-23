@@ -29,7 +29,7 @@ class tensorMonitorHook(object):
 
     self.monitor_func = [
       self._tensor2JSON,
-      # self._tensor2plot,
+      self._tensor2plot,
     ]
     return
 
@@ -91,11 +91,11 @@ class tensorMonitorHook(object):
     self.tensors.append(epoch_tensors)
     self.tensors[-1]['step'] = effective_step
     
-    # for key, value in epoch_tensors.items():
-    #   if key not in self.plot_tensors:
-    #     self.plot_tensors[key] = {'value': [], 'step': []}
-    #   self.plot_tensors[key]['value'].append(value)
-    #   self.plot_tensors[key]['step'].append(effective_step)
+    for key, value in epoch_tensors.items():
+      if key not in self.plot_tensors:
+        self.plot_tensors[key] = {'value': [], 'step': []}
+      self.plot_tensors[key]['value'].append(value)
+      self.plot_tensors[key]['step'].append(effective_step)
 
     for func in self.monitor_func:
       func()
@@ -107,20 +107,20 @@ class tensorMonitorHook(object):
     return
 
   def _tensor2plot(self):
-    for (key, value) in self.plot_tensors.items():
-      if key != "step":
-        plt.linesSingleAxis(
-          {key: {'y': value['value'], 'x': value['step'] } },
-          y_label = (key, 13),
-          x_label = ("Train step", 13),
-          plot_title = (key, 20),
-          x_lim   = [0, 1.01 * value['step'][-1]],
-          y_lim   = 1.1 * max(value['value']),
-          legend  = False,
-          showfig = False,
-          savefig = str(self.cache_path / "{}.png".format(key)),
-          force_init = True,
-        )
+    # for (key, value) in self.plot_tensors.items():
+    #   if key != "step":
+    #     plt.linesSingleAxis(
+    #       {key: {'y': value['value'], 'x': value['step'] } },
+    #       y_label = (key, 13),
+    #       x_label = ("Train step", 13),
+    #       plot_title = (key, 20),
+    #       x_lim   = [0, 1.01 * value['step'][-1]],
+    #       y_lim   = 1.1 * max(value['value']),
+    #       legend  = False,
+    #       showfig = False,
+    #       savefig = str(self.cache_path / "{}.png".format(key)),
+    #       force_init = True,
+    #     )
     return
 
 class validationSampleHook(object):
