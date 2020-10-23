@@ -29,7 +29,7 @@ class tensorMonitorHook(object):
 
     self.monitor_func = [
       self._tensor2JSON,
-      self._tensor2plot,
+      # self._tensor2plot,
     ]
     return
 
@@ -91,11 +91,11 @@ class tensorMonitorHook(object):
     self.tensors.append(epoch_tensors)
     self.tensors[-1]['step'] = effective_step
     
-    for key, value in epoch_tensors.items():
-      if key not in self.plot_tensors:
-        self.plot_tensors[key] = {'value': [], 'step': []}
-      self.plot_tensors[key]['value'].append(value)
-      self.plot_tensors[key]['step'].append(effective_step)
+    # for key, value in epoch_tensors.items():
+    #   if key not in self.plot_tensors:
+    #     self.plot_tensors[key] = {'value': [], 'step': []}
+    #   self.plot_tensors[key]['value'].append(value)
+    #   self.plot_tensors[key]['step'].append(effective_step)
 
     for func in self.monitor_func:
       func()
