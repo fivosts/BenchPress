@@ -80,7 +80,6 @@ class TrainingLogger(object):
         legend = False,
         showfig = False,
         savefig = str(self.logdir / "{}.png".format(key_str)),
-        force_init = True,
       )
     return
 

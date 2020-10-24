@@ -64,6 +64,13 @@ class tensorMonitorHook(object):
             self.tensors = loaded_tensors[:back_index + 1]
           else:
             self.tensors = loaded_tensors
+
+          for ch in self.tensors:
+            for k, v in ch.items():
+              if k not in self.plot_tensors:
+                self.plot_tensors[k] = {'value': [], 'step': []}
+            self.plot_tensors[k]['value'].append(v)
+            self.plot_tensors[k]['step'].append(ch['step'])
       else:
         raise FileNotFoundError(self.jsonfile)
     return
@@ -107,20 +114,19 @@ class tensorMonitorHook(object):
     return
 
   def _tensor2plot(self):
-    # for (key, value) in self.plot_tensors.items():
-    #   if key != "step":
-    #     plt.linesSingleAxis(
-    #       {key: {'y': value['value'], 'x': value['step'] } },
-    #       y_label = (key, 13),
-    #       x_label = ("Train step", 13),
-    #       plot_title = (key, 20),
-    #       x_lim   = [0, 1.01 * value['step'][-1]],
-    #       y_lim   = 1.1 * max(value['value']),
-    #       legend  = False,
-    #       showfig = False,
-    #       savefig = str(self.cache_path / "{}.png".format(key)),
-    #       force_init = True,
-    #     )
+    for (key, value) in self.plot_tensors.items():
+      if key != "step":
+        plt.linesSingleAxis(
+          {key: {'y': value['value'], 'x': value['step'] } },
+          y_label = (key, 13),
+          x_label = ("Train step", 13),
+          plot_title = (key, 20),
+          x_lim   = [0, 1.01 * value['step'][-1]],
+          y_lim   = 1.1 * max(value['value']),
+          legend  = False,
+          showfig = False,
+          savefig = str(self.cache_path / "{}.png".format(key)),
+        )
     return
 
 class validationSampleHook(object):

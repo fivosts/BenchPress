@@ -70,7 +70,6 @@ class Distribution():
     }
     plt.linesSingleAxis(point_set, 
       savefig = str(self.log_path / self.set_name) + ".png",
-      force_init = True,
     )
     return
 
@@ -129,7 +128,6 @@ class TimestampMonitor(Distribution):
         }
       },
       savefig = str(self.log_path / self.set_name) + ".png",
-      force_init = True,
     )
     return
 
