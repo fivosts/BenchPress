@@ -111,8 +111,8 @@ class zipStorage(Storage):
   def zipFiles(self) -> None:
     tmp_root = pathlib.Path("/tmp/bqZipStorageTMP/corpus")
     tmp_root.mkdir(exist_ok = True, parents = True)
-    for en, cf in enumerate(self.cached_content):
-      with open(tmp_root / "{}{}".format(en+1, self.extension), 'w') as f:
+    for cf in self.cached_content:
+      with open(tmp_root / pathlib.Path(cf.path).name, 'w') as f:
         f.write(cf)
     with open(tmp_root / "data.txt", 'w') as f:
       f.write(self.data_file)
@@ -162,7 +162,6 @@ class fileStorage(Storage):
                extension: str
                ):
     super(fileStorage, self).__init__(path, name, extension)
-    self.file_count = 0
     self.cache_path = self.cache_path / self.name
     (self.cache_path).mkdir(exist_ok = True)
     l.getLogger().info("Set up folder storage in {}".format(self.cache_path))
@@ -190,9 +189,8 @@ class fileStorage(Storage):
                         ]
            ) -> None:
     if isinstance(contentfile, bigQuery_database.bqFile):
-      with open(self.cache_path / "{}{}".format(self.file_count, self.extension), 'w') as f:
+      with open(self.cache_path / pathlib.Path(contentfile.path).name, 'w') as f:
         f.write(contentfile.content)
-      self.file_count += 1
       self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     elif isinstance(contentfile, bigQuery_database.bqData):
       with open(self.cache_path / "data.txt", 'w') as f:
@@ -272,7 +270,8 @@ class JSONStorage(Storage):
       self.file_count += 1
       if self.file_count % 500000:
         self._flush_json()
-      self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
+      if isinstance(contentfile, bqMainFile) or isinstance(contentfile, bqOtherFile):
+        self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     return
 
   def _flush_json(self) -> None:
