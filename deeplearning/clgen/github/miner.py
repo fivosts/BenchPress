@@ -216,7 +216,32 @@ class BigQuery(GithubMiner):
     The original storage DB can be diminished in size, by deleting the header
     files that were not eventually used.
     """
+    export_storage = storage.Storage.FromArgs(
+      self.cache_path,
+      "exported_".format(self.dataset.name),
+      self.dataset.extension,
+      config.data_format
+    )
+    with export_storage as st:
+      with progressbar.ProgressBar(
+        max_value = self.storage.mainfile_count + self.storage.otherfile_count,
+        prefix = "Inlining headers"
+      ) as bar:
+        for cf in bar(self.storage.main_contentfiles + self.storage.other_contentfiles):
+          inlined_cf, inlined_headers = self._inline_headers(cf)
+          for inl_cf in [inlined_cf] + inlined_headers:
+            st.save(inl_cf)
     return
+
+  def _inline_headers(self,
+                      contentfile: bigQuery_database.bqFile
+                      ) -> typing.Tuple[
+                            typing.Any[
+                              bigQuery_database.bqMainFile, bigQuery_database.bqOtherFile
+                            ],
+                            typing.List[bigQuery_database.bqHeaderFile]
+                          ]:
+    return contentfile, inlined_files
 
 class RecursiveFetcher(GithubMiner):
   """GitHub API wrapper to pull from github a fresh corpus of OpenCL kernels"""
