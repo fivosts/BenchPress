@@ -59,7 +59,7 @@ class GithubMiner(object):
           lambda x: x >= -1,
           "corpus size must either be -1 or non-negative."
           )
-        if config.data_format != config.GithubMiner.DataFormat.folder:
+        if config.data_format != github_pb2.GithubMiner.DataFormat.folder:
           raise NotImplementedError("RecursiveFetcher only stores files in local folder.")
         return RecursiveFetcher(config)
       else:
@@ -79,7 +79,8 @@ class BigQuery(GithubMiner):
                ):
     super(BigQuery, self).__init__()
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(pathlib.Path(config.big_query.credentials, must_exist = True))
-    self.cache_path = pathlib.Path(config.path, must_exist = False, parents = True).absolute()
+    self.cache_path = pathlib.Path(config.path).resolve()
+    self.cache_path.mkdir(must_exist = False, parents = True)
 
     l.getLogger().info("Initializing BigQuery miner in {}".format(self.cache_path))
     job_config = bigquery.QueryJobConfig(allowLargeResults = True)
@@ -278,7 +279,7 @@ class RecursiveFetcher(GithubMiner):
       ## Use this to read a json file with all current sha files
       ## And of course to append the json file every time you flush
       ## ..and to flush
-      self.corpus_path              = corpus_path
+      self.cache_path              = corpus_path
       self.stored_file_idx          = "record.json"
 
       self.updated_length           = 0
@@ -303,7 +304,7 @@ class RecursiveFetcher(GithubMiner):
       return
 
     def collectHistory(self) -> None:
-      storage_file = os.path.join(self.corpus_path, self.stored_file_idx)
+      storage_file = os.path.join(self.cache_path, self.stored_file_idx)
       if os.path.isfile(storage_file):
         with open(storage_file, 'r') as f:
           try:
@@ -316,7 +317,7 @@ class RecursiveFetcher(GithubMiner):
       return
 
     def appendHistory(self) -> None:
-      storage_file = os.path.join(self.corpus_path, self.stored_file_idx)
+      storage_file = os.path.join(self.cache_path, self.stored_file_idx)
       with open(storage_file, 'w') as f:
         json.dump(
           [self._stored_repos, 
@@ -372,7 +373,7 @@ class RecursiveFetcher(GithubMiner):
 
     def Flush(self) -> None:
       for idx, file in enumerate(self._scraped_files):
-        with open(os.path.join(self.corpus_path, "{}.cl".format(idx + self.updated_length)), 'w') as f:
+        with open(os.path.join(self.cache_path, "{}.cl".format(idx + self.updated_length)), 'w') as f:
           f.write(self._scraped_files[file].contents)
       for repo in self._scraped_repos:
         self._stored_repos[repo] = self._scraped_repos[repo].updated_at
@@ -395,12 +396,13 @@ class RecursiveFetcher(GithubMiner):
   def __init__(self,
                config: github_pb2.GithubMiner
                ):
-    self.corpus_path = config.path
+    self.cache_path = pathlib.Path(config.path).resolve()
+    self.cache_path.mkdir(must_exist = False, parents = True)
     git_credentials = {
       'GITHUB_USERNAME'  : None,
       'GITHUB_PW'        : None,
     }
-    l.getLogger().info("Github fetcher initialized: {}".format(self.corpus_path))
+    l.getLogger().info("Github fetcher initialized: {}".format(self.cache_path))
 
     if not all(k in os.environ for k in git_credentials.keys()):
       l.getLogger().warn("Export github credentials as environment variables to speed up the process")
@@ -415,8 +417,8 @@ class RecursiveFetcher(GithubMiner):
     self.username        = git_credentials['GITHUB_USERNAME']
     self.password        = git_credentials['GITHUB_PW']
     self.token           = config.recursive.access_token
-    self.repo_handler    = GithubRepoHandler(
-      self.corpus_path, 
+    self.repo_handler    = RecursiveFetcher.GithubRepoHandler(
+      self.cache_path, 
       config.recursive.corpus_size_K * 1000,
       config.recursive.flush_limit_K * 1000,
     )
