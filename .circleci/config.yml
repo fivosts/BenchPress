@@ -49,11 +49,10 @@ workflows:
     triggers:
       - schedule:
           cron: "0 6 * * *"
-    jobs:
-      python_versions:
-        jobs:
-          - build_clgen:
-              matrix:
-                parameters:
-                  python_version: ["python3.5", "python3.6", "python3.7", "python3.8", "from_source"]
-              name: << matrix.python_version >>
+    python_versions:
+      jobs:
+        - build_clgen:
+            matrix:
+              parameters:
+                python_version: ["python3.5", "python3.6", "python3.7", "python3.8", "from_source"]
+            name: << matrix.python_version >>
