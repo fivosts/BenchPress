@@ -1,5 +1,5 @@
 github_miner {
-  path: "/home/foivos/opencl_corpus"
+  path: "$HOME/opencl_corpus"
   data_format: folder
   recursive {
   	access_token: "2bfd07104166ae9e610db3537f9b680809643305"
