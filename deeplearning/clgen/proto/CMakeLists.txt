@@ -1,5 +1,5 @@
 if (PROTOC_FROM_SOURCE)
-  add_custom_target(clgen_protobufs ALL
+  add_custom_target(protobufs ALL
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/clgen.proto        --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/corpus.proto       --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/internal.proto     --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
@@ -12,7 +12,7 @@ if (PROTOC_FROM_SOURCE)
     COMMENT "Compiling clgen protobuf files"
   )
 else ()
-  add_custom_target(clgen_protobufs ALL
+  add_custom_target(protobufs ALL
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/clgen.proto        --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/corpus.proto       --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/internal.proto     --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
