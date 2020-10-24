@@ -301,7 +301,7 @@ class RecursiveFetcher(GithubMiner):
       self.is_finished              = False if corpus_size is None else (self.updated_length >= corpus_size)
       return
 
-    def collectHistory(self):
+    def collectHistory(self) -> None:
       storage_file = os.path.join(self.corpus_path, self.stored_file_idx)
       if os.path.isfile(storage_file):
         with open(storage_file, 'r') as f:
@@ -314,7 +314,7 @@ class RecursiveFetcher(GithubMiner):
             l.getLogger().warn("Problem encountered with reading kernel file record.")
       return
 
-    def appendHistory(self):
+    def appendHistory(self) -> None:
       storage_file = os.path.join(self.corpus_path, self.stored_file_idx)
       with open(storage_file, 'w') as f:
         json.dump(
@@ -324,7 +324,7 @@ class RecursiveFetcher(GithubMiner):
           indent = 2)
       return
 
-    def is_repo_updated(self, url, updated_at):
+    def is_repo_updated(self, url, updated_at) -> bool:
       if url in self._scraped_repos and self._scraped_repos[url].updated_at == updated_at:
         self.repos_unchanged_counter += 1
         return True
@@ -333,13 +333,13 @@ class RecursiveFetcher(GithubMiner):
         return True
       return False
    
-    def is_file_updated(self, url, sha):
+    def is_file_updated(self, url, sha) -> bool:
       if url in self._scraped_files and self._scraped_files[url].sha == sha:
         self.files_unchanged_counter += 1
         return True
       return False
 
-    def update_file(self, **kwargs):
+    def update_file(self, **kwargs) -> bool:
 
       url = kwargs.get('url')
       if url in self._scraped_files:
@@ -358,7 +358,7 @@ class RecursiveFetcher(GithubMiner):
 
       return True
 
-    def update_repo(self, **kwargs):
+    def update_repo(self, **kwargs) -> bool:
 
       url = kwargs.get('url')
       if url in self._scraped_repos:
@@ -369,7 +369,7 @@ class RecursiveFetcher(GithubMiner):
         self.repos_new_counter      += 1
       return True
 
-    def Flush(self):
+    def Flush(self) -> None:
       for idx, file in enumerate(self._scraped_files):
         with open(os.path.join(self.corpus_path, "{}.cl".format(idx + self.updated_length)), 'w') as f:
           f.write(self._scraped_files[file].contents)
@@ -425,7 +425,7 @@ class RecursiveFetcher(GithubMiner):
     self.errors_counter  = 0
     return
 
-  def print_counters(self):
+  def print_counters(self) -> None:
     self.repo_handler.print_counters()
     print('. errors: ', self.errors_counter,
           '. ',        self.current_status[0:80],
