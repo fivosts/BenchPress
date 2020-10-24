@@ -49,6 +49,10 @@ workflows:
     triggers:
       - schedule:
           cron: "0 6 * * *"
+          filters:
+            branches:
+              only:
+                - master
     # python_versions:
     jobs:
       - build_clgen:
