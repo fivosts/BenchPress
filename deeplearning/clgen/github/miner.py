@@ -19,9 +19,9 @@ from google.cloud import bigquery
 
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.proto import github_pb2
-from deeplearning.clgen.corpuses.github import datasets
-from deeplearning.clgen.corpuses.github import storage
-from deeplearning.clgen.corpuses.github import bigQuery_database
+from deeplearning.clgen.github import datasets
+from deeplearning.clgen.github import storage
+from deeplearning.clgen.github import bigQuery_database
 
 from eupy.native import logger as l
 

@@ -12,7 +12,7 @@ import functools
 from google.cloud import bigquery
 
 from deeplearning.clgen.proto import github_pb2
-from deeplearning.clgen.corpuses.github import bigQuery_database
+from deeplearning.clgen.github import bigQuery_database
 from eupy.native import logger as l
 
 class Storage(object):

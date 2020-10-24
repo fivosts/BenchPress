@@ -32,7 +32,7 @@ from deeplearning.clgen.models import models
 from deeplearning.clgen.proto import clgen_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
-from deeplearning.clgen.corpuses.github import miner
+from deeplearning.clgen.github import miner
 
 from eupy.native import logger as l
 from eupy.hermes import client

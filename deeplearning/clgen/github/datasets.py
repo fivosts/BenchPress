@@ -8,7 +8,7 @@ import google
 from google.cloud import bigquery
 from absl import flags
 
-from deeplearning.clgen.corpuses.github import bigQuery_database
+from deeplearning.clgen.github import bigQuery_database
 from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
