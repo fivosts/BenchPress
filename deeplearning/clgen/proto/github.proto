@@ -54,8 +54,10 @@ message BigQuery {
 }
 
 message Recursive {
+  // Github access tokens
+  optional string access_token = 1;
   // number of files per flush in thousands
-  optional int32 flush_limit_K = 1;
+  optional int32 flush_limit_K = 2;
   // total corpus limit in thousands.
-  optional int32 corpus_size_K = 2;
+  optional int32 corpus_size_K = 3;
 }

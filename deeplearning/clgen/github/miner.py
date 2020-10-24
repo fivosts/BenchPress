@@ -46,6 +46,7 @@ class GithubMiner(object):
         )
         return BigQuery(config)
       elif config.HasField("recursive"):
+        pbutil.AssertFieldIsSet(config.recursive, "access_token")
         pbutil.AssertFieldConstraint(
           config.recursive,
           "flush_limit_K",
@@ -394,13 +395,12 @@ class RecursiveFetcher(GithubMiner):
   def __init__(self,
                config: github_pb2.GithubMiner
                ):
-    self.corpus_path     = config.path
+    self.corpus_path = config.path
     git_credentials = {
       'GITHUB_USERNAME'  : None,
       'GITHUB_PW'        : None,
-      'GITHUB_TOKEN'     : None,
     }
-    l.getLogger().info("Github fetcher initialized: {}".format(corpus_path))
+    l.getLogger().info("Github fetcher initialized: {}".format(self.corpus_path))
 
     if not all(k in os.environ for k in git_credentials.keys()):
       l.getLogger().warn("Export github credentials as environment variables to speed up the process")
@@ -414,7 +414,7 @@ class RecursiveFetcher(GithubMiner):
 
     self.username        = git_credentials['GITHUB_USERNAME']
     self.password        = git_credentials['GITHUB_PW']
-    self.token           = git_credentials['GITHUB_TOKEN']
+    self.token           = config.recursive.access_token
     self.repo_handler    = GithubRepoHandler(
       self.corpus_path, 
       config.recursive.corpus_size_K * 1000,
