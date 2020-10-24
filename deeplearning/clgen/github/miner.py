@@ -656,12 +656,14 @@ class RecursiveFetcher(GithubMiner):
 
         if include_url and include_url not in stack:
           include_src = self.download_file(repo, include_url, stack)
+          outlines.append("// [FETCH] included: {}\n".format(line))
           outlines.append(include_src)
+          outlines.append('// [FETCH] eof({})'.format(line))
         else:
           if not include_url:
-            outlines.append('// [FETCH] didnt find: \n' + line)
+            outlines.append('// [FETCH] didnt find: \n{}'.format(line))
           else:
-            outlines.append('// [FETCH] skipped: ' + line)
+            outlines.append('// [FETCH] skipped: {}'.format(line))
       else:
         outlines.append(line)
 
