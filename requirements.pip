@@ -42,7 +42,7 @@ docutils==0.14
 editdistance==0.3.1
 entrypoints==0.2.3
 enum34==1.1.6
-eupy==1.0.17
+eupy==1.0.18
 fasteners==0.15
 flaky==3.6.1
 Flask==1.0.2
