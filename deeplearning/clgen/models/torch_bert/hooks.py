@@ -67,6 +67,8 @@ class tensorMonitorHook(object):
 
           for ch in self.tensors:
             for k, v in ch.items():
+              if k == 'step':
+                continue
               if k not in self.plot_tensors:
                 self.plot_tensors[k] = {'value': [], 'step': []}
             self.plot_tensors[k]['value'].append(v)
