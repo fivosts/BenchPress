@@ -79,8 +79,8 @@ class BigQuery(GithubMiner):
                ):
     super(BigQuery, self).__init__()
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(pathlib.Path(config.big_query.credentials, must_exist = True))
-    self.cache_path = pathlib.Path(config.path).resolve()
-    self.cache_path.mkdir(must_exist = False, parents = True)
+    self.cache_path = pathlib.Path(config.path, must_exist = False).expanduser().resolve()
+    self.cache_path.mkdir(exist_ok = True, parents = True)
 
     l.getLogger().info("Initializing BigQuery miner in {}".format(self.cache_path))
     job_config = bigquery.QueryJobConfig(allowLargeResults = True)
@@ -396,8 +396,8 @@ class RecursiveFetcher(GithubMiner):
   def __init__(self,
                config: github_pb2.GithubMiner
                ):
-    self.cache_path = pathlib.Path(config.path).resolve()
-    self.cache_path.mkdir(must_exist = False, parents = True)
+    self.cache_path = pathlib.Path(config.path, must_exist = False).expanduser().resolve()
+    self.cache_path.mkdir(exist_ok = True, parents = True)
     git_credentials = {
       'GITHUB_USERNAME'  : None,
       'GITHUB_PW'        : None,
