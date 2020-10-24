@@ -92,9 +92,13 @@ class BigQuery(GithubMiner):
     return
 
   def fetch(self):
+    self._query_github()
+    self._export_corpus()
+    return
 
+  def _query_github(self) -> None:
+    """Apply bigQuery requests to get all contentfiles"""
     with self.storage as st:
-      # Get contentfiles.
 
       main_repo_count  = 0
       other_repo_count = 0
@@ -199,6 +203,19 @@ class BigQuery(GithubMiner):
         "total_repositories: {}".format(main_repo_count + other_repo_count),
       ]
       st.save(bigQuery_database.bqData(key = self.dataset.name, value = '\n'.join(query_data)))
+    return
+
+  def _export_corpus(self) -> None:
+    """
+    Get all raw files requested from BQ and export them to CLGEN corpus.
+
+    The most important aspect is inlining includes into the source files.
+
+    In case the selected storage type is SQL DB, all needed header files
+    will be found in bq_header_contentfiles table and will be drawn from there.
+    The original storage DB can be diminished in size, by deleting the header
+    files that were not eventually used.
+    """
     return
 
 class RecursiveFetcher(GithubMiner):
