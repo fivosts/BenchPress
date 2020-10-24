@@ -2,7 +2,7 @@ github_miner {
   path: "/home/foivos/opencl_corpus"
   data_format: sql
   big_query {
-    credentials: "/home/foivos/PhD/Code/clgen/deeplearning/clgen/corpuses/3rd_acc_creds.json"
+    credentials: "/home/foivos/PhD/Code/clgen/deeplearning/clgen/github/3rd_acc_creds.json"
     language: "opencl"
   }
 }
