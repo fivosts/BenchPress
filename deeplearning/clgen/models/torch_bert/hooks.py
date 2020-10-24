@@ -71,8 +71,8 @@ class tensorMonitorHook(object):
                 continue
               if k not in self.plot_tensors:
                 self.plot_tensors[k] = {'value': [], 'step': []}
-            self.plot_tensors[k]['value'].append(v)
-            self.plot_tensors[k]['step'].append(ch['step'])
+              self.plot_tensors[k]['value'].append(v)
+              self.plot_tensors[k]['step'].append(ch['step'])
       else:
         raise FileNotFoundError(self.jsonfile)
     return
@@ -101,6 +101,8 @@ class tensorMonitorHook(object):
     self.tensors[-1]['step'] = effective_step
     
     for key, value in epoch_tensors.items():
+      if key == 'step':
+        continue
       if key not in self.plot_tensors:
         self.plot_tensors[key] = {'value': [], 'step': []}
       self.plot_tensors[key]['value'].append(value)
