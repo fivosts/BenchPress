@@ -1,0 +1,8 @@
+github_miner {
+  path: "/home/foivos/opencl_corpus"
+  data_format: folder
+  recursive {
+  	
+  }
+
+}
