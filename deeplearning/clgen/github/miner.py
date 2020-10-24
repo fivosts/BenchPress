@@ -300,7 +300,7 @@ class RecursiveFetcher(GithubMiner):
       self.file_size_limit          = flush_limit
 
       self.collectHistory()
-      self.is_finished              = False if corpus_size == -1 else (self.updated_length >= corpus_size)
+      self.is_finished              = False if (corpus_size // 1000) == -1 else (self.updated_length >= corpus_size)
       return
 
     def collectHistory(self) -> None:
@@ -348,7 +348,7 @@ class RecursiveFetcher(GithubMiner):
         self.file_size_counter      += self._scraped_files[url].update(**kwargs)
         self.files_modified_counter += 1
       else:
-        self._scraped_files[url]    =  GithubFile(**kwargs)
+        self._scraped_files[url]    =  RecursiveFetcher.GithubRepoHandler.GithubFile(**kwargs)
         self.files_new_counter      += 1
         self.file_size_counter      += kwargs.get('size')
 
@@ -367,7 +367,7 @@ class RecursiveFetcher(GithubMiner):
         self._scraped_repos[url].update(**kwargs)
         self.repos_modified_counter += 1
       else:
-        self._scraped_repos[url]    =  GithubRepo(**kwargs)
+        self._scraped_repos[url]    =  RecursiveFetcher.GithubRepoHandler.GithubRepo(**kwargs)
         self.repos_new_counter      += 1
       return True
 
