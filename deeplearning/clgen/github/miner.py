@@ -56,8 +56,8 @@ class GithubMiner(object):
         pbutil.AssertFieldConstraint(
           config.recursive,
           "corpus_size_K",
-          lambda x: x>0,
-          "corpus size cannot be non-positive."
+          lambda x: x >= -1,
+          "corpus size must either be -1 or non-negative."
           )
         if config.data_format != config.GithubMiner.DataFormat.folder:
           raise NotImplementedError("RecursiveFetcher only stores files in local folder.")
@@ -299,7 +299,7 @@ class RecursiveFetcher(GithubMiner):
       self.file_size_limit          = flush_limit
 
       self.collectHistory()
-      self.is_finished              = False if corpus_size is None else (self.updated_length >= corpus_size)
+      self.is_finished              = False if corpus_size == -1 else (self.updated_length >= corpus_size)
       return
 
     def collectHistory(self) -> None:
