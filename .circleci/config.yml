@@ -45,6 +45,10 @@ jobs:
 
 workflows:
   version: 2
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 6 * * *"
   python_versions:
     jobs:
       - build_clgen:
