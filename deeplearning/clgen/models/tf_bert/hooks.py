@@ -436,7 +436,6 @@ class tfPlotTensorHook(_tfEstimatorHooks):
           legend = False,
           showfig = False,
           savefig = str(self.output_dir / "{}.png".format(key_str)),
-          force_init = True,
         )
     return
 
