@@ -855,7 +855,7 @@ class BertForPreTraining(BertPreTrainedModel):
     new_input_ids = torch.LongTensor(updated_sequence).to(pytorch.device)
     return there_is_target, new_input_ids, attention_mask, sample_indices
 
-  def apply_batch(self, batch, prediction, attention, position_ids, masked_lm_label):
+  def apply_batch(self, batch, prediction, attention, position_ids, masked_lm_label = None):
 
     holes, new_batch, new_attention = self.fillTrainSeq(
       batch, prediction, attention
@@ -875,7 +875,7 @@ class BertForPreTraining(BertPreTrainedModel):
         new_attention,
       )
     compile_flag = self.checkIfBatchCompiles(new_batch[0].numpy())
-    if compile_flag:
+    if compile_flag and masked_lm_label:
       for idx, t in enumerate(masked_lm_label):
         if t != -100:
           masked_lm_label[idx] = -100
