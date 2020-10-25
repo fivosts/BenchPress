@@ -855,7 +855,7 @@ class BertForPreTraining(BertPreTrainedModel):
     new_input_ids = torch.LongTensor(updated_sequence).to(pytorch.device)
     return there_is_target, new_input_ids, attention_mask, sample_indices
 
-  def apply_batch(self, batch, prediction, attention, position_ids, masked_lm_label = None):
+  def apply_batch(self, batch, prediction, attention, position_ids, masked_lm_label):
 
     holes, new_batch, new_attention = self.fillTrainSeq(
       batch, prediction, attention
@@ -947,11 +947,11 @@ class BertForPreTraining(BertPreTrainedModel):
         batch_size, sequence_length = tuple(input_ids.shape)
         with concurrent.futures.ThreadPoolExecutor() as executor:
           jobs = [executor.submit(self.apply_batch,
-                                  input_ids        [i].cpu(),
-                                  prediction_scores[i].detach().cpu(),
-                                  attention_mask   [i].cpu(),
-                                  position_ids     [i].cpu().unsqueeze(0),
-                                  masked_lm_labels [i].cpu().numpy()
+                                  batch           = input_ids        [i].cpu(),
+                                  prediction      = prediction_scores[i].detach().cpu(),
+                                  attention       = attention_mask   [i].cpu(),
+                                  position_ids    = position_ids     [i].cpu().unsqueeze(0),
+                                  masked_lm_label = masked_lm_labels [i].cpu().numpy()
                               ) for i in range(batch_size)]
 
           results          = [j.result() for j in jobs]
@@ -959,50 +959,50 @@ class BertForPreTraining(BertPreTrainedModel):
           compile_flag     = [y         for (_, y, _) in results]
           masked_lm_labels = torch.LongTensor([z for (_, _, z) in results]).to(pytorch.device)
       else:
-        ###
-        # batch_size, sequence_length = tuple(input_ids.shape)
-        # with concurrent.futures.ThreadPoolExecutor() as executor:
-        #   jobs = [executor.submit(self.apply_batch,
-        #                           input_ids        [i].cpu(),
-        #                           prediction_scores[i].detach().cpu(),
-        #                           attention_mask   [i].cpu(),
-        #                           position_ids     [i].cpu().unsqueeze(0),
-        #                           masked_lm_labels [i].cpu().numpy()
-        #                       ) for i in range(batch_size)]
-
-        #   results          = [j.result() for j in jobs]
-        #   samples          = [x.numpy() for (x, _, _) in results]
-        #   compile_flag     = [y         for (_, y, _) in results]
-        #   masked_lm_labels = torch.LongTensor([z for (_, _, z) in results]).to(pytorch.device)
-        ###
-        compile_flag = [0] * len(input_ids)
         num_targets = sum([x for x in input_ids[0] if x == self.atomizer.maskToken or x == self.atomizer.holeToken])
         sample_indices = [[[] for i in range(num_targets)] for j in range(len(input_ids))]
-        there_are_holes, new_input_ids, new_attention_mask, sample_indices = self.fillPredictionSeq(
-          input_ids,
-          [[self.argmax(x) for x in b] for b in prediction_scores],
-          attention_mask,
-          sample_indices,
-        )
-        while there_are_holes:
-          new_outputs = self.bert(
-            input_ids            = new_input_ids,
-            attention_mask       = new_attention_mask,
-            position_ids         = position_ids,
-            token_type_ids       = token_type_ids,
-            head_mask            = head_mask,
-            inputs_embeds        = inputs_embeds,
-            output_attentions    = output_attentions,
-            output_hidden_states = output_hidden_states,
-          )
-          new_sequence_output, new_pooled_output = new_outputs[:2]
-          new_prediction_scores, new_seq_relationship_score = self.cls(new_sequence_output, new_pooled_output)
-          there_are_holes, new_input_ids, new_attention_mask, sample_indices = self.fillPredictionSeq(
-            new_input_ids,
-            [[self.argmax(x) for x in b] for b in new_prediction_scores],
-            new_attention_mask,
-            sample_indices,
-          )
+        ###
+        batch_size, sequence_length = tuple(input_ids.shape)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+          jobs = [executor.submit(self.apply_batch,
+                                  batch          = input_ids        [i].cpu(),
+                                  prediction     = prediction_scores[i].detach().cpu(),
+                                  attention      = attention_mask   [i].cpu(),
+                                  position_ids   = position_ids     [i].cpu().unsqueeze(0),
+                                  sample_indices = masked_lm_labels [i].cpu().numpy()
+                              ) for i in range(batch_size)]
+
+          results          = [j.result() for j in jobs]
+          samples          = [x.numpy() for (x, _, _) in results]
+          compile_flag     = [y         for (_, y, _) in results]
+          masked_lm_labels = torch.LongTensor([z for (_, _, z) in results]).to(pytorch.device)
+        ###
+        # compile_flag = [0] * len(input_ids)
+        # there_are_holes, new_input_ids, new_attention_mask, sample_indices = self.fillPredictionSeq(
+        #   input_ids,
+        #   [[self.argmax(x) for x in b] for b in prediction_scores],
+        #   attention_mask,
+        #   sample_indices,
+        # )
+        # while there_are_holes:
+        #   new_outputs = self.bert(
+        #     input_ids            = new_input_ids,
+        #     attention_mask       = new_attention_mask,
+        #     position_ids         = position_ids,
+        #     token_type_ids       = token_type_ids,
+        #     head_mask            = head_mask,
+        #     inputs_embeds        = inputs_embeds,
+        #     output_attentions    = output_attentions,
+        #     output_hidden_states = output_hidden_states,
+        #   )
+        #   new_sequence_output, new_pooled_output = new_outputs[:2]
+        #   new_prediction_scores, new_seq_relationship_score = self.cls(new_sequence_output, new_pooled_output)
+        #   there_are_holes, new_input_ids, new_attention_mask, sample_indices = self.fillPredictionSeq(
+        #     new_input_ids,
+        #     [[self.argmax(x) for x in b] for b in new_prediction_scores],
+        #     new_attention_mask,
+        #     sample_indices,
+        #   )
         for i in range(len(new_input_ids)):
           compile_flag[i] = self.checkIfBatchCompiles(new_input_ids[i].cpu().numpy())
           # if compile_flag[i]:
