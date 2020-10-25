@@ -355,16 +355,16 @@ class dbStorage(Storage):
       self.data = contentfile
     else: # Do this for both bqRepo and bqFile.
       if isinstance(contentfile, bigQuery_database.bqMainFile):
-        self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
         if contentfile.sha256 not in self.main_sha:
+          self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
           self.main_sha.add(contentfile.sha256)
           self.main_files.add(contentfile)
         if len(self.main_files) > self.flush_freq:
           self.flushToDB(self.main_files)
           self.main_files = set()
       elif isinstance(contentfile, bigQuery_database.bqOtherFile):
-        self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
         if contentfile.sha256 not in self.other_sha:
+          self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
           self.other_sha.add(contentfile.sha256)
           self.other_files.add(contentfile)
         if len(self.other_files) > self.flush_freq:
