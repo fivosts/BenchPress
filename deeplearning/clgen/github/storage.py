@@ -381,9 +381,9 @@ class dbStorage(Storage):
 
   def flush(self):
     """Flushes all cached data to DB."""
-    with self.db.Session(commit = True) as session:
-      ## Write data
-      if self.data is not None:
+    ## Write data
+    if self.data is not None:
+      with self.db.Session(commit = True) as session:
         if self.db.data is not None:
           entry = session.query(
             bigQuery_database.bqData
@@ -392,13 +392,14 @@ class dbStorage(Storage):
         else:
           session.add(self.data)
 
-      ## Write repos
-      if self.repocount > len(self.db.repo_entries):
-        for repo in self.repos:
-          repo_name, ref = repo.split(', ')
-          content = bigQuery_database.bqRepo(**bigQuery_database.bqRepo.FromArgs(
-              self.db.repo_count, {'repo_name': repo_name, 'ref': ref})
-          )
+    ## Write repos
+    if self.repocount > len(self.db.repo_entries):
+      for repo in self.repos:
+        repo_name, ref = repo.split(', ')
+        content = bigQuery_database.bqRepo(**bigQuery_database.bqRepo.FromArgs(
+            self.db.repo_count, {'repo_name': repo_name, 'ref': ref})
+        )
+        with self.db.Session(commit = True) as session:
           exists = session.query(
             bigQuery_database.bqRepo
           ).filter_by(repo_name = content.repo_name, ref = content.ref).scalar() is not None
