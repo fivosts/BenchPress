@@ -185,7 +185,8 @@ class bqDatabase(sqlutil.Database):
     Get distinct repository/ref list from bqMainFile table.
     """
     with self.Session() as s:
-      return set("{}, {}".format(e.repo_name, e.ref) for e in s.query(bqMainFile))
+      q = s.query(bqMainFile).with_entities(bqMainFile.repo_name, bqMainFile.ref)
+      return set("{}, {}".format(e.repo_name, e.ref) for e in q.yield_per(10000).enable_eagerloads(False))
 
   @property
   def other_repo_entries(self) -> typing.Set[str]:
@@ -193,7 +194,8 @@ class bqDatabase(sqlutil.Database):
     Get distinct repository/ref list from bqOtherFile table.
     """
     with self.Session() as s:
-      return set("{}, {}".format(e.repo_name, e.ref) for e in s.query(bqOtherFile))
+      q = s.query(bqOtherFile).with_entities(bqOtherFile.repo_name, bqOtherFile.ref)
+      return set("{}, {}".format(e.repo_name, e.ref) for e in q.yield_per(10000).enable_eagerloads(False))
 
   @property
   def header_repo_entries(self) -> typing.Set[str]:
@@ -201,7 +203,8 @@ class bqDatabase(sqlutil.Database):
     Get distinct repository/ref list from bqHeaderFile table.
     """
     with self.Session() as s:
-      return set("{}, {}".format(e.repo_name, e.ref) for e in s.query(bqHeaderFile))
+      q = s.query(bqHeaderFile).with_entities(bqHeaderFile.repo_name, bqHeaderFile.ref)
+      return set("{}, {}".format(e.repo_name, e.ref) for e in q.yield_per(1000000).enable_eagerloads(False))
 
   @property
   def main_sha(self) -> typing.Set[str]:
