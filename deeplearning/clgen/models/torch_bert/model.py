@@ -959,6 +959,22 @@ class BertForPreTraining(BertPreTrainedModel):
           compile_flag     = [y         for (_, y, _) in results]
           masked_lm_labels = torch.LongTensor([z for (_, _, z) in results]).to(pytorch.device)
       else:
+        ###
+        # batch_size, sequence_length = tuple(input_ids.shape)
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #   jobs = [executor.submit(self.apply_batch,
+        #                           input_ids        [i].cpu(),
+        #                           prediction_scores[i].detach().cpu(),
+        #                           attention_mask   [i].cpu(),
+        #                           position_ids     [i].cpu().unsqueeze(0),
+        #                           masked_lm_labels [i].cpu().numpy()
+        #                       ) for i in range(batch_size)]
+
+        #   results          = [j.result() for j in jobs]
+        #   samples          = [x.numpy() for (x, _, _) in results]
+        #   compile_flag     = [y         for (_, y, _) in results]
+        #   masked_lm_labels = torch.LongTensor([z for (_, _, z) in results]).to(pytorch.device)
+        ###
         compile_flag = [0] * len(input_ids)
         num_targets = sum([x for x in input_ids[0] if x == self.atomizer.maskToken or x == self.atomizer.holeToken])
         sample_indices = [[[] for i in range(num_targets)] for j in range(len(input_ids))]
