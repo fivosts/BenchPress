@@ -90,10 +90,9 @@ class CompilationSampler(object):
                           ) for i in range(batch_size)]
 
       results          = [j.result() for j in jobs]
-      samples          = [x.numpy() for (x, _, _) in results]
-      compile_flag     = [y         for (_, y, _) in results]
-      sample_indices   = [z for (_, _, z) in results]
-      return samples, compile_flag, sample_indices
+      samples          = [x.numpy() for (x, _) in results]
+      sample_indices   = [y for (_, y) in results]
+      return samples, sample_indices
 
   def iterTrainingSeq(self,
                       batch           : np.array,
@@ -155,7 +154,7 @@ class CompilationSampler(object):
          whole batch at the same time.
     """
     holes, new_batch, new_attention, sample_indices = self.StepSampleSeq(
-      batch, prediction, attention
+      batch, prediction, attention, sample_indices
     )
     while holes:
       new_prediction, new_seq_relationship_score, _, _ = self.model.get_output(
@@ -165,6 +164,7 @@ class CompilationSampler(object):
         new_batch[0],
         new_prediction.detach().cpu()[0],
         new_attention,
+        sample_indices
       )
     return new_batch[0], sample_indices
 
@@ -222,16 +222,62 @@ class CompilationSampler(object):
     return np.any(new_hole), new_batch, attention_mask
 
   def StepSampleSeq(self,
-                    input_ids      : np.array,
-                    predictions    : np.array,
+                    batch      : np.array,
+                    prediction_scores    : np.array,
                     attention_mask : np.array,
                     sample_indices : np.array,
                     ):
     """
-    Updates new_input_ids with the model's output prediction.
-    The output, if still contains hole or mask tokens, is fed back
-    to the model's input through the input_fn's sample_gen generator.
+    Applies step predictions to input sequence.
+    Specifically optimized for training; does not compute sample indices for speed-up.
     """
+    seq_length    = tuple(batch.shape)[0]
+    allowed_incr = (seq_length - int(torch.where(batch==self.atomizer.padToken)[0][0])
+                    if self.atomizer.padToken in batch
+                    else 0)
+
+    endTokens = [self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken]
+    closed_hole = np.zeros(seq_length, dtype=np.bool)
+    new_hole = np.zeros(seq_length, dtype=np.bool)
+    temp_batch = batch.cpu().detach().numpy().copy()
+
+    for target_idx in torch.where((batch == self.atomizer.holeToken) | (batch == self.atomizer.maskToken))[0]:
+      idx        = int(target_idx)
+      prediction = int(self.argmax(prediction_scores[target_idx]))
+      is_hole = temp_batch[idx] == self.atomizer.holeToken
+
+      if prediction in endTokens:
+        # Model predicted sth that will close the hole.
+        closed_hole[idx] = True
+        continue
+
+      # We replace the hole with a prediction
+      temp_batch[idx] = prediction
+      rem_adds = allowed_incr + np.sum(closed_hole) - np.sum(new_hole)
+      if is_hole and rem_adds:
+        # if this was a hole and we have more empty space, reinsert the hole
+        new_hole[idx] = True
+
+    new_batch = np.full(seq_length, self.atomizer.padToken, dtype=np.int64)
+    new_idx = 0
+    for idx, t in enumerate(temp_batch):
+      if closed_hole[idx]:
+        continue
+      new_batch[new_idx] = t
+      new_idx += 1
+      if new_hole[idx]:
+        new_batch[new_idx] = self.atomizer.holeToken
+        new_idx += 1
+      if new_idx >= seq_length:
+        break
+
+    new_batch = torch.LongTensor([new_batch])
+    attention_mask = (new_batch != self.atomizer.padToken)
+    return np.any(new_hole), new_batch, attention_mask
+
+    ###########################
+
+
     masked_lm_ids = [
                       [x for idx, x in enumerate(predictions[batch_idx])
                           if input_ids[batch_idx][idx] == self.atomizer.maskToken
