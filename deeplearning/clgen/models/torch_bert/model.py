@@ -852,7 +852,6 @@ class BertForPreTraining(BertPreTrainedModel):
         attentions              = attentions,
       )
 
-
 class BertLMHeadModel(BertPreTrainedModel):
   def __init__(self, config):
     super().__init__(config)
