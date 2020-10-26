@@ -95,7 +95,7 @@ class CompilationSampler(object):
       return samples, sample_indices
 
   def iterTrainingSeq(self,
-                      batch           : np.array,
+                      seq           : np.array,
                       prediction      : np.array,
                       attention       : np.array,
                       position_ids    : np.array,
@@ -115,26 +115,26 @@ class CompilationSampler(object):
          whole batch at the same time.
     """
     holes, new_batch, new_attention = self.StepTrainingSeq(
-      batch, prediction, attention
+      seq, prediction, attention
     )
     while holes:
       new_prediction, new_seq_relationship_score, _, _ = self.model.get_output(
-        new_batch.to(pytorch.device), new_attention.to(pytorch.device), position_ids.to(pytorch.device),
+        new_seq.to(pytorch.device), new_attention.to(pytorch.device), position_ids.to(pytorch.device),
       )
-      holes, new_batch, new_attention = self.StepTrainingSeq(
-        new_batch[0],
+      holes, new_seq, new_attention = self.StepTrainingSeq(
+        new_seq[0],
         new_prediction.detach().cpu()[0],
         new_attention,
       )
-    compile_flag = self.checkIfBatchCompiles(new_batch[0].numpy())
+    compile_flag = self.checkIfBatchCompiles(new_seq[0].numpy())
     if compile_flag:
       for idx, t in enumerate(masked_lm_label):
         if t != -100:
           masked_lm_label[idx] = -100
-    return new_batch[0], compile_flag, masked_lm_label
+    return new_seq[0], compile_flag, masked_lm_label
 
   def iterSampleSeq(self,
-                    batch           : np.array,
+                    seq           : np.array,
                     prediction      : np.array,
                     attention       : np.array,
                     position_ids    : np.array,
@@ -153,23 +153,23 @@ class CompilationSampler(object):
          said functionalities on a single sequence. CANNOT be applied to the
          whole batch at the same time.
     """
-    holes, new_batch, new_attention, sample_indices = self.StepSampleSeq(
-      batch, prediction, attention, sample_indices
+    holes, new_seq, new_attention, sample_indices = self.StepSampleSeq(
+      seq, prediction, attention, sample_indices
     )
     while holes:
       new_prediction, new_seq_relationship_score, _, _ = self.model.get_output(
-        new_batch.to(pytorch.device), new_attention.to(pytorch.device), position_ids.to(pytorch.device),
+        new_seq.to(pytorch.device), new_attention.to(pytorch.device), position_ids.to(pytorch.device),
       )
-      holes, new_batch, new_attention, sample_indices = self.StepSampleSeq(
-        new_batch[0],
+      holes, new_seq, new_attention, sample_indices = self.StepSampleSeq(
+        new_seq[0],
         new_prediction.detach().cpu()[0],
         new_attention,
         sample_indices
       )
-    return new_batch[0], sample_indices
+    return new_seq[0], sample_indices
 
   def StepTrainingSeq(self,
-                      batch             : np.array,
+                      seq             : np.array,
                       prediction_scores : np.array,
                       attention_mask    : np.array,
                       ) -> typing.Tuple[bool, torch.LongTensor, np.array]:
@@ -177,20 +177,20 @@ class CompilationSampler(object):
     Applies step predictions to input sequence.
     Specifically optimized for training; does not compute sample indices for speed-up.
     """
-    seq_length    = tuple(batch.shape)[0]
-    allowed_incr = (seq_length - int(torch.where(batch==self.atomizer.padToken)[0][0])
-                    if self.atomizer.padToken in batch
+    seq_length    = tuple(seq.shape)[0]
+    allowed_incr = (seq_length - int(torch.where(seq==self.atomizer.padToken)[0][0])
+                    if self.atomizer.padToken in seq
                     else 0)
 
     endTokens = [self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken]
     closed_hole = np.zeros(seq_length, dtype=np.bool)
     new_hole = np.zeros(seq_length, dtype=np.bool)
-    temp_batch = batch.cpu().detach().numpy().copy()
+    temp_seq = seq.cpu().detach().numpy().copy()
 
-    for target_idx in torch.where((batch == self.atomizer.holeToken) | (batch == self.atomizer.maskToken))[0]:
+    for target_idx in torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0]:
       idx        = int(target_idx)
       prediction = int(self.argmax(prediction_scores[target_idx]))
-      is_hole = temp_batch[idx] == self.atomizer.holeToken
+      is_hole = temp_seq[idx] == self.atomizer.holeToken
 
       if prediction in endTokens:
         # Model predicted sth that will close the hole.
@@ -198,7 +198,7 @@ class CompilationSampler(object):
         continue
 
       # We replace the hole with a prediction
-      temp_batch[idx] = prediction
+      temp_seq[idx] = prediction
       rem_adds = allowed_incr + np.sum(closed_hole) - np.sum(new_hole)
       if is_hole and rem_adds:
         # if this was a hole and we have more empty space, reinsert the hole
@@ -206,7 +206,7 @@ class CompilationSampler(object):
 
     new_batch = np.full(seq_length, self.atomizer.padToken, dtype=np.int64)
     new_idx = 0
-    for idx, t in enumerate(temp_batch):
+    for idx, t in enumerate(temp_seq):
       if closed_hole[idx]:
         continue
       new_batch[new_idx] = t
@@ -222,7 +222,7 @@ class CompilationSampler(object):
     return np.any(new_hole), new_batch, attention_mask
 
   def StepSampleSeq(self,
-                    batch      : np.array,
+                    seq      : np.array,
                     prediction_scores    : np.array,
                     attention_mask : np.array,
                     sample_indices : np.array,
@@ -231,20 +231,20 @@ class CompilationSampler(object):
     Applies step predictions to input sequence.
     Specifically optimized for training; does not compute sample indices for speed-up.
     """
-    seq_length    = tuple(batch.shape)[0]
-    allowed_incr = (seq_length - int(torch.where(batch==self.atomizer.padToken)[0][0])
-                    if self.atomizer.padToken in batch
+    seq_length    = tuple(seq.shape)[0]
+    allowed_incr = (seq_length - int(torch.where(seq==self.atomizer.padToken)[0][0])
+                    if self.atomizer.padToken in seq
                     else 0)
 
     endTokens = [self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken]
     closed_hole = np.zeros(seq_length, dtype=np.bool)
     new_hole = np.zeros(seq_length, dtype=np.bool)
-    temp_batch = batch.cpu().detach().numpy().copy()
+    temp_seq = seq.cpu().detach().numpy().copy()
 
-    for target_idx in torch.where((batch == self.atomizer.holeToken) | (batch == self.atomizer.maskToken))[0]:
+    for target_idx in torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0]:
       idx        = int(target_idx)
       prediction = int(self.argmax(prediction_scores[target_idx]))
-      is_hole = temp_batch[idx] == self.atomizer.holeToken
+      is_hole = temp_seq[idx] == self.atomizer.holeToken
 
       if prediction in endTokens:
         # Model predicted sth that will close the hole.
@@ -252,7 +252,7 @@ class CompilationSampler(object):
         continue
 
       # We replace the hole with a prediction
-      temp_batch[idx] = prediction
+      temp_seq[idx] = prediction
       rem_adds = allowed_incr + np.sum(closed_hole) - np.sum(new_hole)
       if is_hole and rem_adds:
         # if this was a hole and we have more empty space, reinsert the hole
@@ -260,7 +260,7 @@ class CompilationSampler(object):
 
     new_batch = np.full(seq_length, self.atomizer.padToken, dtype=np.int64)
     new_idx = 0
-    for idx, t in enumerate(temp_batch):
+    for idx, t in enumerate(temp_seq):
       if closed_hole[idx]:
         continue
       new_batch[new_idx] = t
