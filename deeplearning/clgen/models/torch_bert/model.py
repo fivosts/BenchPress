@@ -18,16 +18,15 @@
 import math
 import os
 import typing
-import concurrent.futures
 
 import numpy as np
 
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
-from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.models.torch_bert import activations
 from deeplearning.clgen.models.torch_bert import config
 from deeplearning.clgen.models.torch_bert import modeling_utils
+from deeplearning.clgen.models.torch_bert import compiler
 
 def mish(x):
   return x * torch.tanh(torch.nn.functional.softplus(x))
@@ -513,10 +512,10 @@ class BertForPreTrainingOutput(typing.NamedTuple):
   seq_relationship_logits: torch.FloatTensor = None
   hidden_states: typing.Optional[typing.Tuple[torch.FloatTensor]] = None
   attentions: typing.Optional[typing.Tuple[torch.FloatTensor]] = None
-  batch_compilation_rate: float = None
-  compile_status: typing.List = None
-  generated_samples: typing.List = None
-  sample_indices: typing.List = None
+  batch_compilation_rate: float = -1
+  compile_status: typing.List = []
+  generated_samples: typing.List = []
+  sample_indices: typing.List = []
 
 BERT_START_DOCSTRING = r"""
   This model is a PyTorch `torch.nn.Module <https://pytorch.org/docs/stable/nn.html#torch.nn.Module>`_ sub-class.
@@ -719,8 +718,11 @@ class BertForPreTraining(BertPreTrainedModel):
 
     if self.config.reward_compilation or self.config.is_sampling:
       self.compile_sampler = compiler.CompilationSampler(
-        atomizer, use_categorical, temperature
+        self, atomizer, use_categorical, temperature
       )
+    else:
+      self.compile_sampler = None
+
     self.init_weights()
 
   def get_output_embeddings(self):
@@ -748,7 +750,7 @@ class BertForPreTraining(BertPreTrainedModel):
     )
     sequence_output, pooled_output = outputs[:2]
     prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
-    return prediction_scores, seq_relationship_score
+    return prediction_scores, seq_relationship_score, outputs[0], outputs[1]
 
   def forward(
     self,
@@ -795,106 +797,61 @@ class BertForPreTraining(BertPreTrainedModel):
     >>> prediction_logits = outptus.prediction_logits
     >>> seq_relationship_logits = outputs.seq_relationship_logits
     """
-    compile_samples = (self.config.reward_compilation and is_training) or (is_prediction and not is_training)
-
-    prediction_scores, seq_relationship_score = self.get_output(
+    prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
       input_ids, attention_mask, position_ids, token_type_ids, head_mask,
       inputs_embeds, output_attentions, output_hidden_states 
     )
 
-    if not is_validation and self.compile_sampler and is_training:
+    if not is_validation and self.compile_sampler and not self.config.is_sampling:
       samples, compile_flag, masked_lm_labels = self.compile_sampler.generateTrainingBatch(
         input_ids, prediction_scores, attention_mask, position_ids, masked_lm_labels
       )
-    elif not is_validation and self.compile_sampler and self.config.is_sampling:
-      samples, compile_flag, sample_indices = self.compile_sampler.generateSampleBatch(
-        input_ids, prediction_scores, attention_mask, position_ids
+
+      loss_fct = torch.nn.CrossEntropyLoss()
+      masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
+      next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
+      total_loss = masked_lm_loss + next_sentence_loss
+      
+      return BertForPreTrainingOutput(
+        masked_lm_loss          = masked_lm_loss,
+        next_sentence_loss      = next_sentence_loss,
+        total_loss              = total_loss,
+        prediction_logits       = prediction_scores,
+        seq_relationship_logits = seq_relationship_score,
+        hidden_states           = hidden_states,
+        attentions              = attentions,
+        compile_status          = compile_flag,
+        generated_samples       = [x for en, x in enumerate(samples)],
+        batch_compilation_rate  = float(sum(compile_flag)) / len(compile_flag),
+        sample_indices          = [],
       )
 
-    if compile_samples:
-      if is_training:
-        batch_size, sequence_length = tuple(input_ids.shape)
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-          jobs = [executor.submit(self.apply_batch,
-                                  batch           = input_ids        [i].cpu(),
-                                  prediction      = prediction_scores[i].detach().cpu(),
-                                  attention       = attention_mask   [i].cpu(),
-                                  position_ids    = position_ids     [i].cpu().unsqueeze(0),
-                                  masked_lm_label = masked_lm_labels [i].cpu().numpy()
-                              ) for i in range(batch_size)]
+    elif not is_validation and self.compile_sampler and self.config.is_sampling:
+      samples, sample_indices = self.compile_sampler.generateSampleBatch(
+        input_ids, prediction_scores, attention_mask, position_ids
+      )
+      return BertForPreTrainingOutput(
+        generated_samples = samples,
+        sample_indices    = sample_indices
+      )
 
-          results          = [j.result() for j in jobs]
-          samples          = [x.numpy() for (x, _, _) in results]
-          compile_flag     = [y         for (_, y, _) in results]
-          masked_lm_labels = torch.LongTensor([z for (_, _, z) in results]).to(pytorch.device)
-      else:
-        num_targets = sum([x for x in input_ids[0] if x == self.atomizer.maskToken or x == self.atomizer.holeToken])
-        sample_indices = [[[] for i in range(num_targets)] for j in range(len(input_ids))]
-        ###
-        batch_size, sequence_length = tuple(input_ids.shape)
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-          jobs = [executor.submit(self.apply_batch,
-                                  batch          = input_ids        [i].cpu(),
-                                  prediction     = prediction_scores[i].detach().cpu(),
-                                  attention      = attention_mask   [i].cpu(),
-                                  position_ids   = position_ids     [i].cpu().unsqueeze(0),
-                                  sample_indices = masked_lm_labels [i].cpu().numpy()
-                              ) for i in range(batch_size)]
+    else:
 
-          results          = [j.result() for j in jobs]
-          samples          = [x.numpy() for (x, _, _) in results]
-          compile_flag     = [y         for (_, y, _) in results]
-          masked_lm_labels = torch.LongTensor([z for (_, _, z) in results]).to(pytorch.device)
-        ###
-        # compile_flag = [0] * len(input_ids)
-        # there_are_holes, new_input_ids, new_attention_mask, sample_indices = self.fillPredictionSeq(
-        #   input_ids,
-        #   [[self.argmax(x) for x in b] for b in prediction_scores],
-        #   attention_mask,
-        #   sample_indices,
-        # )
-        # while there_are_holes:
-        #   new_outputs = self.bert(
-        #     input_ids            = new_input_ids,
-        #     attention_mask       = new_attention_mask,
-        #     position_ids         = position_ids,
-        #     token_type_ids       = token_type_ids,
-        #     head_mask            = head_mask,
-        #     inputs_embeds        = inputs_embeds,
-        #     output_attentions    = output_attentions,
-        #     output_hidden_states = output_hidden_states,
-        #   )
-        #   new_sequence_output, new_pooled_output = new_outputs[:2]
-        #   new_prediction_scores, new_seq_relationship_score = self.cls(new_sequence_output, new_pooled_output)
-        #   there_are_holes, new_input_ids, new_attention_mask, sample_indices = self.fillPredictionSeq(
-        #     new_input_ids,
-        #     [[self.argmax(x) for x in b] for b in new_prediction_scores],
-        #     new_attention_mask,
-        #     sample_indices,
-        #   )
-        for i in range(len(new_input_ids)):
-          compile_flag[i] = self.checkIfBatchCompiles(new_input_ids[i].cpu().numpy())
-          # if compile_flag[i]:
-          #   masked_lm_labels[i][:] = -100
+      loss_fct = torch.nn.CrossEntropyLoss()
+      masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
+      next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
+      total_loss = masked_lm_loss + next_sentence_loss
+      
+      return BertForPreTrainingOutput(
+        masked_lm_loss          = masked_lm_loss,
+        next_sentence_loss      = next_sentence_loss,
+        total_loss              = total_loss,
+        prediction_logits       = prediction_scores,
+        seq_relationship_logits = seq_relationship_score,
+        hidden_states           = hidden_states,
+        attentions              = attentions,
+      )
 
-    loss_fct = torch.nn.CrossEntropyLoss()
-    masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
-    next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
-    total_loss = masked_lm_loss + next_sentence_loss
-
-    return BertForPreTrainingOutput(
-      masked_lm_loss          = masked_lm_loss,
-      next_sentence_loss      = next_sentence_loss,
-      total_loss              = total_loss,
-      prediction_logits       = prediction_scores,
-      seq_relationship_logits = seq_relationship_score,
-      hidden_states           = outputs[0],
-      attentions              = outputs[1],
-      compile_status          = compile_flag if compile_samples else [],
-      generated_samples       = [x for en, x in enumerate(samples)] if compile_samples else [],
-      batch_compilation_rate  = float(sum(compile_flag)) / len(compile_flag) if compile_samples else -1,
-      sample_indices          = sample_indices if not is_training and is_prediction else []
-    )
 
 class BertLMHeadModel(BertPreTrainedModel):
   def __init__(self, config):
