@@ -381,8 +381,7 @@ class torchBert(backends.BackendBase):
               compilation_rate        = step_out.batch_compilation_rate,
               batch_execution_time_ms = exec_time_ms,
               time_per_sample_ms      = exec_time_ms / self.train_batch_size,
-              num_correct_samples     = (correct_sample_obs.sample_id * min(self.steps_per_epoch, FLAGS.monitor_frequency)
-                                        if correct_sample_obs is not None else None)
+              num_correct_samples     = (correct_sample_obs.sample_id if correct_sample_obs is not None else None)
             )
             self.train.model.zero_grad()
             if self.current_step == 0:
