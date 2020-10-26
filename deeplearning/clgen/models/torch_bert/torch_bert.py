@@ -150,8 +150,7 @@ class torchBert(backends.BackendBase):
     """
     Model parameter initialization for training and validation.
     """
-    if self.bert_config is None:
-      self._ConfigModelParams(False)
+    self._ConfigModelParams(is_sampling = False)
 
     self.train_batch_size                 = self.config.training.batch_size
     self.eval_batch_size                  = self.config.training.batch_size
@@ -205,8 +204,7 @@ class torchBert(backends.BackendBase):
     """
     Model parameter initialization for inference.
     """
-    if self.bert_config is None:
-      self._ConfigModelParams(True)
+    self._ConfigModelParams(is_sampling = True)
     self.sampler = sampler
     self.temperature = sampler.temperature
 
