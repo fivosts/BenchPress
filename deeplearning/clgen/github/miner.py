@@ -100,6 +100,72 @@ class BigQuery(GithubMiner):
     """Apply bigQuery requests to get all contentfiles"""
     with self.storage as st:
 
+      repos = st.db.main_repo_entries
+      repos.update(st.db.other_repo_entries)
+      l.getLogger().info(len(repos))
+
+      # header_repos = st.db.header_repo_entries
+      # final_repos = set()
+      # for repo in repos:
+      #   if repo not in header_repos:
+      #     final_repos.add(repo)
+      # l.getLogger().info(len(final_repos))
+
+      # rep_list = [tuple(r.split(', ')) for r in final_repos]
+
+      # total_header_rows = 0
+
+      # header_includes_it = self.dataset.header_file_query(rep_list)
+      # l.getLogger().warn(header_includes_it)
+      # for i in header_includes_it:
+      #   l.getLogger().info(i)
+      # exit()
+      # if header_includes_it:
+      #   total_header_rows += header_includes_it.total_rows
+      #   with progressbar.ProgressBar(max_value = header_includes_it.total_rows) as bar:
+      #     for en, hf in enumerate(header_includes_it):
+      #       st.save(bigQuery_database.bqHeaderFile(
+      #           **bigQuery_database.bqHeaderFile.FromArgs(st.filecount, hf)
+      #         )
+      #       )
+      #       bar.update(en)
+      #   st.flush()        
+
+      header_repos = st.db.header_repo_entries
+      final_repos = set()
+      with progressbar.ProgressBar(max_value = len(header_repos)) as bar:
+        for repo in bar(header_repos):
+          if repo in repos:
+            final_repos.add(repo)
+        l.getLogger().info(len(final_repos))
+
+      cached_deletes = set()
+      import copy
+      new_db = bigQuery_database.bqDatabase("sqlite:///{}".format(self.cache_path / ("new_" + ".db")))
+
+      with st.db.Session(commit = False) as session:
+        for i in session.query(bigQuery_database.bqHeaderFile).yield_per(100000).enable_eagerloads(False):
+          if "{}, {}".format(i.repo_name, i.ref) in final_repos:
+            cached_deletes.add(i)
+            print(len(cached_deletes))
+          if len(cached_deletes) % 1000 == 0 and (len(cached_deletes) -1) > 0:
+            bar = progressbar.ProgressBar(max_value = len(cached_deletes))
+            with new_db.Session(commit = True) as s:
+              for j in bar(cached_deletes):
+                s.add(j)
+              s.commit()
+            cached_deletes = set()
+        # q = session.query(bigQuery_database.bqHeaderFile
+        #     ).filter("{}, {}".format(
+        #       bigQuery_database.bqHeaderFile.repo_name, bigQuery_database.bqHeaderFile.ref
+        #       ) in final_repos).delete()
+        # session.commit()
+        with new_db.Session(commit = True) as s:
+          for j in cached_deletes:
+            s.add(j)
+          session.commit()
+          cached_deletes = set()
+      exit()
       main_repo_count  = 0
       other_repo_count = 0
 
@@ -236,11 +302,16 @@ class BigQuery(GithubMiner):
   def _inline_headers(self,
                       contentfile: bigQuery_database.bqFile
                       ) -> typing.Tuple[
-                            typing.Any[
+                            typing.Union[
                               bigQuery_database.bqMainFile, bigQuery_database.bqOtherFile
                             ],
                             typing.List[bigQuery_database.bqHeaderFile]
                           ]:
+    ## Do the same as inlineHeaders
+    #  1. Parse file for #include
+    #  2. Resolve include path
+    #  3. Ping DB to get it
+    #  4. Recurse over included file
     return contentfile, inlined_files
 
 class RecursiveFetcher(GithubMiner):
