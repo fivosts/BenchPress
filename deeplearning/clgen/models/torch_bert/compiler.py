@@ -92,7 +92,7 @@ class CompilationSampler(object):
          said functionalities on a single sequence. CANNOT be applied to the
          whole batch at the same time.
     """
-    holes, new_batch, new_attention = self.StepTrainingSeq(
+    holes, new_seq, new_attention = self.StepTrainingSeq(
       seq, prediction, attention
     )
     while holes:
@@ -147,22 +147,22 @@ class CompilationSampler(object):
         # if this was a hole and we have more empty space, reinsert the hole
         new_hole[idx] = True
 
-    new_batch = np.full(seq_length, self.atomizer.padToken, dtype=np.int64)
+    new_seq = np.full(seq_length, self.atomizer.padToken, dtype=np.int64)
     new_idx = 0
     for idx, t in enumerate(temp_seq):
       if closed_hole[idx]:
         continue
-      new_batch[new_idx] = t
+      new_seq[new_idx] = t
       new_idx += 1
       if new_hole[idx]:
-        new_batch[new_idx] = self.atomizer.holeToken
+        new_seq[new_idx] = self.atomizer.holeToken
         new_idx += 1
       if new_idx >= seq_length:
         break
 
-    new_batch = torch.LongTensor([new_batch])
-    attention_mask = (new_batch != self.atomizer.padToken)
-    return np.any(new_hole), new_batch, attention_mask
+    new_seq = torch.LongTensor([new_seq])
+    attention_mask = (new_seq != self.atomizer.padToken)
+    return np.any(new_hole), new_seq, attention_mask
 
   def generateSampleBatch(self,
                           input_ids         : torch.LongTensor,
@@ -270,21 +270,21 @@ class CompilationSampler(object):
       else:
         step_indices[-1].append(self.atomizer.endholeToken)
 
-    new_batch = np.full(seq_length, self.atomizer.padToken, dtype=np.int64)
+    new_seq = np.full(seq_length, self.atomizer.padToken, dtype=np.int64)
     new_idx = 0
     for idx, t in enumerate(temp_seq):
       if closed_hole[idx]:
         continue
-      new_batch[new_idx] = t
+      new_seq[new_idx] = t
       new_idx += 1
       if new_hole[idx]:
-        new_batch[new_idx] = self.atomizer.holeToken
+        new_seq[new_idx] = self.atomizer.holeToken
         new_idx += 1
       if new_idx >= seq_length:
         break
 
-    new_batch = torch.LongTensor([new_batch])
-    attention_mask = (new_batch != self.atomizer.padToken)
+    new_seq = torch.LongTensor([new_seq])
+    attention_mask = (new_seq != self.atomizer.padToken)
 
     # Update sample indices
     idx = 0
@@ -293,4 +293,4 @@ class CompilationSampler(object):
         sample_indices[target_indices] += step_indices[idx]
         idx += 1
 
-    return np.any(new_hole), new_batch, attention_mask, sample_indices
+    return np.any(new_hole), new_seq, attention_mask, sample_indices
