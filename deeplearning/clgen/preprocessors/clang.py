@@ -194,7 +194,10 @@ def CompileLlvmBytecode(
   ) as f:
     f.write(src)
     f.flush()
-    unit = clang.cindex.TranslationUnit.from_source(f.name, args = builtin_cflags + cflags)
+    try:
+      unit = clang.cindex.TranslationUnit.from_source(f.name, args = builtin_cflags + cflags)
+    except clang.cindex.TranslationUnitLoadError as e:
+      raise ValueError(e)
     diagnostics = [str(d) for d in unit.diagnostics if d.severity > 2]
     if len(diagnostics) > 0:
       raise ValueError('\n'.join(diagnostics))
