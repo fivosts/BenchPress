@@ -120,7 +120,7 @@ class torchBert(backends.BackendBase):
     l.getLogger().info("BERT Model config initialized in {}".format(self.cache.path))
     return
 
-  def _ConfigModelParams(self):
+  def _ConfigModelParams(self, is_sampling):
     """General model hyperparameters initialization."""
     self.bertAttrs = {
           "vocab_size"                   : self.atomizer.vocab_size,
@@ -139,7 +139,8 @@ class torchBert(backends.BackendBase):
     }
     self.bert_config = config.BertConfig.from_dict(
       self.bertAttrs, xla_device = self.torch_tpu_available,
-      reward_compilation = FLAGS.reward_compilation
+      reward_compilation = FLAGS.reward_compilation,
+      is_sampling = is_sampling,
     )
     return
 
@@ -150,7 +151,7 @@ class torchBert(backends.BackendBase):
     Model parameter initialization for training and validation.
     """
     if self.bert_config is None:
-      self._ConfigModelParams()
+      self._ConfigModelParams(False)
 
     self.train_batch_size                 = self.config.training.batch_size
     self.eval_batch_size                  = self.config.training.batch_size
@@ -205,7 +206,7 @@ class torchBert(backends.BackendBase):
     Model parameter initialization for inference.
     """
     if self.bert_config is None:
-      self._ConfigModelParams()
+      self._ConfigModelParams(True)
     self.sampler = sampler
     self.temperature = sampler.temperature
 
@@ -244,9 +245,7 @@ class torchBert(backends.BackendBase):
   def model_step(self,
                  model: typing.TypeVar('nn.Module'),
                  inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
-                 is_training: bool = True,
-                 is_prediction: bool = False,
-                 sampling_temperature: bool = None
+                 is_validation: bool = False,
                  ) -> float:
     """
     Perform a training step on a batch of inputs.
@@ -263,8 +262,7 @@ class torchBert(backends.BackendBase):
                 position_ids         = inputs['position_ids'],
                 masked_lm_labels     = inputs['mask_labels'],
                 next_sentence_labels = inputs['next_sentence_labels'],
-                is_training          = is_training,
-                is_prediction        = is_prediction,
+                is_validation        = is_validation,
               )
     return outputs
 
@@ -444,7 +442,7 @@ class torchBert(backends.BackendBase):
           inputs = next(eval_iterator)
 
         with self.torch.no_grad():
-          step_out = self.model_step(self.train.model, inputs, is_training = False)
+          step_out = self.model_step(self.train.model, inputs, is_validation = True)
 
         val_hook.step(inputs, step_out)
         avg_mask_loss.append(step_out.masked_lm_loss.mean().item())
@@ -582,8 +580,6 @@ class torchBert(backends.BackendBase):
     with self.torch.no_grad():
       step_out = self.model_step(
           self.sample.model, self.step_inputs,
-          is_training = False, is_prediction = True,
-          sampling_temperature = self.sampler.temperature
       )
     return step_out.generated_samples, step_out.sample_indices
 

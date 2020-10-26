@@ -469,6 +469,18 @@ class BertPreTrainedModel(modeling_utils.PreTrainedModel):
     if isinstance(module, torch.nn.Linear) and module.bias is not None:
       module.bias.data.zero_()
 
+  def get_output(self,
+                 input_ids,
+                 attention_mask,
+                 position_ids,
+                 token_type_ids       = None,
+                 head_mask            = None,
+                 inputs_embeds        = None,
+                 output_attentions    = None,
+                 output_hidden_states = None,
+                 ) -> typing.Tuple[torch.FloatTensor, torch.FloatTensor]:
+    raise NotImplementedError("Abstract class")
+
 class BertForPreTrainingOutput(typing.NamedTuple):
   """
   Output type of :class:`~transformers.BertForPreTrainingModel`.
@@ -704,182 +716,39 @@ class BertForPreTraining(BertPreTrainedModel):
 
     self.bert = BertModel(config)
     self.cls  = BertPreTrainingHeads(config)
-    self.atomizer        = atomizer
-    self.use_categorical = use_categorical
-    self.temperature     = temperature
-    if self.use_categorical:
-      self.argmax = lambda x: torch.argmax(torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
-          temperature = self.temperature if self.temperature is not None else 1.0, logits = x
-        ).sample()
-      )
-    else:
-      self.argmax = lambda x: torch.argmax(x)
 
+    if self.config.reward_compilation or self.config.is_sampling:
+      self.compile_sampler = compiler.CompilationSampler(
+        atomizer, use_categorical, temperature
+      )
     self.init_weights()
 
   def get_output_embeddings(self):
     return self.cls.predictions.decoder
 
-  def fillTrainSeq(self,
-                   batch,
-                   prediction_scores,
-                   attention_mask,
-                   ):
-    """
-    Takes a single sequence of the batch.
-    """
-    seq_length    = tuple(batch.shape)[0]
-    allowed_incr = (seq_length - int(torch.where(batch==self.atomizer.padToken)[0][0])
-                    if self.atomizer.padToken in batch
-                    else 0)
-
-    endTokens = [self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken]
-    closed_hole = np.zeros(seq_length, dtype=np.bool)
-    new_hole = np.zeros(seq_length, dtype=np.bool)
-    temp_batch = batch.cpu().detach().numpy().copy()
-
-    for target_idx in torch.where((batch == self.atomizer.holeToken) | (batch == self.atomizer.maskToken))[0]:
-      idx        = int(target_idx)
-      prediction = int(self.argmax(prediction_scores[target_idx]))
-      is_hole = temp_batch[idx] == self.atomizer.holeToken
-
-      if prediction in endTokens:
-        # Model predicted sth that will close the hole.
-        closed_hole[idx] = True
-        continue
-
-      # We replace the hole with a prediction
-      temp_batch[idx] = prediction
-      rem_adds = allowed_incr + np.sum(closed_hole) - np.sum(new_hole)
-      if is_hole and rem_adds:
-        # if this was a hole and we have more empty space, reinsert the hole
-        new_hole[idx] = True
-
-    new_batch = np.full(seq_length, self.atomizer.padToken, dtype=np.int64)
-    new_idx = 0
-    for idx, t in enumerate(temp_batch):
-      if closed_hole[idx]:
-        continue
-      new_batch[new_idx] = t
-      new_idx += 1
-      if new_hole[idx]:
-        new_batch[new_idx] = self.atomizer.holeToken
-        new_idx += 1
-      if new_idx >= seq_length:
-        break
-
-    new_batch = torch.LongTensor([new_batch])
-    attention_mask = (new_batch != self.atomizer.padToken)
-    return np.any(new_hole), new_batch, attention_mask
-
-  def checkIfBatchCompiles(self, sample):
-    """Check if generated sample compiles"""
-    try:
-      stdout = opencl.Compile(self.atomizer.ArrayToCode(sample))
-      return 1
-    except ValueError:
-      return 0
-
-  def fillPredictionSeq(self,
-                        input_ids,
-                        predictions,
-                        attention_mask,
-                        sample_indices,
-                        ):
-    """
-    Updates new_input_ids with the model's output prediction.
-    The output, if still contains hole or mask tokens, is fed back
-    to the model's input through the input_fn's sample_gen generator.
-    """
-    masked_lm_ids = [
-                      [x for idx, x in enumerate(predictions[batch_idx])
-                          if input_ids[batch_idx][idx] == self.atomizer.maskToken
-                          or input_ids[batch_idx][idx] == self.atomizer.holeToken
-                      ] for batch_idx in range(len(input_ids))
-                    ]
-    assert len(input_ids) == len(masked_lm_ids), "Inputs and predictions do not have the same batch size."
-
-    updated_sequence = []
-    there_is_target = False
-    for batch_idx, _ in enumerate(input_ids):
-      batch = []
-      mask_id_index     = 0
-      closed_hole_index = 0
-      for idx, token in enumerate(input_ids[batch_idx]):
-        if   token == self.atomizer.maskToken:
-          there_is_target = True
-          mt = masked_lm_ids[batch_idx][mask_id_index]
-          if mt == self.atomizer.maskToken or mt == self.atomizer.holeToken:
-            continue
-          if len(sample_indices[batch_idx][mask_id_index]) > 0:
-            while(sample_indices[batch_idx][mask_id_index + closed_hole_index][-1]) == self.atomizer.endholeToken:
-              closed_hole_index += 1
-          sample_indices[batch_idx][mask_id_index + closed_hole_index].append(int(mt.cpu().numpy()))
-          mask_id_index += 1
-          batch.append(mt)
-        elif token == self.atomizer.holeToken:
-          there_is_target = True
-          mt = masked_lm_ids[batch_idx][mask_id_index]
-          if mt == self.atomizer.maskToken or mt == self.atomizer.holeToken:
-            continue
-          if len(sample_indices[batch_idx][mask_id_index]) > 0:
-            while(sample_indices[batch_idx][mask_id_index + closed_hole_index][-1]) == self.atomizer.endholeToken:
-              closed_hole_index += 1
-          sample_indices[batch_idx][mask_id_index + closed_hole_index].append(int(mt.cpu().numpy()))
-          mask_id_index += 1
-          if mt != self.atomizer.endholeToken:
-            batch.append(mt)
-            batch.append(self.atomizer.holeToken)
-            # done = False
-        else:
-          batch.append(token)
-
-      while len(batch) < len(input_ids[batch_idx]):
-        batch.append(self.atomizer.padToken)
-      batch = batch[:len(input_ids[batch_idx])]
-
-      pad_idx = None
-      if self.atomizer.padToken in batch:
-        pad_idx = batch.index(self.atomizer.padToken)
-      attention_mask[batch_idx] = (torch.full([len(input_ids[0])], 1, dtype = torch.int64)
-                        if pad_idx is None else
-                        torch.cat(
-                            (torch.full([pad_idx], 1, dtype = torch.int64),
-                             torch.full([len(input_ids[batch_idx]) - pad_idx], 0, dtype = torch.int64)
-                            )
-                          )
-                        )
-
-      batch = batch[:len(input_ids[0])]
-      updated_sequence.append(batch)
-    new_input_ids = torch.LongTensor(updated_sequence).to(pytorch.device)
-    return there_is_target, new_input_ids, attention_mask, sample_indices
-
-  def apply_batch(self, batch, prediction, attention, position_ids, masked_lm_label):
-
-    holes, new_batch, new_attention = self.fillTrainSeq(
-      batch, prediction, attention
+  def get_output(self,
+                 input_ids,
+                 attention_mask,
+                 position_ids,
+                 token_type_ids       = None,
+                 head_mask            = None,
+                 inputs_embeds        = None,
+                 output_attentions    = None,
+                 output_hidden_states = None,
+                 ) -> typing.Tuple[torch.FloatTensor, torch.FloatTensor]:
+    outputs = self.bert(
+      input_ids            = input_ids,
+      attention_mask       = attention_mask,
+      position_ids         = position_ids,
+      token_type_ids       = token_type_ids,
+      head_mask            = head_mask,
+      inputs_embeds        = inputs_embeds,
+      output_attentions    = output_attentions,
+      output_hidden_states = output_hidden_states,
     )
-    while holes:
-      outputs = self.bert(
-        input_ids      = new_batch.to(pytorch.device),
-        attention_mask = new_attention.to(pytorch.device),
-        position_ids   = position_ids.to(pytorch.device),
-      )
-      seq_output, pooled_output = outputs[:2]
-      new_prediction, new_seq_relationship_score = self.cls(seq_output, pooled_output)
-
-      holes, new_batch, new_attention = self.fillTrainSeq(
-        new_batch[0],
-        new_prediction.detach().cpu()[0],
-        new_attention,
-      )
-    compile_flag = self.checkIfBatchCompiles(new_batch[0].numpy())
-    if compile_flag and masked_lm_label:
-      for idx, t in enumerate(masked_lm_label):
-        if t != -100:
-          masked_lm_label[idx] = -100
-    return new_batch[0], compile_flag, masked_lm_label
+    sequence_output, pooled_output = outputs[:2]
+    prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
+    return prediction_scores, seq_relationship_score
 
   def forward(
     self,
@@ -893,8 +762,7 @@ class BertForPreTraining(BertPreTrainedModel):
     next_sentence_labels=None,
     output_attentions=None,
     output_hidden_states=None,
-    is_training = True,
-    is_prediction = False,
+    is_validation = False,
     **kwargs
   ):
     r"""
@@ -929,18 +797,19 @@ class BertForPreTraining(BertPreTrainedModel):
     """
     compile_samples = (self.config.reward_compilation and is_training) or (is_prediction and not is_training)
 
-    outputs = self.bert(
-      input_ids            = input_ids,
-      attention_mask       = attention_mask,
-      position_ids         = position_ids,
-      token_type_ids       = token_type_ids,
-      head_mask            = head_mask,
-      inputs_embeds        = inputs_embeds,
-      output_attentions    = output_attentions,
-      output_hidden_states = output_hidden_states,
+    prediction_scores, seq_relationship_score = self.get_output(
+      input_ids, attention_mask, position_ids, token_type_ids, head_mask,
+      inputs_embeds, output_attentions, output_hidden_states 
     )
-    sequence_output, pooled_output = outputs[:2]
-    prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
+
+    if not is_validation and self.compile_sampler and is_training:
+      samples, compile_flag, masked_lm_labels = self.compile_sampler.generateTrainingBatch(
+        input_ids, prediction_scores, attention_mask, position_ids, masked_lm_labels
+      )
+    elif not is_validation and self.compile_sampler and self.config.is_sampling:
+      samples, compile_flag, sample_indices = self.compile_sampler.generateSampleBatch(
+        input_ids, prediction_scores, attention_mask, position_ids
+      )
 
     if compile_samples:
       if is_training:

@@ -1,6 +1,8 @@
 import numpy as np
 import typing
+import concurrent.futures
 
+from deeplearning.clgen.models.torch_bert import model
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.utils.pytorch import torch
 
@@ -15,15 +17,18 @@ class CompilationSampler(object):
   compilation status.
   """
   def __init__(self,
+               model           : model.BertPreTrainedModel,
                atomizer        : atomizers.AtomizerBase,
                use_categorical : bool,
                temperature     : float,
                ):
+    self.model           = model
     self.atomizer        = atomizer
     self.temperature     = temperature
     self.use_categorical = use_categorical
     if self.use_categorical:
-      self.argmax = lambda x: torch.argmax(torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
+      self.argmax = lambda x: torch.argmax(
+        torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
           temperature = self.temperature if self.temperature is not None else 1.0, logits = x
         ).sample()
       )
@@ -41,13 +46,61 @@ class CompilationSampler(object):
     except ValueError:
       return 0
 
-  def compileTrainingSeq(self,
-                         batch           : np.array,
-                         prediction      : np.array,
-                         attention       : np.array,
-                         position_ids    : np.array,
-                         masked_lm_label : np.array,
-                         ) -> typing.Tuple[np.array, np.array, np.array]:
+  def generateTrainingBatch(self,
+                            input_ids         : torch.LongTensor,
+                            prediction_scores : torch.FloatTensor,
+                            attention_mask    : torch.LongTensor,
+                            position_ids      : torch.LongTensor,
+                            masked_lm_labels  : torch.LongTensor,
+                            ) -> typing.Tuple[np.array, typing.List[int], typing.LongTensor]:
+    batch_size, sequence_length = tuple(input_ids.shape)
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+      jobs = [executor.submit(self.iterTrainingSeq,
+                              batch           = input_ids        [i].cpu(),
+                              prediction      = prediction_scores[i].detach().cpu(),
+                              attention       = attention_mask   [i].cpu(),
+                              position_ids    = position_ids     [i].cpu().unsqueeze(0),
+                              masked_lm_label = masked_lm_labels [i].cpu().numpy()
+                          ) for i in range(batch_size)]
+
+      results          = [j.result() for j in jobs]
+      samples          = [x.numpy() for (x, _, _) in results]
+      compile_flag     = [y         for (_, y, _) in results]
+      masked_lm_labels = torch.LongTensor([z for (_, _, z) in results]).to(pytorch.device)
+      return samples, compile_flag, masked_lm_labels
+
+  def generateSampleBatch(self,
+                          input_ids         : torch.LongTensor,
+                          prediction_scores : torch.FloatTensor,
+                          attention_mask    : torch.LongTensor,
+                          position_ids      : torch.LongTensor,
+                          ) -> typing.Tuple[np.array, typing.List[int], typing.LongTensor]:
+    num_targets = sum([x for x in input_ids[0] if x == self.atomizer.maskToken or x == self.atomizer.holeToken])
+    sample_indices = [[[] for i in range(num_targets)] for j in range(len(input_ids))]
+    ###
+    batch_size, sequence_length = tuple(input_ids.shape)
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+      jobs = [executor.submit(self.iterSampleSeq,
+                              batch          = input_ids        [i].cpu(),
+                              prediction     = prediction_scores[i].detach().cpu(),
+                              attention      = attention_mask   [i].cpu(),
+                              position_ids   = position_ids     [i].cpu().unsqueeze(0),
+                              sample_indices = sample_indices   [i]
+                          ) for i in range(batch_size)]
+
+      results          = [j.result() for j in jobs]
+      samples          = [x.numpy() for (x, _, _) in results]
+      compile_flag     = [y         for (_, y, _) in results]
+      sample_indices   = [z for (_, _, z) in results]
+      return samples, compile_flag, sample_indices
+
+  def iterTrainingSeq(self,
+                      batch           : np.array,
+                      prediction      : np.array,
+                      attention       : np.array,
+                      position_ids    : np.array,
+                      masked_lm_label : np.array,
+                      ) -> typing.Tuple[np.array, np.array, np.array]:
     """
     Main training sequence filling loop.
     
@@ -65,14 +118,9 @@ class CompilationSampler(object):
       batch, prediction, attention
     )
     while holes:
-      outputs = self.bert(
-        input_ids      = new_batch.to(pytorch.device),
-        attention_mask = new_attention.to(pytorch.device),
-        position_ids   = position_ids.to(pytorch.device),
+      new_prediction, new_seq_relationship_score = self.model.get_output(
+        new_batch.to(pytorch.device), new_attention.to(pytorch.device), position_ids.to(pytorch.device),
       )
-      seq_output, pooled_output = outputs[:2]
-      new_prediction, new_seq_relationship_score = self.cls(seq_output, pooled_output)
-
       holes, new_batch, new_attention = self.StepTrainingSeq(
         new_batch[0],
         new_prediction.detach().cpu()[0],
@@ -89,7 +137,7 @@ class CompilationSampler(object):
                       batch             : np.array,
                       prediction_scores : np.array,
                       attention_mask    : np.array,
-                      ) -> typing.Tuple[np.array, torch.LongTensor, np.array]:
+                      ) -> typing.Tuple[bool, torch.LongTensor, np.array]:
     """
     Applies step predictions to input sequence.
     Specifically optimized for training; does not compute sample indices for speed-up.
@@ -138,12 +186,47 @@ class CompilationSampler(object):
     attention_mask = (new_batch != self.atomizer.padToken)
     return np.any(new_hole), new_batch, attention_mask
 
-  def fillPredictionSeq(self,
-                        input_ids,
-                        predictions,
-                        attention_mask,
-                        sample_indices,
-                        ):
+  def iterSampleSeq(self,
+                    batch           : np.array,
+                    prediction      : np.array,
+                    attention       : np.array,
+                    position_ids    : np.array,
+                    sample_indices  : np.array,
+                    ) -> typing.Tuple[np.array, np.array, np.array]:
+    """
+    Main sampling sequence filling loop.
+    
+    Function takes model's initial input, prediction and states.
+    Fills input sequence with step predictions and keeps asking
+    iteratively for predictions until target [MASK] or [HOLE] tokens
+    are closed.
+
+    Compiler is invoked for final sequence to get binary compilation status.
+    ##!! This function is designed to work with multithreading and exercises
+         said functionalities on a single sequence. CANNOT be applied to the
+         whole batch at the same time.
+    """
+    holes, new_batch, new_attention, sample_indices = self.StepSampleSeq(
+      batch, prediction, attention
+    )
+    while holes:
+      new_prediction, new_seq_relationship_score = self.model.get_output(
+        new_batch.to(pytorch.device), new_attention.to(pytorch.device), position_ids.to(pytorch.device),
+      )
+      holes, new_batch, new_attention, sample_indices = self.StepSampleSeq(
+        new_batch[0],
+        new_prediction.detach().cpu()[0],
+        new_attention,
+      )
+    compile_flag = self.checkIfBatchCompiles(new_batch[0].numpy())
+    return new_batch[0], compile_flag, sample_indices
+
+  def StepSampleSeq(self,
+                    input_ids      : np.array,
+                    predictions    : np.array,
+                    attention_mask : np.array,
+                    sample_indices : np.array,
+                    ):
     """
     Updates new_input_ids with the model's output prediction.
     The output, if still contains hole or mask tokens, is fed back
