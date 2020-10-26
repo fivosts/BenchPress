@@ -72,27 +72,6 @@ class CompilationSampler(object):
       masked_lm_labels = torch.LongTensor([z for (_, _, z) in results]).to(pytorch.device)
       return samples, compile_flag, masked_lm_labels
 
-  def generateSampleBatch(self,
-                          input_ids         : torch.LongTensor,
-                          prediction_scores : torch.FloatTensor,
-                          attention_mask    : torch.LongTensor,
-                          position_ids      : torch.LongTensor,
-                          ) -> typing.Tuple[typing.List[np.array], typing.List[typing.List[int]]]:
-    ###
-    batch_size, sequence_length = tuple(input_ids.shape)
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-      jobs = [executor.submit(self.iterSampleSeq,
-                              seq            = input_ids        [i].cpu(),
-                              prediction     = prediction_scores[i].detach().cpu(),
-                              attention      = attention_mask   [i].cpu(),
-                              position_ids   = position_ids     [i].cpu().unsqueeze(0),
-                          ) for i in range(batch_size)]
-
-      results          = [j.result() for j in jobs]
-      samples          = [x.numpy() for (x, _) in results]
-      sample_indices   = [y for (_, y) in results]
-      return samples, sample_indices
-
   def iterTrainingSeq(self,
                       seq             : torch.LongTensor,
                       prediction      : torch.FloatTensor,
@@ -131,45 +110,6 @@ class CompilationSampler(object):
         if t != -100:
           masked_lm_label[idx] = -100
     return new_seq[0], compile_flag, masked_lm_label
-
-  def iterSampleSeq(self,
-                    seq          : torch.LongTensor,
-                    prediction   : torch.LongTensor,
-                    attention    : torch.LongTensor,
-                    position_ids : torch.LongTensor,
-                    ) -> typing.Tuple[torch.LongTensor, typing.List[typing.List[int]]]:
-    """
-    Main sampling sequence filling loop.
-    
-    Function takes model's initial input, prediction and states.
-    Fills input sequence with step predictions and keeps asking
-    iteratively for predictions until target [MASK] or [HOLE] tokens
-    are closed.
-
-    Compiler is invoked for final sequence to get binary compilation status.
-    ##!! This function is designed to work with multithreading and exercises
-         said functionalities on a single sequence. CANNOT be applied to the
-         whole batch at the same time.
-    """
-    sample_indices = [
-      [] for _ in range(
-        len(torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0])
-      )
-    ]
-    holes, new_seq, new_attention, sample_indices = self.StepSampleSeq(
-      seq, prediction, attention, sample_indices
-    )
-    while holes:
-      new_prediction, new_seq_relationship_score, _, _ = self.model.get_output(
-        new_seq.to(pytorch.device), new_attention.to(pytorch.device), position_ids.to(pytorch.device),
-      )
-      holes, new_seq, new_attention, sample_indices = self.StepSampleSeq(
-        new_seq[0],
-        new_prediction.detach().cpu()[0],
-        new_attention,
-        sample_indices
-      )
-    return new_seq[0], sample_indices
 
   def StepTrainingSeq(self,
                       seq               : torch.LongTensor,
@@ -223,6 +163,66 @@ class CompilationSampler(object):
     new_batch = torch.LongTensor([new_batch])
     attention_mask = (new_batch != self.atomizer.padToken)
     return np.any(new_hole), new_batch, attention_mask
+
+  def generateSampleBatch(self,
+                          input_ids         : torch.LongTensor,
+                          prediction_scores : torch.FloatTensor,
+                          attention_mask    : torch.LongTensor,
+                          position_ids      : torch.LongTensor,
+                          ) -> typing.Tuple[typing.List[np.array], typing.List[typing.List[int]]]:
+    ###
+    batch_size, sequence_length = tuple(input_ids.shape)
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+      jobs = [executor.submit(self.iterSampleSeq,
+                              seq            = input_ids        [i].cpu(),
+                              prediction     = prediction_scores[i].detach().cpu(),
+                              attention      = attention_mask   [i].cpu(),
+                              position_ids   = position_ids     [i].cpu().unsqueeze(0),
+                          ) for i in range(batch_size)]
+
+      results          = [j.result() for j in jobs]
+      samples          = [x.numpy() for (x, _) in results]
+      sample_indices   = [y for (_, y) in results]
+      return samples, sample_indices
+
+  def iterSampleSeq(self,
+                    seq          : torch.LongTensor,
+                    prediction   : torch.LongTensor,
+                    attention    : torch.LongTensor,
+                    position_ids : torch.LongTensor,
+                    ) -> typing.Tuple[torch.LongTensor, typing.List[typing.List[int]]]:
+    """
+    Main sampling sequence filling loop.
+    
+    Function takes model's initial input, prediction and states.
+    Fills input sequence with step predictions and keeps asking
+    iteratively for predictions until target [MASK] or [HOLE] tokens
+    are closed.
+
+    Compiler is invoked for final sequence to get binary compilation status.
+    ##!! This function is designed to work with multithreading and exercises
+         said functionalities on a single sequence. CANNOT be applied to the
+         whole batch at the same time.
+    """
+    sample_indices = [
+      [] for _ in range(
+        len(torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0])
+      )
+    ]
+    holes, new_seq, new_attention, sample_indices = self.StepSampleSeq(
+      seq, prediction, attention, sample_indices
+    )
+    while holes:
+      new_prediction, new_seq_relationship_score, _, _ = self.model.get_output(
+        new_seq.to(pytorch.device), new_attention.to(pytorch.device), position_ids.to(pytorch.device),
+      )
+      holes, new_seq, new_attention, sample_indices = self.StepSampleSeq(
+        new_seq[0],
+        new_prediction.detach().cpu()[0],
+        new_attention,
+        sample_indices
+      )
+    return new_seq[0], sample_indices
 
   def StepSampleSeq(self,
                     seq               : torch.LongTensor,
