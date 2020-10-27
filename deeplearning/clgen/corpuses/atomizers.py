@@ -69,6 +69,7 @@ class AtomizerBase(object):
     self.vocab      = vocab
     self.metaTokens = metaTokens
     self._UpdateVocabulary()
+    self.metaTokenValues = set(value for key, value in self.__dict__.items() if key in self.metaTokens)
 
   @property
   def atoms(self) -> typing.List[str]:
@@ -162,8 +163,7 @@ class AtomizerBase(object):
     Returns:
       Code in string format.
     """
-    metaTokenValues = set(value for key, value in self.__dict__.items() if key in self.metaTokens)
-    return self.DeatomizeIndices([x for x in encoded if x not in metaTokenValues])
+    return self.DeatomizeIndices([x for x in encoded if x not in self.metaTokenValues])
 
   def StringArrToCode(self,
                       text: typing.List[str],
