@@ -152,10 +152,28 @@ class CompilationSampler(object):
     for idx, t in enumerate(temp_seq):
       if closed_hole[idx]:
         continue
-      new_seq[new_idx] = t
+      try:
+        new_seq[new_idx] = t
+      except IndexError:
+        l.getLogger().info("seq: {}".format(self.atomizer.DeatomizeIndices([x for x in seq.cpu().numpy()])))
+        l.getLogger().info("temp_seq {}".format(self.atomizer.DeatomizeIndices([x for x in temp_seq])))
+        l.getLogger().info("pred idx: {}".format(torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0]))
+        l.getLogger().info("pred_toks {}".format(self.atomizer.DeatomizeIndices([int(self.argmax(prediction_scores[idx])) for idx in torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0]])))
+        l.getLogger().info("allowed_incr: {}".format(allowed_incr))
+        l.getLogger().info("new_hole: {}".format(new_hole))
+        l.getLogger().info("closed_hole: {}".format(closed_hole))
       new_idx += 1
       if new_hole[idx]:
-        new_seq[new_idx] = self.atomizer.holeToken
+        try:
+          new_seq[new_idx] = self.atomizer.holeToken
+        except IndexError:
+          l.getLogger().warn("seq: {}".format(self.atomizer.DeatomizeIndices([x for x in seq.cpu().numpy()])))
+          l.getLogger().warn("temp_seq {}".format(self.atomizer.DeatomizeIndices([x for x in temp_seq])))
+          l.getLogger().warn("pred idx: {}".format(torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0]))
+          l.getLogger().warn("pred_toks {}".format(self.atomizer.DeatomizeIndices([int(self.argmax(prediction_scores[idx])) for idx in torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0]])))
+          l.getLogger().warn("allowed_incr: {}".format(allowed_incr))
+          l.getLogger().warn("new_hole: {}".format(new_hole))
+          l.getLogger().warn("closed_hole: {}".format(closed_hole))
         new_idx += 1
       if new_idx >= seq_length:
         break
