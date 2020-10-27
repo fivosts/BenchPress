@@ -154,12 +154,32 @@ class bqDatabase(sqlutil.Database):
              )
 
   @property
+  def mainfile_count(self) -> int:
+    with self.Session() as s:
+      return s.query(bqMainFile).count()
+  
+  @property
+  def otherfile_count(self) -> int:
+    with self.Session() as s:
+      return s.query(bqOtherFile).count()
+
+  @property
   def repo_count(self) -> int:
     """
     Get number of repos in bqRepo table.
     """
     with self.Session() as s:
       return s.query(bqRepo).count()
+
+  @property
+  def main_files(self) -> typing.List[bqMainFile]:
+    with self.Session() as s:
+      return s.query(bqMainFile).all()
+
+  @property
+  def other_files(self) -> typing.List[bqOtherFile]:
+    with self.Session() as s:
+      return s.query(bqOtherFile).all()
 
   @property
   def data(self) -> bqData:
@@ -230,3 +250,32 @@ class bqDatabase(sqlutil.Database):
     with self.Session() as s:
       return set(s.query(bqHeaderFile.sha256).all())
   
+  def main_files_byRepo(self,
+                        repo_name: str,
+                        ref: str
+                        ) -> typing.List[bqMainFile]:
+    with self.Session() as s:
+      return s.query(bqMainFile
+             ).filter_by(
+                bqMainFile.repo_name == repo_name and bqMainFile.ref == ref
+             ).all()
+
+  def other_files_byRepo(self,
+                        repo_name: str,
+                        ref: str
+                        ) -> typing.List[bqOtherFile]:
+    with self.Session() as s:
+      return s.query(bqOtherFile
+             ).filter_by(
+                bqOtherFile.repo_name == repo_name and bqOtherFile.ref == ref
+             ).all()
+
+  def header_files_byRepo(self,
+                        repo_name: str,
+                        ref: str
+                        ) -> typing.List[bqHeaderFile]:
+    with self.Session() as s:
+      return s.query(bqHeaderFile
+             ).filter_by(
+                bqHeaderFile.repo_name == repo_name and bqHeaderFile.ref == ref
+             ).all()
