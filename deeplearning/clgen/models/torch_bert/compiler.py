@@ -125,7 +125,7 @@ class CompilationSampler(object):
                     if self.atomizer.padToken in seq
                     else 0)
 
-    endTokens = [self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken]
+    endTokens = [self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken, self.atomizer.padToken]
     closed_hole = np.zeros(seq_length, dtype=np.bool)
     new_hole = np.zeros(seq_length, dtype=np.bool)
     temp_seq = seq.cpu().detach().numpy().copy()
@@ -263,7 +263,7 @@ class CompilationSampler(object):
                      if self.atomizer.padToken in seq
                      else 0)
 
-    endTokens = [self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken]
+    endTokens = [self.atomizer.endholeToken, self.atomizer.maskToken, self.atomizer.holeToken, self.atomizer.padToken]
     closed_hole = np.zeros(seq_length, dtype=np.bool)
     new_hole = np.zeros(seq_length, dtype=np.bool)
     temp_seq = seq.cpu().detach().numpy().copy()
