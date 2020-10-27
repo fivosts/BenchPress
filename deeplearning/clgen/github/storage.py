@@ -12,7 +12,7 @@ import functools
 from google.cloud import bigquery
 
 from deeplearning.clgen.proto import github_pb2
-from deeplearning.clgen.github import bigQuery_database
+from deeplearning.clgen.github import bigQuery_database as bqdb
 from eupy.native import logger as l
 
 class Storage(object):
@@ -60,6 +60,12 @@ class Storage(object):
   def save(self):
     raise NotImplementedError("Abstract Class")
 
+  def getRepoFiles(self,
+                   repo_name: str,
+                   ref: str
+                   ) -> typing.List[typing.Union[bqdb.bqMainFile, bqdb.bqHeaderFile]]:
+    raise NotImplementedError("Abstract Class")
+
   def flush(self):
     pass
 
@@ -91,20 +97,20 @@ class zipStorage(Storage):
 
   def save(self,
            contentfile: typing.Union[
-                          bigQuery_database.bqData,
-                          bigQuery_database.bqFile,
-                          bigQuery_database.bqRepo
+                          bqdb.bqData,
+                          bqdb.bqFile,
+                          bqdb.bqRepo
                         ]
            ) -> None:
-    if isinstance(contentfile, bigQuery_database.bqFile):
+    if isinstance(contentfile, bqdb.bqFile):
       self.cached_content.append(contentfile.content)
       self.file_count += 1
       if self.file_count % self.flush_counter == 0:
         self.zipFiles()
       self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
-    elif isinstance(contentfile, bigQuery_database.bqData):
+    elif isinstance(contentfile, bqdb.bqData):
       self.data_file = "{}\n\n{}".format(contentfile.key, contentfile.value)
-    elif isinstance(contentfile, bigQuery_database.bqRepo):
+    elif isinstance(contentfile, bqdb.bqRepo):
       self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     return
 
@@ -183,19 +189,19 @@ class fileStorage(Storage):
 
   def save(self,
            contentfile: typing.Union[
-                          bigQuery_database.bqData,
-                          bigQuery_database.bqFile,
-                          bigQuery_database.bqRepo
+                          bqdb.bqData,
+                          bqdb.bqFile,
+                          bqdb.bqRepo
                         ]
            ) -> None:
-    if isinstance(contentfile, bigQuery_database.bqFile):
+    if isinstance(contentfile, bqdb.bqFile):
       with open(self.cache_path / pathlib.Path(contentfile.path).name, 'w') as f:
         f.write(contentfile.content)
       self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
-    elif isinstance(contentfile, bigQuery_database.bqData):
+    elif isinstance(contentfile, bqdb.bqData):
       with open(self.cache_path / "data.txt", 'w') as f:
         f.write("{}\n\n{}".format(contentfile.key, contentfile.value))
-    elif isinstance(contentfile, bigQuery_database.bqRepo):
+    elif isinstance(contentfile, bqdb.bqRepo):
       self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     return
 
@@ -256,14 +262,14 @@ class JSONStorage(Storage):
 
   def save(self,
            contentfile: typing.Union[
-                          bigQuery_database.bqData,
-                          bigQuery_database.bqFile,
-                          bigQuery_database.bqRepo
+                          bqdb.bqData,
+                          bqdb.bqFile,
+                          bqdb.bqRepo
                         ]
            ) -> None:
-    if isinstance(contentfile, bigQuery_database.bqData):
+    if isinstance(contentfile, bqdb.bqData):
       self.data = "{}\n\n{}".format(contentfile.key, contentfile.value)
-    elif isinstance(contentfile, bigQuery_database.bqRepo):
+    elif isinstance(contentfile, bqdb.bqRepo):
       self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     else:
       self.files.append(contentfile.ToJSONDict())
@@ -323,7 +329,7 @@ class dbStorage(Storage):
                extension: str
                ):
     super(dbStorage, self).__init__(path, name, extension)
-    self.db = bigQuery_database.bqDatabase("sqlite:///{}".format(self.cache_path / (self.name + ".db")))
+    self.db = bqdb.bqDatabase("sqlite:///{}".format(self.cache_path / (self.name + ".db")))
 
     self.data  = None
     self.repos = self.db.repo_entries
@@ -346,15 +352,15 @@ class dbStorage(Storage):
 
   def save(self,
            contentfile: typing.Union[
-                          bigQuery_database.bqData,
-                          bigQuery_database.bqFile,
-                          bigQuery_database.bqRepo
+                          bqdb.bqData,
+                          bqdb.bqFile,
+                          bqdb.bqRepo
                         ]
            ) -> None:
-    if isinstance(contentfile, bigQuery_database.bqData):
+    if isinstance(contentfile, bqdb.bqData):
       self.data = contentfile
     else: # Do this for both bqRepo and bqFile.
-      if isinstance(contentfile, bigQuery_database.bqMainFile):
+      if isinstance(contentfile, bqdb.bqMainFile):
         if contentfile.sha256 not in self.main_sha:
           self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
           self.main_sha.add(contentfile.sha256)
@@ -362,7 +368,7 @@ class dbStorage(Storage):
         if len(self.main_files) > self.flush_freq:
           self.flushToDB(self.main_files)
           self.main_files = set()
-      elif isinstance(contentfile, bigQuery_database.bqOtherFile):
+      elif isinstance(contentfile, bqdb.bqOtherFile):
         if contentfile.sha256 not in self.other_sha:
           self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
           self.other_sha.add(contentfile.sha256)
@@ -370,12 +376,12 @@ class dbStorage(Storage):
         if len(self.other_files) > self.flush_freq:
           self.flushToDB(self.other_files)
           self.other_files = set()
-      elif isinstance(contentfile, bigQuery_database.bqHeaderFile):
+      elif isinstance(contentfile, bqdb.bqHeaderFile):
         self.header_files.add(contentfile)
         if len(self.header_files) > self.flush_freq:
           self.flushToDB(self.header_files)
           self.header_files = set()
-      elif isinstance(contentfile, bigQuery_database.bqRepo):
+      elif isinstance(contentfile, bqdb.bqRepo):
         self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     return
 
@@ -386,7 +392,7 @@ class dbStorage(Storage):
       with self.db.Session(commit = True) as session:
         if self.db.data is not None:
           entry = session.query(
-            bigQuery_database.bqData
+            bqdb.bqData
           ).filter_by(key = self.data.key).first()
           entry.value = self.data.value
         else:
@@ -396,12 +402,12 @@ class dbStorage(Storage):
     if self.repocount > len(self.db.repo_entries):
       for repo in self.repos:
         repo_name, ref = repo.split(', ')
-        content = bigQuery_database.bqRepo(**bigQuery_database.bqRepo.FromArgs(
+        content = bqdb.bqRepo(**bqdb.bqRepo.FromArgs(
             self.db.repo_count, {'repo_name': repo_name, 'ref': ref})
         )
         with self.db.Session(commit = True) as session:
           exists = session.query(
-            bigQuery_database.bqRepo
+            bqdb.bqRepo
           ).filter_by(repo_name = content.repo_name, ref = content.ref).scalar() is not None
           if not exists:
             session.add(content)
@@ -419,11 +425,19 @@ class dbStorage(Storage):
       self.header_files = set()
     return
 
-  def flushToDB(self, files: typing.Set[bigQuery_database.bqFile]) -> None:
+  def flushToDB(self, files: typing.Set[bqdb.bqFile]) -> None:
     with self.db.Session(commit = True) as session:
       for en, file in enumerate(files):
         session.add(file)
     return
+
+  def getRepoFiles(self,
+                   repo_name: str,
+                   ref: str
+                   ) -> typing.List[typing.Union[bqdb.bqMainFile, bqdb.bqHeaderFile]]:
+    return (self.db.main_files_byRepo(repo_name, ref) +
+            self.db.other_files_byRepo(repo_name, ref) +
+            self.db.header_files_byRepo(repo_name, ref))
 
 class bqStorage(Storage):
 
@@ -442,6 +456,6 @@ class bqStorage(Storage):
     super(bqTableStorage, self).__init__(path, extension)
 
   def save(self,
-           contentfile: bigQuery_database.bqFile
+           contentfile: bqdb.bqFile
            ) -> None:
     raise NotImplementedError
