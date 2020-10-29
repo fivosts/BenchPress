@@ -30,8 +30,7 @@ class bqFile():
   """
     A database entry representing a CLgen validation trace.
   """
-  id             : int = sql.Column(sql.Integer,    primary_key = True)
-  sha256         : str = sql.Column(sql.String(64), nullable = False, index = True)
+  id             : int = sql.Column(sql.String(64),    primary_key = True)
   repo_name      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   ref            : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   path           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
@@ -41,13 +40,11 @@ class bqFile():
 
   @classmethod
   def FromArgs(cls,
-               id: int,
                row: bigquery.Row
                ) -> typing.Dict[str, typing.Any]:
 
     return {
-      "id"             : id,
-      "sha256"         : row['id'],
+      "id"             : row['id'],
       "repo_name"      : row['repo_name'],
       "ref"            : row['ref'],
       "path"           : row['path'],
@@ -70,7 +67,6 @@ class bqFile():
   def ToJSONDict(self) -> typing.Dict[str, typing.Any]:
     return {
       "id"             : self.id,
-      "sha256"         : self.sha256,
       "repo_name"      : self.repo_name,
       "ref"            : self.ref,
       "path"           : self.path,
@@ -87,16 +83,12 @@ class bqOtherFile(Base, bqFile):
   """Abstract representation of other-to-main-language queried files."""
   __tablename__  = "bq_other_contentfiles"
 
-class bqHeaderFile(Base, bqFile):
-  """Abstract representation of header file includes."""
-  __tablename__  = "bq_header_contentfiles"
-
 class bqRepo(Base):
   """
     A database entry representing a CLgen validation trace.
   """
   __tablename__  = "bq_repofiles"
-  id             : int = sql.Column(sql.Integer,    primary_key = True)
+  id             : int = sql.Column(sql.Integer, primary_key = True)
   repo_name      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   ref            : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   date_added     : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
@@ -134,34 +126,53 @@ class bqDatabase(sqlutil.Database):
   def __init__(self, url: str, must_exist: bool = False):
     super(bqDatabase, self).__init__(url, Base, must_exist = must_exist)
 
+  ##### Main file properties
   @property
-  def count(self) -> typing.Tuple[int, int]:
-    """
-    Get number of repositories in bqRepo
-    and number of all contentfiles (inc. main, other & header)
-    """
-    return (self.repo_count, self.file_count)
+  def main_files(self) -> typing.List[bqMainFile]:
+    with self.Session() as s:
+      return s.query(bqMainFile).all()
 
   @property
-  def file_count(self) -> int:
-    """
-    Get total number of contentfiles in DB.
-    """
+  def main_ids(self) -> typing.Set[str]:
     with self.Session() as s:
-      return (s.query(bqMainFile).count() +
-              s.query(bqOtherFile).count() +
-              s.query(bqHeaderFile).count()
-             )
+      return set(s.query(bqMainFile.id).all())
 
   @property
   def mainfile_count(self) -> int:
     with self.Session() as s:
       return s.query(bqMainFile).count()
+
+  @property
+  def main_repo_count(self) -> int:
+    with self.Session() as s:
+      return s.query(bqMainFile.repo_name, bqMainFile.ref).distinct().count()
+
+  ##### Other file properties
+  @property
+  def other_files(self) -> typing.List[bqOtherFile]:
+    with self.Session() as s:
+      return s.query(bqOtherFile).all()
+
+  @property
+  def other_ids(self) -> typing.Set[str]:
+    with self.Session() as s:
+      return set(s.query(bqOtherFile.id).all())
   
   @property
   def otherfile_count(self) -> int:
     with self.Session() as s:
       return s.query(bqOtherFile).count()
+
+  @property
+  def other_repo_count(self) -> int:
+    with self.Session() as s:
+      return s.query(bqOtherFile.repo_name, bqOtherFile.ref).distinct().count()
+
+  ##### Repository table properties
+  @property
+  def loadRepos(self) -> typing.Set[typing.Tuple[str, str]]:
+    with self.Session() as s:
+      return set((e.repo_name, e.ref) for e in s.query(bqRepo))
 
   @property
   def repo_count(self) -> int:
@@ -171,16 +182,7 @@ class bqDatabase(sqlutil.Database):
     with self.Session() as s:
       return s.query(bqRepo).count()
 
-  @property
-  def main_files(self) -> typing.List[bqMainFile]:
-    with self.Session() as s:
-      return s.query(bqMainFile).all()
-
-  @property
-  def other_files(self) -> typing.List[bqOtherFile]:
-    with self.Session() as s:
-      return s.query(bqOtherFile).all()
-
+  ##### Data
   @property
   def data(self) -> bqData:
     """
@@ -188,94 +190,3 @@ class bqDatabase(sqlutil.Database):
     """
     with self.Session() as s:
       return s.query(bqData).first()
-
-  @property
-  def repo_entries(self) -> typing.Set[str]:
-    """
-    Get all repository/ref entries in bqRepo table in string format.
-    Returns a set of joint strings.
-    """
-    with self.Session() as s:
-      repos = s.query(bqRepo)
-      return set("{}, {}".format(e.repo_name, e.ref) for e in s.query(bqRepo))
-
-  @property
-  def main_repo_entries(self) -> typing.Set[str]:
-    """
-    Get distinct repository/ref list from bqMainFile table.
-    """
-    with self.Session() as s:
-      q = s.query(bqMainFile).with_entities(bqMainFile.repo_name, bqMainFile.ref)
-      return set("{}, {}".format(e.repo_name, e.ref) for e in q.yield_per(10000).enable_eagerloads(False))
-
-  @property
-  def other_repo_entries(self) -> typing.Set[str]:
-    """
-    Get distinct repository/ref list from bqOtherFile table.
-    """
-    with self.Session() as s:
-      q = s.query(bqOtherFile).with_entities(bqOtherFile.repo_name, bqOtherFile.ref)
-      return set("{}, {}".format(e.repo_name, e.ref) for e in q.yield_per(10000).enable_eagerloads(False))
-
-  @property
-  def header_repo_entries(self) -> typing.Set[str]:
-    """
-    Get distinct repository/ref list from bqHeaderFile table.
-    """
-    with self.Session() as s:
-      q = s.query(bqHeaderFile).with_entities(bqHeaderFile.repo_name, bqHeaderFile.ref)
-      return set("{}, {}".format(e.repo_name, e.ref) for e in q.yield_per(1000000).enable_eagerloads(False))
-
-  @property
-  def main_sha(self) -> typing.Set[str]:
-    """
-    Returns set of all distinct sha256 entries from main files.
-    """
-    with self.Session() as s:
-      return set(s.query(bqMainFile.sha256).all())
-
-  @property
-  def other_sha(self) -> typing.Set[str]:
-    """
-    Returns set of all distinct sha256 entries from main files.
-    """
-    with self.Session() as s:
-      return set(s.query(bqOtherFile.sha256).all())
-
-  @property
-  def header_sha(self) -> typing.Set[str]:
-    """
-    Returns set of all distinct sha256 entries from main files.
-    """
-    with self.Session() as s:
-      return set(s.query(bqHeaderFile.sha256).all())
-  
-  def main_files_byRepo(self,
-                        repo_name: str,
-                        ref: str
-                        ) -> typing.List[bqMainFile]:
-    with self.Session() as s:
-      return s.query(bqMainFile
-             ).filter_by(
-                bqMainFile.repo_name == repo_name and bqMainFile.ref == ref
-             ).all()
-
-  def other_files_byRepo(self,
-                        repo_name: str,
-                        ref: str
-                        ) -> typing.List[bqOtherFile]:
-    with self.Session() as s:
-      return s.query(bqOtherFile
-             ).filter_by(
-                bqOtherFile.repo_name == repo_name and bqOtherFile.ref == ref
-             ).all()
-
-  def header_files_byRepo(self,
-                        repo_name: str,
-                        ref: str
-                        ) -> typing.List[bqHeaderFile]:
-    with self.Session() as s:
-      return s.query(bqHeaderFile
-             ).filter_by(
-                bqHeaderFile.repo_name == repo_name and bqHeaderFile.ref == ref
-             ).all()
