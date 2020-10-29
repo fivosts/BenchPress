@@ -112,11 +112,10 @@ class Dataset(object):
   def _setupTables(self, dataset_id: str) -> typing.Dict[str, bigquery.Table]:
     """API request that gets or sets bigquery.Table instances."""
     table_reg = {
-      'bq_main_contentfiles'   : bigQuery_database.bqFile.bqSchema,
-      'bq_etc_contentfiles'    : bigQuery_database.bqFile.bqSchema,
-      'bq_header_contentfiles' : bigQuery_database.bqFile.bqSchema,
-      'bq_repofiles'           : bigQuery_database.bqRepo.bqSchema,
-      'bq_data'                : bigQuery_database.bqData.bqSchema,
+      'main_files'   : bigQuery_database.bqFile.bqSchema,
+      'other_files'  : bigQuery_database.bqFile.bqSchema,
+      'repositories' : bigQuery_database.bqRepo.bqSchema,
+      'bq_data'      : bigQuery_database.bqData.bqSchema,
     }
     for reg, get_sc in table_reg.items():
       table_id = "{}.{}".format(dataset_id, reg)
@@ -140,7 +139,7 @@ class Dataset(object):
     {}
     """.format("" if not self.query_file_id else "WHERE " + self.query_file_id)
 
-    dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_main_contentfiles', dr = True))
+    dry_run_job = self.client.query(query, job_config = self.queryConfig('main_files', dr = True))
     l.getLogger().warn("This query is going to consume {}".format(
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
@@ -172,7 +171,7 @@ class Dataset(object):
     {}
     """.format("" if not self.query_file_id else "WHERE " + self.query_file_id)
 
-    dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_repofiles', dr = True))
+    dry_run_job = self.client.query(query, job_config = self.queryConfig('repositories', dr = True))
     l.getLogger().warn("This query is going to consume {}".format(
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
@@ -188,7 +187,7 @@ class Dataset(object):
     l.getLogger().info("Retrieving repository list of specs...")
 
     try:
-      rows = self.client.query(query, job_config = self.queryConfig('bq_repofiles')).result()
+      rows = self.client.query(query, job_config = self.queryConfig('repositories')).result()
     except google.api_core.exceptions.Forbidden as e:
       l.getLogger().error(e)
       exit()
@@ -203,7 +202,7 @@ class Dataset(object):
     INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
     """.format("" if not self.query_file_id else "AND (" + self.query_file_id + ")")
 
-    dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_main_contentfiles', dr = True))
+    dry_run_job = self.client.query(query, job_config = self.queryConfig('main_files', dr = True))
     l.getLogger().warn("This query is going to consume {}".format(
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
@@ -219,7 +218,7 @@ class Dataset(object):
     l.getLogger().info("Retrieving {} contentfiles...".format(self.dataset.dataset_id))
 
     try:
-      rows = self.client.query(query, job_config = self.queryConfig('bq_main_contentfiles')).result()
+      rows = self.client.query(query, job_config = self.queryConfig('main_files')).result()
     except google.api_core.exceptions.Forbidden as e:
       l.getLogger().error(e)
       exit()
@@ -244,18 +243,10 @@ class openclDataset(Dataset):
     super(openclDataset, self).__init__(client, "opencl", extensions)
 
     self.other_extensions = ['.c', '.cc', '.cpp', '.cxx', '.c++', '.h', '.hpp']
-    self.header_extension = ['.h', '.hpp']
-
     self.query_exception = ' AND (' + ' OR '.join([
         "(substr(file.path, {}, {}) = '{}' AND contentfile.content LIKE '%kernel void%')"
           .format(-len(ext), 1+len(ext), ext)
       for ext in self.other_extensions
-    ]) + ')'
-
-    self.header_exception = ' AND (' + ' OR '.join([
-        "substr(file.path, {}, {}) = '{}'"
-          .format(-len(ext), 1+len(ext), ext)
-      for ext in self.header_extension
     ]) + ')'
     return
 
@@ -273,7 +264,7 @@ class openclDataset(Dataset):
     {}
     """.format(self.query_exception or "")
 
-    dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_repofiles', dr = True))
+    dry_run_job = self.client.query(query, job_config = self.queryConfig('repositories', dr = True))
     l.getLogger().warn("This query is going to consume {}".format(
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
@@ -310,7 +301,7 @@ class openclDataset(Dataset):
     {}
     """.format(self.query_exception or "")
 
-    dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_repofiles', dr = True))
+    dry_run_job = self.client.query(query, job_config = self.queryConfig('repositories', dr = True))
     l.getLogger().warn("This query is going to consume {}".format(
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
@@ -326,7 +317,7 @@ class openclDataset(Dataset):
     l.getLogger().info("Retrieving etc. repo list...")
 
     try:
-      rows = self.client.query(query, job_config = self.queryConfig('bq_repofiles')).result()
+      rows = self.client.query(query, job_config = self.queryConfig('repositories')).result()
     except google.api_core.exceptions.Forbidden as e:
       l.getLogger().error(e)
       exit()
@@ -348,7 +339,7 @@ class openclDataset(Dataset):
     {}
     """.format(self.query_exception or "")
 
-    dry_run_job = self.client.query(query, job_config = self.queryConfig('bq_etc_contentfiles', dr = True))
+    dry_run_job = self.client.query(query, job_config = self.queryConfig('other_files', dr = True))
     l.getLogger().warn("This query is going to consume {}".format(
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
@@ -364,60 +355,11 @@ class openclDataset(Dataset):
     l.getLogger().info("Retrieving etc. contentfiles...")
 
     try:
-      rows = self.client.query(query, job_config = self.queryConfig('bq_etc_contentfiles')).result()
+      rows = self.client.query(query, job_config = self.queryConfig('other_files')).result()
     except google.api_core.exceptions.Forbidden as e:
       l.getLogger().error(e)
       exit()
     return (cl_file_it, rows)
-
-  def header_file_query(self, repos: typing.List[typing.Tuple[str, str]]) -> bigquery.table.RowIterator:
-    """From the repos you got contentfiles from, get header files as well that might need be included."""
-
-    query = """
-    SELECT file.repo_name, file.path, file.ref,
-           file.id, contentfile.size, contentfile.content
-    FROM `bigquery-public-data.github_repos.files` as file
-    INNER JOIN `bigquery-public-data.github_repos.contents` as contentfile
-    ON file.id = contentfile.id
-    {} 
-    AND file.repo_name in UNNEST(@repo_list)
-    AND file.ref in UNNEST(@ref_list)
-    """.format(self.header_exception or "")
-
-    query_parameters = [
-      bigquery.ArrayQueryParameter("repo_list", "STRING", [x for x, _ in repos]),
-      bigquery.ArrayQueryParameter("ref_list",  "STRING", [x for _, x in repos])
-    ]
-
-    dry_run_job = self.client.query(
-      query, job_config = self.queryConfig(
-        'bq_header_contentfiles', qr = query_parameters, dr = True
-      )
-    )
-    l.getLogger().warn("This query is going to consume {}".format(
-        humanize.naturalsize(dry_run_job.total_bytes_processed)
-      )
-    )
-    l.getLogger().info(query)
-    if FLAGS.bq_wait_permission:
-      l.getLogger().warn("Hit any button to continue...")
-      try:
-        input()
-      except KeyboardInterrupt:
-        return None
-
-    l.getLogger().info("Retrieving header files from repository list...")
-
-    try:
-      rows = self.client.query(
-        query, job_config = self.queryConfig(
-          'bq_header_contentfiles', qr = query_parameters
-        )
-      ).result()
-    except google.api_core.exceptions.Forbidden as e:
-      l.getLogger().error(e)
-      exit()
-    return rows
 
 class cDataset(Dataset):
   """C Dataset"""
