@@ -5,4 +5,8 @@ github_miner {
     credentials: "/home/fivosts/PhD/Code/clgen/deeplearning/clgen/github/4th_acc_creds.json"
     language: "opencl"
   }
+  export_corpus {
+  	data_format: sql
+  	inline_headers: true
+  }
 }
