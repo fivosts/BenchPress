@@ -41,18 +41,18 @@ message GithubMiner {
     Recursive recursive = 5;
   }
   // Select to export finalized corpus
-  optional ExportCorpus export_corpus = 6;
   // Base path of miner's data storage.
-  optional string path = 7;
+  optional string path = 6;
   // Format of saved data.
-  optional DataFormat data_format = 8;
+  optional DataFormat data_format = 7;
 }
 
 message BigQuery {
   // Path to json file with BQ account credentials.
   // Defaulted to clgen/deeplearning/clgen/corpuses/BigQuery_credentials.json
-  optional string credentials = 1;
-  optional string language    = 2;
+  optional string       credentials   = 1;
+  optional string       language      = 2;
+  optional ExportCorpus export_corpus = 3;
 }
 
 message Recursive {
