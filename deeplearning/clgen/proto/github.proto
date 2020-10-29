@@ -40,10 +40,12 @@ message GithubMiner {
     // Exhaustive request miner
     Recursive recursive = 5;
   }
+  // Select to export finalized corpus
+  optional ExportCorpus export_corpus = 6;
   // Base path of miner's data storage.
-  optional string path = 6;
+  optional string path = 7;
   // Format of saved data.
-  optional DataFormat data_format = 7;
+  optional DataFormat data_format = 8;
 }
 
 message BigQuery {
@@ -60,4 +62,22 @@ message Recursive {
   optional int32 flush_limit_K = 2;
   // total corpus limit in thousands.
   optional int32 corpus_size_K = 3;
+}
+
+message ExportCorpus {
+  enum DataFormat {
+    // zip file
+    zip     = 0;
+    // folder with files
+    folder  = 1;
+    // folder of multiple json files (equivalent data w/ sql)
+    json    = 2;
+    // Multiple json files, each one compressed to maximum to save space.
+    jsonzip = 3;
+    // sqlite db
+    sql     = 4;
+    // BigQuery remote table
+    bq      = 5;
+  }
+  optional bool inline_headers = 6;
 }
