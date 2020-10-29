@@ -12,7 +12,7 @@ from labm8.py import sqlutil
 Base = declarative.declarative_base()
 
 class bqData(Base):
-  __tablename__ = "bq_data"
+  __tablename__ = "data"
   """
     DB Table for concentrated validation results.
   """
@@ -77,17 +77,17 @@ class bqFile():
 
 class bqMainFile(Base, bqFile):
   """Abstract representation of main queried files."""
-  __tablename__  = "bq_main_contentfiles"
+  __tablename__  = "main_files"
 
 class bqOtherFile(Base, bqFile):
   """Abstract representation of other-to-main-language queried files."""
-  __tablename__  = "bq_other_contentfiles"
+  __tablename__  = "other_files"
 
 class bqRepo(Base):
   """
     A database entry representing a CLgen validation trace.
   """
-  __tablename__  = "bq_repofiles"
+  __tablename__  = "repositories"
   id             : int = sql.Column(sql.Integer, primary_key = True)
   repo_name      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   ref            : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
