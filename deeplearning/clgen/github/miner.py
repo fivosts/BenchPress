@@ -12,6 +12,7 @@ import github
 import progressbar
 import copy
 import numpy as np
+from absl import flags
 
 from base64 import b64decode
 from functools import partial
@@ -25,6 +26,14 @@ from deeplearning.clgen.github import bigQuery_database
 
 from eupy.native import logger as l
 
+FLAGS = flags.FLAGS
+
+flags.DEFINE_boolean(
+  "bq_force_update",
+  False,
+  "Select to force querying data in a seemingly updated satorage."
+)
+
 class GithubMiner(object):
   """Base abstract class of a github miner"""
 
@@ -36,9 +45,6 @@ class GithubMiner(object):
       pbutil.AssertFieldIsSet(config, "data_format")
       pbutil.AssertFieldIsSet(config, "miner")
 
-      if config.HasField("export_corpus"):
-        pbutil.AssertFieldIsSet(config, "data_format")
-
       if config.HasField("big_query"):
         pbutil.AssertFieldIsSet(config.big_query, "credentials")
         pbutil.AssertFieldConstraint(
@@ -47,6 +53,9 @@ class GithubMiner(object):
           lambda x: x in {'generic', 'opencl', 'c', 'cpp', 'java', 'python'},
           "language must be one of opencl, c, cpp, java, python. 'generic' for language agnostic queries.",
         )
+        if config.big_query.HasField("export_corpus"):
+          pbutil.AssertFieldIsSet(config.big_query.export_corpus, "data_format")
+          pbutil.AssertFieldIsSet(config.big_query.export_corpus, "access_token")
         return BigQuery(config)
       elif config.HasField("recursive"):
         pbutil.AssertFieldIsSet(config.recursive, "access_token")
@@ -97,13 +106,18 @@ class BigQuery(GithubMiner):
 
   def fetch(self):
     self._query_github()
-    if self.config.export_corpus.inline_headers:
+    if self.config.big_query.export_corpus.inline_headers:
       self._export_corpus()
     return
 
   def _query_github(self) -> None:
     """Apply bigQuery requests to get all contentfiles"""
     with self.storage as st:
+
+      if st.content_data is not None and not FLAGS.bq_force_update:
+        l.getLogger().info("Query storage has been updated. Skipping...")
+        return
+
       mainf_it, otherf_it = self.dataset.contentfile_query()
 
       if mainf_it:
@@ -153,113 +167,141 @@ class BigQuery(GithubMiner):
     """
     export_storage = storage.Storage.FromArgs(
       self.cache_path,
-      "exported_".format(self.dataset.name),
+      "export_{}".format(self.dataset.name),
       self.dataset.extension,
       self.config.data_format
     )
 
-    # with export_storage as st:
-    #   for cf in self.storage.db.main_files:
-    #     st.save(bigQuery_database.bqMainFile(**cf.ToJSONDict()))
-    #   for cf in self.storage.db.other_files:
-    #     st.save(bigQuery_database.bqOtherFile(**cf.ToJSONDict()))
-    #     # inlined_cf, inlined_headers = self._inline_headers(cf)
-    #     # for inl_cf in [inlined_cf] + list(inlined_headers):
-    #     #   st.save(inl_cf)
-
-    with self.storage.db.Session() as s:
-
-      self.all_files = {}
-      for f in s.query(bigQuery_database.bqMainFile).all() + s.query(bigQuery_database.bqOtherFile).all():
-        if f.repo_name not in self.all_files:
-          self.all_files[f.repo_name] = {pathlib.Path(f.path).name: f}
-        else:
-          self.all_files[f.repo_name][pathlib.Path(f.path).name] = f
-
-      for f in s.query(bigQuery_database.bqHeaderFile).yield_per(400000).enable_eagerloads(False):
-        if f.repo_name not in self.all_files:
-          self.all_files[f.repo_name] = {pathlib.Path(f.path).name: f}
-        else:
-          self.all_files[f.repo_name][pathlib.Path(f.path).name] = f
+    g = github.Github(self.config.big_query.export_corpus.access_token)
+    iterated_history = export_storage.db.mainfile_entries
+    iterated_history.update(export_storage.db.otherfile_entries)
 
     with export_storage as st:
-      with progressbar.ProgressBar() as bar1, progressbar.ProgressBar() as bar2:
-        for cf in bar1(self.storage.db.main_files):
-          inlined_cf = self._inline_headers(cf)
-          st.save(bigQuery_database.bqMainFile(**bigQuery_database.bqMainFile.FromArgs(st.filecount, inlined_cf.ToJSONDict())))
-        for cf in bar2(self.storage.db.other_files):
-          inlined_cf = self._inline_headers(cf)
-          st.save(bigQuery_database.bqOtherFile(**bigQuery_database.bqOtherFile.FromArgs(st.filecount, inlined_cf.ToJSONDict())))
+      with progressbar.ProgressBar(max_value = self.storage.maincount) as bar:
+        try:
+          for cf in bar(self.storage.mainfiles):
+            if (cf.repo_name, cf.path) in iterated_history:
+              continue
+            rem = g.get_rate_limit().rate.remaining
+            while rem < 100:
+              time.sleep(1)
+              print("Waiting on rate limit: {}".format(rem), sep='', end='')
+              sys.stdout.flush()
+              rem = g.get_rate_limit().rate.remaining
+            try:
+              repo = g.get_repo(cf.repo_name)
+            except github.GithubException as e:
+              st.save(
+                bigQuery_database.bqMainFile(**bigQuery_database.bqMainFile.FromArgs(cf.ToJSONDict()))
+              )
+
+            cf.content = self._inline_headers(repo, cf.ref, cf)
+            st.save(
+              bigQuery_database.bqMainFile(**bigQuery_database.bqMainFile.FromArgs(cf.ToJSONDict()))
+            )
+        except Exception as e:
+          st.flush()
+          raise e
+
+      with progressbar.ProgressBar(max_value = self.storage.othercount) as bar:
+        try:
+          for cf in bar(self.storage.otherfiles):
+            if (cf.repo_name, cf.path) in iterated_history:
+              continue
+            rem = g.get_rate_limit().rate.remaining
+            while rem < 100:
+              time.sleep(1)
+              print("Waiting on rate limit: {}".format(rem), sep='', end='')
+              sys.stdout.flush()
+              rem = g.get_rate_limit().rate.remaining
+            try:
+              repo = g.get_repo(cf.repo_name)
+            except github.GithubException as e:
+              st.save(
+                bigQuery_database.bqMainFile(**bigQuery_database.bqOtherFile.FromArgs(cf.ToJSONDict()))
+              )
+
+            cf.content = self._inline_headers(repo, cf.ref, cf)
+            st.save(
+              bigQuery_database.bqMainFile(**bigQuery_database.bqOtherFile.FromArgs(cf.ToJSONDict()))
+            )
+        except Exception as e:
+          st.flush()
+          raise e
     return
 
   def _inline_headers(self,
-                      contentfile: bigQuery_database.bqFile
-                      ) -> typing.Tuple[
-                            typing.Union[
-                              bigQuery_database.bqMainFile, bigQuery_database.bqOtherFile
-                            ],
-                            typing.Set[bigQuery_database.bqHeaderFile]
-                          ]:
+                      repo   : github.Repository.Repository,
+                      ref    : str,
+                      content: bigQuery_database.bqFile,
+                      ) -> str:
     ## Do the same as inlineHeaders
     #  1. Parse file for #include
     #  2. Resolve include path
     #  3. Ping DB to get it
     #  4. Do BFS on included
 
-    try:
-      inlined_cf    = []
-      inlined_files = set()
-      inlined_files.add(contentfile)
-      inlined_paths = set()
-      inlined_paths.add(contentfile.path)
-      include_exist = True
-      repo_files = self.all_files[contentfile.repo_name]
-      while include_exist:
-        include_exist = False
 
-        for line in contentfile.content.split('\n'):
+    def get_included_file(file_path      : pathlib.Path,
+                          incl_path      : pathlib.Path,
+                          ) -> github.ContentFile.ContentFile:
 
-          match = re.match(re.compile('\w*#include ["<](.*)[">]'), line)
-          if match:
-            include_exist = True
-            include_name  = match.group(1)
+      parent_folder = file_path.parent
+      if parent_folder == file_path:
+        return None
+      folder_files = repo.get_contents(str(parent_folder), ref = ref)
+      while folder_files:
+        file = folder_files.pop(0)
+        if file.path == file_path:
+          continue
+        elif file.type == "dir":
+          folder_files.extend(repo.get_contents(file.path, ref = ref))
+        elif file.path.endswith(str(incl_path)):
+          return file
+      return get_included_file(parent_folder, incl_path)
 
-            # Try and resolve relative paths
-            incl_path = pathlib.Path(include_name.replace('../', '')).name
-            incl_file = None
-            if incl_path in repo_files:
-              incl_file = repo_files[incl_path]
+    inlined_cf    = []
+    inlined_paths = set()
+    inlined_paths.add(content.path)
+    include_exist = True
+    while include_exist:
+      include_exist = False
 
-            if incl_file and incl_file.path not in inlined_paths:
-              inlined_files.add(incl_file)
-              inlined_paths.add(incl_file.path)
-              inlined_cf.append("// [FETCH] included: {}\n".format(line))
+      for line in content.content.split('\n'):
+
+        match = re.match(re.compile('\w*#include ["<](.*)[">]'), line)
+        if match:
+          include_exist = True
+          include_path  = match.group(1)
+
+          # Try and resolve relative paths
+          include_path = pathlib.Path(include_path.replace('../', ''))            
+          incl_file = get_included_file(pathlib.Path(content.path), include_path)
+
+          if incl_file and incl_file.path not in inlined_paths:
+            inlined_paths.add(incl_file.path)
+            inlined_cf.append("// [FETCH] included: {}\n".format(line))
+            if incl_file.size < 1*1000*1000:
               inlined_cf.append(incl_file.content)
-              inlined_cf.append('// [FETCH] eof({})'.format(line))
             else:
-              if not incl_file:
-                inlined_cf.append('// [FETCH] didnt find: {}'.format(line))
-              else:
-                inlined_cf.append('// [FETCH] skipped: {}'.format(line))
-
+              response = json.loads(requests.get(
+                incl_file.git_url, headers={'Authorization': 'token {}'.format(self.config.big_query.export_corpus.access_token)}
+              ).content.decode('utf-8'))
+              incl_cf = b64decode(response['content']).decode('utf-8')
+              inlined_cf.append(incl_cf)
+            inlined_cf.append('// [FETCH] eof({})'.format(line))
           else:
-            inlined_cf.append(line)
-        if contentfile.content != '\n'.join(inlined_cf):
-          contentfile.content = '\n'.join(inlined_cf)
-          inlined_cf = []
-        elif include_exist:
-          l.getLogger().warn(inlined_paths)
-          l.getLogger().warn(contentfile.repo_name)
-          l.getLogger().warn(contentfile.path)
-          return contentfile
+            if not incl_file:
+              inlined_cf.append('// [FETCH] didnt find: {}'.format(line))
+            else:
+              inlined_cf.append('// [FETCH] skipped: {}'.format(line))
 
-      return contentfile
-    except KeyboardInterrupt:
-      l.getLogger().warn(contentfile.content)
-      l.getLogger().warn(contentfile.repo_name)
-      l.getLogger().warn(contentfile.path)
-      l.getLogger().warn(inlined_paths)
-      l.getLogger().warn(inlined_files)
+        else:
+          inlined_cf.append(line)
+      content.content = '\n'.join(inlined_cf)
+      inlined_cf = []
+
+    return content
 
 class RecursiveFetcher(GithubMiner):
   """GitHub API wrapper to pull from github a fresh corpus of OpenCL kernels"""
@@ -458,24 +500,8 @@ class RecursiveFetcher(GithubMiner):
                ):
     self.cache_path = pathlib.Path(config.path, must_exist = False).expanduser().resolve()
     self.cache_path.mkdir(exist_ok = True, parents = True)
-    git_credentials = {
-      'GITHUB_USERNAME'  : None,
-      'GITHUB_PW'        : None,
-    }
     l.getLogger().info("Github fetcher initialized: {}".format(self.cache_path))
 
-    if not all(k in os.environ for k in git_credentials.keys()):
-      l.getLogger().warn("Export github credentials as environment variables to speed up the process")
-
-    for key in git_credentials:
-      if key in os.environ:
-        git_credentials[key] = os.environ[key]
-      else:
-        git_credentials[key] = input("{}: ".format(key))
-        os.environ[key]      = git_credentials[key]
-
-    self.username        = git_credentials['GITHUB_USERNAME']
-    self.password        = git_credentials['GITHUB_PW']
     self.token           = config.recursive.access_token
     self.repo_handler    = RecursiveFetcher.GithubRepoHandler(
       self.cache_path, 
@@ -503,7 +529,7 @@ class RecursiveFetcher(GithubMiner):
       * Occasionally (< 1%) can't find headers to include.
 
     """
-    g = github.Github(self.username, self.password)
+    g = github.Github(self.token)
     handle_repo = partial(self.process_repo, g)
 
     # fetch the repositories to iterate over. Since opencl isn't
@@ -662,7 +688,7 @@ class RecursiveFetcher(GithubMiner):
 
     self.repo_handler.update_file(
       url = url, contents = contents, path = path,
-      sha = sha, repo_url = repo_url, size = size
+      sha = sha, repo_url = repo_url, size = size,
     )
     return True
 
