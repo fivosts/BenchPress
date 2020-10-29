@@ -41,8 +41,6 @@ class Storage(object):
     self.cache_path.mkdir(exist_ok = True)
     self.name       = name
     self.extension  = extension
-
-    self.repos      = set()
     return
 
   def __enter__(self):
@@ -52,12 +50,6 @@ class Storage(object):
     return
 
   def save(self):
-    raise NotImplementedError("Abstract Class")
-
-  def getRepoFiles(self,
-                   repo_name: str,
-                   ref: str
-                   ) -> typing.List[typing.Union[bqdb.bqMainFile, bqdb.bqHeaderFile]]:
     raise NotImplementedError("Abstract Class")
 
   def flush(self):
@@ -73,6 +65,10 @@ class zipStorage(Storage):
   def filecount(self):
     return self.file_count
 
+  @property
+  def loadRepos(self):
+    raise NotImplementedError("Open ZIP files and read repos_list.json")
+
   def __init__(self,
                path: pathlib.Path,
                name: str,
@@ -82,6 +78,7 @@ class zipStorage(Storage):
     self.cached_content = []
     self.flush_counter  = 20000
     self.file_count     = 0
+    self.repos          = self.loadRepos
     self.data_file      = ""
     l.getLogger().info("Set up ZIP storage in {}".format(self.cache_path))
 
@@ -156,6 +153,15 @@ class fileStorage(Storage):
   def filecount(self):
     return self.file_count
 
+  @property
+  def loadRepos(self):
+    if (self.cache_path / "repos_list.json").exists():
+      with open(self.cache_path / "repos_list.json", 'r') as f:
+        repos = json.load(f)
+        return [(repo['repo_name'], repo['ref']) for repo in repos]
+    else:
+      return set()
+
   def __init__(self,
                path: pathlib.Path,
                name: str,
@@ -164,6 +170,7 @@ class fileStorage(Storage):
     super(fileStorage, self).__init__(path, name, extension)
     self.cache_path = self.cache_path / self.name
     (self.cache_path).mkdir(exist_ok = True)
+    self.repos = self.loadRepos
     l.getLogger().info("Set up folder storage in {}".format(self.cache_path))
 
   def __exit__(self, path, name, extension) -> None:
@@ -209,6 +216,15 @@ class JSONStorage(Storage):
   def filecount(self):
     return self.file_count
 
+  @property
+  def loadRepos(self):
+    if (self.cache_path / "repos_list.json").exists():
+      with open(self.cache_path / "repos_list.json", 'r') as f:
+        repos = json.load(f)
+        return [(repo['repo_name'], repo['ref']) for repo in repos]
+    else:
+      return set()
+
   def __init__(self,
                path: pathlib.Path,
                name: str,
@@ -223,8 +239,9 @@ class JSONStorage(Storage):
     self.jsonfile_count = 0
     self.file_count = 0
 
-    self.data  = ""
     self.files = []
+    self.repos = self.loadRepos
+    self.data  = ""
     l.getLogger().info("Set up JSON storage in {}".format(self.cache_path))
 
     return
@@ -309,10 +326,24 @@ class dbStorage(Storage):
     return len(self.repos)
 
   @property
+  def main_repocount(self):
+    return self.db.main_repo_count
+
+  @property
+  def other_repocount(self):
+    return self.db.other_repo_count
+
+  @property
   def filecount(self):
-    return (self.db.file_count +
+    return (self.db.mainfile_count +
+            self.db.otherfile_count +
             len(self.main_files) +
-            len(self.other_files))
+            len(self.other_files)
+            )
+
+  @property
+  def loadRepos(self):
+    return self.repos
 
   def __init__(self,
                path: pathlib.Path,
@@ -322,17 +353,14 @@ class dbStorage(Storage):
     super(dbStorage, self).__init__(path, name, extension)
     self.db = bqdb.bqDatabase("sqlite:///{}".format(self.cache_path / (self.name + ".db")))
 
-    self.data  = None
-    self.repos = self.db.repo_entries
-    if not self.repos:
-      self.repos = set()
+    self.main_ids  = self.db.main_ids
+    self.other_ids = self.db.other_ids
+    self.repos     = self.db.loadRepos
 
-    self.flush_freq = 5
-    self.main_sha   = self.db.main_sha
-    self.main_files = set()
-
-    self.other_sha   = self.db.other_sha
+    self.main_files  = set()
     self.other_files = set()
+    self.data  = None
+    self.flush_freq = 10000
 
     l.getLogger().info("Set up SQL storage in {}".format(self.cache_path))
 
@@ -353,18 +381,23 @@ class dbStorage(Storage):
       self.repos.add((contentfile.repo_name, contentfile.ref))
     else: # bqFile.
       if isinstance(contentfile, bqdb.bqMainFile):
-        if contentfile.sha256 not in self.main_sha:
+
+        if contentfile.id not in self.main_ids:
           self.repos.add((contentfile.repo_name, contentfile.ref))
-          self.main_sha.add(contentfile.sha256)
+          self.main_ids.add(contentfile.id)
           self.main_files.add(contentfile)
+
         if len(self.main_files) > self.flush_freq:
           self.flushToDB(self.main_files)
           self.main_files = set()
+
       elif isinstance(contentfile, bqdb.bqOtherFile):
-        if contentfile.sha256 not in self.other_sha:
+
+        if contentfile.id not in self.other_ids:
           self.repos.add((contentfile.repo_name, contentfile.ref))
-          self.other_sha.add(contentfile.sha256)
+          self.other_ids.add(contentfile.id)
           self.other_files.add(contentfile)
+
         if len(self.other_files) > self.flush_freq:
           self.flushToDB(self.other_files)
           self.other_files = set()
@@ -407,16 +440,9 @@ class dbStorage(Storage):
 
   def flushToDB(self, files: typing.Set[bqdb.bqFile]) -> None:
     with self.db.Session(commit = True) as session:
-      for en, file in enumerate(files):
+      for file in files:
         session.add(file)
     return
-
-  def getRepoFiles(self,
-                   repo_name: str,
-                   ref: str
-                   ) -> typing.List[typing.Union[bqdb.bqMainFile]]:
-    return (self.db.main_files_byRepo(repo_name, ref) +
-            self.db.other_files_byRepo(repo_name, ref))
 
 class bqStorage(Storage):
 
