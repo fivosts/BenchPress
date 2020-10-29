@@ -33,12 +33,6 @@ class Storage(object):
       github_pb2.GithubMiner.DataFormat.bq     : bqStorage,
     }[data_format](path, name, extension)
 
-  @property
-  def repoTuple(self) -> typing.List[typing.Tuple[str, str]]:
-    # Returns repo list in type list of tuples.
-    # t[0] -> repo_name, t[1] -> ref
-    return [tuple(r.split(', ')) for r in self.repos]
-
   def __init__(self,
                path: pathlib.Path,
                name: str,
@@ -107,11 +101,11 @@ class zipStorage(Storage):
       self.file_count += 1
       if self.file_count % self.flush_counter == 0:
         self.zipFiles()
-      self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
+      self.repos.add((contentfile.repo_name, contentfile.ref))
     elif isinstance(contentfile, bqdb.bqData):
       self.data_file = "{}\n\n{}".format(contentfile.key, contentfile.value)
     elif isinstance(contentfile, bqdb.bqRepo):
-      self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
+      self.repos.add((contentfile.repo_name, contentfile.ref))
     return
 
   def zipFiles(self) -> None:
@@ -126,9 +120,9 @@ class zipStorage(Storage):
       json.dump(
         [
           {
-            'repo_name': x.split(', ')[0],
-            'ref': x.split(', ')[1]
-          } for x in self.repos
+            'repo_name': rn,
+            'ref': rf
+          } for rn, rf in self.repos
         ],
         f,
         sort_keys = True,
@@ -177,9 +171,9 @@ class fileStorage(Storage):
       json.dump(
         [
           {
-            'repo_name': x.split(', ')[0],
-            'ref': x.split(', ')[1]
-          } for x in self.repos
+            'repo_name': rn,
+            'ref': rf
+          } for rf, rf in self.repos
         ],
         f,
         sort_keys = True,
@@ -197,12 +191,12 @@ class fileStorage(Storage):
     if isinstance(contentfile, bqdb.bqFile):
       with open(self.cache_path / pathlib.Path(contentfile.path).name, 'w') as f:
         f.write(contentfile.content)
-      self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
+      self.repos.add((contentfile.repo_name, contentfile.ref))
     elif isinstance(contentfile, bqdb.bqData):
       with open(self.cache_path / "data.txt", 'w') as f:
         f.write("{}\n\n{}".format(contentfile.key, contentfile.value))
     elif isinstance(contentfile, bqdb.bqRepo):
-      self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
+      self.repos.add((contentfile.repo_name, contentfile.ref))
     return
 
 class JSONStorage(Storage):
@@ -244,9 +238,9 @@ class JSONStorage(Storage):
       json.dump(
         [
           {
-            'repo_name': x.split(', ')[0],
-            'ref': x.split(', ')[1]
-          } for x in self.repos
+            'repo_name': rn,
+            'ref': rf
+          } for rn, rf in self.repos
         ],
         outf,
         sort_keys = True,
@@ -270,14 +264,13 @@ class JSONStorage(Storage):
     if isinstance(contentfile, bqdb.bqData):
       self.data = "{}\n\n{}".format(contentfile.key, contentfile.value)
     elif isinstance(contentfile, bqdb.bqRepo):
-      self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
+      self.repos.add((contentfile.repo_name, contentfile.ref))
     else:
       self.files.append(contentfile.ToJSONDict())
       self.file_count += 1
+      self.repos.add((contentfile.repo_name, contentfile.ref))
       if self.file_count % 500000:
         self._flush_json()
-      if isinstance(contentfile, bqMainFile) or isinstance(contentfile, bqOtherFile):
-        self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     return
 
   def _flush_json(self) -> None:
@@ -319,9 +312,7 @@ class dbStorage(Storage):
   def filecount(self):
     return (self.db.file_count +
             len(self.main_files) +
-            len(self.other_files) +
-            len(self.header_files)
-           )
+            len(self.other_files))
 
   def __init__(self,
                path: pathlib.Path,
@@ -336,14 +327,13 @@ class dbStorage(Storage):
     if not self.repos:
       self.repos = set()
 
-    self.flush_freq = 100000
+    self.flush_freq = 5
     self.main_sha   = self.db.main_sha
     self.main_files = set()
 
     self.other_sha   = self.db.other_sha
     self.other_files = set()
 
-    self.header_files = set()
     l.getLogger().info("Set up SQL storage in {}".format(self.cache_path))
 
   def __exit__(self, path, name, extension):
@@ -359,10 +349,12 @@ class dbStorage(Storage):
            ) -> None:
     if isinstance(contentfile, bqdb.bqData):
       self.data = contentfile
-    else: # Do this for both bqRepo and bqFile.
+    elif isinstance(contentfile, bqdb.Repo):
+      self.repos.add((contentfile.repo_name, contentfile.ref))
+    else: # bqFile.
       if isinstance(contentfile, bqdb.bqMainFile):
         if contentfile.sha256 not in self.main_sha:
-          self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
+          self.repos.add((contentfile.repo_name, contentfile.ref))
           self.main_sha.add(contentfile.sha256)
           self.main_files.add(contentfile)
         if len(self.main_files) > self.flush_freq:
@@ -370,19 +362,12 @@ class dbStorage(Storage):
           self.main_files = set()
       elif isinstance(contentfile, bqdb.bqOtherFile):
         if contentfile.sha256 not in self.other_sha:
-          self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
+          self.repos.add((contentfile.repo_name, contentfile.ref))
           self.other_sha.add(contentfile.sha256)
           self.other_files.add(contentfile)
         if len(self.other_files) > self.flush_freq:
           self.flushToDB(self.other_files)
           self.other_files = set()
-      elif isinstance(contentfile, bqdb.bqHeaderFile):
-        self.header_files.add(contentfile)
-        if len(self.header_files) > self.flush_freq:
-          self.flushToDB(self.header_files)
-          self.header_files = set()
-      elif isinstance(contentfile, bqdb.bqRepo):
-        self.repos.add("{}, {}".format(contentfile.repo_name, contentfile.ref))
     return
 
   def flush(self):
@@ -400,8 +385,7 @@ class dbStorage(Storage):
 
     ## Write repos
     if self.repocount > len(self.db.repo_entries):
-      for repo in self.repos:
-        repo_name, ref = repo.split(', ')
+      for repo_name, ref in self.repos:
         content = bqdb.bqRepo(**bqdb.bqRepo.FromArgs(
             self.db.repo_count, {'repo_name': repo_name, 'ref': ref})
         )
@@ -414,15 +398,11 @@ class dbStorage(Storage):
 
     if len(self.main_files) > 0:
       self.flushToDB(self.main_files)
-      self.main_files   = set()
+      self.main_files = set()
 
     if len(self.other_files) > 0:
       self.flushToDB(self.other_files)
-      self.other_files  = set()
-
-    if len(self.header_files) > 0:
-      self.flushToDB(self.header_files)
-      self.header_files = set()
+      self.other_files = set()
     return
 
   def flushToDB(self, files: typing.Set[bqdb.bqFile]) -> None:
@@ -434,10 +414,9 @@ class dbStorage(Storage):
   def getRepoFiles(self,
                    repo_name: str,
                    ref: str
-                   ) -> typing.List[typing.Union[bqdb.bqMainFile, bqdb.bqHeaderFile]]:
+                   ) -> typing.List[typing.Union[bqdb.bqMainFile]]:
     return (self.db.main_files_byRepo(repo_name, ref) +
-            self.db.other_files_byRepo(repo_name, ref) +
-            self.db.header_files_byRepo(repo_name, ref))
+            self.db.other_files_byRepo(repo_name, ref))
 
 class bqStorage(Storage):
 
