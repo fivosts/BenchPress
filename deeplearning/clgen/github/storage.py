@@ -425,7 +425,7 @@ class dbStorage(Storage):
           session.add(self.data)
 
     ## Write repos
-    if self.repocount > len(self.db.repo_entries):
+    if self.repocount > self.db.repo_count:
       for repo_name, ref in self.repos:
         content = bqdb.bqRepo(**bqdb.bqRepo.FromArgs(
             self.db.repo_count, {'repo_name': repo_name, 'ref': ref})
