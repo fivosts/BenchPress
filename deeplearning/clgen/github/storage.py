@@ -342,6 +342,14 @@ class dbStorage(Storage):
             )
 
   @property
+  def mainfiles(self):
+    return self.db.main_files
+
+  @property
+  def otherfiles(self):
+    return self.db.other_files
+
+  @property
   def loadRepos(self):
     return self.repos
 
