@@ -36,6 +36,9 @@ class GithubMiner(object):
       pbutil.AssertFieldIsSet(config, "data_format")
       pbutil.AssertFieldIsSet(config, "miner")
 
+      if config.HasField("export_corpus"):
+        pbutil.AssertFieldIsSet(config, "data_format")
+
       if config.HasField("big_query"):
         pbutil.AssertFieldIsSet(config.big_query, "credentials")
         pbutil.AssertFieldConstraint(
@@ -81,192 +84,58 @@ class BigQuery(GithubMiner):
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(pathlib.Path(config.big_query.credentials, must_exist = True))
     self.cache_path = pathlib.Path(config.path, must_exist = False).expanduser().resolve()
     self.cache_path.mkdir(exist_ok = True, parents = True)
+    self.config = config
 
     l.getLogger().info("Initializing BigQuery miner in {}".format(self.cache_path))
     job_config = bigquery.QueryJobConfig(allowLargeResults = True)
     job_config.allow_large_results = True
     self.client = bigquery.Client(default_query_job_config = job_config)
 
-    self.dataset = datasets.Dataset.FromArgs(self.client, config.big_query.language)
-    self.storage = storage.Storage.FromArgs(self.cache_path, self.dataset.name, self.dataset.extension, config.data_format)
+    self.dataset = datasets.Dataset.FromArgs(self.client, self.config.big_query.language)
+    self.storage = storage.Storage.FromArgs(self.cache_path, self.dataset.name, self.dataset.extension, self.config.data_format)
     return
 
   def fetch(self):
     self._query_github()
-    self._export_corpus()
+    if self.config.export_corpus.inline_headers:
+      self._export_corpus()
     return
 
   def _query_github(self) -> None:
     """Apply bigQuery requests to get all contentfiles"""
     with self.storage as st:
-
-      repos = st.db.main_repo_entries
-      repos.update(st.db.other_repo_entries)
-      l.getLogger().info(len(repos))
-
-      # header_repos = st.db.header_repo_entries
-      # final_repos = set()
-      # for repo in repos:
-      #   if repo not in header_repos:
-      #     final_repos.add(repo)
-      # l.getLogger().info(len(final_repos))
-
-      # rep_list = [tuple(r.split(', ')) for r in final_repos]
-
-      # total_header_rows = 0
-
-      # header_includes_it = self.dataset.header_file_query(rep_list)
-      # l.getLogger().warn(header_includes_it)
-      # for i in header_includes_it:
-      #   l.getLogger().info(i)
-      # exit()
-      # if header_includes_it:
-      #   total_header_rows += header_includes_it.total_rows
-      #   with progressbar.ProgressBar(max_value = header_includes_it.total_rows) as bar:
-      #     for en, hf in enumerate(header_includes_it):
-      #       st.save(bigQuery_database.bqHeaderFile(
-      #           **bigQuery_database.bqHeaderFile.FromArgs(st.filecount, hf)
-      #         )
-      #       )
-      #       bar.update(en)
-      #   st.flush()        
-
-      header_repos = st.db.header_repo_entries
-      final_repos = set()
-      with progressbar.ProgressBar(max_value = len(header_repos)) as bar:
-        for repo in bar(header_repos):
-          if repo in repos:
-            final_repos.add(repo)
-        l.getLogger().info(len(final_repos))
-
-      cached_deletes = set()
-      import copy
-      new_db = bigQuery_database.bqDatabase("sqlite:///{}".format(self.cache_path / ("new_" + ".db")))
-
-      with st.db.Session(commit = False) as session:
-        for i in session.query(bigQuery_database.bqHeaderFile).yield_per(100000).enable_eagerloads(False):
-          if "{}, {}".format(i.repo_name, i.ref) in final_repos:
-            cached_deletes.add(i)
-            print(len(cached_deletes))
-          if len(cached_deletes) % 1000 == 0 and (len(cached_deletes) -1) > 0:
-            bar = progressbar.ProgressBar(max_value = len(cached_deletes))
-            with new_db.Session(commit = True) as s:
-              for j in bar(cached_deletes):
-                s.add(j)
-              s.commit()
-            cached_deletes = set()
-        # q = session.query(bigQuery_database.bqHeaderFile
-        #     ).filter("{}, {}".format(
-        #       bigQuery_database.bqHeaderFile.repo_name, bigQuery_database.bqHeaderFile.ref
-        #       ) in final_repos).delete()
-        # session.commit()
-        with new_db.Session(commit = True) as s:
-          for j in cached_deletes:
-            s.add(j)
-          session.commit()
-          cached_deletes = set()
-      exit()
-      main_repo_count  = 0
-      other_repo_count = 0
-
       mainf_it, otherf_it = self.dataset.contentfile_query()
+
       if mainf_it:
         with progressbar.ProgressBar(max_value = mainf_it.total_rows, prefix = "Main Files") as bar:
-          for en, mf in enumerate(mainf_it):
-            st.save(bigQuery_database.bqMainFile(
-                **bigQuery_database.bqMainFile.FromArgs(st.filecount, mf)
-              )
+          for mf in bar(mainf_it):
+            st.save(
+              bigQuery_database.bqMainFile(**bigQuery_database.bqMainFile.FromArgs(mf))
             )
-            bar.update(en)
-        main_repo_count = st.repocount
         st.flush()
 
       if otherf_it:
         with progressbar.ProgressBar(max_value = otherf_it.total_rows, prefix = "Other Files") as bar:
-          for en, of in enumerate(otherf_it):
-            st.save(bigQuery_database.bqOtherFile(
-                **bigQuery_database.bqOtherFile.FromArgs(st.filecount, of)
-              )
+          for of in bar(otherf_it):
+            st.save(
+              bigQuery_database.bqOtherFile(**bigQuery_database.bqOtherFile.FromArgs(of))
             )
-            bar.update(en)
-        other_repo_count = st.repocount - main_repo_count
         st.flush()
-
-      # Get repository list of requested file specifications.
-      # If contentfile_query has taken place, use cached results instead of re-querying.
-      if mainf_it or otherf_it:
-        mainrep_it, otherrep_it = None, None
-      else:
-        mainrep_it, otherrep_it = self.dataset.repository_query()
-
-      if mainrep_it:
-        with progressbar.ProgressBar(max_value = mainrep_it.total_rows, prefix = "Main Repos") as bar:
-          for en, mr in enumerate(mainrep_it):
-            st.save(bigQuery_database.bqRepo(
-                **bigQuery_database.bqRepo.FromArgs(st.repocount, mr)
-              )
-            )
-            bar.update(en)
-        main_repo_count = st.repocount
-        st.flush()
-
-      other_repo_count = 0
-      if otherrep_it:
-        with progressbar.ProgressBar(max_value = otherrep_it.total_rows, prefix = "Other Repos") as bar:
-          for en, orep in enumerate(otherrep_it):
-            st.save(bigQuery_database.bqRepo(
-                **bigQuery_database.bqRepo.FromArgs(st.repocount, orep)
-              )
-            )
-            bar.update(en)
-        other_repo_count = st.repocount - main_repo_count
-        st.flush()
-
-      # Parse files from mined repos to get header files as well.
-      repo_list = st.repoTuple
-      np.random.shuffle(repo_list)
-      # Split repo list into chunks of 1K, in order to do queries in steps that will not timeout (6 hrs).
-      threshold = 500
-      repolist_chunks = []
-
-      t = threshold
-      while True:
-        repolist_chunks.append(repo_list[len(repolist_chunks) * threshold: t])
-        t += threshold
-        if t > len(repo_list):
-          repolist_chunks.append(repo_list[len(repolist_chunks) * threshold:])
-          break
-
-      total_header_rows = 0
-      for p, repo in enumerate(repolist_chunks):
-        header_includes_it = self.dataset.header_file_query(repo)
-        if header_includes_it:
-          total_header_rows += header_includes_it.total_rows
-          with progressbar.ProgressBar(max_value = header_includes_it.total_rows, prefix = "Header Files: {}".format(p)) as bar:
-            for en, hf in enumerate(header_includes_it):
-              st.save(bigQuery_database.bqHeaderFile(
-                  **bigQuery_database.bqHeaderFile.FromArgs(st.filecount, hf)
-                )
-              )
-              bar.update(en)
-          st.flush()
 
       # Filecount of requested file specifications.
       # Use cached results if contentfile has taken place.
       if mainf_it or otherf_it:
         self.dataset.filecount = (mainf_it.total_rows if mainf_it else 0, otherf_it.total_rows if otherf_it else 0)
       mainfile_count, otherfile_count = self.dataset.filecount
-      header_file_count = total_header_rows
 
       query_data = [
         "main_contentfiles : {}".format(mainfile_count),
         "other_contentfiles: {}".format(otherfile_count),
-        "include_contentfiles: {}".format(header_file_count),
-        "total_contentfiles: {}".format(mainfile_count + otherfile_count + header_file_count),
+        "total_contentfiles: {}".format(mainfile_count + otherfile_count),
         "",
-        "main_repositories : {}".format(main_repo_count),
-        "other_repositories: {}".format(other_repo_count),
-        "total_repositories: {}".format(main_repo_count + other_repo_count),
+        "main_repositories : {}".format(st.main_repocount),
+        "other_repositories: {}".format(st.other_repocount),
+        "total_repositories: {}".format(st.repocount),
       ]
       st.save(bigQuery_database.bqData(key = self.dataset.name, value = '\n'.join(query_data)))
     return
@@ -286,17 +155,41 @@ class BigQuery(GithubMiner):
       self.cache_path,
       "exported_".format(self.dataset.name),
       self.dataset.extension,
-      config.data_format
+      self.config.data_format
     )
+
+    # with export_storage as st:
+    #   for cf in self.storage.db.main_files:
+    #     st.save(bigQuery_database.bqMainFile(**cf.ToJSONDict()))
+    #   for cf in self.storage.db.other_files:
+    #     st.save(bigQuery_database.bqOtherFile(**cf.ToJSONDict()))
+    #     # inlined_cf, inlined_headers = self._inline_headers(cf)
+    #     # for inl_cf in [inlined_cf] + list(inlined_headers):
+    #     #   st.save(inl_cf)
+
+    with self.storage.db.Session() as s:
+
+      self.all_files = {}
+      for f in s.query(bigQuery_database.bqMainFile).all() + s.query(bigQuery_database.bqOtherFile).all():
+        if f.repo_name not in self.all_files:
+          self.all_files[f.repo_name] = {pathlib.Path(f.path).name: f}
+        else:
+          self.all_files[f.repo_name][pathlib.Path(f.path).name] = f
+
+      for f in s.query(bigQuery_database.bqHeaderFile).yield_per(400000).enable_eagerloads(False):
+        if f.repo_name not in self.all_files:
+          self.all_files[f.repo_name] = {pathlib.Path(f.path).name: f}
+        else:
+          self.all_files[f.repo_name][pathlib.Path(f.path).name] = f
+
     with export_storage as st:
-      with progressbar.ProgressBar(
-        max_value = self.storage.mainfile_count + self.storage.otherfile_count,
-        prefix = "Inlining headers"
-      ) as bar:
-        for cf in bar(self.storage.main_contentfiles + self.storage.other_contentfiles):
-          inlined_cf, inlined_headers = self._inline_headers(cf)
-          for inl_cf in [inlined_cf] + inlined_headers:
-            st.save(inl_cf)
+      with progressbar.ProgressBar() as bar1, progressbar.ProgressBar() as bar2:
+        for cf in bar1(self.storage.db.main_files):
+          inlined_cf = self._inline_headers(cf)
+          st.save(bigQuery_database.bqMainFile(**bigQuery_database.bqMainFile.FromArgs(st.filecount, inlined_cf.ToJSONDict())))
+        for cf in bar2(self.storage.db.other_files):
+          inlined_cf = self._inline_headers(cf)
+          st.save(bigQuery_database.bqOtherFile(**bigQuery_database.bqOtherFile.FromArgs(st.filecount, inlined_cf.ToJSONDict())))
     return
 
   def _inline_headers(self,
@@ -305,14 +198,68 @@ class BigQuery(GithubMiner):
                             typing.Union[
                               bigQuery_database.bqMainFile, bigQuery_database.bqOtherFile
                             ],
-                            typing.List[bigQuery_database.bqHeaderFile]
+                            typing.Set[bigQuery_database.bqHeaderFile]
                           ]:
     ## Do the same as inlineHeaders
     #  1. Parse file for #include
     #  2. Resolve include path
     #  3. Ping DB to get it
-    #  4. Recurse over included file
-    return contentfile, inlined_files
+    #  4. Do BFS on included
+
+    try:
+      inlined_cf    = []
+      inlined_files = set()
+      inlined_files.add(contentfile)
+      inlined_paths = set()
+      inlined_paths.add(contentfile.path)
+      include_exist = True
+      repo_files = self.all_files[contentfile.repo_name]
+      while include_exist:
+        include_exist = False
+
+        for line in contentfile.content.split('\n'):
+
+          match = re.match(re.compile('\w*#include ["<](.*)[">]'), line)
+          if match:
+            include_exist = True
+            include_name  = match.group(1)
+
+            # Try and resolve relative paths
+            incl_path = pathlib.Path(include_name.replace('../', '')).name
+            incl_file = None
+            if incl_path in repo_files:
+              incl_file = repo_files[incl_path]
+
+            if incl_file and incl_file.path not in inlined_paths:
+              inlined_files.add(incl_file)
+              inlined_paths.add(incl_file.path)
+              inlined_cf.append("// [FETCH] included: {}\n".format(line))
+              inlined_cf.append(incl_file.content)
+              inlined_cf.append('// [FETCH] eof({})'.format(line))
+            else:
+              if not incl_file:
+                inlined_cf.append('// [FETCH] didnt find: {}'.format(line))
+              else:
+                inlined_cf.append('// [FETCH] skipped: {}'.format(line))
+
+          else:
+            inlined_cf.append(line)
+        if contentfile.content != '\n'.join(inlined_cf):
+          contentfile.content = '\n'.join(inlined_cf)
+          inlined_cf = []
+        elif include_exist:
+          l.getLogger().warn(inlined_paths)
+          l.getLogger().warn(contentfile.repo_name)
+          l.getLogger().warn(contentfile.path)
+          return contentfile
+
+      return contentfile
+    except KeyboardInterrupt:
+      l.getLogger().warn(contentfile.content)
+      l.getLogger().warn(contentfile.repo_name)
+      l.getLogger().warn(contentfile.path)
+      l.getLogger().warn(inlined_paths)
+      l.getLogger().warn(inlined_files)
 
 class RecursiveFetcher(GithubMiner):
   """GitHub API wrapper to pull from github a fresh corpus of OpenCL kernels"""
