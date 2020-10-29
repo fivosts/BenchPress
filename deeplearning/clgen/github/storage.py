@@ -335,11 +335,15 @@ class dbStorage(Storage):
 
   @property
   def filecount(self):
-    return (self.db.mainfile_count +
-            self.db.otherfile_count +
-            len(self.main_files) +
-            len(self.other_files)
-            )
+    return self.maincount + self.othercount
+
+  @property
+  def maincount(self):
+    return self.db.mainfile_count + len(self.main_files)
+
+  @property
+  def othercount(self):
+    return self.db.otherfile_count + len(self.other_files)
 
   @property
   def mainfiles(self):
@@ -352,6 +356,10 @@ class dbStorage(Storage):
   @property
   def loadRepos(self):
     return self.repos
+
+  @property
+  def content_data(self):
+    return self.db.data
 
   def __init__(self,
                path: pathlib.Path,
@@ -416,7 +424,7 @@ class dbStorage(Storage):
     ## Write data
     if self.data is not None:
       with self.db.Session(commit = True) as session:
-        if self.db.data is not None:
+        if self.data is not None:
           entry = session.query(
             bqdb.bqData
           ).filter_by(key = self.data.key).first()
