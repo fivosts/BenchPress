@@ -385,7 +385,7 @@ class dbStorage(Storage):
            ) -> None:
     if isinstance(contentfile, bqdb.bqData):
       self.data = contentfile
-    elif isinstance(contentfile, bqdb.Repo):
+    elif isinstance(contentfile, bqdb.bqRepo):
       self.repos.add((contentfile.repo_name, contentfile.ref))
     else: # bqFile.
       if isinstance(contentfile, bqdb.bqMainFile):
