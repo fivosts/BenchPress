@@ -82,4 +82,6 @@ message ExportCorpus {
   optional bool inline_headers = 6;
   // Github access tokens
   optional string access_token = 7;
+  // Format of saved data.
+  optional DataFormat data_format = 8;
 }
