@@ -115,7 +115,7 @@ class Dataset(object):
       'main_files'   : bigQuery_database.bqFile.bqSchema,
       'other_files'  : bigQuery_database.bqFile.bqSchema,
       'repositories' : bigQuery_database.bqRepo.bqSchema,
-      'bq_data'      : bigQuery_database.bqData.bqSchema,
+      'data'         : bigQuery_database.bqData.bqSchema,
     }
     for reg, get_sc in table_reg.items():
       table_id = "{}.{}".format(dataset_id, reg)
