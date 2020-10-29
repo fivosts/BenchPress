@@ -6,6 +6,7 @@ github_miner {
     language: "opencl"
     export_corpus {
       data_format: sql
+      access_token: "2bfd07104166ae9e610db3537f9b680809643305"
       inline_headers: true
     }
   }

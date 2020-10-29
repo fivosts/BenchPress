@@ -80,4 +80,6 @@ message ExportCorpus {
     bq      = 5;
   }
   optional bool inline_headers = 6;
+  // Github access tokens
+  optional string access_token = 7;
 }
