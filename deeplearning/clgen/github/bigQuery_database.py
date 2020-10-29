@@ -130,7 +130,7 @@ class bqDatabase(sqlutil.Database):
   @property
   def main_files(self) -> typing.List[bqMainFile]:
     with self.Session() as s:
-      return s.query(bqMainFile).all()
+      return s.query(bqMainFile).yield_per(200000).enable_eagerloads(False)
 
   @property
   def main_ids(self) -> typing.Set[str]:
@@ -151,7 +151,7 @@ class bqDatabase(sqlutil.Database):
   @property
   def other_files(self) -> typing.List[bqOtherFile]:
     with self.Session() as s:
-      return s.query(bqOtherFile).all()
+      return s.query(bqOtherFile).yield_per(200000).enable_eagerloads(False)
 
   @property
   def other_ids(self) -> typing.Set[str]:
