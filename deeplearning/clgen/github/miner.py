@@ -136,19 +136,51 @@ class BigQuery(GithubMiner):
             )
         st.flush()
 
+      # Get repository list of requested file specifications.
+      # If contentfile_query has taken place, use cached results instead of re-querying.
+      if mainf_it or otherf_it:
+        mainrep_it, otherrep_it = None, None
+      else:
+        mainrep_it, otherrep_it = self.dataset.repository_query()
+
+      main_repo_count = None
+      if mainrep_it:
+        with progressbar.ProgressBar(max_value = mainrep_it.total_rows, prefix = "Main Repos") as bar:
+          for mr in bar(mainrep_it):
+            st.save(
+              bigQuery_database.bqRepo(**bigQuery_database.bqRepo.FromArgs(st.repocount, mr))
+            )
+        main_repo_count = st.repocount
+        st.flush()
+
+      other_repo_count = None
+      if otherrep_it:
+        with progressbar.ProgressBar(max_value = otherrep_it.total_rows, prefix = "Other Repos") as bar:
+          for orep in bar(otherrep_it):
+            st.save(
+              bigQuery_database.bqRepo(**bigQuery_database.bqRepo.FromArgs(st.repocount, orep))
+            )
+        other_repo_count = st.repocount - main_repo_count
+        st.flush()
+
       # Filecount of requested file specifications.
       # Use cached results if contentfile has taken place.
       if mainf_it or otherf_it:
         self.dataset.filecount = (mainf_it.total_rows if mainf_it else 0, otherf_it.total_rows if otherf_it else 0)
       mainfile_count, otherfile_count = self.dataset.filecount
 
+      if main_repo_count is None:
+        main_repo_count = st.main_repocount
+      if other_repo_count is None:
+        other_repo_count = st.other_repocount
+
       query_data = [
         "main_contentfiles : {}".format(mainfile_count),
         "other_contentfiles: {}".format(otherfile_count),
         "total_contentfiles: {}".format(mainfile_count + otherfile_count),
         "",
-        "main_repositories : {}".format(st.main_repocount),
-        "other_repositories: {}".format(st.other_repocount),
+        "main_repositories : {}".format(main_repocount),
+        "other_repositories: {}".format(other_repocount),
         "total_repositories: {}".format(st.repocount),
       ]
       st.save(bigQuery_database.bqData(key = self.dataset.name, value = '\n'.join(query_data)))
@@ -195,7 +227,7 @@ class BigQuery(GithubMiner):
                 bigQuery_database.bqMainFile(**bigQuery_database.bqMainFile.FromArgs(cf.ToJSONDict()))
               )
 
-            cf.content = self._inline_headers(repo, cf.ref, cf)
+            cf = self._inline_headers(repo, cf.ref, cf)
             st.save(
               bigQuery_database.bqMainFile(**bigQuery_database.bqMainFile.FromArgs(cf.ToJSONDict()))
             )
@@ -221,7 +253,7 @@ class BigQuery(GithubMiner):
                 bigQuery_database.bqMainFile(**bigQuery_database.bqOtherFile.FromArgs(cf.ToJSONDict()))
               )
 
-            cf.content = self._inline_headers(repo, cf.ref, cf)
+            cf = self._inline_headers(repo, cf.ref, cf)
             st.save(
               bigQuery_database.bqMainFile(**bigQuery_database.bqOtherFile.FromArgs(cf.ToJSONDict()))
             )
