@@ -34,6 +34,12 @@ flags.DEFINE_boolean(
   "Select to force querying data in a seemingly updated satorage."
 )
 
+flags.DEFINE_string(
+  "exclude_repos_from_db",
+  None,
+  "Specify repo-db to bypass repositories in recursive fetcher."
+)
+
 class GithubMiner(object):
   """Base abstract class of a github miner"""
 
@@ -567,6 +573,14 @@ class RecursiveFetcher(GithubMiner):
       * Occasionally (< 1%) can't find headers to include.
 
     """
+
+    if FLAGS.exclude_repos_from_db:
+      db = bigQuery_database.bqDatabase("sqlite:///{}".format(pathlib.Path(FLAGS.exclude_repos_from_db).resolve()))
+      self.db_excluded_repos = set()
+      with db.Session() as s:
+        for r in s.query(bigQuery_database.bqRepo.repo_name):
+          self.db_excluded_repos.add(r[0])
+
     g = github.Github(self.token)
     handle_repo = partial(self.process_repo, g)
 
@@ -583,7 +597,10 @@ class RecursiveFetcher(GithubMiner):
       'cuda',
       'amd',
       'nvidia',
-      'heterogeneous'
+      'heterogeneous',
+      'c',
+      'cc',
+      'cpp',
     ]
     try:
       for query in query_terms:
@@ -664,6 +681,9 @@ class RecursiveFetcher(GithubMiner):
     updated_at            = str(repo.updated_at)
     self.current_status   = name
     self.print_counters()
+
+    if FLAGS.exclude_repos_from_db and repo.full_name in self.db_excluded_repos:
+      return False
 
     if self.repo_handler.is_repo_updated(url, updated_at):
       # Timestamp of already scraped repo matches, so nothing to do.
