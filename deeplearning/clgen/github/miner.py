@@ -179,8 +179,8 @@ class BigQuery(GithubMiner):
         "other_contentfiles: {}".format(otherfile_count),
         "total_contentfiles: {}".format(mainfile_count + otherfile_count),
         "",
-        "main_repositories : {}".format(main_repocount),
-        "other_repositories: {}".format(other_repocount),
+        "main_repositories : {}".format(main_repo_count),
+        "other_repositories: {}".format(other_repo_count),
         "total_repositories: {}".format(st.repocount),
       ]
       st.save(bigQuery_database.bqData(key = self.dataset.name, value = '\n'.join(query_data)))
@@ -210,48 +210,54 @@ class BigQuery(GithubMiner):
 
     with export_storage as st:
       with progressbar.ProgressBar(max_value = self.storage.maincount) as bar:
-        try:
-          for cf in bar(self.storage.mainfiles):
-            if (cf.repo_name, cf.path) in iterated_history:
-              continue
+        for cf in bar(self.storage.mainfiles):
+          if (cf.repo_name, cf.path) in iterated_history:
+            continue
+          try:
             rem = g.get_rate_limit().rate.remaining
             while rem < 100:
               time.sleep(1)
-              print("Waiting on rate limit: {}".format(rem), sep='', end='')
+              print('\r\033[KWaiting on rate limit: {}'.format(rem), sep='', end='')
               sys.stdout.flush()
               rem = g.get_rate_limit().rate.remaining
-            try:
-              repo = g.get_repo(cf.repo_name)
-            except github.GithubException as e:
-              st.save(
-                bigQuery_database.bqMainFile(**bigQuery_database.bqMainFile.FromArgs(cf.ToJSONDict()))
-              )
-
+            repo = g.get_repo(cf.repo_name)
             cf = self._inline_headers(repo, cf.ref, cf)
             st.save(
               bigQuery_database.bqMainFile(**bigQuery_database.bqMainFile.FromArgs(cf.ToJSONDict()))
             )
-        except Exception as e:
-          st.flush()
-          raise e
+          except Exception as e:
+            st.flush()
+            if "404" in str(e):
+              l.getLogger().error("Not found: {}-{}".format(cf.repo_name, cf.path))
+              st.save(
+                bigQuery_database.bqMainFile(**bigQuery_database.bqMainFile.FromArgs(cf.ToJSONDict()))
+              )
+            else:
+              raise e
 
       with progressbar.ProgressBar(max_value = self.storage.othercount) as bar:
         try:
           for cf in bar(self.storage.otherfiles):
             if (cf.repo_name, cf.path) in iterated_history:
               continue
+            ### Rate limit
             rem = g.get_rate_limit().rate.remaining
             while rem < 100:
               time.sleep(1)
               print("Waiting on rate limit: {}".format(rem), sep='', end='')
               sys.stdout.flush()
               rem = g.get_rate_limit().rate.remaining
+            ### Save file if repo not found
             try:
               repo = g.get_repo(cf.repo_name)
             except github.GithubException as e:
-              st.save(
-                bigQuery_database.bqMainFile(**bigQuery_database.bqOtherFile.FromArgs(cf.ToJSONDict()))
-              )
+              if "Not Found" in str(e):
+                st.save(
+                  bigQuery_database.bqMainFile(**bigQuery_database.bqOtherFile.FromArgs(cf.ToJSONDict()))
+                )
+                continue
+              else:
+                raise e
 
             cf = self._inline_headers(repo, cf.ref, cf)
             st.save(
