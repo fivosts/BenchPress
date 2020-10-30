@@ -519,8 +519,9 @@ class RecursiveFetcher(GithubMiner):
 
     def Flush(self) -> None:
       for idx, file in enumerate(self._scraped_files):
-        with open(os.path.join(self.cache_path, "{}.cl".format(idx + self.updated_length)), 'w') as f:
-          f.write(self._scraped_files[file].contents)
+        if self._scraped_files[file].repo_url in self._scraped_repos:
+          with open(os.path.join(self.cache_path, "{}.cl".format(idx + self.updated_length)), 'w') as f:
+            f.write(self._scraped_files[file].contents)
       for repo in self._scraped_repos:
         self._stored_repos[repo] = self._scraped_repos[repo].updated_at
       self.appendHistory()
@@ -581,6 +582,40 @@ class RecursiveFetcher(GithubMiner):
         for r in s.query(bigQuery_database.bqRepo.repo_name):
           self.db_excluded_repos.add(r[0])
 
+
+    # ### Dummy code to compare similarities of recursive corpus and bq CL corpus.
+    # db = bigQuery_database.bqDatabase("sqlite:////home/fivosts/PhD/Code/clgen/bq_corpus/exported_clgen_opencl_github.db")
+    # self.bq_repos = set()
+    # with db.Session() as s:
+    #   for r in s.query(bigQuery_database.bqMainFile.repo_name):
+    #     self.bq_repos.add(r[0])
+    #   for r in s.query(bigQuery_database.bqOtherFile.repo_name):
+    #     self.bq_repos.add(r[0])
+
+    # with open("/home/fivosts/Downloads/record.json", 'r') as f:
+    #   chris = json.load(f)
+
+    # chris_repos = set(x.replace('https://api.github.com/repos/', '') for x, v in chris[0].items())
+
+    # common_repos = set()
+    # for r in chris_repos:
+    #   if r in self.bq_repos:
+    #     common_repos.add(r)
+
+    # l.getLogger().warn(len(common_repos))
+
+    # file_count = 0
+    # with db.Session() as s:
+    #   for r in s.query(bigQuery_database.bqMainFile).all():
+    #     if r.repo_name in common_repos:
+    #       file_count += 1
+    #   for r in s.query(bigQuery_database.bqOtherFile).all():
+    #     if r.repo_name in common_repos:
+    #       file_count += 1
+
+    # l.getLogger().info(file_count)
+    # exit()
+
     g = github.Github(self.token)
     handle_repo = partial(self.process_repo, g)
 
@@ -638,6 +673,21 @@ class RecursiveFetcher(GithubMiner):
                 pass
               except Exception as e:
                 raise e
+            try:
+              contributors = len([x for x in repo.get_contributors()])
+            except github.GithubException:
+              contributors = -1
+            self.repo_handler.update_repo(
+              url          = repo.url,
+              owner        = repo.owner.email,
+              name         = repo.name,
+              fork         = 1 if repo.fork else 0,
+              stars        = repo.stargazers_count,
+              contributors = contributors,
+              forks        = repo.forks,
+              created_at   = repo.created_at,
+              updated_at   = str(repo.updated_at)
+            )
           except github.GithubException:
             # do nothing in case of error (such as an empty repo)
             pass
@@ -675,37 +725,15 @@ class RecursiveFetcher(GithubMiner):
       True if repository should be scraped, else False.
     """
     self.rate_limit(g)
-
-    url                   = repo.url
-    name                  = repo.name
-    updated_at            = str(repo.updated_at)
-    self.current_status   = name
+    self.current_status = repo.name
     self.print_counters()
 
     if FLAGS.exclude_repos_from_db and repo.full_name in self.db_excluded_repos:
       return False
 
-    if self.repo_handler.is_repo_updated(url, updated_at):
+    if self.repo_handler.is_repo_updated(repo.url, str(repo.updated_at)):
       # Timestamp of already scraped repo matches, so nothing to do.
       return False
-
-    owner  = repo.owner.email
-    fork   = 1 if repo.fork else 0
-    stars  = repo.stargazers_count
-    try:
-      contributors = len([x for x in repo.get_contributors()])
-    except github.GithubException:
-      contributors = -1
-
-    forks      = repo.forks
-    created_at = repo.created_at
-
-    self.repo_handler.update_repo(url          = url,       owner        = owner,
-                                  name         = name,      fork         = fork,
-                                  stars        = stars,     contributors = contributors,
-                                  forks        = forks,     created_at   = created_at,
-                                  updated_at   = updated_at )
-
     return True
 
   def process_file(self, g, repo, file) -> bool:
@@ -741,7 +769,7 @@ class RecursiveFetcher(GithubMiner):
       return False
 
     repo_url = repo.url
-    contents = self.download_file(repo, url)
+    contents = self.download_file(g, repo, url)
     size     = file.size
 
     self.repo_handler.update_file(
@@ -750,7 +778,7 @@ class RecursiveFetcher(GithubMiner):
     )
     return True
 
-  def download_file(self, repo, url: str, stack = []) -> str:
+  def download_file(self, g, repo, url: str, stack = []) -> str:
     """
     Fetch file from GitHub.
 
@@ -773,13 +801,19 @@ class RecursiveFetcher(GithubMiner):
     # Recursion stack
     stack.append(url)
 
-    response = json.loads(requests.get(
-      url,
-      headers={
-        'Authorization': 'token ' + str(self.token)
-      }
-    ).content.decode('utf-8'))
-    src = b64decode(response['content']).decode('utf-8')
+    while True:
+      self.rate_limit(g)
+      try:
+        response = json.loads(requests.get(
+          url,
+          headers={
+            'Authorization': 'token ' + str(self.token)
+          }
+        ).content.decode('utf-8'))
+        src = b64decode(response['content']).decode('utf-8')
+        break
+      except Exception as e:
+        time.sleep(5)
 
     outlines = []
     for line in src.split('\n'):
@@ -799,7 +833,7 @@ class RecursiveFetcher(GithubMiner):
             break
 
         if include_url and include_url not in stack:
-          include_src = self.download_file(repo, include_url, stack)
+          include_src = self.download_file(g, repo, include_url, stack)
           outlines.append("// [FETCH] included: {}\n".format(line))
           outlines.append(include_src)
           outlines.append('// [FETCH] eof({})'.format(line))
