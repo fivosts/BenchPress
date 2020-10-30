@@ -424,10 +424,10 @@ class dbStorage(Storage):
     ## Write data
     if self.data is not None:
       with self.db.Session(commit = True) as session:
-        if self.data is not None:
-          entry = session.query(
-            bqdb.bqData
-          ).filter_by(key = self.data.key).first()
+        entry = session.query(
+          bqdb.bqData
+        ).filter_by(key = self.data.key).first()
+        if entry is not None:
           entry.value = self.data.value
         else:
           session.add(self.data)
@@ -439,9 +439,9 @@ class dbStorage(Storage):
           content = bqdb.bqRepo(**bqdb.bqRepo.FromArgs(
               self.db.repo_count + en, {'repo_name': repo_name, 'ref': ref})
           )
-          # exists = session.query(
-          #   bqdb.bqRepo
-          # ).filter_by(repo_name = content.repo_name, ref = content.ref).scalar() is not None
+          exists = session.query(
+            bqdb.bqRepo
+          ).filter_by(repo_name = content.repo_name, ref = content.ref).scalar() is not None
           if not exists:
             session.add(content)
 
