@@ -1,10 +1,8 @@
 github_miner {
-  path: "/media/fivosts/Second sata disk"
+  path: "universe_repos"
   data_format: sql
-  # data_format: jsonzip
   big_query {
-    # credentials: "/home/fivosts/PhD/Code/clgen/deeplearning/clgen/github/BigQuery_credentials.json"
-    credentials: "/home/fivosts/PhD/Code/clgen/deeplearning/clgen/github/2nd_acc_creds.json"
+    credentials: "/home/fivosts/PhD/Code/clgen/deeplearning/clgen/github/4th_acc_creds.json"
     language: "generic"
   }
 }
