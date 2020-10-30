@@ -426,27 +426,27 @@ class RecursiveFetcher(GithubMiner):
       ## And of course to append the json file every time you flush
       ## ..and to flush
       self.cache_path              = corpus_path
-      self.stored_file_idx          = "record.json"
+      self.stored_file_idx         = "record.json"
 
-      self.updated_length           = 0
+      self.updated_length          = 0
 
-      self._scraped_repos           = {}
-      self._stored_repos            = {}
-      self._scraped_files           = {}
+      self._scraped_repos          = {}
+      self._stored_repos           = {}
+      self._scraped_files          = {}
 
-      self.repos_new_counter        = 0
-      self.repos_modified_counter   = 0
-      self.repos_unchanged_counter  = 0
-      self.repos_stored_counter     = 0
+      self.repos_new_counter       = 0
+      self.repos_modified_counter  = 0
+      self.repos_unchanged_counter = 0
+      self.repos_stored_counter    = 0
 
-      self.files_new_counter        = 0
-      self.files_modified_counter   = 0
-      self.files_unchanged_counter  = 0
-      self.file_size_counter        = 0
-      self.file_size_limit          = flush_limit
+      self.files_new_counter       = 0
+      self.files_modified_counter  = 0
+      self.files_unchanged_counter = 0
+      self.file_size_counter       = 0
+      self.file_size_limit         = flush_limit
 
       self.collectHistory()
-      self.is_finished              = False if (corpus_size // 1000) == -1 else (self.updated_length >= corpus_size)
+      self.is_finished             = False if (corpus_size // 1000) == -1 else (self.updated_length >= corpus_size)
       return
 
     def collectHistory(self) -> None:
