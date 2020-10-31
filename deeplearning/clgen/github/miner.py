@@ -509,6 +509,7 @@ class RecursiveFetcher(GithubMiner):
     def update_repo(self, **kwargs) -> bool:
 
       url = kwargs.get('url')
+      l.getLogger().info("Add: {}".format(url))
       if url in self._scraped_repos:
         self._scraped_repos[url].update(**kwargs)
         self.repos_modified_counter += 1
@@ -801,6 +802,7 @@ class RecursiveFetcher(GithubMiner):
     # Recursion stack
     stack.append(url)
 
+    exc_idx = 0
     while True:
       self.rate_limit(g)
       try:
@@ -810,10 +812,16 @@ class RecursiveFetcher(GithubMiner):
             'Authorization': 'token ' + str(self.token)
           }
         ).content.decode('utf-8'))
-        src = b64decode(response['content']).decode('utf-8')
+        if 'content' in response:
+          src = b64decode(response['content']).decode('utf-8')
+        else:
+          src = ""
         break
-      except Exception as e:
-        time.sleep(5)
+      except requests.exceptions.RequestException as e:
+        if exc_idx == 0:
+          l.getLogger().error(e)
+        exc_idx += 1
+        time.sleep(10)
 
     outlines = []
     for line in src.split('\n'):
@@ -839,7 +847,7 @@ class RecursiveFetcher(GithubMiner):
           outlines.append('// [FETCH] eof({})'.format(line))
         else:
           if not include_url:
-            outlines.append('// [FETCH] didnt find: \n{}'.format(line))
+            outlines.append('// [FETCH] didnt find: {}'.format(line))
           else:
             outlines.append('// [FETCH] skipped: {}'.format(line))
       else:
