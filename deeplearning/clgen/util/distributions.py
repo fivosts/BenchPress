@@ -4,7 +4,7 @@ import typing
 import numpy as np
 
 from deeplearning.clgen.proto import model_pb2
-from eupy.native import plotter as plt
+from deeplearning.clgen.util import plotter
 
 class Distribution():
   def __init__(self, 
@@ -55,35 +55,13 @@ class Distribution():
 
   def plot(self):
     sorted_dict = sorted(self.sample_counter.items(), key = lambda x: x[0])
-    if len(sorted_dict) > 128:
-      self._plot_lines(sorted_dict)
-    else:
-      self._plot_bars(sorted_dict)
-    return
-
-  def _plot_lines(self, sorted_dict):
-    point_set = {
-      self.set_name: {
-        'x': [x for (x, _) in sorted_dict],
-        'y': [y for (_, y) in sorted_dict],
-      }
-    }
-    plt.linesSingleAxis(point_set, 
-      savefig = str(self.log_path / self.set_name) + ".png",
-    )
-    return
-
-  def _plot_bars(self, sorted_dict):
-    point_set = [
-      {
-        'x': [[x for (x, _) in sorted_dict]],
-        'y': [[y for (_, y) in sorted_dict]],
-        'label': [str(y) for (_, y) in sorted_dict],
-      }
-    ]
-    plt.plotBars(
-      point_set, save_file = True, file_path = str(self.log_path / self.set_name),
-      show_xlabels = True, file_extension = ""
+    plotter.FrequencyBars(
+      x = [x for (x, _) in sorted_dict],
+      y = [y for (_, y) in sorted_dict],
+      title     = self.set_name,
+      x_name    = self.set_name,
+      plot_name = self.set_name,
+      path = self.log_path
     )
     return
 
@@ -121,13 +99,14 @@ class TimestampMonitor(Distribution):
     return
 
   def plot(self):
-    plt.linesSingleAxis(
-      {
-        self.set_name: {
-          'y': self.sample_list
-        }
-      },
-      savefig = str(self.log_path / self.set_name) + ".png",
+    plotter.SingleScatterLine(
+      x = np.arange(len(self.sample_list)),
+      y = self.sample_list,
+      title = self.set_name,
+      x_name = "",
+      y_name = self.set_name,
+      plot_name = self.set_name,
+      path = self.log_path,
     )
     return
 
