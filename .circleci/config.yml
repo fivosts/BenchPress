@@ -61,5 +61,5 @@ workflows:
       - build_clgen:
           matrix:
             parameters:
-              python_version: ["python3.5", "python3.6", "python3.7", "python3.8", "from_source"]
+              python_version: ["python3.6", "python3.7", "python3.8", "from_source"]
           name: << matrix.python_version >>
