@@ -47,6 +47,8 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
   sample_indices         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Encoded generated tokens
   encoded_sample_indices : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Sample's vector of features.
+  feature_vector         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Length of total sequence in number of tokens
   num_tokens             : int = sql.Column(sql.Integer,    nullable = False)
   # Whether the generated sample compiles or not.
@@ -69,6 +71,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "text"                   : proto.text,
       "sample_indices"         : proto.sample_indices,
       "encoded_sample_indices" : proto.encoded_sample_indices,
+      "feature_vector"         : proto.feature_vector,
       "num_tokens"             : proto.num_tokens,
       "compile_status"         : "Yes" if proto.compile_status else "No",
       "categorical_sampling"   : proto.categorical_sampling,
