@@ -645,7 +645,7 @@ std::string getexepath() {
 
 // Return path to OpenCL platform header.
 std::string cl_header() {
-  return dirname(getexepath()) + "/../include/cl.h";
+  return dirname(getexepath()) + "/cl.h";
 }
 
 

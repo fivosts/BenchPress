@@ -19,6 +19,11 @@ target_link_directories(clgen_features PUBLIC ${LLVM}/lib/clang/6.0.0/lib/linux/
 target_link_directories(clgen_rewriter PUBLIC ${LLVM}/lib/)
 target_link_directories(clgen_rewriter PUBLIC ${LLVM}/lib/clang/6.0.0/lib/linux/)
 
+add_custom_target(cl_header_file ALL
+  COMMAND cp ${CMAKE_CURRENT_LIST_DIR}/cl.h ${CMAKE_CURRENT_BINARY_DIR}/cl.h
+  COMMENT "Copy cl.h header file"
+)
+
 target_compile_options (clgen_features PRIVATE
     -I/usr/lib/llvm-9/include
     -std=c++11
