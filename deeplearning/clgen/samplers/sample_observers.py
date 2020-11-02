@@ -156,7 +156,7 @@ class SamplesDatabaseObserver(SampleObserver):
         self.monitor.plot()
     return True
 
-  def endSample(self):
+  def endSample(self) -> None:
     with self.db.Session() as session:
       compiled_count = session.query(samples_database.Sample.compile_status).filter_by(compile_status = "Yes").count()
     try:
