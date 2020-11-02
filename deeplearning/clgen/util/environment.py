@@ -18,6 +18,8 @@ try:
   DASHBOARD_TEMPLATES = check_exists(os.environ['DASHBOARD_TEMPLATES'])
   DASHBOARD_STATIC    = check_exists(os.environ['DASHBOARD_STATIC'])
   DATA_CL_INCLUDE     = check_exists(os.environ['DATA_CL_INCLUDE'])
+  CLGEN_FEATURES      = check_exists(os.environ['CLGEN_FEATURES'])
+  CLGEN_REWRITER      = check_exists(os.environ['CLGEN_REWRITER'])
 except Exception as e:
   raise e
   
