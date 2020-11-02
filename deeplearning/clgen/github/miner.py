@@ -5,6 +5,7 @@ import io
 import re
 import time
 import requests
+import functools
 import sys
 import typing
 import pathlib
@@ -15,7 +16,6 @@ import numpy as np
 from absl import flags
 
 from base64 import b64decode
-from functools import partial
 from google.cloud import bigquery
 
 from deeplearning.clgen.util import pbutil
@@ -618,7 +618,7 @@ class RecursiveFetcher(GithubMiner):
     # exit()
 
     g = github.Github(self.token)
-    handle_repo = partial(self.process_repo, g)
+    handle_repo = functools.partial(self.process_repo, g)
 
     # fetch the repositories to iterate over. Since opencl isn't
     # treated as a first-class language by GitHub, we can't use the
@@ -637,6 +637,10 @@ class RecursiveFetcher(GithubMiner):
       'c',
       'cc',
       'cpp',
+      'llvm-project',
+      'language:C',
+      'language:C++',
+      'language:LLVM',
     ]
     try:
       for query in query_terms:
@@ -645,6 +649,7 @@ class RecursiveFetcher(GithubMiner):
         repos = g.search_repositories(query + ' fork:true sort:stars')
 
         for repo in repos:
+          self.cached_includes = {}
           if self.repo_handler.is_finished:
             self.print_counters()
             self.repo_handler.Flush()
@@ -657,7 +662,7 @@ class RecursiveFetcher(GithubMiner):
           if not repo_modified:
             continue
 
-          handle_file = partial(self.process_file, g, repo)
+          handle_file = functools.partial(self.process_file, g, repo)
 
           # iterate over the entire git tree of the repo's default
           # branch (usually 'master'). If a file ends with the .cl
@@ -770,8 +775,8 @@ class RecursiveFetcher(GithubMiner):
       return False
 
     repo_url = repo.url
-    contents = self.download_file(g, repo, url)
-    size     = file.size
+    contents = self.download_file(g, repo, url, [])
+    size     = file.size or 0
 
     self.repo_handler.update_file(
       url = url, contents = contents, path = path,
@@ -779,7 +784,7 @@ class RecursiveFetcher(GithubMiner):
     )
     return True
 
-  def download_file(self, g, repo, url: str, stack = []) -> str:
+  def download_file(self, g, repo, url: str, stack: typing.List[str]) -> str:
     """
     Fetch file from GitHub.
 
@@ -801,7 +806,6 @@ class RecursiveFetcher(GithubMiner):
     """
     # Recursion stack
     stack.append(url)
-
     exc_idx = 0
     while True:
       self.rate_limit(g)
@@ -841,9 +845,11 @@ class RecursiveFetcher(GithubMiner):
             break
 
         if include_url and include_url not in stack:
-          include_src = self.download_file(g, repo, include_url, stack)
+          if include_url not in self.cached_includes:
+            self.cached_includes[include_url] = self.download_file(g, repo, include_url, stack)
+
           outlines.append("// [FETCH] included: {}\n".format(line))
-          outlines.append(include_src)
+          outlines.append(self.cached_includes[include_url])
           outlines.append('// [FETCH] eof({})'.format(line))
         else:
           if not include_url:
@@ -852,7 +858,6 @@ class RecursiveFetcher(GithubMiner):
             outlines.append('// [FETCH] skipped: {}'.format(line))
       else:
         outlines.append(line)
-
     return '\n'.join(outlines)
 
   def rate_limit(self, g) -> None:
