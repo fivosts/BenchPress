@@ -2,9 +2,9 @@ import json
 import numpy as np
 import pathlib
 
+from deeplearning.clgen.util import plotter
 from deeplearning.clgen.samplers import validation_database
 from eupy.native import logger as l
-from eupy.native import plotter as plt
 
 class tensorMonitorHook(object):
   def __init__(self, 
@@ -122,16 +122,14 @@ class tensorMonitorHook(object):
   def _tensor2plot(self):
     for (key, value) in self.plot_tensors.items():
       if key != "step":
-        plt.linesSingleAxis(
-          {key: {'y': value['value'], 'x': value['step'] } },
-          y_label = (key, 13),
-          x_label = ("Train step", 13),
-          plot_title = (key, 20),
-          x_lim   = [0, 1.01 * value['step'][-1]],
-          y_lim   = 1.1 * max(value['value']),
-          legend  = False,
-          showfig = False,
-          savefig = str(self.cache_path / "{}.png".format(key)),
+        plotter.SingleScatterLine(
+          x = value['step'],
+          y = value['value'],
+          title = key,
+          x_name = "Training Step",
+          y_name = key,
+          plot_name = key,
+          path = self.cache_path,
         )
     return
 

@@ -7,9 +7,9 @@ import pathlib
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 from deeplearning.clgen.util.tf import tf
+from deeplearning.clgen.util import plotter
 from deeplearning.clgen.samplers import validation_database
 from eupy.native import logger as l
-from eupy.native import plotter as plt
 
 """
 All hooks deployed for this implementation of BERT.
@@ -426,17 +426,15 @@ class tfPlotTensorHook(_tfEstimatorHooks):
     _, _ = self.timer.update_last_triggered_step(1 + self.trigger_step if self.trigger_step else 0)
     for (key, value) in tensor_values.items():
       key_str = str(pathlib.Path(key).stem)
-      plt.linesSingleAxis(
-          {key_str: {'y': value['value'], 'x': value['step']}},
-          y_label = (key_str, 13),
-          x_label = ("Train step", 13),
-          plot_title = (key_str, 20),
-          x_lim = [0, value['step'][-1] + 0.01 * value['step'][-1]],
-          y_lim = 1.1 * max(value['value']),
-          legend = False,
-          showfig = False,
-          savefig = str(self.output_dir / "{}.png".format(key_str)),
-        )
+      plotter.SingleScatterLine(
+        x = value['step'],
+        y = value['value'],
+        title = key_str,
+        x_name = "Training Step",
+        y_name = key_str,
+        plot_name = key_str,
+        path = self.output_dir,
+      )
     return
 
 
