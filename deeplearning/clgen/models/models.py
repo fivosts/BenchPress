@@ -28,6 +28,7 @@ from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import crypto
+from deeplearning.clgen.features import extractor
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.dashboard import dashboard_db
@@ -385,6 +386,7 @@ class Model(object):
               sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               wall_time_ms              = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
+              feature_vector            = extractor.kernel_features("".join(sample_kernel)),
               num_tokens                = len(samples_in_progress[i]),
               compile_status            = compile_flag,
               categorical_sampling      = self.backend.samplesWithCategorical(),
