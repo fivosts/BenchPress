@@ -2,11 +2,12 @@ import subprocess
 import tempfile
 
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import crypto
 
 CLGEN_FEATURES = environment.CLGEN_FEATURES
 CLGEN_REWRITER = environment.CLGEN_REWRITER
 
-def kernel_features(src: str, *extra_args, file_name = None) -> str:
+def kernel_features(src: str, *extra_args) -> str:
   """
   Invokes clgen_features extractor on a single kernel.
 
@@ -22,7 +23,11 @@ def kernel_features(src: str, *extra_args, file_name = None) -> str:
     tfile = lambda: tempfile.NamedTemporaryFile(
       'w', prefix = "feature_extractor_", suffix = '.cl'
     )
-  with tfile() as f:
+    
+  file_hash = crypto.sha256_str(src)
+  with tempfile.NamedTemporaryFile(
+          'w', prefix = "feat_ext_{}_".format(file_hash), suffix = '.cl'
+        ) as f:
     f.write(src)
     f.flush()
     cmd = [str(CLGEN_FEATURES), f.name]
