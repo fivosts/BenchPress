@@ -365,6 +365,7 @@ class torchBert(backends.BackendBase):
                     sample_indices         = '',
                     encoded_sample_indices = '',
                     sample_time_ms         = int(round(exec_time_ms / self.train_batch_size)),
+                    feature_vector         = extractor.kernel_features(self.atomizer.DeatomizeIndices(s[1], ignore_token = self.atomizer.padToken).replace("\\n", "\n")),
                     num_tokens             = len([x for x in s[1] if x != self.atomizer.padToken]),
                     categorical_sampling   = False,
                     compile_status         = True,
