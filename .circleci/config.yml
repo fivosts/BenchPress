@@ -17,6 +17,9 @@ jobs:
                 name: Remove global cmake
                 command: sudo apt remove cmake
             - run:
+                name: Simulate pre-existing necessary packages
+                command : sudo apt install mysql-server libmysqlclient-dev libsqlite3-dev
+            - run:
                 name: Bootstrap application without sudo
                 command: |
                   echo -e "cmake\nn\ny" | bash requirements.apt
