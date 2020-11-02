@@ -31,6 +31,7 @@ from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.util import distributions
+from deeplearning.clgen.features import extractor
 from absl import flags
 import humanize
 from labm8.py import sqlutil
@@ -72,10 +73,11 @@ class EncodedContentFile(Base):
   # We store the vocabulary indices array as a string of period-separated
   # integers, e.g. '0.1.2.0.1'. To access the values as an array of integers,
   # use EncodedContentFile.indices_array.
-  data: str = sql.Column(
-    sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable=False
-  )
+  data: str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable=False)
+  # Number of tokens in sequence
   tokencount: int = sql.Column(sql.Integer, nullable=False)
+  # Sequence features extracted.
+  feature_vector: str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # The number of milliseconds encoding took.
   encoding_time_ms: int = sql.Column(sql.Integer, nullable=False)
   # Encoding is parallelizable, so the actual wall time of encoding may be much
@@ -128,18 +130,19 @@ class EncodedContentFile(Base):
     ####
     encoding_time_ms = int((time.time() - start_time) * 1000)
     return EncodedContentFile(
-      id=preprocessed_cf.id,
+      id = preprocessed_cf.id,
       # Encode the end-of-file marker separately to ensure that it resolves to
       # the correct token. For example if the vocabulary contains 'a', 'b',
       # and 'ab', then a content file 'a' with EOF marker 'b' would be encoded
       # as 'ab', instead of 'a'+'b'.
-      data=cls.NumpyArrayToDataString(
+      data = cls.NumpyArrayToDataString(
         np.concatenate((data, atomizer.AtomizeString(eof)))
       ),
-      tokencount=len(data),
-      encoding_time_ms=encoding_time_ms,
-      wall_time_ms=encoding_time_ms,  # The outer-loop may change this.
-      date_added=datetime.datetime.utcnow(),
+      tokencount       = len(data),
+      feature_vector   = extractor.kernel_features(preprocessed_cf.text),
+      encoding_time_ms = encoding_time_ms,
+      wall_time_ms     = encoding_time_ms,  # The outer-loop may change this.
+      date_added       = datetime.datetime.utcnow(),
     )
 
 
