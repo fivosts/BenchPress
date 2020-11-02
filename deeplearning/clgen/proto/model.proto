@@ -226,17 +226,18 @@ message Sample {
   optional int32  sample_time_ms         = 4;
   optional string sample_indices         = 5;
   optional string encoded_sample_indices = 6;
+  optional string feature_vector         = 7;
   // Sampling may be batches, so that the sum of sample_time_ms over a range
   // of samples may be much higher than the actual amount of time required to
   // sample the set. This field contains the number of milliseconds between the
   // last sample completing and this sample completing, so that by summing
   // wall_time_ms, it is possible to get an accurate idea of the actual time
   // taken to produce a set of samples.
-  optional int32 wall_time_ms              = 7;
-  optional int64 sample_start_epoch_ms_utc = 8;
-  optional int32 num_tokens                = 9;
-  optional bool  compile_status            = 10;
-  optional bool  categorical_sampling      = 11;
-  optional int32 train_step                = 12;
-  optional string date_added               = 13;
+  optional int32 wall_time_ms              = 8;
+  optional int64 sample_start_epoch_ms_utc = 9;
+  optional int32 num_tokens                = 10;
+  optional bool  compile_status            = 11;
+  optional bool  categorical_sampling      = 12;
+  optional int32 train_step                = 13;
+  optional string date_added               = 14;
 }
