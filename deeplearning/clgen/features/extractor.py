@@ -40,3 +40,17 @@ def kernel_features(src: str, *extra_args) -> str:
     )
     stdout, stderr = process.communicate()
   return stdout
+
+def StrToDictFeatures(str_features: str) -> typing.Dict[str, float]:
+  """
+  Converts clgen_features subprocess output from raw string
+  to a mapped dictionary of feature -> value.
+  """
+  try:
+    lines  = str_features.split('\n')
+    header, values = lines[0].split(',')[2:], lines[-1].split(',')[2:]
+    if len(header) != len(values):
+      raise ValueError("Bad alignment of header-value list of features")
+    return {key: float(value) for key, value in zip(header, values)}
+  except Exception as e:
+    raise ValueError(e)
