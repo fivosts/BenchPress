@@ -305,10 +305,10 @@ class CompilationSampler(object):
     attention_mask = (new_seq != self.atomizer.padToken)
 
     # Update sample indices
-    idx = 0
+    t_idx = 0
     for target_indices, _ in enumerate(sample_indices):
-      if len(sample_indices[target_indices]) == 0 or sample_indices[target_indices][-1] in endTokens:
-        sample_indices[target_indices] += step_indices[idx]
-        idx += 1
+      if len(sample_indices[target_indices]) == 0 or sample_indices[target_indices][-1] not in endTokens:
+        sample_indices[target_indices] += step_indices[t_idx]
+        t_idx += 1
 
     return np.any(new_hole), new_seq, attention_mask, sample_indices
