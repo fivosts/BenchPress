@@ -6,6 +6,8 @@ import numpy as np
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.util import plotter
 
+from eupy.native import logger as l
+
 class Monitor():
   def __init__(self, 
                cache_path : typing.Union[pathlib.Path, str],
@@ -55,6 +57,46 @@ class FrequencyMonitor(Monitor):
     """Plot bars of number of occurences."""
     sorted_dict = sorted(self.sample_counter.items(), key = lambda x: x[0])
     plotter.FrequencyBars(
+      x = [x for (x, _) in sorted_dict],
+      y = [y for (_, y) in sorted_dict],
+      title     = self.set_name,
+      x_name    = self.set_name,
+      plot_name = self.set_name,
+      path = self.cache_path
+    )
+    return
+
+class CumulativeHistMonitor(Monitor):
+  """
+  Keeps monitor of the occured frequency of a specific key.
+  Key is provided through `actual_sample` in register method.
+  Its frequency is incremented by one.
+
+  Bar plots num of occurences VS keys.
+  """
+  def __init__(self, 
+               cache_path: typing.Union[pathlib.Path, str], 
+               set_name  : str,
+               ):
+    super(CumulativeHistMonitor, self).__init__(cache_path, set_name)
+    self.sample_counter = {}
+    return
+
+  def register(self, actual_sample):
+    if isinstance(actual_sample, list):
+      for s in actual_sample:
+        self.register(s)
+    else:
+      if actual_sample not in self.sample_counter:
+        self.sample_counter[actual_sample] =  1
+      else:
+        self.sample_counter[actual_sample] += 1
+    return
+
+  def plot(self):
+    """Plot bars of number of occurences."""
+    sorted_dict = sorted(self.sample_counter.items(), key = lambda x: x[0])
+    plotter.CumulativeHistogram(
       x = [x for (x, _) in sorted_dict],
       y = [y for (_, y) in sorted_dict],
       title     = self.set_name,

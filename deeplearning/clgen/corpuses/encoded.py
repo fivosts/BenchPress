@@ -251,7 +251,7 @@ class EncodedContentFiles(sqlutil.Database):
     contentfile_separator: str,
   ) -> None:
     with preprocessed_db.Session() as p_session:
-      length_mon  = monitors.FrequencyMonitor(self.encoded_path, "encoded_kernel_length")
+      length_mon  = monitors.CumulativeHistMonitor(self.encoded_path, "encoded_kernel_length")
       feature_mon = monitors.FeatureMonitor(self.encoded_path, "feature_vector")
       query = p_session.query(preprocessed.PreprocessedContentFile).filter(
         preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,

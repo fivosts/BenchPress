@@ -67,6 +67,37 @@ def FrequencyBars(x: np.array,
   fig.write_image(outf("png"))
   return
 
+def CumulativeHistogram(x: np.array,
+                        y: np.array,
+                        title    : str,
+                        x_name   : str,
+                        plot_name: str,
+                        path: pathlib.Path
+                        ) -> None:
+
+  layout = go.Layout(
+    title = title,
+    xaxis = dict(title = x_name),
+    yaxis = dict(title = "# of Occurences"),
+  )
+  fig = go.Figure(layout = layout)
+  fig.add_trace(
+    go.Histogram(
+      x = x,
+      y = y,
+      xbins = dict(size = 8),
+      cumulative_enabled = True,
+      histnorm = 'percent',
+      showlegend = False,
+      marker_color = '#ac3939',
+      opacity = 0.75,
+    )
+  )
+  outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
+  fig.write_html (outf("html"))
+  fig.write_image(outf("png"))
+  return
+
 def NormalizedRadar(r         : np.array,
                     theta     : typing.List[str],
                     title     : str,
