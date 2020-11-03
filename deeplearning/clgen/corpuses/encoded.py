@@ -30,7 +30,7 @@ from sqlalchemy.sql import func
 from deeplearning.clgen.corpuses import atomizers
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.proto import internal_pb2
-from deeplearning.clgen.util import distributions
+from deeplearning.clgen.util import monitors
 from deeplearning.clgen.features import extractor
 from absl import flags
 import humanize
@@ -251,7 +251,7 @@ class EncodedContentFiles(sqlutil.Database):
     contentfile_separator: str,
   ) -> None:
     with preprocessed_db.Session() as p_session:
-      distribution = distributions.PassiveMonitor(self.encoded_path, "encoded_kernel_length")
+      distribution = monitors.FrequencyMonitor(self.encoded_path, "encoded_kernel_length")
       query = p_session.query(preprocessed.PreprocessedContentFile).filter(
         preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
         ~preprocessed.PreprocessedContentFile.id.in_(

@@ -7,10 +7,10 @@ import time
 import typing
 
 from deeplearning.clgen.util import gpu
-from deeplearning.clgen.util import distributions
+from deeplearning.clgen.util import monitors
 
 def monRamUsage(path: pathlib.Path) -> None:
-  ram_monitor = distributions.TimestampMonitor(
+  ram_monitor = monitors.HistoryMonitor(
     path, "ram_usage"
   )
   main_process = psutil.Process(os.getpid())
@@ -33,7 +33,7 @@ def monRamUsage(path: pathlib.Path) -> None:
   return
 
 def monGPUsage(path: pathlib.Path) -> None:
-  gpu_monitor = distributions.TimestampMonitor(
+  gpu_monitor = monitors.HistoryMonitor(
     path, "gpu_usage"
   )
   main_process = psutil.Process(os.getpid())

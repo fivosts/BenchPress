@@ -14,6 +14,7 @@ import numpy as np
 
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import distributions
+from deeplearning.clgen.util import monitors
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.models import sequence_masking
 from absl import flags
@@ -407,9 +408,9 @@ class MaskLMDataGenerator(object):
       raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
 
     # Masking generation data monitors
-    start_idx_monitor = distributions.PassiveMonitor(self.cache.path, "target_mask_idx")
-    idx_monitor       = distributions.PassiveMonitor(self.cache.path, "mask_idx")
-    direction_monitor = distributions.PassiveMonitor(self.cache.path, "masking_direction")
+    start_idx_monitor = monitors.FrequencyMonitor(self.cache.path, "target_mask_idx")
+    idx_monitor       = monitors.FrequencyMonitor(self.cache.path, "mask_idx")
+    direction_monitor = monitors.FrequencyMonitor(self.cache.path, "masking_direction")
 
     ## Core loop of masking.
     masked_corpus = []

@@ -19,7 +19,7 @@ from deeplearning.clgen.proto import model_pb2
 from absl import flags
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.util import distributions
+from deeplearning.clgen.util import monitors
 from deeplearning.clgen.samplers import samples_database
 from labm8.py import fs
 
@@ -134,7 +134,7 @@ class SamplesDatabaseObserver(SampleObserver):
     self.sample_id = self.db.count
     self.plot_sample_status = plot_sample_status
     if self.plot_sample_status:
-      self.monitor = distributions.PassiveMonitor(path.parent, "cumulative_sample_count")
+      self.monitor = monitors.FrequencyMonitor(path.parent, "cumulative_sample_count")
 
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback."""
