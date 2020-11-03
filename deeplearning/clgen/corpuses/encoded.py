@@ -251,7 +251,8 @@ class EncodedContentFiles(sqlutil.Database):
     contentfile_separator: str,
   ) -> None:
     with preprocessed_db.Session() as p_session:
-      distribution = monitors.FrequencyMonitor(self.encoded_path, "encoded_kernel_length")
+      length_mon  = monitors.FrequencyMonitor(self.encoded_path, "encoded_kernel_length")
+      feature_mon = monitors.FeatureMonitor(self.encoded_path, "feature_vector")
       query = p_session.query(preprocessed.PreprocessedContentFile).filter(
         preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
         ~preprocessed.PreprocessedContentFile.id.in_(
@@ -296,20 +297,24 @@ class EncodedContentFiles(sqlutil.Database):
               (wall_time_end - wall_time_start) * 1000
             )
             session.add(encoded_cf)
-            distribution.register(encoded_cf.tokencount)
+            length_mon.register(encoded_cf.tokencount)
+            feature_mon.register(extractor.StrToDictFeatures(encoded_cf.feature_vector))
           wall_time_start = wall_time_end
           if wall_time_end - last_commit > 10:
             session.commit()
             last_commit = wall_time_end
-        distribution.plot()
+        length_mon.plot()
+        feature_mon.plot()
         pool.close()
       except KeyboardInterrupt as e:
         pool.terminate()
-        distribution.plot()
+        length_mon.plot()
+        feature_mon.plot()
         raise e
       except Exception as e:
         pool.terminate()
-        distribution.plot()
+        length_mon.plot()
+        feature_mon.plot()
         raise e
     return
 
