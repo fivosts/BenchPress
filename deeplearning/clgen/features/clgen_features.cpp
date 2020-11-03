@@ -385,6 +385,9 @@ class RecursiveASTVisitor
     pCurKI = new FuncInfo(Proto);
     pCurKI->resetCounters();
 
+    // Foivos was here:
+    pCurKI->setAsOclKernel();
+
     unsigned up = f->getNumParams();
     for (unsigned i = 0; i < up; i++) {
       clang::ParmVarDecl *pD = f->getParamDecl(i);
