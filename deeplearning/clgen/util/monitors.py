@@ -13,7 +13,6 @@ class Monitor():
                ):
     self.cache_path     = cache_path if isinstance(cache_path, pathlib.Path) else pathlib.Path(cache_path)
     self.set_name       = set_name
-    self.sample_counter = {}
     return
 
   def register(self, actual_sample):
@@ -27,15 +26,18 @@ class Monitor():
 
 class FrequencyMonitor(Monitor):
   """
-  Not an actual sampling distribution.
-  This subclass is used to register values of a specific type, keep track of them
-  and bar plot them. E.g. length distribution of a specific encoded corpus.
+  Keeps monitor of the occured frequency of a specific key.
+  Key is provided through `actual_sample` in register method.
+  Its frequency is incremented by one.
+
+  Bar plots num of occurences VS keys.
   """
   def __init__(self, 
                cache_path: typing.Union[pathlib.Path, str], 
                set_name  : str,
                ):
     super(FrequencyMonitor, self).__init__(cache_path, set_name)
+    self.sample_counter = {}
     return
 
   def register(self, actual_sample):
@@ -50,6 +52,7 @@ class FrequencyMonitor(Monitor):
     return
 
   def plot(self):
+    """Plot bars of number of occurences."""
     sorted_dict = sorted(self.sample_counter.items(), key = lambda x: x[0])
     plotter.FrequencyBars(
       x = [x for (x, _) in sorted_dict],
@@ -63,9 +66,8 @@ class FrequencyMonitor(Monitor):
 
 class HistoryMonitor(Monitor):
   """
-  Not an actual sampling distribution.
-  In contrast to the rest, this subclass does not count frequency of a certain value.
-  It registers values and plots them against time.
+  Monitors values in an ordered timeline
+  Plots a line of values against timesteps.
   """
   def __init__(self, 
                cache_path: typing.Union[pathlib.Path, str], 
@@ -82,12 +84,52 @@ class HistoryMonitor(Monitor):
     return
 
   def plot(self):
+    """Plot line over timescale"""
     plotter.SingleScatterLine(
       x = np.arange(len(self.sample_list)),
       y = self.sample_list,
       title = self.set_name,
       x_name = "",
       y_name = self.set_name,
+      plot_name = self.set_name,
+      path = self.cache_path,
+    )
+    return
+
+class FeatureMonitor(Monitor):
+  """
+  Produces a Radar chart of normalized features.
+  """
+  def __init__(self,
+               cache_path: typing.Union[pathlib.Path, str],
+               set_name: str,
+               ):
+    super(FeatureMonitor, self).__init__(cache_path, set_name)
+    self.features = {}
+    self.instance_counter = 0
+    return
+
+  def register(self, actual_sample: typing.Dict[str, float]) -> None:
+    """actual sample is a dict of features to their values."""
+    if not isinstance(actual_sample, dict):
+      raise TypeError("Feature sample must be dictionary of string features to float values.")
+
+    self.instance_counter += 1
+    for k, v in actual_sample.items():
+      if k not in self.features:
+        self.features[k] = v
+      else:
+        self.features[k] += v
+    return
+
+  def plot(self):
+    """Plot averaged Radar chart"""
+    r = [v / self.instance_counter for _, v in self.features.items()]
+    theta = [k for k, _ in self.features.items()]
+    plotter.NormalizedRadar(
+      r = r,
+      theta = theta,
+      title = self.set_name,
       plot_name = self.set_name,
       path = self.cache_path,
     )
