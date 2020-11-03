@@ -18,13 +18,6 @@ def kernel_features(src: str, *extra_args) -> str:
   Returns:
     Feature vector and diagnostics in str format.
   """
-  if file_name:
-    tfile = lambda: open("/tmp/{}.cl".format(file_name), 'w')
-  else:
-    tfile = lambda: tempfile.NamedTemporaryFile(
-      'w', prefix = "feature_extractor_", suffix = '.cl'
-    )
-    
   file_hash = crypto.sha256_str(src)
   with tempfile.NamedTemporaryFile(
           'w', prefix = "feat_ext_{}_".format(file_hash), suffix = '.cl'
@@ -49,9 +42,12 @@ def StrToDictFeatures(str_features: str) -> typing.Dict[str, float]:
   """
   try:
     lines  = str_features.split('\n')
-    header, values = lines[0].split(',')[2:], lines[-1].split(',')[2:]
+    header, values = lines[0].split(',')[2:], lines[-2].split(',')[2:]
     if len(header) != len(values):
       raise ValueError("Bad alignment of header-value list of features")
-    return {key: float(value) for key, value in zip(header, values)}
+    try:
+      return {key: float(value) for key, value in zip(header, values)}
+    except ValueError as e:
+      return {key: 0 for key in header}
   except Exception as e:
     raise ValueError(e)
