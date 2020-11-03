@@ -1,5 +1,6 @@
 import subprocess
 import tempfile
+import typing
 
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import crypto
