@@ -69,7 +69,6 @@ def HoleSequence(seq: np.array,
                  max_predictions: int,
                  pickled_distribution: distributions.Distribution,
                  pickled_atomizer,
-                 rngen: random.Random,
                  training_opts,
                  is_torch: bool,
                  ) -> typing.Dict:

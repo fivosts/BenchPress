@@ -386,7 +386,6 @@ class MaskLMDataGenerator(object):
                           pickled_distribution = pickle.dumps(distribution),
                           pickled_atomizer     = pickle.dumps(self.atomizer),
                           training_opts        = self.training_opts,
-                          rngen                = self.rngen,
                           is_torch             = True if self.file_extension == "pt_record" else False,
                           ),
         c
