@@ -66,3 +66,26 @@ def FrequencyBars(x: np.array,
   fig.write_html (outf("html"))
   fig.write_image(outf("png"))
   return
+
+def NormalizedRadar(r         : np.array,
+                    theta     : typing.List[str],
+                    title     : str,
+                    plot_name : str,
+                    path      : pathlib.Path,
+                    ) -> None:
+  layout = go.Layout(
+    title = title,
+  )
+  fig = go.Figure(layout = layout)
+  fig.add_trace(
+    go.Scatterpolar(
+      r = r,
+      theta = theta,
+      fill = 'toself',
+      marker_color = "#cbef0e",
+    )
+  )
+  outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
+  fig.write_html (outf("html"))
+  fig.write_image(outf("png"))
+  return
