@@ -16,13 +16,11 @@ def SingleScatterLine(x: np.array,
                       path: pathlib.Path,
                       ) -> None:
   """Plot a single line, with scatter points at datapoints."""
-
   layout = go.Layout(
     title = title,
     xaxis = dict(title = x_name),
     yaxis = dict(title = y_name),
   )
-
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Scatter(
@@ -46,7 +44,7 @@ def FrequencyBars(x: np.array,
                   plot_name: str,
                   path: pathlib.Path
                   ) -> None:
-
+  """Plot frequency bars based on key."""
   layout = go.Layout(
     title = title,
     xaxis = dict(title = x_name),
@@ -74,7 +72,7 @@ def CumulativeHistogram(x: np.array,
                         plot_name: str,
                         path: pathlib.Path
                         ) -> None:
-
+  """Plot percent cumulative histogram."""
   layout = go.Layout(
     title = title,
     xaxis = dict(title = x_name),
@@ -104,6 +102,7 @@ def NormalizedRadar(r         : np.array,
                     plot_name : str,
                     path      : pathlib.Path,
                     ) -> None:
+  """Radar chart for feature plotting"""
   layout = go.Layout(
     title = title,
   )
