@@ -23,7 +23,7 @@ class Distribution():
                      config: model_pb2.Hole,
                      log_path: typing.Union[pathlib.Path, str],
                      set_name: str,
-                     ):
+                     ) -> typing.TypeVar("Distribution"):
     if config.HasField("uniform_distribution"):
       return UniformDistribution(config.hole_length,
                                  log_path,
@@ -62,51 +62,6 @@ class Distribution():
       x_name    = self.set_name,
       plot_name = self.set_name,
       path = self.log_path
-    )
-    return
-
-class PassiveMonitor(Distribution):
-  """
-  Not an actual sampling distribution.
-  This subclass is used to register values of a specific type, keep track of them
-  and bar plot them. E.g. length distribution of a specific encoded corpus.
-  """
-  def __init__(self, 
-               log_path: typing.Union[pathlib.Path, str], 
-               set_name: str,
-               ):
-    super(PassiveMonitor, self).__init__(None, log_path, set_name)
-    return
-
-class TimestampMonitor(Distribution):
-  """
-  Not an actual sampling distribution.
-  In contrast to the rest, this subclass does not count frequency of a certain value.
-  It registers values and plots them against time.
-  """
-  def __init__(self, 
-               log_path: typing.Union[pathlib.Path, str], 
-               set_name: str,
-               ):
-    super(TimestampMonitor, self).__init__(None, log_path, set_name)
-    self.sample_list = []
-    return
-
-  def register(self, actual_sample: int) -> None:
-    # if isinstance(actual_sample, str):
-    #   actual_sample = int(actual_sample)
-    self.sample_list.append(float(actual_sample))
-    return
-
-  def plot(self):
-    plotter.SingleScatterLine(
-      x = np.arange(len(self.sample_list)),
-      y = self.sample_list,
-      title = self.set_name,
-      x_name = "",
-      y_name = self.set_name,
-      plot_name = self.set_name,
-      path = self.log_path,
     )
     return
 
