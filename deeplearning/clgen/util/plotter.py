@@ -34,7 +34,7 @@ def SingleScatterLine(x: np.array,
   )
   outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
   fig.write_html (outf("html"))
-  fig.write_image(outf("png"))
+  fig.write_image(outf("png"), scale = 2.0)
   return
 
 def FrequencyBars(x: np.array,
@@ -62,7 +62,7 @@ def FrequencyBars(x: np.array,
   )
   outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
   fig.write_html (outf("html"))
-  fig.write_image(outf("png"))
+  fig.write_image(outf("png"), scale = 2.0)
   return
 
 def CumulativeHistogram(x: np.array,
@@ -93,7 +93,7 @@ def CumulativeHistogram(x: np.array,
   )
   outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
   fig.write_html (outf("html"))
-  fig.write_image(outf("png"))
+  fig.write_image(outf("png"), scale = 2.0)
   return
 
 def NormalizedRadar(r         : np.array,
@@ -117,5 +117,5 @@ def NormalizedRadar(r         : np.array,
   )
   outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
   fig.write_html (outf("html"))
-  fig.write_image(outf("png"))
+  fig.write_image(outf("png"), scale = 2.0)
   return
