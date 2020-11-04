@@ -45,6 +45,7 @@ function install_apt_deps()
     $python_version-venv \
     python3-distutils \
     python3-numpy \
+    pv \
     zlib1g-dev \
     libexempi-dev \
     libmpc-dev \

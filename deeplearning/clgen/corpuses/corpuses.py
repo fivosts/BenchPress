@@ -598,7 +598,7 @@ def GetHashOfArchiveContents(archive: pathlib.Path) -> str:
     raise ValueError(f"Archive not found: '{archive}'")
 
   with tempfile.TemporaryDirectory(prefix="clgen_corpus_") as d:
-    cmd = ["tar", "-xf", str(archive), "-C", d]
+    cmd = ["pv", str(archive), "|", "tar", "xfj", "-" "-C", d]
     try:
       subprocess.check_call(cmd)
     except subprocess.CalledProcessError:
