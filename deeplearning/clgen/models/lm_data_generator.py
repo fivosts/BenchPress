@@ -106,7 +106,9 @@ class MaskLMDataGenerator(object):
     self.training_opts.batch_size      = sampler.batch_size
     return self
 
-  def configDataset(self, shaped_corpus) -> None:
+  def configDataset(self,
+                    shaped_corpus: np.array,
+                    ) -> None:
     """
       Configs all necessary training and validation sets described in the model protobuf.
       First constructs training set and optionally splits it into validation set, if selected in config.
@@ -149,7 +151,10 @@ class MaskLMDataGenerator(object):
     self.configValidationSets(self.config.validation_set, shaped_corpus)
     return
 
-  def configValidationSets(self, valset_list, shaped_corpus) -> None:
+  def configValidationSets(self,
+                           valset_list: typing.List,
+                           shaped_corpus: np.array,
+                           ) -> None:
     """
       Mask and store any extra validation datasets defined into
       model protobuf.
@@ -213,7 +218,7 @@ class MaskLMDataGenerator(object):
       self.configValidationSets([self.sampler.config.sample_set], shaped_corpus)
     return sorted(glob.glob(str(self.cache.path / "{}_*.{}".format(sampledDataset, self.file_extension))))
 
-  def createCorpus(self) -> None:
+  def createCorpus(self) -> np.array:
     """
     Constructs training corpus in text format, stores it in
     shaped_corpus
