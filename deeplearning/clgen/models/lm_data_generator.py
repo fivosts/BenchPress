@@ -64,10 +64,10 @@ class MaskLMDataGenerator(object):
     return
 
   def TrainMaskLMBatchGenerator(self,
-                               corpus: "corpuses.Corpus",
-                               training_opts: model_pb2.TrainingOptions,
-                               cache_path,
-                               ) -> "data_generator.MaskLMDataGenerator":
+                                corpus: "corpuses.Corpus",
+                                training_opts: model_pb2.TrainingOptions,
+                                cache_path: pathlib.Path,
+                                ) -> "data_generator.MaskLMDataGenerator":
     """Initializes data generator for training."""
     self.cache         = cache.mkcache(cache_path, "dataset")
     self.cache.path.mkdir(exist_ok = True, parents = True)
@@ -84,13 +84,13 @@ class MaskLMDataGenerator(object):
     return self
 
   def SampleMaskLMBatchGenerator(self,
-                                model_opts,
-                                sampler,
-                                atomizer,
-                                seed: int,
-                                max_position_embeddings: int,
-                                cache_path,
-                                ) -> "data_generator.MaskLMBatchGenerator":
+                                 model_opts,
+                                 sampler,
+                                 atomizer,
+                                 seed: int,
+                                 max_position_embeddings: int,
+                                 cache_path: pathlib.Path,
+                                 ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
     self.cache                   = cache.mkcache(cache_path, "dataset")
     self.cache.path.mkdir(exist_ok = True, parents = True)
