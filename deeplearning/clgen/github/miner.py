@@ -41,6 +41,12 @@ flags.DEFINE_string(
   "Specify repo-db to bypass repositories in recursive fetcher."
 )
 
+flags.DEFINE_string(
+  "enhance_from_db",
+  None,
+  "Specify bq DB to enhance corpus with contentfiles"
+)
+
 flags.DEFINE_boolean(
   "remove_identical_files",
   False,
@@ -617,6 +623,8 @@ class RecursiveFetcher(GithubMiner):
     # exit()
 
     if FLAGS.remove_identical_files:
+      if FLAGS.enhance_from_db:
+        self.enhance_from_db(pathlib.Path(FLAGS.enhance_from_db).resolve())
       self.remove_identical_files()
       return
 
@@ -908,3 +916,29 @@ class RecursiveFetcher(GithubMiner):
     with open(new_path / "record.json", 'w') as f:
       data[1]['total_files'] = len(cache_map)
       json.dump(data, f, indent = 2)
+    return
+
+  def enhance_from_db(self, db_path: pathlib.Path) -> None:
+    l.getLogger().info("Enhancing dataset with {}".format(db_path.name))
+    if not db_path.exists():
+      l.getLogger().warn("{} db not found. Returning...".format(db_path))
+    db = bigQuery_database.bqDatabase("sqlite:///{}".format(db_path))
+    contentfiles  = [cf.content for cf in db.main_files ]
+    contentfiles += [cf.content for cf in db.other_files]
+
+    if os.path.isfile(str(self.cache_path / "record.json")):
+      with open(self.cache_path / "record.json", 'r') as f:
+        data = json.load(f)
+        length = data[1]['total_files']
+    else:
+      l.getLogger().warn("record.json not found. Returning...")
+      return
+
+    for cf in contentfiles:
+      with open(self.cache_path / "{}.cl".format(length), 'w') as f:
+        f.write(cf)
+      length += 1
+    with open(self.cache_path / "record.json", 'w') as f:
+      data[1]['total_files'] = length
+      json.dump(data, f, indent = 2)
+    return
