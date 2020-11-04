@@ -19,6 +19,7 @@ from base64 import b64decode
 from google.cloud import bigquery
 
 from deeplearning.clgen.util import pbutil
+from deeplearning.clgen.util import crypto
 from deeplearning.clgen.proto import github_pb2
 from deeplearning.clgen.github import datasets
 from deeplearning.clgen.github import storage
@@ -38,6 +39,12 @@ flags.DEFINE_string(
   "exclude_repos_from_db",
   None,
   "Specify repo-db to bypass repositories in recursive fetcher."
+)
+
+flags.DEFINE_boolean(
+  "remove_identical_files",
+  False,
+  "Select to load all files, calculate hashes and remove duplicates."
 )
 
 class GithubMiner(object):
@@ -576,14 +583,6 @@ class RecursiveFetcher(GithubMiner):
 
     """
 
-    if FLAGS.exclude_repos_from_db:
-      db = bigQuery_database.bqDatabase("sqlite:///{}".format(pathlib.Path(FLAGS.exclude_repos_from_db).resolve()))
-      self.db_excluded_repos = set()
-      with db.Session() as s:
-        for r in s.query(bigQuery_database.bqRepo.repo_name):
-          self.db_excluded_repos.add(r[0])
-
-
     # ### Dummy code to compare similarities of recursive corpus and bq CL corpus.
     # db = bigQuery_database.bqDatabase("sqlite:////home/fivosts/PhD/Code/clgen/bq_corpus/exported_clgen_opencl_github.db")
     # self.bq_repos = set()
@@ -616,6 +615,17 @@ class RecursiveFetcher(GithubMiner):
 
     # l.getLogger().info(file_count)
     # exit()
+
+    if FLAGS.remove_identical_files:
+      self.remove_identical_files()
+      return
+
+    if FLAGS.exclude_repos_from_db:
+      db = bigQuery_database.bqDatabase("sqlite:///{}".format(pathlib.Path(FLAGS.exclude_repos_from_db).resolve()))
+      self.db_excluded_repos = set()
+      with db.Session() as s:
+        for r in s.query(bigQuery_database.bqRepo.repo_name):
+          self.db_excluded_repos.add(r[0])
 
     g = github.Github(self.token)
     handle_repo = functools.partial(self.process_repo, g)
@@ -872,113 +882,29 @@ class RecursiveFetcher(GithubMiner):
       self.print_counters()
       remaining = g.get_rate_limit().rate.remaining
 
-  def inline_fs_headers(self, path: str, stack: typing.List[str]) -> str:
-    """
-    Recursively inline headers in file.
+  def remove_identical_files(self) -> None:
 
-    Parameters
-    ----------
-    path : str
-      File.
-    stack : typing.List[str]
-      File stack.
+    l.getLogger().info("Removing duplicate files from mined corpus...")
+    if os.path.isfile(str(self.cache_path / "record.json")):
+      with open(self.cache_path / "record.json", 'r') as f:
+        data = json.load(f)
+        repos  = data[0]
+        length = data[1]['total_files']
 
-    Returns
-    -------
-    str
-      Inlined file.
-    """
-    stack.append(path)
+    cache_map = {}
+    for i in range(length):
+      with open(self.cache_path / "{}.cl".format(i), 'r') as f:
+        cf = f.read()
+        cf_hash = crypto.sha256_str(cf)
+        if cf_hash not in cache_map:
+          cache_map[cf_hash] = cf
 
-    with io.open(path) as infile:
-      src = infile.read()
+    new_path = self.cache_path / "distinct_corpus"
+    new_path.mkdir(exist_ok = True, parents = True)
+    for k, v in cache_map.items():
+      with open(new_path / "{}.cl".format(k), 'w') as f:
+        f.write(v)
 
-    outlines = []
-    for line in src.split('\n'):
-      match = re.match(re.compile('\w*#include ["<](.*)[">]'), line)
-      if match:
-        include_name = match.group(1)
-
-        # try and resolve relative paths
-        include_name = include_name.replace('../', '')
-
-        include_path = os.path.join(os.path.dirname(path), include_name)
-
-        if os.path.exists(include_path) and include_path not in stack:
-          include_src = inline_fs_headers(include_path, stack)
-          outlines.append('// [FETCH] include: ' + include_path)
-          outlines.append(include_src)
-          outlines.append('// [FETCH] eof(' + include_path + ')')
-        else:
-          if include_path in stack:
-            outlines.append('// [FETCH] ignored recursive include: ' +
-                    include_path)
-          else:
-            outlines.append('// [FETCH] 404 not found: ' +
-                    include_path)
-      else:
-        outlines.append(line)
-
-    return '\n'.join(outlines)
-
-
-  def process_cl_file(self, db_path: str, path: str) -> None:
-    """
-    Process OpenCL file.
-
-    Parameters
-    ----------
-    db_path : str
-      Path to output database.
-    path : str
-      Path to input file.
-
-    Raises
-    ------
-    IOError
-      In case of IO error.
-    """
-    db = dbutil.connect(db_path)
-    c = db.cursor()
-
-    l.getLogger().info("fetch {path}".format(path=os.path.abspath(path)))
-    try:
-      contents = inline_fs_headers(path, [])
-    except IOError:
-      raise IOError(
-        "cannot read file '{path}'".format(path=os.path.abspath(path)))
-    c.execute('INSERT OR IGNORE INTO ContentFiles VALUES(?,?)',
-          (path, contents))
-
-    db.commit()
-    c.close()
-
-
-  def fetch_files(self, db_path: str, paths: typing.List[str]=[]) -> None:
-    """
-    Fetch from a list of files.
-
-    Parameters
-    ----------
-    db_path : str
-      Output dataset.
-    paths : typing.List[str]
-      typing.List of file paths.
-    """
-    paths = fs.files_from_list(*paths)  # expand directories
-
-    db = dbutil.connect(db_path)
-    c = db.cursor()
-
-    for path in paths:
-      l.getLogger().info("fetch", path)
-      try:
-        contents = inline_fs_headers(path, [])
-      except IOError:
-        db.commit()
-        raise IOError(
-          "cannot read file '{path}'".format(path=os.path.abspath(path)))
-      c.execute('INSERT OR IGNORE INTO ContentFiles VALUES(?,?)',
-            (path, contents))
-
-    db.commit()
+    with open(new_path / "record.json", 'w') as f:
+      data[1]['total_files'] = len(cache_map)
+      json.dump(data, f, indent = 2)
