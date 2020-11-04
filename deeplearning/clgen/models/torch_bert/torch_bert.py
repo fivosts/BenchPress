@@ -489,39 +489,6 @@ class torchBert(backends.BackendBase):
     estimator.model.eval()
     return ckpt_step
 
-  def saveCheckpoint(self, estimator):
-    """
-      Saves model, scheduler, optimizer checkpoints per epoch.
-    """
-    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, self.current_step)
-
-    if self.torch_tpu_available:
-      if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
-        self.pytorch.torch_xla_model.save(estimator.model, ckpt_comp("model"))
-      self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
-      self.pytorch.torch_xla.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
-      self.pytorch.torch_xla.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
-    elif self.is_world_process_zero():
-      self.torch.save(estimator.model.state_dict(), ckpt_comp("model"))
-      self.torch.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
-      self.torch.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
-
-    with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
-      mf.write("train_step: {}\n".format(self.current_step))
-    return
-
-  def is_world_process_zero(self) -> bool:
-    """
-    Whether or not this process is the global main process (when training in a distributed fashion on
-    several machines, this is only going to be :obj:`True` for one process).
-    """
-    if self.torch_tpu_available:
-      return self.pytorch.torch_xla_model.is_master_ordinal(local=False)
-    else:
-      # TODO
-      dummy_local_rank = -1
-      return dummy_local_rank == -1 or self.torch.distributed.get_rank() == 0
-
   def InitSampling(self,
                    sampler : samplers.Sampler,
                    seed    : typing.Optional[int] = None
@@ -606,6 +573,39 @@ class torchBert(backends.BackendBase):
         self.hash
       )
     return sampler, observers
+
+  def saveCheckpoint(self, estimator):
+    """
+      Saves model, scheduler, optimizer checkpoints per epoch.
+    """
+    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, self.current_step)
+
+    if self.torch_tpu_available:
+      if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
+        self.pytorch.torch_xla_model.save(estimator.model, ckpt_comp("model"))
+      self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
+      self.pytorch.torch_xla.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
+      self.pytorch.torch_xla.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
+    elif self.is_world_process_zero():
+      self.torch.save(estimator.model.state_dict(), ckpt_comp("model"))
+      self.torch.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
+      self.torch.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
+
+    with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
+      mf.write("train_step: {}\n".format(self.current_step))
+    return
+
+  def is_world_process_zero(self) -> bool:
+    """
+    Whether or not this process is the global main process (when training in a distributed fashion on
+    several machines, this is only going to be :obj:`True` for one process).
+    """
+    if self.torch_tpu_available:
+      return self.pytorch.torch_xla_model.is_master_ordinal(local=False)
+    else:
+      # TODO
+      dummy_local_rank = -1
+      return dummy_local_rank == -1 or self.torch.distributed.get_rank() == 0
 
   def GetShortSummary(self) -> str:
     return (
