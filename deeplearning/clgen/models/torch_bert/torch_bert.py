@@ -454,41 +454,6 @@ class torchBert(backends.BackendBase):
     self.is_validated = True
     return
 
-  def loadCheckpoint(self, estimator):
-    """
-      Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
-    """
-    if not (self.ckpt_path / "checkpoint.meta").exists():
-      return 0
-
-    with open(self.ckpt_path / "checkpoint.meta", 'r') as mf:
-      get_step  = lambda x: int(x.replace("\n", "").replace("train_step: ", ""))
-      entries   = set({get_step(x) for x in mf.readlines()})
-
-    if FLAGS.select_checkpoint_step == -1:
-      ckpt_step = max(entries)
-    else:
-      if FLAGS.select_checkpoint_step in entries:
-        ckpt_step = FLAGS.select_checkpoint_step
-      else:
-        raise ValueError("{} not found in checkpoint folder.".format(FLAGS.select_checkpoint_step))
-
-    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, ckpt_step)
-
-    # self.train.model = model.BertModel.from_pretrained(ckpt_comp("model"))
-    estimator.model.load_state_dict(
-      self.torch.load(ckpt_comp("model"))
-    )
-    if estimator.optimizer is not None and estimator.scheduler is not None:
-      estimator.optimizer.load_state_dict(
-        self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
-      )
-      estimator.scheduler.load_state_dict(
-        self.torch.load(ckpt_comp("scheduler"))
-      )
-    estimator.model.eval()
-    return ckpt_step
-
   def InitSampling(self,
                    sampler : samplers.Sampler,
                    seed    : typing.Optional[int] = None
@@ -594,6 +559,41 @@ class torchBert(backends.BackendBase):
     with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
       mf.write("train_step: {}\n".format(self.current_step))
     return
+
+  def loadCheckpoint(self, estimator):
+    """
+      Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
+    """
+    if not (self.ckpt_path / "checkpoint.meta").exists():
+      return 0
+
+    with open(self.ckpt_path / "checkpoint.meta", 'r') as mf:
+      get_step  = lambda x: int(x.replace("\n", "").replace("train_step: ", ""))
+      entries   = set({get_step(x) for x in mf.readlines()})
+
+    if FLAGS.select_checkpoint_step == -1:
+      ckpt_step = max(entries)
+    else:
+      if FLAGS.select_checkpoint_step in entries:
+        ckpt_step = FLAGS.select_checkpoint_step
+      else:
+        raise ValueError("{} not found in checkpoint folder.".format(FLAGS.select_checkpoint_step))
+
+    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, ckpt_step)
+
+    # self.train.model = model.BertModel.from_pretrained(ckpt_comp("model"))
+    estimator.model.load_state_dict(
+      self.torch.load(ckpt_comp("model"))
+    )
+    if estimator.optimizer is not None and estimator.scheduler is not None:
+      estimator.optimizer.load_state_dict(
+        self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
+      )
+      estimator.scheduler.load_state_dict(
+        self.torch.load(ckpt_comp("scheduler"))
+      )
+    estimator.model.eval()
+    return ckpt_step
 
   def is_world_process_zero(self) -> bool:
     """
