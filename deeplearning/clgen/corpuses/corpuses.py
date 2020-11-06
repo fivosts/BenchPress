@@ -592,7 +592,7 @@ def GetHashOfArchiveContents(archive: pathlib.Path) -> str:
       with open(archive.parent / "corpus_registry.json", 'r') as js:
         reg = json.load(js)
       if archive.name in reg:
-        l.getLogger().info("Corpus found in registry. Downloading...")
+        l.getLogger().info("Corpus found in registry. Downloading from Google Drive...")
         gdown.download("https://drive.google.com/uc?id={}".format(reg[archive.name]), str(archive))
         return GetHashOfArchiveContents(archive)
     raise ValueError(f"Archive not found: '{archive}'")
