@@ -42,13 +42,13 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
   @classmethod
   def SampleMaskLMBatchGenerator(cls,
-                                model_opts,
-                                sampler,
-                                atomizer,
-                                seed: int,
-                                max_position_embeddings: int,
-                                cache_path,
-                                ) -> "data_generator.MaskLMBatchGenerator":
+                                 model_opts,
+                                 sampler,
+                                 atomizer,
+                                 seed: int,
+                                 max_position_embeddings: int,
+                                 cache_path,
+                                 ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
     d = super(torchLMDataGenerator, torchLMDataGenerator()).SampleMaskLMBatchGenerator(
               model_opts, sampler, atomizer, seed, max_position_embeddings, cache_path
