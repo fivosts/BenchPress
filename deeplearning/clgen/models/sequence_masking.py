@@ -266,14 +266,14 @@ def HoleSequence(seq: np.array,
                         ), hole_length_list, hole_analytics
 
 def MaskSequence(seq: np.array,
-                      train_set: bool,
-                      max_predictions: int,
-                      pickled_atomizer,
-                      rngen: random.Random,
-                      training_opts,
-                      config,
-                      is_torch: bool,
-                      ) -> typing.Dict:
+                 train_set: bool,
+                 max_predictions: int,
+                 pickled_atomizer,
+                 rngen: random.Random,
+                 training_opts,
+                 config,
+                 is_torch: bool,
+                 ) -> typing.Dict:
   """Inserts masks to a given sequence."""
   assert seq.ndim == 1, "Input for masking must be single-dimension array."
 
