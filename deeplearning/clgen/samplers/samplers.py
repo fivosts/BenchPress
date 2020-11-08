@@ -59,10 +59,17 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
         lambda s: len(s),
         "Sampler.start_text must be a string",
       )
+    elif config.HasField("sample_corpus"):
+      ## TODO
+      pbutil.AssertFieldIsSet(config.sample_corpus, "corpus")
+      pbutil.AssertFieldIsSet(config.sample_corpus, "config")
     elif ((not config.HasField("train_set")) 
       and (not config.HasField("validation_set")) 
       and (not config.HasField("sample_set"))):
       raise ValueError(config)
+    pbutil.AssertFieldIsSet(config, "active_sampling")
+    if config.active_sampling == True and not config.HasField("sample_corpus"):
+      raise ValueError("Active sampling can only be used with non pre-masked datasets.")
     pbutil.AssertFieldConstraint(
       config, "batch_size", lambda x: 0 < x, "Sampler.batch_size must be > 0"
     )
@@ -255,6 +262,10 @@ class Sampler(object):
   can lead to bad things happening.
   """
 
+  @property
+  def is_active(self):
+    return self.config.active_sampling
+
   def __init__(self, config: sampler_pb2.Sampler, sample_db_name = "samples.db"):
     """Instantiate a sampler.
 
@@ -277,24 +288,39 @@ class Sampler(object):
       self.start_text = self.config.start_text
     else:
       self.start_text = ""
-    self.isFixedStr = config.HasField("start_text") and not (
-          config.HasField("train_set") or config.HasField("validation_set") or config.HasField("sample_set")
+    self.isFixedStr = self.config.HasField("start_text") and not (
+          self.config.HasField("train_set") or
+          self.config.HasField("validation_set") or
+          self.config.HasField("sample_set") or
+          self.config.HasField("sample_corpus")
         )
 
     self.temperature = self.config.temperature_micros / 1e6
     self.batch_size = self.config.batch_size
     self.sequence_length = self.config.sequence_length
     self.sample_db_name = sample_db_name
-    
+
     # Create the necessary cache directories.
     self.cache = cache.mkcache("sampler", self.hash)
     self.samples_directory = self.cache.path / "samples"
-    self.samples_directory.mkdir(exist_ok=True)
-    
+    self.samples_directory.mkdir(exist_ok = True)
+    self.corpus_directory = None
+    if self.config.HasField("sample_corpus"):
+      self.corpus_directory = self.cache.path / "sample_corpus"
+      self.corpus_directory.mkdir(exist_ok = True)
+      self.sample_corpus = corpuses.Corpus(self.config.sample_corpus.corpus)
+      self.sample_corpus.Create()
+      text_data = [
+        self.sample_corpus.atomizer.DeatomizeIndices(x) for x in self.sample_corpus.GetTrainingData()
+      ]
+      # Text data is dumped in order to specialize with all different model atomizers.
+      with open(self.cache.path / "sample_corpus" / "text_corpus.pkl", 'wb') as outf:
+        pickle.dump(text_data, outf)
+
     meta = internal_pb2.SamplerMeta()
     meta.config.CopyFrom(self.config)
     pbutil.ToFile(meta, path = self.cache.path / "META.pbtxt")
-    
+
     # Set in Specialize().
     self.encoded_start_text = None
     self.tokenized_start_text = None
