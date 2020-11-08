@@ -21,12 +21,6 @@ from eupy.native import logger as l
 FLAGS = flags.FLAGS
 
 class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
-  def __init__(self):
-    super(tfLMDataGenerator, self).__init__("tf_record")
-    self.sampleBatch             = None
-    self.sampleIndices           = None
-    self.tfRecordSampler         = None
-    return
 
   @classmethod
   def TrainMaskLMBatchGenerator(cls,
@@ -54,6 +48,13 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         )
     d.tfRecordSampler = d.tfRecordSampleGenerator()
     return d
+
+  def __init__(self):
+    super(tfLMDataGenerator, self).__init__("tf_record")
+    self.sampleBatch             = None
+    self.sampleIndices           = None
+    self.tfRecordSampler         = None
+    return
 
   def generateTfDataset(self,
                       sequence_length: int,
