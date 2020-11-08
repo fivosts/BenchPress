@@ -54,6 +54,8 @@ class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
     """
     Configure masking function used by active sampler.
     """
+
+    ## TODO sampler config if exists or training opts config if it doesn't.
     if config.HasField("hole"):
       self.masking_func = functools.partial(sequence_masking.HoleSequence,
                             train_set            = False,
