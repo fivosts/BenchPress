@@ -16,16 +16,13 @@ from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.models import lm_data_generator
+from deeplearning.clgen.features import active_generator
 from absl import flags
 from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
 class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
-  def __init__(self):
-    super(torchLMDataGenerator, self).__init__("pt_record")
-    self.dataloader = None
-    return
 
   @classmethod
   def TrainMaskLMBatchGenerator(cls,
@@ -53,8 +50,16 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     d = super(torchLMDataGenerator, torchLMDataGenerator()).SampleMaskLMBatchGenerator(
               model_opts, sampler, atomizer, seed, max_position_embeddings, cache_path
         )
-    d.dataloader = d.predict_dataloader()
-    return d
+    if sampler.is_active:
+      return active_generator.ActiveSamplingGenerator.FromGenerator(d)
+    else:
+      d.dataloader = d.predict_dataloader()
+      return d
+
+  def __init__(self):
+    super(torchLMDataGenerator, self).__init__("pt_record")
+    self.dataloader = None
+    return
 
   def train_dataloader(self, set_name = 'train_dataset') -> None:
     """
