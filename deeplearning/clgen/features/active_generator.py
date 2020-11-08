@@ -21,10 +21,6 @@ class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
     """Initializes data generator for active sampling."""
     d = ActiveSamplingGenerator()
     # d.data_generator = generator
-    if self.training_opts.data_generator.HasField("hole"):
-      self.masking_func = sequence_masking.HoleSequence # TODO
-    else:
-      self.masking_func = sequence_masking.MaskSequence # TODO
     d.configSampleCorpus()
     d.configMaskingFunc(d.config)
     d.dataloader = d.sample_dataloader()
