@@ -9,6 +9,7 @@ import humanize
 import typing
 import multiprocessing
 import functools
+import pathlib
 import pickle
 import numpy as np
 
@@ -79,7 +80,7 @@ class MaskLMDataGenerator(object):
     self.training_opts = training_opts
     self.rngen         = random.Random(training_opts.random_seed)
 
-    shaped_corpus = self.createCorpus()
+    shaped_corpus = self.createCorpus(self.cache.path)
     self.configDataset(shaped_corpus)
     return self
 
@@ -127,15 +128,15 @@ class MaskLMDataGenerator(object):
     if len(glob.glob(str(self.cache.path / "train_dataset_*.{}".format(self.file_extension)))) == 0 or FLAGS.force_remake_dataset:
       if self.config.validation_split == 0:
         self._maskCorpus(
-          shaped_corpus, set_name = "train_dataset", train_set = True
+          shaped_corpus, set_name = "train_dataset", path = self.cache.path, train_set = True
         )
       else:
         split_index  = (len(shaped_corpus) // 100) * self.config.validation_split
         self._maskCorpus(
-          shaped_corpus[split_index:], set_name = "train_dataset", train_set = True
+          shaped_corpus[split_index:], set_name = "train_dataset", path = self.cache.path, train_set = True
         )
         self._maskCorpus(
-          shaped_corpus[:split_index], set_name = "validation_dataset", train_set = False
+          shaped_corpus[:split_index], set_name = "validation_dataset", path = self.cache.path, train_set = False
         )
     else:
       self.dataset["train_dataset"] = {
@@ -148,12 +149,13 @@ class MaskLMDataGenerator(object):
           "txt" : sorted(glob.glob(str(self.cache.path / "validation_dataset_*.txt"))),
         }
 
-    self.configValidationSets(self.config.validation_set, shaped_corpus)
+    self.configValidationSets(self.config.validation_set, shaped_corpus, self.cache.path)
     return
 
   def configValidationSets(self,
                            valset_list: typing.List,
                            shaped_corpus: np.array,
+                           path: pathlib.Path,
                            ) -> None:
     """
       Mask and store any extra validation datasets defined into
@@ -177,14 +179,14 @@ class MaskLMDataGenerator(object):
         valset.max_predictions_per_seq,
         "mask" if valset.HasField("mask") else "hole_{}".format(valset.hole.hole_length)
       )
-      if set_name in self.dataset or len(glob.glob(str(self.cache.path / "{}_*.{}".format(set_name, self.file_extension)))) > 0:
+      if set_name in self.dataset or len(glob.glob(str(path / "{}_*.{}".format(set_name, self.file_extension)))) > 0:
         continue
       self._maskCorpus(
-        shaped_corpus, train_set = False, set_name = set_name, config = valset
+        shaped_corpus, train_set = False, set_name = set_name, path = path, config = valset
       )
     return
 
-  def configSampleSets(self) -> typing.List[str]:
+  def configSampleSets(self) -> typing.List[pathlib.Path]:
     """
     Parses the types of datasets asked from sampler.
 
@@ -201,24 +203,62 @@ class MaskLMDataGenerator(object):
         but this had not been constructed during training.
     """
     if self.sampler.config.HasField("train_set"):
+      path = self.cache.path
       sampledDataset = "train_dataset"
     elif self.sampler.config.HasField("validation_set"):
+      path = self.cache.path
       sampledDataset = "validation_dataset"
     elif self.sampler.config.HasField("sample_set"):
+      path = self.cache.path
       sampledDataset = "pred_{}_{}".format(
         self.sampler.config.sample_set.max_predictions_per_seq,
         "mask" if self.sampler.config.sample_set.HasField("mask") 
                else "hole_{}".format(self.sampler.config.sample_set.hole.hole_length)
       )
-    path_list = sorted(glob.glob(str(self.cache.path / "{}_*.{}".format(sampledDataset, self.file_extension))))
-    if len(path_list) == 0 and sampledDataset == "validation_dataset":
-      raise FileNotFoundError("Corpus had not been split in train-val, therefore validation dataset is not found.")
-    elif len(path_list) == 0:
-      shaped_corpus = self.createCorpus()
-      self.configValidationSets([self.sampler.config.sample_set], shaped_corpus)
-    return sorted(glob.glob(str(self.cache.path / "{}_*.{}".format(sampledDataset, self.file_extension))))
+    elif self.sampler.config.HasField("sample_corpus"):
+      path = self.sampler.corpus_directory
+      sampledDataset = "sample_corpus"
+    else:
+      raise ValueError("Unknown dataset type")
 
-  def createCorpus(self) -> np.array:
+    return self.getDatasetPath(sampledDataset, path)
+
+  def getDatasetPath(self,
+                     set_name: str,
+                     path: pathlib.Path,
+                     ) -> typing.List[pathlib.Path]:
+    """
+    Based on a set name, search cache path for its existence.
+    If not existing, get original pickled corpus, do the masking
+    and save dataset in pt/tf_record format.
+
+    Returns list of created datasets.
+    """
+    path_search = lambda: sorted(
+      glob.glob(
+        str(path / "{}_*.{}".format(set_name, self.file_extension))
+      )
+    )
+    path_list = path_search()
+    if len(path_list) == 0:
+
+      if set_name == "validation_dataset":
+        raise FileNotFoundError("Corpus had not been split in train-val, therefore validation dataset is not found.")
+      elif set_name == "train_dataset":
+        raise FileNotFoundError("Trying to sample training dataset, but it doesn't exist!")
+
+      shaped_corpus = self.createCorpus(path)
+
+      if self.sampler.config.HasField("sample_set"):
+        config_list = [self.sampler.config.sample_set]
+      elif self.sampler.config.HasField("sample_corpus"):
+        config_list = [self.sampler.config.sample_corpus.config]
+      else:
+        raise ValueError("sampler sets can either be sample_set or sample_corpus")
+      self.configValidationSets(config_list, shaped_corpus, path)
+    return path_search()
+
+  def createCorpus(self, path: pathlib.Path) -> np.array:
     """
     Constructs training corpus in text format, stores it in
     shaped_corpus
@@ -240,8 +280,8 @@ class MaskLMDataGenerator(object):
     end             = [self.atomizer.endToken   ]
     shaped_corpus   = None
 
-    if (self.cache.path / "corpus.pkl").exists():
-      with open(self.cache.path / "corpus.pkl", 'rb') as infile:
+    if (path / "corpus.pkl").exists():
+      with open(path / "corpus.pkl", 'rb') as infile:
         shaped_corpus = pickle.load(infile)
         self.num_epochs      = self.training_opts.num_train_steps // self.config.steps_per_epoch
         self.steps_per_epoch = self.config.steps_per_epoch
@@ -254,7 +294,11 @@ class MaskLMDataGenerator(object):
       return shaped_corpus
 
     # generate a kernel corpus
-    encoded_corpus  = self.corpus.GetTrainingData()
+    if (path / "text_corpus.pkl").exists():
+      with open(path / "text_corpus.pkl", 'rb') as infile:
+        encoded_corpus = [self.atomizer.AtomizeString(x) for x in pickle.load(infile)]
+    else:
+      encoded_corpus  = self.corpus.GetTrainingData()
 
     if self.config.datapoint_type == "kernel":
 
@@ -326,7 +370,7 @@ class MaskLMDataGenerator(object):
     else:
       raise ValueError("Unrecognized datapoint_type: {}".format(self.config.datapoint_type))
 
-    with open(self.cache.path / "corpus.pkl", 'wb') as outf:
+    with open(path / "corpus.pkl", 'wb') as outf:
       pickle.dump(shaped_corpus, outf)
     return shaped_corpus
 
@@ -334,6 +378,7 @@ class MaskLMDataGenerator(object):
                   corpus: np.array,
                   train_set: bool,
                   set_name: str,
+                  path: pathlib.Path
                   config   = None,
                   )-> None:
     """
@@ -383,7 +428,7 @@ class MaskLMDataGenerator(object):
     distribution = None
     # Specify the desired masking routine
     if config.HasField("hole"):
-      distribution = distributions.Distribution.FromHoleConfig(config.hole, self.cache.path, set_name)
+      distribution = distributions.Distribution.FromHoleConfig(config.hole, path, set_name)
       maskedSeq    = lambda c: pool.imap_unordered(
         functools.partial(self.hole_func,
                           train_set            = train_set,
@@ -412,9 +457,9 @@ class MaskLMDataGenerator(object):
       raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
 
     # Masking generation data monitors
-    start_idx_monitor = monitors.FrequencyMonitor(self.cache.path, "target_mask_idx")
-    idx_monitor       = monitors.FrequencyMonitor(self.cache.path, "mask_idx")
-    direction_monitor = monitors.FrequencyMonitor(self.cache.path, "masking_direction")
+    start_idx_monitor = monitors.FrequencyMonitor(path, "target_mask_idx")
+    idx_monitor       = monitors.FrequencyMonitor(path, "mask_idx")
+    direction_monitor = monitors.FrequencyMonitor(path, "masking_direction")
 
     ## Core loop of masking.
     masked_corpus = []
@@ -468,15 +513,15 @@ class MaskLMDataGenerator(object):
 
           # write masked_corpus before flushing the list
           self.dataset[set_name]['file'].append(
-            self.cache.path / "{}_{}.{}".format(set_name, iteration, self.file_extension)
+            path / "{}_{}.{}".format(set_name, iteration, self.file_extension)
             )
           self.dataset[set_name]['txt'].append(
-            self.cache.path / "{}_{}.txt".format(set_name, iteration)
+            path / "{}_{}.txt".format(set_name, iteration)
             )
           self._saveCorpusRecord({
               'corpus': masked_corpus,
-              'file'  : self.cache.path / "{}_{}.{}".format(set_name, iteration, self.file_extension),
-              'txt'   : self.cache.path / "{}_{}.txt".format(set_name, iteration)
+              'file'  : path / "{}_{}.{}".format(set_name, iteration, self.file_extension),
+              'txt'   : path / "{}_{}.txt".format(set_name, iteration)
             })
         pool.close()
       except KeyboardInterrupt as e:
