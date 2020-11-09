@@ -67,31 +67,31 @@ def AssertConfigIsValid(config: model_pb2.DataGenerator,
       config,
       "validation_split",
     )
-  if len(config.validation_set) > 0:
-    for val_opt in config.validation_set:
-      if val_opt.HasField("mask"):
-        pbutil.AssertFieldIsSet(
-          val_opt.mask,
-          "random_placed_mask",
-        )
-      elif val_opt.HasField("hole"):
-        pbutil.AssertFieldConstraint(
-          val_opt.hole,
-          "hole_length",
-          lambda x : x > 0,
-          "hole_length is the upper bound range of a hole's length. Therefore should be > 0."
-        )
-        if val_opt.hole.HasField("normal_distribution"):
+    if len(config.validation_set) > 0:
+      for val_opt in config.validation_set:
+        if val_opt.HasField("mask"):
           pbutil.AssertFieldIsSet(
-            val_opt.hole.normal_distribution,
-            "mean",
+            val_opt.mask,
+            "random_placed_mask",
           )
-          pbutil.AssertFieldIsSet(
-            val_opt.hole.normal_distribution,
-            "variance",
+        elif val_opt.HasField("hole"):
+          pbutil.AssertFieldConstraint(
+            val_opt.hole,
+            "hole_length",
+            lambda x : x > 0,
+            "hole_length is the upper bound range of a hole's length. Therefore should be > 0."
           )
-        elif not val_opt.hole.HasField("uniform_distribution"):
-          raise ValueError("Hole length distribution has not been set.")
+          if val_opt.hole.HasField("normal_distribution"):
+            pbutil.AssertFieldIsSet(
+              val_opt.hole.normal_distribution,
+              "mean",
+            )
+            pbutil.AssertFieldIsSet(
+              val_opt.hole.normal_distribution,
+              "variance",
+            )
+          elif not val_opt.hole.HasField("uniform_distribution"):
+            raise ValueError("Hole length distribution has not been set.")
   # Parse masking technique for bert's data generator
   pbutil.AssertFieldIsSet(config, "mask_technique")
   if config.HasField("mask"):
