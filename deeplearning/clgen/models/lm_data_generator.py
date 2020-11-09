@@ -47,17 +47,18 @@ def AssertConfigIsValid(config: model_pb2.DataGenerator,
   Parse data generator protobuf message.
   Raise Exception if format is wrong.
   """
-  pbutil.AssertFieldConstraint(
-    config,
-    "datapoint_type",
-    lambda x: x == "kernel" or x == "statement",
-    "Valid options for datapoint_type are 'kernel' and 'statement'",
-  )
-  pbutil.AssertFieldIsSet(
-    config,
-    "use_start_end",
-  )
   if not is_sampling:
+    # The attributes below are not allowed to be changed in sampling.
+    pbutil.AssertFieldConstraint(
+      config,
+      "datapoint_type",
+      lambda x: x == "kernel" or x == "statement",
+      "Valid options for datapoint_type are 'kernel' and 'statement'",
+    )
+    pbutil.AssertFieldIsSet(
+      config,
+      "use_start_end",
+    )
     pbutil.AssertFieldIsSet(
       config,
       "steps_per_epoch",
