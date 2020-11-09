@@ -126,6 +126,12 @@ def AssertConfigIsValid(config: model_pb2.DataGenerator,
 
 class MaskLMDataGenerator(object):
   """Abstract class, shared among TORCH and TF BERT data generators."""
+  @property
+  def is_torch(self):
+    if self.file_extension == "pt_record":
+      return True
+    return False
+  
   def __init__(self, file_extension: str):
 
     self.file_extension = file_extension
@@ -520,7 +526,7 @@ class MaskLMDataGenerator(object):
                           pickled_distribution = pickle.dumps(distribution),
                           pickled_atomizer     = pickle.dumps(self.atomizer),
                           training_opts        = self.training_opts,
-                          is_torch             = True if self.file_extension == "pt_record" else False,
+                          is_torch             = self.is_torch,
                           ),
         c
       )
@@ -533,7 +539,7 @@ class MaskLMDataGenerator(object):
                           pickled_atomizer   = pickle.dumps(self.atomizer),
                           training_opts      = self.training_opts,
                           rngen              = self.rngen,
-                          is_torch             = True if self.file_extension == "pt_record" else False,
+                          is_torch           = self.is_torch,
                           ),
         c
       )
@@ -570,7 +576,7 @@ class MaskLMDataGenerator(object):
               distribution.register(l_list)
 
             try:
-              if self.file_extension == "pt_record":
+              if self.is_torch:
                 actual_length = np.where(kernel['original_input'] == self.atomizer.padToken)[0][0]
               else:
                 actual_length = np.where(kernel.original_input == self.atomizer.padToken)[0][0]
