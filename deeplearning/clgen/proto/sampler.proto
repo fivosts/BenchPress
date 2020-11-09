@@ -31,16 +31,23 @@ option java_outer_classname = "SamplerProto";
 option java_package = "com.clgen";
 
 import "deeplearning/clgen/proto/model.proto";
+import "deeplearning/clgen/proto/corpus.proto";
 
 // The specification of a CLgen sampler.
 message Sampler {
   // The initial text to the seed the language model with. Each sample will
   // begin with this text.
   oneof sample_feed {
+    // Simple string
     string        start_text      = 1;
+    // Sample from training set
     bool          train_set       = 2;
+    // Sample from validation set
     bool          validation_set  = 3;
+    // Create set with new specs from original corpus
     ValidationSet sample_set      = 4;
+    // Specify a whole new corpus to encode and sample with new specs.
+    SampleCorpus  sample_corpus   = 5;
   }
   // The sampling batch size.
   // TODO(cec): Always sample with max batch size.
@@ -55,6 +62,20 @@ message Sampler {
   // would like to have symmetrical token depth counters for two pairs of
   // tokens.
   repeated SampleTerminationCriterion termination_criteria = 8;
+}
+
+// Specification of a new sample corpus to get feeds from.
+message SampleCorpus {
+  optional CorpusConfig corpus_config = 1;
+  optional Corpus       corpus        = 2;
+}
+
+message CorpusConfig {
+  // Encoding and data masking configuration for sample corpus.
+  optional bool          active_sampling         = 1;
+  optional int32         max_predictions_per_seq = 2;
+  optional float         masked_lm_prob          = 3;
+  optional DataGenerator data_generator          = 4;
 }
 
 // Criteria used for determining when to stop sampling.
