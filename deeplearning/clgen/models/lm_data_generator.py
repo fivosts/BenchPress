@@ -340,7 +340,7 @@ class MaskLMDataGenerator(object):
       if self.sampler.config.HasField("sample_set"):
         config_list = [self.sampler.config.sample_set]
       elif self.sampler.config.HasField("sample_corpus"):
-        config_list = [self.sampler.config.sample_corpus.config]
+        config_list = [self.sampler.config.sample_corpus.corpus_config]
       else:
         raise ValueError("sampler sets can either be sample_set or sample_corpus")
       self.configValidationSets(config_list, shaped_corpus, path)
