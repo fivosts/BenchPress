@@ -61,15 +61,16 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
       )
     elif config.HasField("sample_corpus"):
       ## TODO
-      pbutil.AssertFieldIsSet(config.sample_corpus, "corpus")
-      pbutil.AssertFieldIsSet(config.sample_corpus, "config")
+      pbutil.AssertFieldIsSet(config.sample_corpus, "corpus_config")
+      pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "active_sampling")
+      pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "max_predictions_per_seq")
+      pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "random_seed")
+      pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "masked_lm_prob")
+      corpuses.AssertConfigIsValid(config.sample_corpus, is_sampling = True)
     elif ((not config.HasField("train_set")) 
       and (not config.HasField("validation_set")) 
       and (not config.HasField("sample_set"))):
       raise ValueError(config)
-    pbutil.AssertFieldIsSet(config, "active_sampling")
-    if config.active_sampling == True and not config.HasField("sample_corpus"):
-      raise ValueError("Active sampling can only be used with non pre-masked datasets.")
     pbutil.AssertFieldConstraint(
       config, "batch_size", lambda x: 0 < x, "Sampler.batch_size must be > 0"
     )
@@ -264,7 +265,10 @@ class Sampler(object):
 
   @property
   def is_active(self):
-    return self.config.active_sampling
+    if self.config.HasField("sample_corpus"):
+      return self.config.sample_corpus.active_sampling
+    else:
+      return False
 
   def __init__(self, config: sampler_pb2.Sampler, sample_db_name = "samples.db"):
     """Instantiate a sampler.
