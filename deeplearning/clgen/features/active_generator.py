@@ -5,6 +5,7 @@ import typing
 
 from deeplearning.clgen.models import lm_data_generator
 from deeplearning.clgen.models import sequence_masking
+from deeplearning.clgen.features import extractor
 from deeplearning.clgen.util import distributions
 
 from eupy.native import logger as l
@@ -40,15 +41,64 @@ class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
     self.data_generator = None
 
     # Wrapped data generator attributes
-    self.sampler        = None
-    self.atomizer       = None
-    self.sample_corpus  = None
+    self.sampler       = None
+    self.atomizer      = None
+    self.sample_corpus = None
 
     # Inherent attributes
-    self.distribution   = None
-    self.masking_func   = None
-    self.dataloader     = None
+    self.distribution  = None
+    self.masking_func  = None
+    self.dataloader    = None
+    self.feed_stack    = None
     return
+
+  def sample_dataloader(self) -> typing.Union[
+                                   typing.Dict[str, typing.TypeVar("Tensor")],
+                                   typing.NamedTuple
+                                 ]:
+    """
+    Configurate data container that will be iterated for sampling.
+    Generates data points. 
+    In TF, NamedTuples from str to np.array are generated.
+    In torch, Dict[str, np.array] instances are generated.
+    masking_func output goes through TensorFormat to convert np arrays to relevant tensors.
+    """
+    for seed in self.sample_corpus:
+      sample_feed, hole_lengths, masked_idxs = self.masking_func(seed)
+      # TODO do sth with hole_lengths and masked_idxs
+      self.feed_stack.append(seed)
+      yield self.data_generator.toTensorFormat(sample_feed)
+
+  def EvaluateFromFeatures(self,
+                           samples: np.array,
+                           ) -> typing.Union[
+                                  typing.Dict[str, typing.TypeVar("Tensor")],
+                                  typing.NamedTuple
+                                ]:
+    """
+    Reads model sampling output and evaluates against active target features.
+    If the sample output is not good enough based on the features,
+    active sampler reconstructs the same sample feed and asks again for prediction.
+    """
+    if self.feed_stack is None:
+      raise ValueError("Cannot evaluate from features when no sample has been asked.")
+    if len(self.feed_stack) == 0:
+      raise ValueError("Feed stack is empty. Cannot pop element.")
+
+    # You might also need to check if they compile.
+    features = [extractor.kernel_features(s) for s in samples]
+
+    for sample, feature in zip(samples, features):
+      if feature is not crap:
+        keep(sample)
+
+    if there is sample close to target feature:
+      return good sample, True # Done
+    else:
+      latest_seed = self.feed_stack[-1]
+      sample_feed, hole_lengths, masked_idxs = self.masking_func(latest_seed)
+      # TODO do sth with the hole_lengths and masked_idxs
+      return sample_feed, False, # Not Done
 
   def configSampleCorpus(self) -> None:
     """
@@ -99,19 +149,3 @@ class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
                             is_torch           = self.data_generator.is_torch,
                           )
     return
-
-  def sample_dataloader(self) -> typing.Union[
-                                   typing.Dict[str, typing.TypeVar("Tensor")],
-                                   typing.NamedTuple
-                                 ]:
-    """
-    Configurate data container that will be iterated for sampling.
-    Generates data points. 
-    In TF, NamedTuples from str to np.array are generated.
-    In torch, Dict[str, np.array] instances are generated.
-    masking_func output goes through TensorFormat to convert np arrays to relevant tensors.
-    """
-    for seed in self.sample_corpus:
-      sample_feed, hole_lengths, masked_idxs = self.masking_func(seed)
-      # TODO do sth with hole_lengths and masked_idxs
-      yield self.data_generator.toTensorFormat(sample_feed)
