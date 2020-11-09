@@ -75,7 +75,10 @@ message CorpusConfig {
   optional bool          active_sampling         = 1;
   optional int32         max_predictions_per_seq = 2;
   optional float         masked_lm_prob          = 3;
-  optional DataGenerator data_generator          = 4;
+  oneof mask_technique {
+    Mask mask = 4;
+    Hole hole = 5;
+  }
 }
 
 // Criteria used for determining when to stop sampling.
