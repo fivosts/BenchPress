@@ -305,7 +305,11 @@ class MaskLMDataGenerator(object):
       )
     elif self.sampler.config.HasField("sample_corpus"):
       path = self.sampler.corpus_directory
-      sampledDataset = "sample_corpus"
+      sampledDataset = "pred_{}_{}".format(
+        self.sampler.config.sample_corpus.corpus_config.max_predictions_per_seq,
+        "mask" if self.sampler.config.sample_corpus.corpus_config.HasField("mask")
+               else "hole_{}".format(self.sampler.config.sample_corpus.corpus_config.hole.hole_length)
+      )
     else:
       raise ValueError("Unknown dataset type")
 
