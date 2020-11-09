@@ -22,15 +22,16 @@ class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
     d = ActiveSamplingGenerator()
     # d.data_generator = generator
     d.configSampleCorpus()
-    d.configMaskingFunc(d.config)
+    d.configSampleParams(d.config)
     d.dataloader = d.sample_dataloader()
     return d
 
   def __init__(self):
     # self.data_generator = None
     self.sample_corpus = None
-    self.dataloader = None
-    self.masking_func = None
+    self.dataloader    = None
+    self.masking_func  = None
+    self.distribution  = None
     return
 
   def configSampleCorpus(self) -> None:
@@ -46,28 +47,38 @@ class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
       self.sample_corpus = self.createCorpus(self.sampler.corpus_directory)
     return
 
-  def configMaskingFunc(self, config) -> None:
+  def configSampleParams(self, config) -> None:
     """
     Configure masking function used by active sampler.
     """
+    class SampleTrainingOpts(typing.NamedTuple):
+      max_predictions_per_seq: int
+      masked_lm_prob: float
 
-    ## TODO sampler config if exists or training opts config if it doesn't.
-    if config.HasField("hole"):
+    corpus_config = self.sampler.config.sample_corpus.corpus_config
+    sampling_opts = SampleTrainingOpts(
+      self.training_opts.max_predictions_per_seq, corpus_config.masked_lm_prob
+    )
+
+    if corpus_config.data_generator.HasField("hole"):
+      self.distribution = distributions.Distribution.FromHoleConfig(
+        corpus_config.data_generator.hole, path, "sample_corpus"
+      )
       self.masking_func = functools.partial(sequence_masking.HoleSequence,
                             train_set            = False,
-                            max_predictions      = config.max_predictions_per_seq,
-                            pickled_distribution = pickle.dumps(distribution),
+                            max_predictions      = corpus_config.max_predictions_per_seq,
+                            pickled_distribution = pickle.dumps(self.distribution),
                             pickled_atomizer     = pickle.dumps(self.atomizer),
-                            training_opts        = self.training_opts,
+                            training_opts        = sampling_opts,
                             is_torch             = self.is_torch,
                           )
-    elif config.HasField("mask"):
+    elif corpus_config.data_generator.HasField("mask"):
       self.masking_func = functools.partial(self.mask_func._maskSequence,
                             train_set          = False,
-                            max_predictions    = config.max_predictions_per_seq,
-                            config             = config,
+                            max_predictions    = corpus_config.max_predictions_per_seq,
+                            config             = corpus_config,
                             pickled_atomizer   = pickle.dumps(self.atomizer),
-                            training_opts      = self.training_opts,
+                            training_opts      = sampling_opts,
                             rngen              = self.rngen,
                             is_torch           = self.is_torch,
                           )
@@ -78,4 +89,5 @@ class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
     Configurate data container that will be iterated for sampling.
     """
     for seed in self.sample_corpus:
-      yield self.masking_func(seed)
+      sample_feed, hole_lengths, masked_idxs = self.masking_func(seed)
+      yield sample_feed
