@@ -358,7 +358,7 @@ def MaskSequence(seq: np.array,
         'mask_labels'         : mask_labels,
         'masked_lm_lengths'   : masked_lm_lengths,
         'next_sentence_labels': next_sentence_labels,
-      }, [])
+      }, [], [])
 
   else: # TF 1.X, 2.[0-2]
 
@@ -381,4 +381,4 @@ def MaskSequence(seq: np.array,
                         np.asarray(masked_lm_positions), np.asarray(masked_lm_ids), 
                         np.asarray(masked_lm_weights),   np.asarray(masked_lm_lengths),
                         next_sentence_label
-                        )
+                        ), [], []
