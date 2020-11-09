@@ -21,7 +21,7 @@ import os
 import datetime
 import typing
 import pathlib
-import sqlalchemy as sql
+import pickle
 from absl import flags
 from sqlalchemy.ext import declarative
 
@@ -29,8 +29,10 @@ from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.corpuses import atomizers
+from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
+from deeplearning.clgen.models import lm_data_generator
 
 from eupy.native import logger as l
 from labm8.py import sqlutil
@@ -64,7 +66,9 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
         pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "active_sampling")
         pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "max_predictions_per_seq")
         pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "masked_lm_prob")
-        lm_data_generator.AssertConfigIsValid(config.sample_corpus.corpus_config.data_generator)
+        lm_data_generator.AssertConfigIsValid(
+          config.sample_corpus.corpus_config.data_generator, is_sampling = True
+        )
       else:
         raise ValueError("sample_corpus has no corpus_config field.")
 
@@ -271,7 +275,7 @@ class Sampler(object):
   @property
   def is_active(self):
     if self.config.HasField("sample_corpus"):
-      return self.config.sample_corpus.active_sampling
+      return self.config.sample_corpus.corpus_config.active_sampling
     else:
       return False
 
