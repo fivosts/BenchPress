@@ -63,12 +63,35 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
       )
     elif config.HasField("sample_corpus"):
       if config.sample_corpus.HasField("corpus_config"):
+
         pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "active_sampling")
         pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "max_predictions_per_seq")
         pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "masked_lm_prob")
-        lm_data_generator.AssertConfigIsValid(
-          config.sample_corpus.corpus_config.data_generator, is_sampling = True
-        )
+
+        pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "mask_technique")
+        if config.sample_corpus.corpus_config.HasField("mask"):
+          pbutil.AssertFieldIsSet(
+            config.sample_corpus.corpus_config.mask,
+            "random_placed_mask",
+          )
+        elif config.sample_corpus.corpus_config.HasField("hole"):
+          pbutil.AssertFieldConstraint(
+            config.sample_corpus.corpus_config.hole,
+            "hole_length",
+            lambda x : x > 0,
+            "hole_length is the upper bound range of a hole's length. Therefore should be > 0."
+          )
+          if config.sample_corpus.corpus_config.hole.HasField("normal_distribution"):
+            pbutil.AssertFieldIsSet(
+              config.sample_corpus.corpus_config.hole.normal_distribution,
+              "mean",
+            )
+            pbutil.AssertFieldIsSet(
+              config.sample_corpus.corpus_config.hole.normal_distribution,
+              "variance",
+            )
+          elif not config.sample_corpus.corpus_config.hole.HasField("uniform_distribution"):
+            raise ValueError("Hole length distribution has not been set.")
       else:
         raise ValueError("sample_corpus has no corpus_config field.")
 
