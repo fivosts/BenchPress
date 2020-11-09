@@ -68,11 +68,9 @@ sampler {
       active_sampling: true
       max_predictions_per_seq: 10
       masked_lm_prob: 0.6
-      data_generator {
-        hole {
-          hole_length: 20
-          uniform_distribution: true
-        }
+      hole {
+        hole_length: 20
+        uniform_distribution: true
       }
     }
     corpus {
