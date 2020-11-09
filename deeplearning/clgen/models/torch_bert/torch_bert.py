@@ -508,10 +508,30 @@ class torchBert(backends.BackendBase):
     #   model = self.torch.nn.DataParallel(self.sample.model)
     self.sample.model.eval()
     with self.torch.no_grad():
-      step_out = self.model_step(
+      generated_samples, sample_indices = self.model_step(
           self.sample.model, self.step_inputs,
       )
-    return step_out.generated_samples, step_out.sample_indices
+      if self.sampler.is_active:
+        while True:
+          generated_samples, done = self.sample.data_generator.EvaluateFromFeatures(
+            np.asarray(generated_samples)
+          )
+          if done:
+            return generated_samples, sample_indices
+          else:
+            step_input = {
+              x: generated_samples[x].repeat((self.sampler.batch_size, 1)) for x in generated_samples
+            }
+            self.sampler.setStartText(
+              self.atomizer.DeatomizeIndices(
+                inputs['input_ids'][0].cpu().numpy(), ignore_token = self.atomizer.padToken
+              )
+            )
+            self.sampler.Specialize(self.atomizer)
+            generated_samples, sample_indices = self.model_step(
+                self.sample.model, step_input,
+            )
+    return generated_samples, sample_indices
 
   def _getTestSampler(self, test_sampler, sequence_length):
     if test_sampler is None:
