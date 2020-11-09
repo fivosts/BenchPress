@@ -571,9 +571,9 @@ class MaskLMDataGenerator(object):
             continue
 
           # Do parallel masking over corpus
-          for kernel, l_list, masked_idxs in multiproc_corpus:
+          for kernel, hole_lengths, masked_idxs in multiproc_corpus:
             if distribution:
-              distribution.register(l_list)
+              distribution.register(hole_lengths)
 
             try:
               if self.is_torch:
