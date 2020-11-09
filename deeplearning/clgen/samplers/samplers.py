@@ -64,7 +64,6 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
       pbutil.AssertFieldIsSet(config.sample_corpus, "corpus_config")
       pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "active_sampling")
       pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "max_predictions_per_seq")
-      pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "random_seed")
       pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "masked_lm_prob")
       corpuses.AssertConfigIsValid(config.sample_corpus, is_sampling = True)
     elif ((not config.HasField("train_set")) 
