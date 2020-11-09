@@ -60,12 +60,18 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
         "Sampler.start_text must be a string",
       )
     elif config.HasField("sample_corpus"):
-      ## TODO
-      pbutil.AssertFieldIsSet(config.sample_corpus, "corpus_config")
-      pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "active_sampling")
-      pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "max_predictions_per_seq")
-      pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "masked_lm_prob")
-      corpuses.AssertConfigIsValid(config.sample_corpus, is_sampling = True)
+      if config.sample_corpus.HasField("corpus_config"):
+        pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "active_sampling")
+        pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "max_predictions_per_seq")
+        pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "masked_lm_prob")
+        lm_data_generator.AssertConfigIsValid(config.sample_corpus.corpus_config.data_generator)
+      else:
+        raise ValueError("sample_corpus has no corpus_config field.")
+
+      if config.sample_corpus.HasField("corpus"):
+        corpuses.AssertConfigIsValid(config.sample_corpus.corpus)
+      else:
+        raise ValueError("sample_corpus has no corpus field.")
     elif ((not config.HasField("train_set")) 
       and (not config.HasField("validation_set")) 
       and (not config.HasField("sample_set"))):
