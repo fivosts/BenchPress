@@ -239,12 +239,6 @@ class LazyConcatDataset(torch.utils.data.Dataset):
     return self.dataset[sample_idx]
 
   @property
-  def cummulative_sizes(self):
-    warnings.warn("cummulative_sizes attribute is renamed to "
-                  "cumulative_sizes", DeprecationWarning, stacklevel=2)
-    return self.cumulative_sizes
-
-  @property
   def num_datasets(self):
     return len(self.datasets)
 
