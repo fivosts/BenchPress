@@ -23,7 +23,7 @@ from eupy.native import logger as l
 FLAGS = flags.FLAGS
 
 class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
-
+  """Data generator subclass designed for PyTorch BERT model."""
   @classmethod
   def TrainMaskLMBatchGenerator(cls,
                                corpus: "corpuses.Corpus",
@@ -51,7 +51,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               model_opts, sampler, atomizer, seed, max_position_embeddings, cache_path
         )
     if sampler.is_active:
-      return active_generator.ActiveSamplingGenerator.FromGenerator(d)
+      return active_generator.ActiveSamplingGenerator.FromDataGenerator(d)
     else:
       d.dataloader = d.predict_dataloader()
       return d
