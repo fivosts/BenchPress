@@ -40,6 +40,89 @@ flags.DEFINE_boolean(
   "Force data generator to re-mask encoded dataset and store dataset record."
 )
 
+def AssertConfigIsValid(config: model_pb2.DataGenerator,
+                        is_sampling: bool = False
+                        ) -> model_pb2.DataGenerator:
+  """
+  Parse data generator protobuf message.
+  Raise Exception if format is wrong.
+  """
+  pbutil.AssertFieldConstraint(
+    config,
+    "datapoint_type",
+    lambda x: x == "kernel" or x == "statement",
+    "Valid options for datapoint_type are 'kernel' and 'statement'",
+  )
+  pbutil.AssertFieldIsSet(
+    config,
+    "use_start_end",
+  )
+  if not is_sampling:
+    pbutil.AssertFieldIsSet(
+      config,
+      "steps_per_epoch",
+    )
+    pbutil.AssertFieldIsSet(
+      config,
+      "validation_split",
+    )
+  if len(config.validation_set) > 0:
+    for val_opt in config.validation_set:
+      if val_opt.HasField("mask"):
+        pbutil.AssertFieldIsSet(
+          val_opt.mask,
+          "random_placed_mask",
+        )
+      elif val_opt.HasField("hole"):
+        pbutil.AssertFieldConstraint(
+          val_opt.hole,
+          "hole_length",
+          lambda x : x > 0,
+          "hole_length is the upper bound range of a hole's length. Therefore should be > 0."
+        )
+        if val_opt.hole.HasField("normal_distribution"):
+          pbutil.AssertFieldIsSet(
+            val_opt.hole.normal_distribution,
+            "mean",
+          )
+          pbutil.AssertFieldIsSet(
+            val_opt.hole.normal_distribution,
+            "variance",
+          )
+        elif not val_opt.hole.HasField("uniform_distribution"):
+          raise ValueError("Hole length distribution has not been set.")
+  # Parse masking technique for bert's data generator
+  pbutil.AssertFieldIsSet(config, "mask_technique")
+  if config.HasField("mask"):
+    pbutil.AssertFieldIsSet(
+      config.mask,
+      "random_placed_mask",
+    )
+  elif config.HasField("hole"):
+    pbutil.AssertFieldConstraint(
+      config.hole,
+      "hole_length",
+      lambda x : x > 0,
+      "hole_length is the upper bound range of a hole's length. Therefore should be > 0."
+    )
+    if config.hole.HasField("normal_distribution"):
+      pbutil.AssertFieldIsSet(
+        config.hole.normal_distribution,
+        "mean",
+      )
+      pbutil.AssertFieldIsSet(
+        config.hole.normal_distribution,
+        "variance",
+      )
+    elif not config.hole.HasField("uniform_distribution"):
+      raise ValueError("Hole length distribution has not been set.")
+    if not is_sampling:
+      pbutil.AssertFieldIsSet(
+        config.hole,
+        "stage_training",
+      )
+  return config
+
 class MaskLMDataGenerator(object):
   """Abstract class, shared among TORCH and TF BERT data generators."""
   def __init__(self, file_extension: str):
