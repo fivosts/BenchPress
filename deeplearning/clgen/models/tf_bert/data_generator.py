@@ -338,6 +338,11 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     self.sampleBatch = np.asarray(updated_sequence)
     return self.sampleBatch, self.sampleIndices
 
+  def toTensorFormat(self,
+                     datapoint: typing.TypeVar("#TODO")
+                     ) -> typing.TypeVar("#TODO"):
+    raise NotImplementedError("#TODO!")
+
   def _saveCorpusRecord(self, masked_corpus: typing.Dict) -> None:
     """Converts corpus nparrays to tf Features and stores corpus to TfRecord"""
      
