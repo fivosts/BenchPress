@@ -520,7 +520,9 @@ class MaskLMDataGenerator(object):
     distribution = None
     # Specify the desired masking routine
     if config.HasField("hole"):
-      distribution = distributions.Distribution.FromHoleConfig(config.hole, path, set_name)
+      distribution = distributions.Distribution.FromHoleConfig(
+        config.hole, path, "hole_length_{}".format(set_name)
+      )
       maskedSeq    = lambda c: pool.imap_unordered(
         functools.partial(self.hole_func,
                           train_set            = train_set,
@@ -548,9 +550,11 @@ class MaskLMDataGenerator(object):
     else:
       raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
 
-    # Masking generation data monitors
+    # Monitors count of target indices (in percentile) that were hidden by a hole.
     start_idx_monitor = monitors.FrequencyMonitor(path, "target_mask_idx")
+    # Monitors count of indices (in percentile) that were hidden by a hole.
     idx_monitor       = monitors.FrequencyMonitor(path, "mask_idx")
+    # Monitors if left or right direction was picked for a hole expansion.
     direction_monitor = monitors.FrequencyMonitor(path, "masking_direction")
 
     ## Core loop of masking.
