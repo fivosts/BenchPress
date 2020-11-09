@@ -468,7 +468,7 @@ class MaskLMDataGenerator(object):
                   corpus: np.array,
                   train_set: bool,
                   set_name: str,
-                  path: pathlib.Path
+                  path: pathlib.Path,
                   config   = None,
                   )-> None:
     """
