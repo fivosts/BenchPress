@@ -101,8 +101,8 @@ class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
     return
 
   def sample_dataloader(self) -> typing.Union[
-                                  typing.Dict[str, typing.TypeVar("Tensor")],
-                                  typing.NamedTuple
+                                   typing.Dict[str, typing.TypeVar("Tensor")],
+                                   typing.NamedTuple
                                  ]:
     """
     Configurate data container that will be iterated for sampling.
