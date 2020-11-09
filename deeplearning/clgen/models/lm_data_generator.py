@@ -14,6 +14,7 @@ import pickle
 import numpy as np
 
 from deeplearning.clgen.util import cache
+from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import monitors
 from deeplearning.clgen.proto import model_pb2
