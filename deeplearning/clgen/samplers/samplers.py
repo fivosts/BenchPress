@@ -346,6 +346,9 @@ class Sampler(object):
       self.corpus_directory.mkdir(exist_ok = True)
       self.sample_corpus = corpuses.Corpus(self.config.sample_corpus.corpus)
       self.sample_corpus.Create()
+      self.symlinkSampleCorpus(
+        pathlib.Path(self.sample_corpus.encoded.url[len("sqlite:///") :]).parent
+      )
       text_data = [
         self.sample_corpus.atomizer.DeatomizeIndices(x) for x in self.sample_corpus.GetTrainingData()
       ]
@@ -426,7 +429,27 @@ class Sampler(object):
         symlink
       )
     return
-  
+
+  def symlinkSampleCorpus(self,
+                          corpus_path : pathlib.Path,
+                          ) -> None:
+    """
+    When sample corpus has been selected, creates a symlink
+    of the sampled encoded corpus to the dataset 'sample_corpus'
+    directory of the sampler.
+    """
+    assert os.path.isdir(corpus_path), "Parent path of database is not an existing path!"
+    symlink = self.corpus_directory / "corpus"
+    if not symlink.is_symlink():
+      os.symlink(
+        os.path.relpath(
+          corpus_path,
+          self.corpus_directory,
+        ),
+        symlink,
+      )
+    return
+
   def SampleIsComplete(self, sample_in_progress: typing.List[str]) -> bool:
     """Determine whether to stop sampling.
 
