@@ -106,4 +106,4 @@ class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
     """
     for seed in self.sample_corpus:
       sample_feed, hole_lengths, masked_idxs = self.masking_func(seed)
-      yield sample_feed
+      yield self.data_generator.toTensorFormat(sample_feed)
