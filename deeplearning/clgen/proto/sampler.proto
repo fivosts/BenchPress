@@ -51,17 +51,17 @@ message Sampler {
   }
   // The sampling batch size.
   // TODO(cec): Always sample with max batch size.
-  optional int32 batch_size = 5;
+  optional int32 batch_size = 6;
   // The length of sampling sequences.
-  optional int32 sequence_length = 6;
+  optional int32 sequence_length = 7;
   // The sampling temperature. Must be >= 0. A recommended starting value is
   // 1000000 (i.e. 1.0 in real values).
-  optional int32 temperature_micros = 7;
+  optional int32 temperature_micros = 8;
   // The criteria that determine when to terminate a sample, in the order in
   // which they will be executed. Duplicates are allowed, for example if you
   // would like to have symmetrical token depth counters for two pairs of
   // tokens.
-  repeated SampleTerminationCriterion termination_criteria = 8;
+  repeated SampleTerminationCriterion termination_criteria = 9;
 }
 
 // Specification of a new sample corpus to get feeds from.
