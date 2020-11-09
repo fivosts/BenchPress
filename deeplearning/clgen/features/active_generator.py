@@ -93,12 +93,12 @@ class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
         keep(sample)
 
     if there is sample close to target feature:
-      return good sample, True # Done
+      return good sample, True
     else:
       latest_seed = self.feed_stack[-1]
       sample_feed, hole_lengths, masked_idxs = self.masking_func(latest_seed)
       # TODO do sth with the hole_lengths and masked_idxs
-      return sample_feed, False, # Not Done
+      return sample_feed, False
 
   def configSampleCorpus(self) -> None:
     """
