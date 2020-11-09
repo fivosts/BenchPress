@@ -1,8 +1,13 @@
 import subprocess
+import functools
+import pickle
 import typing
 
 from deeplearning.clgen.models import lm_data_generator
 from deeplearning.clgen.models import sequence_masking
+from deeplearning.clgen.util import distributions
+
+from eupy.native import logger as l
 
 class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
   """
@@ -16,22 +21,33 @@ class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
 
   @classmethod
   def FromDataGenerator(cls,
-                        # generator: lm_data_generator.MaskLMDataGenerator,
+                        generator: lm_data_generator.MaskLMDataGenerator,
                         ) -> "active_generator.ActiveSamplingGenerator":
     """Initializes data generator for active sampling."""
     d = ActiveSamplingGenerator()
-    # d.data_generator = generator
+
+    d.data_generator = generator
+    d.sampler        = d.data_generator.sampler
+    d.atomizer       = d.data_generator.atomizer
+
+    d.configSamplingParams()
     d.configSampleCorpus()
-    d.configSampleParams(d.config)
+
     d.dataloader = d.sample_dataloader()
     return d
 
   def __init__(self):
-    # self.data_generator = None
-    self.sample_corpus = None
-    self.dataloader    = None
-    self.masking_func  = None
-    self.distribution  = None
+    self.data_generator = None
+
+    # Wrapped data generator attributes
+    self.sampler        = None
+    self.atomizer       = None
+    self.sample_corpus  = None
+
+    # Inherent attributes
+    self.distribution   = None
+    self.masking_func   = None
+    self.dataloader     = None
     return
 
   def configSampleCorpus(self) -> None:
@@ -44,10 +60,10 @@ class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
         raise ValueError("{} targets found in active sampler start text. This is wrong. Active sampler masks a sequence on the fly...")
       self.sample_corpus = [self.sampler.encoded_start_text]
     else:
-      self.sample_corpus = self.createCorpus(self.sampler.corpus_directory)
+      self.sample_corpus = self.data_generator.createCorpus(self.sampler.corpus_directory)
     return
 
-  def configSampleParams(self, config) -> None:
+  def configSamplingParams(self) -> None:
     """
     Configure masking function used by active sampler.
     """
@@ -57,12 +73,12 @@ class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
 
     corpus_config = self.sampler.config.sample_corpus.corpus_config
     sampling_opts = SampleTrainingOpts(
-      self.training_opts.max_predictions_per_seq, corpus_config.masked_lm_prob
+      self.data_generator.training_opts.max_predictions_per_seq, corpus_config.masked_lm_prob
     )
 
-    if corpus_config.data_generator.HasField("hole"):
+    if corpus_config.HasField("hole"):
       self.distribution = distributions.Distribution.FromHoleConfig(
-        corpus_config.data_generator.hole, path, "sample_corpus"
+        corpus_config.hole, self.sampler.corpus_directory, "sample_corpus"
       )
       self.masking_func = functools.partial(sequence_masking.HoleSequence,
                             train_set            = False,
@@ -70,17 +86,17 @@ class ActiveSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
                             pickled_distribution = pickle.dumps(self.distribution),
                             pickled_atomizer     = pickle.dumps(self.atomizer),
                             training_opts        = sampling_opts,
-                            is_torch             = self.is_torch,
+                            is_torch             = self.data_generator.is_torch,
                           )
-    elif corpus_config.data_generator.HasField("mask"):
-      self.masking_func = functools.partial(self.mask_func._maskSequence,
+    elif corpus_config.HasField("mask"):
+      self.masking_func = functools.partial(sequence_masking.MaskSequence,
                             train_set          = False,
                             max_predictions    = corpus_config.max_predictions_per_seq,
                             config             = corpus_config,
                             pickled_atomizer   = pickle.dumps(self.atomizer),
                             training_opts      = sampling_opts,
-                            rngen              = self.rngen,
-                            is_torch           = self.is_torch,
+                            rngen              = self.data_generator.rngen,
+                            is_torch           = self.data_generator.is_torch,
                           )
     return
 
