@@ -1,3 +1,6 @@
+"""
+Feature extraction tools for active learning.
+"""
 import subprocess
 import tempfile
 import typing
