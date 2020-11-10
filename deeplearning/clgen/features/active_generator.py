@@ -4,6 +4,7 @@ import pickle
 import typing
 
 from deeplearning.clgen.models import lm_data_generator
+from deeplearning.clgen.models import online_generator
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.util import distributions
