@@ -73,7 +73,6 @@ def HoleSequence(seq: np.array,
                  is_torch: bool,
                  ) -> typing.Tuple[
                         typing.Union[typing.Dict[str, np.array], tfSequence],
-                        typing.List[int],
                         typing.List[MaskedLmInstance],
                       ]:
   """
