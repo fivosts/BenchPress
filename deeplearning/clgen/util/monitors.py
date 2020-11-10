@@ -88,7 +88,7 @@ class CumulativeHistMonitor(Monitor):
     self.sample_counter = {}
     return
 
-  def getData(self) -> typing.Dict[typing.Union[int, str, float]: int]:
+  def getData(self) -> typing.Dict[typing.Union[int, str, float], int]:
     return sorted(self.sample_counter.items(), key = lambda x: x[0])
 
   def register(self, actual_sample: typing.Union[list, int, float]) -> None:
