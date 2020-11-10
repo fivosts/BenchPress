@@ -170,7 +170,7 @@ class AtomizerBase(object):
                       ) -> str:
     """
     Convert string array to compilable code.
-    Removes meta tokens and converts to string.
+    Removes meta tokens.
 
     Args:
       text: String representation of encoded array. (May contain metaTokens)
