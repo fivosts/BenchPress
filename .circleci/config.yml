@@ -18,7 +18,7 @@ jobs:
                 command: sudo apt remove cmake
             - run:
                 name: Simulate pre-existing necessary packages
-                command : sudo apt install mysql-server libmysqlclient-dev libsqlite3-dev
+                command : sudo apt install mysql-server libmysqlclient-dev libsqlite3-dev libmysqlclient21 mysql-server-8.0
             - run:
                 name: Bootstrap application without sudo
                 command: |
