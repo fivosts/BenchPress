@@ -73,7 +73,7 @@ class OnlineSamplingGenerator(object):
     masking_func output goes through TensorFormat to convert np arrays to relevant tensors.
     """
     for seed in self.online_corpus:
-      input_feed, hole_lengths, masked_idxs = self.masking_func(seed)
+      input_feed, masked_idxs = self.masking_func(seed)
       # TODO do sth with hole_lengths and masked_idxs
       yield self.data_generator.toTensorFormat(input_feed)
 
