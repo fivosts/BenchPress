@@ -387,6 +387,9 @@ class MaskLMDataGenerator(object):
 
     # generate a kernel corpus
     if (path / "text_corpus.pkl").exists():
+      # Only sampler writes a text_corpus.pkl, to do online or active sampling.
+      # The reason is, corpus is saved in text format, to be picked up with the
+      # right atomizer. And that is the model's atomizer.
       with open(path / "text_corpus.pkl", 'rb') as infile:
         encoded_corpus = [self.atomizer.AtomizeString(x) for x in pickle.load(infile)]
     else:
