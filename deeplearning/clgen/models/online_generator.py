@@ -10,7 +10,7 @@ from deeplearning.clgen.util import distributions
 
 from eupy.native import logger as l
 
-class OnlineSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
+class OnlineSamplingGenerator(object):
   """
   Data generation object that performs  masking of original
   corpus on the fly.
@@ -19,8 +19,8 @@ class OnlineSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
   @classmethod
   def FromDataGenerator(cls,
                         generator: lm_data_generator.MaskLMDataGenerator,
-                        ) -> "active_generator.OnlineSamplingGenerator":
-    """Initializes data generator for active sampling."""
+                        ) -> "online_generator.OnlineSamplingGenerator":
+    """Initializes data generator for online sampling."""
     d = OnlineSamplingGenerator()
 
     d.data_generator = generator
@@ -30,25 +30,38 @@ class OnlineSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
     d.configSamplingParams()
     d.configSampleCorpus()
 
-    d.dataloader = d.sample_dataloader()
+    d.dataloader = d.online_dataloader()
     return d
 
-  def __init__(self):
-    self.data_generator = None
+  @classmethod
+  def FromDataGenerator(cls,
+                        generator: lm_data_generator.MaskLMDataGenerator,
+                        ) -> "online_generator.OnlineSamplingGenerator":
+    """Initializes data generator for online sampling."""
+    d = OnlineSamplingGenerator(generator)
+    d.dataloader = d.online_dataloader()
+    return d
+
+  def __init__(self,
+               generator: lm_data_generator.MaskLMDataGenerator
+               ):
+    self.data_generator = generator
 
     # Wrapped data generator attributes
-    self.sampler       = None
-    self.atomizer      = None
-    self.sample_corpus = None
+    self.sampler       = self.data_generator.sampler
+    self.atomizer      = self.data_generator.atomizer
 
     # Inherent attributes
+    self.online_corpus = None
     self.distribution  = None
     self.masking_func  = None
     self.dataloader    = None
-    self.feed_stack    = None
+
+    self.configSamplingParams()
+    self.configSampleCorpus()
     return
 
-  def sample_dataloader(self) -> typing.Union[
+  def online_dataloader(self) -> typing.Union[
                                    typing.Dict[str, typing.TypeVar("Tensor")],
                                    typing.NamedTuple
                                  ]:
@@ -59,11 +72,10 @@ class OnlineSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
     In torch, Dict[str, np.array] instances are generated.
     masking_func output goes through TensorFormat to convert np arrays to relevant tensors.
     """
-    for seed in self.sample_corpus:
-      sample_feed, hole_lengths, masked_idxs = self.masking_func(seed)
+    for seed in self.online_corpus:
+      input_feed, hole_lengths, masked_idxs = self.masking_func(seed)
       # TODO do sth with hole_lengths and masked_idxs
-      self.feed_stack.append(seed)
-      yield self.data_generator.toTensorFormat(sample_feed)
+      yield self.data_generator.toTensorFormat(input_feed)
 
   def configSampleCorpus(self) -> None:
     """
@@ -73,14 +85,14 @@ class OnlineSamplingGenerator(lm_data_generator.MaskLMDataGenerator):
       if (self.atomizer.maskToken in self.sampler.encoded_start_text or
           self.atomizer.holeToken in self.sampler.encoded_start_text):
         raise ValueError("Targets found in {} start text. This is wrong. Active sampler masks a sequence on the fly...".format(type(self).__name__))
-      self.sample_corpus = [self.sampler.encoded_start_text]
+      self.online_corpus = [self.sampler.encoded_start_text]
     else:
-      self.sample_corpus = self.data_generator.createCorpus(self.sampler.corpus_directory)
+      self.online_corpus = self.data_generator.createCorpus(self.sampler.corpus_directory)
     return
 
   def configSamplingParams(self) -> None:
     """
-    Configure masking function used by active sampler.
+    Configure masking function used by online sampler.
     """
     class SampleTrainingOpts(typing.NamedTuple):
       max_predictions_per_seq: int
