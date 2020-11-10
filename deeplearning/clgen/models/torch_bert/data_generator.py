@@ -16,6 +16,7 @@ from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.models import lm_data_generator
+from deeplearning.clgen.models import online_generator
 from deeplearning.clgen.features import active_generator
 from absl import flags
 from eupy.native import logger as l
@@ -52,6 +53,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         )
     if sampler.is_active:
       return active_generator.ActiveSamplingGenerator.FromDataGenerator(d)
+    elif sampler.is_online:
+      return online_generator.OnlineSamplingGenerator.FromDataGenerator(d)
     else:
       d.dataloader = d.predict_dataloader()
       return d
