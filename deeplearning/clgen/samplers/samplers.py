@@ -64,7 +64,7 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
     elif config.HasField("sample_corpus"):
       if config.sample_corpus.HasField("corpus_config"):
 
-        pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "active_sampling")
+        pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "sampling_type")
         pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "max_predictions_per_seq")
         pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "masked_lm_prob")
 
@@ -298,7 +298,14 @@ class Sampler(object):
   @property
   def is_active(self):
     if self.config.HasField("sample_corpus"):
-      return self.config.sample_corpus.corpus_config.active_sampling
+      return self.config.sample_corpus.corpus_config.sampling_type == "active"
+    else:
+      return False
+
+  @property
+  def is_online(self):
+    if self.config.HasField("sample_corpus"):
+      return self.config.sample_corpus.corpus_config.sampling_type == "online"
     else:
       return False
 
