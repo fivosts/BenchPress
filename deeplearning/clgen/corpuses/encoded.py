@@ -56,12 +56,9 @@ class EncodedContentFileStats(Base):
 
   __tablename__ = "encoded_contentfiles_stats"
 
-  id               : int = sql.Column(sql.Integer,      primary_key = True)
-  file_count       : int = sql.Column(sql.Integer,      nullable = False)
-  length_frequency : str = sql.Column(sql.String(1024), nullable = False)
-  length_value     : str = sql.Column(sql.String(1024), nullable = False)
-  token_frequency  : str = sql.Column(sql.String(1024), nullable = False)
-  token_value      : str = sql.Column(sql.String(1024), nullable = False)
+  file_count       : int = sql.Column(sql.Integer,      primary_key = True)
+  corpus_features  : str = sql.Column(sql.String(1024), nullable = False)
+  corpus_lengths   : str = sql.Column(sql.String(1024), nullable = False)
 
 class EncodedContentFile(Base):
   """A single encoded content file."""
@@ -169,6 +166,8 @@ class EncodedContentFiles(sqlutil.Database):
 
   def __init__(self, url: str, must_exist: bool = False):
     self.encoded_path = pathlib.Path(url.replace("sqlite:///", "")).parent
+    self.length_monitor  = monitors.CumulativeHistMonitor(self.encoded_path, "encoded_kernel_length")
+    self.feature_monitor = monitors.FeatureMonitor(self.encoded_path, "feature_vector")
     super(EncodedContentFiles, self).__init__(url, Base, must_exist=must_exist)
 
   def Create(
@@ -194,6 +193,7 @@ class EncodedContentFiles(sqlutil.Database):
     with self.Session() as session:
       if not self.IsDone(session):
         self.Import(session, p, atomizer, contentfile_separator)
+        self.SetStats(session)
         self.SetDone(session)
         session.commit()
 
@@ -243,6 +243,27 @@ class EncodedContentFiles(sqlutil.Database):
   def SetDone(self, session: sqlutil.Session):
     session.add(Meta(key="done", value="yes"))
 
+  def SetStats(self, session: sqlutil.Session) -> None:
+    """Write corpus stats to DB"""
+    file_count      = session.query(EncodedContentFile.id).all().count()
+    corpus_features = str(self.feature_monitor.getData())
+    corpus_lengths  = str(self.length_monitor.getData())
+
+    if session.query(EncodedContentFileStats).first():
+      stats = session.query(EncodedContentFileStats).first()
+      stats.file_count      = file_count
+      stats.corpus_features = corpus_features
+      stats.corpus_lengths  = corpus_lengths
+    else:
+      session.add(
+        EncodedContentFileStats(
+          file_count = file_count,
+          corpus_features = corpus_features,
+          corpus_lengths = corpus_lengths,
+        )
+      )
+    return
+
   def Import(
     self,
     session: sqlutil.Session,
@@ -251,8 +272,6 @@ class EncodedContentFiles(sqlutil.Database):
     contentfile_separator: str,
   ) -> None:
     with preprocessed_db.Session() as p_session:
-      length_mon  = monitors.CumulativeHistMonitor(self.encoded_path, "encoded_kernel_length")
-      feature_mon = monitors.FeatureMonitor(self.encoded_path, "feature_vector")
       query = p_session.query(preprocessed.PreprocessedContentFile).filter(
         preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
         ~preprocessed.PreprocessedContentFile.id.in_(
@@ -297,25 +316,26 @@ class EncodedContentFiles(sqlutil.Database):
               (wall_time_end - wall_time_start) * 1000
             )
             session.add(encoded_cf)
-            length_mon.register(encoded_cf.tokencount)
-            feature_mon.register(extractor.StrToDictFeatures(encoded_cf.feature_vector))
+            self.length_monitor.register(encoded_cf.tokencount)
+            self.feature_monitor.register(extractor.StrToDictFeatures(encoded_cf.feature_vector))
           wall_time_start = wall_time_end
           if wall_time_end - last_commit > 10:
             session.commit()
             last_commit = wall_time_end
-        length_mon.plot()
-        feature_mon.plot()
+        self.length_monitor.plot()
+        self.feature_monitor.plot()
         pool.close()
       except KeyboardInterrupt as e:
         pool.terminate()
-        length_mon.plot()
-        feature_mon.plot()
+        self.length_monitor.plot()
+        self.feature_monitor.plot()
         raise e
       except Exception as e:
         pool.terminate()
-        length_mon.plot()
-        feature_mon.plot()
+        self.length_monitor.plot()
+        self.feature_monitor.plot()
         raise e
+    session.commit()
     return
 
   @staticmethod
