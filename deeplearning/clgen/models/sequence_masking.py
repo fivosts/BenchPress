@@ -110,8 +110,6 @@ def HoleSequence(seq: np.array,
   visited_indices   = set()
   # Total masks placed so far.
   total_predictions = 0
-  # Workaround for hole length distributions in multiprocessing environment.
-  hole_length_list = []
   while total_predictions < holes_to_predict:
     pos_index = np.random.randint(0, actual_length - 1) # Fixed seed doesn't work!
     assert pos_index < len(seq), "Candidate index is out of bounds: {} >= {}".format(pos_index, len(seq))
@@ -161,7 +159,6 @@ def HoleSequence(seq: np.array,
          ):
           hole_length = i
           break
-    hole_length_list.append(hole_length)
     pos_index  -= hole_length - 1 if hole_length != 0 and extend_left else 0
     input_id_idx = pos_index + offset_idxs[pos_index]
     # TODO plz check that target changes correctly.
@@ -232,7 +229,7 @@ def HoleSequence(seq: np.array,
         'mask_labels'         : mask_labels,
         'masked_lm_lengths'   : masked_lm_lengths,
         'next_sentence_labels': next_sentence_labels,
-      }, hole_length_list, hole_analytics
+      }, hole_analytics
   
   else: # TF 1.X, 2.[0-2]
     
@@ -267,7 +264,7 @@ def HoleSequence(seq: np.array,
                         np.asarray(masked_lm_positions),  np.asarray(masked_lm_ids),
                         np.asarray(masked_lm_weights),    np.asarray(masked_lm_lengths),
                         next_sentence_label
-                        ), hole_length_list, hole_analytics
+                        ), hole_analytics
 
 def MaskSequence(seq: np.array,
                  train_set: bool,
