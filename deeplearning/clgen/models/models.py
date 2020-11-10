@@ -304,7 +304,7 @@ class Model(object):
     self.backend.InitSampling(sampler, seed)
     [obs.Specialize(self, sampler) for obs in sample_observers]
 
-    batch_count = 1
+    batch_count = 0
     try:
       while self._SampleBatch(sampler, atomizer, sample_observers, epoch):
         batch_count += 1
