@@ -17,6 +17,9 @@ class Monitor():
     self.set_name       = set_name
     return
 
+  def getData(self):
+    raise NotImplementedError("Abstract Class")
+
   def register(self, actual_sample):
     raise NotImplementedError("Abstract Class")
 
@@ -42,7 +45,10 @@ class FrequencyMonitor(Monitor):
     self.sample_counter = {}
     return
 
-  def register(self, actual_sample):
+  def getData(self) -> typing.Dict[typing.Union[int, str, float], int]:
+    return sorted(self.sample_counter.items(), key = lambda x: x[0])
+
+  def register(self, actual_sample: typing.Union[int, str, list]) -> None:
     if isinstance(actual_sample, list):
       for s in actual_sample:
         self.register(s)
@@ -53,7 +59,7 @@ class FrequencyMonitor(Monitor):
         self.sample_counter[actual_sample] += 1
     return
 
-  def plot(self):
+  def plot(self) -> None:
     """Plot bars of number of occurences."""
     sorted_dict = sorted(self.sample_counter.items(), key = lambda x: x[0])
     plotter.FrequencyBars(
@@ -82,7 +88,10 @@ class CumulativeHistMonitor(Monitor):
     self.sample_counter = {}
     return
 
-  def register(self, actual_sample):
+  def getData(self) -> typing.Dict[typing.Union[int, str, float]: int]:
+    return sorted(self.sample_counter.items(), key = lambda x: x[0])
+
+  def register(self, actual_sample: typing.Union[list, int, float]) -> None:
     if isinstance(actual_sample, list):
       for s in actual_sample:
         self.register(s)
@@ -93,9 +102,9 @@ class CumulativeHistMonitor(Monitor):
         self.sample_counter[actual_sample] += 1
     return
 
-  def plot(self):
+  def plot(self) -> None:
     """Plot bars of number of occurences."""
-    sorted_dict = sorted(self.sample_counter.items(), key = lambda x: x[0])
+    sorted_dict = self.getData()
     plotter.CumulativeHistogram(
       x = [x for (x, _) in sorted_dict],
       y = [y for (_, y) in sorted_dict],
@@ -119,13 +128,14 @@ class HistoryMonitor(Monitor):
     self.sample_list = []
     return
 
-  def register(self, actual_sample: int) -> None:
-    # if isinstance(actual_sample, str):
-    #   actual_sample = int(actual_sample)
+  def getData(self) -> typing.List[typing.Union[int, float]]:
+    return self.sample_list
+
+  def register(self, actual_sample: typing.Union[int, float]) -> None:
     self.sample_list.append(float(actual_sample))
     return
 
-  def plot(self):
+  def plot(self) -> None:
     """Plot line over timescale"""
     plotter.SingleScatterLine(
       x = np.arange(len(self.sample_list)),
@@ -151,6 +161,9 @@ class FeatureMonitor(Monitor):
     self.instance_counter = 0
     return
 
+  def getData(self) -> typing.Dict[str, float]:
+    return {k: v / self.instance_counter for k, v in self.features.items()}
+
   def register(self, actual_sample: typing.Dict[str, float]) -> None:
     """actual sample is a dict of features to their values."""
     if not isinstance(actual_sample, dict):
@@ -164,7 +177,7 @@ class FeatureMonitor(Monitor):
         self.features[k] += v
     return
 
-  def plot(self):
+  def plot(self) -> None:
     """Plot averaged Radar chart"""
     r = [v / self.instance_counter for _, v in self.features.items()]
     theta = [k for k, _ in self.features.items()]
