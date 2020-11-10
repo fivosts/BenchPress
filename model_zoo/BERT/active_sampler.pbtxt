@@ -65,7 +65,8 @@ model {
 sampler {
   sample_corpus {
     corpus_config {
-      active_sampling: true
+      # active_sampling: true
+      sampling_type: "active"
       max_predictions_per_seq: 10
       masked_lm_prob: 0.6
       hole {
