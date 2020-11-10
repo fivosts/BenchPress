@@ -22,6 +22,34 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
   ways to find the closest match based on a feature vector.
   """
 
+  class ActiveSampleFeed(typing.NamedTuple):
+    """
+    Representation of a single instance containing
+    original feed, features and the samples the model responded with.
+    """
+    # An array of original input
+    input_feed       : np.array
+    # The feature space of the original input
+    input_features   : typing.Dict[str, float]
+    """
+    All fields below are lists of instances.
+    Based on the same input_feed, each instance
+    represents a single model inference step.
+    The indices of the lists below correspond to
+    the iteration of the active sampler for the given
+    input feed.
+    """
+    # List of masked model input feeds.
+    masked_input_ids : typing.List[np.array]
+    # List of hole instances for masked input.
+    hole_instances   : typing.List[typing.List[sequence_masking.MaskedLmInstance]]
+    # List of model inference outputs.
+    sample_outputs   : typing.List[np.array]
+    # List of output_features for model inference outputs.
+    output_features  : typing.List[typing.Dict[str, float]]
+    # Binary quality flag of sample outputs wrt target features.
+    good_samples     : typing.List[bool]
+
   @classmethod
   def FromDataGenerator(cls,
                         generator: lm_data_generator.MaskLMDataGenerator,
@@ -36,7 +64,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
                ):
     super(ActiveSamplingGenerator, self).__init__(generator)
     # Active sampling attributes.
-    self.feed_stack = None
+    self.feed_stack = []
     return
 
   def active_dataloader(self) -> typing.Union[
@@ -51,9 +79,21 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     masking_func output goes through TensorFormat to convert np arrays to relevant tensors.
     """
     for seed in self.online_corpus:
-      input_feed, hole_lengths, masked_idxs = self.masking_func(seed)
+      seed_src = self.atomizer.ArrayToCode(seed)
+      input_features = extractor.StrToDictFeatures(extractor.kernel_features(seed_src))
+      input_feed, masked_idxs = self.masking_func(seed)
       # TODO do sth with hole_lengths and masked_idxs
-      self.feed_stack.append(seed)
+      self.feed_stack.append(
+        ActiveSamplingGenerator.ActiveSampleFeed(
+          input_feed       = seed,
+          input_features   = input_features,
+          masked_input_ids = [input_feed['input_ids']],
+          hole_instances   = [masked_idxs],
+          sample_outputs   = [],
+          output_features  = [],
+          good_samples     = [],
+        )
+      )
       yield self.data_generator.toTensorFormat(input_feed)
 
   def EvaluateFromFeatures(self,
@@ -73,16 +113,28 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       raise ValueError("Feed stack is empty. Cannot pop element.")
 
     # You might also need to check if they compile.
-    features = [extractor.kernel_features(s) for s in samples]
+    features = [
+      extractor.StrToDictFeatures(extractor.kernel_features(self.atomizer.ArrayToCode(s)))
+      for s in samples
+    ]
+    # Update outputs of most recent ActiveSampleFeed
+    self.feed_stack[-1].sample_outputs  += samples
+    self.feed_stack[-1].output_features += features
 
-    for sample, feature in zip(samples, features):
-      if feature is not crap:
-        keep(sample)
+    # for sample, feature in zip(samples, features):
+    #   # This line below is your requirement.
+    #   # This is going to become more complex.
+    #   bigger = feature_sampler.is_it_bigger(
+    #     self.feed_stack[-1].input_features, feature
+    #   )
+    #   self.feed_stack[-1].append(bigger)
+    #   if feature is not crap:
+    #     keep(sample)
 
-    if there is sample close to target feature:
-      return good sample, True
-    else:
-      latest_seed = self.feed_stack[-1]
-      sample_feed, hole_lengths, masked_idxs = self.masking_func(latest_seed)
-      # TODO do sth with the hole_lengths and masked_idxs
-      return sample_feed, False
+    # if there is sample close to target feature:
+    #   return good sample, True
+    # else:
+    #   latest_seed = self.feed_stack[-1]
+    #   sample_feed, hole_lengths, masked_idxs = self.masking_func(latest_seed)
+    #   # TODO do sth with the hole_lengths and masked_idxs
+    #   return sample_feed, False
