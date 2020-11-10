@@ -508,30 +508,34 @@ class torchBert(backends.BackendBase):
     #   model = self.torch.nn.DataParallel(self.sample.model)
     self.sample.model.eval()
     with self.torch.no_grad():
-      generated_samples, sample_indices = self.model_step(
+      step_out = self.model_step(
           self.sample.model, self.step_inputs,
       )
       if self.sampler.is_active:
+        generated_samples, sample_indices = step_out.generated_samples, step_out.sample_indices
         while True:
-          generated_samples, done = self.sample.data_generator.EvaluateFromFeatures(
+          active_sample, done = self.sample.data_generator.EvaluateFromFeatures(
             np.asarray(generated_samples)
           )
           if done:
-            return generated_samples, sample_indices
+            return active_sample, sample_indices
           else:
             step_input = {
-              x: generated_samples[x].repeat((self.sampler.batch_size, 1)) for x in generated_samples
+              x: active_sample[x].repeat((self.sampler.batch_size, 1)) for x in active_sample
             }
             self.sampler.setStartText(
               self.atomizer.DeatomizeIndices(
-                inputs['input_ids'][0].cpu().numpy(), ignore_token = self.atomizer.padToken
+                step_input['input_ids'][0].cpu().numpy(), ignore_token = self.atomizer.padToken
               )
             )
             self.sampler.Specialize(self.atomizer)
-            generated_samples, sample_indices = self.model_step(
+            active_step = self.model_step(
                 self.sample.model, step_input,
             )
-    return generated_samples, sample_indices
+            generated_samples, sample_indices = active_step.generated_samples, active_step.sample_indices
+      else:
+        return step_out.generated_samples, step_out.sample_indices
+    raise ValueError("While True loop broken without returning")
 
   def _getTestSampler(self, test_sampler, sequence_length):
     if test_sampler is None:
