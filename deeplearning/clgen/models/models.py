@@ -376,6 +376,7 @@ class Model(object):
             except ValueError:
               compile_flag = False
 
+            feature_vector, stderr = extractor.kernel_features("".join(sample_kernel)),
             sample = model_pb2.Sample(
               train_step                = epoch,
               text                      = "".join(sample_kernel),
@@ -386,7 +387,7 @@ class Model(object):
               sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               wall_time_ms              = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
-              feature_vector            = extractor.kernel_features("".join(sample_kernel)),
+              feature_vector            = feature_vector,
               num_tokens                = len(samples_in_progress[i]),
               compile_status            = compile_flag,
               categorical_sampling      = self.backend.samplesWithCategorical(),
