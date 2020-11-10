@@ -515,7 +515,7 @@ class torchBert(backends.BackendBase):
       if self.sampler.is_active:
         generated_samples, sample_indices = step_out.generated_samples, step_out.sample_indices
         while True:
-          active_sample, done = self.sample.data_generator.EvaluateFromFeatures(
+          active_sample, done = self.sample.data_generator.EvaluateFeatures(
             np.asarray(generated_samples)
           )
           if done:
