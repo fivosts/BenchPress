@@ -126,6 +126,7 @@ class EncodedContentFile(Base):
     # token_values = data.sorted()
     ####
     encoding_time_ms = int((time.time() - start_time) * 1000)
+    feature_vector = extractor.kernel_features(preprocessed_cf.text)
     return EncodedContentFile(
       id = preprocessed_cf.id,
       # Encode the end-of-file marker separately to ensure that it resolves to
@@ -136,7 +137,7 @@ class EncodedContentFile(Base):
         np.concatenate((data, atomizer.AtomizeString(eof)))
       ),
       tokencount       = len(data),
-      feature_vector   = extractor.kernel_features(preprocessed_cf.text),
+      feature_vector   = feature_vector,
       encoding_time_ms = encoding_time_ms,
       wall_time_ms     = encoding_time_ms,  # The outer-loop may change this.
       date_added       = datetime.datetime.utcnow(),
