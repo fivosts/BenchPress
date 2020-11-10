@@ -36,15 +36,6 @@ def kernel_features(src: str, *extra_args) -> str:
       universal_newlines = True,
     )
     stdout, stderr = process.communicate()
-  print(stdout)
-  print()
-  print()
-  print()
-  print()
-  print()
-  print()
-  print()
-  print(stderr)
   return stdout, stderr
 
 def StrToDictFeatures(str_features: str) -> typing.Dict[str, float]:
