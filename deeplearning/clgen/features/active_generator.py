@@ -1,3 +1,6 @@
+"""
+Data generator wrapper used for active learning sampling.
+"""
 import subprocess
 import functools
 import pickle
@@ -8,6 +11,7 @@ from deeplearning.clgen.models import lm_data_generator
 from deeplearning.clgen.models import online_generator
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.features import extractor
+from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.util import distributions
 
 from eupy.native import logger as l
@@ -43,12 +47,12 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     masked_input_ids : typing.List[np.array]
     # List of hole instances for masked input.
     hole_instances   : typing.List[typing.List[sequence_masking.MaskedLmInstance]]
-    # List of model inference outputs.
-    sample_outputs   : typing.List[np.array]
-    # List of output_features for model inference outputs.
-    output_features  : typing.List[typing.Dict[str, float]]
-    # Binary quality flag of sample outputs wrt target features.
-    good_samples     : typing.List[bool]
+    # List of model inference batch outputs.
+    sample_outputs   : typing.List[typing.List[np.array]]
+    # List of output_features for model batch inference outputs.
+    output_features  : typing.List[typing.List[typing.Dict[str, float]]]
+    # Binary quality flag of sample batch outputs wrt target features.
+    good_samples     : typing.List[typing.List[bool]]
 
   @classmethod
   def FromDataGenerator(cls,
@@ -80,7 +84,8 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     """
     for seed in self.online_corpus:
       seed_src = self.atomizer.ArrayToCode(seed)
-      input_features = extractor.StrToDictFeatures(extractor.kernel_features(seed_src))
+      feature, stderr = extractor.kernel_features(seed_src)
+      input_features = extractor.StrToDictFeatures(feature)
       input_feed, masked_idxs = self.masking_func(seed)
       # TODO do sth with hole_lengths and masked_idxs
       self.feed_stack.append(
@@ -96,12 +101,12 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       )
       yield self.data_generator.toTensorFormat(input_feed)
 
-  def EvaluateFromFeatures(self,
-                           samples: np.array,
-                           ) -> typing.Union[
-                                  typing.Dict[str, typing.TypeVar("Tensor")],
-                                  typing.NamedTuple
-                                ]:
+  def EvaluateFeatures(self,
+                       samples: np.array,
+                       ) -> typing.Union[
+                              typing.Dict[str, typing.TypeVar("Tensor")],
+                              typing.NamedTuple
+                            ]:
     """
     Reads model sampling output and evaluates against active target features.
     If the sample output is not good enough based on the features,
@@ -112,29 +117,31 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     if len(self.feed_stack) == 0:
       raise ValueError("Feed stack is empty. Cannot pop element.")
 
-    # You might also need to check if they compile.
-    features = [
-      extractor.StrToDictFeatures(extractor.kernel_features(self.atomizer.ArrayToCode(s)))
-      for s in samples
-    ]
-    # Update outputs of most recent ActiveSampleFeed
-    self.feed_stack[-1].sample_outputs  += samples
-    self.feed_stack[-1].output_features += features
+    features, gd = [], []
+    for sample in samples:
+      feature, stderr = extractor.kernel_features(self.atomizer.ArrayToCode(sample))
 
-    # for sample, feature in zip(samples, features):
-    #   # This line below is your requirement.
-    #   # This is going to become more complex.
-    #   bigger = feature_sampler.is_it_bigger(
-    #     self.feed_stack[-1].input_features, feature
-    #   )
-    #   self.feed_stack[-1].append(bigger)
-    #   if feature is not crap:
-    #     keep(sample)
+      if " error: " in stderr:
+        features.append(None)
+        gd.append(False)
+      else:
+        # This line below is your requirement.
+        # This is going to become more complex.
+        bigger = feature_sampler.is_kernel_smaller(
+          self.feed_stack[-1].input_features, extractor.StrToDictFeatures(feature)
+        )
+        gd.append(bigger)
+        features.append(feature)
 
-    # if there is sample close to target feature:
-    #   return good sample, True
-    # else:
-    #   latest_seed = self.feed_stack[-1]
-    #   sample_feed, hole_lengths, masked_idxs = self.masking_func(latest_seed)
-    #   # TODO do sth with the hole_lengths and masked_idxs
-    #   return sample_feed, False
+    self.feed_stack[-1].good_samples.append(gd)
+    self.feed_stack[-1].sample_outputs.append(samples)
+    self.feed_stack[-1].output_features.append(features)
+
+    if any(self.feed_stack[-1].good_samples[-1]):
+      return self.feed_stack[-1].sample_outputs[-1], True
+    else:
+      input_ids, masked_idxs = self.masking_func(self.feed_stack[-1].input_feed)
+      # TODO do sth with hole_lengths and masked_idxs
+      self.feed_stack[-1].masked_input_ids.append(input_ids)
+      self.feed_stack[-1].hole_instances.append(masked_idxs)
+      return self.data_generator.toTensorFormat(input_ids), False
