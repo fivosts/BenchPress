@@ -36,7 +36,16 @@ def kernel_features(src: str, *extra_args) -> str:
       universal_newlines = True,
     )
     stdout, stderr = process.communicate()
-  return stdout
+  print(stdout)
+  print()
+  print()
+  print()
+  print()
+  print()
+  print()
+  print()
+  print(stderr)
+  return stdout, stderr
 
 def StrToDictFeatures(str_features: str) -> typing.Dict[str, float]:
   """
@@ -51,6 +60,6 @@ def StrToDictFeatures(str_features: str) -> typing.Dict[str, float]:
     try:
       return {key: float(value) for key, value in zip(header, values)}
     except ValueError as e:
-      return {key: 0 for key in header}
+      raise ValueError("{}, {}".format(str(e), str_features))
   except Exception as e:
     raise ValueError(e)
