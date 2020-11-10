@@ -376,7 +376,7 @@ class Model(object):
             except ValueError:
               compile_flag = False
 
-            feature_vector, stderr = extractor.kernel_features("".join(sample_kernel)),
+            feature_vector, stderr = extractor.kernel_features("".join(sample_kernel))
             sample = model_pb2.Sample(
               train_step                = epoch,
               text                      = "".join(sample_kernel),
