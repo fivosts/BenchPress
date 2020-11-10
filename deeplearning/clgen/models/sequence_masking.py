@@ -71,7 +71,11 @@ def HoleSequence(seq: np.array,
                  pickled_atomizer,
                  training_opts,
                  is_torch: bool,
-                 ) -> typing.Dict:
+                 ) -> typing.Tuple[
+                        typing.Dict[str, np.array],
+                        typing.List[int],
+                        typing.List[MaskedLmInstance],
+                      ]:
   """
   Inserts hole tokens to a given sequence.
   """
