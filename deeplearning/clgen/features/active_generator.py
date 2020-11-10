@@ -2,6 +2,7 @@ import subprocess
 import functools
 import pickle
 import typing
+import numpy as np
 
 from deeplearning.clgen.models import lm_data_generator
 from deeplearning.clgen.models import online_generator
