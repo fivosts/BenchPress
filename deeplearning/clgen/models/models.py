@@ -372,11 +372,12 @@ class Model(object):
 
             try:
               stdout = opencl.Compile(self.atomizer.StringArrToCode(sample_kernel))
+              feature_vector, stderr = extractor.kernel_features("".join(sample_kernel))
               compile_flag = True
             except ValueError:
               compile_flag = False
+              feature_vector = None
 
-            feature_vector, stderr = extractor.kernel_features("".join(sample_kernel))
             sample = model_pb2.Sample(
               train_step                = epoch,
               text                      = "".join(sample_kernel),
