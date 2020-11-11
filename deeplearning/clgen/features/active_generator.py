@@ -69,6 +69,9 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
                ):
     super(ActiveSamplingGenerator, self).__init__(generator)
     # Active sampling attributes.
+    self.active_db  = active_feed_database.ActiveFeedDatabase(
+      url = "sqlite:///{}".format(self.data_generator.sampler.corpus_directory / "active_feeds.db")
+    )
     self.feed_stack = []
     return
 
@@ -134,7 +137,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
 
       entry = active_feed_database.ActiveFeed.FromArgs(
         atomizer         = self.atomizer,
-        id               = self.active_db.count(),
+        id               = self.active_db.count,
         input_feed       = self.feed_stack[-1].input_feed,
         input_features   = self.feed_stack[-1].input_features,
         masked_input_ids = self.feed_stack[-1].masked_input_ids[-1],
@@ -161,7 +164,9 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
   def addToDB(self, active_feed: active_feed_database.ActiveFeed) -> None:
     """If not exists, add current sample state to database"""
     with self.active_db.Session(commit = True) as session:
-      exists = session.query(ActiveFeed).filter(sha256 == active_feed.sha256).scalar() is not None
+      exists = session.query(
+        active_feed_database.ActiveFeed
+      ).filter(active_feed_database.ActiveFeed.sha256 == active_feed.sha256).scalar() is not None
       if not exists:
         session.add(active_feed)
     return
