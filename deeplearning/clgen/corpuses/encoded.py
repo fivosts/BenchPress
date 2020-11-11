@@ -250,8 +250,8 @@ class EncodedContentFiles(sqlutil.Database):
   def SetStats(self, session: sqlutil.Session) -> None:
     """Write corpus stats to DB"""
     file_count      = session.query(EncodedContentFile.id).count()
-    corpus_features = str(self.feature_monitor.getData())
-    corpus_lengths  = str(self.length_monitor.getData())
+    corpus_features = self.feature_monitor.getStrData()
+    corpus_lengths  = self.length_monitor.getStrData()
 
     if session.query(EncodedContentFileStats).first():
       stats = session.query(EncodedContentFileStats).first()

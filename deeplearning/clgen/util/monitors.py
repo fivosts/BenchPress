@@ -20,6 +20,9 @@ class Monitor():
   def getData(self):
     raise NotImplementedError("Abstract Class")
 
+  def getStrData(self):
+    raise NotImplementedError("Abstract Class")
+
   def register(self, actual_sample):
     raise NotImplementedError("Abstract Class")
 
@@ -47,6 +50,11 @@ class FrequencyMonitor(Monitor):
 
   def getData(self) -> typing.Dict[typing.Union[int, str, float], int]:
     return sorted(self.sample_counter.items(), key = lambda x: x[0])
+
+  def getStrData(self) -> str:
+    return "\n".join(
+      ["{}:{}".format(k, v) for k, v in self.getData().items()]
+    )
 
   def register(self, actual_sample: typing.Union[int, str, list]) -> None:
     if isinstance(actual_sample, list):
@@ -91,6 +99,11 @@ class CumulativeHistMonitor(Monitor):
   def getData(self) -> typing.Dict[typing.Union[int, str, float], int]:
     return sorted(self.sample_counter.items(), key = lambda x: x[0])
 
+  def getStrData(self) -> str:
+    return "\n".join(
+      ["{}:{}".format(k, v) for k, v in self.getData().items()]
+    )
+
   def register(self, actual_sample: typing.Union[list, int, float]) -> None:
     if isinstance(actual_sample, list):
       for s in actual_sample:
@@ -131,6 +144,11 @@ class HistoryMonitor(Monitor):
   def getData(self) -> typing.List[typing.Union[int, float]]:
     return self.sample_list
 
+  def getStrData(self) -> str:
+    return ",".join(
+      [str(v) for v in self.getData()]
+    )
+
   def register(self, actual_sample: typing.Union[int, float]) -> None:
     self.sample_list.append(float(actual_sample))
     return
@@ -163,6 +181,11 @@ class FeatureMonitor(Monitor):
 
   def getData(self) -> typing.Dict[str, float]:
     return {k: v / self.instance_counter for k, v in self.features.items()}
+
+  def getStrData(self) -> str:
+    return "\n".join(
+      ["{}:{}".format(k, v) for k, v in self.getData().items()]
+    )
 
   def register(self, actual_sample: typing.Dict[str, float]) -> None:
     """actual sample is a dict of features to their values."""
