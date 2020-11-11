@@ -15,6 +15,10 @@
   <a href="https://www.gnu.org/licenses/gpl-3.0.en.html" target="_blank">
     <img src="https://img.shields.io/badge/license-GNU%20GPL%20v3-blue.svg?style=flat">
   </a>
+  <!-- CircleCI -->
+  <a href="https://circleci.com/gh/fivosts/clgen">
+    <img src="https://circleci.com/gh/fivosts/clgen.svg?style=svg&circle-token=970ffce3c85304ccd182c59fb969504efe646ef6">
+  </a>
 </div>
 
 **CLgen** is an open source application for generating runnable programs using
@@ -26,7 +30,7 @@ programs it learns from.
 <img src="https://raw.githubusercontent.com/ChrisCummins/phd/master/deeplearning/clgen/docs/assets/pipeline.png" width="500">
 
 
-## Install CLGEN [![CircleCI](https://circleci.com/gh/fivosts/clgen.svg?style=svg&circle-token=970ffce3c85304ccd182c59fb969504efe646ef6)](https://circleci.com/gh/fivosts/clgen)
+## Install CLGEN
 
 TODO!
 
