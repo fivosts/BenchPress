@@ -3,7 +3,7 @@ import contextlib
 import datetime
 import typing
 import sqlite3
-
+import numpy as np
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from absl import flags
