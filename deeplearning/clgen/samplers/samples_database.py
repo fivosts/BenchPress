@@ -87,6 +87,13 @@ class SamplesDatabase(sqlutil.Database):
 
   @property
   def count(self):
+    """Number of samples in DB."""
     with self.Session() as s:
       count = s.query(Sample).count()
     return count
+
+  @property
+  def correct_samples(self) -> typing.Set[str]:
+    """Get samples that compile from SamplesDatabase."""
+    with self.Session() as s:
+      return s.query(Sample).yield_per(500).enable_eagerloads(False)
