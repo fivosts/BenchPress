@@ -70,21 +70,28 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
                output_features  : typing.Dict[str, float],
                sample_quality   : bool,
                ) -> typing.TypeVar("ActiveFeed"):
+    """Construt ActiveFeed table entry from argumentns."""
     str_masked_input_ids = atomizer.DeatomizeIndices(masked_input_ids)
     str_sample = atomizer.DeatomizeIndices(sample)
-    ActiveFeed(
+
+    kernel_length = len(input_feed)
+    if atomizer.padToken in input_feed:
+      kernel_length = np.where(input_feed == atomizer.padToken)[0][0]
+
+    return ActiveFeed(
       id               = id,
       sha256           = crypto.sha256_str(str_masked_input_ids + str_sample),
-      input_feed       = input_feed,
-      encoded_feed     = ','.join(atomizer.AtomizeString(input_feed)),
+      input_feed       = atomizer.DeatomizeIndices(input_feed),
+      encoded_feed     = ','.join([str(x) for x in input_feed]),
+      kernel_length    = kernel_length,
       input_features   = '\n'.join(["{}:{}".format(k, v) for k, v in input_features.items()]),
-      masked_input_ids = ','.join(masked_input_ids),
-      hole_lengths     = ','.join(lm.hole_length for l in hole_instances),
-      hole_start_ids   = ','.join(lm.pos_index for l in hole_instances),
+      masked_input_ids = ','.join([str(x) for x in masked_input_ids]),
+      hole_lengths     = ','.join(str(lm.hole_length) for lm in hole_instances),
+      hole_start_ids   = ','.join(str(lm.pos_index) for lm in hole_instances),
       sample           = atomizer.DeatomizeIndices(sample),
       output_features  = '\n'.join(["{}:{}".format(k, v) for k, v in output_features.items()]) if output_features else "None",
       sample_quality   = sample_quality,
-      date_added       = datetime.datetime.strptime(proto.date_added, "%m/%d/%Y, %H:%M:%S"),
+      date_added       = datetime.datetime.utcnow(),
     )
 
 class ActiveFeedDatabase(sqlutil.Database):
