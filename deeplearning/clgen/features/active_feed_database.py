@@ -63,11 +63,11 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
                atomizer,
                id               : int,
                input_feed       : str,
-               input_features   : str,
+               input_features   : typing.Dict[str, float],
                masked_input_ids : np.array,
                hole_instances   : typing.TypeVar("sequence_masking.MaskedLMInstance"),
                sample           : np.array,
-               output_features  : str,
+               output_features  : typing.Dict[str, float],
                sample_quality   : bool,
                ) -> typing.TypeVar("ActiveFeed"):
     str_masked_input_ids = atomizer.DeatomizeIndices(masked_input_ids)
@@ -77,12 +77,12 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
       sha256           = crypto.sha256_str(str_masked_input_ids + str_sample),
       input_feed       = input_feed,
       encoded_feed     = ','.join(atomizer.AtomizeString(input_feed)),
-      input_features   = input_features,
+      input_features   = '\n'.join(["{}:{}".format(k, v) for k, v in input_features.items()]),
       masked_input_ids = ','.join(masked_input_ids),
       hole_lengths     = ','.join(lm.hole_length for l in hole_instances),
       hole_start_ids   = ','.join(lm.pos_index for l in hole_instances),
       sample           = atomizer.DeatomizeIndices(sample),
-      output_features  = output_features,
+      output_features  = '\n'.join(["{}:{}".format(k, v) for k, v in output_features.items()]) if output_features else "None",
       sample_quality   = sample_quality,
       date_added       = datetime.datetime.strptime(proto.date_added, "%m/%d/%Y, %H:%M:%S"),
     )
