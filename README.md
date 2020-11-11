@@ -3,7 +3,7 @@
     <img src="https://raw.githubusercontent.com/ChrisCummins/phd/master/deeplearning/clgen/docs/assets/logo.png" width="420">
   </a>
 </div>
-
+[![CircleCI](https://circleci.com/gh/fivosts/clgen.svg?style=svg?style=svg&circle-token=970ffce3c85304ccd182c59fb969504efe646ef6)](https://circleci.com/gh/fivosts/clgen)
 -------
 
 <div align="center">
@@ -26,25 +26,9 @@ programs it learns from.
 <img src="https://raw.githubusercontent.com/ChrisCummins/phd/master/deeplearning/clgen/docs/assets/pipeline.png" width="500">
 
 
-## Getting Started
+## Install CLGEN
 
-First check out [INSTALL.md](/INSTALL.md) for instructions on getting the build
-environment set up .
-
-Then build CLgen using:
-
-```sh
-$ bazel build -c opt //deeplearning/clgen
-```
-
-Use our tiny example dataset to train and sample your first CLgen model:
-
-```sh
-$ bazel-bin/deeplearning/clgen -- \
-    --config $PWD/deeplearning/clgen/tests/data/tiny/config.pbtxt
-```
-
-<img src="https://raw.githubusercontent.com/ChrisCummins/phd/master/deeplearning/clgen/docs/assets/clgen.gif" width="500">
+TODO!
 
 
 #### What next?
