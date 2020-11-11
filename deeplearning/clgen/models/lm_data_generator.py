@@ -554,11 +554,11 @@ class MaskLMDataGenerator(object):
       raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
 
     # Monitors count of target indices (in percentile) that were hidden by a hole.
-    start_idx_monitor = monitors.FrequencyMonitor(path, "target_mask_idx")
+    start_idx_monitor = monitors.FrequencyMonitor(path, "{}_target_mask_idx".format(set_name))
     # Monitors count of indices (in percentile) that were hidden by a hole.
-    idx_monitor       = monitors.FrequencyMonitor(path, "mask_idx")
+    idx_monitor       = monitors.FrequencyMonitor(path, "{}_mask_idx".format(set_name))
     # Monitors if left or right direction was picked for a hole expansion.
-    direction_monitor = monitors.FrequencyMonitor(path, "masking_direction")
+    direction_monitor = monitors.FrequencyMonitor(path, "{}_masking_direction".format(set_name))
 
     ## Core loop of masking.
     masked_corpus = []
