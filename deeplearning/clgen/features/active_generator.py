@@ -143,7 +143,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
         output_features  = features[-1],
         sample_quality   = gd[-1],
       )
-      self.AddToDB(entry)
+      self.addToDB(entry)
 
     self.feed_stack[-1].good_samples.append(gd)
     self.feed_stack[-1].sample_outputs.append(samples)
@@ -158,7 +158,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       self.feed_stack[-1].hole_instances.append(masked_idxs)
       return self.data_generator.toTensorFormat(input_ids), False
 
-  def AddToDB(self, active_feed: active_feed_database.ActiveFeed) -> None:
+  def addToDB(self, active_feed: active_feed_database.ActiveFeed) -> None:
     """If not exists, add current sample state to database"""
     with self.active_db.Session(commit = True) as session:
       exists = session.query(ActiveFeed).filter(sha256 == active_feed.sha256).scalar() is not None
