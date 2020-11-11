@@ -157,17 +157,26 @@ class SamplesDatabaseObserver(SampleObserver):
     return True
 
   def endSample(self) -> None:
+    """Write final summed data about sampling session."""
+    # Create feature vector plots
+    feature_monitor = monitors.FeatureMonitor(self.db.url[len("sqlite:///"):], "samples_feature_vector")
+    for sample in self.db.correct_samples:
+      feature_monitor.register(extractor.StrToDictFeatures(encoded_cf.feature_vector))
+    feature_monitor.plot()
+
     with self.db.Session() as session:
       compiled_count = session.query(samples_database.Sample.compile_status).filter_by(compile_status = "Yes").count()
     try:
       r = [
         'compilation rate: {}'.format(compiled_count / self.sample_id),
         'total compilable samples: {}'.format(compiled_count)
+        'average feature vector: {}'.format(feature_monitor.getData())
       ]
     except ZeroDivisionError:
       r = [
         'compilation rate: +/-inf',
         'total compilable samples: {}'.format(compiled_count)
+        'average feature vector: {}'.format(feature_monitor.getData())
       ]
     with self.db.Session(commit = True) as session:
       exists  = session.query(samples_database.SampleResults.key).filter_by(key = "meta").scalar() is not None
