@@ -12,6 +12,7 @@ from deeplearning.clgen.models import online_generator
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
+from deeplearning.clgen.features import active_feed_database
 from deeplearning.clgen.util import distributions
 
 from eupy.native import logger as l
@@ -131,6 +132,19 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
         gd.append(bigger)
         features.append(feature)
 
+      entry = active_feed_database.ActiveFeed.FromArgs(
+        atomizer         = self.atomizer,
+        id               = self.active_db.count(),
+        input_feed       = self.feed_stack[-1].input_feed,
+        input_features   = self.feed_stack[-1].input_features,
+        masked_input_ids = self.feed_stack[-1].masked_input_ids[-1],
+        hole_instances   = self.feed_stack[-1].hole_instances[-1],
+        sample           = sample,
+        output_features  = features[-1],
+        sample_quality   = gd[-1],
+      )
+      self.AddToDB(entry)
+
     self.feed_stack[-1].good_samples.append(gd)
     self.feed_stack[-1].sample_outputs.append(samples)
     self.feed_stack[-1].output_features.append(features)
@@ -143,3 +157,11 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       self.feed_stack[-1].masked_input_ids.append(input_ids)
       self.feed_stack[-1].hole_instances.append(masked_idxs)
       return self.data_generator.toTensorFormat(input_ids), False
+
+  def AddToDB(self, active_feed: active_feed_database.ActiveFeed) -> None:
+    """If not exists, add current sample state to database"""
+    with self.active_db.Session(commit = True) as session:
+      exists = session.query(ActiveFeed).filter(sha256 == active_feed.sha256).scalar() is not None
+      if not exists:
+        session.add(active_feed)
+    return
