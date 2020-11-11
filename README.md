@@ -26,7 +26,7 @@ programs it learns from.
 <img src="https://raw.githubusercontent.com/ChrisCummins/phd/master/deeplearning/clgen/docs/assets/pipeline.png" width="500">
 
 
-## Install CLGEN [![CircleCI](https://circleci.com/gh/fivosts/clgen.svg?style=svg?style=svg&circle-token=970ffce3c85304ccd182c59fb969504efe646ef6)](https://circleci.com/gh/fivosts/clgen)
+## Install CLGEN [![CircleCI](https://circleci.com/gh/fivosts/clgen.svg?style=svg&circle-token==970ffce3c85304ccd182c59fb969504efe646ef6)](https://circleci.com/gh/fivosts/clgen)
 
 TODO!
 
