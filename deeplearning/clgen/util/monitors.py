@@ -48,12 +48,12 @@ class FrequencyMonitor(Monitor):
     self.sample_counter = {}
     return
 
-  def getData(self) -> typing.Dict[typing.Union[int, str, float], int]:
+  def getData(self) -> typing.List[typing.Tuple[typing.Union[int, str, float], int]]:
     return sorted(self.sample_counter.items(), key = lambda x: x[0])
 
   def getStrData(self) -> str:
     return "\n".join(
-      ["{}:{}".format(k, v) for k, v in self.getData().items()]
+      ["{}:{}".format(k, v) for (k, v) in self.getData()]
     )
 
   def register(self, actual_sample: typing.Union[int, str, list]) -> None:
@@ -96,12 +96,12 @@ class CumulativeHistMonitor(Monitor):
     self.sample_counter = {}
     return
 
-  def getData(self) -> typing.Dict[typing.Union[int, str, float], int]:
+  def getData(self) -> typing.List[typing.Tuple[typing.Union[int, str, float], int]]:
     return sorted(self.sample_counter.items(), key = lambda x: x[0])
 
   def getStrData(self) -> str:
     return "\n".join(
-      ["{}:{}".format(k, v) for k, v in self.getData().items()]
+      ["{}:{}".format(k, v) for (k, v) in self.getData()]
     )
 
   def register(self, actual_sample: typing.Union[list, int, float]) -> None:
