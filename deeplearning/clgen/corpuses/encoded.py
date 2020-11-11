@@ -56,8 +56,11 @@ class EncodedContentFileStats(Base):
 
   __tablename__ = "encoded_contentfiles_stats"
 
+  # Total number of files.
   file_count       : int = sql.Column(sql.Integer,      primary_key = True)
+  # Average feature vector of contentfiles.
   corpus_features  : str = sql.Column(sql.String(1024), nullable = False)
+  # Token length distribution of contentfiles.
   corpus_lengths   : str = sql.Column(sql.String(1024), nullable = False)
 
 class EncodedContentFile(Base):
