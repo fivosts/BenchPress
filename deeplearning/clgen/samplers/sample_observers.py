@@ -169,13 +169,13 @@ class SamplesDatabaseObserver(SampleObserver):
     try:
       r = [
         'compilation rate: {}'.format(compiled_count / self.sample_id),
-        'total compilable samples: {}'.format(compiled_count)
+        'total compilable samples: {}'.format(compiled_count),
         'average feature vector: \n{}'.format(feature_monitor.getStrData())
       ]
     except ZeroDivisionError:
       r = [
         'compilation rate: +/-inf',
-        'total compilable samples: {}'.format(compiled_count)
+        'total compilable samples: {}'.format(compiled_count),
         'average feature vector: \n{}'.format(feature_monitor.getStrData())
       ]
     with self.db.Session(commit = True) as session:
