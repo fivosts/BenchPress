@@ -112,8 +112,6 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     If the sample output is not good enough based on the features,
     active sampler reconstructs the same sample feed and asks again for prediction.
     """
-    if self.feed_stack is None:
-      raise ValueError("Cannot evaluate from features when no sample has been asked.")
     if len(self.feed_stack) == 0:
       raise ValueError("Feed stack is empty. Cannot pop element.")
 
