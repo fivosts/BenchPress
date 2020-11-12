@@ -72,7 +72,8 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     self.active_db  = active_feed_database.ActiveFeedDatabase(
       url = "sqlite:///{}".format(self.data_generator.sampler.corpus_directory / "active_feeds.db")
     )
-    self.feed_stack = []
+    self.feed_stack     = []
+    self.active_dataset = ActiveDataset(self.online_corpus)
     return
 
   def active_dataloader(self) -> typing.Union[
@@ -86,16 +87,15 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     In torch, Dict[str, np.array] instances are generated.
     masking_func output goes through TensorFormat to convert np arrays to relevant tensors.
     """
-    for seed in self.online_corpus:
-      seed_src = self.atomizer.ArrayToCode(seed)
-      feature, stderr = extractor.kernel_features(seed_src)
-      input_features = extractor.StrToDictFeatures(feature)
+    while True:
+      seed = next(self.active_dataset)
+      feature, stderr = extractor.kernel_features(self.atomizer.ArrayToCode(seed))
       input_feed, masked_idxs = self.masking_func(seed)
       # TODO do sth with hole_lengths and masked_idxs
       self.feed_stack.append(
         ActiveSamplingGenerator.ActiveSampleFeed(
           input_feed       = seed,
-          input_features   = input_features,
+          input_features   = extractor.StrToDictFeatures(feature),
           masked_input_ids = [input_feed['input_ids']],
           hole_instances   = [masked_idxs],
           sample_outputs   = [],
@@ -127,6 +127,8 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
         features.append(None)
         gd.append(False)
       else:
+        # This branch means sample compiles. Let's use it as a sample feed then.
+        self.active_dataset.add_active_feed(sample)
         # This line below is your requirement.
         # This is going to become more complex.
         features.append(extractor.StrToDictFeatures(feature))
@@ -172,4 +174,44 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       ).filter(active_feed_database.ActiveFeed.sha256 == active_feed.sha256).scalar() is not None
       if not exists:
         session.add(active_feed)
+    return
+
+class ActiveDataset(object):
+  """Dataset as a concatenation of multiple datasets.
+
+  This class is useful to assemble different existing datasets
+  and instantiate them lazily, to avoid loading them all in
+  memory at the same time/
+
+  Arguments:
+    datasets (sequence): List of paths for datasets to be concatenated
+  """
+
+  def __init__(self, dataset: typing.List[np.array]):
+    assert len(dataset) > 0, 'Dataset is empty'
+    self.dataset                 = dataset
+    self.sample_idx              = 0
+    self.additional_active_feeds = []
+    return
+
+  def __len__(self) -> int:
+    return len(self.dataset) + len(self.additional_active_feeds)
+
+  def __next__(self) -> np.array:
+    """
+    Iterator gives priority to additional active feeds if exist,
+    otherwise pops a fresh feed from the dataset.
+    """
+    if self.additional_active_feeds:
+      return self.additional_active_feeds.pop()
+    else:
+      self.sample_idx += 1
+      return self.dataset[(self.sample_idx - 1) % len(self.dataset)]
+
+  def add_active_feed(self, item: np.array) -> None:
+    """
+    If a model provides a good sample, feed it back
+    to the feeds to see if you can get something better.
+    """
+    self.additional_active_feeds.append(item)
     return
