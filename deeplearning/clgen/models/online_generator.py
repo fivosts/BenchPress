@@ -33,15 +33,6 @@ class OnlineSamplingGenerator(object):
     d.dataloader = d.online_dataloader()
     return d
 
-  @classmethod
-  def FromDataGenerator(cls,
-                        generator: lm_data_generator.MaskLMDataGenerator,
-                        ) -> "online_generator.OnlineSamplingGenerator":
-    """Initializes data generator for online sampling."""
-    d = OnlineSamplingGenerator(generator)
-    d.dataloader = d.online_dataloader()
-    return d
-
   def __init__(self,
                generator: lm_data_generator.MaskLMDataGenerator
                ):
