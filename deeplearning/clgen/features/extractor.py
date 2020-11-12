@@ -53,4 +53,6 @@ def StrToDictFeatures(str_features: str) -> typing.Dict[str, float]:
     except ValueError as e:
       raise ValueError("{}, {}".format(str(e), str_features))
   except Exception as e:
-    raise ValueError(e)
+    # Something went wrong with splitting,
+    # str_features is empty so leave this None.
+    return None
