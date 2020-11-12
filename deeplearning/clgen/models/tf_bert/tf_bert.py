@@ -37,6 +37,7 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.preprocessors import opencl
+from deeplearning.clgen.features import extractor
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models.tf_bert import model
@@ -352,6 +353,9 @@ class tfBert(backends.BackendBase):
                 except ValueError:
                   compile_flag = 0
 
+                feature_vector, stderr = extractor.kernel_features(self.atomizer.ArrayToCode(sample))
+                if " error: " in stderr:
+                  feature_vector = None
                 sample_proto = model_pb2.Sample(
                   train_step             = (ep + 1) * self.steps_per_epoch,
                   sample_feed            = sampler.start_text,
@@ -360,7 +364,7 @@ class tfBert(backends.BackendBase):
                   sample_indices         = '\n'.join([self.atomizer.DeatomizeIndices(mind).replace('\n', '\\n') for mind in sind]),
                   encoded_sample_indices = '\n'.join([','.join([str(x) for x in mind]) for mind in sind ]),
                   sample_time_ms         = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
-                  feature_vector         = self.atomizer.DeatomizeIndices(sample, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
+                  feature_vector         = feature_vector,
                   num_tokens             = len(sample),
                   compile_status         = compile_flag,
                   categorical_sampling   = self.samplesWithCategorical(),
