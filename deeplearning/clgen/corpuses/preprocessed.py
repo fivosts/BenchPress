@@ -105,18 +105,18 @@ class PreprocessedContentFile(Base):
     preprocess_time_ms = int((end_time - start_time) * 1000)
     input_text_stripped = input_text.strip()
     return [ cls(
-      input_relpath=relpath,
-      input_sha256=GetFileSha256(contentfile_root / (relpath)),
-      input_charcount=len(input_text_stripped),
-      input_linecount=len(input_text_stripped.split("\n")),
-      sha256=hashlib.sha256(text.encode("utf-8")).hexdigest(),
-      charcount=len(text),
-      linecount=len(text.split("\n")),
-      text=text,
-      preprocessing_succeeded=success,
-      preprocess_time_ms=preprocess_time_ms,
-      wall_time_ms=preprocess_time_ms,  # The outer-loop may change this.
-      date_added=datetime.datetime.utcnow(),
+      input_relpath           = relpath,
+      input_sha256            = GetFileSha256(contentfile_root / (relpath)),
+      input_charcount         = len(input_text_stripped),
+      input_linecount         = len(input_text_stripped.split("\n")),
+      sha256                  = hashlib.sha256(text.encode("utf-8")).hexdigest(),
+      charcount               = len(text),
+      linecount               = len(text.split("\n")),
+      text                    = text,
+      preprocessing_succeeded = success,
+      preprocess_time_ms      = preprocess_time_ms,
+      wall_time_ms            = preprocess_time_ms,  # The outer-loop may change this.
+      date_added              = datetime.datetime.utcnow(),
     ) for (text, success) in text_generator ]
 
 
