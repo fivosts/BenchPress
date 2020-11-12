@@ -96,7 +96,7 @@ sampler {
       preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"  
     }
   }
-  batch_size: 1
+  batch_size: 4
   sequence_length: 512
   temperature_micros: 500000  # = 0.8 real value
   termination_criteria {
