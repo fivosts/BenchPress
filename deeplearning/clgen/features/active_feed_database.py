@@ -39,8 +39,6 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
   input_feed       : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Encoded original input
   encoded_feed     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  # Actual length neglecting pads
-  kernel_length    : int = sql.Column(sql.Integer, nullable = False)
   # Feature vector of input_feed
   input_features   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Resulting encoded array with masks
@@ -51,6 +49,8 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
   hole_start_ids   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Output sample
   sample           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Actual length of sample, excluding pads.
+  num_tokens       : int = sql.Column(sql.Integer, nullable = False)
   # Sample's vector of features.
   output_features  : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Whether the generated sample is of good quality or not.
@@ -71,24 +71,25 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
                sample_quality   : bool,
                ) -> typing.TypeVar("ActiveFeed"):
     """Construt ActiveFeed table entry from argumentns."""
-    str_masked_input_ids = atomizer.DeatomizeIndices(masked_input_ids)
-    str_sample = atomizer.DeatomizeIndices(sample)
+    str_input_feed       = atomizer.DeatomizeIndices(input_feed,       ignore_token = atomizer.padToken)
+    str_masked_input_ids = atomizer.DeatomizeIndices(masked_input_ids, ignore_token = atomizer.padToken)
+    str_sample           = atomizer.DeatomizeIndices(sample,           ignore_token = atomizer.padToken)
 
-    kernel_length = len(input_feed)
-    if atomizer.padToken in input_feed:
-      kernel_length = np.where(input_feed == atomizer.padToken)[0][0]
+    num_tokens = len(sample)
+    if atomizer.padToken in sample:
+      num_tokens = np.where(sample == atomizer.padToken)[0][0]
 
     return ActiveFeed(
       id               = id,
       sha256           = crypto.sha256_str(str_masked_input_ids + str_sample),
-      input_feed       = atomizer.DeatomizeIndices(input_feed),
+      input_feed       = str_input_feed,
       encoded_feed     = ','.join([str(x) for x in input_feed]),
-      kernel_length    = kernel_length,
       input_features   = '\n'.join(["{}:{}".format(k, v) for k, v in input_features.items()]),
-      masked_input_ids = ','.join([str(x) for x in masked_input_ids]),
+      masked_input_ids = str_masked_input_ids,
       hole_lengths     = ','.join(str(lm.hole_length) for lm in hole_instances),
       hole_start_ids   = ','.join(str(lm.pos_index) for lm in hole_instances),
-      sample           = atomizer.DeatomizeIndices(sample),
+      sample           = str_sample,
+      num_tokens       = int(num_tokens),
       output_features  = '\n'.join(["{}:{}".format(k, v) for k, v in output_features.items()]) if output_features else "None",
       sample_quality   = sample_quality,
       date_added       = datetime.datetime.utcnow(),
