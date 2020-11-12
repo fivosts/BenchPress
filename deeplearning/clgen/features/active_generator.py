@@ -15,7 +15,16 @@ from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.features import active_feed_database
 from deeplearning.clgen.util import distributions
 
+from absl import flags
 from eupy.native import logger as l
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_integer(
+  "active_limit_per_feed",
+  50,
+  "Set limit on sample attempts per input_feed. [Default: 50]. Set to 0 for infinite."
+)
 
 class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
   """
@@ -36,6 +45,8 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     input_feed       : np.array
     # The feature space of the original input
     input_features   : typing.Dict[str, float]
+    # Times tried to produce a sample out of this feed
+    feed_attempts    : int
     """
     All fields below are lists of instances.
     Based on the same input_feed, each instance
@@ -97,6 +108,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
         ActiveSamplingGenerator.ActiveSampleFeed(
           input_feed       = seed,
           input_features   = extractor.StrToDictFeatures(feature),
+          feed_attempts    = 0,
           masked_input_ids = [input_feed['input_ids']],
           hole_instances   = [masked_idxs],
           sample_outputs   = [],
@@ -119,6 +131,8 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     """
     if len(self.feed_stack) == 0:
       raise ValueError("Feed stack is empty. Cannot pop element.")
+
+    self.feed_stack[-1] = self.feed_stack[-1]._replace(feed_attempts = 1 + self.feed_stack[-1].feed_attempts)
 
     features, gd = [], []
     for sample in samples:
@@ -160,6 +174,8 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
 
     if any(self.feed_stack[-1].good_samples[-1]):
       return self.feed_stack[-1].sample_outputs[-1], True
+    elif FLAGS.active_limit_per_feed > 0 and self.feed_stack[-1].feed_attempts > FLAGS.active_limit_per_feed:
+      return next(self.dataloader), False
     else:
       input_ids, masked_idxs = self.masking_func(self.feed_stack[-1].input_feed)
       # TODO do sth with hole_lengths and masked_idxs
