@@ -200,7 +200,7 @@ def CompileLlvmBytecode(
       raise ValueError(e)
     diagnostics = [str(d) for d in unit.diagnostics if d.severity > 2]
     if len(diagnostics) > 0:
-      raise ValueError('\n'.join(diagnostics))
+      raise ValueError("{}\n{}".format('\n'.join(diagnostics), src))
     else:
       return src
 
