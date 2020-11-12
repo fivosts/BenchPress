@@ -21,6 +21,7 @@ from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import monitors
 from deeplearning.clgen.samplers import samples_database
+from deeplearning.clgen.features import extractor
 from labm8.py import fs
 
 FLAGS = flags.FLAGS
@@ -134,7 +135,7 @@ class SamplesDatabaseObserver(SampleObserver):
     self.sample_id = self.db.count
     self.plot_sample_status = plot_sample_status
     if self.plot_sample_status:
-      self.monitor = monitors.FrequencyMonitor(path.parent, "cumulative_sample_count")
+      self.monitor = monitors.CumulativeHistMonitor(path.parent, "cumulative_sample_count")
 
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback."""
@@ -159,9 +160,10 @@ class SamplesDatabaseObserver(SampleObserver):
   def endSample(self) -> None:
     """Write final summed data about sampling session."""
     # Create feature vector plots
-    feature_monitor = monitors.FeatureMonitor(self.db.url[len("sqlite:///"):], "samples_feature_vector")
+    db_path = pathlib.Path(self.db.url[len("sqlite:///"):]).parent
+    feature_monitor = monitors.FeatureMonitor(db_path, "samples_feature_vector")
     for sample in self.db.correct_samples:
-      feature_monitor.register(extractor.StrToDictFeatures(encoded_cf.feature_vector))
+      feature_monitor.register(extractor.StrToDictFeatures(sample.feature_vector))
     feature_monitor.plot()
 
     with self.db.Session() as session:
