@@ -357,7 +357,7 @@ class torchBert(backends.BackendBase):
             if FLAGS.reward_compilation:
               correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out.generated_samples)) if step_out.compile_status[en] == 1]
               for s in correct_samples:
-                feature_vector, _ = extractor.kernel_features(self.atomizer.DeatomizeIndices(s[1], ignore_token = self.atomizer.padToken).replace("\\n", "\n"))
+                feature_vector, _ = extractor.kernel_features(self.atomizer.ArrayToCode(s[1]))
                 correct_sample_obs.OnSample(model_pb2.Sample(
                     train_step             = self.current_step,
                     sample_feed            = self.atomizer.DeatomizeIndices(s[0], ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
