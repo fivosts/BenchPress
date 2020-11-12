@@ -369,10 +369,13 @@ class Model(object):
             end_time      = datetime.datetime.utcnow()
             done[i]       = 1
             sample_kernel = [x for x in samples_in_progress[i] if x != atomizer.metaTokens['padToken']]
-
+            num_tokens    = len(samples_in_progress[i])
+            if atomizer.metaTokens['padToken'] in samples_in_progress[i]:
+              num_tokens = samples_in_progress[i].index(atomizer.metaTokens['padToken'])
             try:
-              stdout = opencl.Compile(self.atomizer.StringArrToCode(sample_kernel))
-              feature_vector, stderr = extractor.kernel_features("".join(sample_kernel))
+              src = self.atomizer.StringArrToCode(sample_kernel)
+              stdout = opencl.Compile(src)
+              feature_vector, stderr = extractor.kernel_features(src)
               compile_flag = True
             except ValueError:
               compile_flag = False
@@ -389,7 +392,7 @@ class Model(object):
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               wall_time_ms              = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               feature_vector            = feature_vector,
-              num_tokens                = len(samples_in_progress[i]),
+              num_tokens                = num_tokens,
               compile_status            = compile_flag,
               categorical_sampling      = self.backend.samplesWithCategorical(),
               date_added                = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
