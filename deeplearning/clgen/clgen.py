@@ -305,6 +305,10 @@ def DoFlagsAction(
       else:
         if instance.sampler:
           instance.Sample(sample_observers)
+          instance.sampler.symlinkModelDB(
+            instance.model.cache.path / "samples" / instance.sampler.hash,
+            instance.model.hash
+          )
   else:
     if FLAGS.stop_after in {"corpus", "train"}:
       l.getLogger().warn("FLAGS.stop_after {} will be ignored without model config.".format(FLAGS.stop_after))
