@@ -88,6 +88,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     masking_func output goes through TensorFormat to convert np arrays to relevant tensors.
     """
     while True:
+      """Model will ask with next(). As long as it asks, this loop will bring."""
       seed = next(self.active_dataset)
       feature, stderr = extractor.kernel_features(self.atomizer.ArrayToCode(seed))
       input_feed, masked_idxs = self.masking_func(seed)
