@@ -129,11 +129,14 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       else:
         # This line below is your requirement.
         # This is going to become more complex.
-        bigger = feature_sampler.is_kernel_smaller(
-          self.feed_stack[-1].input_features, extractor.StrToDictFeatures(feature)
-        )
-        gd.append(bigger)
-        features.append(feature)
+        features.append(extractor.StrToDictFeatures(feature))
+        if feature:
+          bigger = feature_sampler.is_kernel_smaller(
+            self.feed_stack[-1].input_features, features[-1]
+          )
+          gd.append(bigger)
+        else:
+          gd.append(False)
 
       entry = active_feed_database.ActiveFeed.FromArgs(
         atomizer         = self.atomizer,
@@ -157,7 +160,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     else:
       input_ids, masked_idxs = self.masking_func(self.feed_stack[-1].input_feed)
       # TODO do sth with hole_lengths and masked_idxs
-      self.feed_stack[-1].masked_input_ids.append(input_ids)
+      self.feed_stack[-1].masked_input_ids.append(input_ids['input_ids'])
       self.feed_stack[-1].hole_instances.append(masked_idxs)
       return self.data_generator.toTensorFormat(input_ids), False
 
