@@ -321,7 +321,10 @@ class EncodedContentFiles(sqlutil.Database):
             )
             session.add(encoded_cf)
             self.length_monitor.register(encoded_cf.tokencount)
-            self.feature_monitor.register(extractor.StrToDictFeatures(encoded_cf.feature_vector))
+
+            dict_features = extractor.StrToDictFeatures(encoded_cf.feature_vector)
+            if dict_features:
+              self.feature_monitor.register(dict_features)
           wall_time_start = wall_time_end
           if wall_time_end - last_commit > 10:
             session.commit()
