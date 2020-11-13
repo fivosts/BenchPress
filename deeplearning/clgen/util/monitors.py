@@ -190,7 +190,7 @@ class FeatureMonitor(Monitor):
   def register(self, actual_sample: typing.Dict[str, float]) -> None:
     """actual sample is a dict of features to their values."""
     if not isinstance(actual_sample, dict):
-      raise TypeError("Feature sample must be dictionary of string features to float values.")
+      raise TypeError("Feature sample must be dictionary of string features to float values. Received: {}".format(actual_sample))
 
     self.instance_counter += 1
     for k, v in actual_sample.items():
