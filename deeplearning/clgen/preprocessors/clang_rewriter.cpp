@@ -55,6 +55,13 @@
 // Uncommend the following line for debug output:
 // #define DEBUG
 
+// Compatibility matching of LLVM Versions.
+#if LLVM_VERSION == 9
+  #define GET_BEGIN_LOC getBeginLoc
+#else
+  #define GET_BEGIN_LOC getLocStart
+#endif
+
 // debugging print out
 #ifdef DEBUG
 #define DEBUG_OUT(x) llvm::errs() << x;
@@ -238,13 +245,13 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
 
   void rewrite_fn_name(clang::CallExpr* const call,
                        const std::string& replacement) {
-    rewriter.ReplaceText(call->getLocStart(), replacement);
+    rewriter.ReplaceText(call->GET_BEGIN_LOC(), replacement);
     ++_fn_call_rewrites_counter;
   }
 
   void rewrite_var_name(clang::DeclRefExpr* const ref,
                         const std::string& replacement) {
-    rewriter.ReplaceText(ref->getLocStart(), replacement);
+    rewriter.ReplaceText(ref->GET_BEGIN_LOC(), replacement);
     ++_var_use_rewrites_counter;
   }
 
@@ -271,7 +278,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
   // rewrite function calls
   //
   bool VisitCallExpr(clang::CallExpr* call) {
-    if (isMainFile(call->getLocStart())) {
+    if (isMainFile(call->GET_BEGIN_LOC())) {
       // rewrite function calls
       const auto callee = call->getDirectCallee();
       if (callee) {
@@ -339,7 +346,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
   // rewrite variable refs
   //
   bool VisitDeclRefExpr(clang::DeclRefExpr* ref) {
-    if (isMainFile(ref->getLocStart())) {
+    if (isMainFile(ref->GET_BEGIN_LOC())) {
       const auto name = ref->getNameInfo().getName().getAsString();
       const auto d = ref->getDecl();
 
@@ -395,7 +402,7 @@ class RewriterASTConsumer : public clang::ASTConsumer {
 class RewriterFrontendAction : public clang::ASTFrontendAction {
  public:
   virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
-      clang::CompilerInstance& ci, StringRef file) {
+      clang::CompilerInstance& ci, llvm::StringRef file) {
     return llvm::make_unique<RewriterASTConsumer>(&ci);
   }
 };
