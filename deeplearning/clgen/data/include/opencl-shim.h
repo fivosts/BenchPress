@@ -68,7 +68,10 @@
 #define KParam int
 #define Tp int
 #define Pixel int3
+#define uint8_t short unsigned int
+#define uint16_t unsigned int
 #define uint32_t unsigned int
+#define uint64_t long unsigned int
 #endif  // CLGEN_OPENCL_SHIM_NO_COMMON_TYPES
 
 // Common constants
