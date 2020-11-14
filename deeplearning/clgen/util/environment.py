@@ -8,6 +8,7 @@ def check_exists(path):
 
 try:
   LLVM                = check_exists(os.environ['LLVM'])
+  LLVM_VERSION        = check_exists(os.environ['LLVM_VERSION'])
   LLVM_LIB            = check_exists(os.environ['LLVM_LIB'])
   LIBCXX_HEADERS      = check_exists(os.environ['LIBCXX_HEADERS'])
   CLANG               = check_exists(os.environ['CLANG'])
@@ -19,7 +20,6 @@ try:
   DASHBOARD_STATIC    = check_exists(os.environ['DASHBOARD_STATIC'])
   DATA_CL_INCLUDE     = check_exists(os.environ['DATA_CL_INCLUDE'])
   CLGEN_FEATURES      = check_exists(os.environ['CLGEN_FEATURES'])
-  CLGEN_REWRITER      = check_exists(os.environ['CLGEN_REWRITER'])
 except Exception as e:
   raise e
   
