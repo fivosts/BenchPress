@@ -25,13 +25,13 @@ from eupy.native import logger as l
 FLAGS = flags.FLAGS
 
 # Path of the clang rewriter binary.
-CLGEN_REWRITER = environment.CLANG_REWRITER
+CLANG_REWRITER = environment.CLANG_REWRITER
 
 # On Linux we must preload the LLVM libraries.
-CLGEN_REWRITER_ENV = os.environ.copy()
+CLANG_REWRITER_ENV = os.environ.copy()
 libclang = os.path.join(environment.LLVM, "lib/libclang.so")
 liblto   = os.path.join(environment.LLVM, "lib/libLTO.so")
-CLGEN_REWRITER_ENV["LD_PRELOAD"] = f"{libclang}:{liblto}"
+CLANG_REWRITER_ENV["LD_PRELOAD"] = f"{libclang}:{liblto}"
 
 
 def NormalizeIdentifiers(
@@ -64,13 +64,13 @@ def NormalizeIdentifiers(
     f.write(text)
     f.flush()
     cmd = (
-      ["timeout", "-s9", str(timeout_seconds), str(CLGEN_REWRITER), f.name]
+      ["timeout", "-s9", str(timeout_seconds), str(CLANG_REWRITER), f.name]
       + ["-extra-arg=" + x for x in cflags]
       + ["--"]
     )
     l.getLogger().debug("$ {}{}".format(
-                    f'LD_PRELOAD={CLGEN_REWRITER_ENV["LD_PRELOAD"]} '
-                    if "LD_PRELOAD" in CLGEN_REWRITER_ENV
+                    f'LD_PRELOAD={CLANG_REWRITER_ENV["LD_PRELOAD"]} '
+                    if "LD_PRELOAD" in CLANG_REWRITER_ENV
                     else "",
                     " ".join(cmd),
       ),
@@ -82,7 +82,7 @@ def NormalizeIdentifiers(
       stdout=subprocess.PIPE,
       stderr=subprocess.PIPE,
       universal_newlines=True,
-      env=CLGEN_REWRITER_ENV,
+      env=CLANG_REWRITER_ENV,
     )
     stdout, stderr = process.communicate()
     l.getLogger().debug("stdout: {}".format(stdout))
