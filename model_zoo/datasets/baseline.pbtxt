@@ -1,7 +1,7 @@
 working_dir: "BERT" ## This path is relative to "workspace_dir", which is an app FLAG
 model {
   corpus {
-    local_tar_archive: "$PWD/../corpus/ultimate_corpus.tar.bz2"
+    local_directory: "$PWD/../corpus/corpus/"
     atomizer {
       token_type: "word"
       token_list: "deeplearning/clgen/corpuses/token_lists.json"
@@ -9,7 +9,7 @@ model {
       wordpiece_tokenization: false
     }
     contentfile_separator: "\n\n"
-    # preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
     # preprocessor: "deeplearning.clgen.preprocessors.opencl:NormalizeIdentifiers"
     # preprocessor: "deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes"
