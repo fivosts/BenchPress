@@ -9,7 +9,6 @@ from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import crypto
 
 CLGEN_FEATURES = environment.CLGEN_FEATURES
-CLGEN_REWRITER = environment.CLGEN_REWRITER
 
 def kernel_features(src: str, *extra_args) -> str:
   """
