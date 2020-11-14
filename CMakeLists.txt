@@ -42,6 +42,18 @@ function(find_binaries)
       )
     endif()
 
+    # Use 6 as default LLVM version. 9 is available as well.
+    if ("${LLVM_VERSION}" STREQUAL "")
+      set(LLVM_VERSION "6" CACHE FILEPATH
+        "Select between LLVM version 6 and 9. [Default: 6]."
+        FORCE
+      )
+    elseif (NOT "${LLVM_VERSION}" STREQUAL "6" AND NOT "${LLVM_VERSION}" STREQUAL "9")
+      message(FATAL_ERROR "-- LLVM Versions available are only 6 and 9.")
+    endif()
+
+    message("-- Using LLVM " ${LLVM_VERSION})
+
     # Python binary exists or crash.
     find_program(PYTHON_FOUND ${PYTHON})
     if (PYTHON_FOUND)
@@ -127,25 +139,40 @@ function(install_external_deps)
     set(PROTOC          ${LOCAL}/bin/protoc PARENT_SCOPE)
   endif ()
 
-  # Clang and LLVM 6 pre-compiled binaries and libraries.
-  ExternalProject_Add(llvm
-    URL               https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
-    PREFIX            ${THIRD_PARTY}
-    TMP_DIR           ${THIRD_PARTY}/tmp
-    STAMP_DIR         ${THIRD_PARTY}/stamp
-    DOWNLOAD_DIR      ${THIRD_PARTY}/llvm
-    SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm
-    INSTALL_DIR       ${LOCAL}
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND     ""
-    INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/llvm/llvm/ ${LOCAL}
-  )
+  # Clang and LLVM 9 pre-compiled binaries and libraries.
+  if ("${LLVM_VERSION}" STREQUAL "6")
+    ExternalProject_Add(llvm
+      URL               https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+      PREFIX            ${THIRD_PARTY}
+      TMP_DIR           ${THIRD_PARTY}/tmp
+      STAMP_DIR         ${THIRD_PARTY}/stamp
+      DOWNLOAD_DIR      ${THIRD_PARTY}/llvm
+      SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm
+      INSTALL_DIR       ${LOCAL}
+      CONFIGURE_COMMAND ""
+      BUILD_COMMAND     ""
+      INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/llvm/llvm/ ${LOCAL}
+    )
+  elseif("${LLVM_VERSION}" STREQUAL "9")
+    ExternalProject_Add(llvm
+      URL               https://releases.llvm.org/9.0.0/clang+llvm-9.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz
+      PREFIX            ${THIRD_PARTY}
+      TMP_DIR           ${THIRD_PARTY}/tmp
+      STAMP_DIR         ${THIRD_PARTY}/stamp
+      DOWNLOAD_DIR      ${THIRD_PARTY}/llvm
+      SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm
+      INSTALL_DIR       ${LOCAL}
+      CONFIGURE_COMMAND ""
+      BUILD_COMMAND     ""
+      INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/llvm/llvm/ ${LOCAL}
+    )
+  endif()
   set(LLVM            ${LOCAL}/llvm PARENT_SCOPE)
 
   #include <OpenCL/*>
   ExternalProject_Add(opencl-headers
     GIT_REPOSITORY    https://github.com/KhronosGroup/OpenCL-Headers.git
-    GIT_TAG           9824efd0ec1adbfc23b40be6486a8ec6efc43822
+    GIT_TAG           9fac4e9866a961f66bdd72fa2bff50145512f972
     GIT_PROGRESS      true
     PREFIX            ${THIRD_PARTY}
     TMP_DIR           ${THIRD_PARTY}/tmp
@@ -203,6 +230,15 @@ function(setup_python)
       COMMENT "Installing python package dependencies"
     )
   endif ()
+  if ("${LLVM_VERSION}" STREQUAL "9")
+    # Override pip clang 6 and install 9
+    add_custom_target(override_pyclang ALL
+      COMMAND ${PYTHON} -m pip uninstall --yes clang
+      COMMAND ${PYTHON} -m pip install clang==9.0
+      DEPENDS requirements
+      COMMENT "Overriding pip clang installation to 9.0.0."
+    )
+  endif()
   set(PYTHON ${PYTHON_ENV} PARENT_SCOPE)
 endfunction()
 
@@ -215,7 +251,6 @@ function(clgen)
   get_target_property(DASHBOARD_TEMPLATES dashboard_templates path)
   get_target_property(LIBCLC              libclc              path)
   get_target_property(DATA_CL_INCLUDE     data_cl_include     path)
-  get_target_property(CLGEN_REWRITER      clgen_rewriter      path)
   get_target_property(CLGEN_FEATURES      clgen_features      path)
 
   string(CONCAT CLGEN 
@@ -227,6 +262,7 @@ function(clgen)
     "PYTHON_BINARY="                         ${PYTHON}  "\n"
     "CLGEN_BINARY="                          ${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH} "/clgen.py\n"
     "export LLVM="                           ${LLVM} "\n"
+    "export LLVM_VERSION="                   ${LLVM_VERSION} "\n"
     "export LLVM_LIB="                       ${LLVM}/lib "\n"
     "export LIBCXX_HEADERS="                 ${LLVM}/include/c++/v1 "\n"
     "export LIBCLC="                         ${LIBCLC} "\n"
@@ -235,12 +271,12 @@ function(clgen)
     "export DASHBOARD_STATIC="               ${DASHBOARD_STATIC} "\n"
     "export DATA_CL_INCLUDE="                ${DATA_CL_INCLUDE} "\n"
     "export CLANG_FORMAT="                   ${LLVM}/bin/clang-format "\n"
-    "export CLANG_HEADERS="                  ${LLVM}/lib/clang/6.0.0/include "\n"
+    "export CLANG_HEADERS="                  ${LLVM}/lib/clang/${LLVM_VERSION}.0.0/include "\n"
     "export CLANG_REWRITER="                 ${CLANG_REWRITER} "\n"
     "export CLGEN_FEATURES="                 ${CLGEN_FEATURES} "\n"
-    "export CLGEN_REWRITER="                 ${CLGEN_REWRITER} "\n"
     "eval PYTHONPATH="                       ${CMAKE_CURRENT_SOURCE_DIR} " $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
     "unset LLVM\n"
+    "unset LLVM_VERSION\n"
     "unset LLVM_LIB\n"
     "unset LIBCXX_HEADERS\n"
     "unset LIBCLC\n"
@@ -250,9 +286,7 @@ function(clgen)
     "unset DATA_CL_INCLUDE\n"
     "unset CLANG_FORMAT\n"
     "unset CLANG_HEADERS\n"
-    "unset CLANG_REWRITER\n"
     "unset CLGEN_FEATURES\n"
-    "unset CLGEN_REWRITER\n"
   )
   file(
     WRITE ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CLGEN}
