@@ -51,6 +51,10 @@ CLANG_FORMAT_CONFIG = {
   "AlwaysBreakAfterDefinitionReturnType": "None",
 }
 clang.cindex.Config.set_library_path(environment.LLVM_LIB)
+if environment.LLVM_VERSION == 9:
+  # LLVM 9 needs libclang explicitly defined.
+  clang.cindex.Config.set_library_file(environment.LLVM_LIB + "/libclang.so.9")
+
 CLANG = environment.CLANG
 CLANG_FORMAT = environment.CLANG_FORMAT
 
@@ -169,7 +173,7 @@ def ProcessCompileLlvmBytecode(
   if process.returncode == 9:
     raise ValueError(f"Clang timed out after {timeout_seconds}s")
   elif process.returncode != 0:
-    raise ValueError("{}\n{}".format(stderr, src))
+    raise ValueError("/*\n{}\n*/\n{}".format(stderr, src))
   return stdout
 
 def CompileLlvmBytecode(
@@ -200,7 +204,7 @@ def CompileLlvmBytecode(
       raise ValueError(e)
     diagnostics = [str(d) for d in unit.diagnostics if d.severity > 2]
     if len(diagnostics) > 0:
-      raise ValueError("{}\n{}".format('\n'.join(diagnostics), src))
+      raise ValueError("/*\n{}\n*/\n{}".format('\n'.join(diagnostics), src))
     else:
       return src
 
