@@ -27,7 +27,7 @@ FLAGS = flags.FLAGS
 LIBCLC         = environment.LIBCLC
 OPENCL_HEADERS = environment.OPENCL_HEADERS
 
-CL_H           = os.path.join(OPENCL_HEADERS, "cl.h")
+CL_H           = os.path.join(OPENCL_HEADERS, "CL/cl.h")
 OPENCL_H       = os.path.join(environment.DATA_CL_INCLUDE, "opencl.h")
 OPENCL_C_H     = os.path.join(environment.DATA_CL_INCLUDE, "opencl-c.h")
 OPENCL_C_BASE  = os.path.join(environment.DATA_CL_INCLUDE, "opencl-c-base.h")
