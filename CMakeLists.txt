@@ -270,7 +270,7 @@ function(clgen)
     "export LLVM_LIB="                       ${LLVM}/lib "\n"
     "export LIBCXX_HEADERS="                 ${LLVM}/include/c++/v1 "\n"
     "export LIBCLC="                         ${LIBCLC} "\n"
-    "export OPENCL_HEADERS="                  $OPENCL_HEADERS "\n"
+    "export OPENCL_HEADERS="                 ${OPENCL_HEADERS} "\n"
     "export CLANG="                          ${LLVM}/bin/clang "\n"
     "export DASHBOARD_TEMPLATES="            ${DASHBOARD_TEMPLATES} "\n"
     "export DASHBOARD_STATIC="               ${DASHBOARD_STATIC} "\n"
@@ -297,7 +297,7 @@ function(clgen)
   file(
     WRITE ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CLGEN}
   )
-  add_custom_target(link_target ALL
+  add_custom_target(clgen ALL
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CMAKE_CURRENT_SOURCE_DIR}/clgen
     COMMAND chmod 551 ${CMAKE_CURRENT_SOURCE_DIR}/clgen
   )
