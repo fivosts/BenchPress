@@ -24,9 +24,14 @@ from absl import flags
 
 FLAGS = flags.FLAGS
 
-LIBCLC = environment.LIBCLC
-OPENCL_H = os.path.join(environment.DATA_CL_INCLUDE, "opencl.h")
-SHIMFILE = os.path.join(environment.DATA_CL_INCLUDE, "opencl-shim.h")
+LIBCLC         = environment.LIBCLC
+OPENCL_HEADERS = environment.OPENCL_HEADERS
+
+CL_H           = os.path.join(OPENCL_HEADERS, "cl.h")
+OPENCL_H       = os.path.join(environment.DATA_CL_INCLUDE, "opencl.h")
+OPENCL_C_H     = os.path.join(environment.DATA_CL_INCLUDE, "opencl-c.h")
+OPENCL_C_BASE  = os.path.join(environment.DATA_CL_INCLUDE, "opencl-c-base.h")
+SHIMFILE       = os.path.join(environment.DATA_CL_INCLUDE, "opencl-shim.h")
 
 def GetClangArgs(use_shim: bool) -> typing.List[str]:
   """Get the arguments to pass to clang for handling OpenCL.
@@ -38,25 +43,32 @@ def GetClangArgs(use_shim: bool) -> typing.List[str]:
   Returns:
     A list of command line arguments to pass to Popen().
   """
+  # args = [
+  #   "-I" + str(LIBCLC),
+  #   "-include",
+  #   str(OPENCL_H),
+  #   "-target",
+  #   "nvptx64-nvidia-nvcl",
+  #   f"-ferror-limit=0",
+  #   "-xcl",
+  #   "-Wno-everything",
+  # ]
+
   args = [
-    "-I" + str(LIBCLC),
-    "-include",
-    str(OPENCL_H),
-    "-target",
-    "nvptx64-nvidia-nvcl",
-    f"-ferror-limit=0",
-    "-xcl",
+    "-x cl",
+    "--target=nvptx64-nvidia-nvcl",
+    "-cl-std=CL2.0",
+    "-ferror-limit=0",
+    "-include {}".format(OPENCL_C_H),
+    "-include {}".format(OPENCL_C_BASE),
+    "-include {}".format(CL_H),
+    "-I{}".format(str(OPENCL_HEADERS)),
+    "-I{}".format(str(LIBCLC)),
     "-Wno-everything",
-    # "-Wno-ignored-pragmas",
-    # "-Wno-implicit-function-declaration",
-    # "-Wno-incompatible-library-redeclaration",
-    # "-Wno-macro-redefined",
-    # "-Wno-unused-parameter",
   ]
   if use_shim:
     args += ["-include", str(SHIMFILE)]
   return args
-
 
 def _ClangPreprocess(text: str, use_shim: bool) -> str:
   """Private preprocess OpenCL source implementation.
@@ -116,7 +128,7 @@ def Compile(text: str) -> str:
   clang.CompileLlvmBytecode(
     text,
     ".cl",
-    GetClangArgs(use_shim=False) + ["-Werror=implicit-function-declaration"],
+    GetClangArgs(use_shim=False)# + ["-Werror=implicit-function-declaration"],
   )
   return text
 
