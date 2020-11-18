@@ -11,6 +11,7 @@ try:
   LLVM                = check_exists(os.environ['LLVM'])
   LLVM_LIB            = check_exists(os.environ['LLVM_LIB'])
   LIBCXX_HEADERS      = check_exists(os.environ['LIBCXX_HEADERS'])
+  OPENCL_HEADERS      = check_exists(os.environ['OPENCL_HEADERS'])
   CLANG               = check_exists(os.environ['CLANG'])
   CLANG_FORMAT        = check_exists(os.environ['CLANG_FORMAT'])
   CLANG_HEADERS       = check_exists(os.environ['CLANG_HEADERS'])
