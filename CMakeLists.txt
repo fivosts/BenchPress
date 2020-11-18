@@ -169,10 +169,14 @@ function(install_external_deps)
   endif()
   set(LLVM            ${LOCAL}/llvm PARENT_SCOPE)
 
-  #include <OpenCL/*>
+  # #include <CL/*>
+  # I have forked my own version of OpenCL Headers which I install here.
+  # My version excludes the C-API functions from being included,
+  # otherwise many compilation errors will come up when trying to
+  # compile pure cl files instead of driving them through a C-file.
   ExternalProject_Add(opencl-headers
-    GIT_REPOSITORY    https://github.com/KhronosGroup/OpenCL-Headers.git
-    GIT_TAG           9fac4e9866a961f66bdd72fa2bff50145512f972
+    GIT_REPOSITORY    https://github.com/fivosts/OpenCL-Headers.git
+    GIT_TAG           ee7c1831c40e2d8ba9ce62fffe9cade64bcf40e7
     GIT_PROGRESS      true
     PREFIX            ${THIRD_PARTY}
     TMP_DIR           ${THIRD_PARTY}/tmp
@@ -266,6 +270,7 @@ function(clgen)
     "export LLVM_LIB="                       ${LLVM}/lib "\n"
     "export LIBCXX_HEADERS="                 ${LLVM}/include/c++/v1 "\n"
     "export LIBCLC="                         ${LIBCLC} "\n"
+    "export OPENCL_HEADERS="                  $OPENCL_HEADERS "\n"
     "export CLANG="                          ${LLVM}/bin/clang "\n"
     "export DASHBOARD_TEMPLATES="            ${DASHBOARD_TEMPLATES} "\n"
     "export DASHBOARD_STATIC="               ${DASHBOARD_STATIC} "\n"
@@ -280,6 +285,7 @@ function(clgen)
     "unset LLVM_LIB\n"
     "unset LIBCXX_HEADERS\n"
     "unset LIBCLC\n"
+    "unset OPENCL_HEADERS\n"
     "unset CLANG\n"
     "unset DASHBOARD_TEMPLATES\n"
     "unset DASHBOARD_STATIC\n"
