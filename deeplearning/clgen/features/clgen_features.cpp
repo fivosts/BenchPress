@@ -665,6 +665,7 @@ void extract_features(std::string path, std::ostream &out,
   clang::DiagnosticOptions diagnosticOptions;
   compiler.createDiagnostics();
 
+  // TODO this
   std::vector<std::string> args{{"-x", "cl", "-include", cl_header()}};
   for (auto& arg : extra_args)
     args.push_back(arg);
