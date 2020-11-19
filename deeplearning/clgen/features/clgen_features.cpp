@@ -645,12 +645,38 @@ std::string getexepath() {
 #endif
 // End platform specific code.
 
+// #ifndef OPENCL_HEADERS
+// #pragma message("OPENCL_HEADERS path has not been defined.")
+// #endif
+// // Include directory of OpenCL headers
+// std::string cl_headers() {
+//   return OPENCL_HEADERS;
+// }
 
-// Return path to OpenCL platform header.
-std::string cl_header() {
+// // Return path to OpenCL platform header.
+// std::string cl_header() {
+//   return cl_headers() + "/CL/cl.h";
+// }
+
+std::string old_cl_header() {
   return dirname(getexepath()) + "/cl.h";
 }
 
+// #ifndef OPENCL_C_H
+// #pragma message("OPENCL_C_H path has not been defined.")
+// #endif
+// // Path to opencl-c header.
+// std::string cl_c_header() {
+//   return OPENCL_C_H;
+// }
+
+// #ifndef OPENCL_BASE_H 
+// #pragma message("OPENCL_BASE_H   path has not been defined.")
+// #endif
+// // Path to opencl-c-base header.
+// std::string cl_base_header() {
+//   return OPENCL_BASE_H  ;
+// }
 
 //
 // Extract features from kernels in an OpenCL program.
@@ -666,7 +692,16 @@ void extract_features(std::string path, std::ostream &out,
   compiler.createDiagnostics();
 
   // TODO this
-  std::vector<std::string> args{{"-x", "cl", "-include", cl_header()}};
+  std::vector<std::string> args{{"-x", "cl", "-include", old_cl_header()}};
+  // std::vector<std::string> args{{
+  //   "-x", "cl",
+  //   "-cl-std=CL2.0",
+  //   "-include", old_cl_header(),
+  //   // "-include", cl_base_header(),
+  //   "-include", cl_header(),
+  //   "-include",
+  //   "-I", cl_headers()
+  // }};
   for (auto& arg : extra_args)
     args.push_back(arg);
   std::vector<const char*> argv;
