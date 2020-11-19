@@ -354,8 +354,6 @@ class tfBert(backends.BackendBase):
                   compile_flag = 0
 
                 feature_vector, stderr = extractor.kernel_features(self.atomizer.ArrayToCode(sample))
-                if " error: " in stderr:
-                  feature_vector = None
                 sample_proto = model_pb2.Sample(
                   train_step             = (ep + 1) * self.steps_per_epoch,
                   sample_feed            = sampler.start_text,
