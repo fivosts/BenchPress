@@ -4,7 +4,11 @@
 # Build folders
 *__pycache__*
 *build/
+/build*/
 *env/
+
+# Temp protobufs outside model zoo or workbench
+/*.pbtxt
 
 # Build files
 *pyc
