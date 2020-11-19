@@ -55,13 +55,13 @@ def GetClangArgs(use_shim: bool) -> typing.List[str]:
   # ]
 
   args = [
-    "-x cl",
+    "-xcl",
     "--target=nvptx64-nvidia-nvcl",
     "-cl-std=CL2.0",
     "-ferror-limit=0",
-    "-include {}".format(OPENCL_C_H),
-    "-include {}".format(OPENCL_C_BASE),
-    "-include {}".format(CL_H),
+    "-include{}".format(OPENCL_C_H),
+    "-include{}".format(OPENCL_C_BASE),
+    "-include{}".format(CL_H),
     "-I{}".format(str(OPENCL_HEADERS)),
     "-I{}".format(str(LIBCLC)),
     "-Wno-everything",
