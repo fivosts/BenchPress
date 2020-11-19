@@ -789,7 +789,7 @@ class RecursiveFetcher(GithubMiner):
       return False
 
     repo_url = repo.url
-    contents = self.download_file(g, repo, url, [])
+    contents, _ = self.download_file(g, repo, url, [])
     size     = file.size or 0
 
     self.repo_handler.update_file(
@@ -798,7 +798,7 @@ class RecursiveFetcher(GithubMiner):
     )
     return True
 
-  def download_file(self, g, repo, url: str, stack: typing.List[str]) -> str:
+  def download_file(self, g, repo, url: str, stack: typing.List[str]) -> typing.Tuple[str, typing.List[str]]:
     """
     Fetch file from GitHub.
 
@@ -860,7 +860,7 @@ class RecursiveFetcher(GithubMiner):
 
         if include_url and include_url not in stack:
           if include_url not in self.cached_includes:
-            self.cached_includes[include_url] = self.download_file(g, repo, include_url, stack)
+            self.cached_includes[include_url], stack = self.download_file(g, repo, include_url, stack)
 
           outlines.append("// [FETCH] included: {}\n".format(line))
           outlines.append(self.cached_includes[include_url])
@@ -872,7 +872,7 @@ class RecursiveFetcher(GithubMiner):
             outlines.append('// [FETCH] skipped: {}'.format(line))
       else:
         outlines.append(line)
-    return '\n'.join(outlines)
+    return '\n'.join(outlines), stack
 
   def rate_limit(self, g) -> None:
     """
