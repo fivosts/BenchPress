@@ -92,7 +92,7 @@ class FeatureSampler(object):
           min_proximity = avg_proximity
           min_idx = idx
 
-    threshold = 0.1
+    threshold = 0.4
     if min_proximity <= threshold:
       self.benchmarks[min_idx] = self.benchmarks[min_idx]._replace(times_achieved = 1 + self.benchmarks[min_idx].times_achieved)
       return True
