@@ -13,6 +13,7 @@ from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.features import active_feed_database
+from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.util import distributions
 
 from absl import flags
@@ -85,6 +86,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     )
     self.feed_stack     = []
     self.active_dataset = ActiveDataset(self.online_corpus)
+    self.feat_sampler   = feature_sampler.FeatureSampler()
     return
 
   def active_dataloader(self) -> typing.Union[
@@ -138,22 +140,24 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     for sample in samples:
       feature, stderr = extractor.kernel_features(self.atomizer.ArrayToCode(sample))
 
-      if " error: " in stderr:
-        features.append(None)
-        gd.append(False)
-      else:
+      try:
+        stdout = opencl.Compile(self.atomizer.ArrayToCode(sample))
         # This branch means sample compiles. Let's use it as a sample feed then.
         self.active_dataset.add_active_feed(sample)
         # This line below is your requirement.
         # This is going to become more complex.
         features.append(extractor.StrToDictFeatures(feature))
-        if feature:
-          bigger = feature_sampler.is_kernel_smaller(
-            self.feed_stack[-1].input_features, features[-1]
-          )
-          gd.append(bigger)
+        if features[-1]:
+          # is_better = feature_sampler.is_kernel_smaller(
+          #   self.feed_stack[-1].input_features, features[-1]
+          # )
+          is_better = self.feat_sampler.sample_from_set(features[-1])
+          gd.append(is_better)
         else:
           gd.append(False)
+      except ValueError:
+        features.append(extractor.StrToDictFeatures(feature))
+        gd.append(False)
 
       entry = active_feed_database.ActiveFeed.FromArgs(
         atomizer         = self.atomizer,
