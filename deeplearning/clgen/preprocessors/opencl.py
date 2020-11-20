@@ -26,6 +26,7 @@ FLAGS = flags.FLAGS
 
 LIBCLC         = environment.LIBCLC
 OPENCL_HEADERS = environment.OPENCL_HEADERS
+AUX_INCLUDE    = environment.AUX_INCLUDE
 
 CL_H           = os.path.join(OPENCL_HEADERS, "CL/cl.h")
 OPENCL_H       = os.path.join(environment.DATA_CL_INCLUDE, "opencl.h")
@@ -64,6 +65,7 @@ def GetClangArgs(use_shim: bool) -> typing.List[str]:
     "-include{}".format(CL_H),
     "-I{}".format(str(OPENCL_HEADERS)),
     "-I{}".format(str(LIBCLC)),
+    "-I{}".format(str(AUX_INCLUDE))
     "-Wno-everything",
   ]
   if use_shim:
