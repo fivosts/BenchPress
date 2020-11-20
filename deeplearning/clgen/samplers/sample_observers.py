@@ -182,7 +182,6 @@ class SamplesDatabaseObserver(SampleObserver):
       ]
     with self.db.Session(commit = True) as session:
       exists  = session.query(samples_database.SampleResults.key).filter_by(key = "meta").scalar() is not None
-      entry   = session.query(samples_database.SampleResults    ).filter_by(key = "meta").first()
       if exists:
         entry = session.query(samples_database.SampleResults    ).filter_by(key = "meta").first()
         entry.results = "\n".join(r)
