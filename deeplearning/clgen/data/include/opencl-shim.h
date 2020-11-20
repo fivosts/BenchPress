@@ -295,6 +295,21 @@
 #define ZDIR 2
 #define ZERO 0
 #define ZSIZE 128
+// Hashcat constants
+#define KERNEL_STATIC
+#define VECT_SIZE 1
+#define DGST_R0 0
+#define DGST_R1 1
+#define DGST_R2 2
+#define DGST_R3 3
+#define DGST_ELEM 4
+#define FIXED_LOCAL_SIZE 1
+#define SCRYPT_R 8
+#define DIGESTS_OFFSET 0
+#define SALT_POS 0
+#define SCRYPT_N 16384
+#define SCRYPT_TMTO 1
+#define SCRYPT_P 1
 #endif  // CLGEN_OPENCL_SHIM_NO_COMMON_CONSTANTS
 
 // Hacks!
@@ -310,27 +325,6 @@
 #define block_size_y 1024
 #define DX 16
 #define DY 32
-#define KERNEL_STATIC
-#define VECT_SIZE 1
-// #define DECLSPEC
-// #define LOCAL_MEM_TYPE_LOCAL  1
-// #define LOCAL_MEM_TYPE_GLOBAL 2
-// #define IS_POCL
-// #define IS_GENERIC
-// #define IS_MESA
-// #define IS_INTEL_SDK
-// #define IS_INTEL_BEIGNET
-// #define IS_APPLE
-// #define IS_AMD
-// #define DEVICE_TYPE_CPU   2
-// #define DEVICE_TYPE_GPU   4
-// #define DEVICE_TYPE_ACCEL 8
-// #define CONSTANT_VK __constant
-// #define CONSTANT_AS __constant
-// #define GLOBAL_AS   __global
-// #define LOCAL_VK    __local
-// #define LOCAL_AS    __local
-// #define KERNEL_FQ   __kernel
 // #define SIGNAL_WORK_KERNEL 1
 #define EOPREC_SPINORFIELDSIZE_LOCAL 256
 #define MAX_STACK_DEPTH 1024
