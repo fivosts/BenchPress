@@ -23,7 +23,7 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_integer(
   "active_limit_per_feed",
-  50,
+  10,
   "Set limit on sample attempts per input_feed. [Default: 50]. Set to 0 for infinite."
 )
 
