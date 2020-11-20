@@ -65,7 +65,7 @@ def GetClangArgs(use_shim: bool) -> typing.List[str]:
     "-include{}".format(CL_H),
     "-I{}".format(str(OPENCL_HEADERS)),
     "-I{}".format(str(LIBCLC)),
-    "-I{}".format(str(AUX_INCLUDE))
+    "-I{}".format(str(AUX_INCLUDE)),
     "-Wno-everything",
   ]
   if use_shim:
