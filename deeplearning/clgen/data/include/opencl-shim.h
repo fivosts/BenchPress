@@ -68,37 +68,51 @@
 #define KParam int
 #define Tp int
 #define Pixel int3
-// #define half2 cl_half2
-// #define half3 cl_half3
-// #define half4 cl_half4
-// #define int64 cl_long
-// #define int32 cl_int
-// #define uint8_t short unsigned int
-// #define int8_t short int
-// #define int16_t int
-// #define int32_t int
-// #define int64_t int
-// #define uint16_t unsigned int
-// #define uint32_t unsigned int
-// #define ulong long unsigned int
-// #define u8 char
-// #define u32a cl_int  // Bad
-// #define u32x cl_int  // Bad
-// #define u32 cl_int  // Bad
-// #define u64a cl_long  // Bad
-// #define u64 cl_long  // Bad
-// #define u64x cl_long  // Bad
-// #define uint64 cl_long
-// #define _FLOAT_PREC float
-// #define int_tp int
-// #define godot_real float
-// #define godot_bool bool
-// #define _var int
-// #define _var_t int
 #define bool2 bool
 #define Dtype float
+#define half float
+#define half2 float2
+#define half3 float3
+#define half4 float4
+#define half8 float8
+#define half16 float16
+#define u8 uint8_t
+#define __u8 uint8_t
+#define __u16 unsigned short
+#define __u32 unsigned int
+#define sph_u64 unsigned long
+#define sph_u32 unsigned int
+#define FLOAT4 float4
+#define CL_DTYPE float
+#define CL_DTYPE4 float4
+#define KERNEL kernel void
+// GLib types
+#define gboolean int
+#define gchar char
+#define guchar unsigned char
+#define gint8 char
+#define guint8 unsigned char
+#define gushort unsigned short
+#define gint16 short
+#define guint16 unsigned short
+#define gint int
+#define guint unsigned int
+#define gint32 int
+#define guint32 unsigned int
+#define glong long
+#define gssize long
+#define gsize unsigned long
+#define gulong unsigned long
+#define gint64 long
+#define guint64 unsigned long
+#define gfloat float
+#define gdouble double
+#define guintptr unsigned long*
+#define goffset long
+#define gintptr long*
+#define gpointer void*
+#define gconstpointer const void*
 // #define KERNEL_ARG_DTYPE int
-// #define T int
 #endif  // CLGEN_OPENCL_SHIM_NO_COMMON_TYPES
 
 // Common constants
@@ -310,35 +324,30 @@
 #define SCRYPT_N 16384
 #define SCRYPT_TMTO 1
 #define SCRYPT_P 1
+// System configs
+#define VLIW1
+#define __OPENCL_VERSION__ 2
+#define _CL_NOINLINE
+#define _CL_ALWAYSINLINE
+#define _CL_OVERLOADABLE
+#define OPENCL_FORCE_INLINE
+#define MIOPEN_USE_FP32 1
 #endif  // CLGEN_OPENCL_SHIM_NO_COMMON_CONSTANTS
 
 // Hacks!
 // #ifndef HACKS
-#define GRID_STRIDE_SHIFT_Z 7
-#define GRID_STRIDE_SHIFT_Y 4
-#define DGST_ELEM 64
-#define DGST_R0 0
-#define DGST_R1 1
-#define DGST_R2 2
-#define DGST_R3 3
+#define GRID_STRIDE_SHIFT_Z 2
+#define GRID_STRIDE_SHIFT_Y 2
 #define block_size_x 2048
 #define block_size_y 1024
 #define DX 16
 #define DY 32
-// #define SIGNAL_WORK_KERNEL 1
-#define EOPREC_SPINORFIELDSIZE_LOCAL 256
 #define MAX_STACK_DEPTH 1024
+#define MAX_K 32
 #define ALLOW_SELF_MATCH 1
 #define SORT_RESULTS 1
 #define POINT_STRIDE 4
 #define DIM_COUNT 3
-// #define HeapEntry StackEntry
-// #define mwc64x_state_t float
-// #define rand_state float
-#define CL_DTYPE float // lets see
-#define CL_DTYPE4 float4 // lets see 22,420
-// #define sFractalCl int
-// #define sExtendedAuxCl int
 #define SQRT_1_2_F 16
 #define SQRT_1_3_F 16
 #define SQRT_2_3_F 16
@@ -347,32 +356,11 @@
 #define EXIT_FAILURE 1
 #define LX_STAGE_21_WG_SIZE 1024
 #define LX_STAGE_21_WG_PER_VECTOR 32
-// #define ucharVECT_SIZE 8
-// #define ushortVECT_SIZE 16
-// #define uintVECT_SIZE 32
-// #define ulongVECT_SIZE 64
 #define N3 16
 #define lambda 0.73
 #define MAGMA_S_ZERO 0
 #define MAGMA_S_ONE 1
-// #define SHA512M_A 512
-// #define SHA512M_B 512
-// #define SHA512M_C 512
-// #define SHA512M_D 512
-// #define SHA512M_E 512
-// #define SHA512M_F 512
-// #define SHA512M_G 512
-// #define SHA512M_H 512
-// #define channnel volatile
-#define _CL_NOINLINE
-#define _CL_ALWAYSINLINE
-#define skc_uint unsigned int
-#define _CL_OVERLOADABLE
 #define dev_sampler_t sampler_t
 #define dev_image_t image_t
-// #define _FLOAT float
-// #define _FLOAT_ACCUM float
-#define OPENCL_FORCE_INLINE
 #define fp float
-// #define sph_u32 long unsigned
 // #endif
