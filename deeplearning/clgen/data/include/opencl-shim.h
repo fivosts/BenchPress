@@ -34,6 +34,7 @@
 #ifndef CLGEN_OPENCL_SHIM_NO_COMMON_TYPES
 #define CONVT float
 #define DATA_TYPE float
+#define DATA_TYP4 float4
 #define DATATYPE float
 #define FLOAT_T float
 #define FLOAT_TYPE float
@@ -76,16 +77,17 @@
 #define half4 float4
 #define half8 float8
 #define half16 float16
-#define u8 uint8_t
-#define __u8 uint8_t
-#define __u16 unsigned short
-#define __u32 unsigned int
 #define sph_u64 unsigned long
 #define sph_u32 unsigned int
+#define _FLOAT float
+#define _FLOAT2 float2
+#define _FLOAT4 float4
+#define _FLOAT8 float8
 #define FLOAT4 float4
 #define CL_DTYPE float
 #define CL_DTYPE4 float4
 #define KERNEL kernel void
+#define channel
 // GLib types
 #define gboolean int
 #define gchar char
@@ -324,6 +326,40 @@
 #define SCRYPT_N 16384
 #define SCRYPT_TMTO 1
 #define SCRYPT_P 1
+// Other constants
+#define MLO_GRP_SZ0 32
+#define MLO_GRP_SZ1 32
+#define MLO_GRP_SZ2 32
+#define MLO_GRP_SZ 0
+#define MLO_N_IN_CHNLS 3
+#define MLO_LCL_N_IN_CHNLS 1
+#define MLO_IN_WIDTH 64
+#define MLO_IN_HEIGHT 32
+#define MLO_IN_STRIDE 1
+#define MLO_IN_CHNL_STRIDE 1
+#define MLO_IN_BATCH_STRIDE 1
+#define MLO_BATCH_SZ 16
+#define MLO_FLTR_SZ0 32
+#define MLO_FLTR_PAD_SZ0 2
+#define MLO_FLTR_STRIDE0 1
+#define MLO_FLTR_SZ1 32
+#define MLO_FLTR_PAD_SZ1 2
+#define MLO_FLTR_STRIDE1 1
+#define MLO_IN_CHNL_LOOP 1
+#define MLO_OUT_WIDTH 64
+#define MLO_OUT_HEIGHT 32
+#define MLO_OUT_STRIDE 1
+#define MLO_N_OUT_PIX_SZ0 4
+#define MLO_N_OUT_PIX_SZ1 4
+#define MLO_N_IN_PIX_SZ0 4
+#define MLO_N_IN_PIX_SZ1 4
+#define MLO_N_STACKS 1
+#define MLO_N_PROCS1 8
+#define MLO_N_PROCS0 8
+#define MLO_IN_SZ0 0
+#define MLO_IN_SZ1 1
+#define BITS_GLOBAL 2
+#define N_GP 4
 // System configs
 #define VLIW1
 #define __OPENCL_VERSION__ 2
