@@ -134,7 +134,8 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     if len(self.feed_stack) == 0:
       raise ValueError("Feed stack is empty. Cannot pop element.")
 
-    self.feed_stack[-1] = self.feed_stack[-1]._replace(feed_attempts = 1 + self.feed_stack[-1].feed_attempts)
+    current_feed = self.feed_stack[-1]
+    current_feed = current_feed._replace(feed_attempts = 1 + current_feed.feed_attempts)
 
     features, gd = [], []
     for sample in samples:
@@ -149,7 +150,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
         features.append(extractor.StrToDictFeatures(feature))
         if features[-1]:
           # is_better = feature_sampler.is_kernel_smaller(
-          #   self.feed_stack[-1].input_features, features[-1]
+          #   current_feed.input_features, features[-1]
           # )
           is_better = self.feat_sampler.sample_from_set(features[-1])
           gd.append(is_better)
@@ -162,29 +163,29 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       entry = active_feed_database.ActiveFeed.FromArgs(
         atomizer         = self.atomizer,
         id               = self.active_db.count,
-        input_feed       = self.feed_stack[-1].input_feed,
-        input_features   = self.feed_stack[-1].input_features,
-        masked_input_ids = self.feed_stack[-1].masked_input_ids[-1],
-        hole_instances   = self.feed_stack[-1].hole_instances[-1],
+        input_feed       = current_feed.input_feed,
+        input_features   = current_feed.input_features,
+        masked_input_ids = current_feed.masked_input_ids[-1],
+        hole_instances   = current_feed.hole_instances[-1],
         sample           = sample,
         output_features  = features[-1],
         sample_quality   = gd[-1],
       )
       self.addToDB(entry)
 
-    self.feed_stack[-1].good_samples.append(gd)
-    self.feed_stack[-1].sample_outputs.append(samples)
-    self.feed_stack[-1].output_features.append(features)
+    current_feed.good_samples.append(gd)
+    current_feed.sample_outputs.append(samples)
+    current_feed.output_features.append(features)
 
-    if any(self.feed_stack[-1].good_samples[-1]):
-      return self.feed_stack[-1].sample_outputs[-1], True
-    elif FLAGS.active_limit_per_feed > 0 and self.feed_stack[-1].feed_attempts > FLAGS.active_limit_per_feed:
+    if any(current_feed.good_samples[-1]):
+      return current_feed.sample_outputs[-1], True
+    elif FLAGS.active_limit_per_feed > 0 and current_feed.feed_attempts > FLAGS.active_limit_per_feed:
       return next(self.dataloader), False
     else:
-      input_ids, masked_idxs = self.masking_func(self.feed_stack[-1].input_feed)
+      input_ids, masked_idxs = self.masking_func(current_feed.input_feed)
       # TODO do sth with hole_lengths and masked_idxs
-      self.feed_stack[-1].masked_input_ids.append(input_ids['input_ids'])
-      self.feed_stack[-1].hole_instances.append(masked_idxs)
+      current_feed.masked_input_ids.append(input_ids['input_ids'])
+      current_feed.hole_instances.append(masked_idxs)
       return self.data_generator.toTensorFormat(input_ids), False
 
   def addToDB(self, active_feed: active_feed_database.ActiveFeed) -> None:
