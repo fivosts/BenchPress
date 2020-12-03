@@ -84,7 +84,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     self.active_db  = active_feed_database.ActiveFeedDatabase(
       url = "sqlite:///{}".format(self.data_generator.sampler.corpus_directory / "active_feeds.db")
     )
-    self.feed_stack     = []
+    self.feed_queue     = []
     self.active_dataset = ActiveDataset(self.online_corpus)
     self.feat_sampler   = feature_sampler.FeatureSampler()
     return
@@ -106,7 +106,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       feature, stderr = extractor.kernel_features(self.atomizer.ArrayToCode(seed))
       input_feed, masked_idxs = self.masking_func(seed)
       # TODO do sth with hole_lengths and masked_idxs
-      self.feed_stack.append(
+      self.feed_queue.append(
         ActiveSamplingGenerator.ActiveSampleFeed(
           input_feed       = seed,
           input_features   = extractor.StrToDictFeatures(feature),
@@ -131,10 +131,10 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     If the sample output is not good enough based on the features,
     active sampler reconstructs the same sample feed and asks again for prediction.
     """
-    if len(self.feed_stack) == 0:
+    if len(self.feed_queue) == 0:
       raise ValueError("Feed stack is empty. Cannot pop element.")
 
-    current_feed = self.feed_stack[-1]
+    current_feed = self.feed_queue.pop(0)
     current_feed = current_feed._replace(feed_attempts = 1 + current_feed.feed_attempts)
 
     features, gd = [], []
