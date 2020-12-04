@@ -353,7 +353,7 @@ class tfBert(backends.BackendBase):
                 except ValueError:
                   compile_flag = 0
 
-                feature_vector, stderr = extractor.kernel_features(self.atomizer.ArrayToCode(sample))
+                feature_vector = extractor.DictKernelFeatures(self.atomizer.ArrayToCode(sample))
                 sample_proto = model_pb2.Sample(
                   train_step             = (ep + 1) * self.steps_per_epoch,
                   sample_feed            = sampler.start_text,
@@ -362,7 +362,7 @@ class tfBert(backends.BackendBase):
                   sample_indices         = '\n'.join([self.atomizer.DeatomizeIndices(mind).replace('\n', '\\n') for mind in sind]),
                   encoded_sample_indices = '\n'.join([','.join([str(x) for x in mind]) for mind in sind ]),
                   sample_time_ms         = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
-                  feature_vector         = feature_vector,
+                  feature_vector         = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
                   num_tokens             = len(sample),
                   compile_status         = compile_flag,
                   categorical_sampling   = self.samplesWithCategorical(),
