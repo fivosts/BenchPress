@@ -46,12 +46,11 @@ def StrToDictFeatures(str_features: str) -> typing.Dict[str, float]:
     lines  = str_features.split('\n')
     header, values = lines[0].split(',')[2:], lines[-2].split(',')[2:]
     if len(header) != len(values):
-      raise ValueError("Bad alignment of header-value list of features")
+      raise ValueError("Bad alignment of header-value list of features. This should never happen.")
     try:
       return {key: float(value) for key, value in zip(header, values)}
     except ValueError as e:
       raise ValueError("{}, {}".format(str(e), str_features))
   except Exception as e:
-    # Something went wrong with splitting,
-    # str_features is empty so leave this None.
+    # Kernel has a syntax error and feature line is empty.
     return None
