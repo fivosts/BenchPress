@@ -65,7 +65,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     Representation of an active learning sample.
     """
     # ActiveSampleFeed instance of model input
-    sample_feed : ActiveSamplingGenerator.ActiveSampleFeed
+    sample_feed : typing.TypeVar("ActiveSamplingGenerator.ActiveSampleFeed")
     # Model prediction
     sample      : np.array
     # Output features of sample
@@ -161,7 +161,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
 
     # If all samples have syntax errors and have no features, skip to next iteration.
     if not self.step_candidates:
-      return (None, None), True
+      return None, None, True
 
     self.num_current_samples += len(samples)
     if self.num_current_samples < FLAGS.active_limit_per_feed:
@@ -227,25 +227,16 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
 
     if self.feed_queue:
       # Keep iterating the same decision tree.
-      return (self.data_generator.toTensorFormat(self.feed_queue[0].input_blob), None), False
+      return self.data_generator.toTensorFormat(self.feed_queue[0].input_blob), None, False
     else:
       # We are done,
       if self.total_candidates:
         active_batch   = [x.sample for x in self.total_candidates]
         active_indices = [x.sample_indices for x in self.total_candidates]
         self.total_candidates = []
-        return (active_batch, active_indices), True
+        return active_batch, active_indices, True
       else:
-        return (None, None), True
-
-    if self.total_candidates:
-      if sth:
-        next_feed = self.feed_queue[0]
-        return self.data_generator.toTensorFormat(next_feed.input_blob), False
-    else:
-      # no step candidate made it to being a good one.
-      # Skip to get next feed from dataset.
-      return (None, None), False
+        return None, None, True
 
   def addToDB(self, active_feed: active_feed_database.ActiveFeed) -> None:
     """If not exists, add current sample state to database"""
