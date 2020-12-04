@@ -38,9 +38,6 @@ class FeatureSampler(object):
             )
           )
 
-    # for benchmark in self.benchmarks:
-    #   l.getLogger().info(benchmark.feature_vector)
-
   def calculate_proximity(self, infeat, tarfeat):
     try:
       return abs((tarfeat - infeat) / tarfeat)
