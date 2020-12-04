@@ -382,14 +382,14 @@ class Model(object):
             num_tokens    = len(samples_in_progress[i])
             if atomizer.metaTokens['padToken'] in samples_in_progress[i]:
               num_tokens = samples_in_progress[i].index(atomizer.metaTokens['padToken'])
+
+            src = self.atomizer.StringArrToCode(sample_kernel)
+            feature_vector, stderr = extractor.DictKernelFeatures(src)
             try:
-              src = self.atomizer.StringArrToCode(sample_kernel)
               stdout = opencl.Compile(src)
-              feature_vector, stderr = extractor.kernel_features(src)
               compile_flag = True
             except ValueError:
               compile_flag = False
-              feature_vector = None
 
             sample = model_pb2.Sample(
               train_step                = epoch,
@@ -401,7 +401,7 @@ class Model(object):
               sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               wall_time_ms              = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
-              feature_vector            = feature_vector,
+              feature_vector            = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
               num_tokens                = num_tokens,
               compile_status            = compile_flag,
               categorical_sampling      = self.backend.samplesWithCategorical(),
