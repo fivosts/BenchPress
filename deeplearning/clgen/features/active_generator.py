@@ -112,13 +112,12 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     while True:
       """Model will ask with next(). As long as it asks, this loop will bring."""
       seed = next(self.active_dataset)
-      feature, stderr = extractor.kernel_features(self.atomizer.ArrayToCode(seed))
       input_feed, masked_idxs = self.masking_func(seed)
       # TODO do sth with hole_lengths and masked_idxs
       self.feed_queue.append(
         ActiveSamplingGenerator.ActiveSampleFeed(
           input_feed       = seed,
-          input_features   = extractor.StrToDictFeatures(feature),
+          input_features   = extractor.DictKernelFeatures(self.atomizer.ArrayToCode(seed)),
           input_blob       = input_feed,
           masked_input_ids = input_feed['input_ids'],
           hole_instances   = masked_idxs,
@@ -147,14 +146,14 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     # If more candidates are needed for that specific sample,
     # store the feeds and ask more samples.
     for sample, indices in zip(samples, sample_indices):
-      feature, stderr = extractor.kernel_features(self.atomizer.ArrayToCode(sample))
-      if "error: " not in stderr:
+      features = extractor.DictKernelFeatures(self.atomizer.ArrayToCode(seed))
+      if features:
         self.step_candidates.append(
           ActiveSamplingGenerator.ActiveSample(
             sample_feed    = current_feed,
             sample         = sample,
             sample_indices = indices,
-            features       = extractor.StrToDictFeatures(feature),
+            features       = features,
             score          = None,
           )
         )
