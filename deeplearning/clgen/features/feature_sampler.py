@@ -56,8 +56,7 @@ class FeatureSampler(object):
     for f in self.path.iterdir():
       with open(f, 'r') as file:
         contents = file.read()
-        stdout, _ = extractor.kernel_features(contents)
-        features = extractor.StrToDictFeatures(stdout)
+        features = extractor.DictKernelFeatures(contents)
         if features:
           self.benchmarks.append(
             FeatureSampler.Benchmark(
