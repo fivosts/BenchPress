@@ -346,16 +346,17 @@ class Model(object):
     # Sampling loop. Continues until all samples in the batch are done.
     while not done.all():
       indices, step_indices = self.backend.SampleNextIndices(sampler, done)
-      if len(samples_in_progress) < len(indices):
-        samples_in_progress = [
-          sampler.tokenized_start_text.copy() for _ in range(len(indices))
-        ]
       # Iterate over all samples in batch to determine whether they're
       # done.
       if indices is None:
         # Return None means model has not produced something that can be stored.
         # This is if accommodates active sampling, which is very selective.
         return True
+
+      if len(samples_in_progress) < len(indices):
+        samples_in_progress = [
+          sampler.tokenized_start_text.copy() for _ in range(len(indices))
+        ]
 
       for i in range(len(indices)):
         if done[i]:
