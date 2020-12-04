@@ -23,8 +23,14 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_integer(
   "active_limit_per_feed",
-  10,
+  50,
   "Set limit on sample attempts per input_feed. [Default: 50]. Set to 0 for infinite."
+)
+
+flags.DEFINE_integer(
+  "active_search_depth",
+  10,
+  "Set the maximum sampling generation depth that active sampler can reach. [Default: 10]."
 )
 
 class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
@@ -39,33 +45,33 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
 
   class ActiveSampleFeed(typing.NamedTuple):
     """
-    Representation of a single instance containing
-    original feed, features and the samples the model responded with.
+    Representation of an active learning input to the model.
     """
     # An array of original input
     input_feed       : np.array
     # The feature space of the original input
     input_features   : typing.Dict[str, float]
-    # Times tried to produce a sample out of this feed
-    feed_attempts    : int
-    """
-    All fields below are lists of instances.
-    Based on the same input_feed, each instance
-    represents a single model inference step.
-    The indices of the lists below correspond to
-    the iteration of the active sampler for the given
-    input feed.
-    """
+    # Full model input
+    input_blob       : typing.Dict[str, np.array]
     # List of masked model input feeds.
-    masked_input_ids : typing.List[np.array]
+    masked_input_ids : np.array
     # List of hole instances for masked input.
-    hole_instances   : typing.List[typing.List[sequence_masking.MaskedLmInstance]]
-    # List of model inference batch outputs.
-    sample_outputs   : typing.List[typing.List[np.array]]
-    # List of output_features for model batch inference outputs.
-    output_features  : typing.List[typing.List[typing.Dict[str, float]]]
-    # Binary quality flag of sample batch outputs wrt target features.
-    good_samples     : typing.List[typing.List[bool]]
+    hole_instances   : typing.List[sequence_masking.MaskedLmInstance]
+    # Depth increases when a valid inference sample is fed back as an input.
+    search_depth     : int
+
+  class ActiveSample(typing.NamedTuple):
+    """
+    Representation of an active learning sample.
+    """
+    # ActiveSampleFeed instance of model input
+    sample_feed : ActiveSamplingGenerator.ActiveSampleFeed
+    # Model prediction
+    sample      : np.array
+    # Output features of sample
+    features    : typing.Dict[str, float]
+    # Score of sample based on active learning search.
+    score       : typing.Union[bool, float]
 
   @classmethod
   def FromDataGenerator(cls,
@@ -84,9 +90,12 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     self.active_db  = active_feed_database.ActiveFeedDatabase(
       url = "sqlite:///{}".format(self.data_generator.sampler.corpus_directory / "active_feeds.db")
     )
-    self.feed_queue     = []
-    self.active_dataset = ActiveDataset(self.online_corpus)
-    self.feat_sampler   = feature_sampler.FeatureSampler()
+    self.feed_queue          = []
+    self.step_candidates     = []
+    self.total_candidates    = []
+    self.num_current_samples = 0 # How many samples has a specific feed delivered.
+    self.active_dataset      = ActiveDataset(self.online_corpus)
+    self.feat_sampler        = feature_sampler.FeatureSampler()
     return
 
   def active_dataloader(self) -> typing.Union[
@@ -110,18 +119,17 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
         ActiveSamplingGenerator.ActiveSampleFeed(
           input_feed       = seed,
           input_features   = extractor.StrToDictFeatures(feature),
-          feed_attempts    = 0,
-          masked_input_ids = [input_feed['input_ids']],
-          hole_instances   = [masked_idxs],
-          sample_outputs   = [],
-          output_features  = [],
-          good_samples     = [],
+          input_blob       = input_feed,
+          masked_input_ids = input_feed['input_ids'],
+          hole_instances   = masked_idxs,
+          search_depth     = 0,
         )
       )
       yield self.data_generator.toTensorFormat(input_feed)
 
   def EvaluateFeatures(self,
-                       samples: np.array,
+                       samples        : np.array,
+                       sample_indices : np.array,
                        ) -> typing.Union[
                               typing.Dict[str, typing.TypeVar("Tensor")],
                               typing.NamedTuple
@@ -135,58 +143,109 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       raise ValueError("Feed stack is empty. Cannot pop element.")
 
     current_feed = self.feed_queue.pop(0)
-    current_feed = current_feed._replace(feed_attempts = 1 + current_feed.feed_attempts)
 
-    features, gd = [], []
-    for sample in samples:
+    # If more candidates are needed for that specific sample,
+    # store the feeds and ask more samples.
+    for sample, indices in zip(samples, sample_indices):
       feature, stderr = extractor.kernel_features(self.atomizer.ArrayToCode(sample))
+      if "error: " not in stderr:
+        self.step_candidates.append(
+          ActiveSamplingGenerator.ActiveSample(
+            sample_feed    = current_feed,
+            sample         = sample,
+            sample_indices = indices,
+            features       = extractor.StrToDictFeatures(feature),
+            score          = None,
+          )
+        )
 
-      try:
-        stdout = opencl.Compile(self.atomizer.ArrayToCode(sample))
-        # This branch means sample compiles. Let's use it as a sample feed then.
-        self.active_dataset.add_active_feed(sample)
-        # This line below is your requirement.
-        # This is going to become more complex.
-        features.append(extractor.StrToDictFeatures(feature))
-        if features[-1]:
-          # is_better = feature_sampler.is_kernel_smaller(
-          #   current_feed.input_features, features[-1]
-          # )
-          is_better = self.feat_sampler.sample_from_set(features[-1])
-          gd.append(is_better)
-        else:
-          gd.append(False)
-      except ValueError:
-        features.append(extractor.StrToDictFeatures(feature))
-        gd.append(False)
+    # If all samples have syntax errors and have no features, skip to next iteration.
+    if not self.step_candidates:
+      return (None, None), True
 
-      entry = active_feed_database.ActiveFeed.FromArgs(
-        atomizer         = self.atomizer,
-        id               = self.active_db.count,
-        input_feed       = current_feed.input_feed,
-        input_features   = current_feed.input_features,
-        masked_input_ids = current_feed.masked_input_ids[-1],
-        hole_instances   = current_feed.hole_instances[-1],
-        sample           = sample,
-        output_features  = features[-1],
-        sample_quality   = gd[-1],
+    self.num_current_samples += len(samples)
+    if self.num_current_samples < FLAGS.active_limit_per_feed:
+      input_feed, masked_idxs = self.masking_func(current_feed.input_feed)
+      self.feed_queue.insert(0,
+        ActiveSamplingGenerator.ActiveSampleFeed(
+          input_feed       = current_feed.input_feed,
+          input_features   = current_feed.input_features,
+          input_blob       = input_feed,
+          masked_input_ids = input_feed['input_ids'],
+          hole_instances   = masked_idxs,
+          search_depth     = current_feed.search_depth,
+        )
       )
-      self.addToDB(entry)
-
-    current_feed.good_samples.append(gd)
-    current_feed.sample_outputs.append(samples)
-    current_feed.output_features.append(features)
-
-    if any(current_feed.good_samples[-1]):
-      return current_feed.sample_outputs[-1], True
-    elif FLAGS.active_limit_per_feed > 0 and current_feed.feed_attempts > FLAGS.active_limit_per_feed:
-      return next(self.dataloader), False
+      return self.data_generator.toTensorFormat(input_feed), None, False
     else:
-      input_ids, masked_idxs = self.masking_func(current_feed.input_feed)
-      # TODO do sth with hole_lengths and masked_idxs
-      current_feed.masked_input_ids.append(input_ids['input_ids'])
-      current_feed.hole_instances.append(masked_idxs)
-      return self.data_generator.toTensorFormat(input_ids), False
+      # For a given input feed, you got all sample candidates, so that's it.
+      self.num_current_samples = 0
+
+    # This function returns all candidates that succeed the threshold
+    # TODO, is the threshold matching a job for feat sampler or active generator ?
+    # Maybe the second.
+    self.total_candidates += self.feat_sampler.sample_from_set(self.step_candidates)
+
+    for candidate in self.total_candidates:
+      # 1) Store them in the database
+      try:
+        _ = opencl.Compile(self.atomizer.ArrayToCode(sample))
+        compile_status = True
+      except ValueError:
+        compile_status = False
+      self.addToDB(
+        active_feed_database.ActiveFeed.FromArgs(
+          atomizer         = self.atomizer,
+          id               = self.active_db.count,
+          input_feed       = candidate.sample_feed.input_feed,
+          input_features   = candidate.sample_feed.input_features,
+          masked_input_ids = candidate.sample_feed.masked_input_ids,
+          hole_instances   = candidate.sample_feed.hole_instances,
+          sample           = candidate.sample,
+          output_features  = candidate.features,
+          sample_quality   = candidate.score,
+          compile_status   = compile_status,
+          search_depth     = candidate.sample_feed.search_depth,
+        )
+      )
+      # 2) Push them back to the input, if not maximum depth is not reached.
+      # self.active_dataset.add_active_feed(candidate.sample) # I strongly disagree with this after all.
+      if 1 + candidate.sample_feed.search_depth <= FLAGS.active_search_depth:
+        input_feed, masked_idxs = self.masking_func(candidate.sample)
+        self.feed_queue.append(
+          ActiveSamplingGenerator.ActiveSampleFeed(
+            input_feed       = candidate.sample,
+            input_features   = candidate.features,
+            input_blob       = input_feed,
+            masked_input_ids = input_feed['input_ids'],
+            hole_instances   = masked_idxs,
+            search_depth     = 1 + candidate.sample_feed.search_depth,
+          )
+        )
+    # 3) Re-initialize all variables
+    self.step_candidates = [] # Input feed is going to change, so reset this sample counter.
+
+    if self.feed_queue:
+      # Keep iterating the same decision tree.
+      return (self.data_generator.toTensorFormat(self.feed_queue[0].input_blob), None), False
+    else:
+      # We are done,
+      if self.total_candidates:
+        active_batch   = [x.sample for x in self.total_candidates]
+        active_indices = [x.sample_indices for x in self.total_candidates]
+        self.total_candidates = []
+        return (active_batch, active_indices), True
+      else:
+        return (None, None), True
+
+    if self.total_candidates:
+      if sth:
+        next_feed = self.feed_queue[0]
+        return self.data_generator.toTensorFormat(next_feed.input_blob), False
+    else:
+      # no step candidate made it to being a good one.
+      # Skip to get next feed from dataset.
+      return (None, None), False
 
   def addToDB(self, active_feed: active_feed_database.ActiveFeed) -> None:
     """If not exists, add current sample state to database"""
@@ -213,27 +272,15 @@ class ActiveDataset(object):
     assert len(dataset) > 0, 'Dataset is empty'
     self.dataset                 = dataset
     self.sample_idx              = 0
-    self.additional_active_feeds = []
     return
 
   def __len__(self) -> int:
-    return len(self.dataset) + len(self.additional_active_feeds)
+    return len(self.dataset)
 
   def __next__(self) -> np.array:
     """
     Iterator gives priority to additional active feeds if exist,
     otherwise pops a fresh feed from the dataset.
     """
-    if self.additional_active_feeds:
-      return self.additional_active_feeds.pop()
-    else:
-      self.sample_idx += 1
-      return self.dataset[(self.sample_idx - 1) % len(self.dataset)]
-
-  def add_active_feed(self, item: np.array) -> None:
-    """
-    If a model provides a good sample, feed it back
-    to the feeds to see if you can get something better.
-    """
-    self.additional_active_feeds.append(item)
-    return
+    self.sample_idx += 1
+    return self.dataset[(self.sample_idx - 1) % len(self.dataset)]
