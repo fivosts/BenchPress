@@ -129,7 +129,7 @@ class EncodedContentFile(Base):
     # token_values = data.sorted()
     ####
     encoding_time_ms = int((time.time() - start_time) * 1000)
-    feature_vector, _ = extractor.kernel_features(preprocessed_cf.text)
+    feature_vector, _ = extractor.StrKernelFeatures(preprocessed_cf.text)
     return EncodedContentFile(
       id = preprocessed_cf.id,
       # Encode the end-of-file marker separately to ensure that it resolves to
