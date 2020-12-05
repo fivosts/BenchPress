@@ -91,7 +91,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       url = "sqlite:///{}".format(self.data_generator.sampler.corpus_directory / "active_feeds.db")
     )
     self.feed_queue          = []
-    self.step_candidates     = []
+    self.step_candidates     = set()
     self.total_candidates    = []
     self.num_current_samples = 0 # How many samples has a specific feed delivered.
     self.active_dataset      = ActiveDataset(self.online_corpus)
@@ -148,7 +148,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     for sample, indices in zip(samples, sample_indices):
       features = extractor.DictKernelFeatures(self.atomizer.ArrayToCode(seed))
       if features:
-        self.step_candidates.append(
+        self.step_candidates.add(
           ActiveSamplingGenerator.ActiveSample(
             sample_feed    = current_feed,
             sample         = sample,
@@ -222,7 +222,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
           )
         )
     # 3) Re-initialize all variables
-    self.step_candidates = [] # Input feed is going to change, so reset this sample counter.
+    self.step_candidates = set() # Input feed is going to change, so reset this sample counter.
 
     if self.feed_queue:
       # Keep iterating the same decision tree.
