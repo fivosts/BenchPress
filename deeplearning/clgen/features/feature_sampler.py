@@ -55,6 +55,9 @@ class EuclideanSampler(object):
                       candidates: typing.List[typing.TypeVar("ActiveSample")],
                       K : int,
                       ) -> typing.List[typing.TypeVar("ActiveSample")]:
+    """
+    Return top-K candidates.
+    """
     return sorted(candidates, key = lambda x: x.score)[:K+1]
 
   def sample_from_set(self, 
