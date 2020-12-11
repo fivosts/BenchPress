@@ -343,7 +343,7 @@ class torchBert(backends.BackendBase):
               inputs = next(batch_iterator)
 
             step_out = self.model_step(self.train.model, inputs)
-            total_loss = step_out.total_loss.mean() if self.pytorch.num_gpus > 1 else step_out.total_loss
+            total_loss = step_out['total_loss'].mean()
             total_loss.backward()
 
             self.torch.nn.utils.clip_grad_norm_(self.train.model.parameters(), self.max_grad_norm)
@@ -355,7 +355,7 @@ class torchBert(backends.BackendBase):
 
             exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
             if FLAGS.reward_compilation:
-              correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out.generated_samples)) if step_out.compile_status[en] == 1]
+              correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'])) if step_out['compile_status'][en] == 1]
               for s in correct_samples:
                 feature_vector = extractor.DictKernelFeatures(self.atomizer.ArrayToCode(s[1]))
                 correct_sample_obs.OnSample(model_pb2.Sample(
@@ -374,11 +374,11 @@ class torchBert(backends.BackendBase):
                   )
                 )
             train_hook.step(
-              masked_lm_loss          = step_out.masked_lm_loss.item(),
-              next_sentence_loss      = step_out.next_sentence_loss.item(),
+              masked_lm_loss          = step_out['masked_lm_loss'].mean().item(),
+              next_sentence_loss      = step_out['next_sentence_loss'].mean().item(),
               total_loss              = total_loss.item(),
               learning_rate           = self.train.scheduler.get_last_lr()[0],
-              compilation_rate        = step_out.batch_compilation_rate,
+              compilation_rate        = step_out['batch_compilation_rate'].mean().item(),
               batch_execution_time_ms = exec_time_ms,
               time_per_sample_ms      = exec_time_ms / self.train_batch_size,
               num_correct_samples     = (correct_sample_obs.sample_id if correct_sample_obs is not None else None)
@@ -444,8 +444,8 @@ class torchBert(backends.BackendBase):
           step_out = self.model_step(self.train.model, inputs, is_validation = True)
 
         val_hook.step(inputs, step_out)
-        avg_mask_loss.append(step_out.masked_lm_loss.mean().item())
-        avg_nsp_loss.append(step_out.next_sentence_loss.mean().item())
+        avg_mask_loss.append(step_out['masked_lm_loss'].mean().item())
+        avg_nsp_loss.append(step_out['next_sentence_loss'].mean().item())
 
       val_hook.final(set_name, avg_mask_loss, avg_nsp_loss)
       if self.pytorch.torch_tpu_available:
@@ -513,7 +513,7 @@ class torchBert(backends.BackendBase):
           self.sample.model, self.step_inputs,
       )
       if self.sampler.is_active:
-        generated_samples, sample_indices = step_out.generated_samples, step_out.sample_indices
+        generated_samples, sample_indices = step_out['generated_samples'], step_out['sample_indices']
         while True:
           active_sample, active_indices, done = self.sample.data_generator.EvaluateFeatures(
             np.asarray(generated_samples),
@@ -536,7 +536,7 @@ class torchBert(backends.BackendBase):
             )
             generated_samples, sample_indices = active_step.generated_samples, active_step.sample_indices
       else:
-        return step_out.generated_samples, step_out.sample_indices
+        return step_out['generated_samples'], step_out['sample_indices']
     raise ValueError("While True loop broken without returning")
 
   def _getTestSampler(self, test_sampler, sequence_length):
