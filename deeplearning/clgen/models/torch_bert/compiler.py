@@ -20,12 +20,10 @@ class CompilationSampler(object):
   compilation status.
   """
   def __init__(self,
-               model           : typing.TypeVar("model.BertPreTrainedModel"),
                atomizer        : atomizers.AtomizerBase,
                use_categorical : bool,
                temperature     : float,
                ):
-    self.model           = model
     self.atomizer        = atomizer
     self.temperature     = temperature
     self.use_categorical = use_categorical
@@ -50,6 +48,8 @@ class CompilationSampler(object):
       return 0
 
   def generateTrainingBatch(self,
+                            model             : typing.TypeVar("model.BertPreTrainedModel"),
+                            device            : torch.device,
                             input_ids         : torch.LongTensor,
                             prediction_scores : torch.FloatTensor,
                             attention_mask    : torch.LongTensor,
@@ -59,20 +59,24 @@ class CompilationSampler(object):
     batch_size, sequence_length = tuple(input_ids.shape)
     with concurrent.futures.ThreadPoolExecutor() as executor:
       jobs = [executor.submit(self.iterTrainingSeq,
+                              model           = model,
+                              device          = device,
                               seq             = input_ids        [i].cpu(),
                               prediction      = prediction_scores[i].detach().cpu(),
                               attention       = attention_mask   [i].cpu(),
                               position_ids    = position_ids     [i].cpu().unsqueeze(0),
-                              masked_lm_label = masked_lm_labels [i].cpu().numpy()
+                              masked_lm_label = masked_lm_labels [i].cpu().numpy(),
                           ) for i in range(batch_size)]
 
       results          = [j.result() for j in jobs]
       samples          = [x.numpy() for (x, _, _) in results]
       compile_flag     = [y         for (_, y, _) in results]
-      masked_lm_labels = torch.LongTensor([z for (_, _, z) in results]).to(pytorch.device)
+      masked_lm_labels = torch.LongTensor([z for (_, _, z) in results]).to(device)
       return samples, compile_flag, masked_lm_labels
 
   def iterTrainingSeq(self,
+                      model           : typing.TypeVar("model.BertPreTrainedModel"),
+                      device          : torch.device,
                       seq             : torch.LongTensor,
                       prediction      : torch.FloatTensor,
                       attention       : torch.LongTensor,
@@ -96,8 +100,8 @@ class CompilationSampler(object):
       seq, prediction, attention
     )
     while holes:
-      new_prediction, new_seq_relationship_score, _, _ = self.model.get_output(
-        new_seq.to(pytorch.device), new_attention.to(pytorch.device), position_ids.to(pytorch.device),
+      new_prediction, new_seq_relationship_score, _, _ = model.get_output(
+        new_seq.to(device), new_attention.to(device), position_ids.to(device),
       )
       holes, new_seq, new_attention = self.StepTrainingSeq(
         new_seq[0],
@@ -183,6 +187,8 @@ class CompilationSampler(object):
     return np.any(new_hole), new_seq, attention_mask
 
   def generateSampleBatch(self,
+                          model             : typing.TypeVar("model.BertPreTrainedModel"),
+                          device            : torch.device,
                           input_ids         : torch.LongTensor,
                           prediction_scores : torch.FloatTensor,
                           attention_mask    : torch.LongTensor,
@@ -192,6 +198,8 @@ class CompilationSampler(object):
     batch_size, sequence_length = tuple(input_ids.shape)
     with concurrent.futures.ThreadPoolExecutor() as executor:
       jobs = [executor.submit(self.iterSampleSeq,
+                              model          = model,
+                              device         = device,
                               seq            = input_ids        [i].cpu(),
                               prediction     = prediction_scores[i].detach().cpu(),
                               attention      = attention_mask   [i].cpu(),
@@ -204,6 +212,8 @@ class CompilationSampler(object):
       return samples, sample_indices
 
   def iterSampleSeq(self,
+                    model        : typing.TypeVar("model.BertPreTrainedModel"),
+                    device       : torch.device,
                     seq          : torch.LongTensor,
                     prediction   : torch.LongTensor,
                     attention    : torch.LongTensor,
@@ -231,8 +241,8 @@ class CompilationSampler(object):
       seq, prediction, attention, sample_indices
     )
     while holes:
-      new_prediction, new_seq_relationship_score, _, _ = self.model.get_output(
-        new_seq.to(pytorch.device), new_attention.to(pytorch.device), position_ids.to(pytorch.device),
+      new_prediction, new_seq_relationship_score, _, _ = model.get_output(
+        new_seq.to(device), new_attention.to(device), position_ids.to(device),
       )
       holes, new_seq, new_attention, sample_indices = self.StepSampleSeq(
         new_seq[0],
