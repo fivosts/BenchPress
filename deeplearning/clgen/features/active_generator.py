@@ -58,7 +58,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     # List of hole instances for masked input.
     hole_instances   : typing.List[sequence_masking.MaskedLmInstance]
     # Depth increases when a valid inference sample is fed back as an input.
-    search_depth     : int
+    gen_id           : int
 
   class ActiveSample(typing.NamedTuple):
     """
@@ -121,7 +121,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
           input_blob       = input_feed,
           masked_input_ids = input_feed['input_ids'],
           hole_instances   = masked_idxs,
-          search_depth     = 0,
+          gen_id           = 0,
         )
       )
       yield self.data_generator.toTensorFormat(input_feed)
@@ -173,7 +173,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
           input_blob       = input_feed,
           masked_input_ids = input_feed['input_ids'],
           hole_instances   = masked_idxs,
-          search_depth     = current_feed.search_depth,
+          gen_id           = current_feed.gen_id,
         )
       )
       # If that specific input hasn't yet gathered all active samples,
@@ -207,12 +207,12 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
           output_features  = candidate.features,
           sample_quality   = candidate.score,
           compile_status   = compile_status,
-          search_depth     = candidate.sample_feed.search_depth,
+          generation_id    = candidate.sample_feed.gen_id,
         )
       )
       # 2) Push them back to the input, if not maximum depth is not reached.
       # self.active_dataset.add_active_feed(candidate.sample) # I strongly disagree with this after all.
-      if 1 + candidate.sample_feed.search_depth <= FLAGS.active_search_depth:
+      if 1 + candidate.sample_feed.gen_id <= FLAGS.active_search_depth:
         input_feed, masked_idxs = self.masking_func(candidate.sample)
         self.feed_queue.append(
           ActiveSamplingGenerator.ActiveSampleFeed(
@@ -221,7 +221,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
             input_blob       = input_feed,
             masked_input_ids = input_feed['input_ids'],
             hole_instances   = masked_idxs,
-            search_depth     = 1 + candidate.sample_feed.search_depth,
+            gen_id           = 1 + candidate.sample_feed.gen_id,
           )
         )
     # 3) Re-initialize all variables

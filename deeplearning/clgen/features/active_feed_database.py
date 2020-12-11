@@ -54,7 +54,11 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
   # Sample's vector of features.
   output_features  : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Whether the generated sample is of good quality or not.
-  sample_quality   : int = sql.Column(sql.Integer,  nullable = False)
+  sample_quality   : float = sql.Column(sql.Float,  nullable = False)
+  # Whether sample compiles or not
+  compile_status   : bool = sql.Column(sql.Boolean, nullable = False)
+  # Number of generation for sample
+  generation_id    : int  = sql.Column(sql.Integer, nullable = False)
   # Date
   date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable = False)
 
@@ -68,7 +72,9 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
                hole_instances   : typing.TypeVar("sequence_masking.MaskedLMInstance"),
                sample           : np.array,
                output_features  : typing.Dict[str, float],
-               sample_quality   : bool,
+               sample_quality   : float,
+               compile_status   : bool,
+               generation_id    : int,
                ) -> typing.TypeVar("ActiveFeed"):
     """Construt ActiveFeed table entry from argumentns."""
     str_input_feed       = atomizer.DeatomizeIndices(input_feed,       ignore_token = atomizer.padToken)
@@ -92,6 +98,8 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
       num_tokens       = int(num_tokens),
       output_features  = '\n'.join(["{}:{}".format(k, v) for k, v in output_features.items()]) if output_features else "None",
       sample_quality   = sample_quality,
+      compile_status   = compile_status,
+      generation_id    = generation_id,
       date_added       = datetime.datetime.utcnow(),
     )
 
