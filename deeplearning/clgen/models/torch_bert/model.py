@@ -811,46 +811,44 @@ class BertForPreTraining(BertPreTrainedModel):
       masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
       next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
       total_loss = masked_lm_loss + next_sentence_loss
-      
-      return BertForPreTrainingOutput(
-        masked_lm_loss          = masked_lm_loss,
-        next_sentence_loss      = next_sentence_loss,
-        total_loss              = total_loss,
-        prediction_logits       = prediction_scores,
-        seq_relationship_logits = seq_relationship_score,
-        hidden_states           = hidden_states,
-        attentions              = attentions,
-        compile_status          = compile_flag,
-        generated_samples       = [x for en, x in enumerate(samples)],
-        batch_compilation_rate  = float(sum(compile_flag)) / len(compile_flag),
-        sample_indices          = [],
-      )
 
+      return {
+        'masked_lm_loss'          : masked_lm_loss,
+        'next_sentence_loss'      : next_sentence_loss,
+        'total_loss'              : total_loss,
+        'prediction_logits'       : prediction_scores,
+        'seq_relationship_logits' : seq_relationship_score,
+        'hidden_states'           : hidden_states,
+        'attentions'              : attentions,
+        'compile_status'          : compile_flag,
+        'generated_samples'       : [x for en, x in enumerate(samples)],
+        'batch_compilation_rate'  : torch.full((1,), float(sum(compile_flag)) / len(compile_flag), dtype = torch.float).to(pytorch.device),
+        'sample_indices'          : [],
+      }
     elif not is_validation and self.compile_sampler and self.config.is_sampling:
       samples, sample_indices = self.compile_sampler.generateSampleBatch(
         input_ids, prediction_scores, attention_mask, position_ids
       )
-      return BertForPreTrainingOutput(
-        generated_samples = samples,
-        sample_indices    = sample_indices
-      )
-
+      return {
+        'generated_samples' : samples,
+        'sample_indices'    : sample_indices,
+      }
     else:
-
       loss_fct = torch.nn.CrossEntropyLoss()
       masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
       next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
       total_loss = masked_lm_loss + next_sentence_loss
-      
-      return BertForPreTrainingOutput(
-        masked_lm_loss          = masked_lm_loss,
-        next_sentence_loss      = next_sentence_loss,
-        total_loss              = total_loss,
-        prediction_logits       = prediction_scores,
-        seq_relationship_logits = seq_relationship_score,
-        hidden_states           = hidden_states,
-        attentions              = attentions,
-      )
+
+      return {
+        'masked_lm_loss'          : masked_lm_loss,
+        'next_sentence_loss'      : next_sentence_loss,
+        'total_loss'              : total_loss,
+        'prediction_logits'       : prediction_scores,
+        'seq_relationship_logits' : seq_relationship_score,
+        'hidden_states'           : hidden_states,
+        'attentions'              : attentions,
+        'batch_compilation_rate'  : torch.full((1,), -1, dtype = torch.float).to(pytorch.device),
+      }
 
 class BertLMHeadModel(BertPreTrainedModel):
   def __init__(self, config):
