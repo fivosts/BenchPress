@@ -718,7 +718,7 @@ class BertForPreTraining(BertPreTrainedModel):
 
     if self.config.reward_compilation or self.config.is_sampling:
       self.compile_sampler = compiler.CompilationSampler(
-        self, atomizer, use_categorical, temperature
+        atomizer, use_categorical, temperature
       )
     else:
       self.compile_sampler = None
@@ -804,9 +804,12 @@ class BertForPreTraining(BertPreTrainedModel):
 
     if not is_validation and self.compile_sampler and not self.config.is_sampling:
       samples, compile_flag, masked_lm_labels = self.compile_sampler.generateTrainingBatch(
-        input_ids, prediction_scores, attention_mask, position_ids, masked_lm_labels
+        self, input_ids.get_device(), input_ids, prediction_scores,
+        attention_mask, position_ids, masked_lm_labels
       )
-
+      raise NotImplementedError
+      print(self.compile_sampler)
+      print(masked_lm_labels)
       loss_fct = torch.nn.CrossEntropyLoss()
       masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
       next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
@@ -827,7 +830,8 @@ class BertForPreTraining(BertPreTrainedModel):
       }
     elif not is_validation and self.compile_sampler and self.config.is_sampling:
       samples, sample_indices = self.compile_sampler.generateSampleBatch(
-        input_ids, prediction_scores, attention_mask, position_ids
+        self, input_ids.get_device(), input_ids,
+        prediction_scores, attention_mask, position_ids
       )
       return {
         'generated_samples' : samples,
