@@ -348,7 +348,7 @@ class Model(object):
       indices, step_indices = self.backend.SampleNextIndices(sampler, done)
       # Iterate over all samples in batch to determine whether they're
       # done.
-      if indices is None:
+      if not indices:
         # Return None means model has not produced something that can be stored.
         # This is if accommodates active sampling, which is very selective.
         return True

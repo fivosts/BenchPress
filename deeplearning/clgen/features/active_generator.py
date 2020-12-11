@@ -129,9 +129,10 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
   def EvaluateFeatures(self,
                        samples        : np.array,
                        sample_indices : np.array,
-                       ) -> typing.Union[
-                              typing.Dict[str, typing.TypeVar("Tensor")],
-                              typing.NamedTuple
+                       ) -> typing.Tuple[
+                            typing.Dict[str, typing.TypeVar("Tensor")],
+                            np.array,
+                            bool
                             ]:
     """
     Reads model sampling output and evaluates against active target features.
@@ -160,7 +161,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
 
     # If all samples have syntax errors and have no features, skip to next iteration.
     if not self.step_candidates:
-      return None, None, True
+      return {}, [], True
 
     self.num_current_samples += len(samples)
     if self.num_current_samples < FLAGS.active_limit_per_feed:
@@ -175,7 +176,9 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
           search_depth     = current_feed.search_depth,
         )
       )
-      return self.data_generator.toTensorFormat(input_feed), None, False
+      # If that specific input hasn't yet gathered all active samples,
+      # send it back and ask for more.
+      return self.data_generator.toTensorFormat(input_feed), [], False
     else:
       # For a given input feed, you got all sample candidates, so that's it.
       self.num_current_samples = 0
@@ -225,17 +228,15 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     self.step_candidates = set() # Input feed is going to change, so reset this sample counter.
 
     if self.feed_queue:
-      # Keep iterating the same decision tree.
-      return self.data_generator.toTensorFormat(self.feed_queue[0].input_blob), None, False
+      # Send the first good candidate back as an input.
+      return self.data_generator.toTensorFormat(self.feed_queue[0].input_blob), [], False
     else:
-      # We are done,
-      if self.total_candidates:
-        active_batch   = [x.sample for x in self.total_candidates]
-        active_indices = [x.sample_indices for x in self.total_candidates]
-        self.total_candidates = []
-        return active_batch, active_indices, True
-      else:
-        return None, None, True
+      # Queue is empty and we can proceed to next feed from dataset.
+      # Return back to models all good active samples, if any.
+      active_batch   = [x.sample for x in self.total_candidates]
+      active_indices = [x.sample_indices for x in self.total_candidates]
+      self.total_candidates = []
+      return active_batch, active_indices, True
 
   def addToDB(self, active_feed: active_feed_database.ActiveFeed) -> None:
     """If not exists, add current sample state to database"""
