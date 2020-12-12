@@ -807,9 +807,6 @@ class BertForPreTraining(BertPreTrainedModel):
         self, input_ids.get_device(), input_ids, prediction_scores,
         attention_mask, position_ids, masked_lm_labels
       )
-      raise NotImplementedError
-      print(self.compile_sampler)
-      print(masked_lm_labels)
       loss_fct = torch.nn.CrossEntropyLoss()
       masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
       next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
@@ -823,8 +820,8 @@ class BertForPreTraining(BertPreTrainedModel):
         'seq_relationship_logits' : seq_relationship_score,
         'hidden_states'           : hidden_states,
         'attentions'              : attentions,
-        'compile_status'          : compile_flag,
-        'generated_samples'       : [x for en, x in enumerate(samples)],
+        'compile_status'          : torch.LongTensor(compile_flag).to(pytorch.device),
+        'generated_samples'       : torch.LongTensor(samples).to(pytorch.device),
         'batch_compilation_rate'  : torch.full((1,), float(sum(compile_flag)) / len(compile_flag), dtype = torch.float).to(pytorch.device),
         'sample_indices'          : [],
       }
@@ -834,8 +831,8 @@ class BertForPreTraining(BertPreTrainedModel):
         prediction_scores, attention_mask, position_ids
       )
       return {
-        'generated_samples' : samples,
-        'sample_indices'    : sample_indices,
+        'generated_samples' : torch.LongTensor(samples).to(pytorch.device),
+        'sample_indices'    : torch.LongTensor(sample_indices).to(pytorch.device),
       }
     else:
       loss_fct = torch.nn.CrossEntropyLoss()
