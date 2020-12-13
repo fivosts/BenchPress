@@ -2,6 +2,8 @@
 from absl import flags
 import os
 
+from deeplearning.clgen.util import gpu
+
 FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean(
@@ -23,11 +25,13 @@ try:
 except ImportError:
   torch_tpu_available = False
 
-device   = None
-num_gpus = None
+offset_device = None
+device        = None
+num_gpus      = None
 
 def initPytorch(local_rank = -1):
   global torch_tpu_available
+  global offset_device
   global device
   global num_gpus
   if FLAGS.pt_cpu_only:
@@ -43,7 +47,11 @@ def initPytorch(local_rank = -1):
     # trigger an error that a device index is missing. Index 0 takes into account the
     # GPUs available in the environment, so `CUDA_VISIBLE_DEVICES=1,2` with `cuda:0`
     # will use the first GPU in that env, i.e. GPU#1
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    offset_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    available_gpus = gpu.getGPUID()
+    device         = torch.device(
+      "cuda:1" if torch.cuda.is_available() and available_gpus else "cpu"
+    )
     num_gpus = torch.cuda.device_count()
   else:
     # Here, we'll use torch.distributed.
