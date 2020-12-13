@@ -213,7 +213,7 @@ class BertConfig(object):
     self.gradient_checkpointing = kwargs.pop("gradient_checkpointing", False)
 
     # Attributes with defaults
-    self.reward_compilation = kwargs.pop("reward_compilation", False)
+    self.reward_compilation = kwargs.pop("reward_compilation", -1)
     self.is_sampling = kwargs.pop("is_sampling", False)
     self.return_dict = kwargs.pop("return_dict", False)
     self.output_hidden_states = kwargs.pop("output_hidden_states", False)
