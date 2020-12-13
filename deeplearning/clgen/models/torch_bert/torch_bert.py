@@ -55,14 +55,16 @@ flags.DEFINE_integer(
   "Default: 250"
 )
 
-flags.DEFINE_boolean(
+flags.DEFINE_integer(
   "reward_compilation",
-  False,
+  -1,
   "Select to integrate LLVM compiler into training regime."
   "During training, the target token will be asked to fill the first token of the hole."
   "If this flag is selected to True, the model will fill entirely the hole, as in inference."
   "The fully generated sample will be checked for syntactic correctness with LLVM."
   "If the sample compiles, then loss will be zero-ed for that instance, hence will be rewarded."
+  "[Default: -1]: do not use comp-rewarded training."
+  "Any integer >= 0: Kick-in this mode after this training step. 0 uses this method from start."
 )
 
 # flags.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
@@ -244,7 +246,8 @@ class torchBert(backends.BackendBase):
   def model_step(self,
                  model: typing.TypeVar('nn.Module'),
                  inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
-                 is_validation: bool = False,
+                 is_validation : bool = False,
+                 step          : int  = -1,
                  ) -> float:
     """
     Perform a training step on a batch of inputs.
@@ -262,6 +265,7 @@ class torchBert(backends.BackendBase):
                 masked_lm_labels     = inputs['mask_labels'],
                 next_sentence_labels = inputs['next_sentence_labels'],
                 is_validation        = is_validation,
+                step                 = step,
               )
     return outputs
 
@@ -313,7 +317,7 @@ class torchBert(backends.BackendBase):
       train_hook = hooks.tensorMonitorHook(
         self.logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
-      if FLAGS.reward_compilation:
+      if FLAGS.reward_compilation >= 0:
         correct_sample_obs = sample_observers.SamplesDatabaseObserver(
           self.logfile_path / "correct_samples.db"
         )
@@ -343,7 +347,7 @@ class torchBert(backends.BackendBase):
               batch_iterator = iter(loader)
               inputs = next(batch_iterator)
 
-            step_out = self.model_step(self.train.model, inputs)
+            step_out = self.model_step(self.train.model, inputs, step = epoch * self.steps_per_epoch + step)
             total_loss = step_out['total_loss'].mean()
             total_loss.backward()
 
@@ -355,7 +359,7 @@ class torchBert(backends.BackendBase):
             self.train.scheduler.step()
 
             exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
-            if FLAGS.reward_compilation:
+            if FLAGS.reward_compilation >= 0 and FLAGS.reward_compilation <= epoch * self.steps_per_epoch + step:
               correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'].cpu().numpy())) if step_out['compile_status'][en] == 1]
               for s in correct_samples:
                 feature_vector = extractor.DictKernelFeatures(self.atomizer.ArrayToCode(s[1]))
