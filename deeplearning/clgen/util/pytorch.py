@@ -50,7 +50,7 @@ def initPytorch(local_rank = -1):
     offset_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     available_gpus = gpu.getGPUID()
     device         = torch.device(
-      "cuda:1" if torch.cuda.is_available() and available_gpus else "cpu"
+      "cuda:{}".format(str(available_gpus[0]['id'])) if torch.cuda.is_available() and available_gpus else "cpu"
     )
     num_gpus = torch.cuda.device_count()
   else:
