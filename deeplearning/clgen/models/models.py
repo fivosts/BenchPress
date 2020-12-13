@@ -348,9 +348,9 @@ class Model(object):
       indices, step_indices = self.backend.SampleNextIndices(sampler, done)
       # Iterate over all samples in batch to determine whether they're
       # done.
-      if not indices:
-        # Return None means model has not produced something that can be stored.
-        # This is if accommodates active sampling, which is very selective.
+      if len(indices) == 0:
+        # Return empty means model has not produced something that can be stored.
+        # This if accommodates active sampling, which is very selective.
         return True
 
       if len(samples_in_progress) < len(indices):
@@ -384,7 +384,7 @@ class Model(object):
               num_tokens = samples_in_progress[i].index(atomizer.metaTokens['padToken'])
 
             src = self.atomizer.StringArrToCode(sample_kernel)
-            feature_vector, stderr = extractor.DictKernelFeatures(src)
+            feature_vector = extractor.DictKernelFeatures(src)
             try:
               stdout = opencl.Compile(src)
               compile_flag = True
