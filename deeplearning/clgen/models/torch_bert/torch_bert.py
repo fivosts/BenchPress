@@ -171,7 +171,7 @@ class torchBert(backends.BackendBase):
     self.torch.manual_seed(self.config.training.random_seed)
     self.torch.cuda.manual_seed_all(self.config.training.random_seed)
 
-    m = model.BertForPreTraining(self.bert_config, atomizer = self.atomizer).to(self.pytorch.device)
+    m = model.BertForPreTraining(self.bert_config, atomizer = self.atomizer).to(self.pytorch.offset_device)
 
     if self.pytorch.num_gpus > 1:
       m = self.torch.nn.DataParallel(m)
