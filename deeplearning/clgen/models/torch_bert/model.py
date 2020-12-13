@@ -716,7 +716,7 @@ class BertForPreTraining(BertPreTrainedModel):
     self.bert = BertModel(config)
     self.cls  = BertPreTrainingHeads(config)
 
-    if self.config.reward_compilation or self.config.is_sampling:
+    if self.config.reward_compilation >= 0 or self.config.is_sampling:
       self.compile_sampler = compiler.CompilationSampler(
         atomizer, use_categorical, temperature
       )
@@ -754,17 +754,18 @@ class BertForPreTraining(BertPreTrainedModel):
 
   def forward(
     self,
-    input_ids=None,
-    attention_mask=None,
-    token_type_ids=None,
-    position_ids=None,
-    head_mask=None,
-    inputs_embeds=None,
-    masked_lm_labels=None,
-    next_sentence_labels=None,
-    output_attentions=None,
-    output_hidden_states=None,
-    is_validation = False,
+    input_ids        = None,
+    attention_mask   = None,
+    token_type_ids   = None,
+    position_ids     = None,
+    head_mask        = None,
+    inputs_embeds    = None,
+    masked_lm_labels = None,
+    next_sentence_labels = None,
+    output_attentions    = None,
+    output_hidden_states = None,
+    is_validation        = False,
+    step                 = -1,
     **kwargs
   ):
     r"""
@@ -802,7 +803,7 @@ class BertForPreTraining(BertPreTrainedModel):
       inputs_embeds, output_attentions, output_hidden_states 
     )
 
-    if not is_validation and self.compile_sampler and not self.config.is_sampling:
+    if not is_validation and self.compile_sampler and step >= self.config.reward_compilation and not self.config.is_sampling:
       samples, compile_flag, masked_lm_labels = self.compile_sampler.generateTrainingBatch(
         self, input_ids.get_device(), input_ids, prediction_scores,
         attention_mask, position_ids, masked_lm_labels
