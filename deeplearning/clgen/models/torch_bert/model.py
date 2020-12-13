@@ -832,7 +832,7 @@ class BertForPreTraining(BertPreTrainedModel):
       )
       return {
         'generated_samples' : torch.LongTensor(samples).to(pytorch.device),
-        'sample_indices'    : torch.LongTensor(sample_indices).to(pytorch.device),
+        'sample_indices'    : sample_indices,
       }
     else:
       loss_fct = torch.nn.CrossEntropyLoss()

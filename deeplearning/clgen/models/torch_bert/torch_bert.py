@@ -221,8 +221,8 @@ class torchBert(backends.BackendBase):
         use_categorical = FLAGS.categorical_sampling,
         temperature = self.temperature
       ).to(self.pytorch.device)
-    if self.pytorch.num_gpus > 1:
-      m = self.torch.nn.DataParallel(m)
+    # if self.pytorch.num_gpus > 1:
+    #   m = self.torch.nn.DataParallel(m)
 
     dummy_num_machines = -1
     if dummy_num_machines != -1:
@@ -514,7 +514,7 @@ class torchBert(backends.BackendBase):
           self.sample.model, self.step_inputs,
       )
       if self.sampler.is_active:
-        generated_samples, sample_indices = step_out['generated_samples'].cpu().numpy(), step_out['sample_indices'].cpu().numpy()
+        generated_samples, sample_indices = step_out['generated_samples'].cpu().numpy(), step_out['sample_indices']
         while True:
           active_sample, active_indices, done = self.sample.data_generator.EvaluateFeatures(
             np.asarray(generated_samples),
@@ -537,7 +537,7 @@ class torchBert(backends.BackendBase):
             )
             generated_samples, sample_indices = active_step.generated_samples, active_step.sample_indices
       else:
-        return step_out['generated_samples'].cpu().numpy(), step_out['sample_indices'].cpu().numpy()
+        return step_out['generated_samples'].cpu().numpy(), step_out['sample_indices']
     raise ValueError("While True loop broken without returning")
 
   def _getTestSampler(self, test_sampler, sequence_length):
