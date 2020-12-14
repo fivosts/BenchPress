@@ -1,6 +1,5 @@
 """Core algorithm of sequence masking"""
 import sys
-import random
 import typing
 import copy
 import humanize
@@ -269,7 +268,6 @@ def MaskSequence(seq: np.array,
                  train_set: bool,
                  max_predictions: int,
                  pickled_atomizer,
-                 rngen: random.Random,
                  training_opts,
                  config,
                  is_torch: bool,
@@ -292,7 +290,7 @@ def MaskSequence(seq: np.array,
     actual_length = len(seq)
 
   candidate_indexes = np.arange(actual_length)
-  rngen.shuffle(candidate_indexes)
+  np.random.shuffle(candidate_indexes)
 
   masks_to_predict = min(max_predictions,
                          max(1, int(round(actual_length * training_opts.masked_lm_prob))))
@@ -305,20 +303,20 @@ def MaskSequence(seq: np.array,
 
     if config.mask.random_placed_mask:
       # 80% of the time, replace with [MASK]
-      if rngen.random() < 0.8:
+      if np.random.random() < 0.8:
         input_ids[pos_index] = atomizer.maskToken
       else:
         # 10% of the time, keep original
-        if rngen.random() < 0.5:
+        if np.random.random() < 0.5:
           pass
         # 10% of the time, replace with random word
         else:
-          random_token = rngen.randint(0, atomizer.vocab_size - 1)
+          random_token = np.random.randint(0, atomizer.vocab_size - 1)
           while any(atomizer.vocab[t] == random_token for (idx, t) in atomizer.metaTokens.items()):
-            random_token = rngen.randint(0, atomizer.vocab_size - 1)
-          input_ids[pos_index] = rngen.randint(0, atomizer.vocab_size - 1)
+            random_token = np.random.randint(0, atomizer.vocab_size - 1)
+          input_ids[pos_index] = np.random.randint(0, atomizer.vocab_size - 1)
     else:
-      if rngen.random() < 0.8:
+      if np.random.random() < 0.8:
         input_ids[pos_index] = atomizer.maskToken
 
     masked_lms.append(MaskedLmInstance(pos_index=pos_index, token_id=seq[pos_index]))

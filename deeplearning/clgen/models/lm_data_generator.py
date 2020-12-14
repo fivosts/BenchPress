@@ -545,7 +545,6 @@ class MaskLMDataGenerator(object):
                           config             = config,
                           pickled_atomizer   = pickle.dumps(self.atomizer),
                           training_opts      = self.training_opts,
-                          rngen              = self.rngen,
                           is_torch           = self.is_torch,
                           ),
         c
