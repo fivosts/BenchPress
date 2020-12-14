@@ -211,6 +211,9 @@ class torchBert(backends.BackendBase):
     self.sampler = sampler
     self.temperature = sampler.temperature
 
+    self.torch.manual_seed(self.config.training.random_seed)
+    self.torch.cuda.manual_seed_all(self.config.training.random_seed)
+
     if sampler.sequence_length > self.bertAttrs['max_position_embeddings']:
       raise ValueError(
           "Cannot use sequence length %d because the BERT model "
