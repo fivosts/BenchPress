@@ -49,13 +49,6 @@ from eupy.native import logger as l
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer(
-  "monitor_frequency",
-  250,
-  "Choose frequency (in steps) in which tensors will be logged during training. "
-  "Default: 250"
-)
-
-flags.DEFINE_integer(
   "reward_compilation",
   -1,
   "Select to integrate LLVM compiler into training regime."
@@ -66,18 +59,6 @@ flags.DEFINE_integer(
   "[Default: -1]: do not use comp-rewarded training."
   "Any integer >= 0: Kick-in this mode after this training step. 0 uses this method from start."
 )
-
-# flags.DEFINE_integer("max_eval_steps", 100, "Maximum number of eval steps.")
-
-# flags.DEFINE_boolean("force_eval", False, "Run Validation no matter what.")
-
-# flags.DEFINE_integer("sample_per_epoch", 3, "Set above zero to sample model after every epoch.")
-
-# flags.DEFINE_boolean("use_tpu", False, "Whether to use TPU or GPU/CPU.")
-
-# flags.DEFINE_boolean("mirror_gpus", False, "Set True to distribute training across all system's GPUs. (Only usable when use_tpu is False).")
-
-# flags.DEFINE_boolean("categorical_sampling", True, "Use categorical distribution on logits when sampling.")
 
 class torchBert(backends.BackendBase):
 
