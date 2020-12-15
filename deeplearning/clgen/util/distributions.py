@@ -78,7 +78,7 @@ class UniformDistribution(Distribution):
     super(UniformDistribution, self).__init__(sample_length, log_path, set_name)
 
   def sample(self):
-    return np.random.randint(0, self.sample_length + 1)
+    return np.random.RandomState().randint(0, self.sample_length + 1)
 
 class NormalDistribution(Distribution):
   """
@@ -97,7 +97,7 @@ class NormalDistribution(Distribution):
     self.variance = variance
 
   def sample(self):
-    sample = int(round(np.random.normal(loc = self.mean, scale = self.variance)))
+    sample = int(round(np.random.RandomState().normal(loc = self.mean, scale = self.variance)))
     while sample < 0 or sample > self.sample_length:
-      sample = int(round(np.random.normal(loc = self.mean, scale = self.variance)))
+      sample = int(round(np.random.RandomState().normal(loc = self.mean, scale = self.variance)))
     return sample

@@ -97,7 +97,7 @@ def HoleSequence(seq: np.array,
   holes_to_predict  = min(max_predictions,
                          max(1, int(round(actual_length * training_opts.masked_lm_prob))))
 
-  extend_left = True if np.random.randint(0, 2) == 1 else False
+  extend_left = True if np.random.RandomState().randint(0, 2) == 1 else False
   input_ids   = list(np.copy(seq))
   # List of (seq_idx, token_id, hole_length) tuples
   masked_lms        = []
@@ -109,7 +109,7 @@ def HoleSequence(seq: np.array,
   # Total masks placed so far.
   total_predictions = 0
   while total_predictions < holes_to_predict:
-    pos_index = np.random.randint(0, actual_length - 1) # Fixed seed doesn't work!
+    pos_index = np.random.RandomState().randint(0, actual_length - 1) # Fixed seed doesn't work!
     assert pos_index < len(seq), "Candidate index is out of bounds: {} >= {}".format(pos_index, len(seq))
     
     # Element in processed array can be found in its original index +/- offset
@@ -290,7 +290,7 @@ def MaskSequence(seq: np.array,
     actual_length = len(seq)
 
   candidate_indexes = np.arange(actual_length)
-  np.random.shuffle(candidate_indexes)
+  np.random.RandomState().shuffle(candidate_indexes)
 
   masks_to_predict = min(max_predictions,
                          max(1, int(round(actual_length * training_opts.masked_lm_prob))))
@@ -303,20 +303,20 @@ def MaskSequence(seq: np.array,
 
     if config.mask.random_placed_mask:
       # 80% of the time, replace with [MASK]
-      if np.random.random() < 0.8:
+      if np.random.RandomState().random() < 0.8:
         input_ids[pos_index] = atomizer.maskToken
       else:
         # 10% of the time, keep original
-        if np.random.random() < 0.5:
+        if np.random.RandomState().random() < 0.5:
           pass
         # 10% of the time, replace with random word
         else:
-          random_token = np.random.randint(0, atomizer.vocab_size - 1)
+          random_token = np.random.RandomState().randint(0, atomizer.vocab_size - 1)
           while any(atomizer.vocab[t] == random_token for (idx, t) in atomizer.metaTokens.items()):
-            random_token = np.random.randint(0, atomizer.vocab_size - 1)
-          input_ids[pos_index] = np.random.randint(0, atomizer.vocab_size - 1)
+            random_token = np.random.RandomState().randint(0, atomizer.vocab_size - 1)
+          input_ids[pos_index] = np.random.RandomState().randint(0, atomizer.vocab_size - 1)
     else:
-      if np.random.random() < 0.8:
+      if np.random.RandomState().random() < 0.8:
         input_ids[pos_index] = atomizer.maskToken
 
     masked_lms.append(MaskedLmInstance(pos_index=pos_index, token_id=seq[pos_index]))
