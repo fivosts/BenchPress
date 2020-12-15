@@ -15,6 +15,8 @@
 """Preprocessor passes for the OpenCL programming language."""
 import typing
 import os
+# import glob
+# import pathlib
 
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.preprocessors import clang
@@ -68,6 +70,14 @@ def GetClangArgs(use_shim: bool) -> typing.List[str]:
     "-I{}".format(str(AUX_INCLUDE)),
     "-Wno-everything",
   ]
+  # header_files = glob.glob(
+  #   str(
+  #     pathlib.Path(FLAGS.workspace_dir).resolve() / "header_files" / "*.h"
+  #   )
+  # )
+  # if header_files:
+  #   for f in header_files:
+  #     args += "-include{}".format(f)
   if use_shim:
     args += ["-include", str(SHIMFILE)]
   return args
