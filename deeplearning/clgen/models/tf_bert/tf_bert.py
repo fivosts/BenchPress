@@ -40,6 +40,7 @@ from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import telemetry
+from deeplearning.clgen.models import bert_flags
 from deeplearning.clgen.models.tf_bert import model
 from deeplearning.clgen.models.tf_bert import optimizer
 from deeplearning.clgen.models.tf_bert import hooks

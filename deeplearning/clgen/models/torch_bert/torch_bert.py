@@ -38,6 +38,7 @@ from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import telemetry
+from deeplearning.clgen.models import bert_flags
 from deeplearning.clgen.models.torch_bert import model
 from deeplearning.clgen.models.torch_bert import config
 from deeplearning.clgen.models.torch_bert import optimizer
