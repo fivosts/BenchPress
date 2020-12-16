@@ -23,6 +23,18 @@ def FrequencyBars(x: np.array,
 # stage1 = stage0 + [6, 7, 8, 9, 10] *2
 # stage2 = stage1 + [11, 12, 13,  14, 15, 16] * 4
 
+"""
+1. How many stages ?: As many exp range fit in sequence length.
+2. Stage freq multiplied by what coeff ?
+3. What mean and variance in idx norm distr ?: Variance can increase
+     exp like ranges, mean is 0.0 and slides up to sequence length
+4. Interval of sliding: ? seq_len / num train steps.
+4a. In case of aux training ? Or stopping training early ? 
+    Re-calculation of intervals on same sets?
+5. Given original corpus, how many kernels go to each step ?
+    Dupes ? Or within dupes ?
+"""
+
 stage0 = [0, 1, 2]*32
 stage1 = stage0 + [3, 4]*64
 stage2 = stage1 + [5, 6, 7, 8]*128
