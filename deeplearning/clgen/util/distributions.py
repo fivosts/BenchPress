@@ -30,8 +30,8 @@ class Distribution():
                                  set_name,
                                  )
     elif config.HasField("normal_distribution"):
-      return NormalDistribution(config.hole_length, 
-                                config.normal_distribution.mean, 
+      return NormalDistribution(config.hole_length,
+                                config.normal_distribution.mean,
                                 config.normal_distribution.variance,
                                 log_path,
                                 set_name,
