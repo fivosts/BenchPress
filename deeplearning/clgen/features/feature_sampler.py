@@ -29,7 +29,7 @@ class EuclideanSampler(object):
         features = extractor.DictKernelFeatures(contents)
         if features:
           self.benchmarks.append(
-            FeatureSampler.Benchmark(
+            EuclideanSampler.Benchmark(
               f,
               f.name,
               contents,
