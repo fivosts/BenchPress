@@ -147,7 +147,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     # If more candidates are needed for that specific sample,
     # store the feeds and ask more samples.
     for sample, indices in zip(samples, sample_indices):
-      features = extractor.DictKernelFeatures(self.atomizer.ArrayToCode(seed))
+      features = extractor.DictKernelFeatures(self.atomizer.ArrayToCode(current_feed))
       if features:
         self.step_candidates.add(
           ActiveSamplingGenerator.ActiveSample(
