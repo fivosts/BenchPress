@@ -95,7 +95,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     self.total_candidates    = []
     self.num_current_samples = 0 # How many samples has a specific feed delivered.
     self.active_dataset      = ActiveDataset(self.online_corpus)
-    self.feat_sampler        = feature_sampler.FeatureSampler()
+    self.feat_sampler        = feature_sampler.EuclideanSampler()
     return
 
   def active_dataloader(self) -> typing.Union[
