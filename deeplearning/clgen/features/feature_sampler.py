@@ -47,7 +47,7 @@ class EuclideanSampler(object):
     for b in self.benchmarks:
       cd = 0
       for i, t in zip(infeat.values(), b.feature_vector.values()):
-        cd += (t**2) - (i**2)
+        cd += abs((t**2) - (i**2))
       d = min(d, cd)
     return math.sqrt(d)
 
@@ -67,7 +67,7 @@ class EuclideanSampler(object):
     Find top K candidates by getting minimum
     euclidean distance from set of rodinia benchmarks.
     """
-    for idx in len(candidates):
+    for idx in range(len(candidates)):
       candidates[idx] = candidates[idx]._replace(
         score = self.calculate_distance(candidates[idx].features)
       )
