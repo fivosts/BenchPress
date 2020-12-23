@@ -65,13 +65,15 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     Representation of an active learning sample.
     """
     # ActiveSampleFeed instance of model input
-    sample_feed : typing.TypeVar("ActiveSamplingGenerator.ActiveSampleFeed")
+    sample_feed    : typing.TypeVar("ActiveSamplingGenerator.ActiveSampleFeed")
     # Model prediction
-    sample      : np.array
+    sample         : np.array
+    # Sample indices of given prediction.
+    sample_indices : np.array
     # Output features of sample
-    features    : typing.Dict[str, float]
+    features       : typing.Dict[str, float]
     # Score of sample based on active learning search.
-    score       : typing.Union[bool, float]
+    score          : typing.Union[bool, float]
 
   @classmethod
   def FromDataGenerator(cls,
@@ -91,7 +93,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       url = "sqlite:///{}".format(self.data_generator.sampler.corpus_directory / "active_feeds.db")
     )
     self.feed_queue          = []
-    self.step_candidates     = set()
+    self.step_candidates     = []
     self.total_candidates    = []
     self.num_current_samples = 0 # How many samples has a specific feed delivered.
     self.active_dataset      = ActiveDataset(self.online_corpus)
@@ -147,9 +149,9 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     # If more candidates are needed for that specific sample,
     # store the feeds and ask more samples.
     for sample, indices in zip(samples, sample_indices):
-      features = extractor.DictKernelFeatures(self.atomizer.ArrayToCode(current_feed))
+      features = extractor.DictKernelFeatures(self.atomizer.ArrayToCode(sample))
       if features:
-        self.step_candidates.add(
+        self.step_candidates.append(
           ActiveSamplingGenerator.ActiveSample(
             sample_feed    = current_feed,
             sample         = sample,
@@ -158,11 +160,6 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
             score          = None,
           )
         )
-
-    # If all samples have syntax errors and have no features, skip to next iteration.
-    if not self.step_candidates:
-      return {}, [], True
-
     self.num_current_samples += len(samples)
     if self.num_current_samples < FLAGS.active_limit_per_feed:
       input_feed, masked_idxs = self.masking_func(current_feed.input_feed)
@@ -178,10 +175,16 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       )
       # If that specific input hasn't yet gathered all active samples,
       # send it back and ask for more.
+      l.getLogger().warn("Gather more")
       return self.data_generator.toTensorFormat(input_feed), [], False
     else:
       # For a given input feed, you got all sample candidates, so that's it.
       self.num_current_samples = 0
+
+    # If all samples have syntax errors and have no features, skip to next iteration.
+    if not self.step_candidates:
+      l.getLogger().warn("Fuck")
+      return {}, [], True
 
     # This function returns all candidates that succeed the threshold
     # TODO, is the threshold matching a job for feat sampler or active generator ?
@@ -225,14 +228,16 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
           )
         )
     # 3) Re-initialize all variables
-    self.step_candidates = set() # Input feed is going to change, so reset this sample counter.
+    self.step_candidates = [] # Input feed is going to change, so reset this sample counter.
 
     if self.feed_queue:
       # Send the first good candidate back as an input.
+      l.getLogger().warn("Good candidate as input")
       return self.data_generator.toTensorFormat(self.feed_queue[0].input_blob), [], False
     else:
       # Queue is empty and we can proceed to next feed from dataset.
       # Return back to models all good active samples, if any.
+      l.getLogger().warn("Empty queue, go on")
       active_batch   = [x.sample for x in self.total_candidates]
       active_indices = [x.sample_indices for x in self.total_candidates]
       self.total_candidates = []
