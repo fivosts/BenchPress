@@ -608,9 +608,23 @@ class torchBert(backends.BackendBase):
         self.torch.load(ckpt_comp("model"))
       )
     else:
-      estimator.model.load_state_dict(
-        self.torch.load(ckpt_comp("model"))
-      )
+      try:
+        estimator.model.load_state_dict(
+          self.torch.load(ckpt_comp("model"))
+        )
+      except RuntimeError:
+        """
+        Pytorch doesn't love loading a DataParallel checkpoint
+        to a simple model. So, the following hack is needed
+        to remove the 'module.' prefix from state keys.
+        """
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in self.torch.load(ckpt_comp("model")).items():
+            name = k[7:] # remove `module.`
+            new_state_dict[name] = v
+        estimator.model.load_state_dict(new_state_dict)
+
     if estimator.optimizer is not None and estimator.scheduler is not None:
       estimator.optimizer.load_state_dict(
         self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
