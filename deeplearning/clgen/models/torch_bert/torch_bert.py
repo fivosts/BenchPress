@@ -571,7 +571,7 @@ class torchBert(backends.BackendBase):
       self.pytorch.torch_xla.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
     elif self.is_world_process_zero():
       if isinstance(estimator, self.torch.nn.DataParallel):
-        self.torch.save(estimator.module.state_dict(), ckpt_comp("model"))
+        self.torch.save(estimator.model.module.state_dict(), ckpt_comp("model"))
       else:
         self.torch.save(estimator.model.state_dict(), ckpt_comp("model"))
       self.torch.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
@@ -604,11 +604,11 @@ class torchBert(backends.BackendBase):
 
     # self.train.model = model.BertModel.from_pretrained(ckpt_comp("model"))
     if isinstance(estimator, self.torch.nn.DataParallel):
-      estimator.model.load_state_dict(
+      estimator.model.module.load_state_dict(
         self.torch.load(ckpt_comp("model"))
       )
     else:
-      estimator.module.load_state_dict(
+      estimator.model.load_state_dict(
         self.torch.load(ckpt_comp("model"))
       )
     if estimator.optimizer is not None and estimator.scheduler is not None:
@@ -618,10 +618,7 @@ class torchBert(backends.BackendBase):
       estimator.scheduler.load_state_dict(
         self.torch.load(ckpt_comp("scheduler"))
       )
-    if isinstance(estimator, self.torch.nn.DataParallel):
-      estimator.module.eval()
-    else:
-      estimator.model.eval()
+    estimator.model.eval()
     return ckpt_step
 
   def is_world_process_zero(self) -> bool:
