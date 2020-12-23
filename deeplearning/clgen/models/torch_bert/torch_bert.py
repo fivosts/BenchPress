@@ -505,11 +505,11 @@ class torchBert(backends.BackendBase):
           self.sample.model, self.step_inputs,
       )
       if self.sampler.is_active:
-        generated_samples, sample_indices = step_out['generated_samples'].cpu().numpy(), step_out['sample_indices']
+        generated_samples, sample_indices = step_out['generated_samples'], step_out['sample_indices']
         while True:
           active_sample, active_indices, done = self.sample.data_generator.EvaluateFeatures(
-            np.asarray(generated_samples),
-            np.asarray(sample_indices)
+            generated_samples.cpu().numpy(),
+            sample_indices
           )
           if done:
             return active_sample, active_indices
@@ -526,7 +526,7 @@ class torchBert(backends.BackendBase):
             active_step = self.model_step(
                 self.sample.model, step_input,
             )
-            generated_samples, sample_indices = active_step.generated_samples, active_step.sample_indices
+            generated_samples, sample_indices = active_step['generated_samples'], active_step['sample_indices']
       else:
         return step_out['generated_samples'].cpu().numpy(), step_out['sample_indices']
     raise ValueError("While True loop broken without returning")
