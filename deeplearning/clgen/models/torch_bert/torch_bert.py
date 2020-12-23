@@ -608,7 +608,7 @@ class torchBert(backends.BackendBase):
         self.torch.load(ckpt_comp("model"))
       )
     else:
-      estimator.model.load_state_dict(
+      estimator.module.load_state_dict(
         self.torch.load(ckpt_comp("model"))
       )
     if estimator.optimizer is not None and estimator.scheduler is not None:
