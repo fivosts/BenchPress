@@ -378,9 +378,9 @@ class Model(object):
           if sampler.SampleIsComplete(samples_in_progress[i]):
             end_time      = datetime.datetime.utcnow()
             done[i]       = 1
-            sample_kernel = [x for x in samples_in_progress[i] if x != atomizer.metaTokens['padToken']]
+            sample_kernel = [x for x in samples_in_progress[i] if 'padToken' in atomizer.metaTokens and x != atomizer.metaTokens['padToken']]
             num_tokens    = len(samples_in_progress[i])
-            if atomizer.metaTokens['padToken'] in samples_in_progress[i]:
+            if 'padToken' in atomizer.metaTokens and atomizer.metaTokens['padToken'] in samples_in_progress[i]:
               num_tokens = samples_in_progress[i].index(atomizer.metaTokens['padToken'])
 
             src = self.atomizer.StringArrToCode(sample_kernel)
