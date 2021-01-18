@@ -100,6 +100,7 @@ class tfSequential(backends.BackendBase):
       f"    $ tensorboard --logdir='{tensorboard_dir}'",
     )
     self.summary_writer = tf.compat.v1.summary.FileWriter(tensorboard_dir)
+    self.telemetry = telemetry.TrainingLogger(pathlib.Path(tensorboard_dir))
 
   def samplesWithCategorical(self):
     return True
