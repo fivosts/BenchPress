@@ -28,6 +28,7 @@ class EuclideanSampler(object):
         contents = file.read()
         features = extractor.DictKernelFeatures(contents)
         if features:
+          l.getLogger().warn(features)
           self.benchmarks.append(
             EuclideanSampler.Benchmark(
               f,
@@ -45,10 +46,12 @@ class EuclideanSampler(object):
     """
     d = 0
     for b in self.benchmarks:
-      cd = 0
-      for i, t in zip(infeat.values(), b.feature_vector.values()):
-        cd += abs((t**2) - (i**2))
-      d = min(d, cd)
+      # cd = 0
+      for key in b.feature_vector.keys():
+        i = infeat[key]
+        t = b.feature_vector[key]
+        d += abs((t**2) - (i**2))
+      # d += cd
     return math.sqrt(d)
 
   def topK_candidates(self,
@@ -71,4 +74,4 @@ class EuclideanSampler(object):
       candidates[idx] = candidates[idx]._replace(
         score = self.calculate_distance(candidates[idx].features)
       )
-    return self.topK_candidates(candidates, 1)
+    return self.topK_candidates(candidates, 3)
