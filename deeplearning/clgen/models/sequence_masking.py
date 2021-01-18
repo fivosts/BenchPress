@@ -87,7 +87,7 @@ def HoleSequence(seq: np.array,
   # Actual length represents the sequence length before pad begins
   if use_start_end:
     actual_length   = np.where(seq == atomizer.endToken)[0][0]
-  elif padToken in seq:
+  elif atomizer.padToken in seq:
     actual_length   = np.where(seq == atomizer.padToken)[0][0]
   else:
     actual_length   = len(seq)
