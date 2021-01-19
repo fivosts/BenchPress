@@ -207,8 +207,9 @@ class CompilationSampler(object):
                           ) for i in range(batch_size)]
 
       results          = [j.result() for j in jobs]
-      samples          = [x.numpy() for (x, _) in results]
-      sample_indices   = [y for (_, y) in results]
+      samples          = [x.numpy() for (x, _, _) in results]
+      sample_indices   = [y for (_, y, _) in results]
+      scores_history   = [z for (_, _, z) in results]
       return samples, sample_indices
 
   def iterSampleSeq(self,
@@ -237,8 +238,9 @@ class CompilationSampler(object):
         len(torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0])
       )
     ]
+    scores_history = []
     holes, new_seq, new_attention, sample_indices = self.StepSampleSeq(
-      seq, prediction, attention, sample_indices
+      seq, prediction, attention, sample_indices, scores_history
     )
     while holes:
       new_prediction, new_seq_relationship_score, _, _ = model.get_output(
@@ -248,9 +250,10 @@ class CompilationSampler(object):
         new_seq[0],
         new_prediction.detach().cpu()[0],
         new_attention,
-        sample_indices
+        sample_indices,
+        scores_history
       )
-    return new_seq[0], sample_indices
+    return new_seq[0], sample_indices, scores_history
 
   def StepSampleSeq(self,
                     seq               : torch.LongTensor,
@@ -280,6 +283,7 @@ class CompilationSampler(object):
 
     for target_idx in torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0]:
       idx        = int(target_idx)
+      self.scores_history.append(prediction_scores[target_idx].numpy())
       prediction = int(self.argmax(prediction_scores[target_idx]))
       step_indices.append([prediction])
       is_hole = temp_seq[idx] == self.atomizer.holeToken
