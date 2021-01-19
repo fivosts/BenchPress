@@ -99,9 +99,10 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
         corpuses.AssertConfigIsValid(config.sample_corpus.corpus)
       else:
         raise ValueError("sample_corpus has no corpus field.")
-    elif ((not config.HasField("train_set")) 
-      and (not config.HasField("validation_set")) 
-      and (not config.HasField("sample_set"))):
+    elif ((not config.HasField("train_set"))
+      and (not config.HasField("validation_set"))
+      and (not config.HasField("sample_set"))
+      and (not config.HasField("live_sampling"))):
       raise ValueError(config)
     pbutil.AssertFieldConstraint(
       config, "batch_size", lambda x: 0 < x, "Sampler.batch_size must be > 0"
@@ -309,6 +310,19 @@ class Sampler(object):
     else:
       return False
 
+  @property
+  def is_live(self):
+    return self.config.HasField("live_sampling"):
+
+  @property
+  def isFixedStr(self):
+    return self.config.HasField("start_text") and not (
+          self.config.HasField("train_set") or
+          self.config.HasField("validation_set") or
+          self.config.HasField("sample_set") or
+          self.config.HasField("sample_corpus")
+        )
+
   def __init__(self, config: sampler_pb2.Sampler, sample_db_name = "samples.db"):
     """Instantiate a sampler.
 
@@ -331,12 +345,6 @@ class Sampler(object):
       self.start_text = self.config.start_text
     else:
       self.start_text = ""
-    self.isFixedStr = self.config.HasField("start_text") and not (
-          self.config.HasField("train_set") or
-          self.config.HasField("validation_set") or
-          self.config.HasField("sample_set") or
-          self.config.HasField("sample_corpus")
-        )
 
     self.temperature = self.config.temperature_micros / 1e6
     self.batch_size = self.config.batch_size
