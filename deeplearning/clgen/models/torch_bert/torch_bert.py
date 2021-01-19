@@ -509,7 +509,7 @@ class torchBert(backends.BackendBase):
           self.sample.model, self.step_inputs,
       )
       if self.sampler.is_live:
-        plotter.GroupOfBars(
+        plotter.LogitsStepsDistrib(
           step_out['prediction_scores'],
           [self.atomizer.DeatomizeIndices([i]) for i in range(self.atomizer.vocab_size)]
         )
