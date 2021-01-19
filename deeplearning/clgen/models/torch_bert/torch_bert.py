@@ -464,10 +464,13 @@ class torchBert(backends.BackendBase):
     l.getLogger().info("Initialized model samples in {}".format(self.sample_path))
     return
 
-  def InitSampleBatch(self, *unused_args, **unused_kwargs) -> None:
+  def InitSampleBatch(self, sampler: samplers.Sampler, **unused_kwargs) -> None:
     """Batch-specific initialization. Called once when a new batch is going to be generated"""
-    del unused_args
     del unused_kwargs
+
+    if sampler.is_live:
+      # For live sampling, start text must be re-instated each iteration.
+      self.InitSampling(sampler)
 
     if self.loader is None:
       if self.torch_tpu_available:
