@@ -827,11 +827,12 @@ class BertForPreTraining(BertPreTrainedModel):
         'sample_indices'          : [],
       }
     elif not is_validation and self.compile_sampler and self.config.is_sampling:
-      samples, sample_indices = self.compile_sampler.generateSampleBatch(
+      samples, sample_indices, scores_history = self.compile_sampler.generateSampleBatch(
         self, input_ids.get_device(), input_ids,
         prediction_scores, attention_mask, position_ids
       )
       return {
+        'prediction_scores' : scores_history, # This is mainly used for live sampling. Else, watch out!
         'generated_samples' : torch.LongTensor(samples).to(pytorch.device),
         'sample_indices'    : sample_indices,
       }
