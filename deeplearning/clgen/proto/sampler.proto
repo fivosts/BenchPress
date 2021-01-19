@@ -48,6 +48,8 @@ message Sampler {
     ValidationSet sample_set      = 4;
     // Specify a whole new corpus to encode and sample with new specs.
     SampleCorpus  sample_corpus   = 5;
+    // Sample live by getting input() from user.
+    bool          live_sampling   = 6;
   }
   // The sampling batch size.
   // TODO(cec): Always sample with max batch size.
