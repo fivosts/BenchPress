@@ -331,6 +331,9 @@ class Model(object):
   ) -> bool:
     ## This function needs a hell of refactoring.
     """Run a single iteration of the batched sample inner-loop."""
+    if sampler.is_live:
+      sampler.start_text = str(input("Live Feed: "))
+
     self.backend.InitSampleBatch(sampler)
     samples_in_progress = [
       sampler.tokenized_start_text.copy() for _ in range(sampler.batch_size)
