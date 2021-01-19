@@ -507,7 +507,9 @@ class torchBert(backends.BackendBase):
       step_out = self.model_step(
           self.sample.model, self.step_inputs,
       )
-      if self.sampler.is_active:
+      if self.sampler.is_live:
+        l.getLogger().warn("Sampler is live and at this point I should plot a bars in groups for prediction distribution")
+      elif self.sampler.is_active:
         generated_samples, sample_indices = step_out['generated_samples'], step_out['sample_indices']
         while True:
           active_sample, active_indices, done = self.sample.data_generator.EvaluateFeatures(
