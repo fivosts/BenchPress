@@ -65,6 +65,35 @@ def FrequencyBars(x: np.array,
   fig.write_image(outf("png"), scale = 2.0)
   return
 
+def GroupOfBars(x: typing.List[np.array],
+                atoms    : typing.List[str],
+                title    : str,
+                x_name   : str,
+                plot_name: str,
+                path: pathlib.Path
+                ) -> None:
+  """
+  Categorical group-bar plotting.
+  vocab_size number of groups. Groups are as many as prediction steps.
+  Used to plot the probability distribution of BERT's token selection. 
+  """
+  layout = go.Layout(
+    title = title,
+    xaxis = dict(title = x_name),
+    # yaxis = dict(title = ""),
+  )
+  fig = go.Figure(layout = layout)
+
+  for pred in x:
+    fig.add_trace(
+      go.Bar(
+        x = atoms,
+        y = pred,
+      )
+    )
+  fig.show()
+  return
+
 def CumulativeHistogram(x: np.array,
                         y: np.array,
                         title    : str,
