@@ -312,7 +312,7 @@ class Sampler(object):
 
   @property
   def is_live(self):
-    return self.config.HasField("live_sampling"):
+    return self.config.HasField("live_sampling")
 
   @property
   def isFixedStr(self):
