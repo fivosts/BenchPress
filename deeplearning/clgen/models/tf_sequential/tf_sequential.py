@@ -341,7 +341,7 @@ class tfSequential(backends.BackendBase):
     del unused_kwargs
 
     self.num_epochs = self.config.training.num_epochs
-    if self.is_trained:
+    if self.is_trained or FLAGS.only_sample:
       return
 
     if self.data_generator is None:
