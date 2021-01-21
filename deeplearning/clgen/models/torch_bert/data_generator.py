@@ -105,8 +105,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     isFixedStr == True means there is a fixed sample feed, e.g. 'kernel void [HOLE]'
     Otherwise, a set has been given to provide random samples from it.
     """
-    if self.sampler.isFixedStr:
-
+    if self.sampler.isFixedStr or self.sampler.is_live:
       input_sample = self.sampler.encoded_start_text
       target_idx   = np.where(np.in1d(input_sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
       num_targets  = (np.count_nonzero(input_sample == self.atomizer.maskToken) + 
@@ -115,7 +114,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
       assert len(target_idx)       != 0, "No target prediction in sample text"
 
-      seen_in_training     = 0
+      seen_in_training     = np.zeros([1], dtype = np.int32)
       original_input       = np.full((self.sampler.sequence_length), 0, dtype = np.int64)
       input_ids            = self._padToMaxPosition(input_sample)[:self.sampler.sequence_length]
       input_mask           = np.concatenate([
@@ -125,8 +124,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       position_ids         = np.arange(self.sampler.sequence_length, dtype = np.int64)
       mask_labels          = np.full((self.sampler.sequence_length), -100, dtype = np.int64)
       masked_lm_lengths    = np.full((self.sampler.sequence_length), -1, dtype = np.int64)
-      next_sentence_labels = 0
-      raise NotImplementedError("Check here that the metrics are correct.")
+      next_sentence_labels = np.zeros([1], dtype = np.int32)
       sample_element = {
         'seen_in_training'    : seen_in_training,
         'original_input'      : original_input,
@@ -138,11 +136,13 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         'next_sentence_labels': next_sentence_labels,
       }
       dataset = [{k: torch.from_numpy(v) for (k, v) in sample_element.items()}]
+      sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
     else:
       path_list = self.configSampleSets()
       dataset = LazyConcatDataset(
                   [x for x in path_list]
                 )
+      sampler = LazyRandomSampler(dataset, replacement = False)
     dataloader = torch.utils.data.dataloader.DataLoader(
       dataset    = dataset,
       # You are wondering why batch_size == 1 and not sampler.batch_size:
@@ -151,7 +151,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       # Model will ask for a batch (of 1) and then replicate it.
       batch_size = 1,
       sampler    = (
-            LazyRandomSampler(dataset, replacement = False)
+            sampler
             if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
             else torch.utils.data.distributed.DistributedSampler(
                   dataset, 
