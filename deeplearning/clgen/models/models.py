@@ -301,6 +301,16 @@ class Model(object):
     atomizer = self.corpus.atomizer
     if sampler.isFixedStr:
       sampler.Specialize(atomizer)
+    elif sampler.is_live:
+      start_text = [str(input("Live Feed: "))]
+      while True:
+        try:
+          start_text.append(str(input()))
+        except EOFError:
+          break
+      sampler.start_text = '\n'.join(start_text)
+      sampler.Specialize(atomizer)
+
     self.backend.InitSampling(sampler, seed)
     [obs.Specialize(self, sampler) for obs in sample_observers]
 
@@ -308,6 +318,15 @@ class Model(object):
     try:
       while self._SampleBatch(sampler, atomizer, sample_observers, epoch):
         batch_count += 1
+        if sampler.is_live:
+          start_text = [str(input("Live Feed: "))]
+          while True:
+            try:
+              start_text.append(str(input()))
+            except EOFError:
+              break
+          sampler.start_text = '\n'.join(start_text)
+          sampler.Specialize(atomizer)
     except KeyboardInterrupt:
       l.getLogger().info("Wrapping up sampling...")
 
@@ -331,8 +350,6 @@ class Model(object):
   ) -> bool:
     ## This function needs a hell of refactoring.
     """Run a single iteration of the batched sample inner-loop."""
-    if sampler.is_live:
-      sampler.start_text = str(input("Live Feed: "))
 
     self.backend.InitSampleBatch(sampler)
     samples_in_progress = [
