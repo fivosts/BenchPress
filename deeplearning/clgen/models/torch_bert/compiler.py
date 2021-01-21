@@ -210,7 +210,7 @@ class CompilationSampler(object):
       samples          = [x.numpy() for (x, _, _) in results]
       sample_indices   = [y for (_, y, _) in results]
       scores_history   = [z for (_, _, z) in results]
-      return samples, sample_indices
+      return samples, sample_indices, scores_history
 
   def iterSampleSeq(self,
                     model        : typing.TypeVar("model.BertPreTrainedModel"),
@@ -260,6 +260,7 @@ class CompilationSampler(object):
                     prediction_scores : torch.LongTensor,
                     attention_mask    : torch.LongTensor,
                     sample_indices    : typing.List[typing.List[int]],
+                    scores_history    : typing.List[np.array],
                     ) -> typing.Tuple[
                           bool,
                           torch.LongTensor,
@@ -283,7 +284,7 @@ class CompilationSampler(object):
 
     for target_idx in torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0]:
       idx        = int(target_idx)
-      self.scores_history.append(prediction_scores[target_idx].numpy())
+      scores_history.append(prediction_scores[target_idx].numpy())
       prediction = int(self.argmax(prediction_scores[target_idx]))
       step_indices.append([prediction])
       is_hole = temp_seq[idx] == self.atomizer.holeToken
