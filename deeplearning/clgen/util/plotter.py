@@ -69,8 +69,8 @@ def LogitsStepsDistrib(x: typing.List[np.array],
                        atoms    : typing.List[str],
                        title    : str,
                        x_name   : str,
-                       plot_name: str,
-                       path: pathlib.Path
+                       # plot_name: str,
+                       # path: pathlib.Path
                        ) -> None:
   """
   Categorical group-bar plotting.
