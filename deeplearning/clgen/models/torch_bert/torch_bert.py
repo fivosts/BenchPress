@@ -509,10 +509,13 @@ class torchBert(backends.BackendBase):
           self.sample.model, self.step_inputs,
       )
       if self.sampler.is_live:
-        plotter.LogitsStepsDistrib(
-          step_out['prediction_scores'],
-          [self.atomizer.DeatomizeIndices([i]) for i in range(self.atomizer.vocab_size)]
-        )
+        for hole in step_out['prediction_scores']:
+          plotter.LogitsStepsDistrib(
+            hole,
+            [self.atomizer.DeatomizeIndices([i]) for i in range(self.atomizer.vocab_size)],
+            title = "Sampling distribution",
+            x_name = "Probs / sample step",
+          )
       if self.sampler.is_active:
         generated_samples, sample_indices = step_out['generated_samples'], step_out['sample_indices']
         while True:
