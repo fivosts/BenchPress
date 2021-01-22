@@ -65,10 +65,11 @@ def FrequencyBars(x: np.array,
   fig.write_image(outf("png"), scale = 2.0)
   return
 
-def LogitsStepsDistrib(x: typing.List[np.array],
-                       atoms    : typing.List[str],
-                       title    : str,
-                       x_name   : str,
+def LogitsStepsDistrib(x              : typing.List[np.array],
+                       atoms          : typing.List[str],
+                       sample_indices : typing.List[str],
+                       title          : str,
+                       x_name         : str,
                        # plot_name: str,
                        # path: pathlib.Path
                        ) -> None:
@@ -84,9 +85,10 @@ def LogitsStepsDistrib(x: typing.List[np.array],
   )
   fig = go.Figure(layout = layout)
 
-  for pred in x:
+  for pred, name in zip(x, sample_indices):
     fig.add_trace(
       go.Bar(
+        name = name,
         x = atoms,
         y = pred,
       )
