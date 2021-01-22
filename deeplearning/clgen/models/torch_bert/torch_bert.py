@@ -509,10 +509,11 @@ class torchBert(backends.BackendBase):
           self.sample.model, self.step_inputs,
       )
       if self.sampler.is_live:
-        for hole in step_out['prediction_scores']:
+        for hole, indcs in zip(step_out['prediction_scores'], step_out['sample_indices']):
           plotter.LogitsStepsDistrib(
-            hole,
-            [self.atomizer.DeatomizeIndices([i]) for i in range(self.atomizer.vocab_size)],
+            x = self.torch.nn.Softmax(dim = 0)(self.torch.FloatTensor(hole)).numpy(),
+            atoms = [self.atomizer.DeatomizeIndices([i]) for i in range(self.atomizer.vocab_size)],
+            sample_indices = [self.atomizer.DeatomizeIndices([i]) for i in indcs[0]],
             title = "Sampling distribution",
             x_name = "Probs / sample step",
           )
