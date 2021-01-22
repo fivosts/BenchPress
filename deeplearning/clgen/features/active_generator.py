@@ -23,14 +23,14 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_integer(
   "active_limit_per_feed",
-  150,
-  "Set limit on sample attempts per input_feed. [Default: 50]. Set to 0 for infinite."
+  400,
+  "Set limit on sample attempts per input_feed. [Default: 400]. Set to 0 for infinite."
 )
 
 flags.DEFINE_integer(
   "active_search_depth",
   20,
-  "Set the maximum sampling generation depth that active sampler can reach. [Default: 10]."
+  "Set the maximum sampling generation depth that active sampler can reach. [Default: 20]."
 )
 
 class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
