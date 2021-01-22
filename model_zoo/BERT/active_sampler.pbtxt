@@ -37,19 +37,19 @@ model {
     layer_norm_eps: 1e-12
   }
   training {
-    num_train_steps: 10000
-    num_warmup_steps: 10
+    num_train_steps: 1000000
+    num_warmup_steps: 5000
     sequence_length: 512
-    batch_size: 1
-    max_predictions_per_seq: 10
-    dupe_factor: 1
+    batch_size: 32
+    max_predictions_per_seq: 1
+    dupe_factor: 100
     masked_lm_prob: 0.6
     random_seed: 12345
     shuffle_corpus_contentfiles_between_epochs: true
     data_generator {
       datapoint_type: "kernel"
       use_start_end : true
-      steps_per_epoch: 500
+      steps_per_epoch: 5000
       validation_split: 0
       hole {
         hole_length: 20
@@ -66,7 +66,7 @@ sampler {
   sample_corpus {
     corpus_config {
       sampling_type: "active"
-      max_predictions_per_seq: 10
+      max_predictions_per_seq: 1
       masked_lm_prob: 0.6
       hole {
         hole_length: 20
@@ -74,7 +74,7 @@ sampler {
       }
     }
     corpus {
-      local_tar_archive: "$PWD/../corpus/corpus_250.tar.bz2"
+      local_tar_archive: "$PWD/../corpus/corpus_1000.tar.bz2"
       atomizer {
         token_type: "word"
         token_list: "deeplearning/clgen/corpuses/token_lists.json"
@@ -93,10 +93,10 @@ sampler {
       preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
       preprocessor: "deeplearning.clgen.preprocessors.common:MinimumLineCount3"
       preprocessor: "deeplearning.clgen.preprocessors.common:ExtractOnlySingleKernels"
-      preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"  
+      preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
     }
   }
-  batch_size: 4
+  batch_size: 16
   sequence_length: 512
   temperature_micros: 500000  # = 0.8 real value
   termination_criteria {
