@@ -20,9 +20,12 @@
 working_dir: "Sequential"
 model {
   corpus {
-    local_tar_archive: "$PWD/../corpus/corpus_250.tar.bz2"
+    local_tar_archive: "$PWD/../corpus/ultimate_corpus.tar.bz2"
     atomizer {
-      token_type: "character"
+      token_type: "word"
+      token_list: "deeplearning/clgen/corpuses/token_lists.json"
+      mask_tokens: false
+      wordpiece_tokenization: false
     }
     contentfile_separator: "\n\n"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim"
@@ -39,14 +42,14 @@ model {
   architecture {
     backend: TENSORFLOW_SEQ
     neuron_type: LSTM
-    neurons_per_layer: 128
+    neurons_per_layer: 256
     num_layers: 2
     post_layer_dropout_micros: 0  # = 0.0 real value
   }
   training {
     num_epochs: 32
-    sequence_length: 64
-    batch_size: 64
+    sequence_length: 512
+    batch_size: 16
     shuffle_corpus_contentfiles_between_epochs: false
     adam_optimizer {
       initial_learning_rate_micros: 2000  # = 0.02 real value
@@ -60,7 +63,7 @@ model {
 sampler {
   start_text: "kernel void A("
   batch_size: 1
-  sequence_length: 64
+  sequence_length: 512
   temperature_micros: 800000  # = 0.8 real value
   termination_criteria {
     symtok {
@@ -70,7 +73,7 @@ sampler {
   }
   termination_criteria {
     maxlen {
-      maximum_tokens_in_sample: 500
+      maximum_tokens_in_sample: 512
     }
   }
 }
