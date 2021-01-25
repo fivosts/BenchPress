@@ -219,7 +219,7 @@ class CompilationSampler(object):
                     prediction   : torch.LongTensor,
                     attention    : torch.LongTensor,
                     position_ids : torch.LongTensor,
-                    ) -> typing.Tuple[torch.LongTensor, typing.List[typing.List[int]]]:
+                    ) -> typing.Tuple[torch.LongTensor, typing.List[typing.List[int]], typing.List[np.array]]:
     """
     Main sampling sequence filling loop.
     
