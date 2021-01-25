@@ -171,6 +171,7 @@ class EncodedContentFiles(sqlutil.Database):
   def __init__(self, url: str, must_exist: bool = False):
     self.encoded_path = pathlib.Path(url.replace("sqlite:///", "")).parent
     self.length_monitor  = monitors.CumulativeHistMonitor(self.encoded_path, "encoded_kernel_length")
+    self.token_monitor   = monitors.FrequencyMonitor(self.encoded_path, "token_distribution")
     self.feature_monitor = monitors.FeatureMonitor(self.encoded_path, "feature_vector")
     super(EncodedContentFiles, self).__init__(url, Base, must_exist=must_exist)
 
@@ -321,6 +322,7 @@ class EncodedContentFiles(sqlutil.Database):
             )
             session.add(encoded_cf)
             self.length_monitor.register(encoded_cf.tokencount)
+            self.token_monitor.register([self.atomizer.DeatomizeIndices([int(x)]) for x in encoded_cf.data.split('.')])
 
             dict_features = extractor.StrToDictFeatures(encoded_cf.feature_vector)
             if dict_features:
@@ -330,16 +332,19 @@ class EncodedContentFiles(sqlutil.Database):
             session.commit()
             last_commit = wall_time_end
         self.length_monitor.plot()
+        self.token_monitor.plot()
         self.feature_monitor.plot()
         pool.close()
       except KeyboardInterrupt as e:
         pool.terminate()
         self.length_monitor.plot()
+        self.token_monitor.plot()
         self.feature_monitor.plot()
         raise e
       except Exception as e:
         pool.terminate()
         self.length_monitor.plot()
+        self.token_monitor.plot()
         self.feature_monitor.plot()
         raise e
     session.commit()
