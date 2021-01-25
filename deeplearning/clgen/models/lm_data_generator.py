@@ -552,12 +552,18 @@ class MaskLMDataGenerator(object):
     else:
       raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
 
+    # Monitor counts actual length distribution of kernel instances.
+    actual_length_monitor = monitors.FrequencyMonitor(path, "{}_actual_kernel_length".format(set_name))
+    # Monitor counts target idxs of a hole as absolute index value.
+    abs_start_idx_monitor = monitors.FrequencyMonitor(path, "{}_abs_target_mask_idx".format(set_name))
     # Monitors count of target indices (in percentile) that were hidden by a hole.
-    start_idx_monitor = monitors.FrequencyMonitor(path, "{}_target_mask_idx".format(set_name))
+    start_idx_monitor     = monitors.FrequencyMonitor(path, "{}_target_mask_idx".format(set_name))
+    # Monitor counts all absolute indices hidden by a hole.
+    abs_idx_monitor       = monitors.FrequencyMonitor(path, "{}_abs_target_mask_idx".format(set_name))
     # Monitors count of indices (in percentile) that were hidden by a hole.
-    idx_monitor       = monitors.FrequencyMonitor(path, "{}_mask_idx".format(set_name))
+    idx_monitor           = monitors.FrequencyMonitor(path, "{}_mask_idx".format(set_name))
     # Monitors if left or right direction was picked for a hole expansion.
-    direction_monitor = monitors.FrequencyMonitor(path, "{}_masking_direction".format(set_name))
+    direction_monitor     = monitors.FrequencyMonitor(path, "{}_masking_direction".format(set_name))
 
     ## Core loop of masking.
     masked_corpus = []
@@ -596,7 +602,10 @@ class MaskLMDataGenerator(object):
               if hole.extend_left:
                 selected_idx += hole.hole_length - 1 if hole.hole_length != 0 else 0
 
+              actual_length_monitor.register(actual_length_monitor)
+              abs_start_idx_monitor.register(selected_idx)
               start_idx_monitor.register(int(2 * round(100.0 * (selected_idx / actual_length) / 2.0)))
+              abs_idx_monitor.register([hole_idx + i for i in range(hole.hole_length)])
               idx_monitor.register([int(2 * round(100.0 * ((hole_idx + i) / actual_length) / 2.0)) for i in range(hole.hole_length)])
               direction_monitor.register(1 if hole.extend_left else 0)
 
