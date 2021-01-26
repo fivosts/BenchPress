@@ -9,7 +9,7 @@ from deeplearning.clgen.util import plotter
 from eupy.native import logger as l
 
 class Monitor():
-  def __init__(self, 
+  def __init__(self,
                cache_path : typing.Union[pathlib.Path, str],
                set_name   : str
                ):
@@ -40,8 +40,8 @@ class FrequencyMonitor(Monitor):
 
   Bar plots num of occurences VS keys.
   """
-  def __init__(self, 
-               cache_path: typing.Union[pathlib.Path, str], 
+  def __init__(self,
+               cache_path: typing.Union[pathlib.Path, str],
                set_name  : str,
                ):
     super(FrequencyMonitor, self).__init__(cache_path, set_name)
@@ -80,6 +80,32 @@ class FrequencyMonitor(Monitor):
     )
     return
 
+class NormalizedFrequencyMonitor(FrequencyMonitor):
+  """
+  Identical to FrequencyMonitor but normalizes absolute values
+  of bars with respect to total occurrences.
+  """
+  def __init__(self,
+               cache_path: typing.Union[pathlib.Path, str],
+               set_name  : str,
+               ):
+    super(NormalizedFrequencyMonitor, self).__init__(cache_path, set_name)
+    return
+
+  def plot(self) -> None:
+    """Plot bars of number of occurences."""
+    total = sum(self.sample_counter.values())
+    sorted_dict = sorted(self.sample_counter.items(), key = lambda x: x[0])
+    plotter.FrequencyBars(
+      x = [x for (x, _) in sorted_dict],
+      y = [y / total for (_, y) in sorted_dict],
+      title     = self.set_name,
+      x_name    = self.set_name,
+      plot_name = self.set_name,
+      path = self.cache_path
+    )
+    return
+
 class CumulativeHistMonitor(Monitor):
   """
   Keeps monitor of the occured frequency of a specific key.
@@ -88,8 +114,8 @@ class CumulativeHistMonitor(Monitor):
 
   Bar plots num of occurences VS keys.
   """
-  def __init__(self, 
-               cache_path: typing.Union[pathlib.Path, str], 
+  def __init__(self,
+               cache_path: typing.Union[pathlib.Path, str],
                set_name  : str,
                ):
     super(CumulativeHistMonitor, self).__init__(cache_path, set_name)
@@ -133,8 +159,8 @@ class HistoryMonitor(Monitor):
   Monitors values in an ordered timeline
   Plots a line of values against timesteps.
   """
-  def __init__(self, 
-               cache_path: typing.Union[pathlib.Path, str], 
+  def __init__(self,
+               cache_path: typing.Union[pathlib.Path, str],
                set_name: str,
                ):
     super(HistoryMonitor, self).__init__(cache_path, set_name)
