@@ -554,6 +554,8 @@ class MaskLMDataGenerator(object):
 
     # Monitor counts actual length distribution of kernel instances.
     actual_length_monitor = monitors.FrequencyMonitor(path, "{}_actual_kernel_length".format(set_name))
+    # Token frequency distribution monitor.
+    token_monitor         = monitors.NormalizedFrequencyMonitor(path, "{}_token_distribution".format(set_name))
     # Monitor counts target idxs of a hole as absolute index value.
     abs_start_idx_monitor = monitors.FrequencyMonitor(path, "{}_abs_target_mask_idx".format(set_name))
     # Monitors count of target indices (in percentile) that were hidden by a hole.
@@ -602,7 +604,11 @@ class MaskLMDataGenerator(object):
               if hole.extend_left:
                 selected_idx += hole.hole_length - 1 if hole.hole_length != 0 else 0
 
-              actual_length_monitor.register(actual_length_monitor)
+              actual_length_monitor.register(actual_length)
+              token_monitor.register([
+                self.atomizer.DeatomizeIndices([int(x)])
+                for x in kernel['input_ids'] if x != self.atomizer.padToken]
+              )
               abs_start_idx_monitor.register(selected_idx)
               start_idx_monitor.register(int(2 * round(100.0 * (selected_idx / actual_length) / 2.0)))
               abs_idx_monitor.register([hole_idx + i for i in range(hole.hole_length)])
@@ -640,6 +646,8 @@ class MaskLMDataGenerator(object):
 
     if distribution:
       distribution.plot()
+    actual_length_monitor.plot()
+    token_monitor.plot()
     start_idx_monitor.plot()
     idx_monitor.plot()
     direction_monitor.plot()
