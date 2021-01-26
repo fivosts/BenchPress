@@ -82,6 +82,9 @@ class torchBert(backends.BackendBase):
     self.torch               = pytorch.torch
     self.torch_tpu_available = pytorch.torch_tpu_available
 
+    self.torch.manual_seed(self.config.training.random_seed)
+    self.torch.cuda.manual_seed_all(self.config.training.random_seed)
+
     self.bertAttrs           = None
     self.bert_config         = None
 
@@ -153,9 +156,6 @@ class torchBert(backends.BackendBase):
     self.validation_results_file          = "val_results.txt"
     self.validation_results_path          = os.path.join(str(self.logfile_path), self.validation_results_file)
 
-    self.torch.manual_seed(self.config.training.random_seed)
-    self.torch.cuda.manual_seed_all(self.config.training.random_seed)
-
     m = model.BertForPreTraining(self.bert_config, atomizer = self.atomizer).to(self.pytorch.offset_device)
 
     if self.pytorch.num_gpus > 1:
@@ -193,9 +193,6 @@ class torchBert(backends.BackendBase):
     self._ConfigModelParams(is_sampling = True)
     self.sampler = sampler
     self.temperature = sampler.temperature
-
-    self.torch.manual_seed(self.config.training.random_seed)
-    self.torch.cuda.manual_seed_all(self.config.training.random_seed)
 
     if sampler.sequence_length > self.bertAttrs['max_position_embeddings']:
       raise ValueError(
@@ -470,8 +467,14 @@ class torchBert(backends.BackendBase):
     del unused_kwargs
 
     if sampler.is_live:
-      # For live sampling, start text must be re-instated each iteration.
-      self.InitSampling(sampler)
+      # For live sampling, start text must be re-instated at each iteration.
+      self.sample = self.sample._replace(
+        data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
+          self.config.training, sampler, self.atomizer, 0,
+          self.config.architecture.max_position_embeddings, self.cache.path
+        )
+      )
+      self.step_inputs, self.loader, self.pred_iterator = None, None, None
 
     if self.loader is None:
       if self.torch_tpu_available:
