@@ -133,6 +133,7 @@ class Model(object):
       config_to_compare.corpus.ClearField("contentfiles")
       config_to_compare.training.ClearField("num_epochs")
       config_to_compare.training.ClearField("num_train_steps")
+      config_to_compare.training.ClearField("batch_size")
       if config_to_compare.training.HasField("data_generator"):
         config_to_compare.training.data_generator.ClearField("steps_per_epoch")
         config_to_compare.training.data_generator.ClearField("validation_set")
@@ -144,6 +145,7 @@ class Model(object):
       cached_to_compare.corpus.ClearField("contentfiles")
       cached_to_compare.training.ClearField("num_epochs")
       cached_to_compare.training.ClearField("num_train_steps")
+      cached_to_compare.training.ClearField("batch_size")
       if cached_to_compare.training.HasField("data_generator"):
         cached_to_compare.training.data_generator.ClearField("steps_per_epoch")
         cached_to_compare.training.data_generator.ClearField("validation_set")
@@ -193,6 +195,7 @@ class Model(object):
     config_to_hash.ClearField("corpus")
     config_to_hash.training.ClearField("num_epochs")
     config_to_hash.training.ClearField("num_train_steps")
+    config_to_hash.training.ClearField("batch_size")
     if config_to_hash.training.HasField("data_generator"):
       config_to_hash.training.data_generator.ClearField("steps_per_epoch")
       config_to_hash.training.data_generator.ClearField("validation_set")
