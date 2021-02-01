@@ -19,6 +19,7 @@ from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import monitors
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.models import sequence_masking
+from deeplearning.clgen.models import lm_database
 from absl import flags
 from eupy.native import logger as l
 
@@ -39,6 +40,12 @@ flags.DEFINE_boolean(
   "force_remake_dataset",
   False,
   "Force data generator to re-mask encoded dataset and store dataset record."
+)
+
+flags.DEFINE_boolean(
+  "store_datasets_to_DB",
+  False,
+  "Set True to store masked datasets to SQL Database for observation."
 )
 
 def AssertConfigIsValid(config: model_pb2.DataGenerator,
@@ -567,6 +574,9 @@ class MaskLMDataGenerator(object):
     # Monitors if left or right direction was picked for a hole expansion.
     direction_monitor     = monitors.FrequencyMonitor(path, "{}_masking_direction".format(set_name))
 
+    if FLAGS.store_datasets_to_DB:
+      lm_db = lm_database.LMDatabase("sqlite:///{}".format(self.cache.path / "{}.db".format(set_name)))
+
     ## Core loop of masking.
     masked_corpus = []
     with progressbar.ProgressBar(max_value = len(corpus) * self.training_opts.dupe_factor) as bar:
@@ -598,22 +608,32 @@ class MaskLMDataGenerator(object):
                 actual_length = np.where(kernel.original_input == self.atomizer.padToken)[0][0]
             except IndexError:
               actual_length = len(kernel['original_input'])
+
+            actual_length_monitor.register(actual_length)
+            token_monitor.register([
+              self.atomizer.DeatomizeIndices([int(x)])
+              for x in kernel['input_ids'] if x != self.atomizer.padToken]
+            )
             for hole in masked_idxs:
               hole_idx = hole.pos_index
               selected_idx = hole.pos_index
               if hole.extend_left:
                 selected_idx += hole.hole_length - 1 if hole.hole_length != 0 else 0
-
-              actual_length_monitor.register(actual_length)
-              token_monitor.register([
-                self.atomizer.DeatomizeIndices([int(x)])
-                for x in kernel['input_ids'] if x != self.atomizer.padToken]
-              )
               abs_start_idx_monitor.register(selected_idx)
               start_idx_monitor.register(int(2 * round(100.0 * (selected_idx / actual_length) / 2.0)))
               abs_idx_monitor.register([hole_idx + i for i in range(hole.hole_length)])
               idx_monitor.register([int(2 * round(100.0 * ((hole_idx + i) / actual_length) / 2.0)) for i in range(hole.hole_length)])
               direction_monitor.register(1 if hole.extend_left else 0)
+
+            if FLAGS.store_datasets_to_DB:
+              with lm_db.Session(commit = True) as s:
+                s.add(
+                  lm_database.LMInstance(
+                    id = lm_db.count,
+                    original_input = self.atomizer.DeatomizeIndices(kernel['original_input'], ignore_token = self.atomizer.padToken),
+                    input_ids = self.atomizer.DeatomizeIndices(kernel['input_ids'], ignore_token = self.atomizer.padToken),
+                  )
+                )
 
             masked_corpus.append(kernel)
             bar.update(kernel_idx)
