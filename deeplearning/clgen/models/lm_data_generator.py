@@ -625,16 +625,6 @@ class MaskLMDataGenerator(object):
               idx_monitor.register([int(2 * round(100.0 * ((hole_idx + i) / actual_length) / 2.0)) for i in range(hole.hole_length)])
               direction_monitor.register(1 if hole.extend_left else 0)
 
-            if FLAGS.store_datasets_to_DB:
-              with lm_db.Session(commit = True) as s:
-                s.add(
-                  lm_database.LMInstance(
-                    id = lm_db.count,
-                    original_input = self.atomizer.DeatomizeIndices(kernel['original_input'], ignore_token = self.atomizer.padToken),
-                    input_ids = self.atomizer.DeatomizeIndices(kernel['input_ids'], ignore_token = self.atomizer.padToken),
-                  )
-                )
-
             masked_corpus.append(kernel)
             bar.update(kernel_idx)
             kernel_idx += 1
@@ -644,6 +634,19 @@ class MaskLMDataGenerator(object):
                 max_predictions, self.steps_per_epoch, self.num_epochs
                 )
 
+          if FLAGS.store_datasets_to_DB:
+            with lm_db.Session(commit = True) as s:
+              count = lm_db.count
+              for idx, kernel in enumerate(masked_corpus):
+                s.add(
+                  lm_database.LMInstance(**lm_database.LMInstance.FromArgs(
+                    id = count + idx,
+                    original_input = self.atomizer.DeatomizeIndices(kernel['original_input'], ignore_token = self.atomizer.padToken),
+                    input_ids = self.atomizer.DeatomizeIndices(kernel['input_ids'], ignore_token = self.atomizer.padToken),
+                    masked_lm_lengths = kernel['masked_lm_lengths'],
+                    masked_lm_predictions = [self.atomizer.DeatomizeIndices([x]) for x in kernel['mask_labels'] if x != -100],
+                  ))
+                )
           # write masked_corpus before flushing the list
           self.dataset[set_name]['file'].append(
             path / "{}_{}.{}".format(set_name, iteration, self.file_extension)
