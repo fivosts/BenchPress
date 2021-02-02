@@ -194,7 +194,7 @@ class HistoryMonitor(Monitor):
 
 class FeatureMonitor(Monitor):
   """
-  Produces a Radar chart of normalized features.
+  Produces a bar chart of averaged features.
   """
   def __init__(self,
                cache_path: typing.Union[pathlib.Path, str],
@@ -227,14 +227,13 @@ class FeatureMonitor(Monitor):
     return
 
   def plot(self) -> None:
-    """Plot averaged Radar chart"""
-    r = [v / self.instance_counter for _, v in self.features.items()]
-    theta = [k for k, _ in self.features.items()]
-    plotter.NormalizedRadar(
-      r = r,
-      theta = theta,
-      title = self.set_name,
+    """Plot averaged Bar chart"""
+    plotter.FrequencyBars(
+      x = [k for k in self.features.keys()],
+      y = [v / self.instance_counter for v in self.features.values()],
+      title     = self.set_name,
+      x_name    = self.set_name,
       plot_name = self.set_name,
-      path = self.cache_path,
+      path = self.cache_path
     )
     return
