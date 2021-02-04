@@ -149,8 +149,8 @@ def ProcessCompileLlvmBytecode(
     The textual LLVM byte code.
 
   Raises:
-    ClangException: In case of an error.
-    ClangTimeout: If clang does not complete before timeout_seconds.
+    ValueError: In case of an error.
+    ValueError: If clang does not complete before timeout_seconds.
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
   with tempfile.NamedTemporaryFile(
@@ -191,6 +191,8 @@ def CompileLlvmBytecode(
   Returns:
     The textual LLVM byte code.
 
+  Raises:
+    ValueError: In case of an error.
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
   with tempfile.NamedTemporaryFile(
