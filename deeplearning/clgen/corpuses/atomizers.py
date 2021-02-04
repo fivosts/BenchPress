@@ -51,6 +51,34 @@ def FromText(config, corpus_txt: str):
 class AtomizerBase(object):
   """The base class for implementing atomizers."""
 
+  @property
+  def atoms(self) -> typing.List[str]:
+    """A list of atoms in the vocabulary."""
+    return list(sorted(self.vocab.keys()))
+
+  @property
+  def indices(self) -> typing.List[int]:
+    """A list of vocabulary indices."""
+    return list(sorted(self.vocab.values()))
+
+  @classmethod
+  def FromText(cls, text: str) -> "AtomizerBase":
+    """Instantiate and specialize an atomizer from a corpus text.
+
+    Args:
+      text: Text corpus
+
+    Returns:
+      An atomizer instance.
+    """
+    raise NotImplementedError("abstract class")
+
+  @classmethod
+  def FromFile(cls, path: pathlib.Path) -> "AtomizerBase":
+    """Load an atomizer from file."""
+    with open(path, "rb") as infile:
+      return pickle.load(infile)
+
   def __init__(self, 
                vocab: typing.Dict[str, int],
                metaTokens: typing.Dict[str, str]
@@ -70,16 +98,6 @@ class AtomizerBase(object):
     self.metaTokens = metaTokens
     self._UpdateVocabulary()
     self.metaTokenValues = set(value for key, value in self.__dict__.items() if key in self.metaTokens)
-
-  @property
-  def atoms(self) -> typing.List[str]:
-    """A list of atoms in the vocabulary."""
-    return list(sorted(self.vocab.keys()))
-
-  @property
-  def indices(self) -> typing.List[int]:
-    """A list of vocabulary indices."""
-    return list(sorted(self.vocab.values()))
 
   def _UpdateVocabulary(self) -> None:
     """Private method which must be called if vocab is modified."""
@@ -180,27 +198,39 @@ class AtomizerBase(object):
     metaTokenStrValues = set(value for key, value in self.metaTokens.items())
     return ''.join([x for x in text if x not in metaTokenStrValues])
 
+class AsciiCharacterAtomizer(AtomizerBase):
+  """An atomizer for character-level syntactic modelling."""
+
   @classmethod
-  def FromText(cls, text: str) -> "AtomizerBase":
-    """Instantiate and specialize an atomizer from a corpus text.
+  def FromText(cls, text: str, mask_tokens: bool) -> "AsciiCharacterAtomizer":
+    """Instantiate and an atomizer from a corpus text.
 
     Args:
-      text: Text corpus
+      text: Text corpus.
 
     Returns:
       An atomizer instance.
     """
-    raise NotImplementedError("abstract class")
+    if mask_tokens:
+      metaTokens = {
+          'startToken'   : '[START]',
+          'endToken'     : '[END]',
+          'padToken'     : '[PAD]',
+          'maskToken'    : '[MASK]',
+          'holeToken'    : '[HOLE]',
+          'endholeToken' : '[ENDHOLE]',
+      }
+    else:
+      metaTokens = {}
+    counter = Counter(text)
+    count_pairs = sorted(counter.items(), key=lambda x: -x[1])
+    atoms, _ = zip(*count_pairs)
+    atoms = tuple(metaTokens.values()) + atoms
+    vocab = dict(zip(atoms, range(len(atoms))))
+    return AsciiCharacterAtomizer(vocab, metaTokens)
 
-  @classmethod
-  def FromFile(cls, path: pathlib.Path) -> "AtomizerBase":
-    """Load an atomizer from file."""
-    with open(path, "rb") as infile:
-      return pickle.load(infile)
-
-
-class AsciiCharacterAtomizer(AtomizerBase):
-  """An atomizer for character-level syntactic modelling."""
+  def __repr__(self) -> str:
+    return f"AsciiCharacterAtomizer[{self.vocab_size} chars]"
 
   def AtomizeString(self, text: str) -> np.array:
     """Atomize a text into an array of vocabulary indices.
@@ -232,20 +262,27 @@ class AsciiCharacterAtomizer(AtomizerBase):
         return np.array(encoded, dtype = np.int32)
     except KeyError:
       raise ValueError("OoV index in string tokenizing.")
-      
-  def __repr__(self) -> str:
-    return f"AsciiCharacterAtomizer[{self.vocab_size} chars]"
+
+class WordAtomizer(AtomizerBase):
+  """A greedy atomizer supports multi-character tokens."""
 
   @classmethod
-  def FromText(cls, text: str, mask_tokens: bool) -> "AsciiCharacterAtomizer":
+  def FromText(cls, text: str, token_list: typing.Set[str], mask_tokens: bool, wordpiece: bool) -> "WordAtomizer":
     """Instantiate and an atomizer from a corpus text.
 
     Args:
-      text: Text corpus.
+      text: Text corpus
+      token_list: A list of multi-character token_list.
 
     Returns:
       An atomizer instance.
     """
+    if not token_list:
+      raise ValueError("No tokens specified")
+
+    if wordpiece:
+      raise NotImplementedError
+
     if mask_tokens:
       metaTokens = {
           'startToken'   : '[START]',
@@ -257,15 +294,17 @@ class AsciiCharacterAtomizer(AtomizerBase):
       }
     else:
       metaTokens = {}
-    counter = Counter(text)
-    count_pairs = sorted(counter.items(), key=lambda x: -x[1])
-    atoms, _ = zip(*count_pairs)
-    atoms = tuple(metaTokens.values()) + atoms
-    vocab = dict(zip(atoms, range(len(atoms))))
-    return AsciiCharacterAtomizer(vocab, metaTokens)
-
-class WordAtomizer(AtomizerBase):
-  """A greedy atomizer supports multi-character tokens."""
+    # Add meta token_list to token set
+    for mt in metaTokens.values():
+      token_list.add(mt)
+    # Instantiate a greedy atomizer using the full vocabulary.
+    full_vocab = dict(zip(token_list, range(len(token_list))))
+    c = WordAtomizer(full_vocab, metaTokens, determine_chars=True)
+    # Derive the subset of the vocabulary required to encode the given text.
+    tokens = [mt for mt in metaTokens.values()] + sorted(list(set(c.TokenizeString(text))))
+    vocab_subset = dict(zip(tokens, range(len(tokens))))
+    # Return a new atomizer using the subset vocabulary.
+    return WordAtomizer(vocab_subset, metaTokens)
 
   def __init__(self, 
                vocab:      typing.Dict[str, int], 
@@ -279,6 +318,9 @@ class WordAtomizer(AtomizerBase):
     self.lookup = dict(
       (c, [a for a in multichars if a[0] == c]) for c in first_chars
     )
+
+  def __repr__(self) -> str:
+    return f"WordAtomizer[{self.vocab_size} tokens]"
 
   def AtomizeString(self, text: str) -> np.array:
     """Atomize a text into an array of vocabulary indices.
@@ -331,46 +373,3 @@ class WordAtomizer(AtomizerBase):
       self._UpdateVocabulary()
 
     return np.array(indices, dtype=np.int32)
-
-  def __repr__(self) -> str:
-    return f"WordAtomizer[{self.vocab_size} tokens]"
-
-  @classmethod
-  def FromText(cls, text: str, token_list: typing.Set[str], mask_tokens: bool, wordpiece: bool) -> "WordAtomizer":
-    """Instantiate and an atomizer from a corpus text.
-
-    Args:
-      text: Text corpus
-      token_list: A list of multi-character token_list.
-
-    Returns:
-      An atomizer instance.
-    """
-    if not token_list:
-      raise ValueError("No tokens specified")
-
-    if wordpiece:
-      raise NotImplementedError
-
-    if mask_tokens:
-      metaTokens = {
-          'startToken'   : '[START]',
-          'endToken'     : '[END]',
-          'padToken'     : '[PAD]',
-          'maskToken'    : '[MASK]',
-          'holeToken'    : '[HOLE]',
-          'endholeToken' : '[ENDHOLE]',
-      }
-    else:
-      metaTokens = {}
-    # Add meta token_list to token set
-    for mt in metaTokens.values():
-      token_list.add(mt)
-    # Instantiate a greedy atomizer using the full vocabulary.
-    full_vocab = dict(zip(token_list, range(len(token_list))))
-    c = WordAtomizer(full_vocab, metaTokens, determine_chars=True)
-    # Derive the subset of the vocabulary required to encode the given text.
-    tokens = [mt for mt in metaTokens.values()] + sorted(list(set(c.TokenizeString(text))))
-    vocab_subset = dict(zip(tokens, range(len(tokens))))
-    # Return a new atomizer using the subset vocabulary.
-    return WordAtomizer(vocab_subset, metaTokens)
