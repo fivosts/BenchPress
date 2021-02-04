@@ -115,6 +115,11 @@ class AtomizerBase(object):
     # Set arbitrary object properties for meta tokens.
     self.__dict__.update({x: self.vocab[y] for x, y in self.metaTokens.items()})
 
+  def ToFile(self, path: pathlib.Path) -> None:
+    """Save an atomizer to file."""
+    with open(path, "wb") as f:
+      pickle.dump(self, f)
+
   def AtomizeString(self, text: str) -> np.array:
     """Atomize a text into an array of vocabulary indices.
 
@@ -163,11 +168,6 @@ class AtomizerBase(object):
         raise ValueError("Wrong encoded array specified")
     except KeyError:
       raise KeyError("Out of vocab: {}".format(encoded))
-
-  def ToFile(self, path: pathlib.Path) -> None:
-    """Save an atomizer to file."""
-    with open(path, "wb") as f:
-      pickle.dump(self, f)
 
   def ArrayToCode(self,
                   encoded: np.array,
