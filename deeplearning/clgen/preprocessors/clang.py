@@ -176,9 +176,12 @@ def ProcessCompileLlvmBytecode(
     raise ValueError("/*\n{}\n*/\n{}".format(stderr, src))
   return stdout
 
-def CompileLlvmBytecode(
-  src: str, suffix: str, cflags: typing.List[str], timeout_seconds: int = 60
-) -> str:
+def CompileLlvmBytecode(src: str,
+                        suffix: str,
+                        cflags: typing.List[str],
+                        timeout_seconds: int = 60,
+                        return_diagnostics: bool = False,
+                        ) -> str:
   """Compile input code into textual LLVM byte code using clang.Cindex python module.
 
   Args:
@@ -205,10 +208,17 @@ def CompileLlvmBytecode(
     except clang.cindex.TranslationUnitLoadError as e:
       raise ValueError(e)
     diagnostics = [str(d) for d in unit.diagnostics if d.severity > 2]
+    locations   = [(d.location.line, d.location.column) for d in unit.diagnostics if d.severity > 2]
     if len(diagnostics) > 0:
-      raise ValueError("/*\n{}\n*/\n{}".format('\n'.join(diagnostics), src))
+      if return_diagnostics:
+        return diagnostics, locations
+      else:
+        raise ValueError("/*\n{}\n*/\n{}".format('\n'.join(diagnostics), src))
     else:
-      return src
+      if return_diagnostics:
+        return src, []
+      else:
+        return src
 
 def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
   """Run clang-format on a source to enforce code style.
