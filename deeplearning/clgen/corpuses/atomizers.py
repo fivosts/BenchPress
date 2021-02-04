@@ -198,6 +198,26 @@ class AtomizerBase(object):
     metaTokenStrValues = set(value for key, value in self.metaTokens.items())
     return ''.join([x for x in text if x not in metaTokenStrValues])
 
+    def SrcLocationToIndex(self,
+                           encoded: np.array,
+                           locations: typing.List[typing.Tuple[int, int]],
+                           ) -> typing.List[int]:
+    """
+    Maps line-column src location to corresponding token of encoded array.
+
+    Args:
+      encoded: np array encoded representation of a kernel.
+      locations: list of tuples representing line-column locations in str-formatted code.
+
+    Returns:
+      List of indices pointing to mapped tokens in the sequence.
+    """
+    indices = []
+    atoms = self.atomizer.AtomizeString(self.DeatomizeIndices(encoded))
+    for (l, c) in locations:
+
+    return indices
+
 class AsciiCharacterAtomizer(AtomizerBase):
   """An atomizer for character-level syntactic modelling."""
 
