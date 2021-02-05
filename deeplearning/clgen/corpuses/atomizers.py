@@ -234,6 +234,10 @@ class AtomizerBase(object):
 
       if lidx == l and cidx > c:
         indices.append(i)
+        try:
+          l, c = next(locit)
+        except StopIteration:
+          break
 
     return indices
 
