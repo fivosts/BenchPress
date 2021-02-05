@@ -198,10 +198,10 @@ class AtomizerBase(object):
     metaTokenStrValues = set(value for key, value in self.metaTokens.items())
     return ''.join([x for x in text if x not in metaTokenStrValues])
 
-    def SrcLocationToIndex(self,
-                           encoded: np.array,
-                           locations: typing.List[typing.Tuple[int, int]],
-                           ) -> typing.List[int]:
+  def SrcLocationToIndex(self,
+                         encoded: np.array,
+                         locations: typing.List[typing.Tuple[int, int]],
+                         ) -> typing.List[int]:
     """
     Maps line-column src location to corresponding token of encoded array.
 
@@ -214,7 +214,26 @@ class AtomizerBase(object):
     """
     indices = []
     atoms = self.atomizer.AtomizeString(self.DeatomizeIndices(encoded))
-    for (l, c) in locations:
+    lidx, cidx = 1, 1
+    locit = iter(locations)
+    try:
+      l, c = next(locit)
+    except StopIteration:
+      return indices
+    for i, token in enumerate(atoms):
+      if token in self.metaTokens.values():
+        pass
+      elif token == "\n\n":
+        lidx += 2
+        cidx = 1
+      elif token == "\n":
+        lidx += 1
+        cidx = 1
+      else:
+        cidx += len(token)
+
+      if lidx == l and cidx > c:
+        indices.append(i)
 
     return indices
 
