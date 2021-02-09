@@ -587,22 +587,28 @@ def GetHashOfArchiveContents(archive: pathlib.Path) -> str:
   Raises:
     UserError: If the requested archive does not exist, or cannot be unpacked.
   """
-  if not archive.is_file():
-    if (archive.parent / "corpus_registry.json").exists():
-      with open(archive.parent / "corpus_registry.json", 'r') as js:
-        reg = json.load(js)
-      if archive.name in reg:
-        l.getLogger().info("Corpus found in registry. Downloading from Google Drive...")
-        gdown.download("https://drive.google.com/uc?id={}".format(reg[archive.name]), str(archive))
-        return GetHashOfArchiveContents(archive)
-    raise ValueError(f"Archive not found: '{archive}'")
+  if not (archive.parent / "corpus_registry.json").exists():
+    raise FileNotFoundError("corpus_registry.json file not found.")
 
-  with tempfile.TemporaryDirectory(prefix="clgen_corpus_") as d:
-    pv  = ["pv", str(archive)]
-    tar = ["tar", "xfj", "-", "-C", d]
-    try:
-      pv_proc = subprocess.Popen(pv, stdout = subprocess.PIPE)
-      subprocess.check_call(tar, stdin = pv_proc.stdout)
-    except subprocess.CalledProcessError:
-      raise ValueError(f"Archive unpack failed: '{archive}'")
-    return checksumdir.dirhash(d, "sha1")
+  with open(archive.parent / "corpus_registry.json", 'r') as js:
+    reg = json.load(js)
+
+  if archive.name not in reg:
+    raise FileNotFoundError("Corpus {} is not registered in corpus_registry".format(archive.name))
+
+  if not archive.is_file():
+    l.getLogger().info("Corpus found in registry. Downloading from Google Drive...")
+    gdown.download("https://drive.google.com/uc?id={}".format(reg[archive.name]['url']), str(archive))
+
+  if 'hash' in reg[archive.name]:
+    return reg[archive.name]['hash']
+  else:
+    with tempfile.TemporaryDirectory(prefix="clgen_corpus_") as d:
+      pv  = ["pv", str(archive)]
+      tar = ["tar", "xfj", "-", "-C", d]
+      try:
+        pv_proc = subprocess.Popen(pv, stdout = subprocess.PIPE)
+        subprocess.check_call(tar, stdin = pv_proc.stdout)
+      except subprocess.CalledProcessError:
+        raise ValueError(f"Archive unpack failed: '{archive}'")
+      return checksumdir.dirhash(d, "sha1")
