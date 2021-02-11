@@ -121,6 +121,11 @@ def RemoveAllWhiteSpace(text: str) -> str:
   Returns:
     The input text, with all whitespaces removed.
   """
+  raise SystemError("Do not use this preprocessor until you have tokenized\
+    characters between whitespaces as a single token. Otherwise, clang-format\
+    is g o i n g t o a d d w h i t e s p a c e s between chars that should be one word.\
+    This will break compilability on reconstruction."
+  )
   return text.replace(' ', '')
 
 @public.clgen_preprocessor
@@ -134,6 +139,11 @@ def RemoveNewLines(text: str) -> str:
   Returns:
     The input text, with all whitespaces removed.
   """
+  raise SystemError("Do not use this preprocessor until you have tokenized\
+    characters between whitespaces as a single token. Otherwise, clang-format\
+    is g o i n g t o a d d w h i t e s p a c e s between chars that should be one word.\
+    This will break compilability on reconstruction."
+  )
   return text.replace('\n', '')
 
 @public.clgen_preprocessor
