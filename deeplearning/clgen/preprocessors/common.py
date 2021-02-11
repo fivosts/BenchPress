@@ -107,6 +107,36 @@ def StripMultipleWhitespaces(text: str) -> str:
   return text
 
 @public.clgen_preprocessor
+def RemoveAllWhiteSpace(text: str) -> str:
+  """
+  WARNING! This preprocessor must not be used before Compile filter.
+
+  Preprocessor removes entirely all whitespaces.
+  Kernels are more compact, but whitespaces must be
+  added between tokens to restore compilability.
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    The input text, with all whitespaces removed.
+  """
+  return text.replace(' ', '')
+
+@public.clgen_preprocessor
+def RemoveNewLines(text: str) -> str:
+  """
+  Preprocessor removes entirely all new lines.
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    The input text, with all whitespaces removed.
+  """
+  return text.replace('\n', '')
+
+@public.clgen_preprocessor
 def ExtractSingleKernels(text: str) -> typing.List[str]:
   """
   A preprocessor that splits a single source file to discrete kernels
