@@ -124,7 +124,7 @@ def ClangPreprocessWithShim(text: str) -> str:
 
 
 @public.clgen_preprocessor
-def Compile(text: str) -> str:
+def Compile(text: str, return_diagnostics = False) -> str:
   """Check that the OpenCL source compiles.
 
   This does not modify the input.
@@ -137,12 +137,12 @@ def Compile(text: str) -> str:
   """
   # We must override the flag -Wno-implicit-function-declaration from
   # GetClangArgs() to ensure that undefined functions are treated as errors.
-  clang.CompileLlvmBytecode(
+  return clang.CompileLlvmBytecode(
     text,
     ".cl",
-    GetClangArgs(use_shim=False)# + ["-Werror=implicit-function-declaration"],
+    GetClangArgs(use_shim=False),# + ["-Werror=implicit-function-declaration"],
+    return_diagnostics = return_diagnostics,
   )
-  return text
 
 
 @public.clgen_preprocessor
