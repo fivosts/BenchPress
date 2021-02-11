@@ -211,7 +211,7 @@ def CompileLlvmBytecode(src: str,
     locations   = [(d.location.line, d.location.column) for d in unit.diagnostics if d.severity > 2]
     if len(diagnostics) > 0:
       if return_diagnostics:
-        return diagnostics, locations
+        return src, locations
       else:
         raise ValueError("/*\n{}\n*/\n{}".format('\n'.join(diagnostics), src))
     else:
