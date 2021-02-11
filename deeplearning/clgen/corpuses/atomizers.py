@@ -213,14 +213,14 @@ class AtomizerBase(object):
       List of indices pointing to mapped tokens in the sequence.
     """
     indices = []
-    atoms = self.atomizer.AtomizeString(self.DeatomizeIndices(encoded))
+    str_atoms = [self.DeatomizeIndices([token]) for token in encoded]
     lidx, cidx = 1, 1
     locit = iter(locations)
     try:
       l, c = next(locit)
     except StopIteration:
       return indices
-    for i, token in enumerate(atoms):
+    for i, token in enumerate(str_atoms):
       if token in self.metaTokens.values():
         pass
       elif token == "\n\n":
