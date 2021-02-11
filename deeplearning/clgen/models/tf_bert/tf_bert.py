@@ -340,7 +340,7 @@ class tfBert(backends.BackendBase):
                 sample_proto = model_pb2.Sample(
                   train_step             = (ep + 1) * self.steps_per_epoch,
                   sample_feed            = sampler.start_text,
-                  text                   = self.atomizer.DeatomizeIndices(sample, ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
+                  text                   = self.atomizer.DeatomizeIndices(sample, ignore_token = self.atomizer.padToken, beautify = True).replace("\\n", "\n"),
                   encoded_text           = ",".join([str(t) for t in sample]),
                   sample_indices         = '\n'.join([self.atomizer.DeatomizeIndices(mind).replace('\n', '\\n') for mind in sind]),
                   encoded_sample_indices = '\n'.join([','.join([str(x) for x in mind]) for mind in sind ]),

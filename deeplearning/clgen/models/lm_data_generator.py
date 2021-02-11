@@ -641,8 +641,8 @@ class MaskLMDataGenerator(object):
                 s.add(
                   lm_database.LMInstance(**lm_database.LMInstance.FromArgs(
                     id = count + idx,
-                    original_input = self.atomizer.DeatomizeIndices(kernel['original_input'], ignore_token = self.atomizer.padToken),
-                    input_ids = self.atomizer.DeatomizeIndices(kernel['input_ids'], ignore_token = self.atomizer.padToken),
+                    original_input = self.atomizer.DeatomizeIndices(kernel['original_input'], ignore_token = self.atomizer.padToken, beautify = True),
+                    input_ids = self.atomizer.DeatomizeIndices(kernel['input_ids'],           ignore_token = self.atomizer.padToken, beautify = True),
                     masked_lm_lengths = kernel['masked_lm_lengths'],
                     masked_lm_predictions = [self.atomizer.DeatomizeIndices([x]) for x in kernel['mask_labels'] if x != -100],
                   ))

@@ -77,9 +77,9 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
                generation_id    : int,
                ) -> typing.TypeVar("ActiveFeed"):
     """Construt ActiveFeed table entry from argumentns."""
-    str_input_feed       = atomizer.DeatomizeIndices(input_feed,       ignore_token = atomizer.padToken)
-    str_masked_input_ids = atomizer.DeatomizeIndices(masked_input_ids, ignore_token = atomizer.padToken)
-    str_sample           = atomizer.DeatomizeIndices(sample,           ignore_token = atomizer.padToken)
+    str_input_feed       = atomizer.DeatomizeIndices(input_feed,       ignore_token = atomizer.padToken, beautify = True)
+    str_masked_input_ids = atomizer.DeatomizeIndices(masked_input_ids, ignore_token = atomizer.padToken, beautify = True)
+    str_sample           = atomizer.DeatomizeIndices(sample,           ignore_token = atomizer.padToken, beautify = True)
 
     num_tokens = len(sample)
     if atomizer.padToken in sample:

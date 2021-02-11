@@ -348,8 +348,8 @@ class torchBert(backends.BackendBase):
                 feature_vector = extractor.DictKernelFeatures(self.atomizer.ArrayToCode(s[1]))
                 correct_sample_obs.OnSample(model_pb2.Sample(
                     train_step             = self.current_step,
-                    sample_feed            = self.atomizer.DeatomizeIndices(s[0], ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
-                    text                   = self.atomizer.DeatomizeIndices(s[1], ignore_token = self.atomizer.padToken).replace("\\n", "\n"),
+                    sample_feed            = self.atomizer.DeatomizeIndices(s[0], ignore_token = self.atomizer.padToken, beautify = True).replace("\\n", "\n"),
+                    text                   = self.atomizer.DeatomizeIndices(s[1], ignore_token = self.atomizer.padToken, beautify = True).replace("\\n", "\n"),
                     encoded_text           = ",".join([str(t) for t in s[1]]),
                     sample_indices         = '',
                     encoded_sample_indices = '',

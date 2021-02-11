@@ -417,10 +417,10 @@ class Model(object):
 
             sample = model_pb2.Sample(
               train_step                = epoch,
-              text                      = "".join(sample_kernel),
+              text                      = "".join(sample_kernel) if not self.atomizer.no_whitespace else opencl.ClangFormat(" ".join(sample_kernel)),
               sample_indices            = step_ind,
               encoded_sample_indices    = encoded_step_indices,
-              sample_feed               = sampler.start_text,
+              sample_feed               = self.atomizer.DeatomizeIndices(sampler.encoded_start_text, beautify = True),
               encoded_text              = ",".join([str(atomizer.vocab[x]) for x in sample_kernel]),
               sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
