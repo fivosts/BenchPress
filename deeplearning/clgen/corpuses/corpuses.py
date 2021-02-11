@@ -373,7 +373,11 @@ class Corpus(object):
       )
       atomizer = GreedyAtomizerFromEncodedDb(self.config.atomizer, encoded_db)
     else:
-      atomizer = atomizers.FromText(self.config.atomizer, corpus_txt)
+      if ("deeplearning.clgen.preprocessors.common:RemoveAllWhiteSpace" in self.config.preprocessor
+       or "deeplearning.clgen.preprocessors.common:RemoveNewLines" in self.config.preprocessor):
+        atomizer = atomizers.FromText(self.config.atomizer, corpus_txt, no_whitespace = True)
+      else:
+        atomizer = atomizers.FromText(self.config.atomizer, corpus_txt, no_whitespace = False)
 
     atomizer.ToFile(self.atomizer_path)
     return atomizer
