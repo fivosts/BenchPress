@@ -25,6 +25,8 @@ from collections import Counter
 from absl import flags
 from eupy.native import logger as l
 
+from deeplearning.clgen.preprocessors import opencl
+
 FLAGS = flags.FLAGS
 
 def FromText(config, corpus_txt: str, no_whitespace: bool):
@@ -359,7 +361,7 @@ class WordAtomizer(AtomizerBase):
       token_list.add(mt)
     # Instantiate a greedy atomizer using the full vocabulary.
     full_vocab = dict(zip(token_list, range(len(token_list))))
-    c = WordAtomizer(full_vocab, metaTokens, determine_chars=True)
+    c = WordAtomizer(full_vocab, metaTokens, determine_chars=True, no_whitespace = no_whitespace)
     # Derive the subset of the vocabulary required to encode the given text.
     tokens = [mt for mt in metaTokens.values()] + sorted(list(set(c.TokenizeString(text))))
     vocab_subset = dict(zip(tokens, range(len(tokens))))
