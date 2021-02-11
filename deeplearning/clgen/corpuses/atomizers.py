@@ -27,13 +27,13 @@ from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
-def FromText(config, corpus_txt: str):
+def FromText(config, corpus_txt: str, no_whitespace: bool):
   mask_tokens = False if config.mask_tokens is None else config.mask_tokens
 
   if config.token_type   == "character":
     if config.token_list is not None:
       l.getLogger().warning("token list in character-based tokenization is going to be ignored.")
-    return AsciiCharacterAtomizer.FromText(corpus_txt, mask_tokens)
+    return AsciiCharacterAtomizer.FromText(corpus_txt, mask_tokens, no_whitespace)
   elif config.token_type == "word":
     with open(config.token_list, 'r') as f:
       token_set = json.load(f)
@@ -43,7 +43,8 @@ def FromText(config, corpus_txt: str):
     return WordAtomizer.FromText(corpus_txt,
                                  token_set, 
                                  mask_tokens, 
-                                 wpc_tok
+                                 wpc_tok,
+                                 no_whitespace
                                 )
   else:
     raise NotImplementedError
@@ -81,7 +82,8 @@ class AtomizerBase(object):
 
   def __init__(self, 
                vocab: typing.Dict[str, int],
-               metaTokens: typing.Dict[str, str]
+               metaTokens: typing.Dict[str, str],
+               no_whitespace: bool,
                ):
     """Instantiate an atomizer.
 
@@ -98,6 +100,7 @@ class AtomizerBase(object):
     self.metaTokens = metaTokens
     self._UpdateVocabulary()
     self.metaTokenValues = set(value for key, value in self.__dict__.items() if key in self.metaTokens)
+    self.no_whitespace   = no_whitespace
 
   def _UpdateVocabulary(self) -> None:
     """Private method which must be called if vocab is modified."""
@@ -148,7 +151,9 @@ class AtomizerBase(object):
 
   def DeatomizeIndices(self, 
                        encoded: np.array, 
-                       ignore_token: int = None):
+                       ignore_token: int = None,
+                       beautify: bool = False
+                       ):
     """Translate atomized code back into a string.
 
     Args:
@@ -161,9 +166,12 @@ class AtomizerBase(object):
     """
     try:
       if np.ndim(encoded) > 1:
-        return [ self.DeatomizeIndices(x, ignore_token) for x in encoded ]
+        return [ self.DeatomizeIndices(x, ignore_token, beautify) for x in encoded ]
       elif np.ndim(encoded) == 1:
-        return "".join(list(map(lambda x: self.decoder[x] if x != ignore_token else '', encoded)))
+        if beautify and self.no_whitespace:
+          return opencl.ClangFormat(" ".join(list(map(lambda x: self.decoder[x] if x != ignore_token else '', encoded))))
+        else:
+          return "".join(list(map(lambda x: self.decoder[x] if x != ignore_token else '', encoded)))
       else:
         raise ValueError("Wrong encoded array specified")
     except KeyError:
@@ -181,7 +189,7 @@ class AtomizerBase(object):
     Returns:
       Code in string format.
     """
-    return self.DeatomizeIndices([x for x in encoded if x not in self.metaTokenValues])
+    return self.DeatomizeIndices([x for x in encoded if x not in self.metaTokenValues], beautify = True)
 
   def StringArrToCode(self,
                       text: typing.List[str],
@@ -196,7 +204,10 @@ class AtomizerBase(object):
       Code in string format.
     """
     metaTokenStrValues = set(value for key, value in self.metaTokens.items())
-    return ''.join([x for x in text if x not in metaTokenStrValues])
+    if self.no_whitespace:
+      return opencl.ClangFormat(' '.join([x for x in text if x not in metaTokenStrValues]))
+    else:
+      return ''.join([x for x in text if x not in metaTokenStrValues])
 
   def SrcLocationToIndex(self,
                          encoded: np.array,
@@ -245,7 +256,7 @@ class AsciiCharacterAtomizer(AtomizerBase):
   """An atomizer for character-level syntactic modelling."""
 
   @classmethod
-  def FromText(cls, text: str, mask_tokens: bool) -> "AsciiCharacterAtomizer":
+  def FromText(cls, text: str, mask_tokens: bool, no_whitespace: bool) -> "AsciiCharacterAtomizer":
     """Instantiate and an atomizer from a corpus text.
 
     Args:
@@ -270,7 +281,7 @@ class AsciiCharacterAtomizer(AtomizerBase):
     atoms, _ = zip(*count_pairs)
     atoms = tuple(metaTokens.values()) + atoms
     vocab = dict(zip(atoms, range(len(atoms))))
-    return AsciiCharacterAtomizer(vocab, metaTokens)
+    return AsciiCharacterAtomizer(vocab, metaTokens, no_whitespace)
 
   def __repr__(self) -> str:
     return f"AsciiCharacterAtomizer[{self.vocab_size} chars]"
@@ -310,7 +321,13 @@ class WordAtomizer(AtomizerBase):
   """A greedy atomizer supports multi-character tokens."""
 
   @classmethod
-  def FromText(cls, text: str, token_list: typing.Set[str], mask_tokens: bool, wordpiece: bool) -> "WordAtomizer":
+  def FromText(cls,
+               text: str,
+               token_list: typing.Set[str],
+               mask_tokens: bool,
+               wordpiece: bool,
+               no_whitespace: bool
+               ) -> "WordAtomizer":
     """Instantiate and an atomizer from a corpus text.
 
     Args:
@@ -347,13 +364,15 @@ class WordAtomizer(AtomizerBase):
     tokens = [mt for mt in metaTokens.values()] + sorted(list(set(c.TokenizeString(text))))
     vocab_subset = dict(zip(tokens, range(len(tokens))))
     # Return a new atomizer using the subset vocabulary.
-    return WordAtomizer(vocab_subset, metaTokens)
+    return WordAtomizer(vocab_subset, metaTokens, no_whitespace)
 
   def __init__(self, 
                vocab:      typing.Dict[str, int], 
                metaTokens: typing.Dict[str, str],
-               determine_chars = False):
-    super(WordAtomizer, self).__init__(vocab, metaTokens)
+               no_whitespace: bool,
+               determine_chars = False
+               ):
+    super(WordAtomizer, self).__init__(vocab, metaTokens, no_whitespace)
 
     self.determine_chars = determine_chars
     multichars = set(k for k in self.atoms if len(k) > 1)
