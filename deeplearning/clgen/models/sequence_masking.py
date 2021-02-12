@@ -70,12 +70,17 @@ def HoleSequence(seq: np.array,
                  pickled_atomizer,
                  training_opts,
                  is_torch: bool,
+                 repair_locations: typing.List[int] = None,
                  ) -> typing.Tuple[
                         typing.Union[typing.Dict[str, np.array], tfSequence],
                         typing.List[MaskedLmInstance],
                       ]:
   """
   Inserts hole tokens to a given sequence.
+
+  If repair_locations is set, then algorithm places holes over syntactic errors
+  for the model to repair them. Default is None, where hole-d indices are randomly
+  selected.
   """
   assert seq.ndim == 1, "Input for masking must be single-dimension array."
 
@@ -109,9 +114,12 @@ def HoleSequence(seq: np.array,
   # Total masks placed so far.
   total_predictions = 0
   while total_predictions < holes_to_predict:
-    pos_index = np.random.RandomState().randint(0, actual_length - 1) # Fixed seed doesn't work!
+    if repair_locations:
+      pos_index = repair_locations[np.random.RandomState().randint(0, len(repair_locations))]
+    else:
+      pos_index = np.random.RandomState().randint(0, actual_length) # Fixed seed doesn't work!
     assert pos_index < len(seq), "Candidate index is out of bounds: {} >= {}".format(pos_index, len(seq))
-    
+
     # Element in processed array can be found in its original index +/- offset
     input_id_idx = pos_index + offset_idxs[pos_index]
     if total_predictions >= holes_to_predict:
@@ -311,10 +319,10 @@ def MaskSequence(seq: np.array,
           pass
         # 10% of the time, replace with random word
         else:
-          random_token = np.random.RandomState().randint(0, atomizer.vocab_size - 1)
+          random_token = np.random.RandomState().randint(0, atomizer.vocab_size)
           while any(atomizer.vocab[t] == random_token for (idx, t) in atomizer.metaTokens.items()):
-            random_token = np.random.RandomState().randint(0, atomizer.vocab_size - 1)
-          input_ids[pos_index] = np.random.RandomState().randint(0, atomizer.vocab_size - 1)
+            random_token = np.random.RandomState().randint(0, atomizer.vocab_size)
+          input_ids[pos_index] = np.random.RandomState().randint(0, atomizer.vocab_size)
     else:
       if np.random.RandomState().random() < 0.8:
         input_ids[pos_index] = atomizer.maskToken
