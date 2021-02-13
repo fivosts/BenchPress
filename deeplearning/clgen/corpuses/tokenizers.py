@@ -39,12 +39,15 @@ def FromText(config, corpus_txt: str):
       token_set = json.load(f)
       token_set = set(token_set['opencl']['tokens'])
     wpc_tok = False if config.wordpiece_tokenization is None else config.wordpiece_tokenization
-
     return WordTokenizer.FromText(corpus_txt,
                                  token_set, 
                                  mask_tokens, 
                                  wpc_tok
                                 )
+  elif config.token_type == "ast":
+    if config.token_list is not None:
+      l.getLogger().warning("token list in AST-based tokenization is going to be ignored.")
+    return ASTokenizer.FromText(corpus_txt, mask_tokens)
   else:
     raise NotImplementedError
 
@@ -431,23 +434,17 @@ class ASTokenizer(TokenizerBase):
   def FromText(cls,
                text: str,
                mask_tokens: bool,
-               wordpiece: bool,
-               ) -> "WordTokenizer":
-    """Instantiate and an tokenizer from a corpus text.
+               ) -> "ASTokenizer":
+    """Instantiate an AST tokenizer from a corpus text.
 
     Args:
       text: Text corpus
-      token_list: A list of multi-character token_list.
 
     Returns:
       An tokenizer instance.
     """
-    if not token_list:
-      raise ValueError("No tokens specified")
 
-    if wordpiece:
-      raise NotImplementedError
-
+    token_list = set()
     if mask_tokens:
       metaTokens = {
           'startToken'   : '[START]',
@@ -459,14 +456,16 @@ class ASTokenizer(TokenizerBase):
       }
     else:
       metaTokens = {}
+    token_list.update(opencl.tokenizeAST(text))
+    raise NotImplementedError
     # Add meta token_list to token set
     for mt in metaTokens.values():
       token_list.add(mt)
     # Instantiate a greedy tokenizer using the full vocabulary.
     full_vocab = dict(zip(token_list, range(len(token_list))))
-    c = WordTokenizer(full_vocab, metaTokens, determine_chars=True)
+    c = ASTokenizer(full_vocab, metaTokens, determine_chars=True)
     # Derive the subset of the vocabulary required to encode the given text.
     tokens = [mt for mt in metaTokens.values()] + sorted(list(set(c.TokenizeString(text))))
     vocab_subset = dict(zip(tokens, range(len(tokens))))
     # Return a new tokenizer using the subset vocabulary.
-    return WordTokenizer(vocab_subset, metaTokens)
+    return ASTokenizer(vocab_subset, metaTokens)
