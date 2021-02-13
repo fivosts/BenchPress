@@ -37,7 +37,7 @@ class BackendBase(object):
     config: model_pb2.Model,
     fs_cache: cache.FSCache,
     hash: str,
-    atomizer: atomizers.AtomizerBase = None,
+    atomizer: atomizers.TokenizerBase = None,
   ):
     self.config = config
     self.cache = fs_cache
@@ -45,7 +45,7 @@ class BackendBase(object):
     self.atomizer = atomizer
 
   ## Legacy function to support lazy creation of corpus
-  def Create(self, atomizer: atomizers.AtomizerBase) -> None:
+  def Create(self, atomizer: atomizers.TokenizerBase) -> None:
     self.atomizer = atomizer
 
   def Train(self, corpus: "Corpus", **extra_kwargs) -> None:

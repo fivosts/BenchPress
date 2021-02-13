@@ -20,7 +20,7 @@ class CompilationSampler(object):
   compilation status.
   """
   def __init__(self,
-               atomizer        : atomizers.AtomizerBase,
+               atomizer        : atomizers.TokenizerBase,
                use_categorical : bool,
                temperature     : float,
                ):

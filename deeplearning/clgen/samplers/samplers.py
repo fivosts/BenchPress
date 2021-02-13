@@ -132,7 +132,7 @@ class TerminationCriterionBase(object):
   and returns whether to stop sampling.
   """
 
-  def Specialize(self, atomizer: atomizers.AtomizerBase) -> None:
+  def Specialize(self, atomizer: atomizers.TokenizerBase) -> None:
     """Specialize a termination criteria to a vocabulary.
 
     This enables the termination criteria to set state specialized to a specific
@@ -206,7 +206,7 @@ class SymmetricalTokenDepthCriterion(TerminationCriterionBase):
     if self.left_token == self.right_token:
       raise ValueError("SymmetricalTokenDepth tokens must be different")
 
-  def Specialize(self, atomizer: atomizers.AtomizerBase) -> None:
+  def Specialize(self, atomizer: atomizers.TokenizerBase) -> None:
     """Specialize a termination criteria to a vocabulary.
 
     This enables the termination criteria to set state specialized to a specific
@@ -388,7 +388,7 @@ class Sampler(object):
     self.start_text = start_text
     return
 
-  def Specialize(self, atomizer: atomizers.AtomizerBase) -> None:
+  def Specialize(self, atomizer: atomizers.TokenizerBase) -> None:
     """Specialize a sampler a vocabulary.
 
     This enables the sampler to set state specialized to a specific encoding

@@ -108,7 +108,7 @@ class EncodedContentFile(Base):
   def FromPreprocessed(
     cls,
     preprocessed_cf: preprocessed.PreprocessedContentFile,
-    atomizer: atomizers.AtomizerBase,
+    atomizer: atomizers.TokenizerBase,
     eof: str,
   ) -> "EncodedContentFile":
     """Instantiate an EncodedContentFile from a preprocessed file.
@@ -178,14 +178,14 @@ class EncodedContentFiles(sqlutil.Database):
   def Create(
     self,
     p: preprocessed.PreprocessedContentFiles,
-    atomizer: atomizers.AtomizerBase,
+    atomizer: atomizers.TokenizerBase,
     contentfile_separator: str,
   ) -> bool:
     """Populate the encoded contentfiles database.
 
     Args:
       p: A PreprocessedContentFiles database.
-      atomizer: An AtomizerBase instance.
+      atomizer: An TokenizerBase instance.
       contentfile_separator: The contentfile separator.
 
     Returns:
@@ -273,7 +273,7 @@ class EncodedContentFiles(sqlutil.Database):
     self,
     session: sqlutil.Session,
     preprocessed_db: preprocessed.PreprocessedContentFiles,
-    atomizer: atomizers.AtomizerBase,
+    atomizer: atomizers.TokenizerBase,
     contentfile_separator: str,
   ) -> None:
     with preprocessed_db.Session() as p_session:

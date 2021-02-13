@@ -347,7 +347,7 @@ class Model(object):
   def _SampleBatch(
     self,
     sampler: samplers.Sampler,
-    atomizer: atomizers.AtomizerBase,
+    atomizer: atomizers.TokenizerBase,
     sample_observers: typing.List[sample_observers_lib.SampleObserver],
     epoch: int,
   ) -> bool:
@@ -468,7 +468,7 @@ class Model(object):
     )
 
   @property
-  def atomizer(self) -> atomizers.AtomizerBase:
+  def atomizer(self) -> atomizers.TokenizerBase:
     return self.corpus.atomizer
 
   @property

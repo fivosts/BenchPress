@@ -351,18 +351,18 @@ class Corpus(object):
       )
 
   @property
-  def atomizer(self) -> atomizers.AtomizerBase:
+  def atomizer(self) -> atomizers.TokenizerBase:
     """Must call Create() first."""
     if not self._created:
       raise ValueError("Must call Create() before accessing atomizer property.")
     if self._atomizer is None:
       if self.atomizer_path.is_file():
-        self._atomizer = atomizers.AtomizerBase.FromFile(self.atomizer_path)
+        self._atomizer = atomizers.TokenizerBase.FromFile(self.atomizer_path)
       else:
-        self._atomizer = self._CreateAtomizer()
+        self._atomizer = self._CreateTokenizer()
     return self._atomizer
 
-  def _CreateAtomizer(self) -> atomizers.AtomizerBase:
+  def _CreateTokenizer(self) -> atomizers.TokenizerBase:
     """Creates and caches an atomizer."""
     l.getLogger().info("Deriving atomizer from preprocessed corpus")
     corpus_txt = self.GetTextCorpus(shuffle=False)
@@ -371,7 +371,7 @@ class Corpus(object):
       encoded_db = encoded.EncodedContentFiles(
         self.config.pre_encoded_corpus_url
       )
-      atomizer = WordAtomizerFromEncodedDb(self.config.atomizer, encoded_db)
+      atomizer = WordTokenizerFromEncodedDb(self.config.atomizer, encoded_db)
     else:
       if ("deeplearning.clgen.preprocessors.common:RemoveAllWhiteSpace" in self.config.preprocessor
        or "deeplearning.clgen.preprocessors.common:RemoveNewLines" in self.config.preprocessor):
@@ -416,7 +416,7 @@ def StoreVocabInMetaTable(
   return encoded.EncodedContentFiles.StoreVocabInMetaTable(session, vocabulary)
 
 
-def WordAtomizerFromEncodedDb(encoded_db: encoded.EncodedContentFiles):
+def WordTokenizerFromEncodedDb(encoded_db: encoded.EncodedContentFiles):
   raise NotImplementedError
   """Create a greedy atomizer for the vocabulary of a given encoded_db."""
   # TODO(github.com/ChrisCummins/clgen/issues/130): This should be a method of
@@ -424,7 +424,7 @@ def WordAtomizerFromEncodedDb(encoded_db: encoded.EncodedContentFiles):
   with encoded_db.Session() as s:
     vocab = GetVocabFromMetaTable(s)
   l.getLogger().info("Loaded vocabulary of {} tokens from meta table".format(len(vocab)))
-  return atomizers.WordAtomizer(vocab)
+  return atomizers.WordTokenizer(vocab)
 
 
 def ExpandConfigPath(path: str, path_prefix: str = None) -> pathlib.Path:
