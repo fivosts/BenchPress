@@ -456,7 +456,10 @@ class ASTokenizer(TokenizerBase):
       }
     else:
       metaTokens = {}
-    token_list.update(opencl.tokenizeAST(text))
+    token_list.update(opencl.TokenizeSource(text))
+    print(token_list)
+    print(len(token_list))
+    exit()
     raise NotImplementedError
     # Add meta token_list to token set
     for mt in metaTokens.values():
