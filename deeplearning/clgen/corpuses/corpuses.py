@@ -60,7 +60,6 @@ flags.DEFINE_string(
   "not be omitted.",
 )
 
-
 def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
   """Assert that config proto is valid.
 
