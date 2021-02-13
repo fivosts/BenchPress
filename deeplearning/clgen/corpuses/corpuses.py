@@ -89,7 +89,7 @@ def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
 
     pbutil.AssertFieldConstraint(config.tokenizer, 
                                  "token_type", 
-                                 lambda x: x == "character" or x == "word",
+                                 lambda x: x == "character" or x == "word" or x == "ast",
                                  "tokenizer is either character or word based."
                                  )
     if config.tokenizer.token_type == "word":
