@@ -25,6 +25,8 @@ from collections import Counter
 from absl import flags
 from eupy.native import logger as l
 
+from deeplearning.clgen.preprocessors import opencl
+
 FLAGS = flags.FLAGS
 
 def FromText(config, corpus_txt: str):
