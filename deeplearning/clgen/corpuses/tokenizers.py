@@ -29,13 +29,13 @@ from deeplearning.clgen.preprocessors import opencl
 
 FLAGS = flags.FLAGS
 
-def FromText(config, corpus_txt: str, no_whitespace: bool):
+def FromText(config, corpus_txt: str):
   mask_tokens = False if config.mask_tokens is None else config.mask_tokens
 
   if config.token_type   == "character":
     if config.token_list is not None:
       l.getLogger().warning("token list in character-based tokenization is going to be ignored.")
-    return AsciiCharacterTokenizer.FromText(corpus_txt, mask_tokens, no_whitespace)
+    return AsciiCharacterTokenizer.FromText(corpus_txt, mask_tokens)
   elif config.token_type == "word":
     with open(config.token_list, 'r') as f:
       token_set = json.load(f)
@@ -45,8 +45,7 @@ def FromText(config, corpus_txt: str, no_whitespace: bool):
     return WordTokenizer.FromText(corpus_txt,
                                  token_set, 
                                  mask_tokens, 
-                                 wpc_tok,
-                                 no_whitespace
+                                 wpc_tok
                                 )
   else:
     raise NotImplementedError
@@ -85,7 +84,6 @@ class TokenizerBase(object):
   def __init__(self, 
                vocab: typing.Dict[str, int],
                metaTokens: typing.Dict[str, str],
-               no_whitespace: bool,
                ):
     """Instantiate an tokenizer.
 
@@ -102,7 +100,6 @@ class TokenizerBase(object):
     self.metaTokens = metaTokens
     self._UpdateVocabulary()
     self.metaTokenValues = set(value for key, value in self.__dict__.items() if key in self.metaTokens)
-    self.no_whitespace   = no_whitespace
 
   def _UpdateVocabulary(self) -> None:
     """Private method which must be called if vocab is modified."""
@@ -170,7 +167,7 @@ class TokenizerBase(object):
       if np.ndim(encoded) > 1:
         return [ self.tokensToString(x, ignore_token, beautify) for x in encoded ]
       elif np.ndim(encoded) == 1:
-        if beautify and self.no_whitespace:
+        if beautify:
           return opencl.ClangFormat(" ".join(list(map(lambda x: self.decoder[x] if x != ignore_token else '', encoded))))
         else:
           return "".join(list(map(lambda x: self.decoder[x] if x != ignore_token else '', encoded)))
@@ -206,10 +203,7 @@ class TokenizerBase(object):
       Code in string format.
     """
     metaTokenStrValues = set(value for key, value in self.metaTokens.items())
-    if self.no_whitespace:
-      return opencl.ClangFormat(' '.join([x for x in text if x not in metaTokenStrValues]))
-    else:
-      return ''.join([x for x in text if x not in metaTokenStrValues])
+    return ''.join([x for x in text if x not in metaTokenStrValues])
 
   def SrcLocationToIndex(self,
                          encoded: np.array,
@@ -258,7 +252,7 @@ class AsciiCharacterTokenizer(TokenizerBase):
   """An tokenizer for character-level syntactic modelling."""
 
   @classmethod
-  def FromText(cls, text: str, mask_tokens: bool, no_whitespace: bool) -> "AsciiCharacterTokenizer":
+  def FromText(cls, text: str, mask_tokens: bool) -> "AsciiCharacterTokenizer":
     """Instantiate and an tokenizer from a corpus text.
 
     Args:
@@ -283,7 +277,7 @@ class AsciiCharacterTokenizer(TokenizerBase):
     atoms, _ = zip(*count_pairs)
     atoms = tuple(metaTokens.values()) + atoms
     vocab = dict(zip(atoms, range(len(atoms))))
-    return AsciiCharacterTokenizer(vocab, metaTokens, no_whitespace)
+    return AsciiCharacterTokenizer(vocab, metaTokens)
 
   def __repr__(self) -> str:
     return f"AsciiCharacterTokenizer[{self.vocab_size} chars]"
@@ -328,7 +322,6 @@ class WordTokenizer(TokenizerBase):
                token_list: typing.Set[str],
                mask_tokens: bool,
                wordpiece: bool,
-               no_whitespace: bool
                ) -> "WordTokenizer":
     """Instantiate and an tokenizer from a corpus text.
 
@@ -361,20 +354,19 @@ class WordTokenizer(TokenizerBase):
       token_list.add(mt)
     # Instantiate a greedy tokenizer using the full vocabulary.
     full_vocab = dict(zip(token_list, range(len(token_list))))
-    c = WordTokenizer(full_vocab, metaTokens, determine_chars=True, no_whitespace = no_whitespace)
+    c = WordTokenizer(full_vocab, metaTokens, determine_chars=True)
     # Derive the subset of the vocabulary required to encode the given text.
     tokens = [mt for mt in metaTokens.values()] + sorted(list(set(c.TokenizeString(text))))
     vocab_subset = dict(zip(tokens, range(len(tokens))))
     # Return a new tokenizer using the subset vocabulary.
-    return WordTokenizer(vocab_subset, metaTokens, no_whitespace)
+    return WordTokenizer(vocab_subset, metaTokens)
 
   def __init__(self, 
                vocab:      typing.Dict[str, int], 
                metaTokens: typing.Dict[str, str],
-               no_whitespace: bool,
                determine_chars = False
                ):
-    super(WordTokenizer, self).__init__(vocab, metaTokens, no_whitespace)
+    super(WordTokenizer, self).__init__(vocab, metaTokens)
 
     self.determine_chars = determine_chars
     multichars = set(k for k in self.atoms if len(k) > 1)
@@ -437,3 +429,50 @@ class WordTokenizer(TokenizerBase):
       self._UpdateVocabulary()
 
     return np.array(indices, dtype=np.int32)
+
+class ASTokenizer(TokenizerBase):
+  """A Clang AST tokenizer fully supports language grammar."""
+
+  @classmethod
+  def FromText(cls,
+               text: str,
+               mask_tokens: bool,
+               wordpiece: bool,
+               ) -> "WordTokenizer":
+    """Instantiate and an tokenizer from a corpus text.
+
+    Args:
+      text: Text corpus
+      token_list: A list of multi-character token_list.
+
+    Returns:
+      An tokenizer instance.
+    """
+    if not token_list:
+      raise ValueError("No tokens specified")
+
+    if wordpiece:
+      raise NotImplementedError
+
+    if mask_tokens:
+      metaTokens = {
+          'startToken'   : '[START]',
+          'endToken'     : '[END]',
+          'padToken'     : '[PAD]',
+          'maskToken'    : '[MASK]',
+          'holeToken'    : '[HOLE]',
+          'endholeToken' : '[ENDHOLE]',
+      }
+    else:
+      metaTokens = {}
+    # Add meta token_list to token set
+    for mt in metaTokens.values():
+      token_list.add(mt)
+    # Instantiate a greedy tokenizer using the full vocabulary.
+    full_vocab = dict(zip(token_list, range(len(token_list))))
+    c = WordTokenizer(full_vocab, metaTokens, determine_chars=True)
+    # Derive the subset of the vocabulary required to encode the given text.
+    tokens = [mt for mt in metaTokens.values()] + sorted(list(set(c.TokenizeString(text))))
+    vocab_subset = dict(zip(tokens, range(len(tokens))))
+    # Return a new tokenizer using the subset vocabulary.
+    return WordTokenizer(vocab_subset, metaTokens)
