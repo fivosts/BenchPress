@@ -305,7 +305,7 @@ class Corpus(object):
         query = query.order_by(func.random())
       return self.config.contentfile_separator.join([x[0] for x in query])
 
-  def GetTrainingData(self, 
+  def GetTrainingData(self,
                       shuffle: bool = False
                       ) -> np.ndarray:
     """Concatenate the entire encoded corpus into an array.
