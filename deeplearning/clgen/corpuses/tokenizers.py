@@ -458,9 +458,20 @@ class ASTokenizer(TokenizerBase):
       }
     else:
       metaTokens = {}
-    token_list.update(opencl.TokenizeSource(text))
-    print(token_list)
-    print(len(token_list))
+    # token_list.update(opencl.TokenizeSource(text))
+    from deeplearning.clgen.util import monitors
+    import pathlib
+    m = monitors.NormalizedFrequencyMonitor(pathlib.Path("/home/fivosts"), "token_type_distr")
+    m2 = monitors.NormalizedFrequencyMonitor(pathlib.Path("/home/fivosts"), "token_distr")
+    source_tokens = opencl.TokenizeSource(text)
+    for t in source_tokens:
+      m.register(t[1])
+      m2.register(t[0])
+
+    m.plot()
+    m2.plot()
+    print(source_tokens)
+    print(len(source_tokens))
     exit()
     raise NotImplementedError
     # Add meta token_list to token set
