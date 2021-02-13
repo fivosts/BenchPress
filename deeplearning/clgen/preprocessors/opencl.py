@@ -96,6 +96,16 @@ def _ClangPreprocess(text: str, use_shim: bool) -> str:
   """
   return clang.Preprocess(text, GetClangArgs(use_shim=use_shim))
 
+def TokenizeSource(text: str) -> typing.Set[str]:
+  """Pass CL code through clang's lexer and return set of tokens.
+
+  Args:
+    text: Source code.
+
+  Returns:
+    Set of unique source code tokens.
+  """
+  return clang.TokenizeSource(text, ".cl", GetClangArgs(use_shim = False))
 
 @public.clgen_preprocessor
 def ClangPreprocess(text: str) -> str:
@@ -143,7 +153,6 @@ def Compile(text: str, return_diagnostics = False) -> str:
     GetClangArgs(use_shim=False),# + ["-Werror=implicit-function-declaration"],
     return_diagnostics = return_diagnostics,
   )
-
 
 @public.clgen_preprocessor
 def ClangFormat(text: str) -> str:

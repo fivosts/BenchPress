@@ -179,7 +179,6 @@ def ProcessCompileLlvmBytecode(
 def CompileLlvmBytecode(src: str,
                         suffix: str,
                         cflags: typing.List[str],
-                        timeout_seconds: int = 60,
                         return_diagnostics: bool = False,
                         ) -> str:
   """Compile input code into textual LLVM byte code using clang.Cindex python module.
@@ -189,7 +188,6 @@ def CompileLlvmBytecode(src: str,
     suffix: The suffix to append to the source code temporary file. E.g. '.c'
       for a C program.
     cflags: A list of flags to be passed to clang.
-    timeout_seconds: The number of seconds to allow before killing clang.
 
   Returns:
     The textual LLVM byte code.
@@ -259,3 +257,37 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
   elif process.returncode != 0:
     raise ValueError(stderr)
   return stdout
+
+def TokenizeSource(text: str,
+                   suffix: str,
+                   cflags: typing.List[str],
+                   ) -> typing.Set[str]:
+  """Pass source code through clang's lexer and return set of tokens.
+
+  Args:
+    src: The source code to compile.
+    suffix: The suffix to append to the source code temporary file. E.g. '.c'
+      for a C program.
+    cflags: A list of flags to be passed to clang.
+
+  Returns:
+    Set of unique source code tokens
+
+  Raises:
+    ValueError: In case of an error.
+  """
+  builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
+  with tempfile.NamedTemporaryFile(
+    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
+  ) as f:
+    f.write(src)
+    f.flush()
+    try:
+      unit = clang.cindex.TranslationUnit.from_source(f.name, args = builtin_cflags + cflags)
+    except clang.cindex.TranslationUnitLoadError as e:
+      raise ValueError(e)
+
+    tokens = set()
+    for t in unit.get_tokens(extent = unit.cursor.extent):
+      tokens.add(t.spelling)
+    return tokens
