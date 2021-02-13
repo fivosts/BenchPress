@@ -371,7 +371,7 @@ class Corpus(object):
       encoded_db = encoded.EncodedContentFiles(
         self.config.pre_encoded_corpus_url
       )
-      atomizer = GreedyAtomizerFromEncodedDb(self.config.atomizer, encoded_db)
+      atomizer = WordAtomizerFromEncodedDb(self.config.atomizer, encoded_db)
     else:
       if ("deeplearning.clgen.preprocessors.common:RemoveAllWhiteSpace" in self.config.preprocessor
        or "deeplearning.clgen.preprocessors.common:RemoveNewLines" in self.config.preprocessor):
@@ -416,7 +416,7 @@ def StoreVocabInMetaTable(
   return encoded.EncodedContentFiles.StoreVocabInMetaTable(session, vocabulary)
 
 
-def GreedyAtomizerFromEncodedDb(encoded_db: encoded.EncodedContentFiles):
+def WordAtomizerFromEncodedDb(encoded_db: encoded.EncodedContentFiles):
   raise NotImplementedError
   """Create a greedy atomizer for the vocabulary of a given encoded_db."""
   # TODO(github.com/ChrisCummins/clgen/issues/130): This should be a method of
@@ -424,7 +424,7 @@ def GreedyAtomizerFromEncodedDb(encoded_db: encoded.EncodedContentFiles):
   with encoded_db.Session() as s:
     vocab = GetVocabFromMetaTable(s)
   l.getLogger().info("Loaded vocabulary of {} tokens from meta table".format(len(vocab)))
-  return atomizers.GreedyAtomizer(vocab)
+  return atomizers.WordAtomizer(vocab)
 
 
 def ExpandConfigPath(path: str, path_prefix: str = None) -> pathlib.Path:
