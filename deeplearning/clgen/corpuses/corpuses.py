@@ -373,11 +373,7 @@ class Corpus(object):
       )
       tokenizer = WordTokenizerFromEncodedDb(self.config.tokenizer, encoded_db)
     else:
-      if ("deeplearning.clgen.preprocessors.common:RemoveAllWhiteSpace" in self.config.preprocessor
-       or "deeplearning.clgen.preprocessors.common:RemoveNewLines" in self.config.preprocessor):
-        tokenizer = tokenizers.FromText(self.config.tokenizer, corpus_txt, no_whitespace = True)
-      else:
-        tokenizer = tokenizers.FromText(self.config.tokenizer, corpus_txt, no_whitespace = False)
+      tokenizer = tokenizers.FromText(self.config.tokenizer, corpus_txt)
 
     tokenizer.ToFile(self.tokenizer_path)
     return tokenizer

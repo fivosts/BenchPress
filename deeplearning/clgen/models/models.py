@@ -417,7 +417,7 @@ class Model(object):
 
             sample = model_pb2.Sample(
               train_step                = epoch,
-              text                      = "".join(sample_kernel) if not self.tokenizer.no_whitespace else opencl.ClangFormat(" ".join(sample_kernel)),
+              text                      = "".join(sample_kernel),
               sample_indices            = step_ind,
               encoded_sample_indices    = encoded_step_indices,
               sample_feed               = self.tokenizer.tokensToString(sampler.encoded_start_text, beautify = True),
