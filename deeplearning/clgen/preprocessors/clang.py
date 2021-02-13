@@ -261,7 +261,7 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
 def TokenizeSource(src: str,
                    suffix: str,
                    cflags: typing.List[str],
-                   ) -> typing.Set[str]:
+                   ) -> typing.Set[typing.Tuple[str, str]]:
   """Pass source code through clang's lexer and return set of tokens.
 
   Args:
@@ -289,5 +289,5 @@ def TokenizeSource(src: str,
 
     tokens = set()
     for t in unit.get_tokens(extent = unit.cursor.extent):
-      tokens.add(t.spelling)
+      tokens.add((t.spelling, t.kind))
     return tokens

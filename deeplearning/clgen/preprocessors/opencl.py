@@ -96,7 +96,7 @@ def _ClangPreprocess(text: str, use_shim: bool) -> str:
   """
   return clang.Preprocess(text, GetClangArgs(use_shim=use_shim))
 
-def TokenizeSource(text: str) -> typing.Set[str]:
+def TokenizeSource(text: str) -> typing.Set[typing.Tuple[str, str]]:
   """Pass CL code through clang's lexer and return set of tokens.
 
   Args:
