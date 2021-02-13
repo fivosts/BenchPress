@@ -37,14 +37,14 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
   def SampleMaskLMBatchGenerator(cls,
                                 model_opts,
                                 sampler,
-                                atomizer,
+                                tokenizer,
                                 seed: int,
                                 max_position_embeddings: int,
                                 cache_path,
                                 ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
     d = super(tfLMDataGenerator, tfLMDataGenerator()).SampleMaskLMBatchGenerator(
-          model_opts, sampler, atomizer, seed, max_position_embeddings, cache_path
+          model_opts, sampler, tokenizer, seed, max_position_embeddings, cache_path
         )
     d.tfRecordSampler = d.tfRecordSampleGenerator()
     return d
@@ -177,15 +177,15 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           masked_lm_ids, masked_lm_weights, masked_lm_lengths) = [], [], [], [], [], []
 
           max_mask_len = max(
-          [len(np.where(np.in1d(np.asarray(x), [self.atomizer.maskToken, self.atomizer.holeToken]))[0]) for x in self.sampleBatch]
+          [len(np.where(np.in1d(np.asarray(x), [self.tokenizer.maskToken, self.tokenizer.holeToken]))[0]) for x in self.sampleBatch]
           )
           if max_mask_len == 0:
             return
           for sample in self.sampleBatch:
-            sample_masks = np.where(np.in1d(sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
+            sample_masks = np.where(np.in1d(sample, [self.tokenizer.maskToken, self.tokenizer.holeToken]))[0]
             actual_mask_len = len(sample_masks)
             len_offset     = max_mask_len - actual_mask_len
-            pad_idx      = np.where(sample == self.atomizer.padToken)[0]
+            pad_idx      = np.where(sample == self.tokenizer.padToken)[0]
             inp_mask     = np.ones(len(sample), dtype = np.int32)
             if len(pad_idx) > 0:
               inp_mask[pad_idx[0]:] = 0
@@ -193,7 +193,7 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             input_ids.append(list(sample))
             input_mask.append(list(inp_mask))
             masked_lm_positions.append(list(sample_masks) + [0] * len_offset)
-            masked_lm_ids.append([self.atomizer.maskToken] * actual_mask_len + [self.atomizer.padToken] * len_offset)
+            masked_lm_ids.append([self.tokenizer.maskToken] * actual_mask_len + [self.tokenizer.padToken] * len_offset)
             masked_lm_weights.append([0.0] * (actual_mask_len + len_offset))
             masked_lm_lengths.append([-1] * (actual_mask_len + len_offset))
           yield (np.full([batch_size, 1], -1), original_input, 
@@ -241,8 +241,8 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     for path in path_list:
       for example in tf.compat.v1.io.tf_record_iterator(path):
         input_ids = np.asarray(tf.train.Example.FromString(example).features.feature['input_ids'].int64_list.value)
-        if self.atomizer.padToken in input_ids:
-          yield input_ids[:np.where(input_ids == self.atomizer.padToken)[0][0]]
+        if self.tokenizer.padToken in input_ids:
+          yield input_ids[:np.where(input_ids == self.tokenizer.padToken)[0][0]]
         else:
           yield input_ids
 
@@ -261,18 +261,18 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           start_text = next(self.tfRecordSampler)[:self.sampler.sequence_length]
         except Exception as e:
           raise e
-      self.sampler.setStartText(self.atomizer.DeatomizeIndices(start_text))
-      self.sampler.Specialize(self.atomizer)
+      self.sampler.setStartText(self.tokenizer.DeatomizeIndices(start_text))
+      self.sampler.Specialize(self.tokenizer)
     
     assert self.sampler.sequence_length <= self.max_position_embeddings, "Sampler sequence length exceeds max position embeddings."
     input_sample = self.sampler.encoded_start_text
     assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
 
-    target_idx = np.where(np.in1d(input_sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
+    target_idx = np.where(np.in1d(input_sample, [self.tokenizer.maskToken, self.tokenizer.holeToken]))[0]
     assert len(target_idx) != 0, "No target prediction in sample text"
 
-    num_masks = np.count_nonzero(input_sample == self.atomizer.maskToken)
-    num_holes = np.count_nonzero(input_sample == self.atomizer.holeToken)
+    num_masks = np.count_nonzero(input_sample == self.tokenizer.maskToken)
+    num_holes = np.count_nonzero(input_sample == self.tokenizer.holeToken)
     num_targets = num_masks + num_holes
 
     padded_sample = self._padToMaxPosition(input_sample)
@@ -299,28 +299,28 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       mask_id_index     = 0
       closed_hole_index = 0
       for idx, token in enumerate(input_ids[batch_idx]):
-        if   token == self.atomizer.maskToken:
+        if   token == self.tokenizer.maskToken:
           mt = masked_lm_ids[batch_idx][mask_id_index]
-          if mt == self.atomizer.maskToken or mt == self.atomizer.holeToken:
+          if mt == self.tokenizer.maskToken or mt == self.tokenizer.holeToken:
             continue
           if len(self.sampleIndices[batch_idx][mask_id_index]) > 0:
-            while(self.sampleIndices[batch_idx][mask_id_index + closed_hole_index][-1]) == self.atomizer.endholeToken:
+            while(self.sampleIndices[batch_idx][mask_id_index + closed_hole_index][-1]) == self.tokenizer.endholeToken:
               closed_hole_index += 1
           self.sampleIndices[batch_idx][mask_id_index + closed_hole_index].append(mt)
           mask_id_index += 1
           batch.append(mt)
-        elif token == self.atomizer.holeToken:
+        elif token == self.tokenizer.holeToken:
           mt = masked_lm_ids[batch_idx][mask_id_index]
-          if mt == self.atomizer.maskToken or mt == self.atomizer.holeToken:
+          if mt == self.tokenizer.maskToken or mt == self.tokenizer.holeToken:
             continue
           if len(self.sampleIndices[batch_idx][mask_id_index]) > 0:
-            while(self.sampleIndices[batch_idx][mask_id_index + closed_hole_index][-1]) == self.atomizer.endholeToken:
+            while(self.sampleIndices[batch_idx][mask_id_index + closed_hole_index][-1]) == self.tokenizer.endholeToken:
               closed_hole_index += 1
           self.sampleIndices[batch_idx][mask_id_index + closed_hole_index].append(mt)
           mask_id_index += 1
-          if mt != self.atomizer.endholeToken:
+          if mt != self.tokenizer.endholeToken:
             batch.append(mt)
-            batch.append(self.atomizer.holeToken)
+            batch.append(self.tokenizer.holeToken)
             done = False
         else:
           batch.append(token)
@@ -397,11 +397,11 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       if FLAGS.write_text_dataset:
         file_writer.write("'seen_in_training': {}\n'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'masked_lm_positions': {}\n'masked_lm_ids': {}\n'masked_lm_weights': {}\n'masked_lm_lengths': {}\n'next_sentence_labels': {}\n\n"
                             .format((True if seen_in_training == 1 else False),
-                                    self.atomizer.DeatomizeIndices(original_input, ignore_token = self.atomizer.padToken, beautify = True),
-                                    self.atomizer.DeatomizeIndices(input_ids,      ignore_token = self.atomizer.padToken, beautify = True),
+                                    self.tokenizer.DeatomizeIndices(original_input, ignore_token = self.tokenizer.padToken, beautify = True),
+                                    self.tokenizer.DeatomizeIndices(input_ids,      ignore_token = self.tokenizer.padToken, beautify = True),
                                     input_mask, 
                                     masked_lm_positions, 
-                                    self.atomizer.DeatomizeIndices(masked_lm_ids), 
+                                    self.tokenizer.DeatomizeIndices(masked_lm_ids), 
                                     masked_lm_weights, 
                                     masked_lm_lengths, 
                                     next_sentence_label)

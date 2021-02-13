@@ -18,7 +18,7 @@ import typing
 import numpy as np
 
 from deeplearning.clgen.samplers import samplers
-from deeplearning.clgen.corpuses import atomizers
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.proto import model_pb2
 from absl import flags
 from labm8.py import cache
@@ -37,16 +37,16 @@ class BackendBase(object):
     config: model_pb2.Model,
     fs_cache: cache.FSCache,
     hash: str,
-    atomizer: atomizers.TokenizerBase = None,
+    tokenizer: tokenizers.TokenizerBase = None,
   ):
     self.config = config
     self.cache = fs_cache
     self.hash = hash
-    self.atomizer = atomizer
+    self.tokenizer = tokenizer
 
   ## Legacy function to support lazy creation of corpus
-  def Create(self, atomizer: atomizers.TokenizerBase) -> None:
-    self.atomizer = atomizer
+  def Create(self, tokenizer: tokenizers.TokenizerBase) -> None:
+    self.tokenizer = tokenizer
 
   def Train(self, corpus: "Corpus", **extra_kwargs) -> None:
     """Train the backend."""
@@ -63,7 +63,7 @@ class BackendBase(object):
     raise NotImplementedError
 
   def SampleNextIndices(
-    self, sampler: samplers.Sampler, done: np.ndarray, atomizer = None
+    self, sampler: samplers.Sampler, done: np.ndarray, tokenizer = None
   ) -> np.ndarray:
     """Sample the next indices for the current sample batch.
 

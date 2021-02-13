@@ -44,15 +44,15 @@ message Corpus {
     // The path to a database of encoded files.
     string pre_encoded_corpus_url = 4;
   }
-  required atomizer atomizer      = 5;
+  required tokenizer tokenizer      = 5;
   // A list of preprocessor passes to run on each contentfile in the corpus
   // prior to training, in the order in which they are run.
   repeated string preprocessor          = 6;
   optional string contentfile_separator = 7;
 }
 
-// The atomizer to use to encode the corpus.
-message atomizer{
+// The tokenizer to use to encode the corpus.
+message tokenizer{
   required string token_type             = 8;
   optional string token_list             = 9;
   optional bool   mask_tokens            = 10;

@@ -67,7 +67,7 @@ def HoleSequence(seq: np.array,
                  train_set: bool,
                  max_predictions: int,
                  pickled_distribution: distributions.Distribution,
-                 pickled_atomizer,
+                 pickled_tokenizer,
                  training_opts,
                  is_torch: bool,
                  repair_locations: typing.List[int] = None,
@@ -84,16 +84,16 @@ def HoleSequence(seq: np.array,
   """
   assert seq.ndim == 1, "Input for masking must be single-dimension array."
 
-  # Unpack atomizer and sampler
+  # Unpack tokenizer and sampler
   distribution = pickle.loads(pickled_distribution)
-  atomizer     = pickle.loads(pickled_atomizer)
-  use_start_end = True if seq[0] == atomizer.startToken else False
+  tokenizer     = pickle.loads(pickled_tokenizer)
+  use_start_end = True if seq[0] == tokenizer.startToken else False
 
   # Actual length represents the sequence length before pad begins
   if use_start_end:
-    actual_length   = np.where(seq == atomizer.endToken)[0][0]
-  elif atomizer.padToken in seq:
-    actual_length   = np.where(seq == atomizer.padToken)[0][0]
+    actual_length   = np.where(seq == tokenizer.endToken)[0][0]
+  elif tokenizer.padToken in seq:
+    actual_length   = np.where(seq == tokenizer.padToken)[0][0]
   else:
     actual_length   = len(seq)
 
@@ -130,7 +130,7 @@ def HoleSequence(seq: np.array,
     elif input_id_idx > len(seq):
       # Do not mask a part of input_ids that is going to be cropped.
       continue
-    elif input_ids[input_id_idx] in {atomizer.startToken, atomizer.endToken}:
+    elif input_ids[input_id_idx] in {tokenizer.startToken, tokenizer.endToken}:
       # Do not target [START] or [END] token
       continue
 
@@ -150,17 +150,17 @@ def HoleSequence(seq: np.array,
     # Confirm there is no conflict with another hole, further down the sequence.
     for i in range(hole_length):
       if extend_left:
-        if (input_ids[input_id_idx - i] == atomizer.holeToken
-         or input_ids[input_id_idx - i] == atomizer.startToken
-         or input_ids[input_id_idx - i] == atomizer.endToken
+        if (input_ids[input_id_idx - i] == tokenizer.holeToken
+         or input_ids[input_id_idx - i] == tokenizer.startToken
+         or input_ids[input_id_idx - i] == tokenizer.endToken
          # or input_id_idx - i == 0
          ):
           hole_length = i
           break
       else:
-        if (input_ids[input_id_idx + i] == atomizer.holeToken
-         or input_ids[input_id_idx + i] == atomizer.startToken
-         or input_ids[input_id_idx + i] == atomizer.endToken
+        if (input_ids[input_id_idx + i] == tokenizer.holeToken
+         or input_ids[input_id_idx + i] == tokenizer.startToken
+         or input_ids[input_id_idx + i] == tokenizer.endToken
          # or input_id_idx + i == len(input_ids)
          ):
           hole_length = i
@@ -170,8 +170,8 @@ def HoleSequence(seq: np.array,
     # TODO plz check that target changes correctly.
     
     # Target token for classifier is either the first token of the hole, or endholeToken if hole is empty
-    target = input_ids[input_id_idx] if hole_length > 0 else atomizer.endholeToken
-    input_ids = input_ids[:input_id_idx] + [atomizer.holeToken] + input_ids[input_id_idx + hole_length:]
+    target = input_ids[input_id_idx] if hole_length > 0 else tokenizer.endholeToken
+    input_ids = input_ids[:input_id_idx] + [tokenizer.holeToken] + input_ids[input_id_idx + hole_length:]
 
     # Store position index, and after making all masks, update with updated offset array
     masked_lms.append(MaskedLmInstance(
@@ -189,19 +189,19 @@ def HoleSequence(seq: np.array,
   for lm in masked_lms:
     prev_index = lm.pos_index
     lm.pos_index = lm.pos_index + offset_idxs[lm.pos_index]
-    assert input_ids[lm.pos_index] == atomizer.holeToken, "{}".format(lm.hole_length)
+    assert input_ids[lm.pos_index] == tokenizer.holeToken, "{}".format(lm.hole_length)
 
   while len(input_ids) < len(seq):
-    input_ids.append(atomizer.padToken)
+    input_ids.append(tokenizer.padToken)
   masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
 
   input_mask = np.ones(len(seq), dtype = np.int64)
-  if atomizer.padToken in input_ids:
-    first_pad_index = input_ids.index(atomizer.padToken)
+  if tokenizer.padToken in input_ids:
+    first_pad_index = input_ids.index(tokenizer.padToken)
     input_mask[first_pad_index:] = 0
     # Check that the pad index is likely correct.
-    assert input_ids[first_pad_index] == atomizer.padToken, "{}".format(input_ids)
-    assert input_ids[first_pad_index - 1] != atomizer.padToken
+    assert input_ids[first_pad_index] == tokenizer.padToken, "{}".format(input_ids)
+    assert input_ids[first_pad_index - 1] != tokenizer.padToken
 
   """
     Related to next_sentence_labels: Fix it to 0 for now, as no next_sentence prediction
@@ -257,13 +257,13 @@ def HoleSequence(seq: np.array,
     num_holes = len(masked_lm_positions)
     while len(masked_lm_positions) < training_opts.max_predictions_per_seq:
         masked_lm_positions.append(0)
-        masked_lm_ids.append(atomizer.padToken)
+        masked_lm_ids.append(tokenizer.padToken)
         masked_lm_weights.append(0.0)
         masked_lm_lengths.append(-1)
 
-    assert (input_ids[:len(seq)].count(atomizer.holeToken) == num_holes,
+    assert (input_ids[:len(seq)].count(tokenizer.holeToken) == num_holes,
       "Number of targets {} does not correspond to hole number in final input sequence: {}"
-      .format(num_holes, input_ids[:len(seq)].count(atomizer.holeToken))
+      .format(num_holes, input_ids[:len(seq)].count(tokenizer.holeToken))
     )
     return tfSequence(seen_in_training, seq,
                         np.asarray(input_ids[:len(seq)]), input_mask,
@@ -275,7 +275,7 @@ def HoleSequence(seq: np.array,
 def MaskSequence(seq: np.array,
                  train_set: bool,
                  max_predictions: int,
-                 pickled_atomizer,
+                 pickled_tokenizer,
                  training_opts,
                  config,
                  is_torch: bool,
@@ -288,12 +288,12 @@ def MaskSequence(seq: np.array,
     pos_index: int
     token_id: int
 
-  # Unpack atomizer
-  atomizer = pickle.loads(pickled_atomizer)
+  # Unpack tokenizer
+  tokenizer = pickle.loads(pickled_tokenizer)
 
   # Actual length represents the sequence length before pad begins
-  if atomizer.padToken in seq:
-    actual_length = np.where(seq == atomizer.padToken)[0][0]
+  if tokenizer.padToken in seq:
+    actual_length = np.where(seq == tokenizer.padToken)[0][0]
   else:
     actual_length = len(seq)
 
@@ -312,20 +312,20 @@ def MaskSequence(seq: np.array,
     if config.mask.random_placed_mask:
       # 80% of the time, replace with [MASK]
       if np.random.RandomState().random() < 0.8:
-        input_ids[pos_index] = atomizer.maskToken
+        input_ids[pos_index] = tokenizer.maskToken
       else:
         # 10% of the time, keep original
         if np.random.RandomState().random() < 0.5:
           pass
         # 10% of the time, replace with random word
         else:
-          random_token = np.random.RandomState().randint(0, atomizer.vocab_size)
-          while any(atomizer.vocab[t] == random_token for (idx, t) in atomizer.metaTokens.items()):
-            random_token = np.random.RandomState().randint(0, atomizer.vocab_size)
-          input_ids[pos_index] = np.random.RandomState().randint(0, atomizer.vocab_size)
+          random_token = np.random.RandomState().randint(0, tokenizer.vocab_size)
+          while any(tokenizer.vocab[t] == random_token for (idx, t) in tokenizer.metaTokens.items()):
+            random_token = np.random.RandomState().randint(0, tokenizer.vocab_size)
+          input_ids[pos_index] = np.random.RandomState().randint(0, tokenizer.vocab_size)
     else:
       if np.random.RandomState().random() < 0.8:
-        input_ids[pos_index] = atomizer.maskToken
+        input_ids[pos_index] = tokenizer.maskToken
 
     masked_lms.append(MaskedLmInstance(pos_index=pos_index, token_id=seq[pos_index]))
 
@@ -333,8 +333,8 @@ def MaskSequence(seq: np.array,
   masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
 
   input_mask = np.ones(len(seq), dtype = np.int64)
-  if atomizer.padToken in input_ids:
-    input_mask[input_ids.index(atomizer.padToken):] = 0
+  if tokenizer.padToken in input_ids:
+    input_mask[input_ids.index(tokenizer.padToken):] = 0
 
   ## Related to next_sentence_labels: Fix it to 0 for now, as no next_sentence prediction
   ## is intended on kernels. In any other case, check bert's create_instances_from_document
@@ -378,7 +378,7 @@ def MaskSequence(seq: np.array,
       masked_lm_lengths.append(1)
     while len(masked_lm_positions) < training_opts.max_predictions_per_seq:
         masked_lm_positions.append(0)
-        masked_lm_ids.append(atomizer.padToken)
+        masked_lm_ids.append(tokenizer.padToken)
         masked_lm_weights.append(0.0)
         masked_lm_lengths.append(-1)
 

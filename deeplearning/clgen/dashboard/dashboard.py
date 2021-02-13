@@ -16,7 +16,7 @@ from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.samplers import validation_database
 from deeplearning.clgen.samplers import samples_database
-from deeplearning.clgen.corpuses import atomizers
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.proto import model_pb2
@@ -90,14 +90,14 @@ def parseModels(workspace_path, corpus_sha: str):
   if (workspace_path / "model").exists():
     for model_sha in (workspace_path / "model").iterdir():
       model_path = workspace_path / "model" / model_sha
-      if (model_path / "atomizer").exists() and pathlib.Path(os.readlink(model_path / "atomizer")).parent.name == corpus_sha:
+      if (model_path / "tokenizer").exists() and pathlib.Path(os.readlink(model_path / "tokenizer")).parent.name == corpus_sha:
         if (model_path / "META.pbtxt").exists():
           meta = parseMeta(model_path / "META.pbtxt")
           model = {          
             'path'        : model_path,
             'sha'         : str(model_sha.name),
             'config'      : meta,
-            'atomizer'    : atomizers.TokenizerBase.FromFile(model_path / pathlib.Path(os.readlink(model_path / "atomizer"))),
+            'tokenizer'    : tokenizers.TokenizerBase.FromFile(model_path / pathlib.Path(os.readlink(model_path / "tokenizer"))),
             'training_log': parseTrainLogs(model_path / "logs"), # TODO
             'validation'  : parseValidationDB(model_path / "logs" / "validation_samples.db"),
             'samplers'    : parseSamplers(workspace_path, model_path / "samples", str(model_sha.name)), # TODO sample_db ?

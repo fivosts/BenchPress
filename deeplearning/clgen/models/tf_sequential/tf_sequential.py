@@ -149,7 +149,7 @@ class tfSequential(backends.BackendBase):
     else:
       sequence_length = self.config.training.sequence_length
       batch_size = self.config.training.batch_size
-    vocab_size = self.atomizer.vocab_size
+    vocab_size = self.tokenizer.vocab_size
 
     cells_lst = []
     for _ in range(self.config.architecture.num_layers):
@@ -495,8 +495,8 @@ class tfSequential(backends.BackendBase):
     import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
 
-    atomizer = corpus.atomizer
-    sampler.Specialize(atomizer)
+    tokenizer = corpus.tokenizer
+    sampler.Specialize(tokenizer)
     sampler.batch_size = 1
     seed = 0
 
@@ -514,7 +514,7 @@ class tfSequential(backends.BackendBase):
         # Iterate over all samples in batch to determine whether they're
         # done.
         for index in indices[0]:
-          sample_in_progress.append(atomizer.decoder[index])
+          sample_in_progress.append(tokenizer.decoder[index])
           if sampler.SampleIsComplete(sample_in_progress):
             stats.append(
               (len(sample_in_progress), int((time.time() - start_time) * 1000))

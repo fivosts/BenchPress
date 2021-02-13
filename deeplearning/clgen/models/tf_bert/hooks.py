@@ -444,7 +444,7 @@ class writeValidationDB(_tfEstimatorHooks):
   def __init__(self,
                mode,
                url,
-               atomizer,
+               tokenizer,
                seen_in_training,
                original_input,
                input_ids,
@@ -467,7 +467,7 @@ class writeValidationDB(_tfEstimatorHooks):
     """
     super(writeValidationDB, self).__init__(mode)
 
-    self.atomizer                  = atomizer
+    self.tokenizer                  = tokenizer
     self.val_db                    = validation_database.ValidationDatabase("sqlite:///{}".format(url))
     self.val_id                    = self.val_db.count
 
@@ -542,7 +542,7 @@ class writeValidationDB(_tfEstimatorHooks):
       for b in range(batch_size):
         val_trace = validation_database.BERTValFile(
           **validation_database.BERTValFile.FromArgs(
-            atomizer = self.atomizer,
+            tokenizer = self.tokenizer,
             id       = self.val_id,
             train_step                = run_values.results[self.global_step],
             seen_in_training          = run_values.results[self.seen_in_training][b],

@@ -25,7 +25,7 @@ class OnlineSamplingGenerator(object):
 
     d.data_generator = generator
     d.sampler        = d.data_generator.sampler
-    d.atomizer       = d.data_generator.atomizer
+    d.tokenizer       = d.data_generator.tokenizer
 
     d.configSamplingParams()
     d.configSampleCorpus()
@@ -40,7 +40,7 @@ class OnlineSamplingGenerator(object):
 
     # Wrapped data generator attributes
     self.sampler       = self.data_generator.sampler
-    self.atomizer      = self.data_generator.atomizer
+    self.tokenizer      = self.data_generator.tokenizer
 
     # Inherent attributes
     self.online_corpus = None
@@ -73,8 +73,8 @@ class OnlineSamplingGenerator(object):
     Configure sampling corpus container to iterate upon.
     """
     if self.sampler.isFixedStr:
-      if (self.atomizer.maskToken in self.sampler.encoded_start_text or
-          self.atomizer.holeToken in self.sampler.encoded_start_text):
+      if (self.tokenizer.maskToken in self.sampler.encoded_start_text or
+          self.tokenizer.holeToken in self.sampler.encoded_start_text):
         raise ValueError("Targets found in {} start text. This is wrong. Active sampler masks a sequence on the fly...".format(type(self).__name__))
       self.online_corpus = [self.sampler.encoded_start_text]
     else:
@@ -102,7 +102,7 @@ class OnlineSamplingGenerator(object):
                             train_set            = False,
                             max_predictions      = corpus_config.max_predictions_per_seq,
                             pickled_distribution = pickle.dumps(self.distribution),
-                            pickled_atomizer     = pickle.dumps(self.atomizer),
+                            pickled_tokenizer     = pickle.dumps(self.tokenizer),
                             training_opts        = sampling_opts,
                             is_torch             = self.data_generator.is_torch,
                           )
@@ -111,7 +111,7 @@ class OnlineSamplingGenerator(object):
                             train_set          = False,
                             max_predictions    = corpus_config.max_predictions_per_seq,
                             config             = corpus_config,
-                            pickled_atomizer   = pickle.dumps(self.atomizer),
+                            pickled_tokenizer   = pickle.dumps(self.tokenizer),
                             training_opts      = sampling_opts,
                             rngen              = self.data_generator.rngen,
                             is_torch           = self.data_generator.is_torch,

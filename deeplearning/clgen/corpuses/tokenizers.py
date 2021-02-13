@@ -12,9 +12,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
-"""This file contains the definition of atomizers.
+"""This file contains the definition of tokenizers.
 
-An atomizer converts a block of text into a sequence of vocbulary tokens.
+An tokenizer converts a block of text into a sequence of vocbulary tokens.
 """
 import pathlib
 import pickle
@@ -52,7 +52,7 @@ def FromText(config, corpus_txt: str, no_whitespace: bool):
     raise NotImplementedError
 
 class TokenizerBase(object):
-  """The base class for implementing atomizers."""
+  """The base class for implementing tokenizers."""
 
   @property
   def atoms(self) -> typing.List[str]:
@@ -66,19 +66,19 @@ class TokenizerBase(object):
 
   @classmethod
   def FromText(cls, text: str) -> "TokenizerBase":
-    """Instantiate and specialize an atomizer from a corpus text.
+    """Instantiate and specialize an tokenizer from a corpus text.
 
     Args:
       text: Text corpus
 
     Returns:
-      An atomizer instance.
+      An tokenizer instance.
     """
     raise NotImplementedError("abstract class")
 
   @classmethod
   def FromFile(cls, path: pathlib.Path) -> "TokenizerBase":
-    """Load an atomizer from file."""
+    """Load an tokenizer from file."""
     with open(path, "rb") as infile:
       return pickle.load(infile)
 
@@ -87,7 +87,7 @@ class TokenizerBase(object):
                metaTokens: typing.Dict[str, str],
                no_whitespace: bool,
                ):
-    """Instantiate an atomizer.
+    """Instantiate an tokenizer.
 
     Args:
       vocab: A dictionary of mappings from character sequences (atoms) into
@@ -121,7 +121,7 @@ class TokenizerBase(object):
     self.__dict__.update({x: self.vocab[y] for x, y in self.metaTokens.items()})
 
   def ToFile(self, path: pathlib.Path) -> None:
-    """Save an atomizer to file."""
+    """Save an tokenizer to file."""
     with open(path, "wb") as f:
       pickle.dump(self, f)
 
@@ -255,17 +255,17 @@ class TokenizerBase(object):
     return indices
 
 class AsciiCharacterTokenizer(TokenizerBase):
-  """An atomizer for character-level syntactic modelling."""
+  """An tokenizer for character-level syntactic modelling."""
 
   @classmethod
   def FromText(cls, text: str, mask_tokens: bool, no_whitespace: bool) -> "AsciiCharacterTokenizer":
-    """Instantiate and an atomizer from a corpus text.
+    """Instantiate and an tokenizer from a corpus text.
 
     Args:
       text: Text corpus.
 
     Returns:
-      An atomizer instance.
+      An tokenizer instance.
     """
     if mask_tokens:
       metaTokens = {
@@ -320,7 +320,7 @@ class AsciiCharacterTokenizer(TokenizerBase):
       raise ValueError("OoV index in string tokenizing.")
 
 class WordTokenizer(TokenizerBase):
-  """A greedy atomizer supports multi-character tokens."""
+  """A greedy tokenizer supports multi-character tokens."""
 
   @classmethod
   def FromText(cls,
@@ -330,14 +330,14 @@ class WordTokenizer(TokenizerBase):
                wordpiece: bool,
                no_whitespace: bool
                ) -> "WordTokenizer":
-    """Instantiate and an atomizer from a corpus text.
+    """Instantiate and an tokenizer from a corpus text.
 
     Args:
       text: Text corpus
       token_list: A list of multi-character token_list.
 
     Returns:
-      An atomizer instance.
+      An tokenizer instance.
     """
     if not token_list:
       raise ValueError("No tokens specified")
@@ -359,13 +359,13 @@ class WordTokenizer(TokenizerBase):
     # Add meta token_list to token set
     for mt in metaTokens.values():
       token_list.add(mt)
-    # Instantiate a greedy atomizer using the full vocabulary.
+    # Instantiate a greedy tokenizer using the full vocabulary.
     full_vocab = dict(zip(token_list, range(len(token_list))))
     c = WordTokenizer(full_vocab, metaTokens, determine_chars=True, no_whitespace = no_whitespace)
     # Derive the subset of the vocabulary required to encode the given text.
     tokens = [mt for mt in metaTokens.values()] + sorted(list(set(c.TokenizeString(text))))
     vocab_subset = dict(zip(tokens, range(len(tokens))))
-    # Return a new atomizer using the subset vocabulary.
+    # Return a new tokenizer using the subset vocabulary.
     return WordTokenizer(vocab_subset, metaTokens, no_whitespace)
 
   def __init__(self, 

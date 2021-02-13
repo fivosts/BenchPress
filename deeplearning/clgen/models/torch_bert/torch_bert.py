@@ -112,7 +112,7 @@ class torchBert(backends.BackendBase):
   def _ConfigModelParams(self, is_sampling):
     """General model hyperparameters initialization."""
     self.bertAttrs = {
-          "vocab_size"                   : self.atomizer.vocab_size,
+          "vocab_size"                   : self.tokenizer.vocab_size,
           "hidden_size"                  : self.config.architecture.hidden_size,
           "num_hidden_layers"            : self.config.architecture.num_hidden_layers,
           "num_attention_heads"          : self.config.architecture.num_attention_heads,
@@ -124,7 +124,7 @@ class torchBert(backends.BackendBase):
           "type_vocab_size"              : self.config.architecture.type_vocab_size,
           "initializer_range"            : self.config.architecture.initializer_range,
           "layer_norm_eps"               : self.config.architecture.layer_norm_eps,
-          "pad_token_id"                 : self.atomizer.padToken,
+          "pad_token_id"                 : self.tokenizer.padToken,
     }
     self.bert_config = config.BertConfig.from_dict(
       self.bertAttrs, xla_device = self.torch_tpu_available,
@@ -156,7 +156,7 @@ class torchBert(backends.BackendBase):
     self.validation_results_file          = "val_results.txt"
     self.validation_results_path          = os.path.join(str(self.logfile_path), self.validation_results_file)
 
-    m = model.BertForPreTraining(self.bert_config, atomizer = self.atomizer).to(self.pytorch.offset_device)
+    m = model.BertForPreTraining(self.bert_config, tokenizer = self.tokenizer).to(self.pytorch.offset_device)
 
     if self.pytorch.num_gpus > 1:
       m = self.torch.nn.DataParallel(m)
@@ -202,7 +202,7 @@ class torchBert(backends.BackendBase):
 
     m = model.BertForPreTraining(
         self.bert_config,
-        atomizer = self.atomizer,
+        tokenizer = self.tokenizer,
         use_categorical = FLAGS.categorical_sampling,
         temperature = self.temperature
       ).to(self.pytorch.device)
@@ -345,17 +345,17 @@ class torchBert(backends.BackendBase):
             if FLAGS.reward_compilation >= 0 and FLAGS.reward_compilation <= epoch * self.steps_per_epoch + step:
               correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'].cpu().numpy())) if step_out['compile_status'][en] == 1]
               for s in correct_samples:
-                feature_vector = extractor.DictKernelFeatures(self.atomizer.ArrayToCode(s[1]))
+                feature_vector = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(s[1]))
                 correct_sample_obs.OnSample(model_pb2.Sample(
                     train_step             = self.current_step,
-                    sample_feed            = self.atomizer.DeatomizeIndices(s[0], ignore_token = self.atomizer.padToken, beautify = True).replace("\\n", "\n"),
-                    text                   = self.atomizer.DeatomizeIndices(s[1], ignore_token = self.atomizer.padToken, beautify = True).replace("\\n", "\n"),
+                    sample_feed            = self.tokenizer.DeatomizeIndices(s[0], ignore_token = self.tokenizer.padToken, beautify = True).replace("\\n", "\n"),
+                    text                   = self.tokenizer.DeatomizeIndices(s[1], ignore_token = self.tokenizer.padToken, beautify = True).replace("\\n", "\n"),
                     encoded_text           = ",".join([str(t) for t in s[1]]),
                     sample_indices         = '',
                     encoded_sample_indices = '',
                     sample_time_ms         = int(round(exec_time_ms / self.train_batch_size)),
                     feature_vector         = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
-                    num_tokens             = len([x for x in s[1] if x != self.atomizer.padToken]),
+                    num_tokens             = len([x for x in s[1] if x != self.tokenizer.padToken]),
                     categorical_sampling   = False,
                     compile_status         = True,
                     date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
@@ -417,7 +417,7 @@ class torchBert(backends.BackendBase):
 
       val_hook = hooks.validationSampleHook(
         url = "sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")),
-        atomizer = self.atomizer,
+        tokenizer = self.tokenizer,
         batch_size = self.eval_batch_size,
         model_step = self.current_step
       )
@@ -451,7 +451,7 @@ class torchBert(backends.BackendBase):
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
     data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
-                       self.config.training, sampler, self.atomizer, seed,
+                       self.config.training, sampler, self.tokenizer, seed,
                        self.config.architecture.max_position_embeddings, self.cache.path
                      )
     self._ConfigSampleParams(data_generator, sampler)
@@ -470,7 +470,7 @@ class torchBert(backends.BackendBase):
       # For live sampling, start text must be re-instated at each iteration.
       self.sample = self.sample._replace(
         data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
-          self.config.training, sampler, self.atomizer, 0,
+          self.config.training, sampler, self.tokenizer, 0,
           self.config.architecture.max_position_embeddings, self.cache.path
         )
       )
@@ -494,8 +494,8 @@ class torchBert(backends.BackendBase):
       inputs = next(self.pred_iterator)
 
     self.step_inputs = {x: inputs[x].repeat((self.sampler.batch_size, 1)) for x in inputs}
-    self.sampler.setStartText(self.atomizer.DeatomizeIndices(inputs['input_ids'][0].cpu().numpy(), ignore_token = self.atomizer.padToken))
-    self.sampler.Specialize(self.atomizer)
+    self.sampler.setStartText(self.tokenizer.DeatomizeIndices(inputs['input_ids'][0].cpu().numpy(), ignore_token = self.tokenizer.padToken))
+    self.sampler.Specialize(self.tokenizer)
     return
 
   def SampleNextIndices(self, *unused_args, **unused_kwargs):
@@ -515,8 +515,8 @@ class torchBert(backends.BackendBase):
         for hole, indcs in zip(step_out['prediction_scores'], step_out['sample_indices']):
           plotter.LogitsStepsDistrib(
             x = self.torch.nn.Softmax(dim = 1)(self.torch.FloatTensor(hole)).numpy(),
-            atoms = [self.atomizer.DeatomizeIndices([i]) for i in range(self.atomizer.vocab_size)],
-            sample_indices = [self.atomizer.DeatomizeIndices([i]) for i in indcs[0]],
+            atoms = [self.tokenizer.DeatomizeIndices([i]) for i in range(self.tokenizer.vocab_size)],
+            sample_indices = [self.tokenizer.DeatomizeIndices([i]) for i in indcs[0]],
             title = "Sampling distribution dim 1",
             x_name = "Probs / sample step",
           )
@@ -534,11 +534,11 @@ class torchBert(backends.BackendBase):
               x: active_sample[x].repeat((self.sampler.batch_size, 1)) for x in active_sample
             }
             self.sampler.setStartText(
-              self.atomizer.DeatomizeIndices(
-                step_input['input_ids'][0].cpu().numpy(), ignore_token = self.atomizer.padToken
+              self.tokenizer.DeatomizeIndices(
+                step_input['input_ids'][0].cpu().numpy(), ignore_token = self.tokenizer.padToken
               )
             )
-            self.sampler.Specialize(self.atomizer)
+            self.sampler.Specialize(self.tokenizer)
             active_step = self.model_step(
                 self.sample.model, step_input,
             )
@@ -560,7 +560,7 @@ class torchBert(backends.BackendBase):
     else:
       sampler = test_sampler
     if sampler.isFixedStr:
-      sampler.Specialize(self.atomizer)
+      sampler.Specialize(self.tokenizer)
     observers = [sample_observers.PrintSampleObserver()]
     if FLAGS.store_samples_db:
       observers.append(sample_observers.SamplesDatabaseObserver(

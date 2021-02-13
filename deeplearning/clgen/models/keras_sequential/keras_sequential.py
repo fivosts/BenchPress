@@ -79,7 +79,7 @@ class kerasSequential(backends.BackendBase):
     """
     del unused_kwargs
 
-    model = builders.BuildKerasModel(self.config, self.atomizer.vocab_size)
+    model = builders.BuildKerasModel(self.config, self.tokenizer.vocab_size)
     with open(self.cache.keypath("model.yaml"), "w") as f:
       f.write(model.to_yaml())
     model.compile(
@@ -92,7 +92,7 @@ class kerasSequential(backends.BackendBase):
     model.summary(print_fn=lambda x: buf.write(x + "\n"))
     l.getLogger().info("Model summary:\n{}".format(buf.getvalue()))
 
-    # TODO(cec): Add an atomizer.CreateVocabularyFile() method, with frequency
+    # TODO(cec): Add an tokenizer.CreateVocabularyFile() method, with frequency
     # counts for a given corpus.
     def Escape(token: str) -> str:
       """Make a token visible and printable."""
@@ -108,7 +108,7 @@ class kerasSequential(backends.BackendBase):
     if not (self.cache.path / "embeddings" / "metadata.tsv").is_file():
       with open(self.cache.path / "embeddings" / "metadata.tsv", "w") as f:
         for _, token in sorted(
-          self.atomizer.decoder.items(), key=lambda x: x[0]
+          self.tokenizer.decoder.items(), key=lambda x: x[0]
         ):
           f.write(Escape(token) + "\n")
 

@@ -144,7 +144,7 @@ class MaskLMDataGenerator(object):
 
     self.dataset                 = None
     self.corpus                  = None
-    self.atomizer                = None
+    self.tokenizer                = None
     self.config                  = None
     self.cache                   = None
 
@@ -169,7 +169,7 @@ class MaskLMDataGenerator(object):
 
     self.dataset       = {}
     self.corpus        = corpus
-    self.atomizer      = corpus.atomizer
+    self.tokenizer      = corpus.tokenizer
     self.config        = training_opts.data_generator
     self.training_opts = training_opts
     self.rngen         = random.Random(training_opts.random_seed)
@@ -181,7 +181,7 @@ class MaskLMDataGenerator(object):
   def SampleMaskLMBatchGenerator(self,
                                  model_opts,
                                  sampler,
-                                 atomizer,
+                                 tokenizer,
                                  seed: int,
                                  max_position_embeddings: int,
                                  cache_path: pathlib.Path,
@@ -192,7 +192,7 @@ class MaskLMDataGenerator(object):
 
     self.dataset                 = {}
     self.sampler                 = sampler
-    self.atomizer                = atomizer
+    self.tokenizer                = tokenizer
     self.config                  = model_opts.data_generator
     self.rngen                   = random.Random(seed)
     self.max_position_embeddings = max_position_embeddings
@@ -374,9 +374,9 @@ class MaskLMDataGenerator(object):
     batch_size      = self.training_opts.batch_size
     dupe_factor     = self.training_opts.dupe_factor
     shuffle         = self.training_opts.shuffle_corpus_contentfiles_between_epochs
-    pad             = [self.atomizer.padToken   ]
-    start           = [self.atomizer.startToken ]
-    end             = [self.atomizer.endToken   ]
+    pad             = [self.tokenizer.padToken   ]
+    start           = [self.tokenizer.startToken ]
+    end             = [self.tokenizer.endToken   ]
     shaped_corpus   = None
 
     if (path / "corpus.pkl").exists():
@@ -396,9 +396,9 @@ class MaskLMDataGenerator(object):
     if (path / "text_corpus.pkl").exists():
       # Only sampler writes a text_corpus.pkl, to do online or active sampling.
       # The reason is, corpus is saved in text format, to be picked up with the
-      # right atomizer. And that is the model's atomizer.
+      # right tokenizer. And that is the model's tokenizer.
       with open(path / "text_corpus.pkl", 'rb') as infile:
-        encoded_corpus = [self.atomizer.AtomizeString(x) for x in pickle.load(infile)]
+        encoded_corpus = [self.tokenizer.AtomizeString(x) for x in pickle.load(infile)]
     else:
       encoded_corpus  = self.corpus.GetTrainingData()
 
@@ -538,7 +538,7 @@ class MaskLMDataGenerator(object):
                           train_set            = train_set,
                           max_predictions      = max_predictions,
                           pickled_distribution = pickle.dumps(distribution),
-                          pickled_atomizer     = pickle.dumps(self.atomizer),
+                          pickled_tokenizer     = pickle.dumps(self.tokenizer),
                           training_opts        = self.training_opts,
                           is_torch             = self.is_torch,
                           ),
@@ -550,7 +550,7 @@ class MaskLMDataGenerator(object):
                           train_set          = train_set,
                           max_predictions    = max_predictions,
                           config             = config,
-                          pickled_atomizer   = pickle.dumps(self.atomizer),
+                          pickled_tokenizer   = pickle.dumps(self.tokenizer),
                           training_opts      = self.training_opts,
                           is_torch           = self.is_torch,
                           ),
@@ -603,16 +603,16 @@ class MaskLMDataGenerator(object):
 
             try:
               if self.is_torch:
-                actual_length = np.where(kernel['original_input'] == self.atomizer.padToken)[0][0]
+                actual_length = np.where(kernel['original_input'] == self.tokenizer.padToken)[0][0]
               else:
-                actual_length = np.where(kernel.original_input == self.atomizer.padToken)[0][0]
+                actual_length = np.where(kernel.original_input == self.tokenizer.padToken)[0][0]
             except IndexError:
               actual_length = len(kernel['original_input'])
 
             actual_length_monitor.register(actual_length)
             token_monitor.register([
-              self.atomizer.DeatomizeIndices([int(x)])
-              for x in kernel['input_ids'] if x != self.atomizer.padToken]
+              self.tokenizer.DeatomizeIndices([int(x)])
+              for x in kernel['input_ids'] if x != self.tokenizer.padToken]
             )
             for hole in masked_idxs:
               hole_idx = hole.pos_index
@@ -641,10 +641,10 @@ class MaskLMDataGenerator(object):
                 s.add(
                   lm_database.LMInstance(**lm_database.LMInstance.FromArgs(
                     id = count + idx,
-                    original_input = self.atomizer.DeatomizeIndices(kernel['original_input'], ignore_token = self.atomizer.padToken, beautify = True),
-                    input_ids = self.atomizer.DeatomizeIndices(kernel['input_ids'],           ignore_token = self.atomizer.padToken, beautify = True),
+                    original_input = self.tokenizer.DeatomizeIndices(kernel['original_input'], ignore_token = self.tokenizer.padToken, beautify = True),
+                    input_ids = self.tokenizer.DeatomizeIndices(kernel['input_ids'],           ignore_token = self.tokenizer.padToken, beautify = True),
                     masked_lm_lengths = kernel['masked_lm_lengths'],
-                    masked_lm_predictions = [self.atomizer.DeatomizeIndices([x]) for x in kernel['mask_labels'] if x != -100],
+                    masked_lm_predictions = [self.tokenizer.DeatomizeIndices([x]) for x in kernel['mask_labels'] if x != -100],
                   ))
                 )
           # write masked_corpus before flushing the list
@@ -720,7 +720,7 @@ class MaskLMDataGenerator(object):
       padded sequence in np.array format
     """
     return np.concatenate([input_sample, 
-                          np.array([self.atomizer.padToken] * 
+                          np.array([self.tokenizer.padToken] * 
                               (self.max_position_embeddings - len(input_sample)), dtype = np.int64)
                           ])
 
@@ -735,10 +735,10 @@ class MaskLMDataGenerator(object):
       [START] + input_sequence + [END]
     """
     assert len(inp) != 0, "Empty list provided."
-    assert self.atomizer.padToken not in inp, "Use this function before padding a sequence!"
+    assert self.tokenizer.padToken not in inp, "Use this function before padding a sequence!"
 
-    start = [self.atomizer.startToken] if inp[0]  != self.atomizer.startToken else []
-    end   = [self.atomizer.endToken  ] if inp[-1] != self.atomizer.endToken   else []
+    start = [self.tokenizer.startToken] if inp[0]  != self.tokenizer.startToken else []
+    end   = [self.tokenizer.endToken  ] if inp[-1] != self.tokenizer.endToken   else []
     if isinstance(inp, list):
       return start + inp + end
     elif isinstance(inp, np.ndarray):

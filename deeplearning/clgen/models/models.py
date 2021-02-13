@@ -29,7 +29,7 @@ from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.features import extractor
-from deeplearning.clgen.corpuses import atomizers
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.models import builders
@@ -115,11 +115,11 @@ class Model(object):
         symlink,
       )
 
-    # Create symlink to the atomizer.
-    symlink = self.cache.path / "atomizer"
+    # Create symlink to the tokenizer.
+    symlink = self.cache.path / "tokenizer"
     if not symlink.is_symlink():
       os.symlink(
-        os.path.relpath(self.corpus.atomizer_path, self.cache.path), symlink
+        os.path.relpath(self.corpus.tokenizer_path, self.cache.path), symlink
       )
 
     # Validate metadata against cache.
@@ -207,7 +207,7 @@ class Model(object):
       return False
     self._created = True
     self.corpus.Create()
-    self.backend.Create(atomizer = self.corpus.atomizer)
+    self.backend.Create(tokenizer = self.corpus.tokenizer)
 
     # Add entry to dashboard database
     with self.dashboard_db.Session(commit=True) as session:
@@ -301,9 +301,9 @@ class Model(object):
     sample_start_time = datetime.datetime.utcnow()    
 
     (self.cache.path / "samples" / sampler.hash).mkdir(exist_ok = True)
-    atomizer = self.corpus.atomizer
+    tokenizer = self.corpus.tokenizer
     if sampler.isFixedStr:
-      sampler.Specialize(atomizer)
+      sampler.Specialize(tokenizer)
     elif sampler.is_live:
       start_text = [str(input("Live Feed: "))]
       while True:
@@ -312,14 +312,14 @@ class Model(object):
         except EOFError:
           break
       sampler.start_text = '\n'.join(start_text)
-      sampler.Specialize(atomizer)
+      sampler.Specialize(tokenizer)
 
     self.backend.InitSampling(sampler, seed)
     [obs.Specialize(self, sampler) for obs in sample_observers]
 
     batch_count = 0
     try:
-      while self._SampleBatch(sampler, atomizer, sample_observers, epoch):
+      while self._SampleBatch(sampler, tokenizer, sample_observers, epoch):
         batch_count += 1
         if sampler.is_live:
           start_text = [str(input("Live Feed: "))]
@@ -329,7 +329,7 @@ class Model(object):
             except EOFError:
               break
           sampler.start_text = '\n'.join(start_text)
-          sampler.Specialize(atomizer)
+          sampler.Specialize(tokenizer)
     except KeyboardInterrupt:
       l.getLogger().info("Wrapping up sampling...")
 
@@ -347,7 +347,7 @@ class Model(object):
   def _SampleBatch(
     self,
     sampler: samplers.Sampler,
-    atomizer: atomizers.TokenizerBase,
+    tokenizer: tokenizers.TokenizerBase,
     sample_observers: typing.List[sample_observers_lib.SampleObserver],
     epoch: int,
   ) -> bool:
@@ -388,11 +388,11 @@ class Model(object):
         for index in indices[i]:
           ## Legacy operation for sequential returning single token
           if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert):
-            samples_in_progress[i] = [atomizer.decoder[x] for x in indices[i]]
-            step_ind               = '\n'.join([self.atomizer.DeatomizeIndices(mind).replace('\n', '\\n') for mind in step_indices[i]])
+            samples_in_progress[i] = [tokenizer.decoder[x] for x in indices[i]]
+            step_ind               = '\n'.join([self.tokenizer.DeatomizeIndices(mind).replace('\n', '\\n') for mind in step_indices[i]])
             encoded_step_indices   = '\n'.join([','.join([str(x) for x in mind]) for mind in step_indices[i]])
           elif isinstance(self.backend, tf_sequential.tfSequential) or isinstance(self.backend, keras_sequential.kerasSequential):
-            samples_in_progress[i].append(atomizer.decoder[index])
+            samples_in_progress[i].append(tokenizer.decoder[index])
             step_ind             = ""
             encoded_step_indices = ""
           else:
@@ -402,12 +402,12 @@ class Model(object):
             end_time      = datetime.datetime.utcnow()
             done[i]       = 1
 
-            sample_kernel = [x for x in samples_in_progress[i] if 'padToken' not in atomizer.metaTokens or x != atomizer.metaTokens['padToken']]
+            sample_kernel = [x for x in samples_in_progress[i] if 'padToken' not in tokenizer.metaTokens or x != tokenizer.metaTokens['padToken']]
             num_tokens    = len(samples_in_progress[i])
-            if 'padToken' in atomizer.metaTokens and atomizer.metaTokens['padToken'] in samples_in_progress[i]:
-              num_tokens = samples_in_progress[i].index(atomizer.metaTokens['padToken'])
+            if 'padToken' in tokenizer.metaTokens and tokenizer.metaTokens['padToken'] in samples_in_progress[i]:
+              num_tokens = samples_in_progress[i].index(tokenizer.metaTokens['padToken'])
 
-            src = self.atomizer.StringArrToCode(sample_kernel)
+            src = self.tokenizer.StringArrToCode(sample_kernel)
             feature_vector = extractor.DictKernelFeatures(src)
             try:
               stdout = opencl.Compile(src)
@@ -417,11 +417,11 @@ class Model(object):
 
             sample = model_pb2.Sample(
               train_step                = epoch,
-              text                      = "".join(sample_kernel) if not self.atomizer.no_whitespace else opencl.ClangFormat(" ".join(sample_kernel)),
+              text                      = "".join(sample_kernel) if not self.tokenizer.no_whitespace else opencl.ClangFormat(" ".join(sample_kernel)),
               sample_indices            = step_ind,
               encoded_sample_indices    = encoded_step_indices,
-              sample_feed               = self.atomizer.DeatomizeIndices(sampler.encoded_start_text, beautify = True),
-              encoded_text              = ",".join([str(atomizer.vocab[x]) for x in sample_kernel]),
+              sample_feed               = self.tokenizer.DeatomizeIndices(sampler.encoded_start_text, beautify = True),
+              encoded_text              = ",".join([str(tokenizer.vocab[x]) for x in sample_kernel]),
               sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               wall_time_ms              = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
@@ -463,13 +463,13 @@ class Model(object):
       A list of absolute paths.
     """
     return sorted(
-      [self.cache.path / "atomizer", self.cache.path / "META.pbtxt",]
+      [self.cache.path / "tokenizer", self.cache.path / "META.pbtxt",]
       + self.backend.InferenceManifest()
     )
 
   @property
-  def atomizer(self) -> atomizers.TokenizerBase:
-    return self.corpus.atomizer
+  def tokenizer(self) -> tokenizers.TokenizerBase:
+    return self.corpus.tokenizer
 
   @property
   def is_trained(self) -> bool:

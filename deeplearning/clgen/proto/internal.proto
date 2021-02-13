@@ -86,7 +86,7 @@ message EncoderWorker {
   optional int64 id = 1;
   optional string text = 3;
   optional string contentfile_separator = 4;
-  optional bytes pickled_atomizer = 5;
+  optional bytes pickled_tokenizer = 5;
 }
 
 message JavaRewriterJob {

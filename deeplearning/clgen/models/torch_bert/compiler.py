@@ -3,7 +3,7 @@ import typing
 import concurrent.futures
 
 from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.corpuses import atomizers
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 
@@ -20,11 +20,11 @@ class CompilationSampler(object):
   compilation status.
   """
   def __init__(self,
-               atomizer        : atomizers.TokenizerBase,
+               tokenizer        : tokenizers.TokenizerBase,
                use_categorical : bool,
                temperature     : float,
                ):
-    self.atomizer        = atomizer
+    self.tokenizer        = tokenizer
     self.temperature     = temperature
     self.use_categorical = use_categorical
     if self.use_categorical:
@@ -42,7 +42,7 @@ class CompilationSampler(object):
                            ) -> int:
     """Sends a filled sequence to the compiler"""
     try:
-      stdout = opencl.Compile(self.atomizer.ArrayToCode(sample))
+      stdout = opencl.Compile(self.tokenizer.ArrayToCode(sample))
       return 1
     except ValueError:
       return 0
@@ -125,19 +125,19 @@ class CompilationSampler(object):
     Specifically optimized for training; does not compute sample indices for speed-up.
     """
     seq_length    = tuple(seq.shape)[0]
-    allowed_incr = (seq_length - int(torch.where(seq==self.atomizer.padToken)[0][0])
-                    if self.atomizer.padToken in seq
+    allowed_incr = (seq_length - int(torch.where(seq==self.tokenizer.padToken)[0][0])
+                    if self.tokenizer.padToken in seq
                     else 0)
 
-    endTokens   = self.atomizer.metaTokenValues
+    endTokens   = self.tokenizer.metaTokenValues
     closed_hole = np.zeros(seq_length, dtype=np.bool)
     new_hole = np.zeros(seq_length, dtype=np.bool)
     temp_seq = seq.cpu().detach().numpy().copy()
 
-    for target_idx in torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0]:
+    for target_idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]:
       idx        = int(target_idx)
       prediction = int(self.argmax(prediction_scores[target_idx]))
-      is_hole = temp_seq[idx] == self.atomizer.holeToken
+      is_hole = temp_seq[idx] == self.tokenizer.holeToken
 
       if prediction in endTokens:
         # Model predicted sth that will close the hole.
@@ -151,7 +151,7 @@ class CompilationSampler(object):
         # if this was a hole and we have more empty space, reinsert the hole
         new_hole[idx] = True
 
-    new_seq = np.full(seq_length, self.atomizer.padToken, dtype=np.int64)
+    new_seq = np.full(seq_length, self.tokenizer.padToken, dtype=np.int64)
     new_idx = 0
     for idx, t in enumerate(temp_seq):
       if closed_hole[idx]:
@@ -159,22 +159,22 @@ class CompilationSampler(object):
       try:
         new_seq[new_idx] = t
       except IndexError:
-        l.getLogger().info("seq: {}".format(self.atomizer.DeatomizeIndices([x for x in seq.cpu().numpy()])))
-        l.getLogger().info("temp_seq {}".format(self.atomizer.DeatomizeIndices([x for x in temp_seq])))
-        l.getLogger().info("pred idx: {}".format(torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0]))
-        l.getLogger().info("pred_toks {}".format(self.atomizer.DeatomizeIndices([int(self.argmax(prediction_scores[idx])) for idx in torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0]])))
+        l.getLogger().info("seq: {}".format(self.tokenizer.DeatomizeIndices([x for x in seq.cpu().numpy()])))
+        l.getLogger().info("temp_seq {}".format(self.tokenizer.DeatomizeIndices([x for x in temp_seq])))
+        l.getLogger().info("pred idx: {}".format(torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]))
+        l.getLogger().info("pred_toks {}".format(self.tokenizer.DeatomizeIndices([int(self.argmax(prediction_scores[idx])) for idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]])))
         l.getLogger().info("allowed_incr: {}".format(allowed_incr))
         l.getLogger().info("new_hole: {}".format(new_hole))
         l.getLogger().info("closed_hole: {}".format(closed_hole))
       new_idx += 1
       if new_hole[idx]:
         try:
-          new_seq[new_idx] = self.atomizer.holeToken
+          new_seq[new_idx] = self.tokenizer.holeToken
         except IndexError:
-          l.getLogger().warn("seq: {}".format(self.atomizer.DeatomizeIndices([x for x in seq.cpu().numpy()])))
-          l.getLogger().warn("temp_seq {}".format(self.atomizer.DeatomizeIndices([x for x in temp_seq])))
-          l.getLogger().warn("pred idx: {}".format(torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0]))
-          l.getLogger().warn("pred_toks {}".format(self.atomizer.DeatomizeIndices([int(self.argmax(prediction_scores[idx])) for idx in torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0]])))
+          l.getLogger().warn("seq: {}".format(self.tokenizer.DeatomizeIndices([x for x in seq.cpu().numpy()])))
+          l.getLogger().warn("temp_seq {}".format(self.tokenizer.DeatomizeIndices([x for x in temp_seq])))
+          l.getLogger().warn("pred idx: {}".format(torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]))
+          l.getLogger().warn("pred_toks {}".format(self.tokenizer.DeatomizeIndices([int(self.argmax(prediction_scores[idx])) for idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]])))
           l.getLogger().warn("allowed_incr: {}".format(allowed_incr))
           l.getLogger().warn("new_hole: {}".format(new_hole))
           l.getLogger().warn("closed_hole: {}".format(closed_hole))
@@ -183,7 +183,7 @@ class CompilationSampler(object):
         break
 
     new_seq = torch.LongTensor([new_seq])
-    attention_mask = (new_seq != self.atomizer.padToken)
+    attention_mask = (new_seq != self.tokenizer.padToken)
     return np.any(new_hole), new_seq, attention_mask
 
   def generateSampleBatch(self,
@@ -235,7 +235,7 @@ class CompilationSampler(object):
     """
     sample_indices = [
       [] for _ in range(
-        len(torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0])
+        len(torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0])
       )
     ]
     scores_history = []
@@ -273,21 +273,21 @@ class CompilationSampler(object):
     """
     step_indices  = []
     seq_length    = tuple(seq.shape)[0]
-    allowed_incr  = (seq_length - int(torch.where(seq==self.atomizer.padToken)[0][0])
-                     if self.atomizer.padToken in seq
+    allowed_incr  = (seq_length - int(torch.where(seq==self.tokenizer.padToken)[0][0])
+                     if self.tokenizer.padToken in seq
                      else 0)
 
-    endTokens = self.atomizer.metaTokenValues
+    endTokens = self.tokenizer.metaTokenValues
     closed_hole = np.zeros(seq_length, dtype=np.bool)
     new_hole = np.zeros(seq_length, dtype=np.bool)
     temp_seq = seq.cpu().detach().numpy().copy()
 
-    for target_idx in torch.where((seq == self.atomizer.holeToken) | (seq == self.atomizer.maskToken))[0]:
+    for target_idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]:
       idx        = int(target_idx)
       scores_history.append(prediction_scores[target_idx].numpy())
       prediction = int(self.argmax(prediction_scores[target_idx]))
       step_indices.append([prediction])
-      is_hole = temp_seq[idx] == self.atomizer.holeToken
+      is_hole = temp_seq[idx] == self.tokenizer.holeToken
 
       if prediction in endTokens:
         # Model predicted sth that will close the hole.
@@ -301,9 +301,9 @@ class CompilationSampler(object):
         # if this was a hole and we have more empty space, reinsert the hole
         new_hole[idx] = True
       else:
-        step_indices[-1].append(self.atomizer.endholeToken)
+        step_indices[-1].append(self.tokenizer.endholeToken)
 
-    new_seq = np.full(seq_length, self.atomizer.padToken, dtype=np.int64)
+    new_seq = np.full(seq_length, self.tokenizer.padToken, dtype=np.int64)
     new_idx = 0
     for idx, t in enumerate(temp_seq):
       if closed_hole[idx]:
@@ -311,13 +311,13 @@ class CompilationSampler(object):
       new_seq[new_idx] = t
       new_idx += 1
       if new_hole[idx]:
-        new_seq[new_idx] = self.atomizer.holeToken
+        new_seq[new_idx] = self.tokenizer.holeToken
         new_idx += 1
       if new_idx >= seq_length:
         break
 
     new_seq = torch.LongTensor([new_seq])
-    attention_mask = (new_seq != self.atomizer.padToken)
+    attention_mask = (new_seq != self.tokenizer.padToken)
 
     # Update sample indices
     t_idx = 0

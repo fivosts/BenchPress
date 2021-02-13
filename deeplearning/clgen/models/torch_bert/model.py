@@ -710,7 +710,7 @@ class BertModel(BertPreTrainedModel):
     # )
 
 class BertForPreTraining(BertPreTrainedModel):
-  def __init__(self, config, atomizer = None, use_categorical = False, temperature = None):
+  def __init__(self, config, tokenizer = None, use_categorical = False, temperature = None):
     super().__init__(config)
 
     self.bert = BertModel(config)
@@ -718,7 +718,7 @@ class BertForPreTraining(BertPreTrainedModel):
 
     if self.config.reward_compilation >= 0 or self.config.is_sampling:
       self.compile_sampler = compiler.CompilationSampler(
-        atomizer, use_categorical, temperature
+        tokenizer, use_categorical, temperature
       )
     else:
       self.compile_sampler = None

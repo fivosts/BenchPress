@@ -42,14 +42,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
   def SampleMaskLMBatchGenerator(cls,
                                  model_opts,
                                  sampler,
-                                 atomizer,
+                                 tokenizer,
                                  seed: int,
                                  max_position_embeddings: int,
                                  cache_path,
                                  ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
     d = super(torchLMDataGenerator, torchLMDataGenerator()).SampleMaskLMBatchGenerator(
-              model_opts, sampler, atomizer, seed, max_position_embeddings, cache_path
+              model_opts, sampler, tokenizer, seed, max_position_embeddings, cache_path
         )
     if sampler.is_active:
       return active_generator.ActiveSamplingGenerator.FromDataGenerator(d)
@@ -107,9 +107,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     """
     if self.sampler.isFixedStr or self.sampler.is_live:
       input_sample = self.sampler.encoded_start_text
-      target_idx   = np.where(np.in1d(input_sample, [self.atomizer.maskToken, self.atomizer.holeToken]))[0]
-      num_targets  = (np.count_nonzero(input_sample == self.atomizer.maskToken) + 
-                     np.count_nonzero(input_sample == self.atomizer.holeToken))
+      target_idx   = np.where(np.in1d(input_sample, [self.tokenizer.maskToken, self.tokenizer.holeToken]))[0]
+      num_targets  = (np.count_nonzero(input_sample == self.tokenizer.maskToken) + 
+                     np.count_nonzero(input_sample == self.tokenizer.holeToken))
 
       assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
       assert len(target_idx)       != 0, "No target prediction in sample text"
@@ -182,8 +182,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         for instance in masked_corpus['corpus']:
           file_writer.write("'seen_in_training': {}\n'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'position_ids': {}\n'mask_labels': {}\n'masked_lm_lengths': {}\n'next_sentence_labels': {}\n\n"
                               .format((True if instance['seen_in_training'] == 1 else False),
-                                      self.atomizer.DeatomizeIndices(instance['original_input'], ignore_token = self.atomizer.padToken, beautify = True),
-                                      self.atomizer.DeatomizeIndices(instance['input_ids'],      ignore_token = self.atomizer.padToken, beautify = True),
+                                      self.tokenizer.DeatomizeIndices(instance['original_input'], ignore_token = self.tokenizer.padToken, beautify = True),
+                                      self.tokenizer.DeatomizeIndices(instance['input_ids'],      ignore_token = self.tokenizer.padToken, beautify = True),
                                       instance['input_mask'],
                                       instance['position_ids'],
                                       instance['mask_labels'],

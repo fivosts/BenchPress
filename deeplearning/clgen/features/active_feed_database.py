@@ -64,7 +64,7 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
 
   @classmethod
   def FromArgs(cls,
-               atomizer,
+               tokenizer,
                id               : int,
                input_feed       : str,
                input_features   : typing.Dict[str, float],
@@ -77,13 +77,13 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
                generation_id    : int,
                ) -> typing.TypeVar("ActiveFeed"):
     """Construt ActiveFeed table entry from argumentns."""
-    str_input_feed       = atomizer.DeatomizeIndices(input_feed,       ignore_token = atomizer.padToken, beautify = True)
-    str_masked_input_ids = atomizer.DeatomizeIndices(masked_input_ids, ignore_token = atomizer.padToken, beautify = True)
-    str_sample           = atomizer.DeatomizeIndices(sample,           ignore_token = atomizer.padToken, beautify = True)
+    str_input_feed       = tokenizer.DeatomizeIndices(input_feed,       ignore_token = tokenizer.padToken, beautify = True)
+    str_masked_input_ids = tokenizer.DeatomizeIndices(masked_input_ids, ignore_token = tokenizer.padToken, beautify = True)
+    str_sample           = tokenizer.DeatomizeIndices(sample,           ignore_token = tokenizer.padToken, beautify = True)
 
     num_tokens = len(sample)
-    if atomizer.padToken in sample:
-      num_tokens = np.where(sample == atomizer.padToken)[0][0]
+    if tokenizer.padToken in sample:
+      num_tokens = np.where(sample == tokenizer.padToken)[0][0]
 
     return ActiveFeed(
       id               = id,

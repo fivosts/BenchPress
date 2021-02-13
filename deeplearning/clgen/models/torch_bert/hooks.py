@@ -138,12 +138,12 @@ class validationSampleHook(object):
 
   def __init__(self,
                url,
-               atomizer,
+               tokenizer,
                batch_size,
                model_step,
                ):
 
-    self.atomizer   = atomizer
+    self.tokenizer   = tokenizer
     self.val_db     = validation_database.ValidationDatabase(url)
     self.val_id     = self.val_db.count
     self.batch_size = batch_size
@@ -190,7 +190,7 @@ class validationSampleHook(object):
       for b in range(self.batch_size):
         val_trace = validation_database.BERTValFile(
           **validation_database.BERTValFile.FromArgs(
-            atomizer = self.atomizer,
+            tokenizer = self.tokenizer,
             id       = self.val_id,
             train_step                = self.model_step,
             seen_in_training          = seen_in_training[b],

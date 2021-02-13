@@ -27,7 +27,7 @@ from sqlalchemy.ext import declarative
 from sqlalchemy.sql import func
 
 
-from deeplearning.clgen.corpuses import atomizers
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.util import monitors
@@ -108,21 +108,21 @@ class EncodedContentFile(Base):
   def FromPreprocessed(
     cls,
     preprocessed_cf: preprocessed.PreprocessedContentFile,
-    atomizer: atomizers.TokenizerBase,
+    tokenizer: tokenizers.TokenizerBase,
     eof: str,
   ) -> "EncodedContentFile":
     """Instantiate an EncodedContentFile from a preprocessed file.
 
     Args:
       preprocessed_cf: A PreprocessedContentFile instance.
-      atomizer: The atomizer to encode using.
+      tokenizer: The tokenizer to encode using.
       eof: An end-of-file marker which is concatenated to the encoded sequence.
 
     Returns:
       An EncodedContentFile instance.
     """
     start_time = time.time()
-    data = atomizer.AtomizeString(preprocessed_cf.text)
+    data = tokenizer.AtomizeString(preprocessed_cf.text)
     ####
     # TODO kernel analytics
     # encoded_length = len(data)
@@ -137,7 +137,7 @@ class EncodedContentFile(Base):
       # and 'ab', then a content file 'a' with EOF marker 'b' would be encoded
       # as 'ab', instead of 'a'+'b'.
       data = cls.NumpyArrayToDataString(
-        np.concatenate((data, atomizer.AtomizeString(eof)))
+        np.concatenate((data, tokenizer.AtomizeString(eof)))
       ),
       tokencount       = len(data),
       feature_vector   = feature_vector,
@@ -151,14 +151,14 @@ def EncoderWorker(
   job: internal_pb2.EncoderWorker,
 ) -> typing.Optional[EncodedContentFile]:
   """Encode a single content file."""
-  # TODO(cec): There is a bug in the atomizer creation logic such that the
-  # derived atomizer is not always capable of encoding the preprocessed files.
+  # TODO(cec): There is a bug in the tokenizer creation logic such that the
+  # derived tokenizer is not always capable of encoding the preprocessed files.
   # Once this has been fixed, there is no need to catch the VocabError here,
   # and EncoderWorker can always return an EncodedContentFile instance.
   try:
     return EncodedContentFile.FromPreprocessed(
       preprocessed.PreprocessedContentFile(id=job.id, text=job.text),
-      pickle.loads(job.pickled_atomizer),
+      pickle.loads(job.pickled_tokenizer),
       job.contentfile_separator,
     )
   except ValueError:
@@ -178,14 +178,14 @@ class EncodedContentFiles(sqlutil.Database):
   def Create(
     self,
     p: preprocessed.PreprocessedContentFiles,
-    atomizer: atomizers.TokenizerBase,
+    tokenizer: tokenizers.TokenizerBase,
     contentfile_separator: str,
   ) -> bool:
     """Populate the encoded contentfiles database.
 
     Args:
       p: A PreprocessedContentFiles database.
-      atomizer: An TokenizerBase instance.
+      tokenizer: An TokenizerBase instance.
       contentfile_separator: The contentfile separator.
 
     Returns:
@@ -197,7 +197,7 @@ class EncodedContentFiles(sqlutil.Database):
     """
     with self.Session() as session:
       if not self.IsDone(session):
-        self.Import(session, p, atomizer, contentfile_separator)
+        self.Import(session, p, tokenizer, contentfile_separator)
         self.SetStats(session)
         self.SetDone(session)
         session.commit()
@@ -273,7 +273,7 @@ class EncodedContentFiles(sqlutil.Database):
     self,
     session: sqlutil.Session,
     preprocessed_db: preprocessed.PreprocessedContentFiles,
-    atomizer: atomizers.TokenizerBase,
+    tokenizer: tokenizers.TokenizerBase,
     contentfile_separator: str,
   ) -> None:
     with preprocessed_db.Session() as p_session:
@@ -288,7 +288,7 @@ class EncodedContentFiles(sqlutil.Database):
           id=x.id,
           text=x.text,
           contentfile_separator=contentfile_separator,
-          pickled_atomizer=pickle.dumps(atomizer),
+          pickled_tokenizer=pickle.dumps(tokenizer),
         )
         for x in query
       ]
@@ -315,14 +315,14 @@ class EncodedContentFiles(sqlutil.Database):
         for encoded_cf in bar(pool.imap_unordered(EncoderWorker, jobs)):
           wall_time_end = time.time()
           # TODO(cec): Remove the if check once EncoderWorker no longer returns
-          # None on atomizer encode error.
+          # None on tokenizer encode error.
           if encoded_cf:
             encoded_cf.wall_time_ms = int(
               (wall_time_end - wall_time_start) * 1000
             )
             session.add(encoded_cf)
             self.length_monitor.register(encoded_cf.tokencount)
-            self.token_monitor.register([atomizer.DeatomizeIndices([int(x)]) for x in encoded_cf.data.split('.')])
+            self.token_monitor.register([tokenizer.DeatomizeIndices([int(x)]) for x in encoded_cf.data.split('.')])
 
             dict_features = extractor.StrToDictFeatures(encoded_cf.feature_vector)
             if dict_features:

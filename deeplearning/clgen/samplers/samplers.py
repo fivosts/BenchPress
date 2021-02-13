@@ -28,7 +28,7 @@ from sqlalchemy.ext import declarative
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import crypto
-from deeplearning.clgen.corpuses import atomizers
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
@@ -132,7 +132,7 @@ class TerminationCriterionBase(object):
   and returns whether to stop sampling.
   """
 
-  def Specialize(self, atomizer: atomizers.TokenizerBase) -> None:
+  def Specialize(self, tokenizer: tokenizers.TokenizerBase) -> None:
     """Specialize a termination criteria to a vocabulary.
 
     This enables the termination criteria to set state specialized to a specific
@@ -141,7 +141,7 @@ class TerminationCriterionBase(object):
     arguments to SampleIsComplete() is from this vocabulary.
 
     Args:
-      atomizer: An atomizer to specialize to.
+      tokenizer: An tokenizer to specialize to.
     """
     pass
 
@@ -206,7 +206,7 @@ class SymmetricalTokenDepthCriterion(TerminationCriterionBase):
     if self.left_token == self.right_token:
       raise ValueError("SymmetricalTokenDepth tokens must be different")
 
-  def Specialize(self, atomizer: atomizers.TokenizerBase) -> None:
+  def Specialize(self, tokenizer: tokenizers.TokenizerBase) -> None:
     """Specialize a termination criteria to a vocabulary.
 
     This enables the termination criteria to set state specialized to a specific
@@ -215,15 +215,15 @@ class SymmetricalTokenDepthCriterion(TerminationCriterionBase):
     arguments to SampleIsComplete() is from this vocabulary.
 
     Args:
-      atomizer: An atomizer to specialize to.
+      tokenizer: An tokenizer to specialize to.
 
     Raises:
       InvalidSymtokTokens: If the depth tokens can't be encoded, or they encode
         to more than one token.
     """
     try:
-      left = atomizer.AtomizeString(self.left_token)
-      right = atomizer.AtomizeString(self.right_token)
+      left = tokenizer.AtomizeString(self.left_token)
+      right = tokenizer.AtomizeString(self.right_token)
       if len(left) > 1 or len(right) > 1:
         raise ValueError(
           "Sampler symmetrical depth tokens do not encode to a single "
@@ -365,9 +365,9 @@ class Sampler(object):
         pathlib.Path(self.sample_corpus.encoded.url[len("sqlite:///") :]).parent
       )
       text_data = [
-        self.sample_corpus.atomizer.DeatomizeIndices(x) for x in self.sample_corpus.GetTrainingData()
+        self.sample_corpus.tokenizer.DeatomizeIndices(x) for x in self.sample_corpus.GetTrainingData()
       ]
-      # Text data is dumped in order to specialize with all different model atomizers.
+      # Text data is dumped in order to specialize with all different model tokenizers.
       with open(self.cache.path / "sample_corpus" / "text_corpus.pkl", 'wb') as outf:
         pickle.dump(text_data, outf)
 
@@ -388,7 +388,7 @@ class Sampler(object):
     self.start_text = start_text
     return
 
-  def Specialize(self, atomizer: atomizers.TokenizerBase) -> None:
+  def Specialize(self, tokenizer: tokenizers.TokenizerBase) -> None:
     """Specialize a sampler a vocabulary.
 
     This enables the sampler to set state specialized to a specific encoding
@@ -397,7 +397,7 @@ class Sampler(object):
     SampleIsComplete() is from this vocabulary.
 
     Args:
-      atomizer: An atomizer to specialize to.
+      tokenizer: An tokenizer to specialize to.
 
     Raises:
       InvalidStartText: If the start_text cannot be encoded using the
@@ -405,8 +405,8 @@ class Sampler(object):
       UserError: In case the sampler cannot be specialized to this vocabulary.
     """
     try:
-      self.encoded_start_text = atomizer.AtomizeString(self.start_text)
-      self.tokenized_start_text = atomizer.TokenizeString(self.start_text)
+      self.encoded_start_text = tokenizer.AtomizeString(self.start_text)
+      self.tokenized_start_text = tokenizer.TokenizeString(self.start_text)
     except ValueError:
       raise ValueError(
         "Sampler start text cannot be encoded using the corpus vocabulary: "
@@ -420,7 +420,7 @@ class Sampler(object):
         f"start text length={len(self.encoded_start_text)}"
       )
     l.getLogger().info("Sampling: '{}'\n".format(self.start_text))
-    [terminator.Specialize(atomizer) for terminator in self.terminators]
+    [terminator.Specialize(tokenizer) for terminator in self.terminators]
 
   def symlinkModelDB(self,
                      db_path   : pathlib.Path,

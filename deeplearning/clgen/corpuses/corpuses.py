@@ -34,7 +34,7 @@ from sqlalchemy.sql.expression import func
 from deeplearning.clgen.util import cache
 
 from deeplearning.clgen.util import crypto
-from deeplearning.clgen.corpuses import atomizers
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.dashboard import dashboard_db
@@ -82,19 +82,19 @@ def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
       return config
 
     pbutil.AssertFieldIsSet(config,          "contentfiles")
-    pbutil.AssertFieldIsSet(config,          "atomizer")
-    pbutil.AssertFieldIsSet(config.atomizer, "token_type")
+    pbutil.AssertFieldIsSet(config,          "tokenizer")
+    pbutil.AssertFieldIsSet(config.tokenizer, "token_type")
     pbutil.AssertFieldIsSet(config,          "contentfile_separator")
     # Check that the preprocessor pipeline resolves to preprocessor functions.
     [preprocessors.GetPreprocessorFunction(p) for p in config.preprocessor]
 
-    pbutil.AssertFieldConstraint(config.atomizer, 
+    pbutil.AssertFieldConstraint(config.tokenizer, 
                                  "token_type", 
                                  lambda x: x == "character" or x == "word",
-                                 "atomizer is either character or word based."
+                                 "tokenizer is either character or word based."
                                  )
-    if config.atomizer.token_type == "word":
-      pbutil.AssertFieldConstraint(config.atomizer,
+    if config.tokenizer.token_type == "word":
+      pbutil.AssertFieldConstraint(config.tokenizer,
                                   "token_list",
                                   lambda x: os.path.isfile(str(ExpandConfigPath(x, path_prefix=FLAGS.clgen_local_path_prefix))),
                                   "Invalid token_list file"
@@ -135,7 +135,7 @@ class Corpus(object):
     # Make a local copy of the configuration.
     self.config = corpus_pb2.Corpus()
     self.config.CopyFrom(AssertConfigIsValid(config))
-    self._atomizer = None
+    self._tokenizer = None
     self._created = False
     self.dashboard_db = dashboard_db.GetDatabase()
     self._dashboard_db_id: typing.Optional[int] = None  # Set in Create()
@@ -184,8 +184,8 @@ class Corpus(object):
       self.encoded = encoded.EncodedContentFiles(config.pre_encoded_corpus_url)
     else:
       self.encoded = encoded.EncodedContentFiles(f"sqlite:///{db_path}")
-    self.atomizer_path = cache.cachepath(
-      "corpus", "encoded", encoded_id, "atomizer.pkl"
+    self.tokenizer_path = cache.cachepath(
+      "corpus", "encoded", encoded_id, "tokenizer.pkl"
     )
     if not self.config.HasField("pre_encoded_corpus_url"):
       symlink = (pathlib.Path(self.encoded.url[len("sqlite:///") :]).parent / "preprocessed")
@@ -250,16 +250,16 @@ class Corpus(object):
       pathlib.Path(self.encoded.url[len("sqlite:///") :]).parent / "LOCK"
     )
     start_time = time.time()
-    atomizer = self.atomizer
+    tokenizer = self.tokenizer
     l.getLogger().info(
       "{}: {} tokens in {} ms".format(
-          type(atomizer).__name__,
-          humanize.intcomma(atomizer.vocab_size),
+          type(tokenizer).__name__,
+          humanize.intcomma(tokenizer.vocab_size),
           humanize.intcomma(int((time.time() - start_time) * 1000)),
         )
     )
     self.encoded.Create(
-      self.preprocessed, atomizer, self.config.contentfile_separator
+      self.preprocessed, tokenizer, self.config.contentfile_separator
     )
 
     # Add entry to dashboard database
@@ -351,41 +351,41 @@ class Corpus(object):
       )
 
   @property
-  def atomizer(self) -> atomizers.TokenizerBase:
+  def tokenizer(self) -> tokenizers.TokenizerBase:
     """Must call Create() first."""
     if not self._created:
-      raise ValueError("Must call Create() before accessing atomizer property.")
-    if self._atomizer is None:
-      if self.atomizer_path.is_file():
-        self._atomizer = atomizers.TokenizerBase.FromFile(self.atomizer_path)
+      raise ValueError("Must call Create() before accessing tokenizer property.")
+    if self._tokenizer is None:
+      if self.tokenizer_path.is_file():
+        self._tokenizer = tokenizers.TokenizerBase.FromFile(self.tokenizer_path)
       else:
-        self._atomizer = self._CreateTokenizer()
-    return self._atomizer
+        self._tokenizer = self._CreateTokenizer()
+    return self._tokenizer
 
-  def _CreateTokenizer(self) -> atomizers.TokenizerBase:
-    """Creates and caches an atomizer."""
-    l.getLogger().info("Deriving atomizer from preprocessed corpus")
+  def _CreateTokenizer(self) -> tokenizers.TokenizerBase:
+    """Creates and caches an tokenizer."""
+    l.getLogger().info("Deriving tokenizer from preprocessed corpus")
     corpus_txt = self.GetTextCorpus(shuffle=False)
 
     if self.config.HasField("pre_encoded_corpus_url"):
       encoded_db = encoded.EncodedContentFiles(
         self.config.pre_encoded_corpus_url
       )
-      atomizer = WordTokenizerFromEncodedDb(self.config.atomizer, encoded_db)
+      tokenizer = WordTokenizerFromEncodedDb(self.config.tokenizer, encoded_db)
     else:
       if ("deeplearning.clgen.preprocessors.common:RemoveAllWhiteSpace" in self.config.preprocessor
        or "deeplearning.clgen.preprocessors.common:RemoveNewLines" in self.config.preprocessor):
-        atomizer = atomizers.FromText(self.config.atomizer, corpus_txt, no_whitespace = True)
+        tokenizer = tokenizers.FromText(self.config.tokenizer, corpus_txt, no_whitespace = True)
       else:
-        atomizer = atomizers.FromText(self.config.atomizer, corpus_txt, no_whitespace = False)
+        tokenizer = tokenizers.FromText(self.config.tokenizer, corpus_txt, no_whitespace = False)
 
-    atomizer.ToFile(self.atomizer_path)
-    return atomizer
+    tokenizer.ToFile(self.tokenizer_path)
+    return tokenizer
 
   @property
   def vocab_size(self) -> int:
     """Get the number of elements in the corpus vocabulary."""
-    return self.atomizer.vocab_size
+    return self.tokenizer.vocab_size
 
   @property
   def size(self) -> int:
@@ -418,13 +418,13 @@ def StoreVocabInMetaTable(
 
 def WordTokenizerFromEncodedDb(encoded_db: encoded.EncodedContentFiles):
   raise NotImplementedError
-  """Create a greedy atomizer for the vocabulary of a given encoded_db."""
+  """Create a greedy tokenizer for the vocabulary of a given encoded_db."""
   # TODO(github.com/ChrisCummins/clgen/issues/130): This should be a method of
   # a concrete `DatabaseCorpus` class.
   with encoded_db.Session() as s:
     vocab = GetVocabFromMetaTable(s)
   l.getLogger().info("Loaded vocabulary of {} tokens from meta table".format(len(vocab)))
-  return atomizers.WordTokenizer(vocab)
+  return tokenizers.WordTokenizer(vocab)
 
 
 def ExpandConfigPath(path: str, path_prefix: str = None) -> pathlib.Path:
