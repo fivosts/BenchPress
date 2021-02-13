@@ -120,8 +120,8 @@ class TokenizerBase(object):
     with open(path, "wb") as f:
       pickle.dump(self, f)
 
-  def AtomizeString(self, text: str) -> np.array:
-    """Atomize a text into an array of vocabulary indices.
+  def TokenizeString(self, text: str) -> np.array:
+    """Tokenize a text into an array of vocabulary indices.
 
     Args:
       text: Input text.
@@ -143,7 +143,7 @@ class TokenizerBase(object):
     Returns:
       A list of tokens.
     """
-    indices = self.AtomizeString(text)
+    indices = self.TokenizeString(text)
     return list(map(lambda x: self.decoder[x], indices))
 
   def tokensToString(self, 
@@ -276,8 +276,8 @@ class AsciiCharacterTokenizer(TokenizerBase):
   def __repr__(self) -> str:
     return f"AsciiCharacterTokenizer[{self.vocab_size} chars]"
 
-  def AtomizeString(self, text: str) -> np.array:
-    """Atomize a text into an array of vocabulary indices.
+  def TokenizeString(self, text: str) -> np.array:
+    """Tokenize a text into an array of vocabulary indices.
 
     Args:
       text: Input text.
@@ -372,8 +372,8 @@ class WordTokenizer(TokenizerBase):
   def __repr__(self) -> str:
     return f"WordTokenizer[{self.vocab_size} tokens]"
 
-  def AtomizeString(self, text: str) -> np.array:
-    """Atomize a text into an array of vocabulary indices.
+  def TokenizeString(self, text: str) -> np.array:
+    """Tokenize a text into an array of vocabulary indices.
 
     Args:
       text: Input text.

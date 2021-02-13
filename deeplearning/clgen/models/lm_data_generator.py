@@ -398,7 +398,7 @@ class MaskLMDataGenerator(object):
       # The reason is, corpus is saved in text format, to be picked up with the
       # right tokenizer. And that is the model's tokenizer.
       with open(path / "text_corpus.pkl", 'rb') as infile:
-        encoded_corpus = [self.tokenizer.AtomizeString(x) for x in pickle.load(infile)]
+        encoded_corpus = [self.tokenizer.TokenizeString(x) for x in pickle.load(infile)]
     else:
       encoded_corpus  = self.corpus.GetTrainingData()
 

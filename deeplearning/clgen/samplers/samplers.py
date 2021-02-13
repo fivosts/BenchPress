@@ -222,8 +222,8 @@ class SymmetricalTokenDepthCriterion(TerminationCriterionBase):
         to more than one token.
     """
     try:
-      left = tokenizer.AtomizeString(self.left_token)
-      right = tokenizer.AtomizeString(self.right_token)
+      left = tokenizer.TokenizeString(self.left_token)
+      right = tokenizer.TokenizeString(self.right_token)
       if len(left) > 1 or len(right) > 1:
         raise ValueError(
           "Sampler symmetrical depth tokens do not encode to a single "
@@ -405,7 +405,7 @@ class Sampler(object):
       UserError: In case the sampler cannot be specialized to this vocabulary.
     """
     try:
-      self.encoded_start_text = tokenizer.AtomizeString(self.start_text)
+      self.encoded_start_text = tokenizer.TokenizeString(self.start_text)
       self.tokenized_start_text = tokenizer.TokenizeString(self.start_text)
     except ValueError:
       raise ValueError(

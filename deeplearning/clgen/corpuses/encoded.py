@@ -122,7 +122,7 @@ class EncodedContentFile(Base):
       An EncodedContentFile instance.
     """
     start_time = time.time()
-    data = tokenizer.AtomizeString(preprocessed_cf.text)
+    data = tokenizer.TokenizeString(preprocessed_cf.text)
     ####
     # TODO kernel analytics
     # encoded_length = len(data)
@@ -137,7 +137,7 @@ class EncodedContentFile(Base):
       # and 'ab', then a content file 'a' with EOF marker 'b' would be encoded
       # as 'ab', instead of 'a'+'b'.
       data = cls.NumpyArrayToDataString(
-        np.concatenate((data, tokenizer.AtomizeString(eof)))
+        np.concatenate((data, tokenizer.TokenizeString(eof)))
       ),
       tokencount       = len(data),
       feature_vector   = feature_vector,
