@@ -258,7 +258,7 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
     raise ValueError(stderr)
   return stdout
 
-def TokenizeSource(text: str,
+def TokenizeSource(src: str,
                    suffix: str,
                    cflags: typing.List[str],
                    ) -> typing.Set[str]:
