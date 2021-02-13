@@ -611,7 +611,7 @@ class MaskLMDataGenerator(object):
 
             actual_length_monitor.register(actual_length)
             token_monitor.register([
-              self.tokenizer.DeatomizeIndices([int(x)])
+              self.tokenizer.tokensToString([int(x)])
               for x in kernel['input_ids'] if x != self.tokenizer.padToken]
             )
             for hole in masked_idxs:
@@ -641,10 +641,10 @@ class MaskLMDataGenerator(object):
                 s.add(
                   lm_database.LMInstance(**lm_database.LMInstance.FromArgs(
                     id = count + idx,
-                    original_input = self.tokenizer.DeatomizeIndices(kernel['original_input'], ignore_token = self.tokenizer.padToken, beautify = True),
-                    input_ids = self.tokenizer.DeatomizeIndices(kernel['input_ids'],           ignore_token = self.tokenizer.padToken, beautify = True),
+                    original_input = self.tokenizer.tokensToString(kernel['original_input'], ignore_token = self.tokenizer.padToken, beautify = True),
+                    input_ids = self.tokenizer.tokensToString(kernel['input_ids'],           ignore_token = self.tokenizer.padToken, beautify = True),
                     masked_lm_lengths = kernel['masked_lm_lengths'],
-                    masked_lm_predictions = [self.tokenizer.DeatomizeIndices([x]) for x in kernel['mask_labels'] if x != -100],
+                    masked_lm_predictions = [self.tokenizer.tokensToString([x]) for x in kernel['mask_labels'] if x != -100],
                   ))
                 )
           # write masked_corpus before flushing the list

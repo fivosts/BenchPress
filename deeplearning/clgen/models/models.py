@@ -389,7 +389,7 @@ class Model(object):
           ## Legacy operation for sequential returning single token
           if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert):
             samples_in_progress[i] = [tokenizer.decoder[x] for x in indices[i]]
-            step_ind               = '\n'.join([self.tokenizer.DeatomizeIndices(mind).replace('\n', '\\n') for mind in step_indices[i]])
+            step_ind               = '\n'.join([self.tokenizer.tokensToString(mind).replace('\n', '\\n') for mind in step_indices[i]])
             encoded_step_indices   = '\n'.join([','.join([str(x) for x in mind]) for mind in step_indices[i]])
           elif isinstance(self.backend, tf_sequential.tfSequential) or isinstance(self.backend, keras_sequential.kerasSequential):
             samples_in_progress[i].append(tokenizer.decoder[index])
@@ -420,7 +420,7 @@ class Model(object):
               text                      = "".join(sample_kernel) if not self.tokenizer.no_whitespace else opencl.ClangFormat(" ".join(sample_kernel)),
               sample_indices            = step_ind,
               encoded_sample_indices    = encoded_step_indices,
-              sample_feed               = self.tokenizer.DeatomizeIndices(sampler.encoded_start_text, beautify = True),
+              sample_feed               = self.tokenizer.tokensToString(sampler.encoded_start_text, beautify = True),
               encoded_text              = ",".join([str(tokenizer.vocab[x]) for x in sample_kernel]),
               sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),

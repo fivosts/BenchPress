@@ -348,8 +348,8 @@ class torchBert(backends.BackendBase):
                 feature_vector = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(s[1]))
                 correct_sample_obs.OnSample(model_pb2.Sample(
                     train_step             = self.current_step,
-                    sample_feed            = self.tokenizer.DeatomizeIndices(s[0], ignore_token = self.tokenizer.padToken, beautify = True).replace("\\n", "\n"),
-                    text                   = self.tokenizer.DeatomizeIndices(s[1], ignore_token = self.tokenizer.padToken, beautify = True).replace("\\n", "\n"),
+                    sample_feed            = self.tokenizer.tokensToString(s[0], ignore_token = self.tokenizer.padToken, beautify = True).replace("\\n", "\n"),
+                    text                   = self.tokenizer.tokensToString(s[1], ignore_token = self.tokenizer.padToken, beautify = True).replace("\\n", "\n"),
                     encoded_text           = ",".join([str(t) for t in s[1]]),
                     sample_indices         = '',
                     encoded_sample_indices = '',
@@ -494,7 +494,7 @@ class torchBert(backends.BackendBase):
       inputs = next(self.pred_iterator)
 
     self.step_inputs = {x: inputs[x].repeat((self.sampler.batch_size, 1)) for x in inputs}
-    self.sampler.setStartText(self.tokenizer.DeatomizeIndices(inputs['input_ids'][0].cpu().numpy(), ignore_token = self.tokenizer.padToken))
+    self.sampler.setStartText(self.tokenizer.tokensToString(inputs['input_ids'][0].cpu().numpy(), ignore_token = self.tokenizer.padToken))
     self.sampler.Specialize(self.tokenizer)
     return
 
@@ -515,8 +515,8 @@ class torchBert(backends.BackendBase):
         for hole, indcs in zip(step_out['prediction_scores'], step_out['sample_indices']):
           plotter.LogitsStepsDistrib(
             x = self.torch.nn.Softmax(dim = 1)(self.torch.FloatTensor(hole)).numpy(),
-            atoms = [self.tokenizer.DeatomizeIndices([i]) for i in range(self.tokenizer.vocab_size)],
-            sample_indices = [self.tokenizer.DeatomizeIndices([i]) for i in indcs[0]],
+            atoms = [self.tokenizer.tokensToString([i]) for i in range(self.tokenizer.vocab_size)],
+            sample_indices = [self.tokenizer.tokensToString([i]) for i in indcs[0]],
             title = "Sampling distribution dim 1",
             x_name = "Probs / sample step",
           )
@@ -534,7 +534,7 @@ class torchBert(backends.BackendBase):
               x: active_sample[x].repeat((self.sampler.batch_size, 1)) for x in active_sample
             }
             self.sampler.setStartText(
-              self.tokenizer.DeatomizeIndices(
+              self.tokenizer.tokensToString(
                 step_input['input_ids'][0].cpu().numpy(), ignore_token = self.tokenizer.padToken
               )
             )

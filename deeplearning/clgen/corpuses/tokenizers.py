@@ -151,7 +151,7 @@ class TokenizerBase(object):
     indices = self.AtomizeString(text)
     return list(map(lambda x: self.decoder[x], indices))
 
-  def DeatomizeIndices(self, 
+  def tokensToString(self, 
                        encoded: np.array, 
                        ignore_token: int = None,
                        beautify: bool = False
@@ -168,7 +168,7 @@ class TokenizerBase(object):
     """
     try:
       if np.ndim(encoded) > 1:
-        return [ self.DeatomizeIndices(x, ignore_token, beautify) for x in encoded ]
+        return [ self.tokensToString(x, ignore_token, beautify) for x in encoded ]
       elif np.ndim(encoded) == 1:
         if beautify and self.no_whitespace:
           return opencl.ClangFormat(" ".join(list(map(lambda x: self.decoder[x] if x != ignore_token else '', encoded))))
@@ -191,7 +191,7 @@ class TokenizerBase(object):
     Returns:
       Code in string format.
     """
-    return self.DeatomizeIndices([x for x in encoded if x not in self.metaTokenValues], beautify = True)
+    return self.tokensToString([x for x in encoded if x not in self.metaTokenValues], beautify = True)
 
   def StringArrToCode(self,
                       text: typing.List[str],
@@ -226,7 +226,7 @@ class TokenizerBase(object):
       List of indices pointing to mapped tokens in the sequence.
     """
     indices = []
-    str_atoms = [self.DeatomizeIndices([token]) for token in encoded]
+    str_atoms = [self.tokensToString([token]) for token in encoded]
     lidx, cidx = 1, 1
     locit = iter(locations)
     try:

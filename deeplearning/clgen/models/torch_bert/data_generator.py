@@ -182,8 +182,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         for instance in masked_corpus['corpus']:
           file_writer.write("'seen_in_training': {}\n'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'position_ids': {}\n'mask_labels': {}\n'masked_lm_lengths': {}\n'next_sentence_labels': {}\n\n"
                               .format((True if instance['seen_in_training'] == 1 else False),
-                                      self.tokenizer.DeatomizeIndices(instance['original_input'], ignore_token = self.tokenizer.padToken, beautify = True),
-                                      self.tokenizer.DeatomizeIndices(instance['input_ids'],      ignore_token = self.tokenizer.padToken, beautify = True),
+                                      self.tokenizer.tokensToString(instance['original_input'], ignore_token = self.tokenizer.padToken, beautify = True),
+                                      self.tokenizer.tokensToString(instance['input_ids'],      ignore_token = self.tokenizer.padToken, beautify = True),
                                       instance['input_mask'],
                                       instance['position_ids'],
                                       instance['mask_labels'],

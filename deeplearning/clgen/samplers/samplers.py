@@ -365,7 +365,7 @@ class Sampler(object):
         pathlib.Path(self.sample_corpus.encoded.url[len("sqlite:///") :]).parent
       )
       text_data = [
-        self.sample_corpus.tokenizer.DeatomizeIndices(x) for x in self.sample_corpus.GetTrainingData()
+        self.sample_corpus.tokenizer.tokensToString(x) for x in self.sample_corpus.GetTrainingData()
       ]
       # Text data is dumped in order to specialize with all different model tokenizers.
       with open(self.cache.path / "sample_corpus" / "text_corpus.pkl", 'wb') as outf:

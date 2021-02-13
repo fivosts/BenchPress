@@ -159,10 +159,10 @@ class CompilationSampler(object):
       try:
         new_seq[new_idx] = t
       except IndexError:
-        l.getLogger().info("seq: {}".format(self.tokenizer.DeatomizeIndices([x for x in seq.cpu().numpy()])))
-        l.getLogger().info("temp_seq {}".format(self.tokenizer.DeatomizeIndices([x for x in temp_seq])))
+        l.getLogger().info("seq: {}".format(self.tokenizer.tokensToString([x for x in seq.cpu().numpy()])))
+        l.getLogger().info("temp_seq {}".format(self.tokenizer.tokensToString([x for x in temp_seq])))
         l.getLogger().info("pred idx: {}".format(torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]))
-        l.getLogger().info("pred_toks {}".format(self.tokenizer.DeatomizeIndices([int(self.argmax(prediction_scores[idx])) for idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]])))
+        l.getLogger().info("pred_toks {}".format(self.tokenizer.tokensToString([int(self.argmax(prediction_scores[idx])) for idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]])))
         l.getLogger().info("allowed_incr: {}".format(allowed_incr))
         l.getLogger().info("new_hole: {}".format(new_hole))
         l.getLogger().info("closed_hole: {}".format(closed_hole))
@@ -171,10 +171,10 @@ class CompilationSampler(object):
         try:
           new_seq[new_idx] = self.tokenizer.holeToken
         except IndexError:
-          l.getLogger().warn("seq: {}".format(self.tokenizer.DeatomizeIndices([x for x in seq.cpu().numpy()])))
-          l.getLogger().warn("temp_seq {}".format(self.tokenizer.DeatomizeIndices([x for x in temp_seq])))
+          l.getLogger().warn("seq: {}".format(self.tokenizer.tokensToString([x for x in seq.cpu().numpy()])))
+          l.getLogger().warn("temp_seq {}".format(self.tokenizer.tokensToString([x for x in temp_seq])))
           l.getLogger().warn("pred idx: {}".format(torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]))
-          l.getLogger().warn("pred_toks {}".format(self.tokenizer.DeatomizeIndices([int(self.argmax(prediction_scores[idx])) for idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]])))
+          l.getLogger().warn("pred_toks {}".format(self.tokenizer.tokensToString([int(self.argmax(prediction_scores[idx])) for idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]])))
           l.getLogger().warn("allowed_incr: {}".format(allowed_incr))
           l.getLogger().warn("new_hole: {}".format(new_hole))
           l.getLogger().warn("closed_hole: {}".format(closed_hole))

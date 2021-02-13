@@ -65,8 +65,8 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
                next_sentence_predictions: typing.List[int],
                ) -> typing.Dict[str, typing.Any]:
 
-    str_original_input              = tokenizer.DeatomizeIndices(original_input, ignore_token = tokenizer.padToken, beautify = True)
-    str_input_ids                   = tokenizer.DeatomizeIndices(input_ids, ignore_token = tokenizer.padToken,      beautify = True)
+    str_original_input              = tokenizer.tokensToString(original_input, ignore_token = tokenizer.padToken, beautify = True)
+    str_input_ids                   = tokenizer.tokensToString(input_ids, ignore_token = tokenizer.padToken,      beautify = True)
     str_masked_lm_ids               = '\n'.join([tokenizer.decoder[x] if x != tokenizer.vocab['\n'] else '\\n' for x in masked_lm_ids])
     str_masked_lm_predictions       = '\n'.join([tokenizer.decoder[x] if x != tokenizer.vocab['\n'] else '\\n' for x in masked_lm_predictions])
 

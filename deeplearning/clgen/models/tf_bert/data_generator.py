@@ -261,7 +261,7 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           start_text = next(self.tfRecordSampler)[:self.sampler.sequence_length]
         except Exception as e:
           raise e
-      self.sampler.setStartText(self.tokenizer.DeatomizeIndices(start_text))
+      self.sampler.setStartText(self.tokenizer.tokensToString(start_text))
       self.sampler.Specialize(self.tokenizer)
     
     assert self.sampler.sequence_length <= self.max_position_embeddings, "Sampler sequence length exceeds max position embeddings."
@@ -397,11 +397,11 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       if FLAGS.write_text_dataset:
         file_writer.write("'seen_in_training': {}\n'original_input': {}\n'input_ids': {}\n'input_mask': {}\n'masked_lm_positions': {}\n'masked_lm_ids': {}\n'masked_lm_weights': {}\n'masked_lm_lengths': {}\n'next_sentence_labels': {}\n\n"
                             .format((True if seen_in_training == 1 else False),
-                                    self.tokenizer.DeatomizeIndices(original_input, ignore_token = self.tokenizer.padToken, beautify = True),
-                                    self.tokenizer.DeatomizeIndices(input_ids,      ignore_token = self.tokenizer.padToken, beautify = True),
+                                    self.tokenizer.tokensToString(original_input, ignore_token = self.tokenizer.padToken, beautify = True),
+                                    self.tokenizer.tokensToString(input_ids,      ignore_token = self.tokenizer.padToken, beautify = True),
                                     input_mask, 
                                     masked_lm_positions, 
-                                    self.tokenizer.DeatomizeIndices(masked_lm_ids), 
+                                    self.tokenizer.tokensToString(masked_lm_ids), 
                                     masked_lm_weights, 
                                     masked_lm_lengths, 
                                     next_sentence_label)
