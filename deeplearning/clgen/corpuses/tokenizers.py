@@ -25,8 +25,6 @@ from collections import Counter
 from absl import flags
 from eupy.native import logger as l
 
-from deeplearning.clgen.preprocessors import opencl
-
 FLAGS = flags.FLAGS
 
 def FromText(config, corpus_txt: str):
@@ -151,7 +149,6 @@ class TokenizerBase(object):
   def tokensToString(self, 
                        encoded: np.array, 
                        ignore_token: int = None,
-                       beautify: bool = False
                        ):
     """Translate atomized code back into a string.
 
@@ -165,12 +162,9 @@ class TokenizerBase(object):
     """
     try:
       if np.ndim(encoded) > 1:
-        return [ self.tokensToString(x, ignore_token, beautify) for x in encoded ]
+        return [ self.tokensToString(x, ignore_token) for x in encoded ]
       elif np.ndim(encoded) == 1:
-        if beautify:
-          return opencl.ClangFormat(" ".join(list(map(lambda x: self.decoder[x] if x != ignore_token else '', encoded))))
-        else:
-          return "".join(list(map(lambda x: self.decoder[x] if x != ignore_token else '', encoded)))
+        return "".join(list(map(lambda x: self.decoder[x] if x != ignore_token else '', encoded)))
       else:
         raise ValueError("Wrong encoded array specified")
     except KeyError:
