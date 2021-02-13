@@ -289,5 +289,7 @@ def TokenizeSource(src: str,
 
     tokens = set()
     for t in unit.get_tokens(extent = unit.cursor.extent):
-      tokens.add((t.spelling, t.kind))
+      if t.kind != clang.cindex.TokenKind.LITERAL:
+        # You need to check here the background of an identifier
+        tokens.add((str(t.spelling), str(t.kind)))
     return tokens
