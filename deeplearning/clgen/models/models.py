@@ -420,7 +420,7 @@ class Model(object):
               text                      = "".join(sample_kernel),
               sample_indices            = step_ind,
               encoded_sample_indices    = encoded_step_indices,
-              sample_feed               = self.tokenizer.tokensToString(sampler.encoded_start_text, beautify = True),
+              sample_feed               = self.tokenizer.tokensToString(sampler.encoded_start_text),
               encoded_text              = ",".join([str(tokenizer.vocab[x]) for x in sample_kernel]),
               sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),

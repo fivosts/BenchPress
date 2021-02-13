@@ -188,7 +188,7 @@ class TokenizerBase(object):
     Returns:
       Code in string format.
     """
-    return self.tokensToString([x for x in encoded if x not in self.metaTokenValues], beautify = True)
+    return self.tokensToString([x for x in encoded if x not in self.metaTokenValues])
 
   def StringArrToCode(self,
                       text: typing.List[str],

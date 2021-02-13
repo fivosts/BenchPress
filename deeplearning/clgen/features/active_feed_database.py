@@ -77,9 +77,9 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
                generation_id    : int,
                ) -> typing.TypeVar("ActiveFeed"):
     """Construt ActiveFeed table entry from argumentns."""
-    str_input_feed       = tokenizer.tokensToString(input_feed,       ignore_token = tokenizer.padToken, beautify = True)
-    str_masked_input_ids = tokenizer.tokensToString(masked_input_ids, ignore_token = tokenizer.padToken, beautify = True)
-    str_sample           = tokenizer.tokensToString(sample,           ignore_token = tokenizer.padToken, beautify = True)
+    str_input_feed       = tokenizer.tokensToString(input_feed,       ignore_token = tokenizer.padToken)
+    str_masked_input_ids = tokenizer.tokensToString(masked_input_ids, ignore_token = tokenizer.padToken)
+    str_sample           = tokenizer.tokensToString(sample,           ignore_token = tokenizer.padToken)
 
     num_tokens = len(sample)
     if tokenizer.padToken in sample:

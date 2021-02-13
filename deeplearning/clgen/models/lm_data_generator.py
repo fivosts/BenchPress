@@ -641,8 +641,8 @@ class MaskLMDataGenerator(object):
                 s.add(
                   lm_database.LMInstance(**lm_database.LMInstance.FromArgs(
                     id = count + idx,
-                    original_input = self.tokenizer.tokensToString(kernel['original_input'], ignore_token = self.tokenizer.padToken, beautify = True),
-                    input_ids = self.tokenizer.tokensToString(kernel['input_ids'],           ignore_token = self.tokenizer.padToken, beautify = True),
+                    original_input = self.tokenizer.tokensToString(kernel['original_input'], ignore_token = self.tokenizer.padToken),
+                    input_ids = self.tokenizer.tokensToString(kernel['input_ids'],           ignore_token = self.tokenizer.padToken),
                     masked_lm_lengths = kernel['masked_lm_lengths'],
                     masked_lm_predictions = [self.tokenizer.tokensToString([x]) for x in kernel['mask_labels'] if x != -100],
                   ))
