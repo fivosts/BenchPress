@@ -400,3 +400,331 @@
 #define dev_image_t image_t
 #define fp float
 // #endif
+
+#define CALbyte char
+#define DCT_INT int
+#define jvector_t int8
+#define svm_pointer_t unsigned int
+#define real4_t float4
+#define ivector_t long3
+#define int64 long int
+#define swift_uint8_t unsigned char
+#define myImage image1d_t
+#define morton unsigned long long
+#define swift_int64_t long
+// #define *EdmaMgr_Handle void
+#define VoxelId int3
+#define u8x unsigned char
+#define u16x unsigned short
+#define hh_float8 float8
+#define DPTYPE char
+#define Byte unsigned char
+#define bytecode unsigned long long
+#define Move unsigned int
+#define CALint int
+#define vector_t float8
+#define JCOEF short
+#define JBLOCK[64] short
+// #define *JBLOCKROW JBLOCK
+// #define *JBLOCKARRAY JBLOCKROW
+// #define *JBLOCKIMAGE JBLOCKARRAY
+#define center_index_t unsigned char
+#define u8_v uchar2
+#define iclblasSideMode_t int
+#define MACTYPE int
+#define tok_t uint8_t
+#define Cr unsigned long long
+#define sumtype int
+#define JDIMENSION unsigned int
+#define wcl_uint unsigned int
+#define hh_float2 float2
+#define MatrixElement double
+#define clo_statetype uint4
+#define wcl_int int
+#define BYTE unsigned char
+// #define *voidpf void
+#define IntPoint int4
+#define cl_mem_fence_flags unsigned int
+#define TvoxelValue float
+#define Quaternion float4
+#define myunsignedint unsigned int
+#define wcl_ulong unsigned long long
+#define swift_int32_t int
+#define tinfl_bit_buf_t unsigned long long
+#define u_int32_t unsigned int
+#define uLongf unsigned long
+#define point4 float4
+#define wcl_unsigned_char unsigned char
+#define complex_t float2
+#define Indice unsigned int
+#define mat4x4 float16
+#define Point float4
+#define s16 short
+#define ElemT int2
+#define wcl_short short
+#define cl_ubyte32 unsigned int
+#define uint64 unsigned long long
+#define uchar1 unsigned char
+#define real16_t float16
+#define edge_index_t unsigned int
+#define jscalar_t long
+#define quaternion float4
+#define swift_uint32_t unsigned int
+#define wcl_short4 short4
+#define u16a unsigned short
+#define scalar_t float
+#define vecto3 float3
+#define chromosome int
+#define real8_t float8
+#define u64a unsigned long long
+#define vtype unsigned int
+#define ValT int
+#define wcl_uchar unsigned char
+#define aes_mode unsigned
+#define b3Float4 float4
+#define mz_bool int
+#define result_type int
+#define subcell_id char
+#define b3Scalar float
+#define wcl_long4 long4
+#define uint1 unsigned int
+#define distance_type int
+#define WOImage write_only image1d_t
+# define wcl_uint4 uint4
+#define mz_uint16 unsigned short
+#define index_t unsigned int
+#define TsdfType int8_t
+#define float1 float
+#define cl_byte64 long long
+#define ushort1 unsigned short
+#define int8_t signed char
+#define kernel_type_t const unsigned
+#define keypoint float4
+#define WORD unsigned int
+#define svm_precision double
+#define PAUChar unsigned char
+#define swift_int8_t char
+#define Bytef unsigned char
+#define Stokes float4
+#define packet uint2
+#define sReal float
+#define mask_t char
+#define Lamp int
+#define FixedPoint0 int
+#define KeyValuePair uint2
+#define float32_t float
+#define cpx float2
+#define coord_type int
+#define scalar float
+#define OutCode int
+#define wcl_float4 float4
+#define mz_uint unsigned int
+#define uInt unsigned int
+#define real3_t float3
+#define u64 unsigned long long
+#define dType float
+#define center_set_pointer_t unsigned int
+#define rkf_evaluation_points float4
+#define des_vector unsigned int
+#define Scalar float
+#define magmaFloatComplex float2
+#define wcl_uchar4 uchar4
+#define kscalar_t int
+#define u16 unsigned short
+#define int_t int
+#define ptype float4
+#define TdetValue float
+#define int32_t int
+#define real2_t float2
+#define bus_t uint2
+#define BOOL int
+#define T2 float2
+#define char1 char
+#define pipetype3 write_only pipe int
+#define bignum25519[10] unsigned int
+#define tfloat double
+#define NodeId unsigned int
+#define i32 int
+#define int32 int
+#define wcl_ushort unsigned short
+#define fcomplex2 float4
+#define data_t uint4
+#define char_complex2 char4
+#define wcl_int4 int4
+#define Scalar4 float4
+// #define *string constant char
+#define word short
+#define cl_byte32 int
+#define u8 unsigned char
+#define color float3
+#define ScoreType int
+#define node_index_t unsigned int
+#define cl_ubyte8 unsigned char
+#define wcl_unsigned_short unsigned short
+#define fcomplex float2
+#define vec2 float2
+#define point2 float2
+#define long1 long
+#define Tree[] const int8_t
+#define Hash unsigned long long
+#define step_t int32_t
+#define z unsigned int
+#define wcl_sampler_t sampler_t
+#define GeglRandom ushort4
+#define FixedPoint3 int
+#define particle float4
+// #define *voidp void
+#define param_float float
+#define longword long
+#define xorshift6432star_state unsigned long long
+#define SceneRayType int
+#define cl_byte8 char
+#define iclblasFillMode_t int
+#define uint unsigned int
+#define point3 float3
+#define PAFloat float
+#define FAST_FLOAT float
+#define intf int
+#define brief_descr int4
+#define swift_uint64_t unsigned long long
+#define KeyT int
+#define RWImage read_write image1d_t
+#define sqsumtype float
+#define BitmapBuffer unsigned char
+#define wcl_short4 ushort4
+#define Tcoord_dev float
+#define Prob uint8_t
+#define vector2 float2
+#define mat22 float4
+#define mz_int16 signed short
+#define MatrixElement float
+#define NNType float
+#define iclblasOperation_t int
+#define Square unsigned char
+#define wcl_unsigned_long unsigned long
+#define atmi_taskgroup_handle_t unsigned long
+#define b3Quat float4
+#define index_diff_t int
+#define vT float
+#define jscalar_t int
+#define pcg6432_state unsigned long
+#define TTMove unsigned int
+#define wcl_char4 char4
+#define coordinate float4
+#define ull unsigned long long
+#define u8_v unsigned char
+#define value_type int
+#define FLOAT_MULT_TYPE float
+#define NumberType long
+#define byte unsigned char
+#define T8 float8
+#define charf char
+#define u32 unsigned int
+#define u32a unsigned int
+#define random_state unsigned int
+#define bc_trit_t long
+#define atmi_task_handle_t unsigned long
+#define wcl_float float
+#define mat3x3[3][3] float
+#define fcomplex4 float8
+#define CALParameterb char
+#define bignum25519align16[12] unsigned int
+#define RandomBuffer float
+#define mat3x3_tri[6] float
+#define short_complex2 short4
+#define fsm_state unsigned char
+#define pixelType char4
+#define WeightType unsigned char
+#define vtype unsigned int
+#define short1 short
+#define fixed8 unsigned char
+#define s8 char
+#define DCT_FLOAT float
+#define u64x unsigned long long
+#define swift_uint16_t ushort
+#define ulong1 unsigned long long
+#define typedef_type float4
+#define b3Vector3 float4
+#define hh_float float
+#define INT32 unsigned int
+#define level_t int8_t
+#define CALParameterr double
+#define vector4 float4
+#define swift_int16_t short
+#define wcl_char char
+#define RT_Vec2f float2
+#define fp_t double
+#define byte_t unsigned char
+#define rkf_integrand_values float4
+#define RT_Vec4f float4
+#define PrimitiveXYIdBuffer int4
+#define global_cell_id int
+#define MyPipe read_only pipe int
+#define string constant char*
+#define vec4 float4
+#define ECLPtr size_t
+#define cl_byte16 short
+#define uintptr_t unsigned int
+#define CALParameteri int
+#define intvec int16
+#define state_t uint16
+#define floatN float
+#define realMD float
+#define real_t float
+#define INT16 short
+#define cl_ubyte64 unsigned long long
+#define CONVTYPE short
+#define v4sf float4
+#define RT_Vec3f float3
+#define buf_t uint16
+#define particle_counter int
+#define RandType unsigned long long
+#define PAInt int
+#define mz_uint32 unsigned int
+#define u32x unsigned int 
+#define xorshift1024_state unsigned int
+#define ROImage read_only image1d_t
+#define DS float2
+#define intptr_t signed int
+#define realND float
+#define mz_uint8 unsigned char
+#define double1 double
+#define iclblasDiagType_t int
+#define u8a unsigned char
+#define bn_word unsigned int
+#define s32 int
+#define tree_index int8_t
+#define t_float float
+#define i8 char
+#define children_list int8
+#define Score int
+#define sIdx int
+#define Piece unsigned char
+#define int1 int
+#define Complex float2
+#define sReal16 float4
+#define wcl_unsigned_int unsigned int
+#define Face int
+#define i16 short
+#define BSDFEvent int
+#define wcl_ulong4 ulong4
+#define iscalar_t long
+#define pos2 int2
+#define cl_float float
+#define color4 float4
+#define bSize size_t
+#define special_func_scalar_type double
+#define Bitboard unsigned long long
+#define TTScore short
+#define hh_float4 float4
+#define prob_t float
+#define wcl_long long
+#define cl_ubyte16 unsigned short
+#define realV float
+#define boolean char
+#define uIntf unsigned int
+#define lcg6432_state unsigned long
+#define vec3 float3
+#define wcl_image2d_t image2d_t
+#define cfloat float2
+#define opencl_device unsigned
