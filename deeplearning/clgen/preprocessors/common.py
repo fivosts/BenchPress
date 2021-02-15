@@ -40,6 +40,36 @@ def _MinimumLineCount(text: str, min_line_count: int) -> str:
     raise ValueError
   return text
 
+def _ExtractDataTypes(text: str, dtype: str) -> str:
+  """
+  Preprocessor extracts all struct type definitions.
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    The input text, with all whitespaces removed.
+  """
+  text = text.split('typedef {}'.format(dtype))
+  dtypes = []
+  new_text = [text[0]]
+  for t in text[1:]:
+    lb, rb = 0, 0
+    ssc = False
+    for idx, ch in enumerate(t):
+      if ch == "{":
+        lb += 1
+      elif ch == "}":
+        rb += 1
+      elif ch == ";" and ssc == True:
+        dtypes.append("typedef {}".format(dtype) + t[:idx + 1])
+        new_text.append(t[idx + 1:])
+        break
+
+      if lb == rb and lb != 0:
+        ssc = True
+  print("\n\n".join(dtypes))
+  return ''.join(new_text)
 
 @public.clgen_preprocessor
 def MinimumLineCount3(text: str) -> str:
@@ -107,13 +137,9 @@ def StripMultipleWhitespaces(text: str) -> str:
   return text
 
 @public.clgen_preprocessor
-def RemoveAllWhiteSpace(text: str) -> str:
+def RemoveTypedefs(text: str) -> str:
   """
-  WARNING! This preprocessor must not be used before Compile filter.
-
-  Preprocessor removes entirely all whitespaces.
-  Kernels are more compact, but whitespaces must be
-  added between tokens to restore compilability.
+  Preprocessor removes all type aliases with typedefs, except typedef structs.
 
   Args:
     text: The text to preprocess.
@@ -121,17 +147,16 @@ def RemoveAllWhiteSpace(text: str) -> str:
   Returns:
     The input text, with all whitespaces removed.
   """
-  raise SystemError("Do not use this preprocessor until you have tokenized\
-    characters between whitespaces as a single token. Otherwise, clang-format\
-    is g o i n g t o a d d w h i t e s p a c e s between chars that should be one word.\
-    This will break compilability on reconstruction."
-  )
-  return text.replace(' ', '')
+  text = text.split('\n')
+  for i, l in enumerate(text):
+    if "typedef " in l and "typedef struct" not in l and "typedef enum" not in l and "typedef union" not in l:
+      text[i] = ""
+  return '\n'.join(text)
 
 @public.clgen_preprocessor
-def RemoveNewLines(text: str) -> str:
+def ExtractStructTypes(text: str) -> str:
   """
-  Preprocessor removes entirely all new lines.
+  Preprocessor extracts all struct type definitions.
 
   Args:
     text: The text to preprocess.
@@ -139,12 +164,20 @@ def RemoveNewLines(text: str) -> str:
   Returns:
     The input text, with all whitespaces removed.
   """
-  raise SystemError("Do not use this preprocessor until you have tokenized\
-    characters between whitespaces as a single token. Otherwise, clang-format\
-    is g o i n g t o a d d w h i t e s p a c e s between chars that should be one word.\
-    This will break compilability on reconstruction."
-  )
-  return text.replace('\n', '')
+  return _ExtractDataTypes(text, 'struct')
+
+@public.clgen_preprocessor
+def ExtractUnionTypes(text: str) -> str:
+  """
+  Preprocessor extracts all union type definitions.
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    The input text, with all whitespaces removed.
+  """
+  return _ExtractDataTypes(text, 'union')
 
 @public.clgen_preprocessor
 def ExtractSingleKernels(text: str) -> typing.List[str]:
