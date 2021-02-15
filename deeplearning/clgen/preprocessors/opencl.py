@@ -35,6 +35,7 @@ OPENCL_H       = os.path.join(environment.DATA_CL_INCLUDE, "opencl.h")
 OPENCL_C_H     = os.path.join(environment.DATA_CL_INCLUDE, "opencl-c.h")
 OPENCL_C_BASE  = os.path.join(environment.DATA_CL_INCLUDE, "opencl-c-base.h")
 SHIMFILE       = os.path.join(environment.DATA_CL_INCLUDE, "opencl-shim.h")
+STRUCTS        = os.path.join(environment.DATA_CL_INCLUDE, "structs.h")
 
 def GetClangArgs(use_shim: bool) -> typing.List[str]:
   """Get the arguments to pass to clang for handling OpenCL.
@@ -65,6 +66,7 @@ def GetClangArgs(use_shim: bool) -> typing.List[str]:
     "-include{}".format(OPENCL_C_H),
     "-include{}".format(OPENCL_C_BASE),
     "-include{}".format(CL_H),
+    "-include{}".format(STRUCTS),
     "-I{}".format(str(OPENCL_HEADERS)),
     "-I{}".format(str(LIBCLC)),
     "-I{}".format(str(AUX_INCLUDE)),
