@@ -25,7 +25,7 @@ model {
       preprocessor: "deeplearning.clgen.preprocessors.common:StripTrailingWhitespace"
       preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
       preprocessor: "deeplearning.clgen.preprocessors.common:MinimumLineCount3"
-      preprocessor: "deeplearning.clgen.preprocessors.common:ExtractOnlySingleKernels"
+      preprocessor: "deeplearning.clgen.preprocessors.opencl:ExtractOnlySingleKernels"
       preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
   }
   architecture {
@@ -98,7 +98,7 @@ sampler {
       preprocessor: "deeplearning.clgen.preprocessors.common:StripTrailingWhitespace"
       preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
       preprocessor: "deeplearning.clgen.preprocessors.common:MinimumLineCount3"
-      preprocessor: "deeplearning.clgen.preprocessors.common:ExtractOnlySingleKernels"
+      preprocessor: "deeplearning.clgen.preprocessors.opencl:ExtractOnlySingleKernels"
       preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile" 
     }
   }
