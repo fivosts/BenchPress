@@ -345,7 +345,7 @@ def initMain(*args, **kwargs):
     )
   mail = None
   if FLAGS.notify_me:
-    mail = client.gmail(FLAGS.notify_me)
+    mail = client.initClient(FLAGS.notify_me)
   if FLAGS.debug:
     # Enable verbose stack traces. See: https://pymotw.com/2/cgitb/
     import cgitb
