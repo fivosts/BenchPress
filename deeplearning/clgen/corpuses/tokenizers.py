@@ -33,7 +33,7 @@ def FromText(config, corpus_txt: str):
   mask_tokens = False if config.mask_tokens is None else config.mask_tokens
 
   if config.token_type   == "character":
-    if config.token_list is not None:
+    if config.token_list:
       l.getLogger().warning("token list in character-based tokenization is going to be ignored.")
     return AsciiCharacterTokenizer.FromText(corpus_txt, mask_tokens)
   elif config.token_type == "word":
@@ -47,7 +47,7 @@ def FromText(config, corpus_txt: str):
                                  wpc_tok
                                 )
   elif config.token_type == "ast":
-    if config.token_list is not None:
+    if config.token_list:
       l.getLogger().warning("token list in AST-based tokenization is going to be ignored.")
     return ASTokenizer.FromText(corpus_txt, mask_tokens)
   else:
