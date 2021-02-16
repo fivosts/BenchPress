@@ -288,7 +288,8 @@ def TokenizeSource(src: str,
       raise ValueError(e)
 
     tokens = set()
-    for t in unit.get_tokens(extent = unit.cursor.extent):
+    for idx, t in enumerate(unit.get_tokens(extent = unit.cursor.extent)):
+      print('\rParsed', idx, 'tokens',  sep = ' ', end = '', flush = True)
       if t.kind == clang.cindex.TokenKind.LITERAL:
         # LITERAL char-based delimiter ''
         for ch in str(t.spelling):
