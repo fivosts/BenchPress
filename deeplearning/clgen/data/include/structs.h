@@ -1,3 +1,7 @@
+typedef struct {
+ float x, y, z;
+} Point;
+
 typedef struct node {
   void **pointers;
   int *keys;
@@ -792,6 +796,7 @@ typedef struct Vector {
   __global uchar *ptr;
   int offset_first_element_in_bytes;
   int stride_x;
+  unsigned int x, y, z;
 } Vector;
 
 typedef struct _NclSubscriptSelection {
@@ -934,6 +939,10 @@ typedef struct T {
 typedef struct {
   float r, g, b;
 } Spectrum;
+
+typedef struct {
+  float r, g, b;
+} Pixel;
 
 typedef struct {
   Spectrum gain;
@@ -8448,6 +8457,7 @@ typedef struct intintIdentitySentinelPerfectCLHash_Bucket {
 typedef struct {
   cl_float3 start;
   cl_float3 dir;
+  Vector d;
 } Ray;
 
 typedef struct IntersectionInfo {
@@ -9318,9 +9328,11 @@ typedef struct {
 
   float3 throughput;
 
+  unsigned int subpixelIndex;
   unsigned int pixelIndex;
-
+  unsigned int depth;
   unsigned int flags;
+  unsigned int seed;
 
   unsigned int _reserved1;
   unsigned int _reserved2;

@@ -196,7 +196,6 @@
 #define LUTSIZE 1024
 #define LUTSIZE_LOG2 10
 #define LWS 128
-#define M_PI 3.14
 #define MASS 100
 #define MAX 100
 #define MAX_PARTITION_SIZE 1024
@@ -368,6 +367,21 @@
 #define MLO_IN_SZ1 1
 #define BITS_GLOBAL 2
 #define N_GP 4
+#define PARAM_SEED 0
+#define PARAM_IMAGE_WIDTH 64
+#define PARAM_IMAGE_HEIGHT 64
+#define PARAM_PATH_COUNT 16
+#define PARAM_STARTLINE 0
+#define M_PI 3.14159265358979323846f
+#define INV_PI 0.31830988618379067154f
+#define INV_TWOPI 0.15915494309189533577f
+#define MAT_MATTE 0
+#define MAT_MIRROR 1
+#define MAT_GLASS 2
+#define MAT_METAL 3
+#define MAT_ALLOY 4
+
+
 // System configs
 #define VLIW1
 #define __OPENCL_VERSION__ 2
