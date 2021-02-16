@@ -98,6 +98,37 @@ def _ClangPreprocess(text: str, use_shim: bool) -> str:
   """
   return clang.Preprocess(text, GetClangArgs(use_shim=use_shim))
 
+def _ExtractTypedefs(text: str, dtype: str) -> str:
+  """
+  Preprocessor extracts all struct type definitions.
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    The input text, with all whitespaces removed.
+  """
+  text = text.split('typedef {}'.format(dtype))
+  dtypes = []
+  new_text = [text[0]]
+  for t in text[1:]:
+    lb, rb = 0, 0
+    ssc = False
+    for idx, ch in enumerate(t):
+      if ch == "{":
+        lb += 1
+      elif ch == "}":
+        rb += 1
+      elif ch == ";" and ssc == True:
+        dtypes.append("typedef {}".format(dtype) + t[:idx + 1])
+        new_text.append(t[idx + 1:])
+        break
+
+      if lb == rb and lb != 0:
+        ssc = True
+  print("\n\n".join(dtypes))
+  return ''.join(new_text)
+
 def TokenizeSource(text: str) -> typing.Set[typing.Tuple[str, str]]:
   """Pass CL code through clang's lexer and return set of tokens.
 
@@ -172,6 +203,167 @@ def ClangFormat(text: str) -> str:
   """
   return clang.ClangFormat(text, ".cl")
 
+@public.clgen_preprocessor
+def ExtractStructTypedefs(text: str) -> str:
+  """
+  Preprocessor extracts all struct type definitions.
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    The input text, with all whitespaces removed.
+  """
+  return _ExtractTypedefs(text, 'struct')
+
+@public.clgen_preprocessor
+def ExtractUnionTypedefs(text: str) -> str:
+  """
+  Preprocessor extracts all union type definitions.
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    The input text, with all whitespaces removed.
+  """
+  return _ExtractTypedefs(text, 'union')
+
+@public.clgen_preprocessor
+def RemoveTypedefs(text: str) -> str:
+  """
+  Preprocessor removes all type aliases with typedefs, except typedef structs.
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    The input text, with all whitespaces removed.
+  """
+  text = text.split('\n')
+  for i, l in enumerate(text):
+    if "typedef " in l and "typedef struct" not in l and "typedef enum" not in l and "typedef union" not in l:
+      text[i] = ""
+  return '\n'.join(text)
+
+@public.clgen_preprocessor
+def ExtractSingleKernels(text: str) -> typing.List[str]:
+  """
+  A preprocessor that splits a single source file to discrete kernels
+  along with their potential global declarations.
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    List of kernels (strings).
+  """
+  # OpenCL kernels can only be void
+  kernel_specifier = 'kernel void'
+  kernel_chunks = text.split(kernel_specifier)
+  actual_kernels, global_space = [], []
+
+  for idx, chunk in enumerate(kernel_chunks):
+    if idx == 0:
+      # There is no way the left-most part is not empty or global
+      if chunk != '':
+        global_space.append(chunk)
+    else:
+      # Given this preprocessor is called after compile,
+      # we are certain that brackets will be paired
+      num_lbrack, num_rbrack, chunk_idx = 0, 0, 0
+      while ((num_lbrack  == 0 
+      or      num_lbrack  != num_rbrack)
+      and     chunk_idx   <  len(chunk)):
+
+        try:
+          cur_tok = chunk[chunk_idx]
+        except IndexError:
+          l.getLogger().warn(chunk)
+        if   cur_tok == "{":
+          num_lbrack += 1
+        elif cur_tok == "}":
+          num_rbrack += 1
+        chunk_idx += 1
+
+      while chunk_idx < len(chunk):
+        # Without this line, global_space tends to gather lots of newlines and wspaces
+        # Then they are replicated and become massive. Better isolate only actual text there.
+        if chunk[chunk_idx] == ' ' or chunk[chunk_idx] == '\n':
+          chunk_idx += 1
+        else:
+          break
+
+      # Add to kernels all global space met so far + 'kernel void' + the kernel's body
+      actual_kernels.append(''.join(global_space) + kernel_specifier + chunk[:chunk_idx])
+      if ''.join(chunk[chunk_idx:]) != '':
+        # All the rest below are appended to global_space
+        global_space.append(chunk[chunk_idx:])
+
+  return actual_kernels
+
+@public.clgen_preprocessor
+def ExtractOnlySingleKernels(text: str) -> typing.List[str]:
+  """
+  A preprocessor that splits a single source file to discrete kernels
+  along without any global declarations..
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    List of kernels (strings).
+  """
+  # OpenCL kernels can only be void
+  kernel_specifier = 'kernel void'
+  kernel_chunks  = text.split(kernel_specifier)
+  actual_kernels = []
+
+  for idx, chunk in enumerate(kernel_chunks):
+    if idx != 0:
+      # Given this preprocessor is called after compile,
+      # we are certain that brackets will be paired
+      num_lbrack, num_rbrack, chunk_idx = 0, 0, 0
+      while ((num_lbrack  == 0 
+      or      num_lbrack  != num_rbrack)
+      and     chunk_idx   <  len(chunk)):
+
+        try:
+          cur_tok = chunk[chunk_idx]
+        except IndexError:
+          l.getLogger().warn(chunk)
+        if   cur_tok == "{":
+          num_lbrack += 1
+        elif cur_tok == "}":
+          num_rbrack += 1
+        chunk_idx += 1
+
+      while chunk_idx < len(chunk):
+        # Without this line, global_space tends to gather lots of newlines and wspaces
+        # Then they are replicated and become massive. Better isolate only actual text there.
+        if chunk[chunk_idx] == ' ' or chunk[chunk_idx] == '\n':
+          chunk_idx += 1
+        else:
+          break
+      # Add to kernels all global space met so far + 'kernel void' + the kernel's body
+      actual_kernels.append(kernel_specifier + chunk[:chunk_idx])
+  return actual_kernels
+
+@public.clgen_preprocessor
+def StringKernelsToSource(text: str) -> str:
+  """
+  Preprocessor converts inlined C++ string kernels to OpenCL programs.
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    OpenCL kernel.
+  """
+  if '\\n"' in text:
+    return ClangPreprocessWithShim(text.replace('\\n"', '').replace('"', ''))
+  else:
+    return text
 
 @public.clgen_preprocessor
 def NormalizeIdentifiers(text: str) -> str:
