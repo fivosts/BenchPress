@@ -19,7 +19,7 @@ model {
     preprocessor: "deeplearning.clgen.preprocessors.common:StripTrailingWhitespace"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
     preprocessor: "deeplearning.clgen.preprocessors.common:MinimumLineCount3"
-    preprocessor: "deeplearning.clgen.preprocessors.common:ExtractSingleKernels"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:ExtractSingleKernels"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
   }
   architecture {
