@@ -248,6 +248,14 @@
 #define SCREENHEIGHT 1920
 #define SCREENWIDTH 1080
 #define SHAREMASK 0
+#define SHA512M_A 32;
+#define SHA512M_B 32;
+#define SHA512M_C 32;
+#define SHA512M_D 32;
+#define SHA512M_E 32;
+#define SHA512M_F 32;
+#define SHA512M_G 32;
+#define SHA512M_H 32;
 #define SIGN 1
 #define SIMD_WIDTH 32
 #define SIMDROWSIZE
