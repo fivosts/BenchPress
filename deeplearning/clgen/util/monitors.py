@@ -195,6 +195,7 @@ class HistoryMonitor(Monitor):
 class FeatureMonitor(Monitor):
   """
   Produces a bar chart of averaged features.
+  Yes, features are averaged. It is not a cumulative representation.
   """
   def __init__(self,
                cache_path: typing.Union[pathlib.Path, str],
