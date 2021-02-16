@@ -5232,7 +5232,7 @@ typedef struct ikepsk {
   unsigned int nr_len;
 
   unsigned int msg_buf[128];
-  unsigned int msg_len;
+  unsigned int msg_len[128];
 
 } ikepsk_t;
 
