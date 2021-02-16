@@ -289,7 +289,22 @@ def TokenizeSource(src: str,
 
     tokens = set()
     for t in unit.get_tokens(extent = unit.cursor.extent):
-      if t.kind != clang.cindex.TokenKind.LITERAL:
-        # You need to check here the background of an identifier
-        tokens.add((str(t.spelling), str(t.kind)))
+      if t.kind == clang.cindex.TokenKind.LITERAL:
+        # LITERAL char-based delimiter ''
+        for ch in str(t.spelling):
+          tokens.add((ch, ''))
+      elif t.kind == clang.cindex.TokenKind.KEYWORD:
+        # KEYWORD delimiter ' '
+        tokens.add((str(t.spelling), ' '))
+      elif t.kind == clang.cindex.TokenKind.PUNCTUATION:
+        # PUNCTUATION delimiter ''
+        tokens.add((str(t.spelling), ''))
+      elif t.kind == clang.cindex.TokenKind.IDENTIFIER:
+        if clang.cindex.Cursor.from_location(unit, t.extent.end).kind == clang.cindex.CursorKind.CALL_EXPR:
+          # IDENTIFIER-CALL_EXPR: char-based delimiter ''
+          for ch in str(t.spelling):
+            tokens.add((ch, ''))
+        else:
+          # IDENTIFIER delimiter ''
+          tokens.add((str(t.spelling), ''))
     return tokens
