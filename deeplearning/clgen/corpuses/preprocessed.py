@@ -37,6 +37,7 @@ from labm8.py import fs
 import humanize
 from labm8.py import sqlutil
 from eupy.native import logger as l
+# from eupy.hermes import client
 
 FLAGS = flags.FLAGS
 
@@ -179,12 +180,14 @@ class PreprocessedContentFiles(sqlutil.Database):
               (total_time or 1) / (total_walltime or 1),
           )
     )
+    # txt = "Pre-processed {} files in {} ({:.2f}x speedup).\n".format(humanize.intcomma(num_input_files), humanize.naturaldelta((total_walltime or 0) / 1000), (total_time or 1) / (total_walltime or 1))
     l.getLogger().info(
       "Pre-processing discard rate: {:.1f}% ({} files).".format(
               (1 - (num_files / max(num_input_files, 1))) * 100,
               humanize.intcomma(num_input_files - num_files),
           )
     )
+    # txt += "Pre-processing discard rate: {:.1f}% ({} files).\n".format((1 - (num_files / max(num_input_files, 1))) * 100, humanize.intcomma(num_input_files - num_files))
     l.getLogger().info(
       "Pre-processed corpus: {} chars, {} lines, {} files.".format(
               humanize.intcomma(char_count),
@@ -192,6 +195,8 @@ class PreprocessedContentFiles(sqlutil.Database):
               humanize.intcomma(num_files),
           )
     )
+    # txt += "Pre-processed corpus: {} chars, {} lines, {} files.\n".format(humanize.intcomma(char_count),humanize.intcomma(line_count),humanize.intcomma(num_files))
+    # client.getClient().send_message("pre-processor", txt)
 
   def IsDone(self, session: sqlutil.Session):
     if session.query(Meta).filter(Meta.key == "done").first():
