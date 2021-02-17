@@ -21,6 +21,7 @@ for an example.
 """
 import json
 import re
+import humanize
 import subprocess
 import tempfile
 import typing
@@ -289,7 +290,7 @@ def DeriveSourceVocab(src: str,
 
     tokens = {}
     for idx, t in enumerate(unit.get_tokens(extent = unit.cursor.extent)):
-      print('\rParsed', idx, 'tokens',  sep = ' ', end = '', flush = True)
+      print('\rParsed', humanize.intcomma(idx), 'tokens',  sep = ' ', end = '', flush = True)
       if t.kind == clang.cindex.TokenKind.LITERAL:
         # LITERAL char-based delimiter ''
         for ch in str(t.spelling):
