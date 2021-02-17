@@ -129,7 +129,7 @@ def _ExtractTypedefs(text: str, dtype: str) -> str:
   print("\n\n".join(dtypes))
   return ''.join(new_text)
 
-def DeriveSourceVocab(text: str) -> typing.Dict[str, str]:
+def DeriveSourceVocab(text: str, token_list: typing.Set[str] = set()) -> typing.Dict[str, str]:
   """Pass CL code through clang's lexer and return set of
   tokens with appropriate delimiters for vocabulary construction.
 
@@ -139,7 +139,7 @@ def DeriveSourceVocab(text: str) -> typing.Dict[str, str]:
   Returns:
     Set of unique source code tokens.
   """
-  return clang.DeriveSourceVocab(text, ".cl", GetClangArgs(use_shim = False))
+  return clang.DeriveSourceVocab(text, token_list, ".cl", GetClangArgs(use_shim = False))
 
 def TokenizeSource(text: str) -> typing.List[str]:
   """

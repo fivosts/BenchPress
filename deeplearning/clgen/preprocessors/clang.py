@@ -260,6 +260,7 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
   return stdout
 
 def DeriveSourceVocab(src: str,
+                      token_list: typing.Set[str],
                       suffix: str,
                       cflags: typing.List[str],
                       ) -> typing.Dict[str, str]:
@@ -267,6 +268,7 @@ def DeriveSourceVocab(src: str,
 
   Args:
     src: The source code to compile.
+    token_list: External set of grammar tokens for target language.
     suffix: The suffix to append to the source code temporary file. E.g. '.c'
       for a C program.
     cflags: A list of flags to be passed to clang.
@@ -291,7 +293,9 @@ def DeriveSourceVocab(src: str,
     tokens = {}
     for idx, t in enumerate(unit.get_tokens(extent = unit.cursor.extent)):
       print('\rParsed', humanize.intcomma(idx), 'tokens',  sep = ' ', end = '', flush = True)
-      if t.kind == clang.cindex.TokenKind.LITERAL:
+      if str(t.spelling) in token_list:
+        tokens[str(t.spelling)] = ' '
+      elif t.kind == clang.cindex.TokenKind.LITERAL:
         # LITERAL char-based delimiter ''
         for ch in str(t.spelling):
           tokens["{}-char-based".format(ch)] = ''
@@ -303,12 +307,14 @@ def DeriveSourceVocab(src: str,
         tokens[str(t.spelling)] = ''
       elif t.kind == clang.cindex.TokenKind.IDENTIFIER:
         cursor_kind = clang.cindex.Cursor.from_location(unit, t.extent.end).kind
-        if cursor_kind == clang.cindex.CursorKind.CALL_EXPR:
+        if cursor_kind in {clang.cindex.CursorKind.CALL_EXPR, clang.cindex.CursorKind.FUNCTION_DECL}:
           # IDENTIFIER-CALL_EXPR: char-based delimiter ''
           for ch in str(t.spelling):
             tokens["{}-char-based".format(ch)] = ''
         else:
           tokens[str(t.spelling)] = ' '
+      else:
+        raise TypeError("{}".format(t.kind))
 
     return tokens
 
