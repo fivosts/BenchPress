@@ -388,11 +388,13 @@ class Model(object):
         for index in indices[i]:
           ## Legacy operation for sequential returning single token
           if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert):
-            samples_in_progress[i] = [tokenizer.decoder[x] for x in indices[i]]
+            # samples_in_progress[i] = [tokenizer.decoder[x] for x in indices[i]]
+            samples_in_progress[i] = [tokenizer.tokensToString([x]) for x in indices[i]]
             step_ind               = '\n'.join([self.tokenizer.tokensToString(mind).replace('\n', '\\n') for mind in step_indices[i]])
             encoded_step_indices   = '\n'.join([','.join([str(x) for x in mind]) for mind in step_indices[i]])
           elif isinstance(self.backend, tf_sequential.tfSequential) or isinstance(self.backend, keras_sequential.kerasSequential):
-            samples_in_progress[i].append(tokenizer.decoder[index])
+            # samples_in_progress[i].append(tokenizer.decoder[index])
+            samples_in_progress[i].append(tokenizer.tokensToString([index]))
             step_ind             = ""
             encoded_step_indices = ""
           else:
