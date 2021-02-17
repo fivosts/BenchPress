@@ -141,6 +141,18 @@ def DeriveSourceVocab(text: str) -> typing.Dict[str, str]:
   """
   return clang.DeriveSourceVocab(text, ".cl", GetClangArgs(use_shim = False))
 
+def TokenizeSource(text: str) -> typing.List[str]:
+  """
+  Tokenize OpenCL with clang's lexer.
+
+  Args:
+    text: The source code to compile.
+
+  Returns:
+    Source code as a list of tokens.
+  """
+  return clang.TokenizeSource(text, ".cl", GetClangArgs(use_shim = False))
+
 @public.clgen_preprocessor
 def ClangPreprocess(text: str) -> str:
   """Preprocessor OpenCL source.
