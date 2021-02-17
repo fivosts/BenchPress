@@ -139,7 +139,7 @@ class TokenizerBase(object):
     """
     raise NotImplementedError("abstract class")
 
-  def TokenizeString(self, text: str) -> typing.List[str]:
+  def AtomizeString(self, text: str) -> typing.List[str]:
     """Split the text into atoms, but do not encode to indices.
 
     Args:
@@ -456,30 +456,16 @@ class ASTokenizer(TokenizerBase):
           'holeToken'    : '[HOLE]',
           'endholeToken' : '[ENDHOLE]',
       }
+      token_list.update(metaTokens.values())
     else:
       metaTokens = {}
-    # token_list.update(opencl.TokenizeSource(text))
-    from deeplearning.clgen.util import monitors
-    import pathlib
-    m = monitors.NormalizedFrequencyMonitor(pathlib.Path("/home/fivosts"), "token_type_distr")
-    m2 = monitors.NormalizedFrequencyMonitor(pathlib.Path("/home/fivosts"), "token_distr")
-    source_tokens = opencl.TokenizeSource(text)
-    for t in source_tokens:
-      m.register(t[1])
-      m2.register(t[0])
 
-    m.plot()
-    m2.plot()
-    print(source_tokens)
-    print(len(source_tokens))
-    exit()
-    raise NotImplementedError
-    # Add meta token_list to token set
-    for mt in metaTokens.values():
-      token_list.add(mt)
-    # Instantiate a greedy tokenizer using the full vocabulary.
+    source_tokens = opencl.TokenizeSource(text)
+    token_list.update(source_tokens.values())
+
+    # Create full vocab and initialize AST tokenizer.
     full_vocab = dict(zip(token_list, range(len(token_list))))
-    c = ASTokenizer(full_vocab, metaTokens, determine_chars=True)
+    c = ASTokenizer(full_vocab, metaTokens, source_tokens)
     # Derive the subset of the vocabulary required to encode the given text.
     tokens = [mt for mt in metaTokens.values()] + sorted(list(set(c.TokenizeString(text))))
     vocab_subset = dict(zip(tokens, range(len(tokens))))
