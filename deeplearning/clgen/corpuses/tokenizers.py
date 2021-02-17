@@ -152,9 +152,9 @@ class TokenizerBase(object):
     return list(map(lambda x: self.decoder[x], indices))
 
   def tokensToString(self, 
-                       encoded: np.array, 
-                       ignore_token: int = None,
-                       ):
+                     encoded: np.array,
+                     ignore_token: int = None,
+                     ):
     """Translate atomized code back into a string.
 
     Args:
@@ -461,12 +461,16 @@ class ASTokenizer(TokenizerBase):
       metaTokens = {}
 
     source_tokens = opencl.DeriveSourceVocab(text)
-    token_list.update(source_tokens.values())
+    token_list.update(source_tokens.keys())
 
     # Create full vocab and initialize AST tokenizer.
     full_vocab = dict(zip(token_list, range(len(token_list))))
     c = ASTokenizer(full_vocab, metaTokens, source_tokens)
-    return ASTokenizer(vocab_subset, metaTokens)
+    assert text.replace('\n\n', '\n') == c.ArrayToCode(c.TokenizeString(text))
+    from eupy.hermes import client
+    client.getClient().send_message("Tokenizer", "Reconstruction succeeded.")
+    exit()
+    return c
 
   def __init__(self, 
                vocab:      typing.Dict[str, int], 
@@ -475,11 +479,7 @@ class ASTokenizer(TokenizerBase):
                ):
     super(ASTokenizer, self).__init__(vocab, metaTokens)
     self.token_del = token_del
-    multichars = set(k for k in self.atoms if len(k) > 1)
-    first_chars = set(a[0] for a in multichars)
-    self.lookup = dict(
-      (c, [a for a in multichars if a[0] == c]) for c in first_chars
-    )
+    return
 
   def TokenizeString(self, text: str) -> np.array:
     """Tokenize a text into an array of vocabulary indices.
@@ -490,40 +490,27 @@ class ASTokenizer(TokenizerBase):
     Returns:
       An array of indices into vocabulary for all atoms in text.
     """
-    indices = []
-    i = 0
-    j = 2
+    return np.array([self.vocab[t] for t in self.AtomizeString(text)], dtype=np.int32)
+
+  def AtomizeString(self, text: str) -> typing.List[str]:
+    """Split the text into atoms, but do not encode to indices.
+
+    Args:
+      text: Input text.
+
+    Returns:
+      A list of tokens.
+
+    Raises:
+      ValueError: When a string atom does not belong in the vocabulary.
+    """
     try:
-      while i < len(text):
-        if self.lookup.get(text[i]):
-          if j <= len(text) and any(
-            x.startswith(text[i:j]) for x in self.lookup[text[i]]
-          ):
-            j += 1
-          else:
-            while j > i + 1:
-              if any(x == text[i:j] for x in self.lookup[text[i]]):
-                indices.append(self.vocab[text[i:j]])
-                i = j
-                j += 2
-                break
-              else:
-                j -= 1
-            else:
-              indices.append(self.vocab[text[i]])
-              i += 1
-              j += 2
-        else:
-          indices.append(self.vocab[text[i]])
-          i += 1
-          j += 2
+      return [self.decoder[self.vocab[t]] for t in opencl.TokenizeSource(text)]
     except KeyError:
-      raise ValueError("String '{}' index out of Vocabulary.".format(text[i:j]))
+      raise ValueError("String index out of vocabulary")
 
-    return np.array(indices, dtype=np.int32)
-
-  def tokensToString(self, 
-                     encoded: np.array, 
+  def tokensToString(self,
+                     encoded: np.array,
                      ignore_token: int = None,
                      ):
     """Translate atomized code back into a string.
@@ -540,7 +527,7 @@ class ASTokenizer(TokenizerBase):
       if np.ndim(encoded) > 1:
         return [ self.tokensToString(x, ignore_token) for x in encoded ]
       elif np.ndim(encoded) == 1:
-        src = "".join(list(map(lambda x: self.decoder[x] + self.token_del[x] if x != ignore_token else '', encoded)))
+        src = "".join(list(map(lambda x: self.decoder[x].replace('-char-based', '') + self.token_del[self.decoder[x]] if x != ignore_token else '', encoded)))
         try:
           src = opencl.ClangFormat(src)
         except ValueError:
