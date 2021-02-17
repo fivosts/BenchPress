@@ -355,7 +355,7 @@ class WordTokenizer(TokenizerBase):
     full_vocab = dict(zip(token_list, range(len(token_list))))
     c = WordTokenizer(full_vocab, metaTokens, determine_chars=True)
     # Derive the subset of the vocabulary required to encode the given text.
-    tokens = [mt for mt in metaTokens.values()] + sorted(list(set(c.TokenizeString(text))))
+    tokens = [mt for mt in metaTokens.values()] + sorted(list(set(c.AtomizeString(text))))
     vocab_subset = dict(zip(tokens, range(len(tokens))))
     # Return a new tokenizer using the subset vocabulary.
     return WordTokenizer(vocab_subset, metaTokens)
@@ -460,14 +460,100 @@ class ASTokenizer(TokenizerBase):
     else:
       metaTokens = {}
 
-    source_tokens = opencl.TokenizeSource(text)
+    source_tokens = opencl.DeriveSourceVocab(text)
     token_list.update(source_tokens.values())
 
     # Create full vocab and initialize AST tokenizer.
     full_vocab = dict(zip(token_list, range(len(token_list))))
     c = ASTokenizer(full_vocab, metaTokens, source_tokens)
-    # Derive the subset of the vocabulary required to encode the given text.
-    tokens = [mt for mt in metaTokens.values()] + sorted(list(set(c.TokenizeString(text))))
-    vocab_subset = dict(zip(tokens, range(len(tokens))))
-    # Return a new tokenizer using the subset vocabulary.
     return ASTokenizer(vocab_subset, metaTokens)
+
+  def __init__(self, 
+               vocab:      typing.Dict[str, int], 
+               metaTokens: typing.Dict[str, str],
+               token_del:  typing.Dict[str, str],
+               ):
+    super(ASTokenizer, self).__init__(vocab, metaTokens)
+    self.token_del = token_del
+    multichars = set(k for k in self.atoms if len(k) > 1)
+    first_chars = set(a[0] for a in multichars)
+    self.lookup = dict(
+      (c, [a for a in multichars if a[0] == c]) for c in first_chars
+    )
+
+  def TokenizeString(self, text: str) -> np.array:
+    """Tokenize a text into an array of vocabulary indices.
+
+    Args:
+      text: Input text.
+
+    Returns:
+      An array of indices into vocabulary for all atoms in text.
+    """
+    indices = []
+    i = 0
+    j = 2
+    try:
+      while i < len(text):
+        if self.lookup.get(text[i]):
+          if j <= len(text) and any(
+            x.startswith(text[i:j]) for x in self.lookup[text[i]]
+          ):
+            j += 1
+          else:
+            while j > i + 1:
+              if any(x == text[i:j] for x in self.lookup[text[i]]):
+                indices.append(self.vocab[text[i:j]])
+                i = j
+                j += 2
+                break
+              else:
+                j -= 1
+            else:
+              indices.append(self.vocab[text[i]])
+              i += 1
+              j += 2
+        else:
+          indices.append(self.vocab[text[i]])
+          i += 1
+          j += 2
+    except KeyError:
+      raise ValueError("String '{}' index out of Vocabulary.".format(text[i:j]))
+
+    return np.array(indices, dtype=np.int32)
+
+  def tokensToString(self, 
+                     encoded: np.array, 
+                     ignore_token: int = None,
+                     ):
+    """Translate atomized code back into a string.
+
+    Args:
+      encoded: An nparray of encoded vocabulary indices.
+      ignore_token: A specific token to ignore from the text string (e.g. exclude pads)
+    Returns:
+      The decoded text.
+      Returns string if nparray is one-dimensional.
+      Else returns list for each extra dimension of strings.
+    """
+    try:
+      if np.ndim(encoded) > 1:
+        return [ self.tokensToString(x, ignore_token) for x in encoded ]
+      elif np.ndim(encoded) == 1:
+        src = "".join(list(map(lambda x: self.decoder[x] + self.token_del[x] if x != ignore_token else '', encoded)))
+        try:
+          src = opencl.ClangFormat(src)
+        except ValueError:
+          raise ValueError("Clang-format failed in AST tokenizer tokensToString")
+        return src
+      else:
+        raise ValueError("Wrong encoded array specified")
+    except KeyError:
+      raise KeyError("Out of vocab: {}".format(encoded))
+
+  def SrcLocationToIndex(self,
+                         encoded: np.array,
+                         locations: typing.List[typing.Tuple[int, int]],
+                         ) -> typing.List[int]:
+
+    raise NotImplementedError("TODO")
