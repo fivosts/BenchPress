@@ -258,10 +258,10 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
     raise ValueError(stderr)
   return stdout
 
-def TokenizeSource(src: str,
-                   suffix: str,
-                   cflags: typing.List[str],
-                   ) -> typing.Dict[str, str]:
+def DeriveSourceVocab(src: str,
+                      suffix: str,
+                      cflags: typing.List[str],
+                      ) -> typing.Dict[str, str]:
   """Pass source code through clang's lexer and return set of tokens.
 
   Args:
