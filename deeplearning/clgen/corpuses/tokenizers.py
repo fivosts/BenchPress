@@ -451,8 +451,6 @@ class ASTokenizer(TokenizerBase):
     Returns:
       An tokenizer instance.
     """
-
-    token_list = set()
     if mask_tokens:
       metaTokens = {
           'startToken'   : '[START]',
@@ -462,11 +460,14 @@ class ASTokenizer(TokenizerBase):
           'holeToken'    : '[HOLE]',
           'endholeToken' : '[ENDHOLE]',
       }
-      token_list.update(metaTokens.values())
     else:
       metaTokens = {}
 
+    token_list = set()
     source_tokens = opencl.DeriveSourceVocab(text, token_set)
+    for mt in metaTokens.values():
+      source_tokens[mt] = ''
+      token_list.add(mt)
     token_list.update(source_tokens.keys())
 
     # Create full vocab and initialize AST tokenizer.
@@ -497,14 +498,14 @@ class ASTokenizer(TokenizerBase):
     cb_del = "-char-based"
     while l_idx < len(text):
     # for idx, ch in enumerate(text):
-      if text[l_idx] == '"' and (l_idx == 0 or text[l_idx - 1] != '\\'):
+      if text[l_idx] == '"' and not inside_char:# and (l_idx == 0 or text[l_idx - 1] != '\\'):
         inside_string ^= True
         try:
           indices.append(self.vocab["{}{}".format(text[l_idx], cb_del)])
         except KeyError:
           raise ValueError("-{}- char out of vocabulary.".format(text[l_idx]))
         l_idx += 1
-      elif text[l_idx] == "'" and (l_idx == 0 or text[l_idx - 1] != '\\'):
+      elif text[l_idx] == "'" and not inside_string:# and (l_idx == 0 or text[l_idx - 1] != '\\'):
         inside_char ^= True
         try:
           indices.append(self.vocab["{}{}".format(text[l_idx], cb_del)])
@@ -512,8 +513,14 @@ class ASTokenizer(TokenizerBase):
           raise ValueError("-{}- char out of vocabulary.".format(text[l_idx]))
         l_idx += 1
       elif text[l_idx] == '\n':
+        if inside_string or inside_char:
+          indices.append(self.vocab["n-char-based"])            
         l_idx += 1
-      elif text[l_idx] == ' ':
+      elif text[l_idx] == '\t':
+        if inside_string or inside_char:
+          indices.append(self.vocab["t-char-based"])            
+        l_idx += 1
+      elif text[l_idx] == ' ' or text[l_idx] == '\\':
         if inside_string or inside_char:
           try:
             indices.append(self.vocab["{}{}".format(text[l_idx], cb_del)])
@@ -522,8 +529,9 @@ class ASTokenizer(TokenizerBase):
         l_idx += 1
       else:
         r_idx = l_idx
-        while r_idx < len(text) and text[r_idx] not in {' ', '\n', '(', ')', '{', '}', '[', ']', ';'}:
-          # Some basic tokens that mean we can't have a unified token from l_idx->r_idx
+        while not inside_char and not inside_string and r_idx < len(text) and text[r_idx] not in {' ', '\n', '(', ')', '{', '}', '[', ']', ';'}:
+          # Some basic tokens that mean we can't have a unified token from l_idx->r_idx.
+          # Also, no word-tokenization in string literals.
           r_idx += 1
         while r_idx > l_idx and text[l_idx:r_idx+1] not in self.vocab:
           r_idx -= 1
@@ -535,7 +543,7 @@ class ASTokenizer(TokenizerBase):
             try:
               indices.append(self.vocab["{}{}".format(text[l_idx], cb_del)])
             except KeyError:
-              raise ValueError("Inside string but out of vocab: -{}-".format(text[l_idx]))
+              raise ValueError("Inside string but out of vocab: -{}-\n{}".format(text[l_idx], text))
           elif ("{}{}".format(text[l_idx], cb_del) not in self.vocab) or r_idx + 1 >= len(text):
             # End of file for some reason, or just there is no char-based entry.
             try:
@@ -551,7 +559,7 @@ class ASTokenizer(TokenizerBase):
               except KeyError:
                 raise ValueError("Alnum out of vocab: -{}-".format(text[l_idx]))
               # print("This should def be a char-based.Why ? If current is char and next is char and should be word, why did you end up rejecting the curr+1 ?")
-            elif text[l_idx+1] == '(':
+            elif text[l_idx+1] == '(' or text[l_idx+1] == '_':
               try:
                 indices.append(self.vocab["{}{}".format(text[l_idx], cb_del)])
               except KeyError:
@@ -573,14 +581,14 @@ class ASTokenizer(TokenizerBase):
               indices.append(self.vocab[text[l_idx:r_idx+1]])
             except KeyError:
               raise ValueError("String word in EOF not in vocab: -{}-".format(text[l_idx:r_idx+1]))
-          elif not text[r_idx].isalnum() or not text[r_idx+1].isalnum():
+          elif (not text[r_idx].isalnum() and text[r_idx] != '_') or (not text[r_idx+1].isalnum() and text[r_idx+1] != '_'):
             try:
               indices.append(self.vocab[text[l_idx:r_idx+1]])
             except KeyError:
               raise ValueError("String word not in vocab: -{}-".format(text[l_idx:r_idx+1]))
           else:
-            # a) we have space, next is alphanumerical
-            # This is to catch a function call named intgetter().
+            # a) we have space, next is alphanumerical or underscore
+            # This is to catch a function call named intgetter() or int_getter().
             while r_idx + 1 < len(text) and text[r_idx+1].isalnum():
               r_idx += 1
             for i in range(l_idx, r_idx + 1):
@@ -609,7 +617,7 @@ class ASTokenizer(TokenizerBase):
       if np.ndim(encoded) > 1:
         return [ self.tokensToString(x, ignore_token) for x in encoded ]
       elif np.ndim(encoded) == 1:
-        src = "".join(list(map(lambda x: self.decoder[x].replace('-char-based', '') + self.token_del[self.decoder[x]] if x != ignore_token else '', encoded)))
+        src = "".join(list(map(lambda x: self.decoder[x].replace('-char-based', '').replace('\\', '\\\\') + self.token_del[self.decoder[x]] if x != ignore_token else '', encoded)))
         # try:
         #   src = opencl.ClangFormat(src)
         # except ValueError:
