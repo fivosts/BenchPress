@@ -406,7 +406,7 @@ class Sampler(object):
     """
     try:
       self.encoded_start_text = tokenizer.TokenizeString(self.start_text)
-      self.tokenized_start_text = tokenizer.TokenizeString(self.start_text)
+      self.tokenized_start_text = tokenizer.AtomizeString(self.start_text)
     except ValueError:
       raise ValueError(
         "Sampler start text cannot be encoded using the corpus vocabulary: "
