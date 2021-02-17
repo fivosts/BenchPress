@@ -139,7 +139,7 @@ def DeriveSourceVocab(text: str) -> typing.Dict[str, str]:
   Returns:
     Set of unique source code tokens.
   """
-  return clang.TokenizeSource(text, ".cl", GetClangArgs(use_shim = False))
+  return clang.DeriveSourceVocab(text, ".cl", GetClangArgs(use_shim = False))
 
 @public.clgen_preprocessor
 def ClangPreprocess(text: str) -> str:
