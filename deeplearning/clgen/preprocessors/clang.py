@@ -294,7 +294,7 @@ def DeriveSourceVocab(src: str,
       if t.kind == clang.cindex.TokenKind.LITERAL:
         # LITERAL char-based delimiter ''
         for ch in str(t.spelling):
-          tokens[ch] = ''
+          tokens["{}-char-based".format(ch)] = ''
       elif t.kind == clang.cindex.TokenKind.KEYWORD:
         # KEYWORD delimiter ' '
         tokens[str(t.spelling)] = ' '
@@ -302,11 +302,64 @@ def DeriveSourceVocab(src: str,
         # PUNCTUATION delimiter ''
         tokens[str(t.spelling)] = ''
       elif t.kind == clang.cindex.TokenKind.IDENTIFIER:
-        if clang.cindex.Cursor.from_location(unit, t.extent.end).kind == clang.cindex.CursorKind.CALL_EXPR:
+        cursor_kind = clang.cindex.Cursor.from_location(unit, t.extent.end).kind
+        if cursor_kind == clang.cindex.CursorKind.CALL_EXPR:
           # IDENTIFIER-CALL_EXPR: char-based delimiter ''
           for ch in str(t.spelling):
-            tokens[ch] = ''
+            tokens["{}-char-based".format(ch)] = ''
         else:
-          # IDENTIFIER delimiter ''
-          tokens[str(t.spelling)] = ''
+          tokens[str(t.spelling)] = ' '
+
+    return tokens
+
+def TokenizeSource(src: str,
+                   suffix: str,
+                   cflags: typing.List[str],
+                   ) -> typing.List[str]:
+  """
+  Tokenize source code with clang's lexer.
+
+  Args:
+    src: The source code to compile.
+    suffix: The suffix to append to the source code temporary file. E.g. '.c'
+      for a C program.
+    cflags: A list of flags to be passed to clang.
+
+  Returns:
+    Source code as a list of tokens.
+
+  Raises:
+    ValueError: In case of an error.
+  """
+  builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
+  with tempfile.NamedTemporaryFile(
+    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
+  ) as f:
+    f.write(src)
+    f.flush()
+    try:
+      unit = clang.cindex.TranslationUnit.from_source(f.name, args = builtin_cflags + cflags)
+    except clang.cindex.TranslationUnitLoadError as e:
+      raise ValueError(e)
+
+    tokens = []
+
+    """
+    Instead of this, feed vocab as argument. Iterate get_tokens. If exists in vocab, ok.
+    If not, do char-based.
+    """
+    for idx, t in enumerate(unit.get_tokens(extent = unit.cursor.extent)):
+      if t.kind == clang.cindex.TokenKind.LITERAL:
+        for ch in str(t.spelling):
+          tokens.append("{}-char-based".format(ch))
+      elif t.kind == clang.cindex.TokenKind.KEYWORD:
+        tokens.append(str(t.spelling))
+      elif t.kind == clang.cindex.TokenKind.PUNCTUATION:
+        tokens.append(str(t.spelling))
+      elif t.kind == clang.cindex.TokenKind.IDENTIFIER:
+        if clang.cindex.Cursor.from_location(unit, t.extent.end).kind == clang.cindex.CursorKind.CALL_EXPR:
+          for ch in str(t.spelling):
+            tokens.append("{}-char-based".format(ch))
+        else:
+          tokens.append(str(t.spelling))
     return tokens
