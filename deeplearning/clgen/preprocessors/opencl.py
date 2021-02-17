@@ -129,8 +129,9 @@ def _ExtractTypedefs(text: str, dtype: str) -> str:
   print("\n\n".join(dtypes))
   return ''.join(new_text)
 
-def TokenizeSource(text: str) -> typing.Set[typing.Tuple[str, str]]:
-  """Pass CL code through clang's lexer and return set of tokens.
+def DeriveSourceVocab(text: str) -> typing.Dict[str, str]:
+  """Pass CL code through clang's lexer and return set of
+  tokens with appropriate delimiters for vocabulary construction.
 
   Args:
     text: Source code.
