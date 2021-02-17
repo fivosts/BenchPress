@@ -48,8 +48,12 @@ def FromText(config, corpus_txt: str):
                                 )
   elif config.token_type == "ast":
     if config.token_list:
-      l.getLogger().warning("token list in AST-based tokenization is going to be ignored.")
-    return ASTokenizer.FromText(corpus_txt, mask_tokens)
+      with open(config.token_list, 'r') as f:
+        token_set = json.load(f)
+        token_set = set(token_set['opencl']['tokens'])
+    else:
+      token_set = set()
+    return ASTokenizer.FromText(corpus_txt, token_set, mask_tokens)
   else:
     raise NotImplementedError
 
@@ -435,12 +439,14 @@ class ASTokenizer(TokenizerBase):
   @classmethod
   def FromText(cls,
                text: str,
+               token_set: typing.Set[str],
                mask_tokens: bool,
                ) -> "ASTokenizer":
     """Instantiate an AST tokenizer from a corpus text.
 
     Args:
       text: Text corpus
+      token_set: Pre-defined grammar keywords of target language.
 
     Returns:
       An tokenizer instance.
@@ -460,17 +466,12 @@ class ASTokenizer(TokenizerBase):
     else:
       metaTokens = {}
 
-    source_tokens = opencl.DeriveSourceVocab(text)
+    source_tokens = opencl.DeriveSourceVocab(text, token_set)
     token_list.update(source_tokens.keys())
 
     # Create full vocab and initialize AST tokenizer.
     full_vocab = dict(zip(token_list, range(len(token_list))))
-    c = ASTokenizer(full_vocab, metaTokens, source_tokens)
-    assert text.replace('\n\n', '\n') == c.ArrayToCode(c.TokenizeString(text))
-    from eupy.hermes import client
-    client.getClient().send_message("Tokenizer", "Reconstruction succeeded.")
-    exit()
-    return c
+    return ASTokenizer(full_vocab, metaTokens, source_tokens)
 
   def __init__(self, 
                vocab:      typing.Dict[str, int], 
@@ -490,24 +491,105 @@ class ASTokenizer(TokenizerBase):
     Returns:
       An array of indices into vocabulary for all atoms in text.
     """
-    return np.array([self.vocab[t] for t in self.AtomizeString(text)], dtype=np.int32)
+    indices = []
+    l_idx, r_idx = 0, 1
+    inside_string, inside_char = False, False
+    cb_del = "-char-based"
+    while l_idx < len(text):
+    # for idx, ch in enumerate(text):
+      if text[l_idx] == '"' and (l_idx == 0 or text[l_idx - 1] != '\\'):
+        inside_string ^= True
+        try:
+          indices.append(self.vocab["{}{}".format(text[l_idx], cb_del)])
+        except KeyError:
+          raise ValueError("-{}- char out of vocabulary.".format(text[l_idx]))
+        l_idx += 1
+      elif text[l_idx] == "'" and (l_idx == 0 or text[l_idx - 1] != '\\'):
+        inside_char ^= True
+        try:
+          indices.append(self.vocab["{}{}".format(text[l_idx], cb_del)])
+        except KeyError:
+          raise ValueError("-{}- char out of vocabulary.".format(text[l_idx]))
+        l_idx += 1
+      elif text[l_idx] == '\n':
+        l_idx += 1
+      elif text[l_idx] == ' ':
+        if inside_string or inside_char:
+          try:
+            indices.append(self.vocab["{}{}".format(text[l_idx], cb_del)])
+          except KeyError:
+            raise ValueError("-{}- char out of vocabulary.".format(text[l_idx]))
+        l_idx += 1
+      else:
+        r_idx = l_idx
+        while r_idx < len(text) and text[r_idx] not in {' ', '\n', '(', ')', '{', '}', '[', ']', ';'}:
+          # Some basic tokens that mean we can't have a unified token from l_idx->r_idx
+          r_idx += 1
+        while r_idx > l_idx and text[l_idx:r_idx+1] not in self.vocab:
+          r_idx -= 1
 
-  def AtomizeString(self, text: str) -> typing.List[str]:
-    """Split the text into atoms, but do not encode to indices.
-
-    Args:
-      text: Input text.
-
-    Returns:
-      A list of tokens.
-
-    Raises:
-      ValueError: When a string atom does not belong in the vocabulary.
-    """
-    try:
-      return [self.decoder[self.vocab[t]] for t in opencl.TokenizeSource(text)]
-    except KeyError:
-      raise ValueError("String index out of vocabulary")
+        if r_idx == l_idx:
+          # Char-based vs word-based has to be evaluated.
+          if (inside_char or inside_string) or text[l_idx] not in self.vocab:
+            # That is definitely a string literal or there just not is a word entry in vocab.
+            try:
+              indices.append(self.vocab["{}{}".format(text[l_idx], cb_del)])
+            except KeyError:
+              raise ValueError("Inside string but out of vocab: -{}-".format(text[l_idx]))
+          elif ("{}{}".format(text[l_idx], cb_del) not in self.vocab) or r_idx + 1 >= len(text):
+            # End of file for some reason, or just there is no char-based entry.
+            try:
+              indices.append(self.vocab[text[l_idx]])
+            except KeyError:
+              raise ValueError("End of file, out of vocab: -{}-".format(text[l_idx]))
+          elif text[l_idx].isalnum():
+            # Char-based special chars can only be in strings.
+            # Any other char-based token found must be alphanumerical.
+            if text[l_idx+1].isalnum():
+              try:
+                indices.append(self.vocab["{}{}".format(text[l_idx], cb_del)])
+              except KeyError:
+                raise ValueError("Alnum out of vocab: -{}-".format(text[l_idx]))
+              # print("This should def be a char-based.Why ? If current is char and next is char and should be word, why did you end up rejecting the curr+1 ?")
+            elif text[l_idx+1] == '(':
+              try:
+                indices.append(self.vocab["{}{}".format(text[l_idx], cb_del)])
+              except KeyError:
+                raise ValueError("Alnum, next is '(' but is out of vocab: -{}-".format(text[l_idx]))
+            else:
+              try:
+                indices.append(self.vocab[text[l_idx]])
+              except KeyError:
+                raise ValueError("Single-alnum word based out of vocab: -{}-".format(text[l_idx]))
+          else:
+            try:
+              indices.append(self.vocab[text[l_idx]])
+            except KeyError:
+              raise ValueError("Single special char word-based out of vocab: -{}-".format(text[l_idx]))
+          l_idx += 1
+        else:
+          if r_idx + 1 >= len(text):
+            try:
+              indices.append(self.vocab[text[l_idx:r_idx+1]])
+            except KeyError:
+              raise ValueError("String word in EOF not in vocab: -{}-".format(text[l_idx:r_idx+1]))
+          elif not text[r_idx].isalnum() or not text[r_idx+1].isalnum():
+            try:
+              indices.append(self.vocab[text[l_idx:r_idx+1]])
+            except KeyError:
+              raise ValueError("String word not in vocab: -{}-".format(text[l_idx:r_idx+1]))
+          else:
+            # a) we have space, next is alphanumerical
+            # This is to catch a function call named intgetter().
+            while r_idx + 1 < len(text) and text[r_idx+1].isalnum():
+              r_idx += 1
+            for i in range(l_idx, r_idx + 1):
+              try:
+                indices.append(self.vocab["{}{}".format(text[i], cb_del)])
+              except KeyError:
+                raise ValueError("Extended word {} to char-based letters out of vocab: -{}-".format(text[l_idx:r_idx+1], text[i]))
+          l_idx = r_idx + 1
+    return np.array(indices, dtype=np.int32)
 
   def tokensToString(self,
                      encoded: np.array,
@@ -528,10 +610,10 @@ class ASTokenizer(TokenizerBase):
         return [ self.tokensToString(x, ignore_token) for x in encoded ]
       elif np.ndim(encoded) == 1:
         src = "".join(list(map(lambda x: self.decoder[x].replace('-char-based', '') + self.token_del[self.decoder[x]] if x != ignore_token else '', encoded)))
-        try:
-          src = opencl.ClangFormat(src)
-        except ValueError:
-          raise ValueError("Clang-format failed in AST tokenizer tokensToString")
+        # try:
+        #   src = opencl.ClangFormat(src)
+        # except ValueError:
+        #   raise ValueError("Clang-format failed in AST tokenizer tokensToString")
         return src
       else:
         raise ValueError("Wrong encoded array specified")
