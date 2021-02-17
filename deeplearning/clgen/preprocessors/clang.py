@@ -261,7 +261,7 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
 def TokenizeSource(src: str,
                    suffix: str,
                    cflags: typing.List[str],
-                   ) -> typing.Set[typing.Tuple[str, str]]:
+                   ) -> typing.Dict[str, str]:
   """Pass source code through clang's lexer and return set of tokens.
 
   Args:
@@ -287,25 +287,25 @@ def TokenizeSource(src: str,
     except clang.cindex.TranslationUnitLoadError as e:
       raise ValueError(e)
 
-    tokens = set()
+    tokens = {}
     for idx, t in enumerate(unit.get_tokens(extent = unit.cursor.extent)):
       print('\rParsed', idx, 'tokens',  sep = ' ', end = '', flush = True)
       if t.kind == clang.cindex.TokenKind.LITERAL:
         # LITERAL char-based delimiter ''
         for ch in str(t.spelling):
-          tokens.add((ch, ''))
+          tokens[ch] = ''
       elif t.kind == clang.cindex.TokenKind.KEYWORD:
         # KEYWORD delimiter ' '
-        tokens.add((str(t.spelling), ' '))
+        tokens[str(t.spelling)] = ' '
       elif t.kind == clang.cindex.TokenKind.PUNCTUATION:
         # PUNCTUATION delimiter ''
-        tokens.add((str(t.spelling), ''))
+        tokens[str(t.spelling)] = ''
       elif t.kind == clang.cindex.TokenKind.IDENTIFIER:
         if clang.cindex.Cursor.from_location(unit, t.extent.end).kind == clang.cindex.CursorKind.CALL_EXPR:
           # IDENTIFIER-CALL_EXPR: char-based delimiter ''
           for ch in str(t.spelling):
-            tokens.add((ch, ''))
+            tokens[ch] = ''
         else:
           # IDENTIFIER delimiter ''
-          tokens.add((str(t.spelling), ''))
+          tokens[str(t.spelling)] = ''
     return tokens
