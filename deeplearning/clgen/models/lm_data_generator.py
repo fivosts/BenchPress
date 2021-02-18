@@ -611,7 +611,7 @@ class MaskLMDataGenerator(object):
 
             actual_length_monitor.register(actual_length)
             token_monitor.register([
-              self.tokenizer.tokensToString([int(x)])
+              self.tokenizer.decoder[int(x)]
               for x in kernel['input_ids'] if x != self.tokenizer.padToken]
             )
             for hole in masked_idxs:
