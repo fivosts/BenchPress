@@ -107,7 +107,7 @@ def CumulativeHistogram(x: np.array,
   layout = go.Layout(
     title = title,
     xaxis = dict(title = x_name),
-    yaxis = dict(title = "# of Occurences"),
+    yaxis = dict(title = "% of Probability Density"),
   )
   fig = go.Figure(layout = layout)
   fig.add_trace(
@@ -116,9 +116,10 @@ def CumulativeHistogram(x: np.array,
       y = y,
       xbins = dict(size = 8),
       cumulative_enabled = True,
+      histfunc = 'sum',
       histnorm = 'percent',
       showlegend = False,
-      marker_color = '#ac3939',
+      marker_color = '#1d99a3',
       opacity = 0.75,
     )
   )
