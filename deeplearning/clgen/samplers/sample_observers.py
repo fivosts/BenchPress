@@ -135,7 +135,7 @@ class SamplesDatabaseObserver(SampleObserver):
     self.sample_id = self.db.count
     self.plot_sample_status = plot_sample_status
     if self.plot_sample_status:
-      self.monitor = monitors.CumulativeHistMonitor(path.parent, "cumulative_sample_count")
+      self.saturation_monitor = monitors.CumulativeHistMonitor(path.parent, "cumulative_sample_count")
 
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback."""
@@ -153,8 +153,8 @@ class SamplesDatabaseObserver(SampleObserver):
         session.add(db_sample)
         self.sample_id += 1
       if self.plot_sample_status:
-        self.monitor.register(self.sample_id)
-        self.monitor.plot()
+        self.saturation_monitor.register(self.sample_id)
+        self.saturation_monitor.plot()
     return True
 
   def endSample(self) -> None:
