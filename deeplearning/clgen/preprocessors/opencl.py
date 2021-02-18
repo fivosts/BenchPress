@@ -142,7 +142,7 @@ def DeriveSourceVocab(text: str, token_list: typing.Set[str] = set()) -> typing.
   """
   return clang.DeriveSourceVocab(text, token_list, ".cl", GetClangArgs(use_shim = False))
 
-def AtomizeSource(text: str, vocab: typing.Set[str] = set()) -> typing.List[str]:
+def AtomizeSource(text: str, vocab: typing.Set[str]) -> typing.List[str]:
   """
   Atomize OpenCL source with clang's lexer into token atoms.
 
