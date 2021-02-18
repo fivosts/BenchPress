@@ -472,6 +472,13 @@ class ASTokenizer(TokenizerBase):
 
     # Create full vocab and initialize AST tokenizer.
     full_vocab = dict(zip(token_list, range(len(token_list))))
+
+    from eupy.hermes import client
+    if 'get_global_id' in full_vocab:
+      client.getClient().send_message("tokenizer", str(full_vocab['get_global_id']))
+    else:
+      client.getClient().send_message("tokenizer", "get_global_id not in vocab.")
+
     return ASTokenizer(full_vocab, metaTokens, source_tokens)
 
   def __init__(self, 
@@ -483,9 +490,10 @@ class ASTokenizer(TokenizerBase):
     self.token_del = token_del
     return
 
-  def TokenizeString(self, text: str) -> np.array:
+  def ManualTokenizeString(self, text: str) -> np.array:
     """Tokenize a text into an array of vocabulary indices.
-
+    !!! This is a manual parser, which is now deprecated.
+    Use regular TokenizeString below.
     Args:
       text: Input text.
 
@@ -559,6 +567,13 @@ class ASTokenizer(TokenizerBase):
               except KeyError:
                 raise ValueError("Alnum out of vocab: -{}-".format(text[l_idx]))
               # print("This should def be a char-based.Why ? If current is char and next is char and should be word, why did you end up rejecting the curr+1 ?")
+            elif text[l_idx - 1].isalnum() and text[l_idx] == 'e' and text[l_idx + 1] == '-':
+              try:
+                indices.append(self.vocab["{}{}".format(text[l_idx], cb_del)])
+                indices.append(self.vocab["{}{}".format(text[l_idx+1], cb_del)])
+                l_idx += 1
+              except KeyError:
+                raise ValueError("Floating exponent out of vocab: -{}-{}-".format(text[l_idx], text[l_idx+1]))
             elif text[l_idx+1] == '(' or text[l_idx+1] == '_':
               try:
                 indices.append(self.vocab["{}{}".format(text[l_idx], cb_del)])
@@ -599,6 +614,34 @@ class ASTokenizer(TokenizerBase):
           l_idx = r_idx + 1
     return np.array(indices, dtype=np.int32)
 
+  def TokenizeString(self, text: str) -> np.array:
+    """Tokenize a text into an array of vocabulary indices.
+
+    Args:
+      text: Input text.
+
+    Returns:
+      An array of indices into vocabulary for all atoms in text.
+    """
+    return np.array([self.vocab[t] for t in self.AtomizeString(text)], dtype=np.int32)
+
+  def AtomizeString(self, text: str) -> typing.List[str]:
+    """Split the text into atoms, but do not encode to indices.
+
+    Args:
+      text: Input text.
+
+    Returns:
+      A list of tokens.
+
+    Raises:
+      ValueError: When a string atom does not belong in the vocabulary.
+    """
+    try:
+      return [self.decoder[self.vocab[t]] for t in opencl.AtomizeSource(text, set(self.vocab.keys()))]
+    except KeyError:
+      raise ValueError("String index out of vocabulary")
+
   def tokensToString(self,
                      encoded: np.array,
                      ignore_token: int = None,
@@ -617,7 +660,7 @@ class ASTokenizer(TokenizerBase):
       if np.ndim(encoded) > 1:
         return [ self.tokensToString(x, ignore_token) for x in encoded ]
       elif np.ndim(encoded) == 1:
-        src = "".join(list(map(lambda x: self.decoder[x].replace('-char-based', '').replace('\\', '\\\\') + self.token_del[self.decoder[x]] if x != ignore_token else '', encoded)))
+        src = "".join(list(map(lambda x: self.decoder[x].replace('-char-based', '').replace('\\', '\\\\').replace('e+ ', 'e + ').replace('e- ', 'e - ') + self.token_del[self.decoder[x]] if x != ignore_token else '', encoded)))
         # try:
         #   src = opencl.ClangFormat(src)
         # except ValueError:
