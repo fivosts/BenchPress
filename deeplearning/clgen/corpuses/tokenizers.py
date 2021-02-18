@@ -158,12 +158,14 @@ class TokenizerBase(object):
   def tokensToString(self, 
                      encoded: np.array,
                      ignore_token: int = None,
+                     with_formatting: bool = False,
                      ):
     """Translate atomized code back into a string.
 
     Args:
       encoded: An nparray of encoded vocabulary indices.
       ignore_token: A specific token to ignore from the text string (e.g. exclude pads)
+      with_formatting: Bool flag used to run clang format on stringified kernel. Used only in AST tokenizer.
     Returns:
       The decoded text.
       Returns string if nparray is one-dimensional.
@@ -645,6 +647,7 @@ class ASTokenizer(TokenizerBase):
   def tokensToString(self,
                      encoded: np.array,
                      ignore_token: int = None,
+                     with_formatting: bool = False,
                      ):
     """Translate atomized code back into a string.
 
@@ -660,7 +663,7 @@ class ASTokenizer(TokenizerBase):
       if np.ndim(encoded) > 1:
         return [ self.tokensToString(x, ignore_token) for x in encoded ]
       elif np.ndim(encoded) == 1:
-        src = "".join(list(map(lambda x: self.decoder[x].replace('-char-based', '').replace('\\', '\\\\').replace('e+ ', 'e + ').replace('e- ', 'e - ') + self.token_del[self.decoder[x]] if x != ignore_token else '', encoded)))
+        src = "".join(list(map(lambda x: self.decoder[x].replace('-char-based', '').replace('\\', '\\\\') + self.token_del[self.decoder[x]] if x != ignore_token else '', encoded))).replace('e+ ', 'e + ').replace('e- ', 'e - ')
         # try:
         #   src = opencl.ClangFormat(src)
         # except ValueError:
