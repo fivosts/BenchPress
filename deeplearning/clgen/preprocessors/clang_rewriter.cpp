@@ -275,27 +275,27 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
     return true;
   }
 
-  // rewrite function calls
-  //
-  bool VisitCallExpr(clang::CallExpr* call) {
-    if (isMainFile(call->GET_BEGIN_LOC())) {
-      // rewrite function calls
-      const auto callee = call->getDirectCallee();
-      if (callee) {
-        const auto name = callee->getNameInfo().getName().getAsString();
+  // // rewrite function calls
+  // //
+  // bool VisitCallExpr(clang::CallExpr* call) {
+  //   if (isMainFile(call->GET_BEGIN_LOC())) {
+  //     // rewrite function calls
+  //     const auto callee = call->getDirectCallee();
+  //     if (callee) {
+  //       const auto name = callee->getNameInfo().getName().getAsString();
 
-        // rewrite fn name
-        const auto it = _fns.find(name);
-        if (it != _fns.end()) {
-          const auto replacement = (*it).second;
-          rewrite_fn_name(call, replacement);
-          DEBUG_OUT("CallExpr " << name << " -> " << replacement << '\n');
-        }
-      }  // else not a direct callee (do we need to handle that?)
-    }    // else not in main file
+  //       // rewrite fn name
+  //       const auto it = _fns.find(name);
+  //       if (it != _fns.end()) {
+  //         const auto replacement = (*it).second;
+  //         rewrite_fn_name(call, replacement);
+  //         DEBUG_OUT("CallExpr " << name << " -> " << replacement << '\n');
+  //       }
+  //     }  // else not a direct callee (do we need to handle that?)
+  //   }    // else not in main file
 
-    return true;
-  }
+  //   return true;
+  // }
 
   // rewrite variable declarations
   //
