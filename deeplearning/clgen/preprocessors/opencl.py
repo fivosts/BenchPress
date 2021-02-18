@@ -135,23 +135,25 @@ def DeriveSourceVocab(text: str, token_list: typing.Set[str] = set()) -> typing.
 
   Args:
     text: Source code.
+    token_list: Optional external list of tokens for opencl grammar.
 
   Returns:
     Set of unique source code tokens.
   """
   return clang.DeriveSourceVocab(text, token_list, ".cl", GetClangArgs(use_shim = False))
 
-def TokenizeSource(text: str) -> typing.List[str]:
+def AtomizeSource(text: str, vocab: typing.Set[str] = set()) -> typing.List[str]:
   """
-  Tokenize OpenCL with clang's lexer.
+  Atomize OpenCL source with clang's lexer into token atoms.
 
   Args:
     text: The source code to compile.
+    vocab: Optional set of learned vocabulary of tokenizer.
 
   Returns:
     Source code as a list of tokens.
   """
-  return clang.TokenizeSource(text, ".cl", GetClangArgs(use_shim = False))
+  return clang.AtomizeSource(text, vocab, ".cl", GetClangArgs(use_shim = False))
 
 @public.clgen_preprocessor
 def ClangPreprocess(text: str) -> str:
