@@ -380,7 +380,13 @@
 #define MAT_GLASS 2
 #define MAT_METAL 3
 #define MAT_ALLOY 4
-
+#define DOT_SIZE 128
+#define NUM_ELEMENTS 64
+#define NUM_FREQUENCIES 4
+#define BASE_ACCUM 1
+#define KB 2
+#define MAX_VALUE 64
+#define MIN_VALUE 0
 
 // System configs
 #define VLIW1

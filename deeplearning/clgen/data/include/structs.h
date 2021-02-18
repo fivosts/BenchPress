@@ -1,3 +1,13 @@
+typedef struct InputData {
+    int roiY, roiHeight;
+    float zeroThreshold, outlierThreshold;
+} InputData;
+
+typedef struct OutputData {
+    int groupsFinished, dstCount, dstCountZero, dstCountOutlier;
+    float srcDstDot[128], dstDstDot[128][128];
+} OutputData;
+
 typedef struct {
  float x, y, z;
 } Point;
