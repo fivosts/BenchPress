@@ -25,6 +25,7 @@ import humanize
 import subprocess
 import tempfile
 import typing
+import string
 import clang.cindex
 from absl import flags
 from deeplearning.clgen.util import environment
@@ -291,30 +292,17 @@ def DeriveSourceVocab(src: str,
       raise ValueError(e)
 
     tokens = {}
+    for ch in string.printable:
+      # Store all printable characters as char-based, to save time iterating literals.
+      tokens["{}-char-based".format(ch)] = ''
     for idx, t in enumerate(unit.get_tokens(extent = unit.cursor.extent)):
-      print('\rParsed', humanize.intcomma(idx), 'tokens',  sep = ' ', end = '', flush = True)
-      if str(t.spelling) in token_list:
-        tokens[str(t.spelling)] = ' '
-      elif t.kind == clang.cindex.TokenKind.LITERAL:
-        # LITERAL char-based delimiter ''
-        for ch in str(t.spelling):
-          tokens["{}-char-based".format(ch)] = ''
-      elif t.kind == clang.cindex.TokenKind.KEYWORD:
-        # KEYWORD delimiter ' '
-        tokens[str(t.spelling)] = ' '
-      elif t.kind == clang.cindex.TokenKind.PUNCTUATION:
-        # PUNCTUATION delimiter ''
-        tokens[str(t.spelling)] = ' '
-      elif t.kind == clang.cindex.TokenKind.IDENTIFIER:
-        cursor_kind = clang.cindex.Cursor.from_location(unit, t.extent.end).kind
-        if cursor_kind in {clang.cindex.CursorKind.CALL_EXPR, clang.cindex.CursorKind.FUNCTION_DECL}:
-          # IDENTIFIER-CALL_EXPR: char-based delimiter ''
-          for ch in str(t.spelling):
-            tokens["{}-char-based".format(ch)] = ''
-        else:
-          tokens[str(t.spelling)] = ' '
+      str_t = str(t.spelling)
+      if str_t in token_list or t.kind in {clang.cindex.TokenKind.KEYWORD, clang.cindex.TokenKind.PUNCTUATION}:
+        tokens[str_t] = ' '
       else:
-        raise TypeError("{}".format(t.kind))
+        cursor_kind = clang.cindex.Cursor.from_location(unit, t.extent.end).kind
+        if cursor_kind not in {clang.cindex.CursorKind.CALL_EXPR}:
+          tokens[str_t] = ' '
 
     return tokens
 
@@ -349,27 +337,12 @@ def AtomizeSource(src: str,
       unit = clang.cindex.TranslationUnit.from_source(f.name, args = builtin_cflags + cflags)
     except clang.cindex.TranslationUnitLoadError as e:
       raise ValueError(e)
-
     tokens = []
-
-    """
-    Instead of this, feed vocab as argument. Iterate get_tokens. If exists in vocab, ok.
-    If not, do char-based.
-    """
     for idx, t in enumerate(unit.get_tokens(extent = unit.cursor.extent)):
-      if t.kind == clang.cindex.TokenKind.LITERAL:
-        for ch in str(t.spelling):
-          tokens.append("{}-char-based".format(ch))
-      elif t.kind == clang.cindex.TokenKind.IDENTIFIER:
-        if str(t.spelling) not in vocab:
-          cursor_kind = clang.cindex.Cursor.from_location(unit, t.extent.end).kind
-          if cursor_kind in {clang.cindex.CursorKind.CALL_EXPR, clang.cindex.CursorKind.FUNCTION_DECL}:
-            for ch in str(t.spelling):
-              tokens.append("{}-char-based".format(ch))
-          else:
-            tokens.append(str(t.spelling))
-        else:
-          tokens.append(str(t.spelling))
-      else:
+      str_t = t.spelling
+      if str_t in vocab:
         tokens.append(str(t.spelling))
+      else:
+        for ch in str_t:
+          tokens.append("{}-char-based".format(ch))
     return tokens
