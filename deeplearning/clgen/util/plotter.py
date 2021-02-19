@@ -120,7 +120,7 @@ def CumulativeHistogram(x: np.array,
       histnorm = 'percent',
       showlegend = False,
       marker_color = '#1d99a3',
-      opacity = 0.75,
+      opacity = 0.65,
     )
   )
   outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
