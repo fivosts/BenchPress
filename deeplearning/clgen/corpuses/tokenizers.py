@@ -200,6 +200,7 @@ class TokenizerBase(object):
 
   def StringArrToCode(self,
                       text: typing.List[str],
+                      with_formatting: bool = False,
                       ) -> str:
     """
     Convert string array to compilable code.
@@ -207,11 +208,12 @@ class TokenizerBase(object):
 
     Args:
       text: String representation of encoded array. (May contain metaTokens)
+      with_formatting: Select to run code through clang-format. Only usable in ASTokenizer
     Returns:
       Code in string format.
     """
-    metaTokenStrValues = set(value for key, value in self.metaTokens.items())
-    return ''.join([x for x in text if x not in metaTokenStrValues])
+    mtstr = set(self.metaTokens.values())
+    return ''.join([x for x in text if x not in mtstr])
 
   def SrcLocationToIndex(self,
                          encoded: np.array,
@@ -497,7 +499,17 @@ class ASTokenizer(TokenizerBase):
                token_del:  typing.Dict[str, str],
                ):
     super(ASTokenizer, self).__init__(vocab, metaTokens)
-    self.token_del = token_del
+    self.decoder_with_delim = {
+      self.vocab[k]: "{}{}".format(k.replace('-char-based', '').replace('\\', '\\\\'), v)
+      for k, v in token_del.items()
+    }
+    """
+    A little legend...
+    self.vocab              : raw_string    -> encoded_value. e.g. 0-char-based: 1243
+    self.decoder            : encoded_value -> raw_string.    e.g. 1243: 0-char-based
+    token_del               : raw_string    -> delimiter.     e.g. 0-char-based: ''
+    self.decoder_with_delim : encoded_value -> pretty_string. e.g. 1243: '0'
+    """
     return
 
   def ManualTokenizeString(self, text: str) -> np.array:
@@ -672,20 +684,48 @@ class ASTokenizer(TokenizerBase):
         return [ self.tokensToString(x, ignore_token) for x in encoded ]
       elif np.ndim(encoded) == 1:
         if with_formatting:
-          src = "".join(
-            list(
-              map(
-                lambda x: self.decoder[x].replace('-char-based', '').replace('\\', '\\\\') + self.token_del[self.decoder[x]] if x != ignore_token else '', encoded
-              )
-            )
-          ).replace('e+ ', 'e + ').replace('e- ', 'e - ').replace('E+ ', 'E + ').replace('E- ', 'E - ')
+          src = []
+          for idx in range(len(encoded)):
+            if encoded[idx] == ignore_token:
+              continue
+            else:
+              ct = self.decoder_with_delim[x]
+              try:
+                if (encoded[idx] in {self.vocab['e-char-based'], self.vocab['E-char-based']}
+                  and encoded[idx+1] in {self.vocab['+'], self.vocab['-']}):
+                  src.append(ct + " ")
+                else:
+                  src.append(ct)
+              except IndexError:
+                src.append(ct)
+          src = "".join(src)
         else:
-          src = opencl.ClangFormat("".join(list(map(lambda x: self.decoder[x].replace('-char-based', '').replace('\\', '\\\\') + self.token_del[self.decoder[x]] if x != ignore_token else '', encoded))))
+          src = opencl.ClangFormat("".join(list(map(lambda x: self.decoder_with_delim[x] if x != ignore_token else '', encoded))))
         return src
       else:
         raise ValueError("Wrong encoded array specified")
     except KeyError:
       raise KeyError("Out of vocab: {}".format(encoded))
+
+  def StringArrToCode(self,
+                      text: typing.List[str],
+                      with_formatting: bool = False,
+                      ) -> str:
+    """
+    Convert string array to compilable code.
+    Removes meta tokens.
+
+    Args:
+      text: String representation of encoded array. (May contain metaTokens)
+      with_formatting: Select to run code through clang-format. Only usable in ASTokenizer
+    Returns:
+      Code in string format.
+    """
+    mtstr = set(self.metaTokens.values())
+    if with_formatting:
+      return opencl.ClangFormat(''.join([self.decoder_with_delim[self.vocab[x]] for x in text if x not in mtstr]))
+    else:
+      return ''.join([self.decoder_with_delim[self.vocab[x]] for x in text if x not in mtstr])
 
   def SrcLocationToIndex(self,
                          encoded: np.array,
