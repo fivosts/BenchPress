@@ -515,8 +515,8 @@ class torchBert(backends.BackendBase):
         for hole, indcs in zip(step_out['prediction_scores'], step_out['sample_indices']):
           plotter.LogitsStepsDistrib(
             x = self.torch.nn.Softmax(dim = 1)(self.torch.FloatTensor(hole)).numpy(),
-            atoms = [self.tokenizer.tokensToString([i]) for i in range(self.tokenizer.vocab_size)],
-            sample_indices = [self.tokenizer.tokensToString([i]) for i in indcs[0]],
+            atoms = [self.tokenizer.decoder[i] for i in range(self.tokenizer.vocab_size)],
+            sample_indices = [self.tokenizer.decoder[i] for i in indcs[0]],
             title = "Sampling distribution dim 1",
             x_name = "Probs / sample step",
           )
