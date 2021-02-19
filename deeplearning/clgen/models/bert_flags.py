@@ -8,9 +8,9 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_integer(
   "monitor_frequency",
-  250,
+  1000,
   "Choose frequency (in steps) in which tensors will be logged during training. "
-  "Default: 250"
+  "Default: 1000"
 )
 
 flags.DEFINE_integer(
