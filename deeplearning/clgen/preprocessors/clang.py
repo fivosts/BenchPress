@@ -337,11 +337,20 @@ def AtomizeSource(src: str,
     except clang.cindex.TranslationUnitLoadError as e:
       raise ValueError(e)
     tokens = []
+    lookout_metaToken, cmt = False, None
     for idx, t in enumerate(unit.get_tokens(extent = unit.cursor.extent)):
       str_t = t.spelling
-      if str_t in vocab:
-        tokens.append(str(t.spelling))
+      if str_t in {'START', 'MASK', 'HOLE', 'END', 'PAD'} and tokens[-1] == '[':
+        cmt = str_t
+        lookout_metaToken = True
+      elif str_t in vocab:
+        if lookout_metaToken and str_t == ']':
+          tokens[-1] = "[{}]".format(cmt)
+          lookout_metaToken = False
+        else:
+          tokens.append(str(t.spelling))
       else:
         for ch in str_t:
           tokens.append("{}-char-based".format(ch))
+
     return tokens
