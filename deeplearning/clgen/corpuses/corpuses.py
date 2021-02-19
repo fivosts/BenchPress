@@ -372,7 +372,7 @@ class Corpus(object):
       )
       tokenizer = WordTokenizerFromEncodedDb(self.config.tokenizer, encoded_db)
     else:
-      tokenizer = tokenizers.FromText(self.config.tokenizer, corpus_txt)
+      tokenizer = tokenizers.FromText(self.config.tokenizer, self.config.contentfile_separator, corpus_txt)
 
     tokenizer.ToFile(self.tokenizer_path)
     return tokenizer
