@@ -300,8 +300,7 @@ def DeriveSourceVocab(src: str,
       if str_t in token_list or t.kind in {clang.cindex.TokenKind.KEYWORD, clang.cindex.TokenKind.PUNCTUATION}:
         tokens[str_t] = ' '
       else:
-        cursor_kind = clang.cindex.Cursor.from_location(unit, t.extent.end).kind
-        if cursor_kind not in {clang.cindex.CursorKind.CALL_EXPR}:
+        if t.kind != clang.cindex.TokenKind.LITERAL and clang.cindex.Cursor.from_location(unit, t.extent.end).kind not in {clang.cindex.CursorKind.CALL_EXPR}:
           tokens[str_t] = ' '
 
     return tokens
