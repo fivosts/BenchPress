@@ -20,6 +20,9 @@ import pathlib
 import pickle
 import typing
 import json
+import multiprocessing
+import progressbar
+import functools
 import numpy as np
 from collections import Counter
 from absl import flags
@@ -29,7 +32,7 @@ from deeplearning.clgen.preprocessors import opencl
 
 FLAGS = flags.FLAGS
 
-def FromText(config, corpus_txt: str):
+def FromText(config, contentfile_separator: str, corpus_txt: str):
   mask_tokens = False if config.mask_tokens is None else config.mask_tokens
 
   if config.token_type   == "character":
@@ -53,7 +56,7 @@ def FromText(config, corpus_txt: str):
         token_set = set(token_set['opencl']['tokens'])
     else:
       token_set = set()
-    return ASTokenizer.FromText(corpus_txt, token_set, mask_tokens)
+    return ASTokenizer.FromText(corpus_txt, token_set, contentfile_separator, mask_tokens)
   else:
     raise NotImplementedError
 
@@ -442,6 +445,7 @@ class ASTokenizer(TokenizerBase):
   def FromText(cls,
                text: str,
                token_set: typing.Set[str],
+               contentfile_separator: str,
                mask_tokens: bool,
                ) -> "ASTokenizer":
     """Instantiate an AST tokenizer from a corpus text.
@@ -465,8 +469,19 @@ class ASTokenizer(TokenizerBase):
     else:
       metaTokens = {}
 
-    token_list = set()
-    source_tokens = opencl.DeriveSourceVocab(text, token_set)
+    token_list, source_tokens = set(), {}
+    chunked_text  = text.split(contentfile_separator)
+    bar           = progressbar.ProgressBar(max_value=len(chunked_text))
+    pool          = multiprocessing.Pool()
+    try:
+      for tl in bar(pool.imap_unordered(functools.partial(opencl.DeriveSourceVocab, token_list = token_set), chunked_text)):
+        source_tokens.update(tl)
+      pool.close()
+    except Exception as e:
+      pool.terminate()
+      raise e
+
+    # source_tokens = opencl.DeriveSourceVocab(text, token_set)
     for mt in metaTokens.values():
       source_tokens[mt] = ''
       token_list.add(mt)
@@ -474,13 +489,6 @@ class ASTokenizer(TokenizerBase):
 
     # Create full vocab and initialize AST tokenizer.
     full_vocab = dict(zip(token_list, range(len(token_list))))
-
-    from eupy.hermes import client
-    if 'get_global_id' in full_vocab:
-      client.getClient().send_message("tokenizer", str(full_vocab['get_global_id']))
-    else:
-      client.getClient().send_message("tokenizer", "get_global_id not in vocab.")
-
     return ASTokenizer(full_vocab, metaTokens, source_tokens)
 
   def __init__(self, 
@@ -663,11 +671,16 @@ class ASTokenizer(TokenizerBase):
       if np.ndim(encoded) > 1:
         return [ self.tokensToString(x, ignore_token) for x in encoded ]
       elif np.ndim(encoded) == 1:
-        src = "".join(list(map(lambda x: self.decoder[x].replace('-char-based', '').replace('\\', '\\\\') + self.token_del[self.decoder[x]] if x != ignore_token else '', encoded))).replace('e+ ', 'e + ').replace('e- ', 'e - ')
-        # try:
-        #   src = opencl.ClangFormat(src)
-        # except ValueError:
-        #   raise ValueError("Clang-format failed in AST tokenizer tokensToString")
+        if with_formatting:
+          src = "".join(
+            list(
+              map(
+                lambda x: self.decoder[x].replace('-char-based', '').replace('\\', '\\\\') + self.token_del[self.decoder[x]] if x != ignore_token else '', encoded
+              )
+            )
+          ).replace('e+ ', 'e + ').replace('e- ', 'e - ').replace('E+ ', 'E + ').replace('E- ', 'E - ')
+        else:
+          src = opencl.ClangFormat("".join(list(map(lambda x: self.decoder[x].replace('-char-based', '').replace('\\', '\\\\') + self.token_del[self.decoder[x]] if x != ignore_token else '', encoded))))
         return src
       else:
         raise ValueError("Wrong encoded array specified")
