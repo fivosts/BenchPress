@@ -389,12 +389,12 @@ class Model(object):
           ## Legacy operation for sequential returning single token
           if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert):
             # samples_in_progress[i] = [tokenizer.decoder[x] for x in indices[i]]
-            samples_in_progress[i] = [tokenizer.tokensToString([x]) for x in indices[i]]
-            step_ind               = '\n'.join([self.tokenizer.tokensToString(mind).replace('\n', '\\n') for mind in step_indices[i]])
+            samples_in_progress[i] = [tokenizer.decoder[x] for x in indices[i]]
+            step_ind               = '\n'.join([','.join([self.tokenizer.decoder[t] for t in mind]).replace('\n', '\\n') for mind in step_indices[i]])
             encoded_step_indices   = '\n'.join([','.join([str(x) for x in mind]) for mind in step_indices[i]])
           elif isinstance(self.backend, tf_sequential.tfSequential) or isinstance(self.backend, keras_sequential.kerasSequential):
             # samples_in_progress[i].append(tokenizer.decoder[index])
-            samples_in_progress[i].append(tokenizer.tokensToString([index]))
+            samples_in_progress[i].append(tokenizer.decoder[index])
             step_ind             = ""
             encoded_step_indices = ""
           else:
@@ -409,7 +409,7 @@ class Model(object):
             if 'padToken' in tokenizer.metaTokens and tokenizer.metaTokens['padToken'] in samples_in_progress[i]:
               num_tokens = samples_in_progress[i].index(tokenizer.metaTokens['padToken'])
 
-            src = self.tokenizer.StringArrToCode(sample_kernel)
+            src = self.tokenizer.StringArrToCode(sample_kernel, with_formatting = True)
             feature_vector = extractor.DictKernelFeatures(src)
             try:
               stdout = opencl.Compile(src)
@@ -419,10 +419,10 @@ class Model(object):
 
             sample = model_pb2.Sample(
               train_step                = epoch,
-              text                      = "".join(sample_kernel),
+              text                      = src,
               sample_indices            = step_ind,
               encoded_sample_indices    = encoded_step_indices,
-              sample_feed               = self.tokenizer.tokensToString(sampler.encoded_start_text),
+              sample_feed               = sampler.start_text,
               encoded_text              = ",".join([str(tokenizer.vocab[x]) for x in sample_kernel]),
               sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
