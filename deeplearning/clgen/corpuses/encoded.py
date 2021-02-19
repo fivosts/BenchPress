@@ -322,7 +322,7 @@ class EncodedContentFiles(sqlutil.Database):
             )
             session.add(encoded_cf)
             self.length_monitor.register(encoded_cf.tokencount)
-            self.token_monitor.register([tokenizer.tokensToString([int(x)]) for x in encoded_cf.data.split('.')])
+            self.token_monitor.register([tokenizer.decoder[int(x)] for x in encoded_cf.data.split('.')])
 
             dict_features = extractor.StrToDictFeatures(encoded_cf.feature_vector)
             if dict_features:
