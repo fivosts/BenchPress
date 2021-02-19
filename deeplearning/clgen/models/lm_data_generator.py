@@ -72,6 +72,11 @@ def AssertConfigIsValid(config: model_pb2.DataGenerator,
     config,
     "validation_split",
   )
+  if config.datapoint_type == "kernel":
+    pbutil.AssertFieldIsSet(
+      config,
+      "truncate_large_kernels",
+    )
   if len(config.validation_set) > 0:
     for val_opt in config.validation_set:
       if val_opt.HasField("mask"):
@@ -405,9 +410,14 @@ class MaskLMDataGenerator(object):
     if self.config.datapoint_type == "kernel":
 
       # Reject larger than sequence length
+      effect_seq_length    = sequence_length - (2 if self.config.use_start_end else 0)
       initial_length       = copy.deepcopy(len(encoded_corpus))
-      encoded_corpus       = [list(x) for x in encoded_corpus if 
-                             len(x) <= sequence_length - (2 if self.config.use_start_end else 0)] # Account for start and end token
+
+      if self.config.truncate_large_kernels:
+        encoded_corpus       = [list(x[:effect_seq_length]) for x in encoded_corpus if len(x[:effect_seq_length]) <= effect_seq_length] # Account for start and end token
+      else:
+        encoded_corpus       = [list(x) for x in encoded_corpus if len(x) <= effect_seq_length] # Account for start and end token
+
       reduced_length       = copy.deepcopy(len(encoded_corpus))
       # Add start/end tokens
       if self.config.use_start_end:
