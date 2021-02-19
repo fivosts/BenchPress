@@ -44,7 +44,7 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
   encoded_masked_lm_predictions : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   next_sentence_predictions     : int = sql.Column(sql.Integer,    nullable = False)
   num_targets                   : int = sql.Column(sql.Integer,    nullable = False)
-  seen_in_training              : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  seen_in_training              : int = sql.Column(sql.Integer,    nullable = False)
   date_added                    : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
@@ -67,8 +67,8 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
 
     str_original_input              = tokenizer.tokensToString(original_input, ignore_token = tokenizer.padToken)
     str_input_ids                   = tokenizer.tokensToString(input_ids, ignore_token = tokenizer.padToken)
-    str_masked_lm_ids               = '\n'.join([tokenizer.decoder[x] if x != tokenizer.vocab['\n'] else '\\n' for x in masked_lm_ids])
-    str_masked_lm_predictions       = '\n'.join([tokenizer.decoder[x] if x != tokenizer.vocab['\n'] else '\\n' for x in masked_lm_predictions])
+    str_masked_lm_ids               = '\n'.join([tokenizer.decoder[x] if ('\n' in tokenizer.vocab and x != tokenizer.vocab['\n']) else '\\n' for x in masked_lm_ids])
+    str_masked_lm_predictions       = '\n'.join([tokenizer.decoder[x] if ('\n' in tokenizer.vocab and x != tokenizer.vocab['\n']) else '\\n' for x in masked_lm_predictions])
 
     return {
       "id"                            : id,
@@ -95,7 +95,7 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
       "encoded_masked_lm_predictions" : ','.join([str(x) for x in masked_lm_predictions]),
       "next_sentence_predictions"     : int(next_sentence_predictions),
       "num_targets"                   : list(masked_lm_ids).index(tokenizer.padToken) if tokenizer.padToken in list(masked_lm_ids) else len(list(masked_lm_ids)),
-      "seen_in_training"              : "yes" if int(seen_in_training) == 1 else "no" if int(seen_in_training) == 0 else "unlikely",
+      "seen_in_training"              : int(seen_in_training),
       "date_added"                    : datetime.datetime.utcnow(),
     }
 
