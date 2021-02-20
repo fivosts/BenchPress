@@ -1,26 +1,28 @@
-working_dir: "BERT" ## This path is relative to "workspace_dir", which is an app FLAG
+working_dir: "default_compdriven" ## This path is relative to "workspace_dir", which is an app FLAG
 model {
   corpus {
     local_tar_archive: "$PWD/../corpus/ultimate_corpus.tar.bz2"
-    atomizer {
-      token_type: "word"
+    tokenizer {
+      token_type: "ast"
       token_list: "deeplearning/clgen/corpuses/token_lists.json"
       mask_tokens: true
       wordpiece_tokenization: false
     }
-    contentfile_separator: "\n\n"
-      preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim"
-      preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
-      preprocessor: "deeplearning.clgen.preprocessors.opencl:NormalizeIdentifiers"
-      preprocessor: "deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes"
-      preprocessor: "deeplearning.clgen.preprocessors.common:StripDuplicateEmptyLines"
-      preprocessor: "deeplearning.clgen.preprocessors.common:StripMultipleWhitespaces"
-      preprocessor: "deeplearning.clgen.preprocessors.opencl:SanitizeKernelPrototype"
-      preprocessor: "deeplearning.clgen.preprocessors.common:StripTrailingWhitespace"
-      preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
-      preprocessor: "deeplearning.clgen.preprocessors.common:MinimumLineCount3"
-      preprocessor: "deeplearning.clgen.preprocessors.common:ExtractOnlySingleKernels"
-      preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
+    contentfile_separator: "\n\n\n\n"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:RemoveTypedefs"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:ExtractOnlySingleKernels"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:StringKernelsToSource"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:NormalizeIdentifiers"
+    preprocessor: "deeplearning.clgen.preprocessors.common:StripDuplicateEmptyLines"
+    preprocessor: "deeplearning.clgen.preprocessors.common:StripMultipleWhitespaces"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:SanitizeKernelPrototype"
+    preprocessor: "deeplearning.clgen.preprocessors.common:StripTrailingWhitespace"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
+    preprocessor: "deeplearning.clgen.preprocessors.common:MinimumLineCount3"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
   }
   architecture {
     backend: TORCH_BERT
@@ -40,7 +42,7 @@ model {
     num_train_steps: 1000000
     num_warmup_steps: 5000
     sequence_length: 1024
-    batch_size: 22
+    batch_size: 16
     max_predictions_per_seq: 1
     dupe_factor: 50
     masked_lm_prob: 0.9
@@ -49,8 +51,9 @@ model {
     data_generator {
       datapoint_type: "kernel"
       use_start_end : true
+      truncate_large_kernels: true
       steps_per_epoch: 5000
-      validation_split: 10
+      validation_split: 0
       hole {
         hole_length: 40
         uniform_distribution: true
@@ -80,34 +83,36 @@ sampler {
 #       max_predictions_per_seq: 1
 #       masked_lm_prob: 0.9
 #       hole {
-#         hole_length: 40
+#         hole_length: 4
 #         uniform_distribution: true
 #       }
 #     }
 #     corpus {
-#       local_tar_archive: "$PWD/../corpus/corpus_250.tar.bz2"
+#       local_tar_archive: "$PWD/../corpus/ultimate_corpus.tar.bz2"
 #       atomizer {
 #         token_type: "word"
 #         token_list: "deeplearning/clgen/corpuses/token_lists.json"
 #         mask_tokens: true
 #         wordpiece_tokenization: false
 #       }
-#       contentfile_separator: "\n\n"
+#       contentfile_separator: "\n\n\n\n"
+#       preprocessor: "deeplearning.clgen.preprocessors.opencl:RemoveTypedefs"
 #       preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim"
+#       preprocessor: "deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes"
+#       preprocessor: "deeplearning.clgen.preprocessors.opencl:ExtractOnlySingleKernels"
+#       preprocessor: "deeplearning.clgen.preprocessors.opencl:StringKernelsToSource"
 #       preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
 #       preprocessor: "deeplearning.clgen.preprocessors.opencl:NormalizeIdentifiers"
-#       preprocessor: "deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes"
 #       preprocessor: "deeplearning.clgen.preprocessors.common:StripDuplicateEmptyLines"
 #       preprocessor: "deeplearning.clgen.preprocessors.common:StripMultipleWhitespaces"
 #       preprocessor: "deeplearning.clgen.preprocessors.opencl:SanitizeKernelPrototype"
 #       preprocessor: "deeplearning.clgen.preprocessors.common:StripTrailingWhitespace"
 #       preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
 #       preprocessor: "deeplearning.clgen.preprocessors.common:MinimumLineCount3"
-#       preprocessor: "deeplearning.clgen.preprocessors.common:ExtractOnlySingleKernels"
-#       preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"  
+#       preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
 #     }
 #   }
-#   batch_size: 8
+#   batch_size: 4
 #   sequence_length: 1024
 #   temperature_micros: 700000  # = 0.8 real value
 #   termination_criteria {
