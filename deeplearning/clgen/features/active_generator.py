@@ -5,6 +5,7 @@ import subprocess
 import functools
 import pickle
 import typing
+import progressbar
 import numpy as np
 
 from deeplearning.clgen.models import lm_data_generator
@@ -15,6 +16,7 @@ from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.features import active_feed_database
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.util import distributions
+from deeplearning.clgen.util import monitors
 
 from absl import flags
 from eupy.native import logger as l
@@ -23,13 +25,13 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_integer(
   "active_limit_per_feed",
-  400,
+  250,
   "Set limit on sample attempts per input_feed. [Default: 400]. Set to 0 for infinite."
 )
 
 flags.DEFINE_integer(
   "active_search_depth",
-  20,
+  30,
   "Set the maximum sampling generation depth that active sampler can reach. [Default: 20]."
 )
 
@@ -92,11 +94,16 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     self.active_db  = active_feed_database.ActiveFeedDatabase(
       url = "sqlite:///{}".format(self.data_generator.sampler.corpus_directory / "active_feeds.db")
     )
-    self.feed_queue          = []
-    self.step_candidates     = []
-    self.total_candidates    = []
-    self.active_dataset      = ActiveDataset(self.online_corpus)
-    self.feat_sampler        = feature_sampler.EuclideanSampler()
+    self.feed_queue            = []
+    self.step_candidates       = []
+    self.total_candidates      = []
+    self.total_candidates_hash = set()
+    self.active_dataset        = ActiveDataset(self.online_corpus)
+    self.feat_sampler          = feature_sampler.EuclideanSampler()
+    self.candidate_monitor     = monitors.HistoryMonitor(
+      self.data_generator.sampler.corpus_directory, "feature_distance"
+    )
+    self.bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
     return
 
   def active_dataloader(self) -> typing.Union[
@@ -113,14 +120,14 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     while True:
       """Model will ask with next(). As long as it asks, this loop will bring."""
       seed = next(self.active_dataset)
-      # seed = self.atomizer.AtomizeString("[START]kernel void A(){ }[END][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD]")
+      # seed = self.tokenizer.TokenizeString("[START]kernel void A(){ }[END][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD]")
       # print(len(seed))
       input_feed, masked_idxs = self.masking_func(seed)
       # TODO do sth with hole_lengths and masked_idxs
       self.feed_queue.append(
         ActiveSamplingGenerator.ActiveSampleFeed(
           input_feed       = seed,
-          input_features   = extractor.DictKernelFeatures(self.atomizer.ArrayToCode(seed)),
+          input_features   = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(seed)),
           input_blob       = input_feed,
           masked_input_ids = input_feed['input_ids'],
           hole_instances   = masked_idxs,
@@ -145,14 +152,13 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     if len(self.feed_queue) == 0:
       raise ValueError("Feed stack is empty. Cannot pop element.")
 
+    # Pops the sample feed that created 'samples'
     current_feed = self.feed_queue.pop(0)
-
-    # If more candidates are needed for that specific sample,
-    # store the feeds and ask more samples.
     for sample, indices in zip(samples, sample_indices):
       try:
-        _ = opencl.Compile(self.atomizer.ArrayToCode(sample))
-        features = extractor.DictKernelFeatures(self.atomizer.ArrayToCode(sample))
+        # If you can extract features from a sample, store it as a candidate.
+        # _ = opencl.Compile(self.tokenizer.ArrayToCode(sample))
+        features = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(sample))
         if features:
           self.step_candidates.append(
             ActiveSamplingGenerator.ActiveSample(
@@ -167,6 +173,9 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
         pass
 
     if len(self.step_candidates) < FLAGS.active_limit_per_feed:
+      # If gathered candidates are not as many as required, re-mask the same feed
+      # place it back in the queue and ask the model for more samples.
+      # The sample input is the same, but masks might be in different locations.
       input_feed, masked_idxs = self.masking_func(current_feed.input_feed)
       self.feed_queue.insert(0,
         ActiveSamplingGenerator.ActiveSampleFeed(
@@ -178,49 +187,46 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
           gen_id           = current_feed.gen_id,
         )
       )
-      # If that specific input hasn't yet gathered all active samples,
-      # send it back and ask for more.
-      l.getLogger().warn("Gather more")
+      self.bar.update(len(self.step_candidates))
       return self.data_generator.toTensorFormat(input_feed), [], False
 
-    # If all samples have syntax errors and have no features, skip to next iteration.
-    if not self.step_candidates:
-      l.getLogger().warn("Fuck")
-      return {}, [], True
+    # Re-init bar for next candidate gathering
+    self.bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
 
-    # l.getLogger().info("We have the candidates. Let's review them")
-    # input()
-    # for i in self.step_candidates:
-    #   l.getLogger().warn(self.atomizer.DeatomizeIndices(i.sample, ignore_token = self.atomizer.padToken))
-    #   l.getLogger().error(i.features)
-
-    # l.getLogger().info("Enter to continue")
-    # input()
-
-    # This function returns all candidates that succeed the threshold
-    # TODO, is the threshold matching a job for feat sampler or active generator ?
-    # Maybe the second.
+    # total_candidates contains all candidates from all generations from a single starting feed
+    # that succeeded the distance sampling. candidate_idx sets a checkpoint of which are old and
+    # which are new. This is to avoid re-storing old total_candidates multiple times.
     candidate_idx = len(self.total_candidates)
-    self.total_candidates += self.feat_sampler.sample_from_set(self.step_candidates)
+    # Top-k candidates of ith generation.
+    new_candidates = self.feat_sampler.sample_from_set(self.step_candidates)
 
-    # l.getLogger().info("Best candidate: ")
-    # for i in self.total_candidates:
-    #   l.getLogger().warn(self.atomizer.DeatomizeIndices(i.sample, ignore_token = self.atomizer.padToken))
-    #   l.getLogger().error(i.features)
-    #   l.getLogger().error(i.score)
-    # l.getLogger().info("Continue...")
-    # input()
+    self.candidate_monitor.register(
+      sum([x.score for x in new_candidates]) / len(new_candidates)
+    )
+    self.candidate_monitor.plot()
+    # Very frequently, new candidates have been generated in the past.
+    # No need to store them again, by keeping a hash of their string.
+    for nc in new_candidates:
+      if nc.sample not in self.total_candidates_hash:
+        self.total_candidates.append(nc)
+        self.total_candidates_hash.add(nc.sample)
 
     for candidate in self.total_candidates[candidate_idx:]:
-      # 1) Store them in the database
-      try:
-        _ = opencl.Compile(self.atomizer.ArrayToCode(sample))
-        compile_status = True
-      except ValueError:
+      # For new total_candidates, check compilability, return error locations if they are incorrect.
+      _, dloc = opencl.Compile(self.tokenizer.ArrayToCode(candidate.sample), return_diagnostics = True)
+      compile_status = True
+      if dloc:
         compile_status = False
+        # The following function maps compiler location diagnostics, e.g. l:5, c:10, to token index of the encoded sequennce.
+        # This will be used to repair broken kernels by targetted masking of wrong tokens.
+        indices = self.tokenizer.SrcLocationToIndex(
+          locations = dloc,
+          encoded = candidate.sample
+        )
+      # Add to active_database.
       self.addToDB(
         active_feed_database.ActiveFeed.FromArgs(
-          atomizer         = self.atomizer,
+          tokenizer         = self.tokenizer,
           id               = self.active_db.count,
           input_feed       = candidate.sample_feed.input_feed,
           input_features   = candidate.sample_feed.input_features,
@@ -233,34 +239,38 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
           generation_id    = candidate.sample_feed.gen_id,
         )
       )
-      # 2) Push them back to the input, if not maximum depth is not reached.
-      # self.active_dataset.add_active_feed(candidate.sample) # I strongly disagree with this after all.
+      # If the current generation has not gone as deep as required, mask each new candidate
+      # and place it at the tail of the sample feed queue.
       if 1 + candidate.sample_feed.gen_id <= FLAGS.active_search_depth:
         input_feed, masked_idxs = self.masking_func(candidate.sample)
-        self.feed_queue.append(
-          ActiveSamplingGenerator.ActiveSampleFeed(
-            input_feed       = candidate.sample,
-            input_features   = candidate.features,
-            input_blob       = input_feed,
-            masked_input_ids = input_feed['input_ids'],
-            hole_instances   = masked_idxs,
-            gen_id           = 1 + candidate.sample_feed.gen_id,
+        if len(input_feed['input_ids']) <= self.data_generator.sampler.sequence_length:
+          self.feed_queue.append(
+            ActiveSamplingGenerator.ActiveSampleFeed(
+              input_feed       = candidate.sample,
+              input_features   = candidate.features,
+              input_blob       = input_feed,
+              masked_input_ids = input_feed['input_ids'],
+              hole_instances   = masked_idxs,
+              gen_id           = 1 + candidate.sample_feed.gen_id,
+            )
           )
-        )
-    # 3) Re-initialize all variables
-    self.step_candidates = [] # Input feed is going to change, so reset this sample counter.
+    # Step candidates contains all candidates of a single gen, therefore initialized before every new gen.
+    self.step_candidates = []
 
     if self.feed_queue:
-      # Send the first good candidate back as an input.
-      l.getLogger().warn("Good candidate as input")
+      # There are next generation candidates in the queue, and these will be used as sample feeds.
       return self.data_generator.toTensorFormat(self.feed_queue[0].input_blob), [], False
     else:
-      # Queue is empty and we can proceed to next feed from dataset.
-      # Return back to models all good active samples, if any.
-      l.getLogger().warn("Empty queue, go on")
+      # We don't have new generation good candidates. Go get a new starting feed from the dataset.
+      # Active learning will be killed (see True value in return statement), the harvested batch
+      # will be returned to models. Models will re-init active learner for the next dataset input.
       active_batch   = [x.sample for x in self.total_candidates]
       active_indices = [x.sample_indices for x in self.total_candidates]
-      self.total_candidates = []
+      self.total_candidates      = []
+      self.total_candidates_hash = set()
+      # self.candidate_monitor   = monitors.HistoryMonitor(
+      #   self.data_generator.sampler.corpus_directory, "feature_distance"
+      # )
       return active_batch, active_indices, True
 
   def addToDB(self, active_feed: active_feed_database.ActiveFeed) -> None:
@@ -284,10 +294,12 @@ class ActiveDataset(object):
     datasets (sequence): List of paths for datasets to be concatenated
   """
 
-  def __init__(self, dataset: typing.List[np.array]):
+  def __init__(self, dataset: typing.List[np.array], shuffle = True):
     assert len(dataset) > 0, 'Dataset is empty'
-    self.dataset                 = dataset
-    self.sample_idx              = 0
+    self.dataset    = dataset
+    self.sample_idx = 0
+    if shuffle:
+      np.random.shuffle(self.dataset)
     return
 
   def __len__(self) -> int:
@@ -295,8 +307,8 @@ class ActiveDataset(object):
 
   def __next__(self) -> np.array:
     """
-    Iterator gives priority to additional active feeds if exist,
-    otherwise pops a fresh feed from the dataset.
+    Iterator pops a fresh feed from the dataset.
+    If dataset is consumed, then it is from the beginning.
     """
     self.sample_idx += 1
     return self.dataset[(self.sample_idx - 1) % len(self.dataset)]
