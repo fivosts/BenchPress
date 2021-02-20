@@ -25,7 +25,7 @@ class OnlineSamplingGenerator(object):
 
     d.data_generator = generator
     d.sampler        = d.data_generator.sampler
-    d.tokenizer       = d.data_generator.tokenizer
+    d.tokenizer      = d.data_generator.tokenizer
 
     d.configSamplingParams()
     d.configSampleCorpus()
