@@ -683,13 +683,13 @@ class ASTokenizer(TokenizerBase):
       if np.ndim(encoded) > 1:
         return [ self.tokensToString(x, ignore_token) for x in encoded ]
       elif np.ndim(encoded) == 1:
-        if with_formatting:
+        if not with_formatting:
           src = []
           for idx in range(len(encoded)):
             if encoded[idx] == ignore_token:
               continue
             else:
-              ct = self.decoder_with_delim[x]
+              ct = self.decoder_with_delim[encoded[idx]]
               try:
                 if (encoded[idx] in {self.vocab['e-char-based'], self.vocab['E-char-based']}
                   and encoded[idx+1] in {self.vocab['+'], self.vocab['-']}):
