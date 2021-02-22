@@ -262,6 +262,19 @@ def RemoveTypedefs(text: str) -> str:
   return '\n'.join(text)
 
 @public.clgen_preprocessor
+def InvertKernelSpecifier(text: str) -> str:
+  """
+  Inverts 'void kernel' specifier to 'kernel void'.
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    The input text, with all whitespaces removed.
+  """
+  return text.replace("void kernel ", "kernel void ")
+
+@public.clgen_preprocessor
 def ExtractSingleKernels(text: str) -> typing.List[str]:
   """
   A preprocessor that splits a single source file to discrete kernels
