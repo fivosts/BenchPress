@@ -15,9 +15,10 @@ model {
       wordpiece_tokenization: false
     }
     contentfile_separator: "\n\n\n\n"
-    preprocessor: "deeplearning.clgen.preprocessors.opencl:RemoveTypedefs"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:InvertKernelSpecifier"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:ExtractOnlySingleKernels"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:StringKernelsToSource"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
@@ -91,9 +92,10 @@ sampler {
         wordpiece_tokenization: false
       }
       contentfile_separator: "\n\n\n\n"
-      preprocessor: "deeplearning.clgen.preprocessors.opencl:RemoveTypedefs"
       preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim"
       preprocessor: "deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes"
+      preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
+      preprocessor: "deeplearning.clgen.preprocessors.opencl:InvertKernelSpecifier"
       preprocessor: "deeplearning.clgen.preprocessors.opencl:ExtractOnlySingleKernels"
       preprocessor: "deeplearning.clgen.preprocessors.opencl:StringKernelsToSource"
       preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
