@@ -347,7 +347,7 @@ def initMain(*args, **kwargs):
   mail = None
   if FLAGS.notify_me:
     mail = client.initClient(FLAGS.notify_me)
-  l.initLogger(name = "clgen", lvl = FLAGS.level, client = (mail, FLAGS.notify_me_level), colorize = FLAGS.color, step = FLAGS.step)
+  l.initLogger(name = "clgen", lvl = FLAGS.level, mail = (mail, FLAGS.notify_me_level), colorize = FLAGS.color, step = FLAGS.step)
   if FLAGS.monitor_mem_usage:
     mem_monitor_threads = memory.init_mem_monitors(
       pathlib.Path(FLAGS.workspace_dir).resolve()
