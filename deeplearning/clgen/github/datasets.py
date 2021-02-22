@@ -164,7 +164,12 @@ class Dataset(object):
       exit()
 
   def repository_query(self) -> typing.Tuple[bigquery.table.RowIterator]:
-    """Returns iterable of query files"""
+    """
+    Queries the repositories' name/branch that contain files with requested
+    specifications (e.g. OpenCL files).
+
+    Returns iterable of query.
+    """
     query = """
     SELECT DISTINCT file.repo_name, file.ref
     FROM `bigquery-public-data.github_repos.files` as file
@@ -194,7 +199,11 @@ class Dataset(object):
     return (rows, None)
 
   def contentfile_query(self) -> typing.Tuple[bigquery.table.RowIterator]:
-    """Returns iterable of query files"""
+    """
+    Queries all contentfiles with requested specifications (e.g. specific file extensions).
+
+    Returns iterable of query files
+    """
     query = """
     SELECT file.repo_name, file.path, file.ref, 
            file.id, contentfile.size, contentfile.content
@@ -225,7 +234,12 @@ class Dataset(object):
     return (rows, None)
 
   def header_file_query(self) -> None:
-    """Override this method if you want header files fetched with the language's contentfiles."""
+    """
+    From the repositories that contentfiles were scraped from, also get their header files
+    for header inlining reasons.
+
+    Override this method IF you want header files fetched with the language's contentfiles.
+    """
     return None
 
 class openclDataset(Dataset):
@@ -383,7 +397,7 @@ class cppDataset(Dataset):
   def __init__(self,
                client: bigquery.Client,
                ):
-    extensions = ['.cpp', 'cc', '.cxx', '.c++', '.h', '.hpp']
+    extensions = ['.cpp', 'cc', '.cxx', '.c++', '.hpp']
     super(cppDataset, self).__init__(client, "cpp", extensions)
     return
 
