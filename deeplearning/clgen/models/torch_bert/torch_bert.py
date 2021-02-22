@@ -375,11 +375,11 @@ class torchBert(backends.BackendBase):
             )
             self.train.model.zero_grad()
             if self.current_step == 0:
-              l.getLogger().info("Starting Loss: {}".format(total_loss.item()))
+              l.getLogger().info("Starting Loss: {}".format(total_loss.item()), mail_level = 4)
             self.current_step += 1
 
           # End of Epoch
-          l.getLogger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.current_loss))
+          l.getLogger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.current_loss), mail_level = 4)
           self.saveCheckpoint(self.train)
           if self.torch_tpu_available:
             self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())

@@ -214,13 +214,13 @@ class EncodedContentFiles(sqlutil.Database):
                             humanize.intcomma(num_files),
                             humanize.intcomma(total_walltime),
                             total_time / total_walltime,
-                          )
+                          ), mail_level = 4
                       )
     l.getLogger().info("Encoded corpus: {} tokens, {} files."
                         .format(
                             humanize.intcomma(token_count),
                             humanize.intcomma(num_files),
-                          )
+                          ), mail_level = 4
                       )
     return
 

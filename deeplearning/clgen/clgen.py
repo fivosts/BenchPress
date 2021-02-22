@@ -51,6 +51,12 @@ flags.DEFINE_string(
   "Set receiver mail address to notify for program failures or termination."
 )
 
+flags.DEFINE_integer(
+  "notify_me_level",
+  5,
+  "Define logging level of mail client"
+)
+
 flags.DEFINE_boolean(
   "color", True, "Colorize or not, logging messages"
 )
@@ -338,14 +344,14 @@ def initMain(*args, **kwargs):
     *args: Arguments to be passed to the function.
     **kwargs: Arguments to be passed to the function.
   """
-  l.initLogger(name = "clgen", lvl = FLAGS.level, colorize = FLAGS.color, step = FLAGS.step)
+  mail = None
+  if FLAGS.notify_me:
+    mail = client.initClient(FLAGS.notify_me)
+  l.initLogger(name = "clgen", lvl = FLAGS.level, client = (mail, FLAGS.notify_me_level), colorize = FLAGS.color, step = FLAGS.step)
   if FLAGS.monitor_mem_usage:
     mem_monitor_threads = memory.init_mem_monitors(
       pathlib.Path(FLAGS.workspace_dir).resolve()
     )
-  mail = None
-  if FLAGS.notify_me:
-    mail = client.initClient(FLAGS.notify_me)
   if FLAGS.debug:
     # Enable verbose stack traces. See: https://pymotw.com/2/cgitb/
     import cgitb
