@@ -18,7 +18,7 @@ DateTime==4.3
 decorator==4.4.2
 Deprecated==1.2.10
 detect-secrets==0.13.1
-eupy==1.0.21
+eupy==1.0.22
 filelock==3.0.12
 Flask==1.1.2
 Flask-SQLAlchemy==2.4.4
