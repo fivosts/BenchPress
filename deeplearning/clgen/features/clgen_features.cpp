@@ -645,38 +645,61 @@ std::string getexepath() {
 #endif
 // End platform specific code.
 
-// #ifndef OPENCL_HEADERS
-// #pragma message("OPENCL_HEADERS path has not been defined.")
-// #endif
-// // Include directory of OpenCL headers
-// std::string cl_headers() {
-//   return OPENCL_HEADERS;
-// }
-
-// // Return path to OpenCL platform header.
-// std::string cl_header() {
-//   return cl_headers() + "/CL/cl.h";
-// }
-
-std::string old_cl_header() {
-  return dirname(getexepath()) + "/cl.h";
+#ifndef OPENCL_C_H
+#pragma message("OPENCL_C_H path has not been defined.")
+#endif
+// Path to opencl-c header.
+std::string cl_c_header() {
+  return std::string("-include") + OPENCL_C_H;
 }
 
-// #ifndef OPENCL_C_H
-// #pragma message("OPENCL_C_H path has not been defined.")
-// #endif
-// // Path to opencl-c header.
-// std::string cl_c_header() {
-//   return OPENCL_C_H;
-// }
+#ifndef OPENCL_BASE_H 
+#pragma message("OPENCL_BASE_H   path has not been defined.")
+#endif
+// Path to opencl-c-base header.
+std::string cl_base_header() {
+  return std::string("-include") + OPENCL_BASE_H;
+}
 
-// #ifndef OPENCL_BASE_H 
-// #pragma message("OPENCL_BASE_H   path has not been defined.")
-// #endif
-// // Path to opencl-c-base header.
-// std::string cl_base_header() {
-//   return OPENCL_BASE_H  ;
-// }
+#ifndef CL_H
+#pragma message("CL_H path has not been defined.")
+#endif
+// Path to opencl-c header.
+std::string cl_h_header() {
+  return std::string("-include") + CL_H;
+}
+
+#ifndef STRUCTS_H
+#pragma message("STRUCTS_H path has not been defined.")
+#endif
+// Path to opencl-c header.
+std::string structs_header() {
+  return std::string("-include") + STRUCTS_H;
+}
+
+#ifndef OPENCL_HEADERS
+#pragma message("OPENCL_HEADERS path has not been defined.")
+#endif
+// Path to opencl-c header.
+std::string opencl_headers_path() {
+  return std::string("-I") + OPENCL_HEADERS;
+}
+
+#ifndef LIBCLC
+#pragma message("LIBCLC path has not been defined.")
+#endif
+// Path to opencl-c header.
+std::string libclc_path() {
+  return std::string("-I") + LIBCLC;
+}
+
+#ifndef AUX_INCLUDE
+#pragma message("AUX_INCLUDE path has not been defined.")
+#endif
+// Path to opencl-c header.
+std::string aux_include_path() {
+  return std::string("-I") + AUX_INCLUDE;
+}
 
 //
 // Extract features from kernels in an OpenCL program.
@@ -691,17 +714,20 @@ void extract_features(std::string path, std::ostream &out,
   clang::DiagnosticOptions diagnosticOptions;
   compiler.createDiagnostics();
 
-  // TODO this
-  std::vector<std::string> args{{"-x", "cl", "-include", old_cl_header()}};
-  // std::vector<std::string> args{{
-  //   "-x", "cl",
-  //   "-cl-std=CL2.0",
-  //   "-include", old_cl_header(),
-  //   // "-include", cl_base_header(),
-  //   "-include", cl_header(),
-  //   "-include",
-  //   "-I", cl_headers()
-  // }};
+  std::vector<std::string> args{{
+    "-x", "cl",
+    // "--target=nvptx64-nvidia-nvcl",
+    "-cl-std=CL2.0",
+    // cl_c_header(),
+    cl_base_header(),
+    cl_h_header(),
+    structs_header(),
+    opencl_headers_path(),
+    libclc_path(),
+    aux_include_path(),
+    "-Wno-everything",
+  }};
+
   for (auto& arg : extra_args)
     args.push_back(arg);
   std::vector<const char*> argv;

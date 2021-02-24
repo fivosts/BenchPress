@@ -1,13 +1,20 @@
 add_executable(clgen_features clgen_features.cpp)
 
 add_dependencies(clgen_features llvm)
-# add_dependencies(clgen_features data_cl_include)
+add_dependencies(clgen_features data_cl_include)
+add_dependencies(clgen_features libclc)
 
-# get_target_property(DATA_CL_INCLUDE data_cl_include path)
+get_target_property(DATA_CL_INCLUDE data_cl_include path)
+get_target_property(LIBCLC libclc path)
 
-# add_compile_definitions(OPENCL_HEADERS="${OPENCL_HEADERS}")
-# add_compile_definitions(OPENCL_C_H="${DATA_CL_INCLUDE}/opencl-c.h")
-# add_compile_definitions(OPENCL_BASE_H="${DATA_CL_INCLUDE}/opencl-c-base.h")
+add_compile_definitions(OPENCL_C_H="${DATA_CL_INCLUDE}/opencl-c.h")
+add_compile_definitions(OPENCL_BASE_H="${DATA_CL_INCLUDE}/opencl-c-base.h")
+add_compile_definitions(CL_H="${OPENCL_HEADERS}/CL/cl.h")
+add_compile_definitions(STRUCTS_H="${DATA_CL_INCLUDE}/structs.h")
+
+add_compile_definitions(OPENCL_HEADERS="${OPENCL_HEADERS}")
+add_compile_definitions(LIBCLC="${LIBCLC}")
+add_compile_definitions(AUX_INCLUDE="${DATA_CL_INCLUDE}/aux_include/")
 
 set_target_properties(clgen_features PROPERTIES
     path ${CMAKE_CURRENT_BINARY_DIR}/clgen_features
