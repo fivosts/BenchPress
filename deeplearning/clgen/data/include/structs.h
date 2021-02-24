@@ -817,7 +817,7 @@ typedef struct _NclSubscriptSelection {
 } NclSubscriptSelection;
 
 typedef struct {
-  unsigned int;
+  unsigned int a;
 } HitPointGreyTexParam;
 
 typedef struct {
@@ -2068,7 +2068,7 @@ typedef struct SeamNodeInfo_s {
 } SeamNodeInfo;
 
 typedef struct {
-  float x, y, z
+  float x, y, z;
 
 } THREE_VECTOR;
 
@@ -4564,7 +4564,6 @@ typedef struct {
   int obits;
   int blocksize;
   int coding_method;
-  int;
   int residualOffs;
   int wbits;
   int abits;
@@ -4671,7 +4670,7 @@ typedef struct {
 typedef struct OCL_object {
   cl_int status;
   cl_event *events;
-  cl_kernel kernel;
+  cl_kernel _kernel;
   cl_context context;
   cl_program *program;
   cl_device_id device_id;
