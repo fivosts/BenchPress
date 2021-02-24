@@ -9180,7 +9180,6 @@ typedef struct {
   float viscosity;
 } fluid_t;
 
-typedef struct MarkerVariables mvars;
 struct DecodeVariables {
 
   int p_jinfo_smp_fact;
@@ -13669,7 +13668,6 @@ typedef struct TestDesc {
   SubproblemDim dim;
   PGranularity pgran;
   bool transpose;
-  bool;
   bool packedImages;
 } TestDesc;
 
@@ -13950,10 +13948,6 @@ typedef struct {
   uchar type;
   uchar reserved;
 } fermat_t;
-
-typedef struct MarkerVariables mvars;
-__constant char MVtab0[8][2] = {{0, 0}, {3, 3}, {2, 2}, {2, 2},
-                                {1, 1}, {1, 1}, {1, 1}, {1, 1}};
 
 typedef struct {
   unsigned int cmds[15];
@@ -16942,7 +16936,7 @@ typedef union PPtr {
 
 typedef union {
   float value;
-  unsigned int short;
+  unsigned int _short;
 } float_shape_type;
 
 typedef union {
