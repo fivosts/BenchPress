@@ -596,7 +596,6 @@
 #define Tree[] const int8_t
 #define Hash unsigned long long
 #define step_t int32_t
-#define z unsigned int
 #define wcl_sampler_t sampler_t
 #define GeglRandom ushort4
 #define FixedPoint3 int
