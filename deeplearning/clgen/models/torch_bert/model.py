@@ -804,7 +804,7 @@ class BertForPreTraining(BertPreTrainedModel):
     )
 
     if not is_validation and self.compile_sampler and step >= self.config.reward_compilation and not self.config.is_sampling:
-      samples, compile_flag, masked_lm_labels = self.compile_sampler.generateTrainingBatch(
+      samples, compile_flag = self.compile_sampler.generateTrainingBatch(
         self, input_ids.get_device(), input_ids, prediction_scores,
         attention_mask, position_ids, masked_lm_labels
       )
