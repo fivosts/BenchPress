@@ -821,9 +821,9 @@ class BertForPreTraining(BertPreTrainedModel):
         'seq_relationship_logits' : seq_relationship_score,
         'hidden_states'           : hidden_states,
         'attentions'              : attentions,
-        'compile_status'          : torch.LongTensor(compile_flag).to(pytorch.device),
-        'generated_samples'       : torch.LongTensor(samples).to(pytorch.device),
-        'batch_compilation_rate'  : torch.full((1,), float(sum(compile_flag)) / len(compile_flag), dtype = torch.float).to(pytorch.device),
+        'compile_status'          : torch.LongTensor(compile_flag),
+        'generated_samples'       : torch.LongTensor(samples),
+        'batch_compilation_rate'  : torch.full((1,), float(sum(compile_flag)) / len(compile_flag), dtype = torch.float),
         'sample_indices'          : [],
       }
     elif not is_validation and self.compile_sampler and self.config.is_sampling:
@@ -833,7 +833,7 @@ class BertForPreTraining(BertPreTrainedModel):
       )
       return {
         'prediction_scores' : scores_history, # This is mainly used for live sampling. Else, watch out!
-        'generated_samples' : torch.LongTensor(samples).to(pytorch.device),
+        'generated_samples' : torch.LongTensor(samples),
         'sample_indices'    : sample_indices,
       }
     else:
@@ -850,7 +850,7 @@ class BertForPreTraining(BertPreTrainedModel):
         'seq_relationship_logits' : seq_relationship_score,
         'hidden_states'           : hidden_states,
         'attentions'              : attentions,
-        'batch_compilation_rate'  : torch.full((1,), -1, dtype = torch.float).to(pytorch.device),
+        'batch_compilation_rate'  : torch.full((1,), -1, dtype = torch.float),
       }
 
 class BertLMHeadModel(BertPreTrainedModel):
