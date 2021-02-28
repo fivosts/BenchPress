@@ -50,18 +50,18 @@ jobs:
 
 workflows:
   version: 2
-  # nightly:
-  #   triggers:
-  #     - schedule:
-  #         cron: "0 6 1,4,7,10,13,16,19,21,24,28 * *"
-  #         filters:
-  #           branches:
-  #             only:
-  #               - master
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 6 1,4,7,10,13,16,19,21,24,28 * *"
+          filters:
+            branches:
+              only:
+                - master
     # python_versions:
-  jobs:
-    - build_clgen:
-        matrix:
-          parameters:
-            python_version: ["python3.6", "python3.7", "python3.8", "from_source"]
-        name: << matrix.python_version >>
+    jobs:
+      - build_clgen:
+          matrix:
+            parameters:
+              python_version: ["python3.6", "python3.7", "python3.8", "from_source"]
+          name: << matrix.python_version >>
