@@ -343,7 +343,7 @@ class torchBert(backends.BackendBase):
 
             exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
             if FLAGS.reward_compilation >= 0 and FLAGS.reward_compilation <= epoch * self.steps_per_epoch + step:
-              correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'].cpu().numpy())) if step_out['compile_status'][en] == 1]
+              correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'])) if step_out['compile_status'][en] == 1]
               for s in correct_samples:
                 feature_vector = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(s[1]))
                 correct_sample_obs.OnSample(model_pb2.Sample(
@@ -524,7 +524,7 @@ class torchBert(backends.BackendBase):
         generated_samples, sample_indices = step_out['generated_samples'], step_out['sample_indices']
         while True:
           active_sample, active_indices, done = self.sample.data_generator.EvaluateFeatures(
-            generated_samples.cpu().numpy(),
+            generated_samples,
             sample_indices
           )
           if done:
@@ -544,7 +544,7 @@ class torchBert(backends.BackendBase):
             )
             generated_samples, sample_indices = active_step['generated_samples'], active_step['sample_indices']
       else:
-        return step_out['generated_samples'].cpu().numpy(), step_out['sample_indices']
+        return step_out['generated_samples'], step_out['sample_indices']
     raise ValueError("While True loop broken without returning")
 
   def _getTestSampler(self, test_sampler, sequence_length):

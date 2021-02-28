@@ -52,37 +52,33 @@ class CompilationSampler(object):
                             device            : torch.device,
                             input_ids         : torch.LongTensor,
                             prediction_scores : torch.FloatTensor,
-                            attention_mask    : torch.LongTensor,
                             position_ids      : torch.LongTensor,
                             masked_lm_labels  : torch.LongTensor,
                             ) -> typing.Tuple[typing.List[np.array], typing.List[int]]:
     batch_size, sequence_length = tuple(input_ids.shape)
     with concurrent.futures.ThreadPoolExecutor() as executor:
       jobs = [executor.submit(self.iterTrainingSeq,
-                              model           = model,
-                              device          = device,
-                              seq             = input_ids,
-                              prediction      = prediction_scores,
-                              attention       = attention_mask,
-                              position_ids    = position_ids,
-                              masked_lm_label = masked_lm_labels,
-                              batch_idx       = i,
+                              model             = model,
+                              device            = device,
+                              input_ids         = input_ids        [i],
+                              prediction_scores = prediction_scores[i],
+                              position_ids      = position_ids     [i],
+                              masked_lm_labels  = masked_lm_labels [i],
                           ) for i in range(batch_size)]
 
       results          = [j.result() for j in jobs]
-      samples          = [x.numpy() for (x, _) in results]
-      compile_flag     = [y         for (_, y) in results]
-      return samples, compile_flag
+      samples          = [x.numpy() for (x, _, _) in results]
+      compile_flag     = [y         for (_, y, _) in results]
+      masked_lm_labels = torch.LongTensor([z for (_, _, z) in results]).to(device)
+      return samples, compile_flag, masked_lm_labels
 
   def iterTrainingSeq(self,
-                      model           : typing.TypeVar("model.BertPreTrainedModel"),
-                      device          : torch.device,
-                      seq             : torch.LongTensor,
-                      prediction      : torch.FloatTensor,
-                      attention       : torch.LongTensor,
-                      position_ids    : torch.LongTensor,
-                      masked_lm_label : torch.LongTensor,
-                      batch_idx       : int,
+                      model             : typing.TypeVar("model.BertPreTrainedModel"),
+                      device            : torch.device,
+                      input_ids         : torch.LongTensor,
+                      prediction_scores : torch.FloatTensor,
+                      position_ids      : torch.LongTensor,
+                      masked_lm_labels  : torch.LongTensor,
                       ) -> typing.Tuple[torch.LongTensor, int]:
     """
     Main training sequence filling loop.
@@ -97,47 +93,37 @@ class CompilationSampler(object):
          said functionalities on a single sequence. CANNOT be applied to the
          whole batch at the same time.
     """
-    holes, new_seq = self.StepTrainingSeq(
-      seq[batch_idx], prediction[batch_idx], attention[batch_idx]
-    )
-    while holes:
-      new_prediction, _, _, _ = model.get_output(
-        new_seq.to(device), attention[batch_idx].unsqueeze(0), position_ids[batch_idx],
-      )
-      holes, new_seq = self.StepTrainingSeq(
-        new_seq[0],
-        new_prediction[0],
-        attention[batch_idx],
-      )
-    compile_flag = self.checkIfBatchCompiles(new_seq[0].numpy())
+    new_holes, next_input_ids, attention_mask = self.StepTrainingSeq(input_ids, prediction_scores)
+    with torch.no_grad():
+      while new_holes:
+        next_prediction_scores, _, _, _ = model.get_output(
+          next_input_ids.to(device), attention_mask.to(device), position_ids,
+        )
+        new_holes, next_input_ids, attention_mask = self.StepTrainingSeq(
+          next_input_ids[0], next_prediction_scores[0],
+        )
+    compile_flag = self.checkIfBatchCompiles(next_input_ids[0].numpy())
     if compile_flag:
-      for idx, t in enumerate(masked_lm_label[batch_idx]):
-        if t != -100:
-          masked_lm_label[batch_idx][idx] = -100
-    return new_seq[0], compile_flag
+      masked_lm_labels = np.full(masked_lm_labels.shape, -100, dtype = np.int64)
+    return next_input_ids[0], compile_flag, masked_lm_labels
 
   def StepTrainingSeq(self,
                       seq               : torch.LongTensor,
                       prediction_scores : torch.FloatTensor,
-                      attention_mask    : torch.LongTensor,
                       ) -> typing.Tuple[bool, torch.LongTensor, np.array]:
     """
     Applies step predictions to input sequence.
     Specifically optimized for training; does not compute sample indices for speed-up.
     """
-    seq_length    = tuple(seq.shape)[0]
-    if self.tokenizer.padToken in seq:
-      first_pad_idx = int(torch.where(seq==self.tokenizer.padToken)[0][0])
-    else:
-      first_pad_idx = seq_length
-    allowed_incr = (seq_length - first_pad_idx
+    seq_length   = tuple(seq.shape)[0]
+    allowed_incr = (seq_length - int(torch.where(seq==self.tokenizer.padToken)[0][0])
                     if self.tokenizer.padToken in seq
                     else 0)
 
     endTokens   = self.tokenizer.metaTokenValues
     closed_hole = np.zeros(seq_length, dtype=np.bool)
     new_hole = np.zeros(seq_length, dtype=np.bool)
-    temp_seq = seq.cpu().detach().numpy().copy()
+    temp_seq = seq.numpy().copy()
 
     for target_idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]:
       idx        = int(target_idx)
@@ -184,34 +170,28 @@ class CompilationSampler(object):
           l.getLogger().warn("new_hole: {}".format(new_hole))
           l.getLogger().warn("closed_hole: {}".format(closed_hole))
         new_idx += 1
-        if first_pad_idx < seq_length:
-          attention_mask[first_pad_idx] = 1
-          first_pad_idx += 1
       if new_idx >= seq_length:
         break
 
     new_seq = torch.LongTensor([new_seq])
-    # attention_mask = (new_seq != self.tokenizer.padToken) #
-    return np.any(new_hole), new_seq
+    attention_mask = (new_seq != self.tokenizer.padToken)
+    return np.any(new_hole), new_seq, attention_mask
 
   def generateSampleBatch(self,
                           model             : typing.TypeVar("model.BertPreTrainedModel"),
                           device            : torch.device,
                           input_ids         : torch.LongTensor,
                           prediction_scores : torch.FloatTensor,
-                          attention_mask    : torch.LongTensor,
                           position_ids      : torch.LongTensor,
                           ) -> typing.Tuple[typing.List[np.array], typing.List[typing.List[int]]]:
-    ###
     batch_size, sequence_length = tuple(input_ids.shape)
     with concurrent.futures.ThreadPoolExecutor() as executor:
       jobs = [executor.submit(self.iterSampleSeq,
-                              model          = model,
-                              device         = device,
-                              seq            = input_ids        [i].cpu(),
-                              prediction     = prediction_scores[i].detach().cpu(),
-                              attention      = attention_mask   [i].cpu(),
-                              position_ids   = position_ids     [i].cpu().unsqueeze(0),
+                              model             = model,
+                              device            = device,
+                              input_ids         = input_ids        [i],
+                              prediction_scores = prediction_scores[i],
+                              position_ids      = position_ids     [i],
                           ) for i in range(batch_size)]
 
       results          = [j.result() for j in jobs]
@@ -221,12 +201,11 @@ class CompilationSampler(object):
       return samples, sample_indices, scores_history
 
   def iterSampleSeq(self,
-                    model        : typing.TypeVar("model.BertPreTrainedModel"),
-                    device       : torch.device,
-                    seq          : torch.LongTensor,
-                    prediction   : torch.LongTensor,
-                    attention    : torch.LongTensor,
-                    position_ids : torch.LongTensor,
+                    model             : typing.TypeVar("model.BertPreTrainedModel"),
+                    device            : torch.device,
+                    input_ids         : torch.LongTensor,
+                    prediction_scores : torch.LongTensor,
+                    position_ids      : torch.LongTensor,
                     ) -> typing.Tuple[torch.LongTensor, typing.List[typing.List[int]], typing.List[np.array]]:
     """
     Main sampling sequence filling loop.
@@ -243,37 +222,34 @@ class CompilationSampler(object):
     """
     sample_indices = [
       [] for _ in range(
-        len(torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0])
+        len(torch.where((input_ids == self.tokenizer.holeToken) | (input_ids == self.tokenizer.maskToken))[0])
       )
     ]
     scores_history = []
-    holes, new_seq, new_attention, sample_indices = self.StepSampleSeq(
-      seq, prediction, attention, sample_indices, scores_history
+    holes, next_input_ids, attention_mask = self.StepSampleSeq(
+      input_ids, prediction_scores, sample_indices, scores_history
     )
     while holes:
-      new_prediction, _, _, _ = model.get_output(
-        new_seq.to(device), new_attention.to(device), position_ids.to(device), #
+      next_prediction_scores, _, _, _ = model.get_output(
+        next_input_ids.to(device), attention_mask.to(device), position_ids,
       )
-      holes, new_seq, new_attention, sample_indices = self.StepSampleSeq(
-        new_seq[0],
-        new_prediction.detach().cpu()[0],
-        new_attention,
+      holes, next_input_ids, attention_mask = self.StepSampleSeq(
+        next_input_ids[0],
+        next_prediction_scores[0].detach().cpu(),
         sample_indices,
         scores_history
       )
-    return new_seq[0], sample_indices, scores_history
+    return next_input_ids[0], sample_indices, scores_history
 
   def StepSampleSeq(self,
                     seq               : torch.LongTensor,
                     prediction_scores : torch.LongTensor,
-                    attention_mask    : torch.LongTensor,
                     sample_indices    : typing.List[typing.List[int]],
                     scores_history    : typing.List[np.array],
                     ) -> typing.Tuple[
                           bool,
                           torch.LongTensor,
                           np.array,
-                          typing.List[typing.List[int]]
                          ]:
     """
     Applies sample step predictions to input sequence.
@@ -287,7 +263,7 @@ class CompilationSampler(object):
     endTokens = self.tokenizer.metaTokenValues
     closed_hole = np.zeros(seq_length, dtype=np.bool)
     new_hole = np.zeros(seq_length, dtype=np.bool)
-    temp_seq = seq.cpu().detach().numpy().copy()
+    temp_seq = seq.numpy().copy()
 
     for target_idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]:
       idx        = int(target_idx)
@@ -324,7 +300,7 @@ class CompilationSampler(object):
         break
 
     new_seq = torch.LongTensor([new_seq])
-    attention_mask = (new_seq != self.tokenizer.padToken) #
+    attention_mask = (new_seq != self.tokenizer.padToken)
 
     # Update sample indices
     t_idx = 0
@@ -333,4 +309,4 @@ class CompilationSampler(object):
         sample_indices[target_indices] += step_indices[t_idx]
         t_idx += 1
 
-    return np.any(new_hole), new_seq, attention_mask, sample_indices
+    return np.any(new_hole), new_seq, attention_mask

@@ -804,15 +804,19 @@ class BertForPreTraining(BertPreTrainedModel):
     )
 
     if not is_validation and self.compile_sampler and step >= self.config.reward_compilation and not self.config.is_sampling:
-      samples, compile_flag = self.compile_sampler.generateTrainingBatch(
-        self, input_ids.get_device(), input_ids, prediction_scores,
-        attention_mask, position_ids, masked_lm_labels
+      samples, compile_flag, masked_lm_labels = self.compile_sampler.generateTrainingBatch(
+        self,
+        input_ids.get_device(),
+        input_ids.cpu(),
+        prediction_scores.cpu(),
+        torch.clone(position_ids),
+        masked_lm_labels.cpu().numpy(),
       )
       loss_fct = torch.nn.CrossEntropyLoss()
       masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
       next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
       total_loss = masked_lm_loss + next_sentence_loss
-
+      print(total_loss)
       return {
         'masked_lm_loss'          : masked_lm_loss,
         'next_sentence_loss'      : next_sentence_loss,
@@ -821,19 +825,22 @@ class BertForPreTraining(BertPreTrainedModel):
         'seq_relationship_logits' : seq_relationship_score,
         'hidden_states'           : hidden_states,
         'attentions'              : attentions,
-        'compile_status'          : torch.LongTensor(compile_flag),
-        'generated_samples'       : torch.LongTensor(samples),
+        'compile_status'          : compile_flag,
+        'generated_samples'       : samples,
         'batch_compilation_rate'  : torch.full((1,), float(sum(compile_flag)) / len(compile_flag), dtype = torch.float),
         'sample_indices'          : [],
       }
     elif not is_validation and self.compile_sampler and self.config.is_sampling:
       samples, sample_indices, scores_history = self.compile_sampler.generateSampleBatch(
-        self, input_ids.get_device(), input_ids,
-        prediction_scores, attention_mask, position_ids
+        self,
+        input_ids.get_device(),
+        input_ids.cpu(),
+        prediction_scores.cpu(),
+        position_ids,
       )
       return {
         'prediction_scores' : scores_history, # This is mainly used for live sampling. Else, watch out!
-        'generated_samples' : torch.LongTensor(samples),
+        'generated_samples' : samples,
         'sample_indices'    : sample_indices,
       }
     else:
