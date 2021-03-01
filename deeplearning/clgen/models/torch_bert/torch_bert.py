@@ -40,6 +40,7 @@ from deeplearning.clgen.features import extractor
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models import bert_flags
+from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.models.torch_bert import model
 from deeplearning.clgen.models.torch_bert import config
 from deeplearning.clgen.models.torch_bert import optimizer
@@ -383,6 +384,38 @@ class torchBert(backends.BackendBase):
           self.saveCheckpoint(self.train)
           if self.torch_tpu_available:
             self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
+
+          sampler, observers = self._getTestSampler(test_sampler, self.config.training.sequence_length)
+          self.InitSampling(sampler, self.config.training.random_seed)
+          for _ in range(FLAGS.sample_per_epoch):
+            start_time   = datetime.datetime.utcnow()
+            self.InitSampleBatch(sampler)
+            sample_batch, sample_indices = self.SampleNextIndices()
+            end_time = datetime.datetime.utcnow()
+            for sample, sind in zip(sample_batch, sample_indices):
+              try:
+                stdout = opencl.Compile(self.tokenizer.ArrayToCode(sample))
+                compile_flag = 1
+              except ValueError:
+                compile_flag = 0
+
+              feature_vector = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(sample))
+              sample_proto = model_pb2.Sample(
+                train_step             = self.current_step,
+                sample_feed            = sampler.start_text,
+                text                   = self.tokenizer.tokensToString(sample, with_formatting = True, ignore_token = self.tokenizer.padToken).replace("\\n", "\n"),
+                encoded_text           = ",".join([str(t) for t in sample]),
+                sample_indices         = '\n'.join([self.tokenizer.tokensToString(mind).replace('\n', '\\n') for mind in sind]),
+                encoded_sample_indices = '\n'.join([','.join([str(x) for x in mind]) for mind in sind ]),
+                sample_time_ms         = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
+                feature_vector         = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
+                num_tokens             = len(sample),
+                compile_status         = compile_flag,
+                categorical_sampling   = self.samplesWithCategorical(),
+                date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
+              )
+              for obs in observers:
+                obs.OnSample(sample_proto)
 
         self.is_trained = True
       except KeyboardInterrupt:
