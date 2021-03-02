@@ -105,7 +105,7 @@ flags.DEFINE_boolean(
 flags.DEFINE_string(
   "print_cache_path",
   None,
-  'Print the directory of a cache and exit. Valid options are: "corpus", '
+  'Print the directory of a cache and exit. Valid options are: "pre_train_corpus", "corpus", '
   '"model", or "sampler".',
 )
 flags.DEFINE_boolean(
@@ -283,7 +283,10 @@ def DoFlagsAction(
 
   if instance.model:
     with instance.Session():
-      if FLAGS.print_cache_path == "corpus":
+      if FLAGS.print_cache_path == "pre_train_corpus":
+        print(instance.model.pre_train_corpus.cache.path)
+        return
+      elif FLAGS.print_cache_path == "corpus":
         print(instance.model.corpus.cache.path)
         return
       elif FLAGS.print_cache_path == "model":
@@ -301,6 +304,8 @@ def DoFlagsAction(
     # The default action is to sample the model.
       if FLAGS.stop_after == "corpus":
         instance.model.corpus.Create()
+        if instance.model.pre_train_corpus:
+          instance.model.pre_train_corpus.Create()
       elif FLAGS.stop_after == "train":
         instance.Train()
         l.getLogger().info("Model: {}".format(instance.model.cache.path))
@@ -320,7 +325,7 @@ def DoFlagsAction(
   else:
     if FLAGS.stop_after in {"corpus", "train"}:
       l.getLogger().warn("FLAGS.stop_after {} will be ignored without model config.".format(FLAGS.stop_after))
-    if FLAGS.print_cache_path in {"corpus", "model", "sampler"}:
+    if FLAGS.print_cache_path in {"pre_train_corpus", "corpus", "model", "sampler"}:
       raise ValueError("{} config has not been specified.".format(FLAGS.print_cache_path))
     elif FLAGS.print_cache_path:
       raise ValueError(f"Invalid --print_cache_path argument: '{FLAGS.print_cache_path}'")
