@@ -175,6 +175,26 @@ class Instance(object):
     with self.Session():
       self.model.Create()
 
+  def PreTrain(self, *args, **kwargs) -> None:
+    if self.config.model.HasField("pre_train_corpus"):
+      with self.Session():
+        test_sampler_config = sampler_pb2.Sampler()
+        test_sampler_config.CopyFrom(self.sampler.config)
+        # Make all test samples the same sequence_length length.
+        del test_sampler_config.termination_criteria[:]
+        test_sampler_config.termination_criteria.extend(
+          [
+            sampler_pb2.SampleTerminationCriterion(
+              maxlen=sampler_pb2.MaxTokenLength(maximum_tokens_in_sample=self.sampler.sequence_length)
+            ),
+          ]
+        )
+        test_sampler = samplers.Sampler(test_sampler_config, sample_db_name = "pre_epoch_samples.db")
+
+        # We inject the `test_sampler` argument so that we can create samples
+        # during training.
+        self.model.PreTrain(*args, test_sampler = test_sampler, **kwargs)
+
   def Train(self, *args, **kwargs) -> None:
     with self.Session():
       test_sampler_config = sampler_pb2.Sampler()
@@ -195,6 +215,7 @@ class Instance(object):
       self.model.Train(*args, test_sampler = test_sampler, **kwargs)
 
   def Sample(self, *args, **kwargs) -> typing.List[model_pb2.Sample]:
+    self.PreTrain()
     self.Train()
     with self.Session():
       return self.model.Sample(self.sampler, *args, **kwargs)
@@ -306,6 +327,9 @@ def DoFlagsAction(
         instance.model.corpus.Create()
         if instance.model.pre_train_corpus:
           instance.model.pre_train_corpus.Create()
+      elif FLAGS.stop_after == "pre_train":
+        instance.PreTrain()
+        l.getLogger().info("Model: {}".format(instance.model.cache.path))
       elif FLAGS.stop_after == "train":
         instance.Train()
         l.getLogger().info("Model: {}".format(instance.model.cache.path))

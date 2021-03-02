@@ -263,6 +263,33 @@ class Model(object):
       raise TypeError("Cannot access dashboard_db_id before Create() called")
     return self._dashboard_db_id
 
+  def PreTrain(self, **kwargs) -> "Model":
+    """
+    Pre-Train the model. Only supported for PyTorch BERT.
+
+    Returns:
+      The model instance.
+
+    Raises:
+      UnableToAcquireLockError: If the model is locked (i.e. there is another
+        process currently modifying the model).
+    """
+    self.Create()
+
+    self.backend.PreTrain(self.pre_train_corpus, **kwargs)
+    pre_telemetry_logs = self.backend.pre_telemetry.EpochTelemetry()
+
+    l.getLogger().info(
+      "Pre-trained model for {} {} in {} ms. " "Training loss: {}."
+        .format(
+          pre_telemetry_logs[-1].epoch_num,
+          "steps" if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert) else "epochs",
+          humanize.intcomma(sum(t.epoch_wall_time_ms for t in pre_telemetry_logs)),
+          pre_telemetry_logs[-1].loss,
+          )
+    )
+    return self
+
   def Train(self, **kwargs) -> "Model":
     """Train the model.
 
@@ -274,18 +301,7 @@ class Model(object):
         process currently modifying the model).
     """
     self.Create()
-    if self.pre_train_corpus:
-      pre_telemetry_logs = self.backend.pre_telemetry.EpochTelemetry()
-      self.backend.PreTrain(self.pre_train_corpus, **kwargs)
-      l.getLogger().info(
-        "Pre-trained model for {} {} in {} ms. " "Training loss: {}."
-          .format(
-            pre_telemetry_logs[-1].epoch_num,
-            "steps" if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert) else "epochs",
-            humanize.intcomma(sum(t.epoch_wall_time_ms for t in pre_telemetry_logs)),
-            pre_telemetry_logs[-1].loss,
-            )
-      )
+
     self.backend.Train(self.corpus, **kwargs)
     telemetry_logs = self.backend.telemetry.EpochTelemetry()
 
