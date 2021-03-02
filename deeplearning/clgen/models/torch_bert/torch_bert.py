@@ -101,8 +101,12 @@ class torchBert(backends.BackendBase):
     self.num_warmup_steps    = None
 
     self.ckpt_path           = self.cache.path / "checkpoints"
+    if self.config.HasField("pre_train_corpus"):
+      self.pre_ckpt_path       = self.cache.path / "checkpoints" / "pre_train"
     self.logfile_path        = self.cache.path / "logs"
     self.sample_path         = self.cache.path / "samples"
+    if self.config.HasField("pre_train_corpus"):
+      self.pre_telemetry       = telemetry.TrainingLogger(self.logfile_path / "pre_train")
     self.telemetry           = telemetry.TrainingLogger(self.logfile_path)
 
     self.is_validated        = False
