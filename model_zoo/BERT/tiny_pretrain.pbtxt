@@ -1,7 +1,26 @@
 working_dir: "BERT" ## This path is relative to "workspace_dir", which is an app FLAG
 model {
-  corpus {
+  pre_train_corpus {
     local_tar_archive: "$PWD/../corpus/corpus_250.tar.bz2"
+    contentfile_separator: "\n\n\n\n"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:InvertKernelSpecifier"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:ExtractOnlySingleKernels"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:StringKernelsToSource"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:NormalizeIdentifiers"
+    preprocessor: "deeplearning.clgen.preprocessors.common:StripDuplicateEmptyLines"
+    preprocessor: "deeplearning.clgen.preprocessors.common:StripMultipleWhitespaces"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:SanitizeKernelPrototype"
+    preprocessor: "deeplearning.clgen.preprocessors.common:StripTrailingWhitespace"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
+    preprocessor: "deeplearning.clgen.preprocessors.common:MinimumLineCount3"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
+  }
+  corpus {
+    local_tar_archive: "$PWD/../corpus/corpus_1000.tar.bz2"
     tokenizer {
       token_type: "ast"
       token_list: "deeplearning/clgen/corpuses/token_lists.json"
@@ -26,7 +45,7 @@ model {
     preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
   }
   architecture {
-    backend: TORCH_BERT
+    backend: TENSORFLOW_BERT
     hidden_size: 512
     num_hidden_layers: 2
     num_attention_heads: 2
