@@ -205,8 +205,12 @@ class Corpus(object):
       f"{corpus_size} token corpus with {self.vocab_size}-element vocabulary"
     )
 
-  def Create(self) -> None:
+  def Create(self, tokenizer = None) -> None:
     """Create the corpus files.
+  
+    Args:
+      tokenizer: In case of pre-training ONLY the tokenizer of fine-tuned corpus,
+      is provided as-is in the pre-training corpus as they must have the same vocab.
 
     Raises:
       EmptyCorpusException: If there are no content files, or no successfully
@@ -248,8 +252,9 @@ class Corpus(object):
     encoded_lock_path = (
       pathlib.Path(self.encoded.url[len("sqlite:///") :]).parent / "LOCK"
     )
-    start_time = time.time()
-    tokenizer = self.tokenizer
+    start_time      = time.time()
+    self._tokenizer = tokenizer
+    tokenizer       = self.tokenizer
     l.getLogger().info(
       "{}: {} tokens in {} ms".format(
           type(tokenizer).__name__,
