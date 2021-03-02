@@ -24,7 +24,7 @@ class TrainingLogger(object):
   """
 
   def __init__(self, logdir: pathlib.Path):
-    logdir.mkdir(exist_ok = True)
+    logdir.mkdir(exist_ok = True, parents = True)
     self.logdir = logdir
     self.last_epoch_begin_timestamp = None
     self.telemetry = None

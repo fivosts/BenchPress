@@ -60,7 +60,8 @@ flags.DEFINE_string(
   "not be omitted.",
 )
 
-def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
+def AssertConfigIsValid(config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrainCorpus]
+                       ) -> typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrainCorpus]:
   """Assert that config proto is valid.
 
   Args:
@@ -81,23 +82,26 @@ def AssertConfigIsValid(config: corpus_pb2.Corpus) -> corpus_pb2.Corpus:
       return config
 
     pbutil.AssertFieldIsSet(config,          "contentfiles")
-    pbutil.AssertFieldIsSet(config,          "tokenizer")
-    pbutil.AssertFieldIsSet(config.tokenizer, "token_type")
+    if isinstance(config, corpus_pb2.Corpus):
+      pbutil.AssertFieldIsSet(config,          "tokenizer")
+      pbutil.AssertFieldIsSet(config.tokenizer, "token_type")
+      pbutil.AssertFieldConstraint(config.tokenizer, 
+                                   "token_type", 
+                                   lambda x: x == "character" or x == "word" or x == "ast",
+                                   "tokenizer is either character or word based."
+                                   )
+      if config.tokenizer.token_type == "word":
+        pbutil.AssertFieldConstraint(config.tokenizer,
+                                    "token_list",
+                                    lambda x: os.path.isfile(str(ExpandConfigPath(x, path_prefix=FLAGS.clgen_local_path_prefix))),
+                                    "Invalid token_list file"
+                                    )
+    else:
+      if config.HasField("tokenizer"):
+        raise ValueError("Pre-train corpus cannot have a distinct tokenizer.")
     pbutil.AssertFieldIsSet(config,          "contentfile_separator")
     # Check that the preprocessor pipeline resolves to preprocessor functions.
     [preprocessors.GetPreprocessorFunction(p) for p in config.preprocessor]
-
-    pbutil.AssertFieldConstraint(config.tokenizer, 
-                                 "token_type", 
-                                 lambda x: x == "character" or x == "word" or x == "ast",
-                                 "tokenizer is either character or word based."
-                                 )
-    if config.tokenizer.token_type == "word":
-      pbutil.AssertFieldConstraint(config.tokenizer,
-                                  "token_list",
-                                  lambda x: os.path.isfile(str(ExpandConfigPath(x, path_prefix=FLAGS.clgen_local_path_prefix))),
-                                  "Invalid token_list file"
-                                  )
 
     return config
   except pbutil.ProtoValueError as e:
@@ -113,7 +117,7 @@ class Corpus(object):
   can lead to bad things happening.
   """
 
-  def __init__(self, config: corpus_pb2.Corpus):
+  def __init__(self, config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrainCorpus]):
     """Instantiate a corpus from a proto config.
 
     If this is a new corpus, a number of files will be created, which may
@@ -128,11 +132,14 @@ class Corpus(object):
         options.
       EmptyCorpusException: In case the corpus contains no data.
     """
-    if not isinstance(config, corpus_pb2.Corpus):
+    if not isinstance(config, corpus_pb2.Corpus) and not isinstance(config, corpus_pb2.PreTrainCorpus):
       raise TypeError(f"Config must be a Corpus proto. Received: '{type(config).__name__}'")
 
     # Make a local copy of the configuration.
-    self.config = corpus_pb2.Corpus()
+    if isinstance(config, corpus_pb2.Corpus):
+      self.config = corpus_pb2.Corpus()
+    else:
+      self.config = corpus_pb2.PreTrainCorpus()
     self.config.CopyFrom(AssertConfigIsValid(config))
     self._tokenizer = None
     self._created = False
@@ -222,7 +229,10 @@ class Corpus(object):
     # Nothing to do for already-encoded databases.
     if self.config.HasField("pre_encoded_corpus_url"):
       with self.dashboard_db.Session(commit=True) as session:
-        config_to_store = corpus_pb2.Corpus()
+        if isinstance(self.config, corpus_pb2.Corpus):
+          config_to_store = corpus_pb2.Corpus()
+        else:
+          config_to_store = corpus_pb2.PreTrainCorpus()
         config_to_store.CopyFrom(self.config)
         # Clear the contentfiles field, since we use the content_id to uniquely
         # identify the input files. This means that corpuses with the same content
@@ -268,7 +278,10 @@ class Corpus(object):
 
     # Add entry to dashboard database
     with self.dashboard_db.Session(commit=True) as session:
-      config_to_store = corpus_pb2.Corpus()
+      if isinstance(self.config, corpus_pb2.Corpus):
+        config_to_store = corpus_pb2.Corpus()
+      else:
+        config_to_store = corpus_pb2.PreTrainCorpus()
       config_to_store.CopyFrom(self.config)
       # Clear the contentfiles field, since we use the content_id to uniquely
       # identify the input files. This means that corpuses with the same content
@@ -451,7 +464,7 @@ def ExpandConfigPath(path: str, path_prefix: str = None) -> pathlib.Path:
 
 
 def ResolveContentId(
-  config: corpus_pb2.Corpus, hc: typing.Optional[hashcache.HashCache] = None
+  config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrainCorpus], hc: typing.Optional[hashcache.HashCache] = None
 ) -> str:
   """Compute the hash of the input contentfiles.
 
@@ -548,7 +561,9 @@ def ResolveContentId(
   return content_id
 
 
-def ResolvePreprocessedId(content_id: str, config: corpus_pb2.Corpus) -> str:
+def ResolvePreprocessedId(content_id: str,
+                          config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrainCorpus]
+                          ) -> str:
   """Compute the hash of a corpus of preprocessed contentfiles.
 
   The hash is computed from the ID of the input files and the serialized
@@ -561,13 +576,18 @@ def ResolvePreprocessedId(content_id: str, config: corpus_pb2.Corpus) -> str:
   return crypto.sha1_list(content_id, *config.preprocessor)
 
 
-def ResolveEncodedId(content_id: str, config: corpus_pb2.Corpus) -> str:
+def ResolveEncodedId(content_id: str,
+                     config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrainCorpus]
+                     ) -> str:
   """Compute the hash of a corpus of preprocessed and encoded contentfiles.
 
   The hash is computed from the ID of the input files and the serialized
   representation of the config proto.
   """
-  config_without_contentfiles = corpus_pb2.Corpus()
+  if isinstance(config,  corpus_pb2.Corpus):
+    config_without_contentfiles = corpus_pb2.Corpus()
+  else:
+    config_without_contentfiles = corpus_pb2.PreTrainCorpus()
   config_without_contentfiles.CopyFrom(config)
   # Clear the contentfiles field, since we use the content_id to uniquely
   # identify the input files. This means that corpuses with the same content

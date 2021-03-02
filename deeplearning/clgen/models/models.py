@@ -244,20 +244,16 @@ class Model(object):
       config_to_store.training.ClearField("num_epochs")
       corpus = session.GetOrAdd(
         dashboard_db.Model,
-        corpus_id=self.corpus.dashboard_db_id + (self.pre_train_corpus.dashboard_db_id
-                                                 if self.pre_train_corpus else 0),
-        config_proto_sha1=crypto.sha1(config_to_store.SerializeToString()),
-        config_proto=str(config_to_store),
-        cache_path=(
-          f"ssh://{socket.gethostname()}@{getpass.getuser()}" f"/{self.cache.path}"
-        ),
-        summary=self.GetShortSummary(),
+        corpus_id         = self.corpus.dashboard_db_id,
+        config_proto_sha1 = crypto.sha1(config_to_store.SerializeToString()),
+        config_proto      = str(config_to_store),
+        cache_path        = (f"ssh://{socket.gethostname()}@{getpass.getuser()}" f"/{self.cache.path}"),
+        summary           = self.GetShortSummary(),
       )
       session.flush()
-      self._dashboard_db_id = corpus.id + (self.pre_train_corpus.dashboard_db_id
-                                           if self.pre_train_corpus else 0)
+      self._dashboard_db_id           = corpus.id
       self.backend.dashboard_model_id = self.dashboard_db_id
-      self.backend.dashboard_db = self.dashboard_db
+      self.backend.dashboard_db       = self.dashboard_db
 
   @property
   def dashboard_db_id(self) -> int:

@@ -44,10 +44,11 @@ message PreTrainCorpus {
     // The path to a database of encoded files.
     string pre_encoded_corpus_url = 4;
   }
+  optional tokenizer tokenizer    = 5;
   // A list of preprocessor passes to run on each contentfile in the corpus
   // prior to training, in the order in which they are run.
-  repeated string preprocessor          = 5;
-  optional string contentfile_separator = 6;
+  repeated string preprocessor          = 6;
+  optional string contentfile_separator = 7;
 }
 
 // The specification of a training corpus.
