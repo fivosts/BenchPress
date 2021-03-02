@@ -48,6 +48,10 @@ class BackendBase(object):
   def Create(self, tokenizer: tokenizers.TokenizerBase) -> None:
     self.tokenizer = tokenizer
 
+  def PreTrain(self, corpus: "Corpus", **extra_kwargs) -> None:
+    """Pre-train the backend"""
+    raise NotImplementedError("pre-training is only supported in PyTorch BERT.")
+
   def Train(self, corpus: "Corpus", **extra_kwargs) -> None:
     """Train the backend."""
     raise NotImplementedError

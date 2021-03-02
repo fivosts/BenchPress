@@ -257,6 +257,17 @@ class torchBert(backends.BackendBase):
               )
     return outputs
 
+  def PreTrain(self,
+               corpus,
+               test_sampler: typing.Optional[samplers.Sampler] = None,
+               **unused_kwargs
+               ) -> None:
+    """
+    Pre-training entry point.
+    """
+    raise NotImplementedError("To be done!")
+
+
   def Train(self,
             corpus,
             test_sampler: typing.Optional[samplers.Sampler] = None,
