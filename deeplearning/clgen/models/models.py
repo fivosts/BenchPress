@@ -220,7 +220,7 @@ class Model(object):
     if config_to_hash.training.HasField("data_generator"):
       config_to_hash.training.data_generator.ClearField("steps_per_epoch")
       config_to_hash.training.data_generator.ClearField("validation_set")
-    if pre_train_corpus:
+    if pre_train_corpus_:
       hash_list = [pre_train_corpus_.hash, corpus_.hash, config_to_hash.SerializeToString()]
     else:
       hash_list = [corpus_.hash, config_to_hash.SerializeToString()]
@@ -244,7 +244,8 @@ class Model(object):
       config_to_store.training.ClearField("num_epochs")
       corpus = session.GetOrAdd(
         dashboard_db.Model,
-        corpus_id=self.corpus.dashboard_db_id + (self.pre_train_corpus.dashboard_db_id or 0),
+        corpus_id=self.corpus.dashboard_db_id + (self.pre_train_corpus.dashboard_db_id
+                                                 if self.pre_train_corpus else 0),
         config_proto_sha1=crypto.sha1(config_to_store.SerializeToString()),
         config_proto=str(config_to_store),
         cache_path=(
@@ -253,7 +254,8 @@ class Model(object):
         summary=self.GetShortSummary(),
       )
       session.flush()
-      self._dashboard_db_id = corpus.id + (self.pre_train_corpus.dashboard_db_id or 0)
+      self._dashboard_db_id = corpus.id + (self.pre_train_corpus.dashboard_db_id
+                                           if self.pre_train_corpus else 0)
       self.backend.dashboard_model_id = self.dashboard_db_id
       self.backend.dashboard_db = self.dashboard_db
 
