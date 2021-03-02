@@ -34,23 +34,24 @@ import "deeplearning/clgen/proto/corpus.proto";
 
 // The specification of a CLgen model.
 message Model {
-  optional clgen.Corpus        corpus       = 1;
-  optional NetworkArchitecture architecture = 2;
-  optional TrainingOptions     training     = 3;
+  optional clgen.PreTrainCorpus pre_train_corpus = 1;
+  optional clgen.Corpus         corpus           = 2;
+  optional NetworkArchitecture  architecture     = 3;
+  optional TrainingOptions      training         = 4;
 }
 
 // The specification of a CLgen language model.
 message NetworkArchitecture {
   enum Backend {
-    TENSORFLOW_SEQ = 0;
+    TENSORFLOW_SEQ  = 0;
     TENSORFLOW_BERT = 1;
-    TORCH_BERT = 2;
-    KERAS_SEQ = 3;
+    TORCH_BERT      = 2;
+    KERAS_SEQ       = 3;
   }
   enum NeuronType {
     LSTM = 0;
-    RNN = 1;
-    GRU = 2;
+    RNN  = 1;
+    GRU  = 2;
   }
   optional Backend backend = 1;
   // The size of the input embedding layer. Only required if backend == KERAS_SEQ.

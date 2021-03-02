@@ -30,6 +30,26 @@ option java_multiple_files = true;
 option java_outer_classname = "CorpusProto";
 option java_package = "com.clgen";
 
+// The specification of a pre-training corpus.
+message PreTrainCorpus {
+  // The input contentfiles to the corpus.
+  // Shell variables are expanded. E.g. $HOME -> /home/<user>.
+  oneof contentfiles {
+    // The ID of an already-cached corpus.
+    string content_id             = 1;
+    // The path to a directory on the local system containing content files.
+    string local_directory        = 2;
+    // The path to a tarball archive file containing content files.
+    string local_tar_archive      = 3;
+    // The path to a database of encoded files.
+    string pre_encoded_corpus_url = 4;
+  }
+  // A list of preprocessor passes to run on each contentfile in the corpus
+  // prior to training, in the order in which they are run.
+  repeated string preprocessor          = 5;
+  optional string contentfile_separator = 6;
+}
+
 // The specification of a training corpus.
 message Corpus {
   // The input contentfiles to the corpus.
@@ -44,7 +64,7 @@ message Corpus {
     // The path to a database of encoded files.
     string pre_encoded_corpus_url = 4;
   }
-  required tokenizer tokenizer      = 5;
+  required tokenizer tokenizer    = 5;
   // A list of preprocessor passes to run on each contentfile in the corpus
   // prior to training, in the order in which they are run.
   repeated string preprocessor          = 6;
@@ -53,8 +73,8 @@ message Corpus {
 
 // The tokenizer to use to encode the corpus.
 message tokenizer{
-  required string token_type             = 8;
-  optional string token_list             = 9;
-  optional bool   mask_tokens            = 10;
-  optional bool   wordpiece_tokenization = 11;
+  required string token_type             = 1;
+  optional string token_list             = 2;
+  optional bool   mask_tokens            = 3;
+  optional bool   wordpiece_tokenization = 4;
 }
