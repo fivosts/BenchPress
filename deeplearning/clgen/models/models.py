@@ -93,8 +93,11 @@ class Model(object):
     if FLAGS.num_epochs:
       self.config.training.num_epochs = FLAGS.num_epochs
       
-    self.corpus = corpuses.Corpus(config.corpus)
-    self.hash = self._ComputeHash(self.corpus, self.config)
+    self.corpus           = corpuses.Corpus(config.corpus)
+    self.pre_train_corpus = None
+    if config.HasField("pre_train_corpus"):
+      self.pre_train_corpus = corpuses.Corpus(config.pre_train_corpus)
+    self.hash = self._ComputeHash(self.pre_train_corpus, self.corpus, self.config)
     self.cache = cache.mkcache("model", self.hash)
     # Create the necessary cache directories.
     (self.cache.path / "checkpoints").mkdir(exist_ok=True)
@@ -114,6 +117,16 @@ class Model(object):
         ),
         symlink,
       )
+    if self.pre_train_corpus:
+      symlink = self.cache.path / "pre_train_corpus"
+      if not symlink.is_symlink():
+        os.symlink(
+          os.path.relpath(
+            pathlib.Path(self.pre_train_corpus.encoded.url[len("sqlite:///") :]).parent,
+            self.cache.path,
+          ),
+          symlink,
+        )
 
     # Create symlink to the tokenizer.
     symlink = self.cache.path / "tokenizer"
@@ -131,6 +144,8 @@ class Model(object):
       config_to_compare = model_pb2.Model()
       config_to_compare.CopyFrom(self.config)
       config_to_compare.corpus.ClearField("contentfiles")
+      if config_to_compare.HasField("pre_train_corpus"):
+        config_to_compare.pre_train_corpus.ClearField("contentfiles")
       config_to_compare.training.ClearField("num_epochs")
       config_to_compare.training.ClearField("num_train_steps")
       config_to_compare.training.ClearField("batch_size")
@@ -143,6 +158,8 @@ class Model(object):
       cached_to_compare = model_pb2.Model()
       cached_to_compare.CopyFrom(cached_meta.config)
       cached_to_compare.corpus.ClearField("contentfiles")
+      if cached_to_compare.HasField("pre_train_corpus"):
+        cached_to_compare.pre_train_corpus.ClearField("contentfiles")
       cached_to_compare.training.ClearField("num_epochs")
       cached_to_compare.training.ClearField("num_train_steps")
       cached_to_compare.training.ClearField("batch_size")
@@ -173,7 +190,10 @@ class Model(object):
     return self.backend.GetShortSummary()
 
   @staticmethod
-  def _ComputeHash(corpus_: corpuses.Corpus, config: model_pb2.Model) -> str:
+  def _ComputeHash(pre_train_corpus_ : corpuses.Corpus,
+                   corpus_           : corpuses.Corpus,
+                   config            : model_pb2.Model,
+                   ) -> str:
     """Compute model hash.
 
     The hash is computed from the ID of the corpus and the serialized
@@ -192,6 +212,7 @@ class Model(object):
     """
     config_to_hash = model_pb2.Model()
     config_to_hash.CopyFrom(config)
+    config_to_hash.ClearField("pre_train_corpus")
     config_to_hash.ClearField("corpus")
     config_to_hash.training.ClearField("num_epochs")
     config_to_hash.training.ClearField("num_train_steps")
@@ -199,14 +220,19 @@ class Model(object):
     if config_to_hash.training.HasField("data_generator"):
       config_to_hash.training.data_generator.ClearField("steps_per_epoch")
       config_to_hash.training.data_generator.ClearField("validation_set")
-
-    return crypto.sha1_list(corpus_.hash, config_to_hash.SerializeToString())
+    if pre_train_corpus:
+      hash_list = [pre_train_corpus_.hash, corpus_.hash, config_to_hash.SerializeToString()]
+    else:
+      hash_list = [corpus_.hash, config_to_hash.SerializeToString()]
+    return crypto.sha1_list(hash_list)
 
   def Create(self) -> bool:
     if self._created:
       return False
     self._created = True
     self.corpus.Create()
+    if self.pre_train_corpus:
+      self.pre_train_corpus.Create(self.corpus.tokenizer)
     self.backend.Create(tokenizer = self.corpus.tokenizer)
 
     # Add entry to dashboard database
@@ -214,10 +240,11 @@ class Model(object):
       config_to_store = model_pb2.Model()
       config_to_store.CopyFrom(self.config)
       config_to_store.ClearField("corpus")
+      config_to_store.ClearField("pre_train_corpus")
       config_to_store.training.ClearField("num_epochs")
       corpus = session.GetOrAdd(
         dashboard_db.Model,
-        corpus_id=self.corpus.dashboard_db_id,
+        corpus_id=self.corpus.dashboard_db_id + (self.pre_train_corpus.dashboard_db_id or 0),
         config_proto_sha1=crypto.sha1(config_to_store.SerializeToString()),
         config_proto=str(config_to_store),
         cache_path=(
@@ -226,7 +253,7 @@ class Model(object):
         summary=self.GetShortSummary(),
       )
       session.flush()
-      self._dashboard_db_id = corpus.id
+      self._dashboard_db_id = corpus.id + (self.pre_train_corpus.dashboard_db_id or 0)
       self.backend.dashboard_model_id = self.dashboard_db_id
       self.backend.dashboard_db = self.dashboard_db
 
@@ -247,6 +274,18 @@ class Model(object):
         process currently modifying the model).
     """
     self.Create()
+    if self.pre_train_corpus:
+      pre_telemetry_logs = self.backend.pre_telemetry.EpochTelemetry()
+      self.backend.PreTrain(self.pre_train_corpus, **kwargs)
+      l.getLogger().info(
+        "Pre-trained model for {} {} in {} ms. " "Training loss: {}."
+          .format(
+            pre_telemetry_logs[-1].epoch_num,
+            "steps" if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert) else "epochs",
+            humanize.intcomma(sum(t.epoch_wall_time_ms for t in pre_telemetry_logs)),
+            pre_telemetry_logs[-1].loss,
+            )
+      )
     self.backend.Train(self.corpus, **kwargs)
     telemetry_logs = self.backend.telemetry.EpochTelemetry()
 
