@@ -45,7 +45,7 @@ model {
     preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
   }
   architecture {
-    backend: TENSORFLOW_BERT
+    backend: TORCH_BERT
     hidden_size: 512
     num_hidden_layers: 2
     num_attention_heads: 2
