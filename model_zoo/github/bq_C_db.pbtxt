@@ -1,0 +1,13 @@
+github_miner {
+  path: "/media/fivosts/Second sata disk/clgen_datasets/bigQuery"
+  data_format: sql
+  big_query {
+    credentials: "/home/fivosts/PhD/Code/clgen/deeplearning/clgen/github/5th_acc_creds.json"
+    language: "c"
+    export_corpus {
+      data_format: sql
+      access_token: "2bfd07104166ae9e610db3537f9b680809643305"
+      inline_headers: true
+    }
+  }
+}
