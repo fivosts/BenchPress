@@ -435,8 +435,8 @@ class Model(object):
 
       end_time = datetime.datetime.utcnow()
       sample = model_pb2.Sample(
-        train_step                = epoch, # Ok
-        text                      = src, # Ok
+        train_step                = epoch,
+        text                      = src,
         sample_indices            = '\n'.join([','.join([self.tokenizer.decoder[idx] for idx in hole_idxs]).replace('\n', '\\n') for hole_idxs in idxs]),
         encoded_sample_indices    = '\n'.join([','.join([str(idx) for idx in hole_idxs]) for hole_idxs in idxs]),
         sample_feed               = sampler.start_text,
