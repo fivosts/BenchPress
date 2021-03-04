@@ -73,7 +73,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "encoded_sample_indices" : proto.encoded_sample_indices,
       "feature_vector"         : proto.feature_vector,
       "num_tokens"             : proto.num_tokens,
-      "compile_status"         : compile_status,
+      "compile_status"         : proto.compile_status,
       "categorical_sampling"   : proto.categorical_sampling,
       "sample_time_ms"         : proto.sample_time_ms,
       "date_added"             : datetime.datetime.strptime(proto.date_added, "%m/%d/%Y, %H:%M:%S"),
