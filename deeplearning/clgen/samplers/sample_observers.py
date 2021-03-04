@@ -163,7 +163,7 @@ class SamplesDatabaseObserver(SampleObserver):
     db_path = pathlib.Path(self.db.url[len("sqlite:///"):]).parent
     feature_monitor = monitors.FeatureMonitor(db_path, "samples_feature_vector")
     for sample in self.db.correct_samples:
-      feature_monitor.register(extractor.StrToDictFeatures(sample.feature_vector))
+      feature_monitor.register({k.split(':')[0]: k.split(':')[1] for k in sample.feature_vector.split('\n')})
     feature_monitor.plot()
 
     with self.db.Session() as session:
