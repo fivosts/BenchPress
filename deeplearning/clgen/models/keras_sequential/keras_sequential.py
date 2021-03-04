@@ -233,7 +233,7 @@ class kerasSequential(backends.BackendBase):
         WeightedPick(p.squeeze(), sampler.temperature) for p in probabilities
       ]
       result[:, idx] = self.inference_indices
-    return result, result
+    return result
 
   def InferenceManifest(self) -> typing.List[pathlib.Path]:
     """Return the list of files which are required for model inference.

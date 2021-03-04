@@ -631,7 +631,7 @@ class tfSequential(backends.BackendBase):
     self.inference_indices = generated[:, -1].reshape((sampler.batch_size, 1))
     if length > 1:
       generated = generated[:, length - 1 :]
-    return generated, generated
+    return generated
 
   def RandomizeSampleState(self) -> None:
     import tensorflow as tf
