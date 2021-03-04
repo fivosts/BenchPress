@@ -371,8 +371,15 @@ class Model(object):
     [obs.Specialize(self, sampler) for obs in sample_observers]
 
     batch_count = 0
+    if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert):
+      sample_batch = lambda : self._SampleLMBatch(sampler, tokenizer, sample_observers, epoch)
+    elif isinstance(self.backend, tf_sequential.tfSequential) or isinstance(self.backend, keras_sequential.kerasSequential):
+      sample_batch = lambda : self._SampleSeqBatch(sampler, tokenizer, sample_observers, epoch)
+    else:
+      raise ValueError("Unrecognized backend.")
+
     try:
-      while self._SampleBatch(sampler, tokenizer, sample_observers, epoch):
+      while sample_batch():
         batch_count += 1
         if sampler.is_live:
           start_text = [str(input("Live Feed: "))]
@@ -397,15 +404,69 @@ class Model(object):
                         )
     )
 
-  def _SampleBatch(
+  def _SampleLMBatch(self,
+                     sampler: samplers.Sampler,
+                     tokenizer: tokenizers.TokenizerBase,
+                     sample_observers: typing.List[sample_observers_lib.SampleObserver],
+                     epoch: int,
+                     ) -> bool:
+    """
+    Run a sampling iteration over BERT models.
+    """
+    start_time = datetime.datetime.utcnow()
+    self.backend.InitSampleBatch(sampler)
+    samples, indices = self.backend.SampleNextIndices(sampler)
+
+    if not indices:
+      # Return empty means model has not produced something that can be stored.
+      # This if accommodates active sampling, which is very selective.
+      return True
+
+    continue_sampling = True
+    for sample, idxs in zip(samples, indices):
+
+      src = self.tokenizer.ArrayToCode(sample, with_formatting = True)
+      features = extractor.DictKernelFeatures(src)
+      try:
+        stdout = opencl.Compile(src)
+        compile_flag = True
+      except ValueError:
+        compile_flag = False
+
+      end_time = datetime.datetime.utcnow()
+      sample = model_pb2.Sample(
+        train_step                = epoch, # Ok
+        text                      = src, # Ok
+        sample_indices            = '\n'.join([','.join([self.tokenizer.decoder[idx] for idx in hole_idxs]).replace('\n', '\\n') for hole_idxs in idxs]),
+        encoded_sample_indices    = '\n'.join([','.join([str(idx) for idx in hole_idxs]) for hole_idxs in idxs]),
+        sample_feed               = sampler.start_text,
+        encoded_text              = ",".join([str(x) for x in sample]),
+        sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
+        sample_time_ms            = int(round(1000 * ((end_time - start_time) / len(samples)).total_seconds())),
+        wall_time_ms              = int(round(1000 * ((end_time - start_time) / len(samples)).total_seconds())),
+        feature_vector            = "\n".join(["{}:{}".format(k, v) for (k, v) in features.items()]),
+        num_tokens                = len(sample),
+        compile_status            = compile_flag,
+        categorical_sampling      = self.backend.samplesWithCategorical(),
+        date_added                = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
+      )
+      # Notify sample observers.
+      continue_sampling &= all(
+        [obs.OnSample(sample) for obs in sample_observers]
+      )
+
+    return continue_sampling
+
+  def _SampleSeqBatch(
     self,
     sampler: samplers.Sampler,
     tokenizer: tokenizers.TokenizerBase,
     sample_observers: typing.List[sample_observers_lib.SampleObserver],
     epoch: int,
   ) -> bool:
-    ## This function needs a hell of refactoring.
-    """Run a single iteration of the batched sample inner-loop."""
+    """
+    Run a single iteration of the batched sample inner-loop for sequential models.
+    """
 
     self.backend.InitSampleBatch(sampler)
     samples_in_progress = [
@@ -421,67 +482,42 @@ class Model(object):
 
     # Sampling loop. Continues until all samples in the batch are done.
     while not done.all():
-      indices, step_indices = self.backend.SampleNextIndices(sampler, done)
+      indices = self.backend.SampleNextIndices(sampler, done)
       # Iterate over all samples in batch to determine whether they're
       # done.
-      if len(indices) == 0:
-        # Return empty means model has not produced something that can be stored.
-        # This if accommodates active sampling, which is very selective.
-        return True
-
-      if len(samples_in_progress) < len(indices):
-        samples_in_progress = [
-          sampler.tokenized_start_text.copy() for _ in range(len(indices))
-        ]
 
       for i in range(len(indices)):
         if done[i]:
           continue
 
         for index in indices[i]:
-          ## Legacy operation for sequential returning single token
-          if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert):
-            # samples_in_progress[i] = [tokenizer.decoder[x] for x in indices[i]]
-            samples_in_progress[i] = [tokenizer.decoder[x] for x in indices[i]]
-            step_ind               = '\n'.join([','.join([self.tokenizer.decoder[t] for t in mind]).replace('\n', '\\n') for mind in step_indices[i]])
-            encoded_step_indices   = '\n'.join([','.join([str(x) for x in mind]) for mind in step_indices[i]])
-          elif isinstance(self.backend, tf_sequential.tfSequential) or isinstance(self.backend, keras_sequential.kerasSequential):
-            # samples_in_progress[i].append(tokenizer.decoder[index])
-            samples_in_progress[i].append(tokenizer.decoder[index])
-            step_ind             = ""
-            encoded_step_indices = ""
-          else:
-            raise TypeError("Backend type check failed: {}".format(type(self.backend)))
+          samples_in_progress[i].append(tokenizer.decoder[index])
+          step_ind             = ""
+          encoded_step_indices = ""
 
           if sampler.SampleIsComplete(samples_in_progress[i]):
-            end_time      = datetime.datetime.utcnow()
-            done[i]       = 1
-
-            sample_kernel = [x for x in samples_in_progress[i] if 'padToken' not in tokenizer.metaTokens or x != tokenizer.metaTokens['padToken']]
-            num_tokens    = len(samples_in_progress[i])
-            if 'padToken' in tokenizer.metaTokens and tokenizer.metaTokens['padToken'] in samples_in_progress[i]:
-              num_tokens = samples_in_progress[i].index(tokenizer.metaTokens['padToken'])
-
-            src = self.tokenizer.StringArrToCode(sample_kernel, with_formatting = True)
-            feature_vector = extractor.DictKernelFeatures(src)
+            end_time       = datetime.datetime.utcnow()
+            sample_kernel  = [x for x in samples_in_progress[i]]
+            feature_vector = extractor.DictKernelFeatures(''.join(samples_in_progress[i]))
+            done[i]        = 1
             try:
-              stdout = opencl.Compile(src)
+              stdout = opencl.Compile(''.join(samples_in_progress[i]))
               compile_flag = True
             except ValueError:
               compile_flag = False
 
             sample = model_pb2.Sample(
               train_step                = epoch,
-              text                      = src,
-              sample_indices            = step_ind,
-              encoded_sample_indices    = encoded_step_indices,
+              text                      = samples_in_progress[i],
+              sample_indices            = "",
+              encoded_sample_indices    = "",
               sample_feed               = sampler.start_text,
               encoded_text              = ",".join([str(tokenizer.vocab[x]) for x in sample_kernel]),
               sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               wall_time_ms              = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               feature_vector            = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
-              num_tokens                = num_tokens,
+              num_tokens                = len(samples_in_progress[i]),
               compile_status            = compile_flag,
               categorical_sampling      = self.backend.samplesWithCategorical(),
               date_added                = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
