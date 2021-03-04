@@ -141,18 +141,24 @@ class BigQuery(GithubMiner):
 
       if mainf_it:
         with progressbar.ProgressBar(max_value = mainf_it.total_rows, prefix = "Main Files") as bar:
-          for mf in bar(mainf_it):
-            st.save(
-              bigQuery_database.bqMainFile(**bigQuery_database.bqMainFile.FromArgs(mf))
-            )
+          try:
+            for mf in bar(mainf_it):
+              st.save(
+                bigQuery_database.bqMainFile(**bigQuery_database.bqMainFile.FromArgs(mf))
+              )
+          except KeyboardInterrupt:
+            pass
         st.flush()
 
       if otherf_it:
         with progressbar.ProgressBar(max_value = otherf_it.total_rows, prefix = "Other Files") as bar:
-          for of in bar(otherf_it):
-            st.save(
-              bigQuery_database.bqOtherFile(**bigQuery_database.bqOtherFile.FromArgs(of))
-            )
+          try:
+            for of in bar(otherf_it):
+              st.save(
+                bigQuery_database.bqOtherFile(**bigQuery_database.bqOtherFile.FromArgs(of))
+              )
+          except KeyboardInterrupt:
+            pass
         st.flush()
 
       # Get repository list of requested file specifications.

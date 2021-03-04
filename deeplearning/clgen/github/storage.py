@@ -376,7 +376,7 @@ class dbStorage(Storage):
     self.main_files  = set()
     self.other_files = set()
     self.data  = None
-    self.flush_freq = 2
+    self.flush_freq = 20000
 
     l.getLogger().info("Set up SQL storage in {}".format(self.cache_path))
 

@@ -384,7 +384,7 @@ class cDataset(Dataset):
   def __init__(self,
                client: bigquery.Client,
                ):
-    extensions = ['.c', '.h']
+    extensions = ['.c']
     super(cDataset, self).__init__(client, "c", extensions)
     return
 
