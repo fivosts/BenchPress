@@ -50,13 +50,13 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
   # Sample's vector of features.
   feature_vector         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Length of total sequence in number of tokens
-  num_tokens             : int = sql.Column(sql.Integer,    nullable = False)
+  num_tokens             : int = sql.Column(sql.Integer,   nullable = False)
   # Whether the generated sample compiles or not.
-  compile_status         : str = sql.Column(sql.String(8),  nullable = False)
+  compile_status         : bool = sql.Column(sql.Boolean,  nullable = False)
   # If Bernoulli distribution was used during samplinng
-  categorical_sampling   : str = sql.Column(sql.String(8),  nullable = False)
+  categorical_sampling   : str = sql.Column(sql.String(8), nullable = False)
   # Time
-  sample_time_ms         : int = sql.Column(sql.Integer,    nullable = False)
+  sample_time_ms         : int = sql.Column(sql.Integer,   nullable = False)
   # Date
   date_added             : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
@@ -73,7 +73,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "encoded_sample_indices" : proto.encoded_sample_indices,
       "feature_vector"         : proto.feature_vector,
       "num_tokens"             : proto.num_tokens,
-      "compile_status"         : "Yes" if proto.compile_status else "No",
+      "compile_status"         : compile_status,
       "categorical_sampling"   : proto.categorical_sampling,
       "sample_time_ms"         : proto.sample_time_ms,
       "date_added"             : datetime.datetime.strptime(proto.date_added, "%m/%d/%Y, %H:%M:%S"),

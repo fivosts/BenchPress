@@ -445,7 +445,7 @@ class Model(object):
         sample_time_ms            = int(round(1000 * ((end_time - start_time) / len(samples)).total_seconds())),
         wall_time_ms              = int(round(1000 * ((end_time - start_time) / len(samples)).total_seconds())),
         feature_vector            = "\n".join(["{}:{}".format(k, v) for (k, v) in features.items()]),
-        num_tokens                = len(sample),
+        num_tokens                = np.where(sample == self.tokenizer.padToken)[0][0] if self.tokenizer.padToken in sample else len(sample),
         compile_status            = compile_flag,
         categorical_sampling      = self.backend.samplesWithCategorical(),
         date_added                = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
