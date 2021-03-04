@@ -207,9 +207,10 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     # Very frequently, new candidates have been generated in the past.
     # No need to store them again, by keeping a hash of their string.
     for nc in new_candidates:
-      if nc.sample not in self.total_candidates_hash:
+      sample_hash = ''.join([str(x) for x in nc.sample])
+      if sample_hash not in self.total_candidates_hash:
         self.total_candidates.append(nc)
-        self.total_candidates_hash.add(nc.sample)
+        self.total_candidates_hash.add(sample_hash)
 
     for candidate in self.total_candidates[candidate_idx:]:
       # For new total_candidates, check compilability, return error locations if they are incorrect.
@@ -242,18 +243,19 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       # If the current generation has not gone as deep as required, mask each new candidate
       # and place it at the tail of the sample feed queue.
       if 1 + candidate.sample_feed.gen_id <= FLAGS.active_search_depth:
-        input_feed, masked_idxs = self.masking_func(candidate.sample)
-        if len(input_feed['input_ids']) <= self.data_generator.sampler.sequence_length:
-          self.feed_queue.append(
-            ActiveSamplingGenerator.ActiveSampleFeed(
-              input_feed       = candidate.sample,
-              input_features   = candidate.features,
-              input_blob       = input_feed,
-              masked_input_ids = input_feed['input_ids'],
-              hole_instances   = masked_idxs,
-              gen_id           = 1 + candidate.sample_feed.gen_id,
+        if not self.data_generator.config.use_start_end or (self.data_generator.config.use_start_end and self.tokenizer.endToken in candidate.sample):
+          input_feed, masked_idxs = self.masking_func(candidate.sample)
+          if len(input_feed['input_ids']) <= self.data_generator.sampler.sequence_length:
+            self.feed_queue.append(
+              ActiveSamplingGenerator.ActiveSampleFeed(
+                input_feed       = candidate.sample,
+                input_features   = candidate.features,
+                input_blob       = input_feed,
+                masked_input_ids = input_feed['input_ids'],
+                hole_instances   = masked_idxs,
+                gen_id           = 1 + candidate.sample_feed.gen_id,
+              )
             )
-          )
     # Step candidates contains all candidates of a single gen, therefore initialized before every new gen.
     self.step_candidates = []
 
