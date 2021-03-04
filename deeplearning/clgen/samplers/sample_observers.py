@@ -167,7 +167,7 @@ class SamplesDatabaseObserver(SampleObserver):
     feature_monitor.plot()
 
     with self.db.Session() as session:
-      compiled_count = session.query(samples_database.Sample.compile_status).filter_by(compile_status = "Yes").count()
+      compiled_count = session.query(samples_database.Sample.compile_status).filter_by(compile_status = 1).count()
     try:
       r = [
         'compilation rate: {}'.format(compiled_count / self.sample_id),
