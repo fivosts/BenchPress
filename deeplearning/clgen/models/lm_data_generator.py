@@ -149,7 +149,7 @@ class MaskLMDataGenerator(object):
 
     self.dataset                 = None
     self.corpus                  = None
-    self.tokenizer                = None
+    self.tokenizer               = None
     self.config                  = None
     self.cache                   = None
 
