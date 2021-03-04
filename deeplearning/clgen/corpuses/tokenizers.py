@@ -482,6 +482,9 @@ class ASTokenizer(TokenizerBase):
     except Exception as e:
       pool.terminate()
       raise e
+    except KeyboardInterrupt as e:
+      pool.terminate()
+      raise e
 
     # source_tokens = opencl.DeriveSourceVocab(text, token_set)
     for mt in metaTokens.values():
