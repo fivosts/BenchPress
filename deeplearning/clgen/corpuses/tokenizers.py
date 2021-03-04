@@ -186,6 +186,7 @@ class TokenizerBase(object):
 
   def ArrayToCode(self,
                   encoded: np.array,
+                  with_formatting: bool = False,
                   ) -> str:
     """
     Convert encoded array to compilable code.
@@ -196,7 +197,7 @@ class TokenizerBase(object):
     Returns:
       Code in string format.
     """
-    return self.tokensToString([x for x in encoded if x not in self.metaTokenValues])
+    return self.tokensToString([x for x in encoded if x not in self.metaTokenValues], with_formatting)
 
   def StringArrToCode(self,
                       text: typing.List[str],
