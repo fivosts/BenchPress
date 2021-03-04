@@ -61,7 +61,7 @@ class EuclideanSampler(object):
     """
     Return top-K candidates.
     """
-    return sorted(candidates, key = lambda x: x.score)[:K+1]
+    return sorted(candidates, key = lambda x: x.score)[:K]
 
   def sample_from_set(self, 
                       candidates: typing.List[typing.TypeVar("ActiveSample")],
