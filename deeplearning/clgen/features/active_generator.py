@@ -91,7 +91,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
                ):
     super(ActiveSamplingGenerator, self).__init__(generator)
     # Active sampling attributes.
-    self.active_db  = active_feed_database.ActiveFeedDatabase(
+    self.active_db = active_feed_database.ActiveFeedDatabase(
       url = "sqlite:///{}".format(self.data_generator.sampler.corpus_directory / "active_feeds.db")
     )
     self.feed_queue            = []
@@ -132,6 +132,14 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
           masked_input_ids = input_feed['input_ids'],
           hole_instances   = masked_idxs,
           gen_id           = 0,
+        )
+      )
+      self.addToDB(
+        active_feed_database.ActiveInput.FromArgs(
+          tokenizer      = self.tokenizer,
+          id             = self.active_db.input_count,
+          input_feed     = self.feed_queue[-1].input_feed,
+          input_features = self.feed_queue[-1].input_features,
         )
       )
       yield self.data_generator.toTensorFormat(input_feed)
@@ -227,8 +235,8 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       # Add to active_database.
       self.addToDB(
         active_feed_database.ActiveFeed.FromArgs(
-          tokenizer         = self.tokenizer,
-          id               = self.active_db.count,
+          tokenizer        = self.tokenizer,
+          id               = self.active_db.active_count,
           input_feed       = candidate.sample_feed.input_feed,
           input_features   = candidate.sample_feed.input_features,
           masked_input_ids = candidate.sample_feed.masked_input_ids,
@@ -275,14 +283,19 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       # )
       return active_batch, active_indices, True
 
-  def addToDB(self, active_feed: active_feed_database.ActiveFeed) -> None:
+  def addToDB(self,
+              db_input: typing.Union[
+                          active_feed_database.ActiveFeed,
+                          active_feed_database.ActiveInput
+                        ]
+              ) -> None:
     """If not exists, add current sample state to database"""
     with self.active_db.Session(commit = True) as session:
       exists = session.query(
-        active_feed_database.ActiveFeed
-      ).filter(active_feed_database.ActiveFeed.sha256 == active_feed.sha256).scalar() is not None
+        type(db_input)
+      ).filter(type(db_input).sha256 == db_input.sha256).scalar() is not None
       if not exists:
-        session.add(active_feed)
+        session.add(db_input)
     return
 
 class ActiveDataset(object):
