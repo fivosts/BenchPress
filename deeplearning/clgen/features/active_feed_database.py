@@ -25,6 +25,51 @@ class ActiveFeedHistory(Base):
   key     : str = sql.Column(sql.String(1024), primary_key=True)
   results : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
 
+class ActiveInput(Base, sqlutil.ProtoBackedMixin):
+  """
+  A database for all original inputs used for active learning.
+  """
+  __tablename__    = "input_feeds"
+  # entry id
+  id             : int = sql.Column(sql.Integer,    primary_key = True)
+  # unique hash of sample text
+  sha256         : str = sql.Column(sql.String(64), nullable = False, index = True)
+  # Text original input
+  input_feed     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Encoded original input
+  encoded_feed   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Feature vector of input_feed
+  input_features : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Actual length of sample, excluding pads.
+  num_tokens     : int = sql.Column(sql.Integer, nullable = False)
+  # Date
+  date_added     : datetime.datetime = sql.Column(sql.DateTime, nullable = False)
+
+  @classmethod
+  def FromArgs(cls,
+               tokenizer,
+               id             : int,
+               input_feed     : np.array,
+               input_features : typing.Dict[str, float],
+               ) -> typing.TypeVar("ActiveInput"):
+    """Construt ActiveFeed table entry from argumentns."""
+    str_input_feed = tokenizer.tokensToString(input_feed, ignore_token = tokenizer.padToken)
+    if tokenizer.padToken in input_feed:
+      num_tokens = np.where(sample == tokenizer.padToken)[0][0]
+    else:
+      num_tokens = len(input_feed)
+
+    return ActiveInput(
+      id             = id,
+      sha256         = crypto.sha256_str(str_masked_input_ids),
+      input_feed     = str_input_feed,
+      encoded_feed   = ','.join([str(x) for x in input_feed]),
+      input_features = '\n'.join(["{}:{}".format(k, v) for k, v in input_features.items()]),
+      num_tokens     = int(num_tokens),
+      date_added     = datetime.datetime.utcnow(),
+    )
+
+
 class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
   """A database row representing a CLgen sample.
 
@@ -66,7 +111,7 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
   def FromArgs(cls,
                tokenizer,
                id               : int,
-               input_feed       : str,
+               input_feed       : np.array,
                input_features   : typing.Dict[str, float],
                masked_input_ids : np.array,
                hole_instances   : typing.TypeVar("sequence_masking.MaskedLMInstance"),
@@ -110,8 +155,15 @@ class ActiveFeedDatabase(sqlutil.Database):
     super(ActiveFeedDatabase, self).__init__(url, Base, must_exist = must_exist)
 
   @property
-  def count(self):
-    """Number of samples in DB."""
+  def input_count(self):
+    """Number of input feeds in DB."""
+    with self.Session() as s:
+      count = s.query(ActiveInput).count()
+    return count
+
+  @property
+  def active_count(self):
+    """Number of active samples in DB."""
     with self.Session() as s:
       count = s.query(ActiveFeed).count()
     return count
