@@ -56,7 +56,7 @@ def StrKernelFeatures(src: str, *extra_args) -> str:
     stdout, stderr = process.communicate()
   return stdout, stderr
 
-def StrToDictFeatures(feat: str) -> typing.Dict[str, float]:
+def DBStrToDictFeatures(feat: str) -> typing.Dict[str, float]:
   """
   Convert string formatted features to dictionary.
   String is in the same format with DB entry.
@@ -67,9 +67,12 @@ def StrToDictFeatures(feat: str) -> typing.Dict[str, float]:
   '
   """
   features = {}
-  for line in feat.split('\n'):
-    delim = line.split(':')
-    features[''.join(delim[0:-1])] = float(delim[-1])
+  try:
+    for line in feat.split('\n'):
+      delim = line.split(':')
+      features[''.join(delim[0:-1])] = float(delim[-1])
+  except ValueError:
+    raise ValueError("{}".format(feat.split('\n')))
   return features
 
 def DictKernelFeatures(src: str, *extra_args) -> typing.Dict[str, float]:
