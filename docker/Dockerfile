@@ -3,9 +3,9 @@ FROM ubuntu:latest
 WORKDIR /home/
 
 RUN apt-get update
-RUN apt-get install -y sudo git
+RUN apt-get install -y sudo git wget
 
-RUN git clone https://3f2defbceff83ef75197a0d924fd2d96ef86e327@github.com/fivosts/clgen.git
+RUN git clone https://54b082ffbdcd8ad60dcba3ba992863b40069667f@github.com/fivosts/clgen.git
 
 WORKDIR /home/clgen
 RUN echo "cmake y" | bash requirements.apt
