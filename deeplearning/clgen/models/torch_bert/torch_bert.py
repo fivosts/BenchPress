@@ -559,7 +559,7 @@ class torchBert(backends.BackendBase):
       step_out = self.model_step(
           self.sample.model, self.step_inputs,
       )
-      if self.sampler.is_live:
+      if self.sampler.is_live and input("Show logits figure ? [y/!y]") == "y":
         for hole, indcs in zip(step_out['prediction_scores'], step_out['sample_indices']):
           plotter.LogitsStepsDistrib(
             x = self.torch.nn.Softmax(dim = 1)(self.torch.FloatTensor(hole)).numpy(),
