@@ -135,7 +135,7 @@ class TrainingLogger(object):
           telemetry_pb2.ModelEpochTelemetry(
             timestamp_unix_epoch_ms = '0',
             epoch_num = x['step'],
-            epoch_wall_time_ms = int(round(x['execution_time_ms'])) if "execution_time_ms" in x else -1,
+            epoch_wall_time_ms = int(round(x['batch_execution_time_ms'])) if "batch_execution_time_ms" in x else -1,
             loss = x['total_loss'] if "total_loss" in x else -1.0,
           ) for x in data
         ]
