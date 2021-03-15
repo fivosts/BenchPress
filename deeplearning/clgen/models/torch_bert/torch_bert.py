@@ -267,7 +267,6 @@ class torchBert(backends.BackendBase):
     """
     Pre-training entry point.
     """
-    raise NotImplementedError("To be done!")
     self.Train(corpus, test_sampler, pre_train = True)
     return
 
@@ -660,6 +659,7 @@ class torchBert(backends.BackendBase):
       mf.write("{}train_step: {}\n".format("pre_" if pre_train else "", self.current_step))
       if pre_train:
         for x in {"model", "scheduler", "optimizer"}:
+          l.getLogger().warn("Write train copy in meta file")
           shutil.copyfile(str(ckpt_comp(x)), str(self.ckpt_path / "{}-0.pt".format(x)))
     return
 
@@ -678,7 +678,9 @@ class torchBert(backends.BackendBase):
         key     = "train_step"
         exclude = "pre_train_step"
       get_step  = lambda x: int(x.replace("\n", "").replace("{}: ".format(key), ""))
-      entries   = set({get_step(x) for x in mf.readlines() if key in x and exclude not in x})
+
+      lines     = mf.readlines()
+      entries   = set({get_step(x) for x in lines if key in x and exclude not in x})
 
     if FLAGS.select_checkpoint_step == -1 or pre_train:
       ckpt_step = max(entries)
