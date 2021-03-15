@@ -86,31 +86,33 @@ class torchBert(backends.BackendBase):
     self.torch.manual_seed(self.config.training.random_seed)
     self.torch.cuda.manual_seed_all(self.config.training.random_seed)
 
-    self.bertAttrs           = None
-    self.bert_config         = None
+    self.bertAttrs         = None
+    self.bert_config       = None
 
-    self.train               = None
-    self.sample              = None
-    self.predict_generator   = None
-    self.sampler             = None
+    self.train             = None
+    self.sample            = None
+    self.predict_generator = None
+    self.sampler           = None
 
-    self.train_batch_size    = None
-    self.eval_batch_size     = None
-    self.learning_rate       = None
-    self.num_train_steps     = None
-    self.num_warmup_steps    = None
+    self.train_batch_size  = None
+    self.eval_batch_size   = None
+    self.learning_rate     = None
+    self.num_train_steps   = None
+    self.num_warmup_steps  = None
 
-    self.ckpt_path           = self.cache.path / "checkpoints"
+    self.ckpt_path         = self.cache.path / "checkpoints"
+    self.sample_path       = self.cache.path / "samples"
+
+    self.logfile_path      = self.cache.path / "logs"
     if self.config.HasField("pre_train_corpus"):
-      self.pre_ckpt_path       = self.cache.path / "checkpoints" / "pre_train"
-    self.logfile_path        = self.cache.path / "logs"
-    self.sample_path         = self.cache.path / "samples"
-    if self.config.HasField("pre_train_corpus"):
-      self.pre_telemetry       = telemetry.TrainingLogger(self.logfile_path / "pre_train")
-    self.telemetry           = telemetry.TrainingLogger(self.logfile_path)
+      self.pre_ckpt_path   = self.logfile_path / "pre_train"
 
-    self.is_validated        = False
-    self.trained             = False
+    self.telemetry         = telemetry.TrainingLogger(self.logfile_path)
+    if self.config.HasField("pre_train_corpus"):
+      self.pre_telemetry   = telemetry.TrainingLogger(self.logfile_path / "pre_train")
+
+    self.is_validated      = False
+    self.trained           = False
     l.getLogger().info("BERT Model config initialized in {}".format(self.cache.path))
     return
 
@@ -266,11 +268,13 @@ class torchBert(backends.BackendBase):
     Pre-training entry point.
     """
     raise NotImplementedError("To be done!")
-
+    self.Train(corpus, test_sampler, pre_train = True)
+    return
 
   def Train(self,
             corpus,
-            test_sampler: typing.Optional[samplers.Sampler] = None,
+            test_sampler : typing.Optional[samplers.Sampler] = None,
+            pre_train    : bool = False,
             **unused_kwargs
             ) -> None:
     """
@@ -284,12 +288,11 @@ class torchBert(backends.BackendBase):
     if FLAGS.only_sample:
       return
       
-    self.current_step = self.loadCheckpoint(self.train)
+    self.current_step = self.loadCheckpoint(self.train, pre_train = pre_train)
     if self.current_step > 0:
       l.getLogger().info("Loaded checkpoint step {}".format(self.current_step))
-    self.is_trained = True if self.current_step >= self.num_train_steps else False
 
-    if not self.is_trained:
+    if self.current_step < self.num_train_steps:
       self.train.model.zero_grad()
 
       ## Set batch size in case of TPU training or distributed training.
@@ -316,7 +319,7 @@ class torchBert(backends.BackendBase):
       train_hook = hooks.tensorMonitorHook(
         self.logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
-      if FLAGS.reward_compilation >= 0:
+      if FLAGS.reward_compilation >= 0 and not pre_train:
         correct_sample_obs = sample_observers.SamplesDatabaseObserver(
           self.logfile_path / "correct_samples.db"
         )
@@ -358,7 +361,7 @@ class torchBert(backends.BackendBase):
             self.train.scheduler.step()
 
             exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
-            if FLAGS.reward_compilation >= 0 and FLAGS.reward_compilation <= epoch * self.steps_per_epoch + step:
+            if FLAGS.reward_compilation >= 0 and FLAGS.reward_compilation <= epoch * self.steps_per_epoch + step and not pre_train:
               correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'])) if step_out['compile_status'][en] == 1]
               for s in correct_samples:
                 feature_vector = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(s[1]))
@@ -377,18 +380,31 @@ class torchBert(backends.BackendBase):
                     date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
                   )
                 )
-            train_hook.step(
-              masked_lm_loss          = step_out['masked_lm_loss'].mean().item(),
-              next_sentence_loss      = step_out['next_sentence_loss'].mean().item(),
-              total_loss              = total_loss.item(),
-              learning_rate           = self.train.scheduler.get_last_lr()[0],
-              compilation_rate        = step_out['batch_compilation_rate'].mean().item(),
-              num_correct_samples     = (correct_sample_obs.sample_id if correct_sample_obs is not None else None),
-              batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1]) 
-                                             for b in inputs['masked_lm_lengths']]) / len(inputs['masked_lm_lengths']),
-              batch_execution_time_ms = exec_time_ms,
-              time_per_sample_ms      = exec_time_ms / self.train_batch_size,
-            )
+            if not pre_train:
+              train_hook.step(
+                masked_lm_loss          = step_out['masked_lm_loss'].mean().item(),
+                next_sentence_loss      = step_out['next_sentence_loss'].mean().item(),
+                total_loss              = total_loss.item(),
+                learning_rate           = self.train.scheduler.get_last_lr()[0],
+                compilation_rate        = step_out['batch_compilation_rate'].mean().item(),
+                num_correct_samples     = (correct_sample_obs.sample_id if correct_sample_obs is not None else None),
+                batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1]) 
+                                               for b in inputs['masked_lm_lengths']]) / len(inputs['masked_lm_lengths']),
+                batch_execution_time_ms = exec_time_ms,
+                time_per_sample_ms      = exec_time_ms / self.train_batch_size,
+              )
+            else:
+              train_hook.step(
+                masked_lm_loss          = step_out['masked_lm_loss'].mean().item(),
+                next_sentence_loss      = step_out['next_sentence_loss'].mean().item(),
+                total_loss              = total_loss.item(),
+                learning_rate           = self.train.scheduler.get_last_lr()[0],
+                batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1]) 
+                                               for b in inputs['masked_lm_lengths']]) / len(inputs['masked_lm_lengths']),
+                batch_execution_time_ms = exec_time_ms,
+                time_per_sample_ms      = exec_time_ms / self.train_batch_size,
+              )
+
             self.train.model.zero_grad()
             if self.current_step == 0:
               l.getLogger().info("Starting Loss: {}".format(total_loss.item()), mail_level = 4)
@@ -396,43 +412,42 @@ class torchBert(backends.BackendBase):
 
           # End of Epoch
           l.getLogger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.current_loss), mail_level = 4)
-          self.saveCheckpoint(self.train)
+          self.saveCheckpoint(self.train, pre_train)
           if self.torch_tpu_available:
             self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
 
-          sampler, observers = self._getTestSampler(test_sampler, self.config.training.sequence_length)
-          self.InitSampling(sampler, self.config.training.random_seed)
-          for _ in range(FLAGS.sample_per_epoch):
-            start_time   = datetime.datetime.utcnow()
-            self.InitSampleBatch(sampler)
-            sample_batch, sample_indices = self.SampleNextIndices()
-            end_time = datetime.datetime.utcnow()
-            for sample, sind in zip(sample_batch, sample_indices):
-              try:
-                stdout = opencl.Compile(self.tokenizer.ArrayToCode(sample))
-                compile_flag = 1
-              except ValueError:
-                compile_flag = 0
+          if FLAGS.sample_per_epoch:
+            sampler, observers = self._getTestSampler(test_sampler, self.config.training.sequence_length)
+            self.InitSampling(sampler, self.config.training.random_seed)
+            for _ in range(FLAGS.sample_per_epoch):
+              start_time   = datetime.datetime.utcnow()
+              self.InitSampleBatch(sampler)
+              sample_batch, sample_indices = self.SampleNextIndices()
+              end_time = datetime.datetime.utcnow()
+              for sample, sind in zip(sample_batch, sample_indices):
+                try:
+                  stdout = opencl.Compile(self.tokenizer.ArrayToCode(sample))
+                  compile_flag = 1
+                except ValueError:
+                  compile_flag = 0
 
-              feature_vector = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(sample))
-              sample_proto = model_pb2.Sample(
-                train_step             = self.current_step,
-                sample_feed            = sampler.start_text,
-                text                   = self.tokenizer.tokensToString(sample, with_formatting = True, ignore_token = self.tokenizer.padToken).replace("\\n", "\n"),
-                encoded_text           = ",".join([str(t) for t in sample]),
-                sample_indices         = '\n'.join([self.tokenizer.tokensToString(mind).replace('\n', '\\n') for mind in sind]),
-                encoded_sample_indices = '\n'.join([','.join([str(x) for x in mind]) for mind in sind ]),
-                sample_time_ms         = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
-                feature_vector         = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
-                num_tokens             = len(sample),
-                compile_status         = compile_flag,
-                categorical_sampling   = self.samplesWithCategorical(),
-                date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
-              )
-              for obs in observers:
-                obs.OnSample(sample_proto)
-
-        self.is_trained = True
+                feature_vector = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(sample))
+                sample_proto = model_pb2.Sample(
+                  train_step             = self.current_step,
+                  sample_feed            = sampler.start_text,
+                  text                   = self.tokenizer.tokensToString(sample, with_formatting = True, ignore_token = self.tokenizer.padToken).replace("\\n", "\n"),
+                  encoded_text           = ",".join([str(t) for t in sample]),
+                  sample_indices         = '\n'.join([self.tokenizer.tokensToString(mind).replace('\n', '\\n') for mind in sind]),
+                  encoded_sample_indices = '\n'.join([','.join([str(x) for x in mind]) for mind in sind ]),
+                  sample_time_ms         = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
+                  feature_vector         = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
+                  num_tokens             = len(sample),
+                  compile_status         = compile_flag,
+                  categorical_sampling   = self.samplesWithCategorical(),
+                  date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
+                )
+                for obs in observers:
+                  obs.OnSample(sample_proto)
       except KeyboardInterrupt:
         pass
 
@@ -621,11 +636,11 @@ class torchBert(backends.BackendBase):
       )
     return sampler, observers
 
-  def saveCheckpoint(self, estimator):
+  def saveCheckpoint(self, estimator, pre_train):
     """
-      Saves model, scheduler, optimizer checkpoints per epoch.
+    Saves model, scheduler, optimizer checkpoints per epoch.
     """
-    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, self.current_step)
+    ckpt_comp = lambda x: self.ckpt_path / "{}{}-{}.pt".format("pre_" if pre_train else "", x, self.current_step)
 
     if self.torch_tpu_available:
       if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
@@ -642,21 +657,30 @@ class torchBert(backends.BackendBase):
       self.torch.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
 
     with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
-      mf.write("train_step: {}\n".format(self.current_step))
+      mf.write("{}train_step: {}\n".format("pre_" if pre_train else "", self.current_step))
+      if pre_train:
+        for x in {"model", "scheduler", "optimizer"}:
+          shutil.copyfile(str(ckpt_comp(x)), str(self.ckpt_path / "{}-0.pt".format(x)))
     return
 
-  def loadCheckpoint(self, estimator):
+  def loadCheckpoint(self, estimator, pre_train = False):
     """
-      Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
+    Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
     """
     if not (self.ckpt_path / "checkpoint.meta").exists():
       return 0
 
     with open(self.ckpt_path / "checkpoint.meta", 'r') as mf:
-      get_step  = lambda x: int(x.replace("\n", "").replace("train_step: ", ""))
-      entries   = set({get_step(x) for x in mf.readlines()})
+      if pre_train:
+        key     = "pre_train_step"
+        exclude = "None"
+      else:
+        key     = "train_step"
+        exclude = "pre_train_step"
+      get_step  = lambda x: int(x.replace("\n", "").replace("{}: ".format(key), ""))
+      entries   = set({get_step(x) for x in mf.readlines() if key in x and exclude not in x})
 
-    if FLAGS.select_checkpoint_step == -1:
+    if FLAGS.select_checkpoint_step == -1 or pre_train:
       ckpt_step = max(entries)
     else:
       if FLAGS.select_checkpoint_step in entries:
@@ -664,7 +688,7 @@ class torchBert(backends.BackendBase):
       else:
         raise ValueError("{} not found in checkpoint folder.".format(FLAGS.select_checkpoint_step))
 
-    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, ckpt_step)
+    ckpt_comp = lambda x: self.ckpt_path / "{}{}-{}.pt".format("pre_" if pre_train else "", x, ckpt_step)
 
     # self.train.model = model.BertModel.from_pretrained(ckpt_comp("model"))
     if isinstance(estimator, self.torch.nn.DataParallel):
