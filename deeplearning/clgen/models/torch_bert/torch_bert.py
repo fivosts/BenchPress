@@ -387,7 +387,7 @@ class torchBert(backends.BackendBase):
                 learning_rate           = self.train.scheduler.get_last_lr()[0],
                 compilation_rate        = step_out['batch_compilation_rate'].mean().item(),
                 num_correct_samples     = (correct_sample_obs.sample_id if correct_sample_obs is not None else None),
-                batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1]) 
+                batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
                                                for b in inputs['masked_lm_lengths']]) / len(inputs['masked_lm_lengths']),
                 batch_execution_time_ms = exec_time_ms,
                 time_per_sample_ms      = exec_time_ms / self.train_batch_size,
@@ -398,7 +398,7 @@ class torchBert(backends.BackendBase):
                 next_sentence_loss      = step_out['next_sentence_loss'].mean().item(),
                 total_loss              = total_loss.item(),
                 learning_rate           = self.train.scheduler.get_last_lr()[0],
-                batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1]) 
+                batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
                                                for b in inputs['masked_lm_lengths']]) / len(inputs['masked_lm_lengths']),
                 batch_execution_time_ms = exec_time_ms,
                 time_per_sample_ms      = exec_time_ms / self.train_batch_size,
