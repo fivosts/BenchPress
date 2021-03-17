@@ -657,10 +657,15 @@ class torchBert(backends.BackendBase):
 
     with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
       mf.write("{}train_step: {}\n".format("pre_" if pre_train else "", self.current_step))
-      if pre_train:
-        for x in {"model", "scheduler", "optimizer"}:
-          l.getLogger().warn("Write train copy in meta file")
-          shutil.copyfile(str(ckpt_comp(x)), str(self.ckpt_path / "{}-0.pt".format(x)))
+    if pre_train:
+      mf = open(self.ckpt_path / "checkpoint.meta", 'r')
+      cf = mf.read()
+      mf.close()
+      if "train_step: 0" not in cf:
+        with open(self.ckpt_path / "checkpoint.meta", 'w') as mf:
+          mf.write(cf + "train_step: 0\n")
+      for x in {"model", "scheduler", "optimizer"}:
+        shutil.copyfile(str(ckpt_comp(x)), str(self.ckpt_path / "{}-0.pt".format(x)))
     return
 
   def loadCheckpoint(self, estimator, pre_train = False):
