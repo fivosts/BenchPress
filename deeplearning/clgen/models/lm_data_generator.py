@@ -177,7 +177,7 @@ class MaskLMDataGenerator(object):
     self.tokenizer      = corpus.tokenizer
     self.config        = training_opts.data_generator
     self.training_opts = training_opts
-    self.rngen         = random.Random(training_opts.random_seed)
+    self.rngen         = np.random # random.Random(training_opts.random_seed)
 
     shaped_corpus = self.createCorpus(self.cache.path)
     self.configDataset(shaped_corpus)
@@ -199,7 +199,7 @@ class MaskLMDataGenerator(object):
     self.sampler                 = sampler
     self.tokenizer                = tokenizer
     self.config                  = model_opts.data_generator
-    self.rngen                   = random.Random(seed)
+    self.rngen                   = np.random
     self.max_position_embeddings = max_position_embeddings
 
     self.training_opts                 = model_opts
