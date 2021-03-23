@@ -208,7 +208,7 @@ class Corpus(object):
     self.hash = encoded_id
     self.cache = cache.mkcache("corpus", "encoded", encoded_id)
     commit.saveCommit(self.cache.path)
-    commit.saveCommit(self.cache..parent.parent / "preprocessed" / preprocessed_id)
+    commit.saveCommit(self.cache.path.parent.parent / "preprocessed" / preprocessed_id)
 
   def GetShortSummary(self) -> str:
     corpus_size = humanize.naturalsize(self.encoded.token_count)
