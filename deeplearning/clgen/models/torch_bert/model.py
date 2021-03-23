@@ -816,7 +816,6 @@ class BertForPreTraining(BertPreTrainedModel):
       masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
       next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
       total_loss = masked_lm_loss + next_sentence_loss
-      print(total_loss)
       return {
         'masked_lm_loss'          : masked_lm_loss,
         'next_sentence_loss'      : next_sentence_loss,
@@ -827,7 +826,7 @@ class BertForPreTraining(BertPreTrainedModel):
         'attentions'              : attentions,
         'compile_status'          : compile_flag,
         'generated_samples'       : samples,
-        'batch_compilation_rate'  : torch.full((1,), float(sum(compile_flag)) / len(compile_flag), dtype = torch.float),
+        'batch_compilation_rate'  : torch.full((1,), float(sum(compile_flag)) / len(compile_flag), dtype = torch.float).to(pytorch.device),
         'sample_indices'          : [],
       }
     elif not is_validation and self.compile_sampler and self.config.is_sampling:
@@ -857,7 +856,7 @@ class BertForPreTraining(BertPreTrainedModel):
         'seq_relationship_logits' : seq_relationship_score,
         'hidden_states'           : hidden_states,
         'attentions'              : attentions,
-        'batch_compilation_rate'  : torch.full((1,), -1, dtype = torch.float),
+        'batch_compilation_rate'  : torch.full((1,), -1, dtype = torch.float).to(pytorch.device),
       }
 
 class BertLMHeadModel(BertPreTrainedModel):
