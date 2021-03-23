@@ -28,6 +28,7 @@ from sqlalchemy.ext import declarative
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import crypto
+from deeplearning.clgen.util import commit
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.proto import sampler_pb2
@@ -374,6 +375,7 @@ class Sampler(object):
     meta = internal_pb2.SamplerMeta()
     meta.config.CopyFrom(self.config)
     pbutil.ToFile(meta, path = self.cache.path / "META.pbtxt")
+    commit.saveCommit(self.cache.path)
 
     # Set in Specialize().
     self.encoded_start_text = None

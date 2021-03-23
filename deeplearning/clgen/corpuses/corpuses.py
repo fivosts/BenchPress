@@ -26,25 +26,27 @@ import time
 import typing
 import json
 import gdown
-
+import humanize
 import checksumdir
 import numpy as np
 from sqlalchemy.sql.expression import func
 
 from deeplearning.clgen.util import cache
-
 from deeplearning.clgen.util import crypto
+from deeplearning.clgen.util import commit
+from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.preprocessors import preprocessors
 from deeplearning.clgen.proto import corpus_pb2
+
 from absl import flags
+
 from labm8.py import hashcache
-import humanize
-from deeplearning.clgen.util import pbutil
 from labm8.py import sqlutil
+
 from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
@@ -205,6 +207,8 @@ class Corpus(object):
         )
     self.hash = encoded_id
     self.cache = cache.mkcache("corpus", "encoded", encoded_id)
+    commit.saveCommit(self.cache.path)
+    commit.saveCommit(self.cache..parent.parent / "preprocessed" / preprocessed_id)
 
   def GetShortSummary(self) -> str:
     corpus_size = humanize.naturalsize(self.encoded.token_count)

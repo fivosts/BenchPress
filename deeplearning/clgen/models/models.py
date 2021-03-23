@@ -28,6 +28,7 @@ from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import crypto
+from deeplearning.clgen.util import commit
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import corpuses
@@ -178,6 +179,9 @@ class Model(object):
       self.meta = internal_pb2.ModelMeta()
       self.meta.config.CopyFrom(self.config)
       self._WriteMetafile()
+
+    ## Store current commit
+    commit.saveCommit(self.cache.path)
 
     self.backend = {
       model_pb2.NetworkArchitecture.TENSORFLOW_SEQ: tf_sequential.tfSequential,
