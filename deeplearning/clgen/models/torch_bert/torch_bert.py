@@ -609,7 +609,7 @@ class torchBert(backends.BackendBase):
     raise ValueError("While True loop broken without returning")
 
   def _getTestSampler(self, test_sampler, sequence_length):
-    if test_sampler is None or test_sampler.is_live:
+    if test_sampler is None or test_sampler.is_live or test_sampler.is_active:
       sampler_str = [
           "start_text: \"[START]kernel void A([HOLE]}[END]\"",
           "batch_size: 2",
