@@ -55,7 +55,7 @@ class ActiveInput(Base, sqlutil.ProtoBackedMixin):
     """Construt ActiveFeed table entry from argumentns."""
     str_input_feed = tokenizer.tokensToString(input_feed, ignore_token = tokenizer.padToken)
     if tokenizer.padToken in input_feed:
-      num_tokens = np.where(sample == tokenizer.padToken)[0][0]
+      num_tokens = np.where(input_feed == tokenizer.padToken)[0][0]
     else:
       num_tokens = len(input_feed)
 
