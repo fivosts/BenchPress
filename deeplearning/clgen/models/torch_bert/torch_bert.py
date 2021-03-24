@@ -548,7 +548,6 @@ class torchBert(backends.BackendBase):
 
     if self.pred_iterator is None:
       self.pred_iterator = iter(self.loader)
-  
     try:
       inputs = next(self.pred_iterator)
     except StopIteration:
@@ -610,12 +609,12 @@ class torchBert(backends.BackendBase):
     raise ValueError("While True loop broken without returning")
 
   def _getTestSampler(self, test_sampler, sequence_length):
-    if test_sampler is None:
+    if test_sampler is None or test_sampler.is_live:
       sampler_str = [
-          "start_text: \"kernel void A(const double g, const double i){\\n  [HOLE] = [HOLE]\\n  int a = g + [HOLE]\"",
+          "start_text: \"[START]kernel void A([HOLE]}[END]\"",
           "batch_size: 2",
           "sequence_length: {}".format(sequence_length),
-          "temperature_micros: 800000",
+          "temperature_micros: 600000",
       ]
       mock_config = pbutil.FromString('\n'.join(sampler_str), sampler_pb2.Sampler())
       sampler = samplers.Sampler(mock_config, sample_db_name = "epoch_samples.db")
