@@ -223,7 +223,7 @@ message RmsPropOptimizer {
 // A generated sample. Instances of this proto are returned by a Model's
 // Sample() method.
 message Sample {
-  optional String original_input         = 1;
+  optional string original_input         = 1;
   optional string sample_feed            = 2;
   optional string text                   = 3;
   optional string encoded_text           = 4;
