@@ -8,6 +8,8 @@ import typing
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import crypto
 
+from eupy.hermes import client
+
 CLGEN_FEATURES = environment.CLGEN_FEATURES
 
 def StrToDictFeatures(str_features: str) -> typing.Dict[str, float]:
@@ -83,5 +85,18 @@ def DictKernelFeatures(src: str, *extra_args) -> typing.Dict[str, float]:
   If the code has syntax errors, features will not be obtained and empty dict
   is returned.
   """
-  str_features, stderr = StrKernelFeatures(src, extra_args)
-  return StrToDictFeatures(str_features)
+  try:
+    str_features, stderr = StrKernelFeatures(src, extra_args)
+    return StrToDictFeatures(str_features)
+  except OSError:
+    import os
+    mail = client.getClient()
+    mail.send_message("extractor", src)
+    main_process = psutil.Process(os.getpid())
+    total_mem = (main_process.memory_info().rss +
+                  sum([p.memory_info().rss 
+                    for p in main_process.children(recursive = True)]
+                  )
+                )
+    mail.send_message("extractor", str(total_mem))
+    return {}
