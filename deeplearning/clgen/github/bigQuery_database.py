@@ -166,7 +166,7 @@ class bqDatabase(sqlutil.Database):
   @property
   def other_ids(self) -> typing.Set[str]:
     with self.Session() as s:
-      return set(s.query(bqOtherFile.id).all())
+      return set(x[0] for x in s.query(bqOtherFile.id).all())
   
   @property
   def otherfile_count(self) -> int:
