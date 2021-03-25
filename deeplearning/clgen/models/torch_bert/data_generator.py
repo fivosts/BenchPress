@@ -44,12 +44,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                  sampler,
                                  tokenizer,
                                  seed: int,
+                                 sample_batch_size: int,
                                  max_position_embeddings: int,
                                  cache_path,
                                  ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
     d = super(torchLMDataGenerator, torchLMDataGenerator()).SampleMaskLMBatchGenerator(
-              model_opts, sampler, tokenizer, seed, max_position_embeddings, cache_path
+              model_opts, sampler, tokenizer, seed,
+              sample_batch_size, max_position_embeddings, cache_path
         )
     if sampler.is_active:
       return active_generator.ActiveSamplingGenerator.FromDataGenerator(d)
@@ -145,11 +147,13 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       sampler = LazyRandomSampler(dataset, replacement = False)
     dataloader = torch.utils.data.dataloader.DataLoader(
       dataset    = dataset,
-      # You are wondering why batch_size == 1 and not sampler.batch_size:
-      # By design, an inference batch contains the same feed.
-      # If dataloader's batch_size > 1, a batch will contain different feeds and so, is set to 1.
-      # Model will ask for a batch (of 1) and then replicate it.
-      batch_size = 1,
+      # Model's batch size is divided by sampler's batch size, in order to get
+      # multiple generation candidates from a given sample feed, but still
+      # efficiently feed big batches to make sampling faster.
+      # Example: model batch size 32 and sampler batch size 4.
+      # This dataloader will return 8 feeds. Each will be repeated 4 times.
+      # 32 sequences will be given to the model.
+      batch_size = self.sample_batch_size,
       sampler    = (
             sampler
             if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
