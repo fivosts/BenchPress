@@ -419,7 +419,7 @@ class Model(object):
     """
     start_time = datetime.datetime.utcnow()
     self.backend.InitSampleBatch(sampler)
-    samples, indices = self.backend.SampleNextIndices(sampler)
+    inputs, samples, indices = self.backend.SampleNextIndices(sampler)
 
     if not indices:
       # Return empty means model has not produced something that can be stored.
@@ -427,7 +427,7 @@ class Model(object):
       return True
 
     continue_sampling = True
-    for sample, idxs in zip(samples, indices):
+    for org, inp, sample, idxs in zip(org_inputs, inputs, samples, indices):
 
       src = self.tokenizer.ArrayToCode(sample, with_formatting = True)
       features = extractor.DictKernelFeatures(src)
@@ -443,7 +443,8 @@ class Model(object):
         text                      = src,
         sample_indices            = '\n'.join([','.join([self.tokenizer.decoder[idx] for idx in hole_idxs]).replace('\n', '\\n') for hole_idxs in idxs]),
         encoded_sample_indices    = '\n'.join([','.join([str(idx) for idx in hole_idxs]) for hole_idxs in idxs]),
-        sample_feed               = sampler.start_text,
+        original_input            = self.tokenizer.tokensToString(org, with_formatting = True, ignore_token = self.tokenizer.padToken),
+        sample_feed               = self.tokenizer.tokensToString(inp, with_formatting = False, ignore_token = self.tokenizer.padToken),
         encoded_text              = ",".join([str(x) for x in sample]),
         sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
         sample_time_ms            = int(round(1000 * ((end_time - start_time) / len(samples)).total_seconds())),
