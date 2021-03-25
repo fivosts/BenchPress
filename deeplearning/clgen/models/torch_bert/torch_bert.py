@@ -421,7 +421,7 @@ class torchBert(backends.BackendBase):
             for _ in range(FLAGS.sample_per_epoch):
               start_time   = datetime.datetime.utcnow()
               self.InitSampleBatch(sampler)
-              sample_batch, sample_indices = self.SampleNextIndices()
+              org_inp, inp_ids, sample_batch, sample_indices = self.SampleNextIndices()
               end_time = datetime.datetime.utcnow()
               for sample, sind in zip(sample_batch, sample_indices):
                 try:
@@ -434,6 +434,7 @@ class torchBert(backends.BackendBase):
                 sample_proto = model_pb2.Sample(
                   train_step             = self.current_step,
                   sample_feed            = sampler.start_text,
+                  original_input         = self.tokenizer.tokensToString(org, with_formatting = True, ignore_token = self.tokenizer.padToken),
                   text                   = self.tokenizer.tokensToString(sample, with_formatting = True, ignore_token = self.tokenizer.padToken).replace("\\n", "\n"),
                   encoded_text           = ",".join([str(t) for t in sample]),
                   sample_indices         = '\n'.join([self.tokenizer.tokensToString(mind).replace('\n', '\\n') for mind in sind]),

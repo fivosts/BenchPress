@@ -117,7 +117,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       assert len(target_idx)       != 0, "No target prediction in sample text"
 
       seen_in_training     = np.zeros([1], dtype = np.int32)
-      original_input       = np.full((self.sampler.sequence_length), 0, dtype = np.int64)
+      original_input       = np.full((self.sampler.sequence_length), self.tokenizer.padToken, dtype = np.int64)
       input_ids            = self._padToMaxPosition(input_sample)[:self.sampler.sequence_length]
       input_mask           = np.concatenate([
                                   np.ones(len(input_sample), dtype = np.int64),
