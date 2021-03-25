@@ -37,22 +37,24 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
   sha256                 : str = sql.Column(sql.String(64), nullable = False, index = True)
   # model's train step that generated the sample
   train_step             : int = sql.Column(sql.Integer,    nullable = False)
-  # encoded sample text
-  encoded_text           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Original input where the feed came from
+  original_input         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Starting feed of model
   sample_feed            : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # String-format generated text
   text                   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Array of the actual generated tokens
   sample_indices         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # encoded sample text
+  encoded_text           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Encoded generated tokens
   encoded_sample_indices : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Whether the generated sample compiles or not.
+  compile_status         : bool = sql.Column(sql.Boolean,  nullable = False)
   # Sample's vector of features.
   feature_vector         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Length of total sequence in number of tokens
   num_tokens             : int = sql.Column(sql.Integer,   nullable = False)
-  # Whether the generated sample compiles or not.
-  compile_status         : bool = sql.Column(sql.Boolean,  nullable = False)
   # If Bernoulli distribution was used during samplinng
   categorical_sampling   : str = sql.Column(sql.String(8), nullable = False)
   # Time
@@ -67,6 +69,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "sha256"                 : crypto.sha256_str(proto.text),
       "train_step"             : proto.train_step,
       "encoded_text"           : proto.encoded_text,
+      "original_input"         : proto.original_input
       "sample_feed"            : proto.sample_feed,
       "text"                   : proto.text,
       "sample_indices"         : proto.sample_indices,
