@@ -480,7 +480,6 @@ class torchBert(backends.BackendBase):
       val_hook = hooks.validationSampleHook(
         url = "sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")),
         tokenizer = self.tokenizer,
-        batch_size = self.eval_batch_size,
         model_step = self.current_step
       )
       eval_iterator = iter(loader)

@@ -139,14 +139,12 @@ class validationSampleHook(object):
   def __init__(self,
                url,
                tokenizer,
-               batch_size,
                model_step,
                ):
 
     self.tokenizer   = tokenizer
     self.val_db     = validation_database.ValidationDatabase(url)
     self.val_id     = self.val_db.count
-    self.batch_size = batch_size
     self.model_step = model_step
     self.mask_accuracy = [0, 0]
     self.nsp_accuracy  = [0, 0]
@@ -170,9 +168,11 @@ class validationSampleHook(object):
     masked_lm_ids = [[x for x in batch if x != -100] for batch in inputs['mask_labels'].cpu().numpy()]
     masked_lm_positions = [[idx for idx, x in enumerate(batch) if x != -100] for batch in inputs['mask_labels'].cpu().numpy()]
 
+    batch_size = len(outputs['prediction_logits'])
+
     masked_lm_predictions = [
           [np.argmax(outputs['prediction_logits'].cpu().numpy()[batch][x]) for x in masked_lm_positions[batch]]
-          for batch in range(self.batch_size)
+          for batch in range(batch_size)
         ]
     next_sentence_predictions = [[np.argmax(x) for x in batch][-1] for batch in outputs['seq_relationship_logits'].cpu().numpy()]
 
@@ -187,7 +187,7 @@ class validationSampleHook(object):
       self.nsp_accuracy[1] += 1
 
     with self.val_db.Session(commit = True) as session:
-      for b in range(self.batch_size):
+      for b in range(batch_size):
         val_trace = validation_database.BERTValFile(
           **validation_database.BERTValFile.FromArgs(
             tokenizer = self.tokenizer,
