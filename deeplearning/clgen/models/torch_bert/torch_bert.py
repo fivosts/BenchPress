@@ -595,7 +595,7 @@ class torchBert(backends.BackendBase):
             sample_indices
           )
           if done:
-            return step_out['original_input'], step_out['input_ids'], active_sample, active_indices
+            return self.step_inputs['original_input'].cpu().numpy(), self.step_inputs['input_ids'].cpu().numpy(), active_sample, active_indices
           else:
             step_input = {
               x: active_sample[x].repeat((self.sampler.batch_size, 1)) for x in active_sample
@@ -611,7 +611,7 @@ class torchBert(backends.BackendBase):
             )
             generated_samples, sample_indices = active_step['generated_samples'], active_step['sample_indices']
       else:
-        return step_out['original_input'], step_out['input_ids'], step_out['generated_samples'], step_out['sample_indices']
+        return self.step_inputs['original_input'].cpu().numpy(), self.step_inputs['input_ids'].cpu().numpy(), step_out['generated_samples'], step_out['sample_indices']
     raise ValueError("While True loop broken without returning")
 
   def _getTestSampler(self, test_sampler, sequence_length):
