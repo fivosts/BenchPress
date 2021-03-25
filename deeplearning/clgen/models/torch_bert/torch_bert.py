@@ -512,8 +512,13 @@ class torchBert(backends.BackendBase):
                    seed    : typing.Optional[int] = None
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
+    if sampler.is_live or sampler.is_active:
+      sample_batch_size = sampler.batch_size
+    else:
+      sample_batch_size = self.train_batch_size // sampler.batch_size
+
     data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
-                       self.config.training, sampler, self.tokenizer, seed,
+                       self.config.training, sampler, self.tokenizer, seed, sample_batch_size,
                        self.config.architecture.max_position_embeddings, self.cache.path
                      )
     self._ConfigSampleParams(data_generator, sampler)
@@ -532,7 +537,7 @@ class torchBert(backends.BackendBase):
       # For live sampling, start text must be re-instated at each iteration.
       self.sample = self.sample._replace(
         data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
-          self.config.training, sampler, self.tokenizer, 0,
+          self.config.training, sampler, self.tokenizer, 0, 1,
           self.config.architecture.max_position_embeddings, self.cache.path
         )
       )
@@ -589,23 +594,23 @@ class torchBert(backends.BackendBase):
             sample_indices
           )
           if done:
-            return active_sample, active_indices
+            return step_out['original_input'], step_out['input_ids'], active_sample, active_indices
           else:
             step_input = {
               x: active_sample[x].repeat((self.sampler.batch_size, 1)) for x in active_sample
             }
-            self.sampler.setStartText(
-              self.tokenizer.tokensToString(
-                step_input['input_ids'][0].cpu().numpy(), ignore_token = self.tokenizer.padToken
-              )
-            )
-            self.sampler.Specialize(self.tokenizer)
+            # self.sampler.setStartText(
+            #   self.tokenizer.tokensToString(
+            #     step_input['input_ids'][0].cpu().numpy(), ignore_token = self.tokenizer.padToken
+            #   )
+            # )
+            # self.sampler.Specialize(self.tokenizer)
             active_step = self.model_step(
                 self.sample.model, step_input,
             )
             generated_samples, sample_indices = active_step['generated_samples'], active_step['sample_indices']
       else:
-        return step_out['generated_samples'], step_out['sample_indices']
+        return step_out['original_input'], step_out['input_ids'], step_out['generated_samples'], step_out['sample_indices']
     raise ValueError("While True loop broken without returning")
 
   def _getTestSampler(self, test_sampler, sequence_length):
