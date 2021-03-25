@@ -561,7 +561,7 @@ class torchBert(backends.BackendBase):
 
     self.step_inputs = {x: inputs[x].repeat((self.sampler.batch_size, 1)) for x in inputs}
     # This loop below is purely for proper printing reasons:
-    for i in range(len(inputs['input_ids']))
+    for i in range(len(inputs['input_ids'])):
       self.sampler.setStartText(self.tokenizer.tokensToString(inputs['input_ids'][i].cpu().numpy(), ignore_token = self.tokenizer.padToken))
       self.sampler.Specialize(self.tokenizer)
     return

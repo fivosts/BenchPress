@@ -69,7 +69,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "sha256"                 : crypto.sha256_str(proto.text),
       "train_step"             : proto.train_step,
       "encoded_text"           : proto.encoded_text,
-      "original_input"         : proto.original_input
+      "original_input"         : proto.original_input,
       "sample_feed"            : proto.sample_feed,
       "text"                   : proto.text,
       "sample_indices"         : proto.sample_indices,
