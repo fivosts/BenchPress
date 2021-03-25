@@ -155,6 +155,7 @@ class MaskLMDataGenerator(object):
 
     self.training_opts           = None
     self.steps_per_epoch         = None
+    self.sample_batch_size       = None
     self.max_position_embeddings = None
     self.num_epochs              = None
     self.steps_per_epoch         = None
@@ -188,6 +189,7 @@ class MaskLMDataGenerator(object):
                                  sampler,
                                  tokenizer,
                                  seed: int,
+                                 sample_batch_size: int,
                                  max_position_embeddings: int,
                                  cache_path: pathlib.Path,
                                  ) -> "data_generator.MaskLMBatchGenerator":
@@ -200,6 +202,7 @@ class MaskLMDataGenerator(object):
     self.tokenizer               = tokenizer
     self.config                  = model_opts.data_generator
     self.rngen                   = np.random
+    self.sample_batch_size       = sample_batch_size
     self.max_position_embeddings = max_position_embeddings
 
     self.training_opts                 = model_opts
