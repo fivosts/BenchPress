@@ -197,7 +197,7 @@ class MaskLMDataGenerator(object):
 
     self.dataset                 = {}
     self.sampler                 = sampler
-    self.tokenizer                = tokenizer
+    self.tokenizer               = tokenizer
     self.config                  = model_opts.data_generator
     self.rngen                   = np.random
     self.max_position_embeddings = max_position_embeddings
