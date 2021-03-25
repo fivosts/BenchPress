@@ -419,7 +419,7 @@ class Model(object):
     """
     start_time = datetime.datetime.utcnow()
     self.backend.InitSampleBatch(sampler)
-    inputs, samples, indices = self.backend.SampleNextIndices(sampler)
+    org_inputs, inputs, samples, indices = self.backend.SampleNextIndices(sampler)
 
     if not indices:
       # Return empty means model has not produced something that can be stored.
