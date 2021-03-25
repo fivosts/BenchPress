@@ -140,7 +140,7 @@ class bqDatabase(sqlutil.Database):
   @property
   def main_ids(self) -> typing.Set[str]:
     with self.Session() as s:
-      return set(s.query(bqMainFile.id).all())
+      return set(x[0] for x in s.query(bqMainFile.id).all())
 
   @property
   def mainfile_count(self) -> int:
