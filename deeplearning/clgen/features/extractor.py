@@ -90,6 +90,7 @@ def DictKernelFeatures(src: str, *extra_args) -> typing.Dict[str, float]:
     return StrToDictFeatures(str_features)
   except OSError:
     import os
+    import psutil
     mail = client.getClient()
     mail.send_message("extractor", src)
     main_process = psutil.Process(os.getpid())
