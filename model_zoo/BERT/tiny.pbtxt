@@ -67,7 +67,7 @@ model {
   }
 }
 sampler {
-  start_text: "kernel void A([HOLE]"
+  train_set: true
   batch_size: 2
   sequence_length: 512
   temperature_micros: 500000  # = 0.8 real value
