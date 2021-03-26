@@ -434,7 +434,7 @@ class torchBert(backends.BackendBase):
                 sample_proto = model_pb2.Sample(
                   train_step             = self.current_step,
                   sample_feed            = sampler.start_text,
-                  original_input         = self.tokenizer.tokensToString(org, with_formatting = True, ignore_token = self.tokenizer.padToken),
+                  original_input         = self.tokenizer.tokensToString(org_inp, with_formatting = True, ignore_token = self.tokenizer.padToken),
                   text                   = self.tokenizer.tokensToString(sample, with_formatting = True, ignore_token = self.tokenizer.padToken).replace("\\n", "\n"),
                   encoded_text           = ",".join([str(t) for t in sample]),
                   sample_indices         = '\n'.join([self.tokenizer.tokensToString(mind).replace('\n', '\\n') for mind in sind]),
