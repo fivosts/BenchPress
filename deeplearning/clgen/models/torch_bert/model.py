@@ -802,11 +802,11 @@ class BertForPreTraining(BertPreTrainedModel):
       input_ids, attention_mask, position_ids, token_type_ids, head_mask,
       inputs_embeds, output_attentions, output_hidden_states 
     )
-
+    device = input_ids.get_device()
     if not is_validation and self.compile_sampler and step >= self.config.reward_compilation and not self.config.is_sampling:
       samples, compile_flag, masked_lm_labels = self.compile_sampler.generateTrainingBatch(
         self,
-        input_ids.get_device(),
+        device,
         input_ids.cpu(),
         prediction_scores.cpu(),
         torch.clone(position_ids),
@@ -824,10 +824,10 @@ class BertForPreTraining(BertPreTrainedModel):
         'seq_relationship_logits' : seq_relationship_score,
         'hidden_states'           : hidden_states,
         'attentions'              : attentions,
-        'compile_status'          : compile_flag,
-        'generated_samples'       : samples,
-        'batch_compilation_rate'  : torch.full((1,), float(sum(compile_flag)) / len(compile_flag), dtype = torch.float).to(pytorch.device),
-        'sample_indices'          : [],
+        'compile_status'          : torch.LongTensor(compile_flag).to(device),
+        'generated_samples'       : torch.LongTensor(samples).to(device),
+        'batch_compilation_rate'  : torch.full((1,), float(sum(compile_flag)) / len(compile_flag), dtype = torch.float).to(device),
+        # 'sample_indices'          : [0],
       }
     elif not is_validation and self.compile_sampler and self.config.is_sampling:
       samples, sample_indices, scores_history = self.compile_sampler.generateSampleBatch(
@@ -856,7 +856,7 @@ class BertForPreTraining(BertPreTrainedModel):
         'seq_relationship_logits' : seq_relationship_score,
         'hidden_states'           : hidden_states,
         'attentions'              : attentions,
-        'batch_compilation_rate'  : torch.full((1,), -1, dtype = torch.float).to(pytorch.device),
+        'batch_compilation_rate'  : torch.full((1,), -1, dtype = torch.float).to(device),
       }
 
 class BertLMHeadModel(BertPreTrainedModel):
