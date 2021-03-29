@@ -38,7 +38,7 @@ class Dataset(object):
     if lang not in languages:
       raise NotImplementedError(lang)
     return languages[lang](client)
-  
+
   @property
   def filecount(self) -> typing.Tuple[int, int]:
     """Return file count of represented query."""
@@ -59,7 +59,7 @@ class Dataset(object):
   @property
   def language(self):
     return "generic"
-  
+
   @property
   def extension(self):
     if self.extensions:
