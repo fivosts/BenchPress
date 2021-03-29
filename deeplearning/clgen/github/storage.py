@@ -434,11 +434,11 @@ class dbStorage(Storage):
 
     ## Write repos
     if self.repocount > self.db.repo_count:
-      with self.db.Session(commit = True) as session:
-        for en, (repo_name, ref) in enumerate(self.repos):
-          content = bqdb.bqRepo(**bqdb.bqRepo.FromArgs(
-              self.db.repo_count + en, {'repo_name': repo_name, 'ref': ref})
-          )
+      for en, (repo_name, ref) in enumerate(self.repos):
+        content = bqdb.bqRepo(**bqdb.bqRepo.FromArgs(
+            self.db.repo_count + en, {'repo_name': repo_name, 'ref': ref})
+        )
+        with self.db.Session(commit = True) as session:
           exists = session.query(
             bqdb.bqRepo
           ).filter_by(repo_name = content.repo_name, ref = content.ref).scalar() is not None
