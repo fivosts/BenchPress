@@ -415,7 +415,7 @@ class Sampler(object):
         f"'{self.start_text}'"
       )
 
-    if len(self.encoded_start_text) >= self.sequence_length:
+    if len(self.encoded_start_text) > self.sequence_length:
       raise ValueError(
         "Encoded sampler start text must be less than sampler sequence "
         f"length. Sampler sequence length={self.sequence_length}, encoded "

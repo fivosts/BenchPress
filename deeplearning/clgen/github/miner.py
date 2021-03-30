@@ -53,6 +53,12 @@ flags.DEFINE_boolean(
   "Select to load all files, calculate hashes and remove duplicates."
 )
 
+flags.DEFINE_boolean(
+  "export_db",
+  False,
+  "Dumps bigquery database to folder of files."
+)
+
 class GithubMiner(object):
   """Base abstract class of a github miner"""
 
@@ -124,6 +130,14 @@ class BigQuery(GithubMiner):
     return
 
   def fetch(self):
+    if FLAGS.export_db:
+      folder = self.cache_path / "export_files"
+      folder.mkdir(exist_ok = True, parents = True)
+      with progressbar.ProgressBar(max_value = self.storage.maincount, prefix = "Export") as bar:
+        for mf in bar(self.storage.db.main_files):
+          with open(folder / mf.id, 'w') as outf:
+            outf.write(mf.content)
+      return
     self._query_github()
     if self.config.big_query.export_corpus.inline_headers:
       self._export_corpus()
