@@ -205,11 +205,23 @@ class Dataset(object):
     Returns iterable of query files
     """
     query = """
-    SELECT file.repo_name, file.path, file.ref, 
-           file.id, contentfile.size, contentfile.content
-    FROM `bigquery-public-data.github_repos.contents` as contentfile
-    INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
+    SELECT MIN(file.repo_name) as repo_name,
+           MIN(file.path) as path,
+           MIN(file.ref) as ref,
+           file.id,
+           MIN(contentfile.size) as size,
+           MIN(contentfile.content) as content
+    FROM (`bigquery-public-data.github_repos.contents` as contentfile
+    INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {})
+    GROUP BY file.id
     """.format("" if not self.query_file_id else "AND (" + self.query_file_id + ")")
+
+    # query = """
+    # SELECT file.id
+    # FROM `bigquery-public-data.github_repos.files` as file
+    # WHERE {}
+    # GROUP BY file.id
+    # """.format("" if not self.query_file_id else "(" + self.query_file_id + ")")
 
     dry_run_job = self.client.query(query, job_config = self.queryConfig('main_files', dr = True))
     l.getLogger().warn("This query is going to consume {}".format(
