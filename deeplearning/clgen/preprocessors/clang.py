@@ -86,7 +86,7 @@ def Preprocess(
   timeout_seconds: int = 60,
   strip_preprocessor_lines: bool = True,
 ):
-  """Run input code through the compiler frontend to inline macros.
+  """Run input code through the compiler frontend to expand macros.
 
   This uses the repository clang binary.
 
