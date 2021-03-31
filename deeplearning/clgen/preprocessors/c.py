@@ -112,7 +112,6 @@ def ClangPreprocess(text: str) -> str:
   except Exception as e:
     raise e
 
-
 @public.clgen_preprocessor
 def Compile(text: str) -> str:
   """A preprocessor which attempts to compile the given code.
@@ -125,7 +124,6 @@ def Compile(text: str) -> str:
   """
   clang.CompileLlvmBytecode(text, ".c", CLANG_ARGS)
   return text
-
 
 @public.clgen_preprocessor
 def ClangFormat(text: str) -> str:
@@ -143,6 +141,18 @@ def ClangFormat(text: str) -> str:
   """
   return clang.ClangFormat(text, ".c")
 
+@public.clgen_preprocessor
+def Parse(text: str) -> str:
+  """A preprocessor which attempts to parse the given code.
+
+  Args:
+    text: Code to compile.
+
+  Returns:
+    The input code, unmodified, if parsing succeeds.
+  """
+  clang.Parse(text, ".c", [])
+  return text
 
 @public.clgen_preprocessor
 def NormalizeIdentifiers(text: str) -> str:

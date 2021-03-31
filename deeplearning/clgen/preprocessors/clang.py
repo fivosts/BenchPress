@@ -203,15 +203,17 @@ def CompileLlvmBytecode(src: str,
   ) as f:
     f.write(src)
     f.flush()
+
     try:
       unit = clang.cindex.TranslationUnit.from_source(f.name, args = builtin_cflags + cflags)
     except clang.cindex.TranslationUnitLoadError as e:
       raise ValueError(e)
+
     diagnostics = [str(d) for d in unit.diagnostics if d.severity > 2]
-    locations   = [(d.location.line, d.location.column) for d in unit.diagnostics if d.severity > 2]
+
     if len(diagnostics) > 0:
       if return_diagnostics:
-        return src, locations
+        return src, [(d.location.line, d.location.column) for d in unit.diagnostics if d.severity > 2]
       else:
         raise ValueError("/*\n{}\n*/\n{}".format('\n'.join(diagnostics), src))
     else:
@@ -220,11 +222,53 @@ def CompileLlvmBytecode(src: str,
       else:
         return src
 
-def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
+def Parse(src: str,
+          suffix: str,
+          cflags: typing.List[str],
+          return_diagnostics: bool = False
+          ) -> str:
+  """Parse input code using clang.Cindex python module.
+
+  Args:
+    src: The source code to compile.
+    suffix: The suffix to append to the source code temporary file. E.g. '.c'
+      for a C program.
+    cflags: A list of flags to be passed to clang.
+
+  Returns:
+    The textual LLVM byte code.
+
+  Raises:
+    ValueError: In case of an error.
+  """
+
+  with tempfile.NamedTemporaryFile(
+    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
+  ) as f:
+
+    try:
+      unit = clang.cindex.TranslationUnit.from_source(f.name, args = cflags, unsaved_files = [(f.name, src)])
+    except clang.cindex.TranslationUnitLoadError as e:
+      raise ValueError(e)
+
+    diagnostics = [d for d in unit.diagnostics if d.severity > 2 and d.category_number in {1, 4}]
+
+    if len(diagnostics) > 0:
+      if return_diagnostics:
+        return src, [(d.location.line, d.location.column) for d in unit.diagnostics if d.severity > 2]
+      else:
+        raise ValueError("/*\n{}\n*/\n{}".format('\n'.join([str(d) for d in diagnostics]), src))
+    else:
+      if return_diagnostics:
+        return src, []
+      else:
+        return src
+
+def ClangFormat(src: str, suffix: str, timeout_seconds: int = 60) -> str:
   """Run clang-format on a source to enforce code style.
 
   Args:
-    text: The source code to run through clang-format.
+    src: The source code to run through clang-format.
     suffix: The suffix to append to the source code temporary file. E.g. '.c'
       for a C program.
     timeout_seconds: The number of seconds to allow clang-format to run for.
@@ -253,7 +297,7 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
     stderr=subprocess.PIPE,
     universal_newlines=True,
   )
-  stdout, stderr = process.communicate(text)
+  stdout, stderr = process.communicate(src)
   if process.returncode == 9:
     raise ValueError(f"clang-format timed out after {timeout_seconds}s")
   elif process.returncode != 0:
@@ -276,11 +320,17 @@ def ExtractFunctions(src: str,
 
   Returns:
     List of separate string functions
+
+  Raises:
+    ValueError: In case of an error.
   """
   with tempfile.NamedTemporaryFile(
     "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
   ) as f:
-    unit = clang.cindex.TranslationUnit.from_source(f.name, args = cflags, unsaved_files = [(f.name, src)])#, args = args + builtin_cflags)
+    try:
+      unit = clang.cindex.TranslationUnit.from_source(f.name, args = cflags, unsaved_files = [(f.name, src)])#, args = args + builtin_cflags)
+    except clang.cindex.TranslationUnitLoadError as e:
+      raise ValueError(e)
 
   def next_token(token_iter):
     """Return None if iterator is consumed."""
