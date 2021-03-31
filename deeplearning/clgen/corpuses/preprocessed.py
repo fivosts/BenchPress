@@ -23,6 +23,7 @@ import subprocess
 import tempfile
 import time
 import typing
+import functools
 
 import progressbar
 import sqlalchemy as sql
@@ -32,6 +33,7 @@ from sqlalchemy.sql import func
 from deeplearning.clgen.preprocessors import preprocessors
 from deeplearning.clgen.proto import corpus_pb2
 from deeplearning.clgen.proto import internal_pb2
+from deeplearning.clgen.github import bigQuery_database as bqdb
 from absl import flags
 from labm8.py import fs
 import humanize
@@ -119,15 +121,49 @@ class PreprocessedContentFile(Base):
       date_added              = datetime.datetime.utcnow(),
     ) for (text, success) in text_generator ]
 
+  @classmethod
+  def FromBQFile(
+    cls,
+    file: bqdb.bqMainFile,
+    preprocessors_: typing.List[str],
+  ) -> "PreprocessedContentFile":
+    """Instantiate a PreprocessedContentFile."""
+    start_time = time.time()
+    preprocessing_succeeded = False
+    try:
+      input_text = file.content
+      text_generator = preprocessors.Preprocess(input_text, preprocessors_)
+      # preprocessing_succeeded = True
+    except Exception as e:
+      raise("Unexpected exception: {}".format(e))
 
-def PreprocessorWorker(
-  job: internal_pb2.PreprocessorWorker,
-) -> PreprocessedContentFile:
+    end_time = time.time()
+    preprocess_time_ms = int((end_time - start_time) * 1000)
+    input_text_stripped = input_text.strip()
+    return [ cls(
+      input_relpath           = "main_files/{}".format(file.id),
+      input_sha256            = file.id,
+      input_charcount         = len(input_text_stripped),
+      input_linecount         = len(input_text_stripped.split("\n")),
+      sha256                  = hashlib.sha256(text.encode("utf-8")).hexdigest(),
+      charcount               = len(text),
+      linecount               = len(text.split("\n")),
+      text                    = text,
+      preprocessing_succeeded = success,
+      preprocess_time_ms      = preprocess_time_ms,
+      wall_time_ms            = preprocess_time_ms,  # The outer-loop may change this.
+      date_added              = datetime.datetime.utcnow(),
+    ) for (text, success) in text_generator ]
+
+def PreprocessorWorker(job: internal_pb2.PreprocessorWorker) -> PreprocessedContentFile:
   """The inner loop of a parallelizable pre-processing job."""
   return PreprocessedContentFile.FromContentFile(
     pathlib.Path(job.contentfile_root), job.relpath, job.preprocessors
   )
 
+def BQPreprocessorWorker(file: bqdb.bqMainFile, preprocessors: typing.List[str]) -> PreprocessedContentFile:
+  """The inner loop of a parallelizable pre-processing job."""
+  return PreprocessedContentFile.FromBQFile(file, preprocessors)
 
 class PreprocessedContentFiles(sqlutil.Database):
   """A database of pre-processed contentfiles."""
@@ -204,48 +240,81 @@ class PreprocessedContentFiles(sqlutil.Database):
 
   def Import(self, session: sqlutil.Session, config: corpus_pb2.Corpus) -> None:
     with self.GetContentFileRoot(config) as contentfile_root:
-      relpaths = set(self.GetImportRelpaths(contentfile_root))
-      done = set(
-        [x[0] for x in session.query(PreprocessedContentFile.input_relpath)]
-      )
-      todo = relpaths - done
-      l.getLogger().info(
-        "Preprocessing {} of {} content files".format(
-                humanize.intcomma(len(todo)),
-                humanize.intcomma(len(relpaths)),
-            )
-      )
-      jobs = [
-        internal_pb2.PreprocessorWorker(
-          contentfile_root=str(contentfile_root),
-          relpath=t,
-          preprocessors=config.preprocessor,
+      if not config.HasField("bq_database"):
+        relpaths = set(self.GetImportRelpaths(contentfile_root))
+        done = set(
+          [x[0] for x in session.query(PreprocessedContentFile.input_relpath)]
         )
-        for t in todo
-      ]
-      try:
-        pool = multiprocessing.Pool()
-        bar = progressbar.ProgressBar(max_value=len(jobs))
-        last_commit = time.time()
-        wall_time_start = time.time()
-        for preprocessed_list in bar(pool.imap_unordered(PreprocessorWorker, jobs)):
-          for preprocessed_cf in preprocessed_list:
-            wall_time_end = time.time()
-            preprocessed_cf.wall_time_ms = int(
-              (wall_time_end - wall_time_start) * 1000
-            )
-            wall_time_start = wall_time_end
-            session.add(preprocessed_cf)
-            if wall_time_end - last_commit > 10:
-              session.commit()
-              last_commit = wall_time_end
-        pool.close()
-      except KeyboardInterrupt as e:
-        pool.terminate()
-        raise e
-      except Exception as e:
-        pool.terminate()
-        raise e
+        todo = relpaths - done
+        l.getLogger().info(
+          "Preprocessing {} of {} content files".format(
+                  humanize.intcomma(len(todo)),
+                  humanize.intcomma(len(relpaths)),
+              )
+        )
+        jobs = [
+          internal_pb2.PreprocessorWorker(
+            contentfile_root = str(contentfile_root),
+            relpath = t,
+            preprocessors = config.preprocessor,
+          )
+          for t in todo
+        ]
+        try:
+          pool = multiprocessing.Pool()
+          bar = progressbar.ProgressBar(max_value=len(jobs))
+          last_commit = time.time()
+          wall_time_start = time.time()
+          for preprocessed_list in bar(pool.imap_unordered(PreprocessorWorker, jobs)):
+            for preprocessed_cf in preprocessed_list:
+              wall_time_end = time.time()
+              preprocessed_cf.wall_time_ms = int(
+                (wall_time_end - wall_time_start) * 1000
+              )
+              wall_time_start = wall_time_end
+              session.add(preprocessed_cf)
+              if wall_time_end - last_commit > 10:
+                session.commit()
+                last_commit = wall_time_end
+          pool.close()
+        except KeyboardInterrupt as e:
+          pool.terminate()
+          raise e
+        except Exception as e:
+          pool.terminate()
+          raise e
+      else:
+        try:
+          pool = multiprocessing.Pool()
+          db   = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root))
+          bar  = progressbar.ProgressBar(max_value = db.mainfile_count)
+
+          last_commit     = time.time()
+          wall_time_start = time.time()
+
+          for preprocessed_list in bar(
+                      pool.imap_unordered(
+                        functools.partial(
+                          BQPreprocessorWorker,
+                          preprocessors = list(config.preprocessor)
+                      ), db.main_files)):
+            for preprocessed_cf in preprocessed_list:
+              wall_time_end = time.time()
+              preprocessed_cf.wall_time_ms = int(
+                (wall_time_end - wall_time_start) * 1000
+              )
+              wall_time_start = wall_time_end
+              session.add(preprocessed_cf)
+              if wall_time_end - last_commit > 10:
+                session.commit()
+                last_commit = wall_time_end
+          pool.close()
+        except KeyboardInterrupt as e:
+          pool.terminate()
+          raise e
+        except Exception as e:
+          pool.terminate()
+          raise e
 
   @contextlib.contextmanager
   def GetContentFileRoot(self, config: corpus_pb2.Corpus) -> pathlib.Path:
@@ -281,8 +350,8 @@ class PreprocessedContentFiles(sqlutil.Database):
               )
         )
         yield pathlib.Path(d)
-    elif config.HasField("fetch_github"):
-      yield pathlib.Path(ExpandConfigPath(config.fetch_github))
+    elif config.HasField("bq_database"):
+      yield pathlib.Path(ExpandConfigPath(config.bq_database))
     else:
       raise NotImplementedError
 
