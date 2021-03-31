@@ -41,14 +41,16 @@ message PreTrainCorpus {
     string local_directory        = 2;
     // The path to a tarball archive file containing content files.
     string local_tar_archive      = 3;
+    // The path to a bigQuery database containing files.
+    string bq_database            = 4;
     // The path to a database of encoded files.
-    string pre_encoded_corpus_url = 4;
+    string pre_encoded_corpus_url = 5;
   }
-  optional tokenizer tokenizer    = 5;
+  optional tokenizer tokenizer    = 6;
   // A list of preprocessor passes to run on each contentfile in the corpus
   // prior to training, in the order in which they are run.
-  repeated string preprocessor          = 6;
-  optional string contentfile_separator = 7;
+  repeated string preprocessor          = 7;
+  optional string contentfile_separator = 8;
 }
 
 // The specification of a training corpus.
@@ -62,14 +64,16 @@ message Corpus {
     string local_directory        = 2;
     // The path to a tarball archive file containing content files.
     string local_tar_archive      = 3;
+    // The path to a bigQuery database containing files.
+    string bq_database            = 4;
     // The path to a database of encoded files.
-    string pre_encoded_corpus_url = 4;
+    string pre_encoded_corpus_url = 5;
   }
-  required tokenizer tokenizer    = 5;
+  optional tokenizer tokenizer    = 6;
   // A list of preprocessor passes to run on each contentfile in the corpus
   // prior to training, in the order in which they are run.
-  repeated string preprocessor          = 6;
-  optional string contentfile_separator = 7;
+  repeated string preprocessor          = 7;
+  optional string contentfile_separator = 8;
 }
 
 // The tokenizer to use to encode the corpus.
