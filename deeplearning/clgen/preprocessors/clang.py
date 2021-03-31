@@ -305,6 +305,76 @@ def DeriveSourceVocab(src: str,
 
     return tokens
 
+def ExtractFunctions(src: str,
+                     suffix: str,
+                     cflags: typing.List[str]
+                     ) -> typing.List[str]:
+  """Splits translation unit into separate functions using tokenizer.
+  WARNING! Functions might need formatting after this preprocessor,
+           if you care about formatting.
+
+  Args:
+    src: The source code to compile.
+    suffix: The suffix to append to the source code temporary file. E.g. '.c'
+      for a C program.
+    cflags: A list of flags to be passed to clang.
+
+  Returns:
+    List of separate string functions
+  """
+  with tempfile.NamedTemporaryFile(
+    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
+  ) as f:
+    unit = clang.cindex.TranslationUnit.from_source(f.name, args = cflags, unsaved_files = [(f.name, src)])#, args = args + builtin_cflags)
+
+  def next_token(token_iter):
+    """Return None if iterator is consumed."""
+    try:
+      return next(token_iter)
+    except StopIteration:
+      return None
+
+  functions = []
+  tokiter = unit.get_tokens(extent = unit.cursor.extent)
+  token = next_token(tokiter)
+
+  while token:
+    # Do sth with token
+    cur = clang.cindex.Cursor.from_location(unit, token.extent.start)
+    if cur.kind == clang.cindex.CursorKind.FUNCTION_DECL:
+      # Found starting point of function declaration.
+      func = []
+      func.append(token.spelling)
+      token = next_token(tokiter)
+      while token and token.spelling != ")":
+        # Go until the closing parenthesis of parameters.
+        func.append(token.spelling)
+        token = next_token(tokiter)
+      while token and token.spelling != "{" and token.spelling != ";":
+        # Reject comments etc. until opening brace or semi-colon.
+        func.append(token.spelling)
+        token = next_token(tokiter)
+      if token and token.spelling == "{":
+        # Function with a body.
+        lbr, rbr = 1, 0
+        while token and lbr != rbr:
+          func.append(token.spelling)
+          token = next_token(tokiter)
+          if token and token.spelling == "{":
+            lbr += 1
+          elif token and token.spelling == "}":
+            rbr += 1
+        if token:
+          func.append(token.spelling)
+        functions.append(' '.join(func))
+        token = next_token(tokiter)
+      else:
+        # Just a function declaration.
+        token = next_token(tokiter)
+    else:
+      token = next_token(tokiter)
+  return functions
+
 def AtomizeSource(src: str,
                   vocab: typing.Set[str],
                   suffix: str,

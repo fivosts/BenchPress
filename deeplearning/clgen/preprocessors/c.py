@@ -158,14 +158,32 @@ def NormalizeIdentifiers(text: str) -> str:
     RewriterException: If rewriter found nothing to rewrite.
     ClangTimeout: If rewriter fails to complete within timeout_seconds.
   """
-  return normalizer.NormalizeIdentifiers(text, ".c", "")
+  return normalizer.NormalizeIdentifiers(text, ".c", [])
 
 @public.clgen_preprocessor
 def ExtractFunctions(text: str) -> str:
-  return text
+  """Splits translation unit into separate functions using tokenizer.
+  WARNING! Functions might need formatting after this preprocessor,
+           if you care about formatting.
+
+  Args:
+    text: The source code to extract functions from.
+
+  Returns:
+    List of separate string functions.
+  """
+  return clang.ExtractFunctions(text, ".c", [])
 
 @public.clgen_preprocessor
 def StripIncludes(text: str) -> str:
+  """Removes include statements from sourcecode.
+
+  Args:
+    text: The source code to strip includes from.
+
+  Returns:
+    Processed source code.
+  """
   lines = []
   for line in text.split('\n'):
     if not '#include ' in line:
