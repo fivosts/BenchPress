@@ -260,51 +260,6 @@ def ClangFormat(text: str, suffix: str, timeout_seconds: int = 60) -> str:
     raise ValueError(stderr)
   return stdout
 
-def DeriveSourceVocab(src: str,
-                      token_list: typing.Set[str],
-                      suffix: str,
-                      cflags: typing.List[str],
-                      ) -> typing.Dict[str, str]:
-  """Pass source code through clang's lexer and return set of tokens.
-
-  Args:
-    src: The source code to compile.
-    token_list: External set of grammar tokens for target language.
-    suffix: The suffix to append to the source code temporary file. E.g. '.c'
-      for a C program.
-    cflags: A list of flags to be passed to clang.
-
-  Returns:
-    Set of unique source code tokens
-
-  Raises:
-    ValueError: In case of an error.
-  """
-  builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
-  with tempfile.NamedTemporaryFile(
-    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
-  ) as f:
-    f.write(src)
-    f.flush()
-    try:
-      unit = clang.cindex.TranslationUnit.from_source(f.name, args = builtin_cflags + cflags)
-    except clang.cindex.TranslationUnitLoadError as e:
-      raise ValueError(e)
-
-    tokens = {}
-    for ch in string.printable:
-      # Store all printable characters as char-based, to save time iterating literals.
-      tokens["{}-char-based".format(ch)] = ''
-    for idx, t in enumerate(unit.get_tokens(extent = unit.cursor.extent)):
-      str_t = str(t.spelling)
-      if str_t in token_list or t.kind in {clang.cindex.TokenKind.KEYWORD, clang.cindex.TokenKind.PUNCTUATION}:
-        tokens[str_t] = ' '
-      else:
-        if t.kind != clang.cindex.TokenKind.LITERAL and clang.cindex.Cursor.from_location(unit, t.extent.end).kind not in {clang.cindex.CursorKind.CALL_EXPR}:
-          tokens[str_t] = ' '
-
-    return tokens
-
 def ExtractFunctions(src: str,
                      suffix: str,
                      cflags: typing.List[str]
@@ -374,6 +329,51 @@ def ExtractFunctions(src: str,
     else:
       token = next_token(tokiter)
   return functions
+
+def DeriveSourceVocab(src: str,
+                      token_list: typing.Set[str],
+                      suffix: str,
+                      cflags: typing.List[str],
+                      ) -> typing.Dict[str, str]:
+  """Pass source code through clang's lexer and return set of tokens.
+
+  Args:
+    src: The source code to compile.
+    token_list: External set of grammar tokens for target language.
+    suffix: The suffix to append to the source code temporary file. E.g. '.c'
+      for a C program.
+    cflags: A list of flags to be passed to clang.
+
+  Returns:
+    Set of unique source code tokens
+
+  Raises:
+    ValueError: In case of an error.
+  """
+  builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
+  with tempfile.NamedTemporaryFile(
+    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
+  ) as f:
+    f.write(src)
+    f.flush()
+    try:
+      unit = clang.cindex.TranslationUnit.from_source(f.name, args = builtin_cflags + cflags)
+    except clang.cindex.TranslationUnitLoadError as e:
+      raise ValueError(e)
+
+    tokens = {}
+    for ch in string.printable:
+      # Store all printable characters as char-based, to save time iterating literals.
+      tokens["{}-char-based".format(ch)] = ''
+    for idx, t in enumerate(unit.get_tokens(extent = unit.cursor.extent)):
+      str_t = str(t.spelling)
+      if str_t in token_list or t.kind in {clang.cindex.TokenKind.KEYWORD, clang.cindex.TokenKind.PUNCTUATION}:
+        tokens[str_t] = ' '
+      else:
+        if t.kind != clang.cindex.TokenKind.LITERAL and clang.cindex.Cursor.from_location(unit, t.extent.end).kind not in {clang.cindex.CursorKind.CALL_EXPR}:
+          tokens[str_t] = ' '
+
+    return tokens
 
 def AtomizeSource(src: str,
                   vocab: typing.Set[str],
