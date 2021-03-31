@@ -19,10 +19,10 @@ model {
     # preprocessor: "deeplearning.clgen.preprocessors.common:StripMultipleWhitespaces"
     # preprocessor: "deeplearning.clgen.preprocessors.opencl:SanitizeKernelPrototype"
     # preprocessor: "deeplearning.clgen.preprocessors.common:StripTrailingWhitespace"
+    preprocessor: "deeplearning.clgen.preprocessors.c:ExtractFunctions"
     preprocessor: "deeplearning.clgen.preprocessors.c:ClangFormat"
     preprocessor: "deeplearning.clgen.preprocessors.common:MinimumLineCount3"
-    preprocessor: "deeplearning.clgen.preprocessors.c:ExtractFunctions"
-    # preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
+    # preprocessor: "deeplearning.clgen.preprocessors.c:Parse"
   }
   architecture {
     backend: TORCH_BERT
