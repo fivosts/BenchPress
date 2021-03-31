@@ -20,11 +20,11 @@ from deeplearning.clgen.util import environment
 from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import normalizer
 from deeplearning.clgen.preprocessors import public
+
 from absl import flags
 
 FLAGS = flags.FLAGS
 
-_UNAME = "mac" if sys.platform == "darwin" else "linux"
 LIBCXX_HEADERS = environment.LIBCXX_HEADERS
 CLANG_HEADERS = environment.CLANG_HEADERS
 
@@ -37,7 +37,7 @@ C_COMMENT_RE = re.compile(
 # but substituted the sandboxed header locations in place of the defaults.
 #   bazel-phd/bazel-out/*-py3-opt/bin/deeplearning/clgen/preprocessors/\
 #     cxx_test.runfiles/llvm_mac/bin/clang -xc++ -E - -v
-CLANG = bazelutil.DataPath("phd/external/llvm_linux/bin/clang")
+CLANG = environment.CLANG
 CLANG_ARGS = [
   "-xc++",
   "-isystem",
