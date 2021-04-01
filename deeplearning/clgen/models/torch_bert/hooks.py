@@ -142,8 +142,9 @@ class validationSampleHook(object):
                model_step,
                ):
 
-    self.tokenizer   = tokenizer
+    self.tokenizer  = tokenizer
     self.val_db     = validation_database.ValidationDatabase(url)
+    self.val_files  = {}
     self.val_id     = self.val_db.count
     self.model_step = model_step
     self.mask_accuracy = [0, 0]
@@ -186,12 +187,12 @@ class validationSampleHook(object):
         self.nsp_accuracy[0] += 1
       self.nsp_accuracy[1] += 1
 
-    with self.val_db.Session(commit = True) as session:
+    with self.val_db.Session() as session:
       for b in range(batch_size):
-        val_trace = validation_database.BERTValFile(
+        f = validation_database.BERTValFile(
           **validation_database.BERTValFile.FromArgs(
             tokenizer = self.tokenizer,
-            id       = self.val_id,
+            id        = self.val_id,
             train_step                = self.model_step,
             seen_in_training          = seen_in_training[b],
             original_input            = original_input[b],
@@ -206,14 +207,17 @@ class validationSampleHook(object):
             next_sentence_predictions = next_sentence_predictions[b],
           )
         )
-        try:
-          exists = session.query(validation_database.BERTValFile.sha256).filter_by(sha256 = val_trace.sha256).scalar() is not None
-        except sqlalchemy.orm.exc.MultipleResultsFound as e:
-          l.getLogger().error("Selected sha256 has been already found more than once.")
-          raise e
-        if not exists:
-          session.add(val_trace)
+        if f.sha256 not in self.val_files:
+          self.val_files[f.sha256] = f
           self.val_id += 1
+        # try:
+        #   exists = session.query(validation_database.BERTValFile.sha256).filter_by(sha256 = val_trace.sha256).scalar() is not None
+        # except sqlalchemy.orm.exc.MultipleResultsFound as e:
+        #   l.getLogger().error("Selected sha256 has been already found more than once.")
+        #   raise e
+        # if not exists:
+        #   session.add(val_trace)
+        #   self.val_id += 1
     return
 
   def final(self,
@@ -233,6 +237,10 @@ class validationSampleHook(object):
       "next_sentence_loss: {}".format(next_sentence_loss),
     ]
     with self.val_db.Session(commit = True) as session:
+
+      for f in self.val_files.values():
+        session.add(f)
+
       exists = session.query(validation_database.ValResults.key).filter_by(key = val_set).scalar() is not None
       if exists:
         entry = session.query(validation_database.ValResults).filter_by(key = val_set).first()
