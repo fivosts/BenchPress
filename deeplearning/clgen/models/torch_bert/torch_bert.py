@@ -460,6 +460,9 @@ class torchBert(backends.BackendBase):
 
   def Validate(self) -> None:
 
+    if FLAGS.max_eval_steps <= 0:
+      l.getLogger().info("Skipping BERT Validation.")
+
     if self.pytorch.num_gpus > 1:
       model = self.torch.nn.DataParallel(self.train.model)
 
