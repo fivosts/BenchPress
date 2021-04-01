@@ -61,7 +61,7 @@ class ActiveInput(Base, sqlutil.ProtoBackedMixin):
 
     return ActiveInput(
       id             = id,
-      sha256         = crypto.sha256_str(str_masked_input_ids),
+      sha256         = crypto.sha256_str(str_input_feed),
       input_feed     = str_input_feed,
       encoded_feed   = ','.join([str(x) for x in input_feed]),
       input_features = '\n'.join(["{}:{}".format(k, v) for k, v in input_features.items()]),
