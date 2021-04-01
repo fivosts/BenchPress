@@ -236,3 +236,11 @@ class validationSampleHook(object):
         entry.results = "\n".join(r)
       else:
         session.add(validation_database.ValResults(key = val_set, results = "\n".join(r)))
+    l.getLogger().info("LM Accuracy: {}, LM Loss: {}, NSP Accuracy: {}, NSP Loss: {}".format(
+        masked_lm_accuracy,
+        masked_lm_loss,
+        next_sentence_accuracy,
+        next_sentence_loss
+      )
+    )
+    return
