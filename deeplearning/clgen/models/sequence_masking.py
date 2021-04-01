@@ -92,10 +92,13 @@ def HoleSequence(seq: np.array,
   # Actual length represents the sequence length before pad begins
   if use_start_end:
     actual_length   = np.where(seq == tokenizer.endToken)[0][0]
+    last_elem       = actual_length
   elif tokenizer.padToken in seq:
     actual_length   = np.where(seq == tokenizer.padToken)[0][0]
+    last_elem       = actual_length - 1
   else:
     actual_length   = len(seq)
+    last_elem       = actual_length - 1
 
   # total tokens to add in holes.
   # No more than max_predictions_per_seq (or otherwise specified), no less than actual seq length x the probability of hiding a token
@@ -140,12 +143,18 @@ def HoleSequence(seq: np.array,
 
     # Sampled number from distribution to represent the actual hole length
     hole_length = distribution.sample()
+
+    # Increase hole length a little bit, if too many empty holes have pushed rightmost elements
+    # over the edge.
+    while last_elem + offset_idxs[last_elem] + 1 - hole_length >= len(seq):
+      hole_length += 1
+
     # Inside range, make sure hole length does not run over input_id_idx bounds
     # This may be redundant given the next for loop
     if extend_left:
       hole_length = min(hole_length, input_id_idx)
     else:
-      hole_length = min(hole_length, actual_length - input_id_idx)
+      hole_length = min(hole_length, (last_elem + offset_idxs[last_elem]) - input_id_idx)
     
     # Confirm there is no conflict with another hole, further down the sequence.
     for i in range(hole_length):
@@ -165,9 +174,19 @@ def HoleSequence(seq: np.array,
          ):
           hole_length = i
           break
+
+    if offset_idxs[last_elem] + 1 - hole_length >= len(seq):
+      # This hole can't help but explode the sequence. Go find a new position.
+      continue
+
+    if hole_length < 0:
+      raise ValueError("Hole length cannot be negative: {}, {}, {}".format(
+        hole_length, actual_length, input_id_idx
+        )
+      )
+
     pos_index  -= hole_length - 1 if hole_length != 0 and extend_left else 0
     input_id_idx = pos_index + offset_idxs[pos_index]
-    # TODO plz check that target changes correctly.
     
     # Target token for classifier is either the first token of the hole, or endholeToken if hole is empty
     target = input_ids[input_id_idx] if hole_length > 0 else tokenizer.endholeToken
@@ -292,10 +311,12 @@ def MaskSequence(seq: np.array,
   tokenizer = pickle.loads(pickled_tokenizer)
 
   # Actual length represents the sequence length before pad begins
-  if tokenizer.padToken in seq:
-    actual_length = np.where(seq == tokenizer.padToken)[0][0]
+  if use_start_end:
+    actual_length   = np.where(seq == tokenizer.endToken)[0][0]
+  elif tokenizer.padToken in seq:
+    actual_length   = np.where(seq == tokenizer.padToken)[0][0]
   else:
-    actual_length = len(seq)
+    actual_length   = len(seq)
 
   candidate_indexes = np.arange(actual_length)
   np.random.RandomState().shuffle(candidate_indexes)
