@@ -165,17 +165,19 @@ class validationSampleHook(object):
     input_mask            = inputs['input_mask'].cpu().numpy()
     masked_lm_lengths     = inputs['masked_lm_lengths'].cpu().numpy()
     next_sentence_labels  = inputs['next_sentence_labels'].cpu().numpy()
-    
-    masked_lm_ids = [[x for x in batch if x != -100] for batch in inputs['mask_labels'].cpu().numpy()]
-    masked_lm_positions = [[idx for idx, x in enumerate(batch) if x != -100] for batch in inputs['mask_labels'].cpu().numpy()]
+    mask_labels           = inputs['mask_labels'].cpu().numpy()
+    pred_logits           = outputs['prediction_logits'].cpu().numpy()
+    seq_rel_logits        = outputs['seq_relationship_logits'].cpu().numpy()
 
-    batch_size = len(outputs['prediction_logits'])
+    batch_size = len(pred_logits)
 
+    masked_lm_ids = [[x for x in batch if x != -100] for batch in mask_labels]
+    masked_lm_positions = [[idx for idx, _ in enumerate(batch)] for batch in masked_lm_ids]
     masked_lm_predictions = [
-          [np.argmax(outputs['prediction_logits'].cpu().numpy()[batch][x]) for x in masked_lm_positions[batch]]
+          [np.argmax(pred_logits[batch][x]) for x in masked_lm_positions[batch]]
           for batch in range(batch_size)
         ]
-    next_sentence_predictions = [[np.argmax(x) for x in batch][-1] for batch in outputs['seq_relationship_logits'].cpu().numpy()]
+    next_sentence_predictions = [[np.argmax(x) for x in batch][-1] for batch in seq_rel_logits]
 
     for target, prediction in zip(masked_lm_ids, masked_lm_predictions):
       if target == prediction:
