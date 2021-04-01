@@ -187,29 +187,28 @@ class validationSampleHook(object):
         self.nsp_accuracy[0] += 1
       self.nsp_accuracy[1] += 1
 
-    with self.val_db.Session() as session:
-      for b in range(batch_size):
-        f = validation_database.BERTValFile(
-          **validation_database.BERTValFile.FromArgs(
-            tokenizer = self.tokenizer,
-            id        = self.val_id,
-            train_step                = self.model_step,
-            seen_in_training          = seen_in_training[b],
-            original_input            = original_input[b],
-            input_ids                 = input_ids[b],
-            input_mask                = input_mask[b],
-            masked_lm_positions       = masked_lm_positions[b],
-            masked_lm_ids             = masked_lm_ids[b],
-            masked_lm_weights         = [],
-            masked_lm_lengths         = masked_lm_lengths[b],
-            next_sentence_labels      = next_sentence_labels[b],
-            masked_lm_predictions     = masked_lm_predictions[b],
-            next_sentence_predictions = next_sentence_predictions[b],
-          )
+    for b in range(batch_size):
+      f = validation_database.BERTValFile(
+        **validation_database.BERTValFile.FromArgs(
+          tokenizer = self.tokenizer,
+          id        = self.val_id,
+          train_step                = self.model_step,
+          seen_in_training          = seen_in_training[b],
+          original_input            = original_input[b],
+          input_ids                 = input_ids[b],
+          input_mask                = input_mask[b],
+          masked_lm_positions       = masked_lm_positions[b],
+          masked_lm_ids             = masked_lm_ids[b],
+          masked_lm_weights         = [],
+          masked_lm_lengths         = masked_lm_lengths[b],
+          next_sentence_labels      = next_sentence_labels[b],
+          masked_lm_predictions     = masked_lm_predictions[b],
+          next_sentence_predictions = next_sentence_predictions[b],
         )
-        if f.sha256 not in self.val_files:
-          self.val_files[f.sha256] = f
-          self.val_id += 1
+      )
+      if f.sha256 not in self.val_files:
+        self.val_files[f.sha256] = f
+        self.val_id += 1
         # try:
         #   exists = session.query(validation_database.BERTValFile.sha256).filter_by(sha256 = val_trace.sha256).scalar() is not None
         # except sqlalchemy.orm.exc.MultipleResultsFound as e:
