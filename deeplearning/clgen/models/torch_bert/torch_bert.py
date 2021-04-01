@@ -505,7 +505,8 @@ class torchBert(backends.BackendBase):
       except KeyboardInterrupt:
         pass
 
-      val_hook.final(set_name, avg_mask_loss, avg_nsp_loss)
+      if avg_mask_loss and avg_nsp_loss:
+        val_hook.final(set_name, sum(avg_mask_loss) / len(avg_mask_loss), sum(avg_nsp_loss) / len(avg_nsp_loss))
       if self.pytorch.torch_tpu_available:
         # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
         self.pytorch.torch_xla_model.master_print(self.pytorch.torch_xla_met.metrics_report())
