@@ -488,19 +488,22 @@ class torchBert(backends.BackendBase):
       )
       eval_iterator = iter(loader)
 
-      for step in tqdm.auto.trange(FLAGS.max_eval_steps, desc = "Validation", leave = False):
-        try:
-          inputs = next(eval_iterator)
-        except StopIteration:
-          eval_iterator = iter(loader)
-          inputs = next(eval_iterator)
+      try:
+        for step in tqdm.auto.trange(FLAGS.max_eval_steps, desc = "Validation", leave = False):
+          try:
+            inputs = next(eval_iterator)
+          except StopIteration:
+            eval_iterator = iter(loader)
+            inputs = next(eval_iterator)
 
-        with self.torch.no_grad():
-          step_out = self.model_step(self.train.model, inputs, is_validation = True)
+          with self.torch.no_grad():
+            step_out = self.model_step(self.train.model, inputs, is_validation = True)
 
-        val_hook.step(inputs, step_out)
-        avg_mask_loss.append(step_out['masked_lm_loss'].mean().item())
-        avg_nsp_loss.append(step_out['next_sentence_loss'].mean().item())
+          val_hook.step(inputs, step_out)
+          avg_mask_loss.append(step_out['masked_lm_loss'].mean().item())
+          avg_nsp_loss.append(step_out['next_sentence_loss'].mean().item())
+      except KeyboardInterrupt:
+        pass
 
       val_hook.final(set_name, avg_mask_loss, avg_nsp_loss)
       if self.pytorch.torch_tpu_available:

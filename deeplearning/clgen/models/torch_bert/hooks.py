@@ -221,6 +221,9 @@ class validationSampleHook(object):
             masked_lm_loss: float,
             next_sentence_loss: float,
            ) -> None:
+    if self.mask_accuracy[1] == 0 or self.nsp_accuracy[1] == 0:
+      return
+
     masked_lm_accuracy = self.mask_accuracy[0] / self.mask_accuracy[1]
     next_sentence_accuracy = self.nsp_accuracy[0] / self.nsp_accuracy[1]
     r = [
