@@ -310,6 +310,7 @@ def MaskSequence(seq: np.array,
   # Unpack tokenizer
   tokenizer = pickle.loads(pickled_tokenizer)
 
+  use_start_end = True if seq[0] == tokenizer.startToken else False
   # Actual length represents the sequence length before pad begins
   if use_start_end:
     actual_length   = np.where(seq == tokenizer.endToken)[0][0]
