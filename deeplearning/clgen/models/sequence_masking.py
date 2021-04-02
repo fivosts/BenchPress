@@ -374,7 +374,7 @@ def MaskSequence(seq: np.array,
     for p in masked_lms:
       if p.pos_index < len(seq):
         mask_labels[p.pos_index] = p.token_id
-        masked_lm_lengths[ind]   = p.hole_length
+        masked_lm_lengths[ind]   = 1
         ind += 1
 
     return ({
