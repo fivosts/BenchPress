@@ -559,7 +559,7 @@ class MaskLMDataGenerator(object):
       )
     elif config.HasField("mask"):
       maskedSeq    = lambda c: pool.imap_unordered(
-        functools.partial(self.mask_func._maskSequence,
+        functools.partial(self.mask_func,
                           train_set          = train_set,
                           max_predictions    = max_predictions,
                           config             = config,
