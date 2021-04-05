@@ -758,6 +758,7 @@ class torchBert(backends.BackendBase):
   def GetShortSummary(self) -> str:
 
     return (
+      "\n"
       f"{model_pb2.NetworkArchitecture.Backend.Name(self.config.architecture.backend)} "
       "network: "
       "\n"
