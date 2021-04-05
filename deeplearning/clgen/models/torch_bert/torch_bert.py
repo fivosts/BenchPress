@@ -756,17 +756,22 @@ class torchBert(backends.BackendBase):
       return dummy_local_rank == -1 or self.torch.distributed.get_rank() == 0
 
   def GetShortSummary(self) -> str:
+
     return (
-      f"h_s: {self.config.architecture.hidden_size}, "
-      f"#h_l: {self.config.architecture.num_hidden_layers}, "
-      f"#att_h: {self.config.architecture.num_attention_heads}, "
-      f"imd_s: {self.config.architecture.intermediate_size}, "
-      f"h_act: {self.config.architecture.hidden_act}, "
       f"{model_pb2.NetworkArchitecture.Backend.Name(self.config.architecture.backend)} "
-      "network"
+      "network: "
       "\n"
-      # self.data_generator.GetShortSummary() # TODO
-    )
+      f"  hidden_size: {self.config.architecture.hidden_size}"
+      "\n"
+      f"  #hidden_layers: {self.config.architecture.num_hidden_layers}"
+      "\n"
+      f"  #attention_heads: {self.config.architecture.num_attention_heads}"
+      "\n"
+      f"  intermediate_size: {self.config.architecture.intermediate_size}"
+      "\n"
+      f"  hidden_act: {self.config.architecture.hidden_act}"
+      "\n"
+    ) + (self.train.data_generator.GetShortSummary() if self.train else "")
 
   def InferenceManifest(self) -> typing.List[pathlib.Path]:
     """Return the list of files which are required for model inference.

@@ -765,3 +765,19 @@ class MaskLMDataGenerator(object):
       return start + inp + end
     elif isinstance(inp, np.ndarray):
       raise NotImplementedError
+
+  def GetShortSummary(self) -> str:
+    return (
+      "Data Generator: "
+      "\n"
+      f"  dupe_factor: {self.training_opts.dupe_factor}"
+      "\n"
+      f"  sequence_length: {self.training_opts.sequence_length}"
+      "\n"
+      f"  batch_size: {self.training_opts.batch_size}"
+      "\n"
+      "LM config:"
+      "\n"
+      f"  {self.config.hole if True else self.config.mask}"
+      "\n"
+    )
