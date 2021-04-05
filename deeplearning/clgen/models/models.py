@@ -419,7 +419,7 @@ class Model(object):
     """
     start_time = datetime.datetime.utcnow()
     self.backend.InitSampleBatch(sampler)
-    org_inputs, inputs, samples, indices = self.backend.SampleNextIndices(sampler)
+    org_inputs, input_ids, samples, indices = self.backend.SampleNextIndices(sampler)
 
     if not indices:
       # Return empty means model has not produced something that can be stored.
@@ -427,7 +427,7 @@ class Model(object):
       return True
 
     continue_sampling = True
-    for org, inp, sample, idxs in zip(org_inputs, inputs, samples, indices):
+    for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
 
       src = self.tokenizer.ArrayToCode(sample, with_formatting = True)
       features = extractor.DictKernelFeatures(src)

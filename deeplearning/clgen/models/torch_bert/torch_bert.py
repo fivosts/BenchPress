@@ -421,9 +421,9 @@ class torchBert(backends.BackendBase):
             for _ in range(FLAGS.sample_per_epoch):
               start_time   = datetime.datetime.utcnow()
               self.InitSampleBatch(sampler)
-              org_inp, inp_ids, sample_batch, sample_indices = self.SampleNextIndices()
+              org_inputs, input_ids, samples, indices = self.SampleNextIndices()
               end_time = datetime.datetime.utcnow()
-              for sample, sind in zip(sample_batch, sample_indices):
+              for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
                 try:
                   stdout = opencl.Compile(self.tokenizer.ArrayToCode(sample))
                   compile_flag = 1
@@ -434,11 +434,11 @@ class torchBert(backends.BackendBase):
                 sample_proto = model_pb2.Sample(
                   train_step             = self.current_step,
                   sample_feed            = sampler.start_text,
-                  original_input         = self.tokenizer.tokensToString(org_inp, with_formatting = True, ignore_token = self.tokenizer.padToken),
+                  original_input         = self.tokenizer.tokensToString(org,    with_formatting = True, ignore_token = self.tokenizer.padToken),
                   text                   = self.tokenizer.tokensToString(sample, with_formatting = True, ignore_token = self.tokenizer.padToken).replace("\\n", "\n"),
                   encoded_text           = ",".join([str(t) for t in sample]),
-                  sample_indices         = '\n'.join([self.tokenizer.tokensToString(mind).replace('\n', '\\n') for mind in sind]),
-                  encoded_sample_indices = '\n'.join([','.join([str(x) for x in mind]) for mind in sind ]),
+                  sample_indices         = '\n'.join([','.join([self.tokenizer.decoder[idx] for idx in hole_idxs]).replace('\n', '\\n') for hole_idxs in idxs]),
+                  encoded_sample_indices = '\n'.join([','.join([str(idx) for idx in hole_idxs]) for hole_idxs in idxs]),
                   sample_time_ms         = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
                   feature_vector         = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
                   num_tokens             = len(sample),
