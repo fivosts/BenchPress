@@ -37,6 +37,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <stdlib.h>
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -63,11 +64,11 @@
 #endif
 
 // debugging print out
-#ifdef DEBUG
-#define DEBUG_OUT(x) llvm::errs() << x;
-#else
-#define DEBUG_OUT(x)
-#endif
+// #ifdef DEBUG
+// #define DEBUG_OUT(x) llvm::errs() << x;
+// #else
+// #define DEBUG_OUT(x)
+// #endif
 
 #ifndef REWRITE_STYLE
 #warning "use -DREWRITE_STYLE to define a rewrite style"
@@ -168,6 +169,63 @@ std::string get_next_name(rewrite_table_t& rewrites, const std::string& name,
   return s;
 }
 
+std::string get_next_random_name(rewrite_table_t &rewrites,
+                                 const std::string &name,
+                                 const char &base_char,
+                                 const std::string &prefix = ""
+                                 )
+{
+  // Sample var name randomly from pool of names, as long as it is not reserved.
+  auto i = rewrites.size();
+  std::string s = prefix;
+  bool vocab[26] = { 0 };
+  int level = prefix.size();
+
+  for (auto const &it : rewrites)
+  {
+    if (it.second.size() - 1 == level && it.second.substr(0, it.second.size() - 1) == prefix)
+    {
+      vocab[it.second[level] - base_char] = 1;
+    }
+  }
+
+  std::vector<int> avail_vocab;
+  for (unsigned i = 0; i < 26; i++)
+  {
+    if (vocab[i] == 0)
+    {
+      avail_vocab.push_back(base_char + i);
+    }
+  }
+
+  if (avail_vocab.size() > 0)
+  {
+    s = avail_vocab[rand() % avail_vocab.size()];
+    s = prefix + s;
+    rewrites[name] = s;
+    return s;
+  }
+  else
+  {
+    std::string new_p = prefix;
+
+    unsigned rem = 1;
+    for (int i = new_p.size() - 1; i > -1; i--)
+    {
+      int incr = new_p[i] + 1 - base_char;
+      new_p[i] = base_char + (incr) % 26;
+      if (incr > 25)
+        rem = 1;
+      else
+        rem = 0;
+        break;
+    }
+    if (rem == 1)
+      new_p = 'a' + new_p;
+    return get_next_random_name(rewrites, name, base_char, new_p);
+  }
+}
+
 class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
  private:
   std::unique_ptr<clang::ASTContext> _context;  // additional AST info
@@ -184,7 +242,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
   std::string get_fn_rewrite(const std::string& name) {
     if (_fns.find(name) == _fns.end()) {
       // New function:
-      auto replacement = get_next_name(_fns, name, fn_base_char, fn_prefix);
+      auto replacement = get_next_random_name(_fns, name, fn_base_char, fn_prefix);
       return replacement;
     } else {
       // Previously declared function:
@@ -199,7 +257,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
                               const std::string& prefix = "") {
     if (rewrites.find(name) == rewrites.end()) {
       // New variable:
-      auto replacement = get_next_name(rewrites, name, var_base_char, prefix);
+      auto replacement = get_next_random_name(rewrites, name, var_base_char, prefix);
       return replacement;
     } else {
       // Previously declared variable:
@@ -269,7 +327,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
       const auto name = func->getNameInfo().getName().getAsString();
       const auto replacement = get_fn_rewrite(name);
       rewrite_fn_name(func, replacement);
-      DEBUG_OUT("FunctionDecl " << name << " -> " << replacement << '\n');
+      // DEBUG_OUT("FunctionDecl " << name << " -> " << replacement << '\n');
     }
 
     return true;
@@ -321,7 +379,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
 
         // rewrite variable name
         rewrite_var_name(decl, replacement);
-        DEBUG_OUT("VarDecl " << name << " -> " << replacement << '\n');
+        // DEBUG_OUT("VarDecl " << name << " -> " << replacement << '\n');
       } else if (auto fn = clang::dyn_cast<clang::FunctionDecl>(parent)) {
         // if it's in function scope, get the rewrite table
         auto& rewrite_table = get_fn_var_rewrite_table(fn);
@@ -332,7 +390,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
 
         // rewrite variable name
         rewrite_var_name(decl, replacement);
-        DEBUG_OUT("VarDecl " << name << " -> " << replacement << '\n');
+        // DEBUG_OUT("VarDecl " << name << " -> " << replacement << '\n');
       } else {
         // this shouldn't happen
         llvm::errs() << "warning: cannot determine scope of variable '" << name
@@ -359,7 +417,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
         if (it != _global_vars.end()) {
           const auto replacement = (*it).second;
           rewrite_var_name(ref, replacement);
-          DEBUG_OUT("DeclRefExpr " << name << " -> " << replacement << '\n');
+          // DEBUG_OUT("DeclRefExpr " << name << " -> " << replacement << '\n');
         }
       } else if (auto fn = clang::dyn_cast<clang::FunctionDecl>(parent)) {
         // get rewrite name
@@ -370,7 +428,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
         if (it != lookup_table.end()) {
           const auto replacement = (*it).second;
           rewrite_var_name(ref, replacement);
-          DEBUG_OUT("DeclRefExpr " << name << " -> " << replacement << '\n');
+          // DEBUG_OUT("DeclRefExpr " << name << " -> " << replacement << '\n');
         }
       } else {
         llvm::errs() << "warning: cannot determine scope of variable '" << name
