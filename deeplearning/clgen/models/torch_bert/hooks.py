@@ -172,7 +172,7 @@ class validationSampleHook(object):
     batch_size = len(pred_logits)
 
     masked_lm_ids = [[x for x in batch if x != -100] for batch in mask_labels]
-    masked_lm_positions = [[idx for idx, _ in enumerate(batch) if x != -100] for batch in mask_labels]
+    masked_lm_positions = [[idx for idx, x in enumerate(batch) if x != -100] for batch in mask_labels]
     masked_lm_predictions = [
           [np.argmax(pred_logits[batch][x]) for x in masked_lm_positions[batch]]
           for batch in range(batch_size)
