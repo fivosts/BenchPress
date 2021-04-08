@@ -159,11 +159,11 @@ class validationSampleHook(object):
       Requested tensors are evaluated and their values are available
     """
 
-    seen_in_training      = inputs['seen_in_training'].cpu().numpy()
-    original_input        = inputs['original_input'].cpu().numpy()
+    seen_in_training      = inputs['seen_in_training'].numpy()
+    original_input        = inputs['original_input'].numpy()
+    masked_lm_lengths     = inputs['masked_lm_lengths'].numpy()
     input_ids             = inputs['input_ids'].cpu().numpy()
     input_mask            = inputs['input_mask'].cpu().numpy()
-    masked_lm_lengths     = inputs['masked_lm_lengths'].cpu().numpy()
     next_sentence_labels  = inputs['next_sentence_labels'].cpu().numpy()
     mask_labels           = inputs['mask_labels'].cpu().numpy()
     pred_logits           = outputs['prediction_logits'].cpu().numpy()
@@ -172,7 +172,7 @@ class validationSampleHook(object):
     batch_size = len(pred_logits)
 
     masked_lm_ids = [[x for x in batch if x != -100] for batch in mask_labels]
-    masked_lm_positions = [[idx for idx, _ in enumerate(batch)] for batch in masked_lm_ids]
+    masked_lm_positions = [[idx for idx, _ in enumerate(batch) if x != -100] for batch in mask_labels]
     masked_lm_predictions = [
           [np.argmax(pred_logits[batch][x]) for x in masked_lm_positions[batch]]
           for batch in range(batch_size)
