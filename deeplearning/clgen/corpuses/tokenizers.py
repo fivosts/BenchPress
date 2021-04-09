@@ -685,7 +685,7 @@ class ASTokenizer(TokenizerBase):
     """
     try:
       if np.ndim(encoded) > 1:
-        return [ self.tokensToString(x, ignore_token) for x in encoded ]
+        return [ self.tokensToString(x, ignore_token, with_formatting) for x in encoded ]
       elif np.ndim(encoded) == 1:
         if not with_formatting:
           src = []
