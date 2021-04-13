@@ -337,7 +337,7 @@ class torchBert(backends.BackendBase):
         for epoch in tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False):
           if epoch < self.current_step // self.steps_per_epoch:
             continue # Stupid bar won't resume.
-          
+
           for step in tqdm.auto.trange(self.steps_per_epoch, desc="Batch", leave = False):
             start = datetime.datetime.utcnow()
             try:
