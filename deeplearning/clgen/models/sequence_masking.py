@@ -110,7 +110,7 @@ def ExhaustiveHoleSequence(all_seq: np.array,
         for hole_len in range(0, end - idx):
           if end + 1 - hole_len >= len(seq):
             continue 
-          input_ids = st_input_ids[:start_idx] + [tokenizer.holeToken] + st_input_ids[start_idx + hole_len:]
+          input_ids = st_input_ids[:idx] + [tokenizer.holeToken] + st_input_ids[idx + hole_len:]
           input_ids += [tokenizer.padToken] * (len(seq) - len(input_ids))
 
           mask_labels = np.full(len(seq), -100, dtype = np.int64)
@@ -121,6 +121,7 @@ def ExhaustiveHoleSequence(all_seq: np.array,
             pos_index   = idx,      token_id    = target,
             hole_length = hole_len, extend_left = False
           )
+          assert len(input_ids) == 512, "len: {} - hole len: {} - idx: {} \n \n {}".format(len(input_ids), hole_len, idx, seq)
           yield ({
             'seen_in_training'    : np.int64([1] if train_set else [0]),
             'original_input'      : seq,
