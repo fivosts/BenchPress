@@ -112,6 +112,7 @@ def ExhaustiveHoleSequence(all_seq: np.array,
             continue 
           input_ids = st_input_ids[:idx] + [tokenizer.holeToken] + st_input_ids[idx + hole_len:]
           input_ids += [tokenizer.padToken] * (len(seq) - len(input_ids))
+          input_ids = input_ids[:len(seq)]
 
           mask_labels = np.full(len(seq), -100, dtype = np.int64)
           target = seq[idx] if hole_len else tokenizer.endholeToken
@@ -121,7 +122,7 @@ def ExhaustiveHoleSequence(all_seq: np.array,
             pos_index   = idx,      token_id    = target,
             hole_length = hole_len, extend_left = False
           )
-          assert len(input_ids) == 512, "len: {} - hole len: {} - idx: {} \n \n {}".format(len(input_ids), hole_len, idx, seq)
+          assert len(input_ids) == 512, "len: {} - hole len: {} - idx: {} - seq_len: {}\n \n {}".format(len(input_ids), hole_len, idx, len(seq), tokenizer.tokensToString(seq, with_formatting = True))
           yield ({
             'seen_in_training'    : np.int64([1] if train_set else [0]),
             'original_input'      : seq,
