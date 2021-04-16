@@ -645,7 +645,7 @@ class MaskLMDataGenerator(object):
             max_predictions, self.steps_per_epoch, self.num_epochs
             )
         # print(kernel_idx)
-        if kernel_idx > 500000:
+        if kernel_idx > 300000:
           # write masked_corpus before flushing the list
           self.dataset[set_name]['file'].append(
             path / "{}_{}.{}".format(set_name, iteration, self.file_extension)

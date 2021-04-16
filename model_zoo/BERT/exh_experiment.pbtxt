@@ -27,7 +27,7 @@ model {
   }
   architecture {
     backend: TORCH_BERT
-    hidden_size: 512
+    hidden_size: 516
     num_hidden_layers: 2
     num_attention_heads: 12
     intermediate_size: 512

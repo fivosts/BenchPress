@@ -11,6 +11,7 @@ import glob
 import humanize
 import numpy as np
 import pathlib
+import gc
 
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
@@ -212,12 +213,17 @@ class LazyConcatDataset(torch.utils.data.Dataset):
 
   @staticmethod
   def cumsum(sequence: typing.List[pathlib.Path]):
+    l.getLogger().warn("In cumsum")
     r, s = [], 0
     for e in sequence:
+      print(e)
       lt = len(torch.load(e))
       assert lt > 0, "Dataset {} is empty".format(e)
       r.append(lt + s)
       s += lt
+    l.getLogger().warn("End cumsum")
+    gc.collect()
+    torch.cuda.empty_cache()
     return r
 
   def __init__(self, datasets: typing.List[pathlib.Path]):
@@ -243,7 +249,12 @@ class LazyConcatDataset(torch.utils.data.Dataset):
     
     if self.curr_dset_idx != dataset_idx:
       self.curr_dset_idx = dataset_idx
+      l.getLogger().error("Dset empty")
+      del self.dataset
+      gc.collect()
+      torch.cuda.empty_cache()
       self.dataset = torch.load(self.datasets[dataset_idx])
+      l.getLogger().error("Loaded")
 
     if dataset_idx == 0:
       sample_idx = idx
