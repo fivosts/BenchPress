@@ -158,7 +158,6 @@ class MaskLMDataGenerator(object):
     self.sample_batch_size       = None
     self.max_position_embeddings = None
     self.num_epochs              = None
-    self.steps_per_epoch         = None
 
     self.sampler                 = None
     self.rngen                   = None
@@ -391,7 +390,6 @@ class MaskLMDataGenerator(object):
       with open(path / "corpus.pkl", 'rb') as infile:
         shaped_corpus = pickle.load(infile)
         self.num_epochs      = self.training_opts.num_train_steps // self.config.steps_per_epoch
-        self.steps_per_epoch = self.config.steps_per_epoch
         l.getLogger().info(
           "Loaded from file corpus of {} examples in {} ms.".format(
                     humanize.intcomma(len(shaped_corpus)),
@@ -437,7 +435,6 @@ class MaskLMDataGenerator(object):
 
       # Set corpus epoch parameters
       self.num_epochs      = self.training_opts.num_train_steps // self.config.steps_per_epoch
-      self.steps_per_epoch = self.config.steps_per_epoch
 
       assert shaped_corpus.ndim     == 2, "corpus dim: {}".format(shaped_corpus.shape)
       assert shaped_corpus.shape[1] == sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(encoded_corpus.shape[1], sequence_length)
