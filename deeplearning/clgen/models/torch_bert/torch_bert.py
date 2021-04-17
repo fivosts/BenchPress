@@ -735,7 +735,7 @@ class torchBert(backends.BackendBase):
           if k[:7] == 'module.':
             name = k[7:] # remove `module.`
           else:
-            name = 'module.' + name # Add 'module.'
+            name = 'module.' + k # Add 'module.'
           new_state_dict[name] = v
         estimator.model.load_state_dict(new_state_dict)
 
