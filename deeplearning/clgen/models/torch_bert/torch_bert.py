@@ -725,12 +725,18 @@ class torchBert(backends.BackendBase):
         Pytorch doesn't love loading a DataParallel checkpoint
         to a simple model. So, the following hack is needed
         to remove the 'module.' prefix from state keys.
+
+        OR it might as well need the opposite. Transitioning from
+        single to multiple GPUs will mean that 'module.' prefix is missing
         """
         from collections import OrderedDict
         new_state_dict = OrderedDict()
         for k, v in self.torch.load(ckpt_comp("model")).items():
+          if k[:7] == 'module.':
             name = k[7:] # remove `module.`
-            new_state_dict[name] = v
+          else:
+            name = 'module.' + name # Add 'module.'
+          new_state_dict[name] = v
         estimator.model.load_state_dict(new_state_dict)
 
     if estimator.optimizer is not None and estimator.scheduler is not None:
