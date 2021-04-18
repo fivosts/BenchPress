@@ -146,7 +146,6 @@ class MaskLMDataGenerator(object):
     self.file_extension = file_extension
     self.mask_func      = sequence_masking.MaskSequence
     self.hole_func      = sequence_masking.HoleSequence
-    self.exh_hole_func  = sequence_masking.ExhaustiveHoleSequence
 
     self.dataset                 = None
     self.corpus                  = None
@@ -547,45 +546,23 @@ class MaskLMDataGenerator(object):
         humanize.naturalsize(single_item_bytes), self.training_opts.dupe_factor, iterations, max_dupe, remaining
       )
     )
-    pool = multiprocessing.Pool(1)
+    pool = multiprocessing.Pool()
     distribution = None
-
-    # masked_seq = lambda c: pool.imap_unordered(
-    #   functools.partial(self.exh_hole_func,
-    #                     train_set = train_set,
-    #                     pickled_tokenizer = pickle.dumps(self.tokenizer)
-    #   ),
-    #   c
-    # )
-
-    # visited = set()
-    # c = 0
-    # with progressbar.ProgressBar(max_value = len(corpus)) as bar:
-    #   for instances in bar(masked_seq(corpus)):
-    #     for kernel, masked_idxs in instances:
-    #       c += 1
-    # print(c)
-    # exit()
     # Specify the desired masking routine
     if config.HasField("hole"):
       distribution = distributions.Distribution.FromHoleConfig(
         config.hole, path, "hole_length_{}".format(set_name)
       )
-      # maskedSeq    = lambda c: pool.imap_unordered(
-      #   functools.partial(self.hole_func,
-      #                     train_set            = train_set,
-      #                     max_predictions      = max_predictions,
-      #                     pickled_distribution = pickle.dumps(distribution),
-      #                     pickled_tokenizer    = pickle.dumps(self.tokenizer),
-      #                     training_opts        = self.training_opts,
-      #                     is_torch             = self.is_torch,
-      #                     ),
-      #   c
-      # )
-      maskedSeq = lambda c: self.exh_hole_func(
-        c,
-        train_set = train_set,
-        pickled_tokenizer = pickle.dumps(self.tokenizer),
+      maskedSeq    = lambda c: pool.imap_unordered(
+        functools.partial(self.hole_func,
+                          train_set            = train_set,
+                          max_predictions      = max_predictions,
+                          pickled_distribution = pickle.dumps(distribution),
+                          pickled_tokenizer    = pickle.dumps(self.tokenizer),
+                          training_opts        = self.training_opts,
+                          is_torch             = self.is_torch,
+                          ),
+        c
       )
     elif config.HasField("mask"):
       maskedSeq    = lambda c: pool.imap_unordered(
@@ -622,28 +599,74 @@ class MaskLMDataGenerator(object):
 
     ## Core loop of masking.
     masked_corpus = []
-    # with progressbar.ProgressBar(max_value = len(corpus)) as bar:
-    kernel_idx = 0
-    iteration = 0
-    visited = set()
-    try:
-      for kernel, masked_idxs in maskedSeq(corpus):
-        hashed = ''.join([str(x) for x in kernel['input_ids']]) + '|' + str(masked_idxs[0].token_id)
-        if hashed in visited:
-          continue
-        else:
-          visited.add(hashed)
+    with progressbar.ProgressBar(max_value = len(corpus) * self.training_opts.dupe_factor) as bar:
+      kernel_idx = 0
+      try:
+        for iteration in range(iterations + 1):
+          masked_corpus = []
+          # Select between normal iterations or dupe factor residual and shuffle
+          if iteration != iterations:
+            multiproc_corpus = maskedSeq(extended_corpus)
+            if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
+              self.rngen.shuffle(extended_corpus)
+          elif remaining != 0:
+            multiproc_corpus = maskedSeq(remaining_corpus)
+            if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
+              self.rngen.shuffle(remaining_corpus)
+          else:
+            continue
 
-        masked_corpus.append(kernel)
-        # bar.update(kernel_idx)
-        kernel_idx += 1
-        if kernel_idx == 1:
-          self.LogBatchTelemetry(
-            self.training_opts.batch_size, self.training_opts.sequence_length,
-            max_predictions, self.steps_per_epoch, self.num_epochs
+          # Do parallel masking over corpus
+          for kernel, masked_idxs in multiproc_corpus:
+            if distribution:
+              distribution.register([mid.hole_length for mid in masked_idxs])
+
+            try:
+              if self.is_torch:
+                actual_length = np.where(kernel['original_input'] == self.tokenizer.padToken)[0][0]
+              else:
+                actual_length = np.where(kernel.original_input == self.tokenizer.padToken)[0][0]
+            except IndexError:
+              actual_length = len(kernel['original_input'])
+
+            actual_length_monitor.register(actual_length)
+            token_monitor.register([
+              self.tokenizer.decoder[int(x)]
+              for x in kernel['input_ids'] if x != self.tokenizer.padToken]
             )
-        # print(kernel_idx)
-        if kernel_idx > 300000:
+            for hole in masked_idxs:
+              hole_idx = hole.pos_index
+              selected_idx = hole.pos_index
+              if hole.extend_left:
+                selected_idx += hole.hole_length - 1 if hole.hole_length != 0 else 0
+              abs_start_idx_monitor.register(selected_idx)
+              start_idx_monitor.register(int(2 * round(100.0 * (selected_idx / actual_length) / 2.0)))
+              abs_idx_monitor.register([hole_idx + i for i in range(hole.hole_length)])
+              idx_monitor.register([int(2 * round(100.0 * ((hole_idx + i) / actual_length) / 2.0)) for i in range(hole.hole_length)])
+              direction_monitor.register(1 if hole.extend_left else 0)
+
+            masked_corpus.append(kernel)
+            bar.update(kernel_idx)
+            kernel_idx += 1
+            if kernel_idx == 1:
+              self.LogBatchTelemetry(
+                self.training_opts.batch_size, self.training_opts.sequence_length,
+                max_predictions, self.steps_per_epoch, self.num_epochs
+                )
+
+          if FLAGS.store_datasets_to_DB:
+            with lm_db.Session(commit = True) as s:
+              count = lm_db.count
+              for idx, kernel in enumerate(masked_corpus):
+                s.add(
+                  lm_database.LMInstance(**lm_database.LMInstance.FromArgs(
+                    id = count + idx,
+                    original_input = self.tokenizer.tokensToString(kernel['original_input'], ignore_token = self.tokenizer.padToken),
+                    input_ids = self.tokenizer.tokensToString(kernel['input_ids'],           ignore_token = self.tokenizer.padToken),
+                    masked_lm_lengths = kernel['masked_lm_lengths'],
+                    masked_lm_predictions = [self.tokenizer.tokensToString([x]) for x in kernel['mask_labels'] if x != -100],
+                  ))
+                )
           # write masked_corpus before flushing the list
           self.dataset[set_name]['file'].append(
             path / "{}_{}.{}".format(set_name, iteration, self.file_extension)
@@ -656,29 +679,13 @@ class MaskLMDataGenerator(object):
               'file'  : path / "{}_{}.{}".format(set_name, iteration, self.file_extension),
               'txt'   : path / "{}_{}.txt".format(set_name, iteration)
             })
-          iteration += 1
-          kernel_idx = 0
-          del masked_corpus
-          masked_corpus = []
-      # write masked_corpus before flushing the list
-      self.dataset[set_name]['file'].append(
-        path / "{}_{}.{}".format(set_name, iteration, self.file_extension)
-        )
-      self.dataset[set_name]['txt'].append(
-        path / "{}_{}.txt".format(set_name, iteration)
-        )
-      self._saveCorpusRecord({
-          'corpus': masked_corpus,
-          'file'  : path / "{}_{}.{}".format(set_name, iteration, self.file_extension),
-          'txt'   : path / "{}_{}.txt".format(set_name, iteration)
-        })
-      pool.close()
-    except KeyboardInterrupt as e:
-      pool.terminate()
-      raise e
-    except Exception as e:
-      pool.terminate()
-      raise e
+        pool.close()
+      except KeyboardInterrupt as e:
+        pool.terminate()
+        raise e
+      except Exception as e:
+        pool.terminate()
+        raise e
 
     if distribution:
       distribution.plot()
