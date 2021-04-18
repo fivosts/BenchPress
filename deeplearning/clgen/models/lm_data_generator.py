@@ -60,6 +60,12 @@ def AssertConfigIsValid(config: model_pb2.DataGenerator,
     lambda x: x == "kernel" or x == "statement",
     "Valid options for datapoint_type are 'kernel' and 'statement'",
   )
+  pbutil.AssertFieldConstraint(
+    config,
+    "datapoint_time",
+    lambda x: x == "online" or x == "pre",
+    "Valid options for datapoint_time are 'online' and 'pre'",
+  )
   pbutil.AssertFieldIsSet(
     config,
     "use_start_end",
@@ -180,7 +186,10 @@ class MaskLMDataGenerator(object):
     self.rngen         = np.random # random.Random(training_opts.random_seed)
 
     shaped_corpus = self.createCorpus(self.cache.path)
-    self.configDataset(shaped_corpus)
+    if self.config.datapoint_time == "pre":
+      # 'pre' pre-processes/masks training/validation/sampling corpus for the model to use.
+      # 'online' stores the raw data and masks them on the fly.
+      self.configDataset(shaped_corpus)
     return self
 
   def SampleMaskLMBatchGenerator(self,
