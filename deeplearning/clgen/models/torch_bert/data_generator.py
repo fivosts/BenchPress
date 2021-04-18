@@ -76,6 +76,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
     eval_dataloaders sets set_name to reuse the function for all different sets.
     """
+    """
+    TODO here, select correct dataset and sampler based on 'online' or 'pre'
+    """
     dataset = LazyConcatDataset(
                 [x for x in self.dataset[set_name]['file']]
               )
@@ -98,6 +101,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
   def eval_dataloaders(self):
     """Pytorch dataloader used for validation."""
+    """
+    TODO fix that for online generator. self.dataset is empty in this case.
+    """
     for set_name in self.dataset:
       yield set_name, self.train_dataloader(set_name)
 
@@ -141,6 +147,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       dataset = [{k: torch.from_numpy(v) for (k, v) in sample_element.items()}]
       sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
     else:
+      """
+      TODO fix that for online sampler. configSampleSets shouldn't be called.
+      Instead, online get stuff and feed them.
+      """
       path_list = self.configSampleSets()
       dataset = LazyConcatDataset(
                   [x for x in path_list]
@@ -200,6 +210,40 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                  .format(len(masked_corpus['corpus']), self.steps_per_epoch, self.training_opts.batch_size, masked_corpus['file']))
     return
 
+class OnlineDataset(torch.utils.data.Dataset):
+  r"""Online pre-processing dataset of raw corpus.
+
+  This dataset holds path to raw corpus and yields
+  pre-processed instances on the fly.
+
+  Arguments:
+    dataset (path): Path for raw dataset
+    func (callable): Function called to pre-process sequence.
+  """
+  @property
+  def load_data(self, dataset: pathlib.Path) -> typing.List[np.array]:
+    if dataset.exists():
+      with open(dataset, 'rb') as infile:
+        return pickle.load(infile)
+
+  def __init__(self, dataset: pathlib.Path, func: callable):
+    super(OnlineDataset, self).__init__()
+    self.dataset = self.load_data(dataset)
+    self.size    = len(self.dataset)
+    self.func    = func
+    return
+
+  def __len__(self):
+    return self.size
+
+  def __getitem__(self, idx):
+
+    if idx < 0:
+      if -idx > len(self):
+        raise ValueError("absolute value of index should not exceed dataset length")
+      idx = len(self) + idx
+    return self.func(self.dataset[idx])
+
 class LazyConcatDataset(torch.utils.data.Dataset):
   r"""Dataset as a concatenation of multiple datasets.
 
@@ -225,6 +269,10 @@ class LazyConcatDataset(torch.utils.data.Dataset):
     gc.collect()
     torch.cuda.empty_cache()
     return r
+
+  @property
+  def num_datasets(self):
+    return len(self.datasets)
 
   def __init__(self, datasets: typing.List[pathlib.Path]):
     super(LazyConcatDataset, self).__init__()
@@ -261,10 +309,6 @@ class LazyConcatDataset(torch.utils.data.Dataset):
     else:
       sample_idx = idx - self.cumulative_sizes[dataset_idx - 1]
     return self.dataset[sample_idx]
-
-  @property
-  def num_datasets(self):
-    return len(self.datasets)
 
 class LazyRandomSampler(torch.utils.data.Sampler):
   r"""Samples elements randomly. If without replacement, then sample from a shuffled dataset.
