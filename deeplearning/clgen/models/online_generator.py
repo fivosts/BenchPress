@@ -39,8 +39,8 @@ class OnlineSamplingGenerator(object):
     self.data_generator = generator
 
     # Wrapped data generator attributes
-    self.sampler       = self.data_generator.sampler
-    self.tokenizer      = self.data_generator.tokenizer
+    self.sampler   = self.data_generator.sampler
+    self.tokenizer = self.data_generator.tokenizer
 
     # Inherent attributes
     self.online_corpus = None
