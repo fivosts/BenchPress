@@ -132,22 +132,27 @@ message DataGenerator {
   // Represent single training instance as whole padded kernel, 
   // or arbitrary statement sequences. Valid options are "kernel" or "statement".
   optional string datapoint_type         = 1;
+  // When datapoints should be pre-processed for training/validation/sampling.
+  // 'pre': Raw corpus is masked and stored. Then used.
+  // 'online': Raw corpus is stored. During training/validation/sampling,
+  // datapoints are pre-processed on the fly and provided to the model.
+  optional string datapoint_time         = 2;
   // Use [START] and [END] meta tokens at the beginning and end of each sequence.
-  optional bool   use_start_end          = 2;
+  optional bool   use_start_end          = 3;
   // If datapoints are 'kernel', kernels > seq len are discarded. If true, they are kept and truncated instead.
-  optional bool   truncate_large_kernels = 3;
+  optional bool   truncate_large_kernels = 4;
   // Number of steps that constitute an epoch. Checkpoints and samples are taken once every epoch.
-  optional int32  steps_per_epoch        = 4;
+  optional int32  steps_per_epoch        = 5;
   // Select a value between 0 and 100. This percentage will be used to split dataset into
   // training and validation. Validation set will not be seen during training.
-  optional int32  validation_split       = 5;
+  optional int32  validation_split       = 6;
   // single token masks are BERT's default. Alternatively, use a hole token
   // to represent an arbitrary amount of hidden tokens.
   oneof mask_technique {
-    Mask mask = 6;
-    Hole hole = 7;
+    Mask mask = 7;
+    Hole hole = 8;
   }
-  repeated ValidationSet validation_set = 8;
+  repeated ValidationSet validation_set = 9;
 }
 
 message Mask {
