@@ -102,7 +102,7 @@ class OnlineSamplingGenerator(object):
                             train_set            = False,
                             max_predictions      = corpus_config.max_predictions_per_seq,
                             pickled_distribution = pickle.dumps(self.distribution),
-                            pickled_tokenizer     = pickle.dumps(self.tokenizer),
+                            pickled_tokenizer    = pickle.dumps(self.tokenizer),
                             training_opts        = sampling_opts,
                             is_torch             = self.data_generator.is_torch,
                           )
