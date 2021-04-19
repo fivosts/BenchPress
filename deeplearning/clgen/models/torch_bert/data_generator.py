@@ -54,13 +54,13 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               model_opts, sampler, tokenizer, seed,
               sample_batch_size, max_position_embeddings, cache_path
         )
-    if sampler.is_active:
-      return active_generator.ActiveSamplingGenerator.FromDataGenerator(d)
-    elif sampler.is_online:
-      return online_generator.OnlineSamplingGenerator.FromDataGenerator(d)
-    else:
-      d.dataloader = d.predict_dataloader()
-      return d
+    # if sampler.is_active:
+    #   return active_generator.ActiveSamplingGenerator.FromDataGenerator(d)
+    # elif sampler.is_online:
+    #   return online_generator.OnlineSamplingGenerator.FromDataGenerator(d)
+    # else:
+    d.dataloader = d.predict_dataloader()
+    return d
 
   def __init__(self):
     super(torchLMDataGenerator, self).__init__("pt_record")
@@ -76,24 +76,26 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
     eval_dataloaders sets set_name to reuse the function for all different sets.
     """
-    """
-    TODO here, select correct dataset and sampler based on 'online' or 'pre'
-    """
-    dataset = LazyConcatDataset(
-                [x for x in self.dataset[set_name]['file']]
-              )
+    if self.config.datapoint_time == "pre":
+      dataset = LazyConcatDataset([x for x in self.dataset[set_name]['file']])
+      sampler = LazyRandomSampler(dataset, replacement = False)
+    elif self.config.datapoint_time == "online":
+      dataset = OnlineDataset(self.cache.path / "corpus.pkl", self.config)
+      sampler = RandomSampler(dataset, replacement = False)
+    else:
+      raise ValueError(self.config.datapoint_time)
+
     dataloader = torch.utils.data.dataloader.DataLoader(
       dataset    = dataset,
       batch_size = self.training_opts.batch_size,
-      sampler    = (
-            LazyRandomSampler(dataset, replacement = False)
-            if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
-            else torch.utils.data.distributed.DistributedSampler(
-                  dataset, 
-                  num_replicas = pytorch.torch_xla.xrt_world_size(),
-                  rank = pytorch.torch_xla.get_ordinal()
-                 )
-            ),
+      sampler    = (sampler
+        if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
+        else torch.utils.data.distributed.DistributedSampler(
+          dataset,
+          num_replicas = pytorch.torch_xla.xrt_world_size(),
+          rank = pytorch.torch_xla.get_ordinal()
+        )
+      ),
       num_workers = 0,
       drop_last   = False,
     )
@@ -101,11 +103,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
   def eval_dataloaders(self):
     """Pytorch dataloader used for validation."""
-    """
-    TODO fix that for online generator. self.dataset is empty in this case.
-    """
-    for set_name in self.dataset:
-      yield set_name, self.train_dataloader(set_name)
+    if self.config.datapoint_time == "online":
+      yield "Online Corpus", self.train_dataloader()
+    else:
+      for set_name in self.dataset:
+        yield set_name, self.train_dataloader(set_name)
 
   def predict_dataloader(self):
     """
@@ -147,15 +149,17 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       dataset = [{k: torch.from_numpy(v) for (k, v) in sample_element.items()}]
       sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
     else:
-      """
-      TODO fix that for online sampler. configSampleSets shouldn't be called.
-      Instead, online get stuff and feed them.
-      """
-      path_list = self.configSampleSets()
-      dataset = LazyConcatDataset(
-                  [x for x in path_list]
-                )
-      sampler = LazyRandomSampler(dataset, replacement = False)
+      if self.sampler.is_online:
+        dataset = OnlineDataset(self.cache.path / "corpus.pkl", self.config)
+        sampler = RandomSampler(dataset, replacement = False)
+      elif self.sampler.is_active:
+        raise NotImplementedError
+      else:
+        path_list = self.configSampleSets()
+        dataset = LazyConcatDataset(
+                    [x for x in path_list]
+                  )
+        sampler = LazyRandomSampler(dataset, replacement = False)
     dataloader = torch.utils.data.dataloader.DataLoader(
       dataset    = dataset,
       # Model's batch size is divided by sampler's batch size, in order to get
@@ -226,11 +230,11 @@ class OnlineDataset(torch.utils.data.Dataset):
       with open(dataset, 'rb') as infile:
         return pickle.load(infile)
 
-  def __init__(self, dataset: pathlib.Path, func: callable):
+  def __init__(self, dataset: pathlib.Path, config: model_pb2.DataGenerator):
     super(OnlineDataset, self).__init__()
     self.dataset = self.load_data(dataset)
     self.size    = len(self.dataset)
-    self.func    = func
+    raise NotImplementedError(config)
     return
 
   def __len__(self):
