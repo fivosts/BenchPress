@@ -153,7 +153,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         dataset = OnlineDataset(self, False)
         sampler = RandomSampler(dataset, replacement = False)
       elif self.sampler.is_active:
-        raise NotImplementedError
+        raise NotImplementedError("Integrate active sampler here")
       else:
         path_list = self.configSampleSets()
         dataset = LazyConcatDataset(
@@ -256,7 +256,6 @@ class OnlineDataset(torch.utils.data.Dataset):
                                     training_opts        = dg.training_opts,
                                     is_torch             = True,
         )
-    raise NotImplementedError(config)
     return
 
   def __len__(self):
@@ -268,7 +267,9 @@ class OnlineDataset(torch.utils.data.Dataset):
       if -idx > len(self):
         raise ValueError("absolute value of index should not exceed dataset length")
       idx = len(self) + idx
-    return self.func(self.dataset[idx])
+    k, idxs = self.func(self.dataset[idx])
+    raise NotImplementedError("Fix a) init state of rngen b) distribution plotting, monitors etc.")
+    return k
 
 class LazyConcatDataset(torch.utils.data.Dataset):
   r"""Dataset as a concatenation of multiple datasets.
