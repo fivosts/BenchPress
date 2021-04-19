@@ -80,7 +80,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       dataset = LazyConcatDataset([x for x in self.dataset[set_name]['file']])
       sampler = LazyRandomSampler(dataset, replacement = False)
     elif self.config.datapoint_time == "online":
-      dataset = OnlineDataset(self.cache.path / "corpus.pkl", self.config)
+      dataset = OnlineDataset(self, True)
       sampler = RandomSampler(dataset, replacement = False)
     else:
       raise ValueError(self.config.datapoint_time)
@@ -150,7 +150,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
     else:
       if self.sampler.is_online:
-        dataset = OnlineDataset(self.cache.path / "corpus.pkl", self.config)
+        dataset = OnlineDataset(self, False)
         sampler = RandomSampler(dataset, replacement = False)
       elif self.sampler.is_active:
         raise NotImplementedError
@@ -230,10 +230,32 @@ class OnlineDataset(torch.utils.data.Dataset):
       with open(dataset, 'rb') as infile:
         return pickle.load(infile)
 
-  def __init__(self, dataset: pathlib.Path, config: model_pb2.DataGenerator):
+  def __init__(self, dg: torchLMDataGenerator, is_train: bool):
     super(OnlineDataset, self).__init__()
-    self.dataset = self.load_data(dataset)
+    self.dataset = self.load_data(dg.cache.path / "corpus.pkl")
     self.size    = len(self.dataset)
+
+    if dg.config.HasField("mask"):
+      self.func = functools.partial(dg.mask_func,
+                                    train_set         = is_train,
+                                    max_predictions   = dg.config.max_predictions_per_seq,
+                                    pickled_tokenizer = pickle.dumps(dg.tokenizer),
+                                    training_opts     = dg.training_opts,
+                                    is_torch          = True,
+                                    config            = dg.config,
+      )
+    elif dg.config.HasField("hole"):
+      distribution = distributions.Distribution.FromHoleConfig(
+        dg.config.hole, dg.cache.path, "hole_length_online"
+      )
+      self.func = functools.partial(dg.hole_func,
+                                    train_set            = is_train,
+                                    max_predictions      = dg.config.max_predictions_per_seq,
+                                    pickled_distribution = pickle.dumps(distribution),
+                                    pickled_tokenizer    = pickle.dumps(dg.tokenizer),
+                                    training_opts        = dg.training_opts,
+                                    is_torch             = dg.is_torch
+        )
     raise NotImplementedError(config)
     return
 
