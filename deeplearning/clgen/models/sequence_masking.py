@@ -62,7 +62,7 @@ class MaskedLmInstance():
     self.hole_length = hole_length
     self.extend_left = extend_left
 
-def HoleSequence(seq: np.array,
+def MPHoleSequence(seq: np.array,
                  train_set: bool,
                  max_predictions: int,
                  pickled_distribution: distributions.Distribution,
@@ -80,6 +80,9 @@ def HoleSequence(seq: np.array,
   If repair_locations is set, then algorithm places holes over syntactic errors
   for the model to repair them. Default is None, where hole-d indices are randomly
   selected.
+
+  This function is compatible for multiprocessing. There is an optimized single-core
+  version below.
   """
   assert seq.ndim == 1, "Input for masking must be single-dimension array."
 
@@ -290,7 +293,7 @@ def HoleSequence(seq: np.array,
                         next_sentence_label
                         ), hole_analytics
 
-def MaskSequence(seq: np.array,
+def MPMaskSequence(seq: np.array,
                  train_set: bool,
                  max_predictions: int,
                  pickled_tokenizer,
@@ -298,7 +301,12 @@ def MaskSequence(seq: np.array,
                  config,
                  is_torch: bool,
                  ) -> typing.Dict:
-  """Inserts masks to a given sequence."""
+  """
+  Inserts masks to a given sequence.
+
+  This function is compatible for multiprocessing. There is an optimized single-core
+  version below.
+  """
   assert seq.ndim == 1, "Input for masking must be single-dimension array."
 
   ## Tuple representation of mask id/position for easy sorting

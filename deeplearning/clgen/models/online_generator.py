@@ -98,7 +98,7 @@ class OnlineSamplingGenerator(object):
       self.distribution = distributions.Distribution.FromHoleConfig(
         corpus_config.hole, self.sampler.corpus_directory, "sample_corpus"
       )
-      self.masking_func = functools.partial(sequence_masking.HoleSequence,
+      self.masking_func = functools.partial(sequence_masking.MPHoleSequence,
                             train_set            = False,
                             max_predictions      = corpus_config.max_predictions_per_seq,
                             pickled_distribution = pickle.dumps(self.distribution),
@@ -107,7 +107,7 @@ class OnlineSamplingGenerator(object):
                             is_torch             = self.data_generator.is_torch,
                           )
     elif corpus_config.HasField("mask"):
-      self.masking_func = functools.partial(sequence_masking.MaskSequence,
+      self.masking_func = functools.partial(sequence_masking.MPMaskSequence,
                             train_set          = False,
                             max_predictions    = corpus_config.max_predictions_per_seq,
                             config             = corpus_config,

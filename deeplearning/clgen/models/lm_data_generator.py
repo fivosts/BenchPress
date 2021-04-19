@@ -150,8 +150,8 @@ class MaskLMDataGenerator(object):
   def __init__(self, file_extension: str):
 
     self.file_extension = file_extension
-    self.mask_func      = sequence_masking.MaskSequence
-    self.hole_func      = sequence_masking.HoleSequence
+    self.mask_func      = sequence_masking.MPMaskSequence
+    self.hole_func      = sequence_masking.MPHoleSequence
 
     self.dataset                 = None
     self.corpus                  = None
