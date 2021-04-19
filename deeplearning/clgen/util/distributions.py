@@ -8,14 +8,16 @@ from deeplearning.clgen.util import plotter
 
 class Distribution():
   def __init__(self, 
-               sample_length: int, 
-               log_path     : typing.Union[pathlib.Path, str],
-               set_name     : str
+               sample_length  : int,
+               relative_length: float,
+               log_path       : typing.Union[pathlib.Path, str],
+               set_name       : str
                ):
-    self.sample_length  = sample_length
-    self.log_path       = log_path if isinstance(log_path, pathlib.Path) else pathlib.Path(log_path)
-    self.set_name       = set_name
-    self.sample_counter = {}
+    self.sample_length   = sample_length
+    self.relative_length = relative_length
+    self.log_path        = log_path if isinstance(log_path, pathlib.Path) else pathlib.Path(log_path)
+    self.set_name        = set_name
+    self.sample_counter  = {}
     return
 
   @classmethod
@@ -24,13 +26,22 @@ class Distribution():
                      log_path: typing.Union[pathlib.Path, str],
                      set_name: str,
                      ) -> typing.TypeVar("Distribution"):
+    if config.HasField("absolute_length"):
+      abs_len = config.hole_length
+      rel_len = 1.0
+    elif config.HasField("relative_length"):
+      abs_len = None
+      rel_len = float(config.relative_length)
+
     if config.HasField("uniform_distribution"):
-      return UniformDistribution(config.hole_length,
+      return UniformDistribution(abs_len,
+                                 rel_len,
                                  log_path,
                                  set_name,
                                  )
     elif config.HasField("normal_distribution"):
-      return NormalDistribution(config.hole_length,
+      return NormalDistribution(abs_len,
+                                rel_len,
                                 config.normal_distribution.mean,
                                 config.normal_distribution.variance,
                                 log_path,
@@ -71,14 +82,20 @@ class UniformDistribution(Distribution):
   Upper range of sampling is defined as [0, sample_length].
   """
   def __init__(self, 
-               sample_length: int,
-               log_path     : typing.Union[pathlib.Path, str],
-               set_name     : str
+               sample_length  : int,
+               relative_length: float,
+               log_path       : typing.Union[pathlib.Path, str],
+               set_name       : str
                ):
-    super(UniformDistribution, self).__init__(sample_length, log_path, set_name)
+    super(UniformDistribution, self).__init__(sample_length, relative_length, log_path, set_name)
 
   def sample(self, length = None):
-    return np.random.RandomState().randint(0, self.sample_length + 1)
+    if self.sample_length:
+      return np.random.RandomState().randint(0, self.sample_length + 1)
+    elif length:
+      return np.random.RandomState().randint(0, length)
+    else:
+      raise ValueErrror("One of sample length and upper length must be specified.")
 
 class NormalDistribution(Distribution):
   """
@@ -86,17 +103,19 @@ class NormalDistribution(Distribution):
   Upper range of sampling is defined as [0, sample_length].
   """
   def __init__(self,
-               sample_length: int,
-               mean         : float,
-               variance     : float,
-               log_path     : typing.Union[pathlib.Path, str],
-               set_name     : str,
+               sample_length  : int,
+               relative_length: float,
+               mean           : float,
+               variance       : float,
+               log_path       : typing.Union[pathlib.Path, str],
+               set_name       : str,
                ):
-    super(NormalDistribution, self).__init__(sample_length, log_path, set_name)
+    super(NormalDistribution, self).__init__(sample_length, relative_length, log_path, set_name)
     self.mean     = mean
     self.variance = variance
 
   def sample(self, length = None):
+    upper_length = self.sample_length or length
     sample = int(round(np.random.RandomState().normal(loc = self.mean, scale = self.variance)))
     while sample < 0 or sample > self.sample_length:
       sample = int(round(np.random.RandomState().normal(loc = self.mean, scale = self.variance)))

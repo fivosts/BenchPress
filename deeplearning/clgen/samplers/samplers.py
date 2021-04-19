@@ -76,12 +76,20 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
             "random_placed_mask",
           )
         elif config.sample_corpus.corpus_config.HasField("hole"):
-          pbutil.AssertFieldConstraint(
-            config.sample_corpus.corpus_config.hole,
-            "hole_length",
-            lambda x : x > 0,
-            "hole_length is the upper bound range of a hole's length. Therefore should be > 0."
-          )
+          if config.HasField("absolute_length"):
+            pbutil.AssertFieldConstraint(
+              config.sample_corpus.corpus_config.hole,
+              "absolute_length",
+              lambda x : x > 0,
+              "absolute length is the upper bound range of a hole's length. Therefore should be > 0."
+            )
+          else:
+            pbutil.AssertFieldConstraint(
+              config.sample_corpus.corpus_config.hole,
+              "relative_length",
+              lambda x : 0.0 < x <= 1.0,
+              "relative length must be between 0 and 100% of a kernel's actual length."
+            )
           if config.sample_corpus.corpus_config.hole.HasField("normal_distribution"):
             pbutil.AssertFieldIsSet(
               config.sample_corpus.corpus_config.hole.normal_distribution,

@@ -123,7 +123,9 @@ def parseModelSummary(meta):
         m.config.training.dupe_factor, round(m.config.training.masked_lm_prob, 3),
         "mask" if m.config.training.data_generator.HasField("mask") else 
             "hole-{},{}".format(
-                m.config.training.data_generator.hole.hole_length,
+                (m.config.training.data_generator.hole.absolute
+                if m.config.training.data_generator.hole.HasField("absolute_length")
+                else m.config.training.data_generator.hole.relative_length),
                 "unf" if m.config.training.data_generator.hole.HasField("uniform_distribution") else
                   "norm-{},{}".format(
                     round(m.config.training.data_generator.hole.normal_distribution.mean, 2), 

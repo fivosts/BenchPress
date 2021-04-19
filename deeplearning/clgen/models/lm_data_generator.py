@@ -91,12 +91,20 @@ def AssertConfigIsValid(config: model_pb2.DataGenerator,
           "random_placed_mask",
         )
       elif val_opt.HasField("hole"):
-        pbutil.AssertFieldConstraint(
-          val_opt.hole,
-          "hole_length",
-          lambda x : x > 0,
-          "hole_length is the upper bound range of a hole's length. Therefore should be > 0."
-        )
+        if val_opt.HasField("absolute_length"):
+          pbutil.AssertFieldConstraint(
+            val_opt.hole,
+            "absolute_length",
+            lambda x : x > 0,
+            "absolute length is the upper bound range of a hole's length. Therefore should be > 0."
+          )
+        else:
+          pbutil.AssertFieldConstraint(
+            val_opt.hole,
+            "relative_length",
+            lambda x : 0.0 < x <= 1.0,
+            "relative length must be between 0 and 100% of a kernel's actual length."
+          )
         if val_opt.hole.HasField("normal_distribution"):
           pbutil.AssertFieldIsSet(
             val_opt.hole.normal_distribution,
@@ -116,12 +124,20 @@ def AssertConfigIsValid(config: model_pb2.DataGenerator,
       "random_placed_mask",
     )
   elif config.HasField("hole"):
-    pbutil.AssertFieldConstraint(
-      config.hole,
-      "hole_length",
-      lambda x : x > 0,
-      "hole_length is the upper bound range of a hole's length. Therefore should be > 0."
-    )
+    if config.HasField("absolute_length"):
+      pbutil.AssertFieldConstraint(
+        config.hole,
+        "absolute_length",
+        lambda x : x > 0,
+        "absolute length is the upper bound range of a hole's length. Therefore should be > 0."
+      )
+    else:
+      pbutil.AssertFieldConstraint(
+        config.hole,
+        "relative_length",
+        lambda x : 0.0 < x <= 1.0,
+        "relative length must be between 0 and 100% of a kernel's actual length."
+      )
     if config.hole.HasField("normal_distribution"):
       pbutil.AssertFieldIsSet(
         config.hole.normal_distribution,
@@ -288,7 +304,10 @@ class MaskLMDataGenerator(object):
     for valset in valset_list:
       set_name = "pred_{}_{}".format(
         valset.max_predictions_per_seq,
-        "mask" if valset.HasField("mask") else "hole_{}".format(valset.hole.hole_length)
+        "mask" if valset.HasField("mask") else "hole_{}".format(valset.hole.absolute_length
+                                                                if valset.hole.HasField("absolute_length")
+                                                                else valset.hole.relative_length
+                                                                )
       )
       if set_name in self.dataset or len(glob.glob(str(path / "{}_*.{}".format(set_name, self.file_extension)))) > 0:
         continue
@@ -324,14 +343,18 @@ class MaskLMDataGenerator(object):
       sampledDataset = "pred_{}_{}".format(
         self.sampler.config.sample_set.max_predictions_per_seq,
         "mask" if self.sampler.config.sample_set.HasField("mask") 
-               else "hole_{}".format(self.sampler.config.sample_set.hole.hole_length)
+               else "hole_{}".format(self.sampler.config.sample_set.hole.absolute_length
+                                     if self.sampler.config.sample_set.hole.HasField("absolute_length")
+                                     else self.sampler.config.sample_set.hole.relative_length)
       )
     elif self.sampler.config.HasField("sample_corpus"):
       path = self.sampler.corpus_directory
       sampledDataset = "pred_{}_{}".format(
         self.sampler.config.sample_corpus.corpus_config.max_predictions_per_seq,
         "mask" if self.sampler.config.sample_corpus.corpus_config.HasField("mask")
-               else "hole_{}".format(self.sampler.config.sample_corpus.corpus_config.hole.hole_length)
+               else "hole_{}".format(self.sampler.config.sample_corpus.corpus_config.hole.absolute_length
+                                     if self.sampler.config.sample_corpus.hole.HasField("absolute_length")
+                                     else self.sampler.config.sample_corpus.hole.relative_length)
       )
     else:
       raise ValueError("Unknown dataset type")
