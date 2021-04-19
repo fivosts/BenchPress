@@ -144,7 +144,7 @@ def MPHoleSequence(seq: np.array,
             .format(seq[pos_index], input_ids[input_id_idx]))
 
     # Sampled number from distribution to represent the actual hole length
-    hole_length = distribution.sample()
+    hole_length = distribution.sample(actual_length)
 
     # Increase hole length a little bit, if too many empty holes have pushed rightmost elements
     # over the edge.
