@@ -39,7 +39,7 @@ class Distribution():
     else:
       raise NotImplementedError(config)
 
-  def sample(self):
+  def sample(self, length = None):
     raise NotImplementedError
 
   def register(self, actual_sample):
@@ -77,7 +77,7 @@ class UniformDistribution(Distribution):
                ):
     super(UniformDistribution, self).__init__(sample_length, log_path, set_name)
 
-  def sample(self):
+  def sample(self, length = None):
     return np.random.RandomState().randint(0, self.sample_length + 1)
 
 class NormalDistribution(Distribution):
@@ -96,7 +96,7 @@ class NormalDistribution(Distribution):
     self.mean     = mean
     self.variance = variance
 
-  def sample(self):
+  def sample(self, length = None):
     sample = int(round(np.random.RandomState().normal(loc = self.mean, scale = self.variance)))
     while sample < 0 or sample > self.sample_length:
       sample = int(round(np.random.RandomState().normal(loc = self.mean, scale = self.variance)))
