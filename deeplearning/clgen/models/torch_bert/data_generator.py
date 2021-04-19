@@ -254,7 +254,7 @@ class OnlineDataset(torch.utils.data.Dataset):
                                     pickled_distribution = pickle.dumps(distribution),
                                     pickled_tokenizer    = pickle.dumps(dg.tokenizer),
                                     training_opts        = dg.training_opts,
-                                    is_torch             = dg.is_torch
+                                    is_torch             = True,
         )
     raise NotImplementedError(config)
     return
