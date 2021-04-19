@@ -62,90 +62,6 @@ class MaskedLmInstance():
     self.hole_length = hole_length
     self.extend_left = extend_left
 
-def ExhaustiveHoleSequence(all_seq: np.array,
-                           train_set: bool,
-                           # max_predictions: int,
-                           # pickled_distribution: distributions.Distribution,
-                           pickled_tokenizer,
-                           # training_opts,
-                           # is_torch: bool,
-                           # repair_locations: typing.List[int] = None,
-                           ) -> typing.List[typing.Tuple[
-                                  typing.Union[typing.Dict[str, np.array], tfSequence],
-                                  typing.List[MaskedLmInstance],
-                                ]]:
-  """
-  Placing random holes seems to introduce an overfitting bias on the model.
-  It doesn't learn a good distribution of what should go in a specific hole
-  for a given index, a left and a right context. This function may be solving
-  this, hopefully in a sustainable way. 
-
-  No holes are placed randomly. Each index produces many holed seq instances;
-  starting from empty hole up to hiding everything until the end.
-
-  Given one sequence, returns a list of instances, one for each hole instances.
-
-  !!!WARNING: Currently only supported for PyTorch.
-  """
-  with progressbar.ProgressBar(max_value = len(all_seq)) as bar:
-    for seq in bar(all_seq):
-      assert seq.ndim == 1, "Input for masking must be single-dimension array."
-
-      # Unpack tokenizer
-      tokenizer     = pickle.loads(pickled_tokenizer)
-      use_start_end = True if seq[0] == tokenizer.startToken else False
-
-      # Actual length represents the sequence length before pad begins
-      start_idx = 0
-      if use_start_end:
-        start_idx = 1
-        end       = np.where(seq == tokenizer.endToken)[0][0]
-      elif tokenizer.padToken in seq:
-        end       = np.where(seq == tokenizer.padToken)[0][0]
-      else:
-        end       = len(seq)
-
-      st_input_ids = list(seq)
-      for idx in range(start_idx, end):
-        for hole_len in range(0, end - idx):
-          if end + 1 - hole_len >= len(seq):
-            continue 
-          input_ids = st_input_ids[:idx] + [tokenizer.holeToken] + st_input_ids[idx + hole_len:]
-          input_ids += [tokenizer.padToken] * (len(seq) - len(input_ids))
-          input_ids = input_ids[:len(seq)]
-
-          mask_labels = np.full(len(seq), -100, dtype = np.int64)
-          target = seq[idx] if hole_len else tokenizer.endholeToken
-          mask_labels[ idx  if hole_len else idx - 1] = target
-
-          mlm_inst = MaskedLmInstance(
-            pos_index   = idx,      token_id    = target,
-            hole_length = hole_len, extend_left = False
-          )
-          assert len(input_ids) == 512, "len: {} - hole len: {} - idx: {} - seq_len: {}\n \n {}".format(len(input_ids), hole_len, idx, len(seq), tokenizer.tokensToString(seq, with_formatting = True))
-          yield ({
-            'seen_in_training'    : np.int64([1] if train_set else [0]),
-            'original_input'      : seq,
-            'input_ids'           : np.asarray(input_ids, dtype = np.int64),
-            'input_mask'          : (seq != tokenizer.padToken),
-            'position_ids'        : np.arange(len(seq), dtype = np.int64),
-            'mask_labels'         : mask_labels,
-            'masked_lm_lengths'   : np.array([hole_len]),
-            'next_sentence_labels': np.int64([0]),
-          }, [mlm_inst])
-          # instances.append(({
-          #   'seen_in_training'    : np.int64([1] if train_set else [0]),
-          #   'original_input'      : seq,
-          #   'input_ids'           : np.asarray(input_ids, dtype = np.int64),
-          #   'input_mask'          : (seq != tokenizer.padToken),
-          #   'position_ids'        : np.arange(len(seq), dtype = np.int64),
-          #   'mask_labels'         : mask_labels,
-          #   'masked_lm_lengths'   : np.array([hole_len]),
-          #   'next_sentence_labels': np.int64([0]),
-          # }, [mlm_inst]))
-
-  return
-
 def HoleSequence(seq: np.array,
                  train_set: bool,
                  max_predictions: int,
@@ -493,3 +409,75 @@ def MaskSequence(seq: np.array,
                         np.asarray(masked_lm_weights),   np.asarray(masked_lm_lengths),
                         next_sentence_label
                         ), [], []
+
+def ExhaustiveHoleSequence(all_seq: np.array,
+                           train_set: bool,
+                           # max_predictions: int,
+                           # pickled_distribution: distributions.Distribution,
+                           pickled_tokenizer,
+                           # training_opts,
+                           # is_torch: bool,
+                           # repair_locations: typing.List[int] = None,
+                           ) -> typing.Generator[
+                                  list(
+                                    tuple(dict(str, np.array), list(MaskedLmInstance)
+                                  ))]:
+  """
+  Placing random holes seems to introduce an overfitting bias on the model.
+  It doesn't learn a good distribution of what should go in a specific hole
+  for a given index, a left and a right context. This function may be solving
+  this, hopefully in a sustainable way. 
+
+  No holes are placed randomly. Each index produces many holed seq instances;
+  starting from empty hole up to hiding everything until the end.
+
+  Given one sequence, returns a list of instances, one for each hole instances.
+
+  !!!WARNING: Currently only supported for PyTorch.
+  """
+  with progressbar.ProgressBar(max_value = len(all_seq)) as bar:
+    for seq in bar(all_seq):
+      assert seq.ndim == 1, "Input for masking must be single-dimension array."
+
+      # Unpack tokenizer
+      tokenizer     = pickle.loads(pickled_tokenizer)
+      use_start_end = True if seq[0] == tokenizer.startToken else False
+
+      # Actual length represents the sequence length before pad begins
+      start_idx = 0
+      if use_start_end:
+        start_idx = 1
+        end       = np.where(seq == tokenizer.endToken)[0][0]
+      elif tokenizer.padToken in seq:
+        end       = np.where(seq == tokenizer.padToken)[0][0]
+      else:
+        end       = len(seq)
+
+      st_input_ids = list(seq)
+      for idx in range(start_idx, end):
+        for hole_len in range(0, end - idx):
+          if end + 1 - hole_len >= len(seq):
+            continue 
+          input_ids = st_input_ids[:idx] + [tokenizer.holeToken] + st_input_ids[idx + hole_len:]
+          input_ids += [tokenizer.padToken] * (len(seq) - len(input_ids))
+          input_ids = input_ids[:len(seq)]
+
+          mask_labels = np.full(len(seq), -100, dtype = np.int64)
+          target = seq[idx] if hole_len else tokenizer.endholeToken
+          mask_labels[ idx  if hole_len else idx - 1] = target
+
+          mlm_inst = MaskedLmInstance(
+            pos_index   = idx,      token_id    = target,
+            hole_length = hole_len, extend_left = False
+          )
+          yield ({
+            'seen_in_training'    : np.int64([1] if train_set else [0]),
+            'original_input'      : seq,
+            'input_ids'           : np.asarray(input_ids, dtype = np.int64),
+            'input_mask'          : (seq != tokenizer.padToken),
+            'position_ids'        : np.arange(len(seq), dtype = np.int64),
+            'mask_labels'         : mask_labels,
+            'masked_lm_lengths'   : np.array([hole_len]),
+            'next_sentence_labels': np.int64([0]),
+          }, [mlm_inst])
+  return
