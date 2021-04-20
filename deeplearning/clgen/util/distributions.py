@@ -27,7 +27,7 @@ class Distribution():
                      set_name: str,
                      ) -> typing.TypeVar("Distribution"):
     if config.HasField("absolute_length"):
-      abs_len = config.hole_length
+      abs_len = config.absolute_length
       rel_len = 1.0
     elif config.HasField("relative_length"):
       abs_len = None

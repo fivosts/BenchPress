@@ -9,12 +9,15 @@ import os
 import typing
 import glob
 import humanize
+import pickle
+import functools
 import numpy as np
 import pathlib
 import gc
 
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
+from deeplearning.clgen.util import distributions
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.models import lm_data_generator
 from deeplearning.clgen.models import sequence_masking
@@ -82,7 +85,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       sampler = LazyRandomSampler(dataset, replacement = False)
     elif self.config.datapoint_time == "online":
       dataset = OnlineDataset(self, True)
-      sampler = RandomSampler(dataset, replacement = False)
+      sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
     else:
       raise ValueError(self.config.datapoint_time)
 
@@ -152,7 +155,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     else:
       if self.sampler.is_online:
         dataset = OnlineDataset(self, False)
-        sampler = RandomSampler(dataset, replacement = False)
+        sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
       elif self.sampler.is_active:
         raise NotImplementedError("Integrate active sampler here")
       else:
@@ -225,12 +228,6 @@ class OnlineDataset(torch.utils.data.Dataset):
     dataset (path): Path for raw dataset
     func (callable): Function called to pre-process sequence.
   """
-  @property
-  def load_data(self, dataset: pathlib.Path) -> typing.List[np.array]:
-    if dataset.exists():
-      with open(dataset, 'rb') as infile:
-        return pickle.load(infile)
-
   def __init__(self, dg: torchLMDataGenerator, is_train: bool):
     super(OnlineDataset, self).__init__()
     self.dataset = self.load_data(dg.cache.path / "corpus.pkl")
@@ -240,7 +237,7 @@ class OnlineDataset(torch.utils.data.Dataset):
     if dg.config.HasField("mask"):
       self.func = functools.partial(sequence_masking.MaskSequence,
                                     train_set         = is_train,
-                                    max_predictions   = dg.config.max_predictions_per_seq,
+                                    max_predictions   = dg.training_opts.max_predictions_per_seq,
                                     pickled_tokenizer = dg.tokenizer,
                                     training_opts     = dg.training_opts,
                                     is_torch          = True,
@@ -251,12 +248,11 @@ class OnlineDataset(torch.utils.data.Dataset):
         dg.config.hole, dg.cache.path, "hole_length_online"
       )
       self.func = functools.partial(sequence_masking.HoleSequence,
-                                    train_set            = is_train,
-                                    max_predictions      = dg.config.max_predictions_per_seq,
-                                    pickled_distribution = distribution,
-                                    pickled_tokenizer    = dg.tokenizer,
-                                    training_opts        = dg.training_opts,
-                                    is_torch             = True,
+                                    train_set       = is_train,
+                                    max_predictions = dg.training_opts.max_predictions_per_seq,
+                                    distribution    = self.distribution,
+                                    tokenizer       = dg.tokenizer,
+                                    training_opts   = dg.training_opts,
         )
     return
 
@@ -269,9 +265,15 @@ class OnlineDataset(torch.utils.data.Dataset):
       if -idx > len(self):
         raise ValueError("absolute value of index should not exceed dataset length")
       idx = len(self) + idx
-    k, idxs = self.func(self.dataset[idx])
+    k = self.func(self.dataset[idx])
+    print(k)
     raise NotImplementedError("Fix a) init state of rngen b) distribution plotting, monitors etc.")
     return k
+
+  def load_data(self, dataset: pathlib.Path) -> typing.List[np.array]:
+    if dataset.exists():
+      with open(dataset, 'rb') as infile:
+        return pickle.load(infile)
 
 class LazyConcatDataset(torch.utils.data.Dataset):
   r"""Dataset as a concatenation of multiple datasets.
