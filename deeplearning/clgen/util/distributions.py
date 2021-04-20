@@ -93,7 +93,7 @@ class UniformDistribution(Distribution):
     if self.sample_length:
       return np.random.RandomState().randint(0, self.sample_length + 1)
     elif length:
-      return np.random.RandomState().randint(0, length)
+      return np.random.RandomState().randint(0, int(length * self.relative_length))
     else:
       raise ValueErrror("One of sample length and upper length must be specified.")
 
@@ -115,7 +115,7 @@ class NormalDistribution(Distribution):
     self.variance = variance
 
   def sample(self, length = None):
-    upper_length = self.sample_length or length
+    upper_length = self.sample_length or length * self.relative_length
     sample = int(round(np.random.RandomState().normal(loc = self.mean, scale = self.variance)))
     while sample < 0 or sample > self.sample_length:
       sample = int(round(np.random.RandomState().normal(loc = self.mean, scale = self.variance)))
