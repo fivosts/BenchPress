@@ -38,6 +38,7 @@
 #include <sstream>
 #include <string>
 #include <stdlib.h>
+#include <time.h>
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -198,6 +199,7 @@ std::string get_next_random_name(rewrite_table_t &rewrites,
     }
   }
 
+  srand(time(NULL));
   if (avail_vocab.size() > 0)
   {
     s = avail_vocab[rand() % avail_vocab.size()];
