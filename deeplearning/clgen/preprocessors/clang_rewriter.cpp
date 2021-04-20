@@ -242,7 +242,7 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
   std::string get_fn_rewrite(const std::string& name) {
     if (_fns.find(name) == _fns.end()) {
       // New function:
-      auto replacement = get_next_random_name(_fns, name, fn_base_char, fn_prefix);
+      auto replacement = get_next_name(_fns, name, fn_base_char, fn_prefix);
       return replacement;
     } else {
       // Previously declared function:
