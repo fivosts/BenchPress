@@ -167,7 +167,7 @@ message Hole {
   // In case sequences are hole-d, choose upper 
   // bound range of possible hole length (will be [0, hole_length]).
   oneof length {
-    int32 abs_length      = 1;
+    int32 absolute_length = 1;
     float relative_length = 2;
   }
   // Select distribution from which each hole length will be sampled.

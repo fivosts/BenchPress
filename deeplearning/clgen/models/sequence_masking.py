@@ -418,6 +418,155 @@ def MPMaskSequence(seq: np.array,
                         next_sentence_label
                         ), [], []
 
+def HoleSequence(seq: np.array,
+                 train_set: bool,
+                 max_predictions: int,
+                 distribution: distributions.Distribution,
+                 tokenizer,
+                 training_opts,
+                 ) -> typing.Tuple[
+                        typing.Dict[str, np.array],
+                      ]:
+  """
+  Inserts hole tokens to a given sequence.
+  Used for online training.
+  """
+  use_start_end = True if seq[0] == tokenizer.startToken else False
+
+  # Actual length represents the sequence length before pad begins
+  if use_start_end:
+    actual_length   = np.where(seq == tokenizer.endToken)[0][0]
+    last_elem       = actual_length
+  elif tokenizer.padToken in seq:
+    actual_length   = np.where(seq == tokenizer.padToken)[0][0]
+    last_elem       = actual_length - 1
+  else:
+    actual_length   = len(seq)
+    last_elem       = actual_length - 1
+
+  # total tokens to add in holes.
+  # No more than max_predictions_per_seq (or otherwise specified), no less than actual seq length x the probability of hiding a token
+  holes_to_predict  = min(max_predictions,
+                         max(1, int(round(actual_length * training_opts.masked_lm_prob))))
+
+  extend_left = True if np.random.RandomState().randint(0, 2) == 1 else False
+  input_ids   = list(np.copy(seq))
+  # List of (seq_idx, token_id, hole_length) tuples
+  masked_lms        = []
+  # Offset array. Indices represent elements in the initial array (seq)
+  # Values of indices represent current offset position in processed array (input_ids).
+  offset_idxs       = np.zeros(len(seq), dtype = np.int64)
+  # Set with all candidate_indexes that have been holed.
+  visited_indices   = set()
+  # Total masks placed so far.
+  total_predictions = 0
+  while total_predictions < holes_to_predict:
+    pos_index = np.random.RandomState().randint(0, actual_length) # Fixed seed doesn't work!
+    # Element in processed array can be found in its original index +/- offset
+    input_id_idx = pos_index + offset_idxs[pos_index]
+    if total_predictions >= holes_to_predict:
+      break
+    elif pos_index in visited_indices:
+      # Do not target an index, already holed
+      continue
+    elif input_id_idx > len(seq):
+      # Do not mask a part of input_ids that is going to be cropped.
+      continue
+    elif input_ids[input_id_idx] in {tokenizer.startToken, tokenizer.endToken}:
+      # Do not target [START] or [END] token
+      continue
+
+    # Sampled number from distribution to represent the actual hole length
+    hole_length = distribution.sample(actual_length)
+
+    # Increase hole length a little bit, if too many empty holes have pushed rightmost elements
+    # over the edge.
+    while last_elem + offset_idxs[last_elem] + 1 - hole_length >= len(seq):
+      hole_length += 1
+
+    # Inside range, make sure hole length does not run over input_id_idx bounds
+    # This may be redundant given the next for loop
+    if extend_left:
+      hole_length = min(hole_length, input_id_idx)
+    else:
+      hole_length = min(hole_length, (last_elem + offset_idxs[last_elem]) - input_id_idx)
+    
+    # Confirm there is no conflict with another hole, further down the sequence.
+    for i in range(hole_length):
+      if extend_left:
+        if (input_ids[input_id_idx - i] == tokenizer.holeToken
+         or input_ids[input_id_idx - i] == tokenizer.startToken
+         or input_ids[input_id_idx - i] == tokenizer.endToken
+         # or input_id_idx - i == 0
+         ):
+          hole_length = i
+          break
+      else:
+        if (input_ids[input_id_idx + i] == tokenizer.holeToken
+         or input_ids[input_id_idx + i] == tokenizer.startToken
+         or input_ids[input_id_idx + i] == tokenizer.endToken
+         # or input_id_idx + i == len(input_ids)
+         ):
+          hole_length = i
+          break
+
+    if offset_idxs[last_elem] + 1 - hole_length >= len(seq):
+      # This hole can't help but explode the sequence. Go find a new position.
+      continue
+
+    pos_index  -= hole_length - 1 if hole_length != 0 and extend_left else 0
+    input_id_idx = pos_index + offset_idxs[pos_index]
+    
+    # Target token for classifier is either the first token of the hole, or endholeToken if hole is empty
+    target = input_ids[input_id_idx] if hole_length > 0 else tokenizer.endholeToken
+    input_ids = input_ids[:input_id_idx] + [tokenizer.holeToken] + input_ids[input_id_idx + hole_length:]
+
+    # Store position index, and after making all masks, update with updated offset array
+    masked_lms.append(MaskedLmInstance(
+        pos_index = pos_index, token_id = target, hole_length = hole_length, extend_left = extend_left
+      )
+    )
+    # Adjust the offset of all affected tokens, from pos_index and after.
+    offset_idxs[pos_index + 1:] += 1 - hole_length
+    total_predictions           += max(1, hole_length)
+    visited_indices.update(range(pos_index, pos_index + hole_length))
+
+  # Now update the entries with offset index.
+  for lm in masked_lms:
+    prev_index = lm.pos_index
+    lm.pos_index = lm.pos_index + offset_idxs[lm.pos_index]
+
+  while len(input_ids) < len(seq):
+    input_ids.append(tokenizer.padToken)
+  masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
+
+  input_mask = np.ones(len(seq), dtype = np.int64)
+  if tokenizer.padToken in input_ids:
+    first_pad_index = input_ids.index(tokenizer.padToken)
+    input_mask[first_pad_index:] = 0
+
+  seen_in_training     = np.int64([1] if train_set else [0])
+  next_sentence_labels = np.int64([0])
+  masked_lm_lengths = np.full(max_predictions, -1, dtype = np.int64)
+  mask_labels = np.full(len(seq), -100, dtype = np.int64)
+  ind = 0
+  for p in masked_lms:
+    if p.pos_index < len(seq):
+      mask_labels[p.pos_index] = p.token_id
+      masked_lm_lengths[ind]   = p.hole_length
+      ind += 1
+
+  return {
+      'seen_in_training'    : seen_in_training,
+      'original_input'      : seq,
+      'input_ids'           : np.asarray(input_ids[:len(seq)], dtype = np.int64),
+      'input_mask'          : input_mask,
+      'position_ids'        : np.arange(len(seq), dtype = np.int64),
+      'mask_labels'         : mask_labels,
+      'masked_lm_lengths'   : masked_lm_lengths,
+      'next_sentence_labels': next_sentence_labels,
+    }
+
 def ExhaustiveHoleSequence(all_seq: np.array,
                            train_set: bool,
                            # max_predictions: int,
@@ -426,10 +575,7 @@ def ExhaustiveHoleSequence(all_seq: np.array,
                            # training_opts,
                            # is_torch: bool,
                            # repair_locations: typing.List[int] = None,
-                           ) -> typing.Generator[
-                                  list(
-                                    tuple(dict(str, np.array), list(MaskedLmInstance)
-                                  ))]:
+                           ) -> typing.Generator:
   """
   Placing random holes seems to introduce an overfitting bias on the model.
   It doesn't learn a good distribution of what should go in a specific hole

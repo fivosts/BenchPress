@@ -124,7 +124,7 @@ def AssertConfigIsValid(config: model_pb2.DataGenerator,
       "random_placed_mask",
     )
   elif config.HasField("hole"):
-    if config.HasField("absolute_length"):
+    if config.hole.HasField("absolute_length"):
       pbutil.AssertFieldConstraint(
         config.hole,
         "absolute_length",

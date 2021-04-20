@@ -17,6 +17,7 @@ from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.models import lm_data_generator
+from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.models import online_generator
 from deeplearning.clgen.features import active_generator
 from absl import flags
@@ -234,25 +235,26 @@ class OnlineDataset(torch.utils.data.Dataset):
     super(OnlineDataset, self).__init__()
     self.dataset = self.load_data(dg.cache.path / "corpus.pkl")
     self.size    = len(self.dataset)
+    self.distribution = None
 
     if dg.config.HasField("mask"):
-      self.func = functools.partial(dg.mask_func,
+      self.func = functools.partial(sequence_masking.MaskSequence,
                                     train_set         = is_train,
                                     max_predictions   = dg.config.max_predictions_per_seq,
-                                    pickled_tokenizer = pickle.dumps(dg.tokenizer),
+                                    pickled_tokenizer = dg.tokenizer,
                                     training_opts     = dg.training_opts,
                                     is_torch          = True,
                                     config            = dg.config,
       )
     elif dg.config.HasField("hole"):
-      distribution = distributions.Distribution.FromHoleConfig(
+      self.distribution = distributions.Distribution.FromHoleConfig(
         dg.config.hole, dg.cache.path, "hole_length_online"
       )
-      self.func = functools.partial(dg.hole_func,
+      self.func = functools.partial(sequence_masking.HoleSequence,
                                     train_set            = is_train,
                                     max_predictions      = dg.config.max_predictions_per_seq,
-                                    pickled_distribution = pickle.dumps(distribution),
-                                    pickled_tokenizer    = pickle.dumps(dg.tokenizer),
+                                    pickled_distribution = distribution,
+                                    pickled_tokenizer    = dg.tokenizer,
                                     training_opts        = dg.training_opts,
                                     is_torch             = True,
         )
