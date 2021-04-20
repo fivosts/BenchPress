@@ -76,7 +76,7 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
             "random_placed_mask",
           )
         elif config.sample_corpus.corpus_config.HasField("hole"):
-          if config.HasField("absolute_length"):
+          if config.hole.HasField("absolute_length"):
             pbutil.AssertFieldConstraint(
               config.sample_corpus.corpus_config.hole,
               "absolute_length",

@@ -233,6 +233,7 @@ class OnlineDataset(torch.utils.data.Dataset):
     self.dataset = self.load_data(dg.cache.path / "corpus.pkl")
     self.size    = len(self.dataset)
     self.distribution = None
+    # self.dg = dg
 
     if dg.config.HasField("mask"):
       self.func = functools.partial(sequence_masking.MaskSequence,
@@ -266,8 +267,8 @@ class OnlineDataset(torch.utils.data.Dataset):
         raise ValueError("absolute value of index should not exceed dataset length")
       idx = len(self) + idx
     k = self.func(self.dataset[idx])
-    print(k)
-    raise NotImplementedError("Fix a) init state of rngen b) distribution plotting, monitors etc.")
+    print(idx)
+    # raise NotImplementedError("Fix a) init state of rngen b) distribution plotting, monitors etc.")
     return k
 
   def load_data(self, dataset: pathlib.Path) -> typing.List[np.array]:
