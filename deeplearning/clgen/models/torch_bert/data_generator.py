@@ -21,6 +21,7 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.models import lm_data_generator
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.models import online_generator
+from deeplearning.clgen.models import datasets
 from deeplearning.clgen.features import active_generator
 from absl import flags
 from eupy.native import logger as l
@@ -80,10 +81,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     eval_dataloaders sets set_name to reuse the function for all different sets.
     """
     if self.config.datapoint_time == "pre":
-      dataset = LazyConcatDataset([x for x in self.dataset[set_name]['file']])
-      sampler = LazyRandomSampler(dataset, replacement = False)
+      dataset = datasets.LazyConcatDataset([x for x in self.dataset[set_name]['file']])
+      sampler = datasets.LazyRandomSampler(dataset, replacement = False)
     elif self.config.datapoint_time == "online":
-      dataset = OnlineDataset(self, True)
+      dataset = datasets.OnlineDataset(self, True)
       sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
     else:
       raise ValueError(self.config.datapoint_time)
@@ -153,16 +154,16 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
     else:
       if self.sampler.is_online:
-        dataset = OnlineDataset(self, False)
+        dataset = datasets.OnlineDataset(self, False)
         sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
       elif self.sampler.is_active:
         raise NotImplementedError("Integrate active sampler here")
       else:
         path_list = self.configSampleSets()
-        dataset = LazyConcatDataset(
+        dataset = datasets.LazyConcatDataset(
                     [x for x in path_list]
                   )
-        sampler = LazyRandomSampler(dataset, replacement = False)
+        sampler = datasets.LazyRandomSampler(dataset, replacement = False)
     dataloader = torch.utils.data.dataloader.DataLoader(
       dataset    = dataset,
       # Model's batch size is divided by sampler's batch size, in order to get
@@ -216,186 +217,3 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
                  .format(len(masked_corpus['corpus']), self.steps_per_epoch, self.training_opts.batch_size, masked_corpus['file']))
     return
-
-class OnlineDataset(torch.utils.data.Dataset):
-  r"""Online pre-processing dataset of raw corpus.
-
-  This dataset holds path to raw corpus and yields
-  pre-processed instances on the fly.
-
-  Arguments:
-    dataset (path): Path for raw dataset
-    func (callable): Function called to pre-process sequence.
-  """
-  def __init__(self, dg: torchLMDataGenerator, is_train: bool):
-    super(OnlineDataset, self).__init__()
-    self.dataset = self.load_data(dg.cache.path / "corpus.pkl")
-    self.size    = len(self.dataset)
-    self.distribution = None
-    # self.dg = dg
-
-    if dg.config.HasField("mask"):
-      self.func = functools.partial(sequence_masking.MaskSequence,
-                                    train_set         = is_train,
-                                    max_predictions   = dg.training_opts.max_predictions_per_seq,
-                                    pickled_tokenizer = dg.tokenizer,
-                                    training_opts     = dg.training_opts,
-                                    is_torch          = True,
-                                    config            = dg.config,
-      )
-    elif dg.config.HasField("hole"):
-      self.distribution = distributions.Distribution.FromHoleConfig(
-        dg.config.hole, dg.cache.path, "hole_length_online"
-      )
-      self.func = functools.partial(sequence_masking.HoleSequence,
-                                    train_set       = is_train,
-                                    max_predictions = dg.training_opts.max_predictions_per_seq,
-                                    distribution    = self.distribution,
-                                    tokenizer       = dg.tokenizer,
-                                    training_opts   = dg.training_opts,
-        )
-    return
-
-  def __len__(self):
-    return self.size
-
-  def __getitem__(self, idx):
-
-    if idx < 0:
-      if -idx > len(self):
-        raise ValueError("absolute value of index should not exceed dataset length")
-      idx = len(self) + idx
-    k = self.func(self.dataset[idx])
-    # raise NotImplementedError("Fix a) init state of rngen b) distribution plotting, monitors etc.")
-    return k
-
-  def load_data(self, dataset: pathlib.Path) -> typing.List[np.array]:
-    if dataset.exists():
-      with open(dataset, 'rb') as infile:
-        return pickle.load(infile)
-
-class LazyConcatDataset(torch.utils.data.Dataset):
-  r"""Dataset as a concatenation of multiple datasets.
-
-  This class is useful to assemble different existing datasets
-  and instantiate them lazily, to avoid loading them all in
-  memory at the same time/
-
-  Arguments:
-    datasets (sequence): List of paths for datasets to be concatenated
-  """
-
-  @staticmethod
-  def cumsum(sequence: typing.List[pathlib.Path]):
-    r, s = [], 0
-    for e in sequence:
-      lt = len(torch.load(e))
-      assert lt > 0, "Dataset {} is empty".format(e)
-      r.append(lt + s)
-      s += lt
-    return r
-
-  @property
-  def num_datasets(self):
-    return len(self.datasets)
-
-  def __init__(self, datasets: typing.List[pathlib.Path]):
-    super(LazyConcatDataset, self).__init__()
-    assert len(datasets) > 0, 'Empty list of datasets provided.'
-    self.datasets = datasets
-    self.cumulative_sizes = self.cumsum(self.datasets)
-
-    self.curr_dset_idx = None
-    self.dataset       = None
-
-  def __len__(self):
-    return self.cumulative_sizes[-1]
-
-  def __getitem__(self, idx):
-
-    import bisect
-    if idx < 0:
-      if -idx > len(self):
-        raise ValueError("absolute value of index should not exceed dataset length")
-      idx = len(self) + idx
-    dataset_idx = bisect.bisect_right(self.cumulative_sizes, idx)
-    
-    if self.curr_dset_idx != dataset_idx:
-      self.curr_dset_idx = dataset_idx
-      self.dataset = torch.load(self.datasets[dataset_idx])
-
-    if dataset_idx == 0:
-      sample_idx = idx
-    else:
-      sample_idx = idx - self.cumulative_sizes[dataset_idx - 1]
-    return self.dataset[sample_idx]
-
-class LazyRandomSampler(torch.utils.data.Sampler):
-  r"""Samples elements randomly. If without replacement, then sample from a shuffled dataset.
-  If with replacement, then user can specify :attr:`num_samples` to draw.
-
-  Arguments:
-    data_source (Dataset): dataset to sample from
-    replacement (bool): samples are drawn with replacement if ``True``, default=``False``
-    num_samples (int): number of samples to draw, default=`len(dataset)`. This argument
-      is supposed to be specified only when `replacement` is ``True``.
-    generator (Generator): Generator used in sampling.
-  """
-
-  def __init__(self, data_source, replacement=False, num_samples=None, generator=None):
-    self.data_source = data_source
-    self.replacement = replacement
-    self._num_samples = num_samples
-    self.generator = generator
-    self.dataset_idx = self.__datasetIdx_iter__
-    if not isinstance(self.replacement, bool):
-      raise TypeError("replacement should be a boolean value, but got "
-                      "replacement={}".format(self.replacement))
-
-    if self._num_samples is not None and not replacement:
-      raise ValueError("With replacement=False, num_samples should not be specified, "
-                       "since a random permute will be performed.")
-
-    if not isinstance(self.num_samples, int) or self.num_samples <= 0:
-      raise ValueError("num_samples should be a positive integer "
-                       "value, but got num_samples={}".format(self.num_samples))
-
-  @property
-  def num_samples(self):
-    # dataset size might change at runtime
-    if self._num_samples is None:
-      return len(self.data_source)
-    return self._num_samples
-
-  @property
-  def num_datasets(self):
-    if isinstance(self.data_source, LazyConcatDataset):
-      return self.data_source.num_datasets
-    else:
-      return 1
-
-  @property
-  def __datasetIdx_iter__(self):
-    dataset_idx = torch.randperm(self.num_datasets, generator = self.generator).tolist()
-    self.dataset_tensor = iter(dataset_idx)
-    return self.dataset_tensor
-
-  def __iter__(self):
-    try:
-      dataset_idx = next(self.dataset_tensor)
-    except StopIteration:
-      dataset_idx = next(self.__datasetIdx_iter__)
-    bounds = (self.data_source.cumulative_sizes[dataset_idx - 1] if dataset_idx else 0, self.data_source.cumulative_sizes[dataset_idx])
-
-    if self.replacement:
-      if self._num_samples is None:
-        size = bounds[1] - bounds[0]
-      else:
-        size = self._num_samples // self.num_datasets
-      rand_tensor = torch.randint(low = bounds[0], high = bounds[1], size = (size,), generator = self.generator).tolist()
-    else:
-      rand_tensor = [x + bounds[0] for x in torch.randperm(bounds[1] - bounds[0], generator = self.generator).tolist()]
-    return iter(rand_tensor)
-
-  def __len__(self):
-    return self.num_samples
