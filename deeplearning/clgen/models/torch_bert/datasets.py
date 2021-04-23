@@ -15,6 +15,7 @@ from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.models import sequence_masking
+from deeplearning.clgen.models import lm_data_generator
 from absl import flags
 from eupy.native import logger as l
 
@@ -30,7 +31,7 @@ class OnlineDataset(torch.utils.data.Dataset):
     dataset (path): Path for raw dataset
     func (callable): Function called to pre-process sequence.
   """
-  def __init__(self, dg: torchLMDataGenerator, is_train: bool):
+  def __init__(self, dg: lm_data_generator.MaskLMDataGenerator, is_train: bool):
     super(OnlineDataset, self).__init__()
     self.dataset         = self.load_data(dg.cache.path / "corpus.pkl")
     self.cache_path      = dg.cache.path
