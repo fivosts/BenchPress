@@ -38,14 +38,18 @@ class OnlineDataset(torch.utils.data.Dataset):
     self.cache_path      = dg.cache.path
     self.size            = len(self.dataset)
     self.cur_step        = 0
-    self.steps_per_epoch = dg.steps_per_epoch
+    self.steps_per_epoch = dg.steps_per_epoch * dg.training_opts.batch_size
     if is_train:
-      self.hlen_monitor  = monitors.NormalizedFrequencyMonitor(self.cache_path, "online_hole_length")
+      if (self.cache_path / "hole_length_mon.pkl").exists():
+        with open(self.cache_path / "hole_length_mon.pkl", 'rb') as infile:
+          self.hlen_monitor = pickle.load(infile)
+      else:
+        self.hlen_monitor = monitors.NormalizedFrequencyMonitor(self.cache_path, "online_hole_length")
+
     """
     TODO, add custom config just like in lm_data_generator
     for val sets / sample sets etc.
     """
-
     if dg.config.HasField("mask"):
       self.func = functools.partial(sequence_masking.MaskSequence,
                                     train_set         = is_train,
@@ -80,8 +84,8 @@ class OnlineDataset(torch.utils.data.Dataset):
       idx = len(self) + idx
     k = self.func(self.dataset[idx])
 
-    if is_train:
-      self.hlen_monitor.register(k['masked_lm_lengths'])
+    if self.hlen_monitor:
+      self.hlen_monitor.register(list(k['masked_lm_lengths']))
       if self.cur_step % self.steps_per_epoch == 0:
         self.hlen_monitor.plot()
         with open(self.cache_path / "hole_length_mon.pkl", 'wb') as outf:

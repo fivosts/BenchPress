@@ -71,7 +71,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     self.dataloader = None
     return
 
-  def train_dataloader(self, set_name = 'train_dataset') -> None:
+  def train_dataloader(self, set_name = 'train_dataset', is_train = True) -> None:
     """
     Pytorch dataloader used for training.
   
@@ -84,7 +84,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       dataset = datasets.LazyConcatDataset([x for x in self.dataset[set_name]['file']])
       sampler = datasets.LazyRandomSampler(dataset, replacement = False)
     elif self.config.datapoint_time == "online":
-      dataset = datasets.OnlineDataset(self, True)
+      dataset = datasets.OnlineDataset(self, is_train)
       sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
     else:
       raise ValueError(self.config.datapoint_time)
@@ -108,7 +108,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
   def eval_dataloaders(self):
     """Pytorch dataloader used for validation."""
     if self.config.datapoint_time == "online":
-      yield "Online Corpus", self.train_dataloader()
+      yield "Online Corpus", self.train_dataloader(is_train = False)
     else:
       for set_name in self.dataset:
         yield set_name, self.train_dataloader(set_name)
