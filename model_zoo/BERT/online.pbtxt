@@ -78,7 +78,7 @@ model {
 }
 sampler {
   live_sampling: true
-  batch_size: 1
+  batch_size: 4
   sequence_length: 768
   temperature_micros: 800000  # = 0.8 real value
   termination_criteria {
