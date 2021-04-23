@@ -21,7 +21,7 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.models import lm_data_generator
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.models import online_generator
-from deeplearning.clgen.models import datasets
+from deeplearning.clgen.models.torch_bert import datasets
 from deeplearning.clgen.features import active_generator
 from absl import flags
 from eupy.native import logger as l
