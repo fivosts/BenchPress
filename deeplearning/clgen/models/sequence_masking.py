@@ -238,7 +238,7 @@ def MPHoleSequence(seq: np.array,
     seen_in_training     = np.int64([1] if train_set else [0])
     next_sentence_labels = np.int64([0])
 
-    masked_lm_lengths = np.full(max_predictions, -1, dtype = np.int64)
+    masked_lm_lengths = np.full(holes_to_predict, -1, dtype = np.int64)
     mask_labels = np.full(len(seq), -100, dtype = np.int64)
     ind = 0
     for p in masked_lms:
@@ -375,7 +375,7 @@ def MPMaskSequence(seq: np.array,
     seen_in_training     = np.int64([1] if train_set else [0])
     next_sentence_labels = np.int64([0])
 
-    masked_lm_lengths = np.full(max_predictions, -1, dtype = np.int64)
+    masked_lm_lengths = np.full(masks_to_predict, -1, dtype = np.int64)
     mask_labels = np.full(len(seq), -100, dtype = np.int64)
     ind = 0
     for p in masked_lms:
@@ -547,7 +547,7 @@ def HoleSequence(seq: np.array,
 
   seen_in_training     = np.int64([1] if train_set else [0])
   next_sentence_labels = np.int64([0])
-  masked_lm_lengths = np.full(max_predictions, -1, dtype = np.int64)
+  masked_lm_lengths = np.full(holes_to_predict, -1, dtype = np.int64)
   mask_labels = np.full(len(seq), -100, dtype = np.int64)
   ind = 0
   for p in masked_lms:
