@@ -197,7 +197,10 @@ class TokenizerBase(object):
     Returns:
       Code in string format.
     """
-    return self.tokensToString([x for x in encoded if x not in self.metaTokenValues], with_formatting)
+    return self.tokensToString(
+              [x for x in encoded if x not in self.metaTokenValues],
+              with_formatting = with_formatting
+            )
 
   def StringArrToCode(self,
                       text: typing.List[str],
@@ -685,7 +688,8 @@ class ASTokenizer(TokenizerBase):
     """
     try:
       if np.ndim(encoded) > 1:
-        return [ self.tokensToString(x, ignore_token, with_formatting) for x in encoded ]
+        return [ self.tokensToString(x, ignore_token = ignore_token, with_formatting = with_formatting)
+                 for x in encoded ]
       elif np.ndim(encoded) == 1:
         if not with_formatting:
           src = []
