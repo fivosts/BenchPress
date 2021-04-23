@@ -530,6 +530,8 @@ class torchBert(backends.BackendBase):
                      )
     self._ConfigSampleParams(data_generator, sampler)
     ckpt_step = self.loadCheckpoint(self.sample)
+    if ckpt_step > 0:
+      l.getLogger().info("Loaded checkpoint step {}".format(ckpt_step))
     self.step_inputs   = None
     self.loader        = None
     self.pred_iterator = None

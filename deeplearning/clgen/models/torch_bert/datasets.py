@@ -14,6 +14,7 @@ import pathlib
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.util import distributions
+from deeplearning.clgen.util import monitors
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.models import lm_data_generator
 from absl import flags
