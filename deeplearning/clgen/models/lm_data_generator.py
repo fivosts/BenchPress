@@ -74,9 +74,11 @@ def AssertConfigIsValid(config: model_pb2.DataGenerator,
     config,
     "steps_per_epoch",
   )
-  pbutil.AssertFieldIsSet(
+  pbutil.AssertFieldConstraint(
     config,
     "validation_split",
+    lambda x : 0 <= x <= 100,
+    "Validation split is expressed in [0-100]%."
   )
   if config.datapoint_type == "kernel":
     pbutil.AssertFieldIsSet(
@@ -243,8 +245,6 @@ class MaskLMDataGenerator(object):
       Then configValidationSets is called which constructs any additional validation_set elements
       provided in the model's config.
     """
-    assert self.config.validation_split >= 0 and self.config.validation_split <= 100
-
     if FLAGS.force_remake_dataset:
       l.getLogger().warn("Force remaking datasets can cause lots of problems on an already trained model. Are you sure you want to proceed ? [y/n]")
       a = input()
