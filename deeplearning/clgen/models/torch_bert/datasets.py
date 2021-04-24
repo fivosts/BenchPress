@@ -34,7 +34,14 @@ class OnlineDataset(torch.utils.data.Dataset):
   """
   def __init__(self, dg: lm_data_generator.MaskLMDataGenerator, is_train: bool):
     super(OnlineDataset, self).__init__()
-    self.dataset         = self.load_data(dg.cache.path / "corpus.pkl")
+    full_dataset         = self.load_data(dg.cache.path / "corpus.pkl")
+    """
+    TODO you've better change is_train check to something more generic.
+    """
+    if is_train:
+      self.dataset       = full_dataset[:int(len(full_dataset) * (1 - (dg.config.validation_split / 100)))]
+    else:
+      self.dataset       = full_dataset[int(len(full_dataset) * (1 - (dg.config.validation_split / 100))):]
     self.cache_path      = dg.cache.path
     self.size            = len(self.dataset)
     self.cur_step        = 0
