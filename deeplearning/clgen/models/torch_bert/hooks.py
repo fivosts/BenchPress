@@ -41,9 +41,9 @@ class tensorMonitorHook(object):
     for key, value in tensors.items():
       if value is None:
         continue
-      if key in self.epoch_tensors and "num_" not in key:
-      # "num_" means tensor registers accumulated number and won't average.
-      # Therefore we are just going to take the last registed value.
+      if key in self.epoch_tensors and "num_" not in key and not "val_" in key:
+        # "num_" means tensor registers accumulated number and won't average.
+        # Therefore we are just going to take the last registed value.
         self.epoch_tensors[key] += value
       else:
         self.epoch_tensors[key] = value
@@ -94,7 +94,7 @@ class tensorMonitorHook(object):
   
     if self.average is True:
       epoch_tensors = (self.epoch_tensors if effective_step == 0
-                     else {k: (v / self.step_freq if not "num_" in k else v) for k, v in self.epoch_tensors.items()})
+                     else {k: (v / self.step_freq if not "num_" in k or not "val_" in k else v) for k, v in self.epoch_tensors.items()})
     else:
       epoch_tensors = (self.epoch_tensors if effective_step == 0
                      else {k: v for k, v in self.epoch_tensors.items()})
