@@ -69,6 +69,12 @@ flags.DEFINE_boolean(
   "Calculate and plot validation loss per end of epoch."
 )
 
+flags.DEFINE_integer(
+  "eval_steps_per_epoch",
+  1000,
+  "Set validation steps at the end of epoch for validation loss calculation."
+)
+
 class torchBert(backends.BackendBase):
 
   class BertEstimator(typing.NamedTuple):
@@ -340,7 +346,6 @@ class torchBert(backends.BackendBase):
 
       try:
         self.train.model.train()
-        val_ml_loss, val_nsp_loss = None, None
         for epoch in tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False):
           if epoch < self.current_step // self.steps_per_epoch:
             continue # Stupid bar won't resume.
@@ -398,11 +403,7 @@ class torchBert(backends.BackendBase):
                                                for b in inputs['masked_lm_lengths']]) / len(inputs['masked_lm_lengths']),
                 batch_execution_time_ms = exec_time_ms,
                 time_per_sample_ms      = exec_time_ms / self.train_batch_size,
-                val_masked_lm_loss      = val_ml_loss,
-                val_next_sentence_loss  = val_nsp_loss,
-                val_total_loss          = val_ml_loss + val_nsp_loss if val_ml_loss and val_nsp_loss else None,
               )
-              val_ml_loss, val_nsp_loss = None, None
             else:
               train_hook.step(
                 masked_lm_loss          = step_out['masked_lm_loss'].mean().item(),
@@ -413,11 +414,7 @@ class torchBert(backends.BackendBase):
                                                for b in inputs['masked_lm_lengths']]) / len(inputs['masked_lm_lengths']),
                 batch_execution_time_ms = exec_time_ms,
                 time_per_sample_ms      = exec_time_ms / self.train_batch_size,
-                val_masked_lm_loss      = val_ml_loss,
-                val_next_sentence_loss  = val_nsp_loss,
-                val_total_loss          = val_ml_loss + val_nsp_loss if val_ml_loss and val_nsp_loss else None,
               )
-              val_ml_loss, val_nsp_loss = None, None
 
             self.train.model.zero_grad()
             if self.current_step == 0:
@@ -425,11 +422,18 @@ class torchBert(backends.BackendBase):
             self.current_step += 1
 
           # End of Epoch
-          l.getLogger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.current_loss), mail_level = 4)
+          l.getLogger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss), mail_level = 4)
           self.saveCheckpoint(self.train, pre_train)
 
           if FLAGS.validate_per_epoch:
             val_ml_loss, val_nsp_loss = self.Validate(per_epoch = True)
+            train_hook.end_epoch(
+            val_masked_lm_loss      = val_ml_loss,
+            val_next_sentence_loss  = val_nsp_loss,
+            val_total_loss          = val_ml_loss + val_nsp_loss,
+            )
+          else:
+            train_hook.end_epoch()
 
           if self.torch_tpu_available:
             self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
@@ -487,7 +491,7 @@ class torchBert(backends.BackendBase):
                  Instead, only loss is monitored and plotted.
     """
 
-    if FLAGS.max_eval_steps <= 0:
+    if (per_epoch and FLAGS.eval_steps_per_epoch <= 0) or (not per_epoch and FLAGS.max_eval_steps <= 0):
       l.getLogger().info("Skipping BERT Validation.")
 
     if self.pytorch.num_gpus > 1:
@@ -515,9 +519,10 @@ class torchBert(backends.BackendBase):
           model_step = self.current_step
         )
       eval_iterator = iter(loader)
+      eval_steps = FLAGS.max_eval_steps if not per_epoch else FLAGS.eval_steps_per_epoch
 
       try:
-        for step in tqdm.auto.trange(FLAGS.max_eval_steps, desc = "Validation", leave = False):
+        for step in tqdm.auto.trange(eval_steps, desc = "Validation", leave = False):
           try:
             inputs = next(eval_iterator)
           except StopIteration:
@@ -543,7 +548,10 @@ class torchBert(backends.BackendBase):
 
     if not per_epoch:
       self.is_validated = True
-    return sum(avg_mask_loss) / len(avg_mask_loss), sum(avg_nsp_loss) / len(avg_nsp_loss)
+    try:
+      return sum(avg_mask_loss) / len(avg_mask_loss), sum(avg_nsp_loss) / len(avg_nsp_loss)
+    except ZeroDivisionError:
+      return float('inf'), float('inf')
 
   def InitSampling(self,
                    sampler : samplers.Sampler,

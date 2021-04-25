@@ -34,9 +34,9 @@ class tensorMonitorHook(object):
     return
 
   @property
-  def current_loss(self):
-    return self.tensors[-1]['total_loss']
-
+  def epoch_loss(self):
+    return self.epoch_tensors['total_loss'] / self.step_freq
+  
   def step(self, **tensors):
     for key, value in tensors.items():
       if value is None:
@@ -48,6 +48,16 @@ class tensorMonitorHook(object):
       else:
         self.epoch_tensors[key] = value
 
+    self.current_step += 1
+    if self.current_step - 1 == 0:
+      self._logTensors()
+    return
+
+  def end_epoch(self, **tensors):
+    for key, value in tensors.items():
+      if value is None:
+        continue
+      self.epoch_tensors[key] = value
     if self._step_triggered():
       self._logTensors()
       self.epoch_tensors = {}
@@ -80,7 +90,6 @@ class tensorMonitorHook(object):
     return
 
   def _step_triggered(self):
-    self.current_step += 1
     if self.delay_checkpoint:
       self.delay_checkpoint = False
       return False
@@ -94,7 +103,7 @@ class tensorMonitorHook(object):
   
     if self.average is True:
       epoch_tensors = (self.epoch_tensors if effective_step == 0
-                     else {k: (v / self.step_freq if not "num_" in k or not "val_" in k else v) for k, v in self.epoch_tensors.items()})
+                     else {k: (v / self.step_freq if not "num_" in k and not "val_" in k else v) for k, v in self.epoch_tensors.items()})
     else:
       epoch_tensors = (self.epoch_tensors if effective_step == 0
                      else {k: v for k, v in self.epoch_tensors.items()})
