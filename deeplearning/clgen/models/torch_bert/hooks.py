@@ -11,14 +11,16 @@ class tensorMonitorHook(object):
                cache_path: pathlib.Path, 
                current_step: int, 
                step_freq: int,
+               steps_per_epoch: int,
                flush_freq: int = None,
                average: bool = True,
                ):
-    self.cache_path   = cache_path
-    self.current_step = current_step
-    self.step_freq    = step_freq
-    self.flush_freq   = flush_freq
-    self.average      = average
+    self.cache_path       = cache_path
+    self.current_step     = current_step
+    self.step_freq        = step_freq
+    self.steps_per_epoch  = steps_per_epoch
+    self.flush_freq       = flush_freq
+    self.average          = average
 
     self.jsonfile         = cache_path / "training.json"
     self.tensors          = []
@@ -35,7 +37,7 @@ class tensorMonitorHook(object):
 
   @property
   def epoch_loss(self):
-    return self.epoch_tensors['total_loss'] / self.step_freq
+    return self.epoch_tensors['total_loss'] / self.steps_per_epoch
   
   def step(self, **tensors):
     for key, value in tensors.items():
