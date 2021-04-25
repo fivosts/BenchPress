@@ -425,7 +425,7 @@ class torchBert(backends.BackendBase):
           l.getLogger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss), mail_level = 4)
           self.saveCheckpoint(self.train, pre_train)
 
-          if FLAGS.validate_per_epoch:
+          if FLAGS.validate_per_epoch and self.train.data_generator.validation_split > 0:
             val_ml_loss, val_nsp_loss = self.Validate(per_epoch = True)
             train_hook.end_epoch(
             val_masked_lm_loss      = val_ml_loss,
