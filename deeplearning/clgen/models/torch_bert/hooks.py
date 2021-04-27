@@ -51,8 +51,9 @@ class tensorMonitorHook(object):
         self.epoch_tensors[key] = value
 
     self.current_step += 1
-    if self.current_step - 1 == 0:
+    if self._step_triggered():
       self._logTensors()
+      self.epoch_tensors = {}
     return
 
   def end_epoch(self, **tensors):
