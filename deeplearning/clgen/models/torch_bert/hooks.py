@@ -61,9 +61,9 @@ class tensorMonitorHook(object):
       if value is None:
         continue
       self.epoch_tensors[key] = value
-    if self._step_triggered():
-      self._logTensors()
-      self.epoch_tensors = {}
+    # if self._step_triggered():
+    self._logTensors()
+    self.epoch_tensors = {}
     return
 
   def _initTensors(self):
