@@ -36,10 +36,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                training_opts: model_pb2.TrainingOptions,
                                cache_path,
                                num_train_steps: int = None,
+                               pre_train: bool = False,
                                ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for training."""
     d = super(torchLMDataGenerator, torchLMDataGenerator()).TrainMaskLMBatchGenerator(
-                corpus, training_opts, cache_path, num_train_steps
+                corpus, training_opts, cache_path, num_train_steps, pre_train
         )
     d.dataloader = d.train_dataloader()
     return d
