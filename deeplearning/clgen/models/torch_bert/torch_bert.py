@@ -304,7 +304,7 @@ class torchBert(backends.BackendBase):
       return
       
     self.current_step = self.loadCheckpoint(self.train, pre_train = pre_train)
-    if self.current_step > 0:
+    if self.current_step >= 0:
       l.getLogger().info("Loaded checkpoint step {}".format(self.current_step))
 
     if self.current_step < self.num_train_steps:
@@ -577,7 +577,7 @@ class torchBert(backends.BackendBase):
                      )
     self._ConfigSampleParams(data_generator, sampler)
     ckpt_step = self.loadCheckpoint(self.sample)
-    if ckpt_step > 0:
+    if ckpt_step >= 0:
       l.getLogger().info("Loaded checkpoint step {}".format(ckpt_step))
     self.step_inputs   = None
     self.loader        = None
@@ -726,7 +726,7 @@ class torchBert(backends.BackendBase):
       if "train_step: 0" not in cf:
         with open(self.ckpt_path / "checkpoint.meta", 'w') as mf:
           mf.write(cf + "train_step: 0\n")
-      for x in {"model", "scheduler", "optimizer"}:
+      for x in {"model"}:
         shutil.copyfile(str(ckpt_comp(x)), str(self.ckpt_path / "{}-0.pt".format(x)))
     return
 
@@ -735,7 +735,7 @@ class torchBert(backends.BackendBase):
     Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
     """
     if not (self.ckpt_path / "checkpoint.meta").exists():
-      return 0
+      return -1
 
     with open(self.ckpt_path / "checkpoint.meta", 'r') as mf:
       if pre_train:
@@ -788,7 +788,7 @@ class torchBert(backends.BackendBase):
           new_state_dict[name] = v
         estimator.model.load_state_dict(new_state_dict)
 
-    if estimator.optimizer is not None and estimator.scheduler is not None:
+    if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
       estimator.optimizer.load_state_dict(
         self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
       )
