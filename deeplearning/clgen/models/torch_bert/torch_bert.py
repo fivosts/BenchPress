@@ -630,9 +630,9 @@ class torchBert(backends.BackendBase):
       if self.sampler.is_live and input("Show logits figure ? [y/!y]") == "y":
         for hole, indcs in zip(step_out['prediction_scores'], step_out['sample_indices']):
           plotter.LogitsStepsDistrib(
-            x = self.torch.nn.Softmax(dim = 1)(self.torch.FloatTensor(hole)).numpy(),
+            x = self.torch.nn.Softmax(dim = 1)(self.torch.FloatTensor(hole[:10])).numpy(),
             atoms = [self.tokenizer.decoder[i] for i in range(self.tokenizer.vocab_size)],
-            sample_indices = [self.tokenizer.decoder[i] for i in indcs[0]],
+            sample_indices = [self.tokenizer.decoder[i] for i in indcs[0]][:10],
             title = "Sampling distribution dim 1",
             x_name = "Probs / sample step",
           )
