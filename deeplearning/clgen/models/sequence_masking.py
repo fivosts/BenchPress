@@ -181,11 +181,7 @@ def MPHoleSequence(seq: np.array,
       # This hole can't help but explode the sequence. Go find a new position.
       continue
 
-    if hole_length < 0:
-      raise ValueError("Hole length cannot be negative: {}, {}, {}".format(
-        hole_length, actual_length, input_id_idx
-        )
-      )
+    assert hole_length >= 0, "hole length is negative: {}".format(hole_length)
 
     pos_index  -= hole_length - 1 if hole_length != 0 and extend_left else 0
     input_id_idx = pos_index + offset_idxs[pos_index]
@@ -490,7 +486,7 @@ def HoleSequence(seq: np.array,
       hole_length = min(hole_length, input_id_idx)
     else:
       hole_length = min(hole_length, (last_elem + offset_idxs[last_elem]) - input_id_idx)
-    
+
     # Confirm there is no conflict with another hole, further down the sequence.
     for i in range(hole_length):
       if extend_left:
@@ -514,9 +510,11 @@ def HoleSequence(seq: np.array,
       # This hole can't help but explode the sequence. Go find a new position.
       continue
 
+    assert hole_length >= 0, "hole length is negative: {}".format(hole_length)
+
     pos_index  -= hole_length - 1 if hole_length != 0 and extend_left else 0
     input_id_idx = pos_index + offset_idxs[pos_index]
-    
+
     # Target token for classifier is either the first token of the hole, or endholeToken if hole is empty
     target = input_ids[input_id_idx] if hole_length > 0 else tokenizer.endholeToken
     input_ids = input_ids[:input_id_idx] + [tokenizer.holeToken] + input_ids[input_id_idx + hole_length:]
