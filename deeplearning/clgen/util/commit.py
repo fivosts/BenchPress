@@ -2,10 +2,9 @@ import git
 import pathlib
 import typing
 
-repo = git.Repo(search_parent_directories = True)
-
 def saveCommit(path: pathlib.Path) -> None:
   curr_commits = loadCommit(path)
+  repo = git.Repo(search_parent_directories = True)
   cm = repo.head.object.hexsha
   if cm not in curr_commits:
     with open(path / "commit", 'a') as cf:
