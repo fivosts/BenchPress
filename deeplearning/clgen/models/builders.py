@@ -144,6 +144,15 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         config.training,
         "num_warmup_steps",
       )
+      if config.model.HasField("pre_train_corpus"):
+        pbutil.AssertFieldIsSet(
+          config.training,
+          "num_pretrain_steps",
+        )
+        pbutil.AssertFieldIsSet(
+          config.training,
+          "num_prewarmup_steps",
+        )
       pbutil.AssertFieldIsSet(
         config.training,
         "dupe_factor",

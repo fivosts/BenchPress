@@ -57,6 +57,12 @@ flags.DEFINE_integer(
 )
 
 flags.DEFINE_integer(
+  "num_pretrain_steps",
+  None,
+  "Bypass num_pretrain_steps provided by protobuf file."
+)
+
+flags.DEFINE_integer(
   "num_epochs",
   None,
   "Bypass num_epochs provided by protobuf file."
@@ -91,6 +97,8 @@ class Model(object):
     self.config.CopyFrom(builders.AssertIsBuildable(config))
     if FLAGS.num_train_steps:
       self.config.training.num_train_steps = FLAGS.num_train_steps
+    if FLAGS.num_pretrain_steps:
+      self.config.training.num_pretrain_steps = FLAGS.num_pretrain_steps
     if FLAGS.num_epochs:
       self.config.training.num_epochs = FLAGS.num_epochs
       
@@ -149,6 +157,8 @@ class Model(object):
         config_to_compare.pre_train_corpus.ClearField("contentfiles")
       config_to_compare.training.ClearField("num_epochs")
       config_to_compare.training.ClearField("num_train_steps")
+      if config_to_compare.model.HasField("pre_train_corpus"):
+        config_to_compare.training.ClearField("num_pretrain_steps")
       config_to_compare.training.ClearField("batch_size")
       if config_to_compare.training.HasField("data_generator"):
         config_to_compare.training.data_generator.ClearField("steps_per_epoch")
@@ -163,6 +173,8 @@ class Model(object):
         cached_to_compare.pre_train_corpus.ClearField("contentfiles")
       cached_to_compare.training.ClearField("num_epochs")
       cached_to_compare.training.ClearField("num_train_steps")
+      if cached_to_compare.model.HasField("pre_train_corpus"):
+        cached_to_compare.training.ClearField("num_pretrain_steps")
       cached_to_compare.training.ClearField("batch_size")
       if cached_to_compare.training.HasField("data_generator"):
         cached_to_compare.training.data_generator.ClearField("steps_per_epoch")
