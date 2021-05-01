@@ -30,7 +30,7 @@ class LMInstance(Base, sqlutil.ProtoBackedMixin):
       "id"                    : id,
       "original_input"        : original_input,
       "input_ids"             : input_ids,
-      "masked_lm_lengths"     : ','.join([str(x) for x in masked_lm_lengths]),
+      "masked_lm_lengths"     : ','.join([str(x) for x in masked_lm_lengths if x >= 0]),
       "masked_lm_predictions" : ','.join(masked_lm_predictions),
     }
 

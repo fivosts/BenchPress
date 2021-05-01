@@ -89,7 +89,7 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
       "masked_lm_ids"                 : str_masked_lm_ids,
       "encoded_mask_lm_ids"           : ','.join([str(x) for x in masked_lm_ids]),
       "masked_lm_weights"             : ','.join([str(int(x)) for x in masked_lm_weights]),
-      "masked_lm_lengths"             : ','.join([str(int(x)) for x in masked_lm_lengths]),
+      "masked_lm_lengths"             : ','.join([str(int(x)) for x in masked_lm_lengths if x >= 0]),
       "next_sentence_labels"          : int(next_sentence_labels),
       "masked_lm_predictions"         : str_masked_lm_predictions,
       "encoded_masked_lm_predictions" : ','.join([str(x) for x in masked_lm_predictions]),
