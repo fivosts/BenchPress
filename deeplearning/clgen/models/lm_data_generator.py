@@ -178,6 +178,7 @@ class MaskLMDataGenerator(object):
     self.cache                   = None
 
     self.training_opts           = None
+    self.pre_train               = None
     self.num_train_steps         = None
     self.steps_per_epoch         = None
     self.sample_batch_size       = None
@@ -193,6 +194,7 @@ class MaskLMDataGenerator(object):
                                 training_opts: model_pb2.TrainingOptions,
                                 cache_path: pathlib.Path,
                                 num_train_steps: int = None,
+                                pre_train: bool = False,
                                 ) -> "data_generator.MaskLMDataGenerator":
     """Initializes data generator for training."""
     self.cache         = cache.mkcache(cache_path, "dataset")
@@ -204,6 +206,7 @@ class MaskLMDataGenerator(object):
     self.config        = training_opts.data_generator
     self.training_opts = training_opts
     self.rngen         = np.random # random.Random(training_opts.random_seed)
+    self.pre_train     = pre_train
     if num_train_steps:
       self.num_train_steps = num_train_steps
     else:
@@ -423,8 +426,10 @@ class MaskLMDataGenerator(object):
     end             = [self.tokenizer.endToken   ]
     shaped_corpus   = None
 
-    if (path / "corpus.pkl").exists():
-      with open(path / "corpus.pkl", 'rb') as infile:
+    corpus_file = "{}corpus.pkl".format("pre_" if self.pre_train else "")
+
+    if (path / corpus_file).exists():
+      with open(path / corpus_file, 'rb') as infile:
         shaped_corpus = pickle.load(infile)
         self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
         self.steps_per_epoch = self.config.steps_per_epoch
@@ -520,7 +525,7 @@ class MaskLMDataGenerator(object):
     else:
       raise ValueError("Unrecognized datapoint_type: {}".format(self.config.datapoint_type))
 
-    with open(path / "corpus.pkl", 'wb') as outf:
+    with open(path / corpus_file, 'wb') as outf:
       pickle.dump(shaped_corpus, outf)
     return shaped_corpus
 
