@@ -34,7 +34,7 @@ class OnlineDataset(torch.utils.data.Dataset):
   """
   def __init__(self, dg: lm_data_generator.MaskLMDataGenerator, is_train: bool):
     super(OnlineDataset, self).__init__()
-    full_dataset         = self.load_data(dg.cache.path / "corpus.pkl")
+    full_dataset         = self.load_data(dg.cache.path / "{}corpus.pkl".format("pre_" if dg.pre_train else ""))
     """
     TODO you've better change is_train check to something more generic.
     """
@@ -47,11 +47,11 @@ class OnlineDataset(torch.utils.data.Dataset):
     self.cur_step        = 0
     self.steps_per_epoch = dg.steps_per_epoch * dg.training_opts.batch_size
     if is_train:
-      if (self.cache_path / "hole_length_mon.pkl").exists():
-        with open(self.cache_path / "hole_length_mon.pkl", 'rb') as infile:
+      if (self.cache_path / "{}hole_length_mon.pkl".format("pre_" if dg.pre_train else "")).exists():
+        with open(self.cache_path / "{}hole_length_mon.pkl".format("pre_" if dg.pre_train else ""), 'rb') as infile:
           self.hlen_monitor = pickle.load(infile)
       else:
-        self.hlen_monitor = monitors.NormalizedFrequencyMonitor(self.cache_path, "online_hole_length")
+        self.hlen_monitor = monitors.NormalizedFrequencyMonitor(self.cache_path, "{}online_hole_length".format("pre_" if dg.pre_train else ""))
 
     """
     TODO, add custom config just like in lm_data_generator
@@ -105,6 +105,8 @@ class OnlineDataset(torch.utils.data.Dataset):
     if dataset.exists():
       with open(dataset, 'rb') as infile:
         return pickle.load(infile)
+    else:
+      raise FileNotFoundError(dataset)
 
 class LazyConcatDataset(torch.utils.data.Dataset):
   r"""Dataset as a concatenation of multiple datasets.
