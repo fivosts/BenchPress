@@ -196,7 +196,7 @@ def StripIncludes(text: str) -> str:
   """
   lines = []
   for line in text.split('\n'):
-    if not '#include ' in line:
+    if not '#include ' in line and not '# include ' in line:
       lines.append(line)
   return '\n'.join(lines)
 
