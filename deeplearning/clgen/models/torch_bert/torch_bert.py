@@ -116,7 +116,7 @@ class torchBert(backends.BackendBase):
 
     self.logfile_path      = self.cache.path / "logs"
     if self.config.HasField("pre_train_corpus"):
-      self.pre_ckpt_path   = self.logfile_path / "pre_train"
+      self.pre_logfile_path = self.logfile_path / "pre_train"
 
     self.telemetry         = telemetry.TrainingLogger(self.logfile_path)
     if self.config.HasField("pre_train_corpus"):
@@ -173,7 +173,7 @@ class torchBert(backends.BackendBase):
     self.max_eval_steps                   = FLAGS.max_eval_steps
 
     self.validation_results_file          = "val_results.txt"
-    self.validation_results_path          = os.path.join(str(self.logfile_path), self.validation_results_file)
+    self.validation_results_path          = os.path.join(str(self.logfile_path if not pre_train else self.pre_logfile_path), self.validation_results_file)
 
     m = model.BertForPreTraining(self.bert_config, tokenizer = self.tokenizer).to(self.pytorch.offset_device)
 
@@ -295,7 +295,8 @@ class torchBert(backends.BackendBase):
       torchLMDataGenerator.TrainMaskLMBatchGenerator(
         corpus, self.config.training,
         self.cache.path,
-        self.config.training.num_pretrain_steps if pre_train else None
+        self.config.training.num_pretrain_steps if pre_train else None,
+        pre_train
       ), pre_train
     )
 
@@ -331,7 +332,7 @@ class torchBert(backends.BackendBase):
       # Get dataloader iterator and setup hooks.
       batch_iterator = iter(loader)    
       train_hook = hooks.tensorMonitorHook(
-        self.logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency), self.steps_per_epoch
+        self.logfile_path if not pre_train else self.pre_logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency), self.steps_per_epoch
       )
       if FLAGS.reward_compilation >= 0 and not pre_train:
         correct_sample_obs = sample_observers.SamplesDatabaseObserver(
@@ -430,7 +431,7 @@ class torchBert(backends.BackendBase):
           self.saveCheckpoint(self.train, pre_train)
 
           if FLAGS.validate_per_epoch and self.train.data_generator.config.validation_split > 0:
-            val_ml_loss, val_nsp_loss = self.Validate(per_epoch = True)
+            val_ml_loss, val_nsp_loss = self.Validate(per_epoch = True, pre_train = pre_train)
             train_hook.end_epoch(
             val_masked_lm_loss      = val_ml_loss,
             val_next_sentence_loss  = val_nsp_loss,
@@ -479,13 +480,13 @@ class torchBert(backends.BackendBase):
         pass
 
       if not FLAGS.force_eval:
-        _, _ = self.Validate()
+        _, _ = self.Validate(pre_train = pre_train)
 
     if FLAGS.force_eval and not self.is_validated:
-      _, _ = self.Validate()
+      _, _ = self.Validate(pre_train = pre_train)
     return
 
-  def Validate(self, per_epoch = False) -> None:
+  def Validate(self, per_epoch = False, pre_train = False) -> None:
     """
     Validation function for torch BERT.
 
@@ -495,8 +496,11 @@ class torchBert(backends.BackendBase):
                  Instead, only loss is monitored and plotted.
     """
 
-    if (per_epoch and FLAGS.eval_steps_per_epoch <= 0) or (not per_epoch and FLAGS.max_eval_steps <= 0):
+    if ( (per_epoch and FLAGS.eval_steps_per_epoch <= 0)
+      or (not per_epoch and FLAGS.max_eval_steps <= 0)
+      or self.config.training.data_generator.validation_split == 0):
       l.getLogger().info("Skipping BERT Validation.")
+      return None, None
 
     if self.pytorch.num_gpus > 1:
       model = self.torch.nn.DataParallel(self.train.model)
@@ -518,7 +522,7 @@ class torchBert(backends.BackendBase):
 
       if not per_epoch:
         val_hook = hooks.validationSampleHook(
-          url = "sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")),
+          url = "sqlite:///{}".format(str((self.logfile_path if not pre_train else self.pre_logfile_path) / "validation_samples.db")),
           tokenizer = self.tokenizer,
           model_step = self.current_step
         )
@@ -836,16 +840,3 @@ class torchBert(backends.BackendBase):
     paths += [ path.absolute() for path in (self.cache.path / "samples").iterdir() ]
     # paths += self.data_generator.InferenceManifest # TODO
     return sorted(paths)
-
-  def _writeValidation(self, result, tf_set) -> None:
-    with tf.io.gfile.GFile(self.validation_results_path, "w") as writer:
-      db = validation_database.ValidationDatabase("sqlite:///{}".format(str(self.logfile_path / "validation_samples.db")))
-      r = [ "{}: {}".format(key, str(result[key])) for key in result.keys() ]
-      with db.Session(commit = True) as session:
-        exists = session.query(validation_database.ValResults.key).filter_by(key = str(tf_set)).scalar() is not None
-        if exists:
-          entry = session.query(validation_database.ValResults).filter_by(key = str(tf_set)).first()
-          entry.results = "\n".join(r)
-        else:
-          session.add(validation_database.ValResults(key = str(tf_set), results = "\n".join(r)))
-    return 
