@@ -157,7 +157,7 @@ class Model(object):
         config_to_compare.pre_train_corpus.ClearField("contentfiles")
       config_to_compare.training.ClearField("num_epochs")
       config_to_compare.training.ClearField("num_train_steps")
-      if config_to_compare.model.HasField("pre_train_corpus"):
+      if config_to_compare.HasField("pre_train_corpus"):
         config_to_compare.training.ClearField("num_pretrain_steps")
       config_to_compare.training.ClearField("batch_size")
       if config_to_compare.training.HasField("data_generator"):
@@ -173,7 +173,7 @@ class Model(object):
         cached_to_compare.pre_train_corpus.ClearField("contentfiles")
       cached_to_compare.training.ClearField("num_epochs")
       cached_to_compare.training.ClearField("num_train_steps")
-      if cached_to_compare.model.HasField("pre_train_corpus"):
+      if cached_to_compare.HasField("pre_train_corpus"):
         cached_to_compare.training.ClearField("num_pretrain_steps")
       cached_to_compare.training.ClearField("batch_size")
       if cached_to_compare.training.HasField("data_generator"):
