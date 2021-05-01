@@ -178,6 +178,7 @@ class MaskLMDataGenerator(object):
     self.cache                   = None
 
     self.training_opts           = None
+    self.num_train_steps         = None
     self.steps_per_epoch         = None
     self.sample_batch_size       = None
     self.max_position_embeddings = None
@@ -191,6 +192,7 @@ class MaskLMDataGenerator(object):
                                 corpus: "corpuses.Corpus",
                                 training_opts: model_pb2.TrainingOptions,
                                 cache_path: pathlib.Path,
+                                num_train_steps: int = None,
                                 ) -> "data_generator.MaskLMDataGenerator":
     """Initializes data generator for training."""
     self.cache         = cache.mkcache(cache_path, "dataset")
@@ -202,7 +204,10 @@ class MaskLMDataGenerator(object):
     self.config        = training_opts.data_generator
     self.training_opts = training_opts
     self.rngen         = np.random # random.Random(training_opts.random_seed)
-
+    if num_train_steps:
+      self.num_train_steps = num_train_steps
+    else:
+      self.num_train_steps = self.training_opts.num_train_steps
     shaped_corpus = self.createCorpus(self.cache.path)
     if self.config.datapoint_time == "pre":
       # 'pre' pre-processes/masks training/validation/sampling corpus for the model to use.
@@ -421,7 +426,7 @@ class MaskLMDataGenerator(object):
     if (path / "corpus.pkl").exists():
       with open(path / "corpus.pkl", 'rb') as infile:
         shaped_corpus = pickle.load(infile)
-        self.num_epochs      = self.training_opts.num_train_steps // self.config.steps_per_epoch
+        self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
         self.steps_per_epoch = self.config.steps_per_epoch
         l.getLogger().info(
           "Loaded from file corpus of {} examples in {} ms.".format(
@@ -467,7 +472,7 @@ class MaskLMDataGenerator(object):
       assert len(shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
 
       # Set corpus epoch parameters
-      self.num_epochs      = self.training_opts.num_train_steps // self.config.steps_per_epoch
+      self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
       self.steps_per_epoch = self.config.steps_per_epoch
       assert shaped_corpus.ndim     == 2, "corpus dim: {}".format(shaped_corpus.shape)
       assert shaped_corpus.shape[1] == sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(encoded_corpus.shape[1], sequence_length)
@@ -491,7 +496,7 @@ class MaskLMDataGenerator(object):
       # Set corpus dimension parameters
       self.steps_per_epoch        = len(encoded_corpus) // (batch_size * sequence_length * dupe_factor)
       assert self.steps_per_epoch != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
-      self.num_epochs             = self.training_opts.num_train_steps // self.steps_per_epoch
+      self.num_epochs             = self.num_train_steps // self.steps_per_epoch
 
       # clipped_corpus_length       = dupe_factor * self.steps_per_epoch * batch_size * sequence_length
       clipped_corpus_length       = self.steps_per_epoch * batch_size * sequence_length

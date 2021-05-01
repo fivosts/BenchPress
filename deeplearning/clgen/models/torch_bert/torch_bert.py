@@ -110,7 +110,6 @@ class torchBert(backends.BackendBase):
     self.eval_batch_size   = None
     self.learning_rate     = None
     self.num_train_steps   = None
-    self.num_warmup_steps  = None
 
     self.ckpt_path         = self.cache.path / "checkpoints"
     self.sample_path       = self.cache.path / "samples"
@@ -153,7 +152,8 @@ class torchBert(backends.BackendBase):
     return
 
   def _ConfigTrainParams(self, 
-                         data_generator: torchLMDataGenerator
+                         data_generator: torchLMDataGenerator,
+                         pre_train: bool,
                         ) -> None:
     """
     Model parameter initialization for training and validation.
@@ -163,7 +163,7 @@ class torchBert(backends.BackendBase):
     self.train_batch_size                 = self.config.training.batch_size
     self.eval_batch_size                  = self.config.training.batch_size
     self.learning_rate                    = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
-    self.num_warmup_steps                 = self.config.training.num_warmup_steps
+    self.num_warmup_steps                 = self.config.training.num_warmup_steps if pre_train else self.config.training.num_prewarmup_steps
     self.max_grad_norm                    = 1.0
 
     self.steps_per_epoch                  = data_generator.steps_per_epoch
@@ -291,10 +291,13 @@ class torchBert(backends.BackendBase):
     """
     Main training entry point.
     """
-    if self.train is None:
-      self._ConfigTrainParams(
-        torchLMDataGenerator.TrainMaskLMBatchGenerator(corpus, self.config.training, self.cache.path)
-      )
+    self._ConfigTrainParams(
+      torchLMDataGenerator.TrainMaskLMBatchGenerator(
+        corpus, self.config.training,
+        self.cache.path,
+        self.config.training.num_pretrain_steps if pre_train else None
+      ), pre_train
+    )
 
     if FLAGS.only_sample:
       return
@@ -336,11 +339,12 @@ class torchBert(backends.BackendBase):
         )
       else:
         correct_sample_obs = None
-        
+      
+      total_steps = self.config.training.num_pretrain_steps if pre_train else self.config.training.num_train_steps
       l.getLogger().info(
         "Splitting {} steps into {} equivalent epochs, {} steps each. Rejected {} redundant step(s)".format(
           self.num_train_steps, self.num_epochs, 
-          self.steps_per_epoch, self.config.training.num_train_steps - self.num_train_steps
+          self.steps_per_epoch, total_steps - self.num_train_steps
         )
       )
 
