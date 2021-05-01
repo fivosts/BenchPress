@@ -92,7 +92,7 @@ class OnlineDataset(torch.utils.data.Dataset):
     k = self.func(self.dataset[idx])
 
     if self.hlen_monitor:
-      self.hlen_monitor.register(list(k['masked_lm_lengths']))
+      self.hlen_monitor.register([x for x in k['masked_lm_lengths'] if x >= 0])
       if self.cur_step % self.steps_per_epoch == 0:
         self.hlen_monitor.plot()
         with open(self.cache_path / "hole_length_mon.pkl", 'wb') as outf:
