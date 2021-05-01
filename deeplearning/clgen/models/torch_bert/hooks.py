@@ -37,7 +37,7 @@ class tensorMonitorHook(object):
 
   @property
   def epoch_loss(self):
-    return self.epoch_tensors['total_loss'] / self.steps_per_epoch
+    return self.tensors[-1]['total_loss'] / self.steps_per_epoch
   
   def step(self, **tensors):
     for key, value in tensors.items():
