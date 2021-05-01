@@ -255,7 +255,7 @@ def Parse(src: str,
 
     if len(diagnostics) > 0:
       if return_diagnostics:
-        return src, [(d.location.line, d.location.column) for d in unit.diagnostics if d.severity > 2]
+        return src, [(d.location.line, d.location.column) for d in diagnostics]
       else:
         raise ValueError("/*\n{}\n*/\n{}".format('\n'.join([str(d) for d in diagnostics]), src))
     else:
