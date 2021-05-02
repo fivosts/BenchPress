@@ -1,7 +1,7 @@
-working_dir: "BERT" ## This path is relative to "workspace_dir", which is an app FLAG
+working_dir: "Base_BERT" ## This path is relative to "workspace_dir", which is an app FLAG
 model {
   pre_train_corpus {
-    local_tar_archive: "$PWD/../corpus/corpus_250.tar.bz2"
+    local_directory: ""
     contentfile_separator: "\n\n\n\n"
     preprocessor: "deeplearning.clgen.preprocessors.c:StripIncludes"
     preprocessor: "deeplearning.clgen.preprocessors.c:ClangPreprocess"
@@ -13,7 +13,7 @@ model {
     preprocessor: "deeplearning.clgen.preprocessors.common:MinimumLineCount3"
   }
   corpus {
-    local_tar_archive: "$PWD/../corpus/corpus_1000.tar.bz2"
+    local_tar_archive: "$PWD/../corpus/ultimate_corpus.tar.bz2"
     tokenizer {
       token_type: "ast"
       token_list: "deeplearning/clgen/corpuses/token_lists.json"
@@ -52,12 +52,12 @@ model {
     layer_norm_eps: 1e-12
   }
   training {
-    num_train_steps: 200
+    num_train_steps: 8000000
     num_pretrain_steps: 16000000
-    num_warmup_steps: 100
+    num_warmup_steps: 50000
     num_prewarmup_steps: 50000
     sequence_length: 768
-    batch_size: 32
+    batch_size: 128
     max_predictions_per_seq: 1
     dupe_factor: 1
     masked_lm_prob: 0.9
@@ -83,7 +83,7 @@ model {
 }
 sampler {
   start_text: "kernel void [HOLE]"
-  batch_size: 4
+  batch_size: 8
   sequence_length: 768
   temperature_micros: 800000  # = 0.8 real value
   termination_criteria {

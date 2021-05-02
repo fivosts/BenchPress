@@ -48,6 +48,7 @@ from deeplearning.clgen.models.torch_bert import hooks
 from deeplearning.clgen.models.torch_bert.data_generator import torchLMDataGenerator
 
 from eupy.native import logger as l
+from eupy.hermes import client
 
 FLAGS = flags.FLAGS
 
@@ -427,6 +428,7 @@ class torchBert(backends.BackendBase):
             self.current_step += 1
 
           # End of Epoch
+          set_mail = "Epoch {} Loss: {}\n".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss)
           l.getLogger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss), mail_level = 4)
           self.saveCheckpoint(self.train, pre_train)
 
@@ -437,8 +439,12 @@ class torchBert(backends.BackendBase):
             val_next_sentence_loss  = val_nsp_loss,
             val_total_loss          = val_ml_loss + val_nsp_loss,
             )
+            set_mail += "Validation Loss: {}\n".format(val_ml_loss)
           else:
             train_hook.end_epoch()
+
+          if FLAGS.notify_me:
+            client.getClient().send_message("clgen:torch_bert", set_mail)
 
           if self.torch_tpu_available:
             self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
@@ -569,7 +575,9 @@ class torchBert(backends.BackendBase):
     if sampler.is_live or sampler.is_active:
       sample_batch_size = sampler.batch_size
     else:
-      sample_batch_size = self.train_batch_size // sampler.batch_size
+      sample_batch_size = (self.train_batch_size // sampler.batch_size
+                            if self.train_batch_size > sampler.batch_size
+                            else sampler.batch_size)
 
     data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
                        self.config.training, sampler, self.tokenizer, seed, sample_batch_size,
