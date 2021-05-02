@@ -42,6 +42,13 @@ from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
+# flags.DEFINE_list(
+#   "local_dir_file_ext",
+#   None,
+#   "If local_directory corpus has been selected and only specific file types are required,"
+#   "pass a list of acceptable extensions here.",
+# )
+
 Base = declarative.declarative_base()
 
 
@@ -443,7 +450,14 @@ class PreprocessedContentFiles(sqlutil.Database):
         raise ValueError(
           f"Empty content files directory: '{contentfile_root}'"
         )
-      return find_output.split("\n")
+      find_output = find_output.split("\n")
+      # if FLAGS.local_dir_file_ext:
+      #   func = lambda x: x[-len(FLAGS.local_dir_file_ext[0]):] == FLAGS.local_dir_file_ext[0]
+      #   for i in range(1, len(FLAGS.local_dir_file_ext)):
+      #     ext = FLAGS.local_dir_file_ext[i]
+      #     func = lambda x: x[-len(ext):] == ext or func(x)
+      find_output = [x for x in find_output if x[-2:] == ".c" or x[-3:] == ".cl"]
+      return find_output
 
 
 def ExpandConfigPath(path: str) -> pathlib.Path:
