@@ -518,7 +518,8 @@ def ResolveContentId(
     else:
       # No hash file, so compute the directory hash and create it.
       try:
-        content_id = hc.GetHash(local_directory)
+        # content_id = hc.GetHash(local_directory)
+        content_id = crypto.sha256_str(str(local_directory))
       except FileNotFoundError as e:
         raise ValueError(e)
       # Create the hash file in the directory so that next time we don't need
