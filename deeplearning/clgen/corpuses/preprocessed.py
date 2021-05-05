@@ -462,25 +462,74 @@ class PreprocessedContentFiles(sqlutil.Database):
     Raises:
       EmptyCorpusException: If the content files directory is empty.
     """
-    with fs.chdir(contentfile_root):
-      find_output = (
-        subprocess.check_output(["find", ".", "-type", "f"])
-        # .decode("utf-8")
-        .strip()
-      )
-      if not find_output:
-        raise ValueError(
-          f"Empty content files directory: '{contentfile_root}'"
-        )
-      find_output = find_output.split("\n")
-      # if FLAGS.local_dir_file_ext:
-      #   func = lambda x: x[-len(FLAGS.local_dir_file_ext[0]):] == FLAGS.local_dir_file_ext[0]
-      #   for i in range(1, len(FLAGS.local_dir_file_ext)):
-      #     ext = FLAGS.local_dir_file_ext[i]
-      #     func = lambda x: x[-len(ext):] == ext or func(x)
-      find_output = [x for x in find_output if x[-2:] == ".c" or x[-3:] == ".cl"]
-      return find_output
 
+    find_output = []
+    queue       = [contentfile_root]
+    cpus        = os.cpu_count()
+    multi_thr   = min(cpus**2, 1600)
+
+    while queue:
+      if len(queue) >= multi_thr:
+        break
+      cur = queue.pop(0)
+      try:
+        for f in cur.iterdir():
+          if f.is_file():
+            if f.suffix in {'.c', '.cl'}:
+              find_output.append(str(f))
+          elif not f.is_symlink():
+            queue.append(f)
+      except PermissionError:
+        pass
+      except NotADirectoryError:
+        pass
+      except FileNotFoundError:
+        pass
+
+    if queue:
+      p = multiprocessing.Pool(cpus)
+      for batch in p.imap_unordered(path_worker, queue):
+        find_output += batch
+    return find_output
+
+    # with fs.chdir(contentfile_root):
+    #   find_output = (
+    #     subprocess.check_output(["find", ".", "-type", "f"])
+    #     # .decode("utf-8")
+    #     .strip()
+    #   )
+    #   if not find_output:
+    #     raise ValueError(
+    #       f"Empty content files directory: '{contentfile_root}'"
+    #     )
+    #   find_output = find_output.split("\n")
+    #   # if FLAGS.local_dir_file_ext:
+    #   #   func = lambda x: x[-len(FLAGS.local_dir_file_ext[0]):] == FLAGS.local_dir_file_ext[0]
+    #   #   for i in range(1, len(FLAGS.local_dir_file_ext)):
+    #   #     ext = FLAGS.local_dir_file_ext[i]
+    #   #     func = lambda x: x[-len(ext):] == ext or func(x)
+    #   find_output = [x for x in find_output if x[-2:] == ".c" or x[-3:] == ".cl"]
+    #   return find_output
+
+def path_worker(base_path) -> typing.List[str]:
+  paths = []
+  queue = [base_path]
+  while queue:
+    cur = queue.pop(0)
+    try:
+      for f in cur.iterdir():
+        if f.is_file():
+          if f.suffix in {'.c', '.cl'}:
+            paths.append(str(f))
+        elif not f.is_symlink():
+          queue.append(f)
+    except PermissionError:
+      pass
+    except NotADirectoryError:
+      pass
+    except FileNotFoundError:
+      pass
+  return paths
 
 def ExpandConfigPath(path: str) -> pathlib.Path:
   return pathlib.Path(os.path.expandvars(path)).expanduser().absolute()
