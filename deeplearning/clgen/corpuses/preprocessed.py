@@ -465,7 +465,7 @@ class PreprocessedContentFiles(sqlutil.Database):
     with fs.chdir(contentfile_root):
       find_output = (
         subprocess.check_output(["find", ".", "-type", "f"])
-        .decode("utf-8")
+        # .decode("utf-8")
         .strip()
       )
       if not find_output:
