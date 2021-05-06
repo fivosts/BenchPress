@@ -474,16 +474,22 @@ class PreprocessedContentFiles(sqlutil.Database):
       cur = queue.pop(0)
       try:
         for f in cur.iterdir():
-          if f.is_file():
+          if f.is_symlink():
+            continue
+          elif f.is_file():
             if f.suffix in {'.c', '.cl'}:
               find_output.append(str(f))
-          elif not f.is_symlink():
+          elif f.is_dir():
             queue.append(f)
+          else:
+            continue
       except PermissionError:
         pass
       except NotADirectoryError:
         pass
       except FileNotFoundError:
+        pass
+      except OSError:
         pass
 
     if queue:
@@ -518,16 +524,22 @@ def path_worker(base_path) -> typing.List[str]:
     cur = queue.pop(0)
     try:
       for f in cur.iterdir():
-        if f.is_file():
+        if f.is_symlink():
+          continue
+        elif f.is_file():
           if f.suffix in {'.c', '.cl'}:
-            paths.append(str(f))
-        elif not f.is_symlink():
+            find_output.append(str(f))
+        elif f.is_dir():
           queue.append(f)
+        else:
+          continue
     except PermissionError:
       pass
     except NotADirectoryError:
       pass
     except FileNotFoundError:
+      pass
+    except OSError:
       pass
   return paths
 
