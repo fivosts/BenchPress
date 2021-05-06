@@ -105,7 +105,10 @@ class PreprocessedContentFile(Base):
     preprocessing_succeeded = False
     try:
       with open(contentfile_root / relpath) as f:
-        input_text = f.read()
+        try:
+          input_text = f.read()
+        except UnicodeDecodeError:
+          input_text = "/*corrupted file format*/"
       text_generator = preprocessors.Preprocess(input_text, preprocessors_)
       # preprocessing_succeeded = True
     except Exception as e:
