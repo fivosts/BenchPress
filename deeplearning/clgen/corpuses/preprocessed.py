@@ -528,7 +528,7 @@ def path_worker(base_path) -> typing.List[str]:
           continue
         elif f.is_file():
           if f.suffix in {'.c', '.cl'}:
-            find_output.append(str(f))
+            paths.append(str(f))
         elif f.is_dir():
           queue.append(f)
         else:
