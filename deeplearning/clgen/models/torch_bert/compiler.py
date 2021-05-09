@@ -183,8 +183,10 @@ class CompilationSampler(object):
                           input_ids         : torch.LongTensor,
                           prediction_scores : torch.FloatTensor,
                           position_ids      : torch.LongTensor,
+                          is_live           : bool,
                           ) -> typing.Tuple[typing.List[np.array], typing.List[typing.List[int]]]:
     batch_size, sequence_length = tuple(input_ids.shape)
+    samples, sample_indices, scores_history = [], [], []
     with concurrent.futures.ThreadPoolExecutor() as executor:
       jobs = [executor.submit(self.iterSampleSeq,
                               model             = model,
@@ -192,13 +194,18 @@ class CompilationSampler(object):
                               input_ids         = input_ids        [i],
                               prediction_scores = prediction_scores[i],
                               position_ids      = position_ids     [i],
+                              is_live           = is_live,
                           ) for i in range(batch_size)]
-
-      results          = [j.result() for j in jobs]
-      samples          = [x.numpy() for (x, _, _) in results]
-      sample_indices   = [y for (_, y, _) in results]
-      scores_history   = [z for (_, _, z) in results]
-      return samples, sample_indices, scores_history
+      for j in concurrent.futures.as_completed(jobs):
+        s, si, sh = j.result()
+        samples.append(s.numpy())
+        sample_indices.append(si)
+        scores_history.append(sh)
+      # results          = [j.result() for j in jobs]
+      # samples          = [x.numpy() for (x, _, _) in results]
+      # sample_indices   = [y for (_, y, _) in results]
+      # scores_history   = [z for (_, _, z) in results]
+    return samples, sample_indices, scores_history
 
   def iterSampleSeq(self,
                     model             : typing.TypeVar("model.BertPreTrainedModel"),
@@ -206,6 +213,7 @@ class CompilationSampler(object):
                     input_ids         : torch.LongTensor,
                     prediction_scores : torch.LongTensor,
                     position_ids      : torch.LongTensor,
+                    is_live           : bool,
                     ) -> typing.Tuple[torch.LongTensor, typing.List[typing.List[int]], typing.List[np.array]]:
     """
     Main sampling sequence filling loop.
@@ -225,7 +233,10 @@ class CompilationSampler(object):
         len(torch.where((input_ids == self.tokenizer.holeToken) | (input_ids == self.tokenizer.maskToken))[0])
       )
     ]
-    scores_history = []
+    if is_live:
+      scores_history = []
+    else:
+      scores_history = None
     holes, next_input_ids, attention_mask = self.StepSampleSeq(
       input_ids, prediction_scores, sample_indices, scores_history
     )
@@ -237,7 +248,7 @@ class CompilationSampler(object):
         next_input_ids[0],
         next_prediction_scores[0].detach().cpu(),
         sample_indices,
-        scores_history
+        scores_history,
       )
     return next_input_ids[0], sample_indices, scores_history
 
@@ -267,7 +278,8 @@ class CompilationSampler(object):
 
     for target_idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]:
       idx        = int(target_idx)
-      scores_history.append(prediction_scores[target_idx].numpy())
+      if scores_history is not None:
+        scores_history.append(prediction_scores[target_idx].numpy())
       prediction = int(self.argmax(prediction_scores[target_idx]))
       step_indices.append([prediction])
       is_hole = temp_seq[idx] == self.tokenizer.holeToken
