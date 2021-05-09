@@ -765,6 +765,7 @@ class BertForPreTraining(BertPreTrainedModel):
     output_attentions    = None,
     output_hidden_states = None,
     is_validation        = False,
+    is_live              = False,
     step                 = -1,
     **kwargs
   ):
@@ -836,6 +837,7 @@ class BertForPreTraining(BertPreTrainedModel):
         input_ids.cpu(),
         prediction_scores.cpu(),
         position_ids,
+        is_live,
       )
       return {
         'prediction_scores' : scores_history, # This is mainly used for live sampling. Else, watch out!
