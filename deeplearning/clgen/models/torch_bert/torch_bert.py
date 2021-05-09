@@ -333,7 +333,7 @@ class torchBert(backends.BackendBase):
       # Get dataloader iterator and setup hooks.
       batch_iterator = iter(loader)    
       train_hook = hooks.tensorMonitorHook(
-        self.logfile_path if not pre_train else self.pre_logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency), self.steps_per_epoch
+        self.logfile_path if not pre_train else self.pre_logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
       if FLAGS.reward_compilation >= 0 and not pre_train:
         correct_sample_obs = sample_observers.SamplesDatabaseObserver(
