@@ -251,6 +251,7 @@ class torchBert(backends.BackendBase):
                  inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
                  is_validation : bool = False,
                  step          : int  = -1,
+                 is_live       : bool = False,
                  ) -> float:
     """
     Perform a training step on a batch of inputs.
@@ -269,6 +270,7 @@ class torchBert(backends.BackendBase):
                 next_sentence_labels = inputs['next_sentence_labels'],
                 is_validation        = is_validation,
                 step                 = step,
+                is_live              = is_live,
               )
     return outputs
 
@@ -642,6 +644,7 @@ class torchBert(backends.BackendBase):
     with self.torch.no_grad():
       step_out = self.model_step(
           self.sample.model, self.step_inputs,
+          is_live = self.sampler.is_live
       )
       if self.sampler.is_live and input("Show logits figure ? [y/!y]") == "y":
         for hole, indcs in zip(step_out['prediction_scores'], step_out['sample_indices']):
