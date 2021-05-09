@@ -24,7 +24,7 @@ class tensorMonitorHook(object):
     self.tensors          = []
     self.plot_tensors     = {}
     self.epoch_tensors    = {}
-    self.epoch_loss       = []
+    self.epch_loss        = []
     self.delay_checkpoint = True if current_step != 0 else False
     self._initTensors()
 
@@ -36,7 +36,7 @@ class tensorMonitorHook(object):
 
   @property
   def epoch_loss(self):
-    return sum(self.epoch_loss) / len(self.epoch_loss)
+    return sum(self.epch_loss) / len(self.epch_loss)
   
   def step(self, **tensors):
     for key, value in tensors.items():
@@ -63,7 +63,7 @@ class tensorMonitorHook(object):
     # if self._step_triggered():
     self._logTensors()
     self.epoch_tensors = {}
-    self.epoch_loss = []
+    self.epch_loss = []
     return
 
   def _initTensors(self):
@@ -113,7 +113,7 @@ class tensorMonitorHook(object):
 
     self.tensors.append(epoch_tensors)
     self.tensors[-1]['step'] = effective_step
-    self.epoch_loss.append(epoch_tensors['total_loss'])
+    self.epch_loss.append(epoch_tensors['total_loss'])
     
     for key, value in epoch_tensors.items():
       if key == 'step':
