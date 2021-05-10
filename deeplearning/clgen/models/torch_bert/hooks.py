@@ -113,7 +113,8 @@ class tensorMonitorHook(object):
 
     self.tensors.append(epoch_tensors)
     self.tensors[-1]['step'] = effective_step
-    self.epch_loss.append(epoch_tensors['total_loss'])
+    if 'total_loss' in epoch_tensors:
+      self.epch_loss.append(epoch_tensors['total_loss'])
     
     for key, value in epoch_tensors.items():
       if key == 'step':
