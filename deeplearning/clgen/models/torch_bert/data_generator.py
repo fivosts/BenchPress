@@ -20,7 +20,6 @@ from deeplearning.clgen.util import distributions
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.models import lm_data_generator
 from deeplearning.clgen.models import sequence_masking
-from deeplearning.clgen.models import online_generator
 from deeplearning.clgen.models.torch_bert import datasets
 from deeplearning.clgen.features import active_generator
 from absl import flags
@@ -60,13 +59,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               model_opts, sampler, tokenizer, seed,
               sample_batch_size, max_position_embeddings, cache_path
         )
-    # if sampler.is_active:
-    #   return active_generator.ActiveSamplingGenerator.FromDataGenerator(d)
-    # elif sampler.is_online:
-    #   return online_generator.OnlineSamplingGenerator.FromDataGenerator(d)
-    # else:
-    d.dataloader = d.predict_dataloader()
-    return d
+    if sampler.is_active:
+      return active_generator.ActiveSamplingGenerator.FromDataGenerator(d)
+    else:
+      d.dataloader = d.predict_dataloader()
+      return d
 
   def __init__(self):
     super(torchLMDataGenerator, self).__init__("pt_record")
@@ -156,10 +153,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
     else:
       if self.sampler.is_online:
+        """
+        TODO maybe add configSampleSets here as well.
+        """
         dataset = datasets.OnlineDataset(self, False)
         sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
-      elif self.sampler.is_active:
-        raise NotImplementedError("Integrate active sampler here")
       else:
         path_list = self.configSampleSets()
         dataset = datasets.LazyConcatDataset(
