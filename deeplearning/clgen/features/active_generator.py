@@ -9,7 +9,6 @@ import progressbar
 import numpy as np
 
 from deeplearning.clgen.models import lm_data_generator
-from deeplearning.clgen.models import online_generator
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
@@ -35,7 +34,7 @@ flags.DEFINE_integer(
   "Set the maximum sampling generation depth that active sampler can reach. [Default: 20]."
 )
 
-class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
+class ActiveSamplingGenerator(object):
   """
   Data generation object that performs active learning
   on sampling process.
@@ -89,7 +88,22 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
   def __init__(self,
                generator: lm_data_generator.MaskLMDataGenerator
                ):
-    super(ActiveSamplingGenerator, self).__init__(generator)
+
+    self.data_generator = generator
+
+    # Wrapped data generator attributes
+    self.sampler   = self.data_generator.sampler
+    self.tokenizer = self.data_generator.tokenizer
+
+    # Inherent attributes
+    self.active_corpus = None
+    self.distribution  = None
+    self.func          = None
+    self.dataloader    = None
+
+    self.configSamplingParams()
+    self.configSampleCorpus()
+
     # Active sampling attributes.
     self.active_db = active_feed_database.ActiveFeedDatabase(
       url = "sqlite:///{}".format(self.data_generator.sampler.corpus_directory / "active_feeds.db")
@@ -98,7 +112,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
     self.step_candidates       = []
     self.total_candidates      = []
     self.total_candidates_hash = set()
-    self.active_dataset        = ActiveDataset(self.online_corpus)
+    self.active_dataset        = ActiveDataset(self.active_corpus)
     self.feat_sampler          = feature_sampler.EuclideanSampler()
     self.candidate_monitor     = monitors.HistoryMonitor(
       self.data_generator.sampler.corpus_directory, "feature_distance"
@@ -122,7 +136,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       seed = next(self.active_dataset)
       # seed = self.tokenizer.TokenizeString("[START]kernel void A(){ }[END][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD]")
       # print(len(seed))
-      input_feed, masked_idxs = self.masking_func(seed)
+      input_feed, masked_idxs = self.func(seed)
       # TODO do sth with hole_lengths and masked_idxs
       self.feed_queue.append(
         ActiveSamplingGenerator.ActiveSampleFeed(
@@ -184,7 +198,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       # If gathered candidates are not as many as required, re-mask the same feed
       # place it back in the queue and ask the model for more samples.
       # The sample input is the same, but masks might be in different locations.
-      input_feed, masked_idxs = self.masking_func(current_feed.input_feed)
+      input_feed, masked_idxs = self.func(current_feed.input_feed)
       self.feed_queue.insert(0,
         ActiveSamplingGenerator.ActiveSampleFeed(
           input_feed       = current_feed.input_feed,
@@ -252,7 +266,7 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       # and place it at the tail of the sample feed queue.
       if 1 + candidate.sample_feed.gen_id <= FLAGS.active_search_depth:
         if not self.data_generator.config.use_start_end or (self.data_generator.config.use_start_end and self.tokenizer.endToken in candidate.sample):
-          input_feed, masked_idxs = self.masking_func(candidate.sample)
+          input_feed, masked_idxs = self.func(candidate.sample)
           if len(input_feed['input_ids']) <= self.data_generator.sampler.sequence_length:
             self.feed_queue.append(
               ActiveSamplingGenerator.ActiveSampleFeed(
@@ -296,6 +310,54 @@ class ActiveSamplingGenerator(online_generator.OnlineSamplingGenerator):
       ).filter(type(db_input).sha256 == db_input.sha256).scalar() is not None
       if not exists:
         session.add(db_input)
+    return
+
+  def configSamplingParams(self) -> None:
+    """
+    Configure masking function used by online sampler.
+    """
+    class SampleTrainingOpts(typing.NamedTuple):
+      max_predictions_per_seq: int
+      masked_lm_prob: float
+
+    corpus_config = self.sampler.config.sample_corpus.corpus_config
+    sampling_opts = SampleTrainingOpts(
+      self.data_generator.training_opts.max_predictions_per_seq, corpus_config.masked_lm_prob
+    )
+
+    if corpus_config.HasField("hole"):
+      self.distribution = distributions.Distribution.FromHoleConfig(
+        corpus_config.hole, self.sampler.corpus_directory, "sample_corpus"
+      )
+      self.func = functools.partial(sequence_masking.HoleSequence,
+                            train_set       = False,
+                            max_predictions = corpus_config.max_predictions_per_seq,
+                            distribution    = self.distribution,
+                            tokenizer       = pickle.dumps(self.tokenizer),
+                            training_opts   = sampling_opts,
+                          )
+    elif corpus_config.HasField("mask"):
+      self.func = functools.partial(sequence_masking.MaskSequence,
+                            train_set          = False,
+                            max_predictions    = corpus_config.max_predictions_per_seq,
+                            config             = corpus_config,
+                            pickled_tokenizer   = self.tokenizer,
+                            training_opts      = sampling_opts,
+                            is_torch           = self.data_generator.is_torch,
+                          )
+    return
+
+  def configSampleCorpus(self) -> None:
+    """
+    Configure sampling corpus container to iterate upon.
+    """
+    if self.sampler.isFixedStr:
+      if (self.tokenizer.maskToken in self.sampler.encoded_start_text or
+          self.tokenizer.holeToken in self.sampler.encoded_start_text):
+        raise ValueError("Targets found in {} start text. This is wrong. Active sampler masks a sequence on the fly...".format(type(self).__name__))
+      self.active_corpus = [self.sampler.encoded_start_text]
+    else:
+      self.active_corpus = self.data_generator.createCorpus(self.sampler.corpus_directory)
     return
 
 class ActiveDataset(object):
