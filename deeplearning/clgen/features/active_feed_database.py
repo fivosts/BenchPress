@@ -91,7 +91,7 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
   # Array of lengths of holes for given instance
   hole_lengths     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Array of starting ids of hole instances in feed.
-  hole_start_ids   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # hole_start_ids   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Output sample
   sample           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Actual length of sample, excluding pads.
@@ -122,9 +122,9 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
                generation_id    : int,
                ) -> typing.TypeVar("ActiveFeed"):
     """Construt ActiveFeed table entry from argumentns."""
-    str_input_feed       = tokenizer.tokensToString(input_feed,       ignore_token = tokenizer.padToken)
-    str_masked_input_ids = tokenizer.tokensToString(masked_input_ids, ignore_token = tokenizer.padToken)
-    str_sample           = tokenizer.tokensToString(sample,           ignore_token = tokenizer.padToken)
+    str_input_feed       = tokenizer.tokensToString(input_feed,       ignore_token = tokenizer.padToken, with_formatting = True)
+    str_masked_input_ids = tokenizer.tokensToString(masked_input_ids, ignore_token = tokenizer.padToken, with_formatting = True)
+    str_sample           = tokenizer.ArrayToCode(sample,              ignore_token = tokenizer.padToken, with_formatting = True)
 
     num_tokens = len(sample)
     if tokenizer.padToken in sample:
@@ -137,8 +137,8 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
       encoded_feed     = ','.join([str(x) for x in input_feed]),
       input_features   = '\n'.join(["{}:{}".format(k, v) for k, v in input_features.items()]),
       masked_input_ids = str_masked_input_ids,
-      hole_lengths     = ','.join(str(lm.hole_length) for lm in hole_instances),
-      hole_start_ids   = ','.join(str(lm.pos_index) for lm in hole_instances),
+      hole_lengths     = ','.join([str(x) for x in hole_instances]),
+      # hole_start_ids   = ','.join(str(lm.pos_index) for lm in hole_instances),
       sample           = str_sample,
       num_tokens       = int(num_tokens),
       output_features  = '\n'.join(["{}:{}".format(k, v) for k, v in output_features.items()]) if output_features else "None",
