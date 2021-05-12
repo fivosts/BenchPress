@@ -408,6 +408,9 @@ class Model(object):
           sampler.Specialize(tokenizer)
     except KeyboardInterrupt:
       l.getLogger().info("Wrapping up sampling...")
+    except Exception as e:
+      l.getLogger().error(e)
+      raise e
 
     for obs in sample_observers:
       obs.endSample()
