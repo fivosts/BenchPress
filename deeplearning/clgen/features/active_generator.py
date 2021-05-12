@@ -343,7 +343,7 @@ class ActiveSamplingGenerator(object):
                             train_set       = False,
                             max_predictions = corpus_config.max_predictions_per_seq,
                             distribution    = self.distribution,
-                            tokenizer       = pickle.dumps(self.tokenizer),
+                            tokenizer       = self.tokenizer,
                             training_opts   = sampling_opts,
                           )
     elif corpus_config.HasField("mask"):
