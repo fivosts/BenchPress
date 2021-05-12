@@ -115,7 +115,7 @@ class ActiveSamplingGenerator(object):
     self.total_candidates_hash = set()
     self.active_dataset        = ActiveDataset(self.active_corpus)
     self.feat_sampler          = feature_sampler.EuclideanSampler()
-    self.candidate_monitor     = monitors.HistoryMonitor(
+    self.candidate_monitor     = monitors.MinRegulatedHistoryMonitor(
       self.data_generator.sampler.corpus_directory, "feature_distance"
     )
     self.bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
