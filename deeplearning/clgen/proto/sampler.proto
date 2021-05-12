@@ -51,19 +51,24 @@ message Sampler {
     // Sample live by getting input() from user.
     bool          live_sampling   = 6;
   }
+  // sampling type can be 'normal', 'online', 'active'
+  // normal: corpus is pre-masked, then fed for predictions.
+  // online: A datapoint is requested from original corpus and masked on the fly.
+  // active: Same as online. Active learning is applied between sample and target features
+  optional string sampling_type = 7;
   // The sampling batch size.
   // TODO(cec): Always sample with max batch size.
-  optional int32 batch_size = 7;
+  optional int32 batch_size = 8;
   // The length of sampling sequences.
-  optional int32 sequence_length = 8;
+  optional int32 sequence_length = 9;
   // The sampling temperature. Must be >= 0. A recommended starting value is
   // 1000000 (i.e. 1.0 in real values).
-  optional int32 temperature_micros = 9;
+  optional int32 temperature_micros = 10;
   // The criteria that determine when to terminate a sample, in the order in
   // which they will be executed. Duplicates are allowed, for example if you
   // would like to have symmetrical token depth counters for two pairs of
   // tokens.
-  repeated SampleTerminationCriterion termination_criteria = 10;
+  repeated SampleTerminationCriterion termination_criteria = 11;
 }
 
 // Specification of a new sample corpus to get feeds from.
@@ -74,11 +79,6 @@ message SampleCorpus {
 
 message CorpusConfig {
   // Encoding and data masking configuration for sample corpus.
-  // sampling type can be 'normal', 'online', 'active'
-  // normal: corpus is pre-masked, then fed for predictions.
-  // online: A datapoint is requested from original corpus and masked on the fly.
-  // active: Same as online. Active learning is applied between sample and target features
-  optional string sampling_type           = 1;
   optional int32  max_predictions_per_seq = 2;
   optional float  masked_lm_prob          = 3;
   oneof mask_technique {

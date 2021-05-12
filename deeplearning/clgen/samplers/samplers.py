@@ -65,7 +65,6 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
     elif config.HasField("sample_corpus"):
       if config.sample_corpus.HasField("corpus_config"):
 
-        pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "sampling_type")
         pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "max_predictions_per_seq")
         pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "masked_lm_prob")
 
@@ -113,6 +112,12 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
       and (not config.HasField("sample_set"))
       and (not config.HasField("live_sampling"))):
       raise ValueError(config)
+
+    pbutil.AssertFieldConstraint(
+      config,
+      lambda x: x in {"normal", "online", "active"},
+      "sampling_type",
+    )
     pbutil.AssertFieldConstraint(
       config, "batch_size", lambda x: 0 < x, "Sampler.batch_size must be > 0"
     )
@@ -308,14 +313,14 @@ class Sampler(object):
   @property
   def is_active(self):
     if self.config.HasField("sample_corpus"):
-      return self.config.sample_corpus.corpus_config.sampling_type == "active"
+      return self.config.sampling_type == "active"
     else:
       return False
 
   @property
   def is_online(self):
     if self.config.HasField("sample_corpus"):
-      return self.config.sample_corpus.corpus_config.sampling_type == "online"
+      return self.config.sampling_type == "online"
     else:
       return False
 
