@@ -121,7 +121,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     """
     if self.sampler.isFixedStr or self.sampler.is_live:
       sample_element = sequence_masking.MaskedSeqToBlob(
-        self.encoded_start_text, self.tokenizer, self.sampler.sequence_length, self.max_position_embeddings
+        self.sampler.encoded_start_text, self.tokenizer, self.sampler.sequence_length, self.max_position_embeddings
       )
       dataset = [{k: torch.from_numpy(v) for (k, v) in sample_element.items()}]
       sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
