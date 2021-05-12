@@ -115,11 +115,13 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
 
     pbutil.AssertFieldConstraint(
       config,
-      lambda x: x in {"normal", "online", "active"},
       "sampling_type",
+      lambda x: x in {"normal", "online", "active"},
     )
     pbutil.AssertFieldConstraint(
-      config, "batch_size", lambda x: 0 < x, "Sampler.batch_size must be > 0"
+      config,
+      "batch_size",
+      lambda x: 0 < x, "Sampler.batch_size must be > 0",
     )
     pbutil.AssertFieldConstraint(
       config,
