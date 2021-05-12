@@ -74,4 +74,4 @@ class EuclideanSampler(object):
       candidates[idx] = candidates[idx]._replace(
         score = self.calculate_distance(candidates[idx].features)
       )
-    return self.topK_candidates(candidates, 1)
+    return self.topK_candidates(candidates, 3)
