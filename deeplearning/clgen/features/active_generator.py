@@ -106,7 +106,7 @@ class ActiveSamplingGenerator(object):
 
     # Active sampling attributes.
     self.active_db = active_feed_database.ActiveFeedDatabase(
-      url = "sqlite:///{}".format(self.data_generator.sampler.corpus_directory / "active_feeds.db")
+      url = "sqlite:///{}".format(self.data_generator.sampler.cache.path / "active_feeds.db")
     )
     self.feed_queue            = []
     self.step_candidates       = []
@@ -115,7 +115,7 @@ class ActiveSamplingGenerator(object):
     self.active_dataset        = ActiveDataset(self.active_corpus)
     self.feat_sampler          = feature_sampler.EuclideanSampler()
     self.candidate_monitor     = monitors.HistoryMonitor(
-      self.data_generator.sampler.corpus_directory, "feature_distance"
+      self.data_generator.sampler.cache.path, "feature_distance"
     )
     self.bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
     return
@@ -327,13 +327,13 @@ class ActiveSamplingGenerator(object):
 
     if corpus_config.HasField("hole"):
       self.distribution = distributions.Distribution.FromHoleConfig(
-        corpus_config.hole, self.sampler.corpus_directory, "sample_corpus"
+        corpus_config.hole, self.sampler.cache.path, "sample_corpus"
       )
       self.func = functools.partial(sequence_masking.HoleSequence,
                             train_set       = False,
                             max_predictions = corpus_config.max_predictions_per_seq,
                             distribution    = self.distribution,
-                            tokenizer       = pickle.dumps(self.tokenizer),
+                            tokenizer       = self.tokenizer,
                             training_opts   = sampling_opts,
                           )
     elif corpus_config.HasField("mask"):
