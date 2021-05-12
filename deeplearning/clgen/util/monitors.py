@@ -192,6 +192,51 @@ class HistoryMonitor(Monitor):
     )
     return
 
+class MinRegulatedHistoryMonitor(Monitor):
+  """
+  Monitors values in an ordered timeline
+  Plots a line of values against timesteps.
+  X-Axis can be regulated when registering a new value.
+  The new value per x-element is always going to be the minimum seen.
+  """
+  def __init__(self,
+               cache_path: typing.Union[pathlib.Path, str],
+               set_name: str,
+               ):
+    super(MinRegulatedHistoryMonitor, self).__init__(cache_path, set_name)
+    self.sample_dict = {}
+    return
+
+  def getData(self) -> typing.List[typing.Tuple[typing.Union[int, str, float], int]]:
+    return sorted(self.sample_counter.items(), key = lambda x: x[0])
+
+  def getStrData(self) -> str:
+    return "\n".join(
+      ["{}:{}".format(k, v) for (k, v) in self.getData()]
+    )
+
+  def register(self, actual_sample: typing.Tuple[int, [int, float]]) -> None:
+    x, y = actual_sample
+    if x in self.sample_dict:
+      self.sample_dict[x] = min(self.sample_dict[x], y)
+    else:
+      self.sample_dict[x] = y
+    return
+
+  def plot(self) -> None:
+    """Plot line over timescale"""
+    sorted_dict = self.getData()
+    plotter.SingleScatterLine(
+      x = [x for (x, _) in sorted_dict],
+      y = [y for (_, y) in sorted_dict],
+      title = self.set_name,
+      x_name = "",
+      y_name = self.set_name,
+      plot_name = self.set_name,
+      path = self.cache_path,
+    )
+    return
+
 class FeatureMonitor(Monitor):
   """
   Produces a bar chart of averaged features.
