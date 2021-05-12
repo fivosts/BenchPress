@@ -257,10 +257,10 @@ class ActiveSamplingGenerator(object):
         compile_status = False
         # The following function maps compiler location diagnostics, e.g. l:5, c:10, to token index of the encoded sequennce.
         # This will be used to repair broken kernels by targetted masking of wrong tokens.
-        indices = self.tokenizer.SrcLocationToIndex(
-          locations = dloc,
-          encoded = candidate.sample
-        )
+        # indices = self.tokenizer.SrcLocationToIndex(
+        #   locations = dloc,
+        #   encoded = candidate.sample
+        # )
       # Add to active_database.
       self.addToDB(
         active_feed_database.ActiveFeed.FromArgs(
