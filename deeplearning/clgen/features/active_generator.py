@@ -307,6 +307,7 @@ class ActiveSamplingGenerator(object):
 
     if self.feed_queue:
       # There are next generation candidates in the queue, and these will be used as sample feeds.
+      raise NotImplementedError("Check here if feed_queue[0] is a generation after current. If so, pull all next generation and keep top-K.")
       return self.data_generator.toTensorFormat(self.feed_queue[0].input_blob), [], False
     else:
       # We don't have new generation good candidates. Go get a new starting feed from the dataset.
