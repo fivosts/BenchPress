@@ -238,7 +238,7 @@ class ActiveSamplingGenerator(object):
     new_candidates = self.feat_sampler.sample_from_set(self.step_candidates)
 
     self.candidate_monitor.register(
-      sum([x.score for x in new_candidates]) / len(new_candidates)
+      (new_candidates[0].generation_id, min([x.score for x in new_candidates]))
     )
     self.candidate_monitor.plot()
     # Very frequently, new candidates have been generated in the past.
