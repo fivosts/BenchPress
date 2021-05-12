@@ -314,17 +314,11 @@ class Sampler(object):
 
   @property
   def is_active(self):
-    if self.config.HasField("sample_corpus"):
-      return self.config.sampling_type == "active"
-    else:
-      return False
+    return self.config.sampling_type == "active"
 
   @property
   def is_online(self):
-    if self.config.HasField("sample_corpus"):
-      return self.config.sampling_type == "online"
-    else:
-      return False
+    return self.config.sampling_type == "online"
 
   @property
   def is_live(self):
