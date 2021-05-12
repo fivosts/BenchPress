@@ -208,7 +208,12 @@ class ActiveSamplingGenerator(object):
       # If gathered candidates are not as many as required, re-mask the same feed
       # place it back in the queue and ask the model for more samples.
       # The sample input is the same, but masks might be in different locations.
-      input_feed = self.func(current_feed.input_feed)
+
+      if self.tokenizer.maskToken not in current_feed.input_feed and self.tokenizer.holeToken not in current_feed.input_feed:
+        input_feed = self.func(current_feed.input_feed)
+      else:
+        input_feed = current_feed.input_blob
+
       self.feed_queue.insert(0,
         ActiveSamplingGenerator.ActiveSampleFeed(
           input_feed       = current_feed.input_feed,
