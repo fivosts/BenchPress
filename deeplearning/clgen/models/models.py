@@ -406,7 +406,7 @@ class Model(object):
               break
           sampler.start_text = '\n'.join(start_text)
           sampler.Specialize(tokenizer)
-    except KeyboardInterrupt:
+    except Exception:
       l.getLogger().info("Wrapping up sampling...")
 
     for obs in sample_observers:
