@@ -120,35 +120,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     Otherwise, a set has been given to provide random samples from it.
     """
     if self.sampler.isFixedStr or self.sampler.is_live:
-      input_sample = self.sampler.encoded_start_text
-      target_idx   = np.where(np.in1d(input_sample, [self.tokenizer.maskToken, self.tokenizer.holeToken]))[0]
-      num_targets  = (np.count_nonzero(input_sample == self.tokenizer.maskToken) + 
-                     np.count_nonzero(input_sample == self.tokenizer.holeToken))
-
-      assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
-      assert len(target_idx)       != 0, "No target prediction in sample text"
-
-      seen_in_training     = np.zeros([1], dtype = np.int32)
-      original_input       = np.full((self.sampler.sequence_length), self.tokenizer.padToken, dtype = np.int64)
-      input_ids            = self._padToMaxPosition(input_sample)[:self.sampler.sequence_length]
-      input_mask           = np.concatenate([
-                                  np.ones(len(input_sample), dtype = np.int64),
-                                  np.zeros(len(input_ids) - len(input_sample), dtype = np.int64)
-                                ])      
-      position_ids         = np.arange(self.sampler.sequence_length, dtype = np.int64)
-      mask_labels          = np.full((self.sampler.sequence_length), -100, dtype = np.int64)
-      masked_lm_lengths    = np.full((self.sampler.sequence_length), -1, dtype = np.int64)
-      next_sentence_labels = np.zeros([1], dtype = np.int32)
-      sample_element = {
-        'seen_in_training'    : seen_in_training,
-        'original_input'      : original_input,
-        'input_ids'           : input_ids,
-        'input_mask'          : input_mask,
-        'position_ids'        : position_ids,
-        'mask_labels'         : mask_labels,
-        'masked_lm_lengths'   : masked_lm_lengths,
-        'next_sentence_labels': next_sentence_labels,
-      }
+      sample_element = sequence_masking.MaskedSeqToBlob(
+        self.encoded_start_text, self.tokenizer, self.sampler.sequence_length, self.max_position_embeddings
+      )
       dataset = [{k: torch.from_numpy(v) for (k, v) in sample_element.items()}]
       sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
     else:

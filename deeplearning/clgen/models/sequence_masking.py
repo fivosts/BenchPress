@@ -420,9 +420,7 @@ def HoleSequence(seq: np.array,
                  distribution: distributions.Distribution,
                  tokenizer,
                  training_opts,
-                 ) -> typing.Tuple[
-                        typing.Dict[str, np.array],
-                      ]:
+                 ) -> typing.Dict[str, np.array]:
   """
   Inserts hole tokens to a given sequence.
   Used for online training.
@@ -564,6 +562,46 @@ def HoleSequence(seq: np.array,
       'masked_lm_lengths'   : masked_lm_lengths,
       'next_sentence_labels': next_sentence_labels,
     }
+
+def MaskedSeqToBlob(enc_text: np.array,
+                    tokenizer,
+                    sequence_length: int,
+                    max_position_embeddings: int,
+                    ):
+  """
+  Constructs training/sampling instance from plain input text.
+  """
+  input_sample = enc_text
+  target_idx   = np.where(np.in1d(input_sample, [tokenizer.maskToken, tokenizer.holeToken]))[0]
+  num_targets  = (np.count_nonzero(input_sample == tokenizer.maskToken) + 
+                 np.count_nonzero(input_sample == tokenizer.holeToken))
+
+  assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
+  assert len(target_idx)       != 0, "No target prediction in sample text"
+
+  seen_in_training     = np.zeros([1], dtype = np.int32)
+  original_input       = np.full((sequence_length), tokenizer.padToken, dtype = np.int64)
+  input_ids            = np.concatenate([
+                            input_sample, np.array([tokenizer.padToken] * (max_position_embeddings - len(input_sample)), dtype = np.int64)
+                         ])[:sequence_length]
+  input_mask           = np.concatenate([
+                              np.ones(len(input_sample), dtype = np.int64),
+                              np.zeros(len(input_ids) - len(input_sample), dtype = np.int64)
+                            ])      
+  position_ids         = np.arange(sequence_length, dtype = np.int64)
+  mask_labels          = np.full((sequence_length), -100, dtype = np.int64)
+  masked_lm_lengths    = np.full((sequence_length), -1, dtype = np.int64)
+  next_sentence_labels = np.zeros([1], dtype = np.int32)
+  return {
+    'seen_in_training'    : seen_in_training,
+    'original_input'      : original_input,
+    'input_ids'           : input_ids,
+    'input_mask'          : input_mask,
+    'position_ids'        : position_ids,
+    'mask_labels'         : mask_labels,
+    'masked_lm_lengths'   : masked_lm_lengths,
+    'next_sentence_labels': next_sentence_labels,
+  }
 
 def ExhaustiveHoleSequence(all_seq: np.array,
                            train_set: bool,

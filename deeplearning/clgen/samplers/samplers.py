@@ -65,6 +65,7 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
     elif config.HasField("sample_corpus"):
       if config.sample_corpus.HasField("corpus_config"):
 
+        pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "sampling_type")
         pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "max_predictions_per_seq")
         pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "masked_lm_prob")
 
@@ -104,24 +105,19 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
         raise ValueError("sample_corpus has no corpus_config field.")
 
       if config.sample_corpus.HasField("corpus"):
-        corpuses.AssertConfigIsValid(config.sample_corpus.corpus)
+        corpuses.AssertConfigIsValid(config.sample_corpus.corpus)        
       else:
-        raise ValueError("sample_corpus has no corpus field.")
+        pbutil.AssertFieldIsSet(
+          config.sample_corpus,
+          "start_text"
+        )
     elif ((not config.HasField("train_set"))
       and (not config.HasField("validation_set"))
       and (not config.HasField("sample_set"))
       and (not config.HasField("live_sampling"))):
       raise ValueError(config)
-
     pbutil.AssertFieldConstraint(
-      config,
-      "sampling_type",
-      lambda x: x in {"normal", "online", "active"},
-    )
-    pbutil.AssertFieldConstraint(
-      config,
-      "batch_size",
-      lambda x: 0 < x, "Sampler.batch_size must be > 0",
+      config, "batch_size", lambda x: 0 < x, "Sampler.batch_size must be > 0"
     )
     pbutil.AssertFieldConstraint(
       config,
@@ -314,11 +310,17 @@ class Sampler(object):
 
   @property
   def is_active(self):
-    return self.config.sampling_type == "active"
+    if self.config.HasField("sample_corpus"):
+      return self.config.sample_corpus.corpus_config.sampling_type == "active"
+    else:
+      return False
 
   @property
   def is_online(self):
-    return self.config.sampling_type == "online"
+    if self.config.HasField("sample_corpus"):
+      return self.config.sample_corpus.corpus_config.sampling_type == "online"
+    else:
+      return False
 
   @property
   def is_live(self):
@@ -326,12 +328,15 @@ class Sampler(object):
 
   @property
   def isFixedStr(self):
-    return self.config.HasField("start_text") and not (
-          self.config.HasField("train_set") or
-          self.config.HasField("validation_set") or
-          self.config.HasField("sample_set") or
-          self.config.HasField("sample_corpus")
-        )
+    if self.config.HasField("sample_corpus"):
+      return self.config.sample_corpus.HasField("start_text")
+    else:
+      return self.config.HasField("start_text") and not (
+            self.config.HasField("train_set") or
+            self.config.HasField("validation_set") or
+            self.config.HasField("sample_set") or
+            self.config.HasField("sample_corpus")
+          )
 
   def __init__(self, config: sampler_pb2.Sampler, sample_db_name = "samples.db"):
     """Instantiate a sampler.
@@ -369,14 +374,18 @@ class Sampler(object):
     if self.config.HasField("sample_corpus"):
       self.corpus_directory = self.cache.path / "sample_corpus"
       self.corpus_directory.mkdir(exist_ok = True)
-      self.sample_corpus = corpuses.Corpus(self.config.sample_corpus.corpus)
-      self.sample_corpus.Create()
-      self.symlinkSampleCorpus(
-        pathlib.Path(self.sample_corpus.encoded.url[len("sqlite:///") :]).parent
-      )
-      text_data = [
-        self.sample_corpus.tokenizer.tokensToString(x) for x in self.sample_corpus.GetTrainingData()
-      ]
+      if self.config.sample_corpus.HasField("corpus"):
+        self.sample_corpus = corpuses.Corpus(self.config.sample_corpus.corpus)
+        self.sample_corpus.Create()
+        self.symlinkSampleCorpus(
+          pathlib.Path(self.sample_corpus.encoded.url[len("sqlite:///") :]).parent
+        )
+        text_data = [
+          self.sample_corpus.tokenizer.tokensToString(x) for x in self.sample_corpus.GetTrainingData()
+        ]
+      else:
+        self.start_text = self.config.sample_corpus.start_text
+        text_data = [self.start_text]
       # Text data is dumped in order to specialize with all different model tokenizers.
       with open(self.cache.path / "sample_corpus" / "text_corpus.pkl", 'wb') as outf:
         pickle.dump(text_data, outf)

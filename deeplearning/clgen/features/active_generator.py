@@ -100,13 +100,14 @@ class ActiveSamplingGenerator(object):
     self.distribution  = None
     self.func          = None
     self.dataloader    = None
+    self.init_masked   = False
 
     self.configSamplingParams()
     self.configSampleCorpus()
 
     # Active sampling attributes.
     self.active_db = active_feed_database.ActiveFeedDatabase(
-      url = "sqlite:///{}".format(self.data_generator.sampler.cache.path / "active_feeds.db")
+      url = "sqlite:///{}".format(self.data_generator.sampler.corpus_directory / "active_feeds.db")
     )
     self.feed_queue            = []
     self.step_candidates       = []
@@ -115,7 +116,7 @@ class ActiveSamplingGenerator(object):
     self.active_dataset        = ActiveDataset(self.active_corpus)
     self.feat_sampler          = feature_sampler.EuclideanSampler()
     self.candidate_monitor     = monitors.HistoryMonitor(
-      self.data_generator.sampler.cache.path, "feature_distance"
+      self.data_generator.sampler.corpus_directory, "feature_distance"
     )
     self.bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
     return
@@ -136,7 +137,16 @@ class ActiveSamplingGenerator(object):
       seed = next(self.active_dataset)
       # seed = self.tokenizer.TokenizeString("[START]kernel void A(){ }[END][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD][PAD]")
       # print(len(seed))
-      input_feed, masked_idxs = self.func(seed)
+      if not self.init_masked:
+        input_feed = self.func(seed)
+        input_ids = input_feed['input_ids']
+      else:
+        input_feed = sequence_masking.MaskedSeqToBlob(
+          self.data_generator.sampler.encoded_start_text,
+          self.tokenizer,
+          self.data_generator.sampler.sequence_length,
+          self.data_generator.max_position_embeddings
+        )
       # TODO do sth with hole_lengths and masked_idxs
       self.feed_queue.append(
         ActiveSamplingGenerator.ActiveSampleFeed(
@@ -144,7 +154,7 @@ class ActiveSamplingGenerator(object):
           input_features   = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(seed)),
           input_blob       = input_feed,
           masked_input_ids = input_feed['input_ids'],
-          hole_instances   = masked_idxs,
+          hole_instances   = [x for x in input_feed['masked_lm_lengths'] if x >= 0],
           gen_id           = 0,
         )
       )
@@ -198,14 +208,14 @@ class ActiveSamplingGenerator(object):
       # If gathered candidates are not as many as required, re-mask the same feed
       # place it back in the queue and ask the model for more samples.
       # The sample input is the same, but masks might be in different locations.
-      input_feed, masked_idxs = self.func(current_feed.input_feed)
+      input_feed = self.func(current_feed.input_feed)
       self.feed_queue.insert(0,
         ActiveSamplingGenerator.ActiveSampleFeed(
           input_feed       = current_feed.input_feed,
           input_features   = current_feed.input_features,
           input_blob       = input_feed,
           masked_input_ids = input_feed['input_ids'],
-          hole_instances   = masked_idxs,
+          hole_instances   = [x for x in input_feed['masked_lm_lengths'] if x >= 0],
           gen_id           = current_feed.gen_id,
         )
       )
@@ -266,7 +276,7 @@ class ActiveSamplingGenerator(object):
       # and place it at the tail of the sample feed queue.
       if 1 + candidate.sample_feed.gen_id <= FLAGS.active_search_depth:
         if not self.data_generator.config.use_start_end or (self.data_generator.config.use_start_end and self.tokenizer.endToken in candidate.sample):
-          input_feed, masked_idxs = self.func(candidate.sample)
+          input_feed = self.func(candidate.sample)
           if len(input_feed['input_ids']) <= self.data_generator.sampler.sequence_length:
             self.feed_queue.append(
               ActiveSamplingGenerator.ActiveSampleFeed(
@@ -274,7 +284,7 @@ class ActiveSamplingGenerator(object):
                 input_features   = candidate.features,
                 input_blob       = input_feed,
                 masked_input_ids = input_feed['input_ids'],
-                hole_instances   = masked_idxs,
+                hole_instances   = [x for x in input_feed['masked_lm_lengths'] if x >= 0],
                 gen_id           = 1 + candidate.sample_feed.gen_id,
               )
             )
@@ -327,13 +337,13 @@ class ActiveSamplingGenerator(object):
 
     if corpus_config.HasField("hole"):
       self.distribution = distributions.Distribution.FromHoleConfig(
-        corpus_config.hole, self.sampler.cache.path, "sample_corpus"
+        corpus_config.hole, self.sampler.corpus_directory, "sample_corpus"
       )
       self.func = functools.partial(sequence_masking.HoleSequence,
                             train_set       = False,
                             max_predictions = corpus_config.max_predictions_per_seq,
                             distribution    = self.distribution,
-                            tokenizer       = self.tokenizer,
+                            tokenizer       = pickle.dumps(self.tokenizer),
                             training_opts   = sampling_opts,
                           )
     elif corpus_config.HasField("mask"):
@@ -354,7 +364,7 @@ class ActiveSamplingGenerator(object):
     if self.sampler.isFixedStr:
       if (self.tokenizer.maskToken in self.sampler.encoded_start_text or
           self.tokenizer.holeToken in self.sampler.encoded_start_text):
-        raise ValueError("Targets found in {} start text. This is wrong. Active sampler masks a sequence on the fly...".format(type(self).__name__))
+        self.init_masked = True
       self.active_corpus = [self.sampler.encoded_start_text]
     else:
       self.active_corpus = self.data_generator.createCorpus(self.sampler.corpus_directory)
