@@ -76,11 +76,22 @@ model {
     }
   }
 }
+# sampler {
+#   live_sampling: true
+#   batch_size: 4
+#   sequence_length: 768
+#   temperature_micros: 800000  # = 0.8 real value
+#   termination_criteria {
+#     maxlen {
+#       maximum_tokens_in_sample: 768
+#     }
+#   }
+# }
 sampler {
-  live_sampling: true
-  batch_size: 4
+  start_text: "[START]kernel void [HOLE]}[END]"
+  batch_size: 16
   sequence_length: 768
-  temperature_micros: 800000  # = 0.8 real value
+  temperature_micros: 700000  # = 0.8 real value
   termination_criteria {
     maxlen {
       maximum_tokens_in_sample: 768
@@ -92,44 +103,20 @@ sampler {
 #     corpus_config {
 #       sampling_type: "active"
 #       max_predictions_per_seq: 1
-#       masked_lm_prob: 0.9
+#       masked_lm_prob: 0.6
 #       hole {
-#         hole_length: 4
+#         relative_length: 0.9
 #         uniform_distribution: true
 #       }
 #     }
-#     corpus {
-#       local_tar_archive: "$PWD/../corpus/ultimate_corpus.tar.bz2"
-#       tokenizer {
-#         token_type: "ast"
-#         token_list: "deeplearning/clgen/corpuses/token_lists.json"
-#         mask_tokens: true
-#         wordpiece_tokenization: false
-#       }
-#       contentfile_separator: "\n\n\n\n"
-#       preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim"
-#       preprocessor: "deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes"
-#       preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
-#       preprocessor: "deeplearning.clgen.preprocessors.opencl:InvertKernelSpecifier"
-#       preprocessor: "deeplearning.clgen.preprocessors.opencl:ExtractOnlySingleKernels"
-#       preprocessor: "deeplearning.clgen.preprocessors.opencl:StringKernelsToSource"
-#       preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
-#       preprocessor: "deeplearning.clgen.preprocessors.opencl:NormalizeIdentifiers"
-#       preprocessor: "deeplearning.clgen.preprocessors.common:StripDuplicateEmptyLines"
-#       preprocessor: "deeplearning.clgen.preprocessors.common:StripMultipleWhitespaces"
-#       preprocessor: "deeplearning.clgen.preprocessors.opencl:SanitizeKernelPrototype"
-#       preprocessor: "deeplearning.clgen.preprocessors.common:StripTrailingWhitespace"
-#       preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
-#       preprocessor: "deeplearning.clgen.preprocessors.common:MinimumLineCount3"
-#       preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
-#     }
+#     start_text: "[START]kernel void [HOLE]}[END]"
 #   }
-#   batch_size: 4
-#   sequence_length: 1024
+#   batch_size: 16
+#   sequence_length: 768
 #   temperature_micros: 700000  # = 0.8 real value
 #   termination_criteria {
 #     maxlen {
-#       maximum_tokens_in_sample: 1024
+#       maximum_tokens_in_sample: 768
 #     }
 #   }
 # }
