@@ -215,7 +215,7 @@ class MinRegulatedHistoryMonitor(Monitor):
       ["{}:{}".format(k, v) for (k, v) in self.getData()]
     )
 
-  def register(self, actual_sample: typing.Tuple[int, [int, float]]) -> None:
+  def register(self, actual_sample: typing.Tuple[int, typing.Union[int, float]]) -> None:
     x, y = actual_sample
     if x in self.sample_dict:
       self.sample_dict[x] = min(self.sample_dict[x], y)
