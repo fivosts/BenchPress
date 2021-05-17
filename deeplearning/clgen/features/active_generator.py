@@ -4,6 +4,7 @@ Data generator wrapper used for active learning sampling.
 import subprocess
 import functools
 import pickle
+import math
 import typing
 import progressbar
 import numpy as np
@@ -42,6 +43,8 @@ class ActiveSampleFeed(typing.NamedTuple):
   input_feed       : np.array
   # The feature space of the original input
   input_features   : typing.Dict[str, float]
+  # Distance from target features of input feed. Valid after 1st generation.
+  input_score      : float
   # Full model input
   input_blob       : typing.Dict[str, np.array]
   # List of masked model input feeds.
@@ -160,6 +163,7 @@ class ActiveSamplingGenerator(object):
         ActiveSampleFeed(
           input_feed       = seed,
           input_features   = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(seed)),
+          input_score      = math.inf,
           input_blob       = input_feed,
           masked_input_ids = input_feed['input_ids'],
           hole_instances   = [x for x in input_feed['masked_lm_lengths'] if x >= 0],
@@ -197,7 +201,7 @@ class ActiveSamplingGenerator(object):
     for sample, indices in zip(samples, sample_indices):
       try:
         # If you can extract features from a sample, store it as a candidate.
-        _ = opencl.Compile(self.tokenizer.ArrayToCode(sample))
+        # _ = opencl.Compile(self.tokenizer.ArrayToCode(sample))
         features = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(sample))
         if features:
           self.step_candidates.append(
@@ -226,6 +230,7 @@ class ActiveSamplingGenerator(object):
         ActiveSampleFeed(
           input_feed       = current_feed.input_feed,
           input_features   = current_feed.input_features,
+          input_score      = math.inf,
           input_blob       = input_feed,
           masked_input_ids = input_feed['input_ids'],
           hole_instances   = [x for x in input_feed['masked_lm_lengths'] if x >= 0],
@@ -246,7 +251,7 @@ class ActiveSamplingGenerator(object):
     new_candidates = self.feat_sampler.sample_from_set(self.step_candidates)
 
     self.candidate_monitor.register(
-      {str(new_candidates[0].generation_id): [x.score for x in new_candidates]}
+      {str(new_candidates[0].sample_feed.gen_id): [c.score for c in new_candidates]}
     )
     self.candidate_monitor.plot()
     # Very frequently, new candidates have been generated in the past.
@@ -295,6 +300,7 @@ class ActiveSamplingGenerator(object):
               ActiveSampleFeed(
                 input_feed       = candidate.sample,
                 input_features   = candidate.features,
+                input_score      = candidate.score,
                 input_blob       = input_feed,
                 masked_input_ids = input_feed['input_ids'],
                 hole_instances   = [x for x in input_feed['masked_lm_lengths'] if x >= 0],
@@ -304,17 +310,17 @@ class ActiveSamplingGenerator(object):
     # Step candidates contains all candidates of a single gen, therefore initialized before every new gen.
     self.step_candidates = []
 
-    raise NotImplementedError("Write here gen_state.pkl")
-
     if self.feed_queue:
       # There are next generation candidates in the queue, and these will be used as sample feeds.
       # But first, do a beam search on next generation, otherwise things will explode pretty quickly.
       next_gen = []
-      while self.feed_queue[0].gen_id == self.current_generation + 1:
+      print(self.current_generation)
+      print(self.feed_queue[0].gen_id)
+      while self.feed_queue and self.feed_queue[0].gen_id == self.current_generation + 1:
         next_gen.append(self.feed_queue.pop(0))
-      next_gen = sorted(next_gen, lambda k: k.score)[:3]
+      next_gen = sorted(next_gen, key = lambda k: k.input_score)[:3]
       self.feed_queue = next_gen + self.feed_queue
-      self.current_generation += 1
+      self.current_generation = self.feed_queue[0].gen_id
 
       # Update generation state pickle to start over.
       with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
