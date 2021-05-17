@@ -173,6 +173,7 @@ def CategoricalViolin(x: np.array,
       go.Violin(
         x = [xel]*len(yel),
         y = yel,
+        name = xel,
         # side = 'positive',
         meanline_visible = True,
         box_visible = True,

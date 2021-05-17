@@ -208,30 +208,29 @@ class CategoricalDistribMonitor(Monitor):
     return
 
   def getData(self) -> typing.List[typing.Tuple[typing.Union[int, str, float], int]]:
-    return sorted(self.sample_counter.items(), key = lambda x: x[0])
+    return sorted(self.sample_dict.items(), key = lambda x: x[0])
 
   def getStrData(self) -> str:
     return "\n".join(
       ["{}:{}".format(k, sum(v) / len(v)) for (k, v) in self.getData()]
     )
 
-  def register(self, actual_sample: typing.Tuple[int, typing.Union[int, float]]) -> None:
-    x, y = actual_sample
-    if x in self.sample_dict:
-      self.sample_dict[x].append(y)
-    else:
-      self.sample_dict[x] = [y]
+  def register(self, actual_sample: typing.Dict[str, float]) -> None:
+    for k, v in actual_sample.items():
+      if k in self.sample_dict:
+        self.sample_dict[k].append(v)
+      else:
+        self.sample_dict[k] = [v]
     return
 
   def plot(self) -> None:
     """Plot line over timescale"""
     sorted_dict = self.getData()
-    plotter.SingleScatterLine(
+    plotter.CategoricalViolin(
       x = [x for (x, _) in sorted_dict],
       y = [y for (_, y) in sorted_dict],
       title = self.set_name,
       x_name = "",
-      y_name = self.set_name,
       plot_name = self.set_name,
       path = self.cache_path,
     )
