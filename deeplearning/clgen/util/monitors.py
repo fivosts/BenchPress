@@ -225,8 +225,6 @@ class CategoricalDistribMonitor(Monitor):
 
   def plot(self) -> None:
     """Plot line over timescale"""
-    print([k for k in self.sample_dict.keys()])
-    print([v for v in self.sample_dict.values()])
     plotter.CategoricalViolin(
       x = [k for k in self.sample_dict.keys()],
       y = [v for v in self.sample_dict.values()],
