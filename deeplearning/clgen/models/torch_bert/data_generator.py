@@ -123,7 +123,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       sample_element = sequence_masking.MaskedSeqToBlob(
         self.sampler.encoded_start_text, self.tokenizer, self.sampler.sequence_length, self.max_position_embeddings
       )
-      dataset = [{k: torch.from_numpy(v) for (k, v) in sample_element.items()}]
+      dataset = [{k: torch.from_numpy(v) for (k, v) in sample_element.items()}] * self.sample_batch_size
       sampler = torch.utils.data.SequentialSampler(dataset)
     else:
       if self.sampler.is_online:
