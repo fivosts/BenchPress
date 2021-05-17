@@ -218,14 +218,15 @@ class CategoricalDistribMonitor(Monitor):
   def register(self, actual_sample: typing.Dict[str, float]) -> None:
     for k, v in actual_sample.items():
       if k in self.sample_dict:
-        self.sample_dict[k].append(v)
+        self.sample_dict[k] += v
       else:
-        self.sample_dict[k] = [v]
+        self.sample_dict[k] = v
     return
 
   def plot(self) -> None:
     """Plot line over timescale"""
-    sorted_dict = self.getData()
+    print([k for k in self.sample_dict.keys()])
+    print([v for v in self.sample_dict.values()])
     plotter.CategoricalViolin(
       x = [k for k in self.sample_dict.keys()],
       y = [v for v in self.sample_dict.values()],
