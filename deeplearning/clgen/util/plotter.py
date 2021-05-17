@@ -151,3 +151,36 @@ def NormalizedRadar(r         : np.array,
   fig.write_html (outf("html"))
   fig.write_image(outf("png"), scale = 2.0)
   return
+
+def CategoricalViolin(x: np.array,
+                      y: typing.List[np.array],
+                      title    : str,
+                      x_name   : str,
+                      plot_name: str,
+                      path: pathlib.Path
+                      ) -> None:
+  """Plot percent cumulative histogram."""
+  layout = go.Layout(
+    title = title,
+    violingap = 0,
+    violinmode = 'overlay',
+    xaxis = dict(title = x_name),
+    yaxis = dict(title = "Distribution / category"),
+  )
+  fig = go.Figure(layout = layout)
+  for xel, yel in zip(x, y):
+    fig.add_trace(
+      go.Violin(
+        x = [xel]*len(yel),
+        y = yel,
+        # side = 'positive',
+        meanline_visible = True,
+        box_visible = True,
+        showlegend = False,
+        opacity = 0.65,
+      )
+    )
+  outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
+  fig.write_html (outf("html"))
+  fig.write_image(outf("png"), scale = 2.0)
+  return
