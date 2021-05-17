@@ -161,7 +161,7 @@ class SamplesDatabaseObserver(SampleObserver):
     """Write final summed data about sampling session."""
     # Create feature vector plots
     db_path = pathlib.Path(self.db.url[len("sqlite:///"):]).parent
-    feature_monitor = monitors.FeatureMonitor(db_path, "samples_feature_vector")
+    feature_monitor = monitors.CategoricalDistribMonitor(db_path, "samples_feature_vector_distribution")
     for sample in self.db.correct_samples:
       if sample.feature_vector:
         feature_monitor.register(extractor.DBStrToDictFeatures(sample.feature_vector))

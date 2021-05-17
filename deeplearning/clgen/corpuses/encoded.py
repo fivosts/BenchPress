@@ -172,7 +172,7 @@ class EncodedContentFiles(sqlutil.Database):
     self.encoded_path = pathlib.Path(url.replace("sqlite:///", "")).parent
     self.length_monitor  = monitors.CumulativeHistMonitor(self.encoded_path, "encoded_kernel_length")
     self.token_monitor   = monitors.NormalizedFrequencyMonitor(self.encoded_path, "token_distribution")
-    self.feature_monitor = monitors.FeatureMonitor(self.encoded_path, "feature_vector")
+    self.feature_monitor = monitors.CategoricalDistribMonitor(self.encoded_path, "feature_vector_distribution")
     super(EncodedContentFiles, self).__init__(url, Base, must_exist=must_exist)
 
   def Create(
