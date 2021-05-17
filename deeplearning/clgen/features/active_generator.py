@@ -119,7 +119,7 @@ class ActiveSamplingGenerator(object):
     self.total_candidates_hash = set()
     self.active_dataset        = ActiveDataset(self.active_corpus)
     self.feat_sampler          = feature_sampler.EuclideanSampler()
-    self.candidate_monitor     = monitors.MinRegulatedHistoryMonitor(
+    self.candidate_monitor     = monitors.CategoricalDistribMonitor(
       self.data_generator.sampler.corpus_directory, "feature_distance"
     )
     self.bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
@@ -245,7 +245,7 @@ class ActiveSamplingGenerator(object):
     new_candidates = self.feat_sampler.sample_from_set(self.step_candidates)
 
     self.candidate_monitor.register(
-      (new_candidates[0].generation_id, min([x.score for x in new_candidates]))
+      {str(new_candidates[0].generation_id): [x.score for x in new_candidates]}
     )
     self.candidate_monitor.plot()
     # Very frequently, new candidates have been generated in the past.
