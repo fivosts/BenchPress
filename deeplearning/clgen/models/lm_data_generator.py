@@ -431,8 +431,9 @@ class MaskLMDataGenerator(object):
     if (path / corpus_file).exists():
       with open(path / corpus_file, 'rb') as infile:
         shaped_corpus = pickle.load(infile)
-        self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
-        self.steps_per_epoch = self.config.steps_per_epoch
+        if self.num_train_steps:
+          self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
+          self.steps_per_epoch = self.config.steps_per_epoch
         l.getLogger().info(
           "Loaded from file corpus of {} examples in {} ms.".format(
                     humanize.intcomma(len(shaped_corpus)),
@@ -448,7 +449,6 @@ class MaskLMDataGenerator(object):
       # right tokenizer. And that is the model's tokenizer.
       with open(path / "text_corpus.pkl", 'rb') as infile:
         encoded_corpus = [self.tokenizer.TokenizeString(x) for x in pickle.load(infile)]
-        self.num_epochs = 1
     else:
       encoded_corpus  = self.corpus.GetTrainingData()
 
@@ -478,10 +478,11 @@ class MaskLMDataGenerator(object):
       assert len(shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
 
       # Set corpus epoch parameters
-      self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
+      if self.num_train_steps:
+        self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
       self.steps_per_epoch = self.config.steps_per_epoch
       assert shaped_corpus.ndim     == 2, "corpus dim: {}".format(shaped_corpus.shape)
-      assert shaped_corpus.shape[1] == sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(encoded_corpus.shape[1], sequence_length)
+      assert shaped_corpus.shape[1] == sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(shaped_corpus.shape[1], sequence_length)
 
       l.getLogger().info("{} kernels were rejected (larger than sequence_length)".format(initial_length - reduced_length))
       l.getLogger().info(
@@ -502,7 +503,8 @@ class MaskLMDataGenerator(object):
       # Set corpus dimension parameters
       self.steps_per_epoch        = len(encoded_corpus) // (batch_size * sequence_length * dupe_factor)
       assert self.steps_per_epoch != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
-      self.num_epochs             = self.num_train_steps // self.steps_per_epoch
+      if self.num_train_steps:
+        self.num_epochs             = self.num_train_steps // self.steps_per_epoch
 
       # clipped_corpus_length       = dupe_factor * self.steps_per_epoch * batch_size * sequence_length
       clipped_corpus_length       = self.steps_per_epoch * batch_size * sequence_length
