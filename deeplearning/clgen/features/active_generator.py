@@ -34,6 +34,38 @@ flags.DEFINE_integer(
   "Set the maximum sampling generation depth that active sampler can reach. [Default: 20]."
 )
 
+class ActiveSampleFeed(typing.NamedTuple):
+  """
+  Representation of an active learning input to the model.
+  """
+  # An array of original input
+  input_feed       : np.array
+  # The feature space of the original input
+  input_features   : typing.Dict[str, float]
+  # Full model input
+  input_blob       : typing.Dict[str, np.array]
+  # List of masked model input feeds.
+  masked_input_ids : np.array
+  # List of hole instances for masked input.
+  hole_instances   : typing.List[sequence_masking.MaskedLmInstance]
+  # Depth increases when a valid inference sample is fed back as an input.
+  gen_id           : int
+
+class ActiveSample(typing.NamedTuple):
+  """
+  Representation of an active learning sample.
+  """
+  # ActiveSampleFeed instance of model input
+  sample_feed    : typing.TypeVar("ActiveSamplingGenerator.ActiveSampleFeed")
+  # Model prediction
+  sample         : np.array
+  # Sample indices of given prediction.
+  sample_indices : np.array
+  # Output features of sample
+  features       : typing.Dict[str, float]
+  # Score of sample based on active learning search.
+  score          : typing.Union[bool, float]
+  
 class ActiveSamplingGenerator(object):
   """
   Data generation object that performs active learning
@@ -43,38 +75,6 @@ class ActiveSamplingGenerator(object):
   A sample feed instance is fed to the model in different
   ways to find the closest match based on a feature vector.
   """
-
-  class ActiveSampleFeed(typing.NamedTuple):
-    """
-    Representation of an active learning input to the model.
-    """
-    # An array of original input
-    input_feed       : np.array
-    # The feature space of the original input
-    input_features   : typing.Dict[str, float]
-    # Full model input
-    input_blob       : typing.Dict[str, np.array]
-    # List of masked model input feeds.
-    masked_input_ids : np.array
-    # List of hole instances for masked input.
-    hole_instances   : typing.List[sequence_masking.MaskedLmInstance]
-    # Depth increases when a valid inference sample is fed back as an input.
-    gen_id           : int
-
-  class ActiveSample(typing.NamedTuple):
-    """
-    Representation of an active learning sample.
-    """
-    # ActiveSampleFeed instance of model input
-    sample_feed    : typing.TypeVar("ActiveSamplingGenerator.ActiveSampleFeed")
-    # Model prediction
-    sample         : np.array
-    # Sample indices of given prediction.
-    sample_indices : np.array
-    # Output features of sample
-    features       : typing.Dict[str, float]
-    # Score of sample based on active learning search.
-    score          : typing.Union[bool, float]
 
   @classmethod
   def FromDataGenerator(cls,
@@ -111,8 +111,8 @@ class ActiveSamplingGenerator(object):
       url = "sqlite:///{}".format(self.data_generator.sampler.corpus_directory / "active_feeds.db")
     )
     if (self.data_generator.sampler.corpus_directory / "gen_state.pkl").exists():
-      raise NotImplementedError("This doesn't work")
-      self.feed_queue = pickle.load(self.data_generator.sampler.corpus_directory / "gen_state.pkl")
+      with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'rb') as infile:
+      self.feed_queue = pickle.load(infile)
     else:
       self.feed_queue          = []
     self.step_candidates       = []
@@ -315,6 +315,11 @@ class ActiveSamplingGenerator(object):
       next_gen = sorted(next_gen, lambda k: k.score)[:3]
       self.feed_queue = next_gen + self.feed_queue
       self.current_generation += 1
+
+      # Update generation state pickle to start over.
+      with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
+        pickle.dump(self.feed_queue, outf)
+
       return self.data_generator.toTensorFormat(self.feed_queue[0].input_blob), [], False
     else:
       # We don't have new generation good candidates. Go get a new starting feed from the dataset.
