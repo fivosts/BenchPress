@@ -192,7 +192,7 @@ class HistoryMonitor(Monitor):
     )
     return
 
-class MinRegulatedHistoryMonitor(Monitor):
+class CategoricalDistribMonitor(Monitor):
   """
   Monitors values in an ordered timeline
   Plots a line of values against timesteps.
@@ -203,7 +203,7 @@ class MinRegulatedHistoryMonitor(Monitor):
                cache_path: typing.Union[pathlib.Path, str],
                set_name: str,
                ):
-    super(MinRegulatedHistoryMonitor, self).__init__(cache_path, set_name)
+    super(CategoricalDistribMonitor, self).__init__(cache_path, set_name)
     self.sample_dict = {}
     return
 
@@ -218,9 +218,9 @@ class MinRegulatedHistoryMonitor(Monitor):
   def register(self, actual_sample: typing.Tuple[int, typing.Union[int, float]]) -> None:
     x, y = actual_sample
     if x in self.sample_dict:
-      self.sample_dict[x] = min(self.sample_dict[x], y)
+      self.sample_dict[x].append(y)
     else:
-      self.sample_dict[x] = y
+      self.sample_dict[x] = [y]
     return
 
   def plot(self) -> None:
