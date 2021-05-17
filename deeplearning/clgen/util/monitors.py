@@ -212,7 +212,7 @@ class CategoricalDistribMonitor(Monitor):
 
   def getStrData(self) -> str:
     return "\n".join(
-      ["{}:{}".format(k, v) for (k, v) in self.getData()]
+      ["{}:{}".format(k, sum(v) / len(v)) for (k, v) in self.getData()]
     )
 
   def register(self, actual_sample: typing.Tuple[int, typing.Union[int, float]]) -> None:
