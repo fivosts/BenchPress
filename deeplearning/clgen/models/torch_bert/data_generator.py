@@ -124,7 +124,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         self.sampler.encoded_start_text, self.tokenizer, self.sampler.sequence_length, self.max_position_embeddings
       )
       dataset = [{k: torch.from_numpy(v) for (k, v) in sample_element.items()}]
-      sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
+      sampler = torch.utils.data.SequentialSampler(dataset)
     else:
       if self.sampler.is_online:
         """
