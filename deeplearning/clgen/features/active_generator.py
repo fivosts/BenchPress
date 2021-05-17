@@ -112,7 +112,7 @@ class ActiveSamplingGenerator(object):
     )
     if (self.data_generator.sampler.corpus_directory / "gen_state.pkl").exists():
       with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'rb') as infile:
-      self.feed_queue = pickle.load(infile)
+        self.feed_queue = pickle.load(infile)
     else:
       self.feed_queue          = []
     self.step_candidates       = []

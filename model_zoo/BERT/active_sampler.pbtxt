@@ -57,7 +57,7 @@ model {
       steps_per_epoch: 5000
       validation_split: 0
       hole {
-        hole_length: 20
+        relative_length: 1.0
         uniform_distribution: true
         stage_training: false
       }
@@ -74,7 +74,7 @@ sampler {
       max_predictions_per_seq: 1
       masked_lm_prob: 0.6
       hole {
-        hole_length: 20
+        relative_length: 1.0
         uniform_distribution: true
       }
     }

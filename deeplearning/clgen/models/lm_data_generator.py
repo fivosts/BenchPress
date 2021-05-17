@@ -448,6 +448,7 @@ class MaskLMDataGenerator(object):
       # right tokenizer. And that is the model's tokenizer.
       with open(path / "text_corpus.pkl", 'rb') as infile:
         encoded_corpus = [self.tokenizer.TokenizeString(x) for x in pickle.load(infile)]
+        self.num_epochs = 1
     else:
       encoded_corpus  = self.corpus.GetTrainingData()
 
