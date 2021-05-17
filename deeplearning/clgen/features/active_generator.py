@@ -65,7 +65,7 @@ class ActiveSample(typing.NamedTuple):
   features       : typing.Dict[str, float]
   # Score of sample based on active learning search.
   score          : typing.Union[bool, float]
-  
+
 class ActiveSamplingGenerator(object):
   """
   Data generation object that performs active learning
@@ -157,7 +157,7 @@ class ActiveSamplingGenerator(object):
         )
       # TODO do sth with hole_lengths and masked_idxs
       self.feed_queue.append(
-        ActiveSamplingGenerator.ActiveSampleFeed(
+        ActiveSampleFeed(
           input_feed       = seed,
           input_features   = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(seed)),
           input_blob       = input_feed,
@@ -201,7 +201,7 @@ class ActiveSamplingGenerator(object):
         features = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(sample))
         if features:
           self.step_candidates.append(
-            ActiveSamplingGenerator.ActiveSample(
+            ActiveSample(
               sample_feed    = current_feed,
               sample         = sample,
               sample_indices = indices,
@@ -223,7 +223,7 @@ class ActiveSamplingGenerator(object):
         input_feed = current_feed.input_blob
 
       self.feed_queue.insert(0,
-        ActiveSamplingGenerator.ActiveSampleFeed(
+        ActiveSampleFeed(
           input_feed       = current_feed.input_feed,
           input_features   = current_feed.input_features,
           input_blob       = input_feed,
@@ -292,7 +292,7 @@ class ActiveSamplingGenerator(object):
           input_feed = self.func(candidate.sample)
           if len(input_feed['input_ids']) <= self.data_generator.sampler.sequence_length:
             self.feed_queue.append(
-              ActiveSamplingGenerator.ActiveSampleFeed(
+              ActiveSampleFeed(
                 input_feed       = candidate.sample,
                 input_features   = candidate.features,
                 input_blob       = input_feed,
