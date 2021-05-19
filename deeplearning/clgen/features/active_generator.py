@@ -35,6 +35,12 @@ flags.DEFINE_integer(
   "Set the maximum sampling generation depth that active sampler can reach. [Default: 20]."
 )
 
+flags.DEFINE_integer(
+  "active_search_width",
+  5,
+  "Set top-K surviving candidates per generation, sorted by distance from target feature space."
+)
+
 class ActiveSampleFeed(typing.NamedTuple):
   """
   Representation of an active learning input to the model.
@@ -318,7 +324,7 @@ class ActiveSamplingGenerator(object):
       print(self.feed_queue[0].gen_id)
       while self.feed_queue and self.feed_queue[0].gen_id == self.current_generation + 1:
         next_gen.append(self.feed_queue.pop(0))
-      next_gen = sorted(next_gen, key = lambda k: k.input_score)[:3]
+      next_gen = sorted(next_gen, key = lambda k: k.input_score)[:FLAGS.active_search_width]
       self.feed_queue = next_gen + self.feed_queue
       self.current_generation = self.feed_queue[0].gen_id
 

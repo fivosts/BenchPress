@@ -8,6 +8,11 @@ import math
 from deeplearning.clgen.features import extractor
 from eupy.native import logger as l
 
+from absl import flags
+from eupy.native import logger as l
+
+FLAGS = flags.FLAGS
+
 class EuclideanSampler(object):
   """
   This is a shitty experimental class to work with benchmark comparison.
@@ -74,4 +79,4 @@ class EuclideanSampler(object):
       candidates[idx] = candidates[idx]._replace(
         score = self.calculate_distance(candidates[idx].features)
       )
-    return self.topK_candidates(candidates, 3)
+    return self.topK_candidates(candidates, FLAGS.active_search_width)
