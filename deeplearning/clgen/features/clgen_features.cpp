@@ -299,22 +299,14 @@ class RecursiveASTVisitor
 
   void InitializeOCLRoutines() {
     // Utility macros.
-#define DEFAULT_OCL_ROUTINE_COUNT 15
-#define ADD_OCL_ROUTINE_INFO(__p__, __name__)                   \
-    {                                                           \
-      FuncInfo* __p__ = new FuncInfo(__name__);                 \
-      __p__->addComputationCount(DEFAULT_OCL_ROUTINE_COUNT);    \
-      FuncInfoVec.push_back(__p__);                             \
+    unsigned ocl_routine_count = 15;
+    for (auto &s: {"exp", "log", "sqrt"}) {
+        FuncInfo* r = new FuncInfo(s);
+        r->resetCounters();
+        r->addComputationCount(ocl_routine_count);
+        FuncInfoVec.push_back(r);
     }
-
-    // The 'stuff'.
-    ADD_OCL_ROUTINE_INFO(p, "exp");
-    ADD_OCL_ROUTINE_INFO(p, "log");
-    ADD_OCL_ROUTINE_INFO(p, "sqrt");
-
-    // Clean up.
-#undef DEFAULT_OCL_ROUTINE_COUNT
-#undef ADD_OCL_ROUTINE_INFO
+    return;
   }
 
 
