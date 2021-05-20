@@ -71,8 +71,8 @@ class FrequencyMonitor(Monitor):
     """Plot bars of number of occurences."""
     sorted_dict = sorted(self.sample_counter.items(), key = lambda x: x[0])
     plotter.FrequencyBars(
-      x = [x for (x, _) in sorted_dict],
-      y = [y for (_, y) in sorted_dict],
+      x = [x for x in sorted_dict.keys()],
+      y = [y for y in sorted_dict.values()],
       title     = self.set_name,
       x_name    = self.set_name,
       plot_name = self.set_name,
@@ -145,8 +145,8 @@ class CumulativeHistMonitor(Monitor):
     """Plot bars of number of occurences."""
     sorted_dict = self.getData()
     plotter.CumulativeHistogram(
-      x = [x for (x, _) in sorted_dict],
-      y = [y for (_, y) in sorted_dict],
+      x = [x for x in sorted_dict.keys()],
+      y = [y for y in sorted_dict.values()],
       title     = self.set_name,
       x_name    = self.set_name,
       plot_name = self.set_name,
@@ -192,6 +192,46 @@ class HistoryMonitor(Monitor):
     )
     return
 
+class CategoricalHistoryMonitor(Monitor):
+  """
+  Scatter line of one datapoint per category.
+  Useful to track average value per category.
+  """
+  def __init__(self,
+               cache_path: typing.Union[pathlib.Path, str],
+               set_name: str,
+               ):
+    super(CategoricalHistoryMonitor, self).__init__(cache_path, set_name)
+    self.sample_dict = {}
+    return
+
+  def getData(self) -> typing.List[typing.Tuple[typing.Union[int, str, float], int]]:
+    return sorted(self.sample_dict.items(), key = lambda x: x[0])
+
+  def getStrData(self) -> str:
+    return "\n".join(
+      ["{}:{}".format(k, v) for (k, v) in self.getData()]
+    )
+
+  def register(self, actual_sample: typing.Tuple[typing.Any, typing.Any]) -> None:
+    key, value = actual_sample
+    self.sample_dict[key] = value
+    return
+
+  def plot(self) -> None:
+    """Plot line over timescale"""
+    sorted_dict = self.getData()
+    plotter.SingleScatterLine(
+      x = [x for x in sorted_dict.keys()],
+      y = [y for y in sorted_dict.values()],
+      title = self.set_name,
+      x_name = "",
+      y_name = self.set_name,
+      plot_name = self.set_name,
+      path = self.cache_path,
+    )
+    return
+
 class CategoricalDistribMonitor(Monitor):
   """
   Monitors values in an ordered timeline
@@ -225,9 +265,10 @@ class CategoricalDistribMonitor(Monitor):
 
   def plot(self) -> None:
     """Plot line over timescale"""
+    sorted_dict = self.getData()
     plotter.CategoricalViolin(
-      x = [k for k in self.sample_dict.keys()],
-      y = [v for v in self.sample_dict.values()],
+      x = [k for k in sorted_dict.keys()],
+      y = [v for v in sorted_dict.values()],
       title = self.set_name,
       x_name = "",
       plot_name = self.set_name,
