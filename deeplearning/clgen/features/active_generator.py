@@ -110,7 +110,9 @@ class ActiveSamplingGenerator(object):
     self.func          = None
     self.dataloader    = None
     self.init_masked   = False
+
     self.current_generation = None
+    self.comp_rate_per_gen  = {}
 
     self.configSamplingParams()
     self.configSampleCorpus()
@@ -131,6 +133,9 @@ class ActiveSamplingGenerator(object):
     self.feat_sampler          = feature_sampler.EuclideanSampler()
     self.candidate_monitor     = monitors.CategoricalDistribMonitor(
       self.data_generator.sampler.corpus_directory, "feature_distance"
+    )
+    self.comp_rate_monitor     = monitors.CategoricalHistoryMonitor(
+      self.data_generator.sampler.corpus_directory, "comp_rate_per_gen"
     )
     self.bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
     return
@@ -204,12 +209,17 @@ class ActiveSamplingGenerator(object):
 
     # Pops the sample feed that created 'samples'
     current_feed = self.feed_queue.pop(0)
+    if current_feed.gen_id not in self.comp_rate_per_gen:
+      self.comp_rate_per_gen[current_feed.gen_id] = [0, len(samples)]
+    else:
+      self.comp_rate_per_gen[current_feed.gen_id][1] += len(samples)
     for sample, indices in zip(samples, sample_indices):
       try:
         # If you can extract features from a sample, store it as a candidate.
         _ = opencl.Compile(self.tokenizer.ArrayToCode(sample))
         features = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(sample))
         if features:
+          self.comp_rate_per_gen[current_feed.gen_id][0] += 1
           self.step_candidates.append(
             ActiveSample(
               sample_feed    = current_feed,
@@ -246,6 +256,8 @@ class ActiveSamplingGenerator(object):
       self.bar.update(len(self.step_candidates))
       return self.data_generator.toTensorFormat(input_feed), [], False
 
+    self.comp_rate_monitor.register((current_feed.gen_id, self.comp_rate_per_gen[current_feed.gen_ids][0] / self.comp_rate_per_gen[current_feed.gen_ids][1]))
+    self.comp_rate_monitor.plot()
     # Re-init bar for next candidate gathering
     self.bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
 
@@ -320,8 +332,6 @@ class ActiveSamplingGenerator(object):
       # There are next generation candidates in the queue, and these will be used as sample feeds.
       # But first, do a beam search on next generation, otherwise things will explode pretty quickly.
       next_gen = []
-      print(self.current_generation)
-      print(self.feed_queue[0].gen_id)
       while self.feed_queue and self.feed_queue[0].gen_id == self.current_generation + 1:
         next_gen.append(self.feed_queue.pop(0))
       next_gen = sorted(next_gen, key = lambda k: k.input_score)[:FLAGS.active_search_width]
