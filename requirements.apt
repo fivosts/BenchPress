@@ -47,6 +47,7 @@ function install_apt_deps()
     python3-numpy \
     pv \
     zlib1g-dev \
+    lib32ncurses5-dev \
     libexempi-dev \
     libmpc-dev \
     libboost-all-dev \
