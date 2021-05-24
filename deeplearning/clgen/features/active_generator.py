@@ -207,6 +207,8 @@ class ActiveSamplingGenerator(object):
     if len(self.feed_queue) == 0:
       raise ValueError("Feed stack is empty. Cannot pop element.")
 
+    found_closer_point = False
+
     # Pops the sample feed that created 'samples'
     current_feed = self.feed_queue.pop(0)
     if current_feed.gen_id not in self.comp_rate_per_gen:
@@ -219,6 +221,9 @@ class ActiveSamplingGenerator(object):
         _ = opencl.Compile(self.tokenizer.ArrayToCode(sample))
         features = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(sample))
         if features:
+          dist = self.feat_sampler.calculate_distance(features)
+          if dist < current_feed.input_score and current_feed.gen_id > 0:
+            found_closer_point = True
           self.comp_rate_per_gen[current_feed.gen_id][0] += 1
           self.step_candidates.append(
             ActiveSample(
@@ -232,7 +237,7 @@ class ActiveSamplingGenerator(object):
       except ValueError:
         pass
 
-    if len(self.step_candidates) < FLAGS.active_limit_per_feed:
+    if len(self.step_candidates) < FLAGS.active_limit_per_feed or found_closer_point:
       # If gathered candidates are not as many as required, re-mask the same feed
       # place it back in the queue and ask the model for more samples.
       # The sample input is the same, but masks might be in different locations.
@@ -267,6 +272,9 @@ class ActiveSamplingGenerator(object):
     candidate_idx = len(self.total_candidates)
     # Top-k candidates of ith generation.
     new_candidates = self.feat_sampler.sample_from_set(self.step_candidates)
+
+    if current_feed.gen_id > 0:
+      new_candidates = new_candidates[:1]
 
     self.candidate_monitor.register(
       {str(new_candidates[0].sample_feed.gen_id): [c.score for c in new_candidates]}
@@ -313,7 +321,7 @@ class ActiveSamplingGenerator(object):
       if 1 + candidate.sample_feed.gen_id <= FLAGS.active_search_depth:
         if not self.data_generator.config.use_start_end or (self.data_generator.config.use_start_end and self.tokenizer.endToken in candidate.sample):
           input_feed = self.func(candidate.sample)
-          if len(input_feed['input_ids']) <= self.data_generator.sampler.sequence_length:
+          if len(input_feed['input_ids']) <= self.data_generator.sampler.sequence_length and candidate.score < current_feed.input_score:
             self.feed_queue.append(
               ActiveSampleFeed(
                 input_feed       = candidate.sample,
