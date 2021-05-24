@@ -145,8 +145,8 @@ class CumulativeHistMonitor(Monitor):
     """Plot bars of number of occurences."""
     sorted_dict = self.getData()
     plotter.CumulativeHistogram(
-      x = [x for x in sorted_dict.keys()],
-      y = [y for y in sorted_dict.values()],
+      x = [x for (x, _) in sorted_dict],
+      y = [y for (_, y) in sorted_dict],
       title     = self.set_name,
       x_name    = self.set_name,
       plot_name = self.set_name,
@@ -222,8 +222,8 @@ class CategoricalHistoryMonitor(Monitor):
     """Plot line over timescale"""
     sorted_dict = self.getData()
     plotter.SingleScatterLine(
-      x = [x for x in sorted_dict.keys()],
-      y = [y for y in sorted_dict.values()],
+      x = [x for (x, _) in sorted_dict],
+      y = [y for (_, y) in sorted_dict],
       title = self.set_name,
       x_name = "",
       y_name = self.set_name,
@@ -271,8 +271,8 @@ class CategoricalDistribMonitor(Monitor):
     """Plot line over timescale"""
     sorted_dict = self.getData()
     plotter.CategoricalViolin(
-      x = [k for k in sorted_dict.keys()],
-      y = [v for v in sorted_dict.values()],
+      x = [k for (k, _) in sorted_dict],
+      y = [v for (_, v) in sorted_dict],
       title = self.set_name,
       x_name = "",
       plot_name = self.set_name,
