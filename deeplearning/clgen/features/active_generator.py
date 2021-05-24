@@ -237,7 +237,7 @@ class ActiveSamplingGenerator(object):
       except ValueError:
         pass
 
-    if len(self.step_candidates) < FLAGS.active_limit_per_feed or found_closer_point:
+    if len(self.step_candidates) < FLAGS.active_limit_per_feed and not found_closer_point:
       # If gathered candidates are not as many as required, re-mask the same feed
       # place it back in the queue and ask the model for more samples.
       # The sample input is the same, but masks might be in different locations.
