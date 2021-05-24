@@ -257,10 +257,14 @@ class CategoricalDistribMonitor(Monitor):
 
   def register(self, actual_sample: typing.Dict[str, float]) -> None:
     for k, v in actual_sample.items():
-      if k in self.sample_dict:
-        self.sample_dict[k] += v
+      if isinstance(v, list):
+        val = v
       else:
-        self.sample_dict[k] = v
+        val = [v]
+      if k in self.sample_dict:
+        self.sample_dict[k] += val
+      else:
+        self.sample_dict[k] = val
     return
 
   def plot(self) -> None:
