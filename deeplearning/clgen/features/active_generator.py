@@ -261,7 +261,7 @@ class ActiveSamplingGenerator(object):
       self.bar.update(len(self.step_candidates))
       return self.data_generator.toTensorFormat(input_feed), [], False
 
-    self.comp_rate_monitor.register((current_feed.gen_id, self.comp_rate_per_gen[current_feed.gen_ids][0] / self.comp_rate_per_gen[current_feed.gen_ids][1]))
+    self.comp_rate_monitor.register((current_feed.gen_id, self.comp_rate_per_gen[current_feed.gen_id][0] / self.comp_rate_per_gen[current_feed.gen_id][1]))
     self.comp_rate_monitor.plot()
     # Re-init bar for next candidate gathering
     self.bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
