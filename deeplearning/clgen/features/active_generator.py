@@ -74,6 +74,8 @@ class ActiveSample(typing.NamedTuple):
   features       : typing.Dict[str, float]
   # Score of sample based on active learning search.
   score          : typing.Union[bool, float]
+  # Active batch timestep where sample was acquired.
+  timestep       : int
 
 class ActiveSamplingGenerator(object):
   """
@@ -207,8 +209,6 @@ class ActiveSamplingGenerator(object):
     if len(self.feed_queue) == 0:
       raise ValueError("Feed stack is empty. Cannot pop element.")
 
-    found_closer_point = False
-
     # Pops the sample feed that created 'samples'
     current_feed = self.feed_queue.pop(0)
     if current_feed.gen_id not in self.comp_rate_per_gen:
@@ -221,9 +221,6 @@ class ActiveSamplingGenerator(object):
         _ = opencl.Compile(self.tokenizer.ArrayToCode(sample))
         features = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(sample))
         if features:
-          dist = self.feat_sampler.calculate_distance(features)
-          if dist < current_feed.input_score and current_feed.gen_id > 0:
-            found_closer_point = True
           self.comp_rate_per_gen[current_feed.gen_id][0] += 1
           self.step_candidates.append(
             ActiveSample(
@@ -232,12 +229,13 @@ class ActiveSamplingGenerator(object):
               sample_indices = indices,
               features       = features,
               score          = None,
+              timestep       = 1 + len(self.step_candidates),
             )
           )
       except ValueError:
         pass
 
-    if len(self.step_candidates) < FLAGS.active_limit_per_feed and not found_closer_point:
+    if len(self.step_candidates) < FLAGS.active_limit_per_feed:
       # If gathered candidates are not as many as required, re-mask the same feed
       # place it back in the queue and ask the model for more samples.
       # The sample input is the same, but masks might be in different locations.
@@ -314,6 +312,7 @@ class ActiveSamplingGenerator(object):
           sample_quality   = candidate.score,
           compile_status   = compile_status,
           generation_id    = candidate.sample_feed.gen_id,
+          timestep         = candidate.timestep,
         )
       )
       # If the current generation has not gone as deep as required, mask each new candidate

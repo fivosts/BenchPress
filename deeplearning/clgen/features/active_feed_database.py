@@ -104,6 +104,8 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
   compile_status   : bool = sql.Column(sql.Boolean, nullable = False)
   # Number of generation for sample
   generation_id    : int  = sql.Column(sql.Integer, nullable = False)
+  # Timestep where sample was acquired.
+  timestep         : int  = sql.Column(sql.Integer, nullable = False)
   # Date
   date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable = False)
 
@@ -120,6 +122,7 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
                sample_quality   : float,
                compile_status   : bool,
                generation_id    : int,
+               timestep         : int,
                ) -> typing.TypeVar("ActiveFeed"):
     """Construt ActiveFeed table entry from argumentns."""
     str_input_feed       = tokenizer.tokensToString(input_feed,       ignore_token = tokenizer.padToken, with_formatting = True)
@@ -145,6 +148,7 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
       sample_quality   = sample_quality,
       compile_status   = compile_status,
       generation_id    = generation_id,
+      timestep         = timestep,
       date_added       = datetime.datetime.utcnow(),
     )
 
