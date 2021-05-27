@@ -320,7 +320,7 @@ class ActiveSamplingGenerator(object):
       if 1 + candidate.sample_feed.gen_id <= FLAGS.active_search_depth:
         if not self.data_generator.config.use_start_end or (self.data_generator.config.use_start_end and self.tokenizer.endToken in candidate.sample):
           input_feed = self.func(candidate.sample)
-          if len(input_feed['input_ids']) <= self.data_generator.sampler.sequence_length and candidate.score < current_feed.input_score:
+          if len(input_feed['input_ids']) <= self.data_generator.sampler.sequence_length and 0 < candidate.score < current_feed.input_score:
             self.feed_queue.append(
               ActiveSampleFeed(
                 input_feed       = candidate.sample,
