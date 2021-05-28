@@ -104,6 +104,10 @@ class EncodedContentFile(Base):
     """The numpy array of the encoded data."""
     return self.DataStringToNumpyArray(self.data)
 
+  @property
+  def features(self) -> typing.Dict[str, float]:
+    return extractor.StrToDictFeatures(self.feature_vector)
+
   @classmethod
   def FromPreprocessed(
     cls,

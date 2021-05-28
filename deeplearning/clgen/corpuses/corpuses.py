@@ -332,12 +332,14 @@ class Corpus(object):
       return self.config.contentfile_separator.join([x[0] for x in query])
 
   def GetTrainingData(self,
-                      shuffle: bool = False
+                      shuffle: bool = False,
+                      sequence_length: int = False,
                       ) -> np.ndarray:
     """Concatenate the entire encoded corpus into an array.
 
     Args:
       shuffle: If true, randomize order of encoded contentfiles.
+      sequence_length: If set, query is optimized to bring only fitting sequences.
 
     Returns:
       The encoded corpus.
@@ -352,13 +354,24 @@ class Corpus(object):
     # data from the encoded database.
     if self._indices_arrays is None:
       with self.encoded.Session() as session:
-        query = session.query(encoded.EncodedContentFile)
+        if sequence_length:
+          query = session.query(encoded.EncodedContentFile).filter(encoded.EncodedContentFile.tokencount <= sequence_length)
+        else:
+          query = session.query(encoded.EncodedContentFile)
         self._indices_arrays = np.array([x.indices_array for x in query])
 
     if shuffle:
       random.shuffle(self._indices_arrays)
 
     return self._indices_arrays
+
+  def GetTrainingFeatures(self, sequence_length: int):
+    """
+    Get feature vectors of training instances within the specified sequence length.
+    """
+    with self.encoded.Session() as session:
+      query = session.query(encoded.EncodedContentFile).filter(encoded.EncodedContentFile.tokencount <= sequence_length)
+      return [x.features for x in query]
 
   def GetNumContentFiles(self) -> int:
     """Get the number of contentfiles which were pre-processed."""

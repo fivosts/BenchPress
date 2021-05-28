@@ -417,14 +417,15 @@ class MaskLMDataGenerator(object):
     start_time = time.time()
 
     # Set corpus dimension parameters
-    sequence_length = self.training_opts.sequence_length
-    batch_size      = self.training_opts.batch_size
-    dupe_factor     = self.training_opts.dupe_factor
-    shuffle         = self.training_opts.shuffle_corpus_contentfiles_between_epochs
-    pad             = [self.tokenizer.padToken   ]
-    start           = [self.tokenizer.startToken ]
-    end             = [self.tokenizer.endToken   ]
-    shaped_corpus   = None
+    sequence_length   = self.training_opts.sequence_length
+    effect_seq_length = sequence_length - (2 if self.config.use_start_end else 0)
+    batch_size        = self.training_opts.batch_size
+    dupe_factor       = self.training_opts.dupe_factor
+    shuffle           = self.training_opts.shuffle_corpus_contentfiles_between_epochs
+    pad               = [self.tokenizer.padToken   ]
+    start             = [self.tokenizer.startToken ]
+    end               = [self.tokenizer.endToken   ]
+    shaped_corpus     = None
 
     corpus_file = "{}corpus.pkl".format("pre_" if self.pre_train else "")
 
@@ -450,13 +451,20 @@ class MaskLMDataGenerator(object):
       with open(path / "text_corpus.pkl", 'rb') as infile:
         encoded_corpus = [self.tokenizer.TokenizeString(x) for x in pickle.load(infile)]
     else:
-      encoded_corpus  = self.corpus.GetTrainingData()
+      encoded_corpus  = self.corpus.GetTrainingData(sequence_length = effect_seq_length if not self.config.truncate_large_kernels else None)
+
+    # Monitor counts actual length distribution of kernel instances.
+    kernel_length_monitor = monitors.FrequencyMonitor(path, "kernel_length")
+    # Token frequency distribution monitor.
+    feature_monitor = monitors.CategoricalDistribMonitor(path, "feature_vector_distribution")
 
     if self.config.datapoint_type == "kernel":
-
       # Reject larger than sequence length
-      effect_seq_length    = sequence_length - (2 if self.config.use_start_end else 0)
       initial_length       = copy.deepcopy(len(encoded_corpus))
+
+      # Get features of fitting dataset within sequence length
+      for feat in self.corpus.GetTrainingFeatures(effect_seq_length):
+        feature_monitor.register(feat)
 
       if self.config.truncate_large_kernels:
         encoded_corpus       = [list(x[:effect_seq_length]) for x in encoded_corpus if len(x[:effect_seq_length]) <= effect_seq_length] # Account for start and end token
@@ -467,6 +475,8 @@ class MaskLMDataGenerator(object):
       # Add start/end tokens
       if self.config.use_start_end:
         encoded_corpus     = [self._addStartEndToken(kf) for kf in encoded_corpus]
+      # Register the actual lengths before padding.
+      kernel_length_monitor.register([len(x) for x in encoded_corpus])
       # pad sequences to sequence length
       encoded_corpus       = np.array([x + pad * (sequence_length - len(x)) for x in encoded_corpus])
       # Clone datapoints dupe_factor times
@@ -513,6 +523,9 @@ class MaskLMDataGenerator(object):
       # shaped_corpus = np.split(clipped_corpus, batch_size * self.steps_per_epoch * dupe_factor, 0)
       shaped_corpus = np.split(clipped_corpus, batch_size * self.steps_per_epoch, 0)
 
+      # Register the actual lengths before padding.
+      kernel_length_monitor.register([len(x) for x in shaped_corpus])
+
       np_corpus = np.asarray(shaped_corpus)
       assert np_corpus.ndim == 2, "Wrong dimensions for shaped_corpus: {}".format(np_corpus.shape)
       assert np_corpus.shape[1] == sequence_length, "Second dimension is not equal to sequence length: {}".format(np_corpus.shape[1])
@@ -528,6 +541,8 @@ class MaskLMDataGenerator(object):
     else:
       raise ValueError("Unrecognized datapoint_type: {}".format(self.config.datapoint_type))
 
+    kernel_length_monitor.plot()
+    feature_monitor.plot()
     with open(path / corpus_file, 'wb') as outf:
       pickle.dump(shaped_corpus, outf)
     return shaped_corpus
@@ -624,8 +639,6 @@ class MaskLMDataGenerator(object):
     else:
       raise AttributeError("target predictions can only be mask or hole {}".format(self.config))
 
-    # Monitor counts actual length distribution of kernel instances.
-    actual_length_monitor = monitors.FrequencyMonitor(path, "{}_actual_kernel_length".format(set_name))
     # Token frequency distribution monitor.
     token_monitor         = monitors.NormalizedFrequencyMonitor(path, "{}_token_distribution".format(set_name))
     # Monitor counts target idxs of a hole as absolute index value.
@@ -674,7 +687,6 @@ class MaskLMDataGenerator(object):
             except IndexError:
               actual_length = len(kernel['original_input'])
 
-            actual_length_monitor.register(actual_length)
             token_monitor.register([
               self.tokenizer.decoder[int(x)]
               for x in kernel['input_ids'] if x != self.tokenizer.padToken]
@@ -734,7 +746,6 @@ class MaskLMDataGenerator(object):
 
     if distribution:
       distribution.plot()
-    actual_length_monitor.plot()
     token_monitor.plot()
     start_idx_monitor.plot()
     idx_monitor.plot()

@@ -71,8 +71,8 @@ class FrequencyMonitor(Monitor):
     """Plot bars of number of occurences."""
     sorted_dict = sorted(self.sample_counter.items(), key = lambda x: x[0])
     plotter.FrequencyBars(
-      x = [x for x in sorted_dict.keys()],
-      y = [y for y in sorted_dict.values()],
+      x = [x for (x, _) in sorted_dict],
+      y = [y for (_, y) in sorted_dict],
       title     = self.set_name,
       x_name    = self.set_name,
       plot_name = self.set_name,
