@@ -454,9 +454,9 @@ class MaskLMDataGenerator(object):
       encoded_corpus  = self.corpus.GetTrainingData(sequence_length = effect_seq_length if not self.config.truncate_large_kernels else None)
 
     # Monitor counts actual length distribution of kernel instances.
-    kernel_length_monitor = monitors.FrequencyMonitor(path, "kernel_length")
+    kernel_length_monitor = monitors.FrequencyMonitor(path, "{}kernel_length".format("pre_" if self.pre_train else ""))
     # Token frequency distribution monitor.
-    feature_monitor = monitors.CategoricalDistribMonitor(path, "feature_vector_distribution")
+    feature_monitor = monitors.CategoricalDistribMonitor(path, "{}feature_vector_distribution".format("pre_" if self.pre_train else ""))
 
     if self.config.datapoint_type == "kernel":
       # Reject larger than sequence length
