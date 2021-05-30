@@ -13,6 +13,12 @@ from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_string(
+  "benchmarks_path",
+  "./rodinia_benchmarks",
+  "Set path of target benchmarks for active sampling."
+)
+
 class EuclideanSampler(object):
   """
   This is a shitty experimental class to work with benchmark comparison.
@@ -26,7 +32,7 @@ class EuclideanSampler(object):
     times_achieved: int
 
   def __init__(self):
-    self.path = pathlib.Path("./rodinia_benchmarks").resolve()
+    self.path = pathlib.Path(FLAGS.benchmarks_path).resolve()
     self.benchmarks = []
     for f in self.path.iterdir():
       with open(f, 'r') as file:
@@ -43,20 +49,27 @@ class EuclideanSampler(object):
               0
             )
           )
+    self.target_benchmark = self.benchmarks[0]
+    return
+
+  def iter_benchmark(self):
+    """
+    When it's time, cycle through the next target benchmark.
+    """
+    self.benchmarks.append(self.benchmarks.pop(0))
+    self.target_benchmark = self.benchmarks[0]
+    return
 
   def calculate_distance(self, infeat) -> float:
     """
-    Comparing all benchmarks, return the minimum euclidan distance
-    of the input feature vector, among any of the target feature vector.
+    Euclidean distance between sample feature vector
+    and current target benchmark.
     """
     d = 0
-    for b in self.benchmarks:
-      # cd = 0
-      for key in b.feature_vector.keys():
-        i = infeat[key]
-        t = b.feature_vector[key]
-        d += abs((t**2) - (i**2))
-      # d += cd
+    for key in self.target_benchmark.feature_vector.keys():
+      i = infeat[key]
+      t = self.target_benchmark.feature_vector[key]
+      d += abs((t**2) - (i**2))
     return math.sqrt(d)
 
   def topK_candidates(self,

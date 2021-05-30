@@ -358,6 +358,7 @@ class ActiveSamplingGenerator(object):
       active_indices = [x.sample_indices for x in self.total_candidates]
       self.total_candidates      = []
       self.total_candidates_hash = set()
+      self.feat_sampler.iter_benchmark()
       # self.candidate_monitor   = monitors.HistoryMonitor(
       #   self.data_generator.sampler.corpus_directory, "feature_distance"
       # )
