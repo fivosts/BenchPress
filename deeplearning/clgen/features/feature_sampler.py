@@ -49,7 +49,7 @@ class EuclideanSampler(object):
             )
           )
     self.target_benchmark = self.benchmarks[0]
-    l.getLogger().warn(self.target_benchmark.feature_vector)
+    l.getLogger().warn("{}: {}".format(self.target_benchmark.name, self.target_benchmark.feature_vector))
     return
 
   def iter_benchmark(self):
@@ -58,7 +58,7 @@ class EuclideanSampler(object):
     """
     self.benchmarks.append(self.benchmarks.pop(0))
     self.target_benchmark = self.benchmarks[0]
-    l.getLogger().warn(self.target_benchmark.feature_vector)
+    l.getLogger().warn("{}: {}".format(self.target_benchmark.name, self.target_benchmark.feature_vector))
     return
 
   def calculate_distance(self, infeat) -> float:
