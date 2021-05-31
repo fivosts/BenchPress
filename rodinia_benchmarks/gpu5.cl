@@ -7,7 +7,7 @@ prepare_kernel(	long d_Ne,
 	// indexes
 	int bx = get_group_id(0);												// get current horizontal block index
 	int tx = get_local_id(0);												// get current horizontal thread index
-	int ei = (bx*NUMBER_THREADS)+tx;										// unique thread id, more threads than actual elements !!!
+	int ei = (bx*12)+tx;										// unique thread id, more threads than actual elements !!!
 
 	// copy input to output & log uncompress
 	if(ei<d_Ne){															// do only for the number of elements, omit extra threads
