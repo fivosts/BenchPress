@@ -50,6 +50,12 @@ FLAGS = flags.FLAGS
 #   "pass a list of acceptable extensions here.",
 # )
 
+flags.DEFINE_boolean(
+  "override_preprocessing",
+  False,
+  "Set to override incomplete pre-processing. Does not set DB value to 'done'"
+)
+
 Base = declarative.declarative_base()
 
 
@@ -267,6 +273,9 @@ class PreprocessedContentFiles(sqlutil.Database):
 
   def IsDone(self, session: sqlutil.Session):
     if session.query(Meta).filter(Meta.key == "done").first():
+      return True
+    elif FLAGS.override_preprocessing:
+      l.getLogger().warn("Overriding incomplete pre-processed DB.")
       return True
     else:
       return False
