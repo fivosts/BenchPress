@@ -663,7 +663,10 @@ class torchBert(backends.BackendBase):
             sample_indices
           )
           if done:
-            return self.step_inputs['original_input'].cpu().numpy(), self.step_inputs['input_ids'].cpu().numpy(), active_sample, active_indices
+            return (np.repeat(self.step_inputs['original_input'].cpu().numpy(), len(active_sample), axis = 0),
+                    np.repeat(self.step_inputs['input_ids'].cpu().numpy(), len(active_sample), axis = 0),
+                    active_sample,
+                    active_indices)
           else:
             step_input = {
               x: active_sample[x].repeat((self.sampler.batch_size, 1)) for x in active_sample

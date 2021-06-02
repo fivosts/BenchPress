@@ -371,6 +371,7 @@ class Sampler(object):
     self.samples_directory = self.cache.path / "samples"
     self.samples_directory.mkdir(exist_ok = True)
     self.corpus_directory = None
+    self.sample_corpus    = None
     if self.config.HasField("sample_corpus"):
       self.corpus_directory = self.cache.path / "sample_corpus"
       self.corpus_directory.mkdir(exist_ok = True)

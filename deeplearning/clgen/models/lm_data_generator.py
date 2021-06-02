@@ -233,6 +233,7 @@ class MaskLMDataGenerator(object):
 
     self.dataset                 = {}
     self.sampler                 = sampler
+    self.corpus                  = sampler.sample_corpus
     self.tokenizer               = tokenizer
     self.config                  = model_opts.data_generator
     self.rngen                   = np.random
