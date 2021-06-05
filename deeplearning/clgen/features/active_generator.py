@@ -22,6 +22,10 @@ from absl import flags
 from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
+import time
+times = {
+  'EvaluateFeatures': 0,
+}
 
 flags.DEFINE_integer(
   "active_limit_per_feed",
@@ -206,6 +210,7 @@ class ActiveSamplingGenerator(object):
     If the sample output is not good enough based on the features,
     active sampler reconstructs the same sample feed and asks again for prediction.
     """
+    t1 = time.time()
     if len(self.feed_queue) == 0:
       raise ValueError("Feed stack is empty. Cannot pop element.")
 
@@ -257,6 +262,8 @@ class ActiveSamplingGenerator(object):
         )
       )
       self.bar.update(len(self.step_candidates))
+      t2 = time.time()
+      times['EvaluateFeatures'] += t2-t1
       return self.data_generator.toTensorFormat(input_feed), [], False
 
     self.comp_rate_monitor.register((current_feed.gen_id, self.comp_rate_per_gen[current_feed.gen_id][0] / self.comp_rate_per_gen[current_feed.gen_id][1]))

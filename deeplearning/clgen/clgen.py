@@ -398,7 +398,9 @@ def initMain(*args, **kwargs):
     t2 = time.time()
     print("Total execution time: {}".format(t2-t1))
     from deeplearning.clgen.models.torch_bert import compiler
+    from deeplearning.clgen.features import active_generator
     print(compiler.times)
+    print(active_generator.times)
     sys.exit(1)
   except Exception as e:
     l.getLogger().error(e)
@@ -420,7 +422,9 @@ def initMain(*args, **kwargs):
   t2 = time.time()
   print("Total execution time: {}".format(t2-t1))
   from deeplearning.clgen.models.torch_bert import compiler
+  from deeplearning.clgen.features import active_generator
   print(compiler.times)
+  print(active_generator.times)
   sys.exit(0)
 
 if __name__ == "__main__":
