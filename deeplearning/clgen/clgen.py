@@ -16,6 +16,7 @@ import contextlib
 import cProfile
 import os
 import pathlib
+import time
 import shutil
 import sys
 import typing
@@ -373,6 +374,7 @@ def initMain(*args, **kwargs):
     *args: Arguments to be passed to the function.
     **kwargs: Arguments to be passed to the function.
   """
+  t1 = time.time()
   mail = None
   if FLAGS.notify_me:
     mail = client.initClient(FLAGS.notify_me)
@@ -393,6 +395,10 @@ def initMain(*args, **kwargs):
     else:
       main()
   except KeyboardInterrupt:
+    t2 = time.time()
+    print("Total execution time: {}".format(t2-t1))
+    from deeplearning.clgen.models.torch_bert import compiler
+    print(compiler.times)
     sys.exit(1)
   except Exception as e:
     l.getLogger().error(e)
@@ -411,6 +417,10 @@ def initMain(*args, **kwargs):
     else:
       job = ""
     mail.send_message("clgen: {}".format(str(job.stem)), "Program terminated successfully at {}.".format(datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S")))
+  t2 = time.time()
+  print("Total execution time: {}".format(t2-t1))
+  from deeplearning.clgen.models.torch_bert import compiler
+  print(compiler.times)
   sys.exit(0)
 
 if __name__ == "__main__":

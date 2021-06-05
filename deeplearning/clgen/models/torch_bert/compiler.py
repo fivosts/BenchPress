@@ -1,6 +1,7 @@
 import numpy as np
 import typing
 import concurrent.futures
+import time
 
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.corpuses import tokenizers
@@ -8,6 +9,12 @@ from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 
 from eupy.native import logger as l
+
+times = {
+  'generateSampleBatch': 0,
+  'get_output': 0,
+  'StepSampleSeq': 0,
+}
 
 class CompilationSampler(object):
   """
@@ -185,6 +192,7 @@ class CompilationSampler(object):
                           position_ids      : torch.LongTensor,
                           is_live           : bool,
                           ) -> typing.Tuple[typing.List[np.array], typing.List[typing.List[int]]]:
+    t1 = time.time()
     batch_size, sequence_length = tuple(input_ids.shape)
     samples, sample_indices, scores_history = [], [], []
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -205,6 +213,8 @@ class CompilationSampler(object):
       # samples          = [x.numpy() for (x, _, _) in results]
       # sample_indices   = [y for (_, y, _) in results]
       # scores_history   = [z for (_, _, z) in results]
+    t2 = time.time()
+    times['generateSampleBatch'] += t2-t1
     return samples, sample_indices, scores_history
 
   def iterSampleSeq(self,
@@ -237,19 +247,28 @@ class CompilationSampler(object):
       scores_history = []
     else:
       scores_history = None
+    t1 = time.time()
     holes, next_input_ids, attention_mask = self.StepSampleSeq(
       input_ids, prediction_scores, sample_indices, scores_history
     )
+    t2 = time.time()
+    times['StepSampleSeq'] += t2-t1
     while holes:
+      t1 = time.time()
       next_prediction_scores, _, _, _ = model.get_output(
         next_input_ids.to(device), attention_mask.to(device), position_ids,
       )
+      t2 = time.time()
+      times['get_output'] += t2-t1
+      t1 = time.time()
       holes, next_input_ids, attention_mask = self.StepSampleSeq(
         next_input_ids[0],
         next_prediction_scores[0].detach().cpu(),
         sample_indices,
         scores_history,
       )
+      t2 = time.time()
+      times['StepSampleSeq'] += t2-t1
     return next_input_ids[0], sample_indices, scores_history
 
   def StepSampleSeq(self,
