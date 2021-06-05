@@ -223,8 +223,9 @@ class ActiveSamplingGenerator(object):
     for sample, indices in zip(samples, sample_indices):
       try:
         # If you can extract features from a sample, store it as a candidate.
-        _ = opencl.Compile(self.tokenizer.ArrayToCode(sample))
-        features = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(sample))
+        code = self.tokenizer.ArrayToCode(sample, with_formatting = False)
+        _ = opencl.Compile(code)
+        features = extractor.DictKernelFeatures(code)
         if features:
           self.comp_rate_per_gen[current_feed.gen_id][0] += 1
           self.step_candidates.append(
