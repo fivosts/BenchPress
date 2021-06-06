@@ -118,6 +118,9 @@ def Preprocess(text: str, preprocessors: typing.List[str]) -> str:
         except UnicodeError:
           yield "UnicodeError", False
           return
+        except OSError:
+          yield "OSError: Memory Allocation", False
+          return
       elif isinstance(text, list):
         for item in text:
           for t, pc in PreprocessSingle(item, preprocessors[idx:]):
