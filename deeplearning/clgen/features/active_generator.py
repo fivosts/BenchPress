@@ -296,10 +296,10 @@ class ActiveSamplingGenerator(object):
 
     for candidate in self.total_candidates[candidate_idx:]:
       # For new total_candidates, check compilability, return error locations if they are incorrect.
-      _, dloc = opencl.Compile(self.tokenizer.ArrayToCode(candidate.sample), return_diagnostics = True)
+      # _, dloc = opencl.Compile(self.tokenizer.ArrayToCode(candidate.sample), return_diagnostics = True)
       compile_status = True
-      if dloc:
-        compile_status = False
+      # if dloc:
+        # compile_status = False
         # The following function maps compiler location diagnostics, e.g. l:5, c:10, to token index of the encoded sequennce.
         # This will be used to repair broken kernels by targetted masking of wrong tokens.
         # indices = self.tokenizer.SrcLocationToIndex(
