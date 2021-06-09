@@ -70,7 +70,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     self.dataloader = None
     return
 
-  def train_dataloader(self, set_name = 'train_dataset', is_train = True) -> None:
+  def train_dataloader(self, set_name = 'train_dataset', is_train = True) -> torch.utils.data.dataloader:
     """
     Pytorch dataloader used for training.
   
@@ -104,7 +104,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     )
     return dataloader
 
-  def eval_dataloaders(self):
+  def eval_dataloaders(self) -> torch.utils.data.dataloader:
     """Pytorch dataloader used for validation."""
     if self.config.datapoint_time == "online":
       yield "Online Corpus", self.train_dataloader(is_train = False)
@@ -112,7 +112,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       for set_name in self.dataset:
         yield set_name, self.train_dataloader(set_name)
 
-  def predict_dataloader(self):
+  def predict_dataloader(self) -> torch.utils.data.dataloader:
     """
     Pytorch dataloader used for inference.
     
