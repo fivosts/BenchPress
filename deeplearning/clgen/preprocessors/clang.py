@@ -474,3 +474,44 @@ def AtomizeSource(src: str,
           tokens.append("{}-char-based".format(ch))
 
     return tokens
+
+def GreweFeatureExtraction(src: str,
+                           suffx: str,
+                           cflags: typing.List[str]
+                           ) -> typing.Dict[str, float]:
+  builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
+  with tempfile.NamedTemporaryFile(
+    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
+  ) as f:
+    f.write(src)
+    f.flush()
+    try:
+      unit = clang.cindex.TranslationUnit.from_source(f.name, args = builtin_cflags + cflags)
+    except clang.cindex.TranslationUnitLoadError as e:
+      return None
+
+  def next_token(token_iter):
+    """Return None if iterator is consumed."""
+    try:
+      return next(token_iter)
+    except StopIteration:
+      return None
+
+  feat_vec = {
+    'comp': 0.0,
+    'rational': 0.0,
+    'mem': 0.0,
+    'localmem': 0.0,
+    'coalesced': 0.0,
+    'atomic': 0.0,
+    'F2:coalesced/mem': 0.0,
+    'F4:comp/mem': 0.0,
+  }
+  tokiter = unit.get_tokens(extent = unit.cursor.extent)
+  token = next_token(tokiter)
+
+  while token:
+    # Do sth with token
+    cur = clang.cindex.Cursor.from_location(unit, token.extent.start)
+
+  return {}
