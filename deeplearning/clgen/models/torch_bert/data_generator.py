@@ -162,10 +162,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     return dataloader
 
   def toTensorFormat(self,
-                     datapoint: typing.Dict[str, np.array]
+                     datapoint: typing.Dict[str, np.array],
+                     batch: int = 1,
                      ) -> typing.Dict[str, torch.Tensor]:
     """Formats a datapoint mapped in generic numpy arrays to Torch tensors."""
-    return {k: torch.from_numpy(v).unsqueeze(0) for (k, v) in datapoint.items()}
+    return {
+      k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0)
+      for (k, v) in datapoint.items()
+    }
 
   def _saveCorpusRecord(self, masked_corpus: typing.Dict) -> None:
     """Converts corpus nparrays to torch tensors and stores corpus to pt_record"""
