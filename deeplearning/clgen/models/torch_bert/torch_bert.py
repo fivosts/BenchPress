@@ -20,10 +20,12 @@ from __future__ import print_function
 
 import os
 import shutil
+import multiprocessing
 import glob
 import typing
 import pathlib
 import datetime
+import time
 import numpy as np
 from absl import flags
 import tqdm
@@ -76,6 +78,35 @@ flags.DEFINE_integer(
   "Set validation steps at the end of epoch for validation loss calculation."
 )
 
+def model_step_worker(model,
+                      input_ids,
+                      attention_mask,
+                      position_ids,
+                      masked_lm_labels,
+                      masked_lm_lengths,
+                      next_sentence_labels,
+                      device,
+                      ):
+  for ids, att, pos, mll, mlg, nsl in zip(
+                                        input_ids,
+                                        attention_mask,
+                                        position_ids,
+                                        masked_lm_labels,
+                                        masked_lm_lengths,
+                                        next_sentence_labels
+                                      ):
+    outputs = model(
+                input_ids            = ids.to(device),
+                attention_mask       = att.to(device),
+                position_ids         = pos.to(device),
+                masked_lm_labels     = mll.to(device),
+                next_sentence_labels = nsl.to(device),
+              )
+    """
+    push the output in the queue here. (Maybe unrolled)
+    """
+  return
+
 class torchBert(backends.BackendBase):
 
   class BertEstimator(typing.NamedTuple):
@@ -84,6 +115,12 @@ class torchBert(backends.BackendBase):
     data_generator : torchLMDataGenerator
     optimizer      : typing.Any
     scheduler      : typing.Any
+
+  class SampleBertEstimator(typing.NamedTuple):
+    """Named tuple for sampling BERT."""
+    models         : typing.List[typing.TypeVar('nn.Module')]
+    data_generator : torchLMDataGenerator
+    devices        : typing.List[str]
 
   def __init__(self, *args, **kwargs):
 
@@ -220,14 +257,28 @@ class torchBert(backends.BackendBase):
           "was only trained up to sequence length %d" %
           (sampler.sequence_length, self.bertAttrs['max_position_embeddings']))
 
-    m = model.BertForPreTraining(
-        self.bert_config,
-        tokenizer = self.tokenizer,
-        use_categorical = FLAGS.categorical_sampling,
-        temperature = self.temperature
-      ).to(self.pytorch.device)
-    # if self.pytorch.num_gpus > 1:
-    #   m = self.torch.nn.DataParallel(m)
+    m = []
+    d = []
+    if self.pytorch.num_gpus > 1:
+      for dev in self.pytorch.devices:
+        d.append(dev)
+        m.append(
+          model.BertForPreTraining(
+            self.bert_config,
+            tokenizer = self.tokenizer,
+            use_categorical = FLAGS.categorical_sampling,
+            temperature = self.temperature
+          ).to(dev)
+        )
+      multiprocessing.set_start_method('spawn')
+    else:
+      m.append(model.BertForPreTraining(
+          self.bert_config,
+          tokenizer = self.tokenizer,
+          use_categorical = FLAGS.categorical_sampling,
+          temperature = self.temperature
+        ).to(self.pytorch.device))
+      d.append(self.pytorch.device)
 
     dummy_num_machines = -1
     if dummy_num_machines != -1:
@@ -237,8 +288,8 @@ class torchBert(backends.BackendBase):
         output_device=dummy_num_machines,
         find_unused_parameters=True,
       )
-    self.sample = torchBert.BertEstimator(
-                    m, data_generator, None, None
+    self.sample = torchBert.SampleBertEstimator(
+                    m, data_generator, d
                   )
     l.getLogger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
     return
@@ -252,7 +303,7 @@ class torchBert(backends.BackendBase):
                  is_validation : bool = False,
                  step          : int  = -1,
                  is_live       : bool = False,
-                 ) -> float:
+                 ) -> typing.Dict[str, typing.TypeVar('torch.Tensor')]:
     """
     Perform a training step on a batch of inputs.
     """
@@ -272,6 +323,67 @@ class torchBert(backends.BackendBase):
                 step                 = step,
                 is_live              = is_live,
               )
+    return outputs
+
+  def sample_model_step(self,
+                        models        : typing.List[typing.TypeVar('nn.Module')],
+                        devices       : typing.List[str],
+                        inputs        : typing.Dict[str, typing.TypeVar('torch.Tensor')],
+                        is_live       : bool = False,
+                        ) -> typing.Dict[str, typing.TypeVar('torch.Tensor')]:
+    """
+    Specialized forward function.
+    Dispatches model replicas across all GPUs, one process each.
+
+    Inputs must be three-dimensional:
+    workload_size x batch_size x sequence_length
+    """
+
+    if not self.pytorch.num_gpus > 1 or is_live:
+      outputs = {'generated_samples': [], 'sample_indices': [], 'input_ids': [], 'masked_lm_lengths': []}
+      for b_idx in range(len(inputs['input_ids'])):
+        out = models[0](
+                input_ids            = inputs['input_ids'][b_idx].to(devices[0]),
+                attention_mask       = inputs['input_mask'][b_idx].to(devices[0]),
+                position_ids         = inputs['position_ids'][b_idx].to(devices[0]),
+                masked_lm_labels     = inputs['mask_labels'][b_idx].to(devices[0]),
+                next_sentence_labels = inputs['next_sentence_labels'][b_idx].to(devices[0]),
+                is_live              = is_live,
+              )
+        outputs['generated_samples'] += out['generated_samples']
+        outputs['sample_indices']    += out['sample_indices']
+        outputs['input_ids']         += list(inputs['input_ids'][b_idx].numpy())
+        outputs['masked_lm_lengths'] += list(inputs['masked_lm_lengths'][b_idx].numpy())
+      return outputs
+
+    multiprocessing.set_start_method('spawn')
+    if len(inputs['input_ids']) < len(devices):
+      devices = devices[:len(inputs['input_ids'])]
+    chunk = len(inputs['input_ids']) // len(devices)
+    procs = []
+    for idx, (m, d) in enumerate(zip(models, devices)):
+      procs.append(multiprocessing.Process(
+        target = model_step_worker, kwargs = {
+          'model'                : m,
+          'input_ids'            : inputs['input_ids'][idx * chunk: (idx+1) * chunk],
+          'attention_mask'       : inputs['input_mask'][idx * chunk: (idx+1) * chunk],
+          'position_ids'         : inputs['position_ids'][idx * chunk: (idx+1) * chunk],
+          'masked_lm_labels'     : inputs['mask_labels'][idx * chunk: (idx+1) * chunk],
+          'masked_lm_lengths'    : inputs['mask_lengths'][idx * chunk: (idx+1) * chunk],
+          'next_sentence_labels' : inputs['next_sentence_labels'][idx * chunk: (idx+1) * chunk],
+        }
+      ))
+
+    for job in procs:
+      job.start()
+    for job in procs:
+      input()
+      job.join()
+
+    """
+    Get the Queue going here.
+    """
+    outputs = {}
     return outputs
 
   def PreTrain(self,
@@ -574,12 +686,12 @@ class torchBert(backends.BackendBase):
                    seed    : typing.Optional[int] = None
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
-    if sampler.is_live or sampler.is_active:
-      sample_batch_size = sampler.batch_size
-    else:
-      sample_batch_size = (self.train_batch_size // sampler.batch_size
-                            if self.train_batch_size > sampler.batch_size
-                            else sampler.batch_size)
+    # if sampler.is_live or sampler.is_active:
+    sample_batch_size = sampler.batch_size
+    # else:
+      # sample_batch_size = (self.train_batch_size // sampler.batch_size
+      #                       if self.train_batch_size > sampler.batch_size
+      #                       else sampler.batch_size)
 
     data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
                        self.config.training, sampler, self.tokenizer, seed, sample_batch_size,
@@ -617,73 +729,94 @@ class torchBert(backends.BackendBase):
       else:
         self.loader = self.sample.data_generator.dataloader
 
-    if self.pred_iterator is None:
-      self.pred_iterator = iter(self.loader)
-    try:
-      inputs = next(self.pred_iterator)
-    except StopIteration:
-      self.pred_iterator = iter(self.loader)
-      inputs = next(self.pred_iterator)
+    if not sampler.is_active:
+      if self.pred_iterator is None:
+        self.pred_iterator = iter(self.loader)
+      try:
+        inputs = next(self.pred_iterator)
+      except StopIteration:
+        self.pred_iterator = iter(self.loader)
+        inputs = next(self.pred_iterator)
 
-    self.step_inputs = {x: inputs[x] for x in inputs}
-    # This loop below is purely for proper printing reasons:
-    for i in range(len(inputs['input_ids'])):
-      self.sampler.setStartText(self.tokenizer.tokensToString(inputs['input_ids'][i].cpu().numpy(), ignore_token = self.tokenizer.padToken))
-      self.sampler.Specialize(self.tokenizer)
+      self.step_inputs = {x: inputs[x].unsqueeze(0).repeat(self.pytorch.num_gpus, 1, 1) for x in inputs}
+
+      # This loop below is purely for proper printing reasons:
+      for seq in set(inputs['input_ids']):
+        self.sampler.setStartText(self.tokenizer.tokensToString(seq.cpu().numpy(), ignore_token = self.tokenizer.padToken))
+        self.sampler.Specialize(self.tokenizer)
     return
 
-  def SampleNextIndices(self, *unused_args, **unused_kwargs):
+  def SampleNextIndices(
+    self, *unused_args, **unused_kwargs
+  ) -> typing.Tuple[np.array, np.array, np.array, np.array]:
     """Called iteratively to build a single batch of samples, until termination criteria stops calling"""
     del unused_kwargs
     del unused_args
+
     if self.sample is None:
       raise ValueError("Bert sampler has not been initialized.")
-    # if self.pytorch.num_gpus > 1:
-    #   model = self.torch.nn.DataParallel(self.sample.model)
-    self.sample.model.eval()
+
     with self.torch.no_grad():
-      step_out = self.model_step(
-          self.sample.model, self.step_inputs,
-          is_live = self.sampler.is_live
-      )
-      if self.sampler.is_live and input("Show logits figure ? [y/!y]") == "y":
-        for hole, indcs in zip(step_out['prediction_scores'], step_out['sample_indices']):
-          plotter.LogitsStepsDistrib(
-            x = self.torch.nn.Softmax(dim = 1)(self.torch.FloatTensor(hole[:10])).numpy(),
-            atoms = [self.tokenizer.decoder[i] for i in range(self.tokenizer.vocab_size)],
-            sample_indices = [self.tokenizer.decoder[i] for i in indcs[0]][:10],
-            title = "Sampling distribution dim 1",
-            x_name = "Probs / sample step",
-          )
       if self.sampler.is_active:
-        generated_samples, sample_indices = step_out['generated_samples'], step_out['sample_indices']
-        while True:
-          active_sample, active_indices, done = self.sample.data_generator.EvaluateFeatures(
-            generated_samples,
-            sample_indices
-          )
-          if done:
-            return (np.repeat(self.step_inputs['original_input'].cpu().numpy(), len(active_sample), axis = 0),
-                    np.repeat(self.step_inputs['input_ids'].cpu().numpy(), len(active_sample), axis = 0),
-                    active_sample,
-                    active_indices)
-          else:
-            step_input = {
-              x: active_sample[x].repeat((self.sampler.batch_size, 1)) for x in active_sample
-            }
-            # self.sampler.setStartText(
-            #   self.tokenizer.tokensToString(
-            #     step_input['input_ids'][0].cpu().numpy(), ignore_token = self.tokenizer.padToken
-            #   )
-            # )
-            # self.sampler.Specialize(self.tokenizer)
-            active_step = self.model_step(
-                self.sample.model, step_input,
-            )
-            generated_samples, sample_indices = active_step['generated_samples'], active_step['sample_indices']
+        return self.sample.data_generator.ActiveGeneration(self, self.sample)
       else:
-        return self.step_inputs['original_input'].cpu().numpy(), self.step_inputs['input_ids'].cpu().numpy(), step_out['generated_samples'], step_out['sample_indices']
-    raise ValueError("While True loop broken without returning")
+        t1 = time.time()
+        step_out = self.sample_model_step(
+            self.sample.models,
+            self.sample.devices,
+            self.step_inputs,
+            is_live = self.sampler.is_live
+        )
+        # step_out = self.model_step(
+        #     self.sample.models[0], self.step_inputs,
+        #     is_live = self.sampler.is_live
+        # )
+        t2 = time.time()
+        print("In total:", t2-t1)
+        if self.sampler.is_live and input("Show logits figure ? [y/!y]") == "y":
+          for hole, indcs in zip(step_out['prediction_scores'], step_out['sample_indices']):
+            plotter.LogitsStepsDistrib(
+              x = self.torch.nn.Softmax(dim = 1)(self.torch.FloatTensor(hole[:10])).numpy(),
+              atoms = [self.tokenizer.decoder[i] for i in range(self.tokenizer.vocab_size)],
+              sample_indices = [self.tokenizer.decoder[i] for i in indcs[0]][:10],
+              title = "Sampling distribution dim 1",
+              x_name = "Probs / sample step",
+            )
+        return (
+          self.step_inputs['original_input'].cpu().view(-1, self.sampler.sequence_length).numpy(),
+          self.step_inputs['input_ids'].cpu().view(-1, self.sampler.sequence_length).numpy(),
+          step_out['generated_samples'],
+          step_out['sample_indices']
+        )
+
+    #   if self.sampler.is_active:
+    #     generated_samples, sample_indices = step_out['generated_samples'], step_out['sample_indices']
+    #     while True:
+    #       active_sample, active_indices, done = self.sample.data_generator.EvaluateFeatures(
+    #         generated_samples,
+    #         sample_indices
+    #       )
+    #       if done:
+    #         return (np.repeat(self.step_inputs['original_input'].cpu().numpy(), len(active_sample), axis = 0),
+    #                 np.repeat(self.step_inputs['input_ids'].cpu().numpy(), len(active_sample), axis = 0),
+    #                 active_sample,
+    #                 active_indices)
+    #       else:
+    #         step_input = {
+    #           x: active_sample[x].repeat((self.sampler.batch_size, 1)) for x in active_sample
+    #         }
+    #         # self.sampler.setStartText(
+    #         #   self.tokenizer.tokensToString(
+    #         #     step_input['input_ids'][0].cpu().numpy(), ignore_token = self.tokenizer.padToken
+    #         #   )
+    #         # )
+    #         # self.sampler.Specialize(self.tokenizer)
+    #         active_step = self.sample_model_step(
+    #             self.sample.models, self.sample.devices, step_input,
+    #         )
+    #         generated_samples, sample_indices = active_step['generated_samples'], active_step['sample_indices']
+    #   else:
+    # raise ValueError("While True loop broken without returning")
 
   def _getTestSampler(self, test_sampler, sequence_length):
     if test_sampler is None or test_sampler.is_live or test_sampler.is_active:
