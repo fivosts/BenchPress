@@ -51,7 +51,7 @@ def initPytorch(local_rank = -1):
     # will use the first GPU in that env, i.e. GPU#1
     offset_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     available_gpus = gpu.getGPUID()
-    devices = [str(x['id']) for x in available_gpus]
+    devices = ["cuda:{}".format(str(x['id'])) for x in available_gpus]
     device         = torch.device(
       "cuda:{}".format(str(available_gpus[0]['id'])) if torch.cuda.is_available() and available_gpus else "cpu"
     )
