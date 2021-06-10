@@ -26,12 +26,14 @@ except ImportError:
   torch_tpu_available = False
 
 offset_device = None
+devices       = None
 device        = None
 num_gpus      = None
 
 def initPytorch(local_rank = -1):
   global torch_tpu_available
   global offset_device
+  global devices
   global device
   global num_gpus
   if FLAGS.pt_cpu_only:
@@ -49,6 +51,7 @@ def initPytorch(local_rank = -1):
     # will use the first GPU in that env, i.e. GPU#1
     offset_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     available_gpus = gpu.getGPUID()
+    devices = [str(available_gpus[x]['id']) for x in available_gpus]
     device         = torch.device(
       "cuda:{}".format(str(available_gpus[0]['id'])) if torch.cuda.is_available() and available_gpus else "cpu"
     )
