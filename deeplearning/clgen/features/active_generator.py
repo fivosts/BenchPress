@@ -2,6 +2,8 @@
 Data generator wrapper used for active learning sampling.
 """
 import subprocess
+import multiprocessing
+import torch
 import functools
 import pickle
 import math
@@ -41,6 +43,27 @@ flags.DEFINE_integer(
   "Set top-K surviving candidates per generation, sorted by distance from target feature space."
 )
 
+def candidate_worker(sample_out, tokenizer):
+  sample, sample_indices, input_ids, masked_lm_lengths = sample_out
+  try:
+    # If you can extract features from a sample, store it as a candidate.
+    code = tokenizer.ArrayToCode(sample, with_formatting = False)
+    # print(code)
+    # _ = opencl.Compile(code)
+    features = extractor.DictKernelFeatures(code)
+    # if features:
+      # self.comp_rate_per_gen[cur_feed.gen_id][0] += 1
+    return sample, sample_indices, features, input_ids, masked_lm_lengths
+  except ValueError:
+    pass
+  return None, None, None, None, None
+
+def dataload_worker(x, feed, func, batch):
+  return {
+    k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0)
+    for (k, v) in func(feed).items()
+  }
+
 class ActiveSampleFeed(typing.NamedTuple):
   """
   Representation of an active learning input to the model.
@@ -51,12 +74,6 @@ class ActiveSampleFeed(typing.NamedTuple):
   input_features   : typing.Dict[str, float]
   # Distance from target features of input feed. Valid after 1st generation.
   input_score      : float
-  # Full model input
-  input_blob       : typing.Dict[str, np.array]
-  # List of masked model input feeds.
-  masked_input_ids : np.array
-  # List of hole instances for masked input.
-  hole_instances   : typing.List[sequence_masking.MaskedLmInstance]
   # Depth increases when a valid inference sample is fed back as an input.
   gen_id           : int
 
@@ -66,6 +83,10 @@ class ActiveSample(typing.NamedTuple):
   """
   # ActiveSampleFeed instance of model input
   sample_feed    : typing.TypeVar("ActiveSamplingGenerator.ActiveSampleFeed")
+  # Input ids that led to this prediction
+  input_ids      : np.array
+  # hole lengths and positions of input ids.
+  hole_instances : typing.List[sequence_masking.MaskedLmInstance]
   # Model prediction
   sample         : np.array
   # Sample indices of given prediction.
@@ -76,6 +97,10 @@ class ActiveSample(typing.NamedTuple):
   score          : typing.Union[bool, float]
   # Active batch timestep where sample was acquired.
   timestep       : int
+
+class SampleTrainingOpts(typing.NamedTuple):
+  max_predictions_per_seq: int
+  masked_lm_prob: float
 
 class ActiveSamplingGenerator(object):
   """
@@ -139,7 +164,6 @@ class ActiveSamplingGenerator(object):
     self.comp_rate_monitor     = monitors.CategoricalHistoryMonitor(
       self.data_generator.sampler.corpus_directory, "comp_rate_per_gen"
     )
-    self.bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
     return
 
   def active_dataloader(self) -> typing.Union[
@@ -365,6 +389,200 @@ class ActiveSamplingGenerator(object):
       # )
       return active_batch, active_indices, True
 
+  def ActiveGeneration(self,
+                       mwrapper: typing.TypeVar('torch_bert.torchBert'),
+                       estimator: typing.TypeVar('torch_bert.SampleBertEstimator')
+                      ) -> typing.Tuple[np.array, np.array, np.array, np.array]:
+    """
+    Get text.
+    """
+    try:
+      if self.feed_queue:
+        current_generation = self.feed_queue[0].gen_id
+      else:
+        current_generation = 0
+        cf = next(self.active_dataset)
+        self.feed_queue.append(
+          ActiveSampleFeed(
+            input_feed       = cf,
+            input_features   = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(cf)),
+            input_score      = math.inf,
+            gen_id           = 0,
+          )
+        )
+        self.addToDB(
+          active_feed_database.ActiveInput.FromArgs(
+            tokenizer      = self.tokenizer, id = self.active_db.input_count,
+            input_feed     = cf, input_features = self.feed_queue[-1].input_features,
+          )
+        )
+    except StopIteration:
+      return [], [], [], []
+
+    original_input, org_input_ids = self.feed_queue[0].input_feed, self.feed_queue[0].input_feed
+
+    total_candidates, total_candidates_hash = [], set()
+
+    while self.feed_queue:
+
+      cur_feed  = self.feed_queue.pop(0)
+
+      step_candidates = []
+      init_mask = True if self.tokenizer.maskToken in cur_feed.input_feed or self.tokenizer.holeToken in cur_feed.input_feed else False
+      bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
+      rem = FLAGS.active_limit_per_feed // self.data_generator.sample_batch_size
+
+      if cur_feed.gen_id not in self.comp_rate_per_gen:
+        self.comp_rate_per_gen[cur_feed.gen_id] = [0, 0]
+
+      if init_mask:
+        input_feed = sequence_masking.MaskedSeqToBlob(
+          cur_feed.input_feed, self.tokenizer,
+          self.data_generator.sampler.sequence_length,
+          self.data_generator.max_position_embeddings
+        )
+        inputs = self.data_generator.toTensorFormat(input_feed, batch = self.data_generator.sample_batch_size)
+        inputs = {k: v.unsqueeze(0).repeat_interleave(rem, dim = 0) for k, v in inputs.items()}
+
+
+      while len(step_candidates) < FLAGS.active_limit_per_feed:
+        """
+        Replicate and mask it for the full workload.
+        """
+        if init_mask:
+          if rem > len(inputs['input_ids']):
+            inputs = {k: v.repeat_interleave(rem // len(inputs['input_ids']), dim = 0) for k, v in inputs.items()}
+          else:
+            inputs = {k: v[:rem] for k, v in inputs.items()}
+        else:
+          inputs = {
+            'input_ids': [], 'input_mask': [], 'position_ids': [],
+            'mask_labels': [], 'masked_lm_lengths': [], 'next_sentence_labels': []
+          }
+          try:
+            pool = multiprocessing.Pool()
+            for batch in pool.imap_unordered(
+                              functools.partial(
+                                dataload_worker, feed  = cur_feed.input_feed,
+                                func  = self.func, batch = self.data_generator.sample_batch_size
+                              ),range(rem)
+                             ):
+              inputs['input_ids'].append(batch['input_ids'])
+              inputs['input_mask'].append(batch['input_mask'])
+              inputs['position_ids'].append(batch['position_ids'])
+              inputs['mask_labels'].append(batch['mask_labels'])
+              inputs['masked_lm_lengths'].append(batch['masked_lm_lengths'])
+              inputs['next_sentence_labels'].append(batch['next_sentence_labels'])
+            pool.close()
+          except Exception as e:
+            pool.terminate()
+            raise e
+
+        outputs = mwrapper.sample_model_step(
+          estimator.models, estimator.devices, inputs,
+        )
+
+        pool = multiprocessing.Pool()
+        self.comp_rate_per_gen[cur_feed.gen_id][1] += len(outputs)
+        try:
+          for batch in pool.imap_unordered(
+                         functools.partial(
+                           candidate_worker, tokenizer = self.tokenizer
+                         ), zip(
+                              outputs['generated_samples'], outputs['sample_indices'],
+                              outputs['input_ids'], outputs['masked_lm_lengths']
+                            )
+                       ):
+            sample, indices, features, input_ids, masked_lm_lengths = batch
+            if sample is not None:
+              self.comp_rate_per_gen[cur_feed.gen_id][0] += 1
+              step_candidates.append(
+                ActiveSample(
+                  sample_feed    = cur_feed,  sample         = sample,
+                  input_ids      = input_ids, hole_instances = [x for x in masked_lm_lengths if x >= 0],
+                  sample_indices = indices,   features       = features,
+                  score          = 1.0,       timestep       = 1 + len(step_candidates),
+                )
+              )
+          pool.close()
+        except Exception as e:
+          pool.terminate()
+          raise e
+        try:
+          rem = max(1, int(((FLAGS.active_limit_per_feed - len(step_candidates)) // self.data_generator.sample_batch_size)
+            / (self.comp_rate_per_gen[cur_feed.gen_id][0] / self.comp_rate_per_gen[cur_feed.gen_id][1])
+          ))
+        except ZeroDivisionError:
+          pass
+        bar.update(min(FLAGS.active_limit_per_feed, len(step_candidates)))
+
+      self.comp_rate_monitor.register((cur_feed.gen_id, self.comp_rate_per_gen[cur_feed.gen_id][0] / self.comp_rate_per_gen[cur_feed.gen_id][1]))
+      self.comp_rate_monitor.plot()
+
+      # total_candidates contains all candidates from all generations from a single starting feed
+      # that succeeded the distance sampling. candidate_idx sets a checkpoint of which are old and
+      # which are new. This is to avoid re-storing old total_candidates multiple times.
+      candidate_idx = len(total_candidates)
+      # Top-k candidates of ith generation.
+      new_candidates = self.feat_sampler.sample_from_set(step_candidates)
+
+      if cur_feed.gen_id > 0:
+        new_candidates = new_candidates[:1]
+
+      self.candidate_monitor.register(
+        {str(new_candidates[0].sample_feed.gen_id): [c.score for c in new_candidates]}
+      )
+      self.candidate_monitor.plot()
+      # Very frequently, new candidates have been generated in the past.
+      # No need to store them again, by keeping a hash of their string.
+      for nc in new_candidates:
+        sample_hash = ''.join([str(x) for x in nc.sample])
+        if sample_hash not in total_candidates_hash:
+          total_candidates.append(nc)
+          total_candidates_hash.add(sample_hash)
+
+      for candidate in total_candidates[candidate_idx:]:
+        self.addToDB(
+          active_feed_database.ActiveFeed.FromArgs(
+            tokenizer        = self.tokenizer,
+            id               = self.active_db.active_count,
+            input_feed       = candidate.sample_feed.input_feed,
+            input_features   = candidate.sample_feed.input_features,
+            masked_input_ids = candidate.input_ids,
+            hole_instances   = candidate.hole_instances,
+            sample           = candidate.sample,
+            output_features  = candidate.features,
+            sample_quality   = candidate.score,
+            compile_status   = True,
+            generation_id    = candidate.sample_feed.gen_id,
+            timestep         = candidate.timestep,
+          )
+        )
+        # If the current generation has not gone as deep as required, mask each new candidate
+        # and place it at the tail of the sample feed queue.
+        if 0 < candidate.score < cur_feed.input_score and 1+candidate.sample_feed.gen_id <= FLAGS.active_search_depth:
+          self.feed_queue.append(
+            ActiveSampleFeed(
+              input_feed       = candidate.sample,
+              input_features   = candidate.features,
+              input_score      = candidate.score,
+              gen_id           = 1 + candidate.sample_feed.gen_id,
+            )
+          )
+      # Step candidates contains all candidates of a single gen, therefore initialized before every new gen.
+      if self.feed_queue:
+        # Update generation state pickle to start over.
+        with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
+          pickle.dump(self.feed_queue, outf)
+
+    with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
+      pickle.dump(self.feed_queue, outf)
+    self.feat_sampler.iter_benchmark()
+    return (np.repeat([original_input], len(active_batch), axis = 0),
+            np.repeat([org_input_ids], len(active_batch), axis = 0),
+            [x.sample for x in total_candidates],
+            [x.sample_indices for x in total_candidates])
+
   def addToDB(self,
               db_input: typing.Union[
                           active_feed_database.ActiveFeed,
@@ -384,9 +602,6 @@ class ActiveSamplingGenerator(object):
     """
     Configure masking function used by online sampler.
     """
-    class SampleTrainingOpts(typing.NamedTuple):
-      max_predictions_per_seq: int
-      masked_lm_prob: float
 
     corpus_config = self.sampler.config.sample_corpus.corpus_config
     sampling_opts = SampleTrainingOpts(
