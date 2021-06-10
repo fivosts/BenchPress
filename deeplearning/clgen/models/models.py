@@ -458,7 +458,7 @@ class Model(object):
         text                      = src,
         sample_indices            = '\n'.join([','.join([self.tokenizer.decoder[idx] for idx in hole_idxs]).replace('\n', '\\n') for hole_idxs in idxs]),
         encoded_sample_indices    = '\n'.join([','.join([str(idx) for idx in hole_idxs]) for hole_idxs in idxs]),
-        original_input            = self.tokenizer.tokensToString(org, with_formatting = True, ignore_token = self.tokenizer.padToken),
+        original_input            = self.tokenizer.tokensToString(org, with_formatting = False, ignore_token = self.tokenizer.padToken),
         sample_feed               = self.tokenizer.tokensToString(inp, with_formatting = False, ignore_token = self.tokenizer.padToken),
         encoded_text              = ",".join([str(x) for x in sample]),
         sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
