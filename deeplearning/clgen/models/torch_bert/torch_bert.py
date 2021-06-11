@@ -381,15 +381,13 @@ class torchBert(backends.BackendBase):
     try:
       for job in procs:
         job.start()
-      i = 0
-      while i < len(inputs['input_ids']):
+      while len(outputs['generated_samples']) < len(inputs['input_ids']):
         try:
           batch = queue.get()
           outputs['generated_samples'] += batch['generated_samples']
           outputs['sample_indices'] += batch['sample_indices']
           outputs['input_ids'] += batch['input_ids']
           outputs['masked_lm_lengths'] += batch['masked_lm_lengths']
-          i += 1
         except multiprocessing.queues.Empty:
           pass
       for job in procs:
