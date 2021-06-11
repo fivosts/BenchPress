@@ -897,7 +897,10 @@ class torchBert(backends.BackendBase):
         shutil.copyfile(str(ckpt_comp(x)), str(self.ckpt_path / "{}-0.pt".format(x)))
     return
 
-  def loadCheckpoint(self, estimator, pre_train = False):
+  def loadCheckpoint(self,
+                     estimator: typing.Union[torchBert.BertEstimator, torchBert.SampleBertEstimator],
+                     pre_train: bool = False
+                     ) -> int:
     """
     Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
     """
@@ -928,14 +931,30 @@ class torchBert(backends.BackendBase):
 
     # self.train.model = model.BertModel.from_pretrained(ckpt_comp("model"))
     if isinstance(estimator, self.torch.nn.DataParallel):
-      estimator.model.module.load_state_dict(
-        self.torch.load(ckpt_comp("model"))
-      )
-    else:
-      try:
-        estimator.model.load_state_dict(
+      if isinstance(estimator, torchBert.BertEstimator):
+        estimator.model.module.load_state_dict(
           self.torch.load(ckpt_comp("model"))
         )
+      elif isinstance(estimator, torchBert.SampleBertEstimator):
+        for m in range(len(estimator.models)):
+          estimator.models[m].load_state_dict(
+            self.torch.load(ckpt_comp("model"))
+          )
+      else:
+        raise ValueError(type(estimator))
+    else:
+      try:
+        if isinstance(estimator, torchBert.BertEstimator):
+          estimator.model.load_state_dict(
+            self.torch.load(ckpt_comp("model"))
+          )
+        elif isinstance(estimator, torchBert.SampleBertEstimator):
+          for m in range(len(estimator.models)):
+            estimator.models[m].load_state_dict(
+              self.torch.load(ckpt_comp("model"))
+            )
+        else:
+          raise ValueError(type(estimator))
       except RuntimeError:
         """
         Pytorch doesn't love loading a DataParallel checkpoint
@@ -953,8 +972,13 @@ class torchBert(backends.BackendBase):
           else:
             name = 'module.' + k # Add 'module.'
           new_state_dict[name] = v
-        estimator.model.load_state_dict(new_state_dict)
-
+        if isinstance(estimator, torchBert.BertEstimator):
+          estimator.model.load_state_dict(new_state_dict)
+        elif isinstance(estimator, torchBert.SampleBertEstimator):
+          for m in range(len(estimator.models)):
+            estimator.models[m].load_state_dict(new_state_dict)
+        else:
+          raise ValueError(type(estimator))
     if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
       estimator.optimizer.load_state_dict(
         self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
@@ -962,7 +986,13 @@ class torchBert(backends.BackendBase):
       estimator.scheduler.load_state_dict(
         self.torch.load(ckpt_comp("scheduler"))
       )
-    estimator.model.eval()
+    if isinstance(estimator, torchBert.BertEstimator):
+      estimator.model.eval()
+    elif isinstance(estimator, torchBert.SampleBertEstimator):
+      for m in range(len(estimator.models)):
+        estimator.models[m].eval()
+    else:
+      raise ValueError(type(estimator))
     return ckpt_step
 
   def is_world_process_zero(self) -> bool:
