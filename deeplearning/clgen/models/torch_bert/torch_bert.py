@@ -982,13 +982,14 @@ class torchBert(backends.BackendBase):
             estimator.models[m].load_state_dict(new_state_dict)
         else:
           raise ValueError(type(estimator))
-    if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
-      estimator.optimizer.load_state_dict(
-        self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
-      )
-      estimator.scheduler.load_state_dict(
-        self.torch.load(ckpt_comp("scheduler"))
-      )
+    if isinstance(estimator, torchBert.BertEstimator):
+      if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
+        estimator.optimizer.load_state_dict(
+          self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
+        )
+        estimator.scheduler.load_state_dict(
+          self.torch.load(ckpt_comp("scheduler"))
+        )
     if isinstance(estimator, torchBert.BertEstimator):
       estimator.model.eval()
     elif isinstance(estimator, torchBert.SampleBertEstimator):
