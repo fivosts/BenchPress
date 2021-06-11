@@ -78,15 +78,16 @@ flags.DEFINE_integer(
   "Set validation steps at the end of epoch for validation loss calculation."
 )
 
-def model_step_worker(model,
-                      input_ids,
-                      attention_mask,
-                      position_ids,
-                      masked_lm_labels,
-                      masked_lm_lengths,
-                      next_sentence_labels,
-                      device,
-                      ):
+def model_step_worker(queue  : multiprocessing.Queue,
+                      model  : typing.TypeVar('torch.nn.Module'),
+                      device : str,
+                      input_ids            : typing.List[typing.TypeVar('torch.Tensor')],
+                      attention_mask       : typing.List[typing.TypeVar('torch.Tensor')],
+                      position_ids         : typing.List[typing.TypeVar('torch.Tensor')],
+                      masked_lm_labels     : typing.List[typing.TypeVar('torch.Tensor')],
+                      masked_lm_lengths    : typing.List[typing.TypeVar('torch.Tensor')],
+                      next_sentence_labels : typing.List[typing.TypeVar('torch.Tensor')],
+                      ) -> typing.Dict[str, typing.List[typing.List[int]]]:
   for ids, att, pos, mll, mlg, nsl in zip(
                                         input_ids,
                                         attention_mask,
@@ -102,9 +103,9 @@ def model_step_worker(model,
                 masked_lm_labels     = mll.to(device),
                 next_sentence_labels = nsl.to(device),
               )
-    """
-    push the output in the queue here. (Maybe unrolled)
-    """
+    outputs['input_ids'] = [[int(y) for y in x] for x in ids.numpy()]
+    outputs['masked_lm_lengths'] = list(mlg.numpy())
+    queue.put(outputs)
   return
 
 class torchBert(backends.BackendBase):
@@ -247,6 +248,7 @@ class torchBert(backends.BackendBase):
     """
     Model parameter initialization for inference.
     """
+    multiprocessing.set_start_method('spawn')
     self._ConfigModelParams(is_sampling = True)
     self.sampler = sampler
     self.temperature = sampler.temperature
@@ -270,7 +272,6 @@ class torchBert(backends.BackendBase):
             temperature = self.temperature
           ).to(dev)
         )
-      multiprocessing.set_start_method('spawn')
     else:
       m.append(model.BertForPreTraining(
           self.bert_config,
@@ -326,11 +327,11 @@ class torchBert(backends.BackendBase):
     return outputs
 
   def sample_model_step(self,
-                        models        : typing.List[typing.TypeVar('nn.Module')],
-                        devices       : typing.List[str],
-                        inputs        : typing.Dict[str, typing.TypeVar('torch.Tensor')],
-                        is_live       : bool = False,
-                        ) -> typing.Dict[str, typing.TypeVar('torch.Tensor')]:
+                        models  : typing.List[typing.TypeVar('torch.nn.Module')],
+                        devices : typing.List[str],
+                        inputs  : typing.Dict[str, typing.TypeVar('torch.Tensor')],
+                        is_live : bool = False,
+                        ) -> typing.Dict[str, typing.List[typing.List[int]]]:
     """
     Specialized forward function.
     Dispatches model replicas across all GPUs, one process each.
@@ -338,9 +339,11 @@ class torchBert(backends.BackendBase):
     Inputs must be three-dimensional:
     workload_size x batch_size x sequence_length
     """
-
+    outputs = {
+      'generated_samples': [], 'sample_indices': [],
+      'input_ids': [], 'masked_lm_lengths': []
+    }
     if not self.pytorch.num_gpus > 1 or is_live:
-      outputs = {'generated_samples': [], 'sample_indices': [], 'input_ids': [], 'masked_lm_lengths': []}
       for b_idx in range(len(inputs['input_ids'])):
         out = models[0](
                 input_ids            = inputs['input_ids'][b_idx].to(devices[0]),
@@ -356,34 +359,45 @@ class torchBert(backends.BackendBase):
         outputs['masked_lm_lengths'] += list(inputs['masked_lm_lengths'][b_idx].numpy())
       return outputs
 
-    multiprocessing.set_start_method('spawn')
     if len(inputs['input_ids']) < len(devices):
       devices = devices[:len(inputs['input_ids'])]
     chunk = len(inputs['input_ids']) // len(devices)
     procs = []
+    queue = multiprocessing.SimpleQueue()
     for idx, (m, d) in enumerate(zip(models, devices)):
       procs.append(multiprocessing.Process(
         target = model_step_worker, kwargs = {
+          'queue'                : queue,
           'model'                : m,
+          'device'               : d,
           'input_ids'            : inputs['input_ids'][idx * chunk: (idx+1) * chunk],
           'attention_mask'       : inputs['input_mask'][idx * chunk: (idx+1) * chunk],
           'position_ids'         : inputs['position_ids'][idx * chunk: (idx+1) * chunk],
           'masked_lm_labels'     : inputs['mask_labels'][idx * chunk: (idx+1) * chunk],
-          'masked_lm_lengths'    : inputs['mask_lengths'][idx * chunk: (idx+1) * chunk],
+          'masked_lm_lengths'    : inputs['masked_lm_lengths'][idx * chunk: (idx+1) * chunk],
           'next_sentence_labels' : inputs['next_sentence_labels'][idx * chunk: (idx+1) * chunk],
         }
       ))
-
-    for job in procs:
-      job.start()
-    for job in procs:
-      input()
-      job.join()
-
-    """
-    Get the Queue going here.
-    """
-    outputs = {}
+    try:
+      for job in procs:
+        job.start()
+      i = 0
+      while i < len(inputs['input_ids']):
+        try:
+          batch = queue.get()
+          outputs['generated_samples'] += batch['generated_samples']
+          outputs['sample_indices'] += batch['sample_indices']
+          outputs['input_ids'] += batch['input_ids']
+          outputs['masked_lm_lengths'] += batch['masked_lm_lengths']
+          i += 1
+        except multiprocessing.queues.Empty:
+          pass
+      for job in procs:
+        job.join()
+    except KeyboardInterrupt:
+      for job in procs:
+        job.terminate()
+      raise KeyboardInterrupt
     return outputs
 
   def PreTrain(self,
@@ -715,7 +729,7 @@ class torchBert(backends.BackendBase):
       # For live sampling, start text must be re-instated at each iteration.
       self.sample = self.sample._replace(
         data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
-          self.config.training, sampler, self.tokenizer, 0, 1,
+          self.config.training, sampler, self.tokenizer, 0, sampler.batch_size,
           self.config.architecture.max_position_embeddings, self.cache.path
         )
       )
@@ -741,8 +755,13 @@ class torchBert(backends.BackendBase):
       self.step_inputs = {x: inputs[x].unsqueeze(0).repeat(self.pytorch.num_gpus, 1, 1) for x in inputs}
 
       # This loop below is purely for proper printing reasons:
-      for seq in set(inputs['input_ids']):
-        self.sampler.setStartText(self.tokenizer.tokensToString(seq.cpu().numpy(), ignore_token = self.tokenizer.padToken))
+      sample_text = set(
+        [self.tokenizer.tokensToString(
+            seq.cpu().numpy(), ignore_token = self.tokenizer.padToken
+          ) for seq in inputs['input_ids']]
+      )
+      for seq in sample_text:
+        self.sampler.setStartText(seq)
         self.sampler.Specialize(self.tokenizer)
     return
 
@@ -760,7 +779,9 @@ class torchBert(backends.BackendBase):
       if self.sampler.is_active:
         return self.sample.data_generator.ActiveGeneration(self, self.sample)
       else:
-        t1 = time.time()
+        # t1 = time.time()
+
+        # for x in range(20):
         step_out = self.sample_model_step(
             self.sample.models,
             self.sample.devices,
@@ -771,8 +792,9 @@ class torchBert(backends.BackendBase):
         #     self.sample.models[0], self.step_inputs,
         #     is_live = self.sampler.is_live
         # )
-        t2 = time.time()
-        print("In total:", t2-t1)
+        # t2 = time.time()
+        # print("In total:", t2-t1)
+        # exit()
         if self.sampler.is_live and input("Show logits figure ? [y/!y]") == "y":
           for hole, indcs in zip(step_out['prediction_scores'], step_out['sample_indices']):
             plotter.LogitsStepsDistrib(
