@@ -430,6 +430,7 @@ class ActiveSamplingGenerator(object):
       step_candidates = []
       init_mask = True if self.tokenizer.maskToken in cur_feed.input_feed or self.tokenizer.holeToken in cur_feed.input_feed else False
       bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
+      bar.update(0)
       rem = FLAGS.active_limit_per_feed // self.data_generator.sample_batch_size
 
       if cur_feed.gen_id not in self.comp_rate_per_gen:
@@ -443,7 +444,6 @@ class ActiveSamplingGenerator(object):
         )
         inputs = self.data_generator.toTensorFormat(input_feed, batch = self.data_generator.sample_batch_size)
         inputs = {k: v.unsqueeze(0).repeat_interleave(rem, dim = 0) for k, v in inputs.items()}
-
 
       while len(step_candidates) < FLAGS.active_limit_per_feed:
         """
@@ -477,7 +477,6 @@ class ActiveSamplingGenerator(object):
           except Exception as e:
             pool.terminate()
             raise e
-
         outputs = mwrapper.sample_model_step(
           estimator.models, estimator.devices, inputs,
         )
@@ -501,7 +500,7 @@ class ActiveSamplingGenerator(object):
                   sample_feed    = cur_feed,  sample         = sample,
                   input_ids      = input_ids, hole_instances = [x for x in masked_lm_lengths if x >= 0],
                   sample_indices = indices,   features       = features,
-                  score          = 1.0,       timestep       = 1 + len(step_candidates),
+                  score          = None,      timestep       = 1 + len(step_candidates),
                 )
               )
           pool.close()
