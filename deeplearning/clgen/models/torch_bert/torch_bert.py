@@ -898,7 +898,10 @@ class torchBert(backends.BackendBase):
     return
 
   def loadCheckpoint(self,
-                     estimator: typing.Union[torchBert.BertEstimator, torchBert.SampleBertEstimator],
+                     estimator: typing.Union[
+                                  typing.TypeVar('torchBert.BertEstimator'),
+                                  typing.TypeVar('torchBert.SampleBertEstimator')
+                                ],
                      pre_train: bool = False
                      ) -> int:
     """
