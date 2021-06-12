@@ -54,7 +54,6 @@ def candidate_worker(sample_out, tokenizer):
     _ = opencl.Compile(code)
     features = extractor.DictKernelFeatures(code)
     if features:
-      # self.comp_rate_per_gen[cur_feed.gen_id][0] += 1
       return sample, sample_indices, features, input_ids, masked_lm_lengths
   except ValueError:
     pass
@@ -181,7 +180,7 @@ class ActiveSamplingGenerator(object):
     Returns:
       generation_id
     """
-    if not self.feed_queue
+    if not self.feed_queue:
       cf = next(self.active_dataset)
       self.feed_queue.append(
         ActiveSampleFeed(
@@ -199,6 +198,110 @@ class ActiveSamplingGenerator(object):
       )
     return self.feed_queue[0].input_feed, self.feed_queue[0].input_feed
 
+  def collateInputData(self,
+                       feed: np.array,
+                       wload_size: int,
+                       masked: bool
+                       ) -> typing.Dict[str, typing.TypeVar('torch.Tensor')]:
+    """
+    Create a full generation workload out of a sample feed.
+    If feed is already masked, then just repeat it across the whole workload.
+    If it is not masked, then feed is masked wload_size times.
+
+    Args:
+      feed: numpy array of input feed.
+      wload_size: Number of inputs that will be fed to the model in a single workload.
+
+    Returns:
+      The tensor inputs dictionary filled for BERT.
+    """
+    if self.tokenizer.maskToken in feed or self.tokenizer.holeToken in feed:
+      inputs = sequence_masking.MaskedSeqToBlob(
+        feed, self.tokenizer,
+        self.data_generator.sampler.sequence_length,
+        self.data_generator.max_position_embeddings
+      )
+      inputs = {
+        k: v.unsqueeze(0).repeat_interleave(wload_size, dim = 0) 
+        for k, v in self.data_generator.toTensorFormat(inputs, batch = self.data_generator.sample_batch_size).items()
+      }
+    else:
+      inputs = {
+        'input_ids': [], 'input_mask': [], 'position_ids': [],
+        'mask_labels': [], 'masked_lm_lengths': [], 'next_sentence_labels': []
+      }
+      try:
+        pool = multiprocessing.Pool()
+        for batch in pool.imap_unordered(
+                          functools.partial(
+                            dataload_worker, feed  = feed,
+                            func  = self.func, batch = self.data_generator.sample_batch_size
+                          ),range(wload_size)
+                         ):
+          if batch:
+            inputs['input_ids'].append(batch['input_ids'])
+            inputs['input_mask'].append(batch['input_mask'])
+            inputs['position_ids'].append(batch['position_ids'])
+            inputs['mask_labels'].append(batch['mask_labels'])
+            inputs['masked_lm_lengths'].append(batch['masked_lm_lengths'])
+            inputs['next_sentence_labels'].append(batch['next_sentence_labels'])
+        pool.close()
+      except KeyboardInterrupt as e:
+        pool.close()
+        pool.terminate()
+        raise e
+    return inputs
+
+  def registerOutputData(self,
+                         outputs: typing.Dict[str, typing.List[np.array]],
+                         candidates: typing.List[ActiveSample],
+                         bar: progressbar.ProgressBar,
+                         ) -> typing.List[int]:
+    """
+    Gets workload output from model.
+    In parallel, every sample is checked for compilability and features are extracted.
+    If sample compiles, it is stored as an active learning candidate.
+
+    Args:
+      outputs: Dictionary output of workload
+      candidates: Passed by reference and filled within this function
+      bar: progressbar for status checking
+
+    Returns:
+      cm_rate: List of two elements that express compilation rate of workload.
+               0th el: Total compiling.
+               1st el: Total samples.
+    """
+    cm_rate = [0, 0]
+    pool = multiprocessing.Pool()
+    cm_rate[1] += len(outputs['generated_samples'])
+    try:
+      it = zip(
+        outputs['generated_samples'], outputs['sample_indices'],
+        outputs['input_ids'], outputs['masked_lm_lengths']
+      )
+      for batch in pool.imap_unordered(
+                     functools.partial(candidate_worker, tokenizer = self.tokenizer), it
+                   ):
+        sample, indices, features, input_ids, masked_lm_lengths = batch
+        if sample is not None:
+          cm_rate[0] += 1
+          bar.update(min(FLAGS.active_limit_per_feed, len(candidates)))
+          candidates.append(
+            ActiveSample(
+              sample_feed    = feed,  sample         = sample,
+              input_ids      = input_ids, hole_instances = [x for x in masked_lm_lengths if x >= 0],
+              sample_indices = indices,   features       = features,
+              score          = None,      timestep       = 1 + len(candidates),
+            )
+          )
+      pool.close()
+    except KeyboardInterrupt as e:
+      pool.close()
+      pool.terminate()
+      raise e
+    return cm_rate
+
   def ActiveGeneration(self,
                        mwrapper: typing.TypeVar('torch_bert.torchBert'),
                        estimator: typing.TypeVar('torch_bert.SampleBertEstimator')
@@ -215,105 +318,46 @@ class ActiveSamplingGenerator(object):
 
     while self.feed_queue:
 
-      cur_feed  = self.feed_queue.pop(0)
-      self.sampler.setStartText(self.tokenizer.tokensToString(cur_feed.input_feed, ignore_token = self.tokenizer.padToken))
+      feed = self.feed_queue.pop(0)
+
+      self.sampler.setStartText(self.tokenizer.tokensToString(feed.input_feed, ignore_token = self.tokenizer.padToken))
       self.sampler.Specialize(self.tokenizer)
+
       step_candidates = []
-      init_mask = True if self.tokenizer.maskToken in cur_feed.input_feed or self.tokenizer.holeToken in cur_feed.input_feed else False
+      rem = FLAGS.active_limit_per_feed // self.data_generator.sample_batch_size
+      cmp_rate = [0, 0]
+
       bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
       bar.update(0)
-      rem = FLAGS.active_limit_per_feed // self.data_generator.sample_batch_size
 
-      cur_comp_rate = [0, 0]
-      if cur_feed.gen_id not in self.comp_rate_per_gen:
-        self.comp_rate_per_gen[cur_feed.gen_id] = [0, 0]
-
-      if init_mask:
-        input_feed = sequence_masking.MaskedSeqToBlob(
-          cur_feed.input_feed, self.tokenizer,
-          self.data_generator.sampler.sequence_length,
-          self.data_generator.max_position_embeddings
-        )
-        inputs = self.data_generator.toTensorFormat(input_feed, batch = self.data_generator.sample_batch_size)
-        inputs = {k: v.unsqueeze(0).repeat_interleave(rem, dim = 0) for k, v in inputs.items()}
+      if feed.gen_id not in self.comp_rate_per_gen:
+        self.comp_rate_per_gen[feed.gen_id] = [0, 0]
 
       while len(step_candidates) < FLAGS.active_limit_per_feed:
-        """
-        Replicate and mask it for the full workload.
-        """
-        if init_mask:
-          if rem > len(inputs['input_ids']):
-            inputs = {k: v.repeat_interleave(rem // len(inputs['input_ids']), dim = 0) for k, v in inputs.items()}
-          else:
-            inputs = {k: v[:rem] for k, v in inputs.items()}
-        else:
-          inputs = {
-            'input_ids': [], 'input_mask': [], 'position_ids': [],
-            'mask_labels': [], 'masked_lm_lengths': [], 'next_sentence_labels': []
-          }
-          try:
-            pool = multiprocessing.Pool()
-            for batch in pool.imap_unordered(
-                              functools.partial(
-                                dataload_worker, feed  = cur_feed.input_feed,
-                                func  = self.func, batch = self.data_generator.sample_batch_size
-                              ),range(rem)
-                             ):
-              if batch:
-                inputs['input_ids'].append(batch['input_ids'])
-                inputs['input_mask'].append(batch['input_mask'])
-                inputs['position_ids'].append(batch['position_ids'])
-                inputs['mask_labels'].append(batch['mask_labels'])
-                inputs['masked_lm_lengths'].append(batch['masked_lm_lengths'])
-                inputs['next_sentence_labels'].append(batch['next_sentence_labels'])
-            pool.close()
-          except KeyboardInterrupt as e:
-            pool.close()
-            pool.terminate()
-            raise e
+
+        self.collateInputData(
+          inputs, feed.input_feed, rem, self.data_generator.sample_batch_size, init_mask
+        )
+
         outputs = mwrapper.sample_model_step(
           estimator.models, estimator.devices, inputs,
         )
-        pool = multiprocessing.Pool()
-        cur_comp_rate[1] += len(outputs['generated_samples'])
-        try:
-          for batch in pool.imap_unordered(
-                         functools.partial(
-                           candidate_worker, tokenizer = self.tokenizer
-                         ), zip(
-                              outputs['generated_samples'], outputs['sample_indices'],
-                              outputs['input_ids'], outputs['masked_lm_lengths']
-                            )
-                       ):
-            sample, indices, features, input_ids, masked_lm_lengths = batch
-            if sample is not None:
-              cur_comp_rate[0] += 1
-              bar.update(min(FLAGS.active_limit_per_feed, len(step_candidates)))
-              step_candidates.append(
-                ActiveSample(
-                  sample_feed    = cur_feed,  sample         = sample,
-                  input_ids      = input_ids, hole_instances = [x for x in masked_lm_lengths if x >= 0],
-                  sample_indices = indices,   features       = features,
-                  score          = None,      timestep       = 1 + len(step_candidates),
-                )
-              )
-          pool.close()
-        except KeyboardInterrupt as e:
-          pool.close()
-          pool.terminate()
-          raise e
+        tcs, ts = self.registerOutputData(outputs, bar)
+        cmp_rate[0] += tcs
+        cmp_rate[1] += ts
+
         try:
           rem = max(
                   2,
                   int(
                     ((FLAGS.active_limit_per_feed - len(step_candidates)) // self.data_generator.sample_batch_size)
-                    / (cur_comp_rate[0] / cur_comp_rate[1])
+                    / (cmp_rate[0] / cmp_rate[1])
           ))
         except ZeroDivisionError:
           pass
 
-      self.comp_rate_per_gen[cur_feed.gen_id] = [sum(x) for x in zip(self.comp_rate_per_gen[cur_feed.gen_id], cur_comp_rate)]
-      self.comp_rate_monitor.register((cur_feed.gen_id, self.comp_rate_per_gen[cur_feed.gen_id][0] / self.comp_rate_per_gen[cur_feed.gen_id][1]))
+      self.comp_rate_per_gen[feed.gen_id] = [sum(x) for x in zip(self.comp_rate_per_gen[feed.gen_id], cmp_rate)]
+      self.comp_rate_monitor.register((feed.gen_id, self.comp_rate_per_gen[feed.gen_id][0] / self.comp_rate_per_gen[feed.gen_id][1]))
       self.comp_rate_monitor.plot()
 
       # total_candidates contains all candidates from all generations from a single starting feed
@@ -323,7 +367,7 @@ class ActiveSamplingGenerator(object):
       # Top-k candidates of ith generation.
       new_candidates = self.feat_sampler.sample_from_set(step_candidates)
 
-      if cur_feed.gen_id > 0:
+      if feed.gen_id > 0:
         new_candidates = new_candidates[:1]
 
       self.candidate_monitor.register(
@@ -357,7 +401,7 @@ class ActiveSamplingGenerator(object):
         )
         # If the current generation has not gone as deep as required, mask each new candidate
         # and place it at the tail of the sample feed queue.
-        if 0 < candidate.score < cur_feed.input_score and 1+candidate.sample_feed.gen_id <= FLAGS.active_search_depth:
+        if 0 < candidate.score < feed.input_score and 1+candidate.sample_feed.gen_id <= FLAGS.active_search_depth:
           self.feed_queue.append(
             ActiveSampleFeed(
               input_feed       = candidate.sample,
