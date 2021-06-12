@@ -355,7 +355,6 @@ class Sampler(object):
     self.config.CopyFrom(AssertConfigIsValid(config))
     self.hash = self._ComputeHash(self.config)
     self.terminators = GetTerminationCriteria(self.config.termination_criteria)
-    self.start_text = self.config.start_text
     if config.HasField("start_text"):
       self.start_text = self.config.start_text
     else:
