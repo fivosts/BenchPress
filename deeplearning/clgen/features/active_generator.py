@@ -3,6 +3,7 @@ Data generator wrapper used for active learning sampling.
 """
 import subprocess
 import multiprocessing
+import torch
 import functools
 import pickle
 import math
@@ -18,10 +19,11 @@ from deeplearning.clgen.features import active_feed_database
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import monitors
-from deeplearning.clgen.util import pytorch
 
 from absl import flags
 from eupy.native import logger as l
+
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 FLAGS = flags.FLAGS
 
@@ -60,7 +62,7 @@ def candidate_worker(sample_out, tokenizer):
 
 def dataload_worker(x, feed, func, batch):
   return {
-    k: pytorch.torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0)
+    k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0)
     for (k, v) in func(feed).items()
   }
 
@@ -481,7 +483,6 @@ class ActiveSamplingGenerator(object):
         outputs = mwrapper.sample_model_step(
           estimator.models, estimator.devices, inputs,
         )
-
         pool = multiprocessing.Pool()
         self.comp_rate_per_gen[cur_feed.gen_id][1] += len(outputs['generated_samples'])
         try:
@@ -512,7 +513,7 @@ class ActiveSamplingGenerator(object):
           raise e
         try:
           rem = max(
-                  pytorch.num_gpus,
+                  2,
                   int(
                     ((FLAGS.active_limit_per_feed - len(step_candidates)) // self.data_generator.sample_batch_size)
                     / (self.comp_rate_per_gen[cur_feed.gen_id][0] / self.comp_rate_per_gen[cur_feed.gen_id][1])
