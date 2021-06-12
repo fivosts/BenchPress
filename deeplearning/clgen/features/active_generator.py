@@ -125,7 +125,7 @@ class ActiveSamplingGenerator(object):
                         ) -> "active_generator.OnlineSamplingGenerator":
     """Initializes data generator for active sampling."""
     d = ActiveSamplingGenerator(generator)
-    d.dataloader = d.active_dataloader()
+    # d.dataloader = d.active_dataloader()
     return d
 
   def __init__(self,
@@ -173,228 +173,31 @@ class ActiveSamplingGenerator(object):
     )
     return
 
-  def active_dataloader(self) -> typing.Union[
-                                   typing.Dict[str, typing.TypeVar("Tensor")],
-                                   typing.NamedTuple
-                                 ]:
+  def initOrGetQueue(self) -> int:
     """
-    Configurate data container that will be iterated for sampling.
-    Generates data points. 
-    In TF, NamedTuples from str to np.array are generated.
-    In torch, Dict[str, np.array] instances are generated.
-    masking_func output goes through TensorFormat to convert np arrays to relevant tensors.
+    If feed queue is not initialized, nitialize it by getting new datapoint.
+    Adds datapoint to InputFeed table of database.
+
+    Returns:
+      generation_id
     """
-    while True:
-      if self.feed_queue:
-        # This will be triggered only if there is a checkpoint state (gen_state.pkl)
-        self.current_generation = self.feed_queue[0].gen_id
-        yield self.data_generator.toTensorFormat(self.feed_queue[0].input_blob)
-      """Model will ask with next(). As long as it asks, this loop will bring."""
-      self.current_generation = 0
-      seed = next(self.active_dataset)
-      if not self.init_masked:
-        input_feed = self.func(seed)
-        input_ids = input_feed['input_ids']
-      else:
-        input_feed = sequence_masking.MaskedSeqToBlob(
-          self.data_generator.sampler.encoded_start_text,
-          self.tokenizer,
-          self.data_generator.sampler.sequence_length,
-          self.data_generator.max_position_embeddings
-        )
-      # TODO do sth with hole_lengths and masked_idxs
+    if not self.feed_queue
+      cf = next(self.active_dataset)
       self.feed_queue.append(
         ActiveSampleFeed(
-          input_feed       = seed,
-          input_features   = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(seed)),
+          input_feed       = cf,
+          input_features   = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(cf)),
           input_score      = math.inf,
-          input_blob       = input_feed,
-          masked_input_ids = input_feed['input_ids'],
-          hole_instances   = [x for x in input_feed['masked_lm_lengths'] if x >= 0],
           gen_id           = 0,
         )
       )
       self.addToDB(
         active_feed_database.ActiveInput.FromArgs(
-          tokenizer      = self.tokenizer,
-          id             = self.active_db.input_count,
-          input_feed     = self.feed_queue[-1].input_feed,
-          input_features = self.feed_queue[-1].input_features,
+          tokenizer      = self.tokenizer, id = self.active_db.input_count,
+          input_feed     = cf, input_features = self.feed_queue[-1].input_features,
         )
       )
-      yield self.data_generator.toTensorFormat(input_feed)
-
-  def EvaluateFeatures(self,
-                       samples        : np.array,
-                       sample_indices : np.array,
-                       ) -> typing.Tuple[
-                            typing.Dict[str, typing.TypeVar("Tensor")],
-                            np.array,
-                            bool
-                            ]:
-    """
-    Reads model sampling output and evaluates against active target features.
-    If the sample output is not good enough based on the features,
-    active sampler reconstructs the same sample feed and asks again for prediction.
-    """
-    if len(self.feed_queue) == 0:
-      raise ValueError("Feed stack is empty. Cannot pop element.")
-
-    # Pops the sample feed that created 'samples'
-    current_feed = self.feed_queue.pop(0)
-    if current_feed.gen_id not in self.comp_rate_per_gen:
-      self.comp_rate_per_gen[current_feed.gen_id] = [0, len(samples)]
-    else:
-      self.comp_rate_per_gen[current_feed.gen_id][1] += len(samples)
-    for sample, indices in zip(samples, sample_indices):
-      try:
-        # If you can extract features from a sample, store it as a candidate.
-        code = self.tokenizer.ArrayToCode(sample, with_formatting = False)
-        _ = opencl.Compile(code)
-        features = extractor.DictKernelFeatures(code)
-        if features:
-          self.comp_rate_per_gen[current_feed.gen_id][0] += 1
-          self.step_candidates.append(
-            ActiveSample(
-              sample_feed    = current_feed,
-              sample         = sample,
-              sample_indices = indices,
-              features       = features,
-              score          = None,
-              timestep       = 1 + len(self.step_candidates),
-            )
-          )
-      except ValueError:
-        pass
-
-    if len(self.step_candidates) < FLAGS.active_limit_per_feed:
-      # If gathered candidates are not as many as required, re-mask the same feed
-      # place it back in the queue and ask the model for more samples.
-      # The sample input is the same, but masks might be in different locations.
-
-      if self.tokenizer.maskToken not in current_feed.input_feed and self.tokenizer.holeToken not in current_feed.input_feed:
-        input_feed = self.func(current_feed.input_feed)
-      else:
-        input_feed = current_feed.input_blob
-
-      self.feed_queue.insert(0,
-        ActiveSampleFeed(
-          input_feed       = current_feed.input_feed,
-          input_features   = current_feed.input_features,
-          input_score      = math.inf,
-          input_blob       = input_feed,
-          masked_input_ids = input_feed['input_ids'],
-          hole_instances   = [x for x in input_feed['masked_lm_lengths'] if x >= 0],
-          gen_id           = current_feed.gen_id,
-        )
-      )
-      self.bar.update(len(self.step_candidates))
-      return self.data_generator.toTensorFormat(input_feed), [], False
-
-    self.comp_rate_monitor.register((current_feed.gen_id, self.comp_rate_per_gen[current_feed.gen_id][0] / self.comp_rate_per_gen[current_feed.gen_id][1]))
-    self.comp_rate_monitor.plot()
-    # Re-init bar for next candidate gathering
-    self.bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
-
-    # total_candidates contains all candidates from all generations from a single starting feed
-    # that succeeded the distance sampling. candidate_idx sets a checkpoint of which are old and
-    # which are new. This is to avoid re-storing old total_candidates multiple times.
-    candidate_idx = len(self.total_candidates)
-    # Top-k candidates of ith generation.
-    new_candidates = self.feat_sampler.sample_from_set(self.step_candidates)
-
-    if current_feed.gen_id > 0:
-      new_candidates = new_candidates[:1]
-
-    self.candidate_monitor.register(
-      {str(new_candidates[0].sample_feed.gen_id): [c.score for c in new_candidates]}
-    )
-    self.candidate_monitor.plot()
-    # Very frequently, new candidates have been generated in the past.
-    # No need to store them again, by keeping a hash of their string.
-    for nc in new_candidates:
-      sample_hash = ''.join([str(x) for x in nc.sample])
-      if sample_hash not in self.total_candidates_hash:
-        self.total_candidates.append(nc)
-        self.total_candidates_hash.add(sample_hash)
-
-    for candidate in self.total_candidates[candidate_idx:]:
-      # For new total_candidates, check compilability, return error locations if they are incorrect.
-      # _, dloc = opencl.Compile(self.tokenizer.ArrayToCode(candidate.sample), return_diagnostics = True)
-      compile_status = True
-      # if dloc:
-        # compile_status = False
-        # The following function maps compiler location diagnostics, e.g. l:5, c:10, to token index of the encoded sequennce.
-        # This will be used to repair broken kernels by targetted masking of wrong tokens.
-        # indices = self.tokenizer.SrcLocationToIndex(
-        #   locations = dloc,
-        #   encoded = candidate.sample
-        # )
-      # Add to active_database.
-      self.addToDB(
-        active_feed_database.ActiveFeed.FromArgs(
-          tokenizer        = self.tokenizer,
-          id               = self.active_db.active_count,
-          input_feed       = candidate.sample_feed.input_feed,
-          input_features   = candidate.sample_feed.input_features,
-          masked_input_ids = candidate.sample_feed.masked_input_ids,
-          hole_instances   = candidate.sample_feed.hole_instances,
-          sample           = candidate.sample,
-          output_features  = candidate.features,
-          sample_quality   = candidate.score,
-          compile_status   = compile_status,
-          generation_id    = candidate.sample_feed.gen_id,
-          timestep         = candidate.timestep,
-        )
-      )
-      # If the current generation has not gone as deep as required, mask each new candidate
-      # and place it at the tail of the sample feed queue.
-      if 1 + candidate.sample_feed.gen_id <= FLAGS.active_search_depth:
-        if not self.data_generator.config.use_start_end or (self.data_generator.config.use_start_end and self.tokenizer.endToken in candidate.sample):
-          input_feed = self.func(candidate.sample)
-          if len(input_feed['input_ids']) <= self.data_generator.sampler.sequence_length and 0 < candidate.score < current_feed.input_score:
-            self.feed_queue.append(
-              ActiveSampleFeed(
-                input_feed       = candidate.sample,
-                input_features   = candidate.features,
-                input_score      = candidate.score,
-                input_blob       = input_feed,
-                masked_input_ids = input_feed['input_ids'],
-                hole_instances   = [x for x in input_feed['masked_lm_lengths'] if x >= 0],
-                gen_id           = 1 + candidate.sample_feed.gen_id,
-              )
-            )
-    # Step candidates contains all candidates of a single gen, therefore initialized before every new gen.
-    self.step_candidates = []
-
-    if self.feed_queue:
-      # There are next generation candidates in the queue, and these will be used as sample feeds.
-      # But first, do a beam search on next generation, otherwise things will explode pretty quickly.
-      next_gen = []
-      while self.feed_queue and self.feed_queue[0].gen_id == self.current_generation + 1:
-        next_gen.append(self.feed_queue.pop(0))
-      next_gen = sorted(next_gen, key = lambda k: k.input_score)[:FLAGS.active_search_width]
-      self.feed_queue = next_gen + self.feed_queue
-      self.current_generation = self.feed_queue[0].gen_id
-
-      # Update generation state pickle to start over.
-      with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
-        pickle.dump(self.feed_queue, outf)
-
-      return self.data_generator.toTensorFormat(self.feed_queue[0].input_blob), [], False
-    else:
-      # We don't have new generation good candidates. Go get a new starting feed from the dataset.
-      # Active learning will be killed (see True value in return statement), the harvested batch
-      # will be returned to models. Models will re-init active learner for the next dataset input.
-      active_batch   = [x.sample for x in self.total_candidates]
-      active_indices = [x.sample_indices for x in self.total_candidates]
-      self.total_candidates      = []
-      self.total_candidates_hash = set()
-      self.feat_sampler.iter_benchmark()
-      # self.candidate_monitor   = monitors.HistoryMonitor(
-      #   self.data_generator.sampler.corpus_directory, "feature_distance"
-      # )
-      return active_batch, active_indices, True
+    return self.feed_queue[0].input_feed, self.feed_queue[0].input_feed
 
   def ActiveGeneration(self,
                        mwrapper: typing.TypeVar('torch_bert.torchBert'),
@@ -404,29 +207,9 @@ class ActiveSamplingGenerator(object):
     Get text.
     """
     try:
-      if self.feed_queue:
-        current_generation = self.feed_queue[0].gen_id
-      else:
-        current_generation = 0
-        cf = next(self.active_dataset)
-        self.feed_queue.append(
-          ActiveSampleFeed(
-            input_feed       = cf,
-            input_features   = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(cf)),
-            input_score      = math.inf,
-            gen_id           = 0,
-          )
-        )
-        self.addToDB(
-          active_feed_database.ActiveInput.FromArgs(
-            tokenizer      = self.tokenizer, id = self.active_db.input_count,
-            input_feed     = cf, input_features = self.feed_queue[-1].input_features,
-          )
-        )
+      org_inp, org_ids = self.initOrGetQueue()
     except StopIteration:
       return [], [], [], []
-
-    original_input, org_input_ids = self.feed_queue[0].input_feed, self.feed_queue[0].input_feed
 
     total_candidates, total_candidates_hash = [], set()
 
@@ -592,8 +375,8 @@ class ActiveSamplingGenerator(object):
     with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
       pickle.dump(self.feed_queue, outf)
     self.feat_sampler.iter_benchmark()
-    return (np.repeat([original_input], len(active_batch), axis = 0),
-            np.repeat([org_input_ids], len(active_batch), axis = 0),
+    return (np.repeat([org_inp], len(active_batch), axis = 0),
+            np.repeat([org_ids], len(active_batch), axis = 0),
             [x.sample for x in total_candidates],
             [x.sample_indices for x in total_candidates])
 
