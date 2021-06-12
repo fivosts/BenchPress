@@ -580,6 +580,7 @@ def MaskedSeqToBlob(enc_text: np.array,
   assert len(target_idx)       != 0, "No target prediction in sample text"
 
   seen_in_training     = np.zeros([1], dtype = np.int32)
+  original_input       = np.full((1), tokenizer.padToken, dtype = np.int64)
   input_ids            = np.concatenate([
                             input_sample, np.array([tokenizer.padToken] * (max_position_embeddings - len(input_sample)), dtype = np.int64)
                          ])[:sequence_length]
@@ -593,7 +594,7 @@ def MaskedSeqToBlob(enc_text: np.array,
   next_sentence_labels = np.zeros([1], dtype = np.int32)
   return {
     'seen_in_training'    : seen_in_training,
-    'original_input'      : [],
+    'original_input'      : original_input,
     'input_ids'           : input_ids,
     'input_mask'          : input_mask,
     'position_ids'        : position_ids,
