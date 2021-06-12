@@ -3,7 +3,6 @@ Data generator wrapper used for active learning sampling.
 """
 import subprocess
 import multiprocessing
-import torch
 import functools
 import pickle
 import math
@@ -19,6 +18,7 @@ from deeplearning.clgen.features import active_feed_database
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import monitors
+from deeplearning.clgen.util import pytorch
 
 from absl import flags
 from eupy.native import logger as l
@@ -49,18 +49,18 @@ def candidate_worker(sample_out, tokenizer):
     # If you can extract features from a sample, store it as a candidate.
     code = tokenizer.ArrayToCode(sample, with_formatting = False)
     # print(code)
-    # _ = opencl.Compile(code)
+    _ = opencl.Compile(code)
     features = extractor.DictKernelFeatures(code)
-    # if features:
+    if features:
       # self.comp_rate_per_gen[cur_feed.gen_id][0] += 1
-    return sample, sample_indices, features, input_ids, masked_lm_lengths
+      return sample, sample_indices, features, input_ids, masked_lm_lengths
   except ValueError:
     pass
   return None, None, None, None, None
 
 def dataload_worker(x, feed, func, batch):
   return {
-    k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0)
+    k: pytorch.torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0)
     for (k, v) in func(feed).items()
   }
 
@@ -474,7 +474,8 @@ class ActiveSamplingGenerator(object):
               inputs['masked_lm_lengths'].append(batch['masked_lm_lengths'])
               inputs['next_sentence_labels'].append(batch['next_sentence_labels'])
             pool.close()
-          except Exception as e:
+          except KeyboardInterrupt as e:
+            pool.close()
             pool.terminate()
             raise e
         outputs = mwrapper.sample_model_step(
@@ -482,7 +483,7 @@ class ActiveSamplingGenerator(object):
         )
 
         pool = multiprocessing.Pool()
-        self.comp_rate_per_gen[cur_feed.gen_id][1] += len(outputs)
+        self.comp_rate_per_gen[cur_feed.gen_id][1] += len(outputs['generated_samples'])
         try:
           for batch in pool.imap_unordered(
                          functools.partial(
@@ -495,6 +496,7 @@ class ActiveSamplingGenerator(object):
             sample, indices, features, input_ids, masked_lm_lengths = batch
             if sample is not None:
               self.comp_rate_per_gen[cur_feed.gen_id][0] += 1
+              bar.update(min(FLAGS.active_limit_per_feed, len(step_candidates)))
               step_candidates.append(
                 ActiveSample(
                   sample_feed    = cur_feed,  sample         = sample,
@@ -504,16 +506,19 @@ class ActiveSamplingGenerator(object):
                 )
               )
           pool.close()
-        except Exception as e:
+        except KeyboardInterrupt as e:
+          pool.close()
           pool.terminate()
           raise e
         try:
-          rem = max(1, int(((FLAGS.active_limit_per_feed - len(step_candidates)) // self.data_generator.sample_batch_size)
-            / (self.comp_rate_per_gen[cur_feed.gen_id][0] / self.comp_rate_per_gen[cur_feed.gen_id][1])
+          rem = max(
+                  pytorch.num_gpus,
+                  int(
+                    ((FLAGS.active_limit_per_feed - len(step_candidates)) // self.data_generator.sample_batch_size)
+                    / (self.comp_rate_per_gen[cur_feed.gen_id][0] / self.comp_rate_per_gen[cur_feed.gen_id][1])
           ))
         except ZeroDivisionError:
           pass
-        bar.update(min(FLAGS.active_limit_per_feed, len(step_candidates)))
 
       self.comp_rate_monitor.register((cur_feed.gen_id, self.comp_rate_per_gen[cur_feed.gen_id][0] / self.comp_rate_per_gen[cur_feed.gen_id][1]))
       self.comp_rate_monitor.plot()
