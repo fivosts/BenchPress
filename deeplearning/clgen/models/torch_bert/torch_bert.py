@@ -105,7 +105,7 @@ def model_step_worker(queue  : multiprocessing.Queue,
               )
     outputs['input_ids'] = [[int(y) for y in x] for x in ids.numpy()]
     outputs['masked_lm_lengths'] = list(mlg.numpy())
-    queue.put(outputs)
+    queue.put(outputs, block = False)
   return
 
 class torchBert(backends.BackendBase):
@@ -363,7 +363,7 @@ class torchBert(backends.BackendBase):
       devices = devices[:len(inputs['input_ids'])]
     chunk = len(inputs['input_ids']) // len(devices)
     procs = []
-    queue = multiprocessing.SimpleQueue()
+    queue = multiprocessing.Queue()
     for idx, (m, d) in enumerate(zip(models, devices)):
       procs.append(multiprocessing.Process(
         target = model_step_worker, kwargs = {
@@ -381,7 +381,7 @@ class torchBert(backends.BackendBase):
     try:
       for job in procs:
         job.start()
-      while len(outputs['generated_samples']) < len(inputs['input_ids']):
+      while len(outputs['generated_samples']) < len(inputs['input_ids']) * len(inputs['input_ids'][0]):
         try:
           batch = queue.get()
           outputs['generated_samples'] += batch['generated_samples']
