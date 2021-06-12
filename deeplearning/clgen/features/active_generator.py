@@ -201,7 +201,6 @@ class ActiveSamplingGenerator(object):
   def collateInputData(self,
                        feed: np.array,
                        wload_size: int,
-                       masked: bool
                        ) -> typing.Dict[str, typing.TypeVar('torch.Tensor')]:
     """
     Create a full generation workload out of a sample feed.
@@ -307,7 +306,22 @@ class ActiveSamplingGenerator(object):
                        estimator: typing.TypeVar('torch_bert.SampleBertEstimator')
                       ) -> typing.Tuple[np.array, np.array, np.array, np.array]:
     """
-    Get text.
+    Active Learning generation core routine.
+
+    This function starts with a feed from a dataset
+    and returns all active samples that have reached the requested feature space.
+
+    Args:
+      mwrapper: BERT model wrapper.
+      estimator: BERT model pipeline.
+
+    Returns:
+      A tuple of 4 arrays:
+        a) Original inputs
+        b) Original input ids
+        c) Generated samples
+        d) Sample indices
+      The arrays are ordered by index.
     """
     try:
       org_inp, org_ids = self.initOrGetQueue()
@@ -335,9 +349,7 @@ class ActiveSamplingGenerator(object):
 
       while len(step_candidates) < FLAGS.active_limit_per_feed:
 
-        self.collateInputData(
-          inputs, feed.input_feed, rem, self.data_generator.sample_batch_size, init_mask
-        )
+        inputs = self.collateInputData(feed.input_feed, rem)
 
         outputs = mwrapper.sample_model_step(
           estimator.models, estimator.devices, inputs,
@@ -347,12 +359,9 @@ class ActiveSamplingGenerator(object):
         cmp_rate[1] += ts
 
         try:
-          rem = max(
-                  2,
-                  int(
-                    ((FLAGS.active_limit_per_feed - len(step_candidates)) // self.data_generator.sample_batch_size)
-                    / (cmp_rate[0] / cmp_rate[1])
-          ))
+          rcands = FLAGS.active_limit_per_feed - len(step_candidates)
+          crate  = cmp_rate[0] / cmp_rate[1]
+          rem = max(2, int((rcands // self.data_generator.sample_batch_size) / crate))
         except ZeroDivisionError:
           pass
 
@@ -476,7 +485,7 @@ class ActiveSamplingGenerator(object):
     Configure sampling corpus container to iterate upon.
     """
     if self.sampler.isFixedStr:
-      self.active_corpus = [self.sampler.encoded_start_text]
+      self.active_corpus = [self.tokenizer.TokenizeString(self.sampler.start_text)]
     else:
       self.active_corpus = self.data_generator.createCorpus(self.sampler.corpus_directory)
     return
