@@ -88,24 +88,29 @@ def model_step_worker(queue  : multiprocessing.Queue,
                       masked_lm_lengths    : typing.List[typing.TypeVar('torch.Tensor')],
                       next_sentence_labels : typing.List[typing.TypeVar('torch.Tensor')],
                       ) -> typing.Dict[str, typing.List[typing.List[int]]]:
-  for ids, att, pos, mll, mlg, nsl in zip(
-                                        input_ids,
-                                        attention_mask,
-                                        position_ids,
-                                        masked_lm_labels,
-                                        masked_lm_lengths,
-                                        next_sentence_labels
-                                      ):
-    outputs = model(
-                input_ids            = ids.to(device),
-                attention_mask       = att.to(device),
-                position_ids         = pos.to(device),
-                masked_lm_labels     = mll.to(device),
-                next_sentence_labels = nsl.to(device),
-              )
-    outputs['input_ids'] = [[int(y) for y in x] for x in ids.numpy()]
-    outputs['masked_lm_lengths'] = list(mlg.numpy())
-    queue.put(outputs, block = False)
+  try:
+    for ids, att, pos, mll, mlg, nsl in zip(
+                                          input_ids,
+                                          attention_mask,
+                                          position_ids,
+                                          masked_lm_labels,
+                                          masked_lm_lengths,
+                                          next_sentence_labels
+                                        ):
+      outputs = model(
+                  input_ids            = ids.to(device),
+                  attention_mask       = att.to(device),
+                  position_ids         = pos.to(device),
+                  masked_lm_labels     = mll.to(device),
+                  next_sentence_labels = nsl.to(device),
+                )
+      outputs['input_ids'] = [[int(y) for y in x] for x in ids.numpy()]
+      outputs['masked_lm_lengths'] = list(mlg.numpy())
+      # print("Put in queue")
+      queue.put(outputs, block = False)
+  except Exception as e:
+    l.getLogger().error(e)
+    exit(1)
   return
 
 class torchBert(backends.BackendBase):
@@ -381,17 +386,26 @@ class torchBert(backends.BackendBase):
     try:
       for job in procs:
         job.start()
-      while len(outputs['generated_samples']) < len(inputs['input_ids']) * len(inputs['input_ids'][0]):
+      bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = False)
+      ln = 0
+      l.getLogger().info(len(inputs['input_ids']))
+      l.getLogger().info(len(inputs['input_ids'][0]))
+      while ln < len(inputs['input_ids']) * len(inputs['input_ids'][0]):
         try:
-          batch = queue.get()
+          batch = queue.get(timeout = 360)
           outputs['generated_samples'] += batch['generated_samples']
-          outputs['sample_indices'] += batch['sample_indices']
-          outputs['input_ids'] += batch['input_ids']
+          outputs['sample_indices']    += batch['sample_indices']
+          outputs['input_ids']         += batch['input_ids']
           outputs['masked_lm_lengths'] += batch['masked_lm_lengths']
+          ln = len(outputs['generated_samples'])
+          bar.update(len(batch['generated_samples']))
         except multiprocessing.queues.Empty:
+          l.getLogger().warn("Queue timed-out having gathered {} sequences".format(len(outputs['generated_samples'])))
           pass
       for job in procs:
         job.join()
+      if not queue.empty():
+        raise ValueError("Queue is not empty!")
     except KeyboardInterrupt:
       for job in procs:
         job.terminate()
@@ -716,7 +730,7 @@ class torchBert(backends.BackendBase):
     self.step_inputs   = None
     self.loader        = None
     self.pred_iterator = None
-    l.getLogger().info("Initialized model samples in {}".format(self.sample_path))
+    l.getLogger().info("Initialized model samples in {}".format(self.sample_path / self.sampler.hash))
     return
 
   def InitSampleBatch(self, sampler: samplers.Sampler, **unused_kwargs) -> None:
