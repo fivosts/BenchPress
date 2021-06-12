@@ -253,6 +253,7 @@ class ActiveSamplingGenerator(object):
 
   def registerOutputData(self,
                          outputs: typing.Dict[str, typing.List[np.array]],
+                         feed: ActiveSampleFeed,
                          candidates: typing.List[ActiveSample],
                          bar: progressbar.ProgressBar,
                          ) -> typing.List[int]:
@@ -354,7 +355,7 @@ class ActiveSamplingGenerator(object):
         outputs = mwrapper.sample_model_step(
           estimator.models, estimator.devices, inputs,
         )
-        tcs, ts = self.registerOutputData(outputs, step_candidates, bar)
+        tcs, ts = self.registerOutputData(outputs, feed, step_candidates, bar)
         cmp_rate[0] += tcs
         cmp_rate[1] += ts
 
