@@ -58,13 +58,18 @@ def candidate_worker(sample_out, tokenizer):
       return sample, sample_indices, features, input_ids, masked_lm_lengths
   except ValueError:
     pass
+  except Exception:
+    pass
   return None, None, None, None, None
 
 def dataload_worker(x, feed, func, batch):
-  return {
-    k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0)
-    for (k, v) in func(feed).items()
-  }
+  try:
+    return {
+      k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0)
+      for (k, v) in func(feed).items()
+    }
+  except Exception:
+    return None
 
 class ActiveSampleFeed(typing.NamedTuple):
   """
@@ -469,12 +474,13 @@ class ActiveSamplingGenerator(object):
                                 func  = self.func, batch = self.data_generator.sample_batch_size
                               ),range(rem)
                              ):
-              inputs['input_ids'].append(batch['input_ids'])
-              inputs['input_mask'].append(batch['input_mask'])
-              inputs['position_ids'].append(batch['position_ids'])
-              inputs['mask_labels'].append(batch['mask_labels'])
-              inputs['masked_lm_lengths'].append(batch['masked_lm_lengths'])
-              inputs['next_sentence_labels'].append(batch['next_sentence_labels'])
+              if batch:
+                inputs['input_ids'].append(batch['input_ids'])
+                inputs['input_mask'].append(batch['input_mask'])
+                inputs['position_ids'].append(batch['position_ids'])
+                inputs['mask_labels'].append(batch['mask_labels'])
+                inputs['masked_lm_lengths'].append(batch['masked_lm_lengths'])
+                inputs['next_sentence_labels'].append(batch['next_sentence_labels'])
             pool.close()
           except KeyboardInterrupt as e:
             pool.close()
