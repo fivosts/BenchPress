@@ -433,7 +433,7 @@ class ActiveSamplingGenerator(object):
     while self.feed_queue:
 
       cur_feed  = self.feed_queue.pop(0)
-      self.sampler.SetStartText(self.tokenizer.tokensToString(cur_feed.input_feed, ignore_token = self.tokenizr.padToken))
+      self.sampler.setStartText(self.tokenizer.tokensToString(cur_feed.input_feed, ignore_token = self.tokenizer.padToken))
       self.sampler.Specialize(self.tokenizer)
       step_candidates = []
       init_mask = True if self.tokenizer.maskToken in cur_feed.input_feed or self.tokenizer.holeToken in cur_feed.input_feed else False
@@ -649,9 +649,6 @@ class ActiveSamplingGenerator(object):
     Configure sampling corpus container to iterate upon.
     """
     if self.sampler.isFixedStr:
-      if (self.tokenizer.maskToken in self.sampler.encoded_start_text or
-          self.tokenizer.holeToken in self.sampler.encoded_start_text):
-        self.init_masked = True
       self.active_corpus = [self.sampler.encoded_start_text]
     else:
       self.active_corpus = self.data_generator.createCorpus(self.sampler.corpus_directory)
