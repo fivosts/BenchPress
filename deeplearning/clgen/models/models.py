@@ -394,7 +394,7 @@ class Model(object):
       raise ValueError("Unrecognized backend.")
 
     try:
-      cont = True
+      seq_count, cont = 0, True
       while cont:
         cont, seq_count = sample_batch()
         if sampler.is_live:
