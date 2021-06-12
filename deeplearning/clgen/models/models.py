@@ -386,7 +386,6 @@ class Model(object):
     self.backend.InitSampling(sampler, seed)
     [obs.Specialize(self, sampler) for obs in sample_observers]
 
-    batch_count = 0
     if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert):
       sample_batch = lambda : self._SampleLMBatch(sampler, tokenizer, sample_observers, epoch)
     elif isinstance(self.backend, tf_sequential.tfSequential) or isinstance(self.backend, keras_sequential.kerasSequential):
@@ -395,8 +394,9 @@ class Model(object):
       raise ValueError("Unrecognized backend.")
 
     try:
-      while sample_batch():
-        batch_count += 1
+      cont = True
+      while cont:
+        cont, seq_count = sample_batch()
         if sampler.is_live:
           start_text = [str(input("Live Feed: "))]
           while True:
@@ -416,10 +416,10 @@ class Model(object):
       obs.endSample()
 
     time_now = datetime.datetime.utcnow()
-    l.getLogger().info( "Produced {} sample batches at a rate of {} ms / batch."
+    l.getLogger().info( "Produced {} samples at a rate of {} ms / sample."
                         .format(
-                          humanize.intcomma(batch_count),
-                          humanize.intcomma(int(1000 * ((time_now - sample_start_time) / max(batch_count, 1)).total_seconds()))
+                          humanize.intcomma(seq_count),
+                          humanize.intcomma(int(1000 * ((time_now - sample_start_time) / max(seq_count, 1)).total_seconds()))
                         )
     )
 
@@ -433,13 +433,14 @@ class Model(object):
     Run a sampling iteration over BERT models.
     """
     start_time = datetime.datetime.utcnow()
+    seq_count  = 0
     self.backend.InitSampleBatch(sampler)
     org_inputs, input_ids, samples, indices = self.backend.SampleNextIndices(sampler)
 
     if not indices:
       # Return empty means model has not produced something that can be stored.
       # This if accommodates active sampling, which is very selective.
-      return True
+      return True, seq_count
 
     continue_sampling = True
     for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
@@ -474,8 +475,9 @@ class Model(object):
       continue_sampling &= all(
         [obs.OnSample(sample) for obs in sample_observers]
       )
+      seq_count += 1
 
-    return continue_sampling
+    return continue_sampling, seq_count
 
   def _SampleSeqBatch(
     self,
@@ -488,13 +490,15 @@ class Model(object):
     Run a single iteration of the batched sample inner-loop for sequential models.
     """
 
+    start_time = datetime.datetime.utcnow()
+
     self.backend.InitSampleBatch(sampler)
     samples_in_progress = [
       sampler.tokenized_start_text.copy() for _ in range(sampler.batch_size)
     ]
     done = np.zeros(sampler.batch_size, dtype=np.bool)
-    start_time = datetime.datetime.utcnow()
     wall_time_start = start_time
+    seq_count  = 0
 
     # The return value of this method. If any of the sample_observers return
     # False, this value is set to False.
@@ -546,11 +550,12 @@ class Model(object):
             continue_sampling &= all(
               [obs.OnSample(sample) for obs in sample_observers]
             )
+            seq_count += 1
             # Wall sample time is the difference between the end of the previous
             # sample and the end of the current sample.
             wall_time_start = datetime.datetime.utcnow()
             break
-    return continue_sampling
+    return continue_sampling, seq_count
 
   def SamplerCache(self, sampler: samplers.Sampler) -> pathlib.Path:
     """Get the path to a sampler cache.
