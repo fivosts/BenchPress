@@ -104,9 +104,8 @@ def model_step_worker(queue  : multiprocessing.Queue,
                   masked_lm_labels     = mll.to(device),
                   next_sentence_labels = nsl.to(device),
                 )
-      outputs['input_ids'] = [[int(y) for y in x] for x in ids.numpy()]
+      outputs['input_ids']         = [[int(y) for y in x] for x in ids.numpy()]
       outputs['masked_lm_lengths'] = list(mlg.numpy())
-      # print("Put in queue")
       queue.put(outputs, block = False)
   except Exception as e:
     l.getLogger().error(e)
@@ -364,32 +363,29 @@ class torchBert(backends.BackendBase):
         outputs['masked_lm_lengths'] += list(inputs['masked_lm_lengths'][b_idx].numpy())
       return outputs
 
-    if len(inputs['input_ids']) < len(devices):
-      devices = devices[:len(inputs['input_ids'])]
-    chunk = len(inputs['input_ids']) // len(devices)
+    chunk = 1 + (len(inputs['input_ids']) // len(devices))
     procs = []
     queue = multiprocessing.Queue()
     for idx, (m, d) in enumerate(zip(models, devices)):
-      procs.append(multiprocessing.Process(
-        target = model_step_worker, kwargs = {
-          'queue'                : queue,
-          'model'                : m,
-          'device'               : d,
-          'input_ids'            : inputs['input_ids'][idx * chunk: (idx+1) * chunk],
-          'attention_mask'       : inputs['input_mask'][idx * chunk: (idx+1) * chunk],
-          'position_ids'         : inputs['position_ids'][idx * chunk: (idx+1) * chunk],
-          'masked_lm_labels'     : inputs['mask_labels'][idx * chunk: (idx+1) * chunk],
-          'masked_lm_lengths'    : inputs['masked_lm_lengths'][idx * chunk: (idx+1) * chunk],
-          'next_sentence_labels' : inputs['next_sentence_labels'][idx * chunk: (idx+1) * chunk],
-        }
-      ))
+      if idx*chunk < len(inputs['input_ids']):
+        procs.append(multiprocessing.Process(
+          target = model_step_worker, kwargs = {
+            'queue'                : queue,
+            'model'                : m,
+            'device'               : d,
+            'input_ids'            : inputs['input_ids'][idx * chunk: (idx+1) * chunk],
+            'attention_mask'       : inputs['input_mask'][idx * chunk: (idx+1) * chunk],
+            'position_ids'         : inputs['position_ids'][idx * chunk: (idx+1) * chunk],
+            'masked_lm_labels'     : inputs['mask_labels'][idx * chunk: (idx+1) * chunk],
+            'masked_lm_lengths'    : inputs['masked_lm_lengths'][idx * chunk: (idx+1) * chunk],
+            'next_sentence_labels' : inputs['next_sentence_labels'][idx * chunk: (idx+1) * chunk],
+          }
+        ))
     try:
       for job in procs:
         job.start()
       bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = False)
       ln = 0
-      l.getLogger().info(len(inputs['input_ids']))
-      l.getLogger().info(len(inputs['input_ids'][0]))
       while ln < len(inputs['input_ids']) * len(inputs['input_ids'][0]):
         try:
           batch = queue.get(timeout = 360)
