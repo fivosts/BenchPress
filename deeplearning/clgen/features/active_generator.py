@@ -354,7 +354,7 @@ class ActiveSamplingGenerator(object):
         outputs = mwrapper.sample_model_step(
           estimator.models, estimator.devices, inputs,
         )
-        tcs, ts = self.registerOutputData(outputs, bar)
+        tcs, ts = self.registerOutputData(outputs, step_candidates, bar)
         cmp_rate[0] += tcs
         cmp_rate[1] += ts
 
