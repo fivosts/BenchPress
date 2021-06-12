@@ -433,13 +433,15 @@ class ActiveSamplingGenerator(object):
     while self.feed_queue:
 
       cur_feed  = self.feed_queue.pop(0)
-
+      self.sampler.SetStartText(self.tokenizer.tokensToString(cur_feed.input_feed, ignore_token = self.tokenizr.padToken))
+      self.sampler.Specialize(self.tokenizer)
       step_candidates = []
       init_mask = True if self.tokenizer.maskToken in cur_feed.input_feed or self.tokenizer.holeToken in cur_feed.input_feed else False
       bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
       bar.update(0)
       rem = FLAGS.active_limit_per_feed // self.data_generator.sample_batch_size
 
+      cur_comp_rate = [0, 0]
       if cur_feed.gen_id not in self.comp_rate_per_gen:
         self.comp_rate_per_gen[cur_feed.gen_id] = [0, 0]
 
@@ -490,7 +492,7 @@ class ActiveSamplingGenerator(object):
           estimator.models, estimator.devices, inputs,
         )
         pool = multiprocessing.Pool()
-        self.comp_rate_per_gen[cur_feed.gen_id][1] += len(outputs['generated_samples'])
+        cur_comp_rate[1] += len(outputs['generated_samples'])
         try:
           for batch in pool.imap_unordered(
                          functools.partial(
@@ -502,7 +504,7 @@ class ActiveSamplingGenerator(object):
                        ):
             sample, indices, features, input_ids, masked_lm_lengths = batch
             if sample is not None:
-              self.comp_rate_per_gen[cur_feed.gen_id][0] += 1
+              cur_comp_rate[0] += 1
               bar.update(min(FLAGS.active_limit_per_feed, len(step_candidates)))
               step_candidates.append(
                 ActiveSample(
@@ -522,11 +524,12 @@ class ActiveSamplingGenerator(object):
                   2,
                   int(
                     ((FLAGS.active_limit_per_feed - len(step_candidates)) // self.data_generator.sample_batch_size)
-                    / (self.comp_rate_per_gen[cur_feed.gen_id][0] / self.comp_rate_per_gen[cur_feed.gen_id][1])
+                    / (cur_comp_rate[0] / cur_comp_rate[1])
           ))
         except ZeroDivisionError:
           pass
 
+      self.comp_rate_per_gen[cur_feed.gen_id] = [sum(x) for x in zip(self.comp_rate_per_gen[cur_feed.gen_id], cur_comp_rate)]
       self.comp_rate_monitor.register((cur_feed.gen_id, self.comp_rate_per_gen[cur_feed.gen_id][0] / self.comp_rate_per_gen[cur_feed.gen_id][1]))
       self.comp_rate_monitor.plot()
 

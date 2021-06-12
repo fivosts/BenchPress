@@ -371,7 +371,7 @@ class Model(object):
 
     (self.cache.path / "samples" / sampler.hash).mkdir(exist_ok = True)
     tokenizer = self.corpus.tokenizer
-    if sampler.isFixedStr:
+    if sampler.isFixedStr and not sampler.is_active:
       sampler.Specialize(tokenizer)
     elif sampler.is_live:
       start_text = [str(input("Live Feed: "))]
