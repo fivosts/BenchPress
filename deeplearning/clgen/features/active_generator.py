@@ -45,31 +45,6 @@ flags.DEFINE_integer(
   "Set top-K surviving candidates per generation, sorted by distance from target feature space."
 )
 
-def candidate_worker(sample_out, tokenizer):
-  sample, sample_indices, input_ids, masked_lm_lengths = sample_out
-  try:
-    # If you can extract features from a sample, store it as a candidate.
-    code = tokenizer.ArrayToCode(sample, with_formatting = False)
-    # print(code)
-    _ = opencl.Compile(code)
-    features = extractor.DictKernelFeatures(code)
-    if features:
-      return sample, sample_indices, features, input_ids, masked_lm_lengths
-  except ValueError:
-    pass
-  except Exception:
-    pass
-  return None, None, None, None, None
-
-def dataload_worker(x, feed, func, batch):
-  try:
-    return {
-      k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0)
-      for (k, v) in func(feed).items()
-    }
-  except Exception:
-    return None
-
 class ActiveSampleFeed(typing.NamedTuple):
   """
   Representation of an active learning input to the model.
@@ -108,6 +83,44 @@ class SampleTrainingOpts(typing.NamedTuple):
   max_predictions_per_seq: int
   masked_lm_prob: float
 
+def candidate_worker(sample_out   : typing.Dict[str, np.array],
+                     feed         : np.array,
+                     feat_sampler : feature_sampler.EuclideanSampler,
+                     tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
+                     ) -> ActiveSample:
+  sample, indices, input_ids, masked_lm_lengths = sample_out
+  try:
+    code = tokenizer.ArrayToCode(sample, with_formatting = False)
+    _ = opencl.Compile(code)
+    features = extractor.DictKernelFeatures(code)
+    if features:
+      return ActiveSample(
+        sample_feed    = feed,      sample         = sample,
+        input_ids      = input_ids, hole_instances = [x for x in masked_lm_lengths if x >= 0],
+        sample_indices = indices,   features       = features,
+        score          = feat_sampler.calculate_distance(features),
+        timestep       = -1,
+      )
+      return sample, indices, features, input_ids, masked_lm_lengths
+  except ValueError:
+    pass
+  except Exception:
+    pass
+  return None
+
+def dataload_worker(x    : int,
+                    feed : np.array,
+                    func : typing.TypeVar('sequence_masking.MaskingFunction'),
+                    batch: int,
+                    ) -> typing.Dict[str, torch.Tensor]:
+  try:
+    return {
+      k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0)
+      for (k, v) in func(feed).items()
+    }
+  except Exception:
+    return None
+
 class ActiveSamplingGenerator(object):
   """
   Data generation object that performs active learning
@@ -142,10 +155,7 @@ class ActiveSamplingGenerator(object):
     self.distribution  = None
     self.func          = None
     self.dataloader    = None
-    self.init_masked   = False
-
-    self.current_generation = None
-    self.comp_rate_per_gen  = {}
+    self.comp_rate     = {}
 
     self.configSamplingParams()
     self.configSampleCorpus()
@@ -159,9 +169,6 @@ class ActiveSamplingGenerator(object):
         self.feed_queue = pickle.load(infile)
     else:
       self.feed_queue          = []
-    self.step_candidates       = []
-    self.total_candidates      = []
-    self.total_candidates_hash = set()
     self.active_dataset        = ActiveDataset(self.active_corpus)
     self.feat_sampler          = feature_sampler.EuclideanSampler()
     self.candidate_monitor     = monitors.CategoricalDistribMonitor(
@@ -252,8 +259,9 @@ class ActiveSamplingGenerator(object):
     return inputs
 
   def registerOutputData(self,
-                         outputs: typing.Dict[str, typing.List[np.array]],
-                         candidates: typing.List[ActiveSample],
+                         outputs    : typing.Dict[str, typing.List[np.array]],
+                         feed       : ActiveSampleFeed,
+                         candidates : typing.List[ActiveSample],
                          bar: progressbar.ProgressBar,
                          ) -> typing.List[int]:
     """
@@ -280,20 +288,17 @@ class ActiveSamplingGenerator(object):
         outputs['input_ids'], outputs['masked_lm_lengths']
       )
       for batch in pool.imap_unordered(
-                     functools.partial(candidate_worker, tokenizer = self.tokenizer), it
+                     functools.partial(
+                       candidate_worker,
+                       feed         = feed,
+                       tokenizer    = self.tokenizer,
+                       feat_sampler = self.feat_sampler, 
+                     ), it
                    ):
-        sample, indices, features, input_ids, masked_lm_lengths = batch
-        if sample is not None:
+        if batch is not None:
           cm_rate[0] += 1
           bar.update(min(FLAGS.active_limit_per_feed, len(candidates)))
-          candidates.append(
-            ActiveSample(
-              sample_feed    = feed,  sample         = sample,
-              input_ids      = input_ids, hole_instances = [x for x in masked_lm_lengths if x >= 0],
-              sample_indices = indices,   features       = features,
-              score          = None,      timestep       = 1 + len(candidates),
-            )
-          )
+          candidates.append(batch)
       pool.close()
     except KeyboardInterrupt as e:
       pool.close()
@@ -344,8 +349,8 @@ class ActiveSamplingGenerator(object):
       bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
       bar.update(0)
 
-      if feed.gen_id not in self.comp_rate_per_gen:
-        self.comp_rate_per_gen[feed.gen_id] = [0, 0]
+      if feed.gen_id not in self.comp_rate:
+        self.comp_rate[feed.gen_id] = [0, 0]
 
       while len(step_candidates) < FLAGS.active_limit_per_feed:
 
@@ -354,7 +359,7 @@ class ActiveSamplingGenerator(object):
         outputs = mwrapper.sample_model_step(
           estimator.models, estimator.devices, inputs,
         )
-        tcs, ts = self.registerOutputData(outputs, bar)
+        tcs, ts = self.registerOutputData(outputs, feed, step_candidates, bar)
         cmp_rate[0] += tcs
         cmp_rate[1] += ts
 
@@ -365,8 +370,9 @@ class ActiveSamplingGenerator(object):
         except ZeroDivisionError:
           pass
 
-      self.comp_rate_per_gen[feed.gen_id] = [sum(x) for x in zip(self.comp_rate_per_gen[feed.gen_id], cmp_rate)]
-      self.comp_rate_monitor.register((feed.gen_id, self.comp_rate_per_gen[feed.gen_id][0] / self.comp_rate_per_gen[feed.gen_id][1]))
+      l.getLogger().warn("Total candidates: {}".format(len(step_candidates)))
+      self.comp_rate[feed.gen_id] = [sum(x) for x in zip(self.comp_rate[feed.gen_id], cmp_rate)]
+      self.comp_rate_monitor.register((feed.gen_id, self.comp_rate[feed.gen_id][0] / self.comp_rate[feed.gen_id][1]))
       self.comp_rate_monitor.plot()
 
       # total_candidates contains all candidates from all generations from a single starting feed
