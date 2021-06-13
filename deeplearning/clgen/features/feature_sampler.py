@@ -89,8 +89,10 @@ class EuclideanSampler(object):
     Find top K candidates by getting minimum
     euclidean distance from set of rodinia benchmarks.
     """
+    """
     for idx in range(len(candidates)):
       candidates[idx] = candidates[idx]._replace(
         score = self.calculate_distance(candidates[idx].features)
       )
+    """
     return self.topK_candidates(candidates, FLAGS.active_search_width)

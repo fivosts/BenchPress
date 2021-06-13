@@ -106,7 +106,7 @@ def candidate_worker(sample_out   : typing.Dict[str, np.array],
     pass
   except Exception:
     pass
-  return None, None, None, None, None
+  return None
 
 def dataload_worker(x    : int,
                     feed : np.array,
