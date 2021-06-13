@@ -428,8 +428,8 @@ class ActiveSamplingGenerator(object):
     with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
       pickle.dump(self.feed_queue, outf)
     self.feat_sampler.iter_benchmark()
-    return (np.repeat([org_inp], len(active_batch), axis = 0),
-            np.repeat([org_ids], len(active_batch), axis = 0),
+    return (np.repeat([org_inp], len(total_candidates), axis = 0),
+            np.repeat([org_ids], len(total_candidates), axis = 0),
             [x.sample for x in total_candidates],
             [x.sample_indices for x in total_candidates])
 
