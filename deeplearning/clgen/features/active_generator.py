@@ -169,9 +169,6 @@ class ActiveSamplingGenerator(object):
         self.feed_queue = pickle.load(infile)
     else:
       self.feed_queue          = []
-    self.step_candidates       = []
-    self.total_candidates      = []
-    self.total_candidates_hash = set()
     self.active_dataset        = ActiveDataset(self.active_corpus)
     self.feat_sampler          = feature_sampler.EuclideanSampler()
     self.candidate_monitor     = monitors.CategoricalDistribMonitor(
