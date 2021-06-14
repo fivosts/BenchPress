@@ -14,6 +14,7 @@
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """This file defines a database for encoded content files."""
 import datetime
+import functools
 import multiprocessing
 import pickle
 import time
@@ -153,6 +154,8 @@ class EncodedContentFile(Base):
 
 def EncoderWorker(
   job: internal_pb2.EncoderWorker,
+  tokenizer,
+  contentfile_separator,
 ) -> typing.Optional[EncodedContentFile]:
   """Encode a single content file."""
   # TODO(cec): There is a bug in the tokenizer creation logic such that the
@@ -162,8 +165,8 @@ def EncoderWorker(
   try:
     return EncodedContentFile.FromPreprocessed(
       preprocessed.PreprocessedContentFile(id=job.id, text=job.text),
-      pickle.loads(job.pickled_tokenizer),
-      job.contentfile_separator,
+      tokenizer,
+      contentfile_separator,
     )
   except ValueError:
     return None
@@ -281,29 +284,31 @@ class EncodedContentFiles(sqlutil.Database):
     contentfile_separator: str,
   ) -> None:
     with preprocessed_db.Session() as p_session:
+      l.getLogger().warn("I am about to do the query.")
       query = p_session.query(preprocessed.PreprocessedContentFile).filter(
         preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
         ~preprocessed.PreprocessedContentFile.id.in_(
           session.query(EncodedContentFile.id).all()
         ),
-      )
-      jobs = [
-        internal_pb2.EncoderWorker(
-          id=x.id,
-          text=x.text,
-          contentfile_separator=contentfile_separator,
-          pickled_tokenizer=pickle.dumps(tokenizer),
-        )
-        for x in query
-      ]
-      if not jobs:
-        raise ValueError(
-          "Pre-processed corpus contains no files: " f"'{preprocessed_db.url}'"
-        )
-
+      ).yield_per(1000000)
+      l.getLogger().warn("I did it!")
+      # jobs = [
+      #   internal_pb2.EncoderWorker(
+      #     id=x.id,
+      #     text=x.text,
+      #     contentfile_separator=contentfile_separator,
+      #     # pickled_tokenizer=pickle.dumps(tokenizer),
+      #   )
+      #   for x in query
+      # ]
+      # if not jobs:
+      #   raise ValueError(
+      #     "Pre-processed corpus contains no files: " f"'{preprocessed_db.url}'"
+      #   )
+      total_jobs = query.count()
       l.getLogger().info("Encoding {} of {} preprocessed files"
                           .format(
-                              humanize.intcomma(query.count()),
+                              humanize.intcomma(total_jobs),
                               humanize.intcomma(
                                 p_session.query(preprocessed.PreprocessedContentFile)
                                 .filter(preprocessed.PreprocessedContentFile.preprocessing_succeeded == True)
@@ -313,10 +318,17 @@ class EncodedContentFiles(sqlutil.Database):
                         )
       try:
         pool = multiprocessing.Pool()
-        bar = progressbar.ProgressBar(max_value=len(jobs))
+        bar = progressbar.ProgressBar(max_value=total_jobs)
         last_commit = time.time()
         wall_time_start = time.time()
-        for encoded_cf in bar(pool.imap_unordered(EncoderWorker, jobs)):
+        l.getLogger().warn("Let's get the encoding rolling!")
+        for encoded_cf in bar(pool.map(
+                                functools.partial(EncoderWorker,
+                                                  tokenizer = tokenizer,
+                                                  contentfile_separator = contentfile_separator,
+                                                  ),
+                                query
+                              )):
           wall_time_end = time.time()
           # TODO(cec): Remove the if check once EncoderWorker no longer returns
           # None on tokenizer encode error.
