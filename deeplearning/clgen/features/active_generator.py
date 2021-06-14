@@ -159,12 +159,12 @@ class ActiveSamplingGenerator(object):
 
     self.configSamplingParams()
     self.configSampleCorpus()
+    self.loadCheckpoint()
 
     # Active sampling attributes.
     self.active_db = active_feed_database.ActiveFeedDatabase(
       url = "sqlite:///{}".format(self.data_generator.sampler.corpus_directory / "active_feeds.db")
     )
-    self.loadCheckpoint()
     self.active_dataset    = ActiveDataset(self.active_corpus)
     self.feat_sampler      = feature_sampler.EuclideanSampler()
     self.candidate_monitor = monitors.CategoricalDistribMonitor(
