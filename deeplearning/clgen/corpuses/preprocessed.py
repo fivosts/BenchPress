@@ -165,8 +165,8 @@ class PreprocessedContentFile(Base):
       # )
       # text_generator = preprocessors.Preprocess(input_text, preprocessors_)
       # preprocessing_succeeded = True
-      pr.start()
-      pr.join()
+      # pr.start()
+      # pr.join()
     except Exception as e:
       raise("Unexpected exception: {}".format(e))
 
