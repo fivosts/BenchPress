@@ -164,17 +164,13 @@ class ActiveSamplingGenerator(object):
     self.active_db = active_feed_database.ActiveFeedDatabase(
       url = "sqlite:///{}".format(self.data_generator.sampler.corpus_directory / "active_feeds.db")
     )
-    if (self.data_generator.sampler.corpus_directory / "gen_state.pkl").exists():
-      with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'rb') as infile:
-        self.feed_queue = pickle.load(infile)
-    else:
-      self.feed_queue          = []
-    self.active_dataset        = ActiveDataset(self.active_corpus)
-    self.feat_sampler          = feature_sampler.EuclideanSampler()
-    self.candidate_monitor     = monitors.CategoricalDistribMonitor(
+    self.loadCheckpoint()
+    self.active_dataset    = ActiveDataset(self.active_corpus)
+    self.feat_sampler      = feature_sampler.EuclideanSampler()
+    self.candidate_monitor = monitors.CategoricalDistribMonitor(
       self.data_generator.sampler.corpus_directory, "feature_distance"
     )
-    self.comp_rate_monitor     = monitors.CategoricalHistoryMonitor(
+    self.comp_rate_mon     = monitors.CategoricalHistoryMonitor(
       self.data_generator.sampler.corpus_directory, "comp_rate_per_gen"
     )
     return
@@ -329,11 +325,12 @@ class ActiveSamplingGenerator(object):
       The arrays are ordered by index.
     """
     try:
+      # Initialize feed queue
       org_inp, org_ids = self.initOrGetQueue()
     except StopIteration:
       return [], [], [], []
 
-    total_candidates, total_candidates_hash = [], set()
+    total_cand, total_cand_hash = [], set()
 
     while self.feed_queue:
 
@@ -352,17 +349,19 @@ class ActiveSamplingGenerator(object):
       if feed.gen_id not in self.comp_rate:
         self.comp_rate[feed.gen_id] = [0, 0]
 
+      # Iterate until you get the required amount of candidates
       while len(step_candidates) < FLAGS.active_limit_per_feed:
-
+        # Pre-process inputs
         inputs = self.collateInputData(feed.input_feed, rem)
-
+        # Infer
         outputs = mwrapper.sample_model_step(
           estimator.models, estimator.devices, inputs,
         )
+        # Post-process outputs.
         tcs, ts = self.registerOutputData(outputs, feed, step_candidates, bar)
         cmp_rate[0] += tcs
         cmp_rate[1] += ts
-
+        # Calculate how many more to infer.
         try:
           rcands = FLAGS.active_limit_per_feed - len(step_candidates)
           crate  = cmp_rate[0] / cmp_rate[1]
@@ -370,74 +369,58 @@ class ActiveSamplingGenerator(object):
         except ZeroDivisionError:
           pass
 
-      l.getLogger().warn("Total candidates: {}".format(len(step_candidates)))
       self.comp_rate[feed.gen_id] = [sum(x) for x in zip(self.comp_rate[feed.gen_id], cmp_rate)]
-      self.comp_rate_monitor.register((feed.gen_id, self.comp_rate[feed.gen_id][0] / self.comp_rate[feed.gen_id][1]))
-      self.comp_rate_monitor.plot()
+      self.comp_rate_mon.register((feed.gen_id, self.comp_rate[feed.gen_id][0] / self.comp_rate[feed.gen_id][1]))
+      self.comp_rate_mon.plot()
 
-      # total_candidates contains all candidates from all generations from a single starting feed
-      # that succeeded the distance sampling. candidate_idx sets a checkpoint of which are old and
-      # which are new. This is to avoid re-storing old total_candidates multiple times.
-      candidate_idx = len(total_candidates)
       # Top-k candidates of ith generation.
-      new_candidates = self.feat_sampler.sample_from_set(step_candidates)
+      best_cands = self.feat_sampler.sample_from_set(step_candidates)
 
       if feed.gen_id > 0:
-        new_candidates = new_candidates[:1]
+        best_cands = best_cands[:1]
 
       self.candidate_monitor.register(
-        {str(new_candidates[0].sample_feed.gen_id): [c.score for c in new_candidates]}
+        {str(best_cands[0].sample_feed.gen_id): [c.score for c in best_cands]}
       )
       self.candidate_monitor.plot()
-      # Very frequently, new candidates have been generated in the past.
-      # No need to store them again, by keeping a hash of their string.
-      for nc in new_candidates:
+      for nc in best_cands:
         sample_hash = ''.join([str(x) for x in nc.sample])
-        if sample_hash not in total_candidates_hash:
-          total_candidates.append(nc)
-          total_candidates_hash.add(sample_hash)
-
-      for candidate in total_candidates[candidate_idx:]:
-        self.addToDB(
-          active_feed_database.ActiveFeed.FromArgs(
-            tokenizer        = self.tokenizer,
-            id               = self.active_db.active_count,
-            input_feed       = candidate.sample_feed.input_feed,
-            input_features   = candidate.sample_feed.input_features,
-            masked_input_ids = candidate.input_ids,
-            hole_instances   = candidate.hole_instances,
-            sample           = candidate.sample,
-            output_features  = candidate.features,
-            sample_quality   = candidate.score,
-            compile_status   = True,
-            generation_id    = candidate.sample_feed.gen_id,
-            timestep         = candidate.timestep,
-          )
-        )
-        # If the current generation has not gone as deep as required, mask each new candidate
-        # and place it at the tail of the sample feed queue.
-        if 0 < candidate.score < feed.input_score and 1+candidate.sample_feed.gen_id <= FLAGS.active_search_depth:
-          self.feed_queue.append(
-            ActiveSampleFeed(
-              input_feed       = candidate.sample,
-              input_features   = candidate.features,
-              input_score      = candidate.score,
-              gen_id           = 1 + candidate.sample_feed.gen_id,
+        if sample_hash not in total_cand_hash:
+          total_cand.append(nc)
+          total_cand_hash.add(sample_hash)
+          if 0 < nc.score < feed.input_score and 1+nc.sample_feed.gen_id <= FLAGS.active_search_depth:
+            self.feed_queue.append(
+              ActiveSampleFeed(
+                input_feed       = nc.sample,
+                input_features   = nc.features,
+                input_score      = nc.score,
+                gen_id           = 1 + nc.sample_feed.gen_id,
+              )
+            )
+          self.addToDB(
+            active_feed_database.ActiveFeed.FromArgs(
+              tokenizer        = self.tokenizer,
+              id               = self.active_db.active_count,
+              input_feed       = nc.sample_feed.input_feed,
+              input_features   = nc.sample_feed.input_features,
+              masked_input_ids = nc.input_ids,
+              hole_instances   = nc.hole_instances,
+              sample           = nc.sample,
+              output_features  = nc.features,
+              sample_quality   = nc.score,
+              compile_status   = True,
+              generation_id    = nc.sample_feed.gen_id,
+              timestep         = nc.timestep,
             )
           )
-      # Step candidates contains all candidates of a single gen, therefore initialized before every new gen.
-      if self.feed_queue:
-        # Update generation state pickle to start over.
-        with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
-          pickle.dump(self.feed_queue, outf)
+      self.saveCheckpoint()
 
-    with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
-      pickle.dump(self.feed_queue, outf)
+    self.saveCheckpoint()
     self.feat_sampler.iter_benchmark()
-    return (np.repeat([org_inp], len(total_candidates), axis = 0),
-            np.repeat([org_ids], len(total_candidates), axis = 0),
-            [x.sample for x in total_candidates],
-            [x.sample_indices for x in total_candidates])
+    return (np.repeat([org_inp], len(total_cand), axis = 0),
+            np.repeat([org_ids], len(total_cand), axis = 0),
+            [x.sample for x in total_cand],
+            [x.sample_indices for x in total_cand])
 
   def addToDB(self,
               db_input: typing.Union[
@@ -445,13 +428,34 @@ class ActiveSamplingGenerator(object):
                           active_feed_database.ActiveInput
                         ]
               ) -> None:
-    """If not exists, add current sample state to database"""
+    """
+    If not exists, add current sample state to database
+    """
     with self.active_db.Session(commit = True) as session:
       exists = session.query(
         type(db_input)
       ).filter(type(db_input).sha256 == db_input.sha256).scalar() is not None
       if not exists:
         session.add(db_input)
+    return
+
+  def saveCheckpoint(self):
+    """
+    Save feed queue checkpoint for easy restart.
+    """
+    with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
+      pickle.dump(self.feed_queue, outf)
+    return
+
+  def loadCheckpoint(self):
+    """
+    Load checkpointed feed queue, if exists.
+    """
+    if (self.data_generator.sampler.corpus_directory / "gen_state.pkl").exists():
+      with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'rb') as infile:
+        self.feed_queue = pickle.load(infile)
+    else:
+      self.feed_queue = []
     return
 
   def configSamplingParams(self) -> None:
