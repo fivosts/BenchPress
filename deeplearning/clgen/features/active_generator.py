@@ -324,24 +324,19 @@ class ActiveSamplingGenerator(object):
         d) Sample indices
       The arrays are ordered by index.
     """
-    try:
-      # Initialize feed queue
-      org_inp, org_ids = self.initOrGetQueue()
-    except StopIteration:
-      return [], [], [], []
-
+    # Initialize feed queue
+    org_inp, org_ids = self.initOrGetQueue()
     total_cand, total_cand_hash = [], set()
 
     while self.feed_queue:
 
       feed = self.feed_queue.pop(0)
+      rem  = FLAGS.active_limit_per_feed // self.data_generator.sample_batch_size
+      step_candidates = []
+      cmp_rate        = [0, 0]
 
       self.sampler.setStartText(self.tokenizer.tokensToString(feed.input_feed, ignore_token = self.tokenizer.padToken))
       self.sampler.Specialize(self.tokenizer)
-
-      step_candidates = []
-      rem = FLAGS.active_limit_per_feed // self.data_generator.sample_batch_size
-      cmp_rate = [0, 0]
 
       bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
       bar.update(0)
