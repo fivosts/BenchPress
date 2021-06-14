@@ -188,10 +188,13 @@ class PreprocessedContentFile(Base):
       date_added              = datetime.datetime.utcnow(),
     ) for (text, success) in text_generator ]
 
-def PreprocessorWorker(job: internal_pb2.PreprocessorWorker) -> PreprocessedContentFile:
+def PreprocessorWorker(job: str,
+                       contentfile_root: pathlib.Path,
+                       preprocessors: typing.List[str]
+                       ) -> PreprocessedContentFile:
   """The inner loop of a parallelizable pre-processing job."""
   return PreprocessedContentFile.FromContentFile(
-    pathlib.Path(job.contentfile_root), job.relpath, job.preprocessors
+    contentfile_root, job, preprocessors
   )
 
 def BQPreprocessorWorker(file: bqdb.bqMainFile, preprocessors: typing.List[str]) -> PreprocessedContentFile:
@@ -309,37 +312,48 @@ class PreprocessedContentFiles(sqlutil.Database):
                   humanize.intcomma(len(relpaths)),
               )
         )
-        jobs = [
-          internal_pb2.PreprocessorWorker(
-            contentfile_root = str(contentfile_root),
-            relpath = t,
-            preprocessors = config.preprocessor,
-          )
-          for t in todo
-        ]
-        try:
-          pool = multiprocessing.Pool()
-          bar = progressbar.ProgressBar(max_value=len(jobs))
-          last_commit = time.time()
-          wall_time_start = time.time()
-          for preprocessed_list in bar(pool.imap_unordered(PreprocessorWorker, jobs)):
-            for preprocessed_cf in preprocessed_list:
-              wall_time_end = time.time()
-              preprocessed_cf.wall_time_ms = int(
-                (wall_time_end - wall_time_start) * 1000
-              )
-              wall_time_start = wall_time_end
-              session.add(preprocessed_cf)
-              if wall_time_end - last_commit > 10:
-                session.commit()
-                last_commit = wall_time_end
-          pool.close()
-        except KeyboardInterrupt as e:
-          pool.terminate()
-          raise e
-        except Exception as e:
-          pool.terminate()
-          raise e
+        chunk_size = 10000
+        jobs, total = [], 0
+        for idx, t in enumerate(todo):
+          if idx % chunk_size == 0:
+            jobs.append([t])
+          else:
+            jobs[-1].append(t)
+          total += 1
+        bar = progressbar.ProgressBar(max_value=total)
+        c = 0
+        for job_chunk in jobs:
+          try:
+            pool = multiprocessing.Pool()
+            last_commit = time.time()
+            wall_time_start = time.time()
+            for preprocessed_list in pool.imap_unordered(
+                                       functools.partial(
+                                         PreprocessorWorker,
+                                         contentfile_root = contentfile_root,
+                                         preprocessors = list(config.preprocessor)
+                                       ),
+                                       job_chunk
+                                      ):
+              for preprocessed_cf in preprocessed_list:
+                wall_time_end = time.time()
+                preprocessed_cf.wall_time_ms = int(
+                  (wall_time_end - wall_time_start) * 1000
+                )
+                wall_time_start = wall_time_end
+                session.add(preprocessed_cf)
+                if wall_time_end - last_commit > 10:
+                  session.commit()
+                  last_commit = wall_time_end
+              c += 1
+              bar.update(c)
+            pool.close()
+          except KeyboardInterrupt as e:
+            pool.terminate()
+            raise e
+          except Exception as e:
+            pool.terminate()
+            raise e
       else:
         try:
           pool = multiprocessing.Pool()
