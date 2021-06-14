@@ -312,7 +312,7 @@ class PreprocessedContentFiles(sqlutil.Database):
                   humanize.intcomma(len(relpaths)),
               )
         )
-        chunk_size = 10000
+        chunk_size = 250000
         jobs, total = [], 0
         for idx, t in enumerate(todo):
           if idx % chunk_size == 0:
