@@ -153,8 +153,20 @@ class PreprocessedContentFile(Base):
     preprocessing_succeeded = False
     try:
       input_text = file.content
-      text_generator = preprocessors.Preprocess(input_text, preprocessors_)
+      pool = multiprocessing.Pool(1)
+      ret = pool.apply_async(preprocessors.Preprocess, (input_text, preprocessors_))
+      try:
+        text_generator = ret.get(timeout = 60)
+      except TimeoutError:
+        l.getLogger().warn("Timeout Error.")
+        return []
+      # pr = multiprocessing.Process(
+      #   target = preprocessors.Preprocess, args = (input_text, preprocessors_)
+      # )
+      # text_generator = preprocessors.Preprocess(input_text, preprocessors_)
       # preprocessing_succeeded = True
+      pr.start()
+      pr.join()
     except Exception as e:
       raise("Unexpected exception: {}".format(e))
 
