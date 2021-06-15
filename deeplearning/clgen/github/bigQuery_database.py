@@ -126,11 +126,15 @@ class bqDatabase(sqlutil.Database):
   def __init__(self, url: str, must_exist: bool = False):
     super(bqDatabase, self).__init__(url, Base, must_exist = must_exist)
 
+  def main_files_batch(self, limit: int, offset: int) -> typing.List[bqMainFile]:
+    with self.Session() as s:
+      return s.query(bqMainFile).limit(limit).offset(offset).all()
+
   ##### Main file properties
   @property
   def main_files(self) -> typing.List[bqMainFile]:
     with self.Session() as s:
-      return s.query(bqMainFile).yield_per(50)
+      return s.query(bqMainFile).yield_per(100000)
 
   @property
   def mainfile_entries(self) -> typing.Set[typing.Tuple[str, str]]:

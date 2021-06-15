@@ -310,11 +310,11 @@ class PreprocessedContentFiles(sqlutil.Database):
           total += 1
         bar = progressbar.ProgressBar(max_value=total)
         c = 0
+        last_commit = time.time()
+        wall_time_start = time.time()
         for job_chunk in jobs:
           try:
             pool = multiprocessing.Pool()
-            last_commit = time.time()
-            wall_time_start = time.time()
             for preprocessed_list in pool.imap_unordered(
                                        functools.partial(
                                          PreprocessorWorker,
@@ -344,23 +344,22 @@ class PreprocessedContentFiles(sqlutil.Database):
             raise e
       else:
           db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root))
-          it = db.main_files
-          consumed = False
           bar = progressbar.ProgressBar(max_value = db.mainfile_count)
-          idx = 0
-          while not consumed:
+          chunk, idx = 250000, 0
+
+          last_commit     = time.time()
+          wall_time_start = time.time()
+
+          while idx < db.mainfile_count:
             try:
               pool = multiprocessing.Pool()
-
-              last_commit     = time.time()
-              wall_time_start = time.time()
-              joined_loop = False
+              batch = db.main_files_batch(chunk, idx)
 
               for preprocessed_list in pool.imap_unordered(
                                         functools.partial(
                                           BQPreprocessorWorker,
                                           preprocessors = list(config.preprocessor)
-                                      ), it):
+                                      ), batch):
                 for preprocessed_cf in preprocessed_list:
                   wall_time_end = time.time()
                   preprocessed_cf.wall_time_ms = int(
@@ -371,13 +370,8 @@ class PreprocessedContentFiles(sqlutil.Database):
                   if wall_time_end - last_commit > 10:
                     session.commit()
                     last_commit = wall_time_end
-                joined_loop = True
                 idx += 1
                 bar.update(idx)
-                if idx % 50 == 0:
-                  break
-              if not joined_loop:
-                consumed = True
               pool.close()
               input()
             except KeyboardInterrupt as e:
