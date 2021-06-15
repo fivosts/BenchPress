@@ -411,52 +411,22 @@ def NormalizeIdentifiers(text: str) -> str:
     text, ".cl", GetClangArgs(use_shim=False)
   )
 
+@public.clgen_preprocessor
+def MinimumStatement1(text: str) -> str:
+  """Check that file contains at least one statement.
 
-# TODO(cec): Re-enable GPUVerify support.
-# def GpuVerify(src: str, args: list, id: str = 'anon', timeout: int = 60) ->
-#  str:
-#   """
-#   Run GPUverify over kernel.
-#
-#   Parameters
-#   ----------
-#   src : str
-#       OpenCL source.
-#   id : str, optional
-#       OpenCL source name.
-#
-#   Returns
-#   -------
-#   str
-#       OpenCL source.
-#
-#   Raises
-#   ------
-#   GPUVerifyException
-#       If GPUverify finds a bug.
-#   InternalError
-#       If GPUverify fails.
-#   """
-#   if not system.is_linux():
-#     raise SystemError("GPUVerify only supported on Linux!")
-#
-#   # GPUverify can't read from stdin.
-#   with tempfile.NamedTemporaryFile('w', suffix='.cl') as tmp:
-#     tmp.write(src)
-#     tmp.flush()
-#     cmd = ['timeout', '-s9', str(timeout), GPUVERIFY, tmp.name] + args
-#
-#     process = subprocess.Popen(cmd, stdin=subprocess.PIPE,
-#   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-#     stdout, stderr = process.communicate()
-#
-#   if process.returncode == -9:  # timeout signal
-#     raise TimeoutError(
-#       f"GPUveryify failed to complete with {timeout} seconds")
-#   elif process.returncode != 0:
-#     raise ValueError(stderr.decode('utf-8'))
-#   return src
+  Args:
+    text: The source to verify.
 
+  Returns:
+    src: The unmodified input src.
+
+  Raises:
+    NoCodeException: If src has no semi-colons.
+  """
+  if ';' not in text:
+    raise ValueError
+  return text
 
 @public.clgen_preprocessor
 def SanitizeKernelPrototype(text: str) -> str:

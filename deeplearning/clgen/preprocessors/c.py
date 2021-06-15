@@ -185,6 +185,23 @@ def ExtractFunctions(text: str) -> str:
   return clang.ExtractFunctions(text, ".c", [])
 
 @public.clgen_preprocessor
+def MinimumStatement1(text: str) -> str:
+  """Check that file contains at least one statement.
+
+  Args:
+    text: The source to verify.
+
+  Returns:
+    src: The unmodified input src.
+
+  Raises:
+    NoCodeException: If src has no semi-colons.
+  """
+  if ';' not in text:
+    raise ValueError
+  return text
+
+@public.clgen_preprocessor
 def StripIncludes(text: str) -> str:
   """Removes include statements from sourcecode.
 
