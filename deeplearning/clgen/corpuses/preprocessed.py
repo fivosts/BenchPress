@@ -532,25 +532,6 @@ class PreprocessedContentFiles(sqlutil.Database):
         find_output += batch
     return find_output
 
-    # with fs.chdir(contentfile_root):
-    #   find_output = (
-    #     subprocess.check_output(["find", ".", "-type", "f"])
-    #     # .decode("utf-8")
-    #     .strip()
-    #   )
-    #   if not find_output:
-    #     raise ValueError(
-    #       f"Empty content files directory: '{contentfile_root}'"
-    #     )
-    #   find_output = find_output.split("\n")
-    #   # if FLAGS.local_dir_file_ext:
-    #   #   func = lambda x: x[-len(FLAGS.local_dir_file_ext[0]):] == FLAGS.local_dir_file_ext[0]
-    #   #   for i in range(1, len(FLAGS.local_dir_file_ext)):
-    #   #     ext = FLAGS.local_dir_file_ext[i]
-    #   #     func = lambda x: x[-len(ext):] == ext or func(x)
-    #   find_output = [x for x in find_output if x[-2:] == ".c" or x[-3:] == ".cl"]
-    #   return find_output
-
 def path_worker(base_path) -> typing.List[str]:
   paths = []
   queue = [base_path]
