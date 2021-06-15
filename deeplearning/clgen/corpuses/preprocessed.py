@@ -345,7 +345,7 @@ class PreprocessedContentFiles(sqlutil.Database):
       else:
           db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root))
           bar = progressbar.ProgressBar(max_value = db.mainfile_count)
-          chunk, idx = 250000, 0
+          chunk, idx = 250, 0
 
           last_commit     = time.time()
           wall_time_start = time.time()
