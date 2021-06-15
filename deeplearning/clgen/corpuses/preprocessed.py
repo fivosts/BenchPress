@@ -300,7 +300,7 @@ class PreprocessedContentFiles(sqlutil.Database):
                   humanize.intcomma(len(relpaths)),
               )
         )
-        chunk_size = 250000
+        chunk_size = 100000
         jobs, total = [], 0
         for idx, t in enumerate(todo):
           if idx % chunk_size == 0:
@@ -345,16 +345,15 @@ class PreprocessedContentFiles(sqlutil.Database):
       else:
           db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root))
           bar = progressbar.ProgressBar(max_value = db.mainfile_count)
-          chunk, idx = 250, 0
+          chunk, idx = 100000, 0
 
           last_commit     = time.time()
           wall_time_start = time.time()
 
           while idx < db.mainfile_count:
             try:
-              pool = multiprocessing.Pool()
               batch = db.main_files_batch(chunk, idx)
-
+              pool = multiprocessing.Pool()
               for preprocessed_list in pool.imap_unordered(
                                         functools.partial(
                                           BQPreprocessorWorker,
@@ -373,7 +372,6 @@ class PreprocessedContentFiles(sqlutil.Database):
                 idx += 1
                 bar.update(idx)
               pool.close()
-              input()
             except KeyboardInterrupt as e:
               pool.terminate()
               raise e
