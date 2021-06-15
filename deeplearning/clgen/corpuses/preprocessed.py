@@ -342,9 +342,9 @@ class PreprocessedContentFiles(sqlutil.Database):
             pool.terminate()
             raise e
       else:
+          db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root))
           it = db.main_files
           consumed = False
-          db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root))
           bar = progressbar.ProgressBar(max_value = db.mainfile_count)
           idx = 0
           while not consumed:
