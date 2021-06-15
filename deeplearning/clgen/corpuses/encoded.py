@@ -284,14 +284,12 @@ class EncodedContentFiles(sqlutil.Database):
     contentfile_separator: str,
   ) -> None:
     with preprocessed_db.Session() as p_session:
-      l.getLogger().warn("I am about to do the query.")
       query = p_session.query(preprocessed.PreprocessedContentFile).filter(
         preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
         ~preprocessed.PreprocessedContentFile.id.in_(
           session.query(EncodedContentFile.id).all()
         ),
-      ).yield_per(1000000)
-      l.getLogger().warn("I did it!")
+      )
       # jobs = [
       #   internal_pb2.EncoderWorker(
       #     id=x.id,
@@ -316,53 +314,57 @@ class EncodedContentFiles(sqlutil.Database):
                               )
                           )
                         )
-      try:
-        pool = multiprocessing.Pool()
-        bar = progressbar.ProgressBar(max_value=total_jobs)
-        last_commit = time.time()
-        wall_time_start = time.time()
-        l.getLogger().warn("Let's get the encoding rolling!")
-        for encoded_cf in bar(pool.map(
-                                functools.partial(EncoderWorker,
-                                                  tokenizer = tokenizer,
-                                                  contentfile_separator = contentfile_separator,
-                                                  ),
-                                query
-                              )):
-          wall_time_end = time.time()
-          # TODO(cec): Remove the if check once EncoderWorker no longer returns
-          # None on tokenizer encode error.
-          if encoded_cf:
-            encoded_cf.wall_time_ms = int(
-              (wall_time_end - wall_time_start) * 1000
-            )
-            session.add(encoded_cf)
-            self.length_monitor.register(encoded_cf.tokencount)
-            self.token_monitor.register([tokenizer.decoder[int(x)] for x in encoded_cf.data.split('.')])
+      bar = progressbar.ProgressBar(max_value=total_jobs)
+      chunk, idx = 2000000, 0
+      last_commit = time.time()
+      wall_time_start = time.time()
+      while idx < total_jobs:
+        try:
+          batch = query.limit(chunk).offset(idx).all()
+          pool = multiprocessing.Pool()
+          for encoded_cf in pool.imap_unordered(
+                              functools.partial(EncoderWorker,
+                                                tokenizer = tokenizer,
+                                                contentfile_separator = contentfile_separator,
+                                                ),
+                              batch
+                            ):
+            wall_time_end = time.time()
+            # TODO(cec): Remove the if check once EncoderWorker no longer returns
+            # None on tokenizer encode error.
+            if encoded_cf:
+              encoded_cf.wall_time_ms = int(
+                (wall_time_end - wall_time_start) * 1000
+              )
+              session.add(encoded_cf)
+              self.length_monitor.register(encoded_cf.tokencount)
+              self.token_monitor.register([tokenizer.decoder[int(x)] for x in encoded_cf.data.split('.')])
 
-            dict_features = extractor.StrToDictFeatures(encoded_cf.feature_vector)
-            if dict_features:
-              self.feature_monitor.register(dict_features)
-          wall_time_start = wall_time_end
-          if wall_time_end - last_commit > 10:
-            session.commit()
-            last_commit = wall_time_end
-        self.length_monitor.plot()
-        self.token_monitor.plot()
-        self.feature_monitor.plot()
-        pool.close()
-      except KeyboardInterrupt as e:
-        pool.terminate()
-        self.length_monitor.plot()
-        self.token_monitor.plot()
-        self.feature_monitor.plot()
-        raise e
-      except Exception as e:
-        pool.terminate()
-        self.length_monitor.plot()
-        self.token_monitor.plot()
-        self.feature_monitor.plot()
-        raise e
+              dict_features = extractor.StrToDictFeatures(encoded_cf.feature_vector)
+              if dict_features:
+                self.feature_monitor.register(dict_features)
+            wall_time_start = wall_time_end
+            if wall_time_end - last_commit > 10:
+              session.commit()
+              last_commit = wall_time_end
+            idx += 1
+            bar.update(idx)
+          pool.close()
+        except KeyboardInterrupt as e:
+          pool.terminate()
+          self.length_monitor.plot()
+          self.token_monitor.plot()
+          self.feature_monitor.plot()
+          raise e
+        except Exception as e:
+          pool.terminate()
+          self.length_monitor.plot()
+          self.token_monitor.plot()
+          self.feature_monitor.plot()
+          raise e
+      self.length_monitor.plot()
+      self.token_monitor.plot()
+      self.feature_monitor.plot()
     session.commit()
     return
 
