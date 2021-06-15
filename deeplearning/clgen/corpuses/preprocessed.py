@@ -152,21 +152,8 @@ class PreprocessedContentFile(Base):
     start_time = time.time()
     preprocessing_succeeded = False
     try:
-      input_text = file.content
-      pool = multiprocessing.Pool(1)
-      ret = pool.apply_async(preprocessors.Preprocess, (input_text, preprocessors_))
-      try:
-        text_generator = ret.get(timeout = 60)
-      except TimeoutError:
-        l.getLogger().warn("Timeout Error.")
-        return []
-      # pr = multiprocessing.Process(
-      #   target = preprocessors.Preprocess, args = (input_text, preprocessors_)
-      # )
-      # text_generator = preprocessors.Preprocess(input_text, preprocessors_)
+      text_generator = preprocessors.Preprocess(input_text, preprocessors_)
       # preprocessing_succeeded = True
-      # pr.start()
-      # pr.join()
     except Exception as e:
       raise("Unexpected exception: {}".format(e))
 
@@ -355,37 +342,49 @@ class PreprocessedContentFiles(sqlutil.Database):
             pool.terminate()
             raise e
       else:
-        try:
-          pool = multiprocessing.Pool()
-          db   = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root))
-          bar  = progressbar.ProgressBar(max_value = db.mainfile_count)
+          it = db.main_files
+          consumed = False
+          db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root))
+          bar = progressbar.ProgressBar(max_value = db.mainfile_count)
+          idx = 0
+          while not consumed:
+            try:
+              pool = multiprocessing.Pool()
 
-          last_commit     = time.time()
-          wall_time_start = time.time()
+              last_commit     = time.time()
+              wall_time_start = time.time()
+              joined_loop = False
 
-          for preprocessed_list in bar(
-                      pool.imap_unordered(
-                        functools.partial(
-                          BQPreprocessorWorker,
-                          preprocessors = list(config.preprocessor)
-                      ), db.main_files)):
-            for preprocessed_cf in preprocessed_list:
-              wall_time_end = time.time()
-              preprocessed_cf.wall_time_ms = int(
-                (wall_time_end - wall_time_start) * 1000
-              )
-              wall_time_start = wall_time_end
-              session.add(preprocessed_cf)
-              if wall_time_end - last_commit > 10:
-                session.commit()
-                last_commit = wall_time_end
-          pool.close()
-        except KeyboardInterrupt as e:
-          pool.terminate()
-          raise e
-        except Exception as e:
-          pool.terminate()
-          raise e
+              for preprocessed_list in pool.imap_unordered(
+                                        functools.partial(
+                                          BQPreprocessorWorker,
+                                          preprocessors = list(config.preprocessor)
+                                      ), it):
+                for preprocessed_cf in preprocessed_list:
+                  wall_time_end = time.time()
+                  preprocessed_cf.wall_time_ms = int(
+                    (wall_time_end - wall_time_start) * 1000
+                  )
+                  wall_time_start = wall_time_end
+                  session.add(preprocessed_cf)
+                  if wall_time_end - last_commit > 10:
+                    session.commit()
+                    last_commit = wall_time_end
+                joined_loop = True
+                idx += 1
+                bar.update(idx)
+                if idx % 50 == 0:
+                  break
+              if not joined_loop:
+                consumed = True
+              pool.close()
+              input()
+            except KeyboardInterrupt as e:
+              pool.terminate()
+              raise e
+            except Exception as e:
+              pool.terminate()
+              raise e
 
   @contextlib.contextmanager
   def GetContentFileRoot(self, config: corpus_pb2.Corpus) -> pathlib.Path:

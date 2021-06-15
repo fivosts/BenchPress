@@ -130,7 +130,7 @@ class bqDatabase(sqlutil.Database):
   @property
   def main_files(self) -> typing.List[bqMainFile]:
     with self.Session() as s:
-      return s.query(bqMainFile).yield_per(100000)
+      return s.query(bqMainFile).yield_per(50)
 
   @property
   def mainfile_entries(self) -> typing.Set[typing.Tuple[str, str]]:
