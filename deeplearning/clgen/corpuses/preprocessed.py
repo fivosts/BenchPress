@@ -152,6 +152,7 @@ class PreprocessedContentFile(Base):
     start_time = time.time()
     preprocessing_succeeded = False
     try:
+      input_text = file.content
       text_generator = preprocessors.Preprocess(input_text, preprocessors_)
       # preprocessing_succeeded = True
     except Exception as e:
