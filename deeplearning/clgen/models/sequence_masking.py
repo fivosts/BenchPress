@@ -417,9 +417,9 @@ def MPMaskSequence(seq: np.array,
 def HoleSequence(seq: np.array,
                  train_set: bool,
                  max_predictions: int,
+                 masked_lm_prob: int,
                  distribution: distributions.Distribution,
                  tokenizer,
-                 training_opts,
                  ) -> typing.Dict[str, np.array]:
   """
   Inserts hole tokens to a given sequence.
@@ -441,7 +441,7 @@ def HoleSequence(seq: np.array,
   # total tokens to add in holes.
   # No more than max_predictions_per_seq (or otherwise specified), no less than actual seq length x the probability of hiding a token
   holes_to_predict  = min(max_predictions,
-                         max(1, int(round(actual_length * training_opts.masked_lm_prob))))
+                         max(1, int(round(actual_length * masked_lm_prob))))
 
   extend_left = True if np.random.RandomState().randint(0, 2) == 1 else False
   input_ids   = list(np.copy(seq))
