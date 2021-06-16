@@ -193,12 +193,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         d.sampler.corpus_directory, "comp_rate_per_gen"
       )
     d.dataloader = d.predict_dataloader()
+    d.loader     = iter(d.dataloader)
     return d
 
   def __init__(self):
     super(torchLMDataGenerator, self).__init__("pt_record")
     self.dataloader = None
     ## Active learning attributes initialization.
+    self.loader     = None
     self.comp_rate  = {}
     self.feed_queue = []
     self.feat_sampler      = None
@@ -428,10 +430,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     """
     if not self.feed_queue:
       try:
-        cf = next(self.dataloader)
+        cf = next(self.loader)
       except StopIteration:
-        self.dataloader = self.predict_dataloader()
-        cf = next(self.dataloader)
+        self.loader = iter(self.dataloader)
+        cf = next(self.loader)
       self.feed_queue.append(
         ActiveSampleFeed(
           input_feed       = cf,
