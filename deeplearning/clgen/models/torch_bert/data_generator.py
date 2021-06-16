@@ -54,6 +54,40 @@ flags.DEFINE_integer(
   "Set top-K surviving candidates per generation, sorted by distance from target feature space."
 )
 
+class ActiveSampleFeed(typing.NamedTuple):
+  """
+  Representation of an active learning input to the model.
+  """
+  # An array of original input
+  input_feed       : np.array
+  # The feature space of the original input
+  input_features   : typing.Dict[str, float]
+  # Distance from target features of input feed. Valid after 1st generation.
+  input_score      : float
+  # Depth increases when a valid inference sample is fed back as an input.
+  gen_id           : int
+
+class ActiveSample(typing.NamedTuple):
+  """
+  Representation of an active learning sample.
+  """
+  # ActiveSampleFeed instance of model input
+  sample_feed    : typing.TypeVar("ActiveSamplingGenerator.ActiveSampleFeed")
+  # Input ids that led to this prediction
+  input_ids      : np.array
+  # hole lengths and positions of input ids.
+  hole_instances : typing.List[sequence_masking.MaskedLmInstance]
+  # Model prediction
+  sample         : np.array
+  # Sample indices of given prediction.
+  sample_indices : np.array
+  # Output features of sample
+  features       : typing.Dict[str, float]
+  # Score of sample based on active learning search.
+  score          : typing.Union[bool, float]
+  # Active batch timestep where sample was acquired.
+  timestep       : int
+  
 def candidate_worker(sample_out   : typing.Dict[str, np.array],
                      feed         : np.array,
                      feat_sampler : feature_sampler.EuclideanSampler,
@@ -91,40 +125,6 @@ def dataload_worker(x    : int,
     }
   except Exception:
     return None
-
-class ActiveSampleFeed(typing.NamedTuple):
-  """
-  Representation of an active learning input to the model.
-  """
-  # An array of original input
-  input_feed       : np.array
-  # The feature space of the original input
-  input_features   : typing.Dict[str, float]
-  # Distance from target features of input feed. Valid after 1st generation.
-  input_score      : float
-  # Depth increases when a valid inference sample is fed back as an input.
-  gen_id           : int
-
-class ActiveSample(typing.NamedTuple):
-  """
-  Representation of an active learning sample.
-  """
-  # ActiveSampleFeed instance of model input
-  sample_feed    : typing.TypeVar("ActiveSamplingGenerator.ActiveSampleFeed")
-  # Input ids that led to this prediction
-  input_ids      : np.array
-  # hole lengths and positions of input ids.
-  hole_instances : typing.List[sequence_masking.MaskedLmInstance]
-  # Model prediction
-  sample         : np.array
-  # Sample indices of given prediction.
-  sample_indices : np.array
-  # Output features of sample
-  features       : typing.Dict[str, float]
-  # Score of sample based on active learning search.
-  score          : typing.Union[bool, float]
-  # Active batch timestep where sample was acquired.
-  timestep       : int
 
 class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
   """Data generator subclass designed for PyTorch BERT model."""
