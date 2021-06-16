@@ -331,7 +331,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     while self.feed_queue:
 
       feed = self.feed_queue.pop(0)
-      rem  = FLAGS.active_limit_per_feed // self.data_generator.sample_batch_size
+      rem  = FLAGS.active_limit_per_feed // self.sample_batch_size
       step_candidates = []
       cmp_rate        = [0, 0]
 
@@ -360,7 +360,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         try:
           rcands = FLAGS.active_limit_per_feed - len(step_candidates)
           crate  = cmp_rate[0] / cmp_rate[1]
-          rem = max(2, int((rcands // self.data_generator.sample_batch_size) / crate))
+          rem = max(2, int((rcands // self.sample_batch_size) / crate))
         except ZeroDivisionError:
           pass
 
@@ -462,8 +462,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     if self.tokenizer.maskToken in feed or self.tokenizer.holeToken in feed:
       inputs = sequence_masking.MaskedSeqToBlob(
         feed, self.tokenizer,
-        self.data_generator.sampler.sequence_length,
-        self.data_generator.max_position_embeddings
+        self.sampler.sequence_length,
+        self.max_position_embeddings
       )
       inputs = {
         k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0).unsqueeze(0).repeat_interleave(wload_size, dim = 0) 
@@ -479,7 +479,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         for batch in pool.imap_unordered(
                           functools.partial(
                             dataload_worker, feed  = feed,
-                            func  = self.func, batch = self.data_generator.sample_batch_size
+                            func  = self.func, batch = self.sample_batch_size
                           ),range(wload_size)
                          ):
           if batch:
@@ -548,7 +548,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     """
     Save feed queue checkpoint for easy restart.
     """
-    with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
+    with open(self.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
       pickle.dump(self.feed_queue, outf)
     return
 
@@ -556,8 +556,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     """
     Load checkpointed feed queue, if exists.
     """
-    if (self.data_generator.sampler.corpus_directory / "gen_state.pkl").exists():
-      with open(self.data_generator.sampler.corpus_directory / "gen_state.pkl", 'rb') as infile:
+    if (self.sampler.corpus_directory / "gen_state.pkl").exists():
+      with open(self.sampler.corpus_directory / "gen_state.pkl", 'rb') as infile:
         self.feed_queue = pickle.load(infile)
     else:
       self.feed_queue = []
