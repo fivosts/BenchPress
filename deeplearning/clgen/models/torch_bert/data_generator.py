@@ -87,7 +87,7 @@ class ActiveSample(typing.NamedTuple):
   score          : typing.Union[bool, float]
   # Active batch timestep where sample was acquired.
   timestep       : int
-  
+
 def candidate_worker(sample_out   : typing.Dict[str, np.array],
                      feed         : np.array,
                      feat_sampler : feature_sampler.EuclideanSampler,
@@ -162,7 +162,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       corpus_config = d.sampler.config.sample_corpus.corpus_config
       if corpus_config.HasField("hole"):
         distribution = distributions.Distribution.FromHoleConfig(
-          corpus_config.hole, self.sampler.corpus_directory, "sample_corpus"
+          corpus_config.hole, d.sampler.corpus_directory, "sample_corpus"
         )
         d.func = functools.partial(sequence_masking.HoleSequence,
                               train_set       = False,
