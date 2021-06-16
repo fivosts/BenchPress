@@ -273,7 +273,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
       elif self.sampler.is_active:
         if self.sampler.isFixedStr:
-          dataset = [self.tokenizer.TokenizeString(self.sampler.start_text)]
+          dataset = [np.asarray(self.tokenizer.TokenizeString(self.sampler.start_text))]
         else:
           dataset = self.createCorpus(self.sampler.corpus_directory)
         batch_size = 1
