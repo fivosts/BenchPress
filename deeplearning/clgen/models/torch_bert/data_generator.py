@@ -116,11 +116,11 @@ def candidate_worker(sample_out   : typing.Dict[str, np.array],
 def dataload_worker(x    : int,
                     feed : np.array,
                     func : typing.TypeVar('sequence_masking.MaskingFunction'),
-                    # batch: int,
+                    batch: int,
                     ) -> typing.Dict[str, torch.Tensor]:
   try:
     return {
-      k: torch.from_numpy(v).unsqueeze(0)
+      k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0)
       for (k, v) in func(feed).items()
     }
   except Exception:
@@ -257,6 +257,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     isFixedStr == True means there is a fixed sample feed, e.g. 'kernel void [HOLE]'
     Otherwise, a set has been given to provide random samples from it.
     """
+    batch_size = self.sample_batch_size
     if not self.sampler.is_active and (self.sampler.isFixedStr or self.sampler.is_live):
       sample_element = sequence_masking.MaskedSeqToBlob(
         self.sampler.encoded_start_text, self.tokenizer, self.sampler.sequence_length, self.max_position_embeddings
@@ -272,9 +273,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
       elif self.sampler.is_active:
         if self.sampler.isFixedStr:
-          dataset = [self.tokenizer.TokenizeString(self.sampler.start_text)] * self.sample_batch_size
+          dataset = [self.tokenizer.TokenizeString(self.sampler.start_text)]
         else:
           dataset = self.createCorpus(self.sampler.corpus_directory)
+        batch_size = 1
         sampler = torch.utils.data.SequentialSampler(dataset)
       else:
         path_list = self.configSampleSets()
@@ -290,7 +292,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       # Example: model batch size 32 and sampler batch size 4.
       # This dataloader will return 8 feeds. Each will be repeated 4 times.
       # 32 sequences will be given to the model.
-      batch_size = self.sample_batch_size,
+      batch_size = batch_size,
       sampler    = (
             sampler
             if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
@@ -473,7 +475,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         self.max_position_embeddings
       )
       inputs = {
-        k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(wload_size, dim = 0) 
+        k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(self.sample_batch_size, dim = 0).unsqueeze(0).repeat_interleave(wload_size, dim = 0) 
         for k, v in inputs.items()
       }
     else:
@@ -486,7 +488,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         for batch in pool.imap_unordered(
                           functools.partial(
                             dataload_worker, feed  = feed,
-                            func  = self.func# , batch = self.sample_batch_size
+                            func  = self.func, batch = self.sample_batch_size
                           ),range(wload_size)
                          ):
           if batch:
