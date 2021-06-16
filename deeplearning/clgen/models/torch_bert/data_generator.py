@@ -273,6 +273,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           dataset = [self.tokenizer.TokenizeString(self.sampler.start_text)]
         else:
           dataset = self.createCorpus(self.sampler.corpus_directory)
+        sampler = torch.utils.data.SequentialSampler(dataset)
       else:
         path_list = self.configSampleSets()
         dataset = datasets.LazyConcatDataset(
