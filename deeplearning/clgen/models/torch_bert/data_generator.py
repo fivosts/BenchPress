@@ -116,11 +116,11 @@ def candidate_worker(sample_out   : typing.Dict[str, np.array],
 def dataload_worker(x    : int,
                     feed : np.array,
                     func : typing.TypeVar('sequence_masking.MaskingFunction'),
-                    batch: int,
+                    # batch: int,
                     ) -> typing.Dict[str, torch.Tensor]:
   try:
     return {
-      k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0)
+      k: torch.from_numpy(v).unsqueeze(0)
       for (k, v) in func(feed).items()
     }
   except Exception:
@@ -272,7 +272,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
       elif self.sampler.is_active:
         if self.sampler.isFixedStr:
-          dataset = [self.tokenizer.TokenizeString(self.sampler.start_text)]
+          dataset = [self.tokenizer.TokenizeString(self.sampler.start_text)] * self.sample_batch_size
         else:
           dataset = self.createCorpus(self.sampler.corpus_directory)
         sampler = torch.utils.data.SequentialSampler(dataset)
@@ -473,7 +473,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         self.max_position_embeddings
       )
       inputs = {
-        k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0).unsqueeze(0).repeat_interleave(wload_size, dim = 0) 
+        k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(wload_size, dim = 0) 
         for k, v in inputs.items()
       }
     else:
@@ -486,7 +486,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         for batch in pool.imap_unordered(
                           functools.partial(
                             dataload_worker, feed  = feed,
-                            func  = self.func, batch = self.sample_batch_size
+                            func  = self.func# , batch = self.sample_batch_size
                           ),range(wload_size)
                          ):
           if batch:
