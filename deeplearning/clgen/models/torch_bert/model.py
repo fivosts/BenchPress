@@ -27,6 +27,10 @@ from deeplearning.clgen.models.torch_bert import activations
 from deeplearning.clgen.models.torch_bert import config
 from deeplearning.clgen.models.torch_bert import modeling_utils
 from deeplearning.clgen.models.torch_bert import compiler
+    
+import tensorrt as trt
+import pycuda.autoinit
+import pycuda.driver as cuda
 
 def mish(x):
   return x * torch.tanh(torch.nn.functional.softplus(x))
@@ -859,6 +863,167 @@ class BertForPreTraining(BertPreTrainedModel):
         'hidden_states'           : hidden_states,
         'attentions'              : attentions,
         'batch_compilation_rate'  : torch.full((1,), -1, dtype = torch.float).to(device),
+      }
+
+
+class BertForPreTrainingTRT(BertForPreTraining):
+  def __init__(self, config, tokenizer = None, use_categorical = False, temperature = None):
+    super().__init__(config, tokenizer=tokenizer, use_categorical=use_categorical, temperature=temperature)
+    self.forward = self._forward_pytorch
+    self.get_output = self._get_output_pytorch
+    self.TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
+
+  def init_engine(self, cache, device_id, batch_size, sequence_length, vocab_size, max_position_embeddings):
+    self.engine_path = cache.path / f'active_bert.{device_id}.engine'
+    self.model_onnx_path = cache.path / f'active_bert.{device_id}.onnx'
+    if not self.engine_path.exists():
+      self._create_engine(batch_size, sequence_length, vocab_size, max_position_embeddings)
+
+    self.runtime = trt.Runtime(self.TRT_LOGGER)
+    with open(self.engine_path, 'rb') as f:
+      self.engine = self.runtime.deserialize_cuda_engine(f.read())
+
+    self.stream = cuda.Stream()
+    self.inputs = []
+    self.outputs = []
+    self.bindings = []
+    for binding in self.engine:
+      shape = self.engine.get_binding_shape(binding)
+      size = trt.volume(shape)# * batch_size
+      dtype = trt.nptype(self.engine.get_binding_dtype(binding))
+      host_mem = cuda.pagelocked_empty(size, dtype).reshape(shape)
+      device_mem = cuda.mem_alloc(host_mem.nbytes)
+      # Append the device buffer to device bindings.
+      self.bindings.append(int(device_mem))
+      # Append to the appropriate list.
+      if self.engine.binding_is_input(binding):
+        self.inputs.append((host_mem, device_mem))
+      else:
+        self.outputs.append((host_mem, device_mem))
+
+    # Override the pytorch module () operator
+    self.__call__ = self._forward_trt
+    self.forward = self._forward_trt
+    self.get_output = self._get_output_trt
+
+
+  def _create_engine(self, batch_size, sequence_length, vocab_size, max_position_embeddings):
+    with torch.no_grad():
+      dims = (batch_size, sequence_length)
+      input_ids = torch.autograd.Variable(torch.randint(vocab_size, dims)).cuda()
+      attention_mask = torch.autograd.Variable(torch.ones(dims)).cuda()
+      position_ids = torch.autograd.Variable(torch.randint(max_position_embeddings, dims)).cuda()
+      args = (input_ids, attention_mask, position_ids)
+
+      inputs = ['input_ids', 'attention_mask', 'position_ids']
+      outputs = ['prediction_scores']
+      dynamic_axes = {
+          'input_ids': {0: 'batch'}, 
+          'attention_mask': {0: 'batch'}, 
+          'position_ids': {0: 'batch'},
+          'prediction_scores':{0: 'batch'}
+          }
+      #out = torch.onnx.export(self.sample.model, args=args, f=model_onnx_path, input_names=inputs, output_names=outputs, dynamic_axes=dynamic_axes)
+      out = torch.onnx.export(self, args=args, f=self.model_onnx_path, input_names=inputs, output_names=outputs)
+
+    EXPLICIT_BATCH = 1 << (int)(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
+    with trt.Builder(self.TRT_LOGGER) as builder, builder.create_network(EXPLICIT_BATCH) as network, trt.OnnxParser(network, self.TRT_LOGGER) as parser:
+      with open(self.model_onnx_path, 'rb') as model_onnx:
+        if not parser.parse(model_onnx.read()):
+          for error in range(parser.num_errors):
+            print(parser.get_error(error))
+
+    with trt.Builder(self.TRT_LOGGER) as builder, builder.create_builder_config() as config:
+      config.max_workspace_size = 1 << 29 # This determines the amount of memory available to the builder when building an optimized engine and should generally be set as high as possible.
+      with builder.build_engine(network, config) as engine:
+        with open(self.engine_path, 'wb') as f:
+          f.write(engine.serialize())
+
+
+  def _get_output_pytorch(self,
+                 input_ids,
+                 attention_mask,
+                 position_ids,
+                 token_type_ids       = None,
+                 head_mask            = None,
+                 inputs_embeds        = None,
+                 output_attentions    = None,
+                 output_hidden_states = None,
+                 ) -> typing.Tuple[torch.FloatTensor, torch.FloatTensor]:
+    outputs = self.bert(
+      input_ids            = input_ids,
+      attention_mask       = attention_mask,
+      position_ids         = position_ids,
+      token_type_ids       = token_type_ids,
+      head_mask            = head_mask,
+      inputs_embeds        = inputs_embeds,
+      output_attentions    = output_attentions,
+      output_hidden_states = output_hidden_states,
+    )
+    sequence_output, pooled_output = outputs[:2]
+    prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
+    return prediction_scores, seq_relationship_score, outputs[0], outputs[1]
+
+  def _forward_pytorch(
+    self,
+    input_ids,
+    attention_mask,
+    position_ids
+  ):
+    prediction_scores, _, _, _ = self._get_output_pytorch(input_ids, attention_mask, position_ids)
+    return prediction_scores
+
+  def _get_output_trt(self,
+                 input_ids,
+                 attention_mask,
+                 position_ids
+                 ) -> typing.Tuple[torch.FloatTensor, torch.FloatTensor]:
+    np.copyto(self.inputs[0][0], input_ids.cpu())
+    np.copyto(self.inputs[1][0], attention_mask.cpu())
+    np.copyto(self.inputs[2][0], position_ids.cpu())
+
+    for inp in self.inputs:
+      cuda.memcpy_htod_async(inp[1], inp[0], self.stream) 
+    self.context.execute_async_v2(bindings=self.bindings, stream_handle=self.stream.handle)
+    cuda.memcpy_dtoh_async(self.outputs[0][0], self.outputs[0][1], self.stream) 
+    self.stream.synchronize()
+    return torch.tensor(self.outputs[0][0]).cpu(), None, None, None
+
+  def _forward_trt(
+    self,
+    input_ids        = None,
+    attention_mask   = None,
+    token_type_ids   = None,
+    position_ids     = None,
+    head_mask        = None,
+    inputs_embeds    = None,
+    masked_lm_labels = None,
+    next_sentence_labels = None,
+    output_attentions    = None,
+    output_hidden_states = None,
+    is_validation        = False,
+    is_live              = False,
+    step                 = -1,
+    **kwargs
+  ):
+    if is_validation or not self.compile_sampler or not self.config.is_sampling:
+      raise NotImplementedError
+    with self.engine.create_execution_context() as self.context:
+
+      prediction_scores, _, _, _ = self._get_output_trt(input_ids, attention_mask, position_ids)
+      device = input_ids.get_device()
+      samples, sample_indices, scores_history = self.compile_sampler.generateSampleBatch(
+        self,
+        input_ids.get_device(),
+        input_ids.cpu(),
+        prediction_scores.cpu(),
+        position_ids,
+        is_live,
+      )
+      return {
+        'prediction_scores' : scores_history, # This is mainly used for live sampling. Else, watch out!
+        'generated_samples' : samples,
+        'sample_indices'    : sample_indices,
       }
 
 class BertLMHeadModel(BertPreTrainedModel):
