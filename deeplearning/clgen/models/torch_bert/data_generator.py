@@ -432,10 +432,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     """
     if not self.feed_queue:
       try:
-        cf = next(self.loader)
+        cf = next(self.loader).squeeze(0)
       except StopIteration:
         self.loader = iter(self.dataloader)
-        cf = next(self.loader)
+        cf = next(self.loader).squeeze(0)
+      cf = [int(x) for x in cf]
       self.feed_queue.append(
         ActiveSampleFeed(
           input_feed       = cf,
