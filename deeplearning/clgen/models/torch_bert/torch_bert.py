@@ -78,6 +78,12 @@ flags.DEFINE_integer(
   "Set validation steps at the end of epoch for validation loss calculation."
 )
 
+flags.DEFINE_boolean(
+  "is_trt",
+  False,
+  "Use TensorRT for the sampling model."
+)
+
 def model_step_worker(queue  : multiprocessing.Queue,
                       model  : typing.TypeVar('torch.nn.Module'),
                       device : str,
@@ -263,27 +269,29 @@ class torchBert(backends.BackendBase):
           "was only trained up to sequence length %d" %
           (sampler.sequence_length, self.bertAttrs['max_position_embeddings']))
 
-    m = []
-    d = []
-    if self.pytorch.num_gpus > 1:
-      for dev in self.pytorch.devices:
-        d.append(dev)
-        m.append(
-          model.BertForPreTraining(
-            self.bert_config,
-            tokenizer = self.tokenizer,
-            use_categorical = FLAGS.categorical_sampling,
-            temperature = self.temperature
-          ).to(dev)
-        )
+    if FLAGS.is_trt:
+      mdl = model.BertForPreTrainingTRT
     else:
-      m.append(model.BertForPreTraining(
+      mdl = model.BertForPreTraining
+
+    m = []
+    if self.pytorch.num_gpus > 1:
+      d = list(self.pytorch.devices)
+    else:
+      d = [self.pytorch.device]
+
+    for dev in d:
+      m.append(mdl(
           self.bert_config,
           tokenizer = self.tokenizer,
           use_categorical = FLAGS.categorical_sampling,
           temperature = self.temperature
-        ).to(self.pytorch.device))
-      d.append(self.pytorch.device)
+        ).to(dev)
+      )
+
+    if FLAGS.is_trt:
+      for mdl_instance, dev in zip(m, d):
+        mdl_instance.init_engine(self.cache, dev.index, sampler.batch_size, sampler.sequence_length, self.tokenizer.vocab_size, self.config.architecture.max_position_embeddings)
 
     dummy_num_machines = -1
     if dummy_num_machines != -1:
@@ -813,7 +821,7 @@ class torchBert(backends.BackendBase):
               x_name = "Probs / sample step",
             )
         return (
-          self.step_inputs['original_input'].cpu().view(-1, self.sampler.sequence_length).numpy(),
+          self.step_inputs['original_input'].cpu().view(-1, self.sampler.batch_size).numpy(),
           self.step_inputs['input_ids'].cpu().view(-1, self.sampler.sequence_length).numpy(),
           step_out['generated_samples'],
           step_out['sample_indices']

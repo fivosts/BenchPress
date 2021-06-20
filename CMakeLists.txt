@@ -139,6 +139,20 @@ function(install_external_deps)
     set(PROTOC          ${LOCAL}/bin/protoc PARENT_SCOPE)
   endif ()
 
+  ## onnx model
+  #ExternalProject_Add(onnx
+  #  GIT_REPOSITORY    https://github.com/onnx/onnx.git
+  #  GIT_TAG           685898bc6f3fd6eb16ba129ea990f96330537e38
+  #  GIT_PROGRESS      true
+  #  BUILD_IN_SOURCE   true
+  #  PREFIX            ${THIRD_PARTY}
+  #  TMP_DIR           ${THIRD_PARTY}/tmp
+  #  STAMP_DIR         ${THIRD_PARTY}/stamp
+  #  SOURCE_DIR        ${THIRD_PARTY}/onnx/onnx
+  #  INSTALL_DIR       ${LOCAL}
+  #)
+  #set(ONNX          ${LOCAL}/onnx PARENT_SCOPE)
+
   # Clang and LLVM 9 pre-compiled binaries and libraries.
   if ("${LLVM_VERSION}" STREQUAL "6")
     ExternalProject_Add(llvm
