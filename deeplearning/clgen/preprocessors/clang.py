@@ -53,9 +53,9 @@ CLANG_FORMAT_CONFIG = {
   "AlwaysBreakAfterDefinitionReturnType": "None",
 }
 clang.cindex.Config.set_library_path(environment.LLVM_LIB)
-if environment.LLVM_VERSION == 9:
+if environment.LLVM_VERSION != 6:
   # LLVM 9 needs libclang explicitly defined.
-  clang.cindex.Config.set_library_file(environment.LLVM_LIB + "/libclang.so.9")
+  clang.cindex.Config.set_library_file(environment.LLVM_LIB + "/libclang.so.{}".format(environment.LLVM_VERSION))
 
 CLANG = environment.CLANG
 CLANG_FORMAT = environment.CLANG_FORMAT

@@ -42,10 +42,24 @@ function(find_binaries)
       )
     endif()
 
-    # Use 6 as default LLVM version. 9 is available as well.
+    # Use 6 as default LLVM version. 9 and 12 are available as well.
     if ("${LLVM_VERSION}" STREQUAL "")
       set(LLVM_VERSION "6" CACHE FILEPATH
-        "Select between LLVM version 6 and 9. [Default: 6]."
+        "Select between LLVM version 6 and 9. 6 is built from source. 9 is pre-compiled binary. [Default: 6]."
+        FORCE
+      )
+      set(CLANG_VERSION "6.0.1" CACHE FILEPATH
+        "Sets clang header path"
+        FORCE
+      )
+    elseif ("${LLVM_VERSION}" STREQUAL "6")
+      set(CLANG_VERSION "6.0.1" CACHE FILEPATH
+        "Sets clang header path"
+        FORCE
+      )
+    elseif("${LLVM_VERSION}" STREQUAL "9")
+      set(CLANG_VERSION "9.0.0" CACHE FILEPATH
+        "Sets clang header path"
         FORCE
       )
     elseif (NOT "${LLVM_VERSION}" STREQUAL "6" AND NOT "${LLVM_VERSION}" STREQUAL "9")
@@ -156,16 +170,19 @@ function(install_external_deps)
   # Clang and LLVM 9 pre-compiled binaries and libraries.
   if ("${LLVM_VERSION}" STREQUAL "6")
     ExternalProject_Add(llvm
-      URL               https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+      GIT_REPOSITORY    https://github.com/llvm/llvm-project.git
+      GIT_TAG           d359f2096850c68b708bc25a7baca4282945949f
+      GIT_PROGRESS      true
       PREFIX            ${THIRD_PARTY}
       TMP_DIR           ${THIRD_PARTY}/tmp
       STAMP_DIR         ${THIRD_PARTY}/stamp
       DOWNLOAD_DIR      ${THIRD_PARTY}/llvm
       SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm
       INSTALL_DIR       ${LOCAL}
-      CONFIGURE_COMMAND ""
-      BUILD_COMMAND     ""
-      INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/llvm/llvm/ ${LOCAL}
+      LIST_SEPARATOR    |
+      CONFIGURE_COMMAND cd ${THIRD_PARTY}/llvm/llvm && ${CMAKE_COMMAND} -S llvm -B build -DLLVM_ENABLE_PROJECTS=clang|libcxx|libcxxabi -DCMAKE_INSTALL_PREFIX=${LOCAL}/llvm -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
+      BUILD_COMMAND     cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE)
+      INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE) install
     )
   elseif("${LLVM_VERSION}" STREQUAL "9")
     ExternalProject_Add(llvm
@@ -182,7 +199,6 @@ function(install_external_deps)
     )
   endif()
   set(LLVM            ${LOCAL}/llvm PARENT_SCOPE)
-
   # #include <CL/*>
   # I have forked my own version of OpenCL Headers which I install here.
   # My version excludes the C-API functions from being included,
@@ -249,7 +265,7 @@ function(setup_python)
     )
   endif ()
   if ("${LLVM_VERSION}" STREQUAL "9")
-    # Override pip clang 6 and install 9
+    # Override pip clang 12 and install 9
     add_custom_target(override_pyclang ALL
       COMMAND ${PYTHON} -m pip uninstall --yes clang
       COMMAND ${PYTHON} -m pip install clang==9.0
@@ -291,7 +307,7 @@ function(clgen)
     "export DATA_CL_INCLUDE="                ${DATA_CL_INCLUDE} "\n"
     "export AUX_INCLUDE="                    ${DATA_CL_INCLUDE} "/aux_include" "\n"
     "export CLANG_FORMAT="                   ${LLVM}/bin/clang-format "\n"
-    "export CLANG_HEADERS="                  ${LLVM}/lib/clang/${LLVM_VERSION}.0.0/include "\n"
+    "export CLANG_HEADERS="                  ${LLVM}/lib/clang/${CLANG_VERSION}/include "\n"
     "export CLANG_REWRITER="                 ${CLANG_REWRITER} "\n"
     "export CLGEN_FEATURES="                 ${CLGEN_FEATURES} "\n"
     "eval PYTHONPATH="                       ${CMAKE_CURRENT_SOURCE_DIR} " $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"

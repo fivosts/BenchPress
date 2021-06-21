@@ -169,6 +169,7 @@ else()
     "-pthread"
     "-ldl"
     "-lz"
+    "-ltinfo"
     "-lclangARCMigrate"
     "-lclangFrontend"
     "-lclangFrontendTool"
@@ -322,6 +323,8 @@ else()
     "-lLLVMCore"
     "-lLLVMBinaryFormat"
     "-lLLVMSupport"
+    "-lz"
+    "-ltinfo"
     "-lLLVMDemangle"
   )
 endif()
