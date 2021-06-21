@@ -13,6 +13,7 @@ try:
   LIBCXX_HEADERS      = check_exists(os.environ['LIBCXX_HEADERS'])
   OPENCL_HEADERS      = check_exists(os.environ['OPENCL_HEADERS'])
   CLANG               = check_exists(os.environ['CLANG'])
+  OPT                 = check_exists(os.environ['OPT'])
   CLANG_FORMAT        = check_exists(os.environ['CLANG_FORMAT'])
   CLANG_HEADERS       = check_exists(os.environ['CLANG_HEADERS'])
   CLANG_REWRITER      = check_exists(os.environ['CLANG_REWRITER'])
