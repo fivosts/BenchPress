@@ -1,3 +1,25 @@
+add_library(clgen_instcount MODULE InstCount.cpp)
+
+add_dependencies(clgen_instcount llvm)
+
+set_target_properties(clgen_instcount PROPERTIES
+    path ${CMAKE_CURRENT_BINARY_DIR}/clgen_instcount
+)
+
+target_include_directories(clgen_instcount PUBLIC ${LLVM}/include/)
+target_link_directories(clgen_instcount PUBLIC ${LLVM}/lib/)
+
+target_compile_options (clgen_instcount PRIVATE
+    -I/usr/lib/llvm-9/include
+    -std=c++11
+    -fno-exceptions
+    -D_GNU_SOURCE
+    -D__STDC_CONSTANT_MACROS
+    -D__STDC_FORMAT_MACROS
+    -D__STDC_LIMIT_MACROS
+    -std=c++11 -O3 -fno-rtti
+)
+
 add_executable(clgen_features clgen_features.cpp)
 
 add_dependencies(clgen_features llvm)
