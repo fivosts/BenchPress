@@ -164,7 +164,7 @@ class SamplesDatabaseObserver(SampleObserver):
     feature_monitor = monitors.CategoricalDistribMonitor(db_path, "samples_feature_vector_distribution")
     for sample in self.db.correct_samples:
       if sample.feature_vector:
-        feature_monitor.register(extractor.DBStrToDictFeatures(sample.feature_vector))
+        feature_monitor.register({l.split(':')[0:-1]: float(l.split(':')[-1])  for l in sample.feature_vector.split('\n')})
     feature_monitor.plot()
 
     with self.db.Session() as session:

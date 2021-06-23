@@ -107,7 +107,7 @@ class EncodedContentFile(Base):
 
   @property
   def features(self) -> typing.Dict[str, float]:
-    return extractor.StrToDictFeatures(self.feature_vector)
+    return extractor.RawToDictFeats(self.feature_vector)
 
   @classmethod
   def FromPreprocessed(
@@ -134,7 +134,7 @@ class EncodedContentFile(Base):
     # token_values = data.sorted()
     ####
     encoding_time_ms = int((time.time() - start_time) * 1000)
-    feature_vector, _ = extractor.StrKernelFeatures(preprocessed_cf.text)
+    feature_vector, _ = extractor.ExtractRawFeatures(preprocessed_cf.text)
     return EncodedContentFile(
       id = preprocessed_cf.id,
       # Encode the end-of-file marker separately to ensure that it resolves to
@@ -340,7 +340,7 @@ class EncodedContentFiles(sqlutil.Database):
               self.length_monitor.register(encoded_cf.tokencount)
               self.token_monitor.register([tokenizer.decoder[int(x)] for x in encoded_cf.data.split('.')])
 
-              dict_features = extractor.StrToDictFeatures(encoded_cf.feature_vector)
+              dict_features = extractor.RawToDictFeats(encoded_cf.feature_vector)
               if dict_features:
                 self.feature_monitor.register(dict_features)
             wall_time_start = wall_time_end
