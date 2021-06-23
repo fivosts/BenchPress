@@ -12,7 +12,6 @@
 
 // #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Passes.h"
-// #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/InitializePasses.h"
