@@ -121,9 +121,7 @@ def Compile(text: str) -> str:
   Returns:
     The input code, unmodified.
   """
-  clang.Compile(text, ".cpp", CLANG_ARGS)
-  return text
-
+  return clang.Compile(text, ".cpp", CLANG_ARGS)
 
 @public.clgen_preprocessor
 def ClangFormat(text: str) -> str:

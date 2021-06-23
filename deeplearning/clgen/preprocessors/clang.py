@@ -183,7 +183,7 @@ def Compile(src: str,
             cflags: typing.List[str],
             return_diagnostics: bool = False,
             ) -> str:
-  """Compile input code into textual LLVM byte code using clang.Cindex python module.
+  """Check input source code for if it compiles.
 
   Args:
     src: The source code to compile.
@@ -192,7 +192,7 @@ def Compile(src: str,
     cflags: A list of flags to be passed to clang.
 
   Returns:
-    The textual LLVM byte code.
+    The text, unmodified.
 
   Raises:
     ValueError: In case of an error.
