@@ -463,7 +463,11 @@ class RewriterFrontendAction : public clang::ASTFrontendAction {
  public:
   virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
       clang::CompilerInstance& ci, llvm::StringRef file) {
+#if LLVM_VERSION == 10
+    return std::make_unique<RewriterASTConsumer>(&ci);
+#else
     return llvm::make_unique<RewriterASTConsumer>(&ci);
+#endif
   }
 };
 
