@@ -267,7 +267,7 @@ def Compile(src: str,
     except clang.cindex.TranslationUnitLoadError as e:
       raise ValueError(e)
 
-    diagnostics = [str(d) for d in unit.diagnostics if d.severity > 2]
+    diagnostics = [str(d) for d in unit.diagnostics if d.severity > 2 and not "implicit declaration of function" not in str(d)]
 
     if len(diagnostics) > 0:
       if return_diagnostics:
