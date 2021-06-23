@@ -58,7 +58,7 @@
 // #define DEBUG
 
 // Compatibility matching of LLVM Versions.
-#if LLVM_VERSION == 9
+#if LLVM_VERSION == 10
   #define GET_BEGIN_LOC getBeginLoc
 #else
   #define GET_BEGIN_LOC getLocStart
