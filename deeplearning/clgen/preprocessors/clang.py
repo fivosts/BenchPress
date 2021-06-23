@@ -178,11 +178,11 @@ def ProcessCompileLlvmBytecode(
     raise ValueError("/*\n{}\n*/\n{}".format(stderr, src))
   return stdout
 
-def CompileLlvmBytecode(src: str,
-                        suffix: str,
-                        cflags: typing.List[str],
-                        return_diagnostics: bool = False,
-                        ) -> str:
+def Compile(src: str,
+            suffix: str,
+            cflags: typing.List[str],
+            return_diagnostics: bool = False,
+            ) -> str:
   """Compile input code into textual LLVM byte code using clang.Cindex python module.
 
   Args:

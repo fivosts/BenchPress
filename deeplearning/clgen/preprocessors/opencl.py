@@ -195,7 +195,7 @@ def Compile(text: str, return_diagnostics = False) -> str:
   """
   # We must override the flag -Wno-implicit-function-declaration from
   # GetClangArgs() to ensure that undefined functions are treated as errors.
-  return clang.CompileLlvmBytecode(
+  return clang.Compile(
     text,
     ".cl",
     GetClangArgs(use_shim=False),# + ["-Werror=implicit-function-declaration"],

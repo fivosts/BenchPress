@@ -122,7 +122,7 @@ def Compile(text: str) -> str:
   Returns:
     The input code, unmodified.
   """
-  clang.CompileLlvmBytecode(text, ".c", CLANG_ARGS)
+  clang.Compile(text, ".c", CLANG_ARGS)
   return text
 
 @public.clgen_preprocessor

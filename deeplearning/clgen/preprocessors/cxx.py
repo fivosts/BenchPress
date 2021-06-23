@@ -121,7 +121,7 @@ def Compile(text: str) -> str:
   Returns:
     The input code, unmodified.
   """
-  clang.CompileLlvmBytecode(text, ".cpp", CLANG_ARGS)
+  clang.Compile(text, ".cpp", CLANG_ARGS)
   return text
 
 
