@@ -29,6 +29,8 @@ add_dependencies(clgen_features libclc)
 get_target_property(DATA_CL_INCLUDE data_cl_include path)
 get_target_property(LIBCLC libclc path)
 
+add_compile_definitions(LLVM_VERSION=${LLVM_VERSION})
+
 add_compile_definitions(OPENCL_C_H="${DATA_CL_INCLUDE}/opencl-c.h")
 add_compile_definitions(OPENCL_BASE_H="${DATA_CL_INCLUDE}/opencl-c-base.h")
 add_compile_definitions(CL_H="${OPENCL_HEADERS}/CL/cl.h")
@@ -112,6 +114,7 @@ if ("${LLVM_VERSION}" STREQUAL "10")
     "-lLLVMSystemZInfo"
     "-lLLVMSparcDisassembler"
     "-lLLVMSparcCodeGen"
+    "-lLLVMFrontendOpenMP"
     "-lLLVMSparcAsmParser"
     "-lLLVMSparcDesc"
     "-lLLVMSparcInfo"

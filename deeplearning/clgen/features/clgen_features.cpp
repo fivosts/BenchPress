@@ -730,7 +730,11 @@ void extract_features(std::string path, std::ostream &out,
   // clang::CompilerInvocation *Invocation = new clang::CompilerInvocation;
   std::shared_ptr<clang::CompilerInvocation> Invocation(new clang::CompilerInvocation);
   clang::CompilerInvocation::CreateFromArgs(*Invocation,
+#if LLVM_VERSION == 10
+                                            argv,
+#else
                                             &(*argv.begin()), &(*argv.end()),
+#endif
                                             compiler.getDiagnostics());
 
   compiler.setInvocation(Invocation);
@@ -753,14 +757,23 @@ void extract_features(std::string path, std::ostream &out,
   llvm::Triple *triple = new llvm::Triple(llvm::sys::getDefaultTargetTriple());
   clang::PreprocessorOptions pproc;
 
+#if LLVM_VERSION == 10
+  Invocation->setLangDefaults(langOpts, clang::Language::OpenCL, *triple, pproc);
+#else 
   Invocation->setLangDefaults(langOpts, clang::InputKind::OpenCL, *triple, pproc);
+#endif
 
   compiler.createPreprocessor(clang::TU_Complete);
   compiler.getPreprocessorOpts().UsePredefines = false;
 
   compiler.createASTContext();
 
+#if LLVM_VERSION == 10
+  const clang::FileEntry *pFile = compiler.getFileManager().getFile(path).get();
+#else
   const clang::FileEntry *pFile = compiler.getFileManager().getFile(path);
+#endif
+
   compiler.getSourceManager().setMainFileID(
       compiler.getSourceManager().createFileID(pFile, clang::SourceLocation(),
                                                clang::SrcMgr::C_User));
