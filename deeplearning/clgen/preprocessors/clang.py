@@ -60,7 +60,7 @@ if environment.LLVM_VERSION != 6:
 CLANG = environment.CLANG
 CLANG_FORMAT = environment.CLANG_FORMAT
 OPT   = environment.OPT
-CLGEN_INSTCOUNT = environment.CLGEN_INSTCOUNT
+INSTCOUNT = environment.INSTCOUNT
 
 class PassRegistry(typing.NamedTuple):
   """
@@ -70,7 +70,7 @@ class PassRegistry(typing.NamedTuple):
   Autophase: str,
 
 opt_reg = PassRegistry(
-  "-load {} -InstCount".format(CLGEN_INSTCOUNT),
+  "-load {} -InstCount".format(INSTCOUNT),
   ""
 )
 
