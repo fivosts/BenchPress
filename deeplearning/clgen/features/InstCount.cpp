@@ -22,7 +22,7 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "clgen_instcount"
+#define DEBUG_TYPE "InstCount"
 #define FEATURES_SIZE 70
 
 namespace {
@@ -44,15 +44,9 @@ namespace {
 }
 
 char InstCount::ID = 0;
-// INITIALIZE_PASS("InstCount", "clgen_instcount",
-//                 "Counts the various types of Instructions", false, true)
-
-static RegisterPass<InstCount> X("clgen_instcount", "Counts the various types of Instructions",
+static RegisterPass<InstCount> X("InstCount", "Counts the various types of Instructions",
                              false /* Only looks at CFG */,
                              true /* Analysis Pass */);
-
-
-// FunctionPass *llvm::createInstCountPass() { return new InstCount(); }
 
 bool InstCount::runOnModule(Module &M) {
   for (auto &F : M) {
