@@ -135,7 +135,7 @@ def Preprocess(
   else:
     return stdout
 
-def ProcessCompileLlvmBytecode(
+def CompileLlvmBytecode(
   src: str, suffix: str, cflags: typing.List[str], timeout_seconds: int = 60
 ) -> str:
   """Compile input code into textual LLVM byte code using clang system binary.

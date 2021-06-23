@@ -47,17 +47,6 @@ def GetClangArgs(use_shim: bool) -> typing.List[str]:
   Returns:
     A list of command line arguments to pass to Popen().
   """
-  # args = [
-  #   "-I" + str(LIBCLC),
-  #   "-include",
-  #   str(OPENCL_H),
-  #   "-target",
-  #   "nvptx64-nvidia-nvcl",
-  #   f"-ferror-limit=0",
-  #   "-xcl",
-  #   "-Wno-everything",
-  # ]
-
   args = [
     "-xcl",
     "--target=nvptx64-nvidia-nvcl",
@@ -72,14 +61,6 @@ def GetClangArgs(use_shim: bool) -> typing.List[str]:
     "-I{}".format(str(AUX_INCLUDE)),
     "-Wno-everything",
   ]
-  # header_files = glob.glob(
-  #   str(
-  #     pathlib.Path(FLAGS.workspace_dir).resolve() / "header_files" / "*.h"
-  #   )
-  # )
-  # if header_files:
-  #   for f in header_files:
-  #     args += "-include{}".format(f)
   if use_shim:
     args += ["-include", str(SHIMFILE)]
   return args
@@ -180,6 +161,23 @@ def ClangPreprocessWithShim(text: str) -> str:
   """
   return _ClangPreprocess(text, True)
 
+def CompileLlvmBytecode(text: str) -> str:
+  """A preprocessor which attempts to compile the given code.
+
+  Args:
+    text: Code to compile.
+
+  Returns:
+    LLVM IR of input source code.
+  """
+  # We must override the flag -Wno-implicit-function-declaration from
+  # GetClangArgs() to ensure that undefined functions are treated as errors.
+  return clang.CompileLlvmBytecode(
+    text,
+    ".cl",
+    GetClangArgs(use_shim=False),# + ["-Werror=implicit-function-declaration"],
+    return_diagnostics = return_diagnostics,
+  )
 
 @public.clgen_preprocessor
 def Compile(text: str, return_diagnostics = False) -> str:

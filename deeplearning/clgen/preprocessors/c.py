@@ -112,6 +112,17 @@ def ClangPreprocess(text: str) -> str:
   except Exception as e:
     raise e
 
+def CompileLlvmBytecode(text: str) -> str:
+  """A preprocessor which attempts to compile the given code.
+
+  Args:
+    text: Code to compile.
+
+  Returns:
+    LLVM IR of input source code.
+  """
+  return clang.CompileLlvmBytecode(text, ".c", CLANG_ARGS)
+
 @public.clgen_preprocessor
 def Compile(text: str) -> str:
   """A preprocessor which attempts to compile the given code.
