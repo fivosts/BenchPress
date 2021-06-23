@@ -66,8 +66,8 @@ class PassRegistry(typing.NamedTuple):
   """
   Named registry of LLVM passes available.
   """
-  InstCount: str,
-  Autophase: str,
+  InstCount: str
+  Autophase: str
 
 opt_reg = PassRegistry(
   "-load {} -InstCount".format(INSTCOUNT),

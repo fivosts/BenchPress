@@ -2792,21 +2792,6 @@ typedef struct NestedBool2 {
 } NestedBool2;
 
 typedef struct {
-  ushort2 srcCoord;
-  short2 ref_offset;
-  uchar partition_mask;
-  uchar sad_adjustment;
-  uchar search_window_config;
-  ulong cc0;
-  ulong cc1;
-  ulong cc2;
-  ulong cc3;
-  uint2 packed_cost_table;
-  uchar cost_precision;
-  ulong packed_shape_cost;
-} intel_sub_group_avc_ime_payload_t;
-
-typedef struct {
   void **factory;
   void *arg;
 } nanos_device_t;
@@ -3959,30 +3944,6 @@ typedef struct {
   float ls;
 } RT_Emissive;
 
-typedef struct {
-  ushort2 srcCoord;
-  unsigned int skip_block_partition_type;
-  unsigned int skip_motion_vector_mask;
-  char bidirectional_weight;
-  uchar skip_sad_adjustment;
-  long mv;
-
-  uchar luma_intra_partition_mask;
-  uchar intra_neighbour_availabilty;
-  unsigned int l_0_3;
-  unsigned int l_4_7;
-  unsigned int l_8_11;
-  unsigned int l_12_15;
-  unsigned int u_0_3;
-  unsigned int u_4_7;
-  unsigned int u_8_11;
-  unsigned int u_12_15;
-  unsigned int ur_16_19;
-  unsigned int ur_20_23;
-  uchar upper_left_corner_luma_pixel;
-  uchar intra_sad_adjustment;
-  unsigned int intra_shape_cost;
-} intel_sub_group_avc_sic_payload_t;
 
 typedef struct {
   float x;
@@ -15822,25 +15783,6 @@ typedef struct def_ClothEdge {
 typedef struct {
   Spectrum n, k;
 } FresnelConstParam;
-
-typedef struct {
-  ushort2 srcCoord;
-  long mv;
-  uchar major_shape;
-  uchar minor_shapes;
-  uchar directions;
-  uchar pixel_mode;
-  uchar sad_adjustment;
-
-  ulong cc0;
-  ulong cc1;
-  ulong cc2;
-  ulong cc3;
-  uint2 packed_cost_table;
-  uchar cost_precision;
-  ulong packed_shape_cost;
-
-} intel_sub_group_avc_ref_payload_t;
 
 typedef struct pw {
   unsigned int i[64];
