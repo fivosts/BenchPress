@@ -11,13 +11,13 @@ target_link_directories(InstCount PUBLIC ${LLVM}/lib/)
 
 target_compile_options (InstCount PRIVATE
     -I/usr/lib/llvm-9/include
-    -std=c++11
+    -std=c++17
     -fno-exceptions
     -D_GNU_SOURCE
     -D__STDC_CONSTANT_MACROS
     -D__STDC_FORMAT_MACROS
     -D__STDC_LIMIT_MACROS
-    -std=c++11 -O3 -fno-rtti
+    -std=c++17 -O3 -fno-rtti
 )
 
 add_executable(clgen_features clgen_features.cpp)
@@ -54,13 +54,13 @@ add_custom_target(cl_header_file ALL
 
 target_compile_options (clgen_features PRIVATE
     -I/usr/lib/llvm-9/include
-    -std=c++11
+    -std=c++17
     -fno-exceptions
     -D_GNU_SOURCE
     -D__STDC_CONSTANT_MACROS
     -D__STDC_FORMAT_MACROS
     -D__STDC_LIMIT_MACROS
-    -std=c++11 -O3 -fno-rtti
+    -std=c++17 -O3 -fno-rtti
 )
 
 if ("${LLVM_VERSION}" STREQUAL "10")

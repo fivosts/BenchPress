@@ -13,7 +13,7 @@ set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath,")
 target_include_directories(clang_rewriter PUBLIC ${LLVM}/include/)
 target_link_directories   (clang_rewriter PUBLIC ${LLVM}/lib/    )
 
-if ("${LLVM_VERSION}" STREQUAL "9")
+if ("${LLVM_VERSION}" STREQUAL "10")
   target_link_libraries(clang_rewriter
     "-pthread"
     "-ldl"
@@ -52,6 +52,7 @@ if ("${LLVM_VERSION}" STREQUAL "9")
     "-lLLVMDebugInfoDWARF"
     "-lLLVMCoverage"
     "-lLLVMTableGen"
+    "-lLLVMFrontendOpenMP"
     "-lLLVMDlltoolDriver"
     "-lLLVMOrcJIT"
     "-lLLVMXCoreDisassembler"
