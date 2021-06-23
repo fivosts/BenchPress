@@ -525,7 +525,7 @@ class torchBert(backends.BackendBase):
             if FLAGS.reward_compilation >= 0 and FLAGS.reward_compilation <= epoch * self.steps_per_epoch + step and not pre_train:
               correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'].cpu().numpy())) if step_out['compile_status'][en] == 1]
               for s in correct_samples:
-                feature_vector = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(s[1]))
+                feature_vector = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(s[1]))
                 correct_sample_obs.OnSample(model_pb2.Sample(
                     train_step             = self.current_step,
                     sample_feed            = self.tokenizer.tokensToString(s[0], ignore_token = self.tokenizer.padToken).replace("\\n", "\n"),
@@ -608,7 +608,7 @@ class torchBert(backends.BackendBase):
                 except ValueError:
                   compile_flag = 0
 
-                feature_vector = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(sample))
+                feature_vector = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(sample))
                 sample_proto = model_pb2.Sample(
                   train_step             = self.current_step,
                   sample_feed            = sampler.start_text,

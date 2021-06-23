@@ -336,7 +336,7 @@ class tfBert(backends.BackendBase):
                 except ValueError:
                   compile_flag = 0
 
-                feature_vector = extractor.DictKernelFeatures(self.tokenizer.ArrayToCode(sample))
+                feature_vector = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(sample))
                 sample_proto = model_pb2.Sample(
                   train_step             = (ep + 1) * self.steps_per_epoch,
                   sample_feed            = sampler.start_text,

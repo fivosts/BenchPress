@@ -445,7 +445,7 @@ class Model(object):
     for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
 
       src = self.tokenizer.ArrayToCode(sample, with_formatting = True)
-      features = extractor.DictKernelFeatures(src)
+      features = extractor.ExtractFeatures(src)
       try:
         stdout = opencl.Compile(src)
         compile_flag = True
@@ -521,7 +521,7 @@ class Model(object):
           if sampler.SampleIsComplete(samples_in_progress[i]):
             end_time       = datetime.datetime.utcnow()
             sample_kernel  = [x for x in samples_in_progress[i]]
-            feature_vector = extractor.DictKernelFeatures(''.join(samples_in_progress[i]))
+            feature_vector = extractor.ExtractFeatures(''.join(samples_in_progress[i]))
             done[i]        = 1
             try:
               stdout = opencl.Compile(''.join(samples_in_progress[i]))
