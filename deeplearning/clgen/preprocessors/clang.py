@@ -59,6 +59,20 @@ if environment.LLVM_VERSION != 6:
 
 CLANG = environment.CLANG
 CLANG_FORMAT = environment.CLANG_FORMAT
+OPT   = environment.OPT
+CLGEN_INSTCOUNT = environment.CLGEN_INSTCOUNT
+
+class PassRegistry(typing.NamedTuple):
+  """
+  Named registry of LLVM passes available.
+  """
+  InstCount: str,
+  Autophase: str,
+
+opt_reg = PassRegistry(
+  "-load {} -InstCount".format(CLGEN_INSTCOUNT),
+  ""
+)
 
 def StripPreprocessorLines(src: str) -> str:
   """Strip preprocessor remnants from clang frontend output.
@@ -164,6 +178,50 @@ def CompileLlvmBytecode(
       ["timeout", "-s9", str(timeout_seconds), str(CLANG), f.name]
       + builtin_cflags
       + cflags
+    )
+    process = subprocess.Popen(
+      cmd,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.PIPE,
+      universal_newlines=True,
+    )
+    stdout, stderr = process.communicate()
+  if process.returncode == 9:
+    raise ValueError(f"Clang timed out after {timeout_seconds}s")
+  elif process.returncode != 0:
+    raise ValueError("/*\n{}\n*/\n{}".format(stderr, src))
+  return stdout
+
+def CompileOptimizer(src: str,
+                     suffix: str,
+                     cflags: typing.List[str],
+                     optimization: str,
+                     timeout_seconds: int = 60,
+                     ) -> str:
+  """Compile source code to IR and apply optimization pass to source code.
+
+  Args:
+    src: The source code to compile.
+    suffix: The suffix to append to the source code temporary file. E.g. '.c'
+      for a C program.
+    cflags: A list of flags to be passed to clang.
+    timeout_seconds: The number of seconds to allow before killing clang.
+
+  Returns:
+    Dictionary with 70-dimensional InstCount feature vector.
+
+  Raises:
+    ValueError: In case of an error.
+    ValueError: If clang does not complete before timeout_seconds.
+  """
+  bc = clang.CompileLlvmBytecode(src, suffix, cflags, timeout_seconds)
+  with tempfile.NamedTemporaryFile(
+    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix='ll'
+  ) as f:
+    f.write(src)
+    f.flush()
+    cmd = (
+      ["timeout", "-s9", str(timeout_seconds), str(OPT), optimization, f.name]
     )
     process = subprocess.Popen(
       cmd,
@@ -479,6 +537,9 @@ def GreweFeatureExtraction(src: str,
                            suffx: str,
                            cflags: typing.List[str]
                            ) -> typing.Dict[str, float]:
+  """
+  !!! Under construction.
+  """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
   with tempfile.NamedTemporaryFile(
     "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix

@@ -179,6 +179,19 @@ def CompileLlvmBytecode(text: str) -> str:
     return_diagnostics = return_diagnostics,
   )
 
+def CompileOptimizer(src: str,
+                     optimization: str,
+                     timeout_seconds: int = 60,
+                     ) -> str:
+  """Compile source code to IR and apply optimization pass to source code.
+  Args:
+    src: The source code to compile.
+    optimization: optimization pass to apply.
+  Returns:
+    Dictionary with 70-dimensional InstCount feature vector.
+  """
+  return clang.CompileOptimizer(text, ".cl", CLANG_ARGS, optimization)
+
 @public.clgen_preprocessor
 def Compile(text: str, return_diagnostics = False) -> str:
   """Check that the OpenCL source compiles.
