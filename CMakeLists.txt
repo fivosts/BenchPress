@@ -42,28 +42,28 @@ function(find_binaries)
       )
     endif()
 
-    # Use 6 as default LLVM version. 9 and 12 are available as well.
+    # Use 6 as default LLVM version. 10 and 12 are available as well.
     if ("${LLVM_VERSION}" STREQUAL "")
-      set(LLVM_VERSION "6" CACHE FILEPATH
-        "Select between LLVM version 6 and 9. 6 is built from source. 9 is pre-compiled binary. [Default: 6]."
+      set(LLVM_VERSION "10" CACHE FILEPATH
+        "Select between LLVM version 6 and 10. Both are build from source. [Default: 10]."
         FORCE
       )
-      set(CLANG_VERSION "6.0.1" CACHE FILEPATH
-        "Sets clang header path"
-        FORCE
-      )
-    elseif ("${LLVM_VERSION}" STREQUAL "6")
-      set(CLANG_VERSION "6.0.1" CACHE FILEPATH
-        "Sets clang header path"
-        FORCE
-      )
-    elseif("${LLVM_VERSION}" STREQUAL "9")
-      set(CLANG_VERSION "9.0.0" CACHE FILEPATH
-        "Sets clang header path"
-        FORCE
-      )
-    elseif (NOT "${LLVM_VERSION}" STREQUAL "6" AND NOT "${LLVM_VERSION}" STREQUAL "9")
-      message(FATAL_ERROR "-- LLVM Versions available are only 6 and 9.")
+      # set(CLANG_VERSION "6.0.1" CACHE FILEPATH
+      #   "Sets clang header path"
+      #   FORCE
+      # )
+    # elseif ("${LLVM_VERSION}" STREQUAL "6")
+      # set(CLANG_VERSION "6.0.1" CACHE FILEPATH
+        # "Sets clang header path"
+        # FORCE
+      # )
+    # elseif("${LLVM_VERSION}" STREQUAL "9")
+      # set(CLANG_VERSION "9.0.0" CACHE FILEPATH
+        # "Sets clang header path"
+        # FORCE
+      # )
+    elseif (NOT "${LLVM_VERSION}" STREQUAL "6" AND NOT "${LLVM_VERSION}" STREQUAL "10")
+      message(FATAL_ERROR "-- LLVM Versions available are only 6 and 10.")
     endif()
 
     message("-- Using LLVM " ${LLVM_VERSION})
@@ -184,18 +184,21 @@ function(install_external_deps)
       BUILD_COMMAND     cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE)
       INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE) install
     )
-  elseif("${LLVM_VERSION}" STREQUAL "9")
+  elseif("${LLVM_VERSION}" STREQUAL "10")
     ExternalProject_Add(llvm
-      URL               https://releases.llvm.org/9.0.0/clang+llvm-9.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz
+      GIT_REPOSITORY    https://github.com/llvm/llvm-project.git
+      GIT_TAG           ef32c611aa214dea855364efd7ba451ec5ec3f74
+      GIT_PROGRESS      true
       PREFIX            ${THIRD_PARTY}
       TMP_DIR           ${THIRD_PARTY}/tmp
       STAMP_DIR         ${THIRD_PARTY}/stamp
       DOWNLOAD_DIR      ${THIRD_PARTY}/llvm
       SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm
       INSTALL_DIR       ${LOCAL}
-      CONFIGURE_COMMAND ""
-      BUILD_COMMAND     ""
-      INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/llvm/llvm/ ${LOCAL}
+      LIST_SEPARATOR    |
+      CONFIGURE_COMMAND cd ${THIRD_PARTY}/llvm/llvm && ${CMAKE_COMMAND} -S llvm -B build -DLLVM_ENABLE_PROJECTS=clang|libcxx|libcxxabi -DCMAKE_INSTALL_PREFIX=${LOCAL}/llvm -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
+      BUILD_COMMAND     cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE)
+      INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE) install
     )
   endif()
   set(LLVM            ${LOCAL}/llvm PARENT_SCOPE)
@@ -264,13 +267,13 @@ function(setup_python)
       COMMENT "Installing python package dependencies"
     )
   endif ()
-  if ("${LLVM_VERSION}" STREQUAL "9")
+  if ("${LLVM_VERSION}" STREQUAL "10")
     # Override pip clang 12 and install 9
     add_custom_target(override_pyclang ALL
       COMMAND ${PYTHON} -m pip uninstall --yes clang
-      COMMAND ${PYTHON} -m pip install clang==9.0
+      COMMAND ${PYTHON} -m pip install clang==10.0.1
       DEPENDS requirements
-      COMMENT "Overriding pip clang installation to 9.0.0."
+      COMMENT "Overriding pip clang installation to 10.0."
     )
   endif()
   set(PYTHON ${PYTHON_ENV} PARENT_SCOPE)
@@ -286,6 +289,7 @@ function(clgen)
   get_target_property(LIBCLC              libclc              path)
   get_target_property(DATA_CL_INCLUDE     data_cl_include     path)
   get_target_property(CLGEN_FEATURES      clgen_features      path)
+  get_target_property(CLGEN_INSTCOUNT     clgen_instcount     path)
 
   string(CONCAT CLGEN 
     "##############################\n"
@@ -308,9 +312,10 @@ function(clgen)
     "export DATA_CL_INCLUDE="                ${DATA_CL_INCLUDE} "\n"
     "export AUX_INCLUDE="                    ${DATA_CL_INCLUDE} "/aux_include" "\n"
     "export CLANG_FORMAT="                   ${LLVM}/bin/clang-format "\n"
-    "export CLANG_HEADERS="                  ${LLVM}/lib/clang/${CLANG_VERSION}/include "\n"
+    "export CLANG_HEADERS="                  ${LLVM}/lib/clang/${LLVM_VERSION}.0.1/include "\n"
     "export CLANG_REWRITER="                 ${CLANG_REWRITER} "\n"
     "export CLGEN_FEATURES="                 ${CLGEN_FEATURES} "\n"
+    "export CLGEN_INSTCOUNT="                ${CLGEN_FEATURES} "\n"
     "eval PYTHONPATH="                       ${CMAKE_CURRENT_SOURCE_DIR} " $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
     "unset LLVM\n"
     "unset LLVM_VERSION\n"
@@ -327,6 +332,7 @@ function(clgen)
     "unset CLANG_FORMAT\n"
     "unset CLANG_HEADERS\n"
     "unset CLGEN_FEATURES\n"
+    "unset CLGEN_INSTCOUNT\n"
   )
   file(
     WRITE ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CLGEN}

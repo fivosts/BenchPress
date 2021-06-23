@@ -63,7 +63,7 @@ target_compile_options (clgen_features PRIVATE
     -std=c++11 -O3 -fno-rtti
 )
 
-if ("${LLVM_VERSION}" STREQUAL "9")
+if ("${LLVM_VERSION}" STREQUAL "10")
   target_link_libraries(clgen_features
     "-Wl,-rpath,"
     "-lrt"
