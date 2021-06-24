@@ -680,9 +680,19 @@ std::string opencl_headers_path() {
 #ifndef LIBCLC
 #pragma message("LIBCLC path has not been defined.")
 #endif
+
 // Path to opencl-c header.
 std::string libclc_path() {
   return std::string("-I") + LIBCLC;
+}
+
+#ifndef LIBCXX
+#pragma message("LIBCXX path has not been defined.")
+#endif
+
+// Path to CXX headers
+std::string libcxx_path() {
+  return std::string("-I") + LIBCXX;
 }
 
 #ifndef AUX_INCLUDE
@@ -715,6 +725,7 @@ void extract_features(std::string path, std::ostream &out,
     cl_h_header(),
     structs_header(),
     opencl_headers_path(),
+    libcxx_path(),
     libclc_path(),
     aux_include_path(),
     "-Wno-everything",
