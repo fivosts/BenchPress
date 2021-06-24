@@ -291,47 +291,37 @@ class FeatureMonitor(Monitor):
                ):
     super(FeatureMonitor, self).__init__(cache_path, set_name)
     self.features = {}
-    self.instance_counters = {}
+    self.instance_counter = 0
     return
 
   def getData(self) -> typing.Dict[str, float]:
-    return {ftype: {k: v / self.instance_counter[ftype] for k, v in features.items()} for ftype, features in self.features.items()}
+    return {k: v / self.instance_counter for k, v in self.features.items()}
 
   def getStrData(self) -> str:
-    return '\n\n'.join(["{}\n{}".format(ftype, "\n".join(
-      ["{}:{}".format(k, v) for k, v in features.items()]
-    )) for ftype, features in self.getData().items()])
+    return "\n".join(
+      ["{}:{}".format(k, v) for k, v in self.getData().items()]
+    )
 
-  def register(self, actual_sample: typing.Dict[str, typing.Dict[str, float]]) -> None:
+  def register(self, actual_sample: typing.Dict[str, float]) -> None:
     """actual sample is a dict of features to their values."""
-    for ftype, feats in actual_sample.items():
-      if ftype in self.instance_counters:
-        self.instance_counters[ftype] += 1
+    if not isinstance(actual_sample, dict):
+      raise TypeError("Feature sample must be dictionary of string features to float values. Received: {}".format(actual_sample))
+
+    self.instance_counter += 1
+    for k, v in actual_sample.items():
+      if k not in self.features:
+        self.features[k] = v
       else:
-        self.instance_counters[ftype] = 1
-
-      if not isinstance(feats, dict):
-        raise TypeError("Feature sample must be dictionary of string features to float values. Received: {}".format(actual_sample))
-
-      if ftype not in self.features:
-        self.features[ftype] = {}
-
-      for k, v in actual_sample.items():
-        if k not in self.features[ftype]:
-          self.features[ftype][k] = v
-        else:
-          self.features[ftype][k] += v
-      return
+        self.features[k] += v
+    return
 
   def plot(self) -> None:
     """Plot averaged Bar chart"""
-    for ftype, features in self.features.items():
-      plotter.FrequencyBars(
-        x = [k for k in features.keys()],
-        y = [v / self.instance_counter[ftype] for v in features.values()],
-        title     = ftype + self.set_name,
-        x_name    = ftype + self.set_name,
-        plot_name = ftype + self.set_name,
-        path = self.cache_path
-      )
-    return
+    plotter.FrequencyBars(
+      x = [k for k in self.features.keys()],
+      y = [v / self.instance_counter for v in self.features.values()],
+      title     = self.set_name,
+      x_name    = self.set_name,
+      plot_name = self.set_name,
+      path = self.cache_path
+    )
