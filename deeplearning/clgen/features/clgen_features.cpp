@@ -686,13 +686,13 @@ std::string libclc_path() {
   return std::string("-I") + LIBCLC;
 }
 
-#ifndef LIBCXX
-#pragma message("LIBCXX path has not been defined.")
+#ifndef LIBCXX_HEADERS
+#pragma message("LIBCXX_HEADERS path has not been defined.")
 #endif
 
 // Path to CXX headers
 std::string libcxx_path() {
-  return std::string("-I") + LIBCXX;
+  return std::string("-I") + LIBCXX_HEADERS;
 }
 
 #ifndef AUX_INCLUDE
