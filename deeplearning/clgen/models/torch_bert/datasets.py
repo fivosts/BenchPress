@@ -73,9 +73,9 @@ class OnlineDataset(torch.utils.data.Dataset):
       self.func = functools.partial(sequence_masking.HoleSequence,
                                     train_set       = is_train,
                                     max_predictions = dg.training_opts.max_predictions_per_seq,
+                                    masked_lm_prob  = dg.training_opts.masked_lm_prob,
                                     distribution    = distribution,
                                     tokenizer       = dg.tokenizer,
-                                    training_opts   = dg.training_opts,
         )
     return
 
