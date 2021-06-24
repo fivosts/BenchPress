@@ -38,7 +38,7 @@ add_compile_definitions(STRUCTS_H="${DATA_CL_INCLUDE}/structs.h")
 
 add_compile_definitions(OPENCL_HEADERS="${OPENCL_HEADERS}")
 add_compile_definitions(LIBCLC="${LIBCLC}")
-add_compile_definitions(LIBCXX_HEADERS="${LLVM}/include/c++/v1")
+add_compile_definitions(LIBCXX_HEADERS="${LLVM}/lib/clang/${LLVM_VERSION}.0.1/include")
 add_compile_definitions(AUX_INCLUDE="${DATA_CL_INCLUDE}/aux_include/")
 
 set_target_properties(clgen_features PROPERTIES
