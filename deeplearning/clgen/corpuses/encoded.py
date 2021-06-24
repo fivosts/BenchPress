@@ -134,7 +134,10 @@ class EncodedContentFile(Base):
     # token_values = data.sorted()
     ####
     encoding_time_ms = int((time.time() - start_time) * 1000)
-    feature_vector, _ = extractor.ExtractRawFeatures(preprocessed_cf.text)
+    try:
+      feature_vector = extractor.ExtractRawFeatures(preprocessed_cf.text)
+    except Exception as e:
+      raise e
     return EncodedContentFile(
       id = preprocessed_cf.id,
       # Encode the end-of-file marker separately to ensure that it resolves to
@@ -168,8 +171,8 @@ def EncoderWorker(
       tokenizer,
       contentfile_separator,
     )
-  except ValueError:
-    return None
+  except Exception as e:
+    raise e
 
 
 class EncodedContentFiles(sqlutil.Database):
@@ -177,9 +180,9 @@ class EncodedContentFiles(sqlutil.Database):
 
   def __init__(self, url: str, must_exist: bool = False):
     self.encoded_path = pathlib.Path(url.replace("sqlite:///", "")).parent
-    self.length_monitor  = monitors.CumulativeHistMonitor(self.encoded_path, "encoded_kernel_length")
-    self.token_monitor   = monitors.NormalizedFrequencyMonitor(self.encoded_path, "token_distribution")
-    self.feature_monitor = monitors.CategoricalDistribMonitor(self.encoded_path, "feature_vector_distribution")
+    self.length_monitor   = monitors.CumulativeHistMonitor(self.encoded_path, "encoded_kernel_length")
+    self.token_monitor    = monitors.NormalizedFrequencyMonitor(self.encoded_path, "token_distribution")
+    self.feature_monitors = {ftype: monitors.CategoricalDistribMonitor(self.encoded_path, "{}_distribution".format(ftype)) for ftype in extractor.extractors.keys()}
     super(EncodedContentFiles, self).__init__(url, Base, must_exist=must_exist)
 
   def Create(
@@ -258,7 +261,7 @@ class EncodedContentFiles(sqlutil.Database):
   def SetStats(self, session: sqlutil.Session) -> None:
     """Write corpus stats to DB"""
     file_count      = session.query(EncodedContentFile.id).count()
-    corpus_features = self.feature_monitor.getStrData()
+    corpus_features = '\n\n'.join([ftype + ":\n" + mon.getStrData() for ftype, mon in self.feature_monitors.items()])
     corpus_lengths  = self.length_monitor.getStrData()
 
     if session.query(EncodedContentFileStats).first():
@@ -342,7 +345,8 @@ class EncodedContentFiles(sqlutil.Database):
 
               dict_features = extractor.RawToDictFeats(encoded_cf.feature_vector)
               if dict_features:
-                self.feature_monitor.register(dict_features)
+                for key, value in dict_features.items():
+                  self.feature_monitors[key].register(value)
             wall_time_start = wall_time_end
             if wall_time_end - last_commit > 10:
               session.commit()
@@ -354,17 +358,21 @@ class EncodedContentFiles(sqlutil.Database):
           pool.terminate()
           self.length_monitor.plot()
           self.token_monitor.plot()
-          self.feature_monitor.plot()
+          for m in self.feature_monitors.values():
+            m.plot()
           raise e
         except Exception as e:
+          l.getLogger().error(e)
           pool.terminate()
           self.length_monitor.plot()
           self.token_monitor.plot()
-          self.feature_monitor.plot()
+          for m in self.feature_monitors.values():
+            m.plot()
           raise e
       self.length_monitor.plot()
       self.token_monitor.plot()
-      self.feature_monitor.plot()
+      for m in self.feature_monitors.values():
+        m.plot()
     session.commit()
     return
 
