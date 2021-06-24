@@ -14,8 +14,8 @@ from eupy.hermes import client
 
 extractors = {
   'GreweFeatures'     : grewe.GreweFeatures,
-  'InstCountFeatures' : instcount.InstCountFeatures,
-  'AutophaseFeatures' : autophase.AutophaseFeatures
+  # 'InstCountFeatures' : instcount.InstCountFeatures,
+  # 'AutophaseFeatures' : autophase.AutophaseFeatures
 }
 
 def ExtractFeatures(src: str,
@@ -40,12 +40,10 @@ def ExtractRawFeatures(src: str,
     ext = list(extractors.keys())
   return '\n\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractRawFeatures(src)) for xt in ext])
 
-def RawToDictFeats(str_feats: str,
-                   ext: str,
-                   ) -> typing.Dict[str, typing.Dict[str, float]]:
+def RawToDictFeats(str_feats: str) -> typing.Dict[str, typing.Dict[str, float]]:
   """
   Wrapper method for core feature functions.
   Returns a mapping between extractor type(string format) and feature data collected.
   """
-  feats = {b.split(':')[0]: b[1+len(b.split(':')[0]):] for b in str_feats.split('\n\n')}
+  feats = {b.split(":\n")[0]: ''.join(b.split(':\n')[1:]) for b in str_feats.split('\n\n')}
   return {xt: extractors[xt].RawToDictFeats(feat) for xt, feat in feats.items()}

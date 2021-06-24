@@ -8,6 +8,8 @@ import typing
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import crypto
 
+from eupy.native import logger as l
+
 CLGEN_FEATURES = environment.CLGEN_FEATURES
 
 class GreweFeatures(object):
@@ -28,8 +30,8 @@ class GreweFeatures(object):
     If the code has syntax errors, features will not be obtained and empty dict
     is returned.
     """
-    str_features, stderr = StrKernelFeatures(src)
-    return StrToDictFeatures(str_features)
+    str_features = cls.ExtractRawFeatures(src)
+    return cls.RawToDictFeats(str_features)
 
   @classmethod
   def ExtractRawFeatures(cls, src: str) -> str:
@@ -56,7 +58,7 @@ class GreweFeatures(object):
         universal_newlines = True,
       )
       stdout, stderr = process.communicate()
-    return stdout, stderr
+    return stdout
 
   @classmethod
   def RawToDictFeats(cls, str_feats: str) -> typing.Dict[str, float]:
@@ -65,15 +67,16 @@ class GreweFeatures(object):
     to a mapped dictionary of feature -> value.
     """
     try:
-      lines  = str_features.split('\n')
+      lines  = str_feats.split('\n')
       header, values = lines[0].split(',')[2:], lines[-2].split(',')[2:]
       if len(header) != len(values):
         raise ValueError("Bad alignment of header-value list of features. This should never happen.")
       try:
         return {key: float(value) for key, value in zip(header, values)}
       except ValueError as e:
-        raise ValueError("{}, {}".format(str(e), str_features))
+        raise ValueError("{}, {}".format(str(e), str_feats))
     except Exception as e:
+      l.getLogger().warn(e)
       # Kernel has a syntax error and feature line is empty.
       # Return an empty dict.
       return {}
