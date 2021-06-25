@@ -22,8 +22,9 @@ try:
   DASHBOARD_STATIC    = check_exists(os.environ['DASHBOARD_STATIC'])
   DATA_CL_INCLUDE     = check_exists(os.environ['DATA_CL_INCLUDE'])
   AUX_INCLUDE         = check_exists(os.environ['AUX_INCLUDE'])
-  CLGEN_FEATURES      = check_exists(os.environ['CLGEN_FEATURES'])
+  GREWE               = check_exists(os.environ['GREWE'])
   INSTCOUNT           = check_exists(os.environ['INSTCOUNT'])
+  AUTOPHASE           = check_exists(os.environ['AUTOPHASE'])
 except Exception as e:
   raise e
   
