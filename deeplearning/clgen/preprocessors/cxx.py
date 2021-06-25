@@ -121,7 +121,7 @@ def CompileLlvmBytecode(text: str) -> str:
   """
   return clang.CompileLlvmBytecode(text, ".cpp", CLANG_ARGS)
 
-def CompileOptimizer(src: str,
+def CompileOptimizer(text: str,
                      optimization: str,
                      timeout_seconds: int = 60,
                      ) -> str:

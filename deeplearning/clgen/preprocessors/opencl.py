@@ -179,7 +179,7 @@ def CompileLlvmBytecode(text: str) -> str:
     return_diagnostics = return_diagnostics,
   )
 
-def CompileOptimizer(src: str,
+def CompileOptimizer(text: str,
                      optimization: str,
                      timeout_seconds: int = 60,
                      ) -> str:
