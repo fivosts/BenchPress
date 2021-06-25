@@ -457,15 +457,21 @@ class MaskLMDataGenerator(object):
     # Monitor counts actual length distribution of kernel instances.
     kernel_length_monitor = monitors.FrequencyMonitor(path, "{}kernel_length".format("pre_" if self.pre_train else ""))
     # Token frequency distribution monitor.
-    feature_monitor = monitors.CategoricalDistribMonitor(path, "{}feature_vector_distribution".format("pre_" if self.pre_train else ""))
+    feature_monitors = {
+      ftype: monitors.CategoricalDistribMonitor(
+                        path,
+                        "{}_{}_distribution".format("pre_" if self.pre_train else "", ftype)
+                      )
+      for ftype in extractor.extractors.keys()
+    }
 
     if self.config.datapoint_type == "kernel":
       # Reject larger than sequence length
       initial_length       = copy.deepcopy(len(encoded_corpus))
 
       # Get features of fitting dataset within sequence length
-      for feat in self.corpus.GetTrainingFeatures(effect_seq_length):
-        feature_monitor.register(feat)
+      for ftype, feat in self.corpus.GetTrainingFeatures(effect_seq_length).items():
+        feature_monitors[ftype].register(feat)
 
       if self.config.truncate_large_kernels:
         encoded_corpus       = [list(x[:effect_seq_length]) for x in encoded_corpus if len(x[:effect_seq_length]) <= effect_seq_length] # Account for start and end token
@@ -543,7 +549,8 @@ class MaskLMDataGenerator(object):
       raise ValueError("Unrecognized datapoint_type: {}".format(self.config.datapoint_type))
 
     kernel_length_monitor.plot()
-    feature_monitor.plot()
+    for fm in feature_monitors.values():
+      fm.plot()
     with open(path / corpus_file, 'wb') as outf:
       pickle.dump(shaped_corpus, outf)
     return shaped_corpus
