@@ -190,7 +190,7 @@ def CompileOptimizer(text: str,
   Returns:
     Dictionary with 70-dimensional InstCount feature vector.
   """
-  return clang.CompileOptimizer(text, ".cl", CLANG_ARGS, optimization)
+  return clang.CompileOptimizer(text, ".cl", GetClangArgs(use_shim=False), optimization)
 
 @public.clgen_preprocessor
 def Compile(text: str, return_diagnostics = False) -> str:
