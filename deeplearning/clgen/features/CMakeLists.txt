@@ -6,7 +6,7 @@ add_library(InstCount MODULE InstCount.cpp)
 add_dependencies(InstCount llvm)
 
 set_target_properties(InstCount PROPERTIES
-    path ${CMAKE_CURRENT_BINARY_DIR}/InstCount
+    path ${CMAKE_CURRENT_BINARY_DIR}/libInstCount.so
 )
 
 target_include_directories(InstCount PUBLIC ${LLVM}/include/)
@@ -31,7 +31,7 @@ add_library(Autophase MODULE Autophase.cpp)
 add_dependencies(Autophase llvm)
 
 set_target_properties(Autophase PROPERTIES
-    path ${CMAKE_CURRENT_BINARY_DIR}/Autophase
+    path ${CMAKE_CURRENT_BINARY_DIR}/libAutophase.so
 )
 
 target_include_directories(Autophase PUBLIC ${LLVM}/include/)
