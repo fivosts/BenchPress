@@ -1,3 +1,6 @@
+#######################################
+# InstCount
+#######################################
 add_library(InstCount MODULE InstCount.cpp)
 
 add_dependencies(InstCount llvm)
@@ -20,11 +23,40 @@ target_compile_options (InstCount PRIVATE
     -std=c++17 -O3 -fno-rtti
 )
 
-add_executable(clgen_features clgen_features.cpp)
+#######################################
+# Autophase
+#######################################
+add_library(Autophase MODULE Autophase.cpp)
 
-add_dependencies(clgen_features llvm)
-add_dependencies(clgen_features data_cl_include)
-add_dependencies(clgen_features libclc)
+add_dependencies(Autophase llvm)
+
+set_target_properties(Autophase PROPERTIES
+    path ${CMAKE_CURRENT_BINARY_DIR}/Autophase
+)
+
+target_include_directories(Autophase PUBLIC ${LLVM}/include/)
+target_link_directories(Autophase PUBLIC ${LLVM}/lib/)
+
+target_compile_options (Autophase PRIVATE
+    -I/usr/lib/llvm-9/include
+    -std=c++17
+    -fno-exceptions
+    -D_GNU_SOURCE
+    -D__STDC_CONSTANT_MACROS
+    -D__STDC_FORMAT_MACROS
+    -D__STDC_LIMIT_MACROS
+    -std=c++17 -O3 -fno-rtti
+)
+
+#######################################
+# Grewe
+#######################################
+
+add_executable(Grewe Grewe.cpp)
+
+add_dependencies(Grewe llvm)
+add_dependencies(Grewe data_cl_include)
+add_dependencies(Grewe libclc)
 
 get_target_property(DATA_CL_INCLUDE data_cl_include path)
 get_target_property(LIBCLC libclc path)
@@ -41,21 +73,21 @@ add_compile_definitions(LIBCLC="${LIBCLC}")
 add_compile_definitions(LIBCXX_HEADERS="${LLVM}/lib/clang/${LLVM_VERSION}.0.1/include")
 add_compile_definitions(AUX_INCLUDE="${DATA_CL_INCLUDE}/aux_include/")
 
-set_target_properties(clgen_features PROPERTIES
-    path ${CMAKE_CURRENT_BINARY_DIR}/clgen_features
+set_target_properties(Grewe PROPERTIES
+    path ${CMAKE_CURRENT_BINARY_DIR}/Grewe
 )
 
-target_include_directories(clgen_features PUBLIC ${LLVM}/include/)
+target_include_directories(Grewe PUBLIC ${LLVM}/include/)
 
-target_link_directories(clgen_features PUBLIC ${LLVM}/lib/)
-target_link_directories(clgen_features PUBLIC ${LLVM}/lib/clang/${LLVM_VERSION}.0.0/lib/linux/)
+target_link_directories(Grewe PUBLIC ${LLVM}/lib/)
+target_link_directories(Grewe PUBLIC ${LLVM}/lib/clang/${LLVM_VERSION}.0.0/lib/linux/)
 
 add_custom_target(cl_header_file ALL
   COMMAND cp ${CMAKE_CURRENT_LIST_DIR}/cl.h ${CMAKE_CURRENT_BINARY_DIR}/cl.h
   COMMENT "Copy cl.h header file"
 )
 
-target_compile_options (clgen_features PRIVATE
+target_compile_options (Grewe PRIVATE
     -I/usr/lib/llvm-9/include
     -std=c++17
     -fno-exceptions
@@ -67,7 +99,7 @@ target_compile_options (clgen_features PRIVATE
 )
 
 if ("${LLVM_VERSION}" STREQUAL "10")
-  target_link_libraries(clgen_features
+  target_link_libraries(Grewe
     "-Wl,-rpath,"
     "-lrt"
     "-ldl"
@@ -221,7 +253,7 @@ if ("${LLVM_VERSION}" STREQUAL "10")
     "-lz"
   )
 else()
-  target_link_libraries(clgen_features
+  target_link_libraries(Grewe
     "-Wl,-rpath,"
     "-lrt"
     "-ldl"

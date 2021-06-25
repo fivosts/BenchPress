@@ -10,7 +10,7 @@ from deeplearning.clgen.util import crypto
 
 from eupy.native import logger as l
 
-CLGEN_FEATURES = environment.CLGEN_FEATURES
+GREWE = environment.GREWE
 
 class GreweFeatures(object):
   """
@@ -49,7 +49,7 @@ class GreweFeatures(object):
           ) as f:
       f.write(src)
       f.flush()
-      cmd = [str(CLGEN_FEATURES), f.name]
+      cmd = [str(GREWE), f.name]
 
       process = subprocess.Popen(
         cmd,

@@ -288,8 +288,9 @@ function(clgen)
   get_target_property(DASHBOARD_TEMPLATES dashboard_templates path)
   get_target_property(LIBCLC              libclc              path)
   get_target_property(DATA_CL_INCLUDE     data_cl_include     path)
-  get_target_property(CLGEN_FEATURES      clgen_features      path)
+  get_target_property(GREWE               Grewe               path)
   get_target_property(INSTCOUNT           InstCount           path)
+  get_target_property(AUTOPHASE           Autophase           path)
 
   string(CONCAT CLGEN 
     "##############################\n"
@@ -314,8 +315,9 @@ function(clgen)
     "export CLANG_FORMAT="                   ${LLVM}/bin/clang-format "\n"
     "export CLANG_HEADERS="                  ${LLVM}/lib/clang/${LLVM_VERSION}.0.1/include "\n"
     "export CLANG_REWRITER="                 ${CLANG_REWRITER} "\n"
-    "export CLGEN_FEATURES="                 ${CLGEN_FEATURES} "\n"
-    "export INSTCOUNT="                      ${CLGEN_FEATURES} "\n"
+    "export GREWE="                          ${GREWE} "\n"
+    "export INSTCOUNT="                      ${INSTCOUNT} "\n"
+    "export AUTOPHASE="                      ${AUTOPHASE} "\n"
     "eval PYTHONPATH="                       ${CMAKE_CURRENT_SOURCE_DIR} " $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
     "unset LLVM\n"
     "unset LLVM_VERSION\n"
@@ -331,8 +333,9 @@ function(clgen)
     "unset AUX_INCLUDE\n"
     "unset CLANG_FORMAT\n"
     "unset CLANG_HEADERS\n"
-    "unset CLGEN_FEATURES\n"
+    "unset GREWE\n"
     "unset INSTCOUNT\n"
+    "unset AUTOPHASE\n"
   )
   file(
     WRITE ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CLGEN}
