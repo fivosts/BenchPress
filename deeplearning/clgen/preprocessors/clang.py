@@ -201,7 +201,7 @@ def CompileOptimizer(src: str,
     ValueError: In case of an error.
     ValueError: If clang does not complete before timeout_seconds.
   """
-  bc = clang.CompileLlvmBytecode(src, suffix, cflags, timeout_seconds)
+  bc = CompileLlvmBytecode(src, suffix, cflags, timeout_seconds)
   with tempfile.NamedTemporaryFile(
     "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix='ll'
   ) as f:
@@ -254,7 +254,8 @@ def Compile(src: str,
     except clang.cindex.TranslationUnitLoadError as e:
       raise ValueError(e)
 
-    diagnostics = [str(d) for d in unit.diagnostics if d.severity > 2 and not "implicit declaration of function" not in str(d)]
+    diagnostics = [str(d) for d in unit.diagnostics if d.severity > 2]
+    # diagnostics = [str(d) for d in unit.diagnostics if d.severity > 2 and not "implicit declaration of function" not in str(d)]
 
     if len(diagnostics) > 0:
       if return_diagnostics:
