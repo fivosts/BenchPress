@@ -54,6 +54,12 @@ flags.DEFINE_integer(
   "Set top-K surviving candidates per generation, sorted by distance from target feature space."
 )
 
+flags.DEFINE_string(
+  "feature_space",
+  "GreweFeatures",
+  "Select feature space to apply active sampling on. Choices are 'GreweFeatures', 'InstCountFeatures', 'AutophaseFeatures'. [Default: 'GreweFeatures']"
+)
+
 class ActiveSampleFeed(typing.NamedTuple):
   """
   Representation of an active learning input to the model.
@@ -97,7 +103,7 @@ def candidate_worker(sample_out   : typing.Dict[str, np.array],
   try:
     code = tokenizer.ArrayToCode(sample, with_formatting = False)
     _ = opencl.Compile(code)
-    features = extractor.ExtractFeatures(code)
+    ftype, features = extractor.ExtractFeatures(code, FLAGS.feature_space)
     if features:
       return ActiveSample(
         sample_feed    = feed,      sample         = sample,
@@ -440,7 +446,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       self.feed_queue.append(
         ActiveSampleFeed(
           input_feed       = cf,
-          input_features   = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf)),
+          input_features   = list(extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), FLAGS.feature_space).values())[0],
           input_score      = math.inf,
           gen_id           = 0,
         )
