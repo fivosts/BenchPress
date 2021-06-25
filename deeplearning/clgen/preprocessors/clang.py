@@ -57,21 +57,23 @@ if environment.LLVM_VERSION != 6:
   # LLVM 9 needs libclang explicitly defined.
   clang.cindex.Config.set_library_file(environment.LLVM_LIB + "/libclang.so.{}".format(environment.LLVM_VERSION))
 
-CLANG = environment.CLANG
+CLANG        = environment.CLANG
 CLANG_FORMAT = environment.CLANG_FORMAT
-OPT   = environment.OPT
+OPT          = environment.OPT
 INSTCOUNT = environment.INSTCOUNT
+AUTOPHASE = environment.AUTOPHASE
 
 class PassRegistry(typing.NamedTuple):
   """
   Named registry of LLVM passes available.
+  Use that in external module to describe the type of optimization pass.
   """
   InstCount: str
   Autophase: str
 
 opt_reg = PassRegistry(
   "-load {} -InstCount".format(INSTCOUNT),
-  ""
+  "-load {} -Autophase".format(AUTOPHASE)
 )
 
 def StripPreprocessorLines(src: str) -> str:
