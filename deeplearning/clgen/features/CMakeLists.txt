@@ -51,7 +51,6 @@ target_compile_options (Autophase PRIVATE
 #######################################
 # Grewe
 #######################################
-
 add_executable(Grewe Grewe.cpp)
 
 add_dependencies(Grewe llvm)
