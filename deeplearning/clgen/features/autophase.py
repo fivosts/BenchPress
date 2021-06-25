@@ -5,10 +5,12 @@ import subprocess
 import tempfile
 import typing
 
+from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import crypto
 
 from eupy.hermes import client
+
+AUTOPHASE = "-load {} -autophase".format(environment.AUTOPHASE)
 
 class AutophaseFeatures(object):
   """
@@ -19,12 +21,12 @@ class AutophaseFeatures(object):
 
   @classmethod
   def ExtractFeatures(cls, src: str) -> typing.Dict[str, float]:
-    raise NotImplementedError
+    return cls.RawToDictFeats(cls.ExtractRawFeatures(src))
 
   @classmethod
   def ExtractRawFeatures(cls, src: str) -> str:
-    raise NotImplementedError
+    return opencl.CompileOptimizer(src, AUTOPHASE)
 
   @classmethod
   def RawToDictFeats(cls, str_feats: str) -> typing.Dict[str, float]:
-    raise NotImplementedError
+    return {feat.split(' : ')[0]: int(feat.splt(' : ')[1]) for feat in str_feats.split('\n') if ' : ' in feat}

@@ -14,8 +14,8 @@ from eupy.hermes import client
 
 extractors = {
   'GreweFeatures'     : grewe.GreweFeatures,
-  # 'InstCountFeatures' : instcount.InstCountFeatures,
-  # 'AutophaseFeatures' : autophase.AutophaseFeatures
+  'InstCountFeatures' : instcount.InstCountFeatures,
+  'AutophaseFeatures' : autophase.AutophaseFeatures
 }
 
 def ExtractFeatures(src: str,
