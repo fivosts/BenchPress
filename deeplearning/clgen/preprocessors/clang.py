@@ -223,7 +223,7 @@ def CompileOptimizer(src: str,
     f.write(src)
     f.flush()
     cmd = (
-      ["timeout", "-s9", str(timeout_seconds), str(OPT), optimization, f.name]
+      ["timeout", "-s9", str(timeout_seconds), str(OPT), optimization, f.name, "-o /dev/null"]
     )
     process = subprocess.Popen(
       cmd,
