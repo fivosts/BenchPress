@@ -471,8 +471,9 @@ class MaskLMDataGenerator(object):
       initial_length       = copy.deepcopy(len(encoded_corpus))
 
       # Get features of fitting dataset within sequence length
-      for ftype, feat in self.corpus.GetTrainingFeatures(effect_seq_length).items():
-        feature_monitors[ftype].register(feat)
+      for feature in self.corpus.GetTrainingFeatures(effect_seq_length):
+        for ftype, fvector in feature.items():
+          feature_monitors[ftype].register(fvector)
 
       if self.config.truncate_large_kernels:
         encoded_corpus       = [list(x[:effect_seq_length]) for x in encoded_corpus if len(x[:effect_seq_length]) <= effect_seq_length] # Account for start and end token
