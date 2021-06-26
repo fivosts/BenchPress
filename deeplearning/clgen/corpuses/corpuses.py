@@ -365,7 +365,7 @@ class Corpus(object):
 
     return self._indices_arrays
 
-  def GetTrainingFeatures(self, sequence_length: int):
+  def GetTrainingFeatures(self, sequence_length: int) -> typing.List[typing.Dict[str, typing.Dict[str, float]]]:
     """
     Get feature vectors of training instances within the specified sequence length.
     """
