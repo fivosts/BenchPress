@@ -80,7 +80,6 @@ def StripPreprocessorLines(src: str) -> str:
   # Strip lines beginning with '#' (that's preprocessor stuff):
   return "\n".join([line for line in lines[i:] if not line.startswith("#")])
 
-
 def Preprocess(
   src: str,
   cflags: typing.List[str],
@@ -201,7 +200,10 @@ def CompileOptimizer(src: str,
     ValueError: In case of an error.
     ValueError: If clang does not complete before timeout_seconds.
   """
-  bc = CompileLlvmBytecode(src, suffix, cflags, timeout_seconds)
+  try:
+    bc = CompileLlvmBytecode(src, suffix, cflags, timeout_seconds)
+  except ValueError:
+    return ""
   with tempfile.NamedTemporaryFile(
     "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix='.ll'
   ) as f:
