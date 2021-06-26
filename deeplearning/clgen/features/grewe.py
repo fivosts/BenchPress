@@ -76,7 +76,7 @@ class GreweFeatures(object):
       except ValueError as e:
         raise ValueError("{}, {}".format(str(e), str_feats))
     except Exception as e:
-      l.getLogger().warn("Grewe RawDict: {}".format(e))
+      # l.getLogger().warn("Grewe RawDict: {}".format(e))
       # Kernel has a syntax error and feature line is empty.
       # Return an empty dict.
       return {}
