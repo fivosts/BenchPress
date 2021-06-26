@@ -34,10 +34,11 @@ class EuclideanSampler(object):
   def __init__(self):
     self.path = pathlib.Path(FLAGS.benchmarks_path).resolve()
     self.benchmarks = []
+    self.feature_space = FLAGS.feature_space
     for f in self.path.iterdir():
       with open(f, 'r') as file:
         contents = file.read()
-        features = extractor.ExtractFeatures(contents, [FLAGS.feature_space])
+        features = extractor.ExtractFeatures(contents, [self.feature_space])
         if features[FLAGS.feature_space]:
           self.benchmarks.append(
             EuclideanSampler.Benchmark(

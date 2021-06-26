@@ -103,7 +103,7 @@ def candidate_worker(sample_out   : typing.Dict[str, np.array],
   try:
     code = tokenizer.ArrayToCode(sample, with_formatting = False)
     _ = opencl.Compile(code)
-    ftype, features = extractor.ExtractFeatures(code, [FLAGS.feature_space])
+    features = extractor.ExtractFeatures(code, [feat_sampler.feature_space])[feat_sampler.feature_space]
     if features:
       return ActiveSample(
         sample_feed    = feed,      sample         = sample,
