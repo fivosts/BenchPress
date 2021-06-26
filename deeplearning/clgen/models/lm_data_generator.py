@@ -17,6 +17,7 @@ from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import monitors
+from deeplearning.clgen.features import extractor
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.models import lm_database
