@@ -45,5 +45,5 @@ def RawToDictFeats(str_feats: str) -> typing.Dict[str, typing.Dict[str, float]]:
   Wrapper method for core feature functions.
   Returns a mapping between extractor type(string format) and feature data collected.
   """
-  feats = {b.split(":\n")[0]: ''.join(b.split(':\n')[1:]) for b in str_feats.split('\n\n')}
+  feats = {b.split(":\n")[0]: ''.join(b.split(':\n')[1:]) for b in str_feats.split('\n\n') if b.split(':\n')[1:]}
   return {xt: extractors[xt].RawToDictFeats(feat) for xt, feat in feats.items()}
