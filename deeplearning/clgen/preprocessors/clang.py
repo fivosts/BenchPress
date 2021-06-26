@@ -182,7 +182,7 @@ def CompileLlvmBytecode(
 def CompileOptimizer(src: str,
                      suffix: str,
                      cflags: typing.List[str],
-                     optimization: str,
+                     optimization: typing.List[str],
                      timeout_seconds: int = 60,
                      ) -> str:
   """Compile source code to IR and apply optimization pass to source code.
@@ -203,12 +203,12 @@ def CompileOptimizer(src: str,
   """
   bc = CompileLlvmBytecode(src, suffix, cflags, timeout_seconds)
   with tempfile.NamedTemporaryFile(
-    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix='ll'
+    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix='.ll'
   ) as f:
-    f.write(src)
+    f.write(bc)
     f.flush()
     cmd = (
-      ["timeout", "-s9", str(timeout_seconds), str(OPT), optimization, f.name, "-o /dev/null"]
+      ["timeout", "-s9", str(timeout_seconds), str(OPT)] + optimization + [f.name, "-o", "/dev/null"]
     )
     process = subprocess.Popen(
       cmd,

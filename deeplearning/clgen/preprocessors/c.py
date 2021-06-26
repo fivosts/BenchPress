@@ -124,7 +124,7 @@ def CompileLlvmBytecode(text: str) -> str:
   return clang.CompileLlvmBytecode(text, ".c", CLANG_ARGS)
 
 def CompileOptimizer(text: str,
-                     optimization: str,
+                     optimization: typing.List[str],
                      timeout_seconds: int = 60,
                      ) -> str:
   """Compile source code to IR and apply optimization pass to source code.
