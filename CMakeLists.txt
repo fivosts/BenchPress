@@ -43,11 +43,15 @@ function(find_binaries)
     endif()
 
     # Use 6 as default LLVM version. 10 and 12 are available as well.
-    if ("${LLVM_VERSION}" STREQUAL "")
-      set(LLVM_VERSION "10" CACHE FILEPATH
-        "Select between LLVM version 6 and 10. Both are build from source. [Default: 10]."
-        FORCE
-      )
+    # if ("${LLVM_VERSION}" STREQUAL "")
+    set(LLVM_VERSION "10" CACHE FILEPATH
+      "Select between LLVM version 6 and 10. Both are build from source. [Default: 10]."
+      FORCE
+    )
+    set(LLVM_VERSION6 "6" CACHE FILEPATH
+      "Select between LLVM version 6 and 10. Both are build from source. [Default: 10]."
+      FORCE
+    )
       # set(CLANG_VERSION "6.0.1" CACHE FILEPATH
       #   "Sets clang header path"
       #   FORCE
@@ -62,9 +66,9 @@ function(find_binaries)
         # "Sets clang header path"
         # FORCE
       # )
-    elseif (NOT "${LLVM_VERSION}" STREQUAL "6" AND NOT "${LLVM_VERSION}" STREQUAL "10")
-      message(FATAL_ERROR "-- LLVM Versions available are only 6 and 10.")
-    endif()
+    # elseif (NOT "${LLVM_VERSION}" STREQUAL "6" AND NOT "${LLVM_VERSION}" STREQUAL "10")
+      # message(FATAL_ERROR "-- LLVM Versions available are only 6 and 10.")
+    # endif()
 
     message("-- Using LLVM " ${LLVM_VERSION})
 
@@ -167,41 +171,35 @@ function(install_external_deps)
   #)
   #set(ONNX          ${LOCAL}/onnx PARENT_SCOPE)
 
-  # Clang and LLVM 9 pre-compiled binaries and libraries.
-  if ("${LLVM_VERSION}" STREQUAL "6")
-    ExternalProject_Add(llvm
-      GIT_REPOSITORY    https://github.com/llvm/llvm-project.git
-      GIT_TAG           d359f2096850c68b708bc25a7baca4282945949f
-      GIT_PROGRESS      true
-      PREFIX            ${THIRD_PARTY}
-      TMP_DIR           ${THIRD_PARTY}/tmp
-      STAMP_DIR         ${THIRD_PARTY}/stamp
-      DOWNLOAD_DIR      ${THIRD_PARTY}/llvm
-      SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm
-      INSTALL_DIR       ${LOCAL}
-      LIST_SEPARATOR    |
-      CONFIGURE_COMMAND cd ${THIRD_PARTY}/llvm/llvm && ${CMAKE_COMMAND} -S llvm -B build -DLLVM_ENABLE_PROJECTS=clang|libcxx|libcxxabi -DCMAKE_INSTALL_PREFIX=${LOCAL}/llvm -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
-      BUILD_COMMAND     cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE)
-      INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE) install
-    )
-  elseif("${LLVM_VERSION}" STREQUAL "10")
-    ExternalProject_Add(llvm
-      GIT_REPOSITORY    https://github.com/llvm/llvm-project.git
-      GIT_TAG           ef32c611aa214dea855364efd7ba451ec5ec3f74
-      GIT_PROGRESS      true
-      PREFIX            ${THIRD_PARTY}
-      TMP_DIR           ${THIRD_PARTY}/tmp
-      STAMP_DIR         ${THIRD_PARTY}/stamp
-      DOWNLOAD_DIR      ${THIRD_PARTY}/llvm
-      SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm
-      INSTALL_DIR       ${LOCAL}
-      LIST_SEPARATOR    |
-      CONFIGURE_COMMAND cd ${THIRD_PARTY}/llvm/llvm && ${CMAKE_COMMAND} -S llvm -B build -DLLVM_ENABLE_PROJECTS=clang|libcxx|libcxxabi -DCMAKE_INSTALL_PREFIX=${LOCAL}/llvm -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
-      BUILD_COMMAND     cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE)
-      INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE) install
-    )
-  endif()
-  set(LLVM            ${LOCAL}/llvm PARENT_SCOPE)
+  ExternalProject_Add(llvm6
+    URL               https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+    PREFIX            ${THIRD_PARTY}
+    TMP_DIR           ${THIRD_PARTY}/tmp
+    STAMP_DIR         ${THIRD_PARTY}/stamp
+    DOWNLOAD_DIR      ${THIRD_PARTY}/llvm6
+    SOURCE_DIR        ${THIRD_PARTY}/llvm6/llvm6
+    INSTALL_DIR       ${LOCAL}
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND     ""
+    INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/llvm6/llvm6/ ${LOCAL}
+  )
+  ExternalProject_Add(llvm
+    GIT_REPOSITORY    https://github.com/llvm/llvm-project.git
+    GIT_TAG           ef32c611aa214dea855364efd7ba451ec5ec3f74
+    GIT_PROGRESS      true
+    PREFIX            ${THIRD_PARTY}
+    TMP_DIR           ${THIRD_PARTY}/tmp
+    STAMP_DIR         ${THIRD_PARTY}/stamp
+    DOWNLOAD_DIR      ${THIRD_PARTY}/llvm
+    SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm
+    INSTALL_DIR       ${LOCAL}
+    LIST_SEPARATOR    |
+    CONFIGURE_COMMAND cd ${THIRD_PARTY}/llvm/llvm && ${CMAKE_COMMAND} -S llvm -B build -DLLVM_ENABLE_PROJECTS=clang|libcxx|libcxxabi -DCMAKE_INSTALL_PREFIX=${LOCAL}/llvm -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
+    BUILD_COMMAND     cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE)
+    INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE) install
+  )
+  set(LLVM6           ${LOCAL}/llvm6 PARENT_SCOPE)
+  set(LLVM            ${LOCAL}/llvm  PARENT_SCOPE)
   # #include <CL/*>
   # I have forked my own version of OpenCL Headers which I install here.
   # My version excludes the C-API functions from being included,
