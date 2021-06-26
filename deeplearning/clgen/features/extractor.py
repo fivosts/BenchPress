@@ -38,7 +38,7 @@ def ExtractRawFeatures(src: str,
   """
   if not ext:
     ext = list(extractors.keys())
-  return '\n\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractRawFeatures(src)) for xt in ext])
+  return '\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractRawFeatures(src)) for xt in ext])
 
 def RawToDictFeats(str_feats: str) -> typing.Dict[str, typing.Dict[str, float]]:
   """

@@ -68,7 +68,7 @@ class GreweFeatures(object):
     """
     try:
       lines  = str_feats.split('\n')
-      header, values = lines[0].split(',')[2:], lines[-2].split(',')[2:]
+      header, values = lines[0].split(',')[2:], lines[1].split(',')[2:]
       if len(header) != len(values):
         raise ValueError("Bad alignment of header-value list of features. This should never happen.")
       try:

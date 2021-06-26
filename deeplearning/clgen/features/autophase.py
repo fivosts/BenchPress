@@ -10,7 +10,7 @@ from deeplearning.clgen.util import environment
 
 from eupy.hermes import client
 
-AUTOPHASE = "-load {} -autophase".format(environment.AUTOPHASE)
+AUTOPHASE = ["-load", environment.AUTOPHASE, "-autophase"]
 
 class AutophaseFeatures(object):
   """
@@ -29,4 +29,4 @@ class AutophaseFeatures(object):
 
   @classmethod
   def RawToDictFeats(cls, str_feats: str) -> typing.Dict[str, float]:
-    return {feat.split(' : ')[0]: int(feat.splt(' : ')[1]) for feat in str_feats.split('\n') if ' : ' in feat}
+    return {feat.split(' : ')[0]: int(feat.split(' : ')[1]) for feat in str_feats.split('\n') if ' : ' in feat}
