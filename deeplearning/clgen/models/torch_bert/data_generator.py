@@ -103,7 +103,7 @@ def candidate_worker(sample_out   : typing.Dict[str, np.array],
   try:
     code = tokenizer.ArrayToCode(sample, with_formatting = False)
     _ = opencl.Compile(code)
-    ftype, features = extractor.ExtractFeatures(code, FLAGS.feature_space)
+    ftype, features = extractor.ExtractFeatures(code, [FLAGS.feature_space])
     if features:
       return ActiveSample(
         sample_feed    = feed,      sample         = sample,
@@ -445,10 +445,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       cf = [int(x) for x in cf]
       self.feed_queue.append(
         ActiveSampleFeed(
-          input_feed       = cf,
-          input_features   = list(extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), FLAGS.feature_space).values())[0],
-          input_score      = math.inf,
-          gen_id           = 0,
+          input_feed     = cf,
+          input_features = list(extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), [FLAGS.feature_space]).values())[0],
+          input_score    = math.inf,
+          gen_id         = 0,
         )
       )
       self.addToDB(

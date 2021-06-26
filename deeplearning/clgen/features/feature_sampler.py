@@ -37,14 +37,14 @@ class EuclideanSampler(object):
     for f in self.path.iterdir():
       with open(f, 'r') as file:
         contents = file.read()
-        ftype, features = extractor.ExtractFeatures(contents, FLAGS.feature_space)
-        if features:
+        features = extractor.ExtractFeatures(contents, [FLAGS.feature_space])
+        if features[FLAGS.feature_space]:
           self.benchmarks.append(
             EuclideanSampler.Benchmark(
               f,
               f.name,
               contents,
-              features,
+              features[FLAGS.feature_space],
               0
             )
           )
