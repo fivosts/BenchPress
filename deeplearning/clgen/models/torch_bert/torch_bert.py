@@ -356,6 +356,7 @@ class torchBert(backends.BackendBase):
       'input_ids': [], 'masked_lm_lengths': []
     }
     if not self.pytorch.num_gpus > 1 or is_live:
+      bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = False)
       for b_idx in range(len(inputs['input_ids'])):
         out = models[0](
                 input_ids            = inputs['input_ids'][b_idx].to(devices[0]),
@@ -369,6 +370,7 @@ class torchBert(backends.BackendBase):
         outputs['sample_indices']    += out['sample_indices']
         outputs['input_ids']         += list(inputs['input_ids'][b_idx].numpy())
         outputs['masked_lm_lengths'] += list(inputs['masked_lm_lengths'][b_idx].numpy())
+        bar.update(len(out['generated_samples']))
       return outputs
 
     chunk = 1 + (len(inputs['input_ids']) // len(devices))
