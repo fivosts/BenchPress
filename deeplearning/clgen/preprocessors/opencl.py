@@ -360,6 +360,7 @@ def ExtractOnlySingleKernels(text: str) -> typing.List[str]:
 
   for idx, chunk in enumerate(kernel_chunks):
     if idx != 0:
+      is_declaration = False
       # Given this preprocessor is called after compile,
       # we are certain that brackets will be paired
       num_lbrack, num_rbrack, chunk_idx = 0, 0, 0
@@ -371,21 +372,24 @@ def ExtractOnlySingleKernels(text: str) -> typing.List[str]:
           cur_tok = chunk[chunk_idx]
         except IndexError:
           l.getLogger().warn(chunk)
-        if   cur_tok == "{":
+        if cur_tok == ";" and num_lbrack == 0:
+          is_declaration = True
+          break
+        elif   cur_tok == "{":
           num_lbrack += 1
         elif cur_tok == "}":
           num_rbrack += 1
         chunk_idx += 1
-
-      while chunk_idx < len(chunk):
-        # Without this line, global_space tends to gather lots of newlines and wspaces
-        # Then they are replicated and become massive. Better isolate only actual text there.
-        if chunk[chunk_idx] == ' ' or chunk[chunk_idx] == '\n':
-          chunk_idx += 1
-        else:
-          break
-      # Add to kernels all global space met so far + 'kernel void' + the kernel's body
-      actual_kernels.append(kernel_specifier + chunk[:chunk_idx])
+      if not is_declaration:
+        while chunk_idx < len(chunk):
+          # Without this line, global_space tends to gather lots of newlines and wspaces
+          # Then they are replicated and become massive. Better isolate only actual text there.
+          if chunk[chunk_idx] == ' ' or chunk[chunk_idx] == '\n':
+            chunk_idx += 1
+          else:
+            break
+        # Add to kernels all global space met so far + 'kernel void' + the kernel's body
+        actual_kernels.append(kernel_specifier + chunk[:chunk_idx])
   return actual_kernels
 
 @public.clgen_preprocessor
