@@ -42,8 +42,7 @@ function(find_binaries)
       )
     endif()
 
-    # Use 6 as default LLVM version. 10 and 12 are available as well.
-    # if ("${LLVM_VERSION}" STREQUAL "")
+    # For legacy reasons, both LLVM 6 and 10 are needed.
     set(LLVM_VERSION "10" CACHE FILEPATH
       "Select between LLVM version 6 and 10. Both are build from source. [Default: 10]."
       FORCE
@@ -52,25 +51,7 @@ function(find_binaries)
       "Select between LLVM version 6 and 10. Both are build from source. [Default: 10]."
       FORCE
     )
-      # set(CLANG_VERSION "6.0.1" CACHE FILEPATH
-      #   "Sets clang header path"
-      #   FORCE
-      # )
-    # elseif ("${LLVM_VERSION}" STREQUAL "6")
-      # set(CLANG_VERSION "6.0.1" CACHE FILEPATH
-        # "Sets clang header path"
-        # FORCE
-      # )
-    # elseif("${LLVM_VERSION}" STREQUAL "9")
-      # set(CLANG_VERSION "9.0.0" CACHE FILEPATH
-        # "Sets clang header path"
-        # FORCE
-      # )
-    # elseif (NOT "${LLVM_VERSION}" STREQUAL "6" AND NOT "${LLVM_VERSION}" STREQUAL "10")
-      # message(FATAL_ERROR "-- LLVM Versions available are only 6 and 10.")
-    # endif()
-
-    message("-- Using LLVM " ${LLVM_VERSION})
+    message("-- Using LLVM " ${LLVM_VERSION} " and " ${LLVM_VERSION6})
 
     # Python binary exists or crash.
     find_program(PYTHON_FOUND ${PYTHON})
