@@ -81,13 +81,25 @@ message CorpusConfig {
   // normal: corpus is pre-masked, then fed for predictions.
   // online: A datapoint is requested from original corpus and masked on the fly.
   // active: Same as online. Active learning is applied between sample and target features
-  optional string sampling_type           = 1;
-  optional int32  max_predictions_per_seq = 2;
-  optional float  masked_lm_prob          = 3;
-  oneof mask_technique {
-    Mask mask = 4;
-    Hole hole = 5;
+  oneof sampling_type {
+    bool           normal = 1;
+    bool           online = 2;
+    ActiveSampler  active = 3;
   }
+  optional int32  max_predictions_per_seq = 4;
+  optional float  masked_lm_prob          = 5;
+  oneof mask_technique {
+    Mask mask = 6;
+    Hole hole = 7;
+  }
+}
+
+// Active Sampling specifications message.
+message ActiveSampler {
+  int32  active_limit_per_feed = 1;
+  int32  active_search_depth   = 2;
+  int32  active_search_width   = 3;
+  string feature_space         = 4;
 }
 
 // Criteria used for determining when to stop sampling.

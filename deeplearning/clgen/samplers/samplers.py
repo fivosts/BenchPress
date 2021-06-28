@@ -64,8 +64,22 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
       )
     elif config.HasField("sample_corpus"):
       if config.sample_corpus.HasField("corpus_config"):
+        if config.sample_corpus.corpus_config.HasField("normal"):
+          pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "normal")
+        elif config.sample_corpus.corpus_config.HasField("online"):
+          pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "online")
+        elif config.sample_corpus.corpus_config.HasField("active"):
+          pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config.active, "active_limit_per_feed")
+          pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config.active, "active_search_depth")
+          pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config.active, "active_search_width")
+          pbutil.AssertFieldConstraint(
+            config.sample_corpus.corpus_config.active,
+            "feature_space",
+            lambda x : x in {"GreweFeatures", "InstCountFeatures", "AutophaseFeatures"}
+          )
+        else:
+          raise ValueError("Sampling type is undefined: {}".format(config.sample_corpus.corpus_config))
 
-        pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "sampling_type")
         pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "max_predictions_per_seq")
         pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config, "masked_lm_prob")
 
@@ -311,14 +325,14 @@ class Sampler(object):
   @property
   def is_active(self):
     if self.config.HasField("sample_corpus"):
-      return self.config.sample_corpus.corpus_config.sampling_type == "active"
+      return self.config.sample_corpus.corpus_config.HasField("active")
     else:
       return False
 
   @property
   def is_online(self):
     if self.config.HasField("sample_corpus"):
-      return self.config.sample_corpus.corpus_config.sampling_type == "online"
+      return self.config.sample_corpus.corpus_config.HasField("online")
     else:
       return False
 
