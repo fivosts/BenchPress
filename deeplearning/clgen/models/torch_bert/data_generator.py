@@ -36,29 +36,29 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_integer(
-  "active_limit_per_feed",
-  2000,
-  "Set limit on sample attempts per input_feed. [Default: 400]. Set to 0 for infinite."
-)
+# flags.DEFINE_integer(
+#   "active_limit_per_feed",
+#   2000,
+#   "Set limit on sample attempts per input_feed. [Default: 400]. Set to 0 for infinite."
+# )
 
-flags.DEFINE_integer(
-  "active_search_depth",
-  32,
-  "Set the maximum sampling generation depth that active sampler can reach. [Default: 20]."
-)
+# flags.DEFINE_integer(
+#   "active_search_depth",
+#   32,
+#   "Set the maximum sampling generation depth that active sampler can reach. [Default: 20]."
+# )
 
-flags.DEFINE_integer(
-  "active_search_width",
-  5,
-  "Set top-K surviving candidates per generation, sorted by distance from target feature space."
-)
+# flags.DEFINE_integer(
+#   "active_search_width",
+#   5,
+#   "Set top-K surviving candidates per generation, sorted by distance from target feature space."
+# )
 
-flags.DEFINE_string(
-  "feature_space",
-  "GreweFeatures",
-  "Select feature space to apply active sampling on. Choices are 'GreweFeatures', 'InstCountFeatures', 'AutophaseFeatures'. [Default: 'GreweFeatures']"
-)
+# flags.DEFINE_string(
+#   "feature_space",
+#   "GreweFeatures",
+#   "Select feature space to apply active sampling on. Choices are 'GreweFeatures', 'InstCountFeatures', 'AutophaseFeatures'. [Default: 'GreweFeatures']"
+# )
 
 class ActiveSampleFeed(typing.NamedTuple):
   """
@@ -191,7 +191,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       d.active_db = active_feed_database.ActiveFeedDatabase(
         url = "sqlite:///{}".format(d.sampler.corpus_directory / "active_feeds.db")
       )
-      d.feat_sampler      = feature_sampler.EuclideanSampler()
+      d.feat_sampler      = feature_sampler.EuclideanSampler(
+        self.sampler.sample_corpus.corpus_config.active.feature_space
+      )
       d.candidate_monitor = monitors.CategoricalDistribMonitor(
         d.sampler.corpus_directory, "feature_distance"
       )
@@ -335,6 +337,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         d) Sample indices
       The arrays are ordered by index.
     """
+    # Active sampling specs initializatin
+    active_limit_per_feed = self.sampler.sample_corpus.corpus_config.active.active_limit_per_feed
+    active_search_depth = self.sampler.sample_corpus.corpus_config.active.active_search_depth
+    active_search_width = self.sampler.sample_corpus.corpus_config.active.active_search_width
+
     # Initialize feed queue
     org_inp, org_ids = self.initOrGetQueue()
     total_cand, total_cand_hash = [], set()
@@ -342,21 +349,21 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     while self.feed_queue:
 
       feed = self.feed_queue.pop(0)
-      rem  = FLAGS.active_limit_per_feed // self.sample_batch_size
+      rem  = active_limit_per_feed // self.sample_batch_size
       step_candidates = []
       cmp_rate        = [0, 0]
 
       self.sampler.setStartText(self.tokenizer.tokensToString(feed.input_feed, ignore_token = self.tokenizer.padToken))
       self.sampler.Specialize(self.tokenizer)
 
-      bar = progressbar.ProgressBar(max_value = FLAGS.active_limit_per_feed)
+      bar = progressbar.ProgressBar(max_value = active_limit_per_feed)
       bar.update(0)
 
       if feed.gen_id not in self.comp_rate:
         self.comp_rate[feed.gen_id] = [0, 0]
 
       # Iterate until you get the required amount of candidates
-      while len(step_candidates) < FLAGS.active_limit_per_feed:
+      while len(step_candidates) < active_limit_per_feed:
         # Pre-process inputs
         inputs = self.collateInputData(feed.input_feed, rem)
         # Infer
@@ -369,7 +376,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         cmp_rate[1] += ts
         # Calculate how many more to infer.
         try:
-          rcands = FLAGS.active_limit_per_feed - len(step_candidates)
+          rcands = active_limit_per_feed - len(step_candidates)
           crate  = cmp_rate[0] / cmp_rate[1]
           rem = max(2, int((rcands // self.sample_batch_size) / crate))
         except ZeroDivisionError:
@@ -380,7 +387,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       self.comp_rate_mon.plot()
 
       # Top-k candidates of ith generation.
-      best_cands = self.feat_sampler.sample_from_set(step_candidates)
+      best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
 
       if feed.gen_id > 0:
         best_cands = best_cands[:1]
@@ -394,7 +401,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         if sample_hash not in total_cand_hash:
           total_cand.append(nc)
           total_cand_hash.add(sample_hash)
-          if 0 < nc.score < feed.input_score and 1+nc.sample_feed.gen_id <= FLAGS.active_search_depth:
+          if 0 < nc.score < feed.input_score and 1+nc.sample_feed.gen_id <= active_search_depth:
             self.feed_queue.append(
               ActiveSampleFeed(
                 input_feed       = nc.sample,
@@ -446,7 +453,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       self.feed_queue.append(
         ActiveSampleFeed(
           input_feed     = cf,
-          input_features = list(extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), [FLAGS.feature_space]).values())[0],
+          input_features = list(extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), [feature_space]).values())[0],
           input_score    = math.inf,
           gen_id         = 0,
         )
@@ -551,7 +558,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                    ):
         if batch is not None:
           cm_rate[0] += 1
-          bar.update(min(FLAGS.active_limit_per_feed, len(candidates)))
+          bar.update(min(active_limit_per_feed, len(candidates)))
           candidates.append(batch)
       pool.close()
     except KeyboardInterrupt as e:

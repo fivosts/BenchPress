@@ -31,21 +31,21 @@ class EuclideanSampler(object):
     feature_vector: typing.Dict[str, float]
     times_achieved: int
 
-  def __init__(self):
+  def __init__(self, feature_space):
     self.path = pathlib.Path(FLAGS.benchmarks_path).resolve()
     self.benchmarks = []
-    self.feature_space = FLAGS.feature_space
+    self.feature_space = feature_space
     for f in self.path.iterdir():
       with open(f, 'r') as file:
         contents = file.read()
         features = extractor.ExtractFeatures(contents, [self.feature_space])
-        if features[FLAGS.feature_space]:
+        if features[feature_space]:
           self.benchmarks.append(
             EuclideanSampler.Benchmark(
               f,
               f.name,
               contents,
-              features[FLAGS.feature_space],
+              features[feature_space],
               0
             )
           )
@@ -85,6 +85,7 @@ class EuclideanSampler(object):
 
   def sample_from_set(self, 
                       candidates: typing.List[typing.TypeVar("ActiveSample")],
+                      search_width: int,
                       ) -> bool:
     """
     Find top K candidates by getting minimum
@@ -96,4 +97,4 @@ class EuclideanSampler(object):
         score = self.calculate_distance(candidates[idx].features)
       )
     """
-    return self.topK_candidates(candidates, FLAGS.active_search_width)
+    return self.topK_candidates(candidates, search_width)
