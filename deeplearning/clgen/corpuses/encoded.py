@@ -43,6 +43,11 @@ FLAGS = flags.FLAGS
 
 Base = declarative.declarative_base()
 
+flags.DEFINE_boolean(
+  "override_encoding",
+  False,
+  "Set to override incomplete encoding. Does not set DB value to 'done'"
+)
 
 class Meta(Base):
   """Meta table for encoded content files database."""
@@ -259,6 +264,9 @@ class EncodedContentFiles(sqlutil.Database):
 
   def IsDone(self, session: sqlutil.Session):
     if session.query(Meta).filter(Meta.key == "done").first():
+      return True
+    elif FLAGS.override_encoding:
+      l.getLogger().warn("Overriding incomplete encoded DB.")
       return True
     else:
       return False
