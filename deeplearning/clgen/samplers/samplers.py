@@ -29,6 +29,7 @@ from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import commit
+from deeplearning.clgen.features import extractor
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.proto import sampler_pb2
@@ -75,7 +76,8 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
           pbutil.AssertFieldConstraint(
             config.sample_corpus.corpus_config.active,
             "feature_space",
-            lambda x : x in {"GreweFeatures", "InstCountFeatures", "AutophaseFeatures"}
+            lambda x : x in set(extractor.extractors.keys()),
+            "feature space can only be one of {}".format(', '.join(list(extractor.extractors.keys())))
           )
         else:
           raise ValueError("Sampling type is undefined: {}".format(config.sample_corpus.corpus_config))
