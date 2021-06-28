@@ -96,10 +96,10 @@ message CorpusConfig {
 
 // Active Sampling specifications message.
 message ActiveSampler {
-  int32  active_limit_per_feed = 1;
-  int32  active_search_depth   = 2;
-  int32  active_search_width   = 3;
-  string feature_space         = 4;
+  optional int32  active_limit_per_feed = 1;
+  optional int32  active_search_depth   = 2;
+  optional int32  active_search_width   = 3;
+  optional string feature_space         = 4;
 }
 
 // Criteria used for determining when to stop sampling.
