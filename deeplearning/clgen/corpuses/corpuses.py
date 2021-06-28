@@ -358,9 +358,9 @@ class Corpus(object):
     if self._indices_arrays is None:
       with self.encoded.Session() as session:
         if sequence_length:
-          query = session.query(encoded.EncodedContentFile).filter(encoded.EncodedContentFile.tokencount <= sequence_length)
+          query = session.query(encoded.EncodedContentFile).filter(encoded.EncodedContentFile.tokencount <= sequence_length).yield_per(1000000)
         else:
-          query = session.query(encoded.EncodedContentFile)
+          query = session.query(encoded.EncodedContentFile).yield_per(1000000)
         self._indices_arrays = np.array([x.indices_array for x in query])
 
     if shuffle:
