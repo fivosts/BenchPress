@@ -135,7 +135,10 @@ class EncodedContentFile(Base):
     ####
     encoding_time_ms = int((time.time() - start_time) * 1000)
     try:
-      feature_vector = extractor.ExtractRawFeatures(preprocessed_cf.text)
+      if not pre_train:
+        feature_vector = extractor.ExtractRawFeatures(preprocessed_cf.text)
+      else:
+        feature_vector = ""
     except Exception as e:
       raise e
     return EncodedContentFile(
@@ -178,11 +181,13 @@ def EncoderWorker(
 class EncodedContentFiles(sqlutil.Database):
   """A database of encoded pre-processed contentfiles."""
 
-  def __init__(self, url: str, must_exist: bool = False):
+  def __init__(self, url: str, is_pre_train: bool, must_exist: bool = False):
     self.encoded_path = pathlib.Path(url.replace("sqlite:///", "")).parent
+    self.is_pre_train     = is_pre_train
     self.length_monitor   = monitors.CumulativeHistMonitor(self.encoded_path, "encoded_kernel_length")
-    self.token_monitor    = monitors.NormalizedFrequencyMonitor(self.encoded_path, "token_distribution")
-    self.feature_monitors = {ftype: monitors.CategoricalDistribMonitor(self.encoded_path, "{}_distribution".format(ftype)) for ftype in extractor.extractors.keys()}
+    if not self.is_pre_train:
+      self.token_monitor    = monitors.NormalizedFrequencyMonitor(self.encoded_path, "token_distribution")
+      self.feature_monitors = {ftype: monitors.CategoricalDistribMonitor(self.encoded_path, "{}_distribution".format(ftype)) for ftype in extractor.extractors.keys()}
     super(EncodedContentFiles, self).__init__(url, Base, must_exist=must_exist)
 
   def Create(
@@ -261,7 +266,10 @@ class EncodedContentFiles(sqlutil.Database):
   def SetStats(self, session: sqlutil.Session) -> None:
     """Write corpus stats to DB"""
     file_count      = session.query(EncodedContentFile.id).count()
-    corpus_features = '\n\n'.join([ftype + ":\n" + mon.getStrData() for ftype, mon in self.feature_monitors.items()])
+    if not self.pre_train:
+      corpus_features = '\n\n'.join([ftype + ":\n" + mon.getStrData() for ftype, mon in self.feature_monitors.items()])
+    else:
+      corpus_features = ""
     corpus_lengths  = self.length_monitor.getStrData()
 
     if session.query(EncodedContentFileStats).first():
@@ -341,12 +349,13 @@ class EncodedContentFiles(sqlutil.Database):
               )
               session.add(encoded_cf)
               self.length_monitor.register(encoded_cf.tokencount)
-              self.token_monitor.register([tokenizer.decoder[int(x)] for x in encoded_cf.data.split('.')])
+              if not self.is_pre_train:
+                self.token_monitor.register([tokenizer.decoder[int(x)] for x in encoded_cf.data.split('.')])
 
-              dict_features = extractor.RawToDictFeats(encoded_cf.feature_vector)
-              if dict_features:
-                for key, value in dict_features.items():
-                  self.feature_monitors[key].register(value)
+                dict_features = extractor.RawToDictFeats(encoded_cf.feature_vector)
+                if dict_features:
+                  for key, value in dict_features.items():
+                    self.feature_monitors[key].register(value)
             wall_time_start = wall_time_end
             if wall_time_end - last_commit > 10:
               session.commit()
@@ -357,22 +366,25 @@ class EncodedContentFiles(sqlutil.Database):
         except KeyboardInterrupt as e:
           pool.terminate()
           self.length_monitor.plot()
-          self.token_monitor.plot()
-          for m in self.feature_monitors.values():
-            m.plot()
+          if not self.is_pre_train:
+            self.token_monitor.plot()
+            for m in self.feature_monitors.values():
+              m.plot()
           raise e
         except Exception as e:
           l.getLogger().error(e)
           pool.terminate()
           self.length_monitor.plot()
-          self.token_monitor.plot()
-          for m in self.feature_monitors.values():
-            m.plot()
+          if not self.is_pre_train:
+            self.token_monitor.plot()
+            for m in self.feature_monitors.values():
+              m.plot()
           raise e
       self.length_monitor.plot()
-      self.token_monitor.plot()
-      for m in self.feature_monitors.values():
-        m.plot()
+      if not self.is_pre_train:
+        self.token_monitor.plot()
+        for m in self.feature_monitors.values():
+          m.plot()
     session.commit()
     return
 

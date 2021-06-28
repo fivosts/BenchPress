@@ -139,9 +139,12 @@ class Corpus(object):
 
     # Make a local copy of the configuration.
     if isinstance(config, corpus_pb2.Corpus):
-      self.config = corpus_pb2.Corpus()
+      self.config    = corpus_pb2.Corpus()
+      self.pre_train = False
     else:
-      self.config = corpus_pb2.PreTrainCorpus()
+      self.config    = corpus_pb2.PreTrainCorpus()
+      self.pre_train = True
+
     self.config.CopyFrom(AssertConfigIsValid(config))
     self._tokenizer = None
     self._created = False
@@ -194,9 +197,9 @@ class Corpus(object):
     cache.cachepath("corpus", "encoded", encoded_id).mkdir(exist_ok=True, parents=True)
     db_path = cache.cachepath("corpus", "encoded", encoded_id, "encoded.db")
     if self.config.HasField("pre_encoded_corpus_url"):
-      self.encoded = encoded.EncodedContentFiles(config.pre_encoded_corpus_url)
+      self.encoded = encoded.EncodedContentFiles(config.pre_encoded_corpus_url, self.pre_train)
     else:
-      self.encoded = encoded.EncodedContentFiles(f"sqlite:///{db_path}")
+      self.encoded = encoded.EncodedContentFiles(f"sqlite:///{db_path}", self.pre_train)
     self.tokenizer_path = cache.cachepath(
       "corpus", "encoded", encoded_id, "tokenizer.pkl"
     )
@@ -408,7 +411,7 @@ class Corpus(object):
 
     if self.config.HasField("pre_encoded_corpus_url"):
       encoded_db = encoded.EncodedContentFiles(
-        self.config.pre_encoded_corpus_url
+        self.config.pre_encoded_corpus_url, self.pre_train
       )
       tokenizer = WordTokenizerFromEncodedDb(self.config.tokenizer, encoded_db)
     else:
