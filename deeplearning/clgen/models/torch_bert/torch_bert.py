@@ -718,13 +718,7 @@ class torchBert(backends.BackendBase):
                    seed    : typing.Optional[int] = None
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
-    # if sampler.is_live or sampler.is_active:
     sample_batch_size = sampler.batch_size
-    # else:
-      # sample_batch_size = (self.train_batch_size // sampler.batch_size
-      #                       if self.train_batch_size > sampler.batch_size
-      #                       else sampler.batch_size)
-
     data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
                        self.config.training, sampler, self.tokenizer, seed, sample_batch_size,
                        self.config.architecture.max_position_embeddings, self.cache.path
@@ -797,22 +791,12 @@ class torchBert(backends.BackendBase):
       if self.sampler.is_active:
         return self.sample.data_generator.ActiveGeneration(self, self.sample)
       else:
-        # t1 = time.time()
-
-        # for x in range(20):
         step_out = self.sample_model_step(
             self.sample.models,
             self.sample.devices,
             self.step_inputs,
             is_live = self.sampler.is_live
         )
-        # step_out = self.model_step(
-        #     self.sample.models[0], self.step_inputs,
-        #     is_live = self.sampler.is_live
-        # )
-        # t2 = time.time()
-        # print("In total:", t2-t1)
-        # exit()
         if self.sampler.is_live and input("Show logits figure ? [y/!y]") == "y":
           for hole, indcs in zip(step_out['prediction_scores'], step_out['sample_indices']):
             plotter.LogitsStepsDistrib(
@@ -828,35 +812,6 @@ class torchBert(backends.BackendBase):
           step_out['generated_samples'],
           step_out['sample_indices']
         )
-
-    #   if self.sampler.is_active:
-    #     generated_samples, sample_indices = step_out['generated_samples'], step_out['sample_indices']
-    #     while True:
-    #       active_sample, active_indices, done = self.sample.data_generator.EvaluateFeatures(
-    #         generated_samples,
-    #         sample_indices
-    #       )
-    #       if done:
-    #         return (np.repeat(self.step_inputs['original_input'].cpu().numpy(), len(active_sample), axis = 0),
-    #                 np.repeat(self.step_inputs['input_ids'].cpu().numpy(), len(active_sample), axis = 0),
-    #                 active_sample,
-    #                 active_indices)
-    #       else:
-    #         step_input = {
-    #           x: active_sample[x].repeat((self.sampler.batch_size, 1)) for x in active_sample
-    #         }
-    #         # self.sampler.setStartText(
-    #         #   self.tokenizer.tokensToString(
-    #         #     step_input['input_ids'][0].cpu().numpy(), ignore_token = self.tokenizer.padToken
-    #         #   )
-    #         # )
-    #         # self.sampler.Specialize(self.tokenizer)
-    #         active_step = self.sample_model_step(
-    #             self.sample.models, self.sample.devices, step_input,
-    #         )
-    #         generated_samples, sample_indices = active_step['generated_samples'], active_step['sample_indices']
-    #   else:
-    # raise ValueError("While True loop broken without returning")
 
   def _getTestSampler(self, test_sampler, sequence_length):
     if test_sampler is None or test_sampler.is_live or test_sampler.is_active:
