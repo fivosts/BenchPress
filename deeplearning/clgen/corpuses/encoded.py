@@ -266,7 +266,7 @@ class EncodedContentFiles(sqlutil.Database):
   def SetStats(self, session: sqlutil.Session) -> None:
     """Write corpus stats to DB"""
     file_count      = session.query(EncodedContentFile.id).count()
-    if not self.pre_train:
+    if not self.is_pre_train:
       corpus_features = '\n\n'.join([ftype + ":\n" + mon.getStrData() for ftype, mon in self.feature_monitors.items()])
     else:
       corpus_features = ""

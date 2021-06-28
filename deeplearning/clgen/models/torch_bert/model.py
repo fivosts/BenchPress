@@ -28,9 +28,9 @@ from deeplearning.clgen.models.torch_bert import config
 from deeplearning.clgen.models.torch_bert import modeling_utils
 from deeplearning.clgen.models.torch_bert import compiler
     
-import tensorrt as trt
-import pycuda.autoinit
-import pycuda.driver as cuda
+# import tensorrt as trt
+# import pycuda.autoinit
+# import pycuda.driver as cuda
 
 def mish(x):
   return x * torch.tanh(torch.nn.functional.softplus(x))

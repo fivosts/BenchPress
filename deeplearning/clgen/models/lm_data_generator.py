@@ -203,7 +203,7 @@ class MaskLMDataGenerator(object):
 
     self.dataset       = {}
     self.corpus        = corpus
-    self.tokenizer      = corpus.tokenizer
+    self.tokenizer     = corpus.tokenizer
     self.config        = training_opts.data_generator
     self.training_opts = training_opts
     self.rngen         = np.random # random.Random(training_opts.random_seed)
@@ -458,27 +458,29 @@ class MaskLMDataGenerator(object):
     # Monitor counts actual length distribution of kernel instances.
     kernel_length_monitor = monitors.FrequencyMonitor(path, "{}kernel_length".format("pre_" if self.pre_train else ""))
     # Token frequency distribution monitor.
-    feature_monitors = {
-      ftype: monitors.CategoricalDistribMonitor(
-                        path,
-                        "{}_{}_distribution".format("pre_" if self.pre_train else "", ftype)
-                      )
-      for ftype in extractor.extractors.keys()
-    }
+    if not self.pre_train:
+      feature_monitors = {
+        ftype: monitors.CategoricalDistribMonitor(
+                          path,
+                          "{}_{}_distribution".format("pre_" if self.pre_train else "", ftype)
+                        )
+        for ftype in extractor.extractors.keys()
+      }
 
     if self.config.datapoint_type == "kernel":
       # Reject larger than sequence length
-      initial_length       = copy.deepcopy(len(encoded_corpus))
+      initial_length = copy.deepcopy(len(encoded_corpus))
 
-      # Get features of fitting dataset within sequence length
-      for feature in self.corpus.GetTrainingFeatures(effect_seq_length):
-        for ftype, fvector in feature.items():
-          feature_monitors[ftype].register(fvector)
+      if not self.pre_train:
+        # Get features of fitting dataset within sequence length
+        for feature in self.corpus.GetTrainingFeatures(effect_seq_length):
+          for ftype, fvector in feature.items():
+            feature_monitors[ftype].register(fvector)
 
       if self.config.truncate_large_kernels:
-        encoded_corpus       = [list(x[:effect_seq_length]) for x in encoded_corpus if len(x[:effect_seq_length]) <= effect_seq_length] # Account for start and end token
+        encoded_corpus     = [list(x[:effect_seq_length]) for x in encoded_corpus if len(x[:effect_seq_length]) <= effect_seq_length] # Account for start and end token
       else:
-        encoded_corpus       = [list(x) for x in encoded_corpus if len(x) <= effect_seq_length] # Account for start and end token
+        encoded_corpus     = [list(x) for x in encoded_corpus if len(x) <= effect_seq_length] # Account for start and end token
 
       reduced_length       = copy.deepcopy(len(encoded_corpus))
       # Add start/end tokens
@@ -523,11 +525,11 @@ class MaskLMDataGenerator(object):
       self.steps_per_epoch        = len(encoded_corpus) // (batch_size * sequence_length * dupe_factor)
       assert self.steps_per_epoch != 0, "Not enought data. Use smaller sequence_length and/or batch_size"
       if self.num_train_steps:
-        self.num_epochs             = self.num_train_steps // self.steps_per_epoch
+        self.num_epochs            = self.num_train_steps // self.steps_per_epoch
 
       # clipped_corpus_length       = dupe_factor * self.steps_per_epoch * batch_size * sequence_length
-      clipped_corpus_length       = self.steps_per_epoch * batch_size * sequence_length
-      clipped_corpus              = encoded_corpus[:clipped_corpus_length]
+      clipped_corpus_length = self.steps_per_epoch * batch_size * sequence_length
+      clipped_corpus        = encoded_corpus[:clipped_corpus_length]
 
       # shaped_corpus = np.split(clipped_corpus, batch_size * self.steps_per_epoch * dupe_factor, 0)
       shaped_corpus = np.split(clipped_corpus, batch_size * self.steps_per_epoch, 0)
@@ -546,13 +548,13 @@ class MaskLMDataGenerator(object):
                   humanize.intcomma(int((time.time() - start_time) * 1000)),
               )
       )
-
     else:
       raise ValueError("Unrecognized datapoint_type: {}".format(self.config.datapoint_type))
 
     kernel_length_monitor.plot()
-    for fm in feature_monitors.values():
-      fm.plot()
+    if not self.pre_train:
+      for fm in feature_monitors.values():
+        fm.plot()
     with open(path / corpus_file, 'wb') as outf:
       pickle.dump(shaped_corpus, outf)
     return shaped_corpus
