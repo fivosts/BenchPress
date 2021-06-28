@@ -115,6 +115,7 @@ class EncodedContentFile(Base):
     preprocessed_cf: preprocessed.PreprocessedContentFile,
     tokenizer: tokenizers.TokenizerBase,
     eof: str,
+    pre_train: bool,
   ) -> "EncodedContentFile":
     """Instantiate an EncodedContentFile from a preprocessed file.
 
@@ -162,6 +163,7 @@ def EncoderWorker(
   job: internal_pb2.EncoderWorker,
   tokenizer,
   contentfile_separator,
+  is_pre_train,
 ) -> typing.Optional[EncodedContentFile]:
   """Encode a single content file."""
   # TODO(cec): There is a bug in the tokenizer creation logic such that the
@@ -173,6 +175,7 @@ def EncoderWorker(
       preprocessed.PreprocessedContentFile(id=job.id, text=job.text),
       tokenizer,
       contentfile_separator,
+      is_pre_train,
     )
   except Exception as e:
     raise e
@@ -337,6 +340,7 @@ class EncodedContentFiles(sqlutil.Database):
                               functools.partial(EncoderWorker,
                                                 tokenizer = tokenizer,
                                                 contentfile_separator = contentfile_separator,
+                                                is_pre_train = self.is_pre_train,
                                                 ),
                               batch
                             ):
