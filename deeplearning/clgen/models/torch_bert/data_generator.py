@@ -36,30 +36,6 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 FLAGS = flags.FLAGS
 
-# flags.DEFINE_integer(
-#   "active_limit_per_feed",
-#   2000,
-#   "Set limit on sample attempts per input_feed. [Default: 400]. Set to 0 for infinite."
-# )
-
-# flags.DEFINE_integer(
-#   "active_search_depth",
-#   32,
-#   "Set the maximum sampling generation depth that active sampler can reach. [Default: 20]."
-# )
-
-# flags.DEFINE_integer(
-#   "active_search_width",
-#   5,
-#   "Set top-K surviving candidates per generation, sorted by distance from target feature space."
-# )
-
-# flags.DEFINE_string(
-#   "feature_space",
-#   "GreweFeatures",
-#   "Select feature space to apply active sampling on. Choices are 'GreweFeatures', 'InstCountFeatures', 'AutophaseFeatures'. [Default: 'GreweFeatures']"
-# )
-
 class ActiveSampleFeed(typing.NamedTuple):
   """
   Representation of an active learning input to the model.
@@ -192,6 +168,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         url = "sqlite:///{}".format(d.sampler.corpus_directory / "active_feeds.db")
       )
       d.feat_sampler      = feature_sampler.EuclideanSampler(
+        self.sampler.corpus_directory,
         self.sampler.sample_corpus.corpus_config.active.feature_space
       )
       d.candidate_monitor = monitors.CategoricalDistribMonitor(
@@ -200,6 +177,16 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       d.comp_rate_mon     = monitors.CategoricalHistoryMonitor(
         d.sampler.corpus_directory, "comp_rate_per_gen"
       )
+      # Store unique specs to database once.
+      d.addToDB(
+        active_feed_database.ActiveSamplingSpecs.FromArgs(
+          act_l_pf   = self.sampler.sample_corpus.corpus_config.active.active_limit_per_feed,
+          act_s_dep  = self.sampler.sample_corpus.corpus_config.active.active_search_depth,
+          act_s_wid  = self.sampler.sample_corpus.corpus_config.active.active_search_width,
+          feat_space = self.sampler.sample_corpus.corpus_config.active.feature_space.
+        )
+      )
+
     d.dataloader = d.predict_dataloader()
     d.loader     = iter(d.dataloader)
     return d
@@ -421,6 +408,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               sample           = nc.sample,
               output_features  = nc.features,
               sample_quality   = nc.score,
+              target_benchmark = (self.feat_sampler.target_benchmark.name, self.feat_sampler.target_benchmark.contents),
+              target_features  = self.feat_sampler.target_benchmark.feature_vector,
               compile_status   = True,
               generation_id    = nc.sample_feed.gen_id,
               timestep         = nc.timestep,
@@ -588,8 +577,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
   def addToDB(self,
               db_input: typing.Union[
-                          active_feed_database.ActiveFeed,
-                          active_feed_database.ActiveInput
+                          active_feed_database.ActiveSamplingSpecs,
+                          active_feed_database.ActiveInput,
+                          active_feed_database.ActiveFeed
                         ]
               ) -> None:
     """
