@@ -29,28 +29,17 @@ class EuclideanSampler(object):
     name: str
     contents: str
     feature_vector: typing.Dict[str, float]
-    times_achieved: int
 
-  def __init__(self, feature_space):
-    self.path = pathlib.Path(FLAGS.benchmarks_path).resolve()
-    self.benchmarks = []
+  def __init__(self,
+               workspace: pathlib.Path,
+               feature_space: str
+               ):
+    self.path          = pathlib.Path(FLAGS.benchmarks_path).resolve()
+    self.workspace     = workspace
     self.feature_space = feature_space
-    for f in self.path.iterdir():
-      with open(f, 'r') as file:
-        contents = file.read()
-        features = extractor.ExtractFeatures(contents, [self.feature_space])
-        if features[feature_space]:
-          self.benchmarks.append(
-            EuclideanSampler.Benchmark(
-              f,
-              f.name,
-              contents,
-              features[feature_space],
-              0
-            )
-          )
+    self.loadCheckpoint()
     self.target_benchmark = self.benchmarks[0]
-    l.getLogger().warn("{}: {}".format(self.target_benchmark.name, self.target_benchmark.feature_vector))
+    l.getLogger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.feature_vector))
     return
 
   def iter_benchmark(self):
@@ -59,10 +48,11 @@ class EuclideanSampler(object):
     """
     self.benchmarks.append(self.benchmarks.pop(0))
     self.target_benchmark = self.benchmarks[0]
-    l.getLogger().warn("{}: {}".format(self.target_benchmark.name, self.target_benchmark.feature_vector))
+    self.saveCheckpoint()
+    l.getLogger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.feature_vector))
     return
 
-  def calculate_distance(self, infeat) -> float:
+  def calculate_distance(self, infeat: typing.Dict[str, float]) -> float:
     """
     Euclidean distance between sample feature vector
     and current target benchmark.
@@ -98,3 +88,37 @@ class EuclideanSampler(object):
       )
     """
     return self.topK_candidates(candidates, search_width)
+
+  def saveCheckpoint(self) -> None:
+    """
+    Save feature sampler state.
+    """
+    with open(self.workspace / "feature_sampler_state.pkl", 'wb') as outf:
+      pickle.dump(self.benchmarks, outf)
+    return
+
+
+  def loadCheckpoint(self) -> None:
+    """
+    Load feature sampler state.
+    """
+    if (self.workspace / "feature_sampler_state.pkl").exists():
+      with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
+        self.benchmarks = pickle.load(infile)
+    else:
+      self.benchmarks = []
+      for f in self.path.iterdir():
+        with open(f, 'r') as file:
+          contents = file.read()
+          features = extractor.ExtractFeatures(contents, [self.feature_space])
+          if features[feature_space]:
+            self.benchmarks.append(
+              EuclideanSampler.Benchmark(
+                f,
+                f.name,
+                contents,
+                features[feature_space],
+                0
+              )
+            )
+    return
