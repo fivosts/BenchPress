@@ -183,7 +183,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           act_l_pf   = self.sampler.sample_corpus.corpus_config.active.active_limit_per_feed,
           act_s_dep  = self.sampler.sample_corpus.corpus_config.active.active_search_depth,
           act_s_wid  = self.sampler.sample_corpus.corpus_config.active.active_search_width,
-          feat_space = self.sampler.sample_corpus.corpus_config.active.feature_space.
+          feat_space = self.sampler.sample_corpus.corpus_config.active.feature_space
         )
       )
 
