@@ -17,13 +17,31 @@ FLAGS = flags.FLAGS
 
 Base = declarative.declarative_base()
 
-class ActiveFeedHistory(Base):
-  __tablename__ = "data"
+class ActiveSamplingSpecs(Base):
+  __tablename__ = "specifications"
   """
     DB Table for concentrated online/active sampling results.
   """
-  key     : str = sql.Column(sql.String(1024), primary_key=True)
-  results : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  sha256                : str = sql.Column(sql.String(1024), primary_key=True)
+  active_limit_per_feed : int = sql.Column(sql.Integer, nullable = False)
+  active_search_depth   : int = sql.Column(sql.Integer, nullable = False)
+  active_search_width   : int = sql.Column(sql.Integer, nullable = False)
+  feature_space         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+
+  @classmethod
+  def FromArgs(cls,
+               act_l_pf   : int,
+               act_s_dep  : int,
+               act_s_wid  : int,
+               feat_space : str
+               ) -> typing.TypeVar("ActiveSamplingSpecs"):
+    return ActiveSamplingSpecs(
+      sha256                = crypto.sha256_str(act_l_pf + act_s_dep + act_s_wid + feat_space),
+      active_limit_per_feed = act_l_pf,
+      active_search_depth   = act_s_dep,
+      active_search_width   = act_s_wid,
+      feature_space         = feat_space,
+    )
 
 class ActiveInput(Base, sqlutil.ProtoBackedMixin):
   """
@@ -77,35 +95,39 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
   """
   __tablename__    = "active_feeds"
   # entry id
-  id               : int = sql.Column(sql.Integer,    primary_key = True)
+  id               : int   = sql.Column(sql.Integer,    primary_key = True)
   # unique hash of sample text
-  sha256           : str = sql.Column(sql.String(64), nullable = False, index = True)
+  sha256           : str   = sql.Column(sql.String(64), nullable = False, index = True)
   # Text original input
-  input_feed       : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  input_feed       : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Encoded original input
-  encoded_feed     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  encoded_feed     : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Feature vector of input_feed
-  input_features   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  input_features   : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Resulting encoded array with masks
-  masked_input_ids : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  masked_input_ids : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Array of lengths of holes for given instance
-  hole_lengths     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  hole_lengths     : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Array of starting ids of hole instances in feed.
   # hole_start_ids   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Output sample
-  sample           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  sample           : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Actual length of sample, excluding pads.
-  num_tokens       : int = sql.Column(sql.Integer, nullable = False)
+  num_tokens       : int   = sql.Column(sql.Integer, nullable = False)
   # Sample's vector of features.
-  output_features  : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  output_features  : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Whether the generated sample is of good quality or not.
   sample_quality   : float = sql.Column(sql.Float,  nullable = False)
-  # Whether sample compiles or not
-  compile_status   : bool = sql.Column(sql.Boolean, nullable = False)
+  # Name and contents of target benchmark specified.
+  target_benchmark : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Feature vector of target benchmark.
+  target_features  : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Whether sample compiles or not.
+  compile_status   : bool  = sql.Column(sql.Boolean, nullable = False)
   # Number of generation for sample
-  generation_id    : int  = sql.Column(sql.Integer, nullable = False)
+  generation_id    : int   = sql.Column(sql.Integer, nullable = False)
   # Timestep where sample was acquired.
-  timestep         : int  = sql.Column(sql.Integer, nullable = False)
+  timestep         : int   = sql.Column(sql.Integer, nullable = False)
   # Date
   date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable = False)
 
@@ -120,6 +142,8 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
                sample           : np.array,
                output_features  : typing.Dict[str, float],
                sample_quality   : float,
+               target_benchmark : typing.Tuple[str, str],
+               target_features  : typing.Dict[str, float],
                compile_status   : bool,
                generation_id    : int,
                timestep         : int,
@@ -145,6 +169,8 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
       sample           = str_sample,
       num_tokens       = int(num_tokens),
       output_features  = '\n'.join(["{}:{}".format(k, v) for k, v in output_features.items()]) if output_features else "None",
+      target_benchmark = "// {}\n{}".format(target_benchmark[0], target_benchmark[1]),
+      target_features  = '\n'.join(["{}:{}".format(k, v) for k, v in target_features.items()]) if target_features else "None",
       sample_quality   = sample_quality,
       compile_status   = compile_status,
       generation_id    = generation_id,
