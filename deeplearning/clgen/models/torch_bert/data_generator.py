@@ -216,8 +216,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       dataset = datasets.LazyConcatDataset([x for x in self.dataset[set_name]['file']])
       sampler = datasets.LazyRandomSampler(dataset, replacement = False)
     elif self.config.datapoint_time == "online":
-      dataset = datasets.OnlineDataset(self, is_train)
-      sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
+      if self.pre_train:
+        dataset = datasets.LazyOnlineDataset(self, is_train)
+        sampler = datasets.LazyRandomSampler(dataset, replacement = False)
+      else:
+        dataset = datasets.OnlineDataset(self, is_train)
+        sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
     else:
       raise ValueError(self.config.datapoint_time)
 
@@ -264,8 +268,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         """
         TODO maybe add configSampleSets here as well.
         """
-        dataset = datasets.OnlineDataset(self, False)
-        sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
+        if self.pre_train:
+          dataset = datasets.LazyOnlineDataset(self, False)
+          sampler = datasets.LazyRandomSampler(dataset, replacement = False)
+        else:
+          dataset = datasets.OnlineDataset(self, False)
+          sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
       elif self.sampler.is_active:
         if self.sampler.isFixedStr:
           dataset = [np.asarray(self.tokenizer.TokenizeString(self.sampler.start_text))]
