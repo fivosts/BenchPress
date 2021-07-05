@@ -10,6 +10,7 @@ import pickle
 import functools
 import numpy as np
 import pathlib
+import glob
 
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
@@ -46,6 +47,8 @@ class OnlineDataset(torch.utils.data.Dataset):
     self.size            = len(self.dataset)
     self.cur_step        = 0
     self.steps_per_epoch = dg.steps_per_epoch * dg.training_opts.batch_size
+
+    self.hlen_monitor = None
     if is_train:
       if (self.cache_path / "{}hole_length_mon.pkl".format("pre_" if dg.pre_train else "")).exists():
         with open(self.cache_path / "{}hole_length_mon.pkl".format("pre_" if dg.pre_train else ""), 'rb') as infile:
@@ -107,6 +110,116 @@ class OnlineDataset(torch.utils.data.Dataset):
         return pickle.load(infile)
     else:
       raise FileNotFoundError(dataset)
+
+class LazyOnlineDataset(torch.utils.data.Dataset):
+  r"""Dataset as a concatenation of multiple datasets.
+
+  This class is useful to assemble different existing datasets
+  and instantiate them lazily, to avoid loading them all in
+  memory at the same time/
+
+  Arguments:
+    datasets (sequence): List of paths for datasets to be concatenated
+  """
+
+  @staticmethod
+  def cumsum(sequence: typing.List[pathlib.Path]):
+    r, s = [], 0
+    for e in sequence:
+      with open(e, 'rb') as infile:
+        lt = len(pickle.load(infile))
+      assert lt > 0, "Dataset {} is empty".format(e)
+      r.append(lt + s)
+      s += lt
+    return r
+
+  @property
+  def num_datasets(self):
+    return len(self.datasets)
+
+  def __init__(self, dg: lm_data_generator.MaskLMDataGenerator, is_train: bool):
+    super(LazyOnlineDataset, self).__init__()
+
+    self.datasets = glob.glob(str(dg.cache.path / "{}corpus_*.pkl".format("pre_" if dg.pre_train else "")))
+    self.cumulative_sizes = self.cumsum(self.datasets)
+
+    self.curr_dset_idx = None
+    self.dataset       = None
+    self.is_train      = is_train
+    """
+    TODO you've better change is_train check to something more generic.
+    """
+    self.vfactor = lambda l: int(l * (1 - (dg.config.validation_split / 100)))
+    self.cache_path      = dg.cache.path
+    self.cur_step        = 0
+    self.steps_per_epoch = dg.steps_per_epoch * dg.training_opts.batch_size
+
+    self.hlen_monitor    = None
+    if is_train:
+      if (self.cache_path / "{}hole_length_mon.pkl".format("pre_" if dg.pre_train else "")).exists():
+        with open(self.cache_path / "{}hole_length_mon.pkl".format("pre_" if dg.pre_train else ""), 'rb') as infile:
+          self.hlen_monitor = pickle.load(infile)
+      else:
+        self.hlen_monitor = monitors.NormalizedFrequencyMonitor(self.cache_path, "{}online_hole_length".format("pre_" if dg.pre_train else ""))
+
+    """
+    TODO, add custom config just like in lm_data_generator
+    for val sets / sample sets etc.
+    """
+    self.tokenizer = dg.tokenizer
+    if dg.config.HasField("mask"):
+      self.func = functools.partial(sequence_masking.MaskSequence,
+                                    train_set         = is_train,
+                                    max_predictions   = dg.training_opts.max_predictions_per_seq,
+                                    pickled_tokenizer = dg.tokenizer,
+                                    training_opts     = dg.training_opts,
+                                    is_torch          = True,
+                                    config            = dg.config,
+      )
+    elif dg.config.HasField("hole"):
+      distribution = distributions.Distribution.FromHoleConfig(
+        dg.config.hole, dg.cache.path, "hole_length_online"
+      )
+      self.func = functools.partial(sequence_masking.HoleSequence,
+                                    train_set       = is_train,
+                                    max_predictions = dg.training_opts.max_predictions_per_seq,
+                                    masked_lm_prob  = dg.training_opts.masked_lm_prob,
+                                    distribution    = distribution,
+                                    tokenizer       = dg.tokenizer,
+        )
+    return
+
+  def __len__(self):
+    return self.cumulative_sizes[-1]
+
+  def __getitem__(self, idx):
+
+    self.cur_step += 1
+    if idx < 0:
+      if -idx > len(self):
+        raise ValueError("absolute value of index should not exceed dataset length")
+      idx = len(self) + idx
+    import bisect
+    dataset_idx = bisect.bisect_right(self.cumulative_sizes, idx)
+    
+    if self.curr_dset_idx != dataset_idx:
+      self.curr_dset_idx = dataset_idx
+      with open(self.datasets[dataset_idx], 'rb') as infile:
+        self.dataset = pickle.load(infile)
+
+    if dataset_idx == 0:
+      sample_idx = idx
+    else:
+      sample_idx = idx - self.cumulative_sizes[dataset_idx - 1]
+    k = self.func(self.dataset[sample_idx])
+
+    if self.hlen_monitor:
+      self.hlen_monitor.register([x for x in k['masked_lm_lengths'] if x >= 0])
+      if self.cur_step % self.steps_per_epoch == 0:
+        self.hlen_monitor.plot()
+        with open(self.cache_path / "hole_length_mon.pkl", 'wb') as outf:
+          pickle.dump(self.hlen_monitor, outf)
+    return k
 
 class LazyConcatDataset(torch.utils.data.Dataset):
   r"""Dataset as a concatenation of multiple datasets.
@@ -203,7 +316,7 @@ class LazyRandomSampler(torch.utils.data.Sampler):
 
   @property
   def num_datasets(self):
-    if isinstance(self.data_source, LazyConcatDataset):
+    if isinstance(self.data_source, LazyConcatDataset) or isinstance(self.data_source, LazyOnlineDataset):
       return self.data_source.num_datasets
     else:
       return 1
@@ -219,7 +332,16 @@ class LazyRandomSampler(torch.utils.data.Sampler):
       dataset_idx = next(self.dataset_tensor)
     except StopIteration:
       dataset_idx = next(self.__datasetIdx_iter__)
-    bounds = (self.data_source.cumulative_sizes[dataset_idx - 1] if dataset_idx else 0, self.data_source.cumulative_sizes[dataset_idx])
+
+    lb, ub = self.data_source.cumulative_sizes[dataset_idx - 1] if dataset_idx else 0, self.data_source.cumulative_sizes[dataset_idx]
+    if isinstance(self.data_source, LazyOnlineDataset):
+      clen = ub - lb
+      if self.data_source.is_train:
+        bounds = (lb, lb + self.data_source.vfactor(clen))
+      else:
+        bounds = (lb + self.data_source.vfactor(clen), ub)
+    else:
+      bounds = (lb, ub)
 
     if self.replacement:
       if self._num_samples is None:
