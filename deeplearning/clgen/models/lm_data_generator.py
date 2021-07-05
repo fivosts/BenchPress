@@ -431,6 +431,18 @@ class MaskLMDataGenerator(object):
 
     corpus_file = "{}corpus.pkl".format("pre_" if self.pre_train else "")
 
+    # Monitor counts actual length distribution of kernel instances.
+    kernel_length_monitor = monitors.FrequencyMonitor(path, "{}kernel_length".format("pre_" if self.pre_train else ""))
+    # Token frequency distribution monitor.
+    if not self.pre_train:
+      feature_monitors = {
+        ftype: monitors.CategoricalDistribMonitor(
+                          path,
+                          "{}{}_distribution".format("pre_" if self.pre_train else "", ftype)
+                        )
+        for ftype in extractor.extractors.keys()
+      }
+
     if (path / corpus_file).exists():
       with open(path / corpus_file, 'rb') as infile:
         shaped_corpus = pickle.load(infile)
@@ -453,19 +465,38 @@ class MaskLMDataGenerator(object):
       with open(path / "text_corpus.pkl", 'rb') as infile:
         encoded_corpus = [self.tokenizer.TokenizeString(x) for x in pickle.load(infile)]
     else:
-      encoded_corpus  = self.corpus.GetTrainingData(sequence_length = effect_seq_length if not self.config.truncate_large_kernels else None)
-
-    # Monitor counts actual length distribution of kernel instances.
-    kernel_length_monitor = monitors.FrequencyMonitor(path, "{}kernel_length".format("pre_" if self.pre_train else ""))
-    # Token frequency distribution monitor.
-    if not self.pre_train:
-      feature_monitors = {
-        ftype: monitors.CategoricalDistribMonitor(
-                          path,
-                          "{}_{}_distribution".format("pre_" if self.pre_train else "", ftype)
-                        )
-        for ftype in extractor.extractors.keys()
-      }
+      if self.pre_train:
+        if self.num_train_steps:
+          self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
+        self.steps_per_epoch = self.config.steps_per_epoch
+        encoded_corpus = []
+        chunk_size = 10000000
+        i = 0
+        ch_idx = 0
+        for kernel in self.corpus.GetTrainingDataGenerator():
+          enck = self._addStartEndToken(list(kernel[:effect_seq_length]))
+          kernel_length_monitor.register(len(enck))
+          enck += pad * (sequence_length - len(enck))
+          encoded_corpus.append(np.array(enck))
+          i += 1
+          if i % chunk_size == 0:
+            encoded_corpus = np.array(encoded_corpus)
+            corpus_file = "pre_corpus_{}.pkl".format(ch_idx)
+            l.getLogger().info("Fixing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
+            with open(path / corpus_file, 'wb') as outf:
+              pickle.dump(encoded_corpus, outf)
+            ch_idx += 1
+            encoded_corpus = []
+        if encoded_corpus:
+          encoded_corpus = np.array(encoded_corpus)
+          l.getLogger().info("Fixing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
+          corpus_file = "pre_corpus_{}.pkl".format(ch_idx)
+          with open(path / corpus_file, 'wb') as outf:
+            pickle.dump(encoded_corpus, outf)
+        kernel_length_monitor.plot()
+        return encoded_corpus
+      else:
+        encoded_corpus  = self.corpus.GetTrainingData(sequence_length = effect_seq_length if not self.config.truncate_large_kernels else None)
 
     if self.config.datapoint_type == "kernel":
       # Reject larger than sequence length
