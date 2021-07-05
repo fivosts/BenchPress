@@ -334,6 +334,12 @@ class Corpus(object):
         query = query.order_by(func.random())
       return self.config.contentfile_separator.join([x[0] for x in query])
 
+  def GetTrainingDataGenerator(self):
+    with self.encoded.Session() as session:
+      for x in session.query(encoded.EncodedContentFile).yield_per(1000000):
+        yield list(x.indices_array)
+      return
+
   def GetTrainingData(self,
                       shuffle: bool = False,
                       sequence_length: int = False,
