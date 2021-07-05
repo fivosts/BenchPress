@@ -470,7 +470,7 @@ class MaskLMDataGenerator(object):
           self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
         self.steps_per_epoch = self.config.steps_per_epoch
         encoded_corpus = []
-        chunk_size = 10000000
+        chunk_size = 5000000
         i = 0
         ch_idx = 0
         for kernel in self.corpus.GetTrainingDataGenerator():
