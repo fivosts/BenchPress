@@ -484,7 +484,7 @@ class MaskLMDataGenerator(object):
             corpus_file = "pre_corpus_{}.pkl".format(ch_idx)
             l.getLogger().info("Fixing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
             with open(path / corpus_file, 'wb') as outf:
-              pickle.dump(encoded_corpus, outf)
+              pickle.dump(encoded_corpus, outf, protocol = 4)
             ch_idx += 1
             encoded_corpus = []
         if encoded_corpus:
@@ -492,7 +492,7 @@ class MaskLMDataGenerator(object):
           l.getLogger().info("Fixing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
           corpus_file = "pre_corpus_{}.pkl".format(ch_idx)
           with open(path / corpus_file, 'wb') as outf:
-            pickle.dump(encoded_corpus, outf)
+            pickle.dump(encoded_corpus, outf, protocol = 4)
         kernel_length_monitor.plot()
         return encoded_corpus
       else:
