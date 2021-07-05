@@ -258,7 +258,10 @@ class torchBert(backends.BackendBase):
     """
     Model parameter initialization for inference.
     """
-    multiprocessing.set_start_method('spawn')
+    try:
+      multiprocessing.set_start_method('spawn')
+    except RuntimeError as e:
+      pass
     self._ConfigModelParams(is_sampling = True)
     self.sampler = sampler
     self.temperature = sampler.temperature
@@ -667,10 +670,10 @@ class torchBert(backends.BackendBase):
       l.getLogger().info("BERT Validation on {}".format(set_name))
       if self.torch_tpu_available:
         loader = self.pytorch.torch_ploader.ParallelLoader(
-                          self.train.data_generator.dataloader, [self.pytorch.device]
+                          dataloader, [self.pytorch.device]
                     ).per_device_loader(self.pytorch.device)
       else:
-        loader = self.train.data_generator.dataloader
+        loader = dataloader
 
       if not per_epoch:
         val_hook = hooks.validationSampleHook(
