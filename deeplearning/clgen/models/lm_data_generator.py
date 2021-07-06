@@ -474,7 +474,10 @@ class MaskLMDataGenerator(object):
         i = 0
         ch_idx = 0
         for kernel in self.corpus.GetTrainingDataGenerator():
-          enck = self._addStartEndToken(list(kernel[:effect_seq_length]))
+          try:
+            enck = self._addStartEndToken(list(kernel[:effect_seq_length]))
+          except AssertionError:
+            continue
           kernel_length_monitor.register(len(enck))
           enck += pad * (sequence_length - len(enck))
           encoded_corpus.append(np.array(enck))
