@@ -226,25 +226,25 @@ class EncodedContentFiles(sqlutil.Database):
         session.commit()
 
       # Logging output.
-      num_files = session.query(EncodedContentFile).count()
-      token_count, total_walltime, total_time, = session.query(
-        func.sum(EncodedContentFile.tokencount),
-        func.sum(EncodedContentFile.wall_time_ms),
-        func.sum(EncodedContentFile.encoding_time_ms),
-      ).first()
-    l.getLogger().info("Encoded {} files in {} ms ({:.2f}x speedup)"
-                        .format(
-                            humanize.intcomma(num_files),
-                            humanize.intcomma(total_walltime),
-                            total_time / total_walltime,
-                          ), mail_level = 4
-                      )
-    l.getLogger().info("Encoded corpus: {} tokens, {} files."
-                        .format(
-                            humanize.intcomma(token_count),
-                            humanize.intcomma(num_files),
-                          ), mail_level = 4
-                      )
+    #   num_files = session.query(EncodedContentFile).count()
+    #   token_count, total_walltime, total_time, = session.query(
+    #     func.sum(EncodedContentFile.tokencount),
+    #     func.sum(EncodedContentFile.wall_time_ms),
+    #     func.sum(EncodedContentFile.encoding_time_ms),
+    #   ).first()
+    # l.getLogger().info("Encoded {} files in {} ms ({:.2f}x speedup)"
+    #                     .format(
+    #                         humanize.intcomma(num_files),
+    #                         humanize.intcomma(total_walltime),
+    #                         total_time / total_walltime,
+    #                       ), mail_level = 4
+    #                   )
+    # l.getLogger().info("Encoded corpus: {} tokens, {} files."
+    #                     .format(
+    #                         humanize.intcomma(token_count),
+    #                         humanize.intcomma(num_files),
+    #                       ), mail_level = 4
+    #                   )
     return
 
   @property
