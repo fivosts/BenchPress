@@ -72,7 +72,7 @@ psutil==5.4.5
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
 pycparser==2.20
-pycuda<2021.1
+# pycuda<2021.1
 PyDispatcher==2.0.5
 PyGithub==1.51
 PyHamcrest==2.0.2
