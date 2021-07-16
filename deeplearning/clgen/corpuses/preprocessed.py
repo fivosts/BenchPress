@@ -205,74 +205,74 @@ class PreprocessedContentFiles(sqlutil.Database):
         session.commit()
 
       # Logging output.
-      num_input_files = session.query(PreprocessedContentFile).count()
-      num_files = (
-        session.query(PreprocessedContentFile)
-        .filter(PreprocessedContentFile.preprocessing_succeeded == True)
-        .count()
-      )
-      input_chars, input_lines, total_walltime, total_time, = session.query(
-        func.sum(PreprocessedContentFile.charcount),
-        func.sum(PreprocessedContentFile.linecount),
-        func.sum(PreprocessedContentFile.wall_time_ms),
-        func.sum(PreprocessedContentFile.preprocess_time_ms),
-      ).first()
-      char_count, line_count = (
-        session.query(
-          func.sum(PreprocessedContentFile.charcount),
-          func.sum(PreprocessedContentFile.linecount),
-        )
-        .filter(PreprocessedContentFile.preprocessing_succeeded == True)
-        .first()
-      )
-    set_mail = "Content files: {} chars, {} lines, {} files.\n".format(
-              humanize.intcomma(input_chars),
-              humanize.intcomma(input_lines),
-              humanize.intcomma(num_input_files),
-            )
-    l.getLogger().info(
-      "Content files: {} chars, {} lines, {} files.".format(
-              humanize.intcomma(input_chars),
-              humanize.intcomma(input_lines),
-              humanize.intcomma(num_input_files),
-            ), mail_level = 4
-    )
-    set_mail += "Pre-processed {} files in {} ({:.2f}x speedup).\n".format(
-              humanize.intcomma(num_input_files),
-              humanize.naturaldelta((total_walltime or 0) / 1000),
-              (total_time or 1) / (total_walltime or 1),
-          )
-    l.getLogger().info(
-      "Pre-processed {} files in {} ({:.2f}x speedup).".format(
-              humanize.intcomma(num_input_files),
-              humanize.naturaldelta((total_walltime or 0) / 1000),
-              (total_time or 1) / (total_walltime or 1),
-          ), mail_level = 4
-    )
-    set_mail += "Pre-processing discard rate: {:.1f}% ({} files).\n".format(
-              (1 - (num_files / max(num_input_files, 1))) * 100,
-              humanize.intcomma(num_input_files - num_files),
-          )
-    l.getLogger().info(
-      "Pre-processing discard rate: {:.1f}% ({} files).".format(
-              (1 - (num_files / max(num_input_files, 1))) * 100,
-              humanize.intcomma(num_input_files - num_files),
-          ), mail_level = 4
-    )
-    set_mail += "Pre-processed corpus: {} chars, {} lines, {} files.\n".format(
-              humanize.intcomma(char_count),
-              humanize.intcomma(line_count),
-              humanize.intcomma(num_files),
-          )
-    l.getLogger().info(
-      "Pre-processed corpus: {} chars, {} lines, {} files.".format(
-              humanize.intcomma(char_count),
-              humanize.intcomma(line_count),
-              humanize.intcomma(num_files),
-          ), mail_level = 4
-    )
-    if FLAGS.notify_me:
-      client.getClient().send_message("clgen:preprocessed", set_mail)
+    #   num_input_files = session.query(PreprocessedContentFile).count()
+    #   num_files = (
+    #     session.query(PreprocessedContentFile)
+    #     .filter(PreprocessedContentFile.preprocessing_succeeded == True)
+    #     .count()
+    #   )
+    #   input_chars, input_lines, total_walltime, total_time, = session.query(
+    #     func.sum(PreprocessedContentFile.charcount),
+    #     func.sum(PreprocessedContentFile.linecount),
+    #     func.sum(PreprocessedContentFile.wall_time_ms),
+    #     func.sum(PreprocessedContentFile.preprocess_time_ms),
+    #   ).first()
+    #   char_count, line_count = (
+    #     session.query(
+    #       func.sum(PreprocessedContentFile.charcount),
+    #       func.sum(PreprocessedContentFile.linecount),
+    #     )
+    #     .filter(PreprocessedContentFile.preprocessing_succeeded == True)
+    #     .first()
+    #   )
+    # set_mail = "Content files: {} chars, {} lines, {} files.\n".format(
+    #           humanize.intcomma(input_chars),
+    #           humanize.intcomma(input_lines),
+    #           humanize.intcomma(num_input_files),
+    #         )
+    # l.getLogger().info(
+    #   "Content files: {} chars, {} lines, {} files.".format(
+    #           humanize.intcomma(input_chars),
+    #           humanize.intcomma(input_lines),
+    #           humanize.intcomma(num_input_files),
+    #         ), mail_level = 4
+    # )
+    # set_mail += "Pre-processed {} files in {} ({:.2f}x speedup).\n".format(
+    #           humanize.intcomma(num_input_files),
+    #           humanize.naturaldelta((total_walltime or 0) / 1000),
+    #           (total_time or 1) / (total_walltime or 1),
+    #       )
+    # l.getLogger().info(
+    #   "Pre-processed {} files in {} ({:.2f}x speedup).".format(
+    #           humanize.intcomma(num_input_files),
+    #           humanize.naturaldelta((total_walltime or 0) / 1000),
+    #           (total_time or 1) / (total_walltime or 1),
+    #       ), mail_level = 4
+    # )
+    # set_mail += "Pre-processing discard rate: {:.1f}% ({} files).\n".format(
+    #           (1 - (num_files / max(num_input_files, 1))) * 100,
+    #           humanize.intcomma(num_input_files - num_files),
+    #       )
+    # l.getLogger().info(
+    #   "Pre-processing discard rate: {:.1f}% ({} files).".format(
+    #           (1 - (num_files / max(num_input_files, 1))) * 100,
+    #           humanize.intcomma(num_input_files - num_files),
+    #       ), mail_level = 4
+    # )
+    # set_mail += "Pre-processed corpus: {} chars, {} lines, {} files.\n".format(
+    #           humanize.intcomma(char_count),
+    #           humanize.intcomma(line_count),
+    #           humanize.intcomma(num_files),
+    #       )
+    # l.getLogger().info(
+    #   "Pre-processed corpus: {} chars, {} lines, {} files.".format(
+    #           humanize.intcomma(char_count),
+    #           humanize.intcomma(line_count),
+    #           humanize.intcomma(num_files),
+    #       ), mail_level = 4
+    # )
+    # if FLAGS.notify_me:
+    #   client.getClient().send_message("clgen:preprocessed", set_mail)
 
   def IsDone(self, session: sqlutil.Session):
     if session.query(Meta).filter(Meta.key == "done").first():
