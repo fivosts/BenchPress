@@ -16,11 +16,17 @@ from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string(
-  "benchmarks_path",
-  "./rodinia_benchmarks",
-  "Set path of target benchmarks for active sampling."
-)
+targets = {
+  'rodinia': './benchmarks/rodinia_3.1.tar.bz2',
+  'grid_walk': '',
+}
+
+normalizers = {
+  'GreweFeatures': {
+    'comp': 50,
+    # etc. etc.
+  }
+}
 
 class EuclideanSampler(object):
   """
@@ -35,9 +41,12 @@ class EuclideanSampler(object):
 
   def __init__(self,
                workspace: pathlib.Path,
-               feature_space: str
+               feature_space: str,
+               target: str
                ):
-    self.path          = pathlib.Path(FLAGS.benchmarks_path).resolve()
+    self.target = target
+    if self.target != "grid_walk":
+      self.path        = pathlib.Path(targets[target]).resolve()
     self.workspace     = workspace
     self.feature_space = feature_space
     self.loadCheckpoint()
@@ -116,23 +125,28 @@ class EuclideanSampler(object):
         self.benchmarks = pickle.load(infile)
     else:
       self.benchmarks = []
-      with self.GetContentFileRoot() as root:
-        contentfiles = []
-        for file in root.iterdir():
-          with open(file, 'r') as inf:
-            contentfiles.appendI((file, inf.read()))
-      kernels = [(p, k) for k in opencl.ExtractOnlySingleKernels(opencl.InvertKernelSpecifier(cf)) for p, cf in contentfiles]
-      for p, k in kernels:
-        features = extractor.ExtractFeatures(k, [self.feature_space])
-        if features[self.feature_space]:
-          self.benchmarks.append(
-            EuclideanSampler.Benchmark(
-                p,
-                p.name,
-                k,
-                features[self.feature_space],
-              )
-          )
+      if self.target == "grid_walk":
+        # have a MAX vector for each feature of each feature space
+        # and create empty benchmarks with said iterated vectors
+        raise NotImplementedError
+      else:
+        with self.GetContentFileRoot() as root:
+          contentfiles = []
+          for file in root.iterdir():
+            with open(file, 'r') as inf:
+              contentfiles.appendI((file, inf.read()))
+        kernels = [(p, k) for k in opencl.ExtractOnlySingleKernels(opencl.InvertKernelSpecifier(cf)) for p, cf in contentfiles]
+        for p, k in kernels:
+          features = extractor.ExtractFeatures(k, [self.feature_space])
+          if features[self.feature_space]:
+            self.benchmarks.append(
+              EuclideanSampler.Benchmark(
+                  p,
+                  p.name,
+                  k,
+                  features[self.feature_space],
+                )
+            )
     return
 
   @contextlib.contextmanager

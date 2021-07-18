@@ -169,7 +169,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       )
       d.feat_sampler      = feature_sampler.EuclideanSampler(
         self.sampler.corpus_directory,
-        self.sampler.sample_corpus.corpus_config.active.feature_space
+        self.sampler.sample_corpus.corpus_config.active.feature_space,
+        self.sampler.sample_corpus.corpus_config.active.target
       )
       d.candidate_monitor = monitors.CategoricalDistribMonitor(
         d.sampler.corpus_directory, "feature_distance"
