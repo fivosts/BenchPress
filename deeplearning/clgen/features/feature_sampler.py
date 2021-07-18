@@ -121,7 +121,7 @@ class EuclideanSampler(object):
         for file in root.iterdir():
           with open(file, 'r') as inf:
             contentfiles.appendI((file, inf.read()))
-      kernels = [(p, k) for k in opencl.ExtractOnlySingleKernels(cf) for p, cf in contentfiles]
+      kernels = [(p, k) for k in opencl.ExtractOnlySingleKernels(opencl.InvertKernelSpecifier(cf)) for p, cf in contentfiles]
       for p, k in kernels:
         features = extractor.ExtractFeatures(k, [self.feature_space])
         if features[self.feature_space]:
