@@ -792,7 +792,10 @@ class torchBert(backends.BackendBase):
 
     with self.torch.no_grad():
       if self.sampler.is_active:
-        return self.sample.data_generator.ActiveGeneration(self, self.sample)
+        try:
+          return self.sample.data_generator.ActiveGeneration(self, self.sample)
+        except StopIteration:
+          raise StopIteration
       else:
         step_out = self.sample_model_step(
             self.sample.models,

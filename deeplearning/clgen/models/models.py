@@ -434,7 +434,10 @@ class Model(object):
     start_time = datetime.datetime.utcnow()
     seq_count  = 0
     self.backend.InitSampleBatch(sampler)
-    org_inputs, input_ids, samples, indices = self.backend.SampleNextIndices(sampler)
+    try:
+      org_inputs, input_ids, samples, indices = self.backend.SampleNextIndices(sampler)
+    except StopIteration:
+      return False, seq_count
 
     if not indices:
       # Return empty means model has not produced something that can be stored.
