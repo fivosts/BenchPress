@@ -2,10 +2,13 @@
 Feature space sampling of source code.
 """
 import typing
+import tempfile
+import contextlib
 import pathlib
 import math
 
 from deeplearning.clgen.features import extractor
+from deeplearning.clgen.preprocessors import opencl
 from eupy.native import logger as l
 
 from absl import flags
@@ -113,18 +116,40 @@ class EuclideanSampler(object):
         self.benchmarks = pickle.load(infile)
     else:
       self.benchmarks = []
-      for f in self.path.iterdir():
-        with open(f, 'r') as file:
-          contents = file.read()
-          features = extractor.ExtractFeatures(contents, [self.feature_space])
-          if features[feature_space]:
-            self.benchmarks.append(
-              EuclideanSampler.Benchmark(
-                f,
-                f.name,
-                contents,
-                features[feature_space],
-                0
+      with self.GetContentFileRoot() as root:
+        contentfiles = []
+        for file in root.iterdir():
+          with open(file, 'r') as inf:
+            contentfiles.appendI((file, inf.read()))
+      kernels = [(p, k) for k in opencl.ExtractOnlySingleKernels(cf) for p, cf in contentfiles]
+      for p, k in kernels:
+        features = extractor.ExtractFeatures(k, [self.feature_space])
+        if features[self.feature_space]:
+          self.benchmarks.append(
+            EuclideanSampler.Benchmark(
+                p,
+                p.name,
+                k,
+                features[self.feature_space],
               )
-            )
+          )
     return
+
+  @contextlib.contextmanager
+  def GetContentFileRoot(self) -> pathlib.Path:
+    """
+    Extract tar archive of benchmarks and yield the root path of all files.
+
+    Yields:
+      The path of a directory containing content files.
+    """
+    with tempfile.TemporaryDirectory(prefix=self.path.stem) as d:
+      cmd = [
+        "tar",
+        "-xf",
+        str(self.path),
+        "-C",
+        d,
+      ]
+      subprocess.check_call(cmd)
+      yield pathlib.Path(d)

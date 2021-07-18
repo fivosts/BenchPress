@@ -332,7 +332,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         d) Sample indices
       The arrays are ordered by index.
     """
-    # Active sampling specs initializatin
+    if not self.feat_sampler.target_benchmark:
+      raise StopIteration
+    # Active sampling specs initialization
     active_limit_per_feed = self.sampler.sample_corpus.corpus_config.active.active_limit_per_feed
     active_search_depth = self.sampler.sample_corpus.corpus_config.active.active_search_depth
     active_search_width = self.sampler.sample_corpus.corpus_config.active.active_search_width
