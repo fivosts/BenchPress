@@ -38,16 +38,22 @@ class EuclideanSampler(object):
     self.workspace     = workspace
     self.feature_space = feature_space
     self.loadCheckpoint()
-    self.target_benchmark = self.benchmarks[0]
-    l.getLogger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.feature_vector))
+    try:
+      self.target_benchmark = self.benchmarks.pop(0)
+      l.getLogger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.feature_vector))
+    except IndexError:
+      self.target_benchmark = None
     return
 
   def iter_benchmark(self):
     """
     When it's time, cycle through the next target benchmark.
     """
-    self.benchmarks.append(self.benchmarks.pop(0))
-    self.target_benchmark = self.benchmarks[0]
+    # self.benchmarks.append(self.benchmarks.pop(0))
+    try:
+      self.target_benchmark = self.benchmarks.pop(0)
+    except IndexError:
+      self.target_benchmark = None
     self.saveCheckpoint()
     l.getLogger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.feature_vector))
     return
