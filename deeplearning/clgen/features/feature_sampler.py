@@ -8,6 +8,7 @@ import pathlib
 import math
 
 from deeplearning.clgen.features import extractor
+from deeplearning.clgen.features import normalizers
 from deeplearning.clgen.preprocessors import opencl
 from eupy.native import logger as l
 
@@ -46,6 +47,19 @@ def GetContentFileRoot(path: pathlib.Path) -> pathlib.Path:
     ]
     subprocess.check_call(cmd)
     yield pathlib.Path(d)
+
+def calculate_distance(self, infeat: typing.Dict[str, float], tarfeat: typing.Dict[str, float]) -> float:
+  """
+  Euclidean distance between sample feature vector
+  and current target benchmark.
+  """
+  d = 0
+  for key in tarfeat.keys():
+    n = normalizers.normalizer[self.feature_space][key]
+    i = infeat[key] / n
+    t = tarfeat[key] / n
+    d += abs((t**2) - (i**2))
+  return math.sqrt(d)
 
 class EuclideanSampler(object):
   """
@@ -94,12 +108,7 @@ class EuclideanSampler(object):
     Euclidean distance between sample feature vector
     and current target benchmark.
     """
-    d = 0
-    for key in self.target_benchmark.feature_vector.keys():
-      i = infeat[key]
-      t = self.target_benchmark.feature_vector[key]
-      d += abs((t**2) - (i**2))
-    return math.sqrt(d)
+    return calculate_distance(infeat, self.target_benchmark.feature_vector)
 
   def topK_candidates(self,
                       candidates: typing.List[typing.TypeVar("ActiveSample")],
