@@ -28,6 +28,25 @@ normalizers = {
   }
 }
 
+@contextlib.contextmanager
+def GetContentFileRoot(path: pathlib.Path) -> pathlib.Path:
+  """
+  Extract tar archive of benchmarks and yield the root path of all files.
+
+  Yields:
+    The path of a directory containing content files.
+  """
+  with tempfile.TemporaryDirectory(prefix=path.stem) as d:
+    cmd = [
+      "tar",
+      "-xf",
+      str(path),
+      "-C",
+      d,
+    ]
+    subprocess.check_call(cmd)
+    yield pathlib.Path(d)
+
 class EuclideanSampler(object):
   """
   This is a shitty experimental class to work with benchmark comparison.
@@ -130,7 +149,7 @@ class EuclideanSampler(object):
         # and create empty benchmarks with said iterated vectors
         raise NotImplementedError
       else:
-        with self.GetContentFileRoot() as root:
+        with GetContentFileRoot(self.path) as root:
           contentfiles = []
           for file in root.iterdir():
             with open(file, 'r') as inf:
@@ -148,22 +167,3 @@ class EuclideanSampler(object):
                 )
             )
     return
-
-  @contextlib.contextmanager
-  def GetContentFileRoot(self) -> pathlib.Path:
-    """
-    Extract tar archive of benchmarks and yield the root path of all files.
-
-    Yields:
-      The path of a directory containing content files.
-    """
-    with tempfile.TemporaryDirectory(prefix=self.path.stem) as d:
-      cmd = [
-        "tar",
-        "-xf",
-        str(self.path),
-        "-C",
-        d,
-      ]
-      subprocess.check_call(cmd)
-      yield pathlib.Path(d)
