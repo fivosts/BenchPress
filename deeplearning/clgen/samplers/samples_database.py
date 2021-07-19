@@ -9,6 +9,7 @@ from sqlalchemy.ext import declarative
 from absl import flags
 
 from deeplearning.clgen.samplers import sample_observers
+from deeplearning.clgen.features import extractor
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.util import crypto
 from labm8.py import sqlutil
@@ -99,4 +100,10 @@ class SamplesDatabase(sqlutil.Database):
   def correct_samples(self) -> typing.Set[str]:
     """Get samples that compile from SamplesDatabase."""
     with self.Session() as s:
-      return s.query(Sample).yield_per(500).enable_eagerloads(False)
+      return s.query(Sample).filter(Sample.compile_status == True).yield_per(1000).enable_eagerloads(False)
+
+  @property
+  def get_samples_features(self) -> typing.List[str, typing.Dict[str, float]]:
+    """Return compiling samples with feature vectors"""
+    with self.Session() as s:
+      return [(x.text, extractor.RawToDictFeats(x.feature_vector)) for x in s.query(Sample).filter(Sample.compile_status == True).yield_per(1000)]
