@@ -382,6 +382,14 @@ class Corpus(object):
       query = session.query(encoded.EncodedContentFile).filter(encoded.EncodedContentFile.tokencount <= sequence_length)
       return [x.features for x in query]
 
+  def getFeaturesContents(self) -> typing.List[typing.Tuple[np.array, typing.Dict[str, float]]]:
+    """
+    Get tuple of contents accompanied by feature vectors.
+    """
+    with self.encoded.Session() as session:
+      query = session.query(encoded.EncodedContentFile)
+      return [(x.indices_array, x.features) for x in query]
+
   def GetNumContentFiles(self) -> int:
     """Get the number of contentfiles which were pre-processed."""
     with self.preprocessed.Session() as session:
