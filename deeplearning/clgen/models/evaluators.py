@@ -91,6 +91,9 @@ class BenchmarkDistance(object):
     self.github_corpus = github_corpus
     # Feature Space setup
     self.feature_space = self.sampler.sample_corpus.corpus_config.active.feature_space
+
+    raise NotImplementedError
+    self.monitor = monitors.MultiCategoricalDistribution(self.path)
     loadBenchmarks()
     return
 

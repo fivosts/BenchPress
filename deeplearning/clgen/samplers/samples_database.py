@@ -103,7 +103,7 @@ class SamplesDatabase(sqlutil.Database):
       return s.query(Sample).filter(Sample.compile_status == True).yield_per(1000).enable_eagerloads(False)
 
   @property
-  def get_samples_features(self) -> typing.List[str, typing.Dict[str, float]]:
+  def get_samples_features(self) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
     """Return compiling samples with feature vectors"""
     with self.Session() as s:
       return [(x.text, extractor.RawToDictFeats(x.feature_vector)) for x in s.query(Sample).filter(Sample.compile_status == True).yield_per(1000)]

@@ -1,9 +1,3 @@
-normalizer = {
-  'GreweFeatures'     : GreweFeatures,
-  'InstCountFeatures' : InstCountFeatures,
-  'AutophaseFeatures' : AutophaseFeatures,
-}
-
 GreweFeatures = {
   'comp': 254,
   'rational': 61,
@@ -145,4 +139,10 @@ AutophaseFeatures = {
   'TotalFuncs' : 11,
   'ArgsPhi' : 230,
   'testUnary' : 229,
+}
+
+normalizer = {
+  'GreweFeatures'     : GreweFeatures,
+  'InstCountFeatures' : InstCountFeatures,
+  'AutophaseFeatures' : AutophaseFeatures,
 }
