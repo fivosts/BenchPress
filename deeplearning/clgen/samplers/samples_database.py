@@ -97,6 +97,12 @@ class SamplesDatabase(sqlutil.Database):
     return count
 
   @property
+  def samples(self) -> typing.List[Sample]:
+    """Get a list of all files in database."""
+    with self.Session() as s:
+      return s.query(Sample).yield_per(1000)
+
+  @property
   def correct_samples(self) -> typing.Set[str]:
     """Get samples that compile from SamplesDatabase."""
     with self.Session() as s:
