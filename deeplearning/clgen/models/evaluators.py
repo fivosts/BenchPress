@@ -37,20 +37,19 @@ class BenchmarkDistance(object):
   Compares BERT vs CLgen vs Github training data against
   how close their benchmarks are against handwritten benchmarks
   """
-
-  class BenchmarkCandidate(typing.NamedTuple):
-    """
-    Benchmark candidate
-    """
-    contents       : str
-    distance       : float
-    feature_vector : typing.Dict[str, float]
-    label          : str
-
   class EvaluatedBenchmark(object):
     """
     Representation of an evaluated benchmark with all its candidates.
     """
+    class BenchmarkCandidate(typing.NamedTuple):
+      """
+      Benchmark candidate
+      """
+      contents       : str
+      distance       : float
+      feature_vector : typing.Dict[str, float]
+      label          : str
+
     def __init__(self,
                  target         : pathlib.Path,
                  name           : str,
@@ -127,7 +126,7 @@ class BenchmarkDistance(object):
     """
     bert_corpus  = [
       (cf, feats[self.feature_space])
-      for cf, feats in self.sampler.
+      for cf, feats in self.bert_db.get_samples_features
     ]
     clgen_corpus = [
       (cf, feats[self.feature_space])
