@@ -450,7 +450,7 @@ class Model(object):
     for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
 
       src = self.tokenizer.ArrayToCode(sample, with_formatting = True)
-      features = extractor.ExtractFeatures(src)
+      features = extractor.ExtractRawFeatures(src)
       try:
         stdout = opencl.Compile(src)
         compile_flag = True
@@ -469,7 +469,7 @@ class Model(object):
         sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
         sample_time_ms            = int(round(1000 * ((end_time - start_time) / len(samples)).total_seconds())),
         wall_time_ms              = int(round(1000 * ((end_time - start_time) / len(samples)).total_seconds())),
-        feature_vector            = "\n".join(["{}:{}".format(k, v) for (k, v) in features.items()]),
+        feature_vector            = features,
         num_tokens                = np.where(sample == self.tokenizer.padToken)[0][0] if self.tokenizer.padToken in sample else len(sample),
         compile_status            = compile_flag,
         categorical_sampling      = self.backend.samplesWithCategorical(),
@@ -526,7 +526,7 @@ class Model(object):
           if sampler.SampleIsComplete(samples_in_progress[i]):
             end_time       = datetime.datetime.utcnow()
             sample_kernel  = [x for x in samples_in_progress[i]]
-            feature_vector = extractor.ExtractFeatures(''.join(samples_in_progress[i]))
+            features       = extractor.ExtractRawFeatures(''.join(samples_in_progress[i]))
             done[i]        = 1
             try:
               stdout = opencl.Compile(''.join(samples_in_progress[i]))
@@ -544,7 +544,7 @@ class Model(object):
               sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               wall_time_ms              = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
-              feature_vector            = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
+              feature_vector            = features,
               num_tokens                = len(samples_in_progress[i]),
               compile_status            = compile_flag,
               categorical_sampling      = self.backend.samplesWithCategorical(),
