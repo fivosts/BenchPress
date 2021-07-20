@@ -25,6 +25,7 @@ import numpy as np
 
 from deeplearning.clgen.samplers import sample_observers as sample_observers_lib
 from deeplearning.clgen.samplers import samplers
+from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import crypto
@@ -34,6 +35,7 @@ from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.models import builders
+from deeplearning.clgen.models import evaluators
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models.keras_sequential import keras_sequential
 from deeplearning.clgen.models.tf_sequential import tf_sequential
@@ -558,6 +560,14 @@ class Model(object):
             wall_time_start = datetime.datetime.utcnow()
             break
     return continue_sampling, seq_count
+
+  def Evaluate(self, sampler: samplers.Sampler) -> None:
+    """
+    Run evaluators for bert's, clgen's github's dataset.
+    """
+    sapler_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(self.cache.path / "samples" / sampler.hash / "samples.db")))
+    evaluator = evaluators.BenchmarkDistance(self.corpus, sampler_db, sampler)
+    evaluator.eval()
 
   def SamplerCache(self, sampler: samplers.Sampler) -> pathlib.Path:
     """Get the path to a sampler cache.
