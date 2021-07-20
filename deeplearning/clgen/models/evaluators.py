@@ -17,7 +17,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string(
   "clgen_samples_path",
   "",
-  "Set path to clgen samples database for evaluation".
+  "Set path to clgen samples database for evaluation",
 )
 
 class BaseEvaluator(object):
