@@ -197,7 +197,7 @@ class SamplesDatabaseObserver(SampleObserver):
       r = [
         'compilation rate: +/-inf',
         'total compilable samples: {}'.format(compiled_count),
-        'average feature vector: \n{}'.format(feature_monitor.getStrData())
+        'average feature vector: \n{}'.format('\n'.join(["{}:\n{}".format(ft, fm.getStrData()) for ft, fm in feature_monitors.items()]))
       ]
     with self.db.Session(commit = True) as session:
       exists  = session.query(samples_database.SampleResults.key).filter_by(key = "meta").scalar() is not None
