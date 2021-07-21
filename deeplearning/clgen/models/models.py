@@ -569,7 +569,7 @@ class Model(object):
     """
     Run evaluators for bert's, clgen's github's dataset.
     """
-    sapler_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(self.cache.path / "samples" / sampler.hash / "samples.db")))
+    sampler_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(self.cache.path / "samples" / sampler.hash / "samples.db")))
     evaluator = evaluators.BenchmarkDistance(self.corpus, sampler_db, sampler)
     evaluator.eval()
 
