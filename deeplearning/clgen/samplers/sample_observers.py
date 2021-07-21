@@ -183,7 +183,7 @@ class SamplesDatabaseObserver(SampleObserver):
           feature_monitors[ftype].register(fvector)
 
     for mon in feature_monitors.values():
-      mon,plot()
+      mon.plot()
 
     with self.db.Session() as session:
       compiled_count = session.query(samples_database.Sample.compile_status).filter_by(compile_status = 1).count()
