@@ -31,7 +31,7 @@ class BaseEvaluator(object):
   def eval(self) -> None:
     raise NotImplementedError
 
-class BenchmarkDistance(object):
+class BenchmarkDistance(BaseEvaluator):
   """
   This evaluator is compatible only with active samplers.
   Compares BERT vs CLgen vs Github training data against
