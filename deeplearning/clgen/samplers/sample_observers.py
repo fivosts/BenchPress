@@ -191,7 +191,7 @@ class SamplesDatabaseObserver(SampleObserver):
       r = [
         'compilation rate: {}'.format(compiled_count / self.sample_id),
         'total compilable samples: {}'.format(compiled_count),
-        'average feature vector: \n{}'.format(feature_monitor.getStrData())
+        'average feature vector: \n{}'.format('\n'.join(["{}:\n{}".format(ft, fm.getStrData()) for ft, fm in feature_monitors.items()]))
       ]
     except ZeroDivisionError:
       r = [
