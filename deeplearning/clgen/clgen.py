@@ -225,7 +225,7 @@ class Instance(object):
     with self.Session():
       self.model.Sample(self.sampler, *args, **kwargs)
       if FLAGS.evaluate:
-        self.model.Evaluate(self.sampler, *args, **kwargs)
+        self.model.Evaluate(self.sampler)
 
   def ToProto(self) -> clgen_pb2.Instance:
     """Get the proto config for the instance."""
