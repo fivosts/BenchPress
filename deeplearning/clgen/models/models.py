@@ -448,11 +448,7 @@ class Model(object):
       # Return empty means model has not produced something that can be stored.
       # This if accommodates active sampling, which is very selective.
       return True, seq_count
-    print(len(org_inputs))
-    print(len(input_ids))
-    print(len(samples))
-    print(len(indices))
-    print(org_inputs.shape)
+
     continue_sampling = True
     for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
 
