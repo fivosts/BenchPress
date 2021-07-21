@@ -416,8 +416,11 @@ class torchBert(backends.BackendBase):
       if not queue.empty():
         raise ValueError("Queue is not empty!")
     except KeyboardInterrupt:
-      for job in procs:
-        job.terminate()
+      try:
+        for job in procs:
+          job.terminate()
+      except Exception:
+        pass
       raise KeyboardInterrupt
     return outputs
 
