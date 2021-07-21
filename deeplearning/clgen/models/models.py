@@ -319,52 +319,6 @@ class Model(object):
       UnableToAcquireLockError: If the model is locked (i.e. there is another
         process currently modifying the model).
     """
-    from deeplearning.clgen.samplers import old_samples_database
-    clgen_db = old_samples_database.SamplesDatabase("sqlite:///{}".format("/home/fivosts/clgen_samples.db"))
-    cl_samples = []
-    with clgen_db.Session() as sess:
-      for sample in clgen_db.correct_samples:
-        cl_samples.append(sample)
-    import progressbar
-    new_clgen_db = samples_database.SamplesDatabase("sqlite:///{}".format("/home/fivosts/new_clgen_samples.db"))
-    with new_clgen_db.Session() as sess:
-      pb = progressbar.ProgressBar(max_value = len(cl_samples))
-      for idx, sample in pb(enumerate(cl_samples)):
-        try:
-          stdout = opencl.Compile(sample.text)
-          compile_flag = True
-          features = extractor.ExtractRawFeatures(sample.text)
-        except ValueError:
-          compile_flag = False
-          features = ""
-
-        s = model_pb2.Sample(
-          train_step                = sample.train_step,
-          text                      = sample.text,
-          sample_indices            = sample.sample_indices,
-          encoded_sample_indices    = sample.encoded_sample_indices,
-          original_input            = "kernel void A(",
-          sample_feed               = sample.sample_feed,
-          encoded_text              = sample.encoded_text,
-          sample_start_epoch_ms_utc = sample.sample_time_ms,
-          sample_time_ms            = sample.sample_time_ms,
-          wall_time_ms              = sample.sample_time_ms,
-          feature_vector            = features,
-          num_tokens                = sample.num_tokens,
-          compile_status            = compile_flag,
-          categorical_sampling      = int(sample.categorical_sampling),
-          date_added                = sample.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
-        )
-        db_sample = samples_database.Sample(
-          **samples_database.Sample.FromProto(sample.id, s)
-        )
-        sess.add(db_sample)
-        if (idx+1) % 1000 == 0:
-          sess.commit()
-
-      sess.commit()
-      sess.flush()
-    exit()
     self.Create()
 
     self.backend.Train(self.corpus, **kwargs)
