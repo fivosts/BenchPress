@@ -813,7 +813,7 @@ class torchBert(backends.BackendBase):
               x_name = "Probs / sample step",
             )
         return (
-          self.step_inputs['original_input'].cpu().view(-1, self.sampler.batch_size).numpy(),
+          self.step_inputs['original_input'].cpu().view(-1, self.sampler.sequence_length).numpy(),
           self.step_inputs['input_ids'].cpu().view(-1, self.sampler.sequence_length).numpy(),
           step_out['generated_samples'],
           step_out['sample_indices']
