@@ -11,6 +11,7 @@ import subprocess
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import normalizers
 from deeplearning.clgen.preprocessors import opencl
+from deeplearning.clgen.preprocessors import c
 from eupy.native import logger as l
 
 from absl import flags
@@ -68,9 +69,11 @@ def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Pat
   contentfiles = iter_cl_files(path)
   kernels = []
   for p, cf in contentfiles:
-    ks = opencl.ExtractOnlySingleKernels(
-          opencl.InvertKernelSpecifier(
-          opencl.StripDoubleUnderscorePrefixes(cf)))
+    ks = opencl.ExtractSingleKernels(
+         opencl.InvertKernelSpecifier(
+         opencl.StripDoubleUnderscorePrefixes(
+         opencl.ClangPreprocessWithShim(
+         c.StripIncludes(cf)))))
     for k in ks:
       kernels.append((p, k))
   return kernels
