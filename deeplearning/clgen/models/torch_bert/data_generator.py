@@ -169,8 +169,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       )
       d.feat_sampler      = feature_sampler.EuclideanSampler(
         d.sampler.corpus_directory,
-        d.sampler.sample_corpus.corpus_config.active.feature_space,
-        d.sampler.sample_corpus.corpus_config.active.target
+        corpus_config.active.feature_space,
+        corpus_config.active.target
       )
       d.candidate_monitor = monitors.CategoricalDistribMonitor(
         d.sampler.corpus_directory, "feature_distance"
@@ -181,10 +181,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       # Store unique specs to database once.
       d.addToDB(
         active_feed_database.ActiveSamplingSpecs.FromArgs(
-          act_l_pf   = self.sampler.sample_corpus.corpus_config.active.active_limit_per_feed,
-          act_s_dep  = self.sampler.sample_corpus.corpus_config.active.active_search_depth,
-          act_s_wid  = self.sampler.sample_corpus.corpus_config.active.active_search_width,
-          feat_space = self.sampler.sample_corpus.corpus_config.active.feature_space
+          act_l_pf   = corpus_config.active.active_limit_per_feed,
+          act_s_dep  = corpus_config.active.active_search_depth,
+          act_s_wid  = corpus_config.active.active_search_width,
+          feat_space = corpus_config.active.feature_space
         )
       )
 
