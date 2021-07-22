@@ -571,7 +571,8 @@ class Model(object):
     """
     sampler_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(self.cache.path / "samples" / sampler.hash / "samples.db")))
     evaluator = evaluators.BenchmarkDistance(self.corpus, sampler_db, sampler)
-    evaluator.eval()
+    evaluator.eval(5)
+    return
 
   def SamplerCache(self, sampler: samplers.Sampler) -> pathlib.Path:
     """Get the path to a sampler cache.

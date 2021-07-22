@@ -75,7 +75,7 @@ class BenchmarkDistance(BaseEvaluator):
     super(BenchmarkDistance, self).__init__(sampler)
 
     # Target and path to target benchmarks
-    self.target      = self.sampler.config.corpus_config.active.target
+    self.target      = self.sampler.config.sample_corpus.corpus_config.active.target
     self.target_path = pathlib.Path(feature_sampler.targets[self.target]).resolve()
 
     # BERT DB setup
@@ -89,11 +89,10 @@ class BenchmarkDistance(BaseEvaluator):
 
     self.github_corpus = github_corpus
     # Feature Space setup
-    self.feature_space = self.sampler.sample_corpus.corpus_config.active.feature_space
+    self.feature_space = self.sampler.config.sample_corpus.corpus_config.active.feature_space
 
-    raise NotImplementedError
-    self.monitor = monitors.MultiCategoricalDistribution(self.path)
-    loadBenchmarks()
+    # self.monitor = monitors.MultiCategoricalDistribution(self.path)
+    self.loadBenchmarks()
     return
 
   def loadBenchmarks(self) -> None:
@@ -122,17 +121,33 @@ class BenchmarkDistance(BaseEvaluator):
     bert_corpus  = [
       (cf, feats[self.feature_space])
       for cf, feats in self.bert_db.get_samples_features
+      if self.feature_space in feats
     ]
     clgen_corpus = [
       (cf, feats[self.feature_space])
       for cf, feats in self.clgen_db.get_samples_features
+      if self.feature_space in feats
     ]
     git_corpus   = [
       (cf, feats[self.feature_space])
-      for cf, feats in self.github_corpus.getFeaturesContents(self.feature_space)
+      for cf, feats in self.github_corpus.getFeaturesContents()
+      if self.feature_space in feats
+    ]
+    reduced_git_corpus = [
+      (cf, feats[self.feature_space])
+      for cf, feats in self.github_corpus.getFeaturesContents(sequence_length = self.sampler.sequence_length)
+      if self.feature_space in feats
     ]
     for benchmark in self.evaluated_benchmarks:
-      bert_corpus  = sorted([(cf, feature_sampler.calculate_distance(fts)) for cf, fts in bert_corpus ], key = lambda x: x[1])[:topK]
-      clgen_corpus = sorted([(cf, feature_sampler.calculate_distance(fts)) for cf, fts in clgen_corpus], key = lambda x: x[1])[:topK]
-      git_corpus   = sorted([(cf, feature_sampler.calculate_distance(fts)) for cf, fts in git_corpus  ], key = lambda x: x[1])[:topK]
+      bc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.feature_vector, self.feature_space)) for cf, fts in bert_corpus ], key = lambda x: x[1])[:topK]
+      cc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.feature_vector, self.feature_space)) for cf, fts in clgen_corpus], key = lambda x: x[1])[:topK]
+      gc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.feature_vector, self.feature_space)) for cf, fts in git_corpus  ], key = lambda x: x[1])[:topK]
+      rgc = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.feature_vector, self.feature_space)) for cf, fts in reduced_git_corpus  ], key = lambda x: x[1])[:topK]
+      print(benchmark.contents)
+      print(benchmark.feature_vector)
+
+      print([x[1] for x in bc])
+      print([x[1] for x in cc])
+      print([x[1] for x in gc])
+      input()
     return
