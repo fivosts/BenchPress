@@ -87,6 +87,7 @@
 #define CL_DTYPE float
 #define CL_DTYPE4 float4
 #define KERNEL kernel void
+#define atomicAdd atomic_add
 #define channel
 // GLib types
 #define gboolean int
@@ -103,7 +104,6 @@
 #define guint32 unsigned int
 #define glong long
 #define gssize long
-#define gsize unsigned long
 #define gulong unsigned long
 #define gint64 long
 #define guint64 unsigned long
