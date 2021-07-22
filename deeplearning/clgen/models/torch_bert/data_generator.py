@@ -88,7 +88,7 @@ def candidate_worker(sample_out   : typing.Dict[str, np.array],
         score          = feat_sampler.calculate_distance(features),
         timestep       = -1,
       )
-      return sample, indices, features, input_ids, masked_lm_lengths
+      # return sample, indices, features, input_ids, masked_lm_lengths
   except ValueError:
     pass
   except Exception:
@@ -558,7 +558,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                    ):
         if batch is not None:
           cm_rate[0] += 1
-          bar.update(min(active_limit_per_feed, len(candidates)))
+          bar.update(min(bar.max_value, len(candidates)))
           candidates.append(batch)
       pool.close()
     except KeyboardInterrupt as e:

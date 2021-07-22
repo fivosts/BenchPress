@@ -23,13 +23,6 @@ targets = {
   'grid_walk': '',
 }
 
-normalizers = {
-  'GreweFeatures': {
-    'comp': 50,
-    # etc. etc.
-  }
-}
-
 @contextlib.contextmanager
 def GetContentFileRoot(path: pathlib.Path) -> pathlib.Path:
   """
@@ -49,14 +42,17 @@ def GetContentFileRoot(path: pathlib.Path) -> pathlib.Path:
     subprocess.check_call(cmd)
     yield pathlib.Path(d)
 
-def calculate_distance(self, infeat: typing.Dict[str, float], tarfeat: typing.Dict[str, float]) -> float:
+def calculate_distance(infeat: typing.Dict[str, float],
+                       tarfeat: typing.Dict[str, float],
+                       feature_space: str,
+                       ) -> float:
   """
   Euclidean distance between sample feature vector
   and current target benchmark.
   """
   d = 0
   for key in tarfeat.keys():
-    n = normalizers.normalizer[self.feature_space][key]
+    n = normalizers.normalizer[feature_space][key]
     i = infeat[key] / n
     t = tarfeat[key] / n
     d += abs((t**2) - (i**2))
@@ -109,7 +105,7 @@ class EuclideanSampler(object):
     Euclidean distance between sample feature vector
     and current target benchmark.
     """
-    return calculate_distance(infeat, self.target_benchmark.feature_vector)
+    return calculate_distance(infeat, self.target_benchmark.feature_vector, self.feature_space)
 
   def topK_candidates(self,
                       candidates: typing.List[typing.TypeVar("ActiveSample")],
