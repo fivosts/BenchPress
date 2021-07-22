@@ -68,14 +68,19 @@ class GreweFeatures(object):
     """
     try:
       lines  = str_feats.split('\n')
-      header, values = lines[0].split(',')[2:], lines[1].split(',')[2:]
-      if len(header) != len(values):
-        raise ValueError("Bad alignment of header-value list of features. This should never happen.")
+      header, values = lines[0].split(',')[2:], [l for l in lines[1:] if l != '' and l != '\n']
+      cumvs  = [0] * 8
       try:
-        return {key: float(value) for key, value in zip(header, values)}
+        for vv in values:
+          for idx, el in enumerate(vv.split(',')[2:]):
+            cumvs[idx] += float(el)
+        if len(header) != len(cumvs):
+          raise ValueError("Bad alignment of header-value list of features. This should never happen.")
+        return {key: float(value) for key, value in zip(header, cumvs)}
       except ValueError as e:
         raise ValueError("{}, {}".format(str(e), str_feats))
     except Exception as e:
+      print(e)
       # l.getLogger().warn("Grewe RawDict: {}".format(e))
       # Kernel has a syntax error and feature line is empty.
       # Return an empty dict.
