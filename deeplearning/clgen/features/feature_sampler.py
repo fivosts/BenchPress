@@ -6,6 +6,7 @@ import tempfile
 import contextlib
 import pathlib
 import math
+import subprocess
 
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import normalizers
@@ -160,10 +161,25 @@ class EuclideanSampler(object):
       else:
         with GetContentFileRoot(self.path) as root:
           contentfiles = []
-          for file in root.iterdir():
-            with open(file, 'r') as inf:
-              contentfiles.appendI((file, inf.read()))
-        kernels = [(p, k) for k in opencl.ExtractOnlySingleKernels(opencl.InvertKernelSpecifier(cf)) for p, cf in contentfiles]
+          file_queue = [p for p in root.iterdir()]
+          while file_queue:
+            c = file_queue.pop(0)
+            if c.is_symlink():
+              continue
+            elif c.is_dir():
+              file_queue += [p for p in c.iterdir()]
+            elif c.is_file() and c.suffix == ".cl":
+              with open(c, 'r') as inf:
+                contentfiles.append((c, inf.read()))
+
+        kernels = []
+        for p, cf in contentfiles:
+          ks = opencl.ExtractOnlySingleKernels(
+                opencl.InvertKernelSpecifier(
+                opencl.StripDoubleUnderscorePrefixes(cf)))
+          for k in ks:
+            kernels.append((p, k))
+
         for p, k in kernels:
           features = extractor.ExtractFeatures(k, [self.feature_space])
           if features[self.feature_space]:
@@ -175,4 +191,6 @@ class EuclideanSampler(object):
                   features[self.feature_space],
                 )
             )
+    l.getLogger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
+    l.getLogger().info(', '.join([x for x in set([x.name for x in self.benchmarks])]))
     return

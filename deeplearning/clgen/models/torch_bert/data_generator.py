@@ -336,9 +336,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     if not self.feat_sampler.target_benchmark:
       raise StopIteration
     # Active sampling specs initialization
-    active_limit_per_feed = self.sampler.sample_corpus.corpus_config.active.active_limit_per_feed
-    active_search_depth = self.sampler.sample_corpus.corpus_config.active.active_search_depth
-    active_search_width = self.sampler.sample_corpus.corpus_config.active.active_search_width
+    active_limit_per_feed = self.sampler.config.sample_corpus.corpus_config.active.active_limit_per_feed
+    active_search_depth = self.sampler.config.sample_corpus.corpus_config.active.active_search_depth
+    active_search_width = self.sampler.config.sample_corpus.corpus_config.active.active_search_width
 
     # Initialize feed queue
     org_inp, org_ids = self.initOrGetQueue()
@@ -453,7 +453,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       self.feed_queue.append(
         ActiveSampleFeed(
           input_feed     = cf,
-          input_features = list(extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), [feature_space]).values())[0],
+          input_features = list(extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), [self.feat_sampler.feature_space]).values())[0],
           input_score    = math.inf,
           gen_id         = 0,
         )
