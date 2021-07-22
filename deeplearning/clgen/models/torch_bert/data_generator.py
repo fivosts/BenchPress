@@ -168,9 +168,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         url = "sqlite:///{}".format(d.sampler.corpus_directory / "active_feeds.db")
       )
       d.feat_sampler      = feature_sampler.EuclideanSampler(
-        self.sampler.corpus_directory,
-        self.sampler.sample_corpus.corpus_config.active.feature_space,
-        self.sampler.sample_corpus.corpus_config.active.target
+        d.sampler.corpus_directory,
+        d.sampler.sample_corpus.corpus_config.active.feature_space,
+        d.sampler.sample_corpus.corpus_config.active.target
       )
       d.candidate_monitor = monitors.CategoricalDistribMonitor(
         d.sampler.corpus_directory, "feature_distance"
