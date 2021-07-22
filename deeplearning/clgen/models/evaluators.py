@@ -75,7 +75,7 @@ class BenchmarkDistance(BaseEvaluator):
     super(BenchmarkDistance, self).__init__(sampler)
 
     # Target and path to target benchmarks
-    self.target      = self.sampler.sample_corpus.corpus_config.active.target
+    self.target      = self.sampler.config.corpus_config.active.target
     self.target_path = pathlib.Path(feature_sampler.targets[self.target]).resolve()
 
     # BERT DB setup
@@ -101,12 +101,7 @@ class BenchmarkDistance(BaseEvaluator):
     Unzip benchmarks zip, iterate, split and collect features for a feature space.
     """
     self.evaluated_benchmarks = []
-    with feature_sampler.GetContentFileRoot(self.target_path) as root:
-      contentfiles = []
-      for file in root.iterdir():
-        with open(file, 'r') as inf:
-          contentfiles.appendI((file, inf.read()))
-    kernels = [(p, k) for k in opencl.ExtractOnlySingleKernels(opencl.InvertKernelSpecifier(cf)) for p, cf in contentfiles]
+    kernels = feature_sampler.yield_cl_kernels(self.target_path)
     for p, k in kernels:
       features = extractor.ExtractFeatures(k, [self.feature_space])
       if features[self.feature_space]:

@@ -24,7 +24,7 @@ targets = {
 }
 
 @contextlib.contextmanager
-def GetContentFileRoot(path: pathlib.Path) -> pathlib.Path:
+def GetContentFileRoot(path: pathlib.Path) -> typing.Iterator[pathlib.Path]:
   """
   Extract tar archive of benchmarks and yield the root path of all files.
 
@@ -41,6 +41,39 @@ def GetContentFileRoot(path: pathlib.Path) -> pathlib.Path:
     ]
     subprocess.check_call(cmd)
     yield pathlib.Path(d)
+
+def iter_cl_files(path: pathlib.Path) -> typing.List[str]:
+  """
+  Iterate base path and yield the contents of all .cl files.
+  """
+  contentfiles = []
+  with GetContentFileRoot(path) as root:
+    file_queue = [p for p in root.iterdir()]
+    while file_queue:
+      c = file_queue.pop(0)
+      if c.is_symlink():
+        continue
+      elif c.is_dir():
+        file_queue += [p for p in c.iterdir()]
+      elif c.is_file() and c.suffix == ".cl":
+        with open(c, 'r') as inf:
+          contentfiles.append((c, inf.read()))
+  return contentfiles
+
+def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Path, str]]:
+  """
+  Fetch all cl files from base path and atomize, preprocess
+  kernels to single instances.
+  """
+  contentfiles = iter_cl_files(path)
+  kernels = []
+  for p, cf in contentfiles:
+    ks = opencl.ExtractOnlySingleKernels(
+          opencl.InvertKernelSpecifier(
+          opencl.StripDoubleUnderscorePrefixes(cf)))
+    for k in ks:
+      kernels.append((p, k))
+  return kernels
 
 def calculate_distance(infeat: typing.Dict[str, float],
                        tarfeat: typing.Dict[str, float],
@@ -155,27 +188,7 @@ class EuclideanSampler(object):
         # and create empty benchmarks with said iterated vectors
         raise NotImplementedError
       else:
-        with GetContentFileRoot(self.path) as root:
-          contentfiles = []
-          file_queue = [p for p in root.iterdir()]
-          while file_queue:
-            c = file_queue.pop(0)
-            if c.is_symlink():
-              continue
-            elif c.is_dir():
-              file_queue += [p for p in c.iterdir()]
-            elif c.is_file() and c.suffix == ".cl":
-              with open(c, 'r') as inf:
-                contentfiles.append((c, inf.read()))
-
-        kernels = []
-        for p, cf in contentfiles:
-          ks = opencl.ExtractOnlySingleKernels(
-                opencl.InvertKernelSpecifier(
-                opencl.StripDoubleUnderscorePrefixes(cf)))
-          for k in ks:
-            kernels.append((p, k))
-
+        kernels = yield_cl_kernels(self.path)
         for p, k in kernels:
           features = extractor.ExtractFeatures(k, [self.feature_space])
           if features[self.feature_space]:
