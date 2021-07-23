@@ -81,12 +81,13 @@ class GreweFeatures(object):
     """
     try:
       lines  = str_feats.split('\n')
-      header, values = lines[0].split(',')[2:], [l for l in lines[1:] if l != '' and l != '\n']
-      cumvs  = [0] * 8
+      header, cumvs = lines[0].split(',')[2:], lines[-2].split(',')[2:]
+      # header, values = lines[0].split(',')[2:], [l for l in lines[1:] if l != '' and l != '\n']
+      # cumvs  = [0] * 8
       try:
-        for vv in values:
-          for idx, el in enumerate(vv.split(',')[2:]):
-            cumvs[idx] += float(el)
+      #   for vv in values:
+      #     for idx, el in enumerate(vv.split(',')[2:]):
+      #       cumvs[idx] += float(el)
         if len(header) != len(cumvs):
           raise ValueError("Bad alignment of header-value list of features. This should never happen.")
         return {key: float(value) for key, value in zip(header, cumvs)}
