@@ -37,7 +37,7 @@ OPENCL_C_BASE  = os.path.join(environment.DATA_CL_INCLUDE, "opencl-c-base.h")
 SHIMFILE       = os.path.join(environment.DATA_CL_INCLUDE, "opencl-shim.h")
 STRUCTS        = os.path.join(environment.DATA_CL_INCLUDE, "structs.h")
 
-def GetClangArgs(use_shim: bool) -> typing.List[str]:
+def GetClangArgs(use_shim: bool, use_aux_headers: bool) -> typing.List[str]:
   """Get the arguments to pass to clang for handling OpenCL.
 
   Args:
@@ -55,17 +55,20 @@ def GetClangArgs(use_shim: bool) -> typing.List[str]:
     "-include{}".format(OPENCL_C_H),
     "-include{}".format(OPENCL_C_BASE),
     "-include{}".format(CL_H),
-    "-include{}".format(STRUCTS),
     "-I{}".format(str(OPENCL_HEADERS)),
     "-I{}".format(str(LIBCLC)),
-    "-I{}".format(str(AUX_INCLUDE)),
     "-Wno-everything",
   ]
+  if use_aux_headers:
+    args += [
+      "-include{}".format(STRUCTS),
+      "-I{}".format(str(AUX_INCLUDE)),
+    ]
   if use_shim:
     args += ["-include", str(SHIMFILE)]
   return args
 
-def _ClangPreprocess(text: str, use_shim: bool) -> str:
+def _ClangPreprocess(text: str, use_shim: bool, use_aux_headers: bool) -> str:
   """Private preprocess OpenCL source implementation.
 
   Inline macros, removes comments, etc.
@@ -77,7 +80,7 @@ def _ClangPreprocess(text: str, use_shim: bool) -> str:
   Returns:
     Preprocessed source.
   """
-  return clang.Preprocess(text, GetClangArgs(use_shim=use_shim))
+  return clang.Preprocess(text, GetClangArgs(use_shim=use_shim, use_aux_headers=use_aux_headers))
 
 def _ExtractTypedefs(text: str, dtype: str) -> str:
   """
@@ -121,7 +124,7 @@ def DeriveSourceVocab(text: str, token_list: typing.Set[str] = set()) -> typing.
   Returns:
     Set of unique source code tokens.
   """
-  return clang.DeriveSourceVocab(text, token_list, ".cl", GetClangArgs(use_shim = False))
+  return clang.DeriveSourceVocab(text, token_list, ".cl", GetClangArgs(use_shim = False, use_aux_headers=True))
 
 def AtomizeSource(text: str, vocab: typing.Set[str]) -> typing.List[str]:
   """
@@ -134,7 +137,7 @@ def AtomizeSource(text: str, vocab: typing.Set[str]) -> typing.List[str]:
   Returns:
     Source code as a list of tokens.
   """
-  return clang.AtomizeSource(text, vocab, ".cl", GetClangArgs(use_shim = False))
+  return clang.AtomizeSource(text, vocab, ".cl", GetClangArgs(use_shim = False, use_aux_headers=True))
 
 @public.clgen_preprocessor
 def ClangPreprocess(text: str) -> str:
@@ -146,7 +149,7 @@ def ClangPreprocess(text: str) -> str:
   Returns:
     Preprocessed source.
   """
-  return _ClangPreprocess(text, False)
+  return _ClangPreprocess(text, False, True)
 
 
 @public.clgen_preprocessor
@@ -159,9 +162,9 @@ def ClangPreprocessWithShim(text: str) -> str:
   Returns:
     Preprocessed source.
   """
-  return _ClangPreprocess(text, True)
+  return _ClangPreprocess(text, True, True)
 
-def CompileLlvmBytecode(text: str) -> str:
+def CompileLlvmBytecode(text: str, use_aux_headers: bool = True) -> str:
   """A preprocessor which attempts to compile the given code.
 
   Args:
@@ -175,13 +178,14 @@ def CompileLlvmBytecode(text: str) -> str:
   return clang.CompileLlvmBytecode(
     text,
     ".cl",
-    GetClangArgs(use_shim=False),# + ["-Werror=implicit-function-declaration"],
+    GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers),# + ["-Werror=implicit-function-declaration"],
     return_diagnostics = return_diagnostics,
   )
 
 def CompileOptimizer(text: str,
                      optimization: typing.List[str],
                      timeout_seconds: int = 60,
+                     use_aux_headers: bool = True,
                      ) -> str:
   """Compile source code to IR and apply optimization pass to source code.
   Args:
@@ -190,10 +194,10 @@ def CompileOptimizer(text: str,
   Returns:
     Dictionary with 70-dimensional InstCount feature vector.
   """
-  return clang.CompileOptimizer(text, ".cl", GetClangArgs(use_shim=False), optimization)
+  return clang.CompileOptimizer(text, ".cl", GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers), optimization)
 
 @public.clgen_preprocessor
-def Compile(text: str, return_diagnostics = False) -> str:
+def Compile(text: str, use_aux_headers = True, return_diagnostics = False) -> str:
   """Check that the OpenCL source compiles.
 
   This does not modify the input.
@@ -209,7 +213,7 @@ def Compile(text: str, return_diagnostics = False) -> str:
   return clang.Compile(
     text,
     ".cl",
-    GetClangArgs(use_shim=False),# + ["-Werror=implicit-function-declaration"],
+    GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers),# + ["-Werror=implicit-function-declaration"],
     return_diagnostics = return_diagnostics,
   )
 
