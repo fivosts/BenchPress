@@ -76,9 +76,11 @@ def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Pat
   #        opencl.ClangPreprocessWithShim(
   #        c.StripIncludes(cf2)))))
   # print(len(ks))
-  # feats1 = extractor.ExtractRawFeatures(ks[0][0], ['InstCountFeatures'], header_file = ks[0][1], use_aux_headers = False)  
+  # feats1 = extractor.ExtractRawFeatures(ks[0][0], ['GreweFeatures'], header_file = ks[0][1], use_aux_headers = False)  
+  # feats3 = extractor.ExtractFeatures(ks[0][0], ['GreweFeatures'], header_file = ks[0][1], use_aux_headers = False)  
   # feats2 = extractor.ExtractRawFeatures(ks[0][0], ['AutophaseFeatures'], header_file = ks[0][1], use_aux_headers = False)  
   # print(feats1)
+  # print(feats3)
   # # print(feats2)
   # exit()
   contentfiles = iter_cl_files(path)
