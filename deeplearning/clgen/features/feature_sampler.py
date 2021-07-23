@@ -61,21 +61,36 @@ def iter_cl_files(path: pathlib.Path) -> typing.List[str]:
           contentfiles.append((c, inf.read()))
   return contentfiles
 
-def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Path, str]]:
+def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Path, str, str]]:
   """
   Fetch all cl files from base path and atomize, preprocess
   kernels to single instances.
   """
+  # cf = pathlib.Path("/home/foivos/PhD/Code/clgen/rodinia_benchmarks/histogram1024.cl")
+  # cf2 = ""
+  # with open(cf, 'r') as inf:
+  #   cf2 = inf.read() 
+  # ks = opencl.ExtractSingleKernelsHeaders(
+  #        opencl.InvertKernelSpecifier(
+  #        opencl.StripDoubleUnderscorePrefixes(
+  #        opencl.ClangPreprocessWithShim(
+  #        c.StripIncludes(cf2)))))
+  # print(len(ks))
+  # feats1 = extractor.ExtractRawFeatures(ks[0][0], ['InstCountFeatures'], header_file = ks[0][1], use_aux_headers = False)  
+  # feats2 = extractor.ExtractRawFeatures(ks[0][0], ['AutophaseFeatures'], header_file = ks[0][1], use_aux_headers = False)  
+  # print(feats1)
+  # # print(feats2)
+  # exit()
   contentfiles = iter_cl_files(path)
   kernels = []
   for p, cf in contentfiles:
-    ks = opencl.ExtractSingleKernels(
+    ks = opencl.ExtractSingleKernelsHeaders(
          opencl.InvertKernelSpecifier(
          opencl.StripDoubleUnderscorePrefixes(
          opencl.ClangPreprocessWithShim(
          c.StripIncludes(cf)))))
-    for k in ks:
-      kernels.append((p, k))
+    for k, h in ks:
+      kernels.append((p, k, h))
   return kernels
 
 def calculate_distance(infeat: typing.Dict[str, float],
@@ -192,8 +207,13 @@ class EuclideanSampler(object):
         raise NotImplementedError
       else:
         kernels = yield_cl_kernels(self.path)
-        for p, k in kernels:
-          features = extractor.ExtractFeatures(k, [self.feature_space])
+        for p, k, h in kernels:
+          features = extractor.ExtractFeatures(
+            k,
+            [self.feature_space],
+            header_file = h,
+            use_aux_headers = False
+          )
           if features[self.feature_space]:
             self.benchmarks.append(
               EuclideanSampler.Benchmark(
