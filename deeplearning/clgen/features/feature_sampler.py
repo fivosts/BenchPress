@@ -95,6 +95,23 @@ def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Pat
       kernels.append((p, k, h))
   return kernels
 
+def grid_walk_generator(feature_space: str) -> typing.Iterator[typing.Dict[str, float]]:
+  """
+  Walk through feature space and generate
+  target feature instances to approximate.
+  """
+  step_size = 100
+  target = normalizers.normalizer[feature_space]
+  for i in range(0, step_size):
+    for k in target.keys():
+      if k != "F2:coalesced/mem" and k != "F4:comp/mem":
+        target[k] = int(normalizers.normalizer[feature_space][k] / (step_size - i))
+    if "F2:coalesced/mem" in target:
+      target["F2:coalesced/mem"] = target["coalesced"] / max(1, target["mem"])
+    if "F4:comp/mem" in target:
+      target["F4:comp/mem"] = target["comp"] / max(1, target["mem"])
+    yield target
+
 def calculate_distance(infeat: typing.Dict[str, float],
                        tarfeat: typing.Dict[str, float],
                        feature_space: str,
@@ -204,9 +221,15 @@ class EuclideanSampler(object):
     else:
       self.benchmarks = []
       if self.target == "grid_walk":
-        # have a MAX vector for each feature of each feature space
-        # and create empty benchmarks with said iterated vectors
-        raise NotImplementedError
+        for target_features in grid_walk_generator(self.feature_space):
+          self.benchmarks.append(
+            EuclideanSampler.Benchmark(
+              None,
+              "",
+              "",
+              target_features,
+            )
+          )
       else:
         kernels = yield_cl_kernels(self.path)
         for p, k, h in kernels:
