@@ -187,6 +187,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           feat_space = corpus_config.active.feature_space
         )
       )
+      d.raised_keyboard_int = False
 
     d.dataloader = d.predict_dataloader()
     d.loader     = iter(d.dataloader)
@@ -202,6 +203,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     self.feat_sampler      = None
     self.candidate_monitor = None
     self.comp_rate_mon     = None
+    self.raised_keyboard_int = None
     return
 
   def train_dataloader(self, set_name = 'train_dataset', is_train = True) -> torch.utils.data.dataloader:
@@ -335,6 +337,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     """
     if not self.feat_sampler.target_benchmark:
       raise StopIteration
+    if self.raised_keyboard_int:
+      self.raised_keyboard_int = False
+      raise KeyboardInterrupt
+
     # Active sampling specs initialization
     active_limit_per_feed = self.sampler.config.sample_corpus.corpus_config.active.active_limit_per_feed
     active_search_depth = self.sampler.config.sample_corpus.corpus_config.active.active_search_depth
@@ -344,96 +350,103 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     org_inp, org_ids = self.initOrGetQueue()
     total_cand, total_cand_hash = [], set()
 
-    while self.feed_queue:
+    try:
+      while self.feed_queue:
 
-      feed = self.feed_queue.pop(0)
-      rem  = active_limit_per_feed // self.sample_batch_size
-      step_candidates = []
-      cmp_rate        = [0, 0]
+        feed = self.feed_queue.pop(0)
+        rem  = active_limit_per_feed // self.sample_batch_size
+        step_candidates = []
+        cmp_rate        = [0, 0]
 
-      self.sampler.setStartText(self.tokenizer.tokensToString(feed.input_feed, ignore_token = self.tokenizer.padToken))
-      self.sampler.Specialize(self.tokenizer)
+        self.sampler.setStartText(self.tokenizer.tokensToString(feed.input_feed, ignore_token = self.tokenizer.padToken))
+        self.sampler.Specialize(self.tokenizer)
 
-      bar = progressbar.ProgressBar(max_value = active_limit_per_feed)
-      bar.update(0)
+        bar = progressbar.ProgressBar(max_value = active_limit_per_feed)
+        bar.update(0)
 
-      if feed.gen_id not in self.comp_rate:
-        self.comp_rate[feed.gen_id] = [0, 0]
+        if feed.gen_id not in self.comp_rate:
+          self.comp_rate[feed.gen_id] = [0, 0]
 
-      # Iterate until you get the required amount of candidates
-      while len(step_candidates) < active_limit_per_feed:
-        # Pre-process inputs
-        inputs = self.collateInputData(feed.input_feed, rem)
-        # Infer
-        outputs = mwrapper.sample_model_step(
-          estimator.models, estimator.devices, inputs,
+        # Iterate until you get the required amount of candidates
+        while len(step_candidates) < active_limit_per_feed:
+          # Pre-process inputs
+          inputs = self.collateInputData(feed.input_feed, rem)
+          # Infer
+          outputs = mwrapper.sample_model_step(
+            estimator.models, estimator.devices, inputs,
+          )
+          # Post-process outputs.
+          tcs, ts = self.registerOutputData(outputs, feed, step_candidates, bar)
+          cmp_rate[0] += tcs
+          cmp_rate[1] += ts
+          # Calculate how many more to infer.
+          try:
+            rcands = active_limit_per_feed - len(step_candidates)
+            crate  = cmp_rate[0] / cmp_rate[1]
+            rem = max(2, int((rcands // self.sample_batch_size) / crate))
+          except ZeroDivisionError:
+            pass
+
+        self.comp_rate[feed.gen_id] = [sum(x) for x in zip(self.comp_rate[feed.gen_id], cmp_rate)]
+        self.comp_rate_mon.register((feed.gen_id, self.comp_rate[feed.gen_id][0] / self.comp_rate[feed.gen_id][1]))
+        self.comp_rate_mon.plot()
+
+        # Top-k candidates of ith generation.
+        best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
+
+        if feed.gen_id > 0:
+          best_cands = best_cands[:1]
+
+        self.candidate_monitor.register(
+          {str(best_cands[0].sample_feed.gen_id): [c.score for c in best_cands]}
         )
-        # Post-process outputs.
-        tcs, ts = self.registerOutputData(outputs, feed, step_candidates, bar)
-        cmp_rate[0] += tcs
-        cmp_rate[1] += ts
-        # Calculate how many more to infer.
-        try:
-          rcands = active_limit_per_feed - len(step_candidates)
-          crate  = cmp_rate[0] / cmp_rate[1]
-          rem = max(2, int((rcands // self.sample_batch_size) / crate))
-        except ZeroDivisionError:
-          pass
-
-      self.comp_rate[feed.gen_id] = [sum(x) for x in zip(self.comp_rate[feed.gen_id], cmp_rate)]
-      self.comp_rate_mon.register((feed.gen_id, self.comp_rate[feed.gen_id][0] / self.comp_rate[feed.gen_id][1]))
-      self.comp_rate_mon.plot()
-
-      # Top-k candidates of ith generation.
-      best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
-
-      if feed.gen_id > 0:
-        best_cands = best_cands[:1]
-
-      self.candidate_monitor.register(
-        {str(best_cands[0].sample_feed.gen_id): [c.score for c in best_cands]}
-      )
-      self.candidate_monitor.plot()
-      for nc in best_cands:
-        sample_hash = ''.join([str(x) for x in nc.sample])
-        if sample_hash not in total_cand_hash:
-          total_cand.append(nc)
-          total_cand_hash.add(sample_hash)
-          if 0 < nc.score < feed.input_score and 1+nc.sample_feed.gen_id <= active_search_depth:
-            self.feed_queue.append(
-              ActiveSampleFeed(
-                input_feed       = nc.sample,
-                input_features   = nc.features,
-                input_score      = nc.score,
-                gen_id           = 1 + nc.sample_feed.gen_id,
+        self.candidate_monitor.plot()
+        for nc in best_cands:
+          sample_hash = ''.join([str(x) for x in nc.sample])
+          if sample_hash not in total_cand_hash:
+            total_cand.append(nc)
+            total_cand_hash.add(sample_hash)
+            if 0 < nc.score < feed.input_score and 1+nc.sample_feed.gen_id <= active_search_depth:
+              self.feed_queue.append(
+                ActiveSampleFeed(
+                  input_feed       = nc.sample,
+                  input_features   = nc.features,
+                  input_score      = nc.score,
+                  gen_id           = 1 + nc.sample_feed.gen_id,
+                )
+              )
+            self.addToDB(
+              active_feed_database.ActiveFeed.FromArgs(
+                tokenizer        = self.tokenizer,
+                id               = self.active_db.active_count,
+                input_feed       = nc.sample_feed.input_feed,
+                input_features   = nc.sample_feed.input_features,
+                masked_input_ids = nc.input_ids,
+                hole_instances   = nc.hole_instances,
+                sample           = nc.sample,
+                output_features  = nc.features,
+                sample_quality   = nc.score,
+                target_benchmark = (self.feat_sampler.target_benchmark.name, self.feat_sampler.target_benchmark.contents),
+                target_features  = self.feat_sampler.target_benchmark.feature_vector,
+                compile_status   = True,
+                generation_id    = nc.sample_feed.gen_id,
+                timestep         = nc.timestep,
               )
             )
-          self.addToDB(
-            active_feed_database.ActiveFeed.FromArgs(
-              tokenizer        = self.tokenizer,
-              id               = self.active_db.active_count,
-              input_feed       = nc.sample_feed.input_feed,
-              input_features   = nc.sample_feed.input_features,
-              masked_input_ids = nc.input_ids,
-              hole_instances   = nc.hole_instances,
-              sample           = nc.sample,
-              output_features  = nc.features,
-              sample_quality   = nc.score,
-              target_benchmark = (self.feat_sampler.target_benchmark.name, self.feat_sampler.target_benchmark.contents),
-              target_features  = self.feat_sampler.target_benchmark.feature_vector,
-              compile_status   = True,
-              generation_id    = nc.sample_feed.gen_id,
-              timestep         = nc.timestep,
-            )
-          )
-      self.saveCheckpoint()
+        self.saveCheckpoint()
 
-    self.saveCheckpoint()
-    self.feat_sampler.iter_benchmark()
-    return (np.repeat([org_inp], len(total_cand), axis = 0),
-            np.repeat([org_ids], len(total_cand), axis = 0),
-            [x.sample for x in total_cand],
-            [x.sample_indices for x in total_cand])
+      self.saveCheckpoint()
+      self.feat_sampler.iter_benchmark()
+      return (np.repeat([org_inp], len(total_cand), axis = 0),
+              np.repeat([org_ids], len(total_cand), axis = 0),
+              [x.sample for x in total_cand],
+              [x.sample_indices for x in total_cand])
+    except KeyboardInterrupt:
+      self.raised_keyboard_int = True
+      return (np.repeat([org_inp], len(total_cand), axis = 0),
+              np.repeat([org_ids], len(total_cand), axis = 0),
+              [x.sample for x in total_cand],
+              [x.sample_indices for x in total_cand])
 
   def initOrGetQueue(self) -> int:
     """
