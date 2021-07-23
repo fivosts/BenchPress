@@ -566,7 +566,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                        candidate_worker,
                        feed         = feed,
                        tokenizer    = self.tokenizer,
-                       feat_sampler = self.feat_sampler, 
+                       feat_sampler = self.feat_sampler,
                      ), it
                    ):
         if batch is not None:
