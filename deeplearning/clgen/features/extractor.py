@@ -19,7 +19,8 @@ extractors = {
 }
 
 def ExtractFeatures(src: str,
-                    ext: typing.List[str] = None
+                    ext: typing.List[str] = None,
+                    use_aux_headers: bool = True,
                     ) -> typing.Dict[str, typing.Dict[str, float]]:
   """
   Wrapper method for core feature functions.
@@ -27,10 +28,11 @@ def ExtractFeatures(src: str,
   """
   if not ext:
     ext = list(extractors.keys())
-  return {xt: extractors[xt].ExtractFeatures(src) for xt in ext}
+  return {xt: extractors[xt].ExtractFeatures(src, use_aux_headers = use_aux_headers) for xt in ext}
 
 def ExtractRawFeatures(src: str,
-                       ext: typing.List[str] = None
+                       ext: typing.List[str] = None,
+                       use_aux_headers: bool = True,
                        ) -> str:
   """
   Wrapper method for core feature functions.
@@ -38,7 +40,7 @@ def ExtractRawFeatures(src: str,
   """
   if not ext:
     ext = list(extractors.keys())
-  return '\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractRawFeatures(src)) for xt in ext])
+  return '\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractRawFeatures(src, use_aux_headers = use_aux_headers)) for xt in ext])
 
 def RawToDictFeats(str_feats: str) -> typing.Dict[str, typing.Dict[str, float]]:
   """

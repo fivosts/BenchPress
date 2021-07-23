@@ -22,7 +22,7 @@ class GreweFeatures(object):
     return
 
   @classmethod
-  def ExtractFeatures(cls, src: str) -> typing.Dict[str, float]:
+  def ExtractFeatures(cls, src: str, use_aux_headers: bool = True) -> typing.Dict[str, float]:
     """
     Invokes clgen_features extractor on source code and return feature mappings
     in dictionary format.
@@ -30,11 +30,11 @@ class GreweFeatures(object):
     If the code has syntax errors, features will not be obtained and empty dict
     is returned.
     """
-    str_features = cls.ExtractRawFeatures(src)
+    str_features = cls.ExtractRawFeatures(src, use_aux_headers)
     return cls.RawToDictFeats(str_features)
 
   @classmethod
-  def ExtractRawFeatures(cls, src: str) -> str:
+  def ExtractRawFeatures(cls, src: str, use_aux_headers: bool = True) -> str:
     """
     Invokes clgen_features extractor on a single kernel.
 
