@@ -22,7 +22,11 @@ class GreweFeatures(object):
     return
 
   @classmethod
-  def ExtractFeatures(cls, src: str, use_aux_headers: bool = True) -> typing.Dict[str, float]:
+  def ExtractFeatures(cls,
+                      src: str,
+                      header_file: str = None,
+                      use_aux_headers: bool = True
+                      ) -> typing.Dict[str, float]:
     """
     Invokes clgen_features extractor on source code and return feature mappings
     in dictionary format.
@@ -30,11 +34,15 @@ class GreweFeatures(object):
     If the code has syntax errors, features will not be obtained and empty dict
     is returned.
     """
-    str_features = cls.ExtractRawFeatures(src, use_aux_headers)
+    str_features = cls.ExtractRawFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers)
     return cls.RawToDictFeats(str_features)
 
   @classmethod
-  def ExtractRawFeatures(cls, src: str, use_aux_headers: bool = True) -> str:
+  def ExtractRawFeatures(cls,
+                         src: str,
+                         header_file: str = None,
+                         use_aux_headers: bool = True
+                         ) -> str:
     """
     Invokes clgen_features extractor on a single kernel.
 
@@ -43,13 +51,18 @@ class GreweFeatures(object):
     Returns:
       Feature vector and diagnostics in str format.
     """
-    file_hash = crypto.sha256_str(src)
-    with tempfile.NamedTemporaryFile(
-            'w', prefix = "feat_ext_{}_".format(file_hash), suffix = '.cl'
-          ) as f:
+    with tempfile.NamedTemporaryFile('w', prefix = "feat_ext_", suffix = '.cl') as f:
       f.write(src)
       f.flush()
-      cmd = [str(GREWE), f.name]
+
+      extra_arg = ""
+      if header_file:
+        htf = tempfile.NamedTemporaryFile('w', prefix = "feat_ext_head_", suffix = '.h')
+        htf.write(header_file)
+        htf.flush()
+        extra_arg = "-extra-arg=-include{}".format(htf.name)
+
+      cmd = [str(GREWE), extra_arg, f.name]
 
       process = subprocess.Popen(
         cmd,
