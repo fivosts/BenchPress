@@ -14,6 +14,7 @@ try:
   OPENCL_HEADERS      = check_exists(os.environ['OPENCL_HEADERS'])
   CLANG               = check_exists(os.environ['CLANG'])
   OPT                 = check_exists(os.environ['OPT'])
+  LLVM_EXTRACT        = check_exists(os.environ['LLVM_EXTRACT'])
   CLANG_FORMAT        = check_exists(os.environ['CLANG_FORMAT'])
   CLANG_HEADERS       = check_exists(os.environ['CLANG_HEADERS'])
   CLANG_REWRITER      = check_exists(os.environ['CLANG_REWRITER'])
