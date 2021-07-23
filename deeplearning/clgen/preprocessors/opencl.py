@@ -164,7 +164,7 @@ def ClangPreprocessWithShim(text: str) -> str:
   """
   return _ClangPreprocess(text, True, True)
 
-def CompileLlvmBytecode(text: str, use_aux_headers: bool = True) -> str:
+def CompileLlvmBytecode(text: str, header_file = None, use_aux_headers: bool = True) -> str:
   """A preprocessor which attempts to compile the given code.
 
   Args:
@@ -185,6 +185,7 @@ def CompileLlvmBytecode(text: str, use_aux_headers: bool = True) -> str:
 def CompileOptimizer(text: str,
                      optimization: typing.List[str],
                      timeout_seconds: int = 60,
+                     header_file: str = None,
                      use_aux_headers: bool = True,
                      ) -> str:
   """Compile source code to IR and apply optimization pass to source code.
@@ -194,10 +195,15 @@ def CompileOptimizer(text: str,
   Returns:
     Dictionary with 70-dimensional InstCount feature vector.
   """
-  return clang.CompileOptimizer(text, ".cl", GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers), optimization)
+  return clang.CompileOptimizer(
+    text,
+    ".cl",
+    GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers), optimization,
+    header_file = header_file,
+  )
 
 @public.clgen_preprocessor
-def Compile(text: str, use_aux_headers = True, return_diagnostics = False) -> str:
+def Compile(text: str, header_file = None, use_aux_headers = True, return_diagnostics = False) -> str:
   """Check that the OpenCL source compiles.
 
   This does not modify the input.
@@ -214,6 +220,7 @@ def Compile(text: str, use_aux_headers = True, return_diagnostics = False) -> st
     text,
     ".cl",
     GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers),# + ["-Werror=implicit-function-declaration"],
+    header_file = header_file,
     return_diagnostics = return_diagnostics,
   )
 
@@ -315,7 +322,7 @@ def ExtractSingleKernels(text: str) -> typing.List[str]:
       # Given this preprocessor is called after compile,
       # we are certain that brackets will be paired
       num_lbrack, num_rbrack, chunk_idx = 0, 0, 0
-      while ((num_lbrack  == 0 
+      while ((num_lbrack  == 0
       or      num_lbrack  != num_rbrack)
       and     chunk_idx   <  len(chunk)):
 
@@ -339,6 +346,62 @@ def ExtractSingleKernels(text: str) -> typing.List[str]:
 
       # Add to kernels all global space met so far + 'kernel void' + the kernel's body
       actual_kernels.append(''.join(global_space) + kernel_specifier + chunk[:chunk_idx])
+      if ''.join(chunk[chunk_idx:]) != '':
+        # All the rest below are appended to global_space
+        global_space.append(chunk[chunk_idx:])
+
+  return actual_kernels
+
+@public.clgen_preprocessor
+def ExtractSingleKernelsHeaders(text: str) -> typing.List[typing.Tuple[str, str]]:
+  """
+  A preprocessor that splits a single source file
+  to tuples of (single kernels, their global space)
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    List of tuples of kernels, global space (strings).
+  """
+  # OpenCL kernels can only be void
+  kernel_specifier = 'kernel void'
+  kernel_chunks = text.split(kernel_specifier)
+  actual_kernels, global_space = [], []
+
+  for idx, chunk in enumerate(kernel_chunks):
+    if idx == 0:
+      # There is no way the left-most part is not empty or global
+      if chunk != '':
+        global_space.append(chunk)
+    else:
+      # Given this preprocessor is called after compile,
+      # we are certain that brackets will be paired
+      num_lbrack, num_rbrack, chunk_idx = 0, 0, 0
+      while ((num_lbrack  == 0 
+      or      num_lbrack  != num_rbrack)
+      and     chunk_idx   <  len(chunk)):
+
+        try:
+          cur_tok = chunk[chunk_idx]
+        except IndexError:
+          l.getLogger().warn(chunk)
+        if   cur_tok == "{":
+          num_lbrack += 1
+        elif cur_tok == "}":
+          num_rbrack += 1
+        chunk_idx += 1
+
+      while chunk_idx < len(chunk):
+        # Without this line, global_space tends to gather lots of newlines and wspaces
+        # Then they are replicated and become massive. Better isolate only actual text there.
+        if chunk[chunk_idx] == ' ' or chunk[chunk_idx] == '\n':
+          chunk_idx += 1
+        else:
+          break
+
+      # Add to kernels all global space met so far + 'kernel void' + the kernel's body
+      actual_kernels.append((kernel_specifier + chunk[:chunk_idx], ''.join(global_space)))
       if ''.join(chunk[chunk_idx:]) != '':
         # All the rest below are appended to global_space
         global_space.append(chunk[chunk_idx:])
