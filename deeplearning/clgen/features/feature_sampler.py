@@ -88,7 +88,7 @@ def calculate_distance(infeat: typing.Dict[str, float],
   """
   d = 0
   for key in tarfeat.keys():
-    n = normalizers.normalizer[feature_space][key]
+    n = tarfeat[key] if tarfeat[key] != 0 else 1# normalizers.normalizer[feature_space][key]
     i = infeat[key] / n
     t = tarfeat[key] / n
     d += abs((t**2) - (i**2))
