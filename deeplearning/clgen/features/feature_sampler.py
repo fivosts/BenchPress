@@ -5,6 +5,7 @@ import typing
 import tempfile
 import contextlib
 import pathlib
+import pickle
 import math
 import subprocess
 
@@ -102,15 +103,16 @@ def grid_walk_generator(feature_space: str) -> typing.Iterator[typing.Dict[str, 
   """
   step_size = 100
   target = normalizers.normalizer[feature_space]
-  for i in range(0, step_size):
+  for i in range(1, step_size+1):
+    ct = {}
     for k in target.keys():
       if k != "F2:coalesced/mem" and k != "F4:comp/mem":
-        target[k] = int(normalizers.normalizer[feature_space][k] / (step_size - i))
-    if "F2:coalesced/mem" in target:
-      target["F2:coalesced/mem"] = target["coalesced"] / max(1, target["mem"])
-    if "F4:comp/mem" in target:
-      target["F4:comp/mem"] = target["comp"] / max(1, target["mem"])
-    yield target
+        ct[k] = int(i * (target[k] / step_size))
+    if "F2:coalesced/mem" in ct:
+      ct["F2:coalesced/mem"] = ct["coalesced"] / max(1, ct["mem"])
+    if "F4:comp/mem" in ct:
+      ct["F4:comp/mem"] = ct["comp"] / max(1, ct["mem"])
+    yield ct
 
 def calculate_distance(infeat: typing.Dict[str, float],
                        tarfeat: typing.Dict[str, float],
@@ -128,17 +130,17 @@ def calculate_distance(infeat: typing.Dict[str, float],
     d += abs((t**2) - (i**2))
   return math.sqrt(d)
 
+class Benchmark(typing.NamedTuple):
+  path: pathlib.Path
+  name: str
+  contents: str
+  feature_vector: typing.Dict[str, float]
+
 class EuclideanSampler(object):
   """
   This is a shitty experimental class to work with benchmark comparison.
   Will be refactored obviously.
   """
-  class Benchmark(typing.NamedTuple):
-    path: pathlib.Path
-    name: str
-    contents: str
-    feature_vector: typing.Dict[str, float]
-
   def __init__(self,
                workspace: pathlib.Path,
                feature_space: str,
@@ -210,12 +212,11 @@ class EuclideanSampler(object):
       pickle.dump(self.benchmarks, outf)
     return
 
-
   def loadCheckpoint(self) -> None:
     """
     Load feature sampler state.
     """
-    if (self.workspace / "feature_sampler_state.pkl").exists():
+    if False: # (self.workspace / "feature_sampler_state.pkl").exists():
       with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
         self.benchmarks = pickle.load(infile)
     else:
@@ -223,13 +224,14 @@ class EuclideanSampler(object):
       if self.target == "grid_walk":
         for target_features in grid_walk_generator(self.feature_space):
           self.benchmarks.append(
-            EuclideanSampler.Benchmark(
-              None,
+            Benchmark(
+              "",
               "",
               "",
               target_features,
             )
           )
+        self.saveCheckpoint()
       else:
         kernels = yield_cl_kernels(self.path)
         for p, k, h in kernels:
@@ -241,7 +243,7 @@ class EuclideanSampler(object):
           )
           if features[self.feature_space]:
             self.benchmarks.append(
-              EuclideanSampler.Benchmark(
+              Benchmark(
                   p,
                   p.name,
                   k,
