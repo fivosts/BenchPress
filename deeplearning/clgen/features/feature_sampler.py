@@ -21,8 +21,17 @@ from eupy.native import logger as l
 FLAGS = flags.FLAGS
 
 targets = {
-  'rodinia': './benchmarks/rodinia_3.1.tar.bz2',
-  'grid_walk': '',
+  'rodinia'      : './benchmarks/rodinia_3.1.tar.bz2',
+  'BabelStream'  : './benchmarks/BabelStream.tar.bz2',
+  'cf4ocl'       : './benchmarks/cf4ocl.tar.bz2',
+  'CHO'          : './benchmarks/cho.tar.bz2',
+  'FinanceBench' : './benchmarks/FinanceBench.tar.bz2',
+  'HeteroMark'   : './benchmarks/HeteroMark.tar.bz2',
+  'mixbench'     : './benchmarks/mixbench.tar.bz2',
+  'OpenDwarfs'   : './benchmarks/OpenDwarfs.tar.bz2',
+  'parboil'      : './benchmarks/parboil.tar.bz2',
+  'polybench'    : './benchmarks/polybench.tar.bz2',
+  'grid_walk'    : '',
 }
 
 @contextlib.contextmanager
