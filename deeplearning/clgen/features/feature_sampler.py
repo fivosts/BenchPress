@@ -6,6 +6,7 @@ import tempfile
 import contextlib
 import pathlib
 import pickle
+import gdown
 import math
 import subprocess
 
@@ -21,16 +22,16 @@ from eupy.native import logger as l
 FLAGS = flags.FLAGS
 
 targets = {
-  'rodinia'      : './benchmarks/rodinia_3.1.tar.bz2',
-  'BabelStream'  : './benchmarks/BabelStream.tar.bz2',
-  'cf4ocl'       : './benchmarks/cf4ocl.tar.bz2',
-  'CHO'          : './benchmarks/cho.tar.bz2',
-  'FinanceBench' : './benchmarks/FinanceBench.tar.bz2',
-  'HeteroMark'   : './benchmarks/HeteroMark.tar.bz2',
-  'mixbench'     : './benchmarks/mixbench.tar.bz2',
-  'OpenDwarfs'   : './benchmarks/OpenDwarfs.tar.bz2',
-  'parboil'      : './benchmarks/parboil.tar.bz2',
-  'polybench'    : './benchmarks/polybench.tar.bz2',
+  'rodinia'      : './model_zoo/benchmarks/rodinia_3.1.tar.bz2',
+  'BabelStream'  : './model_zoo/benchmarks/BabelStream.tar.bz2',
+  'cf4ocl'       : './model_zoo/benchmarks/cf4ocl.tar.bz2',
+  'CHO'          : './model_zoo/benchmarks/cho.tar.bz2',
+  'FinanceBench' : './model_zoo/benchmarks/FinanceBench.tar.bz2',
+  'HeteroMark'   : './model_zoo/benchmarks/HeteroMark.tar.bz2',
+  'mixbench'     : './model_zoo/benchmarks/mixbench.tar.bz2',
+  'OpenDwarfs'   : './model_zoo/benchmarks/OpenDwarfs.tar.bz2',
+  'parboil'      : './model_zoo/benchmarks/parboil.tar.bz2',
+  'polybench'    : './model_zoo/benchmarks/polybench.tar.bz2',
   'grid_walk'    : '',
 }
 
@@ -38,10 +39,25 @@ targets = {
 def GetContentFileRoot(path: pathlib.Path) -> typing.Iterator[pathlib.Path]:
   """
   Extract tar archive of benchmarks and yield the root path of all files.
+  If benchmarks don't exist, download from google drive.
 
   Yields:
     The path of a directory containing content files.
   """
+
+  if not (path.parent / "benchmarks_registry.json").exists():
+    raise FileNotFoundError("benchmarks_registry.json file not found.")
+
+  with open(path.parent / "benchmarks_registry.json", 'r') as js:
+    reg = json.load(js)
+
+  if path.name not in reg:
+    raise FileNotFoundError("Corpus {} is not registered in benchmarks_registry".format(path.name))
+
+  if not path.is_file():
+    l.getLogger().info("Benchmark found in registry. Downloading from Google Drive...")
+    gdown.download("https://drive.google.com/uc?id={}".format(reg[path.name]['url']), str(path))
+
   with tempfile.TemporaryDirectory(prefix=path.stem) as d:
     cmd = [
       "tar",
