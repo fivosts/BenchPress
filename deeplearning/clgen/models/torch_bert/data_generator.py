@@ -188,6 +188,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         )
       )
       d.raised_keyboard_int = False
+      d.raised_exception    = None
 
     d.dataloader = d.predict_dataloader()
     d.loader     = iter(d.dataloader)
@@ -204,6 +205,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     self.candidate_monitor = None
     self.comp_rate_mon     = None
     self.raised_keyboard_int = None
+    self.raised_exception  = None
     return
 
   def train_dataloader(self, set_name = 'train_dataset', is_train = True) -> torch.utils.data.dataloader:
@@ -340,6 +342,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     if self.raised_keyboard_int:
       self.raised_keyboard_int = False
       raise KeyboardInterrupt
+    if self.raised_exception:
+      raise self.raised_exception
 
     # Active sampling specs initialization
     active_limit_per_feed = self.sampler.config.sample_corpus.corpus_config.active.active_limit_per_feed
@@ -443,6 +447,13 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               [x.sample_indices for x in total_cand])
     except KeyboardInterrupt:
       self.raised_keyboard_int = True
+      return (np.repeat([org_inp], len(total_cand), axis = 0),
+              np.repeat([org_ids], len(total_cand), axis = 0),
+              [x.sample for x in total_cand],
+              [x.sample_indices for x in total_cand])
+    except Exception as e:
+      l.getLogger().error(e)
+      self.raised_exception = e
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
