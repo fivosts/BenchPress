@@ -7,6 +7,7 @@ import contextlib
 import pathlib
 import pickle
 import gdown
+import json
 import math
 import subprocess
 
@@ -241,7 +242,7 @@ class EuclideanSampler(object):
     """
     Load feature sampler state.
     """
-    if False: # (self.workspace / "feature_sampler_state.pkl").exists():
+    if (self.workspace / "feature_sampler_state.pkl").exists():
       with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
         self.benchmarks = pickle.load(infile)
     else:
