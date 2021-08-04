@@ -266,7 +266,7 @@ class EuclideanSampler(object):
         reduced_git_corpus = [
           (cf, feats[self.feature_space])
           for cf, feats in self.git_corpus.getFeaturesContents(sequence_length = 768)
-          if self.feature_space in feats
+          if self.feature_space in feats and feats[self.feature_space]
         ]
         for p, k, h in kernels:
           features = extractor.ExtractFeatures(
@@ -276,7 +276,7 @@ class EuclideanSampler(object):
             use_aux_headers = False
           )
           closest_git = sorted([(cf, calculate_distance(fts, features[self.feature_space], self.feature_space)) for cf, fts in reduced_git_corpus], key = lambda x: x[1])[0]
-          if features[self.feature_space] and closest_git > 0:
+          if features[self.feature_space] and closest_git[1] > 0:
             self.benchmarks.append(
               Benchmark(
                   p,
