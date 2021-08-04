@@ -179,7 +179,11 @@ class EuclideanSampler(object):
       self.path        = pathlib.Path(targets[target]).resolve()
     self.workspace     = workspace
     self.feature_space = feature_space
-    self.git_corpus    = git_corpus
+    self.reduced_git_corpus = [
+      (cf, feats[self.feature_space])
+      for cf, feats in git_corpus.getFeaturesContents(sequence_length = 768)
+      if self.feature_space in feats and feats[self.feature_space]
+    ]
     self.loadCheckpoint()
     try:
       self.target_benchmark = self.benchmarks.pop(0)
@@ -263,11 +267,6 @@ class EuclideanSampler(object):
         self.saveCheckpoint()
       else:
         kernels = yield_cl_kernels(self.path)
-        reduced_git_corpus = [
-          (cf, feats[self.feature_space])
-          for cf, feats in self.git_corpus.getFeaturesContents(sequence_length = 768)
-          if self.feature_space in feats and feats[self.feature_space]
-        ]
         for p, k, h in kernels:
           features = extractor.ExtractFeatures(
             k,
@@ -275,7 +274,7 @@ class EuclideanSampler(object):
             header_file = h,
             use_aux_headers = False
           )
-          closest_git = sorted([(cf, calculate_distance(fts, features[self.feature_space], self.feature_space)) for cf, fts in reduced_git_corpus], key = lambda x: x[1])[0]
+          closest_git = sorted([(cf, calculate_distance(fts, features[self.feature_space], self.feature_space)) for cf, fts in self.reduced_git_corpus], key = lambda x: x[1])[0]
           if features[self.feature_space] and closest_git[1] > 0:
             self.benchmarks.append(
               Benchmark(
