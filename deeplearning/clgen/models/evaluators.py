@@ -143,11 +143,13 @@ class BenchmarkDistance(BaseEvaluator):
       cc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.feature_vector, self.feature_space)) for cf, fts in clgen_corpus], key = lambda x: x[1])[:topK]
       gc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.feature_vector, self.feature_space)) for cf, fts in git_corpus  ], key = lambda x: x[1])[:topK]
       rgc = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.feature_vector, self.feature_space)) for cf, fts in reduced_git_corpus  ], key = lambda x: x[1])[:topK]
-      print(benchmark.contents)
+
+      print(benchmark.name)
       print(benchmark.feature_vector)
 
       print([x[1] for x in bc])
       print([x[1] for x in cc])
       print([x[1] for x in gc])
+      print([x[1] for x in rgc])
       input()
     return

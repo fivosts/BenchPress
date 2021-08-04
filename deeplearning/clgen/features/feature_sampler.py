@@ -15,6 +15,7 @@ from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import normalizers
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.preprocessors import c
+from deeplearning.clgen.corpuses import corpuses
 from eupy.native import logger as l
 
 from absl import flags
@@ -168,15 +169,17 @@ class EuclideanSampler(object):
   Will be refactored obviously.
   """
   def __init__(self,
-               workspace: pathlib.Path,
-               feature_space: str,
-               target: str
+               workspace     : pathlib.Path,
+               feature_space : str,
+               target        : str,
+               git_corpus    : corpuses.Corpus = None,
                ):
     self.target = target
     if self.target != "grid_walk":
       self.path        = pathlib.Path(targets[target]).resolve()
     self.workspace     = workspace
     self.feature_space = feature_space
+    self.git_corpus    = git_corpus
     self.loadCheckpoint()
     try:
       self.target_benchmark = self.benchmarks.pop(0)
@@ -260,6 +263,11 @@ class EuclideanSampler(object):
         self.saveCheckpoint()
       else:
         kernels = yield_cl_kernels(self.path)
+        reduced_git_corpus = [
+          (cf, feats[self.feature_space])
+          for cf, feats in self.git_corpus.getFeaturesContents(sequence_length = 768)
+          if self.feature_space in feats
+        ]
         for p, k, h in kernels:
           features = extractor.ExtractFeatures(
             k,
@@ -267,7 +275,8 @@ class EuclideanSampler(object):
             header_file = h,
             use_aux_headers = False
           )
-          if features[self.feature_space]:
+          closest_git = sorted([(cf, calculate_distance(fts, features[self.feature_space], self.feature_space)) for cf, fts in reduced_git_corpus], key = lambda x: x[1])[0]
+          if features[self.feature_space] and closest_git > 0:
             self.benchmarks.append(
               Benchmark(
                   p,

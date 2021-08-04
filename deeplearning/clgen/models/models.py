@@ -388,7 +388,7 @@ class Model(object):
       sampler.start_text = '\n'.join(start_text)
       sampler.Specialize(tokenizer)
 
-    self.backend.InitSampling(sampler, seed)
+    self.backend.InitSampling(sampler, seed, self.corpus)
     [obs.Specialize(self, sampler) for obs in sample_observers]
 
     if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert):

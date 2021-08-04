@@ -721,13 +721,14 @@ class torchBert(backends.BackendBase):
 
   def InitSampling(self,
                    sampler : samplers.Sampler,
-                   seed    : typing.Optional[int] = None
+                   seed    : typing.Optional[int] = None,
+                   corpus = None,
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
     sample_batch_size = sampler.batch_size
     data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
                        self.config.training, sampler, self.tokenizer, seed, sample_batch_size,
-                       self.config.architecture.max_position_embeddings, self.cache.path
+                       self.config.architecture.max_position_embeddings, self.cache.path, corpus
                      )
     self._ConfigSampleParams(data_generator, sampler)
     ckpt_step = self.loadCheckpoint(self.sample)
