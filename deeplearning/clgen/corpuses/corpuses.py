@@ -267,7 +267,7 @@ class Corpus(object):
       pathlib.Path(self.preprocessed.url[len("sqlite:///") :]).parent / "LOCK"
     )
     self.preprocessed.Create(self.config)
-    if not self.preprocessed.size:
+    if not self.preprocessed.size and not FLAGS.override_preprocessing:
       raise ValueError(
         f"Pre-processed corpus contains no files: '{self.preprocessed.url}'"
       )
