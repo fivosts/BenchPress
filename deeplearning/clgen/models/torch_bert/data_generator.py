@@ -134,6 +134,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                  sample_batch_size: int,
                                  max_position_embeddings: int,
                                  cache_path,
+                                 corpus: "corpuses.Corpus" = None,
                                  ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
     d = super(torchLMDataGenerator, torchLMDataGenerator()).SampleMaskLMBatchGenerator(
@@ -170,7 +171,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       d.feat_sampler      = feature_sampler.EuclideanSampler(
         d.sampler.corpus_directory,
         corpus_config.active.feature_space,
-        corpus_config.active.target
+        corpus_config.active.target,
+        git_corpus = corpus
       )
       d.candidate_monitor = monitors.CategoricalDistribMonitor(
         d.sampler.corpus_directory, "feature_distance"
@@ -522,7 +524,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         'mask_labels': [], 'masked_lm_lengths': [], 'next_sentence_labels': []
       }
       try:
-        pool = multiprocessing.Pool()
+        pool = multiprocessing.Pool(4)
         for batch in pool.imap_unordered(
                           functools.partial(
                             dataload_worker, feed  = feed,
@@ -565,7 +567,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                1st el: Total samples.
     """
     cm_rate = [0, 0]
-    pool = multiprocessing.Pool()
+    pool = multiprocessing.Pool(4)
     cm_rate[1] += len(outputs['generated_samples'])
     try:
       it = zip(
