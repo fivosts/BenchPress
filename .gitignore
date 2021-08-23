@@ -21,3 +21,8 @@
 /model_zoo/corpus/*.tar
 /model_zoo/corpus/*.tar.bz2
 /model_zoo/corpus/*.db
+
+# Large benchmarks suites
+/model_zoo/benchmarks/*.tar
+/model_zoo/benchmarks/*.tar.bz2
+/model_zoo/corpus/*.db

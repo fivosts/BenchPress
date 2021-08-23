@@ -102,6 +102,11 @@ flags.DEFINE_boolean(
   False,
   "Select to deploy sampling without training."
 )
+flags.DEFINE_boolean(
+  "evaluate",
+  False,
+  "Select to run paper evaluation between bert, clgen and github datasets."
+)
 flags.DEFINE_string(
   "print_cache_path",
   None,
@@ -218,7 +223,9 @@ class Instance(object):
     self.PreTrain()
     self.Train()
     with self.Session():
-      return self.model.Sample(self.sampler, *args, **kwargs)
+      self.model.Sample(self.sampler, *args, **kwargs)
+      if FLAGS.evaluate:
+        self.model.Evaluate(self.sampler)
 
   def ToProto(self) -> clgen_pb2.Instance:
     """Get the proto config for the instance."""

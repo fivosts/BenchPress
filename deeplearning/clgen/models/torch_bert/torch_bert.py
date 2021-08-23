@@ -359,7 +359,7 @@ class torchBert(backends.BackendBase):
       'input_ids': [], 'masked_lm_lengths': []
     }
     if not self.pytorch.num_gpus > 1 or is_live:
-      bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = False)
+      bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = True, position = 0)
       for b_idx in range(len(inputs['input_ids'])):
         out = models[0](
                 input_ids            = inputs['input_ids'][b_idx].to(devices[0]),
@@ -397,7 +397,7 @@ class torchBert(backends.BackendBase):
     try:
       for job in procs:
         job.start()
-      bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = False)
+      bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = True, position = 0)
       ln = 0
       while ln < len(inputs['input_ids']) * len(inputs['input_ids'][0]):
         try:
@@ -416,8 +416,11 @@ class torchBert(backends.BackendBase):
       if not queue.empty():
         raise ValueError("Queue is not empty!")
     except KeyboardInterrupt:
-      for job in procs:
-        job.terminate()
+      try:
+        for job in procs:
+          job.terminate()
+      except Exception:
+        pass
       raise KeyboardInterrupt
     return outputs
 
@@ -718,13 +721,14 @@ class torchBert(backends.BackendBase):
 
   def InitSampling(self,
                    sampler : samplers.Sampler,
-                   seed    : typing.Optional[int] = None
+                   seed    : typing.Optional[int] = None,
+                   corpus = None,
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
     sample_batch_size = sampler.batch_size
     data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
                        self.config.training, sampler, self.tokenizer, seed, sample_batch_size,
-                       self.config.architecture.max_position_embeddings, self.cache.path
+                       self.config.architecture.max_position_embeddings, self.cache.path, corpus
                      )
     self._ConfigSampleParams(data_generator, sampler)
     ckpt_step = self.loadCheckpoint(self.sample)
@@ -792,7 +796,10 @@ class torchBert(backends.BackendBase):
 
     with self.torch.no_grad():
       if self.sampler.is_active:
-        return self.sample.data_generator.ActiveGeneration(self, self.sample)
+        try:
+          return self.sample.data_generator.ActiveGeneration(self, self.sample)
+        except StopIteration:
+          raise StopIteration
       else:
         step_out = self.sample_model_step(
             self.sample.models,
@@ -810,7 +817,7 @@ class torchBert(backends.BackendBase):
               x_name = "Probs / sample step",
             )
         return (
-          self.step_inputs['original_input'].cpu().view(-1, self.sampler.batch_size).numpy(),
+          self.step_inputs['original_input'].cpu().view(-1, self.step_inputs['original_input'].shape[2]).numpy(),
           self.step_inputs['input_ids'].cpu().view(-1, self.sampler.sequence_length).numpy(),
           step_out['generated_samples'],
           step_out['sample_indices']

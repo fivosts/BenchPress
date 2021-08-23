@@ -60,6 +60,7 @@ if environment.LLVM_VERSION != 6:
 CLANG        = environment.CLANG
 CLANG_FORMAT = environment.CLANG_FORMAT
 OPT          = environment.OPT
+LLVM_EXTRACT = environment.LLVM_EXTRACT
 
 def StripPreprocessorLines(src: str) -> str:
   """Strip preprocessor remnants from clang frontend output.
@@ -135,9 +136,12 @@ def Preprocess(
   else:
     return stdout
 
-def CompileLlvmBytecode(
-  src: str, suffix: str, cflags: typing.List[str], timeout_seconds: int = 60
-) -> str:
+def CompileLlvmBytecode(src: str,
+                        suffix: str,
+                        cflags: typing.List[str],
+                        header_file: str = None,
+                        timeout_seconds: int = 60
+                        ) -> str:
   """Compile input code into textual LLVM byte code using clang system binary.
 
   Args:
@@ -155,15 +159,22 @@ def CompileLlvmBytecode(
     ValueError: If clang does not complete before timeout_seconds.
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
-  with tempfile.NamedTemporaryFile(
-    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
-  ) as f:
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix) as f:
     f.write(src)
     f.flush()
+
+    extra_args = []
+    if header_file:
+      htf = tempfile.NamedTemporaryFile('w', prefix = "clgen_preprocessors_clang_header_", suffix = ".h")
+      htf.write(header_file)
+      htf.flush()
+      extra_args = ['-include{}'.format(htf.name)]
+
     cmd = (
       ["timeout", "-s9", str(timeout_seconds), str(CLANG), f.name]
       + builtin_cflags
       + cflags
+      + extra_args
     )
     process = subprocess.Popen(
       cmd,
@@ -182,6 +193,7 @@ def CompileOptimizer(src: str,
                      suffix: str,
                      cflags: typing.List[str],
                      optimization: typing.List[str],
+                     header_file: str = None,
                      timeout_seconds: int = 60,
                      ) -> str:
   """Compile source code to IR and apply optimization pass to source code.
@@ -201,16 +213,46 @@ def CompileOptimizer(src: str,
     ValueError: If clang does not complete before timeout_seconds.
   """
   try:
-    bc = CompileLlvmBytecode(src, suffix, cflags, timeout_seconds)
-  except ValueError:
+    bc = CompileLlvmBytecode(src, suffix, cflags, header_file, timeout_seconds)
+  except ValueError as e:
     return ""
-  with tempfile.NamedTemporaryFile(
-    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix='.ll'
-  ) as f:
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix='.ll') as f:
     f.write(bc)
     f.flush()
+
+    if header_file:
+      # Hacky way, but llvm-extract requires exact kernel function name
+      k_name = src.split('kernel void')[1].split()
+      if "attribute" not in k_name[0]:
+        k_name = k_name[0]
+      else:
+        k_name = k_name[1]
+      chrs = []
+      for ch in k_name:
+        if ch == "(":
+          break
+        else:
+          chrs.append(ch)
+      k_name = ''.join(chrs)
+
+      ext_cmd = (
+        ["timeout", "-s9", str(timeout_seconds), str(LLVM_EXTRACT)]
+        + [f.name, "--func={}".format(k_name), "-o", f.name]
+      )
+      ext_proc = subprocess.Popen(
+        ext_cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+      )
+      ext_out, ext_err = ext_proc.communicate()
+      if ext_err:
+        raise ValueError(ext_err)
+
     cmd = (
-      ["timeout", "-s9", str(timeout_seconds), str(OPT)] + optimization + [f.name, "-o", "/dev/null"]
+      ["timeout", "-s9", str(timeout_seconds), str(OPT)]
+      + optimization
+      + [f.name, "-o", "/dev/null"]
     )
     process = subprocess.Popen(
       cmd,
@@ -228,6 +270,7 @@ def CompileOptimizer(src: str,
 def Compile(src: str,
             suffix: str,
             cflags: typing.List[str],
+            header_file: str = None,
             return_diagnostics: bool = False,
             ) -> str:
   """Check input source code for if it compiles.
@@ -245,14 +288,19 @@ def Compile(src: str,
     ValueError: In case of an error.
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
-  with tempfile.NamedTemporaryFile(
-    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
-  ) as f:
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix) as f:
     f.write(src)
     f.flush()
 
+    extra_args = []
+    if header_file:
+      htf = tempfile.NamedTemporaryFile('w', prefix = "clgen_preprocessors_clang_header_", suffix = ".h")
+      htf.write(header_file)
+      htf.flush()
+      extra_args = ['-include{}'.format(htf.name)]
+
     try:
-      unit = clang.cindex.TranslationUnit.from_source(f.name, args = builtin_cflags + cflags)
+      unit = clang.cindex.TranslationUnit.from_source(f.name, args = builtin_cflags + cflags + extra_args)
     except clang.cindex.TranslationUnitLoadError as e:
       raise ValueError(e)
 
@@ -290,9 +338,7 @@ def Parse(src: str,
     ValueError: In case of an error.
   """
 
-  with tempfile.NamedTemporaryFile(
-    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
-  ) as f:
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix) as f:
 
     try:
       unit = clang.cindex.TranslationUnit.from_source(f.name, args = cflags, unsaved_files = [(f.name, src)])
@@ -373,7 +419,7 @@ def ExtractFunctions(src: str,
     ValueError: In case of an error.
   """
   with tempfile.NamedTemporaryFile(
-    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
+    "w", prefix="clgen_preprocessors_clang_", suffix=suffix
   ) as f:
     try:
       unit = clang.cindex.TranslationUnit.from_source(f.name, args = cflags, unsaved_files = [(f.name, src)])#, args = args + builtin_cflags)
@@ -450,7 +496,7 @@ def DeriveSourceVocab(src: str,
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
   with tempfile.NamedTemporaryFile(
-    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
+    "w", prefix="clgen_preprocessors_clang_", suffix=suffix
   ) as f:
     f.write(src)
     f.flush()
@@ -496,7 +542,7 @@ def AtomizeSource(src: str,
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
   with tempfile.NamedTemporaryFile(
-    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
+    "w", prefix="clgen_preprocessors_clang_", suffix=suffix
   ) as f:
     f.write(src)
     f.flush()
@@ -532,7 +578,7 @@ def GreweFeatureExtraction(src: str,
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
   with tempfile.NamedTemporaryFile(
-    "w", prefix="phd_deeplearning_clgen_preprocessors_clang_", suffix=suffix
+    "w", prefix="clgen_preprocessors_clang_", suffix=suffix
   ) as f:
     f.write(src)
     f.flush()

@@ -161,11 +161,29 @@ class SamplesDatabaseObserver(SampleObserver):
     """Write final summed data about sampling session."""
     # Create feature vector plots
     db_path = pathlib.Path(self.db.url[len("sqlite:///"):]).parent
-    feature_monitor = monitors.CategoricalDistribMonitor(db_path, "samples_feature_vector_distribution")
+    # feature_monitor = monitors.CategoricalDistribMonitor(db_path, "samples_feature_vector_distribution")
+
+    feature_monitors = {
+      ftype: monitors.CategoricalDistribMonitor(
+                        db_path,
+                        "{}_distribution".format(ftype)
+                      )
+      for ftype in extractor.extractors.keys()
+    }
+
+    # for sample in self.db.correct_samples:
+    #   if sample.feature_vector:
+    #     feature_monitor.register({l.split(':')[0:-1]: float(l.split(':')[-1])  for l in sample.feature_vector.split('\n')}) # This used to work only for Grewe. Needs expanding, see lm_data_generator.
+    # feature_monitor.plot()
+
     for sample in self.db.correct_samples:
       if sample.feature_vector:
-        feature_monitor.register({l.split(':')[0:-1]: float(l.split(':')[-1])  for l in sample.feature_vector.split('\n')})
-    feature_monitor.plot()
+        features = extractor.RawToDictFeats(sample.feature_vector)
+        for ftype, fvector in features.items():
+          feature_monitors[ftype].register(fvector)
+
+    for mon in feature_monitors.values():
+      mon.plot()
 
     with self.db.Session() as session:
       compiled_count = session.query(samples_database.Sample.compile_status).filter_by(compile_status = 1).count()
@@ -173,13 +191,13 @@ class SamplesDatabaseObserver(SampleObserver):
       r = [
         'compilation rate: {}'.format(compiled_count / self.sample_id),
         'total compilable samples: {}'.format(compiled_count),
-        'average feature vector: \n{}'.format(feature_monitor.getStrData())
+        'average feature vector: \n{}'.format('\n'.join(["{}:\n{}".format(ft, fm.getStrData()) for ft, fm in feature_monitors.items()]))
       ]
     except ZeroDivisionError:
       r = [
         'compilation rate: +/-inf',
         'total compilable samples: {}'.format(compiled_count),
-        'average feature vector: \n{}'.format(feature_monitor.getStrData())
+        'average feature vector: \n{}'.format('\n'.join(["{}:\n{}".format(ft, fm.getStrData()) for ft, fm in feature_monitors.items()]))
       ]
     with self.db.Session(commit = True) as session:
       exists  = session.query(samples_database.SampleResults.key).filter_by(key = "meta").scalar() is not None

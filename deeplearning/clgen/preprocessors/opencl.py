@@ -37,7 +37,7 @@ OPENCL_C_BASE  = os.path.join(environment.DATA_CL_INCLUDE, "opencl-c-base.h")
 SHIMFILE       = os.path.join(environment.DATA_CL_INCLUDE, "opencl-shim.h")
 STRUCTS        = os.path.join(environment.DATA_CL_INCLUDE, "structs.h")
 
-def GetClangArgs(use_shim: bool) -> typing.List[str]:
+def GetClangArgs(use_shim: bool, use_aux_headers: bool) -> typing.List[str]:
   """Get the arguments to pass to clang for handling OpenCL.
 
   Args:
@@ -55,17 +55,20 @@ def GetClangArgs(use_shim: bool) -> typing.List[str]:
     "-include{}".format(OPENCL_C_H),
     "-include{}".format(OPENCL_C_BASE),
     "-include{}".format(CL_H),
-    "-include{}".format(STRUCTS),
     "-I{}".format(str(OPENCL_HEADERS)),
     "-I{}".format(str(LIBCLC)),
-    "-I{}".format(str(AUX_INCLUDE)),
     "-Wno-everything",
   ]
+  if use_aux_headers:
+    args += [
+      "-include{}".format(STRUCTS),
+      "-I{}".format(str(AUX_INCLUDE)),
+    ]
   if use_shim:
     args += ["-include", str(SHIMFILE)]
   return args
 
-def _ClangPreprocess(text: str, use_shim: bool) -> str:
+def _ClangPreprocess(text: str, use_shim: bool, use_aux_headers: bool) -> str:
   """Private preprocess OpenCL source implementation.
 
   Inline macros, removes comments, etc.
@@ -77,7 +80,7 @@ def _ClangPreprocess(text: str, use_shim: bool) -> str:
   Returns:
     Preprocessed source.
   """
-  return clang.Preprocess(text, GetClangArgs(use_shim=use_shim))
+  return clang.Preprocess(text, GetClangArgs(use_shim=use_shim, use_aux_headers=use_aux_headers))
 
 def _ExtractTypedefs(text: str, dtype: str) -> str:
   """
@@ -121,7 +124,7 @@ def DeriveSourceVocab(text: str, token_list: typing.Set[str] = set()) -> typing.
   Returns:
     Set of unique source code tokens.
   """
-  return clang.DeriveSourceVocab(text, token_list, ".cl", GetClangArgs(use_shim = False))
+  return clang.DeriveSourceVocab(text, token_list, ".cl", GetClangArgs(use_shim = False, use_aux_headers=True))
 
 def AtomizeSource(text: str, vocab: typing.Set[str]) -> typing.List[str]:
   """
@@ -134,7 +137,7 @@ def AtomizeSource(text: str, vocab: typing.Set[str]) -> typing.List[str]:
   Returns:
     Source code as a list of tokens.
   """
-  return clang.AtomizeSource(text, vocab, ".cl", GetClangArgs(use_shim = False))
+  return clang.AtomizeSource(text, vocab, ".cl", GetClangArgs(use_shim = False, use_aux_headers=True))
 
 @public.clgen_preprocessor
 def ClangPreprocess(text: str) -> str:
@@ -146,7 +149,7 @@ def ClangPreprocess(text: str) -> str:
   Returns:
     Preprocessed source.
   """
-  return _ClangPreprocess(text, False)
+  return _ClangPreprocess(text, False, True)
 
 
 @public.clgen_preprocessor
@@ -159,9 +162,9 @@ def ClangPreprocessWithShim(text: str) -> str:
   Returns:
     Preprocessed source.
   """
-  return _ClangPreprocess(text, True)
+  return _ClangPreprocess(text, True, True)
 
-def CompileLlvmBytecode(text: str) -> str:
+def CompileLlvmBytecode(text: str, header_file = None, use_aux_headers: bool = True) -> str:
   """A preprocessor which attempts to compile the given code.
 
   Args:
@@ -175,13 +178,15 @@ def CompileLlvmBytecode(text: str) -> str:
   return clang.CompileLlvmBytecode(
     text,
     ".cl",
-    GetClangArgs(use_shim=False),# + ["-Werror=implicit-function-declaration"],
+    GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers),# + ["-Werror=implicit-function-declaration"],
     return_diagnostics = return_diagnostics,
   )
 
 def CompileOptimizer(text: str,
                      optimization: typing.List[str],
                      timeout_seconds: int = 60,
+                     header_file: str = None,
+                     use_aux_headers: bool = True,
                      ) -> str:
   """Compile source code to IR and apply optimization pass to source code.
   Args:
@@ -190,10 +195,15 @@ def CompileOptimizer(text: str,
   Returns:
     Dictionary with 70-dimensional InstCount feature vector.
   """
-  return clang.CompileOptimizer(text, ".cl", GetClangArgs(use_shim=False), optimization)
+  return clang.CompileOptimizer(
+    text,
+    ".cl",
+    GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers), optimization,
+    header_file = header_file,
+  )
 
 @public.clgen_preprocessor
-def Compile(text: str, return_diagnostics = False) -> str:
+def Compile(text: str, header_file = None, use_aux_headers = True, return_diagnostics = False) -> str:
   """Check that the OpenCL source compiles.
 
   This does not modify the input.
@@ -209,7 +219,8 @@ def Compile(text: str, return_diagnostics = False) -> str:
   return clang.Compile(
     text,
     ".cl",
-    GetClangArgs(use_shim=False),# + ["-Werror=implicit-function-declaration"],
+    GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers),# + ["-Werror=implicit-function-declaration"],
+    header_file = header_file,
     return_diagnostics = return_diagnostics,
   )
 
@@ -311,7 +322,7 @@ def ExtractSingleKernels(text: str) -> typing.List[str]:
       # Given this preprocessor is called after compile,
       # we are certain that brackets will be paired
       num_lbrack, num_rbrack, chunk_idx = 0, 0, 0
-      while ((num_lbrack  == 0 
+      while ((num_lbrack  == 0
       or      num_lbrack  != num_rbrack)
       and     chunk_idx   <  len(chunk)):
 
@@ -335,6 +346,62 @@ def ExtractSingleKernels(text: str) -> typing.List[str]:
 
       # Add to kernels all global space met so far + 'kernel void' + the kernel's body
       actual_kernels.append(''.join(global_space) + kernel_specifier + chunk[:chunk_idx])
+      if ''.join(chunk[chunk_idx:]) != '':
+        # All the rest below are appended to global_space
+        global_space.append(chunk[chunk_idx:])
+
+  return actual_kernels
+
+@public.clgen_preprocessor
+def ExtractSingleKernelsHeaders(text: str) -> typing.List[typing.Tuple[str, str]]:
+  """
+  A preprocessor that splits a single source file
+  to tuples of (single kernels, their global space)
+
+  Args:
+    text: The text to preprocess.
+
+  Returns:
+    List of tuples of kernels, global space (strings).
+  """
+  # OpenCL kernels can only be void
+  kernel_specifier = 'kernel void'
+  kernel_chunks = text.split(kernel_specifier)
+  actual_kernels, global_space = [], []
+
+  for idx, chunk in enumerate(kernel_chunks):
+    if idx == 0:
+      # There is no way the left-most part is not empty or global
+      if chunk != '':
+        global_space.append(chunk)
+    else:
+      # Given this preprocessor is called after compile,
+      # we are certain that brackets will be paired
+      num_lbrack, num_rbrack, chunk_idx = 0, 0, 0
+      while ((num_lbrack  == 0 
+      or      num_lbrack  != num_rbrack)
+      and     chunk_idx   <  len(chunk)):
+
+        try:
+          cur_tok = chunk[chunk_idx]
+        except IndexError:
+          l.getLogger().warn(chunk)
+        if   cur_tok == "{":
+          num_lbrack += 1
+        elif cur_tok == "}":
+          num_rbrack += 1
+        chunk_idx += 1
+
+      while chunk_idx < len(chunk):
+        # Without this line, global_space tends to gather lots of newlines and wspaces
+        # Then they are replicated and become massive. Better isolate only actual text there.
+        if chunk[chunk_idx] == ' ' or chunk[chunk_idx] == '\n':
+          chunk_idx += 1
+        else:
+          break
+
+      # Add to kernels all global space met so far + 'kernel void' + the kernel's body
+      actual_kernels.append((kernel_specifier + chunk[:chunk_idx], ''.join(global_space)))
       if ''.join(chunk[chunk_idx:]) != '':
         # All the rest below are appended to global_space
         global_space.append(chunk[chunk_idx:])

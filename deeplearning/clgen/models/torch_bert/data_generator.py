@@ -88,7 +88,7 @@ def candidate_worker(sample_out   : typing.Dict[str, np.array],
         score          = feat_sampler.calculate_distance(features),
         timestep       = -1,
       )
-      return sample, indices, features, input_ids, masked_lm_lengths
+      # return sample, indices, features, input_ids, masked_lm_lengths
   except ValueError:
     pass
   except Exception:
@@ -134,6 +134,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                  sample_batch_size: int,
                                  max_position_embeddings: int,
                                  cache_path,
+                                 corpus: "corpuses.Corpus" = None,
                                  ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
     d = super(torchLMDataGenerator, torchLMDataGenerator()).SampleMaskLMBatchGenerator(
@@ -168,8 +169,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         url = "sqlite:///{}".format(d.sampler.corpus_directory / "active_feeds.db")
       )
       d.feat_sampler      = feature_sampler.EuclideanSampler(
-        self.sampler.corpus_directory,
-        self.sampler.sample_corpus.corpus_config.active.feature_space
+        d.sampler.corpus_directory,
+        corpus_config.active.feature_space,
+        corpus_config.active.target,
+        git_corpus = corpus
       )
       d.candidate_monitor = monitors.CategoricalDistribMonitor(
         d.sampler.corpus_directory, "feature_distance"
@@ -180,12 +183,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       # Store unique specs to database once.
       d.addToDB(
         active_feed_database.ActiveSamplingSpecs.FromArgs(
-          act_l_pf   = self.sampler.sample_corpus.corpus_config.active.active_limit_per_feed,
-          act_s_dep  = self.sampler.sample_corpus.corpus_config.active.active_search_depth,
-          act_s_wid  = self.sampler.sample_corpus.corpus_config.active.active_search_width,
-          feat_space = self.sampler.sample_corpus.corpus_config.active.feature_space
+          act_l_pf   = corpus_config.active.active_limit_per_feed,
+          act_s_dep  = corpus_config.active.active_search_depth,
+          act_s_wid  = corpus_config.active.active_search_width,
+          feat_space = corpus_config.active.feature_space
         )
       )
+      d.raised_keyboard_int = False
+      d.raised_exception    = None
 
     d.dataloader = d.predict_dataloader()
     d.loader     = iter(d.dataloader)
@@ -201,6 +206,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     self.feat_sampler      = None
     self.candidate_monitor = None
     self.comp_rate_mon     = None
+    self.raised_keyboard_int = None
+    self.raised_exception  = None
     return
 
   def train_dataloader(self, set_name = 'train_dataset', is_train = True) -> torch.utils.data.dataloader:
@@ -332,105 +339,127 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         d) Sample indices
       The arrays are ordered by index.
     """
-    # Active sampling specs initializatin
-    active_limit_per_feed = self.sampler.sample_corpus.corpus_config.active.active_limit_per_feed
-    active_search_depth = self.sampler.sample_corpus.corpus_config.active.active_search_depth
-    active_search_width = self.sampler.sample_corpus.corpus_config.active.active_search_width
+    if not self.feat_sampler.target_benchmark:
+      raise StopIteration
+    if self.raised_keyboard_int:
+      self.raised_keyboard_int = False
+      raise KeyboardInterrupt
+    if self.raised_exception:
+      raise self.raised_exception
+
+    # Active sampling specs initialization
+    active_limit_per_feed = self.sampler.config.sample_corpus.corpus_config.active.active_limit_per_feed
+    active_search_depth = self.sampler.config.sample_corpus.corpus_config.active.active_search_depth
+    active_search_width = self.sampler.config.sample_corpus.corpus_config.active.active_search_width
 
     # Initialize feed queue
     org_inp, org_ids = self.initOrGetQueue()
     total_cand, total_cand_hash = [], set()
 
-    while self.feed_queue:
+    try:
+      while self.feed_queue:
 
-      feed = self.feed_queue.pop(0)
-      rem  = active_limit_per_feed // self.sample_batch_size
-      step_candidates = []
-      cmp_rate        = [0, 0]
+        feed = self.feed_queue.pop(0)
+        rem  = active_limit_per_feed // self.sample_batch_size
+        step_candidates = []
+        cmp_rate        = [0, 0]
 
-      self.sampler.setStartText(self.tokenizer.tokensToString(feed.input_feed, ignore_token = self.tokenizer.padToken))
-      self.sampler.Specialize(self.tokenizer)
+        self.sampler.setStartText(self.tokenizer.tokensToString(feed.input_feed, ignore_token = self.tokenizer.padToken))
+        self.sampler.Specialize(self.tokenizer)
 
-      bar = progressbar.ProgressBar(max_value = active_limit_per_feed)
-      bar.update(0)
+        bar = progressbar.ProgressBar(max_value = active_limit_per_feed)
+        bar.update(0)
 
-      if feed.gen_id not in self.comp_rate:
-        self.comp_rate[feed.gen_id] = [0, 0]
+        if feed.gen_id not in self.comp_rate:
+          self.comp_rate[feed.gen_id] = [0, 0]
 
-      # Iterate until you get the required amount of candidates
-      while len(step_candidates) < active_limit_per_feed:
-        # Pre-process inputs
-        inputs = self.collateInputData(feed.input_feed, rem)
-        # Infer
-        outputs = mwrapper.sample_model_step(
-          estimator.models, estimator.devices, inputs,
+        # Iterate until you get the required amount of candidates
+        while len(step_candidates) < active_limit_per_feed:
+          # Pre-process inputs
+          inputs = self.collateInputData(feed.input_feed, rem)
+          # Infer
+          outputs = mwrapper.sample_model_step(
+            estimator.models, estimator.devices, inputs,
+          )
+          # Post-process outputs.
+          tcs, ts = self.registerOutputData(outputs, feed, step_candidates, bar)
+          cmp_rate[0] += tcs
+          cmp_rate[1] += ts
+          # Calculate how many more to infer.
+          try:
+            rcands = active_limit_per_feed - len(step_candidates)
+            crate  = cmp_rate[0] / cmp_rate[1]
+            rem = max(2, int((rcands // self.sample_batch_size) / crate))
+          except ZeroDivisionError:
+            pass
+
+        self.comp_rate[feed.gen_id] = [sum(x) for x in zip(self.comp_rate[feed.gen_id], cmp_rate)]
+        self.comp_rate_mon.register((feed.gen_id, self.comp_rate[feed.gen_id][0] / self.comp_rate[feed.gen_id][1]))
+        self.comp_rate_mon.plot()
+
+        # Top-k candidates of ith generation.
+        best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
+
+        if feed.gen_id > 0:
+          best_cands = best_cands[:1]
+
+        self.candidate_monitor.register(
+          {str(best_cands[0].sample_feed.gen_id): [c.score for c in best_cands]}
         )
-        # Post-process outputs.
-        tcs, ts = self.registerOutputData(outputs, feed, step_candidates, bar)
-        cmp_rate[0] += tcs
-        cmp_rate[1] += ts
-        # Calculate how many more to infer.
-        try:
-          rcands = active_limit_per_feed - len(step_candidates)
-          crate  = cmp_rate[0] / cmp_rate[1]
-          rem = max(2, int((rcands // self.sample_batch_size) / crate))
-        except ZeroDivisionError:
-          pass
-
-      self.comp_rate[feed.gen_id] = [sum(x) for x in zip(self.comp_rate[feed.gen_id], cmp_rate)]
-      self.comp_rate_mon.register((feed.gen_id, self.comp_rate[feed.gen_id][0] / self.comp_rate[feed.gen_id][1]))
-      self.comp_rate_mon.plot()
-
-      # Top-k candidates of ith generation.
-      best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
-
-      if feed.gen_id > 0:
-        best_cands = best_cands[:1]
-
-      self.candidate_monitor.register(
-        {str(best_cands[0].sample_feed.gen_id): [c.score for c in best_cands]}
-      )
-      self.candidate_monitor.plot()
-      for nc in best_cands:
-        sample_hash = ''.join([str(x) for x in nc.sample])
-        if sample_hash not in total_cand_hash:
-          total_cand.append(nc)
-          total_cand_hash.add(sample_hash)
-          if 0 < nc.score < feed.input_score and 1+nc.sample_feed.gen_id <= active_search_depth:
-            self.feed_queue.append(
-              ActiveSampleFeed(
-                input_feed       = nc.sample,
-                input_features   = nc.features,
-                input_score      = nc.score,
-                gen_id           = 1 + nc.sample_feed.gen_id,
+        self.candidate_monitor.plot()
+        for nc in best_cands:
+          sample_hash = ''.join([str(x) for x in nc.sample])
+          if sample_hash not in total_cand_hash:
+            total_cand.append(nc)
+            total_cand_hash.add(sample_hash)
+            if 0 < nc.score < feed.input_score and 1+nc.sample_feed.gen_id <= active_search_depth:
+              self.feed_queue.append(
+                ActiveSampleFeed(
+                  input_feed       = nc.sample,
+                  input_features   = nc.features,
+                  input_score      = nc.score,
+                  gen_id           = 1 + nc.sample_feed.gen_id,
+                )
+              )
+            self.addToDB(
+              active_feed_database.ActiveFeed.FromArgs(
+                tokenizer        = self.tokenizer,
+                id               = self.active_db.active_count,
+                input_feed       = nc.sample_feed.input_feed,
+                input_features   = nc.sample_feed.input_features,
+                masked_input_ids = nc.input_ids,
+                hole_instances   = nc.hole_instances,
+                sample           = nc.sample,
+                output_features  = nc.features,
+                sample_quality   = nc.score,
+                target_benchmark = (self.feat_sampler.target_benchmark.name, self.feat_sampler.target_benchmark.contents),
+                target_features  = self.feat_sampler.target_benchmark.feature_vector,
+                compile_status   = True,
+                generation_id    = nc.sample_feed.gen_id,
+                timestep         = nc.timestep,
               )
             )
-          self.addToDB(
-            active_feed_database.ActiveFeed.FromArgs(
-              tokenizer        = self.tokenizer,
-              id               = self.active_db.active_count,
-              input_feed       = nc.sample_feed.input_feed,
-              input_features   = nc.sample_feed.input_features,
-              masked_input_ids = nc.input_ids,
-              hole_instances   = nc.hole_instances,
-              sample           = nc.sample,
-              output_features  = nc.features,
-              sample_quality   = nc.score,
-              target_benchmark = (self.feat_sampler.target_benchmark.name, self.feat_sampler.target_benchmark.contents),
-              target_features  = self.feat_sampler.target_benchmark.feature_vector,
-              compile_status   = True,
-              generation_id    = nc.sample_feed.gen_id,
-              timestep         = nc.timestep,
-            )
-          )
-      self.saveCheckpoint()
+        self.saveCheckpoint()
 
-    self.saveCheckpoint()
-    self.feat_sampler.iter_benchmark()
-    return (np.repeat([org_inp], len(total_cand), axis = 0),
-            np.repeat([org_ids], len(total_cand), axis = 0),
-            [x.sample for x in total_cand],
-            [x.sample_indices for x in total_cand])
+      self.saveCheckpoint()
+      self.feat_sampler.iter_benchmark()
+      return (np.repeat([org_inp], len(total_cand), axis = 0),
+              np.repeat([org_ids], len(total_cand), axis = 0),
+              [x.sample for x in total_cand],
+              [x.sample_indices for x in total_cand])
+    except KeyboardInterrupt:
+      self.raised_keyboard_int = True
+      return (np.repeat([org_inp], len(total_cand), axis = 0),
+              np.repeat([org_ids], len(total_cand), axis = 0),
+              [x.sample for x in total_cand],
+              [x.sample_indices for x in total_cand])
+    except Exception as e:
+      l.getLogger().error(e)
+      self.raised_exception = e
+      return (np.repeat([org_inp], len(total_cand), axis = 0),
+              np.repeat([org_ids], len(total_cand), axis = 0),
+              [x.sample for x in total_cand],
+              [x.sample_indices for x in total_cand])
 
   def initOrGetQueue(self) -> int:
     """
@@ -450,7 +479,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       self.feed_queue.append(
         ActiveSampleFeed(
           input_feed     = cf,
-          input_features = list(extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), [feature_space]).values())[0],
+          input_features = list(extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), [self.feat_sampler.feature_space]).values())[0],
           input_score    = math.inf,
           gen_id         = 0,
         )
@@ -495,7 +524,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         'mask_labels': [], 'masked_lm_lengths': [], 'next_sentence_labels': []
       }
       try:
-        pool = multiprocessing.Pool()
+        pool = multiprocessing.Pool(4)
         for batch in pool.imap_unordered(
                           functools.partial(
                             dataload_worker, feed  = feed,
@@ -538,7 +567,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                1st el: Total samples.
     """
     cm_rate = [0, 0]
-    pool = multiprocessing.Pool()
+    pool = multiprocessing.Pool(4)
     cm_rate[1] += len(outputs['generated_samples'])
     try:
       it = zip(
@@ -550,12 +579,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                        candidate_worker,
                        feed         = feed,
                        tokenizer    = self.tokenizer,
-                       feat_sampler = self.feat_sampler, 
+                       feat_sampler = self.feat_sampler,
                      ), it
                    ):
         if batch is not None:
           cm_rate[0] += 1
-          bar.update(min(active_limit_per_feed, len(candidates)))
+          bar.update(min(bar.max_value, len(candidates)))
           candidates.append(batch)
       pool.close()
     except KeyboardInterrupt as e:

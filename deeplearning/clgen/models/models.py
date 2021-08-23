@@ -15,6 +15,7 @@
 """The CLgen language model."""
 import os
 import socket
+import shutil
 import getpass
 import pathlib
 import typing
@@ -25,6 +26,7 @@ import numpy as np
 
 from deeplearning.clgen.samplers import sample_observers as sample_observers_lib
 from deeplearning.clgen.samplers import samplers
+from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import crypto
@@ -34,6 +36,7 @@ from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.models import builders
+from deeplearning.clgen.models import evaluators
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models.keras_sequential import keras_sequential
 from deeplearning.clgen.models.tf_sequential import tf_sequential
@@ -137,12 +140,14 @@ class Model(object):
           symlink,
         )
 
-    # Create symlink to the tokenizer.
+    # Create symlink to the tokenizer and create a backup inside checkpoints.
     symlink = self.cache.path / "tokenizer"
     if not symlink.is_symlink():
       os.symlink(
         os.path.relpath(self.corpus.tokenizer_path, self.cache.path), symlink
       )
+    if not (self.cache.path / "checkpoints" / "backup_tokenizer.pkl").exists():
+      shutil.copyfile(self.corpus.tokenizer_path, self.cache.path / "checkpoints" / "backup_tokenizer.pkl")
 
     # Validate metadata against cache.
     if self.cache.get("META.pbtxt"):
@@ -383,7 +388,7 @@ class Model(object):
       sampler.start_text = '\n'.join(start_text)
       sampler.Specialize(tokenizer)
 
-    self.backend.InitSampling(sampler, seed)
+    self.backend.InitSampling(sampler, seed, self.corpus)
     [obs.Specialize(self, sampler) for obs in sample_observers]
 
     if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert):
@@ -434,7 +439,10 @@ class Model(object):
     start_time = datetime.datetime.utcnow()
     seq_count  = 0
     self.backend.InitSampleBatch(sampler)
-    org_inputs, input_ids, samples, indices = self.backend.SampleNextIndices(sampler)
+    try:
+      org_inputs, input_ids, samples, indices = self.backend.SampleNextIndices(sampler)
+    except StopIteration:
+      return False, seq_count
 
     if not indices:
       # Return empty means model has not produced something that can be stored.
@@ -445,12 +453,13 @@ class Model(object):
     for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
 
       src = self.tokenizer.ArrayToCode(sample, with_formatting = True)
-      features = extractor.ExtractFeatures(src)
       try:
         stdout = opencl.Compile(src)
         compile_flag = True
+        features = extractor.ExtractRawFeatures(src)
       except ValueError:
         compile_flag = False
+        features     = ""
 
       end_time = datetime.datetime.utcnow()
       sample = model_pb2.Sample(
@@ -464,7 +473,7 @@ class Model(object):
         sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
         sample_time_ms            = int(round(1000 * ((end_time - start_time) / len(samples)).total_seconds())),
         wall_time_ms              = int(round(1000 * ((end_time - start_time) / len(samples)).total_seconds())),
-        feature_vector            = "\n".join(["{}:{}".format(k, v) for (k, v) in features.items()]),
+        feature_vector            = features,
         num_tokens                = np.where(sample == self.tokenizer.padToken)[0][0] if self.tokenizer.padToken in sample else len(sample),
         compile_status            = compile_flag,
         categorical_sampling      = self.backend.samplesWithCategorical(),
@@ -521,7 +530,7 @@ class Model(object):
           if sampler.SampleIsComplete(samples_in_progress[i]):
             end_time       = datetime.datetime.utcnow()
             sample_kernel  = [x for x in samples_in_progress[i]]
-            feature_vector = extractor.ExtractFeatures(''.join(samples_in_progress[i]))
+            features       = extractor.ExtractRawFeatures(''.join(samples_in_progress[i]))
             done[i]        = 1
             try:
               stdout = opencl.Compile(''.join(samples_in_progress[i]))
@@ -539,7 +548,7 @@ class Model(object):
               sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
               sample_time_ms            = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
               wall_time_ms              = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
-              feature_vector            = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
+              feature_vector            = features,
               num_tokens                = len(samples_in_progress[i]),
               compile_status            = compile_flag,
               categorical_sampling      = self.backend.samplesWithCategorical(),
@@ -555,6 +564,15 @@ class Model(object):
             wall_time_start = datetime.datetime.utcnow()
             break
     return continue_sampling, seq_count
+
+  def Evaluate(self, sampler: samplers.Sampler) -> None:
+    """
+    Run evaluators for bert's, clgen's github's dataset.
+    """
+    sampler_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(self.cache.path / "samples" / sampler.hash / "samples.db")))
+    evaluator = evaluators.BenchmarkDistance(self.corpus, sampler_db, sampler)
+    evaluator.eval(5)
+    return
 
   def SamplerCache(self, sampler: samplers.Sampler) -> pathlib.Path:
     """Get the path to a sampler cache.

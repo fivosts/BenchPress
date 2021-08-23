@@ -31,7 +31,11 @@ bool AutophaseInstCount::runOnFunction(Function& F) {
   return false;
 }
 
-void AutophaseInstCount::visitFunction(Function& F) { ++TotalFuncs; }
+void AutophaseInstCount::visitFunction(Function& F) {
+  if (!F.isDeclaration()){
+    ++TotalFuncs; 
+  }
+}
 
 void AutophaseInstCount::visitBasicBlock(BasicBlock& BB) {
   ++TotalBlocks;

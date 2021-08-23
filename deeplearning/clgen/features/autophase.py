@@ -20,12 +20,20 @@ class AutophaseFeatures(object):
     return
 
   @classmethod
-  def ExtractFeatures(cls, src: str) -> typing.Dict[str, float]:
-    return cls.RawToDictFeats(cls.ExtractRawFeatures(src))
+  def ExtractFeatures(cls,
+                      src: str,
+                      header_file: str = None,
+                      use_aux_headers: bool = True
+                      ) -> typing.Dict[str, float]:
+    return cls.RawToDictFeats(cls.ExtractRawFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers))
 
   @classmethod
-  def ExtractRawFeatures(cls, src: str) -> str:
-    return opencl.CompileOptimizer(src, AUTOPHASE)
+  def ExtractRawFeatures(cls,
+                         src: str,
+                         header_file: str = None,
+                         use_aux_headers: bool = True
+                         ) -> str:
+    return opencl.CompileOptimizer(src, AUTOPHASE, header_file = header_file, use_aux_headers = use_aux_headers)
 
   @classmethod
   def RawToDictFeats(cls, str_feats: str) -> typing.Dict[str, float]:

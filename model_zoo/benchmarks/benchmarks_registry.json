@@ -1,0 +1,32 @@
+{
+	"rodinia_3.1.tar.bz2": {
+		"url": "1a4upbtrIAr9Bu833bv-B5LrvG9JpOY3f"
+	},
+	"BabelStream.tar.bz2": {
+		"url": "1OHdFZrrW61mdV6Rd8Pa1BMEoZZ1wrDc8"
+	},
+	"cf4ocl.tar.bz2": {
+		"url": "1Xgym8g2Buk2vwe7-tEk_2e6eynLm4Yhy"
+	},
+	"cho.tar.bz2": {
+		"url": "1BqEosT8fqWykSgddDfKAFDM-rNF3mWaV"
+	},
+	"FinanceBench.tar.bz2": {
+		"url": "1i2GngNY3Rp_SjUbQDPXQHNP8tdIPImbF"
+	},
+	"HeteroMark.tar.bz2": {
+		"url": "1DLukgTifc09NzxZENsXtB1iGqcfLZnIw"
+	},
+	"mixbench.tar.bz2": {
+		"url": "1sCmLxynVpdNTUILsu2J1yNGqFFxxilV5"
+	},
+	"OpenDwarfs.tar.bz2": {
+		"url": "1ImyqkwuLgy2YHlzP5qX4adk8jt7FSex6"
+	},
+	"parboil.tar.bz2": {
+		"url": "1T9N_3pWQkcRbnJ82K7qTER_dLKOg8oJS"
+	},
+	"polybench.tar.bz2": {
+		"url": "1QuzYSgtSsrfZ2llG6Hhk1MFU-Vrejun3"
+	}
+}

@@ -49,12 +49,15 @@ static RegisterPass<InstCount> X("InstCount", "Counts the various types of Instr
 
 bool InstCount::runOnModule(Module &M) {
   for (auto &F : M) {
-    instcount[2].second++;
+    if (!F.isDeclaration()) {
+      instcount[2].second++;
+    }
     for (auto &BB : F){
       instcount[1].second++;
       for (auto &I : BB){
         instcount[0].second++;
-        instcount[I.getOpcode()].second++;
+
+        instcount[2 + I.getOpcode()].second++;
       }
     }
   }

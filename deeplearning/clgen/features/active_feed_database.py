@@ -36,7 +36,7 @@ class ActiveSamplingSpecs(Base):
                feat_space : str
                ) -> typing.TypeVar("ActiveSamplingSpecs"):
     return ActiveSamplingSpecs(
-      sha256                = crypto.sha256_str(act_l_pf + act_s_dep + act_s_wid + feat_space),
+      sha256                = crypto.sha256_str(str(act_l_pf) + str(act_s_dep) + str(act_s_wid) + feat_space),
       active_limit_per_feed = act_l_pf,
       active_search_depth   = act_s_dep,
       active_search_width   = act_s_wid,
