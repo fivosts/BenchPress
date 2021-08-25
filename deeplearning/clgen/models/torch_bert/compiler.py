@@ -43,7 +43,7 @@ class CompilationSampler(object):
       t = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
           temperature = self.temperature if self.temperature is not None else 1.0, logits = t
         ).sample()
-    return torch.argmax(t)
+    return torch.argmax(t, dim = -1)
 
   def checkIfBatchCompiles(self,
                            sample: np.array
@@ -194,26 +194,89 @@ class CompilationSampler(object):
                           is_live           : bool,
                           ) -> typing.Tuple[typing.List[np.array], typing.List[typing.List[int]]]:
     batch_size, sequence_length = tuple(input_ids.shape)
-    samples, sample_indices, scores_history = [], [], []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-      jobs = [executor.submit(self.iterSampleSeq,
-                              model             = model,
-                              device            = device,
-                              input_ids         = input_ids        [i],
-                              prediction_scores = prediction_scores[i],
-                              position_ids      = position_ids     [i],
-                              is_live           = is_live,
-                          ) for i in range(batch_size)]
-      for j in concurrent.futures.as_completed(jobs):
-        s, si, sh = j.result()
-        samples.append(s.numpy())
-        sample_indices.append(si)
-        scores_history.append(sh)
-      # results          = [j.result() for j in jobs]
-      # samples          = [x.numpy() for (x, _, _) in results]
-      # sample_indices   = [y for (_, y, _) in results]
-      # scores_history   = [z for (_, _, z) in results]
+    # samples, sample_indices, scores_history = [], [], []
+    samples, sample_indices, scores_history = self.BatchiterSampleSeq(
+      model = model,
+      device = device,
+      input_ids = input_ids,
+      prediction_scores = prediction_scores,
+      position_ids = position_ids,
+      is_live = is_live,
+    )
+    # with concurrent.futures.ThreadPoolExecutor() as executor:
+    #   jobs = [executor.submit(self.iterSampleSeq,
+    #                           model             = model,
+    #                           device            = device,
+    #                           input_ids         = input_ids        [i],
+    #                           prediction_scores = prediction_scores[i],
+    #                           position_ids      = position_ids     [i],
+    #                           is_live           = is_live,
+    #                       ) for i in range(batch_size)]
+    #   for j in concurrent.futures.as_completed(jobs):
+    #     s, si, sh = j.result()
+    #     samples.append(s.numpy())
+    #     sample_indices.append(si)
+    #     scores_history.append(sh)
+    #   results          = [j.result() for j in jobs]
+    #   samples          = [x.numpy() for (x, _, _) in results]
+    #   sample_indices   = [y for (_, y, _) in results]
+    #   scores_history   = [z for (_, _, z) in results]
     return samples, sample_indices, scores_history
+
+  def BatchiterSampleSeq(self,
+                         model             : typing.TypeVar("model.BertPreTrainedModel"),
+                         device            : torch.device,
+                         input_ids         : torch.LongTensor,
+                         prediction_scores : torch.LongTensor,
+                         position_ids      : torch.LongTensor,
+                         is_live           : bool,
+                         ) -> typing.Tuple[torch.LongTensor, typing.List[typing.List[int]], typing.List[np.array]]:
+    """
+    Main sampling sequence filling loop.
+
+    Function takes model's initial input, prediction and states.
+    Fills input sequence with step predictions and keeps asking
+    iteratively for predictions until target [MASK] or [HOLE] tokens
+    are closed.
+
+    Compiler is invoked for final sequence to get binary compilation status.
+    ##!! This function is designed to work with multithreading and exercises
+         said functionalities on a single sequence. CANNOT be applied to the
+         whole batch at the same time.
+    """
+    sample_indices = []
+    for inpids in input_ids:
+      sample_indices.append([
+        [] for _ in range(len(torch.where((inpids == self.tokenizer.holeToken) | (inpids == self.tokenizer.maskToken))[0]))
+      ])
+    res_idx = 0
+    results = torch.zeros_like(input_ids)
+
+    new_holes = self.BatchStepSampleSeq(input_ids, prediction_scores, device)
+    open_holes = torch.where(new_holes == True)[0]
+    closed_holes = torch.where(new_holes == False)[0]
+
+    results[res_idx: res_idx + len(closed_holes)] = input_ids[closed_holes]
+    res_idx += len(closed_holes)
+    input_ids = torch.index_select(input_ids, 0, open_holes.to(device))
+    attention_mask = (input_ids != self.tokenizer.padToken)
+
+    while torch.any(new_holes):
+
+      prediction_scores, _, _, _ = model.get_output(
+        input_ids, attention_mask, position_ids[:len(input_ids)],
+      )
+
+      new_holes = self.BatchStepSampleSeq(input_ids, prediction_scores, device)
+      open_holes = torch.where(new_holes == True)[0]
+      closed_holes = torch.where(new_holes == False)[0]
+
+      results[res_idx: res_idx + len(closed_holes)] = input_ids[closed_holes]
+      res_idx += len(closed_holes)
+      input_ids = torch.index_select(input_ids, 0, open_holes.to(device))
+      attention_mask = (input_ids != self.tokenizer.padToken)
+
+    return list(results.cpu().numpy()), sample_indices, None
 
   def iterSampleSeq(self,
                     model             : typing.TypeVar("model.BertPreTrainedModel"),
@@ -330,3 +393,35 @@ class CompilationSampler(object):
         t_idx += 1
 
     return np.any(new_hole), new_seq, attention_mask
+
+  def BatchStepSampleSeq(self,
+                         batch             : torch.LongTensor,
+                         prediction_scores : torch.LongTensor,
+                         device,
+                         ) -> typing.Tuple[
+                                bool,
+                                torch.LongTensor,
+                                np.array,
+                              ]:
+    """
+    Applies sample step predictions to input batch of sequences.
+    """
+    endTokens = self.tokenizer.metaTokenValues
+    new_hole = torch.zeros(len(batch), dtype=np.bool)
+
+    idxs, targets = torch.where(batch == self.tokenizer.holeToken)
+    predictions = self.argmax(prediction_scores[(idxs, targets)])
+
+    for seq_idx, el_idx in zip(idxs, targets):
+      if int(predictions[seq_idx]) in endTokens:
+        # Close hole, shift left one position, add pad to the end.
+        batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], batch[seq_idx][el_idx+1:], torch.LongTensor([self.tokenizer.padToken]).to(device)), 0)
+      elif int(batch[seq_idx][-1]) != self.tokenizer.padToken:
+        # No pads remaining to the right, replace hole with prediction but don't insert new hole.
+        batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], predictions[seq_idx].unsqueeze(0), batch[seq_idx][el_idx+1:]), 0)
+      else:
+        # Replace with prediction and keep hole.
+        batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], predictions[seq_idx].unsqueeze(0), batch[seq_idx][el_idx:][:-1]), 0)
+        new_hole[seq_idx] = True
+
+    return new_hole
