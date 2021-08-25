@@ -95,16 +95,23 @@ def candidate_worker(sample_out   : typing.Dict[str, np.array],
     pass
   return None
 
-def dataload_worker(x    : int,
-                    feed : np.array,
-                    func : typing.TypeVar('sequence_masking.MaskingFunction'),
-                    batch: int,
+def dataload_worker(x              : int,
+                    feed           : np.array,
+                    func           : typing.TypeVar('sequence_masking.MaskingFunction'),
+                    batch          : int,
+                    batch_per_feed : int,
                     ) -> typing.Dict[str, torch.Tensor]:
   try:
-    return {
+    feeds = [func(feed) for _ in range(batch // batch_per_feed)]
+    out = {
       k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0)
-      for (k, v) in func(feed).items()
+      for (k, v) in feeds[0].items()
     }
+    for f in feeds[1:]:
+      for k, v in f.items():
+        nt = torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch_per_feed, dim = 0)
+        out[k] = torch.cat((out[k], nt), 0)
+    return out
   except Exception:
     return None
 
@@ -349,8 +356,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
     # Active sampling specs initialization
     active_limit_per_feed = self.sampler.config.sample_corpus.corpus_config.active.active_limit_per_feed
-    active_search_depth = self.sampler.config.sample_corpus.corpus_config.active.active_search_depth
-    active_search_width = self.sampler.config.sample_corpus.corpus_config.active.active_search_width
+    active_search_depth   = self.sampler.config.sample_corpus.corpus_config.active.active_search_depth
+    active_search_width   = self.sampler.config.sample_corpus.corpus_config.active.active_search_width
+    sample_batch_per_feed = self.sampler.config.sample_corpus.corpus_config.active.sample_batch_per_feed
 
     # Initialize feed queue
     org_inp, org_ids = self.initOrGetQueue()
@@ -360,7 +368,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       while self.feed_queue:
 
         feed = self.feed_queue.pop(0)
-        rem  = active_limit_per_feed // self.sample_batch_size
+        rem  = active_limit_per_feed // self.sample_batch_size # remaining size of workload
         step_candidates = []
         cmp_rate        = [0, 0]
 
@@ -376,7 +384,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # Iterate until you get the required amount of candidates
         while len(step_candidates) < active_limit_per_feed:
           # Pre-process inputs
-          inputs = self.collateInputData(feed.input_feed, rem)
+          inputs = self.collateInputData(feed.input_feed, rem, sample_batch_per_feed)
           # Infer
           outputs = mwrapper.sample_model_step(
             estimator.models, estimator.devices, inputs,
@@ -495,6 +503,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
   def collateInputData(self,
                        feed: np.array,
                        wload_size: int,
+                       sample_batch_per_feed: int,
                        ) -> typing.Dict[str, typing.TypeVar('torch.Tensor')]:
     """
     Create a full generation workload out of a sample feed.
@@ -528,7 +537,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         for batch in pool.imap_unordered(
                           functools.partial(
                             dataload_worker, feed  = feed,
-                            func  = self.func, batch = self.sample_batch_size
+                            func  = self.func, batch = self.sample_batch_size,
+                            batch_per_feed = sample_batch_per_feed
                           ),range(wload_size)
                          ):
           if batch:
