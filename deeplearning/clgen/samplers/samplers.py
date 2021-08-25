@@ -87,13 +87,13 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
             config.sample_corpus.corpus_config.active,
             "feature_space",
             lambda x : x in set(extractor.extractors.keys()),
-            "feature space can only be one of {}".format(', '.join(list(extractor.extractors.keys())))
+            "feature_space can only be one of {}".format(', '.join(list(extractor.extractors.keys())))
           )
           pbutil.AssertFieldConstraint(
             config.sample_corpus.corpus_config.active,
             "target",
             lambda x : x in set(feature_sampler.targets.keys()),
-            "feature targets can only be one of {}".format(', '.join(list(feature_sampler.targets.keys())))
+            "target can only be one of {}".format(', '.join(list(feature_sampler.targets.keys())))
           )
         else:
           raise ValueError("Sampling type is undefined: {}".format(config.sample_corpus.corpus_config))
