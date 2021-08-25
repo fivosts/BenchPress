@@ -838,8 +838,8 @@ class BertForPreTraining(BertPreTrainedModel):
       samples, sample_indices, scores_history = self.compile_sampler.generateSampleBatch(
         self,
         input_ids.get_device(),
-        input_ids.cpu(),
-        prediction_scores.cpu(),
+        input_ids,
+        prediction_scores,
         position_ids,
         is_live,
       )
