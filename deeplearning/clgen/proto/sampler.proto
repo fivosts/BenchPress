@@ -99,7 +99,7 @@ message ActiveSampler {
   optional int32  active_limit_per_feed = 1;
   optional int32  active_search_depth   = 2;
   optional int32  active_search_width   = 3;
-  optional int32  batch_size_per_feed   = 4
+  optional int32  batch_size_per_feed   = 4;
   optional string feature_space         = 5;
   optional string target                = 6;
 }
