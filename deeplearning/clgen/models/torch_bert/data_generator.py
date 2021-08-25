@@ -104,7 +104,7 @@ def dataload_worker(x              : int,
   try:
     feeds = [func(feed) for _ in range(batch // batch_per_feed)]
     out = {
-      k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch, dim = 0)
+      k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch_per_feed, dim = 0)
       for (k, v) in feeds[0].items()
     }
     for f in feeds[1:]:
@@ -358,7 +358,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     active_limit_per_feed = self.sampler.config.sample_corpus.corpus_config.active.active_limit_per_feed
     active_search_depth   = self.sampler.config.sample_corpus.corpus_config.active.active_search_depth
     active_search_width   = self.sampler.config.sample_corpus.corpus_config.active.active_search_width
-    sample_batch_per_feed = self.sampler.config.sample_corpus.corpus_config.active.sample_batch_per_feed
+    sample_batch_per_feed = self.sampler.config.sample_corpus.corpus_config.active.batch_size_per_feed
 
     # Initialize feed queue
     org_inp, org_ids = self.initOrGetQueue()
