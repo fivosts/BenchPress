@@ -236,8 +236,8 @@ class CompilationSampler(object):
       model = model,
       device = device,
       queue = queue,
-      input_ids = input_ids,
-      attention_mask = attention_mask,
+      workload_input_ids = input_ids,
+      workload_attention_mask = attention_mask,
       prediction_scores = prediction_scores,
       position_ids = position_ids,
     )
