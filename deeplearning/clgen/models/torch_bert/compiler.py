@@ -368,11 +368,12 @@ class CompilationSampler(object):
     input_ids      = workload_input_ids[0].to(device)
     attention_mask = workload_attention_mask[0].to(device)
 
-    w_idx = 0
 
     wload_size, batch_size, sequence_length = tuple(workload_input_ids.shape)
-    queue_input_ids      = torch.reshape(workload_input_ids, (1, batch_size*wload_size, sequence_length)).squeeze()
-    queue_attention_mask = torch.reshape(workload_attention_mask, (1, batch_size*wload_size, sequence_length)).squeeze()
+    nseq  = wload_size * batch_size
+    w_idx = batch_size
+    queue_input_ids      = torch.reshape(workload_input_ids, (1, nseq, sequence_length)).squeeze()
+    queue_attention_mask = torch.reshape(workload_attention_mask, (1, nseq, sequence_length)).squeeze()
 
     new_holes    = self.BatchStepSampleSeq(input_ids, prediction_scores, device)
     open_holes   = torch.where(new_holes == True)[0]
@@ -396,8 +397,9 @@ class CompilationSampler(object):
     if res > 0:
       input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res].to(device)), 0)
       attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res].to(device)), 0)
+      w_idx += res
 
-    while torch.any(new_holes):
+    while w_idx < nseq and torch.any(new_holes):
 
       prediction_scores, _, _, _ = model.get_output(
         input_ids, attention_mask, position_ids[:len(input_ids)],
@@ -424,6 +426,7 @@ class CompilationSampler(object):
       if res > 0:
         input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res].to(device)), 0)
         attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res].to(device)), 0)
+        w_idx += res
 
     return
 
