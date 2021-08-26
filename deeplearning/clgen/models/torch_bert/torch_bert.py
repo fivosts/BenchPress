@@ -92,27 +92,33 @@ def model_step_worker(queue  : multiprocessing.Queue,
                       position_ids         : typing.List[typing.TypeVar('torch.Tensor')],
                       masked_lm_labels     : typing.List[typing.TypeVar('torch.Tensor')],
                       masked_lm_lengths    : typing.List[typing.TypeVar('torch.Tensor')],
-                      next_sentence_labels : typing.List[typing.TypeVar('torch.Tensor')],
                       ) -> typing.Dict[str, typing.List[typing.List[int]]]:
   try:
-    for ids, att, pos, mll, mlg, nsl in zip(
-                                          input_ids,
-                                          attention_mask,
-                                          position_ids,
-                                          masked_lm_labels,
-                                          masked_lm_lengths,
-                                          next_sentence_labels
-                                        ):
-      outputs = model(
-                  input_ids            = ids.to(device),
-                  attention_mask       = att.to(device),
-                  position_ids         = pos.to(device),
-                  masked_lm_labels     = mll.to(device),
-                  next_sentence_labels = nsl.to(device),
-                )
-      outputs['input_ids']         = [[int(y) for y in x] for x in ids.numpy()]
-      outputs['masked_lm_lengths'] = list(mlg.numpy())
-      queue.put(outputs, block = False)
+
+    model.sample_workload(
+      input_ids            = input_ids,
+      attention_mask       = attention_mask,
+      position_ids         = position_ids[0].to(device),
+      device = device,
+      queue = queue
+    )
+
+    # for ids, att, pos, mll, mlg in zip(
+                                    #   input_ids,
+                                    #   attention_mask,
+                                    #   position_ids,
+                                    #   masked_lm_labels,
+                                    #   masked_lm_lengths,
+                                    # ):
+    #   outputs = model(
+    #               input_ids            = ids.to(device),
+    #               attention_mask       = att.to(device),
+    #               position_ids         = pos.to(device),
+    #               masked_lm_labels     = mll.to(device),
+    #             )
+    #   outputs['input_ids']         = [[int(y) for y in x] for x in ids.numpy()]
+    #   outputs['masked_lm_lengths'] = list(mlg.numpy())
+    #   queue.put(outputs, block = False)
   except Exception as e:
     l.getLogger().error(e)
     exit(1)
@@ -366,7 +372,6 @@ class torchBert(backends.BackendBase):
                 attention_mask       = inputs['input_mask'][b_idx].to(devices[0]),
                 position_ids         = inputs['position_ids'][b_idx].to(devices[0]),
                 masked_lm_labels     = inputs['mask_labels'][b_idx].to(devices[0]),
-                next_sentence_labels = inputs['next_sentence_labels'][b_idx].to(devices[0]),
                 is_live              = is_live,
               )
         outputs['generated_samples'] += out['generated_samples']
@@ -391,7 +396,6 @@ class torchBert(backends.BackendBase):
             'position_ids'         : inputs['position_ids'][idx * chunk: (idx+1) * chunk],
             'masked_lm_labels'     : inputs['mask_labels'][idx * chunk: (idx+1) * chunk],
             'masked_lm_lengths'    : inputs['masked_lm_lengths'][idx * chunk: (idx+1) * chunk],
-            'next_sentence_labels' : inputs['next_sentence_labels'][idx * chunk: (idx+1) * chunk],
           }
         ))
     try:
