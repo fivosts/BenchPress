@@ -223,6 +223,71 @@ class CompilationSampler(object):
     #   scores_history   = [z for (_, _, z) in results]
     return samples, sample_indices, scores_history
 
+  def generateSampleWorkload(self,
+                             model             : typing.TypeVar("model.BertPreTrainedModel"),
+                             device            : torch.device,
+                             input_ids         : torch.LongTensor,
+                             attention_mask    : torch.LongTensor,
+                             prediction_scores : torch.FloatTensor,
+                             position_ids      : torch.LongTensor,
+                             queue,
+                             ) -> typing.Tuple[typing.List[np.array], typing.List[typing.List[int]]]:
+    samples, sample_indices, scores_history = self.WorkloaditerSampleSeq(
+      model = model,
+      device = device,
+      queue = queue,
+      input_ids = input_ids,
+      attention_mask = attention_mask,
+      prediction_scores = prediction_scores,
+      position_ids = position_ids,
+    )
+    return
+
+  def iterSampleSeq(self,
+                    model             : typing.TypeVar("model.BertPreTrainedModel"),
+                    device            : torch.device,
+                    input_ids         : torch.LongTensor,
+                    prediction_scores : torch.LongTensor,
+                    position_ids      : torch.LongTensor,
+                    is_live           : bool,
+                    ) -> typing.Tuple[torch.LongTensor, typing.List[typing.List[int]], typing.List[np.array]]:
+    """
+    Main sampling sequence filling loop.
+    
+    Function takes model's initial input, prediction and states.
+    Fills input sequence with step predictions and keeps asking
+    iteratively for predictions until target [MASK] or [HOLE] tokens
+    are closed.
+
+    Compiler is invoked for final sequence to get binary compilation status.
+    ##!! This function is designed to work with multithreading and exercises
+         said functionalities on a single sequence. CANNOT be applied to the
+         whole batch at the same time.
+    """
+    sample_indices = [
+      [] for _ in range(
+        len(torch.where((input_ids == self.tokenizer.holeToken) | (input_ids == self.tokenizer.maskToken))[0])
+      )
+    ]
+    if is_live:
+      scores_history = []
+    else:
+      scores_history = None
+    holes, next_input_ids, attention_mask = self.StepSampleSeq(
+      input_ids, prediction_scores, sample_indices, scores_history
+    )
+    while holes:
+      next_prediction_scores, _, _, _ = model.get_output(
+        next_input_ids.to(device), attention_mask.to(device), position_ids,
+      )
+      holes, next_input_ids, attention_mask = self.StepSampleSeq(
+        next_input_ids[0],
+        next_prediction_scores[0].detach().cpu(),
+        sample_indices,
+        scores_history,
+      )
+    return next_input_ids[0], sample_indices, scores_history
+
   def BatchiterSampleSeq(self,
                          model             : typing.TypeVar("model.BertPreTrainedModel"),
                          device            : torch.device,
@@ -278,17 +343,18 @@ class CompilationSampler(object):
 
     return list(results.cpu().numpy()), sample_indices, None
 
-  def iterSampleSeq(self,
-                    model             : typing.TypeVar("model.BertPreTrainedModel"),
-                    device            : torch.device,
-                    input_ids         : torch.LongTensor,
-                    prediction_scores : torch.LongTensor,
-                    position_ids      : torch.LongTensor,
-                    is_live           : bool,
-                    ) -> typing.Tuple[torch.LongTensor, typing.List[typing.List[int]], typing.List[np.array]]:
+  def WorkloaditerSampleSeq(self,
+                            model              : typing.TypeVar("model.BertPreTrainedModel"),
+                            device             : torch.device,
+                            queue              ,
+                            workload_input_ids : torch.LongTensor,
+                            workload_attention_mask: torch.LongTensor,
+                            prediction_scores  : torch.LongTensor,
+                            position_ids       : torch.LongTensor,
+                            ) -> typing.Tuple[torch.LongTensor, typing.List[typing.List[int]], typing.List[np.array]]:
     """
     Main sampling sequence filling loop.
-    
+
     Function takes model's initial input, prediction and states.
     Fills input sequence with step predictions and keeps asking
     iteratively for predictions until target [MASK] or [HOLE] tokens
@@ -299,29 +365,66 @@ class CompilationSampler(object):
          said functionalities on a single sequence. CANNOT be applied to the
          whole batch at the same time.
     """
-    sample_indices = [
-      [] for _ in range(
-        len(torch.where((input_ids == self.tokenizer.holeToken) | (input_ids == self.tokenizer.maskToken))[0])
+    input_ids      = workload_input_ids[0].to(device)
+    attention_mask = workload_attention_mask[0].to(device)
+
+    w_idx = 0
+    batch_size, sequence_length = tuple(workload_input_ids[0])
+    queue_input_ids      = torch.reshape(workload_input_ids, (-1, batch_size, sequence_length))
+    queue_attention_mask = torch.reshape(workload_attention_mask, (-1, batch_size, sequence_length))
+
+    new_holes    = self.BatchStepSampleSeq(input_ids, prediction_scores, device)
+    open_holes   = torch.where(new_holes == True)[0]
+    closed_holes = torch.where(new_holes == False)[0]
+
+    for i in closed_holes:
+      queue.put(
+        {
+          'generated_samples': input_ids[i].cpu().numpy(),
+          'sample_indices': [],
+          'input_ids': [],
+          'masked_lm_lengths': []
+        },
+        block = False
       )
-    ]
-    if is_live:
-      scores_history = []
-    else:
-      scores_history = None
-    holes, next_input_ids, attention_mask = self.StepSampleSeq(
-      input_ids, prediction_scores, sample_indices, scores_history
-    )
-    while holes:
-      next_prediction_scores, _, _, _ = model.get_output(
-        next_input_ids.to(device), attention_mask.to(device), position_ids,
+
+    input_ids      = torch.index_select(input_ids, 0, open_holes.to(device))
+    attention_mask = (input_ids != self.tokenizer.padToken)
+
+    res = batch_size - len(input_ids)
+    if res > 0:
+      input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res].to(device)), 0)
+      attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res].to(device)), 0)
+
+    while torch.any(new_holes):
+
+      prediction_scores, _, _, _ = model.get_output(
+        input_ids, attention_mask, position_ids[:len(input_ids)],
       )
-      holes, next_input_ids, attention_mask = self.StepSampleSeq(
-        next_input_ids[0],
-        next_prediction_scores[0].detach().cpu(),
-        sample_indices,
-        scores_history,
-      )
-    return next_input_ids[0], sample_indices, scores_history
+
+      new_holes    = self.BatchStepSampleSeq(input_ids, prediction_scores, device)
+      open_holes   = torch.where(new_holes == True)[0]
+      closed_holes = torch.where(new_holes == False)[0]
+
+      for i in closed_holes:
+        queue.put(
+          {
+            'generated_samples': input_ids[i].cpu().numpy(),
+            'sample_indices': [],
+            'input_ids': [],
+            'masked_lm_lengths': []
+          },
+          block = False
+        )
+      input_ids      = torch.index_select(input_ids, 0, open_holes.to(device))
+      attention_mask = (input_ids != self.tokenizer.padToken)
+
+      res = batch_size - len(input_ids)
+      if res > 0:
+        input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res].to(device)), 0)
+        attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res].to(device)), 0)
+
+    return
 
   def StepSampleSeq(self,
                     seq               : torch.LongTensor,
