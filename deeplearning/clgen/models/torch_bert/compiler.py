@@ -232,7 +232,7 @@ class CompilationSampler(object):
                              position_ids      : torch.LongTensor,
                              queue,
                              ) -> typing.Tuple[typing.List[np.array], typing.List[typing.List[int]]]:
-    samples, sample_indices, scores_history = self.WorkloaditerSampleSeq(
+    self.WorkloaditerSampleSeq(
       model = model,
       device = device,
       queue = queue,
