@@ -368,7 +368,6 @@ class CompilationSampler(object):
     input_ids      = workload_input_ids[0].to(device)
     attention_mask = workload_attention_mask[0].to(device)
 
-
     wload_size, batch_size, sequence_length = tuple(workload_input_ids.shape)
     nseq  = wload_size * batch_size
     w_idx = batch_size

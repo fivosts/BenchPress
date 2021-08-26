@@ -548,6 +548,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             inputs['mask_labels'].append(batch['mask_labels'])
             inputs['masked_lm_lengths'].append(batch['masked_lm_lengths'])
             inputs['next_sentence_labels'].append(batch['next_sentence_labels'])
+        for k, v in inputs.items():
+          inputs[k] = torch.stack(v)
         pool.close()
       except KeyboardInterrupt as e:
         pool.close()
