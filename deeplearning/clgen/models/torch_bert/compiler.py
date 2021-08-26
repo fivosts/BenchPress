@@ -399,7 +399,7 @@ class CompilationSampler(object):
       attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res].to(device)), 0)
       w_idx += res
 
-    while w_idx < nseq and torch.any(new_holes):
+    while w_idx < nseq or torch.any(new_holes):
 
       prediction_scores, _, _, _ = model.get_output(
         input_ids, attention_mask, position_ids[:len(input_ids)],
@@ -427,7 +427,6 @@ class CompilationSampler(object):
         input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res].to(device)), 0)
         attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res].to(device)), 0)
         w_idx += res
-
     return
 
   def StepSampleSeq(self,
