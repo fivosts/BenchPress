@@ -382,7 +382,7 @@ class CompilationSampler(object):
     for i in closed_holes:
       queue.put(
         {
-          'generated_samples': list(input_ids[i].cpu().numpy()),
+          'generated_samples': [input_ids[i].cpu().numpy()],
           'sample_indices': [],
           'input_ids': [],
           'masked_lm_lengths': []
@@ -412,7 +412,7 @@ class CompilationSampler(object):
       for i in closed_holes:
         queue.put(
           {
-            'generated_samples': list(input_ids[i].cpu().numpy()),
+            'generated_samples': [input_ids[i].cpu().numpy()],
             'sample_indices': [],
             'input_ids': [],
             'masked_lm_lengths': []
