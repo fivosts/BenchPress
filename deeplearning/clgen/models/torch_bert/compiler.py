@@ -403,7 +403,6 @@ class CompilationSampler(object):
       prediction_scores, _, _, _ = model.get_output(
         input_ids, attention_mask, position_ids[:len(input_ids)],
       )
-
       new_holes    = self.BatchStepSampleSeq(input_ids, prediction_scores, device)
       open_holes   = torch.where(new_holes == True)[0]
       closed_holes = torch.where(new_holes == False)[0]
