@@ -756,6 +756,27 @@ class BertForPreTraining(BertPreTrainedModel):
     prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
     return prediction_scores, seq_relationship_score, outputs[0], outputs[1]
 
+  def sample_workload(self,
+                      input_ids = None,
+                      attention_mask = None,
+                      position_ids = None,
+                      device = None,
+                      queue = None
+                      ):
+    prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
+      input_ids[0].to(device), attention_mask[0].to(device), position_ids
+    )
+    self.compile_sampler.generateSampleWorkload(
+      self,
+      device,
+      input_ids,
+      attention_mask,
+      prediction_scores,
+      position_ids,
+      queue
+    )
+    return
+
   def forward(
     self,
     input_ids        = None,
@@ -837,7 +858,7 @@ class BertForPreTraining(BertPreTrainedModel):
     elif not is_validation and self.compile_sampler and self.config.is_sampling:
       samples, sample_indices, scores_history = self.compile_sampler.generateSampleBatch(
         self,
-        input_ids.get_device(),
+        device,
         input_ids,
         prediction_scores,
         position_ids,
