@@ -369,9 +369,10 @@ class CompilationSampler(object):
     attention_mask = workload_attention_mask[0].to(device)
 
     w_idx = 0
-    batch_size, sequence_length = tuple(workload_input_ids[0])
-    queue_input_ids      = torch.reshape(workload_input_ids, (-1, batch_size, sequence_length))
-    queue_attention_mask = torch.reshape(workload_attention_mask, (-1, batch_size, sequence_length))
+
+    wload_size, batch_size, sequence_length = tuple(workload_input_ids.shape)
+    queue_input_ids      = torch.reshape(workload_input_ids, (1, batch_size*wload_size, sequence_length)).squeeze()
+    queue_attention_mask = torch.reshape(workload_attention_mask, (1, batch_size*wload_size, sequence_length)).squeeze()
 
     new_holes    = self.BatchStepSampleSeq(input_ids, prediction_scores, device)
     open_holes   = torch.where(new_holes == True)[0]
@@ -380,7 +381,7 @@ class CompilationSampler(object):
     for i in closed_holes:
       queue.put(
         {
-          'generated_samples': input_ids[i].cpu().numpy(),
+          'generated_samples': list(input_ids[i].cpu().numpy()),
           'sample_indices': [],
           'input_ids': [],
           'masked_lm_lengths': []
@@ -409,7 +410,7 @@ class CompilationSampler(object):
       for i in closed_holes:
         queue.put(
           {
-            'generated_samples': input_ids[i].cpu().numpy(),
+            'generated_samples': list(input_ids[i].cpu().numpy()),
             'sample_indices': [],
             'input_ids': [],
             'masked_lm_lengths': []
