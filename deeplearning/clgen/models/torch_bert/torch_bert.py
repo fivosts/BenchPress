@@ -406,9 +406,6 @@ class torchBert(backends.BackendBase):
       while ln < len(inputs['input_ids']) * len(inputs['input_ids'][0]):
         try:
           batch = queue.get(timeout = 360)
-          print(batch['generated_samples'])
-          print(len(batch['generated_samples']))
-          print(type(batch['generated_samples']))
           outputs['generated_samples'] += batch['generated_samples']
           outputs['sample_indices']    += batch['sample_indices']
           outputs['input_ids']         += batch['input_ids']
