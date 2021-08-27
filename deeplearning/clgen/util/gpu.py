@@ -43,7 +43,10 @@ def getGPUID():
   """
   Get GPU entries and select the one with the most memory available.
   """
-  output = subprocess.check_output(NVIDIA_SMI_GET_GPUS.split())
+  try:
+    output = subprocess.check_output(NVIDIA_SMI_GET_GPUS.split())
+  except FileNotFoundError:
+    return None
   gpus = getGPUs(output.decode("utf-8").split(os.linesep))
   if len(gpus) > 0:
     selected_gpus = sorted(gpus, key=lambda x: x['mem_used'])
@@ -57,6 +60,9 @@ def memUsageByPID(pids: typing.Iterable[int]) -> int:
 
   Returns the total GPU memory allocation in MB.
   """
-  output = subprocess.check_output("nvidia-smi pmon -c 1 -s m".split())
+  try:
+    output = subprocess.check_output("nvidia-smi pmon -c 1 -s m".split())
+  except FileNotFoundError:
+    return 0
   pid_list = [i.split() for i in output.decode('utf-8').split(os.linesep)[2:]]
   return sum([int(x[3]) for x in pid_list if x and x[1] != '-' and x[3] != '-' and int(x[1]) in pids])
