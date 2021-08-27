@@ -146,8 +146,6 @@ class Model(object):
       os.symlink(
         os.path.relpath(self.corpus.tokenizer_path, self.cache.path), symlink
       )
-    if not (self.cache.path / "checkpoints" / "backup_tokenizer.pkl").exists():
-      shutil.copyfile(self.corpus.tokenizer_path, self.cache.path / "checkpoints" / "backup_tokenizer.pkl")
 
     # Validate metadata against cache.
     if self.cache.get("META.pbtxt"):
@@ -254,6 +252,10 @@ class Model(object):
     self.corpus.Create()
     if self.pre_train_corpus:
       self.pre_train_corpus.Create(self.corpus.tokenizer)
+
+    if not (self.cache.path / "checkpoints" / "backup_tokenizer.pkl").exists():
+      shutil.copyfile(self.corpus.tokenizer_path, self.cache.path / "checkpoints" / "backup_tokenizer.pkl")
+
     self.backend.Create(tokenizer = self.corpus.tokenizer)
 
     # Add entry to dashboard database
