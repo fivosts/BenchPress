@@ -135,9 +135,9 @@ class torchBert(backends.BackendBase):
 
   class SampleBertEstimator(typing.NamedTuple):
     """Named tuple for sampling BERT."""
-    models         : typing.List[typing.TypeVar('nn.Module')]
+    model          : typing.List[typing.TypeVar('nn.Module')]
     data_generator : torchLMDataGenerator
-    devices        : typing.List[str]
+    # devices        : typing.List[str]
 
   def __init__(self, *args, **kwargs):
 
@@ -283,20 +283,27 @@ class torchBert(backends.BackendBase):
     else:
       mdl = model.BertForPreTraining
 
-    m = []
-    if self.pytorch.num_gpus > 1:
-      d = list(self.pytorch.devices)
-    else:
-      d = [self.pytorch.device]
+    # m = []
+    # if self.pytorch.num_gpus > 1:
+    #   d = list(self.pytorch.devices)
+    # else:
+    #   d = [self.pytorch.device]
 
-    for dev in d:
-      m.append(mdl(
-          self.bert_config,
-          tokenizer = self.tokenizer,
-          use_categorical = FLAGS.categorical_sampling,
-          temperature = self.temperature
-        ).to(dev)
-      )
+    # for dev in d:
+    #   m.append(mdl(
+    #       self.bert_config,
+    #       tokenizer = self.tokenizer,
+    #       use_categorical = FLAGS.categorical_sampling,
+    #       temperature = self.temperature
+    #     ).to(dev)
+    #   )
+
+    m = mdl(
+      self.bert_config,
+      tokenizer = self.tokenizer,
+      use_categorical = FLAGS.categorical_sampling,
+      temperature = self.temperature
+    ).to(self.pytorch.offset_device)
 
     if FLAGS.is_trt:
       for mdl_instance, dev in zip(m, d):
@@ -310,9 +317,7 @@ class torchBert(backends.BackendBase):
         output_device=dummy_num_machines,
         find_unused_parameters=True,
       )
-    self.sample = torchBert.SampleBertEstimator(
-                    m, data_generator, d
-                  )
+    self.sample = torchBert.SampleBertEstimator(m, data_generator)
     l.getLogger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
     return
 
@@ -348,8 +353,7 @@ class torchBert(backends.BackendBase):
     return outputs
 
   def sample_model_step(self,
-                        models  : typing.List[typing.TypeVar('torch.nn.Module')],
-                        devices : typing.List[str],
+                        model   : typing.List[typing.TypeVar('torch.nn.Module')],
                         inputs  : typing.Dict[str, typing.TypeVar('torch.Tensor')],
                         is_live : bool = False,
                         ) -> typing.Dict[str, typing.List[typing.List[int]]]:
@@ -364,8 +368,28 @@ class torchBert(backends.BackendBase):
       'generated_samples': [], 'sample_indices': [],
       'input_ids': [], 'masked_lm_lengths': []
     }
+
+    bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = True, position = 0)
+    for ip, am, pi in zip(inputs['input_ids'], inputs['input_mask'], inputs['position_ids']):
+      out = model(  
+        input_ids            = ip.to(self.pytorch.device),
+        attention_mask       = am.to(self.pytorch.device),
+        position_ids         = pi.to(self.pytorch.device),
+        load = self.torch.ones((64,32,768), dtype = self.torch.int64),
+        # masked_lm_labels     = inputs['mask_labels'],
+        # next_sentence_labels = inputs['next_sentence_labels'],
+        is_live = is_live,
+      )
+      outputs['generated_samples'] += list(out['generated_samples'].cpu().numpy())
+      # outputs['sample_indices']    += list(out['sample_indices'].cpu().numpy())
+      outputs['input_ids']         += list(ip.numpy())
+      bar.update(len(out['generated_samples']))
+
+    return outputs
+    raise NotImplementedError
+
     if not self.pytorch.num_gpus > 1 or is_live:
-      bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = True, position = 0)
+      bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = False, position = 0)
       for b_idx in range(len(inputs['input_ids'])):
         out = models[0](
                 input_ids            = inputs['input_ids'][b_idx].to(devices[0]),
@@ -401,7 +425,7 @@ class torchBert(backends.BackendBase):
     try:
       for job in procs:
         job.start()
-      bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = True, position = 0)
+      bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = False, position = 0)
       ln = 0
       while ln < len(inputs['input_ids']) * len(inputs['input_ids'][0]):
         try:
@@ -806,8 +830,8 @@ class torchBert(backends.BackendBase):
           raise StopIteration
       else:
         step_out = self.sample_model_step(
-            self.sample.models,
-            self.sample.devices,
+            self.sample.model,
+            # self.sample.devices,
             self.step_inputs,
             is_live = self.sampler.is_live
         )
@@ -928,10 +952,11 @@ class torchBert(backends.BackendBase):
           self.torch.load(ckpt_comp("model"))
         )
       elif isinstance(estimator, torchBert.SampleBertEstimator):
-        for m in range(len(estimator.models)):
-          estimator.models[m].load_state_dict(
-            self.torch.load(ckpt_comp("model"))
-          )
+        estimator.model.load_state_dict(self.torch.load(ckpt_comp("model")))
+        # for m in range(len(estimator.models)):
+        #   estimator.models[m].load_state_dict(
+        #     self.torch.load(ckpt_comp("model"))
+        #   )
       else:
         raise ValueError(type(estimator))
     else:
@@ -941,10 +966,11 @@ class torchBert(backends.BackendBase):
             self.torch.load(ckpt_comp("model"))
           )
         elif isinstance(estimator, torchBert.SampleBertEstimator):
-          for m in range(len(estimator.models)):
-            estimator.models[m].load_state_dict(
-              self.torch.load(ckpt_comp("model"))
-            )
+          estimator.model.load_state_dict(self.torch.load(ckpt_comp("model")))
+          # for m in range(len(estimator.models)):
+          #   estimator.models[m].load_state_dict(
+          #     self.torch.load(ckpt_comp("model"))
+          #   )
         else:
           raise ValueError(type(estimator))
       except RuntimeError:
@@ -967,8 +993,9 @@ class torchBert(backends.BackendBase):
         if isinstance(estimator, torchBert.BertEstimator):
           estimator.model.load_state_dict(new_state_dict)
         elif isinstance(estimator, torchBert.SampleBertEstimator):
-          for m in range(len(estimator.models)):
-            estimator.models[m].load_state_dict(new_state_dict)
+          estimator.model.load_state_dict(new_state_dict)
+          # for m in range(len(estimator.models)):
+          #   estimator.models[m].load_state_dict(new_state_dict)
         else:
           raise ValueError(type(estimator))
     if isinstance(estimator, torchBert.BertEstimator):
@@ -982,8 +1009,9 @@ class torchBert(backends.BackendBase):
     if isinstance(estimator, torchBert.BertEstimator):
       estimator.model.eval()
     elif isinstance(estimator, torchBert.SampleBertEstimator):
-      for m in range(len(estimator.models)):
-        estimator.models[m].eval()
+      estimator.model.eval()
+      # for m in range(len(estimator.models)):
+      #   estimator.models[m].eval()
     else:
       raise ValueError(type(estimator))
     return ckpt_step

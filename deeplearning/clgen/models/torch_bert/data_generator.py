@@ -382,15 +382,22 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           self.comp_rate[feed.gen_id] = [0, 0]
 
         # Iterate until you get the required amount of candidates
-        while len(step_candidates) < active_limit_per_feed:
+        # while len(step_candidates) < active_limit_per_feed:
+        better_found = None
+        while not better_found and cmp_rate[0] < 600: # TEMP add
           # Pre-process inputs
+          rem = 500 // self.sample_batch_size # TEMP add
           inputs = self.collateInputData(feed.input_feed, rem, sample_batch_per_feed)
           # Infer
           outputs = mwrapper.sample_model_step(
-            estimator.models, estimator.devices, inputs,
+            estimator.model,
+            # estimator.devices,
+            inputs,
           )
           # Post-process outputs.
-          tcs, ts = self.registerOutputData(outputs, feed, step_candidates, bar)
+          step_candidates = [] # TEMP add
+          # tcs, ts = self.registerOutputData(outputs, feed, step_candidates, bar)
+          (tcs, ts), better_found = self.registerOutputData(outputs, feed, step_candidates, bar)
           cmp_rate[0] += tcs
           cmp_rate[1] += ts
           # Calculate how many more to infer.
@@ -406,15 +413,23 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         self.comp_rate_mon.plot()
 
         # Top-k candidates of ith generation.
-        best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
+        if feed.gen_id == 0:
+          best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
+        else:
+          if not better_found:
+            best_cands = []
+            l.getLogger().warn("No better candidate found...")
+          else:
+            best_cands = [better_found]
 
-        if feed.gen_id > 0:
-          best_cands = best_cands[:1]
+        # if feed.gen_id > 0:
+          # best_cands = best_cands[:1]
 
-        self.candidate_monitor.register(
-          {str(best_cands[0].sample_feed.gen_id): [c.score for c in best_cands]}
-        )
-        self.candidate_monitor.plot()
+        if best_cands:
+          self.candidate_monitor.register(
+            {str(best_cands[0].sample_feed.gen_id): [c.score for c in best_cands]}
+          )
+          self.candidate_monitor.plot()
         for nc in best_cands:
           sample_hash = ''.join([str(x) for x in nc.sample])
           if sample_hash not in total_cand_hash:
@@ -581,6 +596,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     cm_rate = [0, 0]
     pool = multiprocessing.Pool(4)
     cm_rate[1] += len(outputs['generated_samples'])
+    better_found = None
     try:
       it = zip(
         outputs['generated_samples'], outputs['sample_indices'],
@@ -598,12 +614,17 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           cm_rate[0] += 1
           bar.update(min(bar.max_value, len(candidates)))
           candidates.append(batch)
+          if 0 < batch.score < feed.input_score:
+            if not better_found:
+              better_found = batch
+            elif batch.score < better_found.score:
+              better_found = batch
       pool.close()
     except KeyboardInterrupt as e:
       pool.close()
       pool.terminate()
       raise e
-    return cm_rate
+    return cm_rate, better_found
 
   def saveCheckpoint(self):
     """

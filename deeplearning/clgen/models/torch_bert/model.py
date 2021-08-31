@@ -791,6 +791,7 @@ class BertForPreTraining(BertPreTrainedModel):
     output_hidden_states = None,
     is_validation        = False,
     is_live              = False,
+    load = None,
     step                 = -1,
     **kwargs
   ):
@@ -824,6 +825,7 @@ class BertForPreTraining(BertPreTrainedModel):
     >>> prediction_logits = outptus.prediction_logits
     >>> seq_relationship_logits = outputs.seq_relationship_logits
     """
+    print(load)
     prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
       input_ids, attention_mask, position_ids, token_type_ids, head_mask,
       inputs_embeds, output_attentions, output_hidden_states 
@@ -864,11 +866,17 @@ class BertForPreTraining(BertPreTrainedModel):
         position_ids,
         is_live,
       )
-      return {
-        'prediction_scores' : scores_history, # This is mainly used for live sampling. Else, watch out!
-        'generated_samples' : samples,
-        'sample_indices'    : sample_indices,
-      }
+      if is_live:
+        return {
+          'prediction_scores' : scores_history, # This is mainly used for live sampling. Else, watch out!
+          'generated_samples' : samples,
+          'sample_indices'    : sample_indices,
+        }
+      else:
+        return {
+          'generated_samples': samples,
+          # 'sample_indices'   : sample_indices,
+        }
     else:
       loss_fct = torch.nn.CrossEntropyLoss()
       masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))

@@ -341,7 +341,7 @@ class CompilationSampler(object):
       input_ids = torch.index_select(input_ids, 0, open_holes.to(device))
       attention_mask = (input_ids != self.tokenizer.padToken)
 
-    return list(results.cpu().numpy()), sample_indices, None
+    return results, sample_indices, None
 
   def WorkloaditerSampleSeq(self,
                             model              : typing.TypeVar("model.BertPreTrainedModel"),
