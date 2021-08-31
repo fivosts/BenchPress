@@ -230,16 +230,16 @@ class CompilationSampler(object):
                              attention_mask    : torch.LongTensor,
                              prediction_scores : torch.FloatTensor,
                              position_ids      : torch.LongTensor,
-                             queue,
+                             # queue,
                              ) -> typing.Tuple[typing.List[np.array], typing.List[typing.List[int]]]:
-    self.WorkloaditerSampleSeq(
-      model = model,
+    return self.WorkloaditerSampleSeq(
+      model  = model,
       device = device,
-      queue = queue,
-      workload_input_ids = input_ids,
+      # queue  = queue,
+      workload_input_ids      = input_ids,
       workload_attention_mask = attention_mask,
-      prediction_scores = prediction_scores,
-      position_ids = position_ids,
+      prediction_scores       = prediction_scores,
+      position_ids            = position_ids,
     )
     return
 
@@ -346,7 +346,7 @@ class CompilationSampler(object):
   def WorkloaditerSampleSeq(self,
                             model              : typing.TypeVar("model.BertPreTrainedModel"),
                             device             : torch.device,
-                            queue              ,
+                            # queue              ,
                             workload_input_ids : torch.LongTensor,
                             workload_attention_mask: torch.LongTensor,
                             prediction_scores  : torch.LongTensor,
@@ -365,6 +365,7 @@ class CompilationSampler(object):
          said functionalities on a single sequence. CANNOT be applied to the
          whole batch at the same time.
     """
+    queue = []
     input_ids      = workload_input_ids[0].to(device)
     attention_mask = workload_attention_mask[0].to(device)
 
@@ -379,14 +380,14 @@ class CompilationSampler(object):
     closed_holes = torch.where(new_holes == False)[0]
 
     for i in closed_holes:
-      queue.put(
+      queue.append(
         {
           'generated_samples': [input_ids[i].cpu().numpy()],
           'sample_indices': [],
           'input_ids': [],
           'masked_lm_lengths': []
-        },
-        block = False
+        }
+        # block = False
       )
 
     input_ids      = torch.index_select(input_ids, 0, open_holes.to(device))
@@ -408,14 +409,14 @@ class CompilationSampler(object):
       closed_holes = torch.where(new_holes == False)[0]
 
       for i in closed_holes:
-        queue.put(
+        queue.append(
           {
             'generated_samples': [input_ids[i].cpu().numpy()],
             'sample_indices': [],
             'input_ids': [],
             'masked_lm_lengths': []
-          },
-          block = False
+          }
+          # block = False
         )
       input_ids      = torch.index_select(input_ids, 0, open_holes.to(device))
       attention_mask = (input_ids != self.tokenizer.padToken)
@@ -425,7 +426,7 @@ class CompilationSampler(object):
         input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res].to(device)), 0)
         attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res].to(device)), 0)
         w_idx += res
-    return
+    return queue
 
   def StepSampleSeq(self,
                     seq               : torch.LongTensor,

@@ -787,11 +787,11 @@ class BertForPreTraining(BertPreTrainedModel):
     inputs_embeds    = None,
     masked_lm_labels = None,
     next_sentence_labels = None,
+    workload             = None,
     output_attentions    = None,
     output_hidden_states = None,
     is_validation        = False,
     is_live              = False,
-    load = None,
     step                 = -1,
     **kwargs
   ):
@@ -825,6 +825,24 @@ class BertForPreTraining(BertPreTrainedModel):
     >>> prediction_logits = outptus.prediction_logits
     >>> seq_relationship_logits = outputs.seq_relationship_logits
     """
+    if workload is not None:
+      input_ids, attention_mask, position_ids = workload
+      print(input_ids.device)
+      print(attention_mask.device)
+      print(position_ids.device)
+      prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
+        input_ids[0], attention_mask[0], position_ids[0]
+      )
+      return self.compile_sampler.generateSampleWorkload(
+        self,
+        input_ids.get_device(),
+        input_ids,
+        attention_mask,
+        prediction_scores,
+        position_ids[0],
+        # queue
+      )
+
     prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
       input_ids, attention_mask, position_ids, token_type_ids, head_mask,
       inputs_embeds, output_attentions, output_hidden_states 
