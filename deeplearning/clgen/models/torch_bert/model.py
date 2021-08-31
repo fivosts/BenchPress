@@ -825,7 +825,6 @@ class BertForPreTraining(BertPreTrainedModel):
     >>> prediction_logits = outptus.prediction_logits
     >>> seq_relationship_logits = outputs.seq_relationship_logits
     """
-    print(load)
     prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
       input_ids, attention_mask, position_ids, token_type_ids, head_mask,
       inputs_embeds, output_attentions, output_hidden_states 
