@@ -305,6 +305,9 @@ class torchBert(backends.BackendBase):
       temperature = self.temperature
     ).to(self.pytorch.offset_device)
 
+    if self.pytorch.num_gpus > 1:
+      m = self.torch.nn.DataParallel(m)
+
     if FLAGS.is_trt:
       for mdl_instance, dev in zip(m, d):
         mdl_instance.init_engine(self.cache, dev.index, sampler.batch_size, sampler.sequence_length, self.tokenizer.vocab_size, self.config.architecture.max_position_embeddings)
