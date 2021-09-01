@@ -406,7 +406,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           # Post-process outputs.
           step_candidates = [] # TEMP add
           # tcs, ts = self.registerOutputData(outputs, feed, step_candidates, bar)
-          bar = progressbar.ProgressBar(max_value = rem)
+          bar = progressbar.ProgressBar(max_value = rem * self.sample_batch_size)
           bar.update(0)
           (tcs, ts), better_found = self.registerOutputData(outputs, feed, step_candidates, bar)
           cmp_rate[0] += tcs
