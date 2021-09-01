@@ -388,8 +388,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         while not better_found: # TEMP add
           # Pre-process inputs
           rem = 500 // self.sample_batch_size # TEMP add
-          bar = progressbar.ProgressBar(max_value = 500)
-          bar.update(0)
           inputs = self.collateInputData(feed.input_feed, rem, sample_batch_per_feed)
           # Infer
           outputs = mwrapper.sample_model_step(
@@ -400,6 +398,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           # Post-process outputs.
           step_candidates = [] # TEMP add
           # tcs, ts = self.registerOutputData(outputs, feed, step_candidates, bar)
+          bar = progressbar.ProgressBar(max_value = rem)
+          bar.update(0)
           (tcs, ts), better_found = self.registerOutputData(outputs, feed, step_candidates, bar)
           cmp_rate[0] += tcs
           cmp_rate[1] += ts
