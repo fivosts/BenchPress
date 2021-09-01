@@ -185,11 +185,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         corpus_config.active.target,
         git_corpus = corpus
       )
-      d.candidate_monitor = monitors.CategoricalDistribMonitor(
+      d.candidate_monitor = monitors.CategoricalDistribMonitor.loadCheckpoint(
         d.sampler.corpus_directory, "feature_distance"
       )
-      d.comp_rate_mon     = monitors.CategoricalHistoryMonitor(
+      d.comp_rate_mon     = monitors.CategoricalHistoryMonitor.loadCheckpoint(
         d.sampler.corpus_directory, "comp_rate_per_gen"
+      )
+      d.exec_time_mon     = monitors.CategoricalHistoryMonitor.loadCheckpoint(
+        d.sampler.corpus_directory, "exec_time_per_gen"
       )
       # Store unique specs to database once.
       d.addToDB(
@@ -213,10 +216,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     ## Active learning attributes initialization.
     self.loader     = None
     self.comp_rate  = {}
+    self.exec_time  = {}
     self.feed_queue = []
     self.feat_sampler      = None
     self.candidate_monitor = None
     self.comp_rate_mon     = None
+    self.exec_time_mon     = None
     self.raised_keyboard_int = None
     self.raised_exception  = None
     return
@@ -375,12 +380,15 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         rem  = active_limit_per_feed // self.sample_batch_size # remaining size of workload
         step_candidates = []
         cmp_rate        = [0, 0]
+        exec_time       = 0.0
 
         self.sampler.setStartText(self.tokenizer.tokensToString(feed.input_feed, ignore_token = self.tokenizer.padToken))
         self.sampler.Specialize(self.tokenizer)
 
         if feed.gen_id not in self.comp_rate:
           self.comp_rate[feed.gen_id] = [0, 0]
+        if feed.gen_id not in self.exec_time:
+          self.exec_time[feed.gen_id] = 0.0
 
         # Iterate until you get the required amount of candidates
         # while len(step_candidates) < active_limit_per_feed:
@@ -392,7 +400,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           bar.update(0)
           inputs = self.collateInputData(feed.input_feed, rem, sample_batch_per_feed)
           # Infer
-          outputs = mwrapper.sample_model_step(
+          outputs, time = mwrapper.sample_model_step(
             estimator.model,
             # estimator.devices,
             inputs,
@@ -403,6 +411,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           (tcs, ts), better_found = self.registerOutputData(outputs, feed, step_candidates, bar)
           cmp_rate[0] += tcs
           cmp_rate[1] += ts
+          exec_time   += time
+
           if better_found:
             l.getLogger().warn("Found Better")
           else:
@@ -416,8 +426,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             pass
 
         self.comp_rate[feed.gen_id] = [sum(x) for x in zip(self.comp_rate[feed.gen_id], cmp_rate)]
+        self.exec_time[feed.gen_id] += exec_time
         self.comp_rate_mon.register((feed.gen_id, self.comp_rate[feed.gen_id][0] / self.comp_rate[feed.gen_id][1]))
+        self.exec_time_mon.register((feed.gen_id, self.exec_time[feed.gen_id]    / self.exec_time[feed.gen_id][1]))
         self.comp_rate_mon.plot()
+        self.exec_time_mon.plot()
 
         # Top-k candidates of ith generation.
         if feed.gen_id == 0:
@@ -638,6 +651,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     """
     with open(self.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
       pickle.dump(self.feed_queue, outf)
+    self.candidate_monitor.saveCheckpoint()
+    self.comp_rate_mon.saveCheckpoint()
+    self.exec_time_mon.saveCheckpoint()
     return
 
   def loadCheckpoint(self):
