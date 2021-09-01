@@ -366,8 +366,8 @@ class CompilationSampler(object):
          whole batch at the same time.
     """
     queue = []
-    input_ids      = workload_input_ids[0].to(device)
-    attention_mask = workload_attention_mask[0].to(device)
+    input_ids      = workload_input_ids[0]# .to(device)
+    attention_mask = workload_attention_mask[0]# .to(device)
 
     wload_size, batch_size, sequence_length = tuple(workload_input_ids.shape)
     nseq  = wload_size * batch_size
@@ -395,8 +395,8 @@ class CompilationSampler(object):
 
     res = batch_size - len(input_ids)
     if res > 0:
-      input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res].to(device)), 0)
-      attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res].to(device)), 0)
+      input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res]), 0)
+      attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res]), 0)
       w_idx += res
 
     while w_idx < nseq or torch.any(new_holes):
@@ -423,8 +423,8 @@ class CompilationSampler(object):
 
       res = batch_size - len(input_ids)
       if res > 0:
-        input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res].to(device)), 0)
-        attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res].to(device)), 0)
+        input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res]), 0)
+        attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res]), 0)
         w_idx += res
     return queue
 
