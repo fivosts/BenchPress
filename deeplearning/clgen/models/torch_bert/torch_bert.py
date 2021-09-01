@@ -367,6 +367,7 @@ class torchBert(backends.BackendBase):
     Inputs must be three-dimensional:
     workload_size x batch_size x sequence_length
     """
+    start = time.time()
     outputs = {
       'generated_samples': [], 'sample_indices': [],
       'input_ids': [], 'masked_lm_lengths': []
@@ -386,7 +387,8 @@ class torchBert(backends.BackendBase):
       # outputs['input_ids']         = [[]] * len(outputs['generated_samples'])
 
     bar.update(len(outputs['generated_samples']))
-    return outputs
+    end = time.time()
+    return outputs, end-start
     raise NotImplementedError
 
     if not self.pytorch.num_gpus > 1 or is_live:
@@ -830,7 +832,7 @@ class torchBert(backends.BackendBase):
         except StopIteration:
           raise StopIteration
       else:
-        step_out = self.sample_model_step(
+        step_out, time = self.sample_model_step(
             self.sample.model,
             # self.sample.devices,
             self.step_inputs,
