@@ -428,7 +428,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         self.comp_rate[feed.gen_id] = [sum(x) for x in zip(self.comp_rate[feed.gen_id], cmp_rate)]
         self.exec_time[feed.gen_id] += exec_time
         self.comp_rate_mon.register((feed.gen_id, self.comp_rate[feed.gen_id][0] / self.comp_rate[feed.gen_id][1]))
-        self.exec_time_mon.register((feed.gen_id, self.exec_time[feed.gen_id]    / self.exec_time[feed.gen_id][1]))
+        self.exec_time_mon.register((feed.gen_id, self.exec_time[feed.gen_id]    / self.comp_rate[feed.gen_id][1]))
         self.comp_rate_mon.plot()
         self.exec_time_mon.plot()
 
