@@ -241,7 +241,6 @@ class CompilationSampler(object):
       prediction_scores       = prediction_scores,
       position_ids            = position_ids,
     )
-    return
 
   def iterSampleSeq(self,
                     model             : typing.TypeVar("model.BertPreTrainedModel"),
@@ -365,30 +364,26 @@ class CompilationSampler(object):
          said functionalities on a single sequence. CANNOT be applied to the
          whole batch at the same time.
     """
-    queue = []
     input_ids      = workload_input_ids[0]# .to(device)
     attention_mask = workload_attention_mask[0]# .to(device)
 
     wload_size, batch_size, sequence_length = tuple(workload_input_ids.shape)
     nseq  = wload_size * batch_size
     w_idx = batch_size
+
     queue_input_ids      = torch.reshape(workload_input_ids, (1, nseq, sequence_length)).squeeze()
     queue_attention_mask = torch.reshape(workload_attention_mask, (1, nseq, sequence_length)).squeeze()
+
+    queue = torch.zeros(tuple(queue_input_ids.shape)).to(device)
+    q_idx = 0
 
     new_holes    = self.BatchStepSampleSeq(input_ids, prediction_scores, device)
     open_holes   = torch.where(new_holes == True)[0]
     closed_holes = torch.where(new_holes == False)[0]
 
     for i in closed_holes:
-      queue.append(
-        {
-          'generated_samples': [input_ids[i].cpu().numpy()],
-          'sample_indices': [],
-          'input_ids': [],
-          'masked_lm_lengths': []
-        }
-        # block = False
-      )
+      queue[q_idx] = input_ids[i]
+      q_idx += 1
 
     input_ids      = torch.index_select(input_ids, 0, open_holes.to(device))
     attention_mask = (input_ids != self.tokenizer.padToken)
@@ -409,15 +404,9 @@ class CompilationSampler(object):
       closed_holes = torch.where(new_holes == False)[0]
 
       for i in closed_holes:
-        queue.append(
-          {
-            'generated_samples': [input_ids[i].cpu().numpy()],
-            'sample_indices': [],
-            'input_ids': [],
-            'masked_lm_lengths': []
-          }
-          # block = False
-        )
+        queue[q_idx] = input_ids[i]
+        q_idx += 1
+
       input_ids      = torch.index_select(input_ids, 0, open_holes.to(device))
       attention_mask = (input_ids != self.tokenizer.padToken)
 
