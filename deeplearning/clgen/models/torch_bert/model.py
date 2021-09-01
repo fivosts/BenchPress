@@ -827,9 +827,6 @@ class BertForPreTraining(BertPreTrainedModel):
     """
     if workload is not None:
       input_ids, attention_mask, position_ids = workload
-      print(input_ids.device)
-      print(attention_mask.device)
-      print(position_ids.device)
       prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
         input_ids[0], attention_mask[0], position_ids[0]
       )
