@@ -105,9 +105,9 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
   # Feature vector of input_feed
   input_features   : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Resulting encoded array with masks
-  masked_input_ids : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # masked_input_ids : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Array of lengths of holes for given instance
-  hole_lengths     : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # hole_lengths     : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Array of starting ids of hole instances in feed.
   # hole_start_ids   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Output sample
@@ -127,7 +127,7 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
   # Number of generation for sample
   generation_id    : int   = sql.Column(sql.Integer, nullable = False)
   # Timestep where sample was acquired.
-  timestep         : int   = sql.Column(sql.Integer, nullable = False)
+  # timestep         : int   = sql.Column(sql.Integer, nullable = False)
   # Date
   date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable = False)
 
@@ -137,8 +137,8 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
                id               : int,
                input_feed       : np.array,
                input_features   : typing.Dict[str, float],
-               masked_input_ids : np.array,
-               hole_instances   : typing.TypeVar("sequence_masking.MaskedLMInstance"),
+               # masked_input_ids : np.array,
+               # hole_instances   : typing.TypeVar("sequence_masking.MaskedLMInstance"),
                sample           : np.array,
                output_features  : typing.Dict[str, float],
                sample_quality   : float,
@@ -146,11 +146,11 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
                target_features  : typing.Dict[str, float],
                compile_status   : bool,
                generation_id    : int,
-               timestep         : int,
+               # timestep         : int,
                ) -> typing.TypeVar("ActiveFeed"):
     """Construt ActiveFeed table entry from argumentns."""
     str_input_feed       = tokenizer.tokensToString(input_feed,       ignore_token = tokenizer.padToken, with_formatting = True)
-    str_masked_input_ids = tokenizer.tokensToString(masked_input_ids, ignore_token = tokenizer.padToken, with_formatting = True)
+    # str_masked_input_ids = tokenizer.tokensToString(masked_input_ids, ignore_token = tokenizer.padToken, with_formatting = True)
     str_sample           = tokenizer.ArrayToCode(sample, with_formatting = True)
 
     num_tokens = len(sample)
@@ -159,12 +159,12 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
 
     return ActiveFeed(
       id               = id,
-      sha256           = crypto.sha256_str(str_masked_input_ids + str_sample),
+      sha256           = crypto.sha256_str(str_input_feed + str_sample),
       input_feed       = str_input_feed,
       encoded_feed     = ','.join([str(x) for x in input_feed]),
       input_features   = '\n'.join(["{}:{}".format(k, v) for k, v in input_features.items()]),
-      masked_input_ids = str_masked_input_ids,
-      hole_lengths     = ','.join([str(x) for x in hole_instances]),
+      # masked_input_ids = str_masked_input_ids,
+      # hole_lengths     = ','.join([str(x) for x in hole_instances]),
       # hole_start_ids   = ','.join(str(lm.pos_index) for lm in hole_instances),
       sample           = str_sample,
       num_tokens       = int(num_tokens),
@@ -174,7 +174,7 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
       sample_quality   = sample_quality,
       compile_status   = compile_status,
       generation_id    = generation_id,
-      timestep         = timestep,
+      # timestep         = timestep,
       date_added       = datetime.datetime.utcnow(),
     )
 

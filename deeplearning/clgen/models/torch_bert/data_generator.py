@@ -56,39 +56,43 @@ class ActiveSample(typing.NamedTuple):
   # ActiveSampleFeed instance of model input
   sample_feed    : typing.TypeVar("ActiveSamplingGenerator.ActiveSampleFeed")
   # Input ids that led to this prediction
-  input_ids      : np.array
+  # input_ids      : np.array
   # hole lengths and positions of input ids.
-  hole_instances : typing.List[sequence_masking.MaskedLmInstance]
+  # hole_instances : typing.List[sequence_masking.MaskedLmInstance]
   # Model prediction
   sample         : np.array
   # Sample indices of given prediction.
-  sample_indices : np.array
+  # sample_indices : np.array
   # Output features of sample
   features       : typing.Dict[str, float]
   # Score of sample based on active learning search.
   score          : typing.Union[bool, float]
   # Active batch timestep where sample was acquired.
-  timestep       : int
+  # timestep       : int
 
 def candidate_worker(sample_out   : typing.Dict[str, np.array],
                      feed         : np.array,
                      feat_sampler : feature_sampler.EuclideanSampler,
                      tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
                      ) -> ActiveSample:
-  sample, indices, input_ids, masked_lm_lengths = sample_out
+  # sample, indices, input_ids, masked_lm_lengths = sample_out
   try:
-    code = tokenizer.ArrayToCode(sample, with_formatting = False)
+    code = tokenizer.ArrayToCode(sample_out, with_formatting = False)
     _ = opencl.Compile(code)
     features = extractor.ExtractFeatures(code, [feat_sampler.feature_space])[feat_sampler.feature_space]
     if features:
+      # return ActiveSample(
+      #   sample_feed    = feed,      sample         = sample,
+      #   input_ids      = input_ids, hole_instances = [x for x in masked_lm_lengths if x >= 0],
+      #   sample_indices = indices,   features       = features,
+      #   score          = feat_sampler.calculate_distance(features),
+      #   timestep       = -1,
+      # )
       return ActiveSample(
-        sample_feed    = feed,      sample         = sample,
-        input_ids      = input_ids, hole_instances = [x for x in masked_lm_lengths if x >= 0],
-        sample_indices = indices,   features       = features,
-        score          = feat_sampler.calculate_distance(features),
-        timestep       = -1,
+        sample_feed = feed,     sample = sample_out,
+        features    = features, score  = feat_sampler.calculate_distance(features),
       )
-      # return sample, indices, features, input_ids, masked_lm_lengths
+    # return sample, indices, features, input_ids, masked_lm_lengths
   except ValueError:
     pass
   except Exception:
@@ -375,18 +379,17 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         self.sampler.setStartText(self.tokenizer.tokensToString(feed.input_feed, ignore_token = self.tokenizer.padToken))
         self.sampler.Specialize(self.tokenizer)
 
-        bar = progressbar.ProgressBar(max_value = active_limit_per_feed)
-        bar.update(0)
-
         if feed.gen_id not in self.comp_rate:
           self.comp_rate[feed.gen_id] = [0, 0]
 
         # Iterate until you get the required amount of candidates
         # while len(step_candidates) < active_limit_per_feed:
         better_found = None
-        while not better_found and cmp_rate[0] < 600: # TEMP add
+        while not better_found: # TEMP add
           # Pre-process inputs
           rem = 500 // self.sample_batch_size # TEMP add
+          bar = progressbar.ProgressBar(max_value = 500)
+          bar.update(0)
           inputs = self.collateInputData(feed.input_feed, rem, sample_batch_per_feed)
           # Infer
           outputs = mwrapper.sample_model_step(
@@ -400,6 +403,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           (tcs, ts), better_found = self.registerOutputData(outputs, feed, step_candidates, bar)
           cmp_rate[0] += tcs
           cmp_rate[1] += ts
+          if better_found:
+            l.getLogger().warn("Found Better")
+          else:
+            l.getLogger().error("Not found better")
           # Calculate how many more to infer.
           try:
             rcands = active_limit_per_feed - len(step_candidates)
@@ -450,8 +457,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                 id               = self.active_db.active_count,
                 input_feed       = nc.sample_feed.input_feed,
                 input_features   = nc.sample_feed.input_features,
-                masked_input_ids = nc.input_ids,
-                hole_instances   = nc.hole_instances,
+                # masked_input_ids = nc.input_ids,
+                # hole_instances   = nc.hole_instances,
                 sample           = nc.sample,
                 output_features  = nc.features,
                 sample_quality   = nc.score,
@@ -459,7 +466,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                 target_features  = self.feat_sampler.target_benchmark.feature_vector,
                 compile_status   = True,
                 generation_id    = nc.sample_feed.gen_id,
-                timestep         = nc.timestep,
+                # timestep         = nc.timestep,
               )
             )
         self.saveCheckpoint()
@@ -469,20 +476,20 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
-              [x.sample_indices for x in total_cand])
+              [])
     except KeyboardInterrupt:
       self.raised_keyboard_int = True
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
-              [x.sample_indices for x in total_cand])
+              [])
     except Exception as e:
       l.getLogger().error(e)
       self.raised_exception = e
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
-              [x.sample_indices for x in total_cand])
+              [])
 
   def initOrGetQueue(self) -> int:
     """
@@ -548,7 +555,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         'mask_labels': [], 'masked_lm_lengths': [], 'next_sentence_labels': []
       }
       try:
-        pool = multiprocessing.Pool(4)
+        pool = multiprocessing.Pool()
         for batch in pool.imap_unordered(
                           functools.partial(
                             dataload_worker, feed  = feed,
@@ -594,30 +601,29 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                1st el: Total samples.
     """
     cm_rate = [0, 0]
-    pool = multiprocessing.Pool(4)
+    pool = multiprocessing.Pool()
     cm_rate[1] += len(outputs['generated_samples'])
     better_found = None
     try:
-      it = zip(
-        outputs['generated_samples'], outputs['sample_indices'],
-        outputs['input_ids'], outputs['masked_lm_lengths']
-      )
-      for batch in pool.imap_unordered(
-                     functools.partial(
-                       candidate_worker,
-                       feed         = feed,
-                       tokenizer    = self.tokenizer,
-                       feat_sampler = self.feat_sampler,
-                     ), it
-                   ):
+      # it = zip(
+      #   outputs['generated_samples'], outputs['sample_indices'],
+      #   outputs['input_ids'], outputs['masked_lm_lengths']
+      # )
+      for idx, batch in enumerate(pool.imap_unordered(
+                                    functools.partial(
+                                    candidate_worker,
+                                    feed         = feed,
+                                    tokenizer    = self.tokenizer,
+                                    feat_sampler = self.feat_sampler,
+                                    ), outputs['generated_samples']
+                                  )):
+        bar.update(min(bar.max_value, idx))
         if batch is not None:
           cm_rate[0] += 1
-          bar.update(min(bar.max_value, len(candidates)))
+          # bar.update(min(bar.max_value, len(candidates)))
           candidates.append(batch)
           if 0 < batch.score < feed.input_score:
-            if not better_found:
-              better_found = batch
-            elif batch.score < better_found.score:
+            if better_found is None or batch.score < better_found.score:
               better_found = batch
       pool.close()
     except KeyboardInterrupt as e:
