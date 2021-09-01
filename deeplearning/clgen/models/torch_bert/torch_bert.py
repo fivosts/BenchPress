@@ -371,20 +371,21 @@ class torchBert(backends.BackendBase):
       'generated_samples': [], 'sample_indices': [],
       'input_ids': [], 'masked_lm_lengths': []
     }
-
     bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = True, position = 0)
     if not is_live:
       out = model(
         workload = (
-          inputs['input_ids'].to(self.pytorch.device),
-          inputs['input_mask'].to(self.pytorch.device),
-          inputs['position_ids'].to(self.pytorch.device)
+          inputs['input_ids'][0].unsqueeze(0).to(self.pytorch.device),
+          inputs['input_mask'][0].unsqueeze(0).to(self.pytorch.device),
+          inputs['position_ids'][0].unsqueeze(0).to(self.pytorch.device)
         ),
       )
-      outputs['generated_samples'] += list(out['generated_samples'].cpu().numpy())
-      # outputs['sample_indices']    += list(out['sample_indices'].cpu().numpy())
-      outputs['input_ids']         += list(ip.numpy())
+      outputs['generated_samples'] = list(out.cpu().numpy())
+      # outputs['sample_indices']    = [[]] * len(outputs['generated_samples'])
+      # outputs['masked_lm_lengths'] = [[]] * len(outputs['generated_samples'])
+      # outputs['input_ids']         = [[]] * len(outputs['generated_samples'])
 
+    bar.update(len(outputs['generated_samples']))
     return outputs
     raise NotImplementedError
 
