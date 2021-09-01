@@ -17,6 +17,20 @@ class Monitor():
     self.set_name       = set_name
     return
 
+  def saveCheckpoint(self):
+    with open(self.cache_path / "{}_state.pkl".format(self.set_name), 'wb') as outf:
+      pickle.dump(self, outf)
+    return
+
+  @classmethod
+  def loadCheckpoint(cls, cache_path, set_name):
+    if (cache_path / "{}_state.pkl".format(set_name)).exists():
+      with open(cache_path / "{}_state.pkl".format(set_name), 'rb') as infile:
+        obj = pickle.load(infile)
+    else:
+      obj = cls(cache_path, set_name)
+    return obj
+
   def getData(self):
     raise NotImplementedError("Abstract Class")
 
