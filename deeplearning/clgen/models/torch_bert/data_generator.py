@@ -106,16 +106,7 @@ def dataload_worker(x              : int,
                     batch_per_feed : int,
                     ) -> typing.Dict[str, torch.Tensor]:
   try:
-    feeds = [func(feed) for _ in range(batch // batch_per_feed)]
-    out = {
-      k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch_per_feed, dim = 0)
-      for (k, v) in feeds[0].items()
-    }
-    for f in feeds[1:]:
-      for k, v in f.items():
-        nt = torch.from_numpy(v).unsqueeze(0).repeat_interleave(batch_per_feed, dim = 0)
-        out[k] = torch.cat((out[k], nt), 0)
-    return out
+    return [func(feed) for _ in range(batch * batch_per_feed)]
   except Exception:
     return None
 
@@ -577,12 +568,16 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                           ),range(wload_size)
                          ):
           if batch:
-            inputs['input_ids'].append(batch['input_ids'])
-            inputs['input_mask'].append(batch['input_mask'])
-            inputs['position_ids'].append(batch['position_ids'])
-            inputs['mask_labels'].append(batch['mask_labels'])
-            inputs['masked_lm_lengths'].append(batch['masked_lm_lengths'])
-            inputs['next_sentence_labels'].append(batch['next_sentence_labels'])
+            out = {
+              k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(sample_batch_per_feed, dim = 0)
+              for (k, v) in batch[0].items()
+            }
+            for f in batch[1:]:
+              for k, v in f.items():
+                nt = torch.from_numpy(v).unsqueeze(0).repeat_interleave(sample_batch_per_feed, dim = 0)
+                out[k] = torch.cat((out[k], nt), 0)
+            for k in inputs.keys():
+              inputs[k].append(out[k])
         for k, v in inputs.items():
           inputs[k] = torch.stack(v)
         pool.close()
