@@ -4,7 +4,6 @@ import pickle
 import typing
 import numpy as np
 
-from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.util import plotter
 
 from eupy.native import logger as l
