@@ -16,6 +16,7 @@ import pathlib
 import multiprocessing
 import math
 import progressbar
+import tqdm
 
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
@@ -397,7 +398,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           # Post-process outputs.
           step_candidates = [] # TEMP add
           # tcs, ts = self.registerOutputData(outputs, feed, step_candidates, bar)
-          bar = progressbar.ProgressBar(max_value = rem * self.sample_batch_size)
+          # bar = progressbar.ProgressBar(max_value = rem * self.sample_batch_size)
+          bar = tqdm.auto.trange(rem * self.sample_batch_size, desc="Register Outputs", leave = False, position = 0)
           bar.update(0)
           (tcs, ts), better_found = self.registerOutputData(outputs, feed, step_candidates, bar)
           cmp_rate[0] += tcs
@@ -625,7 +627,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                     feat_sampler = self.feat_sampler,
                                     ), outputs['generated_samples']
                                   )):
-        bar.update(min(bar.max_value, idx))
+        bar.update(idx+1)
         if batch is not None:
           cm_rate[0] += 1
           # bar.update(min(bar.max_value, len(candidates)))
