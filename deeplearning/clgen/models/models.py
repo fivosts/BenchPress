@@ -146,6 +146,8 @@ class Model(object):
       os.symlink(
         os.path.relpath(self.corpus.tokenizer_path, self.cache.path), symlink
       )
+    if (self.cache.path / "checkpoints" / "backup_tokenizer.pkl").exists():
+      shutil.copyfile(self.cache.path / "checkpoints" / "backup_tokenizer.pkl", self.corpus.tokenizer_path)
 
     # Validate metadata against cache.
     if self.cache.get("META.pbtxt"):
