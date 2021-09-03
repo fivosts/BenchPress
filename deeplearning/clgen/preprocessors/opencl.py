@@ -490,7 +490,7 @@ def NormalizeIdentifiers(text: str) -> str:
     ClangTimeout: If rewriter fails to complete within timeout_seconds.
   """
   return normalizer.NormalizeIdentifiers(
-    text, ".cl", GetClangArgs(use_shim=False)
+    text, ".cl", GetClangArgs(use_shim = False, use_aux_headers = True)
   )
 
 @public.clgen_preprocessor
