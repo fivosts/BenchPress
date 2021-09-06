@@ -52,7 +52,7 @@ model {
     num_train_steps: 10000000
     num_warmup_steps: 20000
     sequence_length: 768
-    batch_size: 32
+    batch_size: 16
     max_predictions_per_seq: 1
     dupe_factor: 1
     masked_lm_prob: 0.4
@@ -87,31 +87,9 @@ model {
 #     }
 #   }
 # }
-sampler {
-  start_text: "[START]kernel void [HOLE]}[END]"
-  batch_size: 16
-  sequence_length: 768
-  temperature_micros: 700000  # = 0.8 real value
-  termination_criteria {
-    maxlen {
-      maximum_tokens_in_sample: 768
-    }
-  }
-}
 # sampler {
-#   sample_corpus {
-#     corpus_config {
-#       sampling_type: "active"
-#       max_predictions_per_seq: 1
-#       masked_lm_prob: 0.6
-#       hole {
-#         relative_length: 0.9
-#         uniform_distribution: true
-#       }
-#     }
-#     start_text: "[START]kernel void [HOLE]}[END]"
-#   }
-#   batch_size: 16
+#   start_text: "[START]kernel void [HOLE]}[END]"
+#   batch_size: 4
 #   sequence_length: 768
 #   temperature_micros: 700000  # = 0.8 real value
 #   termination_criteria {
@@ -120,3 +98,32 @@ sampler {
 #     }
 #   }
 # }
+sampler {
+  sample_corpus {
+    corpus_config {
+      active {
+        target: "rodinia"
+        active_limit_per_feed: 2000
+        active_search_depth: 320
+        active_search_width: 5
+        batch_size_per_feed: 2
+        feature_space: "GreweFeatures"
+      }
+      max_predictions_per_seq: 1
+      masked_lm_prob: 0.6
+      hole {
+        relative_length: 0.9
+        uniform_distribution: true
+      }
+    }
+    start_text: "[START]kernel void [HOLE]}[END]"
+  }
+  batch_size: 512
+  sequence_length: 768
+  temperature_micros: 700000  # = 0.8 real value
+  termination_criteria {
+    maxlen {
+      maximum_tokens_in_sample: 768
+    }
+  }
+}
