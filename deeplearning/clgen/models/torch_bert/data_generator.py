@@ -384,9 +384,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # Iterate until you get the required amount of candidates
         # while len(step_candidates) < active_limit_per_feed:
         better_found = None
-        while not better_found: # TEMP add
+        while not better_found and cmp_rate[1] < 80000: # TEMP add
           # Pre-process inputs
-          rem = 500 // self.sample_batch_size # TEMP add
+          rem = 4096 // self.sample_batch_size # TEMP add
           inputs = self.collateInputData(feed.input_feed, rem, sample_batch_per_feed)
           # Infer
           outputs, time = mwrapper.sample_model_step(
