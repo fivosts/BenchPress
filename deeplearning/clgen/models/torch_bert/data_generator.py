@@ -36,6 +36,12 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_boolean(
+  "skip_first_queue",
+  False,
+  "Hacky way to speedup active sampling experiments"
+)
+
 class ActiveSampleFeed(typing.NamedTuple):
   """
   Representation of an active learning input to the model.
@@ -196,6 +202,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       )
       d.raised_keyboard_int = False
       d.raised_exception    = None
+      d.skip_first_queue    = FLAGS.skip_first_queue
 
     d.dataloader = d.predict_dataloader()
     d.loader     = iter(d.dataloader)
@@ -215,6 +222,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     self.exec_time_mon     = None
     self.raised_keyboard_int = None
     self.raised_exception  = None
+    self.skip_first_queue = None
     return
 
   def train_dataloader(self, set_name = 'train_dataset', is_train = True) -> torch.utils.data.dataloader:
@@ -368,6 +376,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       while self.feed_queue:
 
         feed = self.feed_queue.pop(0)
+        if self.skip_first_queue:
+          self.skip_first_queue = False
+          try:
+            feed = self.feed_queue.pop(0)
+          except Exception:
+            pass
         rem  = active_limit_per_feed // self.sample_batch_size # remaining size of workload
         step_candidates = []
         cmp_rate        = [0, 0]
