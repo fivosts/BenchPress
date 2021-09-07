@@ -35,7 +35,7 @@ from deeplearning.clgen.util import monitors
 from deeplearning.clgen.features import extractor
 from absl import flags
 import humanize
-from labm8.py import sqlutil
+from deeplearning.clgen.util import sqlutil
 
 from eupy.native import logger as l
 

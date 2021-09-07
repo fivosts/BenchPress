@@ -7,7 +7,7 @@ from sqlalchemy.ext import declarative
 from absl import flags
 
 from deeplearning.clgen.util import crypto
-from labm8.py import sqlutil
+from deeplearning.clgen.util import sqlutil
 
 FLAGS = flags.FLAGS
 

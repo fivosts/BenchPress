@@ -38,7 +38,7 @@ from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.models import lm_data_generator
 
 from eupy.native import logger as l
-from labm8.py import sqlutil
+from deeplearning.clgen.util import sqlutil
 
 FLAGS = flags.FLAGS
 

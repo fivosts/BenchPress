@@ -37,7 +37,7 @@ from deeplearning.clgen.github import bigQuery_database as bqdb
 from absl import flags
 from labm8.py import fs
 import humanize
-from labm8.py import sqlutil
+from deeplearning.clgen.util import sqlutil
 from eupy.native import logger as l
 from eupy.hermes import client
 

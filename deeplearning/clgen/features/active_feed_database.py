@@ -11,7 +11,7 @@ from absl import flags
 from deeplearning.clgen.samplers import sample_observers
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.util import crypto
-from labm8.py import sqlutil
+from deeplearning.clgen.util import sqlutil
 
 FLAGS = flags.FLAGS
 

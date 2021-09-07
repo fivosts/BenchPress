@@ -5,7 +5,7 @@ import sqlalchemy as sql
 from sqlalchemy.dialects import mysql
 
 from absl import flags
-from labm8.py import sqlutil
+from deeplearning.clgen.util import sqlutil
 
 from eupy.native import logger as l
 

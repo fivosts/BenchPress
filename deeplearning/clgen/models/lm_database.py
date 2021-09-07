@@ -3,7 +3,7 @@ import typing
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
-from labm8.py import sqlutil
+from deeplearning.clgen.util import sqlutil
 
 Base = declarative.declarative_base()
 
