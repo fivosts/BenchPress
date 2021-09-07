@@ -107,7 +107,7 @@ sampler {
         active_search_depth: 320
         active_search_width: 5
         batch_size_per_feed: 2
-        feature_space: "GreweFeatures"
+        feature_space: "AutophaseFeatures"
       }
       max_predictions_per_seq: 1
       masked_lm_prob: 0.6
