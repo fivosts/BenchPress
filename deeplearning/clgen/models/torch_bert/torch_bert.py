@@ -995,8 +995,10 @@ class torchBert(backends.BackendBase):
     """
     if self.torch_tpu_available:
       return self.pytorch.torch_xla_model.is_master_ordinal(local=False)
-    else:
+    elif self.pytorch.num_nodes > 1:
       return self.torch.distributed.get_rank() == 0
+    else:
+      return True
 
   def GetShortSummary(self) -> str:
 
