@@ -112,7 +112,7 @@ def dataload_worker(x              : int,
                     batch_per_feed : int,
                     ) -> typing.Dict[str, torch.Tensor]:
   try:
-    return [func(feed) for _ in range(batch * batch_per_feed)]
+    return [f for _ in range(batch // batch_per_feed) for f in [func(feed)] * batch_per_feed]
   except Exception:
     return None
 
@@ -493,20 +493,20 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
-              [])
+              [[]] * len(total_cand))
     except KeyboardInterrupt:
       self.raised_keyboard_int = True
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
-              [])
+              [[]] * len(total_cand))
     except Exception as e:
       l.getLogger().error(e)
       self.raised_exception = e
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
-              [])
+              [[]] * len(total_cand))
 
   def initOrGetQueue(self) -> int:
     """
@@ -582,12 +582,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                          ):
           if batch:
             out = {
-              k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(sample_batch_per_feed, dim = 0)
+              k: torch.from_numpy(v).unsqueeze(0)
               for (k, v) in batch[0].items()
             }
             for f in batch[1:]:
               for k, v in f.items():
-                nt = torch.from_numpy(v).unsqueeze(0).repeat_interleave(sample_batch_per_feed, dim = 0)
+                nt = torch.from_numpy(v).unsqueeze(0)
                 out[k] = torch.cat((out[k], nt), 0)
             for k in inputs.keys():
               inputs[k].append(out[k])
