@@ -353,7 +353,7 @@ def rmtrash(*components):
 
       >>> rmtrash("foo", "bar")
 
-      >>> rmtrash("/home/labm8/file.txt")
+      >>> rmtrash("/home/file.txt")
 
   Arguments:
       *components (string[]): path to the file or directory.
