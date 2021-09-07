@@ -400,7 +400,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         better_found = None
         while not better_found and cmp_rate[1] < 160000: # TEMP add
           # Pre-process inputs
-          rem = 8192 // self.sample_batch_size # TEMP add
+          rem = 4096 // self.sample_batch_size # TEMP add
           inputs = self.collateInputData(feed.input_feed, rem, sample_batch_per_feed)
           # Infer
           outputs, time = mwrapper.sample_model_step(
