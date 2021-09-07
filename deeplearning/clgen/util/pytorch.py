@@ -3,6 +3,7 @@ from absl import flags
 import os
 
 from deeplearning.clgen.util import gpu
+from deeplearning.clgen.util import environment
 
 FLAGS = flags.FLAGS
 
@@ -29,20 +30,24 @@ offset_device = None
 devices       = None
 device        = None
 num_gpus      = None
+num_nodes     = environment.WORLD_SIZE
+tcp_store     = None
 
-def initPytorch(local_rank = -1):
+def initPytorch() -> None:
   global torch_tpu_available
   global offset_device
   global devices
   global device
   global num_gpus
+  global num_nodes
+  global tcp_store
   if FLAGS.pt_cpu_only:
     device = torch.device("cpu")
     num_gpus = 0
   elif torch_tpu_available:
     device = torch_xla.xla_device()
     num_gpus = 0
-  elif local_rank == -1:
+  elif num_nodes == 1:
     # if num_gpus is > 1 we'll use nn.DataParallel.
     # If you only want to use a specific subset of GPUs use `CUDA_VISIBLE_DEVICES=0`
     # Explicitly set CUDA to the first (index 0) CUDA device, otherwise `set_device` will
@@ -57,12 +62,31 @@ def initPytorch(local_rank = -1):
       "cuda:{}".format(str(available_gpus[0]['id'])) if torch.cuda.is_available() and available_gpus else "cpu"
     )
     num_gpus = torch.cuda.device_count()
+    if device.type == "cuda":
+      torch.cuda.set_device(device)
   else:
     # Here, we'll use torch.distributed.
-    # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
-    torch.distributed.init_process_group(backend="nccl")
-    device = torch.device("cuda", local_rank)
-    num_gpus = 1
+    # Initializes the distributed backend which will take care of sychronizing nodes/GPUs.
+    # This branch wiill trigget DistributedDataParalel instead of simple DP.
+    # Distributed training prohibits manual selection of GPUs and takes for granted that cuda is available.
+    tcp_store = torch.distributed.TCPStore(
+      environment.MASTER_ADDR,
+      environment.MASTER_PORT,
+      num_nodes,
+      environment.WORLD_RANK == 0
+    )
+    torch.distributed.init_process_group(
+      backend    = "nccl",
+      store      = tcp_store,
+      rank       = environment.WORLD_RANK,
+      world_size = num_nodes,
+    )
+    num_nodes = torch.distributed.get_world_size()
+    num_gpus  = num_nodes
 
-  if device.type == "cuda":
+    device = torch.device("cuda", environment.LOCAL_RANK)
+    offset_device = torch.device("cuda", environment.LOCAL_RANK)
+    
     torch.cuda.set_device(device)
+
+  return
