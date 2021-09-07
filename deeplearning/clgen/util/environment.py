@@ -28,7 +28,7 @@ try:
   INSTCOUNT           = check_path_exists(os.environ['INSTCOUNT'])
   AUTOPHASE           = check_path_exists(os.environ['AUTOPHASE'])
   MASTER_PORT         = int(os.environ.get("MASTER_PORT", 8738))
-  MASTER_ADDR         = int(os.environ.get("MASTER_ADDR", "127.0.0.1"))
+  MASTER_ADDR         = os.environ.get("MASTER_ADDR", "127.0.0.1")
   LOCAL_RANK          = int(os.environ.get("LOCAL_RANK", os.environ.get("SLURM_LOCALID", 0)))
   WORLD_RANK          = int(os.environ.get("RANK", os.environ.get("SLURM_PROCID", 0)))
   WORLD_SIZE          = int(os.environ.get("WORLD_SIZE", os.environ.get("SLURM_NTASKS", 1)))
