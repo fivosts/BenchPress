@@ -494,20 +494,20 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
-              [])
+              [[]] * len(total_cand))
     except KeyboardInterrupt:
       self.raised_keyboard_int = True
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
-              [])
+              [[]] * len(total_cand))
     except Exception as e:
       l.getLogger().error(e)
       self.raised_exception = e
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
-              [])
+              [[]] * len(total_cand))
 
   def initOrGetQueue(self) -> int:
     """

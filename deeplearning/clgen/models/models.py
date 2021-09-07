@@ -448,7 +448,7 @@ class Model(object):
     except StopIteration:
       return False, seq_count
 
-    if not indices:
+    if not samples:
       # Return empty means model has not produced something that can be stored.
       # This if accommodates active sampling, which is very selective.
       return True, seq_count
