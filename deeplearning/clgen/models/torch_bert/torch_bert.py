@@ -20,7 +20,6 @@ from __future__ import print_function
 
 import os
 import shutil
-import multiprocessing
 import glob
 import typing
 import pathlib
@@ -84,45 +83,28 @@ flags.DEFINE_boolean(
   "Use TensorRT for the sampling model."
 )
 
-def model_step_worker(queue  : multiprocessing.Queue,
-                      model  : typing.TypeVar('torch.nn.Module'),
-                      device : str,
-                      input_ids            : typing.List[typing.TypeVar('torch.Tensor')],
-                      attention_mask       : typing.List[typing.TypeVar('torch.Tensor')],
-                      position_ids         : typing.List[typing.TypeVar('torch.Tensor')],
-                      masked_lm_labels     : typing.List[typing.TypeVar('torch.Tensor')],
-                      masked_lm_lengths    : typing.List[typing.TypeVar('torch.Tensor')],
-                      ) -> typing.Dict[str, typing.List[typing.List[int]]]:
-  try:
+# def model_step_worker(queue  : multiprocessing.Queue,
+#                       model  : typing.TypeVar('torch.nn.Module'),
+#                       device : str,
+#                       input_ids            : typing.List[typing.TypeVar('torch.Tensor')],
+#                       attention_mask       : typing.List[typing.TypeVar('torch.Tensor')],
+#                       position_ids         : typing.List[typing.TypeVar('torch.Tensor')],
+#                       masked_lm_labels     : typing.List[typing.TypeVar('torch.Tensor')],
+#                       masked_lm_lengths    : typing.List[typing.TypeVar('torch.Tensor')],
+#                       ) -> typing.Dict[str, typing.List[typing.List[int]]]:
+#   try:
 
-    model.sample_workload(
-      input_ids            = input_ids,
-      attention_mask       = attention_mask,
-      position_ids         = position_ids[0].to(device),
-      device = device,
-      queue = queue
-    )
-
-    # for ids, att, pos, mll, mlg in zip(
-                                    #   input_ids,
-                                    #   attention_mask,
-                                    #   position_ids,
-                                    #   masked_lm_labels,
-                                    #   masked_lm_lengths,
-                                    # ):
-    #   outputs = model(
-    #               input_ids            = ids.to(device),
-    #               attention_mask       = att.to(device),
-    #               position_ids         = pos.to(device),
-    #               masked_lm_labels     = mll.to(device),
-    #             )
-    #   outputs['input_ids']         = [[int(y) for y in x] for x in ids.numpy()]
-    #   outputs['masked_lm_lengths'] = list(mlg.numpy())
-    #   queue.put(outputs, block = False)
-  except Exception as e:
-    l.getLogger().error(e)
-    exit(1)
-  return
+#     model.sample_workload(
+#       input_ids            = input_ids,
+#       attention_mask       = attention_mask,
+#       position_ids         = position_ids[0].to(device),
+#       device = device,
+#       queue = queue
+#     )
+#   except Exception as e:
+#     l.getLogger().error(e)
+#     exit(1)
+#   return
 
 class torchBert(backends.BackendBase):
 
@@ -232,17 +214,14 @@ class torchBert(backends.BackendBase):
 
     m = model.BertForPreTraining(self.bert_config, tokenizer = self.tokenizer).to(self.pytorch.offset_device)
 
-    if self.pytorch.num_gpus > 1:
-      m = self.torch.nn.DataParallel(m)
-
-    dummy_num_machines = -1
-    if dummy_num_machines != -1:
+    if self.pytorch.num_nodes > 1:
       m = self.torch.nn.parallel.DistributedDataParallel(
         m,
-        device_ids=[dummy_num_machines],
-        output_device=dummy_num_machines,
-        find_unused_parameters=True,
+        device_ids    = [self.pytorch.offset_device],
+        output_device = self.pytorch.offset_device,
       )
+    elif self.pytorch.num_gpus > 1:
+      m = self.torch.nn.DataParallel(m)
 
     opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
       model           = m,
@@ -264,10 +243,6 @@ class torchBert(backends.BackendBase):
     """
     Model parameter initialization for inference.
     """
-    try:
-      multiprocessing.set_start_method('spawn')
-    except RuntimeError as e:
-      pass
     self._ConfigModelParams(is_sampling = True)
     self.sampler = sampler
     self.temperature = sampler.temperature
@@ -283,21 +258,6 @@ class torchBert(backends.BackendBase):
     else:
       mdl = model.BertForPreTraining
 
-    # m = []
-    # if self.pytorch.num_gpus > 1:
-    #   d = list(self.pytorch.devices)
-    # else:
-    #   d = [self.pytorch.device]
-
-    # for dev in d:
-    #   m.append(mdl(
-    #       self.bert_config,
-    #       tokenizer = self.tokenizer,
-    #       use_categorical = FLAGS.categorical_sampling,
-    #       temperature = self.temperature
-    #     ).to(dev)
-    #   )
-
     m = mdl(
       self.bert_config,
       tokenizer = self.tokenizer,
@@ -305,21 +265,20 @@ class torchBert(backends.BackendBase):
       temperature = self.temperature
     ).to(self.pytorch.offset_device)
 
-    if self.pytorch.num_gpus > 1:
-      m = self.torch.nn.DataParallel(m)
-
-    if FLAGS.is_trt:
-      for mdl_instance, dev in zip(m, d):
-        mdl_instance.init_engine(self.cache, dev.index, sampler.batch_size, sampler.sequence_length, self.tokenizer.vocab_size, self.config.architecture.max_position_embeddings)
-
-    dummy_num_machines = -1
-    if dummy_num_machines != -1:
+    if self.pytorch.num_nodes > 1:
       m = self.torch.nn.parallel.DistributedDataParallel(
         m,
         device_ids=[dummy_num_machines],
         output_device=dummy_num_machines,
         find_unused_parameters=True,
       )
+    elif self.pytorch.num_gpus > 1:
+      m = self.torch.nn.DataParallel(m)
+
+    if FLAGS.is_trt:
+      for mdl_instance, dev in zip(m, d):
+        mdl_instance.init_engine(self.cache, dev.index, sampler.batch_size, sampler.sequence_length, self.tokenizer.vocab_size, self.config.architecture.max_position_embeddings)
+
     self.sample = torchBert.SampleBertEstimator(m, data_generator)
     l.getLogger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
     return
@@ -389,71 +348,72 @@ class torchBert(backends.BackendBase):
     bar.update(len(outputs['generated_samples']))
     end = time.time()
     return outputs, end-start
-    raise NotImplementedError
 
-    if not self.pytorch.num_gpus > 1 or is_live:
-      bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = False, position = 0)
-      for b_idx in range(len(inputs['input_ids'])):
-        out = models[0](
-                input_ids            = inputs['input_ids'][b_idx].to(devices[0]),
-                attention_mask       = inputs['input_mask'][b_idx].to(devices[0]),
-                position_ids         = inputs['position_ids'][b_idx].to(devices[0]),
-                masked_lm_labels     = inputs['mask_labels'][b_idx].to(devices[0]),
-                is_live              = is_live,
-              )
-        outputs['generated_samples'] += out['generated_samples']
-        outputs['sample_indices']    += out['sample_indices']
-        outputs['input_ids']         += list(inputs['input_ids'][b_idx].numpy())
-        outputs['masked_lm_lengths'] += list(inputs['masked_lm_lengths'][b_idx].numpy())
-        bar.update(len(out['generated_samples']))
-      return outputs
+    raise NotImplementedError ("Haven't implemented live sampling.")
 
-    chunk = 1 + (len(inputs['input_ids']) // len(devices))
-    procs = []
-    queue = multiprocessing.Queue()
-    for idx, (m, d) in enumerate(zip(models, devices)):
-      if idx*chunk < len(inputs['input_ids']):
-        procs.append(multiprocessing.Process(
-          target = model_step_worker, kwargs = {
-            'queue'                : queue,
-            'model'                : m,
-            'device'               : d,
-            'input_ids'            : inputs['input_ids'][idx * chunk: (idx+1) * chunk],
-            'attention_mask'       : inputs['input_mask'][idx * chunk: (idx+1) * chunk],
-            'position_ids'         : inputs['position_ids'][idx * chunk: (idx+1) * chunk],
-            'masked_lm_labels'     : inputs['mask_labels'][idx * chunk: (idx+1) * chunk],
-            'masked_lm_lengths'    : inputs['masked_lm_lengths'][idx * chunk: (idx+1) * chunk],
-          }
-        ))
-    try:
-      for job in procs:
-        job.start()
-      bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = False, position = 0)
-      ln = 0
-      while ln < len(inputs['input_ids']) * len(inputs['input_ids'][0]):
-        try:
-          batch = queue.get(timeout = 360)
-          outputs['generated_samples'] += batch['generated_samples']
-          outputs['sample_indices']    += batch['sample_indices']
-          outputs['input_ids']         += batch['input_ids']
-          outputs['masked_lm_lengths'] += batch['masked_lm_lengths']
-          ln = len(outputs['generated_samples'])
-          bar.update(len(batch['generated_samples']))
-        except multiprocessing.queues.Empty:
-          l.getLogger().warn("Queue timed-out having gathered {} sequences".format(len(outputs['generated_samples'])))
-          pass
-      for job in procs:
-        job.join()
-      if not queue.empty():
-        raise ValueError("Queue is not empty!")
-    except KeyboardInterrupt:
-      try:
-        for job in procs:
-          job.terminate()
-      except Exception:
-        pass
-      raise KeyboardInterrupt
-    return outputs
+    # if not self.pytorch.num_gpus > 1 or is_live:
+    #   bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = False, position = 0)
+    #   for b_idx in range(len(inputs['input_ids'])):
+    #     out = models[0](
+    #             input_ids            = inputs['input_ids'][b_idx].to(devices[0]),
+    #             attention_mask       = inputs['input_mask'][b_idx].to(devices[0]),
+    #             position_ids         = inputs['position_ids'][b_idx].to(devices[0]),
+    #             masked_lm_labels     = inputs['mask_labels'][b_idx].to(devices[0]),
+    #             is_live              = is_live,
+    #           )
+    #     outputs['generated_samples'] += out['generated_samples']
+    #     outputs['sample_indices']    += out['sample_indices']
+    #     outputs['input_ids']         += list(inputs['input_ids'][b_idx].numpy())
+    #     outputs['masked_lm_lengths'] += list(inputs['masked_lm_lengths'][b_idx].numpy())
+    #     bar.update(len(out['generated_samples']))
+    #   return outputs
+
+    # chunk = 1 + (len(inputs['input_ids']) // len(devices))
+    # procs = []
+    # queue = multiprocessing.Queue()
+    # for idx, (m, d) in enumerate(zip(models, devices)):
+    #   if idx*chunk < len(inputs['input_ids']):
+    #     procs.append(multiprocessing.Process(
+    #       target = model_step_worker, kwargs = {
+    #         'queue'                : queue,
+    #         'model'                : m,
+    #         'device'               : d,
+    #         'input_ids'            : inputs['input_ids'][idx * chunk: (idx+1) * chunk],
+    #         'attention_mask'       : inputs['input_mask'][idx * chunk: (idx+1) * chunk],
+    #         'position_ids'         : inputs['position_ids'][idx * chunk: (idx+1) * chunk],
+    #         'masked_lm_labels'     : inputs['mask_labels'][idx * chunk: (idx+1) * chunk],
+    #         'masked_lm_lengths'    : inputs['masked_lm_lengths'][idx * chunk: (idx+1) * chunk],
+    #       }
+    #     ))
+    # try:
+    #   for job in procs:
+    #     job.start()
+    #   bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = False, position = 0)
+    #   ln = 0
+    #   while ln < len(inputs['input_ids']) * len(inputs['input_ids'][0]):
+    #     try:
+    #       batch = queue.get(timeout = 360)
+    #       outputs['generated_samples'] += batch['generated_samples']
+    #       outputs['sample_indices']    += batch['sample_indices']
+    #       outputs['input_ids']         += batch['input_ids']
+    #       outputs['masked_lm_lengths'] += batch['masked_lm_lengths']
+    #       ln = len(outputs['generated_samples'])
+    #       bar.update(len(batch['generated_samples']))
+    #     except multiprocessing.queues.Empty:
+    #       l.getLogger().warn("Queue timed-out having gathered {} sequences".format(len(outputs['generated_samples'])))
+    #       pass
+    #   for job in procs:
+    #     job.join()
+    #   if not queue.empty():
+    #     raise ValueError("Queue is not empty!")
+    # except KeyboardInterrupt:
+    #   try:
+    #     for job in procs:
+    #       job.terminate()
+    #   except Exception:
+    #     pass
+    #   raise KeyboardInterrupt
+    # return outputs
 
   def PreTrain(self,
                corpus,
@@ -540,7 +500,8 @@ class torchBert(backends.BackendBase):
             continue # Stupid bar won't resume.
 
           for step in tqdm.auto.trange(self.steps_per_epoch, desc="Batch", leave = False):
-            start = datetime.datetime.utcnow()
+            if self.is_world_process_zero():
+              start = datetime.datetime.utcnow()
             try:
               inputs = next(batch_iterator)
             except StopIteration:
@@ -560,60 +521,68 @@ class torchBert(backends.BackendBase):
               self.train.optimizer.step()
             self.train.scheduler.step()
 
-            exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
-            if FLAGS.reward_compilation >= 0 and FLAGS.reward_compilation <= epoch * self.steps_per_epoch + step and not pre_train:
-              correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'].cpu().numpy())) if step_out['compile_status'][en] == 1]
-              for s in correct_samples:
-                feature_vector = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(s[1]))
-                correct_sample_obs.OnSample(model_pb2.Sample(
-                    train_step             = self.current_step,
-                    sample_feed            = self.tokenizer.tokensToString(s[0], ignore_token = self.tokenizer.padToken).replace("\\n", "\n"),
-                    text                   = self.tokenizer.tokensToString(s[1], ignore_token = self.tokenizer.padToken).replace("\\n", "\n"),
-                    encoded_text           = ",".join([str(t) for t in s[1]]),
-                    sample_indices         = '',
-                    encoded_sample_indices = '',
-                    sample_time_ms         = int(round(exec_time_ms / self.train_batch_size)),
-                    feature_vector         = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
-                    num_tokens             = len([x for x in s[1] if x != self.tokenizer.padToken]),
-                    categorical_sampling   = False,
-                    compile_status         = True,
-                    date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
+            if self.is_world_process_zero():
+              exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
+              self.torch.distributed.all_reduce(step_out["masked_lm_loss"])
+              self.torch.distributed.all_reduce(step_out["next_sentence_loss"])
+              self.torch.distributed.all_reduce(total_loss)
+              self.torch.distributed.all_reduce(inputs['masked_lm_lengths'])
+              if FLAGS.reward_compilation >= 0 and FLAGS.reward_compilation <= epoch * self.steps_per_epoch + step and not pre_train:
+                correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'].cpu().numpy())) if step_out['compile_status'][en] == 1]
+                for s in correct_samples:
+                  feature_vector = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(s[1]))
+                  correct_sample_obs.OnSample(model_pb2.Sample(
+                      train_step             = self.current_step,
+                      sample_feed            = self.tokenizer.tokensToString(s[0], ignore_token = self.tokenizer.padToken).replace("\\n", "\n"),
+                      text                   = self.tokenizer.tokensToString(s[1], ignore_token = self.tokenizer.padToken).replace("\\n", "\n"),
+                      encoded_text           = ",".join([str(t) for t in s[1]]),
+                      sample_indices         = '',
+                      encoded_sample_indices = '',
+                      sample_time_ms         = int(round(exec_time_ms / self.train_batch_size)),
+                      feature_vector         = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
+                      num_tokens             = len([x for x in s[1] if x != self.tokenizer.padToken]),
+                      categorical_sampling   = False,
+                      compile_status         = True,
+                      date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
+                    )
                   )
+              if not pre_train:
+                train_hook.step(
+                  masked_lm_loss          = step_out['masked_lm_loss'].mean().item(),
+                  next_sentence_loss      = step_out['next_sentence_loss'].mean().item(),
+                  total_loss              = total_loss.item(),
+                  learning_rate           = self.train.scheduler.get_last_lr()[0],
+                  compilation_rate        = step_out['batch_compilation_rate'].mean().item(),
+                  num_correct_samples     = (correct_sample_obs.sample_id if correct_sample_obs is not None else None),
+                  batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
+                                                 for b in inputs['masked_lm_lengths']]) / len(inputs['masked_lm_lengths']),
+                  batch_execution_time_ms = exec_time_ms,
+                  time_per_sample_ms      = exec_time_ms / self.train_batch_size,
                 )
-            if not pre_train:
-              train_hook.step(
-                masked_lm_loss          = step_out['masked_lm_loss'].mean().item(),
-                next_sentence_loss      = step_out['next_sentence_loss'].mean().item(),
-                total_loss              = total_loss.item(),
-                learning_rate           = self.train.scheduler.get_last_lr()[0],
-                compilation_rate        = step_out['batch_compilation_rate'].mean().item(),
-                num_correct_samples     = (correct_sample_obs.sample_id if correct_sample_obs is not None else None),
-                batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
-                                               for b in inputs['masked_lm_lengths']]) / len(inputs['masked_lm_lengths']),
-                batch_execution_time_ms = exec_time_ms,
-                time_per_sample_ms      = exec_time_ms / self.train_batch_size,
-              )
-            else:
-              train_hook.step(
-                masked_lm_loss          = step_out['masked_lm_loss'].mean().item(),
-                next_sentence_loss      = step_out['next_sentence_loss'].mean().item(),
-                total_loss              = total_loss.item(),
-                learning_rate           = self.train.scheduler.get_last_lr()[0],
-                batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
-                                               for b in inputs['masked_lm_lengths']]) / len(inputs['masked_lm_lengths']),
-                batch_execution_time_ms = exec_time_ms,
-                time_per_sample_ms      = exec_time_ms / self.train_batch_size,
-              )
+              else:
+                train_hook.step(
+                  masked_lm_loss          = step_out['masked_lm_loss'].mean().item(),
+                  next_sentence_loss      = step_out['next_sentence_loss'].mean().item(),
+                  total_loss              = total_loss.item(),
+                  learning_rate           = self.train.scheduler.get_last_lr()[0],
+                  batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
+                                                 for b in inputs['masked_lm_lengths']]) / len(inputs['masked_lm_lengths']),
+                  batch_execution_time_ms = exec_time_ms,
+                  time_per_sample_ms      = exec_time_ms / self.train_batch_size,
+                )
 
-            self.train.model.zero_grad()
-            if self.current_step == 0:
-              l.getLogger().info("Starting Loss: {}".format(total_loss.item()), mail_level = 4)
-            self.current_step += 1
+              self.train.model.zero_grad()
+              if self.current_step == 0:
+                l.getLogger().info("Starting Loss: {}".format(total_loss.item()), mail_level = 4)
+              self.current_step += 1
 
           # End of Epoch
           set_mail = "Epoch {} Loss: {}\n".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss)
           l.getLogger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss), mail_level = 4)
           self.saveCheckpoint(self.train, pre_train)
+
+          if pytorch.num_nodes > 1:
+            loader.sampler.set_epoch(epoch)
 
           if FLAGS.validate_per_epoch and self.train.data_generator.config.validation_split > 0:
             val_ml_loss, val_nsp_loss = self.Validate(per_epoch = True, pre_train = pre_train)
@@ -1027,9 +996,7 @@ class torchBert(backends.BackendBase):
     if self.torch_tpu_available:
       return self.pytorch.torch_xla_model.is_master_ordinal(local=False)
     else:
-      # TODO
-      dummy_local_rank = -1
-      return dummy_local_rank == -1 or self.torch.distributed.get_rank() == 0
+      return self.torch.distributed.get_rank() == 0
 
   def GetShortSummary(self) -> str:
 
