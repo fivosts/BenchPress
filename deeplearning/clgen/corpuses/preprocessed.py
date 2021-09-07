@@ -24,7 +24,7 @@ import tempfile
 import time
 import typing
 import functools
-
+import humanize
 import progressbar
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
@@ -34,12 +34,13 @@ from deeplearning.clgen.preprocessors import preprocessors
 from deeplearning.clgen.proto import corpus_pb2
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.github import bigQuery_database as bqdb
-from absl import flags
-from labm8.py import fs
-import humanize
+from deeplearning.clgen.util import fs
 from deeplearning.clgen.util import sqlutil
+
 from eupy.native import logger as l
 from eupy.hermes import client
+
+from absl import flags
 
 FLAGS = flags.FLAGS
 

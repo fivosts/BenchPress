@@ -44,7 +44,7 @@ from deeplearning.clgen.proto import corpus_pb2
 
 from absl import flags
 
-from labm8.py import hashcache
+from deeplearning.clgen.util import hashcache
 from deeplearning.clgen.util import sqlutil
 
 from eupy.native import logger as l

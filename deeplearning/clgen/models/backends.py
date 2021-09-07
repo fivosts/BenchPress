@@ -21,7 +21,8 @@ from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.proto import model_pb2
 from absl import flags
-from labm8.py import cache
+
+from deeplearning.clgen.util import cache
 
 FLAGS = flags.FLAGS
 

@@ -776,7 +776,7 @@ class ColumnFactory(object):
 
   @staticmethod
   def MillisecondDatetime(
-    nullable: bool = False, default,
+    nullable: bool = False, default = None,
   ):
     """Return a datetime column with millisecond precision.
 
