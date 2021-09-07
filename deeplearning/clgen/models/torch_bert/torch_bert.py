@@ -341,6 +341,7 @@ class torchBert(backends.BackendBase):
         ),
       )
       outputs['generated_samples'] = list(out.detach().cpu().numpy())
+      outputs['sample_indices']    = [[]] * len(out)
       # outputs['sample_indices']    = [[]] * len(outputs['generated_samples'])
       # outputs['masked_lm_lengths'] = [[]] * len(outputs['generated_samples'])
       # outputs['input_ids']         = [[]] * len(outputs['generated_samples'])
@@ -523,10 +524,11 @@ class torchBert(backends.BackendBase):
 
             if self.is_world_process_zero():
               exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
-              self.torch.distributed.all_reduce(step_out["masked_lm_loss"])
-              self.torch.distributed.all_reduce(step_out["next_sentence_loss"])
-              self.torch.distributed.all_reduce(total_loss)
-              self.torch.distributed.all_reduce(inputs['masked_lm_lengths'])
+              if self.pytorch.num_nodes > 1:
+                self.torch.distributed.all_reduce(step_out["masked_lm_loss"])
+                self.torch.distributed.all_reduce(step_out["next_sentence_loss"])
+                self.torch.distributed.all_reduce(total_loss)
+                self.torch.distributed.all_reduce(inputs['masked_lm_lengths'])
               if FLAGS.reward_compilation >= 0 and FLAGS.reward_compilation <= epoch * self.steps_per_epoch + step and not pre_train:
                 correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'].cpu().numpy())) if step_out['compile_status'][en] == 1]
                 for s in correct_samples:
@@ -581,7 +583,7 @@ class torchBert(backends.BackendBase):
           l.getLogger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss), mail_level = 4)
           self.saveCheckpoint(self.train, pre_train)
 
-          if pytorch.num_nodes > 1:
+          if self.pytorch.num_nodes > 1:
             loader.sampler.set_epoch(epoch)
 
           if FLAGS.validate_per_epoch and self.train.data_generator.config.validation_split > 0:
