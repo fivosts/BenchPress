@@ -20,9 +20,9 @@ from absl import flags
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import monitors
+from deeplearning.clgen.util import fs
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.features import extractor
-from labm8.py import fs
 
 FLAGS = flags.FLAGS
 

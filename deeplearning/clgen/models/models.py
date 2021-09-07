@@ -47,7 +47,7 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import telemetry_pb2
 from deeplearning.clgen.preprocessors import opencl
 from absl import flags
-from labm8.py import sqlutil
+from deeplearning.clgen.util import sqlutil
 
 from eupy.native import logger as l
 

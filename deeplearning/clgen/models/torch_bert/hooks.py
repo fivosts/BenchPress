@@ -89,7 +89,7 @@ class tensorMonitorHook(object):
               self.plot_tensors[k]['value'].append(v)
               self.plot_tensors[k]['step'].append(ch['step'])
       else:
-        raise FileNotFoundError(self.jsonfile)
+        l.getLogger().error("Training json log-file not found. Will keep track from this point on.")
     return
 
   def _step_triggered(self):

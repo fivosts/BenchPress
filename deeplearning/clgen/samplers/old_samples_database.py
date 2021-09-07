@@ -39,7 +39,6 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
   # model's train step that generated the sample
   train_step             : int = sql.Column(sql.Integer,    nullable = False)
   # Original input where the feed came from
-  original_input         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Starting feed of model
   sample_feed            : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # String-format generated text
@@ -51,7 +50,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
   # Encoded generated tokens
   encoded_sample_indices : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Whether the generated sample compiles or not.
-  compile_status         : bool = sql.Column(sql.Boolean,  nullable = False)
+  compile_status         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Sample's vector of features.
   feature_vector         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Length of total sequence in number of tokens
@@ -70,7 +69,6 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "sha256"                 : crypto.sha256_str(proto.text),
       "train_step"             : proto.train_step,
       "encoded_text"           : proto.encoded_text,
-      "original_input"         : proto.original_input,
       "sample_feed"            : proto.sample_feed,
       "text"                   : proto.text,
       "sample_indices"         : proto.sample_indices,
@@ -106,7 +104,7 @@ class SamplesDatabase(sqlutil.Database):
   def correct_samples(self) -> typing.Set[str]:
     """Get samples that compile from SamplesDatabase."""
     with self.Session() as s:
-      return s.query(Sample).filter(Sample.compile_status == True).yield_per(1000).enable_eagerloads(False)
+      return s.query(Sample).filter(Sample.compile_status == "Yes").yield_per(1000).enable_eagerloads(False)
 
   @property
   def get_samples_features(self) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:

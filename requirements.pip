@@ -40,6 +40,7 @@ h5py==2.10.0
 humanize==0.5.1
 hyperlink==20.0.1
 idna==2.10
+ifcfg==0.22
 importlib-metadata==2.0.0
 incremental==17.5.0
 itemadapter==0.1.1
