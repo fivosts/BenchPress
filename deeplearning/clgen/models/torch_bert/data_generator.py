@@ -251,11 +251,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       dataset    = dataset,
       batch_size = self.training_opts.batch_size,
       sampler    = (sampler
-        if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
+        if pytorch.num_nodes <= 1 or not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
         else torch.utils.data.distributed.DistributedSampler(
-          dataset,
-          num_replicas = pytorch.torch_xla.xrt_world_size(),
-          rank = pytorch.torch_xla.get_ordinal()
+          dataset      = dataset,
+          num_replicas = pytorch.num_nodes if not pytorch.torch_tpu_available else pytorch.torch_xla.xrt_world_size(),
+          rank         = pytorch.torch.distributed.get_rank() if not pytorch.torch_tpu_available else pytorch.torch_xla.get_ordinal()
         )
       ),
       num_workers = 0,
@@ -318,15 +318,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       # This dataloader will return 8 feeds. Each will be repeated 4 times.
       # 32 sequences will be given to the model.
       batch_size = batch_size,
-      sampler    = (
-            sampler
-            if not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
-            else torch.utils.data.distributed.DistributedSampler(
-                  dataset, 
-                  num_replicas = pytorch.torch_xla.xrt_world_size(), 
-                  rank = pytorch.torch_xla.get_ordinal()
-                 )
-            ),
+      sampler    = (sampler
+        if pytorch.num_nodes <= 1 or not pytorch.torch_tpu_available or pytorch.torch_xla.xrt_world_size() <= 1
+        else torch.utils.data.distributed.DistributedSampler(
+          dataset      = dataset,
+          num_replicas = pytorch.num_nodes if not pytorch.torch_tpu_available else pytorch.torch_xla.xrt_world_size(),
+          rank         = pytorch.torch.distributed.get_rank() if not pytorch.torch_tpu_available else pytorch.torch_xla.get_ordinal()
+          )
+      ),
       num_workers = 0,
       drop_last   = False,
       )
