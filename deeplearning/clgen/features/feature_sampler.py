@@ -93,24 +93,14 @@ def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Pat
   """
   Fetch all cl files from base path and atomize, preprocess
   kernels to single instances.
+
+  Original benchmarks extracted from suites, go through a series of pre-processors:
+  1. Include statements are removed.
+  2. Code is preprocessed with shim (macro expansion).
+  3. Double underscores are removed.
+  4. void kernel -> kernel void
+  5. Translation units are split to tuples of (kernel, utility/global space)
   """
-  # cf = pathlib.Path("/home/foivos/PhD/Code/clgen/rodinia_benchmarks/histogram1024.cl")
-  # cf2 = ""
-  # with open(cf, 'r') as inf:
-  #   cf2 = inf.read() 
-  # ks = opencl.ExtractSingleKernelsHeaders(
-  #        opencl.InvertKernelSpecifier(
-  #        opencl.StripDoubleUnderscorePrefixes(
-  #        opencl.ClangPreprocessWithShim(
-  #        c.StripIncludes(cf2)))))
-  # print(len(ks))
-  # feats1 = extractor.ExtractRawFeatures(ks[0][0], ['GreweFeatures'], header_file = ks[0][1], use_aux_headers = False)  
-  # feats3 = extractor.ExtractFeatures(ks[0][0], ['GreweFeatures'], header_file = ks[0][1], use_aux_headers = False)  
-  # feats2 = extractor.ExtractRawFeatures(ks[0][0], ['AutophaseFeatures'], header_file = ks[0][1], use_aux_headers = False)  
-  # print(feats1)
-  # print(feats3)
-  # # print(feats2)
-  # exit()
   contentfiles = iter_cl_files(path)
   kernels = []
   for p, cf in contentfiles:
