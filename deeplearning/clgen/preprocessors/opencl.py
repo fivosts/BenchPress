@@ -26,8 +26,11 @@ from absl import flags
 
 FLAGS = flags.FLAGS
 
+# LibCLC
 LIBCLC         = environment.LIBCLC
+# OpenCL standard headers
 OPENCL_HEADERS = environment.OPENCL_HEADERS
+# Auxiliary .cl kernels that may need be included
 AUX_INCLUDE    = environment.AUX_INCLUDE
 
 CL_H           = os.path.join(OPENCL_HEADERS, "CL/cl.h")
@@ -196,9 +199,10 @@ def CompileOptimizer(text: str,
     Dictionary with 70-dimensional InstCount feature vector.
   """
   return clang.CompileOptimizer(
-    text,
-    ".cl",
-    GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers), optimization,
+    src = text,
+    suffix = ".cl",
+    cflags = GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers),
+    optimization = optimization,
     header_file = header_file,
   )
 
