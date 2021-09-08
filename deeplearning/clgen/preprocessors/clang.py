@@ -223,17 +223,8 @@ def CompileOptimizer(src: str,
     if header_file:
       # Hacky way, but llvm-extract requires exact kernel function name
       k_name = src.split('kernel void')[1].split()
-      if "attribute" not in k_name[0]:
-        k_name = k_name[0]
-      else:
-        k_name = k_name[1]
-      chrs = []
-      for ch in k_name:
-        if ch == "(":
-          break
-        else:
-          chrs.append(ch)
-      k_name = ''.join(chrs)
+      k_name = k_name[1] if "attribute" in k_name[0] else k_name[0]
+      k_name = k_name.split('(', 1)[0]
 
       ext_cmd = (
         ["timeout", "-s9", str(timeout_seconds), str(LLVM_EXTRACT)]
