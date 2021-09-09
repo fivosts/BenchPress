@@ -630,18 +630,18 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       #   outputs['generated_samples'], outputs['sample_indices'],
       #   outputs['input_ids'], outputs['masked_lm_lengths']
       # )
-      for idx, batch in enumerate(pool.imap_unordered(
+      for idx, batch in enumerate(pool.map(
                                     functools.partial(
                                     candidate_worker,
                                     feed         = feed,
                                     tokenizer    = self.tokenizer,
                                     feat_sampler = self.feat_sampler,
-                                    ), outputs['generated_samples']
+                                    ),
+                                    outputs['generated_samples'],
                                   )):
         bar.update(idx+1)
         if batch is not None:
           cm_rate[0] += 1
-          # bar.update(min(bar.max_value, len(candidates)))
           candidates.append(batch)
           if 0 < batch.score < feed.input_score:
             if better_found is None or batch.score < better_found.score:
