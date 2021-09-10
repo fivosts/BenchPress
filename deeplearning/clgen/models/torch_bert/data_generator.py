@@ -497,6 +497,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
         if write_cache_proc:
           write_cache_proc.join()
+
         self.comp_rate[feed.gen_id] = [sum(x) for x in zip(self.comp_rate[feed.gen_id], cmp_rate)]
         self.exec_time[feed.gen_id] += exec_time
         self.comp_rate_mon.register((feed.gen_id, self.comp_rate[feed.gen_id][0] / self.comp_rate[feed.gen_id][1]))
