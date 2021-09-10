@@ -10,6 +10,8 @@ import gdown
 import json
 import math
 import subprocess
+import functools
+import multiprocessing
 
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import normalizers
@@ -37,6 +39,30 @@ targets = {
   'grid_walk'    : '',
 }
 
+def preprocessor_worker(contentfile_batch):
+  kernel_batch = []
+  p, cf = contentfile_batch
+  ks = opencl.ExtractSingleKernelsHeaders(
+       opencl.InvertKernelSpecifier(
+       opencl.StripDoubleUnderscorePrefixes(
+       opencl.ClangPreprocessWithShim(
+       c.StripIncludes(cf)))))
+  for k, h in ks:
+    kernel_batch.append((p, k, h))
+  return kernel_batch
+
+def benchmark_worker(benchmark, feature_space, reduced_git_corpus):
+  p, k, h = benchmark
+  features = extractor.ExtractFeatures(
+    k,
+    [feature_space],
+    header_file = h,
+    use_aux_headers = False
+  )
+  closest_git = sorted([(cf, calculate_distance(fts, features[feature_space], feature_space)) for cf, fts in reduced_git_corpus], key = lambda x: x[1])[0]
+  if features[feature_space] and closest_git[1] > 0:
+    return Benchmark(p, p.name, k, features[feature_space])
+
 @contextlib.contextmanager
 def GetContentFileRoot(path: pathlib.Path) -> typing.Iterator[pathlib.Path]:
   """
@@ -46,7 +72,6 @@ def GetContentFileRoot(path: pathlib.Path) -> typing.Iterator[pathlib.Path]:
   Yields:
     The path of a directory containing content files.
   """
-
   if not (path.parent / "benchmarks_registry.json").exists():
     raise FileNotFoundError("benchmarks_registry.json file not found.")
 
@@ -103,14 +128,9 @@ def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Pat
   """
   contentfiles = iter_cl_files(path)
   kernels = []
-  for p, cf in contentfiles:
-    ks = opencl.ExtractSingleKernelsHeaders(
-         opencl.InvertKernelSpecifier(
-         opencl.StripDoubleUnderscorePrefixes(
-         opencl.ClangPreprocessWithShim(
-         c.StripIncludes(cf)))))
-    for k, h in ks:
-      kernels.append((p, k, h))
+  pool = multiprocessing.Pool()
+  for kernel_batch in pool.map(preprocessor_worker, contentfiles):
+    kernels += kernel_batch
   return kernels
 
 def grid_walk_generator(feature_space: str) -> typing.Iterator[typing.Dict[str, float]]:
@@ -257,23 +277,16 @@ class EuclideanSampler(object):
         self.saveCheckpoint()
       else:
         kernels = yield_cl_kernels(self.path)
-        for p, k, h in kernels:
-          features = extractor.ExtractFeatures(
-            k,
-            [self.feature_space],
-            header_file = h,
-            use_aux_headers = False
-          )
-          closest_git = sorted([(cf, calculate_distance(fts, features[self.feature_space], self.feature_space)) for cf, fts in self.reduced_git_corpus], key = lambda x: x[1])[0]
-          if features[self.feature_space] and closest_git[1] > 0:
-            self.benchmarks.append(
-              Benchmark(
-                  p,
-                  p.name,
-                  k,
-                  features[self.feature_space],
-                )
-            )
+        pool = multiprocessing.Pool()
+        for benchmark in pool.map(
+                          functools.partial(
+                            benchmark_worker,
+                            feature_space = self.feature_space,
+                            reduced_git_corpus = self.reduced_git_corpus
+                          ), kernels
+                        ):
+          if benchmark:
+            self.benchmarks.append(benchmark)
     l.getLogger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     l.getLogger().info(', '.join([x for x in set([x.name for x in self.benchmarks])]))
     return
