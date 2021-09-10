@@ -215,7 +215,8 @@ def CompileOptimizer(src: str,
   try:
     bc = CompileLlvmBytecode(src, suffix, cflags, header_file, timeout_seconds)
   except ValueError as e:
-    return ""
+    raise ValueError("Compilation failed")
+
   with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix='.ll') as f:
     f.write(bc)
     f.flush()

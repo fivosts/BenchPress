@@ -76,15 +76,14 @@ class ActiveSample(typing.NamedTuple):
   # Active batch timestep where sample was acquired.
   # timestep       : int
 
-def candidate_worker(sample_out   : typing.Dict[str, np.array],
-                     feed         : np.array,
-                     feat_sampler : feature_sampler.EuclideanSampler,
-                     tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
-                     ) -> ActiveSample:
+def IR_candidate_worker(sample_out   : typing.Dict[str, np.array],
+                        feed         : np.array,
+                        feat_sampler : feature_sampler.EuclideanSampler,
+                        tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
+                        ) -> ActiveSample:
   # sample, indices, input_ids, masked_lm_lengths = sample_out
   try:
     code = tokenizer.ArrayToCode(sample_out, with_formatting = False)
-    _ = opencl.Compile(code)
     features = extractor.ExtractFeatures(code, [feat_sampler.feature_space])[feat_sampler.feature_space]
     if features:
       # return ActiveSample(
@@ -99,6 +98,26 @@ def candidate_worker(sample_out   : typing.Dict[str, np.array],
         features    = features, score  = feat_sampler.calculate_distance(features),
       )
     # return sample, indices, features, input_ids, masked_lm_lengths
+  except ValueError:
+    pass
+  except Exception:
+    pass
+  return None
+
+def text_candidate_worker(sample_out   : typing.Dict[str, np.array],
+                          feed         : np.array,
+                          feat_sampler : feature_sampler.EuclideanSampler,
+                          tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
+                          ) -> ActiveSample:
+  try:
+    code = tokenizer.ArrayToCode(sample_out, with_formatting = False)
+    _ = opencl.Compile(code)
+    features = extractor.ExtractFeatures(code, [feat_sampler.feature_space])[feat_sampler.feature_space]
+    if features:
+      return ActiveSample(
+        sample_feed = feed,     sample = sample_out,
+        features    = features, score  = feat_sampler.calculate_distance(features),
+      )
   except ValueError:
     pass
   except Exception:
@@ -396,7 +415,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
         # Iterate until you get the required amount of candidates
         # while len(step_candidates) < active_limit_per_feed:
-        better_found = None
+        better_found, it = None, 0
         while not better_found and cmp_rate[1] < 160000: # TEMP add
           # Pre-process inputs
           rem = 8192 // self.sample_batch_size # TEMP add
@@ -404,8 +423,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           # Infer
           outputs, time = mwrapper.sample_model_step(
             estimator.model,
-            # estimator.devices,
             inputs,
+            iteration = it,
           )
           # Post-process outputs.
           step_candidates = [] # TEMP add
@@ -417,10 +436,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           cmp_rate[1] += ts
           exec_time   += time
 
-          if better_found:
-            l.getLogger().warn("Found Better")
-          else:
-            l.getLogger().error("Not found better")
+          if better_found and feed.gen_id > 0:
+            l.getLogger().info("Improved score {} -> {}".format(round(feed.input_score, 3), round(better_found.score, 3)))
           # Calculate how many more to infer.
           try:
             rcands = active_limit_per_feed - len(step_candidates)
@@ -428,6 +445,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             rem = max(2, int((rcands // self.sample_batch_size) / crate))
           except ZeroDivisionError:
             pass
+          it += 1
 
         self.comp_rate[feed.gen_id] = [sum(x) for x in zip(self.comp_rate[feed.gen_id], cmp_rate)]
         self.exec_time[feed.gen_id] += exec_time
@@ -439,6 +457,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # Top-k candidates of ith generation.
         if feed.gen_id == 0:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
+          l.getLogger().info("Starting scores: {}".format(', '.join([str(round(c.score, 3)) for c in best_cands])))
         else:
           if not better_found:
             best_cands = []
@@ -510,7 +529,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
   def initOrGetQueue(self) -> int:
     """
-    If feed queue is not initialized, nitialize it by getting new datapoint.
+    If feed queue is not initialized, initialize it by getting new datapoint.
     Adds datapoint to InputFeed table of database.
 
     Returns:
@@ -526,7 +545,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       self.feed_queue.append(
         ActiveSampleFeed(
           input_feed     = cf,
-          input_features = list(extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), [self.feat_sampler.feature_space]).values())[0],
+          input_features = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), [self.feat_sampler.feature_space])[self.feat_sampler.feature_space],
           input_score    = math.inf,
           gen_id         = 0,
         )
@@ -630,15 +649,15 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       #   outputs['generated_samples'], outputs['sample_indices'],
       #   outputs['input_ids'], outputs['masked_lm_lengths']
       # )
-      for idx, batch in enumerate(pool.map(
-                                    functools.partial(
-                                    candidate_worker,
-                                    feed         = feed,
-                                    tokenizer    = self.tokenizer,
-                                    feat_sampler = self.feat_sampler,
-                                    ),
-                                    outputs['generated_samples'],
-                                  )):
+      if self.feat_sampler.feature_space != "GreweFeatures":
+        candidate_worker = functools.partial(
+          IR_candidate_worker, feed = feed, tokenizer = self.tokenizer, feat_sampler = self.feat_sampler,
+        )
+      else:
+        candidate_worker = functools.partial(
+          text_candidate_worker, feed = feed, tokenizer = self.tokenizer, feat_sampler = self.feat_sampler,
+        )
+      for idx, batch in enumerate(pool.map(candidate_worker,outputs['generated_samples'])):
         bar.update(idx+1)
         if batch is not None:
           cm_rate[0] += 1
@@ -646,6 +665,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           if 0 < batch.score < feed.input_score:
             if better_found is None or batch.score < better_found.score:
               better_found = batch
+      bar.update(bar.max_value)
       pool.close()
     except KeyboardInterrupt as e:
       pool.close()

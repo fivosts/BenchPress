@@ -315,9 +315,10 @@ class torchBert(backends.BackendBase):
     return outputs
 
   def sample_model_step(self,
-                        model   : typing.List[typing.TypeVar('torch.nn.Module')],
-                        inputs  : typing.Dict[str, typing.TypeVar('torch.Tensor')],
-                        is_live : bool = False,
+                        model     : typing.List[typing.TypeVar('torch.nn.Module')],
+                        inputs    : typing.Dict[str, typing.TypeVar('torch.Tensor')],
+                        is_live   : bool = False,
+                        iteration : int = None,
                         ) -> typing.Dict[str, typing.List[typing.List[int]]]:
     """
     Specialized forward function.
@@ -331,7 +332,11 @@ class torchBert(backends.BackendBase):
       'generated_samples': [], 'sample_indices': [],
       'input_ids': [], 'masked_lm_lengths': []
     }
-    bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = False, position = 0)
+    if iteration is not None:
+      desc = "Sampling iteration: {}".format(iteration)
+    else:
+      desc = "Sampling"
+    bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc=desc, leave = False, position = 0)
     if not is_live:
       out = model(
         workload = (

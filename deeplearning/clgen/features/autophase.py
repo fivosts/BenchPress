@@ -33,7 +33,10 @@ class AutophaseFeatures(object):
                          header_file: str = None,
                          use_aux_headers: bool = True
                          ) -> str:
-    return opencl.CompileOptimizer(src, AUTOPHASE, header_file = header_file, use_aux_headers = use_aux_headers)
+    try:
+      return opencl.CompileOptimizer(src, AUTOPHASE, header_file = header_file, use_aux_headers = use_aux_headers)
+    except ValueError:
+      return ""
 
   @classmethod
   def RawToDictFeats(cls, str_feats: str) -> typing.Dict[str, float]:
