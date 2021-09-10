@@ -422,6 +422,8 @@ class Model(object):
 
     for obs in sample_observers:
       obs.endSample()
+    if isinstance(self.backend, torch_bert.torchBert) and sampler.is_active:
+      self.backend.sample.data_generator.samples_cache_obs.endSample()
 
     time_now = datetime.datetime.utcnow()
     l.getLogger().info( "Produced {} samples at a rate of {} ms / sample."
