@@ -7,6 +7,7 @@ fit_generator() method to stream batches of training data.
 """
 import os
 import typing
+import datetime
 import glob
 import humanize
 import pickle
@@ -28,11 +29,10 @@ from deeplearning.clgen.features import active_feed_database
 from deeplearning.clgen.models import lm_data_generator
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.models.torch_bert import datasets
+from deeplearning.clgen.samplers import sample_observers
 from deeplearning.clgen.preprocessors import opencl
 from absl import flags
 from eupy.native import logger as l
-
-torch.multiprocessing.set_sharing_strategy('file_system')
 
 FLAGS = flags.FLAGS
 
@@ -40,6 +40,12 @@ flags.DEFINE_boolean(
   "skip_first_queue",
   False,
   "Hacky way to speedup active sampling experiments"
+)
+
+flags.DEFINE_integer(
+  "sample_workload_size",
+  8192,
+  "Select size of workload per inference step."
 )
 
 class ActiveSampleFeed(typing.NamedTuple):
@@ -135,6 +141,31 @@ def dataload_worker(x              : int,
   except Exception:
     return None
 
+def write_samples_cache(db_sample_obs: sample_observers.SamplesDatabaseObserver,
+                        tokenizer,
+                        samples: typing.List[typing.List[int]]
+                        ) -> None:
+  for sample in samples:
+    s = model_pb2.Sample(
+      train_step = -1,
+      text = tokenizer.ArrayToCode(sample.sample, with_formatting = True),
+      sample_indices = "",
+      encoded_sample_indices = "",
+      original_input = "",
+      sample_feed    = "",
+      encoded_text   = "",
+      sample_start_epoch_ms_utc = 0,
+      sample_time_ms = 0,
+      wall_time_ms   = 0,
+      feature_vector = '\n'.join(["{}:{}".format(k, v) for k, v in sample.features.items()]) if sample.features else "None",
+      num_tokens     = np.where(sample.sample == self.tokenizer.padToken)[0][0] if self.tokenizer.padToken in sample.sample else len(sample),
+      compile_status = True,
+      categorical_sampling = FLAGS.categorical_sampling,
+      date_added           = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
+    )
+    db_sample_obs.OnSample(s)
+  return
+
 class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
   """Data generator subclass designed for PyTorch BERT model."""
   @classmethod
@@ -195,6 +226,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       d.active_db = active_feed_database.ActiveFeedDatabase(
         url = "sqlite:///{}".format(d.sampler.corpus_directory / "active_feeds.db")
       )
+      d.samples_cache_obs = sample_observers.SamplesDatabaseObserver(
+        path = d.sampler.corpus_directory / "samples_cache.db",
+        must_exist = False,
+      )
       d.feat_sampler      = feature_sampler.EuclideanSampler(
         d.sampler.corpus_directory,
         corpus_config.active.feature_space,
@@ -235,6 +270,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     self.comp_rate  = {}
     self.exec_time  = {}
     self.feed_queue = []
+    self.active_db  = None
+    self.samples_cache_obs = None
     self.feat_sampler      = None
     self.candidate_monitor = None
     self.comp_rate_mon     = None
@@ -400,8 +437,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             feed = self.feed_queue.pop(0)
           except Exception:
             pass
-        rem  = active_limit_per_feed // self.sample_batch_size # remaining size of workload
-        step_candidates = []
+
         cmp_rate        = [0, 0]
         exec_time       = 0.0
 
@@ -413,29 +449,40 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         if feed.gen_id not in self.exec_time:
           self.exec_time[feed.gen_id] = 0.0
 
-        # Iterate until you get the required amount of candidates
-        # while len(step_candidates) < active_limit_per_feed:
-        better_found, it = None, 0
-        l.getLogger().info("Input feed score: {}".format(str(round(feed.input_score, 2))))
-        while not better_found and cmp_rate[1] < 160000: # TEMP add
+        # Iterate until you get a better sample or surpass the limit.
+        better_found, write_cache_proc, it = None, None, 0
+        l.getLogger().info("Current input feed score: {}".format(str(round(feed.input_score, 2))))
+        while not better_found and cmp_rate[1] < 160000:
           # Pre-process inputs
-          rem = 8192 // self.sample_batch_size # TEMP add
-          inputs = self.collateInputData(feed.input_feed, rem, sample_batch_per_feed)
-          # Infer
+          wsize = FLAGS.sample_workload_size // self.sample_batch_size
+          inputs = self.collateInputData(feed.input_feed, wsize, sample_batch_per_feed)
+          # Workload inference.
           outputs, time = mwrapper.sample_model_step(
             estimator.model,
             inputs,
             iteration = it,
           )
           # Post-process outputs.
-          step_candidates = [] # TEMP add
-          # tcs, ts = self.registerOutputData(outputs, feed, step_candidates, bar)
-          bar = progressbar.ProgressBar(max_value = rem * self.sample_batch_size)
+          step_candidates = []
+          bar = progressbar.ProgressBar(max_value = wsize * self.sample_batch_size)
           bar.update(0)
           (tcs, ts), better_found = self.registerOutputData(outputs, feed, step_candidates, bar)
           cmp_rate[0] += tcs
           cmp_rate[1] += ts
           exec_time   += time
+
+          if write_cache_proc:
+            write_cache_proc.join()
+          self.samples_cache_obs.sample_id = self.samples_cache_obs.db.count
+          write_cache_proc = multiprocessing.Process(
+            target = write_samples_cache,
+            kwargs = {
+              'db_sample_obs' : self.samples_cache_obs,
+              'tokenizer'     : self.tokenizer,
+              'samples'       : step_candidates,
+            }
+          )
+          write_cache_proc.start()
 
           if better_found and feed.gen_id > 0:
             l.getLogger().info("Improved score {} -> {}".format(round(feed.input_score, 3), round(better_found.score, 3)))
@@ -443,11 +490,13 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           try:
             rcands = active_limit_per_feed - len(step_candidates)
             crate  = cmp_rate[0] / cmp_rate[1]
-            rem = max(2, int((rcands // self.sample_batch_size) / crate))
+            wsize = max(2, int((rcands // self.sample_batch_size) / crate))
           except ZeroDivisionError:
             pass
           it += 1
 
+        if write_cache_proc:
+          write_cache_proc.join()
         self.comp_rate[feed.gen_id] = [sum(x) for x in zip(self.comp_rate[feed.gen_id], cmp_rate)]
         self.exec_time[feed.gen_id] += exec_time
         self.comp_rate_mon.register((feed.gen_id, self.comp_rate[feed.gen_id][0] / self.comp_rate[feed.gen_id][1]))
@@ -465,9 +514,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             l.getLogger().warn("No better candidate found...")
           else:
             best_cands = [better_found]
-
-        # if feed.gen_id > 0:
-          # best_cands = best_cands[:1]
 
         if best_cands:
           self.candidate_monitor.register(
@@ -494,8 +540,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                 id               = self.active_db.active_count,
                 input_feed       = nc.sample_feed.input_feed,
                 input_features   = nc.sample_feed.input_features,
-                # masked_input_ids = nc.input_ids,
-                # hole_instances   = nc.hole_instances,
                 sample           = nc.sample,
                 output_features  = nc.features,
                 sample_quality   = nc.score,
@@ -503,7 +547,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                 target_features  = self.feat_sampler.target_benchmark.feature_vector,
                 compile_status   = True,
                 generation_id    = nc.sample_feed.gen_id,
-                # timestep         = nc.timestep,
               )
             )
         self.saveCheckpoint()
@@ -557,6 +600,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           input_feed     = cf, input_features = self.feed_queue[-1].input_features,
         )
       )
+    l.getLogger().info("Feed queue input scores: {}".format(', '.join([str(round(c.input_score, 2)) for c in self.feed_queue])))
     return self.feed_queue[0].input_feed, self.feed_queue[0].input_feed
 
   def collateInputData(self,
@@ -658,7 +702,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         candidate_worker = functools.partial(
           text_candidate_worker, feed = feed, tokenizer = self.tokenizer, feat_sampler = self.feat_sampler,
         )
-      for idx, batch in enumerate(pool.map(candidate_worker,outputs['generated_samples'])):
+      for idx, batch in enumerate(pool.map(candidate_worker, outputs['generated_samples'])):
         bar.update(idx+1)
         if batch is not None:
           cm_rate[0] += 1
