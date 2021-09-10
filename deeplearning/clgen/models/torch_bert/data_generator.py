@@ -416,6 +416,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # Iterate until you get the required amount of candidates
         # while len(step_candidates) < active_limit_per_feed:
         better_found, it = None, 0
+        l.getLogger().info("Input feed score: {}".format(str(round(feed.input_score, 2))))
         while not better_found and cmp_rate[1] < 160000: # TEMP add
           # Pre-process inputs
           rem = 8192 // self.sample_batch_size # TEMP add
