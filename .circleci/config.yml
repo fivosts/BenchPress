@@ -27,7 +27,8 @@ jobs:
                   echo -e "cmake\nn\ny" | bash requirements.apt
       - when:
           condition: 
-            not equal: ["from_source", <<parameters.python_version>>]
+            not:
+              equal: ["from_source", <<parameters.python_version>>]
           steps:
           - run:
               name: Remove global cmake
