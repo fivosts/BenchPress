@@ -485,7 +485,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           write_cache_proc.start()
 
           if better_found and feed.gen_id > 0:
-            l.getLogger().info("Improved score {} -> {}".format(round(feed.input_score, 3), round(better_found.score, 3)))
+            l.getLogger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
           # Calculate how many more to infer.
           try:
             rcands = active_limit_per_feed - len(step_candidates)
@@ -601,7 +601,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           input_feed     = cf, input_features = self.feed_queue[-1].input_features,
         )
       )
-    l.getLogger().info("Feed queue input scores: {}".format(', '.join([str(round(c.input_score, 2)) for c in self.feed_queue])))
+    l.getLogger().info("Feed queue input scores: {}".format(', '.join([str(round(c.input_score, 3)) for c in self.feed_queue])))
     return self.feed_queue[0].input_feed, self.feed_queue[0].input_feed
 
   def collateInputData(self,
