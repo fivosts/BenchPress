@@ -351,10 +351,11 @@ class TSNEMonitor(Monitor):
                set_name: str,
                ):
     super(TSNEMonitor, self).__init__(cache_path, set_name)
-    self.features = []
+    self.features     = []
     self.features_set = set()
-    self.groups   = []
-    self.names    = []
+    self.groups       = []
+    self.groups_set   = set()
+    self.names        = []
     return
 
   def getData(self) -> None:
@@ -379,6 +380,7 @@ class TSNEMonitor(Monitor):
       self.features.append(feats_list)
       self.features_set.add(feats_list)
       self.groups.append(group)
+      self.groups_set.add(group)
       self.names.append(name)
     elif name != "":
       for idx, f in enumerate(self.features):
