@@ -49,8 +49,8 @@ def GroupScatterPlot(groups: typing.Dict[str, typing.Dict[str, list]],
   """
   layout = go.Layout(
     title = title,
-    xaxis = dict(title = x_name),
-    yaxis = dict(title = y_name),
+    # xaxis = dict(title = x_name),
+    # yaxis = dict(title = y_name),
   )
   fig = go.Figure(layout = layout)
   for group, values in groups.items():
