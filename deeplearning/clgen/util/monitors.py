@@ -3,6 +3,7 @@ import pathlib
 import pickle
 import typing
 import numpy as np
+import sklearn.manifold
 
 from deeplearning.clgen.util import plotter
 
@@ -336,6 +337,63 @@ class FeatureMonitor(Monitor):
       y = [v / self.instance_counter for v in self.features.values()],
       title     = self.set_name,
       x_name    = self.set_name,
+      plot_name = self.set_name,
+      path = self.cache_path
+    )
+
+class TSNEMonitor(Monitor):
+  """
+  Keeps track of feature vectors of various groups in a given feature space.
+  Performs t-SNE algorithm to reduce dimensionality to 2 and plots groupped scatterplot.
+  """
+  def __init__(self, 
+               cache_path: typing.Union[pathlib.Path, str],
+               set_name: str,
+               ):
+    super(TSNEMonitor, self).__init__(cache_path, set_name)
+    self.features = []
+    self.groups   = []
+    self.names    = []
+    return
+
+  def getData(self) -> None:
+    raise NotImplementedError
+
+  def getStrData(self) -> None:
+    raise NotImplementedError
+
+  def register(self, actual_sample: typing.Tuple[typing.Dict[str, int], str, typing.Optional[str]]) -> None:
+    """
+    A registered sample must contain:
+    1. A feature vector.
+    2. The group it belongs to.
+    3. (Optional) The name of the datapoint.
+    """
+    feats, group = actual_sample[0], actual_sample[1]
+    name = actual_sample[2] if len(actual_sample) == 3 else ""
+    self.features.append(list(feats.values()))
+    self.groups.append(group)
+    self.names.append(name)
+    return
+
+  def plot(self) -> None:
+    tsne = sklearn.manifold.TSNE()
+    embeddings = tsne.fit_transform(np.array(self.features))
+    groupped_data = {}
+    for points, group, name in zip(embeddings, self.groups, self.names):
+      if group in groupped_data:
+        groupped_data[group]['data'].append(points)
+        groupped_data[group]['names'].append(name)
+      else:
+        groupped_data[group] = {
+          'data': [points],
+          'names': [name],
+        }
+    plotter.GroupScatterPlot(
+      groups    = groupped_data,
+      title     = self.set_name,
+      x_name    = self.set_name,
+      y_name    = self.set_name,
       plot_name = self.set_name,
       path = self.cache_path
     )
