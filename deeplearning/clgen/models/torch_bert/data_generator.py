@@ -82,7 +82,7 @@ class ActiveSample(typing.NamedTuple):
   # Active batch timestep where sample was acquired.
   # timestep       : int
 
-def IR_candidate_worker(sample_out   : typing.Dict[str, np.array],
+def IR_candidate_worker(sample_out   : np.array,
                         feed         : np.array,
                         feat_sampler : feature_sampler.EuclideanSampler,
                         tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
@@ -110,7 +110,7 @@ def IR_candidate_worker(sample_out   : typing.Dict[str, np.array],
     pass
   return None
 
-def text_candidate_worker(sample_out   : typing.Dict[str, np.array],
+def text_candidate_worker(sample_out   : np.array,
                           feed         : np.array,
                           feat_sampler : feature_sampler.EuclideanSampler,
                           tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
@@ -239,6 +239,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       d.candidate_monitor = monitors.CategoricalDistribMonitor.loadCheckpoint(
         d.sampler.corpus_directory, "feature_distance"
       )
+      d.tsne_monitor      = monitors.TSNEMonitor.loadCheckpoint(
+        d.sampler.corpus_directory, "tsne_feature_map"
+      )
       d.comp_rate_mon     = monitors.CategoricalHistoryMonitor.loadCheckpoint(
         d.sampler.corpus_directory, "comp_rate_per_gen"
       )
@@ -274,6 +277,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     self.samples_cache_obs = None
     self.feat_sampler      = None
     self.candidate_monitor = None
+    self.tsne_monitor      = None
     self.comp_rate_mon     = None
     self.exec_time_mon     = None
     self.raised_keyboard_int = None
@@ -467,6 +471,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           bar = progressbar.ProgressBar(max_value = wsize * self.sample_batch_size)
           bar.update(0)
           (tcs, ts), better_found = self.registerOutputData(outputs, feed, step_candidates, bar)
+          for c in step_candidates:
+            self.tsne_monitor.register((c.features, str(feed.gen_id)))
           cmp_rate[0] += tcs
           cmp_rate[1] += ts
           exec_time   += time
@@ -545,7 +551,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                 output_features  = nc.features,
                 sample_quality   = nc.score,
                 target_benchmark = (self.feat_sampler.target_benchmark.name, self.feat_sampler.target_benchmark.contents),
-                target_features  = self.feat_sampler.target_benchmark.feature_vector,
+                target_features  = self.feat_sampler.target_benchmark.features,
                 compile_status   = True,
                 generation_id    = nc.sample_feed.gen_id,
               )
@@ -704,7 +710,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           text_candidate_worker, feed = feed, tokenizer = self.tokenizer, feat_sampler = self.feat_sampler,
         )
       for idx, batch in enumerate(pool.map(candidate_worker, outputs['generated_samples'])):
-        bar.update(idx+1)
         if batch is not None:
           cm_rate[0] += 1
           candidates.append(batch)
@@ -726,6 +731,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     with open(self.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
       pickle.dump(self.feed_queue, outf)
     self.candidate_monitor.saveCheckpoint()
+    self.tsne_monitor.saveCheckpoint()
     self.comp_rate_mon.saveCheckpoint()
     self.exec_time_mon.saveCheckpoint()
     return
