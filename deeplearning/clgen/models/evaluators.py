@@ -45,16 +45,16 @@ class BenchmarkDistance(BaseEvaluator):
       """
       Benchmark candidate
       """
-      contents       : str
-      distance       : float
-      feature_vector : typing.Dict[str, float]
-      label          : str
+      contents : str
+      distance : float
+      features : typing.Dict[str, float]
+      label    : str
 
     def __init__(self,
                  target         : pathlib.Path,
                  name           : str,
                  contents       : str,
-                 feature_vector : typing.Dict[str, float],
+                 features : typing.Dict[str, float],
                  bert_cands     : typing.List[BenchmarkCandidate] = [], # (contents, distance, labels)
                  clgen_cands    : typing.List[BenchmarkCandidate] = [], # (contents, distance, labels)
                  github_cands   : typing.List[BenchmarkCandidate] = [], # (contents, distance, labels)
@@ -62,7 +62,7 @@ class BenchmarkDistance(BaseEvaluator):
       self.target         = target
       self.name           = name
       self.contents       = contents
-      self.feature_vector = feature_vector
+      self.features = features
       self.bert_cands     = bert_cands
       self.clgen_cands    = clgen_cands
       self.github_cands   = github_cands
@@ -144,15 +144,15 @@ class BenchmarkDistance(BaseEvaluator):
     print(len(reduced_git_corpus))
     for benchmark in self.evaluated_benchmarks:
       try:
-        bc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.feature_vector, self.feature_space)) for cf, fts in bert_corpus ], key = lambda x: x[1])[:topK]
-        cc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.feature_vector, self.feature_space)) for cf, fts in clgen_corpus], key = lambda x: x[1])[:topK]
-        gc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.feature_vector, self.feature_space)) for cf, fts in git_corpus  ], key = lambda x: x[1])[:topK]
-        rgc = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.feature_vector, self.feature_space)) for cf, fts in reduced_git_corpus  ], key = lambda x: x[1])[:topK]
+        bc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in bert_corpus ], key = lambda x: x[1])[:topK]
+        cc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in clgen_corpus], key = lambda x: x[1])[:topK]
+        gc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in git_corpus  ], key = lambda x: x[1])[:topK]
+        rgc = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in reduced_git_corpus  ], key = lambda x: x[1])[:topK]
       except KeyError:
         print(git_corpus)
 
       print(benchmark.name)
-      print(benchmark.feature_vector)
+      print(benchmark.features)
 
       print([x[1] for x in bc])
       print([x[1] for x in cc])
