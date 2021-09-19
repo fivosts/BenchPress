@@ -168,10 +168,10 @@ def calculate_distance(infeat: typing.Dict[str, float],
   return math.sqrt(d)
 
 class Benchmark(typing.NamedTuple):
-  path: pathlib.Path
-  name: str
-  contents: str
-  feature_vector: typing.Dict[str, float]
+  path : pathlib.Path
+  name : str
+  contents : str
+  features : typing.Dict[str, float]
 
 class EuclideanSampler(object):
   """
@@ -197,7 +197,7 @@ class EuclideanSampler(object):
     self.loadCheckpoint()
     try:
       self.target_benchmark = self.benchmarks.pop(0)
-      l.getLogger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.feature_vector))
+      l.getLogger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     except IndexError:
       self.target_benchmark = None
     return
@@ -212,7 +212,7 @@ class EuclideanSampler(object):
     except IndexError:
       self.target_benchmark = None
     self.saveCheckpoint()
-    l.getLogger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.feature_vector))
+    l.getLogger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     return
 
   def calculate_distance(self, infeat: typing.Dict[str, float]) -> float:
@@ -220,7 +220,7 @@ class EuclideanSampler(object):
     Euclidean distance between sample feature vector
     and current target benchmark.
     """
-    return calculate_distance(infeat, self.target_benchmark.feature_vector, self.feature_space)
+    return calculate_distance(infeat, self.target_benchmark.features, self.feature_space)
 
   def topK_candidates(self,
                       candidates: typing.List[typing.TypeVar("ActiveSample")],
