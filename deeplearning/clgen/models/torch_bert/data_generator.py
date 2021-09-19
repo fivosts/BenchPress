@@ -248,6 +248,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       d.exec_time_mon     = monitors.CategoricalHistoryMonitor.loadCheckpoint(
         d.sampler.corpus_directory, "exec_time_per_gen"
       )
+      # Check if benchmark set has been registed to monitor.
+      if d.feat_sampler.target not in d.tsne_monitor.groups_set:
+        for b in d.feat_sampler.benchmarks:
+          d.tsne_monitor.register((b.features, d.feat_sampler.target, b.name))
       # Store unique specs to database once.
       d.addToDB(
         active_feed_database.ActiveSamplingSpecs.FromArgs(
