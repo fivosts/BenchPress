@@ -37,6 +37,40 @@ def SingleScatterLine(x: np.array,
   fig.write_image(outf("png"), scale = 2.0)
   return
 
+def GroupScatterPlot(groups: typing.Dict[str, typing.Dict[str, list]],
+                     title: str,
+                     x_name: str,
+                     y_name: str,
+                     plot_name: str,
+                     path: pathlib.Path,
+                     ) -> None:
+  """
+  Plots groupped scatter plot of points in two-dimensional space.
+  """
+  layout = go.Layout(
+    title = title,
+    xaxis = dict(title = x_name),
+    yaxis = dict(title = y_name),
+  )
+  fig = go.Figure(layout = layout)
+  for group, values in groups.items():
+    feats = np.array(values['data'])
+    names = values['names']
+    fig.add_trace(
+      go.Scatter(
+        x = feats[:,0], y = feats[:,1],
+        name = group,
+        mode = 'markers',
+        showlegend = True,
+        opacity    = 0.75,
+        text       = names,
+      )
+    )
+  outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
+  fig.write_html (outf("html"))
+  fig.write_image(outf("png"), scale = 2.0)
+  return
+
 def FrequencyBars(x: np.array,
                   y: np.array,
                   title    : str,
