@@ -184,8 +184,9 @@ class EuclideanSampler(object):
                target        : str,
                git_corpus    : corpuses.Corpus = None,
                ):
-    self.target = target
-    if self.target != "grid_walk":
+    self.target     = target
+    self.benchmarks = []
+    if self.target  != "grid_walk":
       self.path        = pathlib.Path(targets[target]).resolve()
     self.workspace     = workspace
     self.feature_space = feature_space
