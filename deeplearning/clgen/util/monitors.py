@@ -352,6 +352,7 @@ class TSNEMonitor(Monitor):
                ):
     super(TSNEMonitor, self).__init__(cache_path, set_name)
     self.features = []
+    self.features_set = set()
     self.groups   = []
     self.names    = []
     return
@@ -368,15 +369,27 @@ class TSNEMonitor(Monitor):
     1. A feature vector.
     2. The group it belongs to.
     3. (Optional) The name of the datapoint.
+
+    Feature vectors stored are unique.
     """
     feats, group = actual_sample[0], actual_sample[1]
     name = actual_sample[2] if len(actual_sample) == 3 else ""
-    self.features.append(list(feats.values()))
-    self.groups.append(group)
-    self.names.append(name)
+    feats_list = list(feats.values())
+    if feats_list not in self.features_set:
+      self.features.append(feats_list)
+      self.features_set.add(feats_list)
+      self.groups.append(group)
+      self.names.append(name)
+    elif name != "":
+      for idx, f in enumerate(self.features):
+        if feats_list == f:
+          self.names[idx] += ",{}".format(name)
     return
 
   def plot(self) -> None:
+    """
+    Plot groupped scatter graph.
+    """
     tsne = sklearn.manifold.TSNE()
     embeddings = tsne.fit_transform(np.array(self.features))
     groupped_data = {}
