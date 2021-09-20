@@ -252,6 +252,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       if d.feat_sampler.target not in d.tsne_monitor.groups_set:
         for b in d.feat_sampler.benchmarks:
           d.tsne_monitor.register((b.features, d.feat_sampler.target, b.name))
+        d.tsne_monitor.plot()
       # Store unique specs to database once.
       d.addToDB(
         active_feed_database.ActiveSamplingSpecs.FromArgs(
@@ -475,8 +476,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           bar = progressbar.ProgressBar(max_value = wsize * self.sample_batch_size)
           bar.update(0)
           (tcs, ts), better_found = self.registerOutputData(outputs, feed, step_candidates, bar)
+          if better_found:
+            self.tsne_monitor.register((better_found.features, "gen_{}_accepted".format(str(feed.gen_id)), str(better_found.score)))
           for c in step_candidates:
-            self.tsne_monitor.register((c.features, str(feed.gen_id)))
+            self.tsne_monitor.register((c.features, "gen_{}".format(str(feed.gen_id))))
           cmp_rate[0] += tcs
           cmp_rate[1] += ts
           exec_time   += time
@@ -514,6 +517,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         self.exec_time_mon.register((feed.gen_id, self.exec_time[feed.gen_id]    / self.comp_rate[feed.gen_id][1]))
         self.comp_rate_mon.plot()
         self.exec_time_mon.plot()
+        self.tsne_monitor.plot()
 
         # Top-k candidates of ith generation.
         if feed.gen_id == 0:
