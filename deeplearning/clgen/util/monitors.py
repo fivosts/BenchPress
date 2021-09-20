@@ -376,9 +376,9 @@ class TSNEMonitor(Monitor):
     feats, group = actual_sample[0], actual_sample[1]
     name = actual_sample[2] if len(actual_sample) == 3 else ""
     feats_list = list(feats.values())
-    if feats_list not in self.features_set:
+    if str(feats_list) not in self.features_set:
       self.features.append(feats_list)
-      self.features_set.add(feats_list)
+      self.features_set.add(str(feats_list))
       self.groups.append(group)
       self.groups_set.add(group)
       self.names.append(name)
