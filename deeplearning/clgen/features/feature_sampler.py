@@ -288,6 +288,7 @@ class EuclideanSampler(object):
                         ):
           if benchmark:
             self.benchmarks.append(benchmark)
+        self.benchmarks = sorted(self.benchmarks, key = lambda x: x.name)
     l.getLogger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     l.getLogger().info(', '.join([x for x in set([x.name for x in self.benchmarks])]))
     return
