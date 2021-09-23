@@ -146,24 +146,27 @@ def write_samples_cache(db_sample_obs: sample_observers.SamplesDatabaseObserver,
                         samples: typing.List[typing.List[int]]
                         ) -> None:
   for sample in samples:
-    s = model_pb2.Sample(
-      train_step = -1,
-      text = tokenizer.ArrayToCode(sample.sample, with_formatting = True),
-      sample_indices = "",
-      encoded_sample_indices = "",
-      original_input = "",
-      sample_feed    = "",
-      encoded_text   = "",
-      sample_start_epoch_ms_utc = 0,
-      sample_time_ms = 0,
-      wall_time_ms   = 0,
-      feature_vector = '\n'.join(["{}:{}".format(k, v) for k, v in sample.features.items()]) if sample.features else "None",
-      num_tokens     = np.where(sample.sample == tokenizer.padToken)[0][0] if tokenizer.padToken in sample.sample else len(sample),
-      compile_status = True,
-      categorical_sampling = FLAGS.categorical_sampling,
-      date_added           = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
-    )
-    db_sample_obs.OnSample(s)
+    try:
+      s = model_pb2.Sample(
+        train_step = -1,
+        text = tokenizer.ArrayToCode(sample.sample, with_formatting = True),
+        sample_indices = "",
+        encoded_sample_indices = "",
+        original_input = "",
+        sample_feed    = "",
+        encoded_text   = "",
+        sample_start_epoch_ms_utc = 0,
+        sample_time_ms = 0,
+        wall_time_ms   = 0,
+        feature_vector = '\n'.join(["{}:{}".format(k, v) for k, v in sample.features.items()]) if sample.features else "None",
+        num_tokens     = np.where(sample.sample == tokenizer.padToken)[0][0] if tokenizer.padToken in sample.sample else len(sample),
+        compile_status = True,
+        categorical_sampling = FLAGS.categorical_sampling,
+        date_added           = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
+      )
+      db_sample_obs.OnSample(s)
+    except Exception:
+      pass
   return
 
 class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
@@ -484,6 +487,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           cmp_rate[1] += ts
           exec_time   += time
 
+          # Write to samples cache DB.
           if write_cache_proc:
             write_cache_proc.join()
           self.samples_cache_obs.sample_id = self.samples_cache_obs.db.count
