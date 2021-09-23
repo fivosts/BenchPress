@@ -364,33 +364,42 @@ class CompilationSampler(object):
          said functionalities on a single sequence. CANNOT be applied to the
          whole batch at the same time.
     """
-    input_ids      = workload_input_ids[0]# .to(device)
-    attention_mask = workload_attention_mask[0]# .to(device)
+    # Get current input_ids - attention mask.
+    input_ids      = workload_input_ids[0]
+    input_idxs     = torch.arange(batch_size)
+    attention_mask = workload_attention_mask[0]
 
+    # [workload_size x batch_size x sequence_length]
     wload_size, batch_size, sequence_length = tuple(workload_input_ids.shape)
+    # Number of sequences
     nseq  = wload_size * batch_size
+    # Iteration idx of workload
     w_idx = batch_size
 
+    # Workload of input_ids and attention_mask pairs.
+    # queue input_idxs ensure direct ordering from inputs -> outputs.
     queue_input_ids      = torch.reshape(workload_input_ids, (1, nseq, sequence_length)).squeeze()
+    queue_input_idxs     = torch.arange(nseq)
     queue_attention_mask = torch.reshape(workload_attention_mask, (1, nseq, sequence_length)).squeeze()
 
+    #! This is the return queue [nseq x sequence_length].
     queue = torch.zeros(tuple(queue_input_ids.shape)).to(device)
-    q_idx = 0
 
     new_holes    = self.BatchStepSampleSeq(input_ids, prediction_scores, device)
-    open_holes   = torch.where(new_holes == True)[0]
+    open_holes   = torch.where(new_holes == True)[0].to(device)
     closed_holes = torch.where(new_holes == False)[0]
 
     for i in closed_holes:
-      queue[q_idx] = input_ids[i]
-      q_idx += 1
+      queue[input_idxs[i]] = input_ids[i]
 
-    input_ids      = torch.index_select(input_ids, 0, open_holes.to(device))
+    input_ids      = torch.index_select(input_ids, 0, open_holes)
+    input_idxs     = torch.index_select(input_idxs, 0, open_holes)
     attention_mask = (input_ids != self.tokenizer.padToken)
 
     res = batch_size - len(input_ids)
     if res > 0:
       input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res]), 0)
+      input_idxs     = torch.cat((input_idxs, queue_input_idxs[w_idx: w_idx + res]), 0)
       attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res]), 0)
       w_idx += res
 
@@ -399,20 +408,25 @@ class CompilationSampler(object):
       prediction_scores, _, _, _ = model.get_output(
         input_ids, attention_mask, position_ids[:len(input_ids)],
       )
+      # Array of new hole existence per seq idx
       new_holes    = self.BatchStepSampleSeq(input_ids, prediction_scores, device)
-      open_holes   = torch.where(new_holes == True)[0]
+      # Fill these holes.
+      open_holes   = torch.where(new_holes == True)[0].to(device)
+      # Those are done.
       closed_holes = torch.where(new_holes == False)[0]
 
+      # Add to return queue those that have finished.
       for i in closed_holes:
-        queue[q_idx] = input_ids[i]
-        q_idx += 1
+        queue[input_idxs[1]] = input_ids[i]
 
-      input_ids      = torch.index_select(input_ids, 0, open_holes.to(device))
+      input_ids      = torch.index_select(input_ids, 0, open_holes)
+      input_idxs     = torch.index_select(input_idxs, 0, open_holes)
       attention_mask = (input_ids != self.tokenizer.padToken)
 
       res = batch_size - len(input_ids)
       if res > 0:
         input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res]), 0)
+        input_idxs     = torch.cat((input_idxs, queue_input_idxs[w_idx: w_idx + res]), 0)
         attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res]), 0)
         w_idx += res
     return queue
@@ -501,9 +515,12 @@ class CompilationSampler(object):
     Applies sample step predictions to input batch of sequences.
     """
     endTokens = self.tokenizer.metaTokenValues
+    # Array of boolean values, shows where holes are still left.
     new_hole = torch.zeros(len(batch), dtype=np.bool)
 
+    # [seq_idx, hole_idx] of batch.
     idxs, targets = torch.where(batch == self.tokenizer.holeToken)
+    # Predictions for these indices.
     predictions = self.argmax(prediction_scores[(idxs, targets)])
 
     for seq_idx, el_idx in zip(idxs, targets):
