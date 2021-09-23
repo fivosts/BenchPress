@@ -364,11 +364,6 @@ class CompilationSampler(object):
          said functionalities on a single sequence. CANNOT be applied to the
          whole batch at the same time.
     """
-    # Get current input_ids - attention mask.
-    input_ids      = workload_input_ids[0]
-    input_idxs     = torch.arange(batch_size)
-    attention_mask = workload_attention_mask[0]
-
     # [workload_size x batch_size x sequence_length]
     wload_size, batch_size, sequence_length = tuple(workload_input_ids.shape)
     # Number of sequences
@@ -376,10 +371,15 @@ class CompilationSampler(object):
     # Iteration idx of workload
     w_idx = batch_size
 
+    # Get current input_ids - attention mask.
+    input_ids      = workload_input_ids[0]
+    input_idxs     = torch.arange(batch_size).to(device)
+    attention_mask = workload_attention_mask[0]
+
     # Workload of input_ids and attention_mask pairs.
     # queue input_idxs ensure direct ordering from inputs -> outputs.
     queue_input_ids      = torch.reshape(workload_input_ids, (1, nseq, sequence_length)).squeeze()
-    queue_input_idxs     = torch.arange(nseq)
+    queue_input_idxs     = torch.arange(nseq).to(device)
     queue_attention_mask = torch.reshape(workload_attention_mask, (1, nseq, sequence_length)).squeeze()
 
     #! This is the return queue [nseq x sequence_length].
@@ -417,7 +417,7 @@ class CompilationSampler(object):
 
       # Add to return queue those that have finished.
       for i in closed_holes:
-        queue[input_idxs[1]] = input_ids[i]
+        queue[input_idxs[i]] = input_ids[i]
 
       input_ids      = torch.index_select(input_ids, 0, open_holes)
       input_idxs     = torch.index_select(input_idxs, 0, open_holes)
