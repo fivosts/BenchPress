@@ -68,13 +68,13 @@ class ActiveSample(typing.NamedTuple):
   # ActiveSampleFeed instance of model input
   sample_feed    : typing.TypeVar("ActiveSamplingGenerator.ActiveSampleFeed")
   # Input ids that led to this prediction
-  # input_ids      : np.array
+  input_ids      : np.array
   # hole lengths and positions of input ids.
-  # hole_instances : typing.List[sequence_masking.MaskedLmInstance]
+  hole_lengths : typing.List[sequence_masking.MaskedLmInstance]
   # Model prediction
   sample         : np.array
   # Sample indices of given prediction.
-  # sample_indices : np.array
+  sample_indices : np.array
   # Output features of sample
   features       : typing.Dict[str, float]
   # Score of sample based on active learning search.
@@ -82,47 +82,51 @@ class ActiveSample(typing.NamedTuple):
   # Active batch timestep where sample was acquired.
   # timestep       : int
 
-def IR_candidate_worker(sample_out   : np.array,
+def IR_candidate_worker(sample       : np.array,
                         feed         : np.array,
                         feat_sampler : feature_sampler.EuclideanSampler,
                         tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
                         ) -> ActiveSample:
   # sample, indices, input_ids, masked_lm_lengths = sample_out
+  sample, s_indices, input_ids, mlm_lengths = sample
   try:
-    code = tokenizer.ArrayToCode(sample_out, with_formatting = False)
+    code = tokenizer.ArrayToCode(sample, with_formatting = False)
     features = extractor.ExtractFeatures(code, [feat_sampler.feature_space])[feat_sampler.feature_space]
     if features:
-      # return ActiveSample(
-      #   sample_feed    = feed,      sample         = sample,
-      #   input_ids      = input_ids, hole_instances = [x for x in masked_lm_lengths if x >= 0],
-      #   sample_indices = indices,   features       = features,
-      #   score          = feat_sampler.calculate_distance(features),
-      #   timestep       = -1,
-      # )
       return ActiveSample(
-        sample_feed = feed,     sample = sample_out,
-        features    = features, score  = feat_sampler.calculate_distance(features),
+        sample_feed = feed,
+        sample      = sample,
+        sample_indices = [x for x in sample_indices if x != tokenizer.padToken],
+        input_ids      = [x for x in input_ids if x != tokenizer.padToken],
+        hole_lengths   = mlm_lengths,
+        features       = features,
+        score          = feat_sampler.calculate_distance(features),
       )
-    # return sample, indices, features, input_ids, masked_lm_lengths
   except ValueError:
     pass
   except Exception:
     pass
   return None
 
-def text_candidate_worker(sample_out   : np.array,
+def text_candidate_worker(sample       : np.array,
                           feed         : np.array,
                           feat_sampler : feature_sampler.EuclideanSampler,
                           tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
                           ) -> ActiveSample:
+  sample, s_indices, input_ids, mlm_lengths = sample
   try:
-    code = tokenizer.ArrayToCode(sample_out, with_formatting = False)
+    code = tokenizer.ArrayToCode(sample, with_formatting = False)
     _ = opencl.Compile(code)
     features = extractor.ExtractFeatures(code, [feat_sampler.feature_space])[feat_sampler.feature_space]
     if features:
       return ActiveSample(
-        sample_feed = feed,     sample = sample_out,
-        features    = features, score  = feat_sampler.calculate_distance(features),
+        sample_feed = feed,
+        sample      = sample,
+        sample_indices = [x for x in sample_indices if x != tokenizer.padToken],
+        input_ids      = [x for x in input_ids if x != tokenizer.padToken],
+        hole_lengths   = mlm_lengths,
+        features       = features,
+        score          = feat_sampler.calculate_distance(features),
       )
   except ValueError:
     pass
@@ -709,10 +713,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     cm_rate[1] += len(outputs['generated_samples'])
     better_found = None
     try:
-      # it = zip(
-      #   outputs['generated_samples'], outputs['sample_indices'],
-      #   outputs['input_ids'], outputs['masked_lm_lengths']
-      # )
+      it = zip(
+        outputs['generated_samples'], outputs['sample_indices'],
+        outputs['input_ids'], outputs['masked_lm_lengths']
+      )
       if self.feat_sampler.feature_space != "GreweFeatures":
         candidate_worker = functools.partial(
           IR_candidate_worker, feed = feed, tokenizer = self.tokenizer, feat_sampler = self.feat_sampler,
@@ -721,7 +725,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         candidate_worker = functools.partial(
           text_candidate_worker, feed = feed, tokenizer = self.tokenizer, feat_sampler = self.feat_sampler,
         )
-      for idx, batch in enumerate(pool.map(candidate_worker, outputs['generated_samples'])):
+      for idx, batch in enumerate(pool.map(candidate_worker, it)):
         if batch is not None:
           cm_rate[0] += 1
           candidates.append(batch)
