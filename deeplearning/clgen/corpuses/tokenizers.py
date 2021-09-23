@@ -708,7 +708,11 @@ class ASTokenizer(TokenizerBase):
                 src.append(ct)
           src = "".join(src)
         else:
-          src = opencl.ClangFormat("".join(list(map(lambda x: self.decoder_with_delim[x] if x != ignore_token else '', encoded))))
+          src = "".join(list(map(lambda x: self.decoder_with_delim[x] if x != ignore_token else '', encoded)))
+          try:
+            src = opencl.ClangFormat(src)
+          except ValueError:
+            pass
         return src
       else:
         raise ValueError("Wrong encoded array specified")
