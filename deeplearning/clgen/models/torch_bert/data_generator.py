@@ -88,7 +88,7 @@ def IR_candidate_worker(sample       : np.array,
                         tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
                         ) -> ActiveSample:
   # sample, indices, input_ids, masked_lm_lengths = sample_out
-  sample, s_indices, input_ids, mlm_lengths = sample
+  sample, sample_indices, input_ids, mlm_lengths = sample
   try:
     code = tokenizer.ArrayToCode(sample, with_formatting = False)
     features = extractor.ExtractFeatures(code, [feat_sampler.feature_space])[feat_sampler.feature_space]
@@ -104,8 +104,8 @@ def IR_candidate_worker(sample       : np.array,
       )
   except ValueError:
     pass
-  except Exception:
-    pass
+  except Exception as e:
+    raise e
   return None
 
 def text_candidate_worker(sample       : np.array,
@@ -113,7 +113,7 @@ def text_candidate_worker(sample       : np.array,
                           feat_sampler : feature_sampler.EuclideanSampler,
                           tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
                           ) -> ActiveSample:
-  sample, s_indices, input_ids, mlm_lengths = sample
+  sample, sample_indices, input_ids, mlm_lengths = sample
   try:
     code = tokenizer.ArrayToCode(sample, with_formatting = False)
     _ = opencl.Compile(code)
@@ -130,8 +130,8 @@ def text_candidate_worker(sample       : np.array,
       )
   except ValueError:
     pass
-  except Exception:
-    pass
+  except Exception as e:
+    raise e
   return None
 
 def dataload_worker(x              : int,
