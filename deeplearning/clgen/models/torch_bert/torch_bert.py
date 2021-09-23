@@ -338,18 +338,17 @@ class torchBert(backends.BackendBase):
       desc = "Sampling"
     bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc=desc, leave = False, position = 0)
     if not is_live:
-      out = model(
+      samples, sample_indices = model(
         workload = (
           inputs['input_ids'].to(self.pytorch.device),
           inputs['input_mask'].to(self.pytorch.device),
           inputs['position_ids'].to(self.pytorch.device)
         ),
       )
-      outputs['generated_samples'] = list(out.detach().cpu().numpy())
-      outputs['sample_indices']    = [[]] * len(out)
-      # outputs['sample_indices']    = [[]] * len(outputs['generated_samples'])
-      # outputs['masked_lm_lengths'] = [[]] * len(outputs['generated_samples'])
-      # outputs['input_ids']         = [[]] * len(outputs['generated_samples'])
+      outputs['generated_samples'] = list(samples.detach().cpu().numpy())
+      outputs['sample_indices']    = list(sample_indices.detach().cpu().numpy())
+      outputs['input_ids']         = list(self.torch.reshape(inputs['input_ids'], tuple(samples.shape)))
+      outputs['masked_lm_lengths'] = list(self.torch.reshape(inputs['masked_lm_lengths'], (samples.shape[0], -1)))
 
     bar.update(len(outputs['generated_samples']))
     end = time.time()
