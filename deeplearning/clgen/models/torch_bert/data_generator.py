@@ -39,7 +39,13 @@ FLAGS = flags.FLAGS
 flags.DEFINE_boolean(
   "skip_first_queue",
   False,
-  "Hacky way to speedup active sampling experiments"
+  "Hacky way to speedup active sampling experiments."
+)
+
+flags.DEFINE_boolean(
+  "evaluate_candidates",
+  False,
+  "Select to do exhaustive evaluation of sampling search candidates."
 )
 
 flags.DEFINE_integer(
@@ -75,6 +81,8 @@ class ActiveSample(typing.NamedTuple):
   sample         : np.array
   # Sample indices of given prediction.
   sample_indices : np.array
+  # number of tokens the model filled holes with.
+  sample_indices_size : int
   # Output features of sample
   features       : typing.Dict[str, float]
   # Score of sample based on active learning search.
@@ -99,6 +107,7 @@ def IR_candidate_worker(sample       : np.array,
         sample_indices = [x for x in sample_indices if x != tokenizer.padToken],
         input_ids      = [x for x in input_ids if x != tokenizer.padToken],
         hole_lengths   = mlm_lengths,
+        sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
         features       = features,
         score          = feat_sampler.calculate_distance(features),
       )
@@ -125,6 +134,7 @@ def text_candidate_worker(sample       : np.array,
         sample_indices = [x for x in sample_indices if x != tokenizer.padToken],
         input_ids      = [x for x in input_ids if x != tokenizer.padToken],
         hole_lengths   = mlm_lengths,
+        sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
         features       = features,
         score          = feat_sampler.calculate_distance(features),
       )
@@ -145,9 +155,9 @@ def dataload_worker(x              : int,
   except Exception:
     return None
 
-def write_samples_cache(db_sample_obs: sample_observers.SamplesDatabaseObserver,
-                        tokenizer,
-                        samples: typing.List[typing.List[int]]
+def write_samples_cache(db_sample_obs : sample_observers.SamplesDatabaseObserver,
+                        tokenizer     : "tokenizers.TokenizerBase",
+                        samples       : typing.List[ActiveSample]
                         ) -> None:
   for sample in samples:
     try:
@@ -172,6 +182,19 @@ def write_samples_cache(db_sample_obs: sample_observers.SamplesDatabaseObserver,
     except Exception:
       pass
   return
+
+def write_eval_db(db_sample_obs : sample_observers.SamplesDatabaseObserver,
+                  tokenizer     : "tokenizers.TokenizerBase",
+                  samples       : typing.List[ActiveSample],
+                  gen_id        : int,
+                  ) -> None:
+  for sample in samples:
+    try:
+      raise NotImplementedError("A) Fix the schema of this evaluated Database. B) Fix evaluators/plots/crap for what you are inserting in here,")
+    except Exception:
+      pass
+  return
+
 
 class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
   """Data generator subclass designed for PyTorch BERT model."""
@@ -237,6 +260,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         path = d.sampler.corpus_directory / "samples_cache.db",
         must_exist = False,
       )
+      if FLAGS.evaluate_candidates:
+        d.eval_db_obs = sample_observers.SamplesDatabaseObserver(
+          path = d.sampler.corpus_directory / "evaluated_candidates.db",
+          must_exist = False,
+        )
       d.feat_sampler      = feature_sampler.EuclideanSampler(
         d.sampler.corpus_directory,
         corpus_config.active.feature_space,
@@ -287,6 +315,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     self.feed_queue = []
     self.active_db  = None
     self.samples_cache_obs = None
+    self.eval_db_obs       = None
     self.feat_sampler      = None
     self.candidate_monitor = None
     self.tsne_monitor      = None
@@ -467,6 +496,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
         # Iterate until you get a better sample or surpass the limit.
         better_found, write_cache_proc, it = None, None, 0
+        if FLAGS.evaluate_candidates:
+          write_eval_proc = None
+
         l.getLogger().info("Current input feed score: {}".format(str(round(feed.input_score, 2))))
         while not better_found and cmp_rate[1] < 160000:
           # Pre-process inputs
@@ -483,15 +515,19 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           bar = progressbar.ProgressBar(max_value = wsize * self.sample_batch_size)
           bar.update(0)
           (tcs, ts), better_found = self.registerOutputData(outputs, feed, step_candidates, bar)
+
+          ## Register good offsprings, along with step candidates in tsne monitor.
           if better_found:
             self.tsne_monitor.register((better_found.features, "gen_{}_accepted".format(str(feed.gen_id)), str(better_found.score)))
           for c in step_candidates:
             self.tsne_monitor.register((c.features, "gen_{}".format(str(feed.gen_id))))
+
+          ## Recalculate compilation rate of generation.
           cmp_rate[0] += tcs
           cmp_rate[1] += ts
           exec_time   += time
 
-          # Write to samples cache DB.
+          ## Write to samples cache DB.
           if write_cache_proc:
             write_cache_proc.join()
           self.samples_cache_obs.sample_id = self.samples_cache_obs.db.count
@@ -504,6 +540,20 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             }
           )
           write_cache_proc.start()
+
+          if FLAGS.evaluate_candidates:
+            if write_eval_proc:
+              write_eval_proc.join()
+            self.eval_db_obs.sample_id = self.eval_db_obs.db.count
+            write_eval_proc = multiprocessing.Process(
+              target = write_eval_db,
+              kwargs = {
+                'db_sample_obs' : self.eval_db_obs,
+                'tokenizer'     : self.tokenizer,
+                'samples'       : step_candidates,
+                'gen_id'        : feed.gen_id,
+              }
+            )
 
           if better_found and feed.gen_id > 0:
             l.getLogger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
