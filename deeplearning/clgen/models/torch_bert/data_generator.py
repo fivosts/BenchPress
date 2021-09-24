@@ -26,6 +26,7 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.features import active_feed_database
+from deeplearning.clgen.features import evaluate_cand_database
 from deeplearning.clgen.models import lm_data_generator
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.models.torch_bert import datasets
@@ -101,7 +102,7 @@ def IR_candidate_worker(sample       : np.array,
     code = tokenizer.ArrayToCode(sample, with_formatting = False)
     features = extractor.ExtractFeatures(code, [feat_sampler.feature_space])[feat_sampler.feature_space]
     if features:
-      return ActiveSample(
+      return (True, ActiveSample(
         sample_feed = feed,
         sample      = sample,
         sample_indices = [x for x in sample_indices if x != tokenizer.padToken],
@@ -110,12 +111,21 @@ def IR_candidate_worker(sample       : np.array,
         sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
         features       = features,
         score          = feat_sampler.calculate_distance(features),
-      )
+      ))
   except ValueError:
     pass
   except Exception as e:
     raise e
-  return None
+  return (False, ActiveSample(
+    sample_feed = feed,
+    sample      = sample,
+    sample_indices = [x for x in sample_indices if x != tokenizer.padToken],
+    input_ids      = [x for x in input_ids if x != tokenizer.padToken],
+    hole_lengths   = mlm_lengths,
+    sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
+    features       = {},
+    score          = math.inf,
+  ))
 
 def text_candidate_worker(sample       : np.array,
                           feed         : np.array,
@@ -128,7 +138,7 @@ def text_candidate_worker(sample       : np.array,
     _ = opencl.Compile(code)
     features = extractor.ExtractFeatures(code, [feat_sampler.feature_space])[feat_sampler.feature_space]
     if features:
-      return ActiveSample(
+      return (True, ActiveSample(
         sample_feed = feed,
         sample      = sample,
         sample_indices = [x for x in sample_indices if x != tokenizer.padToken],
@@ -137,12 +147,21 @@ def text_candidate_worker(sample       : np.array,
         sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
         features       = features,
         score          = feat_sampler.calculate_distance(features),
-      )
+      ))
   except ValueError:
     pass
   except Exception as e:
     raise e
-  return None
+  return (False, ActiveSample(
+    sample_feed = feed,
+    sample      = sample,
+    sample_indices = [x for x in sample_indices if x != tokenizer.padToken],
+    input_ids      = [x for x in input_ids if x != tokenizer.padToken],
+    hole_lengths   = mlm_lengths,
+    sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
+    features       = {},
+    score          = math.inf,
+  ))
 
 def dataload_worker(x              : int,
                     feed           : np.array,
@@ -183,16 +202,44 @@ def write_samples_cache(db_sample_obs : sample_observers.SamplesDatabaseObserver
       pass
   return
 
-def write_eval_db(db_sample_obs : sample_observers.SamplesDatabaseObserver,
-                  tokenizer     : "tokenizers.TokenizerBase",
-                  samples       : typing.List[ActiveSample],
-                  gen_id        : int,
+def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
+                  tokenizer : "tokenizers.TokenizerBase",
+                  samples   : typing.List[ActiveSample],
+                  target_benchmark : typing.Tuple[str, str],
+                  target_features  : typing.Dict[str, float],
+                  gen_id    : int,
                   ) -> None:
-  for sample in samples:
-    try:
-      raise NotImplementedError("A) Fix the schema of this evaluated Database. B) Fix evaluators/plots/crap for what you are inserting in here,")
-    except Exception:
-      pass
+  with eval_db.Session(commit = True) as session:
+    for sample in samples:
+      try:
+        _ = opencl.Compile(tokenizer.ArrayToCode(sample.sample))
+        compile_status = True
+      except ValueError:
+        compile_status = False
+
+      sobj = evaluate_cand_database.SearchCandidate.FromArgs(
+        tokenizer        = tokenizer,
+        id               = eval_db.count,
+        input_feed       = sample.sample_feed.input_feed,
+        input_ids        = sample.input_ids,
+        input_features   = sample.sample_feed.input_features,
+        input_score      = sample.sample_feed.input_score,
+        hole_lengths     = sample.hole_lengths,
+        sample           = sample.sample,
+        sample_indices   = sample.sample_indices,
+        output_features  = sample.features,
+        sample_score     = sample.score,
+        target_benchmark = target_benchmark,
+        target_features  = target_features,
+        compile_status   = compile_status,
+        generation_id    = gen_id,
+      )
+      entry = session.query(evaluate_cand_database.SearchCandidate).filter_by(sha256 = sobj.sha256).first()
+      if entry is not None:
+        entry.frequency += 1
+      else:
+        session.add(sobj) 
+      session.commit()
   return
 
 
@@ -261,8 +308,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         must_exist = False,
       )
       if FLAGS.evaluate_candidates:
-        d.eval_db_obs = sample_observers.SamplesDatabaseObserver(
-          path = d.sampler.corpus_directory / "evaluated_candidates.db",
+        d.eval_db = evaluate_cand_database.SearchCandidateDatabase(
+          url = "sqlite:///{}".format(d.sampler.corpus_directory / "evaluated_candidates.db"),
           must_exist = False,
         )
       d.feat_sampler      = feature_sampler.EuclideanSampler(
@@ -315,7 +362,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     self.feed_queue = []
     self.active_db  = None
     self.samples_cache_obs = None
-    self.eval_db_obs       = None
+    self.eval_db           = None
     self.feat_sampler      = None
     self.candidate_monitor = None
     self.tsne_monitor      = None
@@ -511,10 +558,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             iteration = it,
           )
           # Post-process outputs.
-          step_candidates = []
+          step_candidates, rejected_candidates = [], []
           bar = progressbar.ProgressBar(max_value = wsize * self.sample_batch_size)
           bar.update(0)
-          (tcs, ts), better_found = self.registerOutputData(outputs, feed, step_candidates, bar)
+          (tcs, ts), better_found = self.registerOutputData(outputs, feed, step_candidates, rejected_candidates, bar)
 
           ## Register good offsprings, along with step candidates in tsne monitor.
           if better_found:
@@ -544,16 +591,18 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           if FLAGS.evaluate_candidates:
             if write_eval_proc:
               write_eval_proc.join()
-            self.eval_db_obs.sample_id = self.eval_db_obs.db.count
             write_eval_proc = multiprocessing.Process(
               target = write_eval_db,
               kwargs = {
-                'db_sample_obs' : self.eval_db_obs,
-                'tokenizer'     : self.tokenizer,
-                'samples'       : step_candidates,
-                'gen_id'        : feed.gen_id,
+                'eval_db'   : self.eval_db,
+                'tokenizer' : self.tokenizer,
+                'samples'   : step_candidates + rejected_candidates,
+                'target_benchmark' : (self.feat_sampler.target_benchmark.name, self.feat_sampler.target_benchmark.contents),
+                'target_features'  : self.feat_sampler.target_benchmark.features,
+                'gen_id'           : feed.gen_id,
               }
             )
+          write_eval_proc.start()
 
           if better_found and feed.gen_id > 0:
             l.getLogger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
@@ -566,8 +615,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             pass
           it += 1
 
+        # Catch threads on last iteration.
         if write_cache_proc:
           write_cache_proc.join()
+        if FLAGS.evaluate_candidates and write_eval_proc:
+          write_eval_proc.join()
 
         self.comp_rate[feed.gen_id] = [sum(x) for x in zip(self.comp_rate[feed.gen_id], cmp_rate)]
         self.exec_time[feed.gen_id] += exec_time
@@ -741,6 +793,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                          outputs    : typing.Dict[str, typing.List[np.array]],
                          feed       : ActiveSampleFeed,
                          candidates : typing.List[ActiveSample],
+                         rejected_candidates: typing.List[ActiveSample],
                          bar: progressbar.ProgressBar,
                          ) -> typing.List[int]:
     """
@@ -776,12 +829,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           text_candidate_worker, feed = feed, tokenizer = self.tokenizer, feat_sampler = self.feat_sampler,
         )
       for idx, batch in enumerate(pool.map(candidate_worker, it)):
-        if batch is not None:
+        if batch[0]:
           cm_rate[0] += 1
-          candidates.append(batch)
-          if 0 < batch.score < feed.input_score:
-            if better_found is None or batch.score < better_found.score:
-              better_found = batch
+          candidates.append(batch[1])
+          if 0 < batch[1].score < feed.input_score:
+            if better_found is None or batch[1].score < better_found.score:
+              better_found = batch[1]
+        else:
+          rejected_candidates.append(batch[1])
       bar.update(bar.max_value)
       pool.close()
     except KeyboardInterrupt as e:
