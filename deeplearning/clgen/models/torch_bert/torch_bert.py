@@ -347,8 +347,8 @@ class torchBert(backends.BackendBase):
       )
       outputs['generated_samples'] = list(samples.detach().cpu().numpy())
       outputs['sample_indices']    = list(sample_indices.detach().cpu().numpy())
-      outputs['input_ids']         = list(self.torch.reshape(inputs['input_ids'], tuple(samples.shape)))
-      outputs['masked_lm_lengths'] = list(self.torch.reshape(inputs['masked_lm_lengths'], (samples.shape[0], -1)))
+      outputs['input_ids']         = list(self.torch.reshape(inputs['input_ids'], tuple(samples.shape)).numpy())
+      outputs['masked_lm_lengths'] = list(self.torch.reshape(inputs['masked_lm_lengths'], (samples.shape[0], -1)).numpy())
 
     bar.update(len(outputs['generated_samples']))
     end = time.time()
