@@ -590,7 +590,7 @@ def MaskedSeqToBlob(enc_text: np.array,
                             ])      
   position_ids         = np.arange(sequence_length, dtype = np.int64)
   mask_labels          = np.full((sequence_length), -100, dtype = np.int64)
-  masked_lm_lengths    = np.full((sequence_length), -1, dtype = np.int64)
+  masked_lm_lengths    = np.full((1), -1, dtype = np.int64)
   next_sentence_labels = np.zeros([1], dtype = np.int32)
   return {
     'seen_in_training'    : seen_in_training,
