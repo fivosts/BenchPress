@@ -1,5 +1,6 @@
 """A module for databases of CLgen samples."""
 import contextlib
+import math
 import datetime
 import typing
 import sqlite3
@@ -86,7 +87,6 @@ class ActiveInput(Base, sqlutil.ProtoBackedMixin):
       num_tokens     = int(num_tokens),
       date_added     = datetime.datetime.utcnow(),
     )
-
 
 class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
   """A database row representing a CLgen sample.
@@ -179,7 +179,7 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
     )
 
 class ActiveFeedDatabase(sqlutil.Database):
-  """A database of CLgen samples."""
+  """A database monitoring search-based generation process."""
 
   def __init__(self, url: str, must_exist: bool = False):
     super(ActiveFeedDatabase, self).__init__(url, Base, must_exist = must_exist)
