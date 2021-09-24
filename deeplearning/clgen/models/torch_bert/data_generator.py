@@ -602,7 +602,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                 'gen_id'           : feed.gen_id,
               }
             )
-          write_eval_proc.start()
+            write_eval_proc.start()
 
           if better_found and feed.gen_id > 0:
             l.getLogger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
