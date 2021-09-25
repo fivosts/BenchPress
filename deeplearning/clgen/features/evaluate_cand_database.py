@@ -7,7 +7,7 @@ import sqlite3
 import numpy as np
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
-from absl import flags
+from absl import app, flags
 
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import sqlutil
@@ -15,6 +15,12 @@ from deeplearning.clgen.util import sqlutil
 FLAGS = flags.FLAGS
 
 Base = declarative.declarative_base()
+
+flags.DEFINE_string(
+  "eval_cand_db",
+  "",
+  "Set path of candidatae Database to evaluate."
+)
 
 class SearchCandidate(Base, sqlutil.ProtoBackedMixin):
   """A database row representing a CLgen sample.
@@ -143,3 +149,82 @@ class SearchCandidateDatabase(sqlutil.Database):
     with self.Session() as s:
       count = s.query(SearchCandidate).count()
     return count
+
+  @property
+  def freq_gen_col(self):
+    """Return frequency-generation columns of databse."""
+    with self.Session() as s:
+      return s.query(SearchCandidate.generation_id, SearchCandidate.frequency).all()
+
+  @property
+  def rel_hole_lengths(self):
+    """Return column of relative hole lengths"""
+    with self.Session() as s:
+      return s.query(SearchCandidate.rel_hole_lengths).all()
+
+  @property
+  def gen_lenind_abshole(self):
+    with self.Session() as s:
+      return s.query(
+        SearchCandidate.generation_id,
+        SearchCandidate.abs_hole_lengths,
+        SearchCandidate.hole_ind_length
+      )
+
+def run_db_evaluation(db: SearchCandidateDatabase) -> None:
+  # 1) Frequency per generation.
+  #   x-axis: times occured, y-axis: how many samples did hit these freq.
+  #   One group of these distributions per generation.
+  freq_gen  = db.freq_gen_col
+  freqd = {}
+  for gen, f in freq:
+    if gen in freq_gen:
+      if f in freq_gen[gen]:
+        freq_gen[gen][f] += 1
+      else:
+        freq_gen[gen][f] = 1
+    else:
+      freq_gen[gen] = {}
+      freq_gen[gen][f] = 1
+  plt.GrouppedBars(freqd) # Dict[Dict[int, int]]
+
+  # 2) Relative hole length distribution.
+  rel_holes = db.rel_hole_lengths
+  rhl_list = []
+  for x in rel_holes:
+    for hl in x.split(','):
+      rhl_list.append(float(hl))
+  raise NotImplementedError("Must describe percentiles to distribute.")
+  plt.BarDistribution(rhl_list)
+
+  # 3) Per generation: delta of (filled_tokens - hole_length)
+  l.getLogger().warn("Filled tokens - hole length will be wrong for multiple holes!")
+  l.getLogger().warn("For now, I am assigning every hole to the total of sample indices length.")
+  abs_holes = db.gen_lenind_abshole
+  gen_hole_deltas = {} # gen -> list of deltas.
+  for gen, ahl, lind in abs_holes:
+    if gen not in gen_hole_deltas:
+      gen_hole_deltas[gen] = []
+    for hl in x.split(','):
+      gen_hole_deltas[gen].append(lind - int(hl))
+  plt.ViolinPlots(gen_hole_deltas) # x - axis: gen id, y-axis: distribution.
+
+  # 4) 2D scatter: token delta vs score delta.
+
+  # 5) Bar plot: 6 linear combinations of sign of token delta and score delta (neg, pos, 0.0).
+
+  # 6) Bar plot: 4 linear combinations of compilability and token delta.
+
+  # 7) 2D scatter per generation: rel hole length vs score delta.
+
+  # 8) token delta vs len_input_feed.
+  return
+
+def initMain(*args, **kwargs):
+  db = SearchCandidateDatabase(url = FLAGS.eval_cand_db, must_exist = True)
+  run_db_evaluation(db)
+  return
+
+if __name__ == "__main__":
+  app.run(initMain)
+  sys.exit(0)
