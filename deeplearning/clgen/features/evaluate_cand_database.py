@@ -320,6 +320,7 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
         groups['token delta == 0, score_delta < 0'] += 1
       else:
         groups['token delta == 0, score_delta == 0'] += 1
+  raise NotImplementedError("Move to groupped bars, switch to percentiles")
   plt.FrequencyBars(
     x = list(groups.keys()),
     y = list(groups.values()),
@@ -372,6 +373,7 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     plot_name = "rel_hl_score_delta",
   )
 
+  raise NotImplementedError("Is this correct ? Check.")
   # 8) token delta vs len_input_feed.
   plt.ScatterPlot(
     x = feed_len,
