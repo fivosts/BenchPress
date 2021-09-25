@@ -42,7 +42,7 @@ def GroupScatterPlot(groups: typing.Dict[str, typing.Dict[str, list]],
                      x_name: str,
                      y_name: str,
                      plot_name: str,
-                     path: pathlib.Path,
+                     path: pathlib.Path = None,
                      ) -> None:
   """
   Plots groupped scatter plot of points in two-dimensional space.
@@ -66,17 +66,54 @@ def GroupScatterPlot(groups: typing.Dict[str, typing.Dict[str, list]],
         text       = names,
       )
     )
-  outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
-  fig.write_html (outf("html"))
-  fig.write_image(outf("png"), scale = 2.0)
+  if path:
+    outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
+    fig.write_html (outf("html"))
+    fig.write_image(outf("png"), scale = 2.0)
+  else:
+    fig.show()
   return
+
+def ScatterPlot(x: np.array,
+                y: np.array,
+                x_name: str,
+                y_name: str,
+                plot_name: str,
+                path: pathlib.Path = None,
+                ) -> None:
+  """
+  Implementation of a simple 2D scatter plot without groups.
+  """
+  layout = go.Layout(
+    title = title,
+    xaxis = dict(title = x_name),
+    yaxis = dict(title = y_name),
+  )
+  fig = go.Figure(layout = layout)
+
+  fig.add_trace(
+    go.Scatter(
+      x = x,
+      y = y,
+      mode = 'markers',
+      showlegend = True,
+      opacity = 0.75,
+    )
+  )
+
+  if path:
+    outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
+    fig.write_html (outf("html"))
+    fig.write_image(outf("png"), scale = 2.0)
+  else:
+    fig.show()
 
 def FrequencyBars(x: np.array,
                   y: np.array,
-                  title    : str,
-                  x_name   : str,
-                  plot_name: str,
-                  path: pathlib.Path
+                  title     : str,
+                  x_name    : str,
+                  plot_name : str,
+                  path      : pathlib.Path = None,
                   ) -> None:
   """Plot frequency bars based on key."""
   layout = go.Layout(
@@ -94,9 +131,12 @@ def FrequencyBars(x: np.array,
       opacity = 0.75,
     )
   )
-  outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
-  fig.write_html (outf("html"))
-  fig.write_image(outf("png"), scale = 2.0)
+  if path:
+    outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
+    fig.write_html (outf("html"))
+    fig.write_image(outf("png"), scale = 2.0)
+  else:
+    fig.show()
   return
 
 def LogitsStepsDistrib(x              : typing.List[np.array],
@@ -128,6 +168,39 @@ def LogitsStepsDistrib(x              : typing.List[np.array],
       )
     )
   fig.show()
+  return
+
+def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.List]],
+                 title     : str,
+                 x_name    : str,
+                 plot_name : str,
+                 path      : pathlib.Path = None,
+                 ) -> None:
+  """
+  Similar to LogitsStepsDistrib but more generic.
+  Plots groups of bars.
+  """
+  layout = go.Layout(
+    title = title,
+    xaxis = dict(title = x_name),
+  )
+  fig = go.Figure(layout = layout)
+
+  for group, (x, y) in groups.items():
+    fig.add_trace(
+      go.Bar(
+        name = str(group),
+        x = x,
+        y = y,
+      )
+    )
+
+  if path:
+    outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
+    fig.write_html (outf("html"))
+    fig.write_image(outf("png"), scale = 2.0)
+  else:
+    fig.show()
   return
 
 def CumulativeHistogram(x: np.array,
@@ -191,7 +264,7 @@ def CategoricalViolin(x: np.array,
                       title    : str,
                       x_name   : str,
                       plot_name: str,
-                      path: pathlib.Path
+                      path: pathlib.Path = None,
                       ) -> None:
   """Plot percent cumulative histogram."""
   layout = go.Layout(
@@ -215,7 +288,10 @@ def CategoricalViolin(x: np.array,
         opacity = 0.65,
       )
     )
-  outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
-  fig.write_html (outf("html"))
-  fig.write_image(outf("png"), scale = 2.0)
+  if path:
+    outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
+    fig.write_html (outf("html"))
+    fig.write_image(outf("png"), scale = 2.0)
+  else:
+    fig.show()
   return
