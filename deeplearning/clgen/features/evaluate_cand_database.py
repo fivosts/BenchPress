@@ -267,6 +267,7 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
       gen_hole_deltas[gen] = []
     gen_hole_deltas[gen].append(lind - int(ahl))
 
+  raise NotImplementedError("The plot below is wrong ? Check. Also remove the V things. Keep the rectangles.")
   plt.CategoricalViolin(
     x = list(gen_hole_deltas.keys()),
     y = list(gen_hole_deltas.values()),
