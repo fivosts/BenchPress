@@ -267,7 +267,6 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
       gen_hole_deltas[gen] = []
     gen_hole_deltas[gen].append(lind - int(ahl))
 
-  raise NotImplementedError("The plot below is wrong ? Check. Also remove the V things. Keep the rectangles.")
   plt.CategoricalViolin(
     x = list(gen_hole_deltas.keys()),
     y = list(gen_hole_deltas.values()),
@@ -285,6 +284,7 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     y_name = "Score Delta",
     plot_name = "Token Delta VS Score Delta",
   )
+  # raise NotImplementedError("Split data into two groups: Compiling and Not.")
 
   # 5) Bar plot: 6 linear combinations of sign of token delta and score delta (neg, pos, 0.0).
   groups = {
@@ -320,7 +320,6 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
         groups['token delta == 0, score_delta < 0'] += 1
       else:
         groups['token delta == 0, score_delta == 0'] += 1
-  raise NotImplementedError("Move to groupped bars, switch to percentiles")
   plt.FrequencyBars(
     x = list(groups.keys()),
     y = list(groups.values()),
@@ -328,6 +327,7 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     x_name = "category",
     plot_name = "token_score_deltas",
   )
+  # raise NotImplementedError("Move to groupped bars, switch to percentiles")
 
   # 6) Bar plot: 4 linear combinations of compilability and token delta.
   groups = {
@@ -358,9 +358,9 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
   plt.FrequencyBars(
     x = list(groups.keys()),
     y = list(groups.values()),
-    title = "Compilability VS token & score delta",
+    title = "Compilability VS token delta",
     x_name = "category",
-    plot_name = "comp_score_token_delta",
+    plot_name = "comp_token_delta",
   )
 
   # 7) 2D scatter per generation: rel hole length vs score delta.
@@ -373,7 +373,7 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     plot_name = "rel_hl_score_delta",
   )
 
-  raise NotImplementedError("Is this correct ? Check.")
+  # raise NotImplementedError("Is this correct ? Check.")
   # 8) token delta vs len_input_feed.
   plt.ScatterPlot(
     x = feed_len,
