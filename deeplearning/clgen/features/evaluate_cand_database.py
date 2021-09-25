@@ -208,7 +208,7 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
   for dp in data:
     gen_ids.append(dp.generation_id)
     frequencies.append(dp.frequency)
-    token_deltas.append(sum([int(x) for x in dp.abs_hole_lengths.split(',') if x]) - dp.hole_ind_length)
+    token_deltas.append(dp.hole_ind_length - sum([int(x) for x in dp.abs_hole_lengths.split(',') if x]))
     len_indices.append(dp.hole_ind_length)
     if dp.rel_hole_lengths:
       rel_hole_lengths.append(float(dp.rel_hole_lengths))
