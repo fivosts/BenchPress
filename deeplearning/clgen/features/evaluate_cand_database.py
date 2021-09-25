@@ -14,6 +14,8 @@ from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import plotter as plt
 
+from eupy.native import logger as l
+
 FLAGS = flags.FLAGS
 
 Base = declarative.declarative_base()
@@ -197,18 +199,25 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
   gen_ids          = []
   frequencies      = []
   token_deltas     = []
+  len_indices      = []
   rel_hole_lengths = []
+  abs_hole_lengths = []
   score_deltas     = []
   compile_status   = []
   feed_len         = []
   for dp in data:
-    gen_id.append(dp.generation_id)
+    gen_ids.append(dp.generation_id)
     frequencies.append(dp.frequency)
-    token_deltas.append(sum([int(x) for x in dp.abs_hole_lengths.split(',')]) - dp.len_indices)
-    rel_hole_lengths.append(dp.rel_hole_lengths)
-    score_deltas.append(dp.score_delta)
+    token_deltas.append(sum([int(x) for x in dp.abs_hole_lengths.split(',') if x]) - dp.hole_ind_length)
+    len_indices.append(dp.hole_ind_length)
+    if dp.rel_hole_lengths:
+      rel_hole_lengths.append(float(dp.rel_hole_lengths))
+    if dp.abs_hole_lengths:
+      abs_hole_lengths.append(int(dp.abs_hole_lengths))
+    if not math.isinf(dp.score_delta):
+      score_deltas.append(dp.score_delta)
     compile_status.append(dp.compile_status)
-    feed_len.append(len([int(x) for x in dp.encoded_input_ids.split(',')]))
+    feed_len.append(len([int(x) for x in dp.encoded_input_ids.split(',') if x]))
 
   # 1) Frequency per generation.
   #   x-axis: times occured, y-axis: how many samples did hit these freq.
@@ -224,6 +233,8 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     else:
       freqd[gen] = {}
       freqd[gen][f] = 1
+  for k, v in freqd.items():
+    freqd[k] = (list(v.keys()), list(v.values()))
   plt.GrouppedBars(
     groups = freqd, # Dict[Dict[int, int]]
     title = "Frequency of samples per generation",
@@ -248,15 +259,13 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
   )
 
   # 3) Per generation: delta of (filled_tokens - hole_length)
-  l.getLogger().warn("Filled tokens - hole length will be wrong for multiple holes!")
-  l.getLogger().warn("For now, I am assigning every hole to the total of sample indices length.")
-  data = db.gen_lenind_abshole
+  print("Filled tokens - hole length will be wrong for multiple holes!")
+  print("For now, I am assigning every hole to the total of sample indices length.")
   gen_hole_deltas = {} # gen -> list of deltas.
-  for gen, ahl, lind in data:
+  for gen, ahl, lind in zip(gen_ids, abs_hole_lengths, len_indices):
     if gen not in gen_hole_deltas:
       gen_hole_deltas[gen] = []
-    for hl in x.split(','):
-      gen_hole_deltas[gen].append(lind - int(hl))
+    gen_hole_deltas[gen].append(lind - int(ahl))
 
   plt.CategoricalViolin(
     x = list(gen_hole_deltas.keys()),
@@ -270,6 +279,7 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
   plt.ScatterPlot(
     x = token_deltas,
     y = score_deltas,
+    title = "Token Delta VS Score Delta",
     x_name = "Token Delta",
     y_name = "Score Delta",
     plot_name = "Token Delta VS Score Delta",
@@ -357,6 +367,7 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     y = score_deltas,
     x_name = "Relative Hole Length",
     y_name = "Score Delta",
+    title = "Relative Hole Length VS Score Delta",
     plot_name = "rel_hl_score_delta",
   )
 
@@ -366,11 +377,13 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     y = token_deltas,
     x_name = "Input Feed Length",
     y_name = "Token Delta",
+    title = "Input Length VS Token Delta",
     plot_name = "feed_len_token_delta",
   )
   return
 
 def initMain(*args, **kwargs):
+  # l.initLogger(name = "eval_cand_db")
   db_path = pathlib.Path(FLAGS.eval_cand_db).absolute()
   if not db_path.exists():
     raise FileNotFoundError(str(db_path))
