@@ -1,6 +1,7 @@
 """A module for databases of CLgen samples."""
 import contextlib
 import math
+import pathlib
 import datetime
 import typing
 import sqlite3
@@ -11,6 +12,7 @@ from absl import app, flags
 
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import sqlutil
+from deeplearning.clgen.util import plotter as plt
 
 FLAGS = flags.FLAGS
 
@@ -151,6 +153,12 @@ class SearchCandidateDatabase(sqlutil.Database):
     return count
 
   @property
+  def get_data(self):
+    """Return all database in list format"""
+    with self.Session() as s:
+      return s.query(SearchCandidate).all()
+
+  @property
   def freq_gen_col(self):
     """Return frequency-generation columns of databse."""
     with self.Session() as s:
@@ -169,59 +177,204 @@ class SearchCandidateDatabase(sqlutil.Database):
         SearchCandidate.generation_id,
         SearchCandidate.abs_hole_lengths,
         SearchCandidate.hole_ind_length
-      )
+      ).all()
+
+  @property
+  def holes_scores(self):
+    """Return hole length, hole filled length, score delta"""
+    with self.Session() as s:
+      return s.query(
+        SearchCandidate.abs_hole_lengths,
+        SearchCandidate.hole_ind_length,
+        SearchCandidate.score_delta,
+        SearchCandidate.compile_status
+      ).all()
 
 def run_db_evaluation(db: SearchCandidateDatabase) -> None:
+
+
+  data = db.get_data
+  gen_ids          = []
+  frequencies      = []
+  token_deltas     = []
+  rel_hole_lengths = []
+  score_deltas     = []
+  compile_status   = []
+  feed_len         = []
+  for dp in data:
+    gen_id.append(dp.generation_id)
+    frequencies.append(dp.frequency)
+    token_deltas.append(sum([int(x) for x in dp.abs_hole_lengths.split(',')]) - dp.len_indices)
+    rel_hole_lengths.append(dp.rel_hole_lengths)
+    score_deltas.append(dp.score_delta)
+    compile_status.append(dp.compile_status)
+    feed_len.append(len([int(x) for x in dp.encoded_input_ids.split(',')]))
+
   # 1) Frequency per generation.
   #   x-axis: times occured, y-axis: how many samples did hit these freq.
   #   One group of these distributions per generation.
-  freq_gen  = db.freq_gen_col
+  data  = db.freq_gen_col
   freqd = {}
-  for gen, f in freq:
-    if gen in freq_gen:
-      if f in freq_gen[gen]:
-        freq_gen[gen][f] += 1
+  for gen, f in zip(gen_ids, frequencies):
+    if gen in freqd:
+      if f in freqd[gen]:
+        freqd[gen][f] += 1
       else:
-        freq_gen[gen][f] = 1
+        freqd[gen][f] = 1
     else:
-      freq_gen[gen] = {}
-      freq_gen[gen][f] = 1
-  plt.GrouppedBars(freqd) # Dict[Dict[int, int]]
+      freqd[gen] = {}
+      freqd[gen][f] = 1
+  plt.GrouppedBars(
+    groups = freqd, # Dict[Dict[int, int]]
+    title = "Frequency of samples per generation",
+    x_name = "# of repetitions",
+    plot_name = "freq_samples_per_gen"
+  )
 
   # 2) Relative hole length distribution.
-  rel_holes = db.rel_hole_lengths
-  rhl_list = []
-  for x in rel_holes:
-    for hl in x.split(','):
-      rhl_list.append(float(hl))
-  raise NotImplementedError("Must describe percentiles to distribute.")
-  plt.BarDistribution(rhl_list)
+  rhl_dist = {}
+  for rhl in rel_hole_lengths:
+    rounded = int(100*rhl)
+    if rounded not in rhl_dist:
+      rhl_dist[rounded] = 1
+    else:
+      rhl_dist[rounded] += 1
+  plt.FrequencyBars(
+    x = list(rhl_dist.keys()),
+    y = list(rhl_dist.values()),
+    title = "% hole length distribution",
+    x_name = "percentile",
+    plot_name = "perc_hole_length_distribution",
+  )
 
   # 3) Per generation: delta of (filled_tokens - hole_length)
   l.getLogger().warn("Filled tokens - hole length will be wrong for multiple holes!")
   l.getLogger().warn("For now, I am assigning every hole to the total of sample indices length.")
-  abs_holes = db.gen_lenind_abshole
+  data = db.gen_lenind_abshole
   gen_hole_deltas = {} # gen -> list of deltas.
-  for gen, ahl, lind in abs_holes:
+  for gen, ahl, lind in data:
     if gen not in gen_hole_deltas:
       gen_hole_deltas[gen] = []
     for hl in x.split(','):
       gen_hole_deltas[gen].append(lind - int(hl))
-  plt.ViolinPlots(gen_hole_deltas) # x - axis: gen id, y-axis: distribution.
+
+  plt.CategoricalViolin(
+    x = list(gen_hole_deltas.keys()),
+    y = list(gen_hole_deltas.values()),
+    title = "Hole delta vs generation",
+    x_name = "Generation id",
+    plot_name = "hole_delta_vs_gen"
+  )
 
   # 4) 2D scatter: token delta vs score delta.
+  plt.ScatterPlot(
+    x = token_deltas,
+    y = score_deltas,
+    x_name = "Token Delta",
+    y_name = "Score Delta",
+    plot_name = "Token Delta VS Score Delta",
+  )
 
   # 5) Bar plot: 6 linear combinations of sign of token delta and score delta (neg, pos, 0.0).
+  groups = {
+    'token delta > 0, score_delta > 0': 0,
+    'token delta > 0, score_delta < 0': 0,
+    'token delta > 0, score_delta == 0': 0,
+    'token delta < 0, score_delta > 0': 0,
+    'token delta < 0, score_delta < 0': 0,
+    'token delta < 0, score_delta == 0': 0,
+    'token delta == 0, score_delta > 0': 0,
+    'token delta == 0, score_delta < 0': 0,
+    'token delta == 0, score_delta == 0': 0,
+  }
+  for td, sd in zip(token_deltas, score_deltas):
+    if td > 0:
+      if sd > 0:
+        groups['token delta > 0, score_delta > 0'] += 1
+      elif sd < 0:
+        groups['token delta > 0, score_delta < 0'] += 1
+      else:
+        groups['token delta > 0, score_delta == 0'] += 1
+    elif td < 0:
+      if sd > 0:
+        groups['token delta < 0, score_delta > 0'] += 1
+      elif sd < 0:
+        groups['token delta < 0, score_delta < 0'] += 1
+      else:
+        groups['token delta < 0, score_delta == 0'] += 1
+    else:
+      if sd > 0:
+        groups['token delta == 0, score_delta > 0'] += 1
+      elif sd < 0:
+        groups['token delta == 0, score_delta < 0'] += 1
+      else:
+        groups['token delta == 0, score_delta == 0'] += 1
+  plt.FrequencyBars(
+    x = list(groups.keys()),
+    y = list(groups.values()),
+    title = "Sample Frequency VS token & score delta",
+    x_name = "category",
+    plot_name = "token_score_deltas",
+  )
 
   # 6) Bar plot: 4 linear combinations of compilability and token delta.
+  groups = {
+    'token delta > 0, compile': 0,
+    'token delta > 0, not-compile': 0,
+    'token delta < 0, compile': 0,
+    'token delta < 0, not-compile': 0,
+    'token delta == 0, compile': 0,
+    'token delta == 0, not-compile': 0,
+  }
+  for td, cs in zip(token_deltas, compile_status):
+    if td > 0:
+      if cs == 1:
+        groups['token delta > 0, compile'] += 1
+      else:
+        groups['token delta > 0, not-compile'] += 1
+    elif td < 0:
+      if cs == 1:
+        groups['token delta < 0, compile'] += 1
+      else:
+        groups['token delta < 0, not-compile'] += 1
+    else:
+      if cs == 1:
+        groups['token delta == 0, compile'] += 1
+      else:
+        groups['token delta == 0, not-compile'] += 1
+
+  plt.FrequencyBars(
+    x = list(groups.keys()),
+    y = list(groups.values()),
+    title = "Compilability VS token & score delta",
+    x_name = "category",
+    plot_name = "comp_score_token_delta",
+  )
 
   # 7) 2D scatter per generation: rel hole length vs score delta.
+  plt.ScatterPlot(
+    x = [int(100*x) for x in rel_hole_lengths],
+    y = score_deltas,
+    x_name = "Relative Hole Length",
+    y_name = "Score Delta",
+    plot_name = "rel_hl_score_delta",
+  )
 
   # 8) token delta vs len_input_feed.
+  plt.ScatterPlot(
+    x = feed_len,
+    y = token_deltas,
+    x_name = "Input Feed Length",
+    y_name = "Token Delta",
+    plot_name = "feed_len_token_delta",
+  )
   return
 
 def initMain(*args, **kwargs):
-  db = SearchCandidateDatabase(url = FLAGS.eval_cand_db, must_exist = True)
+  db_path = pathlib.Path(FLAGS.eval_cand_db).absolute()
+  if not db_path.exists():
+    raise FileNotFoundError(str(db_path))
+  db = SearchCandidateDatabase(url = "sqlite:///{}".format(str(db_path)), must_exist = True)
   run_db_evaluation(db)
   return
 
