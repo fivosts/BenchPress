@@ -78,6 +78,7 @@ def ScatterPlot(x: np.array,
                 y: np.array,
                 x_name: str,
                 y_name: str,
+                title : str,
                 plot_name: str,
                 path: pathlib.Path = None,
                 ) -> None:
