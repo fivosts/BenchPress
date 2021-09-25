@@ -393,14 +393,14 @@ def initMain(*args, **kwargs):
     import cgitb
     cgitb.enable(format="text")
     main()
-    sys.exit(0)
+    return
   try:
     if FLAGS.profiling:
       cProfile.runctx("main()", None, None, sort="tottime")
     else:
       main()
   except KeyboardInterrupt:
-    sys.exit(1)
+    return
   except Exception as e:
     l.getLogger().error(e)
     if mail:
@@ -410,7 +410,6 @@ def initMain(*args, **kwargs):
         job = ""
       mail.send_message("clgen:{}".format(str(job.stem)), e)
     raise
-    sys.exit(1)
 
   if mail:
     if FLAGS.config is not None:
@@ -418,7 +417,8 @@ def initMain(*args, **kwargs):
     else:
       job = ""
     mail.send_message("clgen: {}".format(str(job.stem)), "Program terminated successfully at {}.".format(datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S")))
-  sys.exit(0)
+  return
 
 if __name__ == "__main__":
   app.run(initMain)
+  sys.exit(0)
