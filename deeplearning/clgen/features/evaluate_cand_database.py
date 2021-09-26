@@ -160,9 +160,7 @@ class SearchCandidateDatabase(sqlutil.Database):
     with self.Session() as s:
       return s.query(SearchCandidate).all()
 
-def run_db_evaluation(db: SearchCandidateDatabase) -> None:
-
-  data = db.get_data
+def input_samples_distribution(data) -> None:
   # 1) Frequency per generation.
   #   x-axis: times occured, y-axis: how many samples did hit these freq.
   #   One group of these distributions per generation.
@@ -179,13 +177,16 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
       freqd[gen][f] = 1
   for k, v in freqd.items():
     freqd[k] = (list(v.keys()), list(v.values()))
+
   plt.GrouppedBars(
     groups = freqd, # Dict[Dict[int, int]]
     title = "Frequency of input/samples pair per generation",
     x_name = "# of repetitions",
     plot_name = "freq_input_samples_per_gen"
   )
+  return
 
+def samples_distribution(data) -> None:
   freqd = {}
   for dp in data:
     gen, sam = dp.generation_id, dp.sample
@@ -213,6 +214,9 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     plot_name = "freq_samples_per_gen"
   )
 
+  return
+
+def rel_length_distribution(data) -> None:
   # 2) Relative hole length distribution.
   rhl_dist = {}
   for dp in data:
@@ -232,7 +236,9 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     x_name = "percentile",
     plot_name = "perc_hole_length_distribution",
   )
+  return
 
+def token_delta_per_gen(data) -> None:  
   # 3) Per generation: delta of (filled_tokens - hole_length)
   print("Filled tokens - hole length will be wrong for multiple holes!")
   print("For now, I am assigning every hole to the total of sample indices length.")
@@ -254,7 +260,9 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     x_name = "Generation id",
     plot_name = "hole_delta_vs_gen"
   )
+  return
 
+def token_score_delta_scatter(data) -> None:
   # 4) 2D scatter: token delta vs score delta.
   tds, sds = [], []
   for dp in data:
@@ -271,7 +279,9 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     y_name = "Score Delta",
     plot_name = "Token Delta VS Score Delta",
   )
+  return  
 
+def score_vs_token_delta(data) -> None:
   # 5) Bar plot: 6 linear combinations of sign of token delta and score delta (neg, pos, 0.0).
   groups = {
     'better score' : [['token delta > 0', 'token delta < 0', 'token delta == 0'], [0, 0, 0]],
@@ -314,7 +324,9 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     x_name = "category",
     plot_name = "token_score_deltas",
   )
+  return
 
+def comp_vs_token_delta(data) -> None:
   # 6) Bar plot: 4 linear combinations of compilability and token delta.
   groups = {
     'token delta > 0': [['compile', 'not-compile'], [0, 0]],
@@ -352,7 +364,9 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     x_name = "category",
     plot_name = "comp_token_delta",
   )
+  return
 
+def rel_length_score(data) -> None:
   # 7) 2D scatter per generation: rel hole length vs score delta.
   rhl_lens = []
   scd      = []
@@ -374,7 +388,9 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     title = "Relative Hole Length VS Score Delta",
     plot_name = "rel_hl_score_delta",
   )
+  return
 
+def token_delta_vs_len_input(data) -> None:
   # 8) token delta vs len_input_feed.
   feed_len = []
   token_deltas = []
@@ -392,7 +408,10 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     title = "Input Length VS Token Delta",
     plot_name = "feed_len_token_delta",
   )
+  return
 
+def token_vs_rel_len(data) -> None:
+  # Token Delta vs Relative hole length percentile.
   tds = []
   rhl_list = []
   for dp in data:
@@ -413,7 +432,21 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     title = "Rel. Hole length VS Token Delta",
     plot_name = "rel_hl_token_delta"
   )
+  return
 
+def run_db_evaluation(db: SearchCandidateDatabase) -> None:
+
+  data = db.get_data
+  input_samples_distribution(data)
+  samples_distribution(data)
+  rel_length_distribution(data)
+  token_delta_per_gen(data)
+  token_score_delta_scatter(data)
+  score_vs_token_delta(data)
+  comp_vs_token_delta(data)
+  rel_length_score(data)
+  token_delta_vs_len_input(data)
+  token_vs_rel_len(data)
   return
 
 def initMain(*args, **kwargs):
