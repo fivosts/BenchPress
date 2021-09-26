@@ -160,71 +160,15 @@ class SearchCandidateDatabase(sqlutil.Database):
     with self.Session() as s:
       return s.query(SearchCandidate).all()
 
-  @property
-  def freq_gen_col(self):
-    """Return frequency-generation columns of databse."""
-    with self.Session() as s:
-      return s.query(SearchCandidate.generation_id, SearchCandidate.frequency).all()
-
-  @property
-  def rel_hole_lengths(self):
-    """Return column of relative hole lengths"""
-    with self.Session() as s:
-      return s.query(SearchCandidate.rel_hole_lengths).all()
-
-  @property
-  def gen_lenind_abshole(self):
-    with self.Session() as s:
-      return s.query(
-        SearchCandidate.generation_id,
-        SearchCandidate.abs_hole_lengths,
-        SearchCandidate.hole_ind_length
-      ).all()
-
-  @property
-  def holes_scores(self):
-    """Return hole length, hole filled length, score delta"""
-    with self.Session() as s:
-      return s.query(
-        SearchCandidate.abs_hole_lengths,
-        SearchCandidate.hole_ind_length,
-        SearchCandidate.score_delta,
-        SearchCandidate.compile_status
-      ).all()
-
 def run_db_evaluation(db: SearchCandidateDatabase) -> None:
 
-
   data = db.get_data
-  gen_ids          = []
-  frequencies      = []
-  token_deltas     = []
-  len_indices      = []
-  rel_hole_lengths = []
-  abs_hole_lengths = []
-  score_deltas     = []
-  compile_status   = []
-  feed_len         = []
-  for dp in data:
-    gen_ids.append(dp.generation_id)
-    frequencies.append(dp.frequency)
-    token_deltas.append(dp.hole_ind_length - sum([int(x) for x in dp.abs_hole_lengths.split(',') if x]))
-    len_indices.append(dp.hole_ind_length)
-    if dp.rel_hole_lengths:
-      rel_hole_lengths.append(float(dp.rel_hole_lengths))
-    if dp.abs_hole_lengths:
-      abs_hole_lengths.append(int(dp.abs_hole_lengths))
-    if not math.isinf(dp.score_delta):
-      score_deltas.append(dp.score_delta)
-    compile_status.append(dp.compile_status)
-    feed_len.append(len([int(x) for x in dp.encoded_input_ids.split(',') if x]))
-
   # 1) Frequency per generation.
   #   x-axis: times occured, y-axis: how many samples did hit these freq.
   #   One group of these distributions per generation.
-  data  = db.freq_gen_col
   freqd = {}
-  for gen, f in zip(gen_ids, frequencies):
+  for dp in data:
+    gen, f = dp.generation_id, dp.frequency
     if gen in freqd:
       if f in freqd[gen]:
         freqd[gen][f] += 1
@@ -237,6 +181,33 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     freqd[k] = (list(v.keys()), list(v.values()))
   plt.GrouppedBars(
     groups = freqd, # Dict[Dict[int, int]]
+    title = "Frequency of input/samples pair per generation",
+    x_name = "# of repetitions",
+    plot_name = "freq_input_samples_per_gen"
+  )
+
+  freqd = {}
+  for dp in data:
+    gen, sam = dp.generation_id, dp.sample
+    hsm = crypto.sha256_str(sam)
+    if gen in freqd:
+      if hsm in freqd[gen]:
+        freqd[gen][hsm] += 1
+      else:
+        freqd[gen][hsm] = 1
+    else:
+      freqd[gen] = {}
+      freqd[gen][hsm] = 1
+  for k, v in freqd.items():
+    gdict = {}
+    for samp, freq in v.items():
+      if freq in gdict:
+        gdict[freq] += 1
+      else:
+        gdict[freq] = 1
+    freqd[k] = (list(gdict.keys()), list(gdict.values()))
+  plt.GrouppedBars(
+    groups = freqd, # Dict[Dict[int, int]]
     title = "Frequency of samples per generation",
     x_name = "# of repetitions",
     plot_name = "freq_samples_per_gen"
@@ -244,12 +215,16 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
 
   # 2) Relative hole length distribution.
   rhl_dist = {}
-  for rhl in rel_hole_lengths:
-    rounded = int(100*rhl)
-    if rounded not in rhl_dist:
-      rhl_dist[rounded] = 1
-    else:
-      rhl_dist[rounded] += 1
+  for dp in data:
+    rhl = dp.rel_hole_lengths
+    try:
+      rounded = int(100*float(rhl))
+      if rounded not in rhl_dist:
+        rhl_dist[rounded] = 1
+      else:
+        rhl_dist[rounded] += 1
+    except Exception:
+      continue
   plt.FrequencyBars(
     x = list(rhl_dist.keys()),
     y = list(rhl_dist.values()),
@@ -262,10 +237,15 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
   print("Filled tokens - hole length will be wrong for multiple holes!")
   print("For now, I am assigning every hole to the total of sample indices length.")
   gen_hole_deltas = {} # gen -> list of deltas.
-  for gen, ahl, lind in zip(gen_ids, abs_hole_lengths, len_indices):
-    if gen not in gen_hole_deltas:
-      gen_hole_deltas[gen] = []
-    gen_hole_deltas[gen].append(lind - int(ahl))
+  for dp in data:
+    gen, ahl, lind = dp.generation_id, dp.abs_hole_lengths, dp.hole_ind_length
+    try:
+      ahl = sum([int(x) for x in ahl.split(',') if x])
+      if gen not in gen_hole_deltas:
+        gen_hole_deltas[gen] = []
+      gen_hole_deltas[gen].append(lind - int(ahl))
+    except Exception:
+      continue
 
   plt.CategoricalViolin(
     x = list(gen_hole_deltas.keys()),
@@ -276,105 +256,134 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
   )
 
   # 4) 2D scatter: token delta vs score delta.
+  tds, sds = [], []
+  for dp in data:
+    td = dp.hole_ind_length - sum([int(x) for x in dp.abs_hole_lengths.split(',') if x])
+    sd = dp.score_delta if not math.isinf(dp.score_delta) else None
+    if sd is not None and td is not None:
+      tds.append(td)
+      sds.append(sd)
   plt.ScatterPlot(
-    x = token_deltas,
-    y = score_deltas,
+    x = tds,
+    y = sds,
     title = "Token Delta VS Score Delta",
     x_name = "Token Delta",
     y_name = "Score Delta",
     plot_name = "Token Delta VS Score Delta",
   )
-  # raise NotImplementedError("Split data into two groups: Compiling and Not.")
 
   # 5) Bar plot: 6 linear combinations of sign of token delta and score delta (neg, pos, 0.0).
   groups = {
-    'token delta > 0, score_delta > 0': 0,
-    'token delta > 0, score_delta < 0': 0,
-    'token delta > 0, score_delta == 0': 0,
-    'token delta < 0, score_delta > 0': 0,
-    'token delta < 0, score_delta < 0': 0,
-    'token delta < 0, score_delta == 0': 0,
-    'token delta == 0, score_delta > 0': 0,
-    'token delta == 0, score_delta < 0': 0,
-    'token delta == 0, score_delta == 0': 0,
+    'better score' : [['token delta > 0', 'token delta < 0', 'token delta == 0'], [0, 0, 0]],
+    'worse score'  : [['token delta > 0', 'token delta < 0', 'token delta == 0'], [0, 0, 0]],
+    'same score'   : [['token delta > 0', 'token delta < 0', 'token delta == 0'], [0, 0, 0]],
   }
-  for td, sd in zip(token_deltas, score_deltas):
-    if td > 0:
-      if sd > 0:
-        groups['token delta > 0, score_delta > 0'] += 1
-      elif sd < 0:
-        groups['token delta > 0, score_delta < 0'] += 1
+  nsum = 0
+  for dp in data:
+    td = dp.hole_ind_length - sum([int(x) for x in dp.abs_hole_lengths.split(',') if x])
+    sd = dp.score_delta if not math.isinf(dp.score_delta) else None
+    if sd is not None and td is not None:
+      nsum += 1
+      if sd < 0:
+        if td > 0:
+          groups['better score'][1][0] += 1
+        elif td < 0:
+          groups['better score'][1][1] += 1
+        else:
+          groups['better score'][1][2] += 1
+      elif sd > 0:
+        if td > 0:
+          groups['worse score'][1][0] += 1
+        elif td < 0:
+          groups['worse score'][1][1] += 1
+        else:
+          groups['worse score'][1][2] += 1
       else:
-        groups['token delta > 0, score_delta == 0'] += 1
-    elif td < 0:
-      if sd > 0:
-        groups['token delta < 0, score_delta > 0'] += 1
-      elif sd < 0:
-        groups['token delta < 0, score_delta < 0'] += 1
-      else:
-        groups['token delta < 0, score_delta == 0'] += 1
-    else:
-      if sd > 0:
-        groups['token delta == 0, score_delta > 0'] += 1
-      elif sd < 0:
-        groups['token delta == 0, score_delta < 0'] += 1
-      else:
-        groups['token delta == 0, score_delta == 0'] += 1
-  plt.FrequencyBars(
-    x = list(groups.keys()),
-    y = list(groups.values()),
-    title = "Sample Frequency VS token & score delta",
+        if td > 0:
+          groups['same score'][1][0] += 1
+        elif td < 0:
+          groups['same score'][1][1] += 1
+        else:
+          groups['same score'][1][2] += 1
+  for k, v in groups.items():
+    for idx, nv in enumerate(v[1]):
+      groups[k][1][idx] = 100 * (nv / nsum)
+  plt.GrouppedBars(
+    groups = groups,
+    title = "Sample Frequency % VS token & score delta",
     x_name = "category",
     plot_name = "token_score_deltas",
   )
-  # raise NotImplementedError("Move to groupped bars, switch to percentiles")
 
   # 6) Bar plot: 4 linear combinations of compilability and token delta.
   groups = {
-    'token delta > 0, compile': 0,
-    'token delta > 0, not-compile': 0,
-    'token delta < 0, compile': 0,
-    'token delta < 0, not-compile': 0,
-    'token delta == 0, compile': 0,
-    'token delta == 0, not-compile': 0,
+    'token delta > 0': [['compile', 'not-compile'], [0, 0]],
+    'token delta < 0': [['compile', 'not-compile'], [0, 0]],
+    'token delta == 0': [['compile', 'not-compile'], [0, 0]],
   }
-  for td, cs in zip(token_deltas, compile_status):
-    if td > 0:
-      if cs == 1:
-        groups['token delta > 0, compile'] += 1
+  nsum = 0
+  for dp in data:
+    td = dp.hole_ind_length - sum([int(x) for x in dp.abs_hole_lengths.split(',') if x])
+    cs = dp.compile_status
+    if td is not None and cs is not None:
+      nsum += 1
+      if td > 0:
+        if cs == 1:
+          groups['token delta > 0'][1][0] += 1
+        else:
+          groups['token delta > 0'][1][1] += 1
+      elif td < 0:
+        if cs == 1:
+          groups['token delta < 0'][1][0] += 1
+        else:
+          groups['token delta < 0'][1][1] += 1
       else:
-        groups['token delta > 0, not-compile'] += 1
-    elif td < 0:
-      if cs == 1:
-        groups['token delta < 0, compile'] += 1
-      else:
-        groups['token delta < 0, not-compile'] += 1
-    else:
-      if cs == 1:
-        groups['token delta == 0, compile'] += 1
-      else:
-        groups['token delta == 0, not-compile'] += 1
+        if cs == 1:
+          groups['token delta == 0'][1][0] += 1
+        else:
+          groups['token delta == 0'][1][1] += 1
+  for k, v in groups.items():
+    for idx, nv in enumerate(v[1]):
+      groups[k][1][idx] = 100 * (nv / nsum)
 
-  plt.FrequencyBars(
-    x = list(groups.keys()),
-    y = list(groups.values()),
-    title = "Compilability VS token delta",
+  plt.GrouppedBars(
+    groups = groups,
+    title = "Sample Frequency % VS Compilability & token delta",
     x_name = "category",
     plot_name = "comp_token_delta",
   )
 
   # 7) 2D scatter per generation: rel hole length vs score delta.
+  rhl_lens = []
+  scd      = []
+  for dp in data:
+    try:
+      rhl = int(100*float(dp.rel_hole_lengths))
+      sd = dp.score_delta
+      if rhl is not None and not math.isinf(sd):
+        rhl_lens.append(rhl)
+        scd.append(sd)
+    except Exception:
+      continue
+
   plt.ScatterPlot(
-    x = [int(100*x) for x in rel_hole_lengths],
-    y = score_deltas,
+    x = rhl_lens,
+    y = scd,
     x_name = "Relative Hole Length",
     y_name = "Score Delta",
     title = "Relative Hole Length VS Score Delta",
     plot_name = "rel_hl_score_delta",
   )
 
-  # raise NotImplementedError("Is this correct ? Check.")
   # 8) token delta vs len_input_feed.
+  feed_len = []
+  token_deltas = []
+  for dp in data:
+    td = dp.hole_ind_length - sum([int(x) for x in dp.abs_hole_lengths.split(',') if x])
+    if td is not None:
+      token_deltas.append(td)
+      feed_len.append(len([int(x) for x in dp.encoded_input_ids.split(',') if x]))
+
   plt.ScatterPlot(
     x = feed_len,
     y = token_deltas,
@@ -383,6 +392,28 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
     title = "Input Length VS Token Delta",
     plot_name = "feed_len_token_delta",
   )
+
+  tds = []
+  rhl_list = []
+  for dp in data:
+    try:
+      rhl = dp.rel_hole_lengths
+      rounded = int(100*float(rhl))
+      td = dp.hole_ind_length - sum([int(x) for x in dp.abs_hole_lengths.split(',') if x])
+      if td is not None:
+        tds.append(td)
+        rhl_list.append(rhl)
+    except Exception:
+      continue
+  plt.ScatterPlot(
+    x = rhl_list,
+    y = tds,
+    x_name = "Relative Hole length %",
+    y_name = "Token Delta",
+    title = "Rel. Hole length VS Token Delta",
+    plot_name = "rel_hl_token_delta"
+  )
+
   return
 
 def initMain(*args, **kwargs):
