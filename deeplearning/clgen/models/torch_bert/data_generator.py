@@ -684,6 +684,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               [[]] * len(total_cand))
     except KeyboardInterrupt:
       self.raised_keyboard_int = True
+      if write_cache_proc:
+        write_cache_proc.join()
+      if FLAGS.evaluate_candidates and write_eval_proc:
+        write_eval_proc.join()
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
@@ -783,6 +787,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         for k, v in inputs.items():
           inputs[k] = torch.stack(v)
         pool.close()
+        pool.terminate()
       except KeyboardInterrupt as e:
         pool.close()
         pool.terminate()
@@ -839,6 +844,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           rejected_candidates.append(batch[1])
       bar.update(bar.max_value)
       pool.close()
+      pool.terminate()
     except KeyboardInterrupt as e:
       pool.close()
       pool.terminate()
