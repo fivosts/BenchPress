@@ -8,7 +8,7 @@ RUN apt-get install -y sudo git wget
 RUN git clone https://54b082ffbdcd8ad60dcba3ba992863b40069667f@github.com/fivosts/clgen.git
 
 WORKDIR /home/clgen
-RUN echo "cmake y" | bash requirements.apt
+RUN sh -c 'cmake y" | bash requirements.apt'
 
 WORKDIR /home/clgen
 RUN mkdir build
