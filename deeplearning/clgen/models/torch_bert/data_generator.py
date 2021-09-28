@@ -7,6 +7,7 @@ fit_generator() method to stream batches of training data.
 """
 import os
 import typing
+import copy
 import datetime
 import glob
 import humanize
@@ -516,12 +517,15 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     sample_batch_per_feed = self.sampler.config.sample_corpus.corpus_config.active.batch_size_per_feed
 
     # Initialize feed queue
-    org_inp, org_ids = self.initOrGetQueue()
+    org_inp = self.initOrGetQueue()
+    org_ids = copy.copy(org_inp)
     total_cand, total_cand_hash = [], set()
 
     try:
+      ## BFS style. While you have jobs, keep going.
       while self.feed_queue:
 
+        ## Pop the feed that will probide a sample workload.
         feed = self.feed_queue.pop(0)
         if self.skip_first_queue:
           self.skip_first_queue = False
@@ -530,34 +534,41 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           except Exception:
             pass
 
+        # Compilation rate, execution time, per generation.
         cmp_rate        = [0, 0]
         exec_time       = 0.0
-
-        self.sampler.setStartText(self.tokenizer.tokensToString(feed.input_feed, ignore_token = self.tokenizer.padToken))
-        self.sampler.Specialize(self.tokenizer)
 
         if feed.gen_id not in self.comp_rate:
           self.comp_rate[feed.gen_id] = [0, 0]
         if feed.gen_id not in self.exec_time:
           self.exec_time[feed.gen_id] = 0.0
 
+        # Specialize sampler to current sampling input.
+        self.sampler.setStartText(self.tokenizer.tokensToString(feed.input_feed, ignore_token = self.tokenizer.padToken))
+        self.sampler.Specialize(self.tokenizer)
+
         # Iterate until you get a better sample or surpass the limit.
-        better_found, write_cache_proc, it = None, None, 0
+        better_found, it, threshold = None, 0, 160000
+        # Sample cache thread, eval cand DB thread.
+        write_cache_proc, it = None
         if FLAGS.evaluate_candidates:
           write_eval_proc = None
 
         l.getLogger().info("Current input feed score: {}".format(str(round(feed.input_score, 2))))
-        while not better_found and cmp_rate[1] < 160000:
-          # Pre-process inputs
+        while not better_found and cmp_rate[1] < threshold:
+          ## Pre-process inputs
+          # workload size: how many batches of sequences you need.
           wsize = FLAGS.sample_workload_size // self.sample_batch_size
+          # Give the input feed and some specs, get the tensor ready to feed.
           inputs = self.collateInputData(feed.input_feed, wsize, sample_batch_per_feed)
-          # Workload inference.
+          ## Workload inference.
           outputs, time = mwrapper.sample_model_step(
             estimator.model,
             inputs,
             iteration = it,
           )
-          # Post-process outputs.
+          ## Post-process outputs.
+          # Keep step_candidates and evaluate them. Keep rejected candidates only for eval_cand database.
           step_candidates, rejected_candidates = [], []
           bar = progressbar.ProgressBar(max_value = wsize * self.sample_batch_size)
           bar.update(0)
@@ -588,6 +599,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           )
           write_cache_proc.start()
 
+          ## Write all candidates to eval_cand DB.
           if FLAGS.evaluate_candidates:
             if write_eval_proc:
               write_eval_proc.join()
@@ -608,12 +620,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             l.getLogger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
           # Calculate how many more to infer.
           try:
-            rcands = active_limit_per_feed - len(step_candidates)
-            crate  = cmp_rate[0] / cmp_rate[1]
-            wsize = max(2, int((rcands // self.sample_batch_size) / crate))
+            rcands = active_limit_per_feed - len(step_candidates) # Deprecated.
+            crate  = cmp_rate[0] / cmp_rate[1] # Get current compilation rate.
+            wsize = max(2, int((rcands // self.sample_batch_size) / crate)) # Deprecated.
           except ZeroDivisionError:
             pass
+          # Step counter.
           it += 1
+        ######## End of while.
 
         # Catch threads on last iteration.
         if write_cache_proc:
@@ -621,6 +635,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         if FLAGS.evaluate_candidates and write_eval_proc:
           write_eval_proc.join()
 
+        ## Update all monitors.
         self.comp_rate[feed.gen_id] = [sum(x) for x in zip(self.comp_rate[feed.gen_id], cmp_rate)]
         self.exec_time[feed.gen_id] += exec_time
         self.comp_rate_mon.register((feed.gen_id, self.comp_rate[feed.gen_id][0] / self.comp_rate[feed.gen_id][1]))
@@ -629,22 +644,27 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         self.exec_time_mon.plot()
         self.tsne_monitor.plot()
 
-        # Top-k candidates of ith generation.
+        ## Collect surviving candidates of generation.
+        # If we just started, get top-K.
         if feed.gen_id == 0:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
           l.getLogger().info("Starting scores: {}".format(', '.join([str(round(c.score, 3)) for c in best_cands])))
         else:
+          # If nothing was found, there are no best cands, and we will keep searching.
           if not better_found:
             best_cands = []
             l.getLogger().warn("No better candidate found...")
           else:
+            # Otherwise, this single input feed, provides a new single better sample.
             best_cands = [better_found]
 
+        # Monitor the new better candidate(s), if any.
         if best_cands:
           self.candidate_monitor.register(
             {str(best_cands[0].sample_feed.gen_id): [c.score for c in best_cands]}
           )
           self.candidate_monitor.plot()
+        # Add them back to queue and to active feed database.
         for nc in best_cands:
           sample_hash = ''.join([str(x) for x in nc.sample])
           if sample_hash not in total_cand_hash:
@@ -674,8 +694,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                 generation_id    = nc.sample_feed.gen_id,
               )
             )
+        # save state and re-loop.
         self.saveCheckpoint()
 
+      ## Finished, save state, switch benchmark, return samples.
       self.saveCheckpoint()
       self.feat_sampler.iter_benchmark()
       return (np.repeat([org_inp], len(total_cand), axis = 0),
@@ -700,13 +722,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               [x.sample for x in total_cand],
               [[]] * len(total_cand))
 
-  def initOrGetQueue(self) -> int:
+  def initOrGetQueue(self) -> np.array:
     """
     If feed queue is not initialized, initialize it by getting new datapoint.
+    Otherwise, don't do anything as feed_queue is already loaded from checkpoint.
     Adds datapoint to InputFeed table of database.
 
     Returns:
-      generation_id
+      Starting input feed of sampling.
     """
     if not self.feed_queue:
       try:
@@ -730,7 +753,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         )
       )
     l.getLogger().info("Feed queue input scores: {}".format(', '.join([str(round(c.input_score, 3)) for c in self.feed_queue])))
-    return self.feed_queue[0].input_feed, self.feed_queue[0].input_feed
+    return self.feed_queue[0].input_feed
 
   def collateInputData(self,
                        feed: np.array,
@@ -841,7 +864,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             if better_found is None or batch[1].score < better_found.score:
               better_found = batch[1]
         else:
-          rejected_candidates.append(batch[1])
+          if FLAGS.evaluate_candidates:
+            rejected_candidates.append(batch[1])
       bar.update(bar.max_value)
       pool.close()
       pool.terminate()
