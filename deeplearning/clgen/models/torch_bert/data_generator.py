@@ -572,7 +572,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         if FLAGS.evaluate_candidates:
           write_eval_proc = None
 
-        l.getLogger().info("Current input feed scores: {}".format(','.join([str(round(feed.input_score, 2)) for feed in feeds])))
+        l.getLogger().info("Current input feed scores: {}".format(', '.join([str(round(feed.input_score, 3)) for feed in feeds])))
         while not better_found and cmp_rate[1] < threshold:
           ## Pre-process inputs
           # workload size: how many batches of sequences you need.
@@ -593,7 +593,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           tcs, ts = 0, 0
           for idx, feed in enumerate(feeds):
             (cs, s), better_found = self.registerOutputData(
-              outputs[idx*wsize*self.sample_batch_size: (idx+1)*wsize*self.sample_batch_size],
+              outputs,
+              (idx*wsize*self.sample_batch_size, (idx+1)*wsize*self.sample_batch_size),
               feed,
               step_candidates,
               rejected_candidates,
@@ -644,9 +645,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             )
             write_eval_proc.start()
 
-          if FLAGS.evolutionary_search:
-            raise NotImplementedError
-          elif better_found and feeds[0].gen_id > 0:
+          if not FLAGS.evolutionary_search and better_found and feeds[0].gen_id > 0:
             l.getLogger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
           # Calculate how many more to infer.
           try:
@@ -682,7 +681,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # If we just started, get top-K.
         if FLAGS.evolutionary_search:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
-          l.getLogger().info("Top {} samples of {} generation: {}".format(active_search_width, ', '.join([str(round(c.score, 3)) for c in best_cands])))
+          l.getLogger().info("Top {} samples of {} generation: {}".format(active_search_width, feeds[0].gen_id, ', '.join([str(round(c.score, 3)) for c in best_cands])))
         elif feeds[0].gen_id == 0:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
           l.getLogger().info("Starting scores: {}".format(', '.join([str(round(c.score, 3)) for c in best_cands])))
@@ -859,6 +858,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
   def registerOutputData(self,
                          outputs    : typing.Dict[str, typing.List[np.array]],
+                         rng        : typing.Tuple[int, int],
                          feed       : ActiveSampleFeed,
                          candidates : typing.List[ActiveSample],
                          rejected_candidates: typing.List[ActiveSample],
@@ -885,8 +885,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     better_found = None
     try:
       it = zip(
-        outputs['generated_samples'], outputs['sample_indices'],
-        outputs['input_ids'], outputs['masked_lm_lengths']
+        outputs['generated_samples'][rng[0]: rng[1]], outputs['sample_indices'][rng[0]: rng[1]],
+        outputs['input_ids'][rng[0]: rng[1]], outputs['masked_lm_lengths'][rng[0]: rng[1]]
       )
       if self.feat_sampler.feature_space != "GreweFeatures":
         candidate_worker = functools.partial(
