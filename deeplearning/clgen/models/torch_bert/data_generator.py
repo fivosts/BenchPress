@@ -527,26 +527,37 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       while self.feed_queue:
 
         ## Pop the feed that will probide a sample workload.
-        feed = self.feed_queue.pop(0)
-        if self.skip_first_queue:
-          self.skip_first_queue = False
+        if FLAGS.evolutionary_search:
           try:
-            feed = self.feed_queue.pop(0)
+            init_feed = self.feed_queue.pop(0)
+            feeds = [init_feed]
+            cur_gen = init_feed.gen_id
+            while self.feed_queue[0].gen_id == cur_gen:
+              feeds.append(self.feed_queue.pop(0))
           except Exception:
             pass
+        else:
+          feeds = [self.feed_queue.pop(0)]
+          if self.skip_first_queue:
+            self.skip_first_queue = False
+            try:
+              feeds = [self.feed_queue.pop(0)]
+            except Exception:
+              pass
 
         # Compilation rate, execution time, per generation.
         cmp_rate        = [0, 0]
         exec_time       = 0.0
 
-        if feed.gen_id not in self.comp_rate:
-          self.comp_rate[feed.gen_id] = [0, 0]
-        if feed.gen_id not in self.exec_time:
-          self.exec_time[feed.gen_id] = 0.0
+        if feeds[0].gen_id not in self.comp_rate:
+          self.comp_rate[feeds[0].gen_id] = [0, 0]
+        if feeds[0].gen_id not in self.exec_time:
+          self.exec_time[feeds[0].gen_id] = 0.0
 
         # Specialize sampler to current sampling input.
-        self.sampler.setStartText(self.tokenizer.tokensToString(feed.input_feed, ignore_token = self.tokenizer.padToken))
-        self.sampler.Specialize(self.tokenizer)
+        for feed in feeds:
+          self.sampler.setStartText(self.tokenizer.tokensToString(feed.input_feed, ignore_token = self.tokenizer.padToken))
+          self.sampler.Specialize(self.tokenizer)
 
         # Iterate until you get a better sample or surpass the limit.
         better_found, it, threshold = None, 0, 160000
@@ -555,13 +566,13 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         if FLAGS.evaluate_candidates:
           write_eval_proc = None
 
-        l.getLogger().info("Current input feed score: {}".format(str(round(feed.input_score, 2))))
+        l.getLogger().info("Current input feed scores: {}".format(','.join([str(round(feed.input_score, 2)) for feed in feeds])))
         while not better_found and cmp_rate[1] < threshold:
           ## Pre-process inputs
           # workload size: how many batches of sequences you need.
           wsize = FLAGS.sample_workload_size // self.sample_batch_size
           # Give the input feed and some specs, get the tensor ready to feed.
-          inputs = self.collateInputData([feed.input_feed], wsize, sample_batch_per_feed)
+          inputs = self.collateInputData([feed.input_feed for feed in feeds], wsize, sample_batch_per_feed)
           ## Workload inference.
           outputs, time = mwrapper.sample_model_step(
             estimator.model,
@@ -571,15 +582,25 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           ## Post-process outputs.
           # Keep step_candidates and evaluate them. Keep rejected candidates only for eval_cand database.
           step_candidates, rejected_candidates = [], []
-          bar = progressbar.ProgressBar(max_value = wsize * self.sample_batch_size)
+          bar = progressbar.ProgressBar(max_value = len(feeds) * wsize * self.sample_batch_size)
           bar.update(0)
-          (tcs, ts), better_found = self.registerOutputData(outputs, feed, step_candidates, rejected_candidates, bar)
+          tcs, ts = 0, 0
+          for idx, feed in enumerate(feeds):
+            (cs, s), better_found = self.registerOutputData(
+              outputs[idx*wsize*self.sample_batch_size: (idx+1)*wsize*self.sample_batch_size],
+              feed,
+              step_candidates,
+              rejected_candidates,
+              bar
+            )
+            tcs += cs
+            ts  =  s
 
           ## Register good offsprings, along with step candidates in tsne monitor.
-          if better_found:
-            self.tsne_monitor.register((better_found.features, "gen_{}_accepted".format(str(feed.gen_id)), str(better_found.score)))
+          if not FLAGS.evolutionary_search and better_found:
+            self.tsne_monitor.register((better_found.features, "gen_{}_accepted".format(str(feeds[0].gen_id)), str(better_found.score)))
           for c in step_candidates:
-            self.tsne_monitor.register((c.features, "gen_{}".format(str(feed.gen_id))))
+            self.tsne_monitor.register((c.features, "gen_{}".format(str(feeds[0].gen_id))))
 
           ## Recalculate compilation rate of generation.
           cmp_rate[0] += tcs
@@ -612,12 +633,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                 'samples'   : step_candidates + rejected_candidates,
                 'target_benchmark' : (self.feat_sampler.target_benchmark.name, self.feat_sampler.target_benchmark.contents),
                 'target_features'  : self.feat_sampler.target_benchmark.features,
-                'gen_id'           : feed.gen_id,
+                'gen_id'           : feeds[0].gen_id,
               }
             )
             write_eval_proc.start()
 
-          if better_found and feed.gen_id > 0:
+          if FLAGS.evolutionary_search:
+            raise NotImplementedError
+          elif better_found and feeds[0].gen_id > 0:
             l.getLogger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
           # Calculate how many more to infer.
           try:
@@ -628,6 +651,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             pass
           # Step counter.
           it += 1
+          if FLAGS.evolutionary_search:
+            # No need to keep looking for better samples than parents.
+            # In this mode, you get a workload and keep the best independently.
+            break
         ######## End of while.
 
         # Catch threads on last iteration.
@@ -637,17 +664,20 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           write_eval_proc.join()
 
         ## Update all monitors.
-        self.comp_rate[feed.gen_id] = [sum(x) for x in zip(self.comp_rate[feed.gen_id], cmp_rate)]
-        self.exec_time[feed.gen_id] += exec_time
-        self.comp_rate_mon.register((feed.gen_id, self.comp_rate[feed.gen_id][0] / self.comp_rate[feed.gen_id][1]))
-        self.exec_time_mon.register((feed.gen_id, self.exec_time[feed.gen_id]    / self.comp_rate[feed.gen_id][1]))
+        self.comp_rate[feeds[0].gen_id] = [sum(x) for x in zip(self.comp_rate[feeds[0].gen_id], cmp_rate)]
+        self.exec_time[feeds[0].gen_id] += exec_time
+        self.comp_rate_mon.register((feeds[0].gen_id, self.comp_rate[feeds[0].gen_id][0] / self.comp_rate[feeds[0].gen_id][1]))
+        self.exec_time_mon.register((feeds[0].gen_id, self.exec_time[feeds[0].gen_id]    / self.comp_rate[feeds[0].gen_id][1]))
         self.comp_rate_mon.plot()
         self.exec_time_mon.plot()
         self.tsne_monitor.plot()
 
         ## Collect surviving candidates of generation.
         # If we just started, get top-K.
-        if feed.gen_id == 0:
+        if FLAGS.evolutionary_search:
+          best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
+          l.getLogger().info("Top {} samples of {} generation: {}".format(active_search_width, ', '.join([str(round(c.score, 3)) for c in best_cands])))
+        elif feeds[0].gen_id == 0:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
           l.getLogger().info("Starting scores: {}".format(', '.join([str(round(c.score, 3)) for c in best_cands])))
         else:
@@ -860,7 +890,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         candidate_worker = functools.partial(
           text_candidate_worker, feed = feed, tokenizer = self.tokenizer, feat_sampler = self.feat_sampler,
         )
+      t = 0
       for idx, batch in enumerate(pool.map(candidate_worker, it)):
+        t = idx
         if batch[0]:
           cm_rate[0] += 1
           candidates.append(batch[1])
@@ -870,7 +902,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         else:
           if FLAGS.evaluate_candidates:
             rejected_candidates.append(batch[1])
-      bar.update(bar.max_value)
+      bar.update(1+t)
       pool.close()
       pool.terminate()
     except KeyboardInterrupt as e:
