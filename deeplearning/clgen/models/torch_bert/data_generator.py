@@ -169,7 +169,7 @@ def dataload_worker(x              : int,
                     func           : typing.TypeVar('sequence_masking.MaskingFunction'),
                     batch          : int,
                     batch_per_feed : int,
-                    ) -> typing.Dict[str, torch.Tensor]:
+                    ) -> typing.Dict[str, np.array]:
   try:
     return [f for _ in range(batch // batch_per_feed) for f in [func(feed)] * batch_per_feed]
   except Exception:
