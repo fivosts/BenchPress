@@ -681,7 +681,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # If we just started, get top-K.
         if FLAGS.evolutionary_search:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
-          l.getLogger().info("Top {} samples of {} generation: {}".format(active_search_width, feeds[0].gen_id, ', '.join([str(round(c.score, 3)) for c in best_cands])))
+          l.getLogger().info("Top-{} ({} unique) samples of generation {}: {}".format(active_search_width, len(best_cands), feeds[0].gen_id, ', '.join([str(round(c.score, 3)) for c in best_cands])))
         elif feeds[0].gen_id == 0:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
           l.getLogger().info("Starting scores: {}".format(', '.join([str(round(c.score, 3)) for c in best_cands])))
@@ -703,10 +703,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # Add them back to queue and to active feed database.
         for nc in best_cands:
           sample_hash = ''.join([str(x) for x in nc.sample])
-          if sample_hash not in total_cand_hash:
+          if FLAGS.evolutionary_search or (sample_hash not in total_cand_hash):
             total_cand.append(nc)
             total_cand_hash.add(sample_hash)
-            if 0 < nc.score < feed.input_score and 1+nc.sample_feed.gen_id <= active_search_depth:
+            if FLAGS.evolutionary_search or (0 < nc.score < feed.input_score and 1+nc.sample_feed.gen_id <= active_search_depth):
               self.feed_queue.append(
                 ActiveSampleFeed(
                   input_feed       = nc.sample,
@@ -811,7 +811,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     """
     if self.tokenizer.maskToken in feed[0] or self.tokenizer.holeToken in feed[0]:
       inputs = sequence_masking.MaskedSeqToBlob(
-        feed, self.tokenizer,
+        feed[0], self.tokenizer,
         self.sampler.sequence_length,
         self.max_position_embeddings
       )
@@ -908,7 +908,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         else:
           if FLAGS.evaluate_candidates:
             rejected_candidates.append(batch[1])
-      bar.update(1+t)
+      bar.update(bar.value + 1 + t)
       pool.close()
       pool.terminate()
     except KeyboardInterrupt as e:
