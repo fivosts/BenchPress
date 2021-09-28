@@ -235,6 +235,7 @@ class EuclideanSampler(object):
   def sample_from_set(self, 
                       candidates: typing.List[typing.TypeVar("ActiveSample")],
                       search_width: int,
+                      only_unique: bool = True,
                       ) -> bool:
     """
     Find top K candidates by getting minimum
@@ -246,6 +247,15 @@ class EuclideanSampler(object):
         score = self.calculate_distance(candidates[idx].features)
       )
     """
+    if unique:
+      hset = set()
+      unique_candidates = []
+      for c in candidates:
+        sample_str = ','.join([str(x) for x in c.sample])
+        if sample_str not in hset:
+          unique_candidates.append(c)
+          hset.add(sample_str)
+      candidates = unique_candidates
     return self.topK_candidates(candidates, search_width)
 
   def saveCheckpoint(self) -> None:
