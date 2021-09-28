@@ -247,7 +247,7 @@ class EuclideanSampler(object):
         score = self.calculate_distance(candidates[idx].features)
       )
     """
-    if unique:
+    if only_unique:
       hset = set()
       unique_candidates = []
       for c in candidates:
