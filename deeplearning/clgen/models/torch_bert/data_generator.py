@@ -50,6 +50,12 @@ flags.DEFINE_boolean(
   "Select to do exhaustive evaluation of sampling search candidates."
 )
 
+flags.DEFINE_boolean(
+  "evolutionary_search",
+  True,
+  "Select to perform independent per-generation candidate search instead of son-better-than-parent paradigm."
+)
+
 flags.DEFINE_integer(
   "sample_workload_size",
   8192,
