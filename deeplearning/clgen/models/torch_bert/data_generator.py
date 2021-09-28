@@ -165,15 +165,16 @@ def text_candidate_worker(sample       : np.array,
   ))
 
 def dataload_worker(x              : int,
-                    feed           : np.array,
+                    feed           : typing.List[np.array],
                     func           : typing.TypeVar('sequence_masking.MaskingFunction'),
                     batch          : int,
                     batch_per_feed : int,
                     ) -> typing.Dict[str, np.array]:
   try:
-    return [f for _ in range(batch // batch_per_feed) for f in [func(feed)] * batch_per_feed]
-  except Exception:
-    return None
+    # return [f for _ in range(batch // batch_per_feed) for f in [func(fd) for fd in feed] * batch_per_feed]
+    return [f for _ in range(batch // batch_per_feed) for f in [func(fd) for fd in feed * batch_per_feed]]
+  except Exception as e:
+    raise e
 
 def write_samples_cache(db_sample_obs : sample_observers.SamplesDatabaseObserver,
                         tokenizer     : "tokenizers.TokenizerBase",
@@ -550,7 +551,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # Iterate until you get a better sample or surpass the limit.
         better_found, it, threshold = None, 0, 160000
         # Sample cache thread, eval cand DB thread.
-        write_cache_proc, it = None
+        write_cache_proc = None
         if FLAGS.evaluate_candidates:
           write_eval_proc = None
 
@@ -560,7 +561,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           # workload size: how many batches of sequences you need.
           wsize = FLAGS.sample_workload_size // self.sample_batch_size
           # Give the input feed and some specs, get the tensor ready to feed.
-          inputs = self.collateInputData(feed.input_feed, wsize, sample_batch_per_feed)
+          inputs = self.collateInputData([feed.input_feed], wsize, sample_batch_per_feed)
           ## Workload inference.
           outputs, time = mwrapper.sample_model_step(
             estimator.model,
@@ -756,7 +757,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     return self.feed_queue[0].input_feed
 
   def collateInputData(self,
-                       feed: np.array,
+                       feed: typing.List[np.array],
                        wload_size: int,
                        sample_batch_per_feed: int,
                        ) -> typing.Dict[str, typing.TypeVar('torch.Tensor')]:
@@ -766,13 +767,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     If it is not masked, then feed is masked wload_size times.
 
     Args:
-      feed: numpy array of input feed.
+      feed: numpy array of input feed (expressed as list of a single np element),
+            or a list of numpys in case multiple workloads are merged.
       wload_size: Number of inputs that will be fed to the model in a single workload.
 
     Returns:
       The tensor inputs dictionary filled for BERT.
     """
-    if self.tokenizer.maskToken in feed or self.tokenizer.holeToken in feed:
+    if self.tokenizer.maskToken in feed[0] or self.tokenizer.holeToken in feed[0]:
       inputs = sequence_masking.MaskedSeqToBlob(
         feed, self.tokenizer,
         self.sampler.sequence_length,
@@ -791,7 +793,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         pool = multiprocessing.Pool()
         for batch in pool.imap_unordered(
                           functools.partial(
-                            dataload_worker, feed  = feed,
+                            dataload_worker, feed = feed,
                             func  = self.func, batch = self.sample_batch_size,
                             batch_per_feed = sample_batch_per_feed
                           ),range(wload_size)
@@ -809,7 +811,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             for k in inputs.keys():
               inputs[k].append(out[k])
         for k, v in inputs.items():
-          inputs[k] = torch.stack(v)
+          s = torch.stack(v)
+          inputs[k] = s.view(-1, self.sample_batch_size, s.shape[-1])
         pool.close()
         pool.terminate()
       except KeyboardInterrupt as e:
