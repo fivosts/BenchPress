@@ -797,6 +797,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                           ),range(wload_size)
                          ):
           if batch:
+            # convert dict values from np -> torch.Tensor.
             out = {
               k: torch.from_numpy(v).unsqueeze(0)
               for (k, v) in batch[0].items()
