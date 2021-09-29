@@ -182,7 +182,8 @@ def input_samples_distribution(data) -> None:
     groups = freqd, # Dict[Dict[int, int]]
     title = "Frequency of input/samples pair per generation",
     x_name = "# of repetitions",
-    plot_name = "freq_input_samples_per_gen"
+    plot_name = "freq_input_samples_per_gen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -211,7 +212,8 @@ def samples_distribution(data) -> None:
     groups = freqd, # Dict[Dict[int, int]]
     title = "Frequency of samples per generation",
     x_name = "# of repetitions",
-    plot_name = "freq_samples_per_gen"
+    plot_name = "freq_samples_per_gen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
 
   return
@@ -235,6 +237,7 @@ def rel_length_distribution(data) -> None:
     title = "% hole length distribution",
     x_name = "percentile",
     plot_name = "perc_hole_length_distribution",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -258,7 +261,8 @@ def token_delta_per_gen(data) -> None:
     y = list(gen_hole_deltas.values()),
     title = "Hole delta vs generation",
     x_name = "Generation id",
-    plot_name = "hole_delta_vs_gen"
+    plot_name = "hole_delta_vs_gen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -278,6 +282,7 @@ def token_score_delta_scatter(data) -> None:
     x_name = "Token Delta",
     y_name = "Score Delta",
     plot_name = "Token Delta VS Score Delta",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return  
 
@@ -323,6 +328,7 @@ def score_vs_token_delta(data) -> None:
     title = "Sample Frequency % VS token & score delta",
     x_name = "category",
     plot_name = "token_score_deltas",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -363,6 +369,7 @@ def comp_vs_token_delta(data) -> None:
     title = "Sample Frequency % VS Compilability & token delta",
     x_name = "category",
     plot_name = "comp_token_delta",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -387,6 +394,7 @@ def rel_length_score(data) -> None:
     y_name = "Score Delta",
     title = "Relative Hole Length VS Score Delta",
     plot_name = "rel_hl_score_delta",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -407,6 +415,7 @@ def token_delta_vs_len_input(data) -> None:
     y_name = "Token Delta",
     title = "Input Length VS Token Delta",
     plot_name = "feed_len_token_delta",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -430,9 +439,110 @@ def token_vs_rel_len(data) -> None:
     x_name = "Relative Hole length %",
     y_name = "Token Delta",
     title = "Rel. Hole length VS Token Delta",
-    plot_name = "rel_hl_token_delta"
+    plot_name = "rel_hl_token_delta",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
+
+def score_per_abs_hlen(data) -> None:
+  """
+  Groupped bars of a) better, b) same, c) worse score, per absolute hole length unit.
+  """
+  abshl = []
+  score_ds = []
+  groups = {
+    'better score' : {},
+    'worse score'  : {},
+    'same score'   : {},
+  }
+  max_abs = 0
+  for dp in data:
+    try:
+      ahl = sum([int(x) for x in dp.abs_hole_lengths.split(',') if x])
+      max_abs = max(max_abs, ahl)
+      sd = dp.score_delta
+      if not math.isinf(sd):
+        if sd > 0:
+          k = 'worse score'
+        elif sd < 0:
+          k = 'better score'
+        else:
+          k = 'same score'
+        if str(ahl) not in groups[k]:
+          groups[k][str(ahl)] = 1
+        else:
+          groups[k][str(ahl)] += 1
+    except Exception as e:
+      print(e)
+      continue
+  for l in range(0, max_abs):
+    total = 0
+    for k, v in groups.items():
+      if str(l) in v:
+        total += v[str(l)]
+    for k, v in groups.items():
+      if str(l) in v:
+        groups[k][str(l)] = 100 * (v[str(l)] / total)
+  for k, v in groups.items():
+    groups[k] = (list(v.keys()), list(v.values()))
+
+  plt.GrouppedBars(
+    groups = groups, # Dict[Dict[int, int]]
+    title = "Score Direction (%) per Absolute Hole Length",
+    x_name = "Size of Hole",
+    plot_name = "score_per_abs_hlen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
+  )
+
+def score_per_rel_hlen(data) -> None:
+  """
+  Groupped bars of a) better, b) same, c) worse score, per absolute hole length unit.
+  """
+  abshl = []
+  score_ds = []
+  groups = {
+    'better score' : {},
+    'worse score'  : {},
+    'same score'   : {},
+  }
+  max_abs = 0
+  for dp in data:
+    try:
+      rhl = dp.rel_hole_lengths
+      rounded = int(100*float(rhl))
+      max_abs = max(max_abs, rounded)
+      sd = dp.score_delta
+      if not math.isinf(sd):
+        if sd > 0:
+          k = 'worse score'
+        elif sd < 0:
+          k = 'better score'
+        else:
+          k = 'same score'
+        if str(rounded) not in groups[k]:
+          groups[k][str(rounded)] = 1
+        else:
+          groups[k][str(rounded)] += 1
+    except Exception as e:
+      continue
+  for l in range(0, max_abs):
+    total = 0
+    for k, v in groups.items():
+      if str(l) in v:
+        total += v[str(l)]
+    for k, v in groups.items():
+      if str(l) in v:
+        groups[k][str(l)] = 100 * (v[str(l)] / total)
+  for k, v in groups.items():
+    groups[k] = (list(v.keys()), list(v.values()))
+
+  plt.GrouppedBars(
+    groups = groups, # Dict[Dict[int, int]]
+    title = "Score Direction (%) per Relative Hole Length",
+    x_name = "Size of Hole %",
+    plot_name = "score_per_rel_hlen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
+  )
 
 def run_db_evaluation(db: SearchCandidateDatabase) -> None:
 
@@ -447,6 +557,9 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
   rel_length_score(data)
   token_delta_vs_len_input(data)
   token_vs_rel_len(data)
+  score_per_abs_hlen(data)
+  score_per_rel_hlen(data)
+  # raise NotImplementedError("bars of better, same, worse score per rel hole length.")
   return
 
 def initMain(*args, **kwargs):
