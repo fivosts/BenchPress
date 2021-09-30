@@ -248,12 +248,15 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
       objs[sobj.sha256] = [sobj, 1]
 
   with eval_db.Session(commit = True) as session:
+    offset_idx = 0
     for sha, obj in objs.items():
       entry = session.query(evaluate_cand_database.SearchCandidate).filter_by(sha256 = sha).first()
       if entry is not None:
         entry.frequency += obj[1]
       else:
         obj[0].frequency = obj[1]
+        obj[0].id += offset_idx
+        offset_idx += 1
         session.add(obj[0])
     session.commit()
   return
