@@ -180,7 +180,7 @@ def input_samples_distribution(data) -> None:
 
   plt.GrouppedBars(
     groups = freqd, # Dict[Dict[int, int]]
-    title = "Frequency of input/samples pair per generation",
+    title = "Repetition of input/samples pair per generation",
     x_name = "# of repetitions",
     plot_name = "freq_input_samples_per_gen",
     path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
@@ -210,7 +210,7 @@ def samples_distribution(data) -> None:
     freqd[k] = (list(gdict.keys()), list(gdict.values()))
   plt.GrouppedBars(
     groups = freqd, # Dict[Dict[int, int]]
-    title = "Frequency of samples per generation",
+    title = "Repetition of samples per generation",
     x_name = "# of repetitions",
     plot_name = "freq_samples_per_gen",
     path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
