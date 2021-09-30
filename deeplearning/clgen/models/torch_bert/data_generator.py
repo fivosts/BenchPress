@@ -261,7 +261,6 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
     session.commit()
   return
 
-
 class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
   """Data generator subclass designed for PyTorch BERT model."""
   @classmethod
