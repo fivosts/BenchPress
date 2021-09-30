@@ -217,37 +217,45 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
                   target_features  : typing.Dict[str, float],
                   gen_id    : int,
                   ) -> None:
-  with eval_db.Session(commit = True) as session:
-    for sample in samples:
-      try:
-        _ = opencl.Compile(tokenizer.ArrayToCode(sample.sample))
-        compile_status = True
-      except ValueError:
-        compile_status = False
+  objs = {}
+  for sample in samples:
+    try:
+      _ = opencl.Compile(tokenizer.ArrayToCode(sample.sample))
+      compile_status = True
+    except ValueError:
+      compile_status = False
 
-      sobj = evaluate_cand_database.SearchCandidate.FromArgs(
-        tokenizer        = tokenizer,
-        id               = eval_db.count,
-        input_feed       = sample.sample_feed.input_feed,
-        input_ids        = sample.input_ids,
-        input_features   = sample.sample_feed.input_features,
-        input_score      = sample.sample_feed.input_score,
-        hole_lengths     = sample.hole_lengths,
-        sample           = sample.sample,
-        sample_indices   = sample.sample_indices,
-        output_features  = sample.features,
-        sample_score     = sample.score,
-        target_benchmark = target_benchmark,
-        target_features  = target_features,
-        compile_status   = compile_status,
-        generation_id    = gen_id,
-      )
-      entry = session.query(evaluate_cand_database.SearchCandidate).filter_by(sha256 = sobj.sha256).first()
+    sobj = evaluate_cand_database.SearchCandidate.FromArgs(
+      tokenizer        = tokenizer,
+      id               = eval_db.count,
+      input_feed       = sample.sample_feed.input_feed,
+      input_ids        = sample.input_ids,
+      input_features   = sample.sample_feed.input_features,
+      input_score      = sample.sample_feed.input_score,
+      hole_lengths     = sample.hole_lengths,
+      sample           = sample.sample,
+      sample_indices   = sample.sample_indices,
+      output_features  = sample.features,
+      sample_score     = sample.score,
+      target_benchmark = target_benchmark,
+      target_features  = target_features,
+      compile_status   = compile_status,
+      generation_id    = gen_id,
+    )
+    if sobj.sha256 in objs:
+      objs[sobj.sha256][1] += 1
+    else:
+      objs[sobj.sha256] = [sobj, 1]
+
+  with eval_db.Session(commit = True) as session:
+    for sha, obj in objs.items():
+      entry = session.query(evaluate_cand_database.SearchCandidate).filter_by(sha256 = sha).first()
       if entry is not None:
-        entry.frequency += 1
+        entry.frequency += obj[1]
       else:
-        session.add(sobj) 
-      session.commit()
+        obj[0].frequency = obj[1]
+        session.add(obj[0])
+    session.commit()
   return
 
 
