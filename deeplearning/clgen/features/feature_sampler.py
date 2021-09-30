@@ -12,6 +12,7 @@ import math
 import subprocess
 import functools
 import multiprocessing
+from numpy.random import default_rng
 
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import normalizers
@@ -24,6 +25,12 @@ from absl import flags
 from eupy.native import logger as l
 
 FLAGS = flags.FLAGS
+
+flags.DEFINE_integer(
+  "randomize_selection",
+  None,
+  "Debugging integer flag that abolishes euclidean distance priority and picks X randomly selected elements to return as top-X."
+)
 
 targets = {
   'rodinia'      : './model_zoo/benchmarks/rodinia_3.1.tar.bz2',
@@ -230,7 +237,16 @@ class EuclideanSampler(object):
     """
     Return top-K candidates.
     """
-    return sorted(candidates, key = lambda x: x.score)[:K]
+    if FLAGS.randomize_selection is None:
+      return sorted(candidates, key = lambda x: x.score)[:K]
+    else:
+      if FLAGS.randomize_selection == 0:
+        raise ValueError("randomize_selection, {}, cannot be 0.".format(FLAGS.randomize_selection))
+      l.getLogger().warn("Randomized generation selection has been activated. You must know what you are doing!")
+      kf = min(FLAGS.randomize_selection, len(candidates))
+      rng = default_rng()
+      indices = set(rng.choice(len(candidates), size = kf, replace = False))
+      return [c for idx, c in enumerate(candidates) if idx in indices]
 
   def sample_from_set(self, 
                       candidates: typing.List[typing.TypeVar("ActiveSample")],
