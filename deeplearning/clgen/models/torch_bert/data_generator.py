@@ -672,12 +672,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             break
         ######## End of while.
 
-        # Catch threads on last iteration.
-        if write_cache_proc:
-          write_cache_proc.join()
-        if FLAGS.evaluate_candidates and write_eval_proc:
-          write_eval_proc.join()
-
         ## Update all monitors.
         self.comp_rate[feeds[0].gen_id] = [sum(x) for x in zip(self.comp_rate[feeds[0].gen_id], cmp_rate)]
         self.exec_time[feeds[0].gen_id] += exec_time
@@ -742,6 +736,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             )
         # save state and re-loop.
         self.saveCheckpoint()
+
+      # Catch threads on last iteration.
+      if write_cache_proc:
+        write_cache_proc.join()
+      if FLAGS.evaluate_candidates and write_eval_proc:
+        write_eval_proc.join()
 
       ## Finished, save state, switch benchmark, return samples.
       self.saveCheckpoint()
