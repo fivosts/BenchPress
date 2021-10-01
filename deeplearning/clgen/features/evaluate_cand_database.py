@@ -266,6 +266,30 @@ def token_delta_per_gen(data) -> None:
   )
   return
 
+def comp_token_delta_per_gen(data) -> None:  
+  # 3) Per generation: delta of (filled_tokens - hole_length)
+  gen_hole_deltas = {} # gen -> list of deltas.
+  for dp in data:
+    if dp.compile_status == 1:
+      gen, ahl, lind = dp.generation_id, dp.abs_hole_lengths, dp.hole_ind_length
+      try:
+        ahl = sum([int(x) for x in ahl.split(',') if x])
+        if gen not in gen_hole_deltas:
+          gen_hole_deltas[gen] = []
+        gen_hole_deltas[gen].append(lind - int(ahl))
+      except Exception:
+        continue
+
+  plt.CategoricalViolin(
+    x = list(gen_hole_deltas.keys()),
+    y = list(gen_hole_deltas.values()),
+    title = "Hole delta vs generation for compilable samples",
+    x_name = "Generation id",
+    plot_name = "comp_hole_delta_vs_gen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
+  )
+  return
+
 def token_score_delta_scatter(data) -> None:
   # 4) 2D scatter: token delta vs score delta.
   tds, sds = [], []
@@ -550,10 +574,13 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
   input_samples_distribution(data)
   samples_distribution(data)
   rel_length_distribution(data)
+  comp_token_delta_per_gen(data)
   token_delta_per_gen(data)
   token_score_delta_scatter(data)
   score_vs_token_delta(data)
+  score_vs_len_indices(data)
   comp_vs_token_delta(data)
+  comp_vs_len_indices(data)
   rel_length_score(data)
   token_delta_vs_len_input(data)
   token_vs_rel_len(data)
