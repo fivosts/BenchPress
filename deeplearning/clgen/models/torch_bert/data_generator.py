@@ -588,6 +588,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           ## Pre-process inputs
           # workload size: how many batches of sequences you need.
           wsize = FLAGS.sample_workload_size // self.sample_batch_size
+          if FLAGS.evolutionary_search and feeds[0].gen_id == 0:
+            wsize = wsize * active_search_width
           # Give the input feed and some specs, get the tensor ready to feed.
           inputs = self.collateInputData([feed.input_feed for feed in feeds], wsize, sample_batch_per_feed)
           ## Workload inference.
