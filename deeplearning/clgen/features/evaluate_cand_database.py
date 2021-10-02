@@ -266,6 +266,30 @@ def token_delta_per_gen(data) -> None:
   )
   return
 
+def comp_token_delta_per_gen(data) -> None:  
+  # 3) Per generation: delta of (filled_tokens - hole_length)
+  gen_hole_deltas = {} # gen -> list of deltas.
+  for dp in data:
+    if dp.compile_status == 1:
+      gen, ahl, lind = dp.generation_id, dp.abs_hole_lengths, dp.hole_ind_length
+      try:
+        ahl = sum([int(x) for x in ahl.split(',') if x])
+        if gen not in gen_hole_deltas:
+          gen_hole_deltas[gen] = []
+        gen_hole_deltas[gen].append(lind - int(ahl))
+      except Exception:
+        continue
+
+  plt.CategoricalViolin(
+    x = list(gen_hole_deltas.keys()),
+    y = list(gen_hole_deltas.values()),
+    title = "Hole delta vs generation for compilable samples",
+    x_name = "Generation id",
+    plot_name = "comp_hole_delta_vs_gen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
+  )
+  return
+
 def token_score_delta_scatter(data) -> None:
   # 4) 2D scatter: token delta vs score delta.
   tds, sds = [], []
@@ -494,6 +518,148 @@ def score_per_abs_hlen(data) -> None:
     path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
 
+def comp_vs_len_indices(data) -> None:
+  """
+  Groupped bars of a) better, b) same, c) worse score, per absolute hole length unit.
+  """
+  abshl = []
+  score_ds = []
+  groups = {
+    'compile' : {},
+    'not-compile'   : {},
+  }
+  max_len_ind = 0
+  for dp in data:
+    try:
+      len_ind = dp.hole_ind_length
+      max_len_ind = max(max_len_ind, len_ind)
+      cs = dp.compile_status
+      if cs ==1:
+        k = 'compile'
+      else:
+        k = 'not-compile'
+      if str(len_ind) not in groups[k]:
+        groups[k][str(len_ind)] = 1
+      else:
+        groups[k][str(len_ind)] += 1
+    except Exception as e:
+      print(e)
+      continue
+  # for l in range(0, max_len_ind):
+  #   total = 0
+  #   for k, v in groups.items():
+  #     if str(l) in v:
+  #       total += v[str(l)]
+    # for k, v in groups.items():
+    #   if str(l) in v:
+    #     groups[k][str(l)] = 100 * (v[str(l)] / total)
+  for k, v in groups.items():
+    groups[k] = (list(v.keys()), list(v.values()))
+
+  plt.GrouppedBars(
+    groups = groups, # Dict[Dict[int, int]]
+    title = "Compilability VS Length of Indices",
+    x_name = "Length of Indices",
+    plot_name = "comp_per_len_indices",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
+  )
+  return
+
+def comp_vs_len_indices_over_len_input(data) -> None:
+  """
+  Groupped bars of a) better, b) same, c) worse score, per absolute hole length unit.
+  """
+  abshl = []
+  score_ds = []
+  groups = {
+    'compile' : {},
+    'not-compile'   : {},
+  }
+  max_len_ind = 0.0
+  for dp in data:
+    try:
+      len_ratio = dp.hole_ind_length / len([int(x) for x in dp.encoded_input_ids.split(',') if x])
+      len_ratio = round(len_ratio, 1)
+      max_len_ind = max(max_len_ind, len_ratio)
+      cs = dp.compile_status
+      if cs ==1:
+        k = 'compile'
+      else:
+        k = 'not-compile'
+      if str(len_ratio) not in groups[k]:
+        groups[k][str(len_ratio)] = 1
+      else:
+        groups[k][str(len_ratio)] += 1
+    except Exception as e:
+      print(e)
+      continue
+  # for l in range(0, max_len_ind):
+  #   total = 0
+  #   for k, v in groups.items():
+  #     if str(l) in v:
+  #       total += v[str(l)]
+    # for k, v in groups.items():
+    #   if str(l) in v:
+    #     groups[k][str(l)] = 100 * (v[str(l)] / total)
+  for k, v in groups.items():
+    groups[k] = (list(v.keys()), list(v.values()))
+
+  plt.GrouppedBars(
+    groups = groups, # Dict[Dict[int, int]]
+    title = "Compilability VS (Length of Indices / Length of Input)",
+    x_name = "Length of Indices / Length of Input",
+    plot_name = "comp_per_indices_input_len_ratio",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
+  )
+  return
+
+def comp_vs_num_tokens(data) -> None:
+  """
+  Groupped bars of a) better, b) same, c) worse score, per absolute hole length unit.
+  """
+  abshl = []
+  score_ds = []
+  groups = {
+    'compile' : {},
+    'not-compile'   : {},
+  }
+  max_numtok = 0
+  for dp in data:
+    try:
+      numtok = dp.num_tokens
+      max_numtok = max(max_numtok, numtok)
+      cs = dp.compile_status
+      if cs ==1:
+        k = 'compile'
+      else:
+        k = 'not-compile'
+      if str(numtok) not in groups[k]:
+        groups[k][str(numtok)] = 1
+      else:
+        groups[k][str(numtok)] += 1
+    except Exception as e:
+      print(e)
+      continue
+  for l in range(0, max_numtok):
+    total = 0
+    for k, v in groups.items():
+      if str(l) in v:
+        total += v[str(l)]
+    for k, v in groups.items():
+      if str(l) in v:
+        groups[k][str(l)] = 100 * (v[str(l)] / total)
+  for k, v in groups.items():
+    groups[k] = (list(v.keys()), list(v.values()))
+
+  plt.GrouppedBars(
+    groups = groups, # Dict[Dict[int, int]]
+    title = "Compilability % VS Length of Sample",
+    x_name = "Length of Sample",
+    plot_name = "comp_per_len_sample",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
+  )
+  return
+
 def score_per_rel_hlen(data) -> None:
   """
   Groupped bars of a) better, b) same, c) worse score, per absolute hole length unit.
@@ -544,21 +710,80 @@ def score_per_rel_hlen(data) -> None:
     path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
 
+def score_direction_categorical_distrib_per_rel_hlen(data) -> None:
+  """
+  Groupped bars of a) better, b) same, c) worse score, per absolute hole length unit.
+  """
+  abshl = []
+  score_ds = []
+  groups = {
+    'better score' : {},
+    'worse score'  : {},
+    'same score'   : {},
+  }
+  normalizers = {
+    'better score' : 0,
+    'worse score'  : 0,
+    'same score'   : 0,
+  }
+  max_abs = 0
+  for dp in data:
+    try:
+      rhl = dp.rel_hole_lengths
+      rounded = int(100*float(rhl))
+      max_abs = max(max_abs, rounded)
+      sd = dp.score_delta
+      if not math.isinf(sd):
+        if sd > 0:
+          k = 'worse score'
+          normalizers[k] += 1
+        elif sd < 0:
+          k = 'better score'
+          normalizers[k] += 1
+        else:
+          k = 'same score'
+          normalizers[k] += 1
+        if str(rounded) not in groups[k]:
+          groups[k][str(rounded)] = 1
+        else:
+          groups[k][str(rounded)] += 1
+    except Exception as e:
+      continue
+  for k, v in groups.items():
+    for rhlk, rhlv in v.items():
+      groups[k][rhlk] = groups[k][rhlk] / normalizers[k]
+
+  for k, v in groups.items():
+    groups[k] = (list(v.keys()), list(v.values()))
+
+  plt.GrouppedBars(
+    groups = groups, # Dict[Dict[int, int]]
+    title = "Score Direction Distribution per Category VS Relative Hole Length",
+    x_name = "Size of Hole %",
+    plot_name = "score_cat_distrib_rel_hlen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
+  )
+
 def run_db_evaluation(db: SearchCandidateDatabase) -> None:
 
   data = db.get_data
   input_samples_distribution(data)
   samples_distribution(data)
   rel_length_distribution(data)
+  comp_token_delta_per_gen(data)
   token_delta_per_gen(data)
   token_score_delta_scatter(data)
   score_vs_token_delta(data)
+  comp_vs_num_tokens(data)
   comp_vs_token_delta(data)
+  comp_vs_len_indices(data) ######## I also need per (len_indices / len input feed) ratio.
+  comp_vs_len_indices_over_len_input(data)
   rel_length_score(data)
   token_delta_vs_len_input(data)
   token_vs_rel_len(data)
   score_per_abs_hlen(data)
   score_per_rel_hlen(data)
+  score_direction_categorical_distrib_per_rel_hlen(data)
   # raise NotImplementedError("bars of better, same, worse score per rel hole length.")
   return
 
