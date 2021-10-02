@@ -18,6 +18,7 @@ import pathlib
 import multiprocessing
 import math
 import progressbar
+import threading
 
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
@@ -628,7 +629,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           if write_cache_proc:
             write_cache_proc.join()
           self.samples_cache_obs.sample_id = self.samples_cache_obs.db.count
-          write_cache_proc = multiprocessing.Process(
+          write_cache_proc = threading.Thread(
             target = write_samples_cache,
             kwargs = {
               'db_sample_obs' : self.samples_cache_obs,
@@ -642,7 +643,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           if FLAGS.evaluate_candidates:
             if write_eval_proc:
               write_eval_proc.join()
-            write_eval_proc = multiprocessing.Process(
+            write_eval_proc = threading.Thread(
               target = write_eval_db,
               kwargs = {
                 'eval_db'   : self.eval_db,
@@ -753,8 +754,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     except KeyboardInterrupt:
       self.raised_keyboard_int = True
       if write_cache_proc:
+        write_cache_proc.interrupt()
         write_cache_proc.join()
       if FLAGS.evaluate_candidates and write_eval_proc:
+        write_eval_proc.interrupt()
         write_eval_proc.join()
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
