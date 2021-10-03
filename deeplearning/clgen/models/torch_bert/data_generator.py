@@ -260,7 +260,7 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
           obj[0].id += offset_idx
           offset_idx += 1
           session.add(obj[0])
-      session.commit()
+        session.commit()
       except Exception as e:
         l.getLogger().error(entry)
         if entry is not None:
