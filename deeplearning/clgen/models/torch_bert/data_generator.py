@@ -549,6 +549,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     org_ids = copy.copy(org_inp)
     total_cand, total_cand_hash = [], set()
 
+    # Sample cache thread, eval cand DB thread.
+    write_cache_proc = None
+    if FLAGS.evaluate_candidates:
+      write_eval_proc = None
+
     try:
       ## BFS style. While you have jobs, keep going.
       while self.feed_queue:
@@ -588,10 +593,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
         # Iterate until you get a better sample or surpass the limit.
         better_found, it, threshold = None, 0, 160000
-        # Sample cache thread, eval cand DB thread.
-        write_cache_proc = None
-        if FLAGS.evaluate_candidates:
-          write_eval_proc = None
 
         l.getLogger().info("Current input feed scores: {}".format(', '.join([str(round(feed.input_score, 3)) for feed in feeds])))
         while not better_found and cmp_rate[1] < threshold:
