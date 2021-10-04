@@ -241,7 +241,7 @@ def rel_length_distribution(data) -> None:
   )
   return
 
-def token_delta_per_gen(data) -> None:  
+def token_delta_per_gen(data) -> None:
   # 3) Per generation: delta of (filled_tokens - hole_length)
   print("Filled tokens - hole length will be wrong for multiple holes!")
   print("For now, I am assigning every hole to the total of sample indices length.")
@@ -266,7 +266,7 @@ def token_delta_per_gen(data) -> None:
   )
   return
 
-def comp_token_delta_per_gen(data) -> None:  
+def comp_token_delta_per_gen(data) -> None:
   # 3) Per generation: delta of (filled_tokens - hole_length)
   gen_hole_deltas = {} # gen -> list of deltas.
   for dp in data:
@@ -290,6 +290,30 @@ def comp_token_delta_per_gen(data) -> None:
   )
   return
 
+def nohole_in_end_token_delta_per_gen(data) -> None:
+  # 3) Per generation: delta of (filled_tokens - hole_length)
+  gen_hole_deltas = {} # gen -> list of deltas.
+  for dp in data:
+    if "[HOLE][END]" not in dp.input_ids.replace('\n', '').replace(' ', ''):
+      gen, ahl, lind = dp.generation_id, dp.abs_hole_lengths, dp.hole_ind_length
+      try:
+        ahl = sum([int(x) for x in ahl.split(',') if x])
+        if gen not in gen_hole_deltas:
+          gen_hole_deltas[gen] = []
+        gen_hole_deltas[gen].append(lind - int(ahl))
+      except Exception:
+        continue
+
+  plt.CategoricalViolin(
+    x = list(gen_hole_deltas.keys()),
+    y = list(gen_hole_deltas.values()),
+    title = "Hole delta vs generation for input ids with no hole before end",
+    x_name = "Generation id",
+    plot_name = "nohole_end_token_delta_vs_gen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
+  )
+  return
+
 def token_score_delta_scatter(data) -> None:
   # 4) 2D scatter: token delta vs score delta.
   tds, sds = [], []
@@ -305,7 +329,7 @@ def token_score_delta_scatter(data) -> None:
     title = "Token Delta VS Score Delta",
     x_name = "Token Delta",
     y_name = "Score Delta",
-    plot_name = "Token Delta VS Score Delta",
+    plot_name = "token_delta_vs_score_delta",
     path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return  
@@ -771,6 +795,7 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
   samples_distribution(data)
   rel_length_distribution(data)
   comp_token_delta_per_gen(data)
+  nohole_in_end_token_delta_per_gen(data)
   token_delta_per_gen(data)
   token_score_delta_scatter(data)
   score_vs_token_delta(data)
