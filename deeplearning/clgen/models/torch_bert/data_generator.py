@@ -644,7 +644,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           if write_cache_proc:
             write_cache_proc.join()
           self.samples_cache_obs.sample_id = self.samples_cache_obs.db.count
-          write_cache_proc = threading.Thread(
+          write_cache_proc = multiprocessing.Process(
             target = write_samples_cache,
             kwargs = {
               'db_sample_obs' : self.samples_cache_obs,
@@ -660,7 +660,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             if write_eval_proc:
               write_eval_proc.join()
             l.getLogger().warn("After join: {}".format(write_eval_proc))
-            write_eval_proc = threading.Thread(
+            write_eval_proc = multiprocessing.Process(
               target = write_eval_db,
               kwargs = {
                 'eval_db'   : self.eval_db,
