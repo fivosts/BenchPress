@@ -632,8 +632,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           ## Register good offsprings, along with step candidates in tsne monitor.
           if not FLAGS.evolutionary_search and better_found:
             self.tsne_monitor.register((better_found.features, "gen_{}_accepted".format(str(feeds[0].gen_id)), str(better_found.score)))
-          for c in step_candidates:
-            self.tsne_monitor.register((c.features, "gen_{}".format(str(feeds[0].gen_id))))
+            for c in step_candidates:
+              self.tsne_monitor.register((c.features, "gen_{}".format(str(feeds[0].gen_id))))
 
           ## Recalculate compilation rate of generation.
           cmp_rate[0] += tcs
@@ -698,7 +698,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         self.exec_time_mon.register((feeds[0].gen_id, self.exec_time[feeds[0].gen_id]    / self.comp_rate[feeds[0].gen_id][1]))
         self.comp_rate_mon.plot()
         self.exec_time_mon.plot()
-        self.tsne_monitor.plot()
+        # self.tsne_monitor.plot()
 
         ## Collect surviving candidates of generation.
         # If we just started, get top-K.
@@ -725,6 +725,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           self.candidate_monitor.plot()
         # Add them back to queue and to active feed database.
         for nc in best_cands:
+          if FLAGS.evolutionary_search:
+            self.tsne_monitor.register((nc.features, "gen_{}_accepted".format(str(feeds[0].gen_id))))
           sample_hash = ''.join([str(x) for x in nc.sample])
           if FLAGS.evolutionary_search or (sample_hash not in total_cand_hash):
             total_cand.append(nc)
@@ -753,6 +755,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                 generation_id    = nc.sample_feed.gen_id,
               )
             )
+        self.tsne_monitor.plot()
         # save state and re-loop.
         self.saveCheckpoint()
 
