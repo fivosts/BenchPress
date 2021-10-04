@@ -561,7 +561,7 @@ class CompilationSampler(object):
       if int(predictions[seq_idx]) in endTokens:
         # Close hole, shift left one position, add pad to the end.
         batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], batch[seq_idx][el_idx+1:], torch.LongTensor([self.tokenizer.padToken]).to(device)), 0)
-      elif int(batch[seq_idx][-1]) != self.tokenizer.padToken or (indices_lengths is not None and indices_lengths[seq_idx] >= FLAGS.sample_indices_limit):
+      elif int(batch[seq_idx][-1]) != self.tokenizer.padToken or (indices_lengths is not None and indices_lengths[seq_idx] >= FLAGS.sample_indices_limit-1):
         # No pads remaining to the right, replace hole with prediction but don't insert new hole.
         # batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], predictions[seq_idx].unsqueeze(0), batch[seq_idx][el_idx+1:]), 0)
         batch[seq_idx][el_idx] = predictions[seq_idx]
