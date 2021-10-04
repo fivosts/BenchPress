@@ -27,14 +27,6 @@ class CompilationSampler(object):
     self.tokenizer        = tokenizer
     self.temperature     = temperature
     self.use_categorical = use_categorical
-    # if self.use_categorical:
-    #   self.argmax = lambda x: torch.argmax(
-    #     torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
-    #       temperature = self.temperature if self.temperature is not None else 1.0, logits = x
-    #     ).sample()
-    #   )
-    # else:
-    # self.argmax = torch.argmax
     return
 
   def argmax(self, t):
