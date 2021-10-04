@@ -270,6 +270,7 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
         l.getLogger().error("count: {}".format(eval_db.count))
         l.getLogger().error("offset_idx: {}".format(offset_idx))
         print(e)
+  l.getLogger().warn("Finished eval_DB thread")
   return
 
 class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
@@ -654,8 +655,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
           ## Write all candidates to eval_cand DB.
           if FLAGS.evaluate_candidates:
+            l.getLogger().warn("Before join: {}".format(write_eval_proc))
             if write_eval_proc:
               write_eval_proc.join()
+            l.getLogger().warn("After join: {}".format(write_eval_proc))
             write_eval_proc = threading.Thread(
               target = write_eval_db,
               kwargs = {
