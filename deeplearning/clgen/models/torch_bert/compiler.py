@@ -553,12 +553,6 @@ class CompilationSampler(object):
     # [seq_idx, hole_idx] of batch.
     idxs, targets = torch.where(batch == self.tokenizer.holeToken)
     # Predictions for these indices.
-    l.getLogger().warn(batch)
-    l.getLogger().warn(batch_idxs)
-    l.getLogger().warn(sample_indices)
-    l.getLogger().warn(indices_lengths)
-    l.getLogger().warn(prediction_scores)
-    l.getLogger().warn(device)
     predictions = self.argmax(prediction_scores[(idxs, targets)])
 
     for seq_idx, el_idx in zip(idxs, targets):
