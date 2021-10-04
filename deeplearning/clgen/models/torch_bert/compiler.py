@@ -6,8 +6,17 @@ from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
+from absl import flags
 
 from eupy.native import logger as l
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_integer(
+  "sample_indices_limit",
+  None,
+  "Hard-stop model generating more indices per sample than this specified integer."
+)
 
 class CompilationSampler(object):
   """
@@ -371,6 +380,9 @@ class CompilationSampler(object):
     # sample indices array that will be returned.
     sample_indices = torch.full((nseq, sequence_length), self.tokenizer.padToken).to(device)
 
+    if FLAGS.sample_indices_limit is not None:
+      sidx_length = torch.full((batch_size, 1), 0).to(device)
+
     # Workload of input_ids and attention_mask pairs.
     # queue input_idxs ensure direct ordering from inputs -> outputs.
     queue_input_ids      = torch.reshape(workload_input_ids, (1, nseq, sequence_length)).squeeze()
@@ -380,7 +392,14 @@ class CompilationSampler(object):
     #! This is the return queue [nseq x sequence_length].
     queue = torch.zeros(tuple(queue_input_ids.shape)).to(device)
 
-    new_holes    = self.BatchStepSampleSeq(input_ids, input_idxs, sample_indices, prediction_scores, device)
+    new_holes = self.BatchStepSampleSeq(
+      input_ids,
+      input_idxs,
+      sample_indices,
+      sidx_length if FLAGS.sample_indices_limit else None,
+      prediction_scores,
+      device
+    )
     open_holes   = torch.where(new_holes == True)[0].to(device)
     closed_holes = torch.where(new_holes == False)[0]
 
@@ -390,12 +409,16 @@ class CompilationSampler(object):
     input_ids      = torch.index_select(input_ids, 0, open_holes)
     input_idxs     = torch.index_select(input_idxs, 0, open_holes)
     attention_mask = (input_ids != self.tokenizer.padToken)
+    if FLAGS.sample_indices_limit:
+      sidx_length  = torch.index_select(sidx_length, 0, open_holes)
 
     res = batch_size - len(input_ids)
     if res > 0:
       input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res]), 0)
       input_idxs     = torch.cat((input_idxs, queue_input_idxs[w_idx: w_idx + res]), 0)
       attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res]), 0)
+      if FLAGS.sample_indices_limit:
+        sidx_length  = torch.cat((sidx_length, torch.full((res, 1), 0).to(device)), 0)
       w_idx += res
 
     while w_idx < nseq or torch.any(new_holes):
@@ -404,7 +427,14 @@ class CompilationSampler(object):
         input_ids, attention_mask, position_ids[:len(input_ids)],
       )
       # Array of new hole existence per seq idx
-      new_holes    = self.BatchStepSampleSeq(input_ids, input_idxs, sample_indices, prediction_scores, device)
+      new_holes = self.BatchStepSampleSeq(
+        input_ids,
+        input_idxs,
+        sample_indices,
+        sidx_length if FLAGS.sample_indices_limit else None,
+        prediction_scores,
+        device
+      )
       # Fill these holes.
       open_holes   = torch.where(new_holes == True)[0].to(device)
       # Those are done.
@@ -417,12 +447,16 @@ class CompilationSampler(object):
       input_ids      = torch.index_select(input_ids, 0, open_holes)
       input_idxs     = torch.index_select(input_idxs, 0, open_holes)
       attention_mask = (input_ids != self.tokenizer.padToken)
+      if FLAGS.sample_indices_limit:
+        sidx_length  = torch.index_select(sidx_length, 0, open_holes)
 
       res = batch_size - len(input_ids)
-      if res > 0:
+      if res > 0 and w_idx + res <= len(queue_input_ids):
         input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res]), 0)
         input_idxs     = torch.cat((input_idxs, queue_input_idxs[w_idx: w_idx + res]), 0)
         attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res]), 0)
+        if FLAGS.sample_indices_limit:
+          sidx_length  = torch.cat((sidx_length, torch.full((res, 1), 0).to(device)), 0)
         w_idx += res
     return queue, sample_indices
 
@@ -501,6 +535,7 @@ class CompilationSampler(object):
                          batch             : torch.LongTensor,
                          batch_idxs        : torch.LongTensor,
                          sample_indices    : torch.LongTensor,
+                         indices_lengths   : torch.LongTensor,
                          prediction_scores : torch.LongTensor,
                          device,
                          ) -> typing.Tuple[
@@ -521,6 +556,8 @@ class CompilationSampler(object):
     predictions = self.argmax(prediction_scores[(idxs, targets)])
 
     for seq_idx, el_idx in zip(idxs, targets):
+      # seq_idx -> indices within the batch
+      # el_idx  -> element index within a sequence
       if int(predictions[seq_idx]) in endTokens:
         # Close hole, shift left one position, add pad to the end.
         batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], batch[seq_idx][el_idx+1:], torch.LongTensor([self.tokenizer.padToken]).to(device)), 0)
@@ -530,8 +567,11 @@ class CompilationSampler(object):
       else:
         # Replace with prediction and keep hole.
         batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], predictions[seq_idx].unsqueeze(0), batch[seq_idx][el_idx:][:-1]), 0)
-        new_hole[seq_idx] = True
+        if indices_lengths is None or indices_lengths[seq_idx] < FLAGS.sample_indices_limit:
+          new_hole[seq_idx] = True
       q_idx = batch_idxs[seq_idx]
       sample_indices[q_idx][el_idx] = predictions[seq_idx]
+      if indices_lengths is not None:
+        indices_lengths[seq_idx] += 1
 
     return new_hole
