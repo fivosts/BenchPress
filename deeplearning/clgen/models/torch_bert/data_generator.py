@@ -219,6 +219,7 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
                   gen_id    : int,
                   ) -> None:
   objs = {}
+  l.getLogger().warn("Before prep loop in eval db")
   for sample in samples:
     try:
       _ = opencl.Compile(tokenizer.ArrayToCode(sample.sample))
@@ -671,6 +672,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               }
             )
             write_eval_proc.start()
+            l.getLogger().warn("Started process")
 
           if not FLAGS.evolutionary_search and better_found and feeds[0].gen_id > 0:
             l.getLogger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
