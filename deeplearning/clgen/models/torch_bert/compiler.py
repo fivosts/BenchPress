@@ -553,6 +553,12 @@ class CompilationSampler(object):
     # [seq_idx, hole_idx] of batch.
     idxs, targets = torch.where(batch == self.tokenizer.holeToken)
     # Predictions for these indices.
+    l.getLogger().warn(batch)
+    l.getLogger().warn(batch_idxs)
+    l.getLogger().warn(sample_indices)
+    l.getLogger().warn(indices_lengths)
+    l.getLogger().warn(prediction_scores)
+    l.getLogger().warn(device)
     predictions = self.argmax(prediction_scores[(idxs, targets)])
 
     for seq_idx, el_idx in zip(idxs, targets):
@@ -561,14 +567,14 @@ class CompilationSampler(object):
       if int(predictions[seq_idx]) in endTokens:
         # Close hole, shift left one position, add pad to the end.
         batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], batch[seq_idx][el_idx+1:], torch.LongTensor([self.tokenizer.padToken]).to(device)), 0)
-      elif int(batch[seq_idx][-1]) != self.tokenizer.padToken:
+      elif int(batch[seq_idx][-1]) != self.tokenizer.padToken or (indices_lengths is not None and indices_lengths[seq_idx] >= FLAGS.sample_indices_limit):
         # No pads remaining to the right, replace hole with prediction but don't insert new hole.
-        batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], predictions[seq_idx].unsqueeze(0), batch[seq_idx][el_idx+1:]), 0)
+        # batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], predictions[seq_idx].unsqueeze(0), batch[seq_idx][el_idx+1:]), 0)
+        batch[seq_idx][el_idx] = predictions[seq_idx]
       else:
         # Replace with prediction and keep hole.
         batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], predictions[seq_idx].unsqueeze(0), batch[seq_idx][el_idx:][:-1]), 0)
-        if indices_lengths is None or indices_lengths[seq_idx] < FLAGS.sample_indices_limit:
-          new_hole[seq_idx] = True
+        new_hole[seq_idx] = True
       q_idx = batch_idxs[seq_idx]
       sample_indices[q_idx][el_idx] = predictions[seq_idx]
       if indices_lengths is not None:
