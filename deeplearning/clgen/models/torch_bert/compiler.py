@@ -451,7 +451,7 @@ class CompilationSampler(object):
         sidx_length  = torch.index_select(sidx_length, 0, open_holes)
 
       res = batch_size - len(input_ids)
-      if res > 0 and w_idx + res <= len(queue_input_ids):
+      if res > 0:
         input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res]), 0)
         input_idxs     = torch.cat((input_idxs, queue_input_idxs[w_idx: w_idx + res]), 0)
         attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res]), 0)
