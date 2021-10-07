@@ -225,7 +225,7 @@ class Dataset(object):
            COUNT(DISTINCT repository.actor.login) as unique_stars_by_actor_login 
     FROM (`bigquery-public-data.github_repos.contents` as contentfile
     INNER JOIN `bigquery-public-data.github_repos.files` as file ON file.id = contentfile.id {}
-    INNER JOIN (SELECT * FROM `githubarchive.year.*` WHERE type="WatchEvent") as repository ON repository.repo.name = file.repo_name)
+    LEFT OUTER JOIN (SELECT * FROM `githubarchive.year.*` WHERE type="WatchEvent") as repository ON repository.repo.name = file.repo_name)
     GROUP BY file.id""".format("" if not self.query_file_id else "AND (" + self.query_file_id + ")")
     # query = """
     # SELECT file.id
