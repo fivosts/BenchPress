@@ -37,6 +37,7 @@ class bqFile():
   size           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   content        : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   date_added     : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
+  unique_stars_by_actor_login: int = sql.Column(sql.Integer(), nullable=True)
 
   @classmethod
   def FromArgs(cls,
@@ -51,6 +52,7 @@ class bqFile():
       "size"           : row['size']           if row['size']           else "None",
       "content"        : row['content']        if row['content']        else "None",
       "date_added"     : datetime.datetime.utcnow(),
+      "unique_stars_by_actor_login": row['unique_stars_by_actor_login'] if row['unique_stars_by_actor_login'] else "None"
     }
 
   @staticmethod
@@ -62,6 +64,7 @@ class bqFile():
       bigquery.SchemaField("path",           "STRING",  mode = "REQUIRED"),
       bigquery.SchemaField("size",           "INTEGER", mode = "REQUIRED"),
       bigquery.SchemaField("content",        "STRING",  mode = "REQUIRED"),
+      bigquery.SchemaField("unique_stars_by_actor_login", "INTEGER", mode="REQUIRED")
     ]
 
   def ToJSONDict(self) -> typing.Dict[str, typing.Any]:
@@ -73,6 +76,7 @@ class bqFile():
       "size"           : self.size,
       "content"        : self.content,
       "date_added"     : str(self.date_added.strftime("%m/%d/%Y, %H:%M:%S")),
+      "unique_stars_by_actor_login": self.unique_stars_by_actor_login
     }
 
 class bqMainFile(Base, bqFile):
