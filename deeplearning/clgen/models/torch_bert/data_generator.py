@@ -775,11 +775,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     except KeyboardInterrupt:
       self.raised_keyboard_int = True
       if write_cache_proc:
-        write_cache_proc.interrupt()
-        write_cache_proc.join()
+        write_cache_proc.terminate()
       if FLAGS.evaluate_candidates and write_eval_proc:
-        write_eval_proc.interrupt()
-        write_eval_proc.join()
+        write_eval_proc.terminate()
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
