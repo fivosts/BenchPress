@@ -61,6 +61,7 @@ def GetClangArgs(use_shim: bool, use_aux_headers: bool) -> typing.List[str]:
     "-I{}".format(str(OPENCL_HEADERS)),
     "-I{}".format(str(LIBCLC)),
     "-Wno-everything",
+    "-O1",
   ]
   if use_aux_headers:
     args += [
