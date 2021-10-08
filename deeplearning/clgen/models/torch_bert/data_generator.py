@@ -556,6 +556,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     if FLAGS.evaluate_candidates:
       write_eval_proc = None
 
+    bench_idx = 1
+
     try:
       ## BFS style. While you have jobs, keep going.
       while self.feed_queue:
@@ -579,6 +581,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             except Exception:
               pass
 
+        l.getLogger().info("Benchmark {}, generation {}".format(bench_idx, feeds[0].gen_id))
         # Compilation rate, execution time, per generation.
         cmp_rate        = [0, 0]
         exec_time       = 0.0
@@ -771,6 +774,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       ## Finished, save state, switch benchmark, return samples.
       self.saveCheckpoint()
       self.feat_sampler.iter_benchmark()
+      bench_idx += 1
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
