@@ -724,6 +724,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           )
           self.candidate_monitor.plot()
         # Add them back to queue and to active feed database.
+        found_match = False
         for nc in best_cands:
           if FLAGS.evolutionary_search:
             self.tsne_monitor.register((nc.features, "gen_{}_accepted".format(str(feeds[0].gen_id))))
@@ -731,7 +732,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           if FLAGS.evolutionary_search or (sample_hash not in total_cand_hash):
             total_cand.append(nc)
             total_cand_hash.add(sample_hash)
-            if FLAGS.evolutionary_search or (0 < nc.score < feed.input_score and 1+nc.sample_feed.gen_id <= active_search_depth):
+            if nc.score == 0.0 and FLAGS.evolutionary_search:
+              found_match = True
+            if not found_match and (FLAGS.evolutionary_search or (0 < nc.score < feed.input_score and 1+nc.sample_feed.gen_id <= active_search_depth)):
               self.feed_queue.append(
                 ActiveSampleFeed(
                   input_feed       = nc.sample,
