@@ -738,7 +738,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               total_cand_hash.add(sample_hash)
             if nc.score == 0.0 and FLAGS.evolutionary_search:
               found_match = True
-            if not found_match and (FLAGS.evolutionary_search or (0 < nc.score < feed.input_score and 1+nc.sample_feed.gen_id <= active_search_depth)):
+            if not found_match and 1+nc.sample_feed.gen_id <= active_search_depth and 0 < nc.score < feed.input_score:
               self.feed_queue.append(
                 ActiveSampleFeed(
                   input_feed       = nc.sample,
