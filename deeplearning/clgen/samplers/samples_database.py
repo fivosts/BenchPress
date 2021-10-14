@@ -6,7 +6,7 @@ import sqlite3
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
-from absl import flags
+from absl import app, flags
 
 from deeplearning.clgen.samplers import sample_observers
 from deeplearning.clgen.features import extractor
@@ -15,6 +15,18 @@ from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import sqlutil
 
 FLAGS = flags.FLAGS
+
+flags.DEFINE_string(
+  "sample_mergeable_databases",
+  None,
+  "Comma separated paths of SamplesDatabase to merge into one."
+)
+
+flags.DEFINE_string(
+  "sample_merged_path",
+  None,
+  "Specify output of merged database."
+)
 
 Base = declarative.declarative_base()
 
@@ -97,6 +109,12 @@ class SamplesDatabase(sqlutil.Database):
     return count
 
   @property
+  def get_data(self):
+    """Return all database in list format"""
+    with self.Session() as s:
+      return s.query(Sample).all()
+
+  @property
   def samples(self) -> typing.List[Sample]:
     """Get a list of all files in database."""
     with self.Session() as s:
@@ -113,3 +131,40 @@ class SamplesDatabase(sqlutil.Database):
     """Return compiling samples with feature vectors"""
     with self.Session() as s:
       return [(x.text, extractor.RawToDictFeats(x.feature_vector)) for x in s.query(Sample).filter(Sample.compile_status == True).yield_per(1000)]
+
+def merge_databases(dbs: typing.List[SamplesDatabase], out_db: SamplesDatabase) -> None:
+  sdir = {}
+  new_id = 0
+  for db in dbs:
+    data = db.get_data
+    for dp in data:
+      if dp.hash not in sdir:
+        dp.id = new_id
+        sdir[dp.hash] = dp
+        new_id += 1
+  with out_db.Session() as s:
+    for dp in sdir.values():
+      s.add(dp)
+  return
+
+def initMain(*args, **kwargs):
+  if not FLAGS.sample_merged_path:
+    raise ValueError("Specify out path for merged database")
+
+  out_path = pathlib.Path(FLAGS.sample_merged_path).absolute()
+  if out_path.stem != '.db':
+    raise ValueError("sample_merged_path must end in a valid database name (.db extension)")
+  out_path.parent.mkdir(exist_ok = True, parents = True)
+  out_db = SamplesDatabase(url = "sqlite:///{}".format(str(out_path)), must_exist = False)
+
+  db_paths = [pathlib.Path(p).absolute() for p in FLAGS.sample_mergeable_databases.replace(" ", "").split(",")]
+  for p in db_paths:
+    if not p.exists():
+      raise FileNotFoundError(p)
+  dbs = [SamplesDatabase(url = "sqlite:///{}".format(str(p)), must_exist = True) for p in db_paths]
+  merge_databases(dbs, out_db)
+  return
+
+if __name__ == "__main__":
+  app.run(initMain)
+  sys.exit(0)
