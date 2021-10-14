@@ -271,7 +271,7 @@ function(clgen)
   get_target_property(INSTCOUNT           InstCount           path)
   get_target_property(AUTOPHASE           Autophase           path)
 
-  string(CONCAT CLGEN 
+  string(CONCAT CLGEN
     "#######################################\n"
     "#      Auto generated bash binary     #\n"
     "# -------------  CLGEN -------------- #\n"
@@ -284,6 +284,7 @@ function(clgen)
     "# path from root, e.g.                #\n"
     "# deeplearning/clgen/models/models.py #\n"
     "#######################################\n"
+    "#!$(which bash)\n"
     "PYTHON_BINARY="                         ${PYTHON}  "\n"
     "if [[ -z \"$CLGEN_BINARY\" ]]\; then\n"
     "  CLGEN_BINARY="                        ${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH} "/clgen.py\n"
