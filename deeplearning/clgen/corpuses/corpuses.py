@@ -219,10 +219,14 @@ class Corpus(object):
     commit.saveCommit(self.cache.path.parent.parent / "preprocessed" / preprocessed_id)
 
   def GetShortSummary(self) -> str:
-    corpus_size = humanize.naturalsize(self.encoded.token_count)
-    return (
-      f"{corpus_size} token corpus with {self.vocab_size}-element vocabulary"
-    )
+    try:
+      corpus_size = humanize.naturalsize(self.encoded.token_count)
+      return (
+        f"{corpus_size} token corpus with {self.vocab_size}-element vocabulary"
+      )
+    except Exception:
+      return ""
+
 
   def Create(self, tokenizer = None) -> None:
     """Create the corpus files.
