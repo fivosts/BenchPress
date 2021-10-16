@@ -1,5 +1,6 @@
 import numpy as np
 import typing
+import pathlib
 import concurrent.futures
 
 from deeplearning.clgen.preprocessors import opencl
@@ -41,9 +42,27 @@ class CompilationSampler(object):
   def argmax(self, t):
     """Sample argmax from a tensor."""
     if self.use_categorical:
-      t = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
-          temperature = self.temperature if self.temperature is not None else 1.0, logits = t
-        ).sample()
+      try:
+        t = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
+            temperature = self.temperature if self.temperature is not None else 1.0, logits = t
+          ).sample()
+      except ValueError as e:
+        dump_cf = ""
+        dump_types = ""
+        p = pathlib.Path("./dump_argmax_error.log").absolute()
+        l.getLogger().error(t.shape)
+        l.getLogger().error(p)
+        for d0 in t:
+          for d1 in d0:
+            dump_cf += str(d1) + ", "
+            if isinstance(d1, torch.Tensor):
+              dump_types += str(d1.type()) + ", "
+            else:
+              dump_types += str(type(d1)) + ", "
+        with open(p, 'w') as outf:
+          outf.write(dump_cf + "\n\n\n" + dump_types)
+        raise e
+
     return torch.argmax(t, dim = -1)
 
   def checkIfBatchCompiles(self,
