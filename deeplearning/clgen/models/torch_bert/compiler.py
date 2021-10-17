@@ -61,7 +61,7 @@ class CompilationSampler(object):
               else:
                 dump_types += str(type(d1)) + ", "
           with open(p, 'w') as outf:
-            outf.write(dump_cf + "\n\n\n" + dump_types)
+            outf.write(str(t.shape) + "\n\n\n" + dump_cf + "\n\n\n" + dump_types)
         raise e
 
     return torch.argmax(ct, dim = -1)
