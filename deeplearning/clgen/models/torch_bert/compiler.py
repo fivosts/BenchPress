@@ -44,7 +44,9 @@ class CompilationSampler(object):
     if self.use_categorical:
       try:
         ct = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
-            temperature = self.temperature if self.temperature is not None else 1.0, logits = t
+            temperature = self.temperature if self.temperature is not None else 1.0,
+            logits = t,
+            validate_args = False if "1.9." in torch.__version__ else None,
           ).sample()
       except ValueError as e:
         dump_cf = ""
