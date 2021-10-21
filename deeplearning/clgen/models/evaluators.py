@@ -10,7 +10,7 @@ from deeplearning.clgen.corpuses import corpuses
 
 from eupy.native import logger as l
 
-from absl import flags
+from absl import app, flags
 
 FLAGS = flags.FLAGS
 
@@ -160,3 +160,12 @@ class BenchmarkDistance(BaseEvaluator):
       print([x[1] for x in rgc])
       input()
     return
+
+def initMain(*args, **kwargs):
+  raise NotImplementedError
+  evaluator = BenchmarkDistance()
+  return
+
+if __name__ == "__main__":
+  app.run(initMain)
+  sys.exit(0)
