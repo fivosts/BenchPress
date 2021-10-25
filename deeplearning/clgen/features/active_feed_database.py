@@ -240,14 +240,14 @@ def merge_databases(dbs: typing.List[ActiveFeedDatabase], out_db: ActiveFeedData
     None
   """
   sdir = {}
-  new_id = 0
+  new_id = out_db.active_count
   existing = [dp.sha256 for dp in out_db.get_data]
   for db in dbs:
     data = db.get_data
     for dp in data:
-      if dp.hash not in sdir and dp.hash not in existing:
+      if dp.sha256 not in sdir and dp.sha256 not in existing:
         dp.id = new_id
-        sdir[dp.hash] = dp
+        sdir[dp.sha256] = dp
         new_id += 1
   with out_db.Session() as s:
     for dp in sdir.values():
@@ -266,15 +266,36 @@ def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples
     None
   """
   sdir = {}
-  new_id = 0
+  new_id = out_db.count
+  existing = [dp.sha256 for dp in out_db.get_data]
   for db in dbs:
-    data = db.get_data
-    for dp in data:
-      if dp.hash not in sdir:
+    data = []
+    for dp in db.get_data:
+      data.append(samples_database.FromProto(0, model_pb2.Sample(
+        train_step                = -1,
+        text                      = dp.sample,
+        sample_indices            = "",
+        encoded_sample_indices    = "",
+        original_input            = "",
+        sample_feed               = dp.input_feed,
+        encoded_text              = "",
+        sample_start_epoch_ms_utc = "",
+        sample_time_ms            = "",
+        wall_time_ms              = "",
+        feature_vector            = dp.output_features,
+        num_tokens                = dp.num_tokens,
+        compile_status            = dp.compile_status,
+        categorical_sampling      = "1",
+        date_added                = dp.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
+      )))
+    for dp in data and dp.sha256 not in existing:
+      if dp.sha256 not in sdir:
         dp.id = new_id
-        sdir[dp.hash] = dp
+        sdir[dp.sha256] = dp
         new_id += 1
-  with out_db.Session() as s
+  with out_db.Session() as s:
+    for dp in sdir.values():
+      s.add(dp)
   return
 
 def initMain(*args, **kwargs):
