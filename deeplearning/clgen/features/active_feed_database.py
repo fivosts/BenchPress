@@ -25,7 +25,13 @@ flags.DEFINE_string(
 flags.DEFINE_string(
   "active_merged_path",
   None,
-  "Specify output of merged database."
+  "Specify output of active merged database."
+)
+
+flags.DEFINE_string(
+  "samples_merged_path",
+  None,
+  "Specify output of samples merged database."
 )
 
 flags.DEFINE_string(
@@ -245,6 +251,19 @@ def merge_databases(dbs: typing.List[ActiveFeedDatabase], out_db: ActiveFeedData
   with out_db.Session() as s:
     for dp in sdir.values():
       s.add(dp)
+  return
+
+def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples_database.SamplesDatabase) -> None:
+  """
+  Merges a list  of active_feed_databases to a SamplesDatabase db.
+
+  Arguments:
+    dbs: List of active feed databases.
+    out_db: Exported output samples database.
+
+  Returns:
+    None
+  """
   return
 
 def initMain(*args, **kwargs):
