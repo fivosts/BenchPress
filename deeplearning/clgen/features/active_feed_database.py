@@ -248,9 +248,11 @@ def merge_databases(dbs: typing.List[ActiveFeedDatabase], out_db: ActiveFeedData
         dp.id = new_id
         sdir[dp.hash] = dp
         new_id += 1
+  existing = [dp.sha256 for dp in out_db.get_data]
   with out_db.Session() as s:
     for dp in sdir.values():
-      s.add(dp)
+      if dp.sha256 not in existing:
+        s.add(dp)
   return
 
 def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples_database.SamplesDatabase) -> None:
@@ -264,6 +266,16 @@ def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples
   Returns:
     None
   """
+  sdir = {}
+  new_id = 0
+  for db in dbs:
+    data = db.get_data
+    for dp in data:
+      if dp.hash not in sdir:
+        dp.id = new_id
+        sdir[dp.hash] = dp
+        new_id += 1
+  with out_db.Session() as s
   return
 
 def initMain(*args, **kwargs):
