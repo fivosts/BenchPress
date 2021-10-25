@@ -217,6 +217,16 @@ class ActiveFeedDatabase(sqlutil.Database):
     return count
 
 def merge_databases(dbs: typing.List[ActiveFeedDatabase], out_db: ActiveFeedDatabase) -> None:
+  """
+  Merges a list  of active_feed_databases to a single one, specified in out_db.
+
+  Arguments:
+    dbs: List of active feed databases.
+    out_db: Exported output database.
+
+  Returns:
+    None
+  """
   sdir = {}
   new_id = 0
   for db in dbs:
