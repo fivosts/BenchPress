@@ -592,7 +592,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           self.exec_time[feeds[0].gen_id] = 0.0
 
         # Specialize sampler to current sampling input.
-        for feed in feeds[0]:
+        for feed in feeds[:1]:
           self.sampler.setStartText(self.tokenizer.tokensToString(feed.input_feed, ignore_token = self.tokenizer.padToken))
           self.sampler.Specialize(self.tokenizer)
 
