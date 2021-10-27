@@ -27,7 +27,9 @@ from deeplearning.clgen.models.torch_bert import activations
 from deeplearning.clgen.models.torch_bert import config
 from deeplearning.clgen.models.torch_bert import modeling_utils
 from deeplearning.clgen.models.torch_bert import compiler
-    
+
+from eupy.native import logger as l
+
 # import tensorrt as trt
 # import pycuda.autoinit
 # import pycuda.driver as cuda
@@ -830,7 +832,7 @@ class BertForPreTraining(BertPreTrainedModel):
       prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
         input_ids[0], attention_mask[0], position_ids[0]
       )
-      print(input_ids.shape, ", device: ", input_ids.get_device())
+      l.getLogger().warn("inp shape: {}, device: {}".format(input_ids.shape, input_ids.get_device()))
       return self.compile_sampler.generateSampleWorkload(
         self,
         input_ids.get_device(),
