@@ -581,7 +581,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             except Exception:
               pass
 
-        l.getLogger().info("Benchmark {}, generation {}".format(bench_idx, feeds[0].gen_id))
+        l.getLogger().info("Benchmark {}, generation {}".format(self.bench_idx, feeds[0].gen_id))
         # Compilation rate, execution time, per generation.
         cmp_rate        = [0, 0]
         exec_time       = 0.0
