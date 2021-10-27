@@ -109,7 +109,7 @@ flags.DEFINE_boolean(
 #   return
 
 def gpu_thread():
-  for _ in range(5):
+  for _ in range(200):
     l.getLogger().warn(
       "GPU util: \n{}".format(
         '\n'.join(["id: {}, mem_used: {}, mem_total: {}, gpu_util: {}".format(x['id'], x['mem_used'], x['mem_total'], x['gpu_util']) for x in gpu.getGPUID()])
