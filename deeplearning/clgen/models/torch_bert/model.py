@@ -830,6 +830,7 @@ class BertForPreTraining(BertPreTrainedModel):
       prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
         input_ids[0], attention_mask[0], position_ids[0]
       )
+      print(input_ids.shape, ", device: ", input_ids.get_device())
       return self.compile_sampler.generateSampleWorkload(
         self,
         input_ids.get_device(),
