@@ -25,6 +25,7 @@ import typing
 import pathlib
 import datetime
 import time
+import threading
 import numpy as np
 from absl import flags
 import tqdm
@@ -34,6 +35,7 @@ from deeplearning.clgen.samplers import sample_observers
 from deeplearning.clgen.samplers import validation_database
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import plotter
+from deeplearning.clgen.util import gpu
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
@@ -105,6 +107,15 @@ flags.DEFINE_boolean(
 #     l.getLogger().error(e)
 #     exit(1)
 #   return
+
+def gpu_thread():
+  time.sleep(15)
+  l.getLogger().warn(
+    "GPU util: \n{}".format(
+      '\n'.join(["id: {}, mem_used: {}, mem_total: {}, gpu_util: {}".format(x['id'], x['mem_used'], x['mem_total'], x['gpu_util']) for x in gpu.getGPUID()])
+    )
+  )
+  return
 
 class torchBert(backends.BackendBase):
 
@@ -336,8 +347,10 @@ class torchBert(backends.BackendBase):
       desc = "Sampling iteration: {}".format(iteration)
     else:
       desc = "Sampling"
-    bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc=desc, leave = False, position = 0)
+    bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc=desc, leave = True, position = 0)
     if not is_live:
+      t = threading.Thread(target = gpu_thread)
+      t.start()
       samples, sample_indices = model(
         workload = (
           inputs['input_ids'].to(self.pytorch.device),
@@ -345,6 +358,7 @@ class torchBert(backends.BackendBase):
           inputs['position_ids'].to(self.pytorch.device)
         ),
       )
+      t.join()
       outputs['generated_samples'] = list(samples.detach().cpu().numpy())
       outputs['sample_indices']    = list(sample_indices.detach().cpu().numpy())
       outputs['input_ids']         = list(self.torch.reshape(inputs['input_ids'], tuple(samples.shape)).numpy())
