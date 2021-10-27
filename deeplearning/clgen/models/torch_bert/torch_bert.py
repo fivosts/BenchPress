@@ -109,12 +109,13 @@ flags.DEFINE_boolean(
 #   return
 
 def gpu_thread():
-  time.sleep(15)
-  l.getLogger().warn(
-    "GPU util: \n{}".format(
-      '\n'.join(["id: {}, mem_used: {}, mem_total: {}, gpu_util: {}".format(x['id'], x['mem_used'], x['mem_total'], x['gpu_util']) for x in gpu.getGPUID()])
+  for _ in range(5):
+    l.getLogger().warn(
+      "GPU util: \n{}".format(
+        '\n'.join(["id: {}, mem_used: {}, mem_total: {}, gpu_util: {}".format(x['id'], x['mem_used'], x['mem_total'], x['gpu_util']) for x in gpu.getGPUID()])
+      )
     )
-  )
+    time.sleep(300)
   return
 
 class torchBert(backends.BackendBase):
