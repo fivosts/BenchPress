@@ -115,7 +115,7 @@ def gpu_thread():
         '\n'.join(["id: {}, mem_used: {}, mem_total: {}, gpu_util: {}".format(x['id'], x['mem_used'], x['mem_total'], x['gpu_util']) for x in gpu.getGPUID()])
       )
     )
-    time.sleep(300)
+    time.sleep(5)
   return
 
 class torchBert(backends.BackendBase):
