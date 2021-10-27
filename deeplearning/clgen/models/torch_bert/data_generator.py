@@ -378,6 +378,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       d.raised_keyboard_int = False
       d.raised_exception    = None
       d.skip_first_queue    = FLAGS.skip_first_queue
+      d.bench_idx           = 1
 
     d.dataloader = d.predict_dataloader()
     d.loader     = iter(d.dataloader)
@@ -401,7 +402,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     self.exec_time_mon     = None
     self.raised_keyboard_int = None
     self.raised_exception  = None
-    self.skip_first_queue = None
+    self.skip_first_queue  = None
+    self.bench_idx         = None
     return
 
   def train_dataloader(self, set_name = 'train_dataset', is_train = True) -> torch.utils.data.dataloader:
@@ -555,8 +557,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     write_cache_proc = None
     if FLAGS.evaluate_candidates:
       write_eval_proc = None
-
-    bench_idx = 1
 
     try:
       ## BFS style. While you have jobs, keep going.
@@ -776,7 +776,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       ## Finished, save state, switch benchmark, return samples.
       self.saveCheckpoint()
       self.feat_sampler.iter_benchmark()
-      bench_idx += 1
+      self.bench_idx += 1
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],

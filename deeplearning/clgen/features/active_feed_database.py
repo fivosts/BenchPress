@@ -9,7 +9,7 @@ import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from absl import app, flags
 
-from deeplearning.clgen.samplers import sample_observers
+from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import sqlutil
@@ -19,13 +19,25 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string(
   "active_mergeable_databases",
   None,
-  "Comma separated paths of SamplesDatabase to merge into one."
+  "Comma separated paths of ActiveFeedDatabase to merge into one."
 )
 
 flags.DEFINE_string(
   "active_merged_path",
   None,
-  "Specify output of merged database."
+  "Specify output of active merged database."
+)
+
+flags.DEFINE_string(
+  "samples_merged_path",
+  None,
+  "Specify output of samples merged database."
+)
+
+flags.DEFINE_string(
+  "active_feed_mode",
+  None,
+  "Select module's operation. Choices: \"active_to_samples\" and \"merge_active\""
 )
 
 Base = declarative.declarative_base()
@@ -217,14 +229,69 @@ class ActiveFeedDatabase(sqlutil.Database):
     return count
 
 def merge_databases(dbs: typing.List[ActiveFeedDatabase], out_db: ActiveFeedDatabase) -> None:
+  """
+  Merges a list  of active_feed_databases to a single one, specified in out_db.
+
+  Arguments:
+    dbs: List of active feed databases.
+    out_db: Exported output database.
+
+  Returns:
+    None
+  """
   sdir = {}
-  new_id = 0
+  new_id = out_db.active_count
+  existing = [dp.sha256 for dp in out_db.get_data]
   for db in dbs:
     data = db.get_data
     for dp in data:
-      if dp.hash not in sdir:
+      if dp.sha256 not in sdir and dp.sha256 not in existing:
         dp.id = new_id
-        sdir[dp.hash] = dp
+        sdir[dp.sha256] = dp
+        new_id += 1
+  with out_db.Session() as s:
+    for dp in sdir.values():
+      s.add(dp)
+  return
+
+def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples_database.SamplesDatabase) -> None:
+  """
+  Merges a list  of active_feed_databases to a SamplesDatabase db.
+
+  Arguments:
+    dbs: List of active feed databases.
+    out_db: Exported output samples database.
+
+  Returns:
+    None
+  """
+  sdir = {}
+  new_id = out_db.count
+  existing = [dp.sha256 for dp in out_db.get_data]
+  for db in dbs:
+    data = []
+    for dp in db.get_data:
+      data.append(samples_database.FromProto(0, model_pb2.Sample(
+        train_step                = -1,
+        text                      = dp.sample,
+        sample_indices            = "",
+        encoded_sample_indices    = "",
+        original_input            = "",
+        sample_feed               = dp.input_feed,
+        encoded_text              = "",
+        sample_start_epoch_ms_utc = "",
+        sample_time_ms            = "",
+        wall_time_ms              = "",
+        feature_vector            = dp.output_features,
+        num_tokens                = dp.num_tokens,
+        compile_status            = dp.compile_status,
+        categorical_sampling      = "1",
+        date_added                = dp.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
+      )))
+    for dp in data and dp.sha256 not in existing:
+      if dp.sha256 not in sdir:
+        dp.id = new_id
+        sdir[dp.sha256] = dp
         new_id += 1
   with out_db.Session() as s:
     for dp in sdir.values():
@@ -232,21 +299,40 @@ def merge_databases(dbs: typing.List[ActiveFeedDatabase], out_db: ActiveFeedData
   return
 
 def initMain(*args, **kwargs):
-  if not FLAGS.active_merged_path:
-    raise ValueError("Specify out path for merged database")
-
-  out_path = pathlib.Path(FLAGS.active_merged_path).absolute()
-  if out_path.stem != '.db':
-    raise ValueError("active_merged_path must end in a valid database name (.db extension)")
-  out_path.parent.mkdir(exist_ok = True, parents = True)
-  out_db = ActiveFeedDatabase(url = "sqlite:///{}".format(str(out_path)), must_exist = False)
-
+  """
+  Setup module's operations.
+  """
+  if not FLAGS.active_mergeable_databases:
+    raise ValueError("Please input active feed databases to merge as a comma separated list.")
   db_paths = [pathlib.Path(p).absolute() for p in FLAGS.active_mergeable_databases.replace(" ", "").split(",")]
   for p in db_paths:
     if not p.exists():
       raise FileNotFoundError(p)
   dbs = [ActiveFeedDatabase(url = "sqlite:///{}".format(str(p)), must_exist = True) for p in db_paths]
-  merge_databases(dbs, out_db)
+
+  if active_feed_mode == "merge_active":
+    if not FLAGS.active_merged_path:
+      raise ValueError("Specify out path for merged database")
+
+    out_path = pathlib.Path(FLAGS.active_merged_path).absolute()
+    if out_path.stem != '.db':
+      raise ValueError("active_merged_path must end in a valid database name (.db extension)")
+    out_path.parent.mkdir(exist_ok = True, parents = True)
+    out_db = ActiveFeedDatabase(url = "sqlite:///{}".format(str(out_path)), must_exist = False)
+
+    merge_databases(dbs, out_db)
+  elif FLAGS.active_feed_mode == "active_to_samples":
+
+    out_path = pathlib.Path(FLAGS.samples_merged_path).absolute()
+    if out_path.stem != '.db':
+      raise ValueError("samples_merged_path must end in a valid database name (.db extension)")
+    out_path.parent.mkdir(exist_ok = True, parents = True)
+    out_db = samples_database.SamplesDatabase(url = "sqlite:///{}".format(str(out_path)), must_exist = False)
+
+    active_convert_samples(dbs, out_db)
+  else:
+    raise ValueError("Invalid value for FLAGS.active_feed_mode: {}".format(FLAGS.active_feed_mode))
+
   return
 
 if __name__ == "__main__":
