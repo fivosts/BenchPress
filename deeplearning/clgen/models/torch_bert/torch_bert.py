@@ -365,8 +365,14 @@ class torchBert(backends.BackendBase):
       stop_thread = True
       t.join()
       l.getLogger().warn("Finished workload")
-      outputs['generated_samples'] = list(samples.detach().cpu().numpy())
-      outputs['sample_indices']    = list(sample_indices.detach().cpu().numpy())
+      x = samples.detach().cpu().numpy()
+      l.getLogger().warn("Detached")
+      outputs['generated_samples'] = list(x)
+      l.getLogger().warn("Moved to CPU")
+      y = sample_indices.detach().cpu().numpy()
+      l.getLogger().warn("Detached")
+      outputs['sample_indices']    = list(y)
+      l.getLogger().warn("Moved to CPU")
       outputs['input_ids']         = list(self.torch.reshape(inputs['input_ids'], tuple(samples.shape)).numpy())
       outputs['masked_lm_lengths'] = list(self.torch.reshape(inputs['masked_lm_lengths'], (samples.shape[0], -1)).numpy())
 
