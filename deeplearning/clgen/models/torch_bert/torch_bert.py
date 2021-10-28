@@ -352,6 +352,8 @@ class torchBert(backends.BackendBase):
     bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc=desc, leave = True, position = 0)
     if not is_live:
       l.getLogger().warn("Number of GPUs: {}".format(self.pytorch.num_gpus))
+      global stop_thread
+      stop_thread = False
       t = threading.Thread(target = gpu_thread)
       t.start()
       samples, sample_indices = model(
@@ -361,7 +363,6 @@ class torchBert(backends.BackendBase):
           inputs['position_ids'].to(self.pytorch.device)
         ),
       )
-      global stop_thread
       stop_thread = True
       t.join()
       l.getLogger().warn("Finished workload")
