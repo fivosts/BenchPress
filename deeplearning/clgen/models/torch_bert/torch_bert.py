@@ -110,6 +110,7 @@ flags.DEFINE_boolean(
 
 stop_thread = False
 def gpu_thread():
+  global stop_thread
   while not stop_thread:
     l.getLogger().warn(
       "GPU util: \n{}".format(
