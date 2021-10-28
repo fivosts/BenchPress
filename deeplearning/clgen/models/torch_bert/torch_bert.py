@@ -375,7 +375,7 @@ class torchBert(backends.BackendBase):
       l.getLogger().warn("Moved to CPU")
       outputs['input_ids']         = list(self.torch.reshape(inputs['input_ids'], tuple(samples.shape)).numpy())
       outputs['masked_lm_lengths'] = list(self.torch.reshape(inputs['masked_lm_lengths'], (samples.shape[0], -1)).numpy())
-
+      l.getLogger().warn("Finished all CPU tensors")
     bar.update(len(outputs['generated_samples']))
     end = time.time()
     return outputs, end-start
