@@ -108,8 +108,9 @@ flags.DEFINE_boolean(
 #     exit(1)
 #   return
 
+stop_thread = False
 def gpu_thread():
-  for _ in range(200):
+  while not stop_thread:
     l.getLogger().warn(
       "GPU util: \n{}".format(
         '\n'.join(["id: {}, mem_used: {}, mem_total: {}, gpu_util: {}".format(x['id'], x['mem_used'], x['mem_total'], x['gpu_util']) for x in gpu.getGPUID()])
@@ -360,6 +361,8 @@ class torchBert(backends.BackendBase):
           inputs['position_ids'].to(self.pytorch.device)
         ),
       )
+      global stop_thread
+      stop_thread = True
       t.join()
       l.getLogger().warn("Finished workload")
       outputs['generated_samples'] = list(samples.detach().cpu().numpy())
