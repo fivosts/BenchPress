@@ -921,6 +921,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                1st el: Total samples.
     """
     cm_rate = [0, 0]
+    l.getLogger().warn("Opening pool")
     pool = multiprocessing.Pool()
     cm_rate[1] += len(outputs['generated_samples'])
     better_found = None
@@ -939,6 +940,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           text_candidate_worker, tokenizer = self.tokenizer, feat_sampler = self.feat_sampler,
         )
       t = 0
+      l.getLogger().warn("Pool opened")
       for idx, batch in enumerate(pool.map(candidate_worker, it)):
         t = idx
         if batch[0]:
