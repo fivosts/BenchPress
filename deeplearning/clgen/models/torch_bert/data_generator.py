@@ -219,7 +219,7 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
                   gen_id    : int,
                   ) -> None:
   objs = {}
-  l.getLogger().warn("Before prep loop in eval db")
+  # l.getLogger().warn("Before prep loop in eval db")
   for sample in samples:
     try:
       _ = opencl.Compile(tokenizer.ArrayToCode(sample.sample))
@@ -248,7 +248,7 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
       objs[sobj.sha256][1] += 1
     else:
       objs[sobj.sha256] = [sobj, 1]
-  l.getLogger().warn(eval_db.count)
+  # l.getLogger().warn(eval_db.count)
   with eval_db.Session(commit = True) as session:
     offset_idx = 0
     for sha, obj in objs.items():
@@ -271,7 +271,7 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
         l.getLogger().error("count: {}".format(eval_db.count))
         l.getLogger().error("offset_idx: {}".format(offset_idx))
         print(e)
-  l.getLogger().warn("Finished eval_DB thread")
+  # l.getLogger().warn("Finished eval_DB thread")
   return
 
 class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
@@ -660,10 +660,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
           ## Write all candidates to eval_cand DB.
           if FLAGS.evaluate_candidates:
-            l.getLogger().warn("Before join: {}".format(write_eval_proc))
+            # l.getLogger().warn("Before join: {}".format(write_eval_proc))
             if write_eval_proc:
               write_eval_proc.join()
-            l.getLogger().warn("After join: {}".format(write_eval_proc))
+            # l.getLogger().warn("After join: {}".format(write_eval_proc))
             write_eval_proc = multiprocessing.Process(
               target = write_eval_db,
               kwargs = {
@@ -676,7 +676,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               }
             )
             write_eval_proc.start()
-            l.getLogger().warn("Started process")
+            # l.getLogger().warn("Started process")
 
           if not FLAGS.evolutionary_search and better_found and feeds[0].gen_id > 0:
             l.getLogger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
@@ -921,7 +921,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                1st el: Total samples.
     """
     cm_rate = [0, 0]
-    l.getLogger().warn("Opening pool")
+    # l.getLogger().warn("Opening pool")
     pool = multiprocessing.Pool()
     cm_rate[1] += len(outputs['generated_samples'])
     better_found = None
@@ -940,7 +940,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           text_candidate_worker, tokenizer = self.tokenizer, feat_sampler = self.feat_sampler,
         )
       t = 0
-      l.getLogger().warn("Pool opened")
+      # l.getLogger().warn("Pool opened")
       for idx, batch in enumerate(pool.map(candidate_worker, it)):
         t = idx
         if batch[0]:

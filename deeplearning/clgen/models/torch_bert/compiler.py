@@ -480,7 +480,7 @@ class CompilationSampler(object):
         if FLAGS.sample_indices_limit:
           sidx_length  = torch.cat((sidx_length, torch.full((res, 1), 0).to(device)), 0)
         w_idx += res
-    l.getLogger().warn("{} is done now and returning workload...".format(device))
+    # l.getLogger().warn("{} is done now and returning workload...".format(device))
     return queue, sample_indices
 
   def StepSampleSeq(self,
