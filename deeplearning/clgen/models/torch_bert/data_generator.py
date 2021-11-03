@@ -644,19 +644,19 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           cmp_rate[1] += ts
           exec_time   += time
 
-          ## Write to samples cache DB.
-          if write_cache_proc:
-            write_cache_proc.join()
-          self.samples_cache_obs.sample_id = self.samples_cache_obs.db.count
-          write_cache_proc = multiprocessing.Process(
-            target = write_samples_cache,
-            kwargs = {
-              'db_sample_obs' : self.samples_cache_obs,
-              'tokenizer'     : self.tokenizer,
-              'samples'       : step_candidates,
-            }
-          )
-          write_cache_proc.start()
+          # ## Write to samples cache DB.
+          # if write_cache_proc:
+          #   write_cache_proc.join()
+          # self.samples_cache_obs.sample_id = self.samples_cache_obs.db.count
+          # write_cache_proc = multiprocessing.Process(
+          #   target = write_samples_cache,
+          #   kwargs = {
+          #     'db_sample_obs' : self.samples_cache_obs,
+          #     'tokenizer'     : self.tokenizer,
+          #     'samples'       : step_candidates,
+          #   }
+          # )
+          # write_cache_proc.start()
 
           ## Write all candidates to eval_cand DB.
           if FLAGS.evaluate_candidates:
