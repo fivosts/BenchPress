@@ -350,7 +350,7 @@ class torchBert(backends.BackendBase):
       desc = "Sampling iteration: {}".format(iteration)
     else:
       desc = "Sampling"
-    bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc=desc, leave = True, position = 0)
+    bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc=desc, leave = False, position = 0)
     if not is_live:
       # l.getLogger().warn("Number of GPUs: {}".format(self.pytorch.num_gpus))
       # global stop_thread
