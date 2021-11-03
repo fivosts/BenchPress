@@ -38,13 +38,11 @@ from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.corpuses import preprocessed
-from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.preprocessors import preprocessors
 from deeplearning.clgen.proto import corpus_pb2
 
 from absl import flags
 
-from deeplearning.clgen.util import hashcache
 from deeplearning.clgen.util import sqlutil
 
 from eupy.native import logger as l
@@ -148,16 +146,13 @@ class Corpus(object):
     self.config.CopyFrom(AssertConfigIsValid(config))
     self._tokenizer = None
     self._created = False
-    self.dashboard_db = dashboard_db.GetDatabase()
-    self._dashboard_db_id: typing.Optional[int] = None  # Set in Create()
 
     # An in-memory cache of the encoded contentfiles indices arrays.
     # Set and used in GetTrainingData().
     self._indices_arrays: typing.Optional[typing.List[np.array]] = None
 
     cache.cachepath("corpus").mkdir(parents=True, exist_ok=True)
-    hc = hashcache.HashCache(cache.cachepath("hashcache.db"), "sha1")
-    self.content_id = ResolveContentId(self.config, hc)
+    self.content_id = ResolveContentId(self.config)
     # Database of pre-processed files.
     preprocessed_id = ResolvePreprocessedId(self.content_id, self.config)
     cache.cachepath("corpus", "preprocessed", preprocessed_id).mkdir(exist_ok=True, parents=True)
@@ -241,31 +236,7 @@ class Corpus(object):
     """
     self._created = True
     l.getLogger().info("Content ID: {}".format(self.content_id))
-
-    # Nothing to do for already-encoded databases.
-    if self.config.HasField("pre_encoded_corpus_url"):
-      with self.dashboard_db.Session(commit=True) as session:
-        if isinstance(self.config, corpus_pb2.Corpus):
-          config_to_store = corpus_pb2.Corpus()
-        else:
-          config_to_store = corpus_pb2.PreTrainCorpus()
-        config_to_store.CopyFrom(self.config)
-        # Clear the contentfiles field, since we use the content_id to uniquely
-        # identify the input files. This means that corpuses with the same content
-        # files delivered through different means (e.g. two separate but identical
-        # directories) have the same hash.
-        config_to_store.ClearField("contentfiles")
-        corpus = session.GetOrAdd(
-          dashboard_db.Corpus,
-          config_proto_sha1=crypto.sha1(config_to_store.SerializeToString()),
-          config_proto=str(config_to_store),
-          preprocessed_url="",
-          encoded_url=self.encoded.url,
-          summary=self.GetShortSummary(),
-        )
-        session.flush()
-        self._dashboard_db_id = corpus.id
-      return
+    return
 
     preprocessed_lock_path = (
       pathlib.Path(self.preprocessed.url[len("sqlite:///") :]).parent / "LOCK"
@@ -291,35 +262,7 @@ class Corpus(object):
     self.encoded.Create(
       self.preprocessed, tokenizer, self.config.contentfile_separator
     )
-
-    # Add entry to dashboard database
-    with self.dashboard_db.Session(commit=True) as session:
-      if isinstance(self.config, corpus_pb2.Corpus):
-        config_to_store = corpus_pb2.Corpus()
-      else:
-        config_to_store = corpus_pb2.PreTrainCorpus()
-      config_to_store.CopyFrom(self.config)
-      # Clear the contentfiles field, since we use the content_id to uniquely
-      # identify the input files. This means that corpuses with the same content
-      # files delivered through different means (e.g. two separate but identical
-      # directories) have the same hash.
-      config_to_store.ClearField("contentfiles")
-      corpus = session.GetOrAdd(
-        dashboard_db.Corpus,
-        config_proto_sha1=crypto.sha1(config_to_store.SerializeToString()),
-        config_proto=str(config_to_store),
-        preprocessed_url=self.preprocessed.url,
-        encoded_url=self.encoded.url,
-        summary=self.GetShortSummary(),
-      )
-      session.flush()
-      self._dashboard_db_id = corpus.id
-
-  @property
-  def dashboard_db_id(self) -> int:
-    if not self._created:
-      raise TypeError("Cannot access dashboard_db_id before Create() called")
-    return self._dashboard_db_id
+    return
 
   def GetTextCorpus(self, shuffle: bool) -> str:
     """Concatenate the entire corpus into a string.
@@ -509,17 +452,13 @@ def ExpandConfigPath(path: str, path_prefix: str = None) -> pathlib.Path:
   )
 
 
-def ResolveContentId(
-  config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrainCorpus], hc: typing.Optional[hashcache.HashCache] = None
-) -> str:
+def ResolveContentId(config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrainCorpus]) -> str:
   """Compute the hash of the input contentfiles.
 
   This function resolves the unique sha1 checksum of a set of content files.
 
   Args:
     config: The corpus config proto.
-    hc: A hashcache database instance, used for resolving directory hashes. If
-      the corpus has pre_encoded_corpus_url field set, this may be omitted.
 
   Returns:
     A hex encoded sha1 string.
