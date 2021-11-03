@@ -34,7 +34,6 @@ from deeplearning.clgen.util import commit
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import corpuses
-from deeplearning.clgen.dashboard import dashboard_db
 from deeplearning.clgen.models import builders
 from deeplearning.clgen.models import evaluators
 from deeplearning.clgen.models import telemetry
@@ -116,8 +115,6 @@ class Model(object):
     (self.cache.path / "samples").mkdir(exist_ok=True)
 
     self._created = False
-    self.dashboard_db = dashboard_db.GetDatabase()
-    self._dashboard_db_id: typing.Optional[int] = None
 
     # Create symlink to encoded corpus.
     symlink = self.cache.path / "corpus"
@@ -259,32 +256,7 @@ class Model(object):
       shutil.copyfile(self.corpus.tokenizer_path, self.cache.path / "checkpoints" / "backup_tokenizer.pkl")
 
     self.backend.Create(tokenizer = self.corpus.tokenizer)
-
-    # Add entry to dashboard database
-    with self.dashboard_db.Session(commit=True) as session:
-      config_to_store = model_pb2.Model()
-      config_to_store.CopyFrom(self.config)
-      config_to_store.ClearField("corpus")
-      config_to_store.ClearField("pre_train_corpus")
-      config_to_store.training.ClearField("num_epochs")
-      corpus = session.GetOrAdd(
-        dashboard_db.Model,
-        corpus_id         = self.corpus.dashboard_db_id,
-        config_proto_sha1 = crypto.sha1(config_to_store.SerializeToString()),
-        config_proto      = str(config_to_store),
-        cache_path        = (f"ssh://{socket.gethostname()}@{getpass.getuser()}" f"/{self.cache.path}"),
-        summary           = self.GetShortSummary(),
-      )
-      session.flush()
-      self._dashboard_db_id           = corpus.id
-      self.backend.dashboard_model_id = self.dashboard_db_id
-      self.backend.dashboard_db       = self.dashboard_db
-
-  @property
-  def dashboard_db_id(self) -> int:
-    if not self._created:
-      raise TypeError("Cannot access dashboard_db_id before Create() called")
-    return self._dashboard_db_id
+    return
 
   def PreTrain(self, **kwargs) -> "Model":
     """
