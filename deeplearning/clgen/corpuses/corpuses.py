@@ -236,6 +236,7 @@ class Corpus(object):
     """
     self._created = True
     l.getLogger().info("Content ID: {}".format(self.content_id))
+    l.getLogger().critical("Return to remove this return statement after experiments are over.")
     return
 
     preprocessed_lock_path = (
