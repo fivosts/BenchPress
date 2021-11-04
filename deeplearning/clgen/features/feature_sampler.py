@@ -101,7 +101,7 @@ def GetContentFileRoot(path: pathlib.Path) -> typing.Iterator[pathlib.Path]:
       d,
     ]
     subprocess.check_call(cmd)
-    l.getLogger().info("Unpacked benchmark suite {}".format(path))
+    l.getLogger().info("Unpacked benchmark suite {}".format(str(d)))
     yield pathlib.Path(d)
 
 def iter_cl_files(path: pathlib.Path) -> typing.List[str]:
