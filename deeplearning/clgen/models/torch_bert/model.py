@@ -832,10 +832,12 @@ class BertForPreTraining(BertPreTrainedModel):
       prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
         input_ids[0], attention_mask[0], position_ids[0]
       )
+      device = input_ids.get_device()
+      device = device if device >= 0 else 'cpu'
       # l.getLogger().warn("inp shape: {}, device: {}".format(input_ids.shape, input_ids.get_device()))
       return self.compile_sampler.generateSampleWorkload(
         self,
-        input_ids.get_device(),
+        device,
         input_ids,
         attention_mask,
         prediction_scores,
@@ -848,6 +850,7 @@ class BertForPreTraining(BertPreTrainedModel):
       inputs_embeds, output_attentions, output_hidden_states 
     )
     device = input_ids.get_device()
+    device = device if device >= 0 else 'cpu'
     if not is_validation and self.compile_sampler and step >= self.config.reward_compilation and not self.config.is_sampling:
       samples, compile_flag, masked_lm_labels = self.compile_sampler.generateTrainingBatch(
         self,
