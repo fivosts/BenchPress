@@ -101,6 +101,7 @@ def GetContentFileRoot(path: pathlib.Path) -> typing.Iterator[pathlib.Path]:
       d,
     ]
     subprocess.check_call(cmd)
+    l.getLogger().info("Unpacked benchmark suite {}".format(path))
     yield pathlib.Path(d)
 
 def iter_cl_files(path: pathlib.Path) -> typing.List[str]:
@@ -119,6 +120,7 @@ def iter_cl_files(path: pathlib.Path) -> typing.List[str]:
       elif c.is_file() and c.suffix == ".cl":
         with open(c, 'r') as inf:
           contentfiles.append((c, inf.read()))
+  l.getLogger().info("Scanned \'.cl\' files in {}".format(str(path)))
   return contentfiles
 
 def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Path, str, str]]:
@@ -138,6 +140,7 @@ def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Pat
   pool = multiprocessing.Pool()
   for kernel_batch in pool.map(preprocessor_worker, contentfiles):
     kernels += kernel_batch
+  l.getLogger().info("Pre-processed {} OpenCL benchmarks".format(len(kernels)))
   return kernels
 
 def grid_walk_generator(feature_space: str) -> typing.Iterator[typing.Dict[str, float]]:
