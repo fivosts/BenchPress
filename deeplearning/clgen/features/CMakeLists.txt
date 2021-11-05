@@ -6,7 +6,10 @@ add_library(InstCount MODULE InstCount.cpp)
 add_dependencies(InstCount llvm)
 
 set_target_properties(InstCount PROPERTIES
-    path ${CMAKE_CURRENT_BINARY_DIR}/libInstCount.so
+    LIBRARY_OUTPUT_NAME ${LOCAL}/lib/libInstCount.so
+)
+set_target_properties(InstCount PROPERTIES
+    path ${LOCAL}/lib/libInstCount.so
 )
 
 target_include_directories(InstCount PUBLIC ${LLVM}/include/)
@@ -31,7 +34,10 @@ add_library(Autophase MODULE Autophase.cpp)
 add_dependencies(Autophase llvm)
 
 set_target_properties(Autophase PROPERTIES
-    path ${CMAKE_CURRENT_BINARY_DIR}/libAutophase.so
+    LIBRARY_OUTPUT_NAME ${LOCAL}/lib/Autophase.so
+)
+set_target_properties(Autophase PROPERTIES
+    path ${LOCAL}/lib/Autophase.so
 )
 
 target_include_directories(Autophase PUBLIC ${LLVM}/include/)
@@ -73,7 +79,10 @@ add_compile_definitions(LIBCXX_HEADERS="${LLVM6}/lib/clang/${LLVM_VERSION6}.0.0/
 add_compile_definitions(AUX_INCLUDE="${DATA_CL_INCLUDE}/aux_include/")
 
 set_target_properties(Grewe PROPERTIES
-    path ${CMAKE_CURRENT_BINARY_DIR}/Grewe
+    RUNTIME_OUTPUT_NAME ${LOCAL}/bin/Grewe
+)
+set_target_properties(Grewe PROPERTIES
+    path ${LOCAL}/bin/Grewe
 )
 
 target_include_directories(Grewe PUBLIC ${LLVM6}/include/)
