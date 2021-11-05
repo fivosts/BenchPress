@@ -26,6 +26,10 @@ OPTION(BOOST_FROM_SOURCE
        "Select to build boost locally from source." 
        OFF
 )
+OPTION(PROTOC_FROM_SOURCE
+      "Select to build protoc locally from source."
+      OFF
+)
 
 function(find_binaries)
 
@@ -74,14 +78,16 @@ function(find_binaries)
 
     # protoc binary exists or crash.
     find_program(PROTOC_FOUND ${PROTOC})
-    if (PROTOC_FOUND)
-      message("-- protoc binary found in " ${PROTOC_FOUND})
-      set(PROTOC_FROM_SOURCE OFF PARENT_SCOPE)
-    elseif (NOT PROTOC_FOUND)
-      message(WARNING "-- protoc binary " ${PROTOC_FOUND} " not found. Will install from source.")
-      set(PROTOC_FROM_SOURCE ON PARENT_SCOPE)
-    else()
-        message(FATAL_ERROR "-- Unknown protoc binary error. Aborting.")
+    if (NOT PROTOC_FROM_SOURCE)
+      if (PROTOC_FOUND)
+        message("-- protoc binary found in " ${PROTOC_FOUND})
+        set(PROTOC_FROM_SOURCE OFF PARENT_SCOPE)
+      elseif (NOT PROTOC_FOUND)
+        message(WARNING "-- protoc binary " ${PROTOC_FOUND} " not found. Will install from source.")
+        set(PROTOC_FROM_SOURCE ON PARENT_SCOPE)
+      else()
+          message(FATAL_ERROR "-- Unknown protoc binary error. Aborting.")
+      endif()
     endif()
 endfunction()
 
