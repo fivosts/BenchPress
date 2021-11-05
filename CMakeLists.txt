@@ -13,7 +13,9 @@ set(APP_PATH    deeplearning/clgen)
 # Base path of third_party deps
 set(THIRD_PARTY ${CMAKE_BINARY_DIR}/third_party)
 # Local bin folder for application binaries and libraries
-set(LOCAL       ${CMAKE_BINARY_DIR}/local)
+if ("${LOCAL}" STREQUAL "")
+  set(LOCAL ${CMAKE_BINARY_DIR}/local)
+endif()
 
 OPTION(BOOST_FROM_SOURCE 
        "Select to build boost locally from source." 
