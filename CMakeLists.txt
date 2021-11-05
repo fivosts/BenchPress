@@ -17,6 +17,11 @@ if ("${LOCAL}" STREQUAL "")
   set(LOCAL ${CMAKE_BINARY_DIR}/local)
 endif()
 
+# Setup local binary folders
+file(MAKE_DIRECTORY ${LOCAL})
+file(MAKE_DIRECTORY ${LOCAL}/bin)
+file(MAKE_DIRECTORY ${LOCAL}/lib)
+
 OPTION(BOOST_FROM_SOURCE 
        "Select to build boost locally from source." 
        OFF
@@ -272,6 +277,17 @@ function(clgen)
   get_target_property(GREWE               Grewe               path)
   get_target_property(INSTCOUNT           InstCount           path)
   get_target_property(AUTOPHASE           Autophase           path)
+
+  # add_custom_target(install_binaries
+  #   COMMAND mv ${CLANG_REWRITER}       ${LOCAL}/bin/clang_rewriter
+  #   COMMAND mv ${DASHBOARD_STATIC}     ${LOCAL}/bin/dashboard_static
+  #   COMMAND mv ${DASHBOARD_TEMPLATES}  ${LOCAL}/bin/dashboard_templates
+  #   COMMAND mv ${LIBCLC}               ${LOCAL}/bin/libclc
+  #   COMMAND mv ${DATA_CL_INCLUDE}      ${LOCAL}/bin/data_cl_include
+  #   COMMAND mv ${GREWE}                ${LOCAL}/bin/Grewe
+  #   COMMAND mv ${INSTCOUNT}            ${LOCAL}/bin/InstCount
+  #   COMMAND mv ${AUTOPHASE}            ${LOCAL}/bin/Autophase
+  # )
 
   string(CONCAT CLGEN
     "#######################################\n"
