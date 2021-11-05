@@ -6,10 +6,7 @@ add_library(InstCount MODULE InstCount.cpp)
 add_dependencies(InstCount llvm)
 
 set_target_properties(InstCount PROPERTIES
-    LIBRARY_OUTPUT_NAME ${LOCAL}/lib/libInstCount.so
-)
-set_target_properties(InstCount PROPERTIES
-    path ${LOCAL}/lib/libInstCount.so
+    path ${LOCAL}/lib/InstCount.so
 )
 
 target_include_directories(InstCount PUBLIC ${LLVM}/include/)
@@ -25,7 +22,10 @@ target_compile_options (InstCount PRIVATE
     -D__STDC_LIMIT_MACROS
     -std=c++17 -O3 -fno-rtti
 )
-
+add_custom_target(install_lib_ic ALL
+    COMMAND mv libInstCount.so ${LOCAL}/lib/InstCount.so
+    DEPENDS InstCount
+)
 #######################################
 # Autophase
 #######################################
@@ -33,9 +33,6 @@ add_library(Autophase MODULE Autophase.cpp)
 
 add_dependencies(Autophase llvm)
 
-set_target_properties(Autophase PROPERTIES
-    LIBRARY_OUTPUT_NAME ${LOCAL}/lib/Autophase.so
-)
 set_target_properties(Autophase PROPERTIES
     path ${LOCAL}/lib/Autophase.so
 )
@@ -53,7 +50,10 @@ target_compile_options (Autophase PRIVATE
     -D__STDC_LIMIT_MACROS
     -std=c++17 -O3 -fno-rtti
 )
-
+add_custom_target(install_lib_ap ALL
+    COMMAND mv libAutophase.so ${LOCAL}/lib/Autophase.so
+    DEPENDS Autophase
+)
 #######################################
 # Grewe
 #######################################
