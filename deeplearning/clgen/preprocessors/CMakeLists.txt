@@ -4,7 +4,10 @@ add_dependencies(clang_rewriter llvm)
 add_compile_definitions(LLVM_VERSION=${LLVM_VERSION})
 
 set_target_properties(clang_rewriter PROPERTIES
-    path ${CMAKE_CURRENT_BINARY_DIR}/clang_rewriter
+    RUNTIME_OUTPUT_NAME ${LOCAL}/bin/clang_rewriter
+)
+set_target_properties(clang_rewriter PROPERTIES
+    path ${LOCAL}/bin/clang_rewriter
 )
 
 set(CMAKE_CXX_FLAGS        "-fno-rtti")
