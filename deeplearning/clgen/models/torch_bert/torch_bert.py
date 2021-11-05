@@ -969,10 +969,10 @@ class torchBert(backends.BackendBase):
       try:
         if isinstance(estimator, torchBert.BertEstimator):
           estimator.model.load_state_dict(
-            self.torch.load(ckpt_comp("model"))
+            self.torch.load(ckpt_comp("model"), map_location=self.pytorch.device)
           )
         elif isinstance(estimator, torchBert.SampleBertEstimator):
-          estimator.model.load_state_dict(self.torch.load(ckpt_comp("model")))
+          estimator.model.load_state_dict(self.torch.load(ckpt_comp("model"), map_location=self.pytorch.device))
           # for m in range(len(estimator.models)):
           #   estimator.models[m].load_state_dict(
           #     self.torch.load(ckpt_comp("model"))
@@ -1010,7 +1010,7 @@ class torchBert(backends.BackendBase):
           self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
         )
         estimator.scheduler.load_state_dict(
-          self.torch.load(ckpt_comp("scheduler"))
+          self.torch.load(ckpt_comp("scheduler"), map_location=self.pytorch.device)
         )
     if isinstance(estimator, torchBert.BertEstimator):
       estimator.model.eval()
