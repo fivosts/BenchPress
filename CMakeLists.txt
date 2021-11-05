@@ -88,6 +88,8 @@ function(find_binaries)
       else()
           message(FATAL_ERROR "-- Unknown protoc binary error. Aborting.")
       endif()
+    else()
+      message("-- Installing protoc from source.")
     endif()
 endfunction()
 
