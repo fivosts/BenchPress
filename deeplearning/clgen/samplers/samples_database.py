@@ -132,6 +132,11 @@ class SamplesDatabase(sqlutil.Database):
     with self.Session() as s:
       return [(x.text, extractor.RawToDictFeats(x.feature_vector)) for x in s.query(Sample).filter(Sample.compile_status == True).yield_per(1000)]
 
+  def get_by_id(self, id):
+    """Index and return sample by ID."""
+    with self.Session() as s:
+      return s.query(Sample).filter(Sample.id == id).all()
+
 def merge_databases(dbs: typing.List[SamplesDatabase], out_db: SamplesDatabase) -> None:
   sdir = {}
   new_id = 0
