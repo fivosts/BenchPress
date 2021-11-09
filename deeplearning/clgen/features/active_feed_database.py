@@ -325,7 +325,7 @@ def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples
   for db in dbs:
     data = []
     for dp in db.get_data:
-      data.append(samples_database.FromProto(0, model_pb2.Sample(
+      data.append(samples_database.Sample.FromProto(0, model_pb2.Sample(
         train_step                = -1,
         text                      = dp.sample,
         sample_indices            = "",
@@ -333,13 +333,11 @@ def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples
         original_input            = "",
         sample_feed               = dp.input_feed,
         encoded_text              = "",
-        sample_start_epoch_ms_utc = "",
-        sample_time_ms            = "",
-        wall_time_ms              = "",
+        sample_time_ms            = 0,
         feature_vector            = extractor.ExtractRawFeatures(dp.sample),
         num_tokens                = dp.num_tokens,
         compile_status            = dp.compile_status,
-        categorical_sampling      = "1",
+        categorical_sampling      = 1,
         date_added                = dp.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
       )))
     for dp in data and dp.sha256 not in existing:
@@ -348,8 +346,10 @@ def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples
         sdir[dp.sha256] = dp
         new_id += 1
   with out_db.Session() as s:
-    for dp in sdir.values():
+    bar = progressbar.ProgressBar(max_value = len(sdir.values()))
+    for dp in bar(sdir.values()):
       s.add(dp)
+    s.commit()
   return
 
 def initMain(*args, **kwargs):
