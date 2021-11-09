@@ -4,6 +4,7 @@ import math
 import copy
 import progressbar
 import pathlib
+import multiprocessing
 import datetime
 import typing
 import sqlite3
@@ -308,6 +309,24 @@ def merge_databases(dbs: typing.List[ActiveFeedDatabase], out_db: ActiveFeedData
     s.commit()
   return
 
+def ToProto(dp: ActiveFeed) -> samples_database.Sample:
+  return samples_database.Sample.FromProto(0, model_pb2.Sample(
+           train_step             = -1,
+           text                   = dp.sample,
+           sample_indices         = "",
+           encoded_sample_indices = "",
+           original_input         = "",
+           sample_feed            = dp.input_feed,
+           encoded_text           = "",
+           sample_time_ms         = 0,
+           feature_vector         = extractor.ExtractRawFeatures(dp.sample),
+           num_tokens             = dp.num_tokens,
+           compile_status         = dp.compile_status,
+           categorical_sampling   = 1,
+           date_added             = dp.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
+          )
+      )
+
 def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples_database.SamplesDatabase) -> None:
   """
   Merges a list  of active_feed_databases to a SamplesDatabase db.
@@ -324,22 +343,10 @@ def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples
   existing = [dp.sha256 for dp in out_db.get_data]
   for db in dbs:
     data = []
-    for dp in db.get_data:
-      data.append(samples_database.Sample.FromProto(0, model_pb2.Sample(
-        train_step                = -1,
-        text                      = dp.sample,
-        sample_indices            = "",
-        encoded_sample_indices    = "",
-        original_input            = "",
-        sample_feed               = dp.input_feed,
-        encoded_text              = "",
-        sample_time_ms            = 0,
-        feature_vector            = extractor.ExtractRawFeatures(dp.sample),
-        num_tokens                = dp.num_tokens,
-        compile_status            = dp.compile_status,
-        categorical_sampling      = 1,
-        date_added                = dp.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
-      )))
+    bar = progressbar.ProgressBar(max_value = db.active_count)
+    pool = multiprocessing.Pool()
+    for dp in bar(pool.imap_unordered(ToProto, db.get_data)):
+      data.append(dp)
     for dp in data and dp.sha256 not in existing:
       if dp.sha256 not in sdir:
         dp.id = new_id
