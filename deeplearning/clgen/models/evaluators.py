@@ -1,5 +1,6 @@
 import typing
 import pathlib
+import numpy as np
 
 from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.samplers import samples_database
@@ -7,6 +8,7 @@ from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.corpuses import corpuses
+from deeplearning.clgen.util import monitors
 
 from eupy.native import logger as l
 
@@ -18,6 +20,12 @@ flags.DEFINE_string(
   "clgen_samples_path",
   "",
   "Set path to clgen samples database for evaluation",
+)
+
+flags.DEFINE_string(
+  "samples_db_path",
+  "",
+  "Set path to BERT samples database for motivational_example figure",
 )
 
 class BaseEvaluator(object):
@@ -161,7 +169,53 @@ class BenchmarkDistance(BaseEvaluator):
       input()
     return
 
+def motivational_example_fig():
+  """
+  Build the plot for paper's motivational example.
+  """
+  target = "rodinia"
+  feature_space = "GreweFeatures"
+  benchmarks = []
+  kernels = feature_sampler.yield_cl_kernels(pathlib.Path(feature_sampler.targets[target]).resolve())
+  for p, k, h in kernels:
+    features = extractor.ExtractFeatures(k, [feature_space], header_file = h, use_aux_headers = False)
+    if features[feature_space]:
+      benchmarks.append(
+        BenchmarkDistance.EvaluatedBenchmark(
+            p,
+            p.name,
+            k,
+            features[feature_space],
+          )
+      )
+  clgen_samples_path = pathlib.Path(FLAGS.clgen_samples_path).resolve()
+  if not clgen_samples_path.exists():
+    raise FileNotFoundError
+  clgen_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(clgen_samples_path)))
+  clgen_corpus = clgen_db.correct_samples
+
+  bert_samples_path = pathlib.Path(FLAGS.samples_db_path).resolve()
+  if not bert_samples_path.exists():
+    raise FileNotFoundError
+  bert_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(bert_samples_path)))
+  bert_datapoint = bert_db.get_by_id(50)
+
+  mon = monitors.TSNEMonitor(".", "motivational_example")
+  for b in benchmarks:
+    mon.register((b.features, "Rodinia Benchmarks", b.name))
+  for i in range(20):
+    sample = clgen_corpus[np.random.randint(0, len(clgen_corpus))]
+    feats = extractor.RawToDictFeats(sample.feature_vector)[feature_space]
+    if feature_space in feats and feats[feature_space]:
+      mon.register((feats[feature_space], "clgen samples"))
+
+  mon.register((extractor.RawToDictFeats(bert_datapoint[0].feature_vector)[feature_space], "bert sample"))
+  mon.plot()
+  return
+
 def initMain(*args, **kwargs):
+  l.initLogger(name = "evaluators", lvl = 20, mail = (None, 5), colorize = True, step = False)
+  motivational_example_fig()
   raise NotImplementedError
   evaluator = BenchmarkDistance()
   return
