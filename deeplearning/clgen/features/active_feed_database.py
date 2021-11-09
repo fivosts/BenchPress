@@ -1,6 +1,9 @@
 """A module for databases of CLgen samples."""
 import contextlib
 import math
+import copy
+import progressbar
+import pathlib
 import datetime
 import typing
 import sqlite3
@@ -9,6 +12,7 @@ import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from absl import app, flags
 
+from deeplearning.clgen.features import extractor
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.util import crypto
@@ -202,6 +206,40 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
       date_added       = datetime.datetime.utcnow(),
     )
 
+  @classmethod
+  def FromActiveFeed(cls,
+                     id : int,
+                     sha256           : str,
+                     input_feed       : str = "",
+                     encoded_feed     : str = "",
+                     input_features   : str = "",
+                     sample           : str = "",
+                     num_tokens       : int = -1,
+                     output_features  : str = "",
+                     target_benchmark : str = "",
+                     target_features  : str = "",
+                     sample_quality   : float = -1,
+                     compile_status   : bool = False,
+                     generation_id    : int = -1,
+                     date_added : datetime.datetime = datetime.datetime.utcnow()
+                     ) -> typing.TypeVar("ActiveFeed"):
+    return ActiveFeed(
+      id = id,
+      sha256           = sha256,
+      input_feed       = input_feed,
+      encoded_feed     = encoded_feed,
+      input_features   = input_features,
+      sample           = sample,
+      num_tokens       = num_tokens,
+      output_features  = output_features,
+      target_benchmark = target_benchmark,
+      target_features  = target_features,
+      sample_quality   = sample_quality,
+      compile_status   = compile_status,
+      generation_id    = generation_id,
+      date_added       = date_added,
+    )
+
 class ActiveFeedDatabase(sqlutil.Database):
   """A database monitoring search-based generation process."""
 
@@ -246,12 +284,28 @@ def merge_databases(dbs: typing.List[ActiveFeedDatabase], out_db: ActiveFeedData
     data = db.get_data
     for dp in data:
       if dp.sha256 not in sdir and dp.sha256 not in existing:
-        dp.id = new_id
-        sdir[dp.sha256] = dp
+        sdir[dp.sha256] = ActiveFeed.FromActiveFeed(
+          id = new_id,
+          sha256 = dp.sha256,
+          input_feed       = dp.input_feed,
+          encoded_feed     = dp.encoded_feed,
+          input_features   = dp.input_features,
+          sample           = dp.sample,
+          num_tokens       = dp.num_tokens,
+          output_features  = dp.output_features,
+          target_benchmark = dp.target_benchmark,
+          target_features  = dp.target_features,
+          sample_quality   = dp.sample_quality,
+          compile_status   = dp.compile_status,
+          generation_id    = dp.generation_id,
+          date_added       = dp.date_added,
+        )
         new_id += 1
   with out_db.Session() as s:
-    for dp in sdir.values():
-      s.add(dp)
+    bar = progressbar.ProgressBar(max_value = len(sdir.values()))
+    for dp in bar(sdir.values()):
+      s.add(s.merge(dp))
+    s.commit()
   return
 
 def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples_database.SamplesDatabase) -> None:
@@ -282,7 +336,7 @@ def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples
         sample_start_epoch_ms_utc = "",
         sample_time_ms            = "",
         wall_time_ms              = "",
-        feature_vector            = dp.output_features,
+        feature_vector            = extractor.ExtractRawFeatures(dp.sample),
         num_tokens                = dp.num_tokens,
         compile_status            = dp.compile_status,
         categorical_sampling      = "1",
@@ -310,13 +364,13 @@ def initMain(*args, **kwargs):
       raise FileNotFoundError(p)
   dbs = [ActiveFeedDatabase(url = "sqlite:///{}".format(str(p)), must_exist = True) for p in db_paths]
 
-  if active_feed_mode == "merge_active":
+  if FLAGS.active_feed_mode == "merge_active":
     if not FLAGS.active_merged_path:
       raise ValueError("Specify out path for merged database")
 
     out_path = pathlib.Path(FLAGS.active_merged_path).absolute()
-    if out_path.stem != '.db':
-      raise ValueError("active_merged_path must end in a valid database name (.db extension)")
+    if out_path.suffix != '.db':
+      raise ValueError("active_merged_path must end in a valid database name (.db extension): {}".format(out_path))
     out_path.parent.mkdir(exist_ok = True, parents = True)
     out_db = ActiveFeedDatabase(url = "sqlite:///{}".format(str(out_path)), must_exist = False)
 
@@ -324,7 +378,7 @@ def initMain(*args, **kwargs):
   elif FLAGS.active_feed_mode == "active_to_samples":
 
     out_path = pathlib.Path(FLAGS.samples_merged_path).absolute()
-    if out_path.stem != '.db':
+    if out_path.suffix != '.db':
       raise ValueError("samples_merged_path must end in a valid database name (.db extension)")
     out_path.parent.mkdir(exist_ok = True, parents = True)
     out_db = samples_database.SamplesDatabase(url = "sqlite:///{}".format(str(out_path)), must_exist = False)
