@@ -198,16 +198,16 @@ def motivational_example_fig():
   if not bert_samples_path.exists():
     raise FileNotFoundError
   bert_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(bert_samples_path)))
-  bert_datapoints = bert_db.get_by_ids([143826, 161032, 176617, 185438])
+  bert_datapoints = bert_db.get_by_ids([143826])
 
   data = [s for s in bert_db.correct_samples]
-  for x in range(20):
-    s = data[np.random.randint(0, len(data))]
-    feats = extractor.RawToDictFeats(s.feature_vector)
-    if feature_space in feats and feats[feature_space]:
-      bert_datapoints.append(s)
-    else:
-      s.feature_vector = extractor.ExtractRawFeatures(s.text)
+  # for x in range(20):
+  #   s = data[np.random.randint(0, len(data))]
+  #   feats = extractor.RawToDictFeats(s.feature_vector)
+  #   if feature_space in feats and feats[feature_space]:
+  #     bert_datapoints.append(s)
+  #   else:
+  #     s.feature_vector = extractor.ExtractRawFeatures(s.text)
 
   mon = monitors.TSNEMonitor(".", "motivational_example")
   for b in benchmarks:
@@ -219,7 +219,10 @@ def motivational_example_fig():
       mon.register((feats[feature_space], "clgen samples"))
 
   for s in bert_datapoints:
-    mon.register((extractor.RawToDictFeats(s.feature_vector)[feature_space], "bert sample"))
+    feats = extractor.RawToDictFeats(s.feature_vector)[feature_space]
+    for k in feats.keys():
+      feats[k] += 100
+    mon.register((feats, "bert sample"))
   mon.plot()
   return
 
