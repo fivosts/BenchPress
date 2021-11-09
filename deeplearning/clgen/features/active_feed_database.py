@@ -347,8 +347,8 @@ def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples
     pool = multiprocessing.Pool()
     for dp in bar(pool.imap_unordered(ToProto, db.get_data)):
       data.append(dp)
-    for dp in data and dp.sha256 not in existing:
-      if dp.sha256 not in sdir:
+    for dp in data:
+      if dp.sha256 not in sdir and dp.sha256 not in existing:
         dp.id = new_id
         sdir[dp.sha256] = dp
         new_id += 1
