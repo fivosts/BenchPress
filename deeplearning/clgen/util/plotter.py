@@ -52,13 +52,13 @@ def GroupScatterPlot(groups: typing.Dict[str, typing.Dict[str, list]],
   layout = go.Layout(
     plot_bgcolor='rgba(0,0,0,0)',
     title = title,
-    xaxis = dict(title = x_name, showgrid = False, showline = True, linecolor = 'black', mirror = True),
-    yaxis = dict(title = y_name, showgrid = False, showline = True, linecolor = 'black', mirror = True),
+    xaxis = dict(title = x_name, showgrid = False, showline = True, linecolor = 'black', mirror = True, tickfont = dict(size = 24), titlefont = dict(size = 26)),
+    yaxis = dict(title = y_name, showgrid = False, showline = True, linecolor = 'black', mirror = True, tickfont = dict(size = 24), titlefont = dict(size = 26)),
     legend=dict(
       x=0.9,
       y=0.9,
       traceorder='normal',
-      font=dict(size=12,),
+      font=dict(size = 24,),
     )
   )
   fig = go.Figure(layout = layout)
@@ -203,8 +203,14 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
   layout = go.Layout(
     plot_bgcolor='rgba(0,0,0,0)',
     title = title,
-    xaxis = dict(title = x_name, tickfont = dict(size = 16), titlefont = dict(size = 18)),
-    yaxis = dict(tickfont = dict(size = 16))
+    xaxis = dict(title = x_name, tickfont = dict(size = 24), titlefont = dict(size = 26)),
+    yaxis = dict(tickfont = dict(size = 24)),
+    legend=dict(
+      x=0.1,
+      y=0.9,
+      traceorder='normal',
+      font=dict(size = 24,),
+    )
   )
   fig = go.Figure(layout = layout)
 
