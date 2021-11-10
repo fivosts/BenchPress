@@ -223,9 +223,10 @@ class Instance(object):
     self.PreTrain()
     self.Train()
     with self.Session():
-      self.model.Sample(self.sampler, *args, **kwargs)
       if FLAGS.evaluate:
         self.model.Evaluate(self.sampler)
+      else:
+        self.model.Sample(self.sampler, *args, **kwargs)
 
   def ToProto(self) -> clgen_pb2.Instance:
     """Get the proto config for the instance."""
