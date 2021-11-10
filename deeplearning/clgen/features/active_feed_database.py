@@ -310,22 +310,24 @@ def merge_databases(dbs: typing.List[ActiveFeedDatabase], out_db: ActiveFeedData
   return
 
 def ToProto(dp: ActiveFeed) -> samples_database.Sample:
-  return samples_database.Sample.FromProto(0, model_pb2.Sample(
-           train_step             = -1,
-           text                   = dp.sample,
-           sample_indices         = "",
-           encoded_sample_indices = "",
-           original_input         = "",
-           sample_feed            = dp.input_feed,
-           encoded_text           = "",
-           sample_time_ms         = 0,
-           feature_vector         = extractor.ExtractRawFeatures(dp.sample),
-           num_tokens             = dp.num_tokens,
-           compile_status         = dp.compile_status,
-           categorical_sampling   = 1,
-           date_added             = dp.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
+  return samples_database.Sample(
+           **samples_database.Sample.FromProto(0, model_pb2.Sample(
+             train_step             = -1,
+             text                   = dp.sample,
+             sample_indices         = "",
+             encoded_sample_indices = "",
+             original_input         = "",
+             sample_feed            = dp.input_feed,
+             encoded_text           = "",
+             sample_time_ms         = 0,
+             feature_vector         = extractor.ExtractRawFeatures(dp.sample),
+             num_tokens             = dp.num_tokens,
+             compile_status         = dp.compile_status,
+             categorical_sampling   = 1,
+             date_added             = dp.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
+            )
           )
-      )
+        )
 
 def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples_database.SamplesDatabase) -> None:
   """
