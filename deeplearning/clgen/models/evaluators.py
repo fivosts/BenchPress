@@ -214,8 +214,8 @@ class BenchmarkDistance(BaseEvaluator):
         names[benchmark.name][0] = 0
     plotter.GrouppedBars(
       groups = groups,
-      title  = "Average distance of top-5 samples",
-      x_name = "Datasets",
+      title  = "",
+      x_name = "Benchmarks",
       plot_name = "avg_dist",
     )
     return
