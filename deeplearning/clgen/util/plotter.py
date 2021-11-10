@@ -17,6 +17,7 @@ def SingleScatterLine(x: np.array,
                       ) -> None:
   """Plot a single line, with scatter points at datapoints."""
   layout = go.Layout(
+    plot_bgcolor='rgba(0,0,0,0)',
     title = title,
     xaxis = dict(title = x_name),
     yaxis = dict(title = y_name),
@@ -42,17 +43,31 @@ def GroupScatterPlot(groups: typing.Dict[str, typing.Dict[str, list]],
                      x_name: str,
                      y_name: str,
                      plot_name: str,
+                     marker_style: typing.List[str] = None,
                      path: pathlib.Path = None,
                      ) -> None:
   """
   Plots groupped scatter plot of points in two-dimensional space.
   """
   layout = go.Layout(
+    plot_bgcolor='rgba(0,0,0,0)',
     title = title,
-    xaxis = dict(title = x_name),
-    yaxis = dict(title = y_name),
+    xaxis = dict(title = x_name, showgrid = False, showline = True, linecolor = 'black', mirror = True),
+    yaxis = dict(title = y_name, showgrid = False, showline = True, linecolor = 'black', mirror = True),
+    legend=dict(
+      x=0.9,
+      y=0.9,
+      traceorder='normal',
+      font=dict(size=12,),
+    )
   )
   fig = go.Figure(layout = layout)
+  if marker_style:
+    if len(marker_style) != len(groups.keys()):
+      raise ValueError("Mismatch between markers styles and number of groups")
+    miter = iter(marker_style)
+  else:
+    miter = None
   for group, values in groups.items():
     feats = np.array(values['data'])
     names = values['names']
@@ -63,6 +78,7 @@ def GroupScatterPlot(groups: typing.Dict[str, typing.Dict[str, list]],
         mode = 'markers',
         showlegend = True,
         opacity    = 0.75,
+        marker     = next(miter) if miter else None,
         text       = names,
       )
     )
@@ -86,6 +102,7 @@ def ScatterPlot(x: np.array,
   Implementation of a simple 2D scatter plot without groups.
   """
   layout = go.Layout(
+    plot_bgcolor='rgba(0,0,0,0)',
     title = title,
     xaxis = dict(title = x_name),
     yaxis = dict(title = y_name),
@@ -118,6 +135,7 @@ def FrequencyBars(x: np.array,
                   ) -> None:
   """Plot frequency bars based on key."""
   layout = go.Layout(
+    plot_bgcolor='rgba(0,0,0,0)',
     title = title,
     xaxis = dict(title = x_name),
     yaxis = dict(title = "# of Occurences"),
@@ -154,6 +172,7 @@ def LogitsStepsDistrib(x              : typing.List[np.array],
   Used to plot the probability distribution of BERT's token selection. 
   """
   layout = go.Layout(
+    plot_bgcolor='rgba(0,0,0,0)',
     title = title,
     xaxis = dict(title = x_name),
     # yaxis = dict(title = ""),
@@ -182,6 +201,7 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
   Plots groups of bars.
   """
   layout = go.Layout(
+    plot_bgcolor='rgba(0,0,0,0)',
     title = title,
     xaxis = dict(title = x_name),
   )
@@ -213,6 +233,7 @@ def CumulativeHistogram(x: np.array,
                         ) -> None:
   """Plot percent cumulative histogram."""
   layout = go.Layout(
+    plot_bgcolor='rgba(0,0,0,0)',
     title = title,
     xaxis = dict(title = x_name),
     yaxis = dict(title = "% of Probability Density"),
@@ -244,6 +265,7 @@ def NormalizedRadar(r         : np.array,
                     ) -> None:
   """Radar chart for feature plotting"""
   layout = go.Layout(
+    plot_bgcolor='rgba(0,0,0,0)',
     title = title,
   )
   fig = go.Figure(layout = layout)
@@ -269,6 +291,7 @@ def CategoricalViolin(x: np.array,
                       ) -> None:
   """Plot percent cumulative histogram."""
   layout = go.Layout(
+    plot_bgcolor='rgba(0,0,0,0)',
     title = title,
     violingap = 0,
     violinmode = 'overlay',
