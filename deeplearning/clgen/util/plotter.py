@@ -203,7 +203,8 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
   layout = go.Layout(
     plot_bgcolor='rgba(0,0,0,0)',
     title = title,
-    xaxis = dict(title = x_name),
+    xaxis = dict(title = x_name, tickfont = dict(size = 16), titlefont = dict(size = 18)),
+    yaxis = dict(tickfont = dict(size = 16))
   )
   fig = go.Figure(layout = layout)
 
