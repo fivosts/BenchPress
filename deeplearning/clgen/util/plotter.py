@@ -204,16 +204,16 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
   Plots groups of bars.
   """
   # colors
-  palette = itertools.cycle(px.colors.qualitative.G10)
+  palette = itertools.cycle(px.colors.qualitative.T10)
 
   layout = go.Layout(
     plot_bgcolor='rgba(0,0,0,0)',
     title = title,
     xaxis = dict(title = x_name, tickfont = dict(size = 24), titlefont = dict(size = 26)),
-    yaxis = dict(type = "log", gridcolor = '#c4c4c4', gridwidth = 0.5, tickformat = ".1r", tickfont = dict(size = 24)),
+    yaxis = dict(type = "log", gridcolor = '#c4c4c4', gridwidth = 0.4, tickformat = "0.1r", tickfont = dict(size = 24)),
     legend=dict(
       x=0.1,
-      y=0.9,
+      y=0.92,
       bgcolor = 'rgba(0,0,0,0)',
       traceorder='normal',
       font=dict(size = 24,),
@@ -226,8 +226,11 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
       go.Bar(
         name = str(group),
         x = x,
-        y = y,
-        marker_color = next(palette)
+        y = [0.2+i for i in y],
+        marker_color = next(palette),
+        textposition = "outside",
+        text = ["" if i > 0 else "*" for i in y],
+        textfont = dict(color = "red", tickfont = dict(size = 16)),
       )
     )
 
