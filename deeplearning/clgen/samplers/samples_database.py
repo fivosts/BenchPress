@@ -132,6 +132,12 @@ class SamplesDatabase(sqlutil.Database):
     with self.Session() as s:
       return [(x.text, extractor.RawToDictFeats(x.feature_vector)) for x in s.query(Sample).filter(Sample.compile_status == True).yield_per(1000)]
 
+  @property
+  def get_compilable_num_tokens(self) -> typing.List[int]:
+    """Return num_tokens column."""
+    with self.Session() as s:
+      return s.query(Sample.num_tokens).filter(Sample.compile_status == True).all()
+
   def get_by_ids(self, ids):
     """Index and return sample by ID."""
     with self.Session() as s:
