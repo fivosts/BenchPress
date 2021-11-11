@@ -5,7 +5,10 @@ Based on plotly module
 import typing
 import pathlib
 import numpy as np
+import itertools
+
 from plotly import graph_objs as go
+import plotly.express as px
 
 def SingleScatterLine(x: np.array,
                       y: np.array,
@@ -200,14 +203,18 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
   Similar to LogitsStepsDistrib but more generic.
   Plots groups of bars.
   """
+  # colors
+  palette = itertools.cycle(px.colors.qualitative.G10)
+
   layout = go.Layout(
     plot_bgcolor='rgba(0,0,0,0)',
     title = title,
     xaxis = dict(title = x_name, tickfont = dict(size = 24), titlefont = dict(size = 26)),
-    yaxis = dict(tickfont = dict(size = 24)),
+    yaxis = dict(type = "log", gridcolor = '#c4c4c4', gridwidth = 0.5, tickformat = ".1r", tickfont = dict(size = 24)),
     legend=dict(
       x=0.1,
       y=0.9,
+      bgcolor = 'rgba(0,0,0,0)',
       traceorder='normal',
       font=dict(size = 24,),
     )
@@ -220,6 +227,7 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
         name = str(group),
         x = x,
         y = y,
+        marker_color = next(palette)
       )
     )
 
