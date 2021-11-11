@@ -2,13 +2,15 @@
 import contextlib
 import datetime
 import typing
+import multiprocessing
+import progressbar
 import sqlite3
+import pathlib
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from absl import app, flags
 
-from deeplearning.clgen.samplers import sample_observers
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.util import crypto
@@ -136,7 +138,7 @@ class SamplesDatabase(sqlutil.Database):
   def get_compilable_num_tokens(self) -> typing.List[int]:
     """Return num_tokens column."""
     with self.Session() as s:
-      return s.query(Sample.num_tokens).filter(Sample.compile_status == True).all()
+      return [int(x[0]) for x in s.query(Sample.num_tokens).filter(Sample.compile_status == True)]
 
   def get_by_ids(self, ids):
     """Index and return sample by ID."""
@@ -158,13 +160,50 @@ def merge_databases(dbs: typing.List[SamplesDatabase], out_db: SamplesDatabase) 
       s.add(dp)
   return
 
+def run_extractors(sample: Sample) -> Sample:
+  if sample.compile_status:
+    return Sample(
+             **Sample.FromProto(0, model_pb2.Sample(
+               train_step             = sample.train_step,
+               text                   = sample.text,
+               sample_indices         = sample.sample_indices,
+               encoded_sample_indices = sample.encoded_sample_indices,
+               original_input         = sample.original_input,
+               sample_feed            = sample.sample_feed,
+               encoded_text           = sample.encoded_text,
+               sample_time_ms         = sample.sample_time_ms,
+               feature_vector         = extractor.ExtractRawFeatures(sample.text),
+               num_tokens             = sample.num_tokens,
+               compile_status         = sample.compile_status,
+               categorical_sampling   = int(sample.categorical_sampling),
+               date_added             = sample.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
+              )
+            )
+          )
+  else:
+    return sample
+
+def modernize_samples_db(db: SamplesDatabase, out_db: SamplesDatabase) -> None:
+  """
+  Re-run feature extractors to update old db.
+  """
+  pool = multiprocessing.Pool()
+  inp_data = db.get_data
+  bar = progressbar.ProgressBar(max_value = len(inp_data))
+
+  with out_db.Session(commit = True) as s:
+    for dp in bar(pool.imap_unordered(run_extractors, inp_data)):
+      s.add(dp)
+    s.commit()
+  return
+
 def initMain(*args, **kwargs):
   if not FLAGS.sample_merged_path:
     raise ValueError("Specify out path for merged database")
 
   out_path = pathlib.Path(FLAGS.sample_merged_path).absolute()
-  if out_path.stem != '.db':
-    raise ValueError("sample_merged_path must end in a valid database name (.db extension)")
+  if out_path.suffix != '.db':
+    raise ValueError("sample_merged_path must end in a valid database name (.db extension): {}")
   out_path.parent.mkdir(exist_ok = True, parents = True)
   out_db = SamplesDatabase(url = "sqlite:///{}".format(str(out_path)), must_exist = False)
 
@@ -173,7 +212,8 @@ def initMain(*args, **kwargs):
     if not p.exists():
       raise FileNotFoundError(p)
   dbs = [SamplesDatabase(url = "sqlite:///{}".format(str(p)), must_exist = True) for p in db_paths]
-  merge_databases(dbs, out_db)
+  # merge_databases(dbs, out_db)
+  modernize_samples_db(dbs[0], out_db)
   return
 
 if __name__ == "__main__":
