@@ -215,7 +215,7 @@ class BenchmarkDistance(BaseEvaluator):
     plotter.GrouppedBars(
       groups = groups,
       title  = "",
-      x_name = "Benchmarks",
+      x_name = "",
       plot_name = "avg_dist",
     )
     return
