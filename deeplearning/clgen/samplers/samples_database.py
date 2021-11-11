@@ -192,8 +192,10 @@ def modernize_samples_db(db: SamplesDatabase, out_db: SamplesDatabase) -> None:
   bar = progressbar.ProgressBar(max_value = len(inp_data))
 
   with out_db.Session(commit = True) as s:
-    for dp in bar(pool.imap_unordered(run_extractors, inp_data)):
+    for idx, dp in bar(enumerate(pool.imap_unordered(run_extractors, inp_data))):
       s.add(dp)
+      if idx+1 % 5000:
+        s.commit()
     s.commit()
   return
 
