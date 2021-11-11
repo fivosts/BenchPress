@@ -209,12 +209,13 @@ class BenchmarkDistance(BaseEvaluator):
           bn = "{}-{}".format(benchmark.name, names[benchmark.name][0])
         dst_list = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in dset], key = lambda x: x[1])[:topK]
         groups[dsetname][0].append(bn)
-        groups[dsetname][1].append(sum([x[1] for x in dst_list]) / len(dst_list))
+        # groups[dsetname][1].append(sum([x[1] for x in dst_list]) / len(dst_list))
+        groups[dsetname][1].append(min([x[1] for x in dst_list]))
       for benchmark in final_benchmarks:
         names[benchmark.name][0] = 0
     plotter.GrouppedBars(
       groups = groups,
-      title  = "",
+      title  = "Grewe Features",
       x_name = "",
       plot_name = "avg_dist",
     )

@@ -230,7 +230,7 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
         marker_color = next(palette),
         textposition = "outside",
         text = ["" if i > 0 else "*" for i in y],
-        textfont = dict(color = "red", tickfont = dict(size = 16)),
+        textfont = dict(color = "red", size = 16),
       )
     )
 
