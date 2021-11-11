@@ -181,7 +181,24 @@ def run_extractors(sample: Sample) -> Sample:
             )
           )
   else:
-    return sample
+    return Sample(
+             **Sample.FromProto(0, model_pb2.Sample(
+               train_step             = sample.train_step,
+               text                   = sample.text,
+               sample_indices         = sample.sample_indices,
+               encoded_sample_indices = sample.encoded_sample_indices,
+               original_input         = sample.original_input,
+               sample_feed            = sample.sample_feed,
+               encoded_text           = sample.encoded_text,
+               sample_time_ms         = sample.sample_time_ms,
+               feature_vector         = "",
+               num_tokens             = sample.num_tokens,
+               compile_status         = sample.compile_status,
+               categorical_sampling   = int(sample.categorical_sampling),
+               date_added             = sample.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
+              )
+            )
+          )
 
 def modernize_samples_db(db: SamplesDatabase, out_db: SamplesDatabase) -> None:
   """
@@ -193,6 +210,7 @@ def modernize_samples_db(db: SamplesDatabase, out_db: SamplesDatabase) -> None:
 
   with out_db.Session(commit = True) as s:
     for idx, dp in bar(enumerate(pool.imap_unordered(run_extractors, inp_data))):
+      dp.id = idx
       s.add(dp)
       if idx+1 % 5000:
         s.commit()
