@@ -367,7 +367,7 @@ def RelativeDistribution(x: np.array,
     x,
     curve_type = 'normal',
     show_rug = False,
-    bin_size = 2,
+    bin_size = 1,
     show_hist = True
   )
   fig.update_layout(layout)
