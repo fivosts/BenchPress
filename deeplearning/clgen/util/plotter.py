@@ -8,6 +8,7 @@ import numpy as np
 import itertools
 
 from plotly import graph_objs as go
+import plotly.figure_factory as ff
 import plotly.express as px
 
 def SingleScatterLine(x: np.array,
@@ -330,6 +331,47 @@ def CategoricalViolin(x: np.array,
         opacity = 0.65,
       )
     )
+  if path:
+    outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
+    fig.write_html (outf("html"))
+    fig.write_image(outf("png"), scale = 2.0)
+  else:
+    fig.show()
+  return
+
+def RelativeDistribution(x: np.array,
+                         y: typing.List[np.array],
+                         title: str,
+                         x_name: str,
+                         plot_name: str,
+                         path: pathlib.Path = None,
+                         ) -> None:
+  """Plot smoothened relative distribution of data"""
+  palette = itertools.cycle(px.colors.qualitative.T10)
+
+  layout = go.Layout(
+    plot_bgcolor='rgba(0,0,0,0)',
+    title = title,
+    xaxis = dict(title = x_name, tickfont = dict(size = 24), titlefont = dict(size = 26)),
+    yaxis = dict(gridcolor = '#c4c4c4', gridwidth = 0.4, tickfont = dict(size = 24)),
+    legend=dict(
+      x=0.75,
+      y=0.75,
+      bgcolor = 'rgba(0,0,0,0)',
+      traceorder='normal',
+      font=dict(size = 24,),
+    )
+  )
+  fig = ff.create_distplot(
+    y,
+    x,
+    curve_type = 'normal',
+    show_rug = False,
+    bin_size = 2,
+    show_hist = True
+  )
+  fig.update_layout(layout)
+
   if path:
     outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
     fig.write_html (outf("html"))

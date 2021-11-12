@@ -218,6 +218,7 @@ class BenchmarkDistance(BaseEvaluator):
       title  = "Grewe Features",
       x_name = "",
       plot_name = "avg_dist",
+      path = pathlib.Path(".").resolve(),
     )
     return
 
@@ -301,9 +302,33 @@ def motivational_example_fig():
   )
   return
 
+def benchpress_vs_clgen_fig():
+
+  clgen_samples_path = pathlib.Path(FLAGS.clgen_samples_path).resolve()
+  if not clgen_samples_path.exists():
+    raise FileNotFoundError
+  clgen_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(clgen_samples_path)))
+  clgen_ntoks = clgen_db.get_compilable_num_tokens
+
+  bert_samples_path = pathlib.Path(FLAGS.samples_db_path).resolve()
+  if not bert_samples_path.exists():
+    raise FileNotFoundError
+  bert_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(bert_samples_path)))
+  data = bert_db.get_compilable_num_tokens
+
+  plotter.RelativeDistribution(
+    x = ["BenchPress", "CLgen"],
+    y = [data, clgen_ntoks],
+    title = "",
+    x_name = "# Tokens",
+    plot_name = "token_relative_distribution",
+    path = pathlib.Path(".").resolve()
+  )
+
 def initMain(*args, **kwargs):
   l.initLogger(name = "evaluators", lvl = 20, mail = (None, 5), colorize = True, step = False)
-  motivational_example_fig()
+  # motivational_example_fig()
+  benchpress_vs_clgen_fig()
   return
 
 if __name__ == "__main__":
