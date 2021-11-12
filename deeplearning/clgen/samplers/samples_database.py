@@ -5,6 +5,7 @@ import typing
 import multiprocessing
 import progressbar
 import sqlite3
+import functools
 import pathlib
 
 import sqlalchemy as sql
@@ -12,6 +13,7 @@ from sqlalchemy.ext import declarative
 from absl import app, flags
 
 from deeplearning.clgen.features import extractor
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import sqlutil
@@ -28,6 +30,12 @@ flags.DEFINE_string(
   "sample_merged_path",
   None,
   "Specify output of merged database."
+)
+
+flags.DEFINE_string(
+  "tokenizer_path",
+  None,
+  "Specify path of tokenizer to update database."
 )
 
 Base = declarative.declarative_base()
@@ -217,6 +225,46 @@ def modernize_samples_db(db: SamplesDatabase, out_db: SamplesDatabase) -> None:
     s.commit()
   return
 
+def update_tokenizer(sample: Sample, tokenizer) -> Sample:
+  encoded = tokenizer.TokenizeString(sample.text)
+  return Sample(
+           **Sample.FromProto(0, model_pb2.Sample(
+             train_step             = sample.train_step,
+             text                   = sample.text,
+             sample_indices         = sample.sample_indices,
+             encoded_sample_indices = sample.sample_indices,
+             original_input         = sample.original_input,
+             sample_feed            = sample.sample_feed,
+             encoded_text           = ','.join([str(x) for x in encoded]),
+             sample_time_ms         = sample.sample_time_ms,
+             feature_vector         = sample.feature_vector,
+             num_tokens             = len(encoded),
+             compile_status         = sample.compile_status,
+             categorical_sampling   = int(sample.categorical_sampling),
+             date_added             = sample.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
+            )
+          )
+        )
+
+def modernize_clgen_tokenizer(db: SamplesDatabase, out_db: SamplesDatabase, tokenizer) -> None:
+  """
+  Re-run feature extractors to update old db.
+  """
+  pool = multiprocessing.Pool()
+  inp_data = db.get_data
+  bar = progressbar.ProgressBar(max_value = len(inp_data))
+
+  f = functools.partial(update_tokenizer, tokenizer = tokenizer)
+
+  with out_db.Session(commit = True) as s:
+    for idx, dp in bar(enumerate(pool.imap_unordered(f, inp_data))):
+      dp.id = idx
+      s.add(dp)
+      if idx+1 % 5000:
+        s.commit()
+    s.commit()
+  return
+
 def initMain(*args, **kwargs):
   if not FLAGS.sample_merged_path:
     raise ValueError("Specify out path for merged database")
@@ -232,8 +280,15 @@ def initMain(*args, **kwargs):
     if not p.exists():
       raise FileNotFoundError(p)
   dbs = [SamplesDatabase(url = "sqlite:///{}".format(str(p)), must_exist = True) for p in db_paths]
+
+  tokenizer_path = pathlib.Path(FLAGS.tokenizer_path).resolve()
+  if not tokenizer_path.exists():
+    raise FileNotFoundError(tokenizer_path)
+  tokenizer = tokenizers.TokenizerBase.FromFile(tokenizer_path)
+
   # merge_databases(dbs, out_db)
-  modernize_samples_db(dbs[0], out_db)
+  # modernize_samples_db(dbs[0], out_db)
+  modernize_clgen_tokenizer(dbs[0], out_db, tokenizer)
   return
 
 if __name__ == "__main__":
