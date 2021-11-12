@@ -1,5 +1,8 @@
 import typing
 import pathlib
+import sklearn
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 import numpy as np
 
 from deeplearning.clgen.samplers import samplers
@@ -150,7 +153,6 @@ class BenchmarkDistance(BaseEvaluator):
       for cf, feats in self.github_corpus.getFeaturesContents(sequence_length = self.sampler.sequence_length)
       if self.feature_space in feats and feats[self.feature_space]
     ]
-    self.avg_score_per_target(bert_corpus, clgen_corpus, git_corpus, reduced_git_corpus, topK)
 
     outfile = pathlib.Path("./results.out").resolve()
     with open(outfile, 'w') as outf:
@@ -179,6 +181,7 @@ class BenchmarkDistance(BaseEvaluator):
             outf.write("{}\n\n".format(x[0]))
           outf.write("###############################\n\n")
 
+    self.avg_score_per_target(bert_corpus, clgen_corpus, git_corpus, reduced_git_corpus, topK)
     return
 
   def avg_score_per_target(self, bert, clgen, git, reduced_git, topK):
@@ -222,7 +225,56 @@ class BenchmarkDistance(BaseEvaluator):
     )
     return
 
-def motivational_example_fig():
+def kmeans_datasets(bert_db, clgen_db):
+
+  scaler = sklearn.preprocessing.StandardScaler()
+  for fspace in ["AutophaseFeatures", "InstCountFeatures", "GreweFeatures"]:
+
+    bert_ds = [x for _, x in bert_db.get_samples_features if fspace in x]
+    clgen_ds = [x for _, x in clgen_db.get_samples_features if fspace in x]
+
+    data = []
+    for x in bert_ds + clgen_ds:
+      vals = list(x[fspace].values())
+      if vals:
+        data.append([float(y) for y in vals])
+
+    bert_scaled = scaler.fit_transform(data)
+    # bert_scaled = data
+    bert_reduced = PCA(2).fit_transform(data)
+    # clgen_scaled = scaler.fit_transform([[float(y) for y in x[1].values()] for x in clgen])
+    # git_scaled = scaler.fit_transform([[float(y) for y in x[1].values()] for x in git])
+    # reduced_git_scaled = scaler.fit_transform([[float(y) for y in x[1].values()] for x in reduced_git])
+
+    kmeans = KMeans(
+      init = "random",
+      n_clusters = 4,
+      n_init = 20,
+      max_iter = 300,
+      random_state = 42,
+    )
+    kmeans.fit(bert_reduced)
+    groups = {
+      "Benchpress": {"names": [], "data": bert_reduced[:len(bert_ds)]},
+      "CLgen": {"names": [], "data": bert_reduced[len(bert_ds):len(bert_ds) + len(clgen_ds)]},
+      # "GitHub": {"names": [], "data": bert_reduced[len(bert) + len(clgen):]},
+    }
+    plotter.GroupScatterPlot(
+      groups = groups,
+      title = "PCA-2 {}".format(fspace.replace("Features", " Features")),
+      x_name = "",
+      y_name = "",
+      plot_name = "pc2_{}_bpclgen".format(fspace),
+      # marker_style = [
+      #   dict(color = 'darkslateblue', size = 10, symbol = "diamond-open", line = dict(width = 4)),
+      #   dict(color = 'goldenrod', size = 10, symbol = "circle"),
+      #   dict(color = 'firebrick', size = 14, symbol = "cross"),
+      # ],
+      path = pathlib.Path(".").resolve()
+    )
+  return
+
+def motivational_example_fig(bert_db, clgen_db):
   """
   Build the plot for paper's motivational example.
   """
@@ -241,25 +293,10 @@ def motivational_example_fig():
             features[feature_space],
           )
       )
-  clgen_samples_path = pathlib.Path(FLAGS.clgen_samples_path).resolve()
-  if not clgen_samples_path.exists():
-    raise FileNotFoundError
-  clgen_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(clgen_samples_path)))
-  clgen_corpus = [s for s in clgen_db.correct_samples]
 
-  bert_samples_path = pathlib.Path(FLAGS.samples_db_path).resolve()
-  if not bert_samples_path.exists():
-    raise FileNotFoundError
-  bert_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(bert_samples_path)))
+  clgen_corpus = [s for s in clgen_db.correct_samples]
   bert_datapoints = bert_db.get_by_ids([143826, 146576, 144315])
   data = [s for s in bert_db.correct_samples]
-  # for x in range(20):
-  #   s = data[np.random.randint(0, len(data))]
-  #   feats = extractor.RawToDictFeats(s.feature_vector)
-  #   if feature_space in feats and feats[feature_space]:
-  #     bert_datapoints.append(s)
-  #   else:
-  #     s.feature_vector = extractor.ExtractRawFeatures(s.text)
 
   groups = {
     "Rodinia Benchmarks": {'data': [], 'names': []},
@@ -281,11 +318,11 @@ def motivational_example_fig():
       groups["CLgen samples"]['names'].append("")
 
   for s in bert_datapoints:
-    feats = extractor.RawToDictFeats(s.feature_vector)[feature_space]
-    # for k in feats.keys():
-    #   feats[k] += 100
-    mon.register((feats, "bert sample"))
-    groups["BenchPress Examples"]["data"].append([feats['comp'], feats['mem']])
+    feats = extractor.RawToDictFeats(s.feature_vector)
+    if feature_space in feats:
+      mon.register((feats[feature_space], "bert sample"))
+      groups["BenchPress Examples"]["data"].append([feats[feature_space]['comp'], feats[feature_space]['mem']])
+      groups["BenchPress Examples"]['names'].append("")
   mon.plot()
   plotter.GroupScatterPlot(
     groups = groups,
@@ -302,22 +339,12 @@ def motivational_example_fig():
   )
   return
 
-def benchpress_vs_clgen_fig():
+def benchpress_vs_clgen_fig(bert_db, clgen_db):
 
-  clgen_samples_path = pathlib.Path(FLAGS.clgen_samples_path).resolve()
-  if not clgen_samples_path.exists():
-    raise FileNotFoundError
-  clgen_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(clgen_samples_path)))
   clgen_ntoks = clgen_db.get_compilable_num_tokens
-
   clgen_num_insts = [x[1]["InstCountFeatures"]["TotalInsts"] for x in clgen_db.get_samples_features if "InstCountFeatures" in x[1]]
 
-  bert_samples_path = pathlib.Path(FLAGS.samples_db_path).resolve()
-  if not bert_samples_path.exists():
-    raise FileNotFoundError
-  bert_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(bert_samples_path)))
   data = bert_db.get_compilable_num_tokens
-
   bert_num_insts = [x[1]["InstCountFeatures"]["TotalInsts"] for x in bert_db.get_samples_features if "InstCountFeatures" in x[1]]
 
   plotter.RelativeDistribution(
@@ -340,8 +367,21 @@ def benchpress_vs_clgen_fig():
 
 def initMain(*args, **kwargs):
   l.initLogger(name = "evaluators", lvl = 20, mail = (None, 5), colorize = True, step = False)
-  # motivational_example_fig()
-  benchpress_vs_clgen_fig()
+
+  bert_samples_path = pathlib.Path(FLAGS.samples_db_path).resolve()
+  if not bert_samples_path.exists():
+    raise FileNotFoundError
+  bert_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(bert_samples_path)))
+
+  clgen_samples_path = pathlib.Path(FLAGS.clgen_samples_path).resolve()
+  if not clgen_samples_path.exists():
+    raise FileNotFoundError
+  clgen_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(clgen_samples_path)))
+
+  # motivational_example_fig(bert_db, clgen_db)
+  # benchpress_vs_clgen_fig(bert_db, clgen_db)
+  kmeans_datasets(bert_db, clgen_db)
+
   return
 
 if __name__ == "__main__":
