@@ -56,13 +56,13 @@ def GroupScatterPlot(groups: typing.Dict[str, typing.Dict[str, list]],
   layout = go.Layout(
     plot_bgcolor='rgba(0,0,0,0)',
     title = title,
-    xaxis = dict(title = x_name, showgrid = False, showline = True, linecolor = 'black', mirror = True, tickfont = dict(size = 24), titlefont = dict(size = 26)),
-    yaxis = dict(title = y_name, showgrid = False, showline = True, linecolor = 'black', mirror = True, tickfont = dict(size = 24), titlefont = dict(size = 26)),
+    xaxis = dict(title = x_name, showgrid = False, showline = True, linecolor = 'black', mirror = True, tickfont = dict(size = 26), titlefont = dict(size = 26)),
+    yaxis = dict(title = y_name, showgrid = False, showline = True, linecolor = 'black', mirror = True, tickfont = dict(size = 26), titlefont = dict(size = 26)),
     legend=dict(
-      x=0.1,
-      y=0.92,
+      x=0.05,
+      y=0.94,
       traceorder='normal',
-      font=dict(size = 24,),
+      font=dict(size = 26,),
     )
   )
   fig = go.Figure(layout = layout)
