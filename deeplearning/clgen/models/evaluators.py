@@ -310,7 +310,7 @@ def benchpress_vs_clgen_fig():
   clgen_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(clgen_samples_path)))
   clgen_ntoks = clgen_db.get_compilable_num_tokens
 
-  clgen_num_insts = [x[1]["InstCountFeatures"]["TotalInsts"] for x in clgen_db.get_samples_features]
+  clgen_num_insts = [x[1]["InstCountFeatures"]["TotalInsts"] for x in clgen_db.get_samples_features if "InstCountFeatures" in x[1]]
 
   bert_samples_path = pathlib.Path(FLAGS.samples_db_path).resolve()
   if not bert_samples_path.exists():
@@ -318,7 +318,7 @@ def benchpress_vs_clgen_fig():
   bert_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(bert_samples_path)))
   data = bert_db.get_compilable_num_tokens
 
-  bert_num_insts = [x[1]["InstCountFeatures"]["TotalInsts"] for x in bert_db.get_samples_features]
+  bert_num_insts = [x[1]["InstCountFeatures"]["TotalInsts"] for x in bert_db.get_samples_features if "InstCountFeatures" in x[1]]
 
   plotter.RelativeDistribution(
     x = ["BenchPress", "CLgen"],
@@ -340,7 +340,7 @@ def benchpress_vs_clgen_fig():
 
 def initMain(*args, **kwargs):
   l.initLogger(name = "evaluators", lvl = 20, mail = (None, 5), colorize = True, step = False)
-  motivational_example_fig()
+  # motivational_example_fig()
   benchpress_vs_clgen_fig()
   return
 
