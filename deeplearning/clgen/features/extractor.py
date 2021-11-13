@@ -42,6 +42,8 @@ def ExtractRawFeatures(src: str,
   """
   if not ext:
     ext = list(extractors.keys())
+  if ext and not isinstance(ext, list):
+    raise TypeError("Requested feature space extractors must be a list, {} received".format(type(ext)))
   return '\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractRawFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers)) for xt in ext])
 
 def RawToDictFeats(str_feats: str) -> typing.Dict[str, typing.Dict[str, float]]:
