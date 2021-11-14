@@ -549,7 +549,7 @@ class Model(object):
     """
     l.getLogger().info("Running samples evaluation...")
     sampler_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(self.cache.path / "samples" / sampler.hash / "samples.db")))
-    evaluator = evaluators.BenchmarkDistance(self.corpus, sampler_db, sampler)
+    evaluator = evaluators.BenchmarkDistance(self.tokenizer, self.corpus, sampler_db, sampler)
     evaluator.eval(5)
     return
 
