@@ -222,6 +222,11 @@ def CompileOptimizer(src: str,
     f.flush()
 
     if header_file:
+      """
+      If the investigated kernel needs header files to be included,
+      then, call llvm-extract afterwards, extract that kernel and write
+      it to f.name.
+      """
       # Hacky way, but llvm-extract requires exact kernel function name
       k_name = src.split('kernel void')[1].split()
       k_name = k_name[1] if "attribute" in k_name[0] else k_name[0]
