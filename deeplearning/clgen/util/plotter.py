@@ -11,13 +11,31 @@ from plotly import graph_objs as go
 import plotly.figure_factory as ff
 import plotly.express as px
 
+def _write_figure(fig: go.Figure,
+                  plot_name: str,
+                  path   : pathlib.Path = None,
+                  width  : int = None,
+                  height : int = None,
+                  ) -> None:
+  """
+  Write plotly image & and html file if path exists.
+  Otherwise only show html file.
+  """
+  if path:
+    outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
+    fig.write_html (outf("html"))
+    fig.write_image(outf("png"), width = width, height = height)
+  else:
+    fig.show()
+  return
+
 def SingleScatterLine(x: np.array,
                       y: np.array,
                       title : str,
                       x_name: str,
                       y_name: str,
                       plot_name: str,
-                      path: pathlib.Path,
+                      path: pathlib.Path = None,
                       ) -> None:
   """Plot a single line, with scatter points at datapoints."""
   layout = go.Layout(
@@ -37,9 +55,7 @@ def SingleScatterLine(x: np.array,
       opacity = 0.75
     )
   )
-  outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
-  fig.write_html (outf("html"))
-  fig.write_image(outf("png"), scale = 2.0)
+  _write_figure(fig, plot_name, path)
   return
 
 def GroupScatterPlot(groups: typing.Dict[str, typing.Dict[str, list]],
@@ -88,12 +104,7 @@ def GroupScatterPlot(groups: typing.Dict[str, typing.Dict[str, list]],
         text       = names,
       )
     )
-  if path:
-    outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
-    fig.write_html (outf("html"))
-    fig.write_image(outf("png"), width = 1184, height = 944)
-  else:
-    fig.show()
+  _write_figure(fig, plot_name, path)
   return
 
 def ScatterPlot(x: np.array,
@@ -124,13 +135,8 @@ def ScatterPlot(x: np.array,
       opacity = 0.75,
     )
   )
-
-  if path:
-    outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
-    fig.write_html (outf("html"))
-    fig.write_image(outf("png"), scale = 2.0)
-  else:
-    fig.show()
+  _write_figure(fig, plot_name, path)
+  return
 
 def FrequencyBars(x: np.array,
                   y: np.array,
@@ -156,12 +162,7 @@ def FrequencyBars(x: np.array,
       opacity = 0.75,
     )
   )
-  if path:
-    outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
-    fig.write_html (outf("html"))
-    fig.write_image(outf("png"), scale = 2.0)
-  else:
-    fig.show()
+  _write_figure(fig, plot_name, path)
   return
 
 def LogitsStepsDistrib(x              : typing.List[np.array],
@@ -169,8 +170,8 @@ def LogitsStepsDistrib(x              : typing.List[np.array],
                        sample_indices : typing.List[str],
                        title          : str,
                        x_name         : str,
-                       # plot_name: str,
-                       # path: pathlib.Path
+                       plot_name      : str,
+                       path           : pathlib.Path = None,
                        ) -> None:
   """
   Categorical group-bar plotting.
@@ -193,7 +194,7 @@ def LogitsStepsDistrib(x              : typing.List[np.array],
         y = pred,
       )
     )
-  fig.show()
+  _write_figure(fig, plot_name, path)
   return
 
 def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.List]],
@@ -237,13 +238,7 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
         textfont = dict(color = "white", size = 100),
       )
     )
-
-  if path:
-    outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
-    fig.write_html (outf("html"))
-    fig.write_image(outf("png"), scale = 2.0)
-  else:
-    fig.show()
+  _write_figure(fig, plot_name, path)
   return
 
 def CumulativeHistogram(x: np.array,
@@ -251,7 +246,7 @@ def CumulativeHistogram(x: np.array,
                         title    : str,
                         x_name   : str,
                         plot_name: str,
-                        path: pathlib.Path
+                        path: pathlib.Path = None,
                         ) -> None:
   """Plot percent cumulative histogram."""
   layout = go.Layout(
@@ -274,16 +269,14 @@ def CumulativeHistogram(x: np.array,
       opacity = 0.65,
     )
   )
-  outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
-  fig.write_html (outf("html"))
-  fig.write_image(outf("png"), scale = 2.0)
+  _write_figure(fig, plot_name, path)
   return
 
 def NormalizedRadar(r         : np.array,
                     theta     : typing.List[str],
                     title     : str,
                     plot_name : str,
-                    path      : pathlib.Path,
+                    path      : pathlib.Path = None,
                     ) -> None:
   """Radar chart for feature plotting"""
   layout = go.Layout(
@@ -299,9 +292,7 @@ def NormalizedRadar(r         : np.array,
       marker_color = "#cbef0e",
     )
   )
-  outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
-  fig.write_html (outf("html"))
-  fig.write_image(outf("png"), scale = 2.0)
+  _write_figure(fig, plot_name, path)
   return
 
 def CategoricalViolin(x: np.array,
@@ -334,12 +325,7 @@ def CategoricalViolin(x: np.array,
         opacity = 0.65,
       )
     )
-  if path:
-    outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
-    fig.write_html (outf("html"))
-    fig.write_image(outf("png"), scale = 2.0)
-  else:
-    fig.show()
+  _write_figure(fig, plot_name, path)
   return
 
 def RelativeDistribution(x: np.array,
@@ -376,10 +362,5 @@ def RelativeDistribution(x: np.array,
   )
   fig.update_layout(layout)
 
-  if path:
-    outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
-    fig.write_html (outf("html"))
-    fig.write_image(outf("png"), width = 1184, height = 744)
-  else:
-    fig.show()
+  _write_figure(fig, plot_name, path)
   return
