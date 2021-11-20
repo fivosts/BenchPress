@@ -42,7 +42,7 @@ def _get_generic_layout(kwargs) -> go.Layout:
   showgrid  = kwargs.get('showgrid',  True)
   linewidth = kwargs.get('linewidth', 2)
   gridwidth = kwargs.get('gridwidth', 1)
-  margin    = kwargs.get('val2', {'l': 80, 'r': 80, 't': 100, 'b': 80})
+  margin    = kwargs.get('margin', {'l': 80, 'r': 80, 't': 100, 'b': 80})
 
   # Legend
   legend_x   = kwargs.get('legend_x', 1.02)
