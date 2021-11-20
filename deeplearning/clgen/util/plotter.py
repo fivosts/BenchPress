@@ -21,7 +21,7 @@ def SingleScatterLine(x: np.array,
                       ) -> None:
   """Plot a single line, with scatter points at datapoints."""
   layout = go.Layout(
-    plot_bgcolor='rgba(0,0,0,0)',
+    # plot_bgcolor='rgba(0,0,0,0)',
     title = title,
     xaxis = dict(title = x_name),
     yaxis = dict(title = y_name),
@@ -55,14 +55,16 @@ def GroupScatterPlot(groups: typing.Dict[str, typing.Dict[str, list]],
   """
   layout = go.Layout(
     plot_bgcolor='rgba(0,0,0,0)',
-    title = title,
-    xaxis = dict(title = x_name, showgrid = False, showline = True, linecolor = 'black', mirror = True, tickfont = dict(size = 26), titlefont = dict(size = 26)),
-    yaxis = dict(title = y_name, showgrid = False, showline = True, linecolor = 'black', mirror = True, tickfont = dict(size = 26), titlefont = dict(size = 26)),
+    margin={'l': 0, 'r': 0, 't': 0, 'b': 0},
+    # margin={'l': 0, 'r': 0, 't': 70, 'b': 0},
+    title = dict(text = title, font = dict(size = 38)),
+    xaxis = dict(title = x_name, showgrid = False, showline = True, linecolor = 'black', mirror = True, linewidth = 2, tickfont = dict(size = 32), titlefont = dict(size = 38)),
+    yaxis = dict(title = y_name, showgrid = False, showline = True, linecolor = 'black', mirror = True, linewidth = 2, tickfont = dict(size = 32), titlefont = dict(size = 38)),
     legend=dict(
       x=0.05,
-      y=0.94,
+      y=0.97,
       traceorder='normal',
-      font=dict(size = 26,),
+      font=dict(size = 36,),
     )
   )
   fig = go.Figure(layout = layout)
@@ -89,7 +91,7 @@ def GroupScatterPlot(groups: typing.Dict[str, typing.Dict[str, list]],
   if path:
     outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
     fig.write_html (outf("html"))
-    fig.write_image(outf("png"), scale = 2.0)
+    fig.write_image(outf("png"), width = 1184, height = 944)
   else:
     fig.show()
   return
@@ -209,12 +211,13 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
 
   layout = go.Layout(
     plot_bgcolor='rgba(0,0,0,0)',
-    title = title,
+    title = dict(text = title, font = dict(size = 26)),
     xaxis = dict(title = x_name, tickfont = dict(size = 24), titlefont = dict(size = 26)),
-    yaxis = dict(type = "log", gridcolor = '#c4c4c4', gridwidth = 0.4, tickformat = "0.1r", tickfont = dict(size = 24)),
+    # yaxis = dict(type = "log", gridcolor = '#c4c4c4', gridwidth = 0.4, tickformat = "0.1r", tickfont = dict(size = 24)),
+    yaxis = dict(gridcolor = '#c4c4c4', gridwidth = 0.4, tickfont = dict(size = 24)),
     legend=dict(
-      x=0.1,
-      y=0.92,
+      # x=0.1,
+      # y=0.92,
       bgcolor = 'rgba(0,0,0,0)',
       traceorder='normal',
       font=dict(size = 24,),
@@ -227,11 +230,11 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
       go.Bar(
         name = str(group),
         x = x,
-        y = [0.2+i for i in y],
+        y = [(0.2+i if i == 0 else i) for i in y],
         marker_color = next(palette),
-        textposition = "outside",
-        text = ["" if i > 0 else "*" for i in y],
-        textfont = dict(color = "red", size = 16),
+        textposition = "inside",
+        text = ["" if i < 100 else "*" for i in y],
+        textfont = dict(color = "white", size = 100),
       )
     )
 
@@ -352,20 +355,21 @@ def RelativeDistribution(x: np.array,
   layout = go.Layout(
     plot_bgcolor='rgba(0,0,0,0)',
     title = title,
-    xaxis = dict(title = x_name, tickfont = dict(size = 24), titlefont = dict(size = 26)),
-    yaxis = dict(gridcolor = '#c4c4c4', gridwidth = 0.4, tickfont = dict(size = 24)),
+    xaxis = dict(title = x_name, tickfont = dict(size = 28), titlefont = dict(size = 30)),
+    yaxis = dict(gridcolor = '#c4c4c4', gridwidth = 0.4, tickfont = dict(size = 28)),
     legend=dict(
       x=0.75,
       y=0.75,
       bgcolor = 'rgba(0,0,0,0)',
       traceorder='normal',
-      font=dict(size = 24,),
+      font=dict(size = 28,),
     )
   )
   fig = ff.create_distplot(
     y,
     x,
     curve_type = 'normal',
+    histnorm = "probability",
     show_rug = False,
     bin_size = 1,
     show_hist = True
@@ -375,7 +379,7 @@ def RelativeDistribution(x: np.array,
   if path:
     outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
     fig.write_html (outf("html"))
-    fig.write_image(outf("png"), scale = 2.0)
+    fig.write_image(outf("png"), width = 1184, height = 744)
   else:
     fig.show()
   return
