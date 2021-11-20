@@ -317,6 +317,18 @@ class EuclideanSampler(object):
                         ):
           if benchmark:
             self.benchmarks.append(benchmark)
+        renaming = {}
+        for benchmark in self.benchmarks:
+          if benchmark.name not in renaming:
+            renaming[benchmark.name] = [0, 0]
+          else:
+            renaming[benchmark.name][1] += 1
+        for idx, benchmark in enumerate(self.benchmarks):
+          if renaming[benchmark.name][1] != 0:
+            renaming[benchmark.name][0] += 1
+            self.benchmarks[idx]._replace(
+              name = "{}-{}".format(benchmark.name, renaming[benchmark.name][0])
+            )
         self.benchmarks = sorted(self.benchmarks, key = lambda x: x.name)
     l.getLogger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     l.getLogger().info(', '.join([x for x in set([x.name for x in self.benchmarks])]))
