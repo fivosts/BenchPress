@@ -11,21 +11,77 @@ from plotly import graph_objs as go
 import plotly.figure_factory as ff
 import plotly.express as px
 
-def _get_generic_layout(title: str, x_name: str, y_name: str) -> go.Layout:
+example_formats = """
+  margin = {'l': 0, 'r': 0, 't': 0, 'b': 0}   # Eliminates excess background around the plot (Can hide the title)
+  plot_bgcolor = 'rgba(0,0,0,0)' or "#000fff" # Sets the background color of the plot
+"""
+
+def _get_generic_layout(kwargs) -> go.Layout:
+  """
+  Constructor of a basic plotly layout.
+  All keyword arguments are compatible with plotly documentation
+
+  Exceptions:
+    axisfont instead of titlefont. Reserved titlefont for title's 'font' size property.
+  """
+  # Title and axis names
+  title  = kwargs.get('title', "")
+  x_name = kwargs.get('x_name', "")
+  y_name = kwargs.get('y_name', "")
+
+  # Font sizes
+  titlefont = kwargs.get('titlefont', 38)
+  axisfont  = kwargs.get('axisfont', 38)
+  tickfont  = kwargs.get('tickfont', 32)
+
+  # Plot line and axis options
+  showline  = kwargs.get('showline',  True)
+  linecolor = kwargs.get('linecolor', 'black')
+  gridcolor = kwargs.get('gridcolor', "#eee")
+  mirror    = kwargs.get('mirror',    False)
+  showgrid  = kwargs.get('showgrid',  True)
+  linewidth = kwargs.get('linewidth', 2)
+  gridwidth = kwargs.get('gridwidth', 1)
+  margin    = kwargs.get('val2', {'l': 80, 'r': 80, 't': 100, 'b': 80})
+
+  # Legend
+  legend_x   = kwargs.get('legend_x', 1.02)
+  legend_y   = kwargs.get('legend_y', 1.0)
+  traceorder = kwargs.get('traceorder', "normal")
+  legendfont = kwargs.get('legendfont', 24)
+
+  # Background
+  plot_bgcolor = kwargs.get('plot_bgcolor', "#fff")
+
+  # Violin options
+  violingap  = kwargs.get('violingap', 0)
+  violinmode = kwargs.get('violinmode', 'overlay')
+
+  title = dict(text = title, font = dict(size = titlefont))
+  yaxis = dict(
+             title     = y_name,   showgrid = showgrid,
+             showline  = showline, linecolor = linecolor,
+             mirror    = mirror,   linewidth = linewidth,
+             gridwidth = gridwidth,
+             tickfont  = dict(size = tickfont),
+             titlefont = dict(size = axisfont)
+          )
+  xaxis = dict(
+            title     = x_name,   showgrid = showgrid,
+            showline  = showline, linecolor = linecolor,
+            mirror    = mirror,   linewidth = linewidth,
+            tickfont  = dict(size = tickfont),
+            titlefont = dict(size = axisfont)
+          )
   return go.Layout(
-    title = dict(text = title, font = dict(size = 38)),
-    xaxis = dict(
-      title = x_name, showgrid = False,
-      showline = True, linecolor = 'black',
-      mirror = True, linewidth = 2,
-      tickfont = dict(size = 32), titlefont = dict(size = 38)
-    ),
-    yaxis = dict(
-      title = y_name, showgrid = False,
-      showline = True, linecolor = 'black',
-      mirror = True, linewidth = 2,
-      tickfont = dict(size = 32), titlefont = dict(size = 38)
-    ),
+    plot_bgcolor = plot_bgcolor,
+    margin       = margin,
+    legend       = dict(x = legend_x, y = legend_y, traceorder = traceorder, legendfont = legendfont),
+    title        = title,
+    xaxis        = xaxis,
+    yaxis        = yaxis,
+    violingap    = violingap,
+    violinmode   = violinmode,
   )
 
 def _write_figure(fig       : go.Figure,
@@ -55,7 +111,7 @@ def SingleScatterLine(x         : np.array,
                       path      : pathlib.Path = None,
                       ) -> None:
   """Plot a single line, with scatter points at datapoints."""
-  layout = _get_generic_layout(title, x_name, y_name)
+  layout = _get_generic_layout(title = title, x_name = x_name, y_name = y_name)
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Scatter(
@@ -81,22 +137,15 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
   """
   Plots groupped scatter plot of points in two-dimensional space.
   """
-  layout = _get_generic_layout(title, x_name, y_name)
-  # TODO update layout with this
-  # layout = go.Layout(
-  #   plot_bgcolor='rgba(0,0,0,0)',
-  #   margin={'l': 0, 'r': 0, 't': 0, 'b': 0},
-  #   # margin={'l': 0, 'r': 0, 't': 70, 'b': 0},
-  #   title = dict(text = title, font = dict(size = 38)),
-  #   xaxis = dict(title = x_name, showgrid = False, showline = True, linecolor = 'black', mirror = True, linewidth = 2, tickfont = dict(size = 32), titlefont = dict(size = 38)),
-  #   yaxis = dict(title = y_name, showgrid = False, showline = True, linecolor = 'black', mirror = True, linewidth = 2, tickfont = dict(size = 32), titlefont = dict(size = 38)),
-  #   legend=dict(
-  #     x=0.05,
-  #     y=0.97,
-  #     traceorder='normal',
-  #     font=dict(size = 36,),
-  #   )
-  # )
+  layout = _get_generic_layout(
+    title = title,
+    x_name = x_name,
+    y_name = y_name,
+    plot_bgcolor = 'rbga(0,0,0,0)',
+    margin={'l': 0, 'r': 0, 't': 0, 'b': 0},
+    legend_x = 0.05,
+    legend_y = 0.97,
+  )
   fig = go.Figure(layout = layout)
   if marker_style:
     if len(marker_style) != len(groups.keys()):
@@ -132,10 +181,12 @@ def ScatterPlot(x         : np.array,
   """
   Implementation of a simple 2D scatter plot without groups.
   """
-  layout = _get_generic_layout(title, x_name, y_name)
-  # layout = go.Layout(
-  #   plot_bgcolor='rgba(0,0,0,0)',
-  # )
+  layout = _get_generic_layout(
+    title = title,
+    x_name = x_name,
+    y_name = y_name,
+    plot_bgcolor = 'rgba(0,0,0,0)'
+  )
   fig = go.Figure(layout = layout)
 
   fig.add_trace(
@@ -158,13 +209,7 @@ def FrequencyBars(x         : np.array,
                   path      : pathlib.Path = None,
                   ) -> None:
   """Plot frequency bars based on key."""
-  layout = _get_generic_layout(title, x_name, "#of Occurences")
-  # layout = go.Layout(
-  #   plot_bgcolor='rgba(0,0,0,0)',
-  #   title = title,
-  #   xaxis = dict(title = x_name),
-  #   yaxis = dict(title = "# of Occurences"),
-  # )
+  layout = _get_generic_layout(title = title, x_name = x_name, y_name = "#of Occurences")
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Bar(
@@ -191,13 +236,10 @@ def LogitsStepsDistrib(x              : typing.List[np.array],
   vocab_size number of groups. Groups are as many as prediction steps.
   Used to plot the probability distribution of BERT's token selection. 
   """
-  layout = _get_generic_layout(title, x_name, "")
-  # layout = go.Layout(
-  #   plot_bgcolor='rgba(0,0,0,0)',
-  #   title = title,
-  #   xaxis = dict(title = x_name),
-  #   # yaxis = dict(title = ""),
-  # )
+  layout = _get_generic_layout(
+    title = title,
+    x_name = x_name
+  )
   fig = go.Figure(layout = layout)
 
   for pred, name in zip(x, sample_indices):
@@ -222,21 +264,15 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
   Plots groups of bars.
   """
   # colors
-  layout = _get_generic_layout(title, x_name, "")
-  # layout = go.Layout(
-  #   plot_bgcolor='rgba(0,0,0,0)',
-  #   title = dict(text = title, font = dict(size = 26)),
-  #   xaxis = dict(title = x_name, tickfont = dict(size = 24), titlefont = dict(size = 26)),
-  #   # yaxis = dict(type = "log", gridcolor = '#c4c4c4', gridwidth = 0.4, tickformat = "0.1r", tickfont = dict(size = 24)),
-  #   yaxis = dict(gridcolor = '#c4c4c4', gridwidth = 0.4, tickfont = dict(size = 24)),
-  #   legend=dict(
-  #     # x=0.1,
-  #     # y=0.92,
-  #     bgcolor = 'rgba(0,0,0,0)',
-  #     traceorder='normal',
-  #     font=dict(size = 24,),
-  #   )
-  # )
+  layout = _get_generic_layout(
+    title = title,
+    x_name = x_name,
+    plot_bgcolor = 'rgba(0,0,0,0)',
+    gridwidth = 0.4,
+    gridcolor = "#c4c4c4",
+    legend_x = 0.1,
+    legend_y = 0.92,
+  )
   fig = go.Figure(layout = layout)
 
   palette = itertools.cycle(px.colors.qualitative.T10)
@@ -263,13 +299,11 @@ def CumulativeHistogram(x         : np.array,
                         path      : pathlib.Path = None,
                         ) -> None:
   """Plot percent cumulative histogram."""
-  layout = _get_generic_layout(title, x_name, "% of Probability Density")
-  # layout = go.Layout(
-  #   plot_bgcolor='rgba(0,0,0,0)',
-  #   title = title,
-  #   xaxis = dict(title = x_name),
-  #   yaxis = dict(title = "% of Probability Density"),
-  # )
+  layout = _get_generic_layout(
+    title = title,
+    x_name = x_name,
+    y_name = "% of Probability Density"
+  )
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Histogram(
@@ -294,11 +328,7 @@ def NormalizedRadar(r         : np.array,
                     path      : pathlib.Path = None,
                     ) -> None:
   """Radar chart for feature plotting"""
-  layout = _get_generic_layout(title, "", "")
-  # layout = go.Layout(
-  #   plot_bgcolor='rgba(0,0,0,0)',
-  #   title = title,
-  # )
+  layout = _get_generic_layout(title = title)
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Scatterpolar(
@@ -319,15 +349,13 @@ def CategoricalViolin(x         : np.array,
                       path      : pathlib.Path = None,
                       ) -> None:
   """Plot percent cumulative histogram."""
-  layout = _get_generic_layout(title, x_name, "Distribution / category")
-  # layout = go.Layout(
-  #   plot_bgcolor='rgba(0,0,0,0)',
-  #   title = title,
-  #   violingap = 0,
-  #   violinmode = 'overlay',
-  #   xaxis = dict(title = x_name),
-  #   yaxis = dict(title = "Distribution / category"),
-  # )
+  layout = _get_generic_layout(
+    title      = title,
+    x_name     = x_name,
+    y_name     = "Distribution / category",
+    violingap  = 0,
+    violinmode = 'overlay',
+  )
   fig = go.Figure(layout = layout)
   for xel, yel in zip(x, y):
     fig.add_trace(
@@ -353,20 +381,16 @@ def RelativeDistribution(x         : np.array,
                          path      : pathlib.Path = None,
                          ) -> None:
   """Plot smoothened relative distribution of data"""
-  layout = _get_generic_layout(title, x_name, "")
-  # layout = go.Layout(
-  #   plot_bgcolor='rgba(0,0,0,0)',
-  #   title = title,
-  #   xaxis = dict(title = x_name, tickfont = dict(size = 28), titlefont = dict(size = 30)),
-  #   yaxis = dict(gridcolor = '#c4c4c4', gridwidth = 0.4, tickfont = dict(size = 28)),
-  #   legend=dict(
-  #     x=0.75,
-  #     y=0.75,
-  #     bgcolor = 'rgba(0,0,0,0)',
-  #     traceorder='normal',
-  #     font=dict(size = 28,),
-  #   )
-  # )
+  layout = _get_generic_layout(
+    title  = title,
+    x_name = x_name,
+    plot_bgcolor = 'rgba(0,0,0,0)',
+    gridwidth = 0.4,
+    gridcolor = "#c4c4c4",
+    legend_x  = 0.75,
+    legend_y  = 0.75,
+    traceorder = 'normal',
+  )
   fig = ff.create_distplot(
     y,
     x,
