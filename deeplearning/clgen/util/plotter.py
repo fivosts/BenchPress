@@ -31,10 +31,10 @@ def _write_figure(fig: go.Figure,
 
 def SingleScatterLine(x: np.array,
                       y: np.array,
-                      title : str,
-                      x_name: str,
-                      y_name: str,
-                      plot_name: str,
+                      title     : str,
+                      x_name    : str,
+                      y_name    : str,
+                      plot_name : str,
                       path: pathlib.Path = None,
                       ) -> None:
   """Plot a single line, with scatter points at datapoints."""
@@ -58,12 +58,12 @@ def SingleScatterLine(x: np.array,
   _write_figure(fig, plot_name, path)
   return
 
-def GroupScatterPlot(groups: typing.Dict[str, typing.Dict[str, list]],
-                     title: str,
-                     x_name: str,
-                     y_name: str,
-                     plot_name: str,
-                     marker_style: typing.List[str] = None,
+def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
+                     title        : str,
+                     x_name       : str,
+                     y_name       : str,
+                     plot_name    : str,
+                     marker_style : typing.List[str] = None,
                      path: pathlib.Path = None,
                      ) -> None:
   """
@@ -107,13 +107,13 @@ def GroupScatterPlot(groups: typing.Dict[str, typing.Dict[str, list]],
   _write_figure(fig, plot_name, path)
   return
 
-def ScatterPlot(x: np.array,
-                y: np.array,
-                x_name: str,
-                y_name: str,
-                title : str,
-                plot_name: str,
-                path: pathlib.Path = None,
+def ScatterPlot(x         : np.array,
+                y         : np.array,
+                x_name    : str,
+                y_name    : str,
+                title     : str,
+                plot_name : str,
+                path      : pathlib.Path = None,
                 ) -> None:
   """
   Implementation of a simple 2D scatter plot without groups.
@@ -243,10 +243,10 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
 
 def CumulativeHistogram(x: np.array,
                         y: np.array,
-                        title    : str,
-                        x_name   : str,
-                        plot_name: str,
-                        path: pathlib.Path = None,
+                        title     : str,
+                        x_name    : str,
+                        plot_name : str,
+                        path      : pathlib.Path = None,
                         ) -> None:
   """Plot percent cumulative histogram."""
   layout = go.Layout(
@@ -297,10 +297,10 @@ def NormalizedRadar(r         : np.array,
 
 def CategoricalViolin(x: np.array,
                       y: typing.List[np.array],
-                      title    : str,
-                      x_name   : str,
-                      plot_name: str,
-                      path: pathlib.Path = None,
+                      title     : str,
+                      x_name    : str,
+                      plot_name : str,
+                      path      : pathlib.Path = None,
                       ) -> None:
   """Plot percent cumulative histogram."""
   layout = go.Layout(
@@ -330,10 +330,10 @@ def CategoricalViolin(x: np.array,
 
 def RelativeDistribution(x: np.array,
                          y: typing.List[np.array],
-                         title: str,
-                         x_name: str,
-                         plot_name: str,
-                         path: pathlib.Path = None,
+                         title     : str,
+                         x_name    : str,
+                         plot_name : str,
+                         path      : pathlib.Path = None,
                          ) -> None:
   """Plot smoothened relative distribution of data"""
   palette = itertools.cycle(px.colors.qualitative.T10)
