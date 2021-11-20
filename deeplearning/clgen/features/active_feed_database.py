@@ -28,13 +28,13 @@ flags.DEFINE_string(
 )
 
 flags.DEFINE_string(
-  "active_merged_path",
+  "output_active_db",
   None,
   "Specify output of active merged database."
 )
 
 flags.DEFINE_string(
-  "samples_merged_path",
+  "output_samples_db",
   None,
   "Specify output of samples merged database."
 )
@@ -358,21 +358,21 @@ def initMain(*args, **kwargs):
   dbs = [ActiveFeedDatabase(url = "sqlite:///{}".format(str(p)), must_exist = True) for p in db_paths]
 
   if FLAGS.active_feed_mode == "merge_active":
-    if not FLAGS.active_merged_path:
+    if not FLAGS.output_active_db:
       raise ValueError("Specify out path for merged database")
 
-    out_path = pathlib.Path(FLAGS.active_merged_path).absolute()
+    out_path = pathlib.Path(FLAGS.output_active_db).absolute()
     if out_path.suffix != '.db':
-      raise ValueError("active_merged_path must end in a valid database name (.db extension): {}".format(out_path))
+      raise ValueError("output_active_db must end in a valid database name (.db extension): {}".format(out_path))
     out_path.parent.mkdir(exist_ok = True, parents = True)
     out_db = ActiveFeedDatabase(url = "sqlite:///{}".format(str(out_path)), must_exist = False)
 
     merge_databases(dbs, out_db)
   elif FLAGS.active_feed_mode == "active_to_samples":
 
-    out_path = pathlib.Path(FLAGS.samples_merged_path).absolute()
+    out_path = pathlib.Path(FLAGS.output_samples_db).absolute()
     if out_path.suffix != '.db':
-      raise ValueError("samples_merged_path must end in a valid database name (.db extension)")
+      raise ValueError("output_samples_db must end in a valid database name (.db extension)")
     out_path.parent.mkdir(exist_ok = True, parents = True)
     out_db = samples_database.SamplesDatabase(url = "sqlite:///{}".format(str(out_path)), must_exist = False)
 
