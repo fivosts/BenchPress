@@ -314,6 +314,8 @@ function(clgen)
     "PYTHON_BINARY="                         ${PYTHON}  "\n"
     "if [[ -z \"$CLGEN_BINARY\" ]]\; then\n"
     "  CLGEN_BINARY="                        ${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH} "/clgen.py\n"
+    "elif [[ \"$CLGEN_BINARY\" == \"cmd\" ]]\; then\n"
+    "  CLGEN_BINARY=\"\"\n"
     "else\n"
     "  CLGEN_BINARY="                        ${CMAKE_CURRENT_SOURCE_DIR}/ "$CLGEN_BINARY" "\n"
     "fi\n"
