@@ -11,11 +11,11 @@ from plotly import graph_objs as go
 import plotly.figure_factory as ff
 import plotly.express as px
 
-def _write_figure(fig: go.Figure,
-                  plot_name: str,
-                  path   : pathlib.Path = None,
-                  width  : int = None,
-                  height : int = None,
+def _write_figure(fig       : go.Figure,
+                  plot_name : str,
+                  path      : pathlib.Path = None,
+                  width     : int = None,
+                  height    : int = None,
                   ) -> None:
   """
   Write plotly image & and html file if path exists.
@@ -29,13 +29,13 @@ def _write_figure(fig: go.Figure,
     fig.show()
   return
 
-def SingleScatterLine(x: np.array,
-                      y: np.array,
+def SingleScatterLine(x         : np.array,
+                      y         : np.array,
                       title     : str,
                       x_name    : str,
                       y_name    : str,
                       plot_name : str,
-                      path: pathlib.Path = None,
+                      path      : pathlib.Path = None,
                       ) -> None:
   """Plot a single line, with scatter points at datapoints."""
   layout = go.Layout(
@@ -64,7 +64,7 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
                      y_name       : str,
                      plot_name    : str,
                      marker_style : typing.List[str] = None,
-                     path: pathlib.Path = None,
+                     path         : pathlib.Path = None,
                      ) -> None:
   """
   Plots groupped scatter plot of points in two-dimensional space.
@@ -138,8 +138,8 @@ def ScatterPlot(x         : np.array,
   _write_figure(fig, plot_name, path)
   return
 
-def FrequencyBars(x: np.array,
-                  y: np.array,
+def FrequencyBars(x         : np.array,
+                  y         : np.array,
                   title     : str,
                   x_name    : str,
                   plot_name : str,
@@ -241,8 +241,8 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
   _write_figure(fig, plot_name, path)
   return
 
-def CumulativeHistogram(x: np.array,
-                        y: np.array,
+def CumulativeHistogram(x         : np.array,
+                        y         : np.array,
                         title     : str,
                         x_name    : str,
                         plot_name : str,
@@ -295,8 +295,8 @@ def NormalizedRadar(r         : np.array,
   _write_figure(fig, plot_name, path)
   return
 
-def CategoricalViolin(x: np.array,
-                      y: typing.List[np.array],
+def CategoricalViolin(x         : np.array,
+                      y         : typing.List[np.array],
                       title     : str,
                       x_name    : str,
                       plot_name : str,
@@ -328,8 +328,8 @@ def CategoricalViolin(x: np.array,
   _write_figure(fig, plot_name, path)
   return
 
-def RelativeDistribution(x: np.array,
-                         y: typing.List[np.array],
+def RelativeDistribution(x         : np.array,
+                         y         : typing.List[np.array],
                          title     : str,
                          x_name    : str,
                          plot_name : str,
@@ -361,6 +361,5 @@ def RelativeDistribution(x: np.array,
     show_hist = True
   )
   fig.update_layout(layout)
-
   _write_figure(fig, plot_name, path)
   return
