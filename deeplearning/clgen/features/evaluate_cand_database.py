@@ -180,10 +180,10 @@ def input_samples_distribution(data) -> None:
 
   plt.GrouppedBars(
     groups = freqd, # Dict[Dict[int, int]]
+    plot_name = "freq_input_samples_per_gen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "Repetition of input/samples pair per generation",
     x_name = "# of repetitions",
-    plot_name = "freq_input_samples_per_gen",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -210,10 +210,10 @@ def samples_distribution(data) -> None:
     freqd[k] = (list(gdict.keys()), list(gdict.values()))
   plt.GrouppedBars(
     groups = freqd, # Dict[Dict[int, int]]
+    plot_name = "freq_samples_per_gen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "Repetition of samples per generation",
     x_name = "# of repetitions",
-    plot_name = "freq_samples_per_gen",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
 
   return
@@ -234,10 +234,10 @@ def rel_length_distribution(data) -> None:
   plt.FrequencyBars(
     x = list(rhl_dist.keys()),
     y = list(rhl_dist.values()),
+    plot_name = "perc_hole_length_distribution",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "% hole length distribution",
     x_name = "percentile",
-    plot_name = "perc_hole_length_distribution",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -259,10 +259,10 @@ def token_delta_per_gen(data) -> None:
   plt.CategoricalViolin(
     x = list(gen_hole_deltas.keys()),
     y = list(gen_hole_deltas.values()),
+    plot_name = "hole_delta_vs_gen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "Hole delta vs generation",
     x_name = "Generation id",
-    plot_name = "hole_delta_vs_gen",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -283,10 +283,10 @@ def comp_token_delta_per_gen(data) -> None:
   plt.CategoricalViolin(
     x = list(gen_hole_deltas.keys()),
     y = list(gen_hole_deltas.values()),
+    plot_name = "comp_hole_delta_vs_gen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "Hole delta vs generation for compilable samples",
     x_name = "Generation id",
-    plot_name = "comp_hole_delta_vs_gen",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -307,10 +307,10 @@ def nohole_in_end_token_delta_per_gen(data) -> None:
   plt.CategoricalViolin(
     x = list(gen_hole_deltas.keys()),
     y = list(gen_hole_deltas.values()),
+    plot_name = "nohole_end_token_delta_vs_gen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "Hole delta vs generation for input ids with no hole before end",
     x_name = "Generation id",
-    plot_name = "nohole_end_token_delta_vs_gen",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -326,11 +326,11 @@ def token_score_delta_scatter(data) -> None:
   plt.ScatterPlot(
     x = tds,
     y = sds,
+    plot_name = "token_delta_vs_score_delta",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "Token Delta VS Score Delta",
     x_name = "Token Delta",
     y_name = "Score Delta",
-    plot_name = "token_delta_vs_score_delta",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return  
 
@@ -373,10 +373,10 @@ def score_vs_token_delta(data) -> None:
       groups[k][1][idx] = 100 * (nv / nsum)
   plt.GrouppedBars(
     groups = groups,
+    plot_name = "token_score_deltas",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "Sample Frequency % VS token & score delta",
     x_name = "category",
-    plot_name = "token_score_deltas",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -414,10 +414,10 @@ def comp_vs_token_delta(data) -> None:
 
   plt.GrouppedBars(
     groups = groups,
+    plot_name = "comp_token_delta",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "Sample Frequency % VS Compilability & token delta",
     x_name = "category",
-    plot_name = "comp_token_delta",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -438,11 +438,11 @@ def rel_length_score(data) -> None:
   plt.ScatterPlot(
     x = rhl_lens,
     y = scd,
+    plot_name = "rel_hl_score_delta",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     x_name = "Relative Hole Length",
     y_name = "Score Delta",
     title = "Relative Hole Length VS Score Delta",
-    plot_name = "rel_hl_score_delta",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -459,11 +459,11 @@ def token_delta_vs_len_input(data) -> None:
   plt.ScatterPlot(
     x = feed_len,
     y = token_deltas,
+    plot_name = "feed_len_token_delta",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     x_name = "Input Feed Length",
     y_name = "Token Delta",
     title = "Input Length VS Token Delta",
-    plot_name = "feed_len_token_delta",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -484,11 +484,11 @@ def token_vs_rel_len(data) -> None:
   plt.ScatterPlot(
     x = rhl_list,
     y = tds,
+    plot_name = "rel_hl_token_delta",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     x_name = "Relative Hole length %",
     y_name = "Token Delta",
     title = "Rel. Hole length VS Token Delta",
-    plot_name = "rel_hl_token_delta",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -536,10 +536,10 @@ def score_per_abs_hlen(data) -> None:
 
   plt.GrouppedBars(
     groups = groups, # Dict[Dict[int, int]]
+    plot_name = "score_per_abs_hlen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "Score Direction (%) per Absolute Hole Length",
     x_name = "Size of Hole",
-    plot_name = "score_per_abs_hlen",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
 
 def comp_vs_len_indices(data) -> None:
@@ -582,10 +582,10 @@ def comp_vs_len_indices(data) -> None:
 
   plt.GrouppedBars(
     groups = groups, # Dict[Dict[int, int]]
+    plot_name = "comp_per_len_indices",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "Compilability VS Length of Indices",
     x_name = "Length of Indices",
-    plot_name = "comp_per_len_indices",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -630,10 +630,10 @@ def comp_vs_len_indices_over_len_input(data) -> None:
 
   plt.GrouppedBars(
     groups = groups, # Dict[Dict[int, int]]
+    plot_name = "comp_per_indices_input_len_ratio",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "Compilability VS (Length of Indices / Length of Input)",
     x_name = "Length of Indices / Length of Input",
-    plot_name = "comp_per_indices_input_len_ratio",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -677,10 +677,10 @@ def comp_vs_num_tokens(data) -> None:
 
   plt.GrouppedBars(
     groups = groups, # Dict[Dict[int, int]]
+    plot_name = "comp_per_len_sample",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "Compilability % VS Length of Sample",
     x_name = "Length of Sample",
-    plot_name = "comp_per_len_sample",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
   return
 
@@ -728,10 +728,10 @@ def score_per_rel_hlen(data) -> None:
 
   plt.GrouppedBars(
     groups = groups, # Dict[Dict[int, int]]
+    plot_name = "score_per_rel_hlen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "Score Direction (%) per Relative Hole Length",
     x_name = "Size of Hole %",
-    plot_name = "score_per_rel_hlen",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
 
 def score_direction_categorical_distrib_per_rel_hlen(data) -> None:
@@ -782,10 +782,10 @@ def score_direction_categorical_distrib_per_rel_hlen(data) -> None:
 
   plt.GrouppedBars(
     groups = groups, # Dict[Dict[int, int]]
+    plot_name = "score_cat_distrib_rel_hlen",
+    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent,
     title = "Score Direction Distribution per Category VS Relative Hole Length",
     x_name = "Size of Hole %",
-    plot_name = "score_cat_distrib_rel_hlen",
-    path = pathlib.Path(FLAGS.eval_cand_db).absolute().parent
   )
 
 def run_db_evaluation(db: SearchCandidateDatabase) -> None:
