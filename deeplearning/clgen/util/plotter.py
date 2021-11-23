@@ -16,7 +16,7 @@ example_formats = """
   plot_bgcolor = 'rgba(0,0,0,0)' or "#000fff" # Sets the background color of the plot
 """
 
-def _get_generic_layout(kwargs) -> go.Layout:
+def _get_generic_layout(**kwargs) -> go.Layout:
   """
   Constructor of a basic plotly layout.
   All keyword arguments are compatible with plotly documentation
@@ -112,7 +112,7 @@ def SingleScatterLine(x         : np.array,
                       **kwargs,
                       ) -> None:
   """Plot a single line, with scatter points at datapoints."""
-  layout = _get_generic_layout(title = title, x_name = x_name, y_name = y_name)
+  layout = _get_generic_layout(title = title, x_name = x_name, y_name = y_name, kwargs)
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Scatter(
@@ -143,10 +143,11 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
     title = title,
     x_name = x_name,
     y_name = y_name,
-    plot_bgcolor = 'rbga(0,0,0,0)',
-    margin={'l': 0, 'r': 0, 't': 0, 'b': 0},
-    legend_x = 0.05,
-    legend_y = 0.97,
+    kwargs,
+    # plot_bgcolor = 'rbga(0,0,0,0)',
+    # margin={'l': 0, 'r': 0, 't': 0, 'b': 0},
+    # legend_x = 0.05,
+    # legend_y = 0.97,
   )
   fig = go.Figure(layout = layout)
   if marker_style:
@@ -188,7 +189,8 @@ def ScatterPlot(x         : np.array,
     title = title,
     x_name = x_name,
     y_name = y_name,
-    plot_bgcolor = 'rgba(0,0,0,0)'
+    # plot_bgcolor = 'rgba(0,0,0,0)'
+    kwargs,
   )
   fig = go.Figure(layout = layout)
 
@@ -213,7 +215,7 @@ def FrequencyBars(x         : np.array,
                   **kwargs,
                   ) -> None:
   """Plot frequency bars based on key."""
-  layout = _get_generic_layout(title = title, x_name = x_name, y_name = "#of Occurences")
+  layout = _get_generic_layout(title = title, x_name = x_name, y_name = "#of Occurences", kwargs)
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Bar(
@@ -243,7 +245,8 @@ def LogitsStepsDistrib(x              : typing.List[np.array],
   """
   layout = _get_generic_layout(
     title = title,
-    x_name = x_name
+    x_name = x_name,
+    kwargs
   )
   fig = go.Figure(layout = layout)
 
@@ -273,11 +276,12 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
   layout = _get_generic_layout(
     title = title,
     x_name = x_name,
-    plot_bgcolor = 'rgba(0,0,0,0)',
-    gridwidth = 0.4,
-    gridcolor = "#c4c4c4",
-    legend_x = 0.1,
-    legend_y = 0.92,
+    # plot_bgcolor = 'rgba(0,0,0,0)',
+    # gridwidth = 0.4,
+    # gridcolor = "#c4c4c4",
+    # legend_x = 0.1,
+    # legend_y = 0.92,
+    kwargs,
   )
   fig = go.Figure(layout = layout)
 
@@ -309,7 +313,8 @@ def CumulativeHistogram(x         : np.array,
   layout = _get_generic_layout(
     title = title,
     x_name = x_name,
-    y_name = "% of Probability Density"
+    y_name = "% of Probability Density",
+    kwargs
   )
   fig = go.Figure(layout = layout)
   fig.add_trace(
@@ -336,7 +341,7 @@ def NormalizedRadar(r         : np.array,
                     **kwargs,
                     ) -> None:
   """Radar chart for feature plotting"""
-  layout = _get_generic_layout(title = title)
+  layout = _get_generic_layout(title = title, kwargs)
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Scatterpolar(
@@ -361,9 +366,10 @@ def CategoricalViolin(x         : np.array,
   layout = _get_generic_layout(
     title      = title,
     x_name     = x_name,
-    y_name     = "Distribution / category",
-    violingap  = 0,
-    violinmode = 'overlay',
+    # y_name     = "Distribution / category",
+    # violingap  = 0,
+    # violinmode = 'overlay',
+    kwargs,
   )
   fig = go.Figure(layout = layout)
   for xel, yel in zip(x, y):
@@ -394,12 +400,13 @@ def RelativeDistribution(x         : np.array,
   layout = _get_generic_layout(
     title  = title,
     x_name = x_name,
-    plot_bgcolor = 'rgba(0,0,0,0)',
-    gridwidth = 0.4,
-    gridcolor = "#c4c4c4",
-    legend_x  = 0.75,
-    legend_y  = 0.75,
-    traceorder = 'normal',
+    # plot_bgcolor = 'rgba(0,0,0,0)',
+    # gridwidth = 0.4,
+    # gridcolor = "#c4c4c4",
+    # legend_x  = 0.75,
+    # legend_y  = 0.75,
+    # traceorder = 'normal',
+    kwargs,
   )
   fig = ff.create_distplot(
     y,
