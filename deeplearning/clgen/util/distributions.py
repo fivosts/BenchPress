@@ -69,10 +69,10 @@ class Distribution():
     plotter.FrequencyBars(
       x = [x for (x, _) in sorted_dict],
       y = [y for (_, y) in sorted_dict],
+      plot_name = self.set_name,
+      path      = self.log_path,
       title     = self.set_name,
       x_name    = self.set_name,
-      plot_name = self.set_name,
-      path = self.log_path
     )
     return
 
