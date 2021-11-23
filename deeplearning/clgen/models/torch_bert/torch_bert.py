@@ -847,6 +847,7 @@ class torchBert(backends.BackendBase):
               x = self.torch.nn.Softmax(dim = 1)(self.torch.FloatTensor(hole[:10])).numpy(),
               atoms = [self.tokenizer.decoder[i] for i in range(self.tokenizer.vocab_size)],
               sample_indices = [self.tokenizer.decoder[i] for i in indcs[0]][:10],
+              plot_name = "sampling_distrib",
               title = "Sampling distribution dim 1",
               x_name = "Probs / sample step",
             )
