@@ -429,11 +429,11 @@ class tfPlotTensorHook(_tfEstimatorHooks):
       plotter.SingleScatterLine(
         x = value['step'],
         y = value['value'],
-        title = key_str,
-        x_name = "Training Step",
-        y_name = key_str,
         plot_name = key_str,
-        path = self.output_dir,
+        path      = self.output_dir,
+        title     = key_str,
+        x_name    = "Training Step",
+        y_name    = key_str,
       )
     return
 
