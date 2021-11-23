@@ -68,16 +68,17 @@ message MinScore {
   repeated DatabasesGroups db_groups      = 3;
 }
 
+// Analyze the size of target bechmraks in number of instructions and token length.
+message AnalyzeTarget{
+  optional string target    = 1;
+  optional string tokenizer = 2;
+}
+
 // Define a group of Databases that will be considered jointly.
 message DatabasesGroups {
   optional string group_name = 1;
   optional string db_type    = 2;
   repeated string databases  = 3;
-}
-
-// Analyze the size of target bechmraks in number of instructions and token length.
-message AnalyzeTarget{
-  optional string target = 1;
 }
 
 // The specification of a CLgen sampler.
