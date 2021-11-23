@@ -296,10 +296,9 @@ class BenchmarkDistance(BaseEvaluator):
         names[benchmark.name][0] = 0
     plotter.GrouppedBars(
       groups = groups,
-      title  = "{}".format(self.feature_space.replace("Features", " Features")),
-      x_name = "",
       plot_name = "avg_dist_{}".format(self.feature_space.replace("Features", " Features")),
       path = pathlib.Path(".").resolve(),
+      title  = "{}".format(self.feature_space.replace("Features", " Features")),
     )
     return
 
@@ -388,15 +387,13 @@ def kmeans_datasets(bert_db, clgen_db):
     plotter.GroupScatterPlot(
       groups = groups,
       title = "PCA-2 {}".format(fspace.replace("Features", " Features")),
-      x_name = "",
-      y_name = "",
       plot_name = "pc2_{}_bpclgen".format(fspace),
+      path = pathlib.Path(".").resolve(),
       marker_style = [
         dict(color = 'darkslateblue', size = 10),
         dict(size = 10),
         # dict(color = 'goldenrod', size = 10, symbol = "circle"),
       ],
-      path = pathlib.Path(".").resolve()
     )
   return
 
@@ -459,16 +456,16 @@ def motivational_example_fig(bert_db, fixed_bert, clgen_db):
   plotter.GroupScatterPlot(
     groups = groups,
     title = "",
+    plot_name = "motivational_example_compvsmem",
+    path = pathlib.Path(".").resolve(),
     x_name = "# Computational Instructions",
     y_name = "# Memory Instructions",
-    plot_name = "motivational_example_compvsmem",
     marker_style = [
       # dict(color = 'skyblue', size = 10, symbol = "cross"),
       # dict(color = 'firebrick', size = 10, symbol = "cross"),
       dict(color = 'darkslateblue', size = 10, symbol = "diamond-open", line = dict(width = 4)),
       dict(color = 'firebrick', size = 10, symbol = "circle"),
     ],
-    path = pathlib.Path(".").resolve(),
   )
   return
 
@@ -483,19 +480,17 @@ def benchpress_vs_clgen_fig(bert_db, clgen_db):
   plotter.RelativeDistribution(
     x = ["BenchPress", "CLgen"],
     y = [data, clgen_ntoks],
-    title = "",
-    x_name = "Token Length",
     plot_name = "token_relative_distribution",
-    path = pathlib.Path(".").resolve()
+    path = pathlib.Path(".").resolve(),
+    x_name = "Token Length",
   )
 
   plotter.RelativeDistribution(
     x = ["BenchPress", "CLgen"],
     y = [bert_num_insts, clgen_num_insts],
-    title = "",
-    x_name = "LLVM IR Instructions Length (-O1)",
     plot_name = "numinst_relative_distribution",
-    path = pathlib.Path(".").resolve()
+    path = pathlib.Path(".").resolve(),
+    x_name = "LLVM IR Instructions Length (-O1)",
   )
 
 def get_size_distribution():
