@@ -109,6 +109,7 @@ def SingleScatterLine(x         : np.array,
                       y_name    : str,
                       plot_name : str,
                       path      : pathlib.Path = None,
+                      **kwargs,
                       ) -> None:
   """Plot a single line, with scatter points at datapoints."""
   layout = _get_generic_layout(title = title, x_name = x_name, y_name = y_name)
@@ -133,6 +134,7 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
                      plot_name    : str,
                      marker_style : typing.List[str] = None,
                      path         : pathlib.Path = None,
+                     **kwargs,
                      ) -> None:
   """
   Plots groupped scatter plot of points in two-dimensional space.
@@ -177,6 +179,7 @@ def ScatterPlot(x         : np.array,
                 title     : str,
                 plot_name : str,
                 path      : pathlib.Path = None,
+                **kwargs,
                 ) -> None:
   """
   Implementation of a simple 2D scatter plot without groups.
@@ -207,6 +210,7 @@ def FrequencyBars(x         : np.array,
                   x_name    : str,
                   plot_name : str,
                   path      : pathlib.Path = None,
+                  **kwargs,
                   ) -> None:
   """Plot frequency bars based on key."""
   layout = _get_generic_layout(title = title, x_name = x_name, y_name = "#of Occurences")
@@ -230,6 +234,7 @@ def LogitsStepsDistrib(x              : typing.List[np.array],
                        x_name         : str,
                        plot_name      : str,
                        path           : pathlib.Path = None,
+                       **kwargs,
                        ) -> None:
   """
   Categorical group-bar plotting.
@@ -258,6 +263,7 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
                  x_name    : str,
                  plot_name : str,
                  path      : pathlib.Path = None,
+                 **kwargs,
                  ) -> None:
   """
   Similar to LogitsStepsDistrib but more generic.
@@ -297,6 +303,7 @@ def CumulativeHistogram(x         : np.array,
                         x_name    : str,
                         plot_name : str,
                         path      : pathlib.Path = None,
+                        **kwargs,
                         ) -> None:
   """Plot percent cumulative histogram."""
   layout = _get_generic_layout(
@@ -326,6 +333,7 @@ def NormalizedRadar(r         : np.array,
                     title     : str,
                     plot_name : str,
                     path      : pathlib.Path = None,
+                    **kwargs,
                     ) -> None:
   """Radar chart for feature plotting"""
   layout = _get_generic_layout(title = title)
@@ -347,6 +355,7 @@ def CategoricalViolin(x         : np.array,
                       x_name    : str,
                       plot_name : str,
                       path      : pathlib.Path = None,
+                      **kwargs,
                       ) -> None:
   """Plot percent cumulative histogram."""
   layout = _get_generic_layout(
@@ -379,6 +388,7 @@ def RelativeDistribution(x         : np.array,
                          x_name    : str,
                          plot_name : str,
                          path      : pathlib.Path = None,
+                         **kwargs,
                          ) -> None:
   """Plot smoothened relative distribution of data"""
   layout = _get_generic_layout(
