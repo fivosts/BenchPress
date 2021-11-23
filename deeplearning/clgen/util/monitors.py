@@ -88,10 +88,10 @@ class FrequencyMonitor(Monitor):
     plotter.FrequencyBars(
       x = [x for (x, _) in sorted_dict],
       y = [y for (_, y) in sorted_dict],
+      plot_name = self.set_name,
+      path      = self.cache_path,
       title     = self.set_name,
       x_name    = self.set_name,
-      plot_name = self.set_name,
-      path = self.cache_path
     )
     return
 
@@ -114,10 +114,10 @@ class NormalizedFrequencyMonitor(FrequencyMonitor):
     plotter.FrequencyBars(
       x = [x for (x, _) in sorted_dict],
       y = [y / total for (_, y) in sorted_dict],
+      plot_name = self.set_name,
+      path      = self.cache_path,
       title     = self.set_name,
       x_name    = self.set_name,
-      plot_name = self.set_name,
-      path = self.cache_path
     )
     return
 
@@ -162,10 +162,10 @@ class CumulativeHistMonitor(Monitor):
     plotter.CumulativeHistogram(
       x = [x for (x, _) in sorted_dict],
       y = [y for (_, y) in sorted_dict],
+      plot_name = self.set_name,
+      path      = self.cache_path,
       title     = self.set_name,
       x_name    = self.set_name,
-      plot_name = self.set_name,
-      path = self.cache_path
     )
     return
 
@@ -199,11 +199,10 @@ class HistoryMonitor(Monitor):
     plotter.SingleScatterLine(
       x = np.arange(len(self.sample_list)),
       y = self.sample_list,
-      title = self.set_name,
-      x_name = "",
-      y_name = self.set_name,
       plot_name = self.set_name,
-      path = self.cache_path,
+      path   = self.cache_path,
+      title  = self.set_name,
+      y_name = self.set_name,
     )
     return
 
@@ -239,11 +238,10 @@ class CategoricalHistoryMonitor(Monitor):
     plotter.SingleScatterLine(
       x = [x for (x, _) in sorted_dict],
       y = [y for (_, y) in sorted_dict],
-      title = self.set_name,
-      x_name = "",
-      y_name = self.set_name,
       plot_name = self.set_name,
-      path = self.cache_path,
+      path   = self.cache_path,
+      title  = self.set_name,
+      y_name = self.set_name,
     )
     return
 
@@ -288,10 +286,9 @@ class CategoricalDistribMonitor(Monitor):
     plotter.CategoricalViolin(
       x = [k for (k, _) in sorted_dict],
       y = [v for (_, v) in sorted_dict],
-      title = self.set_name,
-      x_name = "",
       plot_name = self.set_name,
-      path = self.cache_path,
+      path  = self.cache_path,
+      title = self.set_name,
     )
     return
 
@@ -335,10 +332,10 @@ class FeatureMonitor(Monitor):
     plotter.FrequencyBars(
       x = [k for k in self.features.keys()],
       y = [v / self.instance_counter for v in self.features.values()],
+      plot_name = self.set_name,
+      path      = self.cache_path,
       title     = self.set_name,
       x_name    = self.set_name,
-      plot_name = self.set_name,
-      path = self.cache_path
     )
 
 class TSNEMonitor(Monitor):
@@ -406,9 +403,9 @@ class TSNEMonitor(Monitor):
         }
     plotter.GroupScatterPlot(
       groups    = groupped_data,
+      plot_name = self.set_name,
+      path      = self.cache_path,
       title     = self.set_name,
       x_name    = self.set_name,
       y_name    = self.set_name,
-      plot_name = self.set_name,
-      path = self.cache_path
     )
