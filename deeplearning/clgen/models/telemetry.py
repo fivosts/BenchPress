@@ -72,14 +72,10 @@ class TrainingLogger(object):
       key_str = str(pathlib.Path(key).stem)
       plt.linesSingleAxis(
         {key_str: {'y': value, 'x': step}},
-        y_label = (key_str, 13),
-        x_label = ("Train step", 13),
-        plot_title = (key_str, 20),
-        x_lim = [0, step[-1] + 0.01 * step[-1]],
-        y_lim = 1.1 * max(value),
-        legend = False,
-        showfig = False,
-        savefig = str(self.logdir / "{}.png".format(key_str)),
+        y_name = key_str,
+        x_name = "Train step",
+        plot_title = key_str,
+        path       = self.logdir,
       )
     return
 
