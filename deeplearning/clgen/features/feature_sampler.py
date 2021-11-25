@@ -220,10 +220,10 @@ class EuclideanSampler(object):
     # self.benchmarks.append(self.benchmarks.pop(0))
     try:
       self.target_benchmark = self.benchmarks.pop(0)
+      l.getLogger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     except IndexError:
       self.target_benchmark = None
     self.saveCheckpoint()
-    l.getLogger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     return
 
   def calculate_distance(self, infeat: typing.Dict[str, float]) -> float:
