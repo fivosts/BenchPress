@@ -87,8 +87,7 @@ def _get_generic_layout(**kwargs) -> go.Layout:
 def _write_figure(fig       : go.Figure,
                   plot_name : str,
                   path      : pathlib.Path = None,
-                  width     : int = None,
-                  height    : int = None,
+                  **kwargs
                   ) -> None:
   """
   Write plotly image & and html file if path exists.
@@ -97,7 +96,7 @@ def _write_figure(fig       : go.Figure,
   if path:
     outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
     fig.write_html (outf("html"))
-    fig.write_image(outf("png"), width = width, height = height)
+    fig.write_image(outf("png"), width = kwargs.get('width'), height = kwargs.get('height'))
   else:
     fig.show()
   return
@@ -109,7 +108,7 @@ def SingleScatterLine(x         : np.array,
                       **kwargs,
                       ) -> None:
   """Plot a single line, with scatter points at datapoints."""
-  layout = _get_generic_layout(title = title, x_name = x_name, y_name = y_name, kwargs)
+  layout = _get_generic_layout(kwargs)
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Scatter(
@@ -121,7 +120,7 @@ def SingleScatterLine(x         : np.array,
       opacity = 0.75
     )
   )
-  _write_figure(fig, plot_name, path)
+  _write_figure(fig, plot_name, path, kwargs)
   return
 
 def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
@@ -133,16 +132,7 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
   """
   Plots groupped scatter plot of points in two-dimensional space.
   """
-  layout = _get_generic_layout(
-    title = title,
-    x_name = x_name,
-    y_name = y_name,
-    kwargs,
-    # plot_bgcolor = 'rbga(0,0,0,0)',
-    # margin={'l': 0, 'r': 0, 't': 0, 'b': 0},
-    # legend_x = 0.05,
-    # legend_y = 0.97,
-  )
+  layout = _get_generic_layout(kwargs)
   fig = go.Figure(layout = layout)
   if marker_style:
     if len(marker_style) != len(groups.keys()):
@@ -164,7 +154,7 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
         text       = names,
       )
     )
-  _write_figure(fig, plot_name, path)
+  _write_figure(fig, plot_name, path, kwargs)
   return
 
 def ScatterPlot(x         : np.array,
@@ -176,13 +166,7 @@ def ScatterPlot(x         : np.array,
   """
   Implementation of a simple 2D scatter plot without groups.
   """
-  layout = _get_generic_layout(
-    title = title,
-    x_name = x_name,
-    y_name = y_name,
-    # plot_bgcolor = 'rgba(0,0,0,0)'
-    kwargs,
-  )
+  layout = _get_generic_layout(kwargs)
   fig = go.Figure(layout = layout)
 
   fig.add_trace(
@@ -194,7 +178,7 @@ def ScatterPlot(x         : np.array,
       opacity = 0.75,
     )
   )
-  _write_figure(fig, plot_name, path)
+  _write_figure(fig, plot_name, path, kwargs)
   return
 
 def FrequencyBars(x         : np.array,
@@ -204,7 +188,7 @@ def FrequencyBars(x         : np.array,
                   **kwargs,
                   ) -> None:
   """Plot frequency bars based on key."""
-  layout = _get_generic_layout(title = title, x_name = x_name, y_name = "#of Occurences", kwargs)
+  layout = _get_generic_layout(kwargs)
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Bar(
@@ -215,7 +199,7 @@ def FrequencyBars(x         : np.array,
       opacity = 0.75,
     )
   )
-  _write_figure(fig, plot_name, path)
+  _write_figure(fig, plot_name, path, kwargs)
   return
 
 def LogitsStepsDistrib(x              : typing.List[np.array],
@@ -230,11 +214,7 @@ def LogitsStepsDistrib(x              : typing.List[np.array],
   vocab_size number of groups. Groups are as many as prediction steps.
   Used to plot the probability distribution of BERT's token selection. 
   """
-  layout = _get_generic_layout(
-    title = title,
-    x_name = x_name,
-    kwargs
-  )
+  layout = _get_generic_layout(kwargs)
   fig = go.Figure(layout = layout)
 
   for pred, name in zip(x, sample_indices):
@@ -245,7 +225,7 @@ def LogitsStepsDistrib(x              : typing.List[np.array],
         y = pred,
       )
     )
-  _write_figure(fig, plot_name, path)
+  _write_figure(fig, plot_name, path, kwargs)
   return
 
 def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.List]],
@@ -258,16 +238,7 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
   Plots groups of bars.
   """
   # colors
-  layout = _get_generic_layout(
-    title = title,
-    x_name = x_name,
-    # plot_bgcolor = 'rgba(0,0,0,0)',
-    # gridwidth = 0.4,
-    # gridcolor = "#c4c4c4",
-    # legend_x = 0.1,
-    # legend_y = 0.92,
-    kwargs,
-  )
+  layout = _get_generic_layout(kwargs)
   fig = go.Figure(layout = layout)
 
   palette = itertools.cycle(px.colors.qualitative.T10)
@@ -283,7 +254,7 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
         textfont = dict(color = "white", size = 100),
       )
     )
-  _write_figure(fig, plot_name, path)
+  _write_figure(fig, plot_name, path, kwargs)
   return
 
 def CumulativeHistogram(x         : np.array,
@@ -293,12 +264,7 @@ def CumulativeHistogram(x         : np.array,
                         **kwargs,
                         ) -> None:
   """Plot percent cumulative histogram."""
-  layout = _get_generic_layout(
-    title = title,
-    x_name = x_name,
-    y_name = "% of Probability Density",
-    kwargs
-  )
+  layout = _get_generic_layout(kwargs)
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Histogram(
@@ -313,7 +279,7 @@ def CumulativeHistogram(x         : np.array,
       opacity = 0.65,
     )
   )
-  _write_figure(fig, plot_name, path)
+  _write_figure(fig, plot_name, path, kwargs)
   return
 
 def NormalizedRadar(r         : np.array,
@@ -323,7 +289,7 @@ def NormalizedRadar(r         : np.array,
                     **kwargs,
                     ) -> None:
   """Radar chart for feature plotting"""
-  layout = _get_generic_layout(title = title, kwargs)
+  layout = _get_generic_layout(kwargs)
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Scatterpolar(
@@ -333,7 +299,7 @@ def NormalizedRadar(r         : np.array,
       marker_color = "#cbef0e",
     )
   )
-  _write_figure(fig, plot_name, path)
+  _write_figure(fig, plot_name, path, kwargs)
   return
 
 def CategoricalViolin(x         : np.array,
@@ -343,14 +309,7 @@ def CategoricalViolin(x         : np.array,
                       **kwargs,
                       ) -> None:
   """Plot percent cumulative histogram."""
-  layout = _get_generic_layout(
-    title      = title,
-    x_name     = x_name,
-    # y_name     = "Distribution / category",
-    # violingap  = 0,
-    # violinmode = 'overlay',
-    kwargs,
-  )
+  layout = _get_generic_layout(kwargs)
   fig = go.Figure(layout = layout)
   for xel, yel in zip(x, y):
     fig.add_trace(
@@ -365,7 +324,7 @@ def CategoricalViolin(x         : np.array,
         opacity = 0.65,
       )
     )
-  _write_figure(fig, plot_name, path)
+  _write_figure(fig, plot_name, path, kwargs)
   return
 
 def RelativeDistribution(x         : np.array,
@@ -375,17 +334,7 @@ def RelativeDistribution(x         : np.array,
                          **kwargs,
                          ) -> None:
   """Plot smoothened relative distribution of data"""
-  layout = _get_generic_layout(
-    title  = title,
-    x_name = x_name,
-    # plot_bgcolor = 'rgba(0,0,0,0)',
-    # gridwidth = 0.4,
-    # gridcolor = "#c4c4c4",
-    # legend_x  = 0.75,
-    # legend_y  = 0.75,
-    # traceorder = 'normal',
-    kwargs,
-  )
+  layout = _get_generic_layout(kwargs)
   fig = ff.create_distplot(
     y,
     x,
@@ -396,5 +345,5 @@ def RelativeDistribution(x         : np.array,
     show_hist = True
   )
   fig.update_layout(layout)
-  _write_figure(fig, plot_name, path)
+  _write_figure(fig, plot_name, path, kwargs)
   return
