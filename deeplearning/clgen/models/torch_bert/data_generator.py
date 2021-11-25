@@ -378,7 +378,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       d.raised_keyboard_int = False
       d.raised_exception    = None
       d.skip_first_queue    = FLAGS.skip_first_queue
-      d.bench_idx           = 1
 
     d.dataloader = d.predict_dataloader()
     d.loader     = iter(d.dataloader)
@@ -774,9 +773,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         write_eval_proc.join()
 
       ## Finished, save state, switch benchmark, return samples.
+      self.bench_idx += 1
       self.saveCheckpoint()
       self.feat_sampler.iter_benchmark()
-      self.bench_idx += 1
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
@@ -966,7 +965,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     Save feed queue checkpoint for easy restart.
     """
     with open(self.sampler.corpus_directory / "gen_state.pkl", 'wb') as outf:
-      pickle.dump(self.feed_queue, outf)
+      pickle.dump({'feed_queue': self.feed_queue, 'bench_idx': self.bench_idx}, outf)
     self.candidate_monitor.saveCheckpoint()
     self.tsne_monitor.saveCheckpoint()
     self.comp_rate_mon.saveCheckpoint()
@@ -979,9 +978,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     """
     if (self.sampler.corpus_directory / "gen_state.pkl").exists():
       with open(self.sampler.corpus_directory / "gen_state.pkl", 'rb') as infile:
-        self.feed_queue = pickle.load(infile)
+        checkpoint = pickle.load(infile)
+        self.feed_queue = checkpoint['feed_queue']
+        self.bench_idx  = checkpoint['bench_idx']
     else:
       self.feed_queue = []
+      self.bench_idx  = 1
     return
 
   def addToDB(self,
