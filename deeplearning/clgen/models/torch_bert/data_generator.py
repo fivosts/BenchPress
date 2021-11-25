@@ -11,6 +11,7 @@ import copy
 import datetime
 import glob
 import humanize
+import sklearn
 import pickle
 import functools
 import numpy as np
@@ -61,6 +62,12 @@ flags.DEFINE_integer(
   "sample_workload_size",
   8192,
   "Select size of workload per inference step."
+)
+
+flags.DEFINE_boolean(
+  "features_standard_scaler",
+  False,
+  "Select to use sklearn StandardScaler for generation standardization."
 )
 
 class ActiveSampleFeed(typing.NamedTuple):
@@ -951,6 +958,15 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         else:
           if FLAGS.evaluate_candidates:
             rejected_candidates.append(batch[1])
+
+      if FLAGS.features_standard_scaler:
+        scaler = sklearn.preprocessing.StandardScaler()
+        scaler.fit([[float(y) for y in x.features.values()] for x in candidates + [self.feat_sampler.target_benchmark]])
+        target_feats = scaler.transform([float(x) for x in self.feat_sampler.target_benchmark.features.values()])
+        for idx, cd in enumerate(candidates):
+          candidates[idx].__replace(score = feat_sampler.calculate_distance(scaler.transform([float(x) for x in cd.features.values()]), target_feats))
+        raise NotImplementedError("Check this code is correct.")
+
       bar.update(bar.value + 1 + t)
       pool.close()
       pool.terminate()
