@@ -14,7 +14,7 @@ option java_package = "com.clgen";
 // Specification of app's evaluation pipeline.
 message Evaluation {
   // Define a list of different evaluators to run.
-  repeated evaluators = 1;
+  repeated evaluators evaluator = 1;
 }
 
 // Instance of a single evaluation pass.
