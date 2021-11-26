@@ -25,6 +25,7 @@ message evaluators {
     KAverageScore k_average_score = 2;
     MinScore      min_score       = 3;
     AnalyzeTarget analyze_target  = 4;
+    CompMemGrewe  comp_mem_grewe  = 5;
   }
 }
 
