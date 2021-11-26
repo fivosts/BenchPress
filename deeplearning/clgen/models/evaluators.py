@@ -25,18 +25,6 @@ from absl import app, flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
-  "clgen_samples_path",
-  None,
-  "Set path to clgen samples database for evaluation",
-)
-
-flags.DEFINE_string(
-  "samples_db_path",
-  "",
-  "Set path to BERT samples database for motivational_example figure",
-)
-
-flags.DEFINE_string(
   "evaluator_config",
   "",
   "Set path to evaluator config file",
