@@ -46,7 +46,8 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
   """
   Parse config file and check for validity.
   """
-
+  pbutil.AssertFieldIsSet(config, "workspace")
+  pathlib.path(config.workspace).resolve().mkdir(exist_ok = True, parents = True)
   for ev in config.evaluator:
     if ev.HasField("k_average_score"):
       for dbs in ev.k_average_score.db_group:
@@ -207,10 +208,11 @@ def KAverageScore(**kwargs):
   Compare the average of top-K closest per target benchmark
   for all different database groups.
   """
-  db_groups     = kwargs.get('db_groups')
-  target        = kwargs.get('targets')
-  feature_space = kwargs.get('feature_space')
-  top_k         = kwargs.get('top_k')
+  db_groups      = kwargs.get('db_groups')
+  target         = kwargs.get('targets')
+  feature_space  = kwargs.get('feature_space')
+  top_k          = kwargs.get('top_k')
+  plotter_config = kwargs.get('plotter_config')
 
   groups = {}
 
@@ -231,7 +233,7 @@ def KAverageScore(**kwargs):
     groups = groups,
     plot_name = "avg_{}_dist_{}".format(top_k, self.feature_space.replace("Features", " Features")),
     path = pathlib.Path(".").resolve(), # TODO
-    title  = "{}".format(self.feature_space.replace("Features", " Features")),
+    **plotter_config,
   )
   return
 
@@ -284,6 +286,7 @@ def main(config: evaluator_pb2.Evaluation):
       "feature_space"  : None,
       "tokenizer"      : None,
       "top_k"          : None,
+      "plotter_config" : None,
     }
     if ev.HasField("k_average_score"):
       sev = ev.k_average_score
@@ -321,6 +324,9 @@ def main(config: evaluator_pb2.Evaluation):
     # Gather feature spaces if applicable.
     if sev.HasField("feature_space"):
       kw_args['feature_space'] = sev.feature_space
+    # Gather plotter configuration
+    if sev.HasField("plotter_config"):
+      kw_args['plotter_config'] = sev.plotter_config
 
     evaluation_map[type(sev)](**kw_args)
   return
