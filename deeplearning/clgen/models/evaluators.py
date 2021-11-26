@@ -42,70 +42,6 @@ flags.DEFINE_string(
   "Set path to evaluator config file",
 )
 
-class DBGroup(object):
-  """
-  Class representation of a group of databases evaluated.
-  """
-  @property
-  def data(self):
-    """
-    Get concatenated data of all databases.
-    """
-    if self.data:
-      return self.data
-    else:
-      self.data = []
-      for db in self.databases:
-        self.data += db.get_data
-
-  @property
-  def features(self):
-    raise NotImplementedError
-    return None
-  
-  def __init__(self, group_name: str, group_type: str, databases: typing.List[pathlib.Path]):
-    self.group_name = group_name
-    self.group_type = {
-      "SamplesDatabase"    : samples_database.SamplesDatabase,
-      "ActiveFeedDatabase" : active_feed_database.ActiveFeedDatabase,
-    }[group_type]
-    self.databases = [self.group_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
-
-
-class Benchmark(typing.NamedTuple):
-  path     : pathlib.Path
-  name     : str
-  contents : str
-  features : typing.Dict[str, float]
-
-class TargetBenchmarks(object):
-  """
-  Class representation of target benchmarks.
-  """
-  def __init__(self, target: str):
-    self.target        = target
-    self.benchmark_cfs = feature_sampler.yield_cl_kernels(pathlib.Path(feature_sampler.targets[self.target]).resolve())
-    self.benchmarks    = {ext: None for ext in extractor.extractors.keys()}
-
-  def get_features(self, feature_space: str):
-    """
-    Get or set and get benchmarks with their features for a feature space.
-    """
-    if self.features[feature_space]:
-      return self.features[feature_space]
-    else:
-      for p, k, h in self.benchmark_cfs:
-        features = extractor.ExtractFeatures(k, [feature_space], header_file = h, use_aux_headers = False)
-        if features[feature_space]:
-          self.benchmarks[feature_space].append(
-            BenchmarkDistance.EvaluatedBenchmark(
-                p,
-                p.name,
-                k,
-                features[feature_space],
-              )
-          )
-
 def AssertIfValid(config: evaluator_pb2.Evaluation):
   """
   Parse config file and check for validity.
@@ -185,6 +121,69 @@ def ConfigFromFlags() -> evaluator_pb2.Evaluation:
   config = pbutil.FromFile(config_path, evaluator_pb2.Evaluation())
   return AssertIfValid(config)
 
+class DBGroup(object):
+  """
+  Class representation of a group of databases evaluated.
+  """
+  @property
+  def data(self):
+    """
+    Get concatenated data of all databases.
+    """
+    if self.data:
+      return self.data
+    else:
+      self.data = []
+      for db in self.databases:
+        self.data += db.get_data
+
+  @property
+  def features(self):
+    raise NotImplementedError
+    return None
+  
+  def __init__(self, group_name: str, group_type: str, databases: typing.List[pathlib.Path]):
+    self.group_name = group_name
+    self.group_type = {
+      "SamplesDatabase"    : samples_database.SamplesDatabase,
+      "ActiveFeedDatabase" : active_feed_database.ActiveFeedDatabase,
+    }[group_type]
+    self.databases = [self.group_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
+
+
+class Benchmark(typing.NamedTuple):
+  path     : pathlib.Path
+  name     : str
+  contents : str
+  features : typing.Dict[str, float]
+
+class TargetBenchmarks(object):
+  """
+  Class representation of target benchmarks.
+  """
+  def __init__(self, target: str):
+    self.target        = target
+    self.benchmark_cfs = feature_sampler.yield_cl_kernels(pathlib.Path(feature_sampler.targets[self.target]).resolve())
+    self.benchmarks    = {ext: None for ext in extractor.extractors.keys()}
+
+  def get_benchmarks(self, feature_space: str):
+    """
+    Get or set and get benchmarks with their features for a feature space.
+    """
+    if not self.benchmarks[feature_space]:
+      for p, k, h in self.benchmark_cfs:
+        features = extractor.ExtractFeatures(k, [feature_space], header_file = h, use_aux_headers = False)
+        if features[feature_space]:
+          self.benchmarks[feature_space].append(
+            BenchmarkDistance.EvaluatedBenchmark(
+                p,
+                p.name,
+                k,
+                features[feature_space],
+              )
+          )
+    return self.benchmarks[feature_space]
+
 def LogFile(**kwargs):
   """
   Write benchmarks  and target stats in log file.
@@ -204,6 +203,27 @@ def KAverageScore(**kwargs):
   feature_space = kwargs.get('feature_space')
   top_k         = kwargs.get('top_k')
 
+  groups = {}
+
+  for dbg in db_groups:
+    groups[dbg.group_name] = ([], [])
+    for benchmark in target.get_benchmarks(feature_space):
+      groups[dbg.group_name][0].append(benchmark.name)
+      distances = sorted(
+        [feature_sampler.calculate_distance(fv, benchmark.features)
+         for fv in dbg.get_features(feature_space)]
+      )
+      target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
+      avg_dist = sum(distances[:top_k]) / len(distances[:top_k])
+
+      groups[dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
+
+  plotter.GrouppedBars(
+    groups = groups,
+    plot_name = "avg_{}_dist_{}".format(top_k, self.feature_space.replace("Features", " Features")),
+    path = pathlib.Path(".").resolve(), # TODO
+    title  = "{}".format(self.feature_space.replace("Features", " Features")),
+  )
   return
 
 def MinScore(**kwargs):
