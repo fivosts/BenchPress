@@ -254,6 +254,7 @@ def CompMemGrewe(**kwargs):
   db_groups      = kwargs.get('db_groups')
   target         = kwargs.get('targets')
   workspace_path = kwargs.get('workspace_path')
+  plotter_config = kwargs.get('plotter_config')
   feature_space  = "GreweFeatures"
 
   groups = {}
@@ -281,6 +282,7 @@ def CompMemGrewe(**kwargs):
     groups = groups,
     plot_name = "comp_vs_mem_grewe",
     path = workspace_path,
+    **plotter_config
   )
   return
 
