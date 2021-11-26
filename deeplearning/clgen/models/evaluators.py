@@ -213,7 +213,7 @@ def KAverageScore(**kwargs):
   feature_space  = kwargs.get('feature_space')
   top_k          = kwargs.get('top_k')
   plotter_config = kwargs.get('plotter_config')
-
+  workspace_path = kwargs.get('workspace_path')
   groups = {}
 
   for dbg in db_groups:
@@ -232,7 +232,7 @@ def KAverageScore(**kwargs):
   plotter.GrouppedBars(
     groups = groups,
     plot_name = "avg_{}_dist_{}".format(top_k, self.feature_space.replace("Features", " Features")),
-    path = pathlib.Path(".").resolve(), # TODO
+    path = workspace_path, # TODO
     **plotter_config,
   )
   return
@@ -251,6 +251,7 @@ def AnalyzeTarget(**kwargs):
   """
   targets   = kwargs.get('targets')
   tokenizer = kwargs.get('tokenizer')
+  workspace_path = kwargs.get('workspace_path')
 
   return
 
@@ -261,6 +262,7 @@ def CompMemGrewe(**kwargs):
   """
   db_groups     = kwargs.get('db_groups')
   target        = kwargs.get('targets')
+  workspace_path = kwargs.get('workspace_path')
 
   return
 
@@ -287,6 +289,7 @@ def main(config: evaluator_pb2.Evaluation):
       "tokenizer"      : None,
       "top_k"          : None,
       "plotter_config" : None,
+      "workspace_path" : pathlib.Path(config.workspace).resolve(),
     }
     if ev.HasField("k_average_score"):
       sev = ev.k_average_score
