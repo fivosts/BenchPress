@@ -42,13 +42,272 @@ flags.DEFINE_string(
   "Set path to evaluator config file",
 )
 
-evaluation_map = {
-  "evaluator_pb2.LogFile"       : "LogFile",
-  "evaluator_pb2.KAverageScore" : "KAverageScore",
-  "evaluator_pb2.MinScore"      : "MinScore",
-  "evaluator_pb2.AnalyzeTarget" : "AnalyzeTarget",
-  "evaluator_pb2.CompMemGrewe"  : "CompMemGrewe",
-}
+class DBGroup(object):
+  """
+  Class representation of a group of databases evaluated.
+  """
+  @property
+  def data(self):
+    """
+    Get concatenated data of all databases.
+    """
+    if self.data:
+      return self.data
+    else:
+      self.data = []
+      for db in self.databases:
+        self.data += db.get_data
+
+  @property
+  def features(self):
+    raise NotImplementedError
+    return None
+  
+  def __init__(self, group_name: str, group_type: str, databases: typing.List[pathlib.Path]):
+    self.group_name = group_name
+    self.group_type = {
+      "SamplesDatabase"    : samples_database.SamplesDatabase,
+      "ActiveFeedDatabase" : active_feed_database.ActiveFeedDatabase,
+    }[group_type]
+    self.databases = [self.group_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
+
+
+class Benchmark(typing.NamedTuple):
+  path     : pathlib.Path
+  name     : str
+  contents : str
+  features : typing.Dict[str, float]
+
+class TargetBenchmarks(object):
+  """
+  Class representation of target benchmarks.
+  """
+  def __init__(self, target: str):
+    self.target        = target
+    self.benchmark_cfs = feature_sampler.yield_cl_kernels(pathlib.Path(feature_sampler.targets[self.target]).resolve())
+    self.benchmarks    = {ext: None for ext in extractor.extractors.keys()}
+
+  def get_features(self, feature_space: str):
+    """
+    Get or set and get benchmarks with their features for a feature space.
+    """
+    if self.features[feature_space]:
+      return self.features[feature_space]
+    else:
+      for p, k, h in self.benchmark_cfs:
+        features = extractor.ExtractFeatures(k, [feature_space], header_file = h, use_aux_headers = False)
+        if features[feature_space]:
+          self.benchmarks[feature_space].append(
+            BenchmarkDistance.EvaluatedBenchmark(
+                p,
+                p.name,
+                k,
+                features[feature_space],
+              )
+          )
+
+def AssertIfValid(config: evaluator_pb2.Evaluation):
+  """
+  Parse config file and check for validity.
+  """
+
+  for ev in config.evaluator:
+    if ev.HasField("k_average_score"):
+      for dbs in ev.k_average_score.db_group:
+        for db in dbs.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+      pbutil.AssertFieldConstraint(
+        ev.k_average_score,
+        "target",
+        lambda x: x in feature_sampler.targets,
+        "target {} not found".format(ev.k_average_score.target),
+      )
+      pbutil.AssertFieldIsSet(ev.k_average_score, "feature_space")
+      pbutil.AssertFieldConstraint(
+        ev.k_average_score,
+        "top_k",
+        lambda x: x > 0,
+        "top-K factor must be positive",
+      )
+    elif ev.HasField("min_score"):
+      for dbs in ev.min_score.db_group:
+        for db in dbs.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+      pbutil.AssertFieldConstraint(
+        ev.min_score,
+        "target",
+        lambda x: x in feature_sampler.targets,
+        "target {} not found".format(ev.min_score.target),
+      )
+      pbutil.AssertFieldIsSet(ev.min_score, "feature_space")
+    elif ev.HasField("analyze_target"):
+      for dbs in ev.analyze_target.db_group:
+        for db in dbs.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+      pbutil.AssertFieldIsSet(ev.analyze_target, "tokenizer")
+      if not pathlib.Path(ev.analyze_target.tokenizer).resolve().exists():
+        raise FileNotFoundError(pathlib.Path(ev.analyze_target.tokenizer).resolve())
+      for target in ev.analyze_target.targets:
+        assert target in feature_sampler.targets, target
+    elif ev.HasField("log_file"):
+      for dbs in ev.log_file.db_group:
+        for db in dbs.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+    elif ev.HasField("comp_mem_grewe"):
+      for dbs in ev.comp_mem_grewe.db_group:
+        for db in dbs.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+      pbutil.AssertFieldConstraint(
+        ev.comp_mem_grewe,
+        "target",
+        lambda x: x in feature_sampler.targets,
+        "target {} not found".format(ev.comp_mem_grewe.target),
+      )
+  return config
+
+def ConfigFromFlags() -> evaluator_pb2.Evaluation:
+  """
+  Parse evaluator config path and return config.
+  """
+  config_path = pathlib.Path(FLAGS.evaluator_config)
+  if not config_path.is_file():
+    raise FileNotFoundError (f"Evaluation --evaluator_config file not found: '{config_path}'")
+  config = pbutil.FromFile(config_path, evaluator_pb2.Evaluation())
+  return AssertIfValid(config)
+
+def LogFile(**kwargs):
+  """
+  Write benchmarks  and target stats in log file.
+  """
+  db_groups     = kwargs.get('db_groups')
+  target        = kwargs.get('targets')
+
+  return
+
+def KAverageScore(**kwargs):
+  """
+  Compare the average of top-K closest per target benchmark
+  for all different database groups.
+  """
+  db_groups     = kwargs.get('db_groups')
+  target        = kwargs.get('targets')
+  feature_space = kwargs.get('feature_space')
+  top_k         = kwargs.get('top_k')
+
+  return
+
+def MinScore(**kwargs):
+  """
+  Compare the closest sample per target benchmark
+  for all different database groups.
+  """
+  db_groups     = kwargs.get('db_groups')
+  target        = kwargs.get('targets')
+  feature_space = kwargs.get('feature_space')
+
+  return
+
+def AnalyzeTarget(**kwargs):
+  """
+  Analyze requested target benchmark suites.
+  """
+  targets   = kwargs.get('targets')
+  tokenizer = kwargs.get('tokenizer')
+
+  return
+
+def CompMemGrewe(**kwargs):
+  """
+  Compare Computation vs Memory instructions for each database group
+  and target benchmarks.
+  """
+  db_groups     = kwargs.get('db_groups')
+  target        = kwargs.get('targets')
+
+  return
+
+def main(config: evaluator_pb2.Evaluation):
+  """
+  Run the evaluators iteratively.
+  """
+  evaluation_map = {
+    evaluator_pb2.LogFile       : LogFile,
+    evaluator_pb2.KAverageScore : KAverageScore,
+    evaluator_pb2.MinScore      : MinScore,
+    evaluator_pb2.AnalyzeTarget : AnalyzeTarget,
+    evaluator_pb2.CompMemGrewe  : CompMemGrewe,
+  }
+  db_cache       = {}
+  target_cache   = {}
+  tokenizer      = None
+  feature_spaces = []
+  for ev in config.evaluator:
+    kw_args = {
+      "db_groups"      : [],
+      "targets"        : None,
+      "feature_space"  : None,
+      "tokenizer"      : None,
+      "top_k"          : None,
+    }
+    if ev.HasField("k_average_score"):
+      sev = ev.k_average_score
+      kw_args['top_k'] = sev.top_k
+    elif ev.HasField("min_score"):
+      sev = ev.min_score
+    elif ev.HasField("analyze_target"):
+      sev = ev.analyze_target
+      kw_args['tokenizer'] = tokenizers.FromFile(pathlib.Path(sev.tokenizer).resolve())
+    elif ev.HasField("log_file"):
+      sev = ev.log_file
+    elif ev.HasField("comp_mem_grewe"):
+      sev = ev.comp_mem_grewe
+    else:
+      raise NotImplementedError(ev)
+
+    # Gather database groups and cache them
+    for dbs in sev.db_group:
+      key = dbs.group_name + ''.join(dbs.database)
+      if key not in db_cache:
+        db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database)
+      kw_args['db_groups'].append(db_cache[key])
+    # Gather target benchmarks and cache them
+    if sev.HasField("target"):
+      if isinstance(sev.target, list):
+        kw_args["targets"] = []
+        for t in sev.target:
+          if t not in target_cache:
+            target_cache[t] = TargetBenchmarks(t)
+          kw_args["targets"].append(target_cache[t])
+      else:
+        if sev.target not in target_cache:
+          target_cache[sev.target] = TargetBenchmarks(sev.target)
+          kw_args["targets"] = target_cache[sev.target]
+    # Gather feature spaces if applicable.
+    if sev.HasField("feature_space"):
+      kw_args['feature_space'] = sev.feature_space
+
+    evaluation_map[type(sev)](**kw_args)
+  return
+
+def initMain(*args, **kwargs):
+  l.initLogger(name = "evaluators", lvl = 20, mail = (None, 5), colorize = True, step = False)
+  config = ConfigFromFlags()
+  main(config)
+  return
+
+if __name__ == "__main__":
+  app.run(initMain)
+  sys.exit(0)
 
 class BaseEvaluator(object):
   """
@@ -524,171 +783,3 @@ def get_size_distribution():
     m.register((x[1], x[0]))
   m.plot()
   return
-
-class DBGroup(object):
-  """
-  Class representation of a group of databases evaluated.
-  """
-  @property
-  def data(self):
-    """
-    Get concatenated data of all databases.
-    """
-    if self.data:
-      return self.data
-    else:
-      self.data = []
-      for db in self.databases:
-        self.data += db.get_data
-
-  @property
-  def features(self):
-    raise NotImplementedError
-    return None
-  
-  def __init__(self, group_name: str, group_type: str, databases: typing.List[pathlib.Path]):
-    self.group_name = group_name
-    self.group_type = {
-      "SamplesDatabase"    : samples_database.SamplesDatabase,
-      "ActiveFeedDatabase" : active_feed_database.ActiveFeedDatabase,
-    }[group_type]
-    self.databases = [self.group_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
-
-
-class Benchmark(typing.NamedTuple):
-  path     : pathlib.Path
-  name     : str
-  contents : str
-  features : typing.Dict[str, float]
-
-class TargetBenchmarks(object):
-  """
-  Class representation of target benchmarks.
-  """
-  def __init__(self, target: str):
-    self.target        = target
-    self.benchmark_cfs = feature_sampler.yield_cl_kernels(pathlib.Path(feature_sampler.targets[self.target]).resolve())
-    self.benchmarks    = {ext: None for ext in extractor.extractors.keys()}
-
-  def get_features(self, feature_space: str):
-    """
-    Get or set and get benchmarks with their features for a feature space.
-    """
-    if self.features[feature_space]:
-      return self.features[feature_space]
-    else:
-      for p, k, h in self.benchmark_cfs:
-        features = extractor.ExtractFeatures(k, [feature_space], header_file = h, use_aux_headers = False)
-        if features[feature_space]:
-          self.benchmarks[feature_space].append(
-            BenchmarkDistance.EvaluatedBenchmark(
-                p,
-                p.name,
-                k,
-                features[feature_space],
-              )
-          )
-
-def AssertIfValid(config: evaluator_pb2.Evaluation):
-  """
-  Parse config file and check for validity.
-  """
-  for ev in config.evaluator:
-    for dbs in ev.db_group:
-      for db in dbs.database:
-        p = pathlib.Path(db).resolve()
-        if not p.exists():
-          raise FileNotFoundError(p)
-    if isinstance(ev, evaluator_pb2.KAverageScore):
-      pbutil.AssertFieldConstraint(
-        ev,
-        "target",
-        lambda x: x in feature_sampler.targets,
-        "target {} not found".format(ev.target),
-      )
-      pbutil.AssertFieldIsSet(ev, "feature_space")
-      pbutil.AssertFieldConstraint(
-        ev,
-        "top_K",
-        lambda x: x > 0,
-        "top-K factor must be positive",
-      )
-    elif isinstance(ev, evaluator_pb2.MinScore):
-      pbutil.AssertFieldConstraint(
-        ev,
-        "target",
-        lambda x: x in feature_sampler.targets,
-        "target {} not found".format(ev.target),
-      )
-      pbutil.AssertFieldIsSet(ev.MinScore, "feature_space")
-    elif isinstance(ev, evaluator_pb2.AnalyzeTarget):
-      pbutil.AssertFieldIsSet(ev, "tokenizer")
-      if not pathlib.Path(ev.tokenizer).resolve().exists():
-        raise FileNotFoundError(pathlib.Path(ev.tokenizer).resolve())
-      for target in ev.AnalyzeTarget.targets:
-        assert target in feature_sampler.targets, target
-  return config
-
-def ConfigFromFlags() -> evaluator_pb2.Evaluation:
-  """
-  Parse evaluator config path and return config.
-  """
-  config_path = pathlib.Path(FLAGS.evaluator_config)
-  if not config_path.is_file():
-    raise FileNotFoundError (f"Evaluation --evaluator_config file not found: '{config_path}'")
-  config = pbutil.FromFile(config_path, evaluator_pb2.Evaluation())
-  return AssertIfValid(config)
-
-def main(config: evaluator_pb2.Evaluation):
-  """
-  Run the evaluators iteratively.
-  """
-  db_cache       = {}
-  target_cache   = {}
-  tokenizer      = None
-  feature_spaces = []
-  for ev in config.evaluators:
-    kw_args = {
-      "db_groups" : [],
-      "targets"   : None,
-      "feature_spaces": None,
-      "tokenizer": None,
-    }
-    # Gather database groups and cache them
-    for dbs in ev.db_group:
-      key = dbs.group_name + ''.join(dbs.database)
-      if key not in db_cache:
-        db_cache[key] = DBGroup(dbs.group_name, dbs.group_type, dbs.database)
-      kw_args['db_groups'].append(db_cache[key])
-    # Gather target benchmarks and cache them
-    if ev.HasField("target"):
-      if isinstance(ev.target, list):
-        kw_args["targets"] = []
-        for t in ev.target:
-          if t not in target_cache:
-            target_cache[t] = TargetBenchmarks(t)
-          kw_args["targets"].append(target_cache[t])
-      else:
-        if ev.target not in target_cache:
-          target_cache[ev.target] = TargetBenchmarks(ev.target)
-          kw_args["targets"] = target_cache[ev.target]
-    # Gather tokenizer, if applicable.
-    if isinstance(ev, AnalyzeTarget):
-      tokenizer = tokenizers.FromFile(pathlib.Path(ev.tokenizer).resolve())
-    # Gather feature spaces if applicable.
-    if ev.HasField("feature_space"):
-      feature_space = ev.feature_space
-
-    evaluation_map[type(ev)](kw_args)
-
-  return
-
-def initMain(*args, **kwargs):
-  l.initLogger(name = "evaluators", lvl = 20, mail = (None, 5), colorize = True, step = False)
-  config = ConfigFromFlags()
-  main(config)
-  return
-
-if __name__ == "__main__":
-  app.run(initMain)
-  sys.exit(0)
