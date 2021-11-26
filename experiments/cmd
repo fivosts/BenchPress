@@ -1,1 +1,0 @@
-./clgen --workspace_dir <where is the base workspace ? Could be ./workspace> --config experiments/<select_correct_pb.pbtxt> --override_preprocessing --override_encoding --only_sample --evolutionary_search --sample_workload_size 128 --sample_indices_limit 110
