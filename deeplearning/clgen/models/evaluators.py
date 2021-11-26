@@ -138,13 +138,13 @@ class DBGroup(object):
       for db in self.databases:
         self.data += db.get_data
 
-  def __init__(self, group_name: str, group_type: str, databases: typing.List[pathlib.Path]):
+  def __init__(self, group_name: str, db_type: str, databases: typing.List[pathlib.Path]):
     self.group_name = group_name
-    self.group_type = {
+    self.db_type = {
       "SamplesDatabase"    : samples_database.SamplesDatabase,
       "ActiveFeedDatabase" : active_feed_database.ActiveFeedDatabase,
-    }[group_type]
-    self.databases = [self.group_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
+    }[db_type]
+    self.databases = [self.db_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
     self.features  = {ext: None for ext in extractor.extractors.keys()}
 
     return 
@@ -218,6 +218,8 @@ def KAverageScore(**kwargs):
   groups = {}
 
   for dbg in db_groups:
+    if not isinstance(dg.db_type, samples_database.SamplesDatabase):
+      raise ValueError("Scores require SamplesDatabase but received", dbg.db_type)
     groups[dbg.group_name] = ([], [])
     for benchmark in target.get_benchmarks(feature_space):
       groups[dbg.group_name][0].append(benchmark.name)
@@ -268,6 +270,8 @@ def CompMemGrewe(**kwargs):
 
   groups = {}
   for dbg in db_groups:
+    if not isinstance(dg.db_type, samples_database.SamplesDatabase):
+      raise ValueError("CompMemGrewe requires SamplesDatabase but received", dbg.db_type)
     groups[dbg.group_name] = {
       'data'  : [],
       'names' : []
