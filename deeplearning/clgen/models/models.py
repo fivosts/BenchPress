@@ -543,16 +543,6 @@ class Model(object):
             break
     return continue_sampling, seq_count
 
-  def Evaluate(self, sampler: samplers.Sampler) -> None:
-    """
-    Run evaluators for bert's, clgen's github's dataset.
-    """
-    l.getLogger().info("Running samples evaluation...")
-    sampler_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(self.cache.path / "samples" / sampler.hash / "samples.db")))
-    evaluator = evaluators.BenchmarkDistance(self.tokenizer, self.corpus, sampler_db, sampler)
-    evaluator.eval(5)
-    return
-
   def SamplerCache(self, sampler: samplers.Sampler) -> pathlib.Path:
     """Get the path to a sampler cache.
 
