@@ -6,6 +6,7 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 import numpy as np
 
+from deeplearning.clgen.proto import evaluator_pb2
 from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.features import feature_sampler
@@ -15,6 +16,7 @@ from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.util import monitors
 from deeplearning.clgen.util import plotter
+from deeplearning.clgen.util import pbutil
 
 from eupy.native import logger as l
 
@@ -34,12 +36,18 @@ flags.DEFINE_string(
   "Set path to BERT samples database for motivational_example figure",
 )
 
+flags.DEFINE_string(
+  "evaluator_config",
+  "",
+  "Set path to evaluator config file",
+)
+
 evaluation_map = {
-  "evaluator_pb2.LogFile"       : LogFile,
-  "evaluator_pb2.KAverageScore" : KAverageScore,
-  "evaluator_pb2.MinScore"      : MinScore,
-  "evaluator_pb2.AnalyzeTarget" : AnalyzeTarget,
-  "evaluator_pb2.CompMemGrewe"  : CompMemGrewe,
+  "evaluator_pb2.LogFile"       : "LogFile",
+  "evaluator_pb2.KAverageScore" : "KAverageScore",
+  "evaluator_pb2.MinScore"      : "MinScore",
+  "evaluator_pb2.AnalyzeTarget" : "AnalyzeTarget",
+  "evaluator_pb2.CompMemGrewe"  : "CompMemGrewe",
 }
 
 class BaseEvaluator(object):
@@ -586,8 +594,8 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
   Parse config file and check for validity.
   """
   for ev in config.evaluator:
-    for dbs in ev.db_groups:
-      for db in dbs.databases:
+    for dbs in ev.db_group:
+      for db in dbs.database:
         p = pathlib.Path(db).resolve()
         if not p.exists():
           raise FileNotFoundError(p)
@@ -640,17 +648,17 @@ def main(config: evaluator_pb2.Evaluation):
   tokenizer      = None
   feature_spaces = []
   for ev in config.evaluators:
-    kw_args {
+    kw_args = {
       "db_groups" : [],
       "targets"   : None,
       "feature_spaces": None,
       "tokenizer": None,
     }
     # Gather database groups and cache them
-    for dbs in ev.db_groups:
-      key = dbs.group_name + ''.join(dbs.databases)
+    for dbs in ev.db_group:
+      key = dbs.group_name + ''.join(dbs.database)
       if key not in db_cache:
-        db_cache[key] = DBGroup(dbs.group_name, dbs.group_type, dbs.databases)
+        db_cache[key] = DBGroup(dbs.group_name, dbs.group_type, dbs.database)
       kw_args['db_groups'].append(db_cache[key])
     # Gather target benchmarks and cache them
     if ev.HasField("target"):

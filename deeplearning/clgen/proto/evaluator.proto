@@ -32,7 +32,7 @@ message evaluators {
 // Dump log file for all databases provided.
 message LogFile {
   optional string          target    = 1;
-  repeated DatabasesGroups db_groups = 2;
+  repeated DatabasesGroups db_group  = 2;
 }
 
 // 2
@@ -41,7 +41,7 @@ message KAverageScore {
   optional string          target         = 1;
   optional string          feature_space  = 2;
   optional int32           top_k          = 3;
-  repeated DatabasesGroups db_groups      = 4;
+  repeated DatabasesGroups db_group       = 4;
 }
 
 // 3
@@ -49,7 +49,7 @@ message KAverageScore {
 message MinScore {
   optional string          target         = 1;
   optional string          feature_space  = 2;
-  repeated DatabasesGroups db_groups      = 3;
+  repeated DatabasesGroups db_group       = 3;
 }
 
 // 4
@@ -63,12 +63,12 @@ message AnalyzeTarget {
 // Map on 2-Dimensional space the number of memory vs computational instructions from Grewe's features.
 message CompMemGrewe {
   optional string          target    = 1;
-  repeated DatabasesGroups db_groups = 2;
+  repeated DatabasesGroups db_group  = 2;
 }
 
 // Define a group of Databases that will be considered jointly.
 message DatabasesGroups {
   optional string group_name = 1;
   optional string db_type    = 2;
-  repeated string databases  = 3;
+  repeated string database   = 3;
 }
