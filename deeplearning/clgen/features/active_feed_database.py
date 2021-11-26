@@ -245,6 +245,12 @@ class ActiveFeedDatabase(sqlutil.Database):
       return s.query(ActiveFeed).all()
 
   @property
+  def get_features(self):
+    """Return all feature vectors of compiling samples."""
+    with self.Session() as s:
+      return [x.output_features for x in s.query(ActiveFeed).yield_per(1000)]
+
+  @property
   def active_count(self):
     """Number of active samples in DB."""
     with self.Session() as s:
