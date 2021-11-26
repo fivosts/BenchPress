@@ -137,11 +137,6 @@ class DBGroup(object):
       for db in self.databases:
         self.data += db.get_data
 
-  @property
-  def features(self):
-    raise NotImplementedError
-    return None
-  
   def __init__(self, group_name: str, group_type: str, databases: typing.List[pathlib.Path]):
     self.group_name = group_name
     self.group_type = {
@@ -149,7 +144,21 @@ class DBGroup(object):
       "ActiveFeedDatabase" : active_feed_database.ActiveFeedDatabase,
     }[group_type]
     self.databases = [self.group_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
+    self.features  = {ext: None for ext in extractor.extractors.keys()}
 
+    return 
+
+  def get_features(self, feature_space: str):
+    """
+    Get or set and get features for a specific feature space.
+    """
+    if not self.features[feature_space]:
+      self.features[feature_space] = []
+      for db in self.databases:
+        self.features[feature_space] += [extractor.RawToDictFeats(x.feature_vector)[feature_space] for x in db.get_features]
+    return self.features[feature_space]
+
+    extractor.RawToDictFeats(sample.feature_vector)
 
 class Benchmark(typing.NamedTuple):
   path     : pathlib.Path
