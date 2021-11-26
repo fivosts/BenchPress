@@ -585,7 +585,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
   """
   Parse config file and check for validity.
   """
-  for ev in config.evaluators:
+  for ev in config.evaluator:
     for dbs in ev.db_groups:
       for db in dbs.databases:
         p = pathlib.Path(db).resolve()
