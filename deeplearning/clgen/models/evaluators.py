@@ -326,161 +326,62 @@ if __name__ == "__main__":
   app.run(initMain)
   sys.exit(0)
 
-class BaseEvaluator(object):
+def eval(self, topK: int) -> None:
   """
-  Base class for evaluators.
+  Iterate benchmarks and evaluate datasets efficacy.
   """
-  def __init__(self, sampler: samplers.Sampler):
-    self.sampler = sampler
-    return
+  bert_corpus  = [
+    (cf, feats[self.feature_space])
+    for cf, feats in self.bert_db.get_samples_features
+    if self.feature_space in feats
+  ]
+  clgen_corpus = [
+    (cf, feats[self.feature_space])
+    for cf, feats in self.clgen_db.get_samples_features
+    if self.feature_space in feats
+  ]
+  git_corpus   = [
+    (cf, feats[self.feature_space])
+    for cf, feats in self.github_corpus.getFeaturesContents()
+    if self.feature_space in feats and feats[self.feature_space]
+  ]
+  reduced_git_corpus = [
+    (cf, feats[self.feature_space])
+    for cf, feats in self.github_corpus.getFeaturesContents(sequence_length = self.sampler.sequence_length)
+    if self.feature_space in feats and feats[self.feature_space]
+  ]
 
-  def eval(self) -> None:
-    raise NotImplementedError
+  outfile = pathlib.Path("./results_{}.out".format(self.feature_space)).resolve()
+  with open(outfile, 'w') as outf:
+    for benchmark in self.evaluated_benchmarks:
+      try:
+        bc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in bert_corpus ], key = lambda x: x[1])[:topK]
+        cc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in clgen_corpus], key = lambda x: x[1])[:topK]
+        gc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in git_corpus  ], key = lambda x: x[1])[:topK]
+        rgc = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in reduced_git_corpus  ], key = lambda x: x[1])[:topK]
+      except KeyError:
+        print(git_corpus)
 
-class BenchmarkDistance(BaseEvaluator):
-  """
-  This evaluator is compatible only with active samplers.
-  Compares BERT vs CLgen vs Github training data against
-  how close their benchmarks are against handwritten benchmarks
-  """
-  class EvaluatedBenchmark(object):
-    """
-    Representation of an evaluated benchmark with all its candidates.
-    """
-    class BenchmarkCandidate(typing.NamedTuple):
-      """
-      Benchmark candidate
-      """
-      contents : str
-      distance : float
-      features : typing.Dict[str, float]
-      label    : str
+      if rgc[0][1] > 0:
+        outf.write("###############################\n")
+        outf.write("{}\n".format(benchmark.name))
+        outf.write("Target features: {}\n".format(benchmark.features))
 
-    def __init__(self,
-                 target         : pathlib.Path,
-                 name           : str,
-                 contents       : str,
-                 features       : typing.Dict[str, float],
-                 bert_cands     : typing.List[BenchmarkCandidate] = [], # (contents, distance, labels)
-                 clgen_cands    : typing.List[BenchmarkCandidate] = [], # (contents, distance, labels)
-                 github_cands   : typing.List[BenchmarkCandidate] = [], # (contents, distance, labels)
-                 ) -> None:
-      self.target         = target
-      self.name           = name
-      self.contents       = contents
-      self.features = features
-      self.bert_cands     = bert_cands
-      self.clgen_cands    = clgen_cands
-      self.github_cands   = github_cands
+        outf.write("BenchPress: {}, lengths: {}\n".format([x[1] for x in bc], [len(self.tokenizer.TokenizeString(x[0])) for x in bc]))
 
-  def __init__(self,
-               tokenizer,
-               github_corpus : corpuses.Corpus,
-               samples_db    : samples_database.SamplesDatabase,
-               sampler       : samplers.Sampler
-               ) -> None:
-    super(BenchmarkDistance, self).__init__(sampler)
+        outf.write("CLgen: {}, lengths: {}\n".format([x[1] for x in cc], [len(self.tokenizer.TokenizeString(x[0])) for x in cc]))
+        outf.write("Github: {}, lengths: {}\n".format([x[1] for x in gc], [len(self.tokenizer.TokenizeString(x[0])) for x in gc]))
+        outf.write("Github <= 768 tokens: {}, lengths: {}\n".format([x[1] for x in rgc], [len(self.tokenizer.TokenizeString(x[0])) for x in rgc]))
 
-    # Target and path to target benchmarks
-    self.tokenizer   = tokenizer
-    self.target      = self.sampler.config.sample_corpus.corpus_config.active.target
-    self.target_path = pathlib.Path(feature_sampler.targets[self.target]).resolve()
+        outf.write("\n\nTop-5 functions BenchPress's functions: \n")
+        for x in bc:
+          outf.write("{}\n\n".format(x[0]))
+          outf.write("Number of tokens: {}\nNumber of LLVM IR Instructions: {}\n\n".format(len(self.tokenizer.TokenizeString(x[0])), extractor.ExtractFeatures(x[0], ["InstCountFeatures"])["InstCountFeatures"]["TotalInsts"]))
+        outf.write("###############################\n\n")
 
-    # BERT DB setup
-    self.bert_db = samples_db
-
-    # clgen DB setup
-    if not FLAGS.clgen_samples_path:
-      raise ValueError("clgen_samples_path has not been set for evaluation")
-    self.clgen_samples_path = pathlib.Path(FLAGS.clgen_samples_path).resolve()
-    if not self.clgen_samples_path.exists():
-      raise FileNotFoundError(str(self.clgen_samples_path))
-    self.clgen_db = samples_database.SamplesDatabase("sqlite:///{}".format(str(self.clgen_samples_path)))
-
-    self.github_corpus = github_corpus
-    # Feature Space setup
-    self.feature_space = self.sampler.config.sample_corpus.corpus_config.active.feature_space
-
-    # self.monitor = monitors.MultiCategoricalDistribution(self.path)
-    self.loadBenchmarks()
-    return
-
-  def loadBenchmarks(self) -> None:
-    """
-    Unzip benchmarks zip, iterate, split and collect features for a feature space.
-    """
-    self.evaluated_benchmarks = []
-    kernels = feature_sampler.yield_cl_kernels(self.target_path)
-    for p, k, h in kernels:
-      features = extractor.ExtractFeatures(k, [self.feature_space], header_file = h, use_aux_headers = False)
-      if features[self.feature_space]:
-        self.evaluated_benchmarks.append(
-          BenchmarkDistance.EvaluatedBenchmark(
-              p,
-              p.name,
-              k,
-              features[self.feature_space],
-            )
-        )
-    l.getLogger().info("Loaded {} benchmarks".format(len(self.evaluated_benchmarks)))
-    return
-
-  def eval(self, topK: int) -> None:
-    """
-    Iterate benchmarks and evaluate datasets efficacy.
-    """
-    bert_corpus  = [
-      (cf, feats[self.feature_space])
-      for cf, feats in self.bert_db.get_samples_features
-      if self.feature_space in feats
-    ]
-    clgen_corpus = [
-      (cf, feats[self.feature_space])
-      for cf, feats in self.clgen_db.get_samples_features
-      if self.feature_space in feats
-    ]
-    git_corpus   = [
-      (cf, feats[self.feature_space])
-      for cf, feats in self.github_corpus.getFeaturesContents()
-      if self.feature_space in feats and feats[self.feature_space]
-    ]
-    reduced_git_corpus = [
-      (cf, feats[self.feature_space])
-      for cf, feats in self.github_corpus.getFeaturesContents(sequence_length = self.sampler.sequence_length)
-      if self.feature_space in feats and feats[self.feature_space]
-    ]
-
-    outfile = pathlib.Path("./results_{}.out".format(self.feature_space)).resolve()
-    with open(outfile, 'w') as outf:
-      for benchmark in self.evaluated_benchmarks:
-        try:
-          bc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in bert_corpus ], key = lambda x: x[1])[:topK]
-          cc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in clgen_corpus], key = lambda x: x[1])[:topK]
-          gc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in git_corpus  ], key = lambda x: x[1])[:topK]
-          rgc = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in reduced_git_corpus  ], key = lambda x: x[1])[:topK]
-        except KeyError:
-          print(git_corpus)
-
-        if rgc[0][1] > 0:
-          outf.write("###############################\n")
-          outf.write("{}\n".format(benchmark.name))
-          outf.write("Target features: {}\n".format(benchmark.features))
-
-          outf.write("BenchPress: {}, lengths: {}\n".format([x[1] for x in bc], [len(self.tokenizer.TokenizeString(x[0])) for x in bc]))
-
-          outf.write("CLgen: {}, lengths: {}\n".format([x[1] for x in cc], [len(self.tokenizer.TokenizeString(x[0])) for x in cc]))
-          outf.write("Github: {}, lengths: {}\n".format([x[1] for x in gc], [len(self.tokenizer.TokenizeString(x[0])) for x in gc]))
-          outf.write("Github <= 768 tokens: {}, lengths: {}\n".format([x[1] for x in rgc], [len(self.tokenizer.TokenizeString(x[0])) for x in rgc]))
-
-          outf.write("\n\nTop-5 functions BenchPress's functions: \n")
-          for x in bc:
-            outf.write("{}\n\n".format(x[0]))
-            outf.write("Number of tokens: {}\nNumber of LLVM IR Instructions: {}\n\n".format(len(self.tokenizer.TokenizeString(x[0])), extractor.ExtractFeatures(x[0], ["InstCountFeatures"])["InstCountFeatures"]["TotalInsts"]))
-          outf.write("###############################\n\n")
-
-    # self.avg_score_per_target(bert_corpus, clgen_corpus, git_corpus, reduced_git_corpus, topK)
-    # self.benchmark_stats(reduced_git_corpus)
-    return
+  # self.avg_score_per_target(bert_corpus, clgen_corpus, git_corpus, reduced_git_corpus, topK)
+  # self.benchmark_stats(reduced_git_corpus)
+  return
 
   def benchmark_stats(self, reduced_git):
     groups = {}
