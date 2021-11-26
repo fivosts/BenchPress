@@ -231,10 +231,7 @@ def MinScore(**kwargs):
   Compare the closest sample per target benchmark
   for all different database groups.
   """
-  db_groups     = kwargs.get('db_groups')
-  target        = kwargs.get('targets')
-  feature_space = kwargs.get('feature_space')
-
+  KAverageScore(top_k = 1, kwargs)
   return
 
 def AnalyzeTarget(**kwargs):
