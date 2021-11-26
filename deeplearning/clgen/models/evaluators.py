@@ -201,7 +201,7 @@ def LogFile(**kwargs):
   """
   db_groups     = kwargs.get('db_groups')
   target        = kwargs.get('targets')
-
+  raise NotImplementedError
   return
 
 def KAverageScore(**kwargs):
@@ -255,7 +255,7 @@ def AnalyzeTarget(**kwargs):
   targets   = kwargs.get('targets')
   tokenizer = kwargs.get('tokenizer')
   workspace_path = kwargs.get('workspace_path')
-
+  raise NotImplementedError
   return
 
 def CompMemGrewe(**kwargs):
