@@ -156,10 +156,11 @@ class DBGroup(object):
     if not self.features[feature_space]:
       self.features[feature_space] = []
       for db in self.databases:
-        self.features[feature_space] += [extractor.RawToDictFeats(x.feature_vector)[feature_space] for x in db.get_features]
+        for x in db.get_features:
+          feats = extractor.RawToDictFeats(x.feature_vector)
+          if feature_space in feats and feats[feature_space]:
+            self.features[feature_space].append(feats)
     return self.features[feature_space]
-
-    extractor.RawToDictFeats(sample.feature_vector)
 
 class Benchmark(typing.NamedTuple):
   path     : pathlib.Path
@@ -232,7 +233,7 @@ def KAverageScore(**kwargs):
   plotter.GrouppedBars(
     groups = groups,
     plot_name = "avg_{}_dist_{}".format(top_k, self.feature_space.replace("Features", " Features")),
-    path = workspace_path, # TODO
+    path = workspace_path,
     **plotter_config,
   )
   return
@@ -260,10 +261,35 @@ def CompMemGrewe(**kwargs):
   Compare Computation vs Memory instructions for each database group
   and target benchmarks.
   """
-  db_groups     = kwargs.get('db_groups')
-  target        = kwargs.get('targets')
+  db_groups      = kwargs.get('db_groups')
+  target         = kwargs.get('targets')
   workspace_path = kwargs.get('workspace_path')
+  feature_space  = "GreweFeatures"
 
+  groups = {}
+  for dbg in db_groups:
+    groups[dbg.group_name] = {
+      'data'  : [],
+      'names' : []
+    }
+
+  for b in target.get_benchmarks(feature_space):
+    groups[target.target]['data'].append([b.features['comp'], b.features['mem']])
+    groups[target.target]['names'].append(b.name)
+  
+  unique = set()
+  for dbg in db_groups:
+    for feats in dbg.get_features(feature_space):
+      if "{}-{}".format(feats['comp'], feats['mem']) not in unique:
+        groups[dbg.group_name]["data"].append([feats['comp'], feats['mem']])
+        groups[dbg.group_name]['names'].append("")
+        unique.add("{}-{}".format(feats['comp'], feats['mem']))
+
+  plotter.GroupScatterPlot(
+    groups = groups,
+    plot_name = "comp_vs_mem_grewe",
+    path = workspace_path,
+  )
   return
 
 def main(config: evaluator_pb2.Evaluation):
@@ -494,78 +520,6 @@ def kmeans_datasets(bert_db, clgen_db):
         # dict(color = 'goldenrod', size = 10, symbol = "circle"),
       ],
     )
-  return
-
-def motivational_example_fig(bert_db, fixed_bert, clgen_db):
-  """
-  Build the plot for paper's motivational example.
-  """
-  target = "rodinia"
-  feature_space = "GreweFeatures"
-  benchmarks = []
-  kernels = feature_sampler.yield_cl_kernels(pathlib.Path(feature_sampler.targets[target]).resolve())
-  for p, k, h in kernels:
-    features = extractor.ExtractFeatures(k, [feature_space], header_file = h, use_aux_headers = False)
-    if features[feature_space]:
-      benchmarks.append(
-        BenchmarkDistance.EvaluatedBenchmark(
-            p,
-            p.name,
-            k,
-            features[feature_space],
-          )
-      )
-
-  clgen_corpus = [s for s in clgen_db.correct_samples]
-  # bert_datapoints = bert_db.get_by_ids([143826, 146576, 144315])
-  # bert_datapoints = bert_db.get_by_ids([146576])
-  bert_datapoints = [s for s in bert_db.correct_samples]
-  fixed_bert = [s for s in fixed_bert.correct_samples]
-  data = [s for s in bert_db.correct_samples]
-
-  groups = {
-    # "BenchPress Examples": {'data': [], 'names': []},
-    "Rodinia Benchmarks": {'data': [], 'names': []},
-    "CLgen samples": {'data': [], 'names': []},
-  }
-
-  mon = monitors.TSNEMonitor(".", "motivational_example")
-  for b in benchmarks:
-    mon.register((b.features, "Rodinia Benchmarks", b.name))
-    groups["Rodinia Benchmarks"]['data'].append([b.features['comp'], b.features['mem']])
-    groups["Rodinia Benchmarks"]['names'].append(b.name)
-  for i in range(30):
-    sample = clgen_corpus[np.random.randint(0, len(clgen_corpus))]
-    feats = extractor.RawToDictFeats(sample.feature_vector)
-    if feature_space in feats and feats[feature_space]:
-      mon.register((feats[feature_space], "clgen samples"))
-      groups["CLgen samples"]['data'].append([feats[feature_space]['comp'], feats[feature_space]['mem']])
-      groups["CLgen samples"]['names'].append("")
-
-  # unique = set()
-  # for s in bert_datapoints + fixed_bert:
-  #   feats = extractor.RawToDictFeats(s.feature_vector)
-  #   if feature_space in feats:
-  #     mon.register((feats[feature_space], "bert sample"))
-  #     if "{}-{}".format(feats[feature_space]['comp'], feats[feature_space]['mem']) not in unique:
-  #       groups["BenchPress Examples"]["data"].append([feats[feature_space]['comp'], feats[feature_space]['mem']])
-  #       groups["BenchPress Examples"]['names'].append("")
-  #       unique.add("{}-{}".format(feats[feature_space]['comp'], feats[feature_space]['mem']))
-  mon.plot()
-  plotter.GroupScatterPlot(
-    groups = groups,
-    title = "",
-    plot_name = "motivational_example_compvsmem",
-    path = pathlib.Path(".").resolve(),
-    x_name = "# Computational Instructions",
-    y_name = "# Memory Instructions",
-    marker_style = [
-      # dict(color = 'skyblue', size = 10, symbol = "cross"),
-      # dict(color = 'firebrick', size = 10, symbol = "cross"),
-      dict(color = 'darkslateblue', size = 10, symbol = "diamond-open", line = dict(width = 4)),
-      dict(color = 'firebrick', size = 10, symbol = "circle"),
-    ],
-  )
   return
 
 def benchpress_vs_clgen_fig(bert_db, clgen_db):
