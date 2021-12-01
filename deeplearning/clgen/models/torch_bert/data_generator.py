@@ -962,10 +962,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       if FLAGS.features_standard_scaler:
         scaler = sklearn.preprocessing.StandardScaler()
         scaler.fit([[float(y) for y in x.features.values()] for x in candidates + [self.feat_sampler.target_benchmark]])
-        target_feats = scaler.transform([float(x) for x in self.feat_sampler.target_benchmark.features.values()])
+        target_feats = {k: v for k, v in zip(self.feat_sampler.target_benchmark.features.keys(), scaler.transform([[float(x) for x in self.feat_sampler.target_benchmark.features.values()]])[0])}
         for idx, cd in enumerate(candidates):
-          candidates[idx]._replace(score = feat_sampler.calculate_distance(scaler.transform([float(x) for x in cd.features.values()]), target_feats))
-        raise NotImplementedError("Check this code is correct.")
+          outfeats = {k: v for k, v in zip(cd.features.keys(), scaler.transform([[float(x) for x in cd.features.values()]])[0])}
+          candidates[idx]._replace(score = feature_sampler.calculate_distance(outfeats, target_feats, self.feat_sampler.feature_space))
 
       bar.update(bar.value + 1 + t)
       pool.close()
