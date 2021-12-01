@@ -108,7 +108,7 @@ def SingleScatterLine(x         : np.array,
                       **kwargs,
                       ) -> None:
   """Plot a single line, with scatter points at datapoints."""
-  layout = _get_generic_layout(kwargs)
+  layout = _get_generic_layout(**kwargs)
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Scatter(
@@ -132,7 +132,7 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
   """
   Plots groupped scatter plot of points in two-dimensional space.
   """
-  layout = _get_generic_layout(kwargs)
+  layout = _get_generic_layout(**kwargs)
   fig = go.Figure(layout = layout)
   if marker_style:
     if len(marker_style) != len(groups.keys()):
@@ -166,7 +166,7 @@ def ScatterPlot(x         : np.array,
   """
   Implementation of a simple 2D scatter plot without groups.
   """
-  layout = _get_generic_layout(kwargs)
+  layout = _get_generic_layout(**kwargs)
   fig = go.Figure(layout = layout)
 
   fig.add_trace(
@@ -188,7 +188,7 @@ def FrequencyBars(x         : np.array,
                   **kwargs,
                   ) -> None:
   """Plot frequency bars based on key."""
-  layout = _get_generic_layout(kwargs)
+  layout = _get_generic_layout(**kwargs)
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Bar(
@@ -214,7 +214,7 @@ def LogitsStepsDistrib(x              : typing.List[np.array],
   vocab_size number of groups. Groups are as many as prediction steps.
   Used to plot the probability distribution of BERT's token selection. 
   """
-  layout = _get_generic_layout(kwargs)
+  layout = _get_generic_layout(**kwargs)
   fig = go.Figure(layout = layout)
 
   for pred, name in zip(x, sample_indices):
@@ -238,7 +238,7 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
   Plots groups of bars.
   """
   # colors
-  layout = _get_generic_layout(kwargs)
+  layout = _get_generic_layout(**kwargs)
   fig = go.Figure(layout = layout)
 
   palette = itertools.cycle(px.colors.qualitative.T10)
@@ -264,7 +264,7 @@ def CumulativeHistogram(x         : np.array,
                         **kwargs,
                         ) -> None:
   """Plot percent cumulative histogram."""
-  layout = _get_generic_layout(kwargs)
+  layout = _get_generic_layout(**kwargs)
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Histogram(
@@ -289,7 +289,7 @@ def NormalizedRadar(r         : np.array,
                     **kwargs,
                     ) -> None:
   """Radar chart for feature plotting"""
-  layout = _get_generic_layout(kwargs)
+  layout = _get_generic_layout(**kwargs)
   fig = go.Figure(layout = layout)
   fig.add_trace(
     go.Scatterpolar(
@@ -309,7 +309,7 @@ def CategoricalViolin(x         : np.array,
                       **kwargs,
                       ) -> None:
   """Plot percent cumulative histogram."""
-  layout = _get_generic_layout(kwargs)
+  layout = _get_generic_layout(**kwargs)
   fig = go.Figure(layout = layout)
   for xel, yel in zip(x, y):
     fig.add_trace(
@@ -334,7 +334,7 @@ def RelativeDistribution(x         : np.array,
                          **kwargs,
                          ) -> None:
   """Plot smoothened relative distribution of data"""
-  layout = _get_generic_layout(kwargs)
+  layout = _get_generic_layout(**kwargs)
   fig = ff.create_distplot(
     y,
     x,
