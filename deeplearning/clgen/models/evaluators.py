@@ -233,7 +233,7 @@ def MinScore(**kwargs):
   Compare the closest sample per target benchmark
   for all different database groups.
   """
-  KAverageScore(top_k = 1, kwargs)
+  KAverageScore(top_k = 1, **kwargs)
   return
 
 def AnalyzeTarget(**kwargs):
