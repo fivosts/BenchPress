@@ -76,7 +76,7 @@ def _get_generic_layout(**kwargs) -> go.Layout:
   return go.Layout(
     plot_bgcolor = plot_bgcolor,
     margin       = margin,
-    legend       = dict(x = legend_x, y = legend_y, traceorder = traceorder, legendfont = legendfont),
+    legend       = dict(x = legend_x, y = legend_y, traceorder = traceorder, font = dict(size = legendfont)),
     title        = title,
     xaxis        = xaxis,
     yaxis        = yaxis,
@@ -120,7 +120,7 @@ def SingleScatterLine(x         : np.array,
       opacity = 0.75
     )
   )
-  _write_figure(fig, plot_name, path, kwargs)
+  _write_figure(fig, plot_name, path, **kwargs)
   return
 
 def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
@@ -154,7 +154,7 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
         text       = names,
       )
     )
-  _write_figure(fig, plot_name, path, kwargs)
+  _write_figure(fig, plot_name, path, **kwargs)
   return
 
 def ScatterPlot(x         : np.array,
@@ -178,7 +178,7 @@ def ScatterPlot(x         : np.array,
       opacity = 0.75,
     )
   )
-  _write_figure(fig, plot_name, path, kwargs)
+  _write_figure(fig, plot_name, path, **kwargs)
   return
 
 def FrequencyBars(x         : np.array,
@@ -199,7 +199,7 @@ def FrequencyBars(x         : np.array,
       opacity = 0.75,
     )
   )
-  _write_figure(fig, plot_name, path, kwargs)
+  _write_figure(fig, plot_name, path, **kwargs)
   return
 
 def LogitsStepsDistrib(x              : typing.List[np.array],
@@ -225,7 +225,7 @@ def LogitsStepsDistrib(x              : typing.List[np.array],
         y = pred,
       )
     )
-  _write_figure(fig, plot_name, path, kwargs)
+  _write_figure(fig, plot_name, path, **kwargs)
   return
 
 def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.List]],
@@ -254,7 +254,7 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
         textfont = dict(color = "white", size = 100),
       )
     )
-  _write_figure(fig, plot_name, path, kwargs)
+  _write_figure(fig, plot_name, path, **kwargs)
   return
 
 def CumulativeHistogram(x         : np.array,
@@ -279,7 +279,7 @@ def CumulativeHistogram(x         : np.array,
       opacity = 0.65,
     )
   )
-  _write_figure(fig, plot_name, path, kwargs)
+  _write_figure(fig, plot_name, path, **kwargs)
   return
 
 def NormalizedRadar(r         : np.array,
@@ -299,7 +299,7 @@ def NormalizedRadar(r         : np.array,
       marker_color = "#cbef0e",
     )
   )
-  _write_figure(fig, plot_name, path, kwargs)
+  _write_figure(fig, plot_name, path, **kwargs)
   return
 
 def CategoricalViolin(x         : np.array,
@@ -324,7 +324,7 @@ def CategoricalViolin(x         : np.array,
         opacity = 0.65,
       )
     )
-  _write_figure(fig, plot_name, path, kwargs)
+  _write_figure(fig, plot_name, path, **kwargs)
   return
 
 def RelativeDistribution(x         : np.array,
@@ -345,5 +345,5 @@ def RelativeDistribution(x         : np.array,
     show_hist = True
   )
   fig.update_layout(layout)
-  _write_figure(fig, plot_name, path, kwargs)
+  _write_figure(fig, plot_name, path, **kwargs)
   return
