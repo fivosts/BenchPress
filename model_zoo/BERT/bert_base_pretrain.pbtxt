@@ -1,7 +1,7 @@
 working_dir: "Base_BERT" ## This path is relative to "workspace_dir", which is an app FLAG
 model {
   pre_train_corpus {
-    local_directory: ""
+    bq_database: ""
     contentfile_separator: "\n\n\n\n"
     preprocessor: "deeplearning.clgen.preprocessors.c:StripIncludes"
     preprocessor: "deeplearning.clgen.preprocessors.c:ClangPreprocess"
