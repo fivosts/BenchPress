@@ -34,9 +34,6 @@ flags.DEFINE_string(
   "Select target directory of TemporaryDirectory."
 )
 
-if FLAGS.local_filesystem:
-  pathlib.Path(local_filesystem).resolve().mkdir(exist_ok = True, parents = True)
-
 class Error(Exception):
   pass
 
