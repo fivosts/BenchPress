@@ -22,8 +22,17 @@ import shutil
 import tempfile
 import typing
 from glob import iglob
+from absl import flags
 
 from send2trash import send2trash
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string(
+  local_filesystem,
+  None,
+  "Select target directory of TemporaryDirectory."
+)
 
 class Error(Exception):
   pass

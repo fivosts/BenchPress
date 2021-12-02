@@ -397,7 +397,7 @@ class PreprocessedContentFiles(sqlutil.Database):
     if config.HasField("local_directory"):
       yield pathlib.Path(ExpandConfigPath(config.local_directory))
     elif config.HasField("local_tar_archive"):
-      with tempfile.TemporaryDirectory(prefix="clgen_corpus_") as d:
+      with tempfile.TemporaryDirectory(prefix="clgen_corpus_", dir = FLAGS.local_filesystem) as d:
         start_time = time.time()
         cmd = [
           "tar",

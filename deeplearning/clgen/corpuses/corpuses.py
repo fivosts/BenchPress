@@ -615,7 +615,7 @@ def GetHashOfArchiveContents(archive: pathlib.Path) -> str:
   if 'hash' in reg[archive.name]:
     return reg[archive.name]['hash']
   else:
-    with tempfile.TemporaryDirectory(prefix="clgen_corpus_") as d:
+    with tempfile.TemporaryDirectory(prefix="clgen_corpus_", dir = FLAGS.local_filesystem) as d:
       pv  = ["pv", str(archive)]
       tar = ["tar", "xfj", "-", "-C", d]
       try:
