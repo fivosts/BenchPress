@@ -29,7 +29,7 @@ from send2trash import send2trash
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
-  local_filesystem,
+  "local_filesystem",
   None,
   "Select target directory of TemporaryDirectory."
 )
