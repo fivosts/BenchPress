@@ -425,3 +425,23 @@ class EncodedContentFiles(sqlutil.Database):
     session.add_all(
       [encoded.Meta(key=f"vocab_{v}", value=k) for k, v in vocabulary.items()]
     )
+
+  def get_data(self, sequence_length: int = None) -> typing.List[np.array]:
+    """
+    Get the indices array of encoded contentfiles.
+    """
+    with self.Session() as session:
+      if sequence_length:
+        return session.query(EncodedContentFile.indices_array).filter(EncodedContentFile.tokencount <= sequence_length).all()
+      else:
+        return session.query(EncodedContentFile.indices_array).all()
+
+  def get_features(self, sequence_length: int = None) -> typing.List[str]:
+    """
+    Get feature vectors of training instances within the specified sequence length.
+    """
+    with self.Session() as session:
+      if sequence_length:
+        return session.query(EncodedContentFile.features).filter(EncodedContentFile.tokencount <= sequence_length).all()
+      else:
+        return session.query(EncodedContentFile.features).all()
