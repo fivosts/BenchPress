@@ -432,9 +432,9 @@ class EncodedContentFiles(sqlutil.Database):
     """
     with self.Session() as session:
       if sequence_length:
-        return [x.indices_array for x in session.query(EncodedContentFile).filter(EncodedContentFile.tokencount <= sequence_length)]
+        return [x.indices_array for x in session.query(EncodedContentFile).filter(EncodedContentFile.tokencount <= sequence_length).all()]
       else:
-        return [x.indices_array for x in session.query(EncodedContentFile)]
+        return [x.indices_array for x in session.query(EncodedContentFile).all()]
 
   def get_features(self, sequence_length: int = None) -> typing.List[str]:
     """
@@ -442,6 +442,6 @@ class EncodedContentFiles(sqlutil.Database):
     """
     with self.Session() as session:
       if sequence_length:
-        return [x.features for x in session.query(EncodedContentFile).filter(EncodedContentFile.tokencount <= sequence_length)]
+        return [x.feature_vector for x in session.query(EncodedContentFile).filter(EncodedContentFile.tokencount <= sequence_length).all()]
       else:
-        return [x.features for x in session.query(EncodedContentFile)]
+        return [x.feature_vector for x in session.query(EncodedContentFile).all()]
