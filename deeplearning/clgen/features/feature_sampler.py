@@ -143,6 +143,24 @@ def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Pat
   l.getLogger().info("Pre-processed {} OpenCL benchmarks".format(len(kernels)))
   return kernels
 
+def resolve_benchmark_names(benchmarks: typing.List["Benchmark"]) -> typing.List["Benchmark"]:
+  """
+  Resolves duplicate benchmark names. e.g. X, X, X -> X-1, X-2, X-3.
+  """
+  renaming = {}
+  for benchmark in benchmarks:
+    if benchmark.name not in renaming:
+      renaming[benchmark.name] = [0, 0]
+    else:
+      renaming[benchmark.name][1] += 1
+  for idx, benchmark in enumerate(benchmarks):
+    if renaming[benchmark.name][1] != 0:
+      renaming[benchmark.name][0] += 1
+      benchmarks[idx] = benchmarks[idx]._replace(
+        name = "{}-{}".format(benchmark.name, renaming[benchmark.name][0])
+      )
+  return sorted(benchmarks, key = lambda x: x.name)
+
 def grid_walk_generator(feature_space: str) -> typing.Iterator[typing.Dict[str, float]]:
   """
   Walk through feature space and generate
@@ -317,19 +335,7 @@ class EuclideanSampler(object):
                         ):
           if benchmark:
             self.benchmarks.append(benchmark)
-        renaming = {}
-        for benchmark in self.benchmarks:
-          if benchmark.name not in renaming:
-            renaming[benchmark.name] = [0, 0]
-          else:
-            renaming[benchmark.name][1] += 1
-        for idx, benchmark in enumerate(self.benchmarks):
-          if renaming[benchmark.name][1] != 0:
-            renaming[benchmark.name][0] += 1
-            self.benchmarks[idx]._replace(
-              name = "{}-{}".format(benchmark.name, renaming[benchmark.name][0])
-            )
-        self.benchmarks = sorted(self.benchmarks, key = lambda x: x.name)
+        resolve_benchmark_names(self.benchmarks)
     l.getLogger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     l.getLogger().info(', '.join([x for x in set([x.name for x in self.benchmarks])]))
     return
