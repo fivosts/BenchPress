@@ -28,3 +28,85 @@ evaluator {
     }
   }
 }
+evaluator {
+  k_average_score {
+    target: "rodinia"
+    feature_space: "InstCountFeatures"
+    top_k: 5
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "full_results/BERT/Autophase/merged_samples.db"
+    }
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "full_results/CLgen/updated_clgen_samples.db"
+    }
+    db_group {
+      group_name: "GitHub"
+      db_type: "EncodedContentFiles"
+      database: "full_results/GitHub/encoded.db"
+    }
+    db_group {
+      group_name: "GitHub-768"
+      db_type: "EncodedContentFiles"
+      database: "full_results/GitHub/encoded.db"
+      size_limit: 768
+    }
+  }
+}
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "AutophaseFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "full_results/BERT/Autophase/merged_samples.db"
+    }
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "full_results/CLgen/updated_clgen_samples.db"
+    }
+    db_group {
+      group_name: "GitHub"
+      db_type: "EncodedContentFiles"
+      database: "full_results/GitHub/encoded.db"
+    }
+    db_group {
+      group_name: "GitHub-768"
+      db_type: "EncodedContentFiles"
+      database: "full_results/GitHub/encoded.db"
+      size_limit: 768
+    }
+  }
+}
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "InstCountFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "full_results/BERT/Autophase/merged_samples.db"
+    }
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "full_results/CLgen/updated_clgen_samples.db"
+    }
+    db_group {
+      group_name: "GitHub"
+      db_type: "EncodedContentFiles"
+      database: "full_results/GitHub/encoded.db"
+    }
+    db_group {
+      group_name: "GitHub-768"
+      db_type: "EncodedContentFiles"
+      database: "full_results/GitHub/encoded.db"
+      size_limit: 768
+    }
+  }
+}
