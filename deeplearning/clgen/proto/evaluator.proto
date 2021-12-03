@@ -15,8 +15,10 @@ option java_package = "com.clgen";
 message Evaluation {
   // Define workspace path
   optional string     workspace = 1;
+  // Define tokenizer path
+  optional string     tokenizer = 2;
   // Define a list of different evaluators to run.
-  repeated evaluators evaluator = 2;
+  repeated evaluators evaluator = 3;
 }
 
 // Instance of a single evaluation pass.
@@ -61,8 +63,7 @@ message MinScore {
 // Analyze the size of target bechmraks in number of instructions and token length.
 message AnalyzeTarget {
   repeated string               target      = 1;
-  optional string               tokenizer   = 2;
-  optional PlotterConfiguration plot_config = 3;
+  optional PlotterConfiguration plot_config = 2;
 }
 
 // 5

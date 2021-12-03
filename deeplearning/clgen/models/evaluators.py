@@ -14,6 +14,7 @@ from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import active_feed_database
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.corpuses import corpuses
+from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.util import monitors
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import pbutil
@@ -35,7 +36,10 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
   Parse config file and check for validity.
   """
   pbutil.AssertFieldIsSet(config, "workspace")
-  pathlib.path(config.workspace).resolve().mkdir(exist_ok = True, parents = True)
+  pbutil.AssertFieldIsSet(config, "tokenizer")
+  if not pathlib.Path(config.tokenizer).resolve().exists():
+    raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
+  pathlib.Path(config.workspace).resolve().mkdir(exist_ok = True, parents = True)
   for ev in config.evaluator:
     if ev.HasField("k_average_score"):
       for dbs in ev.k_average_score.db_group:
@@ -96,9 +100,6 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
-      pbutil.AssertFieldIsSet(ev.analyze_target, "tokenizer")
-      if not pathlib.Path(ev.analyze_target.tokenizer).resolve().exists():
-        raise FileNotFoundError(pathlib.Path(ev.analyze_target.tokenizer).resolve())
       for target in ev.analyze_target.targets:
         assert target in feature_sampler.targets, target
     elif ev.HasField("log_file"):
@@ -339,14 +340,13 @@ def main(config: evaluator_pb2.Evaluation):
   }
   db_cache       = {}
   target_cache   = {}
-  tokenizer      = None
   feature_spaces = []
   for ev in config.evaluator:
     kw_args = {
       "db_groups"      : [],
       "targets"        : None,
       "feature_space"  : None,
-      "tokenizer"      : None,
+      "tokenizer"      : pathlib.Path(config.tokenizer).resolve(),
       "top_k"          : None,
       "plotter_config" : None,
       "workspace_path" : pathlib.Path(config.workspace).resolve(),
@@ -358,7 +358,6 @@ def main(config: evaluator_pb2.Evaluation):
       sev = ev.min_score
     elif ev.HasField("analyze_target"):
       sev = ev.analyze_target
-      kw_args['tokenizer'] = tokenizers.FromFile(pathlib.Path(sev.tokenizer).resolve())
     elif ev.HasField("log_file"):
       sev = ev.log_file
     elif ev.HasField("comp_mem_grewe"):
