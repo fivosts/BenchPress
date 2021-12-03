@@ -189,7 +189,7 @@ def EncoderWorker(
 class EncodedContentFiles(sqlutil.Database):
   """A database of encoded pre-processed contentfiles."""
 
-  def __init__(self, url: str, is_pre_train: bool, must_exist: bool = False):
+  def __init__(self, url: str, is_pre_train: bool = False, must_exist: bool = False):
     self.encoded_path = pathlib.Path(url.replace("sqlite:///", "")).parent
     self.is_pre_train     = is_pre_train
     self.length_monitor   = monitors.CumulativeHistMonitor(self.encoded_path, "encoded_kernel_length")
