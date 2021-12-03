@@ -1,33 +1,30 @@
+workspace: "full_results/workspace"
+tokenizer: "full_results/backup_tokenizer.pkl"
 evaluator {
   k_average_score {
     target: "rodinia"
-    feature_space: "GreweFeatures"
-    top_k: 2
+    feature_space: "AutophaseFeatures"
+    top_k: 5
     db_group {
-      group_name: "BenchPress_fixed"
+      group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "results/BERT/Fixed_input/samples.db"
+      database: "full_results/BERT/Autophase/merged_samples.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "results/CLgen/updated_clgen_samples.db"
-    }
-  }
-}
-evaluator {
-  min_score {
-    db_group {
-      group_name: "BenchPress_fixed"
-      db_type: "SamplesDatabase"
-      database: "results/BERT/Fixed_input/samples.db"
+      database: "full_results/CLgen/updated_clgen_samples.db"
     }
     db_group {
-      group_name: "CLgen"
-      db_type: "SamplesDatabase"
-      database: "results/CLgen/updated_clgen_samples.db"
+      group_name: "GitHub"
+      db_type: "EncodedContentFiles"
+      database: "full_results/GitHub/encoded.db"
     }
-    target: "rodinia"
-    feature_space: "GreweFeatures"
+    db_group {
+      group_name: "GitHub-768"
+      db_type: "EncodedContentFiles"
+      database: "full_results/GitHub/encoded.db"
+      size_limit: 768
+    }
   }
 }
