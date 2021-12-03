@@ -186,9 +186,12 @@ class DBGroup(object):
       for db in self.databases:
         db_feats = db.get_features(self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_features
         for x in db_feats:
-          feats = extractor.RawToDictFeats(x)
+          try:
+            feats = extractor.RawToDictFeats(x)
+          except Exception as e:
+            l.getLogger().warn(x)
           if feature_space in feats and feats[feature_space]:
-            self.features[feature_space].append(feats)
+            self.features[feature_space].append(feats[feature_space])
     return self.features[feature_space]
 
 class Benchmark(typing.NamedTuple):
@@ -204,7 +207,9 @@ class TargetBenchmarks(object):
   def __init__(self, target: str):
     self.target        = target
     self.benchmark_cfs = feature_sampler.yield_cl_kernels(pathlib.Path(feature_sampler.targets[self.target]).resolve())
-    self.benchmarks    = {ext: None for ext in extractor.extractors.keys()}
+    self.benchmarks    = {ext: [] for ext in extractor.extractors.keys()}
+    l.getLogger().info("Loaded {} {} benchmarks".format(len(self.benchmark_cfs), self.target))
+    return
 
   def get_benchmarks(self, feature_space: str):
     """
@@ -215,13 +220,15 @@ class TargetBenchmarks(object):
         features = extractor.ExtractFeatures(k, [feature_space], header_file = h, use_aux_headers = False)
         if features[feature_space]:
           self.benchmarks[feature_space].append(
-            BenchmarkDistance.EvaluatedBenchmark(
+            Benchmark(
                 p,
                 p.name,
                 k,
                 features[feature_space],
               )
           )
+      self.benchmarks[feature_space] = feature_sampler.resolve_benchmark_names(self.benchmarks[feature_space])
+    l.getLogger().info("Extracted features for {} {} benchmarks".format(len(self.benchmarks[feature_space]), self.target))
     return self.benchmarks[feature_space]
 
 def LogFile(**kwargs):
@@ -242,20 +249,22 @@ def KAverageScore(**kwargs):
   target         = kwargs.get('targets')
   feature_space  = kwargs.get('feature_space')
   top_k          = kwargs.get('top_k')
-  plotter_config = kwargs.get('plotter_config')
+  plot_config    = kwargs.get('plot_config')
   workspace_path = kwargs.get('workspace_path')
   groups = {}
 
   for dbg in db_groups:
-    if not (isinstance(dbg.db_type, samples_database.SamplesDatabase) or isinstance(dbg.db_type, encoded.EncodedContentFiles)):
+    if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
     groups[dbg.group_name] = ([], [])
     for benchmark in target.get_benchmarks(feature_space):
       groups[dbg.group_name][0].append(benchmark.name)
+      # Find shortest distances.
       distances = sorted(
-        [feature_sampler.calculate_distance(fv, benchmark.features)
+        [feature_sampler.calculate_distance(fv, benchmark.features, feature_space)
          for fv in dbg.get_features(feature_space)]
       )
+      # Compute target's distance from O(0,0)
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
       avg_dist = sum(distances[:top_k]) / len(distances[:top_k])
 
@@ -263,9 +272,9 @@ def KAverageScore(**kwargs):
 
   plotter.GrouppedBars(
     groups = groups,
-    plot_name = "avg_{}_dist_{}".format(top_k, self.feature_space.replace("Features", " Features")),
+    plot_name = "avg_{}_dist_{}".format(top_k, feature_space.replace("Features", " Features")),
     path = workspace_path,
-    **plotter_config,
+    **plot_config if plot_config else {},
   )
   return
 
@@ -295,7 +304,7 @@ def CompMemGrewe(**kwargs):
   db_groups      = kwargs.get('db_groups')
   target         = kwargs.get('targets')
   workspace_path = kwargs.get('workspace_path')
-  plotter_config = kwargs.get('plotter_config')
+  plot_config    = kwargs.get('plot_config')
   feature_space  = "GreweFeatures"
 
   groups = {}
@@ -323,7 +332,7 @@ def CompMemGrewe(**kwargs):
     groups = groups,
     plot_name = "comp_vs_mem_grewe",
     path = workspace_path,
-    **plotter_config
+    **plot_config if plot_config else {}
   )
   return
 
@@ -348,7 +357,7 @@ def main(config: evaluator_pb2.Evaluation):
       "feature_space"  : None,
       "tokenizer"      : pathlib.Path(config.tokenizer).resolve(),
       "top_k"          : None,
-      "plotter_config" : None,
+      "plot_config"    : None,
       "workspace_path" : pathlib.Path(config.workspace).resolve(),
     }
     if ev.HasField("k_average_score"):
@@ -388,8 +397,8 @@ def main(config: evaluator_pb2.Evaluation):
     if sev.HasField("feature_space"):
       kw_args['feature_space'] = sev.feature_space
     # Gather plotter configuration
-    if sev.HasField("plotter_config"):
-      kw_args['plotter_config'] = sev.plotter_config
+    if sev.HasField("plot_config"):
+      kw_args['plot_config'] = sev.plot_config
 
     evaluation_map[type(sev)](**kw_args)
   return
