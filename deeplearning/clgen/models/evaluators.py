@@ -43,6 +43,13 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
           p = pathlib.Path(db).resolve()
           if not p.exists():
             raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
       pbutil.AssertFieldConstraint(
         ev.k_average_score,
         "target",
@@ -62,6 +69,13 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
           p = pathlib.Path(db).resolve()
           if not p.exists():
             raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
       pbutil.AssertFieldConstraint(
         ev.min_score,
         "target",
@@ -75,6 +89,13 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
           p = pathlib.Path(db).resolve()
           if not p.exists():
             raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
       pbutil.AssertFieldIsSet(ev.analyze_target, "tokenizer")
       if not pathlib.Path(ev.analyze_target.tokenizer).resolve().exists():
         raise FileNotFoundError(pathlib.Path(ev.analyze_target.tokenizer).resolve())
@@ -86,12 +107,26 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
           p = pathlib.Path(db).resolve()
           if not p.exists():
             raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
     elif ev.HasField("comp_mem_grewe"):
       for dbs in ev.comp_mem_grewe.db_group:
         for db in dbs.database:
           p = pathlib.Path(db).resolve()
           if not p.exists():
             raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
       pbutil.AssertFieldConstraint(
         ev.comp_mem_grewe,
         "target",
@@ -124,18 +159,22 @@ class DBGroup(object):
     else:
       self.data = []
       for db in self.databases:
-        self.data += db.get_data
+        if self.db_type == encoded.EncodedContentFiles:
+          self.data += db.get_data(self.size_limit)
+        else:
+          self.data += db.get_data
 
-  def __init__(self, group_name: str, db_type: str, databases: typing.List[pathlib.Path]):
+  def __init__(self, group_name: str, db_type: str, databases: typing.List[pathlib.Path], size_limit: int = None):
     self.group_name = group_name
     self.db_type = {
       "SamplesDatabase"    : samples_database.SamplesDatabase,
       "ActiveFeedDatabase" : active_feed_database.ActiveFeedDatabase,
+      "EncodedContentFiles": encoded.EncodedContentFiles,
     }[db_type]
-    self.databases = [self.db_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
-    self.features  = {ext: None for ext in extractor.extractors.keys()}
-
-    return 
+    self.databases  = [self.db_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
+    self.features   = {ext: None for ext in extractor.extractors.keys()}
+    self.size_limit = size_limit
+    return
 
   def get_features(self, feature_space: str):
     """
@@ -144,8 +183,9 @@ class DBGroup(object):
     if not self.features[feature_space]:
       self.features[feature_space] = []
       for db in self.databases:
-        for x in db.get_features:
-          feats = extractor.RawToDictFeats(x.feature_vector)
+        db_feats = db.get_features(self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_features
+        for x in db_feats:
+          feats = extractor.RawToDictFeats(x)
           if feature_space in feats and feats[feature_space]:
             self.features[feature_space].append(feats)
     return self.features[feature_space]
@@ -206,8 +246,8 @@ def KAverageScore(**kwargs):
   groups = {}
 
   for dbg in db_groups:
-    if not isinstance(dg.db_type, samples_database.SamplesDatabase):
-      raise ValueError("Scores require SamplesDatabase but received", dbg.db_type)
+    if not (isinstance(dbg.db_type, samples_database.SamplesDatabase) or isinstance(dbg.db_type, encoded.EncodedContentFiles)):
+      raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
     groups[dbg.group_name] = ([], [])
     for benchmark in target.get_benchmarks(feature_space):
       groups[dbg.group_name][0].append(benchmark.name)
@@ -330,7 +370,8 @@ def main(config: evaluator_pb2.Evaluation):
     for dbs in sev.db_group:
       key = dbs.group_name + ''.join(dbs.database)
       if key not in db_cache:
-        db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database)
+        size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+        db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, size_limit = size_limit)
       kw_args['db_groups'].append(db_cache[key])
     # Gather target benchmarks and cache them
     if sev.HasField("target"):
