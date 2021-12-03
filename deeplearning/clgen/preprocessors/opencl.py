@@ -183,7 +183,7 @@ def CompileLlvmBytecode(text: str, header_file = None, use_aux_headers: bool = T
     text,
     ".cl",
     GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers),# + ["-Werror=implicit-function-declaration"],
-    return_diagnostics = return_diagnostics,
+    header_file = header_file,
   )
 
 def CompileOptimizer(text: str,
