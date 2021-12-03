@@ -228,7 +228,7 @@ class TargetBenchmarks(object):
               )
           )
       self.benchmarks[feature_space] = feature_sampler.resolve_benchmark_names(self.benchmarks[feature_space])
-    l.getLogger().info("Extracted features for {} {} benchmarks".format(len(self.benchmarks[feature_space]), self.target))
+      l.getLogger().info("Extracted features for {} {} benchmarks".format(len(self.benchmarks[feature_space]), self.target))
     return self.benchmarks[feature_space]
 
 def LogFile(**kwargs):
@@ -283,6 +283,8 @@ def MinScore(**kwargs):
   Compare the closest sample per target benchmark
   for all different database groups.
   """
+  if 'top_k' in kwargs:
+    del kwargs['top_k']
   KAverageScore(top_k = 1, **kwargs)
   return
 
@@ -392,7 +394,7 @@ def main(config: evaluator_pb2.Evaluation):
       else:
         if sev.target not in target_cache:
           target_cache[sev.target] = TargetBenchmarks(sev.target)
-          kw_args["targets"] = target_cache[sev.target]
+        kw_args["targets"] = target_cache[sev.target]
     # Gather feature spaces if applicable.
     if sev.HasField("feature_space"):
       kw_args['feature_space'] = sev.feature_space
