@@ -344,7 +344,7 @@ class PreprocessedContentFiles(sqlutil.Database):
             pool.terminate()
             raise e
       else:
-          db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root))
+          db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root), must_exist = True)
           if db.mainfile_count == 0:
             raise ValueError("Input BQ database {} is empty!".format(contentfile_root))
           bar = progressbar.ProgressBar(max_value = db.mainfile_count)
