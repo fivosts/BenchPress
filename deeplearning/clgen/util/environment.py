@@ -32,8 +32,9 @@ try:
   LOCAL_RANK          = int(os.environ.get("LOCAL_RANK", os.environ.get("SLURM_LOCALID", 0)))
   WORLD_RANK          = int(os.environ.get("RANK", os.environ.get("SLURM_PROCID", 0)))
   WORLD_SIZE          = int(os.environ.get("WORLD_SIZE", os.environ.get("SLURM_NTASKS", 1)))
-  GLOO_SOCKET_IFNAME  = os.environ.get("GLOO_SOCKET_NAME", ifcfg.default_interface()['device'])
-  NCCL_SOCKET_IFNAME  = os.environ.get("NCCL_SOCKET_IFNAME", ifcfg.default_interface()['device'])
+  if "GLOO_SOCKET_IFNAME" not in os.environ:
+    os.environ["GLOO_SOCKET_IFNAME"] = ifcfg.default_interface()['device']
+  if "NCCL_SOCKET_IFNAME" not in os.environ:
+    os.environ["NCCL_SOCKET_IFNAME"] = ifcfg.default_interface()['device']
 except Exception as e:
   raise e
-  
