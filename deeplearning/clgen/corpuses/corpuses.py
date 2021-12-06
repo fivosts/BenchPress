@@ -234,6 +234,8 @@ class Corpus(object):
       EmptyCorpusException: If there are no content files, or no successfully
         pre-processed files.
     """
+    if self.pre_train and not tokenizer:
+      raise ValueError("Tokenizer must be specified when encoding pre-training corpus.")
     self._created = True
     l.getLogger().info("Content ID: {}".format(self.content_id))
 
