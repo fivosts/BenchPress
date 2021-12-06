@@ -326,7 +326,7 @@ def DoFlagsAction(
       if FLAGS.stop_after == "corpus":
         instance.model.corpus.Create()
         if instance.model.pre_train_corpus:
-          instance.model.pre_train_corpus.Create()
+          instance.model.pre_train_corpus.Create(tokenizer = instance.model.corpus.tokenizer)
       elif FLAGS.stop_after == "pre_train":
         instance.PreTrain()
         l.getLogger().info("Model: {}".format(instance.model.cache.path))
