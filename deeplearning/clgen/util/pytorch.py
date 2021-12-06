@@ -13,6 +13,12 @@ flags.DEFINE_boolean(
   "Do not use GPU/TPU in pytorch session."
 )
 
+flags.DEFINE_string(
+  "DDP_backend",
+  "nccl",
+  "Select backend for Distributed Data Parallel. Valid choices are \'nccl\' and \'gloo\'"
+)
+
 import torch
 
 try:
@@ -30,8 +36,6 @@ offset_device = None
 devices       = None
 device        = None
 num_gpus      = None
-num_nodes     = environment.WORLD_SIZE
-tcp_store     = None
 
 def initPytorch() -> None:
   global torch_tpu_available
@@ -39,15 +43,13 @@ def initPytorch() -> None:
   global devices
   global device
   global num_gpus
-  global num_nodes
-  global tcp_store
   if FLAGS.pt_cpu_only:
     device = torch.device("cpu")
     num_gpus = 0
   elif torch_tpu_available:
     device = torch_xla.xla_device()
     num_gpus = 0
-  elif num_nodes == 1:
+  elif environment.WORLD_SIZE == 1:
     # if num_gpus is > 1 we'll use nn.DataParallel.
     # If you only want to use a specific subset of GPUs use `CUDA_VISIBLE_DEVICES=0`
     # Explicitly set CUDA to the first (index 0) CUDA device, otherwise `set_device` will
@@ -72,17 +74,17 @@ def initPytorch() -> None:
     tcp_store = torch.distributed.TCPStore(
       environment.MASTER_ADDR,
       environment.MASTER_PORT,
-      num_nodes,
+      environment.WORLD_SIZE,
       environment.WORLD_RANK == 0
     )
     torch.distributed.init_process_group(
-      backend    = "nccl",
+      backend    = FLAGS.DDP_backend,
       store      = tcp_store,
       rank       = environment.WORLD_RANK,
-      world_size = num_nodes,
+      world_size = environment.WORLD_SIZE,
     )
     num_nodes = torch.distributed.get_world_size()
-    num_gpus  = num_nodes
+    num_gpus  = num_nodes # TODO ?
 
     device = torch.device("cuda", environment.LOCAL_RANK)
     offset_device = torch.device("cuda", environment.LOCAL_RANK)
