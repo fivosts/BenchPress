@@ -69,7 +69,7 @@ def initPytorch() -> None:
   else:
     # Here, we'll use torch.distributed.
     # Initializes the distributed backend which will take care of sychronizing nodes/GPUs.
-    # This branch wiill trigget DistributedDataParalel instead of simple DP.
+    # This branch will trigger DistributedDataParalel instead of simple DP.
     # Distributed training prohibits manual selection of GPUs and takes for granted that cuda is available.
     tcp_store = torch.distributed.TCPStore(
       environment.MASTER_ADDR,
