@@ -2,6 +2,7 @@
 Evaluators - result fetchers for samples across different techniques.
 """
 import typing
+import io
 import subprocess
 import pathlib
 import sklearn
@@ -9,6 +10,7 @@ import math
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 import numpy as np
+import pandas as pd
 
 from deeplearning.clgen.proto import evaluator_pb2
 from deeplearning.clgen.samplers import samplers
@@ -414,16 +416,39 @@ def TopKCLDrive(**kwargs) -> None:
     for benchmark in target.get_benchmarks(feature_space):
       groups[dbg.group_name][0].append(benchmark.name)
       # Find shortest distances.
-      distances = sorted(
-        [feature_sampler.calculate_distance(fv, benchmark.features, feature_space)
-         for fv in dbg.get_features(feature_space)]
+      src_distances = sorted(
+        [(src, feature_sampler.calculate_distance(fv, benchmark.features, feature_space))
+         for src, fv in dbg.get_data_features(feature_space)],
+         key = lambda x: x[1]
       )
-      for sd in distances:
-        # Monitor distance
-        # Get label
+      for src, dist in src_distances:
+        try:
+          with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem) as f:
+            f.write(src)
+            f.flush()
+            proc = subprocess.Popen(
+              "{} --srcs={} --num_runs=1000 --gsize=4096 --lsize=1024 --envs=".format(cldrive, f).split(),
+              stdout = subprocess.PIPE,
+              stderr = subprocess.PIPE,
+              universal_newlines = True,
+            )
+            stdout, stderr = proc.communicate()
+            df = pd.read_csv(io.StringIO(stdout), sep = ",")
+            avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean()) / 1000
+            avg_time_gpu_us = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean()) / 1000
+
+          # Save distance of kernel from target.
+          groups[dbg.group_name][1].append(dist)
+          # Store label
+          groups[dbg.group_name][2].append("GPU" if avg_time_cpu_us > avg_time_gpu_us else "CPU")
+          # Some thoughts: Maybe a dedicated plot to show distribution of execution times, etc. ?
+          # In here you basically need the label.
+        except Exception as e:
+          l.getLogger().error(src)
+          l.getLogger().error(e)
       # Compute target's distance from O(0,0)
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
-      avg_dist = sum(distances[:top_k]) / len(distances[:top_k])
+      avg_dist = sum(src_distances[:top_k]) / len(src_distances[:top_k])
 
       groups[dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
 
