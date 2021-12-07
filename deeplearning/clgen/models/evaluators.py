@@ -262,7 +262,7 @@ class TargetBenchmarks(object):
       l.getLogger().info("Extracted features for {} {} benchmarks".format(len(self.benchmarks[feature_space]), self.target))
     return self.benchmarks[feature_space]
 
-def LogFile(**kwargs):
+def LogFile(**kwargs) -> None:
   """
   Write benchmarks  and target stats in log file.
   """
@@ -271,7 +271,7 @@ def LogFile(**kwargs):
   raise NotImplementedError
   return
 
-def KAverageScore(**kwargs):
+def KAverageScore(**kwargs) -> None:
   """
   Compare the average of top-K closest per target benchmark
   for all different database groups.
@@ -309,7 +309,7 @@ def KAverageScore(**kwargs):
   )
   return
 
-def MinScore(**kwargs):
+def MinScore(**kwargs) -> None:
   """
   Compare the closest sample per target benchmark
   for all different database groups.
@@ -319,7 +319,7 @@ def MinScore(**kwargs):
   KAverageScore(top_k = 1, **kwargs)
   return
 
-def AnalyzeTarget(**kwargs):
+def AnalyzeTarget(**kwargs) -> None:
   """
   Analyze requested target benchmark suites.
   """
@@ -329,7 +329,7 @@ def AnalyzeTarget(**kwargs):
   raise NotImplementedError
   return
 
-def CompMemGrewe(**kwargs):
+def CompMemGrewe(**kwargs) -> None:
   """
   Compare Computation vs Memory instructions for each database group
   and target benchmarks.
@@ -369,6 +369,8 @@ def CompMemGrewe(**kwargs):
   )
   return
 
+def TopKCLDrive(**kwargs) -> None:
+
 def main(config: evaluator_pb2.Evaluation):
   """
   Run the evaluators iteratively.
@@ -379,6 +381,7 @@ def main(config: evaluator_pb2.Evaluation):
     evaluator_pb2.MinScore      : MinScore,
     evaluator_pb2.AnalyzeTarget : AnalyzeTarget,
     evaluator_pb2.CompMemGrewe  : CompMemGrewe,
+    evaluator_pb2.TopKCLDrive   : TopKCLDrive,
   }
   db_cache       = {}
   target_cache   = {}
