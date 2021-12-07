@@ -9,7 +9,9 @@ from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import crypto
 
 from eupy.native import logger as l
+from absl import flags
 
+FLAGS = flags.FLAGS
 GREWE = environment.GREWE
 
 class GreweFeatures(object):
@@ -51,13 +53,13 @@ class GreweFeatures(object):
     Returns:
       Feature vector and diagnostics in str format.
     """
-    with tempfile.NamedTemporaryFile('w', prefix = "feat_ext_", suffix = '.cl') as f:
+    with tempfile.NamedTemporaryFile('w', prefix = "feat_ext_", suffix = '.cl', dir = FLAGS.local_filesystem) as f:
       f.write(src)
       f.flush()
 
       extra_arg = ""
       if header_file:
-        htf = tempfile.NamedTemporaryFile('w', prefix = "feat_ext_head_", suffix = '.h')
+        htf = tempfile.NamedTemporaryFile('w', prefix = "feat_ext_head_", suffix = '.h', dir = FLAGS.local_filesystem)
         htf.write(header_file)
         htf.flush()
         extra_arg = "-extra-arg=-include{}".format(htf.name)

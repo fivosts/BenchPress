@@ -1,8 +1,6 @@
 """
 Feature Extraction module for Autophase paper features.
 """
-import subprocess
-import tempfile
 import typing
 
 from deeplearning.clgen.preprocessors import opencl

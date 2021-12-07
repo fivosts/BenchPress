@@ -30,6 +30,9 @@ import clang.cindex
 from absl import flags
 from deeplearning.clgen.util import environment
 from eupy.native import  logger as l
+from absl import flags
+
+FLAGS = flags.FLAGS
 
 # The marker used to mark stdin from clang pre-processor output.
 CLANG_STDIN_MARKER = re.compile(r'# \d+ "<stdin>" 2')
@@ -159,13 +162,13 @@ def CompileLlvmBytecode(src: str,
     ValueError: If clang does not complete before timeout_seconds.
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix) as f:
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem) as f:
     f.write(src)
     f.flush()
 
     extra_args = []
     if header_file:
-      htf = tempfile.NamedTemporaryFile('w', prefix = "clgen_preprocessors_clang_header_", suffix = ".h")
+      htf = tempfile.NamedTemporaryFile('w', prefix = "clgen_preprocessors_clang_header_", suffix = ".h", dir = FLAGS.local_filesystem)
       htf.write(header_file)
       htf.flush()
       extra_args = ['-include{}'.format(htf.name)]
@@ -217,7 +220,7 @@ def CompileOptimizer(src: str,
   except ValueError as e:
     raise ValueError("Compilation failed")
 
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix='.ll') as f:
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix='.ll', dir = FLAGS.local_filesystem) as f:
     f.write(bc)
     f.flush()
 
@@ -285,13 +288,13 @@ def Compile(src: str,
     ValueError: In case of an error.
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix) as f:
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem) as f:
     f.write(src)
     f.flush()
 
     extra_args = []
     if header_file:
-      htf = tempfile.NamedTemporaryFile('w', prefix = "clgen_preprocessors_clang_header_", suffix = ".h")
+      htf = tempfile.NamedTemporaryFile('w', prefix = "clgen_preprocessors_clang_header_", suffix = ".h", dir = FLAGS.local_filesystem)
       htf.write(header_file)
       htf.flush()
       extra_args = ['-include{}'.format(htf.name)]
@@ -335,7 +338,7 @@ def Parse(src: str,
     ValueError: In case of an error.
   """
 
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix) as f:
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem) as f:
 
     try:
       unit = clang.cindex.TranslationUnit.from_source(f.name, args = cflags, unsaved_files = [(f.name, src)])
@@ -416,7 +419,7 @@ def ExtractFunctions(src: str,
     ValueError: In case of an error.
   """
   with tempfile.NamedTemporaryFile(
-    "w", prefix="clgen_preprocessors_clang_", suffix=suffix
+    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem
   ) as f:
     try:
       unit = clang.cindex.TranslationUnit.from_source(f.name, args = cflags, unsaved_files = [(f.name, src)])#, args = args + builtin_cflags)
@@ -493,7 +496,7 @@ def DeriveSourceVocab(src: str,
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
   with tempfile.NamedTemporaryFile(
-    "w", prefix="clgen_preprocessors_clang_", suffix=suffix
+    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem
   ) as f:
     f.write(src)
     f.flush()
@@ -539,7 +542,7 @@ def AtomizeSource(src: str,
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
   with tempfile.NamedTemporaryFile(
-    "w", prefix="clgen_preprocessors_clang_", suffix=suffix
+    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem
   ) as f:
     f.write(src)
     f.flush()
@@ -575,7 +578,7 @@ def GreweFeatureExtraction(src: str,
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
   with tempfile.NamedTemporaryFile(
-    "w", prefix="clgen_preprocessors_clang_", suffix=suffix
+    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem
   ) as f:
     f.write(src)
     f.flush()
