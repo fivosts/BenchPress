@@ -134,6 +134,37 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         lambda x: x in feature_sampler.targets,
         "target {} not found".format(ev.comp_mem_grewe.target),
       )
+    elif ev.HasField("topk_cldrive"):
+      for dbs in ev.topk_cldrive.db_group:
+        for db in dbs.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
+      pbutil.AssertFieldIsSet(ev.topk_cldrive, "cldrive")
+      if not pathlib.Path(ev.tok_cldrive.cldrive).resolve().exists():
+        raise FileNotFoundError(ev.topk_cldrive.cldrive)
+      pbutil.AssertFieldConstraint(
+        ev.topk_cldrive,
+        "target",
+        lambda x: x in feature_sampler.targets,
+        "target {} not found".format(ev.topk_cldrive.target),
+      )
+      pbutil.AssertFieldIsSet(ev.topk_cldrive, "feature_space")
+      pbutil.AssertFieldConstraint(
+        ev.topk_cldrive,
+        "top_k",
+        lambda x: x > 0,
+        "top-K factor must be positive",
+      )
+    else:
+      raise ValueError(ev)
   return config
 
 def ConfigFromFlags() -> evaluator_pb2.Evaluation:
