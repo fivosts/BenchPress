@@ -36,6 +36,7 @@ offset_device = None
 devices       = None
 device        = None
 num_gpus      = None
+num_nodes     = None
 
 def initPytorch() -> None:
   global torch_tpu_available
