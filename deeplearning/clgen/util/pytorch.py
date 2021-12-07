@@ -44,6 +44,7 @@ def initPytorch() -> None:
   global devices
   global device
   global num_gpus
+  global num_nodes
   if FLAGS.pt_cpu_only:
     device = torch.device("cpu")
     num_gpus = 0
