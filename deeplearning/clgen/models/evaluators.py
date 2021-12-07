@@ -1,4 +1,8 @@
+"""
+Evaluators - result fetchers for samples across different techniques.
+"""
 import typing
+import subprocess
 import pathlib
 import sklearn
 import math
@@ -371,6 +375,9 @@ def CompMemGrewe(**kwargs) -> None:
 
 def TopKCLDrive(**kwargs) -> None:
 
+  raise NotImplementedError
+  return
+
 def main(config: evaluator_pb2.Evaluation):
   """
   Run the evaluators iteratively.
@@ -389,11 +396,7 @@ def main(config: evaluator_pb2.Evaluation):
   for ev in config.evaluator:
     kw_args = {
       "db_groups"      : [],
-      "targets"        : None,
-      "feature_space"  : None,
       "tokenizer"      : pathlib.Path(config.tokenizer).resolve(),
-      "top_k"          : None,
-      "plot_config"    : None,
       "workspace_path" : pathlib.Path(config.workspace).resolve(),
     }
     if ev.HasField("k_average_score"):
@@ -407,10 +410,14 @@ def main(config: evaluator_pb2.Evaluation):
       sev = ev.log_file
     elif ev.HasField("comp_mem_grewe"):
       sev = ev.comp_mem_grewe
+    elif ev.HasField("topk_cldrive"):
+      sev = ev.topk_cldrive
+      kw_args['top_k']   = sev.top_k
+      kw_args["cldrive"] = sev.cldrive
     else:
       raise NotImplementedError(ev)
 
-    # Gather database groups and cache them
+    # Gather database groups and cache them.
     for dbs in sev.db_group:
       key = dbs.group_name + ''.join(dbs.database)
       if key not in db_cache:
