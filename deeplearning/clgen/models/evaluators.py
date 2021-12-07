@@ -186,7 +186,7 @@ class DBGroup(object):
   Class representation of a group of databases evaluated.
   """
   @property
-  def data(self):
+  def data(self) -> typing.List[str]:
     """
     Get concatenated data of all databases.
     """
@@ -207,12 +207,13 @@ class DBGroup(object):
       "ActiveFeedDatabase" : active_feed_database.ActiveFeedDatabase,
       "EncodedContentFiles": encoded.EncodedContentFiles,
     }[db_type]
-    self.databases  = [self.db_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
-    self.features   = {ext: None for ext in extractor.extractors.keys()}
-    self.size_limit = size_limit
+    self.databases     = [self.db_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
+    self.features      = {ext: None for ext in extractor.extractors.keys()}
+    self.data_features = {ext: None for ext in extractor.extractors.keys()}
+    self.size_limit    = size_limit
     return
 
-  def get_features(self, feature_space: str):
+  def get_features(self, feature_space: str) -> typing.List[typing.Dict[str, float]]:
     """
     Get or set and get features for a specific feature space.
     """
@@ -228,6 +229,23 @@ class DBGroup(object):
           if feature_space in feats and feats[feature_space]:
             self.features[feature_space].append(feats[feature_space])
     return self.features[feature_space]
+
+  def get_data_features(self, feature_space: str) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
+    """
+    Get or set feature with data list of tuples.
+    """
+    if not self.data_features[feature_space]:
+      self.data_features[feature_space] = []
+      for db in self.databases:
+        db_feats = db.get_data_features(self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_data_features
+        for src, f in db_feats:
+          try:
+            feats = extractor.RawToDictFeats(f)
+          except Exception as e:
+            l.getLogger().warn(f)
+          if feature_space in feats and feats[feature_space]:
+            self.data_features[feature_space].append((src, feats[feature_space]))
+    return self.data_features[feature_space]
 
 class Benchmark(typing.NamedTuple):
   path     : pathlib.Path
@@ -374,6 +392,40 @@ def CompMemGrewe(**kwargs) -> None:
   return
 
 def TopKCLDrive(**kwargs) -> None:
+  """
+  Collect top-K samples per database group for each target benchmark.
+  """
+  db_groups      = kwargs.get('db_groups')
+  target         = kwargs.get('targets')
+  feature_space  = kwargs.get('feature_space')
+  top_k          = kwargs.get('top_k')
+  cldrive        = kwargs.get('cldrive')
+  plot_config    = kwargs.get('plot_config')
+  workspace_path = kwargs.get('workspace_path')
+
+  groups = {}
+
+  # For each db group -> for each target -> k samples -> 1) benchmark.name 2) distance 3) label.
+
+  for dbg in db_groups:
+    if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
+      raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
+    groups[dbg.group_name] = ([], [], [])
+    for benchmark in target.get_benchmarks(feature_space):
+      groups[dbg.group_name][0].append(benchmark.name)
+      # Find shortest distances.
+      distances = sorted(
+        [feature_sampler.calculate_distance(fv, benchmark.features, feature_space)
+         for fv in dbg.get_features(feature_space)]
+      )
+      for sd in distances:
+        # Monitor distance
+        # Get label
+      # Compute target's distance from O(0,0)
+      target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
+      avg_dist = sum(distances[:top_k]) / len(distances[:top_k])
+
+      groups[dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
 
   raise NotImplementedError
   return
