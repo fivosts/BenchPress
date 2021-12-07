@@ -491,10 +491,9 @@ class torchBert(backends.BackendBase):
       if self.torch_tpu_available:
         total_train_batch_size = self.train_batch_size * self.pytorch.torch_xla.xrt_world_size()
       else:
-        dummy_num_machines = -1
         total_train_batch_size = (
           self.train_batch_size
-          * (self.torch.distributed.get_world_size() if dummy_num_machines != -1 else 1)
+          * (self.torch.distributed.get_world_size() if self.pytorch.num_nodes > 1 else 1)
         )
 
       # Set dataloader in case of TPU training.
@@ -529,6 +528,14 @@ class torchBert(backends.BackendBase):
       try:
         self.train.model.train()
         for epoch in tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False):
+
+          # In distributed mode, calling the set_epoch() method at
+          # the beginning of each epoch before creating the DataLoader iterator
+          # is necessary to make shuffling work properly across multiple epochs.
+          # Otherwise, the same ordering will be always used.
+          if self.pytorch.num_nodes > 1:
+            loader.sampler.set_epoch(epoch)
+
           if epoch < self.current_step // self.steps_per_epoch:
             continue # Stupid bar won't resume.
 
