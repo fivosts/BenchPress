@@ -3,6 +3,7 @@ import contextlib
 import pathlib
 import datetime
 import typing
+import progressbar
 import sqlite3
 from google.cloud import bigquery
 
@@ -238,8 +239,9 @@ def chunkify_db(bq_db: bqDatabase, chunks: int, prefix: str) -> None:
   for db_idx, db in enumerate(out_dbs):
     l.getLogger().info("Writing db_{}...".format(db_idx))
     with db.Session() as s:
-      batch = out_dbs.main_files_batch(limit = chunk_size + (chunks if db_idx == chunks - 1 else 0), offset = idx)
-      for file in batch:
+      batch = bq_db.main_files_batch(limit = chunk_size + (chunks if db_idx == chunks - 1 else 0), offset = idx)
+      p = progressbar.ProgressBar(max_value = len(batch))
+      for file in bar(batch):
         s.add(file)
         idx += 1
       s.commit()
