@@ -1,5 +1,6 @@
 """A module for databases of CLgen samples."""
 import contextlib
+import pathlib
 import datetime
 import typing
 import sqlite3
@@ -8,6 +9,23 @@ from google.cloud import bigquery
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from deeplearning.clgen.util import sqlutil
+
+from absl import app, flags
+from eupy.native import logger as l
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string(
+  "bq_database",
+  None,
+  "Insert path of BigQuery's database."
+)
+
+flags.DEFINE_int(
+  "chunkify",
+  None,
+  "Select chunkifying factor to split BQ database into sub-databases to perform pseudo-distributed preprocessing."
+)
 
 Base = declarative.declarative_base()
 
@@ -209,3 +227,41 @@ class bqDatabase(sqlutil.Database):
     """
     with self.Session() as s:
       return s.query(bqData).first()
+
+def chunkify_db(bq_db: bqDatabase, chunks: int, prefix: str) -> None:
+  out_dbs = [bqDatabase(url = "sqlite:///{}_{}".format(prefix, idx)) for idx in range(chunks)]
+
+  total_files = bq_db.mainfile_count
+  chunk_size = total_files // chunks
+
+  idx = 0
+  for db_idx, db in enumerate(out_dbs):
+    l.getLogger().info("Writing db_{}...".format(db_idx))
+    with db.Session() as s:
+      batch = out_dbs.main_files_batch(limit = chunk_size + (chunks if db_idx == chunks - 1 else 0), offset = idx)
+      for file in batch:
+        s.add(file)
+        idx += 1
+      s.commit()
+  return
+
+def initMain(*args, **kwargs):
+  """
+  Setup module's operations.
+  """
+  l.initLogger(name = "bigQuery_database", lvl = 20, mail = (None, 5), colorize = True, step = False)
+  if FLAGS.chunkify or FLAGS.chunkify < 2:
+    if not FLAGS.bq_database:
+      raise ValueError("You must set a path for bq_database")
+    bq_db_path = pathlib.Path(FLAGS.bq_database).resolve()
+    if not bq_db_path.exists():
+      raise FileNotFoundError(bq_db_path)
+    bq_db = bqDatabase(url = "sqlite:///{}".format(str(bq_db_path)), must_exist = True)
+    chunkify_db(bq_db, FLAGS.chunkify, prefix = bq_db_path.stem)
+  else:
+    l.getLogger().warn("Chunkify has not been set or has been set to less than 2. Nothing to do, exiting...")
+  return
+
+if __name__ == "__main__":
+  app.run(initMain)
+  sys.exit(0)
