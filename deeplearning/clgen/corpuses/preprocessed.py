@@ -57,6 +57,18 @@ flags.DEFINE_boolean(
   "Set to override incomplete pre-processing. Does not set DB value to 'done'"
 )
 
+flags.DEFINE_string(
+  "preprocessed_databases",
+  None,
+  "Comma-separated list of paths for input preprocessed databases."
+)
+
+flags.DEFINE_string(
+  "merged_preprocessed_database",
+  None,
+  "Path for merged output preprocessed database"
+)
+
 Base = declarative.declarative_base()
 
 
