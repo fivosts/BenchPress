@@ -348,7 +348,7 @@ class PreprocessedContentFiles(sqlutil.Database):
           if db.mainfile_count == 0:
             raise ValueError("Input BQ database {} is empty!".format(contentfile_root))
           done = set(
-            [int(x[0].replace("main_files/", "")) for x in session.query(PreprocessedContentFile.input_relpath)]
+            [x[0].replace("main_files/", "") for x in session.query(PreprocessedContentFile.input_relpath)]
           )
           bar = progressbar.ProgressBar(max_value = db.mainfile_count)
           chunk, idx = 100000, 0
