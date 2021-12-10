@@ -112,6 +112,30 @@ class PreprocessedContentFile(Base):
   )
 
   @classmethod
+  def FromPreprocessedContentFile(
+    cls,
+    preprocessed_file: "PreprocessedContentFile",
+  ) -> "PreprocessedContentFile":
+    """
+    Replicate PreprocessedContentFile
+    """
+    return PreprocessedContentFile(
+      id                      = preprocessed_file.id,
+      input_relpath           = preprocessed_file.input_relpath,
+      input_sha256            = preprocessed_file.input_sha256,
+      input_charcount         = preprocessed_file.input_charcount,
+      input_linecount         = preprocessed_file.input_linecount,
+      sha256                  = preprocessed_file.sha256,
+      charcount               = preprocessed_file.charcount,
+      linecount               = preprocessed_file.linecount,
+      text                    = preprocessed_file.text,
+      preprocessing_succeeded = preprocessed_file.preprocessing_succeeded,
+      preprocess_time_ms      = preprocessed_file.preprocess_time_ms,
+      wall_time_ms            = preprocessed_file.wall_time_ms,
+      date_added              = datetime.datetime.utcnow(),
+    )
+
+  @classmethod
   def FromContentFile(
     cls,
     contentfile_root: pathlib.Path,
@@ -595,7 +619,7 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
       data = [x for x in s.query(PreprocessedContentFiles).all()]
     with out_db.Session() as s:
       for df in data:
-        s.add(df)
+        s.add(PreprocessedContentFile.FromPreprocessedContentFile(df))
       s.commit()
   return
 
