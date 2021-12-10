@@ -240,7 +240,7 @@ def chunkify_db(bq_db: bqDatabase, chunks: int, prefix: str) -> None:
     l.getLogger().info("Writing db_{}...".format(db_idx))
     with db.Session() as s:
       batch = bq_db.main_files_batch(limit = chunk_size + (chunks if db_idx == chunks - 1 else 0), offset = idx)
-      p = progressbar.ProgressBar(max_value = len(batch))
+      bar = progressbar.ProgressBar(max_value = len(batch))
       for file in bar(batch):
         s.add(file)
         idx += 1
