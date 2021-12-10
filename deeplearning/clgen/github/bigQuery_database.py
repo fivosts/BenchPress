@@ -130,7 +130,7 @@ class bqDatabase(sqlutil.Database):
     with self.Session() as s:
       files = s.query(bqMainFile).filter(bqMainFile.id not in exclude_id).limit(limit).offset(offset).all()
       if exclude_id:
-        for vid in s.query(bqMainFile.id).limit(limit).offset(offset).filter(bqMainFile.id in exclude_id).all():
+        for vid in s.query(bqMainFile.id).filter(bqMainFile.id in exclude_id).limit(limit).offset(offset).all():
           exclude_id.remove(vid)
       return files
 
