@@ -573,3 +573,43 @@ def ExpandConfigPath(path: str) -> pathlib.Path:
 def GetFileSha256(path: pathlib.Path) -> str:
   with open(path, "rb") as f:
     return hashlib.sha256(f.read()).hexdigest()
+
+def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[PreprocessedContentFiles]) -> None:
+  """
+  Collect data from a list of preprocessed databases and merge them.
+  """
+  for db in dbs:
+    with db.Session() as s:
+      data = [x for x in s.query(PreprocessedContentFiles).all()]
+    with out_db.Session() as s:
+      for df in data:
+        s.add(df)
+      s.commit()
+  return
+
+def initMain(*args, **kwargs):
+  """
+  Setup module's operations.
+  """
+  l.initLogger(name = "bigQuery_database", lvl = 20, mail = (None, 5), colorize = True, step = False)
+
+  if not FLAGS.preprocessed_databases:
+    raise ValueError("Please input preprocessed databases to merge as a comma separated list.")
+  db_paths = [pathlib.Path(p).absolute() for p in FLAGS.preprocessed_databases.replace(" ", "").split(",")]
+  for p in db_paths:
+    if not p.exists():
+      raise FileNotFoundError(p)
+  dbs = [PreprocessedContentFiles(url = "sqlite:///{}".format(str(p)), must_exist = True) for p in db_paths]
+
+  if not FLAGS.merged_preprocessed_database:
+    raise ValueError("You must set a path for merged_preprocessed_database")
+  out_db_path = pathlib.Path(FLAGS.merged_preprocessed_database).resolve()
+  if not out_db_path.exists():
+    raise FileNotFoundError(out_db_path)
+  out_db = PreprocessedContentFiles(url = "sqlite:///{}".format(str(out_db_path)), must_exist = True)
+  merge_db(dbs, out_db)
+return
+
+if __name__ == "__main__":
+  app.run(initMain)
+  sys.exit(0)
