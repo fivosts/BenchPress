@@ -360,6 +360,8 @@ class PreprocessedContentFiles(sqlutil.Database):
             try:
               pool = multiprocessing.Pool()
               batch = db.main_files_batch(chunk, idx, exclude_id = done)
+              idx += chunk - len(batch)
+              bar.update(idx)
               for preprocessed_list in pool.imap_unordered(
                                         functools.partial(
                                           BQPreprocessorWorker,

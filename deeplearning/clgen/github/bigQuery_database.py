@@ -128,9 +128,9 @@ class bqDatabase(sqlutil.Database):
 
   def main_files_batch(self, limit: int, offset: int, exclude_id: typing.Set[str] = set()) -> typing.List[bqMainFile]:
     with self.Session() as s:
-      files = s.query(bqMainFile).filter(bqMainFile.id not in exclude_id).limit(limit).offset(offset).all()
+      files = [f for f in s.query(bqMainFile).limit(limit).offset(offset).all() if f.id not in exclude_id]
       if exclude_id:
-        for vid in s.query(bqMainFile.id).filter(bqMainFile.id in exclude_id).limit(limit).offset(offset).all():
+        for vid in [f.id for f in files if f.id in exclude_id]:
           exclude_id.remove(vid)
       return files
 
