@@ -351,7 +351,7 @@ class PreprocessedContentFiles(sqlutil.Database):
             [x[0].replace("main_files/", "") for x in session.query(PreprocessedContentFile.input_relpath)]
           )
           bar = progressbar.ProgressBar(max_value = db.mainfile_count)
-          chunk, idx = 2500000, 0
+          chunk, idx = 6000000, 0
 
           last_commit     = time.time()
           wall_time_start = time.time()
