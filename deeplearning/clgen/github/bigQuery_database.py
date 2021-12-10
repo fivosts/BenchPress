@@ -257,7 +257,7 @@ def initMain(*args, **kwargs):
     if not bq_db_path.exists():
       raise FileNotFoundError(bq_db_path)
     bq_db = bqDatabase(url = "sqlite:///{}".format(str(bq_db_path)), must_exist = True)
-    chunkify_db(bq_db, FLAGS.chunkify, prefix = bq_db_path.stem)
+    chunkify_db(bq_db, FLAGS.chunkify, prefix = "{}/{}".format(bq_db_path.parent, bq_db_path.stem))
   else:
     l.getLogger().warn("Chunkify has not been set or has been set to less than 2. Nothing to do, exiting...")
   return
