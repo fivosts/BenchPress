@@ -358,8 +358,8 @@ class PreprocessedContentFiles(sqlutil.Database):
 
           while idx < db.mainfile_count:
             try:
-              batch = db.main_files_batch(chunk, idx, exclude_id = done)
               pool = multiprocessing.Pool()
+              batch = db.main_files_batch(chunk, idx, exclude_id = done)
               for preprocessed_list in pool.imap_unordered(
                                         functools.partial(
                                           BQPreprocessorWorker,
