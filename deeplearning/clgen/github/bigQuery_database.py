@@ -230,7 +230,7 @@ class bqDatabase(sqlutil.Database):
       return s.query(bqData).first()
 
 def chunkify_db(bq_db: bqDatabase, chunks: int, prefix: str) -> None:
-  out_dbs = [bqDatabase(url = "sqlite:///{}_{}".format(prefix, idx)) for idx in range(chunks)]
+  out_dbs = [bqDatabase(url = "sqlite:///{}_{}.db".format(prefix, idx)) for idx in range(chunks)]
 
   total_files = bq_db.mainfile_count
   chunk_size = total_files // chunks
@@ -241,9 +241,11 @@ def chunkify_db(bq_db: bqDatabase, chunks: int, prefix: str) -> None:
     with db.Session() as s:
       batch = bq_db.main_files_batch(limit = chunk_size + (chunks if db_idx == chunks - 1 else 0), offset = idx)
       bar = progressbar.ProgressBar(max_value = len(batch))
+      l.getLogger().info(len(batch))
       for file in bar(batch):
         s.add(file)
         idx += 1
+      l.getLogger().info("commit")
       s.commit()
   return
 

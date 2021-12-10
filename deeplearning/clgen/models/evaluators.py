@@ -421,13 +421,13 @@ def TopKCLDrive(**kwargs) -> None:
          for src, fv in dbg.get_data_features(feature_space)],
          key = lambda x: x[1]
       )
-      for src, dist in src_distances:
+      for idx, (src, dist) in enumerate(src_distances):
         try:
           with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem) as f:
             f.write(src)
             f.flush()
             proc = subprocess.Popen(
-              "{} --srcs={} --num_runs=1000 --gsize=4096 --lsize=1024 --envs=".format(cldrive, f).split(),
+              "{} --srcs={} --num_runs=1000 --gsize=4096 --lsize=1024 --envs='CPU','GPU'".format(cldrive, f).split(),
               stdout = subprocess.PIPE,
               stderr = subprocess.PIPE,
               universal_newlines = True,
@@ -437,10 +437,13 @@ def TopKCLDrive(**kwargs) -> None:
             avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean()) / 1000
             avg_time_gpu_us = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean()) / 1000
 
-          # Save distance of kernel from target.
-          groups[dbg.group_name][1].append(dist)
-          # Store label
-          groups[dbg.group_name][2].append("GPU" if avg_time_cpu_us > avg_time_gpu_us else "CPU")
+          # Save distance of kernel from target and label.
+          if len(groups[dbg.group_name][1]) - 1 < idx:
+            groups[dbg.group_name][1].append([dist])
+            groups[dbg.group_name][2].append(["GPU" if avg_time_cpu_us > avg_time_gpu_us else "CPU"])
+          else:
+            groups[dbg.group_name][1][idx].append(dist)
+            groups[dbg.group_name][2][idx].append("GPU" if avg_time_cpu_us > avg_time_gpu_us else "CPU")
           # Some thoughts: Maybe a dedicated plot to show distribution of execution times, etc. ?
           # In here you basically need the label.
         except Exception as e:
