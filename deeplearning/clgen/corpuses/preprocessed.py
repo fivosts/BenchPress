@@ -347,6 +347,9 @@ class PreprocessedContentFiles(sqlutil.Database):
           db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root), must_exist = True)
           if db.mainfile_count == 0:
             raise ValueError("Input BQ database {} is empty!".format(contentfile_root))
+          done = set(
+            [int(x[0].replace("main_files/", "")) for x in session.query(PreprocessedContentFile.input_relpath)]
+          )
           bar = progressbar.ProgressBar(max_value = db.mainfile_count)
           chunk, idx = 100000, 0
 
@@ -355,7 +358,7 @@ class PreprocessedContentFiles(sqlutil.Database):
 
           while idx < db.mainfile_count:
             try:
-              batch = db.main_files_batch(chunk, idx)
+              batch = db.main_files_batch(chunk, idx, exclude_id = done)
               pool = multiprocessing.Pool()
               for preprocessed_list in pool.imap_unordered(
                                         functools.partial(
