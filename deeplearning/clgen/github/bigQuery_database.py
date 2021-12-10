@@ -21,7 +21,7 @@ flags.DEFINE_string(
   "Insert path of BigQuery's database."
 )
 
-flags.DEFINE_int(
+flags.DEFINE_integer(
   "chunkify",
   None,
   "Select chunkifying factor to split BQ database into sub-databases to perform pseudo-distributed preprocessing."

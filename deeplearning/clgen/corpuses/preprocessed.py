@@ -608,7 +608,7 @@ def initMain(*args, **kwargs):
     raise FileNotFoundError(out_db_path)
   out_db = PreprocessedContentFiles(url = "sqlite:///{}".format(str(out_db_path)), must_exist = True)
   merge_db(dbs, out_db)
-return
+  return
 
 if __name__ == "__main__":
   app.run(initMain)
