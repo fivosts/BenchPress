@@ -238,16 +238,17 @@ def chunkify_db(bq_db: bqDatabase, chunks: int, prefix: str) -> None:
   idx = 0
   for db_idx, db in enumerate(out_dbs):
     l.getLogger().info("Writing db_{}...".format(db_idx))
+    batch = bq_db.main_files_batch(limit = chunk_size + (chunks if db_idx == chunks - 1 else 0), offset = idx)
     with db.Session() as s:
-      batch = bq_db.main_files_batch(limit = chunk_size + (chunks if db_idx == chunks - 1 else 0), offset = idx)
       bar = progressbar.ProgressBar(max_value = len(batch))
       l.getLogger().info(len(batch))
-      for file in bar(batch):
-        s.add(file)
+      for f in bar(batch):
+        s.add(bqMainFile(**bqMainFile.FromArgs(f.ToJSONDict())))
         idx += 1
       l.getLogger().info("commit")
       s.commit()
   return
+
 
 def initMain(*args, **kwargs):
   """
