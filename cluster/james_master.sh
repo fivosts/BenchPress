@@ -14,7 +14,13 @@ nodes=( ["james06.inf.ed.ac.uk"]="0" ["james09.inf.ed.ac.uk"]="1" ["james10.inf.
 
 if [ $# -ge 1 ] && [ "$1" == "--kill" ]; then
   for key in ${!nodes[@]}; do
-    ssh s1879742@${key} "kill $(pgrep clgen)"
+    ssh s1879742@${key} "kill -SIGINT $(pgrep clgen)"
+  sleep 10
+  echo "pgrep sanity check:"
+  for key in ${!nodes[@]}; do
+    echo ${key}
+    ssh s1879742@${key} "pgrep clgen"
+    echo ""
   done
 elif [ $# -ge 1 ] && [ "$1" == "--clean_workspace" ]; then
   for key in ${!nodes[@]}; do
