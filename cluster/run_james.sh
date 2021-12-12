@@ -22,4 +22,4 @@ cp /disk/scratch/s1879742/bigQuery/clgen_c_github_"${nodes[$(hostname)]}".db /di
 cd
 cd clgen
 
-./clgen --stop_after corpus --workspace_dir /disk/scratch/s1879742/c_corpus_pretrain --config model_zoo/BERT/bert_base_pretrain.pbtxt > log-$(hostname).txt
+stdbuf -oL ./clgen --local_filesystem /disk/scratch/s1879742/tmp --stop_after corpus --workspace_dir /disk/scratch/s1879742/c_corpus_pretrain --config model_zoo/BERT/bert_base_pretrain.pbtxt &> log-$(hostname).txt
