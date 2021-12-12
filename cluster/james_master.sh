@@ -25,7 +25,7 @@ if [ $# -ge 1 ] && [ "$1" == "--kill" ]; then
   done
 elif [ $# -ge 1 ] && [ "$1" == "--clean_workspace" ]; then
   for key in ${!nodes[@]}; do
-    ssh s1879742@${key} "rm -rf /disk/scratch/s1879742/c_corpus_pretrain"
+    ssh s1879742@${key} "rm -rf /disk/scratch/s1879742/c_corpus_workspace"
   done
 elif [ $# -ge 1 ] && [ "$1" == "--dispatch" ]; then
   for key in ${!nodes[@]}; do
