@@ -15,6 +15,7 @@ nodes=( ["james06.inf.ed.ac.uk"]="0" ["james09.inf.ed.ac.uk"]="1" ["james10.inf.
 if [ $# -ge 1 ] && [ "$1" == "--kill" ]; then
   for key in ${!nodes[@]}; do
     ssh s1879742@${key} "kill -SIGINT $(pgrep clgen)"
+  done
   sleep 10
   echo "pgrep sanity check:"
   for key in ${!nodes[@]}; do
