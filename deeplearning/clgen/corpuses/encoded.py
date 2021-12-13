@@ -445,3 +445,13 @@ class EncodedContentFiles(sqlutil.Database):
         return [x.feature_vector for x in session.query(EncodedContentFile).filter(EncodedContentFile.tokencount <= sequence_length).all()]
       else:
         return [x.feature_vector for x in session.query(EncodedContentFile).all()]
+
+  def get_data_features(self, tokenizer, sequence_length: int = None) -> typing.List[typing.Tuple[str, str]]:
+    """
+    Collect list of source with features
+    """
+    with self.Session() as s:
+      if sequence_length:
+        return [(tokenizer.ArrayToCode(x.indices_array, with_formatting = False), x.feature_vector) for x in session.query(EncodedContentFile).filter(EncodedContentFile.tokencount <= sequence_length).all()]
+      else:
+        return [(tokenizer.ArrayToCode(x.indices_array, with_formatting = False), x.feature_vector) for x in session.query(EncodedContentFile).all()]
