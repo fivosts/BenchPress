@@ -3,6 +3,7 @@ Evaluators - result fetchers for samples across different techniques.
 """
 import typing
 import io
+import tempfile
 import subprocess
 import pathlib
 import sklearn
@@ -154,7 +155,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
       pbutil.AssertFieldIsSet(ev.topk_cldrive, "cldrive")
-      if not pathlib.Path(ev.tok_cldrive.cldrive).resolve().exists():
+      if not pathlib.Path(ev.topk_cldrive.cldrive).resolve().exists():
         raise FileNotFoundError(ev.topk_cldrive.cldrive)
       pbutil.AssertFieldConstraint(
         ev.topk_cldrive,
@@ -202,7 +203,7 @@ class DBGroup(object):
         else:
           self.data += db.get_data
 
-  def __init__(self, group_name: str, db_type: str, databases: typing.List[pathlib.Path], size_limit: int = None):
+  def __init__(self, group_name: str, db_type: str, databases: typing.List[pathlib.Path], tokenizer = None, size_limit: int = None):
     self.group_name = group_name
     self.db_type = {
       "SamplesDatabase"    : samples_database.SamplesDatabase,
@@ -212,6 +213,7 @@ class DBGroup(object):
     self.databases     = [self.db_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
     self.features      = {ext: None for ext in extractor.extractors.keys()}
     self.data_features = {ext: None for ext in extractor.extractors.keys()}
+    self.tokenizer     = tokenizer
     self.size_limit    = size_limit
     return
 
@@ -222,7 +224,7 @@ class DBGroup(object):
     if not self.features[feature_space]:
       self.features[feature_space] = []
       for db in self.databases:
-        db_feats = db.get_features(self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_features
+        db_feats = db.get_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_features
         for x in db_feats:
           try:
             feats = extractor.RawToDictFeats(x)
@@ -407,54 +409,89 @@ def TopKCLDrive(**kwargs) -> None:
 
   groups = {}
 
-  # For each db group -> for each target -> k samples -> 1) benchmark.name 2) distance 3) label.
+  # Identify system platforms.
+  platforms = {
+    'CPU': None,
+    'GPU': None,
+  }
+  try:
+    cmd = subprocess.Popen(
+      "{} --clinfo".format(cldrive).split(),
+      stdout = subprocess.PIPE,
+      stderr = subprocess.PIPE,
+      universal_newlines = True,
+    )
+    stdout, stderr = cmd.communicate()
+    if stderr:
+      raise ValueError(stderr)
+  except Exception as e:
+    l.getLogger().error(cmd)
+    l.getLogger().error(e)
+  lines = stdout.split('\n')
+  for line in lines:
+    if line and line[:3] == "GPU" and not platforms['GPU']:
+      platforms['GPU'] = line
+    elif line and line[:3] == "CPU" and not platforms['CPU']:
+      platforms['CPU'] = line
 
+  def get_cldrive_label(src: str) -> str:
+    # Run cldrive on source sample.
+    with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix = '.cl', dir = FLAGS.local_filesystem) as f:
+      f.write(src)
+      f.flush()
+      proc = subprocess.Popen(
+        "{} --srcs={} --num_runs=1000 --gsize=4096 --lsize=1024 --envs={},{}".format(cldrive, f.name, platforms['CPU'], platforms['GPU']).split(),
+        stdout = subprocess.PIPE,
+        stderr = subprocess.PIPE,
+        universal_newlines = True,
+      )
+      stdout, stderr = proc.communicate()
+      try:
+        df = pd.read_csv(io.StringIO(stdout), sep = ",")
+        avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean()) / 1000
+        avg_time_gpu_us = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean()) / 1000
+      except pd.errors.EmptyDataError:
+        # CSV is empty which means src failed miserably.
+        avg_time_cpu_us = None
+        avg_time_gpu_us = None
+
+      # Save distance of kernel from target and label.
+      label = "GPU" if avg_time_cpu_us is not None and avg_time_cpu_us > avg_time_gpu_us else "CPU" if avg_time_cpu_us is not None else "ERR"
+    return label
+
+  # For each db group -> for each target -> k samples -> 1) benchmark.name 2) distance 3) label.
   for dbg in db_groups:
+
     if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
     groups[dbg.group_name] = ([], [], [])
+
     for benchmark in target.get_benchmarks(feature_space):
-      groups[dbg.group_name][0].append(benchmark.name)
-      # Find shortest distances.
+
+      groups[dbg.group_name][0].append((benchmark.name, get_cldrive_label(benchmark.contents)))
       src_distances = sorted(
         [(src, feature_sampler.calculate_distance(fv, benchmark.features, feature_space))
          for src, fv in dbg.get_data_features(feature_space)],
          key = lambda x: x[1]
-      )
-      for idx, (src, dist) in enumerate(src_distances):
-        try:
-          with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem) as f:
-            f.write(src)
-            f.flush()
-            proc = subprocess.Popen(
-              "{} --srcs={} --num_runs=1000 --gsize=4096 --lsize=1024 --envs='CPU','GPU'".format(cldrive, f).split(),
-              stdout = subprocess.PIPE,
-              stderr = subprocess.PIPE,
-              universal_newlines = True,
-            )
-            stdout, stderr = proc.communicate()
-            df = pd.read_csv(io.StringIO(stdout), sep = ",")
-            avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean()) / 1000
-            avg_time_gpu_us = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean()) / 1000
+      )[:top_k]
 
-          # Save distance of kernel from target and label.
-          if len(groups[dbg.group_name][1]) - 1 < idx:
-            groups[dbg.group_name][1].append([dist])
-            groups[dbg.group_name][2].append(["GPU" if avg_time_cpu_us > avg_time_gpu_us else "CPU"])
-          else:
-            groups[dbg.group_name][1][idx].append(dist)
-            groups[dbg.group_name][2][idx].append("GPU" if avg_time_cpu_us > avg_time_gpu_us else "CPU")
-          # Some thoughts: Maybe a dedicated plot to show distribution of execution times, etc. ?
-          # In here you basically need the label.
-        except Exception as e:
-          l.getLogger().error(src)
-          l.getLogger().error(e)
+      for idx, (src, dist) in enumerate(src_distances):
+
+        label = get_cldrive_label(src)
+        if len(groups[dbg.group_name][1]) - 1 < idx:
+          groups[dbg.group_name][1].append([dist])
+          groups[dbg.group_name][2].append([label])
+        else:
+          groups[dbg.group_name][1][idx].append(dist)
+          groups[dbg.group_name][2][idx].append(label)
+        # Some thoughts: Maybe a dedicated plot to show distribution of execution times, etc. ?
+        # In here you basically need the label.
       # Compute target's distance from O(0,0)
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
-      avg_dist = sum(src_distances[:top_k]) / len(src_distances[:top_k])
+      avg_dist = sum([x[1] for x in src_distances]) / top_k
 
       groups[dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
-
+  print(groups)
   raise NotImplementedError
   return
 
@@ -502,7 +539,7 @@ def main(config: evaluator_pb2.Evaluation):
       key = dbs.group_name + ''.join(dbs.database)
       if key not in db_cache:
         size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
-        db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, size_limit = size_limit)
+        db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
       kw_args['db_groups'].append(db_cache[key])
     # Gather target benchmarks and cache them
     if sev.HasField("target"):
