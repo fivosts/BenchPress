@@ -621,6 +621,9 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
       for df in data:
         s.add(PreprocessedContentFile.FromPreprocessedContentFile(df))
       s.commit()
+  with out_db.Session() as s:
+    out_db.SetDone(session)
+
   return
 
 def initMain(*args, **kwargs):
