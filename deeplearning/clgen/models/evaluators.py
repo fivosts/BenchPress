@@ -5,6 +5,7 @@ import typing
 import io
 import tempfile
 import subprocess
+import pickle
 import pathlib
 import sklearn
 import math
@@ -21,6 +22,7 @@ from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import active_feed_database
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.corpuses import corpuses
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.util import monitors
 from deeplearning.clgen.util import plotter
@@ -241,7 +243,7 @@ class DBGroup(object):
     if not self.data_features[feature_space]:
       self.data_features[feature_space] = []
       for db in self.databases:
-        db_feats = db.get_data_features(self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_data_features
+        db_feats = db.get_data_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_data_features
         for src, f in db_feats:
           try:
             feats = extractor.RawToDictFeats(f)
@@ -440,12 +442,17 @@ def TopKCLDrive(**kwargs) -> None:
       f.write(src)
       f.flush()
       proc = subprocess.Popen(
-        "{} --srcs={} --num_runs=1000 --gsize=4096 --lsize=1024 --envs={},{}".format(cldrive, f.name, platforms['CPU'], platforms['GPU']).split(),
+        "timeout -s9 30 {} --srcs={} --num_runs=1000 --gsize=4096 --lsize=1024 --envs={},{}".format(cldrive, f.name, platforms['CPU'], platforms['GPU']).split(),
         stdout = subprocess.PIPE,
         stderr = subprocess.PIPE,
         universal_newlines = True,
       )
       stdout, stderr = proc.communicate()
+      if proc.returncode == 9:
+        l.getLogger().error(src)
+        l.getLogger().error(stderr)
+        raise ValueError("CLDrive has timed out!")
+
       try:
         df = pd.read_csv(io.StringIO(stdout), sep = ",")
         avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean()) / 1000
@@ -457,17 +464,22 @@ def TopKCLDrive(**kwargs) -> None:
 
       # Save distance of kernel from target and label.
       label = "GPU" if avg_time_cpu_us is not None and avg_time_cpu_us > avg_time_gpu_us else "CPU" if avg_time_cpu_us is not None else "ERR"
+      if label == "ERR":
+        l.getLogger().warn("CLDrive error!")
+        l.getLogger().warn(src)
+        l.getLogger().warn(stdout)
+        l.getLogger().warn(stderr)
     return label
 
   # For each db group -> for each target -> k samples -> 1) benchmark.name 2) distance 3) label.
   for dbg in db_groups:
-
+    l.getLogger().info(dbg.group_name)
     if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
     groups[dbg.group_name] = ([], [], [])
 
     for benchmark in target.get_benchmarks(feature_space):
-
+      l.getLogger().info(benchmark.name)
       groups[dbg.group_name][0].append((benchmark.name, get_cldrive_label(benchmark.contents)))
       src_distances = sorted(
         [(src, feature_sampler.calculate_distance(fv, benchmark.features, feature_space))
@@ -492,6 +504,8 @@ def TopKCLDrive(**kwargs) -> None:
 
       groups[dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
   print(groups)
+  with open("./data.pkl", 'wb') as inf:
+    pickle.dump(groups, inf)
   raise NotImplementedError
   return
 
@@ -513,7 +527,7 @@ def main(config: evaluator_pb2.Evaluation):
   for ev in config.evaluator:
     kw_args = {
       "db_groups"      : [],
-      "tokenizer"      : pathlib.Path(config.tokenizer).resolve(),
+      "tokenizer"      : tokenizers.TokenizerBase.FromFile(pathlib.Path(config.tokenizer).resolve()),
       "workspace_path" : pathlib.Path(config.workspace).resolve(),
     }
     if ev.HasField("k_average_score"):
