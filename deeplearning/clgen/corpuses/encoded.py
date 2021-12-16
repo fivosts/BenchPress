@@ -450,7 +450,7 @@ class EncodedContentFiles(sqlutil.Database):
     """
     Collect list of source with features
     """
-    with self.Session() as s:
+    with self.Session() as session:
       if sequence_length:
         return [(tokenizer.ArrayToCode(x.indices_array, with_formatting = False), x.feature_vector) for x in session.query(EncodedContentFile).filter(EncodedContentFile.tokencount <= sequence_length).all()]
       else:
