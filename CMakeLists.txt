@@ -30,6 +30,10 @@ OPTION(PROTOC_FROM_SOURCE
       "Select to build protoc locally from source."
       OFF
 )
+OPTION(BUILD_CLDRIVE
+      "Select to build CLdrive."
+      OFF
+)
 
 function(find_binaries)
 
@@ -91,6 +95,15 @@ function(find_binaries)
     else()
       message("-- Installing protoc from source.")
     endif()
+
+    # If bazel does not exist, deactivate building cldrive
+    find_program(BAZEL bazel)
+    if (NOT BUILD_CLDRIVE)
+      if (NOT BAZEL)
+        message(WARNING "-- bazel binary " ${BAZEL} " not found. Skipping cldrive build.")
+        set(BUILD_CLDRIVE OFF PARENT_SCOPE)
+      endif()
+    endif()
 endfunction()
 
 function(install_external_deps)
@@ -151,6 +164,25 @@ function(install_external_deps)
       CONFIGURE_COMMAND cd ${THIRD_PARTY}/protobuf/protobuf && ./autogen.sh && ${THIRD_PARTY}/protobuf/protobuf/configure --prefix=${LOCAL}
     )
     set(PROTOC          ${LOCAL}/bin/protoc PARENT_SCOPE)
+  endif ()
+
+  if (BUILD_CLDRIVE)
+    # protoc compiler
+    ExternalProject_Add(cldrive
+      GIT_REPOSITORY    https://github.com/fivosts/cldrive.git
+      GIT_TAG           c74ddf6225b40a6df7df6fec06e93c9d9a3dfe0e
+      GIT_PROGRESS      true
+      BUILD_IN_SOURCE   true
+      PREFIX            ${THIRD_PARTY}
+      TMP_DIR           ${THIRD_PARTY}/tmp
+      STAMP_DIR         ${THIRD_PARTY}/stamp
+      SOURCE_DIR        ${THIRD_PARTY}/cldrive
+      INSTALL_DIR       ${LOCAL}
+      CONFIGURE_COMMAND cd ${THIRD_PARTY}/cldrive
+      BUILD_COMMAND     cd ${THIRD_PARTY}/cldrive && bazel build -c opt //gpu/cldrive
+      INSTALL_COMMAND   ln -sf ${THIRD_PARTY}/cldrive/bazel-bin/gpu/cldrive/cldrive ${LOCAL}/bin/cldrive
+    )
+    set(CLDRIVE          ${LOCAL}/bin/cldrive PARENT_SCOPE)
   endif ()
 
   ## onnx model
@@ -215,23 +247,6 @@ function(install_external_deps)
     INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/opencl_headers/opencl_headers/ ${LOCAL}
   )
   set(OPENCL_HEADERS  ${LOCAL}/opencl_headers PARENT_SCOPE)
-
-  # TODO check if needed.
-  # ExternalProject_Add(opencl-icd-loader
-  #   GIT_REPOSITORY    https://https://github.com/KhronosGroup/OpenCL-ICD-Loader
-  #   GIT_TAG           c7fda8bb042760b5ead8650c64445f5972a64ad7
-  #   GIT_PROGRESS      true
-  #   DEPENDS           ${includes}
-  #   PREFIX            ${THIRD_PARTY}
-  #   TMP_DIR           ${THIRD_PARTY}/tmp
-  #   STAMP_DIR         ${THIRD_PARTY}/stamp
-  #   SOURCE_DIR        ${THIRD_PARTY}/opencl_icd_loader/opencl_icd_loader
-  #   BINARY_DIR        ${THIRD_PARTY}/opencl_icd_loader/build
-  #   INSTALL_DIR       ${LOCAL}
-  #   # CONFIGURE_COMMAND 
-  #   # BUILD_COMMAND     ${THIRD_PARTY}/boost/boost/b2 && ${THIRD_PARTY}/boost/boost/b2 headers
-  #   # INSTALL_COMMAND   ${THIRD_PARTY}/boost/boost/b2 install
-  # )
 endfunction()
 
 function(setup_python)
@@ -335,6 +350,7 @@ function(clgen)
     "export CLANG_FORMAT="                   ${LLVM}/bin/clang-format "\n"
     "export CLANG_HEADERS="                  ${LLVM}/lib/clang/${LLVM_VERSION}.0.1/include "\n"
     "export CLANG_REWRITER="                 ${CLANG_REWRITER} "\n"
+    "export CLDRIVE="                        ${CLDRIVE} "\n"
     "export GREWE="                          ${GREWE} "\n"
     "export INSTCOUNT="                      ${INSTCOUNT} "\n"
     "export AUTOPHASE="                      ${AUTOPHASE} "\n"
