@@ -143,6 +143,12 @@ class SamplesDatabase(sqlutil.Database):
       return [x.feature_vector for x in s.query(Sample).filter(Sample.compile_status == True).yield_per(1000)]
 
   @property
+  def get_data_features(self) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
+    """Return tuple of code + feature vectors"""
+    with self.Session() as s:
+      return [(x.text, x.feature_vector) for x in s.query(Sample).filter(Sample.compile_status == True).yield_per(1000)]
+
+  @property
   def get_samples_features(self) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
     """Return compiling samples with feature vectors"""
     with self.Session() as s:
