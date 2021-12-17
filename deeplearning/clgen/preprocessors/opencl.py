@@ -32,6 +32,9 @@ LIBCLC         = environment.LIBCLC
 OPENCL_HEADERS = environment.OPENCL_HEADERS
 # Auxiliary .cl kernels that may need be included
 AUX_INCLUDE    = environment.AUX_INCLUDE
+# CLDrive executable, if exists.
+CLDRIVE        = environment.CLDRIVE
+CL_PLATFORMS   = None
 
 CL_H           = os.path.join(OPENCL_HEADERS, "CL/cl.h")
 OPENCL_H       = os.path.join(environment.DATA_CL_INCLUDE, "opencl.h")
@@ -71,6 +74,36 @@ def GetClangArgs(use_shim: bool, use_aux_headers: bool) -> typing.List[str]:
   if use_shim:
     args += ["-include", str(SHIMFILE)]
   return args
+
+def getOpenCLPlatforms() -> None:
+  """
+  Identify compatible OpenCL platforms for current system.
+  """
+  global CL_PLATFORMS
+  CL_PLATFORMS = {
+    'CPU': None,
+    'GPU': None,
+  }
+  try:
+    cmd = subprocess.Popen(
+      "{} --clinfo".format(CLDRIVE).split(),
+      stdout = subprocess.PIPE,
+      stderr = subprocess.PIPE,
+      universal_newlines = True,
+    )
+    stdout, stderr = cmd.communicate()
+    if stderr:
+      raise ValueError(stderr)
+  except Exception as e:
+    l.getLogger().error(cmd)
+    l.getLogger().error(e)
+  lines = stdout.split('\n')
+  for line in lines:
+    if line and line[:3] == "GPU" and not CL_PLATFORMS['GPU']:
+      CL_PLATFORMS['GPU'] = line
+    elif line and line[:3] == "CPU" and not CL_PLATFORMS['CPU']:
+      CL_PLATFORMS['CPU'] = line
+  return
 
 def _ClangPreprocess(text: str, use_shim: bool, use_aux_headers: bool) -> str:
   """Private preprocess OpenCL source implementation.
@@ -167,6 +200,34 @@ def ClangPreprocessWithShim(text: str) -> str:
     Preprocessed source.
   """
   return _ClangPreprocess(text, True, True)
+
+def RunCLDrive(text: src, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> str:
+  """
+  If CLDrive executable exists, run it over provided source code.
+  """
+  if not CLDRIVE:
+    l.getLogger().warn("CLDrive executable has not been found. Skipping CLDrive execution.")
+    return ""
+
+  global CL_PLATFORMS
+  if not CL_PLATFORMS:
+    getOpenCLPlatforms()
+
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_opencl_cldrive", suffix = '.cl', dir = FLAGS.local_filesystem) as f:
+    f.write(src)
+    f.flush()
+    proc = subprocess.Popen(
+      "timeout -s9 30 {} --srcs={} --num_runs={} --gsize={} --lsize={} --envs={},{}".format(CLDRIVE, f.name, num_runs, gsize, lsize, platforms['CPU'], platforms['GPU']).split(),
+      stdout = subprocess.PIPE,
+      stderr = subprocess.PIPE,
+      universal_newlines = True,
+    )
+    stdout, stderr = proc.communicate()
+    if proc.returncode == 9:
+      l.getLogger().error(src)
+      l.getLogger().error(stderr)
+      raise ValueError("CLDrive has timed out!")
+  return stdout, stderr
 
 def CompileLlvmBytecode(text: str, header_file = None, use_aux_headers: bool = True) -> str:
   """A preprocessor which attempts to compile the given code.
