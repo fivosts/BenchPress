@@ -411,64 +411,25 @@ def TopKCLDrive(**kwargs) -> None:
 
   groups = {}
 
-  # Identify system platforms.
-  platforms = {
-    'CPU': None,
-    'GPU': None,
-  }
-  try:
-    cmd = subprocess.Popen(
-      "{} --clinfo".format(cldrive).split(),
-      stdout = subprocess.PIPE,
-      stderr = subprocess.PIPE,
-      universal_newlines = True,
-    )
-    stdout, stderr = cmd.communicate()
-    if stderr:
-      raise ValueError(stderr)
-  except Exception as e:
-    l.getLogger().error(cmd)
-    l.getLogger().error(e)
-  lines = stdout.split('\n')
-  for line in lines:
-    if line and line[:3] == "GPU" and not platforms['GPU']:
-      platforms['GPU'] = line
-    elif line and line[:3] == "CPU" and not platforms['CPU']:
-      platforms['CPU'] = line
-
   def get_cldrive_label(src: str) -> str:
     # Run cldrive on source sample.
-    with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix = '.cl', dir = FLAGS.local_filesystem) as f:
-      f.write(src)
-      f.flush()
-      proc = subprocess.Popen(
-        "timeout -s9 30 {} --srcs={} --num_runs=1000 --gsize=4096 --lsize=1024 --envs={},{}".format(cldrive, f.name, platforms['CPU'], platforms['GPU']).split(),
-        stdout = subprocess.PIPE,
-        stderr = subprocess.PIPE,
-        universal_newlines = True,
-      )
-      stdout, stderr = proc.communicate()
-      if proc.returncode == 9:
-        l.getLogger().error(src)
-        l.getLogger().error(stderr)
-        raise ValueError("CLDrive has timed out!")
+    stdout, stderr = opencl.RunCLDrive(src)
+    try:
+      df = pd.read_csv(io.StringIO(stdout), sep = ",")
+      avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean()) / 1000
+      avg_time_gpu_us = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean()) / 1000
+    except pd.errors.EmptyDataError:
+      # CSV is empty which means src failed miserably.
+      avg_time_cpu_us = None
+      avg_time_gpu_us = None
 
-      try:
-        df = pd.read_csv(io.StringIO(stdout), sep = ",")
-        avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean()) / 1000
-        avg_time_gpu_us = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean()) / 1000
-      except pd.errors.EmptyDataError:
-        # CSV is empty which means src failed miserably.
-        avg_time_cpu_us = None
-        avg_time_gpu_us = None
-
-      # Save distance of kernel from target and label.
-      label = "GPU" if avg_time_cpu_us is not None and avg_time_cpu_us > avg_time_gpu_us else "CPU" if avg_time_cpu_us is not None else "ERR"
-      if label == "ERR":
-        l.getLogger().warn("CLDrive error!")
-        l.getLogger().warn(src)
-        l.getLogger().warn(stdout)
-        l.getLogger().warn(stderr)
+    # Save distance of kernel from target and label.
+    label = "GPU" if avg_time_cpu_us is not None and avg_time_cpu_us > avg_time_gpu_us else "CPU" if avg_time_cpu_us is not None else "ERR"
+    if label == "ERR":
+      l.getLogger().warn("CLDrive error!")
+      l.getLogger().warn(src)
+      l.getLogger().warn(stdout)
+      l.getLogger().warn(stderr)
     return label
 
   # For each db group -> for each target -> k samples -> 1) benchmark.name 2) distance 3) label.
