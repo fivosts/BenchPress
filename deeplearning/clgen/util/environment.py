@@ -25,6 +25,10 @@ try:
   DATA_CL_INCLUDE     = check_path_exists(os.environ['DATA_CL_INCLUDE'])
   AUX_INCLUDE         = check_path_exists(os.environ['AUX_INCLUDE'])
   GREWE               = check_path_exists(os.environ['GREWE'])
+  try:
+    CLDRIVE           = check_path_exists(os.environ['CLDRIVE'])
+  except ValueError:
+    CLDRIVE           = None
   INSTCOUNT           = check_path_exists(os.environ['INSTCOUNT'])
   AUTOPHASE           = check_path_exists(os.environ['AUTOPHASE'])
   MASTER_PORT         = int(os.environ.get("MASTER_PORT", 8738))
