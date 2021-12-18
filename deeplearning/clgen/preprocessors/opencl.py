@@ -201,7 +201,7 @@ def ClangPreprocessWithShim(text: str) -> str:
   """
   return _ClangPreprocess(text, True, True)
 
-def RunCLDrive(text: src, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> str:
+def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> str:
   """
   If CLDrive executable exists, run it over provided source code.
   """
