@@ -237,7 +237,7 @@ function(install_external_deps)
     SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm
     INSTALL_DIR       ${LOCAL}/llvm10
     LIST_SEPARATOR    |
-    CONFIGURE_COMMAND cd ${THIRD_PARTY}/llvm/llvm && ${CMAKE_COMMAND} -S llvm -B build -DLLVM_ENABLE_PROJECTS=clang|libcxx|libcxxabi -DCMAKE_INSTALL_PREFIX=${LOCAL}/llvm -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
+    CONFIGURE_COMMAND cd ${THIRD_PARTY}/llvm/llvm && ${CMAKE_COMMAND} -S llvm -B build -DLLVM_ENABLE_PROJECTS=clang|libcxx|libcxxabi -DCMAKE_INSTALL_PREFIX=${LOCAL}/llvm10 -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
     BUILD_COMMAND     cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE)
     INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE) install
   )
