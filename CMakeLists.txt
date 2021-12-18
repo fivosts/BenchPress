@@ -199,17 +199,32 @@ function(install_external_deps)
   #)
   #set(ONNX          ${LOCAL}/onnx PARENT_SCOPE)
 
+  # ExternalProject_Add(llvm6
+  #   URL               https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+  #   PREFIX            ${THIRD_PARTY}
+  #   TMP_DIR           ${THIRD_PARTY}/tmp
+  #   STAMP_DIR         ${THIRD_PARTY}/stamp
+  #   DOWNLOAD_DIR      ${THIRD_PARTY}/llvm6
+  #   SOURCE_DIR        ${THIRD_PARTY}/llvm6/llvm6
+  #   INSTALL_DIR       ${LOCAL}
+  #   CONFIGURE_COMMAND ""
+  #   BUILD_COMMAND     ""
+  #   INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/llvm6/llvm6/ ${LOCAL}
+  # )
   ExternalProject_Add(llvm6
-    URL               https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+    GIT_REPOSITORY    https://github.com/llvm/llvm-project.git
+    GIT_TAG           e4f84abd37bf64bb18352fbef1fdcc88a2431a72
+    GIT_PROGRESS      true
     PREFIX            ${THIRD_PARTY}
     TMP_DIR           ${THIRD_PARTY}/tmp
     STAMP_DIR         ${THIRD_PARTY}/stamp
     DOWNLOAD_DIR      ${THIRD_PARTY}/llvm6
     SOURCE_DIR        ${THIRD_PARTY}/llvm6/llvm6
-    INSTALL_DIR       ${LOCAL}
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND     ""
-    INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/llvm6/llvm6/ ${LOCAL}
+    INSTALL_DIR       ${LOCAL}/llvm6
+    LIST_SEPARATOR    |
+    CONFIGURE_COMMAND cd ${THIRD_PARTY}/llvm6/llvm6 && ${CMAKE_COMMAND} -S llvm -B build -DLLVM_ENABLE_PROJECTS=clang|libcxx|libcxxabi -DCMAKE_INSTALL_PREFIX=${LOCAL}/llvm6 -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
+    BUILD_COMMAND     cd ${THIRD_PARTY}/llvm6/llvm6/build && $(MAKE)
+    INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm6/llvm6/build && $(MAKE) install
   )
   ExternalProject_Add(llvm
     GIT_REPOSITORY    https://github.com/llvm/llvm-project.git
@@ -220,14 +235,14 @@ function(install_external_deps)
     STAMP_DIR         ${THIRD_PARTY}/stamp
     DOWNLOAD_DIR      ${THIRD_PARTY}/llvm
     SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm
-    INSTALL_DIR       ${LOCAL}
+    INSTALL_DIR       ${LOCAL}/llvm10
     LIST_SEPARATOR    |
     CONFIGURE_COMMAND cd ${THIRD_PARTY}/llvm/llvm && ${CMAKE_COMMAND} -S llvm -B build -DLLVM_ENABLE_PROJECTS=clang|libcxx|libcxxabi -DCMAKE_INSTALL_PREFIX=${LOCAL}/llvm -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
     BUILD_COMMAND     cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE)
     INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE) install
   )
-  set(LLVM6           ${LOCAL}/llvm6 PARENT_SCOPE)
-  set(LLVM            ${LOCAL}/llvm  PARENT_SCOPE)
+  set(LLVM6           ${LOCAL}/llvm6   PARENT_SCOPE)
+  set(LLVM            ${LOCAL}/llvm10  PARENT_SCOPE)
   # #include <CL/*>
   # I have forked my own version of OpenCL Headers which I install here.
   # My version excludes the C-API functions from being included,
