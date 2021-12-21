@@ -410,10 +410,11 @@ def TopKCLDrive(**kwargs) -> None:
   workspace_path = kwargs.get('workspace_path')
 
   groups = {}
+  lsize, gsize = [128, 256, 512, 1024, 2048, 4096], [128, 256, 512, 1024, 2048, 4096, 8192]
 
-  def get_cldrive_label(src: str) -> str:
+  def get_cldrive_label(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> str:
     # Run cldrive on source sample.
-    stdout, stderr = opencl.RunCLDrive(src)
+    stdout, stderr = opencl.RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
     try:
       df = pd.read_csv(io.StringIO(stdout), sep = ",")
       avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean()) / 1000
@@ -437,33 +438,41 @@ def TopKCLDrive(**kwargs) -> None:
     l.getLogger().info(dbg.group_name)
     if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
-    groups[dbg.group_name] = ([], [], [])
 
     for benchmark in target.get_benchmarks(feature_space):
+
       l.getLogger().info(benchmark.name)
-      groups[dbg.group_name][0].append((benchmark.name, get_cldrive_label(benchmark.contents)))
       src_distances = sorted(
         [(src, feature_sampler.calculate_distance(fv, benchmark.features, feature_space))
          for src, fv in dbg.get_data_features(feature_space)],
          key = lambda x: x[1]
       )[:top_k]
 
-      for idx, (src, dist) in enumerate(src_distances):
+      for gs in gsize:
+        for ls in lsize:
+          if ls > gs:
+            continue
 
-        label = get_cldrive_label(src)
-        if len(groups[dbg.group_name][1]) - 1 < idx:
-          groups[dbg.group_name][1].append([dist])
-          groups[dbg.group_name][2].append([label])
-        else:
-          groups[dbg.group_name][1][idx].append(dist)
-          groups[dbg.group_name][2][idx].append(label)
-        # Some thoughts: Maybe a dedicated plot to show distribution of execution times, etc. ?
-        # In here you basically need the label.
-      # Compute target's distance from O(0,0)
-      target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
-      avg_dist = sum([x[1] for x in src_distances]) / top_k
+          config = "g{}-l{}".format(gs, ls)
+          groups[config] = {} # ([], [], [])
+          groups[config][dbg.group_name] = ([], [], [])
+          groups[config][dbg.group_name][0].append((benchmark.name, get_cldrive_label(benchmark.contents, num_runs = 100, gsize = gs, lsize = ls)))
+          for idx, (src, dist) in enumerate(src_distances):
 
-      groups[dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
+            label = get_cldrive_label(src, num_runs = 100, gsize = gs, lsize = ls)
+            if len(groups[config][dbg.group_name][1]) - 1 < idx:
+              groups[config][dbg.group_name][1].append([dist])
+              groups[config][dbg.group_name][2].append([label])
+            else:
+              groups[config][dbg.group_name][1][idx].append(dist)
+              groups[config][dbg.group_name][2][idx].append(label)
+            # Some thoughts: Maybe a dedicated plot to show distribution of execution times, etc. ?
+            # In here you basically need the label.
+          # Compute target's distance from O(0,0)
+          target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
+          avg_dist = sum([x[1] for x in src_distances]) / top_k
+
+          groups[config][dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
   print(groups)
   with open("./data.pkl", 'wb') as inf:
     pickle.dump(groups, inf)
