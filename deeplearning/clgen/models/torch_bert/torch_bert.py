@@ -904,7 +904,7 @@ class torchBert(backends.BackendBase):
       self.pytorch.torch_xla.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
       self.pytorch.torch_xla.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
     elif self.is_world_process_zero():
-      if isinstance(estimator, self.torch.nn.DataParallel):
+      if isinstance(estimator.model, self.torch.nn.DataParallel):
         self.torch.save(estimator.model.module.state_dict(), ckpt_comp("model"))
       else:
         self.torch.save(estimator.model.state_dict(), ckpt_comp("model"))
@@ -960,7 +960,7 @@ class torchBert(backends.BackendBase):
     ckpt_comp = lambda x: self.ckpt_path / "{}{}-{}.pt".format("pre_" if pre_train else "", x, ckpt_step)
 
     # self.train.model = model.BertModel.from_pretrained(ckpt_comp("model"))
-    if isinstance(estimator, self.torch.nn.DataParallel):
+    if isinstance(estimator.model, self.torch.nn.DataParallel):
       if isinstance(estimator, torchBert.BertEstimator):
         estimator.model.module.load_state_dict(
           self.torch.load(ckpt_comp("model"))
