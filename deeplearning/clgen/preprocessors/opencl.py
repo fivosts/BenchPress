@@ -16,8 +16,7 @@
 import typing
 import os
 import subprocess
-# import glob
-# import pathlib
+import tempfile
 
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.preprocessors import clang
