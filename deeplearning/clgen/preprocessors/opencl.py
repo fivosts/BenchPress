@@ -220,7 +220,7 @@ def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1
     f.write(src)
     f.flush()
     proc = subprocess.Popen(
-      "timeout -s9 30 {} --srcs={} --num_runs={} --gsize={} --lsize={} --envs={},{}".format(CLDRIVE, f.name, num_runs, gsize, lsize, platforms['CPU'], platforms['GPU']).split(),
+      "timeout -s9 30 {} --srcs={} --num_runs={} --gsize={} --lsize={} --envs={},{}".format(CLDRIVE, f.name, num_runs, gsize, lsize, CL_PLATFORMS['CPU'], CL_PLATFORMS['GPU']).split(),
       stdout = subprocess.PIPE,
       stderr = subprocess.PIPE,
       universal_newlines = True,
