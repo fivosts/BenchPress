@@ -22,6 +22,9 @@ from deeplearning.clgen.util import environment
 from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import normalizer
 from deeplearning.clgen.preprocessors import public
+
+from eupy.native import logger as l
+
 from absl import flags
 
 FLAGS = flags.FLAGS
