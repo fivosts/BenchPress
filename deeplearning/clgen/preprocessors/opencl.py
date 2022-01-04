@@ -15,6 +15,7 @@
 """Preprocessor passes for the OpenCL programming language."""
 import typing
 import os
+import subprocess
 # import glob
 # import pathlib
 
