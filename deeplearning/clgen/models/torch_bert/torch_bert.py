@@ -987,8 +987,6 @@ class torchBert(backends.BackendBase):
             name = 'module.' + k # Add 'module.'
           new_state_dict[name] = v
         estimator.model.load_state_dict(new_state_dict)
-        else:
-          raise ValueError(type(estimator))
     if isinstance(estimator, torchBert.BertEstimator):
       if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
         estimator.optimizer.load_state_dict(
