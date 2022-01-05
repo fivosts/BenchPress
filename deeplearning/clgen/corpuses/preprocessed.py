@@ -615,14 +615,14 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
   Collect data from a list of preprocessed databases and merge them.
   """
   for db in dbs:
-    with db.Session() as s:
-      data = [x for x in s.query(PreprocessedContentFiles).all()]
-    with out_db.Session() as s:
+    with db.Session() as ses:
+      data = [x for x in ses.query(PreprocessedContentFile).all()]
+    with out_db.Session() as ses:
       for df in data:
-        s.add(PreprocessedContentFile.FromPreprocessedContentFile(df))
-      s.commit()
-  with out_db.Session() as s:
-    out_db.SetDone(session)
+        ses.add(PreprocessedContentFile.FromPreprocessedContentFile(df))
+      ses.commit()
+  with out_db.Session() as ses:
+    out_db.SetDone(ses)
 
   return
 
@@ -643,9 +643,8 @@ def initMain(*args, **kwargs):
   if not FLAGS.merged_preprocessed_database:
     raise ValueError("You must set a path for merged_preprocessed_database")
   out_db_path = pathlib.Path(FLAGS.merged_preprocessed_database).resolve()
-  if not out_db_path.exists():
-    raise FileNotFoundError(out_db_path)
-  out_db = PreprocessedContentFiles(url = "sqlite:///{}".format(str(out_db_path)), must_exist = True)
+  out_db_path.parent.mkdir(exist_ok = True, parents = True)
+  out_db = PreprocessedContentFiles(url = "sqlite:///{}".format(str(out_db_path)), must_exist = False)
   merge_db(dbs, out_db)
   return
 
