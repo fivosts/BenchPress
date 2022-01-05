@@ -442,7 +442,7 @@ def TopKCLDrive(**kwargs) -> None:
     for benchmark in target.get_benchmarks(feature_space):
 
       l.getLogger().info(benchmark.name)
-      src_distances = sorted(
+      closest_src = sorted(
         [(src, feature_sampler.calculate_distance(fv, benchmark.features, feature_space))
          for src, fv in dbg.get_data_features(feature_space)],
          key = lambda x: x[1]
@@ -454,10 +454,12 @@ def TopKCLDrive(**kwargs) -> None:
             continue
 
           config = "g{}-l{}".format(gs, ls)
-          groups[config] = {} # ([], [], [])
-          groups[config][dbg.group_name] = ([], [], [])
+          if config not in groups:
+            groups[config] = {}
+          if dbg.group_name not in groups[config]:
+            groups[config][dbg.group_name] = ([], [], [])
           groups[config][dbg.group_name][0].append((benchmark.name, get_cldrive_label(benchmark.contents, num_runs = 100, gsize = gs, lsize = ls)))
-          for idx, (src, dist) in enumerate(src_distances):
+          for idx, (src, dist) in enumerate(closest_src):
 
             label = get_cldrive_label(src, num_runs = 100, gsize = gs, lsize = ls)
             if len(groups[config][dbg.group_name][1]) - 1 < idx:
@@ -470,7 +472,7 @@ def TopKCLDrive(**kwargs) -> None:
             # In here you basically need the label.
           # Compute target's distance from O(0,0)
           target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
-          avg_dist = sum([x[1] for x in src_distances]) / top_k
+          avg_dist = sum([x[1] for x in closest_src]) / top_k
 
           groups[config][dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
   print(groups)
