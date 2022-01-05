@@ -295,7 +295,7 @@ function(setup_python)
   if ("${LLVM_VERSION}" STREQUAL "10")
     # Override pip clang 12 and install 9
     add_custom_target(override_pyclang ALL
-      COMMAND ${PYTHON} -m pip uninstall --yes clang
+      # COMMAND ${PYTHON} -m pip uninstall --yes clang
       COMMAND ${PYTHON} -m pip install clang==10.0.1
       DEPENDS requirements
       COMMENT "Overriding pip clang installation to 10.0."
