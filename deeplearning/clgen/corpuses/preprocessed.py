@@ -40,7 +40,7 @@ from deeplearning.clgen.util import sqlutil
 from eupy.native import logger as l
 from eupy.hermes import client
 
-from absl import flags
+from absl import app, flags
 
 FLAGS = flags.FLAGS
 
