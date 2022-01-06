@@ -615,7 +615,7 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
   Collect data from a list of preprocessed databases and merge them.
   """
   for db in dbs:
-    l.getLogger().info("Loading {}...".format(db.stem))
+    l.getLogger().info("Loading {}...".format(db.url))
     with db.Session() as ses:
       data = ses.query(PreprocessedContentFile).all()
     with out_db.Session() as ses:
