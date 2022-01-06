@@ -618,7 +618,8 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
     with db.Session() as ses:
       data = [x for x in ses.query(PreprocessedContentFile).all()]
     with out_db.Session() as ses:
-      for df in data:
+      bar = progressbar.ProgressBar(max_value = len(data))
+      for df in bar(data):
         ses.add(PreprocessedContentFile.FromPreprocessedContentFile(df))
       ses.commit()
   with out_db.Session() as ses:
