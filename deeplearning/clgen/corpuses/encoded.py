@@ -133,7 +133,11 @@ class EncodedContentFile(Base):
       An EncodedContentFile instance.
     """
     start_time = time.time()
-    data = tokenizer.TokenizeString(preprocessed_cf.text)
+    try:
+      data = tokenizer.TokenizeString(preprocessed_cf.text)
+    except ValueError as e:
+      l.getLogger().warn(e)
+      return None
     ####
     # TODO kernel analytics
     # encoded_length = len(data)
@@ -147,24 +151,21 @@ class EncodedContentFile(Base):
         feature_vector = ""
     except Exception as e:
       raise e
-    try:
-      return EncodedContentFile(
-        id = preprocessed_cf.id,
-        # Encode the end-of-file marker separately to ensure that it resolves to
-        # the correct token. For example if the vocabulary contains 'a', 'b',
-        # and 'ab', then a content file 'a' with EOF marker 'b' would be encoded
-        # as 'ab', instead of 'a'+'b'.
-        data = cls.NumpyArrayToDataString(
-          np.concatenate((data, tokenizer.TokenizeString(eof)))
-        ),
-        tokencount       = len(data),
-        feature_vector   = feature_vector,
-        encoding_time_ms = encoding_time_ms,
-        wall_time_ms     = encoding_time_ms,  # The outer-loop may change this.
-        date_added       = datetime.datetime.utcnow(),
-      )
-    except ValueError:
-      return None
+    return EncodedContentFile(
+      id = preprocessed_cf.id,
+      # Encode the end-of-file marker separately to ensure that it resolves to
+      # the correct token. For example if the vocabulary contains 'a', 'b',
+      # and 'ab', then a content file 'a' with EOF marker 'b' would be encoded
+      # as 'ab', instead of 'a'+'b'.
+      data = cls.NumpyArrayToDataString(
+        np.concatenate((data, tokenizer.TokenizeString(eof)))
+      ),
+      tokencount       = len(data),
+      feature_vector   = feature_vector,
+      encoding_time_ms = encoding_time_ms,
+      wall_time_ms     = encoding_time_ms,  # The outer-loop may change this.
+      date_added       = datetime.datetime.utcnow(),
+    )
 
 def EncoderWorker(
   job: internal_pb2.EncoderWorker,
@@ -311,7 +312,7 @@ class EncodedContentFiles(sqlutil.Database):
       query = p_session.query(preprocessed.PreprocessedContentFile).filter(
         preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
         ~preprocessed.PreprocessedContentFile.id.in_(
-          session.query(EncodedContentFile.id).all()
+          ([int(x.id) for x in session.query(EncodedContentFile).all()])
         )
       )
       # jobs = [
