@@ -554,7 +554,10 @@ def AtomizeSource(src: str,
     lookout_metaToken, cmt = False, None
     for idx, t in enumerate(unit.get_tokens(extent = unit.cursor.extent)):
       str_t = t.spelling
-      if str_t in {'START', 'MASK', 'HOLE', 'END', 'PAD'} and tokens[-1] == '[':
+      if str_t in {'START', 'MASK', 'HOLE', 'END', 'PAD'} and len(tokens) == 0:
+        l.getLogger().warn("Please inspect the following code, having triggered a meta token existence without left brace preceding:")
+        l.getLogger().warn(src)
+      if str_t in {'START', 'MASK', 'HOLE', 'END', 'PAD'} and len(tokens) > 0 and tokens[-1] == '[':
         cmt = str_t
         lookout_metaToken = True
       elif str_t in vocab:
