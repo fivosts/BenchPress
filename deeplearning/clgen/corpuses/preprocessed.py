@@ -115,12 +115,13 @@ class PreprocessedContentFile(Base):
   def FromPreprocessedContentFile(
     cls,
     preprocessed_file: "PreprocessedContentFile",
+    idx: int = None,
   ) -> "PreprocessedContentFile":
     """
     Replicate PreprocessedContentFile
     """
     return PreprocessedContentFile(
-      id                      = preprocessed_file.id,
+      id                      = idx if idx else preprocessed_file.id,
       input_relpath           = preprocessed_file.input_relpath,
       input_sha256            = preprocessed_file.input_sha256,
       input_charcount         = preprocessed_file.input_charcount,
@@ -614,6 +615,7 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
   """
   Collect data from a list of preprocessed databases and merge them.
   """
+  pkey = out_db.input_size
   for db in dbs:
     l.getLogger().info("Loading {}...".format(db.url))
     with db.Session() as ses:
@@ -621,8 +623,9 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
     with out_db.Session() as ses:
       bar = progressbar.ProgressBar(max_value = len(data))
       for df in bar(data):
-        ses.add(PreprocessedContentFile.FromPreprocessedContentFile(df))
+        ses.add(PreprocessedContentFile.FromPreprocessedContentFile(df, idx = pkey + df.id))
       ses.commit()
+    pkey += len(data)
   with out_db.Session() as ses:
     out_db.SetDone(ses)
 
