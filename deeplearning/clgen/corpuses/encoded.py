@@ -147,22 +147,24 @@ class EncodedContentFile(Base):
         feature_vector = ""
     except Exception as e:
       raise e
-    return EncodedContentFile(
-      id = preprocessed_cf.id,
-      # Encode the end-of-file marker separately to ensure that it resolves to
-      # the correct token. For example if the vocabulary contains 'a', 'b',
-      # and 'ab', then a content file 'a' with EOF marker 'b' would be encoded
-      # as 'ab', instead of 'a'+'b'.
-      data = cls.NumpyArrayToDataString(
-        np.concatenate((data, tokenizer.TokenizeString(eof)))
-      ),
-      tokencount       = len(data),
-      feature_vector   = feature_vector,
-      encoding_time_ms = encoding_time_ms,
-      wall_time_ms     = encoding_time_ms,  # The outer-loop may change this.
-      date_added       = datetime.datetime.utcnow(),
-    )
-
+    try:
+      return EncodedContentFile(
+        id = preprocessed_cf.id,
+        # Encode the end-of-file marker separately to ensure that it resolves to
+        # the correct token. For example if the vocabulary contains 'a', 'b',
+        # and 'ab', then a content file 'a' with EOF marker 'b' would be encoded
+        # as 'ab', instead of 'a'+'b'.
+        data = cls.NumpyArrayToDataString(
+          np.concatenate((data, tokenizer.TokenizeString(eof)))
+        ),
+        tokencount       = len(data),
+        feature_vector   = feature_vector,
+        encoding_time_ms = encoding_time_ms,
+        wall_time_ms     = encoding_time_ms,  # The outer-loop may change this.
+        date_added       = datetime.datetime.utcnow(),
+      )
+    except ValueError:
+      return None
 
 def EncoderWorker(
   job: internal_pb2.EncoderWorker,
