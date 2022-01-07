@@ -312,7 +312,7 @@ class EncodedContentFiles(sqlutil.Database):
         preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
         ~preprocessed.PreprocessedContentFile.id.in_(
           session.query(EncodedContentFile.id).all()
-        ),
+        )
       )
       # jobs = [
       #   internal_pb2.EncoderWorker(
