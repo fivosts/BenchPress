@@ -49,6 +49,18 @@ flags.DEFINE_boolean(
   "Set to override incomplete encoding. Does not set DB value to 'done'"
 )
 
+flags.DEFINE_string(
+  "encoded_databases",
+  None,
+  "Comma-separated list of paths for input encoded databases."
+)
+
+flags.DEFINE_string(
+  "merged_encoded_database",
+  None,
+  "Path for merged output encoded database"
+)
+
 class Meta(Base):
   """Meta table for encoded content files database."""
 
@@ -311,10 +323,8 @@ class EncodedContentFiles(sqlutil.Database):
     with preprocessed_db.Session() as p_session:
       query = p_session.query(preprocessed.PreprocessedContentFile).filter(
         preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
-        ~preprocessed.PreprocessedContentFile.id.in_(
-          ([int(x.id) for x in session.query(EncodedContentFile).all()])
-        )
       )
+      done = set([int(x.id) for x in session.query(EncodedContentFile).all()])
       # jobs = [
       #   internal_pb2.EncoderWorker(
       #     id=x.id,
@@ -328,7 +338,7 @@ class EncodedContentFiles(sqlutil.Database):
       #   raise ValueError(
       #     "Pre-processed corpus contains no files: " f"'{preprocessed_db.url}'"
       #   )
-      total_jobs = query.count()
+      total_jobs = query.count() - len(done)
       l.getLogger().info("Encoding {} of {} preprocessed files"
                           .format(
                               humanize.intcomma(total_jobs),
@@ -345,7 +355,15 @@ class EncodedContentFiles(sqlutil.Database):
       wall_time_start = time.time()
       while idx < total_jobs:
         try:
-          batch = query.limit(chunk).offset(idx).all()
+          if done:
+            batch = []
+            for f in query.limit(chunk).offset(idx).all():
+              if f.id not in done:
+                batch.append(f)
+              else:
+                done.remove(f.id)
+          else:
+            batch = query.limit(chunk).offset(idx).all()
           pool = multiprocessing.Pool()
           for encoded_cf in pool.imap_unordered(
                               functools.partial(EncoderWorker,
@@ -458,3 +476,49 @@ class EncodedContentFiles(sqlutil.Database):
         return [(tokenizer.ArrayToCode(x.indices_array, with_formatting = False), x.feature_vector) for x in session.query(EncodedContentFile).filter(EncodedContentFile.tokencount <= sequence_length).all()]
       else:
         return [(tokenizer.ArrayToCode(x.indices_array, with_formatting = False), x.feature_vector) for x in session.query(EncodedContentFile).all()]
+
+def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedContentFiles]) -> None:
+  """
+  Collect data from a list of preprocessed databases and merge them.
+  """
+  pkey = out_db.input_size
+  for db in dbs:
+    l.getLogger().info("Loading {}...".format(db.url))
+    with db.Session() as ses:
+      data = ses.query(EncodedContentFile).all()
+    with out_db.Session() as ses:
+      bar = progressbar.ProgressBar(max_value = len(data))
+      for df in bar(data):
+        ses.add(EncodedContentFile.FromEncodedContentFile(df, idx = pkey + df.id))
+      ses.commit()
+    pkey += len(data)
+  with out_db.Session() as ses:
+    out_db.SetDone(ses)
+
+  return
+
+def initMain(*args, **kwargs):
+  """
+  Setup module's operations.
+  """
+  l.initLogger(name = "bigQuery_database", lvl = 20, mail = (None, 5), colorize = True, step = False)
+
+  if not FLAGS.encoded_databases:
+    raise ValueError("Please input encoded databases to merge as a comma separated list.")
+  db_paths = [pathlib.Path(p).absolute() for p in FLAGS.encoded_databases.replace(" ", "").split(",")]
+  for p in db_paths:
+    if not p.exists():
+      raise FileNotFoundError(p)
+  dbs = [EncodedContentFiles(url = "sqlite:///{}".format(str(p)), must_exist = True) for p in db_paths]
+
+  if not FLAGS.merged_encoded_database:
+    raise ValueError("You must set a path for merged_encoded_database")
+  out_db_path = pathlib.Path(FLAGS.merged_encoded_database).resolve()
+  out_db_path.parent.mkdir(exist_ok = True, parents = True)
+  out_db = EncodedContentFiles(url = "sqlite:///{}".format(str(out_db_path)), must_exist = False)
+  merge_db(dbs, out_db)
+  return
+
+if __name__ == "__main__":
+  app.run(initMain)
+  sys.exit(0)
