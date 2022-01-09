@@ -338,7 +338,7 @@ class EncodedContentFiles(sqlutil.Database):
       #   raise ValueError(
       #     "Pre-processed corpus contains no files: " f"'{preprocessed_db.url}'"
       #   )
-      total_jobs = query.count() - len(done)
+      total_jobs = query.count() # - len(done)
       l.getLogger().info("Encoding {} of {} preprocessed files"
                           .format(
                               humanize.intcomma(total_jobs),
