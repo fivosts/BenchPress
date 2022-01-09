@@ -351,7 +351,6 @@ class EncodedContentFiles(sqlutil.Database):
                         )
       bar = progressbar.ProgressBar(max_value=total_jobs)
       chunk, idx = 2000000, 0
-      last_commit = time.time()
       wall_time_start = time.time()
       while idx < total_jobs:
         try:
@@ -360,11 +359,12 @@ class EncodedContentFiles(sqlutil.Database):
             for f in query.limit(chunk).offset(idx).all():
               if f.id not in done:
                 batch.append(f)
-              else:
-                done.remove(f.id)
+              # else:
+                # done.remove(f.id)
           else:
             batch = query.limit(chunk).offset(idx).all()
           pool = multiprocessing.Pool()
+          last_commit = time.time()
           for encoded_cf in pool.imap_unordered(
                               functools.partial(EncoderWorker,
                                                 tokenizer = tokenizer,
