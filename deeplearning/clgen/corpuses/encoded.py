@@ -359,7 +359,8 @@ class EncodedContentFiles(sqlutil.Database):
             for f in query.limit(chunk).offset(idx).all():
               if f.id not in done:
                 batch.append(f)
-              # else:
+              else:
+                idx += 1
                 # done.remove(f.id)
           else:
             batch = query.limit(chunk).offset(idx).all()
