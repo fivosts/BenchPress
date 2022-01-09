@@ -471,10 +471,10 @@ def TopKCLDrive(**kwargs) -> None:
             # Some thoughts: Maybe a dedicated plot to show distribution of execution times, etc. ?
             # In here you basically need the label.
           # Compute target's distance from O(0,0)
-          target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
-          avg_dist = sum([x[1] for x in closest_src]) / top_k
+          # target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
+          # avg_dist = sum([x[1] for x in closest_src]) / top_k
 
-          groups[config][dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
+          # groups[config][dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
   print(groups)
   with open("./data.pkl", 'wb') as inf:
     pickle.dump(groups, inf)
