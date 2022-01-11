@@ -394,6 +394,27 @@ def CompMemGrewe(**kwargs) -> None:
   )
   return
 
+def get_cldrive_label(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> str:
+  # Run cldrive on source sample.
+  stdout, stderr = opencl.RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
+  try:
+    df = pd.read_csv(io.StringIO(stdout), sep = ",")
+    avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean()) / 1000
+    avg_time_gpu_us = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean()) / 1000
+  except pd.errors.EmptyDataError:
+    # CSV is empty which means src failed miserably.
+    avg_time_cpu_us = None
+    avg_time_gpu_us = None
+
+  # Save distance of kernel from target and label.
+  label = "GPU" if avg_time_cpu_us is not None and avg_time_cpu_us > avg_time_gpu_us else "CPU" if avg_time_cpu_us is not None else "ERR"
+  if label == "ERR":
+    l.getLogger().warn("CLDrive error!")
+    l.getLogger().warn(src)
+    l.getLogger().warn(stdout)
+    l.getLogger().warn(stderr)
+  return label
+
 def TopKCLDrive(**kwargs) -> None:
   """
   Collect top-K samples per database group for each target benchmark.
@@ -407,27 +428,6 @@ def TopKCLDrive(**kwargs) -> None:
 
   groups = {}
   lsize, gsize = [128, 256, 512, 1024, 2048, 4096], [128, 256, 512, 1024, 2048, 4096, 8192]
-
-  def get_cldrive_label(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> str:
-    # Run cldrive on source sample.
-    stdout, stderr = opencl.RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
-    try:
-      df = pd.read_csv(io.StringIO(stdout), sep = ",")
-      avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean()) / 1000
-      avg_time_gpu_us = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean()) / 1000
-    except pd.errors.EmptyDataError:
-      # CSV is empty which means src failed miserably.
-      avg_time_cpu_us = None
-      avg_time_gpu_us = None
-
-    # Save distance of kernel from target and label.
-    label = "GPU" if avg_time_cpu_us is not None and avg_time_cpu_us > avg_time_gpu_us else "CPU" if avg_time_cpu_us is not None else "ERR"
-    if label == "ERR":
-      l.getLogger().warn("CLDrive error!")
-      l.getLogger().warn(src)
-      l.getLogger().warn(stdout)
-      l.getLogger().warn(stderr)
-    return label
 
   # For each db group -> for each target -> k samples -> 1) benchmark.name 2) distance 3) label.
   for dbg in db_groups:
