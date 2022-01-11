@@ -156,9 +156,6 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
-      pbutil.AssertFieldIsSet(ev.topk_cldrive, "cldrive")
-      if not pathlib.Path(ev.topk_cldrive.cldrive).resolve().exists():
-        raise FileNotFoundError(ev.topk_cldrive.cldrive)
       pbutil.AssertFieldConstraint(
         ev.topk_cldrive,
         "target",
@@ -405,7 +402,6 @@ def TopKCLDrive(**kwargs) -> None:
   target         = kwargs.get('targets')
   feature_space  = kwargs.get('feature_space')
   top_k          = kwargs.get('top_k')
-  cldrive        = kwargs.get('cldrive')
   plot_config    = kwargs.get('plot_config')
   workspace_path = kwargs.get('workspace_path')
 
@@ -516,7 +512,6 @@ def main(config: evaluator_pb2.Evaluation):
     elif ev.HasField("topk_cldrive"):
       sev = ev.topk_cldrive
       kw_args['top_k']   = sev.top_k
-      kw_args["cldrive"] = sev.cldrive
     else:
       raise NotImplementedError(ev)
 
