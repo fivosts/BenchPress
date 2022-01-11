@@ -112,7 +112,6 @@ evaluator {
 }
 evaluator {
   topk_cldrive {
-    cldrive: "~/cldrive/cldrive"
     target: "rodinia"
     feature_space: "InstCountFeatures"
     db_group {
