@@ -487,7 +487,7 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
     l.getLogger().info("Loading {}...".format(db.url))
     chunk, idx = 2000000, 0
     bar = progressbar.ProgressBar(max_value = db.size)
-    while idx < total_jobs:
+    while idx < db.size:
       with db.Session() as ses:
         data = ses.query(EncodedContentFile).limit(chunk).offset(idx).all()
       with out_db.Session() as ses:
