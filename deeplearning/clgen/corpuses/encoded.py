@@ -33,7 +33,7 @@ from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.util import monitors
 from deeplearning.clgen.features import extractor
-from absl import flags
+from absl import app, flags
 import humanize
 from deeplearning.clgen.util import sqlutil
 
@@ -485,14 +485,18 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
   pkey = out_db.input_size
   for db in dbs:
     l.getLogger().info("Loading {}...".format(db.url))
-    with db.Session() as ses:
-      data = ses.query(EncodedContentFile).all()
-    with out_db.Session() as ses:
-      bar = progressbar.ProgressBar(max_value = len(data))
-      for df in bar(data):
-        ses.add(EncodedContentFile.FromEncodedContentFile(df, idx = pkey + df.id))
-      ses.commit()
-    pkey += len(data)
+    chunk, idx = 2000000, 0
+    bar = progressbar.ProgressBar(max_value = db.size)
+    while idx < total_jobs:
+      with db.Session() as ses:
+        data = ses.query(EncodedContentFile).limit(chunk).offset(idx).all()
+      with out_db.Session() as ses:
+        for i, df in enumerate(data):
+          ses.add(EncodedContentFile.FromEncodedContentFile(df, idx = pkey + df.id))
+          bar.update(idx + i)
+        ses.commit()
+      pkey += len(data)
+      idx  += chunk
   with out_db.Session() as ses:
     out_db.SetDone(ses)
 
