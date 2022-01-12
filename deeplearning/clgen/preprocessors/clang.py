@@ -162,13 +162,17 @@ def CompileLlvmBytecode(src: str,
     ValueError: If clang does not complete before timeout_seconds.
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem) as f:
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir) as f:
     f.write(src)
     f.flush()
 
     extra_args = []
     if header_file:
-      htf = tempfile.NamedTemporaryFile('w', prefix = "clgen_preprocessors_clang_header_", suffix = ".h", dir = FLAGS.local_filesystem)
+      htf = tempfile.NamedTemporaryFile('w', prefix = "clgen_preprocessors_clang_header_", suffix = ".h", dir = tdir)
       htf.write(header_file)
       htf.flush()
       extra_args = ['-include{}'.format(htf.name)]
@@ -219,8 +223,12 @@ def CompileOptimizer(src: str,
     bc = CompileLlvmBytecode(src, suffix, cflags, header_file, timeout_seconds)
   except ValueError as e:
     raise ValueError("Compilation failed")
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
 
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix='.ll', dir = FLAGS.local_filesystem) as f:
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix='.ll', dir = tdir) as f:
     f.write(bc)
     f.flush()
 
@@ -288,13 +296,17 @@ def Compile(src: str,
     ValueError: In case of an error.
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem) as f:
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir) as f:
     f.write(src)
     f.flush()
 
     extra_args = []
     if header_file:
-      htf = tempfile.NamedTemporaryFile('w', prefix = "clgen_preprocessors_clang_header_", suffix = ".h", dir = FLAGS.local_filesystem)
+      htf = tempfile.NamedTemporaryFile('w', prefix = "clgen_preprocessors_clang_header_", suffix = ".h", dir = tdir)
       htf.write(header_file)
       htf.flush()
       extra_args = ['-include{}'.format(htf.name)]
@@ -337,8 +349,11 @@ def Parse(src: str,
   Raises:
     ValueError: In case of an error.
   """
-
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem) as f:
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir) as f:
 
     try:
       unit = clang.cindex.TranslationUnit.from_source(f.name, args = cflags, unsaved_files = [(f.name, src)])
@@ -418,8 +433,12 @@ def ExtractFunctions(src: str,
   Raises:
     ValueError: In case of an error.
   """
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
   with tempfile.NamedTemporaryFile(
-    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem
+    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir
   ) as f:
     try:
       unit = clang.cindex.TranslationUnit.from_source(f.name, args = cflags, unsaved_files = [(f.name, src)])#, args = args + builtin_cflags)
@@ -495,8 +514,12 @@ def DeriveSourceVocab(src: str,
     ValueError: In case of an error.
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
   with tempfile.NamedTemporaryFile(
-    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem
+    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir
   ) as f:
     f.write(src)
     f.flush()
@@ -541,8 +564,12 @@ def AtomizeSource(src: str,
     ValueError: In case of an error.
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
   with tempfile.NamedTemporaryFile(
-    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem
+    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir
   ) as f:
     f.write(src)
     f.flush()
@@ -580,8 +607,12 @@ def GreweFeatureExtraction(src: str,
   !!! Under construction.
   """
   builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
   with tempfile.NamedTemporaryFile(
-    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = FLAGS.local_filesystem
+    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir
   ) as f:
     f.write(src)
     f.flush()

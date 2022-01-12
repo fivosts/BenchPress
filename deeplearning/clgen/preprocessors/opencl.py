@@ -216,7 +216,12 @@ def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1
   if not CL_PLATFORMS:
     getOpenCLPlatforms()
 
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_opencl_cldrive", suffix = '.cl', dir = FLAGS.local_filesystem) as f:
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
+
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_opencl_cldrive", suffix = '.cl', dir = tdir) as f:
     f.write(src)
     f.flush()
     proc = subprocess.Popen(
