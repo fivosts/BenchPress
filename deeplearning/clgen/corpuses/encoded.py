@@ -127,6 +127,25 @@ class EncodedContentFile(Base):
     return extractor.RawToDictFeats(self.feature_vector)
 
   @classmethod
+  def FromEncodedContentFile(
+    cls,
+    encoded_file: "EncodedContentFile",
+    idx: int = None,
+  ) -> "EncodedContentFile":
+    """
+    Replicate EncodedContentFile
+    """
+    return EncodedContentFile(
+      id               = idx if idx else encoded_file.id,
+      data             = encoded_file.data,
+      tokencount       = encoded_file.tokencount,
+      feature_vector   = encoded_file.feature_vector,
+      encoding_time_ms = encoded_file.encoding_time_ms,
+      wall_time_ms     = encoded_file.wall_time_ms,
+      date_added       = encoded_file.date_added,
+    )
+
+  @classmethod
   def FromPreprocessed(
     cls,
     preprocessed_cf: preprocessed.PreprocessedContentFile,
