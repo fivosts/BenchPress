@@ -482,7 +482,7 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
   """
   Collect data from a list of preprocessed databases and merge them.
   """
-  pkey = out_db.input_size
+  pkey = out_db.size
   for db in dbs:
     l.getLogger().info("Loading {}...".format(db.url))
     chunk, idx = 2000000, 0
