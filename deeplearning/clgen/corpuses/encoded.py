@@ -512,7 +512,7 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
       with out_db.Session() as ses:
         for df in data:
           f = EncodedContentFile.FromEncodedContentFile(df, idx = pkey + idx)
-          print(f.id)
+          l.getLogger().warn(f.id)
           ses.add(f)
           idx += 1
           bar.update(idx)
