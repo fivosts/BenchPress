@@ -237,6 +237,44 @@ def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1
       raise ValueError("CLDrive has timed out!")
   return stdout, stderr
 
+def CLDriveNumBytes(src: str, gsize: int = 4096, lsize: int = 1024) -> int:
+  # Run cldrive on source sample.
+  stdout, stderr = opencl.RunCLDrive(src, num_runs = 1, gsize = gsize, lsize = lsize)
+  try:
+    df = pd.read_csv(io.StringIO(stdout), sep = ",")
+    transferred_bytes_cpu = df[df['device'].str.contains("CPU")].transferred_bytes.mean()
+    transferred_bytes_gpu = df[df['device'].str.contains("GPU")].transferred_bytes.mean()
+  except pd.errors.EmptyDataError:
+    # CSV is empty which means src failed miserably.
+    transferred_bytes_cpu = None
+    transferred_bytes_gpu = None
+
+  assert transferred_bytes_cpu == transferred_bytes_gpu, "Mismatch between cpu and gpu transferred bytes: {}".format(transferred_bytes_cpu, transferred_bytes_gpu)
+  return transferred_bytes_cpu
+
+def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> str:
+  # Run cldrive on source sample.
+  stdout, stderr = opencl.RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
+  try:
+    df = pd.read_csv(io.StringIO(stdout), sep = ",")
+    transferred_bytes = df[df['device'].str.contains("CPU")].transferred_bytes.mean()
+    avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean()) / 1000
+    avg_time_gpu_us = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean()) / 1000
+  except pd.errors.EmptyDataError:
+    # CSV is empty which means src failed miserably.
+    transferred_bytes = None
+    avg_time_cpu_us   = None
+    avg_time_gpu_us   = None
+
+  # Save distance of kernel from target and label.
+  label = "GPU" if avg_time_cpu_us is not None and avg_time_cpu_us > avg_time_gpu_us else "CPU" if avg_time_cpu_us is not None else "ERR"
+  if label == "ERR":
+    l.getLogger().warn("CLDrive error!")
+    l.getLogger().warn(src)
+    l.getLogger().warn(stdout)
+    l.getLogger().warn(stderr)
+  return label
+
 def CompileLlvmBytecode(text: str, header_file = None, use_aux_headers: bool = True) -> str:
   """A preprocessor which attempts to compile the given code.
 
