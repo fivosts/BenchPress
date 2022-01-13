@@ -394,27 +394,6 @@ def CompMemGrewe(**kwargs) -> None:
   )
   return
 
-def get_cldrive_label(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> str:
-  # Run cldrive on source sample.
-  stdout, stderr = opencl.RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
-  try:
-    df = pd.read_csv(io.StringIO(stdout), sep = ",")
-    avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean()) / 1000
-    avg_time_gpu_us = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean()) / 1000
-  except pd.errors.EmptyDataError:
-    # CSV is empty which means src failed miserably.
-    avg_time_cpu_us = None
-    avg_time_gpu_us = None
-
-  # Save distance of kernel from target and label.
-  label = "GPU" if avg_time_cpu_us is not None and avg_time_cpu_us > avg_time_gpu_us else "CPU" if avg_time_cpu_us is not None else "ERR"
-  if label == "ERR":
-    l.getLogger().warn("CLDrive error!")
-    l.getLogger().warn(src)
-    l.getLogger().warn(stdout)
-    l.getLogger().warn(stderr)
-  return label
-
 def TopKCLDrive(**kwargs) -> None:
   """
   Collect top-K samples per database group for each target benchmark.
@@ -454,10 +433,10 @@ def TopKCLDrive(**kwargs) -> None:
             groups[config] = {}
           if dbg.group_name not in groups[config]:
             groups[config][dbg.group_name] = ([], [], [])
-          groups[config][dbg.group_name][0].append((benchmark.name, get_cldrive_label(benchmark.contents, num_runs = 100, gsize = gs, lsize = ls)))
+          groups[config][dbg.group_name][0].append((benchmark.name, opencl.CLDriveLabel(benchmark.contents, num_runs = 100, gsize = gs, lsize = ls)))
           for idx, (src, dist) in enumerate(closest_src):
 
-            label = get_cldrive_label(src, num_runs = 100, gsize = gs, lsize = ls)
+            label = opencl.CLDriveLabel(src, num_runs = 100, gsize = gs, lsize = ls)
             if len(groups[config][dbg.group_name][1]) - 1 < idx:
               groups[config][dbg.group_name][1].append([dist])
               groups[config][dbg.group_name][2].append([label])
