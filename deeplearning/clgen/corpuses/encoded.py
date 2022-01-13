@@ -515,7 +515,7 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
           idx += 1
           bar.update(idx)
         ses.commit()
-    pkey += idx
+      pkey += idx
   with out_db.Session() as ses:
     out_db.SetDone(ses)
 
