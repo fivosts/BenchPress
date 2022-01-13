@@ -504,7 +504,7 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
   pkey = out_db.size
   for db in dbs:
     l.getLogger().info("Loading {}...".format(db.url))
-    chunk, idx = 2000000, 0
+    chunk, idx = 100, 0
     bar = progressbar.ProgressBar(max_value = db.size)
     while idx < db.size:
       with db.Session() as ses:
@@ -515,7 +515,8 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
           idx += 1
           bar.update(idx)
         ses.commit()
-      pkey += idx
+      input()
+    pkey += len(data)
   with out_db.Session() as ses:
     out_db.SetDone(ses)
 
