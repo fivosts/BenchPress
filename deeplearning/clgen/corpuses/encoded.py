@@ -512,6 +512,7 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
       with out_db.Session() as ses:
         for df in data:
           ses.add(EncodedContentFile.FromEncodedContentFile(df, idx = pkey + idx))
+          print(pkey + idx)
           idx += 1
           bar.update(idx)
         ses.commit()
