@@ -615,9 +615,9 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
   """
   Collect data from a list of preprocessed databases and merge them.
   """
-  pkey = out_db.input_size
   for db in dbs:
     l.getLogger().info("Loading {}...".format(db.url))
+    pkey = out_db.input_size
     with db.Session() as ses:
       data = ses.query(PreprocessedContentFile).all()
     with out_db.Session() as ses:
@@ -625,7 +625,6 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
       for df in bar(data):
         ses.add(PreprocessedContentFile.FromPreprocessedContentFile(df, idx = pkey + df.id))
       ses.commit()
-    pkey += len(data)
   with out_db.Session() as ses:
     out_db.SetDone(ses)
 
