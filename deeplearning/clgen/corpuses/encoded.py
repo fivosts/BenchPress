@@ -514,7 +514,7 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
           ses.add(EncodedContentFile.FromEncodedContentFile(df, idx = pkey + df.id))
           bar.update(idx + i)
         ses.commit()
-      pkey += len(data)
+      pkey += chunk
       idx  += chunk
   with out_db.Session() as ses:
     out_db.SetDone(ses)
