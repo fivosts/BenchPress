@@ -136,7 +136,7 @@ class EncodedContentFile(Base):
     Replicate EncodedContentFile
     """
     return EncodedContentFile(
-      id               = idx if idx else encoded_file.id,
+      id               = idx if idx is not None else encoded_file.id,
       data             = encoded_file.data,
       tokencount       = encoded_file.tokencount,
       feature_vector   = encoded_file.feature_vector,
@@ -502,24 +502,19 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
   Collect data from a list of preprocessed databases and merge them.
   """
   pkey = out_db.size
-  l.getLogger().error(pkey)
   for db in dbs:
     l.getLogger().info("Loading {}...".format(db.url))
-    chunk, idx = 100, 0
+    chunk, idx = 2000000, 0
     bar = progressbar.ProgressBar(max_value = db.size)
     while idx < db.size:
       with db.Session() as ses:
         data = ses.query(EncodedContentFile).limit(chunk).offset(idx).all()
       with out_db.Session() as ses:
         for df in data:
-          l.getLogger().critical(pkey)
-          l.getLogger().critical(idx)
           f = EncodedContentFile.FromEncodedContentFile(df, idx = pkey + idx)
-          l.getLogger().warn(f.id)
           ses.add(f)
           idx += 1
           bar.update(idx)
-        ses.commit()
       input()
     pkey += len(data)
   with out_db.Session() as ses:
