@@ -501,11 +501,11 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
   """
   Collect data from a list of preprocessed databases and merge them.
   """
-  pkey = out_db.size
   for db in dbs:
     l.getLogger().info("Loading {}...".format(db.url))
     chunk, idx = 2000000, 0
     bar = progressbar.ProgressBar(max_value = db.size)
+    pkey = out_db.size
     while idx < db.size:
       with db.Session() as ses:
         data = ses.query(EncodedContentFile).limit(chunk).offset(idx).all()
@@ -516,7 +516,6 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
           idx += 1
           bar.update(idx)
         ses.commit()
-    pkey += len(data)
   with out_db.Session() as ses:
     out_db.SetDone(ses)
 
