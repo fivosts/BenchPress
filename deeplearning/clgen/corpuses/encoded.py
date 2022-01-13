@@ -511,8 +511,9 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
         data = ses.query(EncodedContentFile).limit(chunk).offset(idx).all()
       with out_db.Session() as ses:
         for df in data:
-          ses.add(EncodedContentFile.FromEncodedContentFile(df, idx = pkey + idx))
-          print(pkey + idx)
+          f = EncodedContentFile.FromEncodedContentFile(df, idx = pkey + idx)
+          print(f.id)
+          ses.add(f)
           idx += 1
           bar.update(idx)
         ses.commit()
