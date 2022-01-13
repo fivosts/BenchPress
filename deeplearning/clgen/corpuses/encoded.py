@@ -510,12 +510,12 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
       with db.Session() as ses:
         data = ses.query(EncodedContentFile).limit(chunk).offset(idx).all()
       with out_db.Session() as ses:
-        for i, df in enumerate(data):
+        for df in data:
           ses.add(EncodedContentFile.FromEncodedContentFile(df, idx = pkey + df.id))
-          bar.update(idx + i)
+          idx += 1
+          bar.update(idx)
         ses.commit()
-      pkey += chunk
-      idx  += chunk
+    pkey = out_db.size
   with out_db.Session() as ses:
     out_db.SetDone(ses)
 
