@@ -474,6 +474,7 @@ class MaskLMDataGenerator(object):
         encoded_corpus = []
         chunk_size = 5000000
         i, ch_idx = 0, 0
+        bar = progressbar.ProgressBar(max_value = self.corpus.encoded.size)
         for kernel in self.corpus.GetTrainingDataGenerator():
           try:
             enck = self._addStartEndToken(list(kernel[:effect_seq_length]))
@@ -491,6 +492,7 @@ class MaskLMDataGenerator(object):
               pickle.dump(encoded_corpus, outf, protocol = 4)
             ch_idx += 1
             encoded_corpus = []
+          bar.update(i)
         if encoded_corpus:
           encoded_corpus = np.array(encoded_corpus)
           l.getLogger().info("Fixing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
