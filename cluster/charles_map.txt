@@ -1,7 +1,0 @@
-log-charles11-autophase-0
-log-charles12-autophase-1
-log-charles14-autophase-2
-log-charles15-autophase-3
-log-charles17-instcount-0
-log-charles18-instcount-1
-log-charles19-instcount-2
