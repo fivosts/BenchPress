@@ -203,6 +203,8 @@ class Model(object):
       model_pb2.NetworkArchitecture.TENSORFLOW_BERT: tf_bert.tfBert,
       model_pb2.NetworkArchitecture.TORCH_BERT: torch_bert.torchBert,
     }[config.architecture.backend](self.config, self.cache, self.hash)
+    l.getLogger().info("Initialized {} in {}".format(self.config.architecture.backend, self.cache.path))
+    return
 
   def GetShortSummary(self) -> str:
     return self.backend.GetShortSummary()

@@ -212,6 +212,8 @@ class Corpus(object):
     self.cache = cache.mkcache("corpus", "encoded", encoded_id)
     commit.saveCommit(self.cache.path)
     commit.saveCommit(self.cache.path.parent.parent / "preprocessed" / preprocessed_id)
+    l.getLogger().info("Initialized {}train corpus in {}".format("pre_" if self.pre_train else "", self.cache.path))
+    return
 
   def GetShortSummary(self) -> str:
     try:
