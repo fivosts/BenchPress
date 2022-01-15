@@ -158,6 +158,37 @@ def AssertConfigIsValid(config: model_pb2.DataGenerator,
     )
   return config
 
+def _addStartEndPadToken(tokenizer, inp: list, trunc: int = None, seq_len: int = None) -> typing.Tuple[int, np.array]:
+  """
+  Inserts [START] and [END] token at the beginnning and end of a sequence
+  
+  Arguments:
+    inp: input_sequence
+
+  Returns:
+    [START] + input_sequence + [END]
+  """
+  try:
+    if trunc is not None:
+      inp = inp[:trunc]
+
+    assert len(inp) != 0, "Empty list provided."
+    assert tokenizer.padToken not in inp, "Use this function before padding a sequence!"
+
+    start = [tokenizer.startToken] if inp[0]  != tokenizer.startToken else []
+    end   = [tokenizer.endToken  ] if inp[-1] != tokenizer.endToken   else []
+
+    if isinstance(inp, list):
+      ret = start + inp + end
+      rlen = len(ret)
+      if seq_len is not None:
+        ret += tokenizer.padToken * (seq_len - len(ret))
+      return rlen, np.array(ret)
+    elif isinstance(inp, np.ndarray):
+      raise NotImplementedError
+  except AssertionError:
+    return None
+
 class MaskLMDataGenerator(object):
   """Abstract class, shared among TORCH and TF BERT data generators."""
   @property
@@ -430,7 +461,6 @@ class MaskLMDataGenerator(object):
     shaped_corpus     = None
 
     corpus_file = "{}corpus.pkl".format("pre_" if self.pre_train else "")
-
     # Monitor counts actual length distribution of kernel instances.
     kernel_length_monitor = monitors.FrequencyMonitor(path, "{}kernel_length".format("pre_" if self.pre_train else ""))
     # Token frequency distribution monitor.
@@ -469,25 +499,32 @@ class MaskLMDataGenerator(object):
         if self.num_train_steps:
           self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
         self.steps_per_epoch = self.config.steps_per_epoch
+        l.getLogger().error("Processing pre-train corpus chunks...")
         if len(glob.glob(str(path / "pre_corpus_*.pkl"))) > 0:
           return []
         encoded_corpus = []
         chunk_size = 5000000
         i, ch_idx = 0, 0
-        bar = progressbar.ProgressBar(max_value = self.corpus.encoded.size)
-        for kernel in self.corpus.GetTrainingDataGenerator():
-          try:
-            enck = self._addStartEndToken(list(kernel[:effect_seq_length]))
-          except AssertionError:
-            continue
-          kernel_length_monitor.register(len(enck))
-          enck += pad * (sequence_length - len(enck))
-          encoded_corpus.append(np.array(enck))
+        bar  = progressbar.ProgressBar(max_value = self.corpus.encoded.size)
+        l.getLogger().warn("Processing pre-train corpus chunks...")
+        pool = multiprocessing.Pool()
+        l.getLogger().info("Processing pre-train corpus chunks...")
+        for dp in pool.imap_unordered(
+                            functools.partial(
+                              _addStartEndPadToken,
+                              tokenizer = self.tokenizer,
+                              trunc = effect_seq_length,
+                              seq_len = sequence_length),
+                            self.corpus.GetTrainingDataGenerator()):
+          if dp:
+            rlen, enc_kernel = dp
+            kernel_length_monitor.register(rlen)
+            encoded_corpus.append(enc_kernel)
           i += 1
           if i % chunk_size == 0:
             encoded_corpus = np.array(encoded_corpus)
             corpus_file = "pre_corpus_{}.pkl".format(ch_idx)
-            l.getLogger().info("Fixing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
+            l.getLogger().info("Storing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
             with open(path / corpus_file, 'wb') as outf:
               pickle.dump(encoded_corpus, outf, protocol = 4)
             ch_idx += 1
@@ -495,7 +532,7 @@ class MaskLMDataGenerator(object):
           bar.update(i)
         if encoded_corpus:
           encoded_corpus = np.array(encoded_corpus)
-          l.getLogger().info("Fixing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
+          l.getLogger().info("Storing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
           corpus_file = "pre_corpus_{}.pkl".format(ch_idx)
           with open(path / corpus_file, 'wb') as outf:
             pickle.dump(encoded_corpus, outf, protocol = 4)
