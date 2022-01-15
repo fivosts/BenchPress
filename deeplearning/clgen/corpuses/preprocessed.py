@@ -78,7 +78,6 @@ class Meta(Base):
   key: str = sql.Column(sql.String(1024), primary_key=True)
   value: str = sql.Column(sql.String(1024), nullable=False)
 
-
 class PreprocessedContentFile(Base):
   __tablename__ = "preprocessed_contentfiles"
 
