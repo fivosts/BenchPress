@@ -239,7 +239,6 @@ class Corpus(object):
     if self.pre_train and not tokenizer:
       raise ValueError("Tokenizer must be specified when encoding pre-training corpus.")
     self._created = True
-    l.getLogger().info("Content ID: {}".format(self.content_id))
 
     preprocessed_lock_path = (
       pathlib.Path(self.preprocessed.url[len("sqlite:///") :]).parent / "LOCK"
@@ -249,22 +248,24 @@ class Corpus(object):
       raise ValueError(
         f"Pre-processed corpus contains no files: '{self.preprocessed.url}'"
       )
+    l.getLogger().info("Pre-processed {}train corpus in corpuses/{}".format("pre_" if self.pre_train else "", pathlib.Path(self.preprocessed.url).parent.stem))
     encoded_lock_path = (
       pathlib.Path(self.encoded.url[len("sqlite:///") :]).parent / "LOCK"
     )
     start_time      = time.time()
     self._tokenizer = tokenizer
     tokenizer       = self.tokenizer
-    l.getLogger().info(
-      "{}: {} tokens in {} ms".format(
-          type(tokenizer).__name__,
-          humanize.intcomma(tokenizer.vocab_size),
-          humanize.intcomma(int((time.time() - start_time) * 1000)),
-        )
-    )
+    if not self.pre_train:
+      l.getLogger().info(
+        "{}: {} tokens".format(
+            type(tokenizer).__name__,
+            humanize.intcomma(tokenizer.vocab_size),
+          )
+      )
     self.encoded.Create(
       self.preprocessed, tokenizer, self.config.contentfile_separator
     )
+    l.getLogger().info("Encoded {}train corpus in corpuses/{}".format("pre_" if self.pre_train else "", pathlib.Path(self.encoded.url).parent.stem))
     return
 
   def GetTextCorpus(self, shuffle: bool) -> str:
@@ -286,7 +287,7 @@ class Corpus(object):
 
   def GetTrainingDataGenerator(self):
     with self.encoded.Session() as session:
-      for x in session.query(encoded.EncodedContentFile).yield_per(1000000):
+      for x in session.query(encoded.EncodedContentFile).yield_per(5000000):
         yield list(x.indices_array)
       return
 
@@ -373,7 +374,6 @@ class Corpus(object):
 
   def _CreateTokenizer(self) -> tokenizers.TokenizerBase:
     """Creates and caches an tokenizer."""
-    l.getLogger().info("Deriving tokenizer from preprocessed corpus")
     corpus_txt = self.GetTextCorpus(shuffle=False)
 
     if self.config.HasField("pre_encoded_corpus_url"):
@@ -544,12 +544,6 @@ def ResolveContentId(config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrain
   #     l.getLogger().info("Wrote directory hash: '{}'.".format(hash_file_path))
   else:
     raise NotImplementedError("Unsupported Corpus.contentfiles field value")
-  l.getLogger().warning(
-    "Resolved Content ID {} in {} ms.".format(
-          content_id,
-          humanize.intcomma(int((time.time() - start_time) * 1000)),
-        )
-  )
   return content_id
 
 
