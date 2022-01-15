@@ -285,7 +285,12 @@ class EncodedContentFiles(sqlutil.Database):
   def size(self):
     """Return the total number of files in the encoded corpus."""
     with self.Session() as session:
-      return session.query(EncodedContentFile).count()
+      if session.query(EncodedContentFileStats).first():
+        stats = session.query(EncodedContentFileStats).first()
+        return stats.file_count
+      else:
+        l.getLogger().warn("Stats table not found. Inserting stats...")
+        self.SetStats(session)
 
   @property
   def token_count(self) -> int:
@@ -330,6 +335,7 @@ class EncodedContentFiles(sqlutil.Database):
           corpus_lengths = corpus_lengths,
         )
       )
+    session.commit()
     return
 
   def Import(
