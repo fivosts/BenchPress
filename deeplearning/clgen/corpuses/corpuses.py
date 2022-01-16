@@ -287,7 +287,7 @@ class Corpus(object):
 
   def GetTrainingDataGenerator(self):
     with self.encoded.Session() as session:
-      for x in session.query(encoded.EncodedContentFile).yield_per(5000000):
+      for x in session.query(encoded.EncodedContentFile).yield_per(10000):
         yield list(x.indices_array)
       return
 

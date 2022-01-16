@@ -158,7 +158,7 @@ def AssertConfigIsValid(config: model_pb2.DataGenerator,
     )
   return config
 
-def _addStartEndPadToken(tokenizer, inp: list, trunc: int = None, seq_len: int = None) -> typing.Tuple[int, np.array]:
+def _addStartEndPadToken(inp: list, tokenizer, trunc: int = None, seq_len: int = None) -> typing.Tuple[int, np.array]:
   """
   Inserts [START] and [END] token at the beginnning and end of a sequence
   
@@ -168,6 +168,7 @@ def _addStartEndPadToken(tokenizer, inp: list, trunc: int = None, seq_len: int =
   Returns:
     [START] + input_sequence + [END]
   """
+  tokenizer = pickle.loads(tokenizer)
   try:
     if trunc is not None:
       inp = inp[:trunc]
@@ -182,7 +183,7 @@ def _addStartEndPadToken(tokenizer, inp: list, trunc: int = None, seq_len: int =
       ret = start + inp + end
       rlen = len(ret)
       if seq_len is not None:
-        ret += tokenizer.padToken * (seq_len - len(ret))
+        ret += [tokenizer.padToken] * (seq_len - len(ret))
       return rlen, np.array(ret)
     elif isinstance(inp, np.ndarray):
       raise NotImplementedError
@@ -499,22 +500,20 @@ class MaskLMDataGenerator(object):
         if self.num_train_steps:
           self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
         self.steps_per_epoch = self.config.steps_per_epoch
-        l.getLogger().error("Processing pre-train corpus chunks...")
         if len(glob.glob(str(path / "pre_corpus_*.pkl"))) > 0:
           return []
         encoded_corpus = []
-        chunk_size = 5000000
+        chunk_size = 1000000
         i, ch_idx = 0, 0
         bar  = progressbar.ProgressBar(max_value = self.corpus.encoded.size)
-        l.getLogger().warn("Processing pre-train corpus chunks...")
         pool = multiprocessing.Pool()
         l.getLogger().info("Processing pre-train corpus chunks...")
         for dp in pool.imap_unordered(
                             functools.partial(
                               _addStartEndPadToken,
-                              tokenizer = self.tokenizer,
-                              trunc = effect_seq_length,
-                              seq_len = sequence_length),
+                              tokenizer = pickle.dumps(self.tokenizer),
+                              trunc     = effect_seq_length,
+                              seq_len   = sequence_length),
                             self.corpus.GetTrainingDataGenerator()):
           if dp:
             rlen, enc_kernel = dp
@@ -537,6 +536,7 @@ class MaskLMDataGenerator(object):
           with open(path / corpus_file, 'wb') as outf:
             pickle.dump(encoded_corpus, outf, protocol = 4)
         kernel_length_monitor.plot()
+        pool.close()
         return encoded_corpus
       else:
         encoded_corpus  = self.corpus.GetTrainingData(sequence_length = effect_seq_length if not self.config.truncate_large_kernels else None)
