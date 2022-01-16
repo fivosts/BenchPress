@@ -503,7 +503,7 @@ class MaskLMDataGenerator(object):
         if len(glob.glob(str(path / "pre_corpus_*.pkl"))) > 0:
           return []
         encoded_corpus = []
-        chunk_size = 1000000
+        chunk_size = 5000000
         i, ch_idx = 0, 0
         bar  = progressbar.ProgressBar(max_value = self.corpus.encoded.size)
         pool = multiprocessing.Pool()
