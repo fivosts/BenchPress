@@ -94,6 +94,7 @@ def _write_figure(fig       : go.Figure,
   Otherwise only show html file.
   """
   if path:
+    path.mkdir(parents = True, exist_ok = True)
     outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
     fig.write_html (outf("html"))
     fig.write_image(outf("png"), width = kwargs.get('width'), height = kwargs.get('height'))
@@ -113,14 +114,40 @@ def SingleScatterLine(x         : np.array,
   fig.add_trace(
     go.Scatter(
       x = x, y = y,
-      mode = 'lines+markers',
+      mode = kwargs.get(mode, 'lines+markers'),
       name = plot_name,
-      showlegend = False,
-      marker_color = "#00b3b3",
-      opacity = 0.75
+      showlegend = kwargs.get(showlegend, False),
+      marker_color = kwargs.get(marker_color, "#00b3b3"),
+      opacity = kwargs.get(opacity, 0.75),
     )
   )
   _write_figure(fig, plot_name, path, **kwargs)
+  return
+
+def MultiScatterLine(x         : typing.List[np.array],
+                     y         : typing.List[np.array],
+                     names     : typing.List[str],
+                     plot_name : str,
+                     path      : pathlib.Path = None,
+                     **kwargs,
+                     ) -> None:
+  """
+  Implementation of a simple, ungroupped 2D plot of multiple scatter lines.
+  """
+  layout = _get_generic_layout(**kwargs)
+  fig = go.Figure(layout = layout)
+  for xx, yy, n in zip(x, y, names):
+    fig.add_trace(
+      go.Scatter(
+        x = xx,
+        y = yy,
+        name = n,
+        mode = kwargs.get(mode, 'lines+markers'),
+        showlegend = kwargs.get(showlegend, True),
+        opacity = kwargs.get(opacity, 0.75),
+      )
+    )
+    _write_figure(fig, plot_name, path, **kwargs)
   return
 
 def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
@@ -147,37 +174,13 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
       go.Scatter(
         x = feats[:,0], y = feats[:,1],
         name = group,
-        mode = 'markers',
-        showlegend = True,
-        opacity    = 1.0,
+        mode = kwargs.get(mode, 'markers'),
+        showlegend = kwargs.get(showlegend, True),
+        opacity    = kwargs.get(opacity, 1.0),
         marker     = next(miter) if miter else None,
         text       = names,
       )
     )
-  _write_figure(fig, plot_name, path, **kwargs)
-  return
-
-def ScatterPlot(x         : np.array,
-                y         : np.array,
-                plot_name : str,
-                path      : pathlib.Path = None,
-                **kwargs,
-                ) -> None:
-  """
-  Implementation of a simple 2D scatter plot without groups.
-  """
-  layout = _get_generic_layout(**kwargs)
-  fig = go.Figure(layout = layout)
-
-  fig.add_trace(
-    go.Scatter(
-      x = x,
-      y = y,
-      mode = 'markers',
-      showlegend = True,
-      opacity = 0.75,
-    )
-  )
   _write_figure(fig, plot_name, path, **kwargs)
   return
 
@@ -340,8 +343,8 @@ def RelativeDistribution(x         : np.array,
     x,
     curve_type = 'normal',
     histnorm = "probability",
-    show_rug = False,
-    bin_size = 1,
+    show_rug = kwargs.get('show_rug', False),
+    bin_size = kwargs.get('bin_size', 1),
     show_hist = True
   )
   fig.update_layout(layout)
