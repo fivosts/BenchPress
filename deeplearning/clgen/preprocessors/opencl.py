@@ -248,7 +248,7 @@ def CLDrivePretty(src: str, num_runs: int = 5, gsize: int = 4096, lsize: int = 1
     print(x)
   for x in stderr.split('\n'):
     print(x)
-  return pd.read_csv(io.StringIO(stdout), sep = ","), stderr
+  return stdout, stderr
 
 def CLDriveNumBytes(src: str, gsize: int = 4096, lsize: int = 1024) -> int:
   """
