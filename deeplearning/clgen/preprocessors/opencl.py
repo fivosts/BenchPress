@@ -237,8 +237,15 @@ def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1
       raise ValueError("CLDrive has timed out!")
   return stdout, stderr
 
+def CLDrivePretty(src: str, gsize: int = 4096, lsize: int = 1024) -> typing.Tuple[str, str]:
+  """
+  Run CLDrive with given configuration but pretty print stdout and stderror.
+  """
+
 def CLDriveNumBytes(src: str, gsize: int = 4096, lsize: int = 1024) -> int:
-  # Run cldrive on source sample.
+  """
+  Run CLDrive once for given configuration to identify number of transferred bytes.
+  """
   stdout, stderr = opencl.RunCLDrive(src, num_runs = 1, gsize = gsize, lsize = lsize)
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
@@ -253,7 +260,9 @@ def CLDriveNumBytes(src: str, gsize: int = 4096, lsize: int = 1024) -> int:
   return transferred_bytes_cpu
 
 def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> str:
-  # Run cldrive on source sample.
+  """
+  Run CLDrive on given configuration and compute whether it should run on CPU vs GPU based on where it will execute faster (transfer time + execution time).
+  """
   stdout, stderr = opencl.RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
