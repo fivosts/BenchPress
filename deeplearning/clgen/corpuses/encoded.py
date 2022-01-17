@@ -291,6 +291,7 @@ class EncodedContentFiles(sqlutil.Database):
       else:
         l.getLogger().warn("Stats table not found. Inserting stats...")
         self.SetStats(session)
+        return session.query(EncodedContentFileStats).first().file_count
 
   @property
   def token_count(self) -> int:
