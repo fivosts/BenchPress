@@ -114,11 +114,11 @@ def SingleScatterLine(x         : np.array,
   fig.add_trace(
     go.Scatter(
       x = x, y = y,
-      mode = kwargs.get(mode, 'lines+markers'),
+      mode = kwargs.get('mode', 'lines+markers'),
       name = plot_name,
-      showlegend = kwargs.get(showlegend, False),
-      marker_color = kwargs.get(marker_color, "#00b3b3"),
-      opacity = kwargs.get(opacity, 0.75),
+      showlegend = kwargs.get('showlegend', False),
+      marker_color = kwargs.get('marker_color', "#00b3b3"),
+      opacity = kwargs.get('opacity', 0.75),
     )
   )
   _write_figure(fig, plot_name, path, **kwargs)
@@ -142,9 +142,9 @@ def MultiScatterLine(x         : typing.List[np.array],
         x = xx,
         y = yy,
         name = n,
-        mode = kwargs.get(mode, 'lines+markers'),
-        showlegend = kwargs.get(showlegend, True),
-        opacity = kwargs.get(opacity, 0.75),
+        mode = kwargs.get('mode', 'lines+markers'),
+        showlegend = kwargs.get('showlegend', True),
+        opacity = kwargs.get('opacity', 0.75),
       )
     )
     _write_figure(fig, plot_name, path, **kwargs)
@@ -174,9 +174,9 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
       go.Scatter(
         x = feats[:,0], y = feats[:,1],
         name = group,
-        mode = kwargs.get(mode, 'markers'),
-        showlegend = kwargs.get(showlegend, True),
-        opacity    = kwargs.get(opacity, 1.0),
+        mode = kwargs.get('mode', 'markers'),
+        showlegend = kwargs.get('showlegend', True),
+        opacity    = kwargs.get('opacity', 1.0),
         marker     = next(miter) if miter else None,
         text       = names,
       )
