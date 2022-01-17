@@ -15,6 +15,7 @@
 """Preprocessor passes for the OpenCL programming language."""
 import typing
 import os
+import io
 import subprocess
 import tempfile
 
@@ -237,7 +238,7 @@ def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1
       raise ValueError("CLDrive has timed out!")
   return stdout, stderr
 
-def CLDrivePretty(src: str, num_runs: int = 5, gsize: int = 4096, lsize: int = 1024) -> typing.Tuple[str, str]:
+def CLDrivePretty(src: str, num_runs: int = 5, gsize: int = 4096, lsize: int = 1024) -> typing.Tuple[pd.DataFrame, str]:
   """
   Run CLDrive with given configuration but pretty print stdout and stderror.
   """
@@ -246,7 +247,7 @@ def CLDrivePretty(src: str, num_runs: int = 5, gsize: int = 4096, lsize: int = 1
     print(x)
   for x in stderr.split('\n'):
     print(x)
-  return stdout, stderr
+  return pd.read_csv(io.StringIO(stdout), sep = ","), stderr
 
 def CLDriveNumBytes(src: str, gsize: int = 4096, lsize: int = 1024) -> int:
   """
@@ -265,22 +266,25 @@ def CLDriveNumBytes(src: str, gsize: int = 4096, lsize: int = 1024) -> int:
   assert transferred_bytes_cpu == transferred_bytes_gpu, "Mismatch between cpu and gpu transferred bytes: {}".format(transferred_bytes_cpu, transferred_bytes_gpu)
   return transferred_bytes_cpu
 
-def CLDriveExecutionTimes(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> int:
+def CLDriveExecutionTimes(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
   """
   Run CLDrive once for given configuration to identify number of transferred bytes.
   """
-  stdout, stderr = RunCLDrive(src, num_runs = 1, gsize = gsize, lsize = lsize)
+  stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
-    transferred_bytes_cpu = df[df['device'].str.contains("CPU")].transferred_bytes.mean()
-    transferred_bytes_gpu = df[df['device'].str.contains("GPU")].transferred_bytes.mean()
+    transfer_time_cpu  = df[df['device'].str.contains("CPU")].transfer_time_ns
+    execution_time_cpu = df[df['device'].str.contains("CPU")].kernel_time_ns
+    transfer_time_gpu  = df[df['device'].str.contains("GPU")].transfer_time_ns
+    execution_time_gpu = df[df['device'].str.contains("GPU")].kernel_time_ns
   except pd.errors.EmptyDataError:
     # CSV is empty which means src failed miserably.
-    transferred_bytes_cpu = None
-    transferred_bytes_gpu = None
+    transfer_time_cpu  = None
+    execution_time_cpu = None
+    transfer_time_gpu  = None
+    execution_time_gpu = None
 
-  assert transferred_bytes_cpu == transferred_bytes_gpu, "Mismatch between cpu and gpu transferred bytes: {}".format(transferred_bytes_cpu, transferred_bytes_gpu)
-  return transferred_bytes_cpu
+  return transfer_time_cpu, execution_time_cpu, transfer_time_gpu, execution_time_gpu
 
 def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> str:
   """
