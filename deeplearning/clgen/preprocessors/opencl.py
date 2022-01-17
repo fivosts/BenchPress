@@ -225,7 +225,7 @@ def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1
     f.write(src)
     f.flush()
     proc = subprocess.Popen(
-      "timeout -s9 30 {} --srcs={} --num_runs={} --gsize={} --lsize={} --envs={},{}".format(CLDRIVE, f.name, num_runs, gsize, lsize, CL_PLATFORMS['CPU'], CL_PLATFORMS['GPU']).split(),
+      "{} --srcs={} --num_runs={} --gsize={} --lsize={} --envs={},{}".format(CLDRIVE, f.name, num_runs, gsize, lsize, CL_PLATFORMS['CPU'], CL_PLATFORMS['GPU']).split(),
       stdout = subprocess.PIPE,
       stderr = subprocess.PIPE,
       universal_newlines = True,
@@ -255,6 +255,23 @@ def CLDriveNumBytes(src: str, gsize: int = 4096, lsize: int = 1024) -> int:
   stdout, stderr = RunCLDrive(src, num_runs = 1, gsize = gsize, lsize = lsize)
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
+    transferred_bytes_cpu = df[df['device'].str.contains("CPU")].transferred_bytes[0]
+    transferred_bytes_gpu = df[df['device'].str.contains("GPU")].transferred_bytes[0]
+  except pd.errors.EmptyDataError:
+    # CSV is empty which means src failed miserably.
+    transferred_bytes_cpu = None
+    transferred_bytes_gpu = None
+
+  assert transferred_bytes_cpu == transferred_bytes_gpu, "Mismatch between cpu and gpu transferred bytes: {}".format(transferred_bytes_cpu, transferred_bytes_gpu)
+  return transferred_bytes_cpu
+
+def CLDriveExecutionTimes(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> int:
+  """
+  Run CLDrive once for given configuration to identify number of transferred bytes.
+  """
+  stdout, stderr = RunCLDrive(src, num_runs = 1, gsize = gsize, lsize = lsize)
+  try:
+    df = pd.read_csv(io.StringIO(stdout), sep = ",")
     transferred_bytes_cpu = df[df['device'].str.contains("CPU")].transferred_bytes.mean()
     transferred_bytes_gpu = df[df['device'].str.contains("GPU")].transferred_bytes.mean()
   except pd.errors.EmptyDataError:
@@ -272,12 +289,10 @@ def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int =
   stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
-    transferred_bytes = df[df['device'].str.contains("CPU")].transferred_bytes.mean()
     avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean()) / 1000
     avg_time_gpu_us = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean()) / 1000
   except pd.errors.EmptyDataError:
     # CSV is empty which means src failed miserably.
-    transferred_bytes = None
     avg_time_cpu_us   = None
     avg_time_gpu_us   = None
 
