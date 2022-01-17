@@ -519,8 +519,7 @@ def ResolveContentId(config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrain
       ExpandConfigPath(config.local_tar_archive, path_prefix=FLAGS.clgen_local_path_prefix)
     )
   elif config.HasField("bq_database"):
-    db_path = ExpandConfigPath(config.bq_database, path_prefix = FLAGS.clgen_local_path_prefix)
-    content_id = crypto.sha256_str(str(db_path))
+    content_id = crypto.sha256_str(str(config.bq_database))
   # elif config.HasField("fetch_github"):
 
   #   gitfile_path = ExpandConfigPath(
