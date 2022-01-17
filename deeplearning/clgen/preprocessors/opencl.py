@@ -237,10 +237,16 @@ def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1
       raise ValueError("CLDrive has timed out!")
   return stdout, stderr
 
-def CLDrivePretty(src: str, gsize: int = 4096, lsize: int = 1024) -> typing.Tuple[str, str]:
+def CLDrivePretty(src: str, num_runs: int = 5, gsize: int = 4096, lsize: int = 1024) -> typing.Tuple[str, str]:
   """
   Run CLDrive with given configuration but pretty print stdout and stderror.
   """
+  stdout, stderr = opencl.RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
+  for x in stdout.split('\n'):
+    print(x)
+  for x in stderr.split('\n'):
+    print(x)
+  return stdout, stderr
 
 def CLDriveNumBytes(src: str, gsize: int = 4096, lsize: int = 1024) -> int:
   """
