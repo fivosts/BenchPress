@@ -241,7 +241,7 @@ def CLDrivePretty(src: str, num_runs: int = 5, gsize: int = 4096, lsize: int = 1
   """
   Run CLDrive with given configuration but pretty print stdout and stderror.
   """
-  stdout, stderr = opencl.RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
+  stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
   for x in stdout.split('\n'):
     print(x)
   for x in stderr.split('\n'):
@@ -252,7 +252,7 @@ def CLDriveNumBytes(src: str, gsize: int = 4096, lsize: int = 1024) -> int:
   """
   Run CLDrive once for given configuration to identify number of transferred bytes.
   """
-  stdout, stderr = opencl.RunCLDrive(src, num_runs = 1, gsize = gsize, lsize = lsize)
+  stdout, stderr = RunCLDrive(src, num_runs = 1, gsize = gsize, lsize = lsize)
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
     transferred_bytes_cpu = df[df['device'].str.contains("CPU")].transferred_bytes.mean()
@@ -269,7 +269,7 @@ def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int =
   """
   Run CLDrive on given configuration and compute whether it should run on CPU vs GPU based on where it will execute faster (transfer time + execution time).
   """
-  stdout, stderr = opencl.RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
+  stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
     transferred_bytes = df[df['device'].str.contains("CPU")].transferred_bytes.mean()
