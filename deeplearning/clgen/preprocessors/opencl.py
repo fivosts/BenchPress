@@ -18,6 +18,7 @@ import os
 import io
 import subprocess
 import tempfile
+import pandas as pd
 
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.preprocessors import clang
