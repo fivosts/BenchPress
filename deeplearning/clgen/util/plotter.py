@@ -158,6 +158,14 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
                      ) -> None:
   """
   Plots groupped scatter plot of points in two-dimensional space.
+  Groups must comply to the following format:
+
+  groups = {
+    'group_name': {
+      'data': [[xi, yi], ...],
+      'names': [ni, ...]
+    }
+  }
   """
   layout = _get_generic_layout(**kwargs)
   fig = go.Figure(layout = layout)
@@ -168,6 +176,8 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
   else:
     miter = None
   for group, values in groups.items():
+    if len(values['data']) == 0:
+      continue
     feats = np.array(values['data'])
     names = values['names']
     fig.add_trace(
@@ -239,6 +249,11 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
   """
   Similar to LogitsStepsDistrib but more generic.
   Plots groups of bars.
+
+  Groups must comply to the following format:
+  groups = {
+    'group_name': ([], [])
+  }
   """
   # colors
   layout = _get_generic_layout(**kwargs)
@@ -253,7 +268,7 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
         y = [(0.2+i if i == 0 else i) for i in y],
         marker_color = next(palette),
         textposition = "inside",
-        text = ["" if i < 100 else "*" for i in y],
+        # text = ["" if i < 100 else "*" for i in y],
         textfont = dict(color = "white", size = 100),
       )
     )
