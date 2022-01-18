@@ -190,8 +190,9 @@ def LabelGlobalSize() -> None:
 
 def ExecutionTimesGlobalSize() -> None:
   """
-  Iterate over multiple global sizes and collect the optimal device
-  to execute an OpenCL kernel. GPU or CPU.
+  Iterate over multiple global sizes and collect the execution time
+  for transferring to CPU and GPU and executing kernel on CPU and GPU
+  and report groupped bar plot.
   """
   global src1
   global src2
