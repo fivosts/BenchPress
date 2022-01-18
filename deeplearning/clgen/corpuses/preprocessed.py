@@ -380,6 +380,7 @@ class PreprocessedContentFiles(sqlutil.Database):
           except Exception as e:
             pool.terminate()
             raise e
+        session.commit()
       else:
           db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root), must_exist = True)
           total = db.mainfile_count                        # Total number of files in BQ database.
@@ -391,20 +392,24 @@ class PreprocessedContentFiles(sqlutil.Database):
           done = set(
             [x[0].replace("main_files/", "") for x in session.query(PreprocessedContentFile.input_relpath)]
           )
+          ####### You have to insert a barrier here. Otherwise if a rank writes below in the for loop, this will show up as done here (although it doesn't really matter, howver you will have simultaneous R/W)
           if environment.WORLD_RANK == 0:
             bar = progressbar.ProgressBar(max_value = total)
+
           chunk, idx = min(total_per_node, 6000000), environment.WORLD_RANK * total_per_node
+          limit = (environment.WORLD_RANK + 1) * total_per_node + (total % total_per_node if environment.WORLD_RANK == environment.WORLD_SIZE - 1 else 0)
 
           last_commit     = time.time()
           wall_time_start = time.time()
 
-          while idx < total:
+          while idx < limit:
             try:
-              pool = multiprocessing.Pool()
+              chunk = min(chunk, limit - idx)
               batch = db.main_files_batch(chunk, idx, exclude_id = done)
               idx += chunk - len(batch)
               if environment.WORLD_RANK == 0:
                 bar.update(idx)
+              pool = multiprocessing.Pool()
               for preprocessed_list in pool.imap_unordered(
                                         functools.partial(
                                           BQPreprocessorWorker,
@@ -430,6 +435,9 @@ class PreprocessedContentFiles(sqlutil.Database):
             except Exception as e:
               pool.terminate()
               raise e
+          session.commit()
+    ######### You need to add a barrier here as well.
+    return
 
   @contextlib.contextmanager
   def GetContentFileRoot(self, config: corpus_pb2.Corpus) -> pathlib.Path:
