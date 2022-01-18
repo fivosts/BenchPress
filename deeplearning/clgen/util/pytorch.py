@@ -47,7 +47,8 @@ def initPytorch() -> None:
   global num_nodes
   if FLAGS.pt_cpu_only:
     device = torch.device("cpu")
-    num_gpus = 0
+    num_gpus  = 0
+    num_nodes = 1
   elif torch_tpu_available:
     device = torch_xla.xla_device()
     num_gpus = 0
@@ -65,7 +66,8 @@ def initPytorch() -> None:
     device         = torch.device(
       "cuda:{}".format(str(available_gpus[0]['id'])) if torch.cuda.is_available() and available_gpus else "cpu"
     )
-    num_gpus = torch.cuda.device_count()
+    num_gpus  = torch.cuda.device_count()
+    num_nodes = 1
     if device.type == "cuda":
       torch.cuda.set_device(device)
   else:
