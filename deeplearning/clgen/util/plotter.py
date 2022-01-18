@@ -243,6 +243,7 @@ def LogitsStepsDistrib(x              : typing.List[np.array],
 
 def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.List]],
                  plot_name : str,
+                 text      : typing.List[str] = None,
                  path      : pathlib.Path = None,
                  **kwargs,
                  ) -> None:
@@ -267,7 +268,8 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
         x = x,
         y = [(0.2+i if i == 0 else i) for i in y],
         marker_color = next(palette),
-        textposition = "inside",
+        textposition = kwargs.get('textposition', 'inside'),
+        text = text,
         # text = ["" if i < 100 else "*" for i in y],
         textfont = dict(color = "white", size = 100),
       )
