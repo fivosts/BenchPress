@@ -18,6 +18,7 @@ import os
 import io
 import subprocess
 import tempfile
+import math
 import pandas as pd
 
 from deeplearning.clgen.util import environment
@@ -294,17 +295,20 @@ def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int =
   stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
-    avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean()) / 1000
-    avg_time_gpu_us = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean()) / 1000
+    avg_time_cpu_us = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean())
+    avg_time_gpu_us = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean())
   except pd.errors.EmptyDataError:
     # CSV is empty which means src failed miserably.
     avg_time_cpu_us   = None
     avg_time_gpu_us   = None
 
-  # Save distance of kernel from target and label.
-  label = "GPU" if avg_time_cpu_us is not None and avg_time_cpu_us > avg_time_gpu_us else "CPU" if avg_time_cpu_us is not None else "ERR"
+  if math.isnan(avg_time_cpu_us) or math.isnan(avg_time_gpu_us):
+    label = "ERR"
+  else:
+    # Save distance of kernel from target and label.
+    label = "GPU" if avg_time_cpu_us is not None and avg_time_cpu_us > avg_time_gpu_us else "CPU" if avg_time_cpu_us is not None else "ERR"
+
   if label == "ERR":
-    l.getLogger().warn("CLDrive error!")
     l.getLogger().warn(src)
     l.getLogger().warn(stdout)
     l.getLogger().warn(stderr)
