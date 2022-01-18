@@ -37,6 +37,7 @@ from deeplearning.clgen.github import bigQuery_database as bqdb
 from deeplearning.clgen.util import fs
 from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import distrib
 
 from eupy.native import logger as l
 from eupy.hermes import client
@@ -392,7 +393,8 @@ class PreprocessedContentFiles(sqlutil.Database):
           done = set(
             [x[0].replace("main_files/", "") for x in session.query(PreprocessedContentFile.input_relpath)]
           )
-          ####### You have to insert a barrier here. Otherwise if a rank writes below in the for loop, this will show up as done here (although it doesn't really matter, howver you will have simultaneous R/W)
+          # Make sure everyone has read the right copy of done IDs.
+          distrib.barrier()
           if environment.WORLD_RANK == 0:
             bar = progressbar.ProgressBar(max_value = total)
 
@@ -436,7 +438,8 @@ class PreprocessedContentFiles(sqlutil.Database):
               pool.terminate()
               raise e
           session.commit()
-    ######### You need to add a barrier here as well.
+    # Make sure every node is done by now.
+    distrib.barrier()
     return
 
   @contextlib.contextmanager
