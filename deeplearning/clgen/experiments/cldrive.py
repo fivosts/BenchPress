@@ -178,13 +178,8 @@ def LabelGlobalSize() -> None:
     for gsize_pow in range(MIN_GISZE_POW, MAX_GSIZE_POW+1):
       print("##########", gsize_pow, 2**gsize_pow)
       label = opencl.CLDriveLabel(src, num_runs = N_RUNS[n][2**gsize_pow], gsize = 2**gsize_pow, lsize = 256)
-      try:
-        if label == 'ERR':
-          while label == 'ERR':
-            label = opencl.CLDriveLabel(src, num_runs = N_RUNS[n][2**gsize_pow], gsize = 2**gsize_pow, lsize = 256)
-      except KeyboardInterrupt:
-        continue
-      labels[label]['data'].append([gsize_pow, 1])
+      if label != 'ERR':
+        labels[label]['data'].append([gsize_pow, 1])
     plt.GroupScatterPlot(
       groups = labels,
       plot_name = "label_per_gsize",
