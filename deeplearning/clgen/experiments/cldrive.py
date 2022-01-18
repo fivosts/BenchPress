@@ -270,23 +270,89 @@ def ExecutionTimesGlobalSize() -> None:
         while cpt is None:
           cpt, cpk, gpt, gpk = opencl.CLDriveExecutionTimes(src, num_runs = N_RUNS[n][2**gsize_pow], gsize = 2**gsize_pow, lsize = 256)
 
+      print(cpt.mean(), cpk.mean(), gpt.mean(), gpk.mean())
 
-      groups['cpu_transfer'][0].append(gsize_pow)
-      groups['cpu_transfer'][1].append(cpt.mean())
+      if not math.isnan(cpt.mean()):
+        groups['cpu_transfer'][0].append(lsize_pow)
+        groups['cpu_transfer'][1].append(cpt.mean() / (10**6))
 
-      groups['cpu_kernel'][0].append(gsize_pow)
-      groups['cpu_kernel'][1].append(cpk.mean())
+      if not math.isnan(cpk.mean()):
+        groups['cpu_kernel'][0].append(lsize_pow)
+        groups['cpu_kernel'][1].append(cpk.mean() / (10**6))
 
-      groups['gpu_transfer'][0].append(gsize_pow)
-      groups['gpu_transfer'][1].append(gpt.mean())
+      if not math.isnan(gpt.mean()):
+        groups['gpu_transfer'][0].append(lsize_pow)
+        groups['gpu_transfer'][1].append(gpt.mean() / (10**6))
 
-      groups['gpu_kernel'][0].append(gsize_pow)
-      groups['gpu_kernel'][1].append(cpk.mean())
+      if not math.isnan(gpk.mean()):
+        groups['gpu_kernel'][0].append(lsize_pow)
+        groups['gpu_kernel'][1].append(gpk.mean() / (10**6))
 
     plt.GrouppedBars(
       groups = groups,
       plot_name = "exec_times_per_gsize",
       path = pathlib.Path("./plots/exec_times_gsize/{}".format(n)),
       x_name = "power of 2",
+      y_name = "ms",
+    )
+  return
+
+def ExecutionTimesLocalSize() -> None:
+  """
+  Iterate over multiple global sizes and collect the optimal device
+  to execute an OpenCL kernel. GPU or CPU.
+  """
+  global src1
+  global src2
+
+  MIN_LISZE_POW = 0
+  MAX_LSIZE_POW = 21
+  GSIZE_POW = 21
+  N_RUNS = 10**2
+
+  for n, src in [("src1", src1), ("src2", src2)]:
+    labels = {
+      'CPU': {'data': [], 'names': None},
+      'GPU': {'data': [], 'names': None},
+    }
+    groups = {
+      'cpu_transfer' : [[], []],
+      'cpu_kernel'   : [[], []],
+      'gpu_transfer' : [[], []],
+      'gpu_kernel'   : [[], []],
+    }
+    for lsize_pow in range(MIN_LISZE_POW, MAX_LSIZE_POW+1):
+      print("##########", lsize_pow, 2**lsize_pow)
+
+      cpt, cpk, gpt, gpk = opencl.CLDriveExecutionTimes(src, num_runs = N_RUNS, gsize = 2**GSIZE_POW, lsize = 2**lsize_pow)
+
+      if cpt is None:
+        while cpt is None:
+          cpt, cpk, gpt, gpk = opencl.CLDriveExecutionTimes(src, num_runs = N_RUNS, gsize = 2**GSIZE_POW, lsize = 2**lsize_pow)
+
+      print(cpt.mean(), cpk.mean(), gpt.mean(), gpk.mean())
+
+      if not math.isnan(cpt.mean()):
+        groups['cpu_transfer'][0].append(lsize_pow)
+        groups['cpu_transfer'][1].append(cpt.mean() / (10**6))
+
+      if not math.isnan(cpk.mean()):
+        groups['cpu_kernel'][0].append(lsize_pow)
+        groups['cpu_kernel'][1].append(cpk.mean() / (10**6))
+
+      if not math.isnan(gpt.mean()):
+        groups['gpu_transfer'][0].append(lsize_pow)
+        groups['gpu_transfer'][1].append(gpt.mean() / (10**6))
+
+      if not math.isnan(gpk.mean()):
+        groups['gpu_kernel'][0].append(lsize_pow)
+        groups['gpu_kernel'][1].append(gpk.mean() / (10**6))
+
+    plt.GrouppedBars(
+      groups = groups,
+      plot_name = "exec_times_per_lsize",
+      path = pathlib.Path("./plots/exec_times_lsize/{}".format(n)),
+      x_name = "power of 2",
+      y_name = "ms",
     )
   return
