@@ -36,6 +36,7 @@ from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.github import bigQuery_database as bqdb
 from deeplearning.clgen.util import fs
 from deeplearning.clgen.util import sqlutil
+from deeplearning.clgen.util import environment
 
 from eupy.native import logger as l
 from eupy.hermes import client
@@ -381,23 +382,29 @@ class PreprocessedContentFiles(sqlutil.Database):
             raise e
       else:
           db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root), must_exist = True)
-          if db.mainfile_count == 0:
+          total = db.mainfile_count                        # Total number of files in BQ database.
+          total_per_node = total // environment.WORLD_SIZE # In distributed nodes, this is the total files to be processed per node.
+          if total == 0:
             raise ValueError("Input BQ database {} is empty!".format(contentfile_root))
+
+          # Set of IDs that have been completed.
           done = set(
             [x[0].replace("main_files/", "") for x in session.query(PreprocessedContentFile.input_relpath)]
           )
-          bar = progressbar.ProgressBar(max_value = db.mainfile_count)
-          chunk, idx = min(db.mainfile_count, 6000000), 0
+          if environment.WORLD_RANK == 0:
+            bar = progressbar.ProgressBar(max_value = total)
+          chunk, idx = min(total_per_node, 6000000), environment.WORLD_RANK * total_per_node
 
           last_commit     = time.time()
           wall_time_start = time.time()
 
-          while idx < db.mainfile_count:
+          while idx < total:
             try:
               pool = multiprocessing.Pool()
               batch = db.main_files_batch(chunk, idx, exclude_id = done)
               idx += chunk - len(batch)
-              bar.update(idx)
+              if environment.WORLD_RANK == 0:
+                bar.update(idx)
               for preprocessed_list in pool.imap_unordered(
                                         functools.partial(
                                           BQPreprocessorWorker,
@@ -414,7 +421,8 @@ class PreprocessedContentFiles(sqlutil.Database):
                     session.commit()
                     last_commit = wall_time_end
                 idx += 1
-                bar.update(idx)
+                if environment.WORLD_RANK == 0:
+                  bar.update(idx)
               pool.close()
             except KeyboardInterrupt as e:
               pool.terminate()
