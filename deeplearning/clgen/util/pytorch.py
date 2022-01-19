@@ -90,6 +90,8 @@ def initPytorch() -> None:
     num_nodes = torch.distributed.get_world_size()
     num_gpus  = num_nodes # TODO ?
 
+    l.getLogger().warn("TODO: accommodate multiple nodes without GPUs.")
+    
     device = torch.device("cuda", environment.LOCAL_RANK)
     offset_device = torch.device("cuda", environment.LOCAL_RANK)
     
