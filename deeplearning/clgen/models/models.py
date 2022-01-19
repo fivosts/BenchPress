@@ -31,6 +31,8 @@ from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import commit
+from deeplearning.clgen.util import sqlutil
+from deeplearning.clgen.util import distrib
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import corpuses
@@ -46,7 +48,6 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import telemetry_pb2
 from deeplearning.clgen.preprocessors import opencl
 from absl import flags
-from deeplearning.clgen.util import sqlutil
 
 from eupy.native import logger as l
 
@@ -115,6 +116,9 @@ class Model(object):
     (self.cache.path / "samples").mkdir(exist_ok=True)
 
     self._created = False
+
+    # Initialize distrib path
+    distrib.init(self.cache.path)
 
     # Create symlink to encoded corpus.
     symlink = self.cache.path / "corpus"
