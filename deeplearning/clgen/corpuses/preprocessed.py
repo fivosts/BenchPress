@@ -444,10 +444,10 @@ class PreprocessedContentFiles(sqlutil.Database):
               pool.terminate()
               raise e
           session.commit()
-    # Make sure every node is done by now.
-    distrib.barrier()
     if environment.WORLD_SIZE > 1:
       bar.finalize(idx)
+    # Make sure every node is done by now.
+    distrib.barrier()
     return
 
   @contextlib.contextmanager
