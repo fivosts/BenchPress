@@ -4,6 +4,7 @@ import os
 import time
 import pathlib
 import typing
+import functools
 import progressbar
 
 from deeplearning.clgen.util import environment
@@ -31,6 +32,8 @@ def barrier(fn: typing.Callable = None) -> None:
     barriers = glob.glob(str(PATH / "barrier-*"))
 
     while len(barriers) < environment.WORLD_SIZE:
+      if WORLD_RANK == 0 and fn:
+        fn()
       time.sleep(1)
       barriers = glob.glob(str(PATH / "barrier-*"))
 
@@ -101,7 +104,8 @@ class ProgressBar(object):
     """
     Do a final bar update and cleanup progressbar object.
     """
-    self.update(idx)
+    fn = functools.partial(self.update, idx = idx)
+    barrier(fn)
     if WORLD_RANK == 0:
       indices = glob.glob(str(PATH / "index-*"))
       for ip in indices:
