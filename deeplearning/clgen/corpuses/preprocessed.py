@@ -411,6 +411,8 @@ class PreprocessedContentFiles(sqlutil.Database):
           last_commit     = time.time()
           wall_time_start = time.time()
 
+          l.getLogger().error("Node {} will make idx {} to {}".format(environment.WORLD_RANK, idx, limit))
+
           while idx < limit:
             try:
               chunk = min(chunk, limit - idx)
