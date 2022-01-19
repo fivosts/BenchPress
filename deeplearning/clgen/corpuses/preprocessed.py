@@ -323,65 +323,68 @@ class PreprocessedContentFiles(sqlutil.Database):
       return False
 
   def SetDone(self, session: sqlutil.Session):
-    session.add(Meta(key="done", value="yes"))
+    if environment.WORLD_RANK == 0:
+      session.add(Meta(key="done", value="yes"))
+    return
 
   def Import(self, session: sqlutil.Session, config: corpus_pb2.Corpus) -> None:
     with self.GetContentFileRoot(config) as contentfile_root:
       if not config.HasField("bq_database"):
-        relpaths = set(self.GetImportRelpaths(contentfile_root))
-        done = set(
-          [x[0] for x in session.query(PreprocessedContentFile.input_relpath)]
-        )
-        todo = relpaths - done
-        l.getLogger().info(
-          "Preprocessing {} of {} content files".format(
-                  humanize.intcomma(len(todo)),
-                  humanize.intcomma(len(relpaths)),
-              )
-        )
-        chunk_size = 100000
-        jobs, total = [], 0
-        for idx, t in enumerate(todo):
-          if idx % chunk_size == 0:
-            jobs.append([t])
-          else:
-            jobs[-1].append(t)
-          total += 1
-        bar = progressbar.ProgressBar(max_value=total)
-        c = 0
-        last_commit = time.time()
-        wall_time_start = time.time()
-        for job_chunk in jobs:
-          try:
-            pool = multiprocessing.Pool()
-            for preprocessed_list in pool.imap_unordered(
-                                       functools.partial(
-                                         PreprocessorWorker,
-                                         contentfile_root = contentfile_root,
-                                         preprocessors = list(config.preprocessor)
-                                       ),
-                                       job_chunk
-                                      ):
-              for preprocessed_cf in preprocessed_list:
-                wall_time_end = time.time()
-                preprocessed_cf.wall_time_ms = int(
-                  (wall_time_end - wall_time_start) * 1000
+        if environment.WORLD_RANK == 0:
+          relpaths = set(self.GetImportRelpaths(contentfile_root))
+          done = set(
+            [x[0] for x in session.query(PreprocessedContentFile.input_relpath)]
+          )
+          todo = relpaths - done
+          l.getLogger().info(
+            "Preprocessing {} of {} content files".format(
+                    humanize.intcomma(len(todo)),
+                    humanize.intcomma(len(relpaths)),
                 )
-                wall_time_start = wall_time_end
-                session.add(preprocessed_cf)
-                if wall_time_end - last_commit > 10:
-                  session.commit()
-                  last_commit = wall_time_end
-              c += 1
-              bar.update(c)
-            pool.close()
-          except KeyboardInterrupt as e:
-            pool.terminate()
-            raise e
-          except Exception as e:
-            pool.terminate()
-            raise e
-        session.commit()
+          )
+          chunk_size = 100000
+          jobs, total = [], 0
+          for idx, t in enumerate(todo):
+            if idx % chunk_size == 0:
+              jobs.append([t])
+            else:
+              jobs[-1].append(t)
+            total += 1
+          bar = progressbar.ProgressBar(max_value=total)
+          c = 0
+          last_commit = time.time()
+          wall_time_start = time.time()
+          for job_chunk in jobs:
+            try:
+              pool = multiprocessing.Pool()
+              for preprocessed_list in pool.imap_unordered(
+                                         functools.partial(
+                                           PreprocessorWorker,
+                                           contentfile_root = contentfile_root,
+                                           preprocessors = list(config.preprocessor)
+                                         ),
+                                         job_chunk
+                                        ):
+                for preprocessed_cf in preprocessed_list:
+                  wall_time_end = time.time()
+                  preprocessed_cf.wall_time_ms = int(
+                    (wall_time_end - wall_time_start) * 1000
+                  )
+                  wall_time_start = wall_time_end
+                  session.add(preprocessed_cf)
+                  if wall_time_end - last_commit > 10:
+                    session.commit()
+                    last_commit = wall_time_end
+                c += 1
+                bar.update(c)
+              pool.close()
+            except KeyboardInterrupt as e:
+              pool.terminate()
+              raise e
+            except Exception as e:
+              pool.terminate()
+              raise e
+          session.commit()
       else:
           db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root), must_exist = True)
           total = db.mainfile_count                        # Total number of files in BQ database.
