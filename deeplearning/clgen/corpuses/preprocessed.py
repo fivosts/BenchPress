@@ -232,9 +232,10 @@ class PreprocessedContentFiles(sqlutil.Database):
   """A database of pre-processed contentfiles."""
 
   def __init__(self, url: str, must_exist: bool = False):
-    super(PreprocessedContentFiles, self).__init__(
-      url, Base, must_exist=must_exist
-    )
+    if environment.WORLD_RANK == 0:
+      super(PreprocessedContentFiles, self).__init__(
+        url, Base, must_exist=must_exist
+      )
 
   def Create(self, config: corpus_pb2.Corpus):
     with self.Session() as session:
