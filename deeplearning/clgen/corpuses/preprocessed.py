@@ -396,13 +396,17 @@ class PreprocessedContentFiles(sqlutil.Database):
           done = set(
             [x[0].replace("main_files/", "") for x in session.query(PreprocessedContentFile.input_relpath)]
           )
-          # Make sure everyone has read the right copy of done IDs.
-          distrib.barrier()
-          if environment.WORLD_RANK == 0:
-            bar = progressbar.ProgressBar(max_value = total)
 
           chunk, idx = min(total_per_node, 6000000), environment.WORLD_RANK * total_per_node
           limit = (environment.WORLD_RANK + 1) * total_per_node + (total % total_per_node if environment.WORLD_RANK == environment.WORLD_SIZE - 1 else 0)
+
+          if environment.WORLD_SIZE > 1:
+            bar = distrib.ProgressBar(max_value = total, offset = idx)
+          else:
+            bar = progressbar.ProgressBar(max_value = total)
+
+          # Make sure everyone has read the right copy of done IDs.
+          distrib.barrier()
 
           last_commit     = time.time()
           wall_time_start = time.time()
@@ -431,8 +435,7 @@ class PreprocessedContentFiles(sqlutil.Database):
                     session.commit()
                     last_commit = wall_time_end
                 idx += 1
-                if environment.WORLD_RANK == 0:
-                  bar.update(idx)
+                bar.update(idx)
               pool.close()
             except KeyboardInterrupt as e:
               pool.terminate()
@@ -443,6 +446,8 @@ class PreprocessedContentFiles(sqlutil.Database):
           session.commit()
     # Make sure every node is done by now.
     distrib.barrier()
+    if environment.WORLD_SIZE > 1:
+      bar.finalize(idx)
     return
 
   @contextlib.contextmanager
