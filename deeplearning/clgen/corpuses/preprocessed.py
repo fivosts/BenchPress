@@ -437,7 +437,7 @@ class PreprocessedContentFiles(sqlutil.Database):
                     session.commit()
                     last_commit = wall_time_end
                     if environment.WORLD_SIZE > 1:
-                      l.getLogger.warn(str(environment.WORLD_RANK) + " " + str(idx))
+                      l.getLogger().warn(str(environment.WORLD_RANK) + " " + str(idx))
                       bar.update(idx)
                 idx += 1
                 if environment.WORLD_SIZE == 1:
