@@ -52,6 +52,24 @@ def barrier(fn: typing.Callable = None) -> None:
         time.sleep(0.2)
   return
 
+def lock() -> None:
+  """
+  Acquire lockfile to proceed to critical section.
+  """
+  locks = glob.glob(str(PATH / "lock-*"))
+  while True:
+    if len(locks) == 0:
+      break
+  with open(PATH / "lock-{}".format(WORLD_RANK), 'w') as outf:
+    outf.write("{}\n".format(WORLD_RANK))
+  return
+
+def unlock() -> None:
+  """
+  Release node lock.
+  """
+  return
+
 def init(path: pathlib.Path) -> None:
   """
   Initialize parent directory for distrib coordination.
