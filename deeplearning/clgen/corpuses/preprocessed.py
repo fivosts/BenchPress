@@ -416,7 +416,9 @@ class PreprocessedContentFiles(sqlutil.Database):
           while idx < limit:
             try:
               chunk = min(chunk, limit - idx)
+              l.getLogger().error("Node " + str(environment.WORLD_RANK))
               batch = db.main_files_batch(chunk, idx, exclude_id = done)
+              l.getLogger().critical("Node " + str(environment.WORLD_RANK))
               idx += chunk - len(batch)
               if environment.WORLD_RANK == 0:
                 bar.update(idx)
