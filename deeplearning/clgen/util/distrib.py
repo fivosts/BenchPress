@@ -85,7 +85,7 @@ class ProgressBar(object):
     """
     total = idx - self.offset
     for n in range(1, WORLD_SIZE):
-      if (self.path / "index-{}".format(n)).exist():
+      if (self.path / "index-{}".format(n)).exists():
         with open(self.path / "index-{}".format(n), 'r') as inf:
           total += int(inf.read())
     return total
