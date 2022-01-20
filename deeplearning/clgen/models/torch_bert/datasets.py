@@ -8,6 +8,7 @@ fit_generator() method to stream batches of training data.
 import typing
 import pickle
 import functools
+import json
 import numpy as np
 import pathlib
 import glob
@@ -124,13 +125,31 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
 
   @staticmethod
   def cumsum(sequence: typing.List[pathlib.Path]):
-    r, s = [], 0
+    lts, r, s = None, [], 0 # Cached lengths list, cumulative lengths, current max length.
+
+    ## If lengths cache exists, just load the dictionary.
+    if self.cache_lengths.exists():
+      with open(self.cache_lengths, 'r') as inf:
+        lts = json.load(inf)
+
+    ## Iterate every dataset chunk, and fix the cumulative length distribution.
     for e in sequence:
-      with open(e, 'rb') as infile:
-        lt = len(pickle.load(infile))
+      if lts:
+        lt = lts[e.name]
+      else:
+        with open(e, 'rb') as infile:
+          lt = len(pickle.load(infile))
       assert lt > 0, "Dataset {} is empty".format(e)
       r.append(lt + s)
       s += lt
+
+    ## If lengths cache had not been created, fix it now.
+    if not lts:
+      lts = {}
+      s = 0
+      for e, rx in zip(sequence, r):
+        lts[e.name] = rx - s
+        s += rx
     return r
 
   @property
@@ -140,7 +159,8 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
   def __init__(self, dg: lm_data_generator.MaskLMDataGenerator, is_train: bool):
     super(LazyOnlineDataset, self).__init__()
 
-    self.datasets = glob.glob(str(dg.cache.path / "{}corpus_*.pkl".format("pre_" if dg.pre_train else "")))
+    self.datasets      = glob.glob(str(dg.cache.path / "{}corpus_*.pkl".format("pre_" if dg.pre_train else "")))
+    self.cache_lengths = dg.cache.path / "pre_lengths_cache.json"
     self.cumulative_sizes = self.cumsum(self.datasets)
 
     self.curr_dset_idx = None
