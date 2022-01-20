@@ -386,69 +386,69 @@ class PreprocessedContentFiles(sqlutil.Database):
               raise e
           session.commit()
       else:
-          db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root), must_exist = True)
-          total = db.mainfile_count                        # Total number of files in BQ database.
-          total_per_node = total // environment.WORLD_SIZE # In distributed nodes, this is the total files to be processed per node.
-          if total == 0:
-            raise ValueError("Input BQ database {} is empty!".format(contentfile_root))
+        db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root), must_exist = True)
+        total = db.mainfile_count                        # Total number of files in BQ database.
+        total_per_node = total // environment.WORLD_SIZE # In distributed nodes, this is the total files to be processed per node.
+        if total == 0:
+          raise ValueError("Input BQ database {} is empty!".format(contentfile_root))
 
-          # Set of IDs that have been completed.
-          done = set(
-            [x[0].replace("main_files/", "") for x in session.query(PreprocessedContentFile.input_relpath)]
-          )
+        # Set of IDs that have been completed.
+        done = set(
+          [x[0].replace("main_files/", "") for x in session.query(PreprocessedContentFile.input_relpath)]
+        )
 
-          chunk, idx = min(total_per_node, 5000), environment.WORLD_RANK * total_per_node
-          limit = (environment.WORLD_RANK + 1) * total_per_node + (total % total_per_node if environment.WORLD_RANK == environment.WORLD_SIZE - 1 else 0)
+        chunk, idx = min(total_per_node, 5000), environment.WORLD_RANK * total_per_node
+        limit = (environment.WORLD_RANK + 1) * total_per_node + (total % total_per_node if environment.WORLD_RANK == environment.WORLD_SIZE - 1 else 0)
 
-          if environment.WORLD_SIZE > 1:
-            bar = distrib.ProgressBar(max_value = total, offset = idx)
-          else:
-            bar = progressbar.ProgressBar(max_value = total)
+        if environment.WORLD_SIZE > 1:
+          bar = distrib.ProgressBar(max_value = total, offset = idx)
+        else:
+          bar = progressbar.ProgressBar(max_value = total)
 
-          # Make sure everyone has read the right copy of done IDs.
-          distrib.barrier()
+        # Make sure everyone has read the right copy of done IDs.
+        distrib.barrier()
 
-          last_commit     = time.time()
-          wall_time_start = time.time()
+        last_commit     = time.time()
+        wall_time_start = time.time()
 
-          l.getLogger().error("Node {} will make idx {} to {}".format(environment.WORLD_RANK, idx, limit))
+        l.getLogger().error("Node {} will make idx {} to {}".format(environment.WORLD_RANK, idx, limit))
 
-          while idx < limit:
-            try:
-              chunk = min(chunk, limit - idx)
-              batch = db.main_files_batch(chunk, idx, exclude_id = done)
-              idx += chunk - len(batch)
-              if environment.WORLD_RANK == 0:
+        while idx < limit:
+          try:
+            chunk = min(chunk, limit - idx)
+            batch = db.main_files_batch(chunk, idx, exclude_id = done)
+            idx += chunk - len(batch)
+            if environment.WORLD_RANK == 0:
+              bar.update(idx)
+            pool = multiprocessing.Pool()
+            for preprocessed_list in pool.imap_unordered(
+                                      functools.partial(
+                                        BQPreprocessorWorker,
+                                        preprocessors = list(config.preprocessor)
+                                    ), batch):
+              for preprocessed_cf in preprocessed_list:
+                wall_time_end = time.time()
+                preprocessed_cf.wall_time_ms = int(
+                  (wall_time_end - wall_time_start) * 1000
+                )
+                wall_time_start = wall_time_end
+                session.add(preprocessed_cf)
+                if wall_time_end - last_commit > 10:
+                  session.commit()
+                  last_commit = wall_time_end
+                  if environment.WORLD_SIZE > 1:
+                    bar.update(idx)
+              idx += 1
+              if environment.WORLD_SIZE == 1:
                 bar.update(idx)
-              pool = multiprocessing.Pool()
-              for preprocessed_list in pool.imap_unordered(
-                                        functools.partial(
-                                          BQPreprocessorWorker,
-                                          preprocessors = list(config.preprocessor)
-                                      ), batch):
-                for preprocessed_cf in preprocessed_list:
-                  wall_time_end = time.time()
-                  preprocessed_cf.wall_time_ms = int(
-                    (wall_time_end - wall_time_start) * 1000
-                  )
-                  wall_time_start = wall_time_end
-                  session.add(preprocessed_cf)
-                  if wall_time_end - last_commit > 10:
-                    session.commit()
-                    last_commit = wall_time_end
-                    if environment.WORLD_SIZE > 1:
-                      bar.update(idx)
-                idx += 1
-                if environment.WORLD_SIZE == 1:
-                  bar.update(idx)
-              pool.close()
-            except KeyboardInterrupt as e:
-              pool.terminate()
-              raise e
-            except Exception as e:
-              pool.terminate()
-              raise e
-          session.commit()
+            pool.close()
+          except KeyboardInterrupt as e:
+            pool.terminate()
+            raise e
+          except Exception as e:
+            pool.terminate()
+            raise e
+        session.commit()
         if environment.WORLD_SIZE > 1:
           bar.finalize(idx)
     # Make sure every node is done by now.
