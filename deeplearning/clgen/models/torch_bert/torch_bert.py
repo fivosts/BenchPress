@@ -36,6 +36,7 @@ from deeplearning.clgen.samplers import validation_database
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import gpu
+from deeplearning.clgen.util import distrib
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
@@ -229,6 +230,7 @@ class torchBert(backends.BackendBase):
     m = model.BertForPreTraining(self.bert_config, tokenizer = self.tokenizer).to(self.pytorch.offset_device)
 
     if self.pytorch.num_nodes > 1:
+      distrib.barrier()
       m = self.torch.nn.parallel.DistributedDataParallel(
         m,
         device_ids    = [self.pytorch.offset_device],
