@@ -26,22 +26,22 @@ def barrier(fn: typing.Callable = None) -> None:
   if WORLD_SIZE > 1:
     if PATH is None:
       raise FileNotFoundError("Distributed env path has not been set!")
-    with open(PATH / "barrier-{}".format(WORLD_RANK), 'w') as outf:
+    with open(PATH / "barrier-lock-{}".format(WORLD_RANK), 'w') as outf:
       outf.write("{}\n".format(WORLD_RANK))
 
-    barriers = glob.glob(str(PATH / "barrier-*"))
+    barriers = glob.glob(str(PATH / "barrier-lock-*"))
 
     while len(barriers) < environment.WORLD_SIZE:
       if WORLD_RANK == 0 and fn:
         fn()
       time.sleep(0.5)
-      barriers = glob.glob(str(PATH / "barrier-*"))
+      barriers = glob.glob(str(PATH / "barrier-lock-*"))
 
     with open(PATH / "barrier-escape-{}".format(WORLD_RANK), 'w') as outf:
       outf.write("{}\n".format(WORLD_RANK))
 
     while len(barriers) > 0:
-      barriers = glob.glob(str(PATH / "barrier-*"))
+      barriers = glob.glob(str(PATH / "barrier-lock-*"))
       escapes  = glob.glob(str(PATH / "barrier-escape-*"))
       if environment.WORLD_RANK == 0 and len(escapes) == environment.WORLD_SIZE:
         for be in escapes:
