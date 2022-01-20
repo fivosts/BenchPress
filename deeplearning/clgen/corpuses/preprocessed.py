@@ -436,8 +436,12 @@ class PreprocessedContentFiles(sqlutil.Database):
                   if wall_time_end - last_commit > 10:
                     session.commit()
                     last_commit = wall_time_end
+                    if environment.WORLD_SIZE > 1:
+                      l.getLogger(str(environment.WORLD_RANK) + " " + idx)
+                      bar.update(idx)
                 idx += 1
-                bar.update(idx)
+                if environment.WORLD_SIZE == 1:
+                  bar.update(idx)
               pool.close()
             except KeyboardInterrupt as e:
               pool.terminate()
