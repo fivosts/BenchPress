@@ -417,7 +417,7 @@ class PreprocessedContentFiles(sqlutil.Database):
             try:
               chunk = min(chunk, limit - idx)
               if environment.WORLD_RANK == 1:
-                time.sleep(5)
+                time.sleep(20)
               l.getLogger().error("Node " + str(environment.WORLD_RANK) + " " + str(chunk) + " " + str(idx))
               # distrib.lock()
               batch = db.main_files_batch(chunk, idx, exclude_id = done)
