@@ -449,8 +449,8 @@ class PreprocessedContentFiles(sqlutil.Database):
               pool.terminate()
               raise e
           session.commit()
-    if environment.WORLD_SIZE > 1:
-      bar.finalize(idx)
+        if environment.WORLD_SIZE > 1:
+          bar.finalize(idx)
     # Make sure every node is done by now.
     distrib.barrier()
     return
