@@ -32,16 +32,20 @@ def barrier(fn: typing.Callable = None) -> None:
     barriers = glob.glob(str(PATH / "barrier-*"))
 
     while len(barriers) < environment.WORLD_SIZE:
-      print(WORLD_RANK, "first while")
       if WORLD_RANK == 0 and fn:
         fn()
-      time.sleep(1)
+      time.sleep(0.5)
       barriers = glob.glob(str(PATH / "barrier-*"))
 
+    with open(PATH / "barrier-escape-{}".format(WORLD_RANK), 'w') as outf:
+      outf.write("{}\n".format(WORLD_RANK))
+
     while len(barriers) > 0:
-      print(WORLD_RANK, "second while")
       barriers = glob.glob(str(PATH / "barrier-*"))
-      if environment.WORLD_RANK == 0:
+      escapes  = glob.glob(str(PATH / "barrier-escape-*"))
+      if environment.WORLD_RANK == 0 and len(escapes) == environment.WORLD_SIZE:
+        for be in escapes:
+          os.remove(str(be))
         for b in barriers:
           os.remove(str(b))
       else:
