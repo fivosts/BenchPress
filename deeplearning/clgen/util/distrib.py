@@ -73,7 +73,7 @@ class ProgressBar(object):
       self.bar = progressbar.ProgressBar(max_value = max_value)
     return
 
-  def _fetch_indices(idx: int) -> int:
+  def _fetch_indices(self, idx: int) -> int:
     """
     Master node reads current workload indices of all nodes.
     """
@@ -84,7 +84,7 @@ class ProgressBar(object):
           total += int(inf.read())
     return total
 
-  def _write_index(idx: int) -> None:
+  def _write_index(self, idx: int) -> None:
     """
     Update personal node dictionary with current index.
     """
@@ -100,7 +100,7 @@ class ProgressBar(object):
       self._write_index(idx)
     return
 
-  def finalize(idx: int) -> None:
+  def finalize(self, idx: int) -> None:
     """
     Do a final bar update and cleanup progressbar object.
     """
