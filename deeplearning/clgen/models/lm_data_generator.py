@@ -1,5 +1,6 @@
 """Data generator specifically used for Mask LM models (namely BERT)."""
 import sys
+import json
 import time
 import random
 import progressbar
@@ -503,6 +504,7 @@ class MaskLMDataGenerator(object):
         if len(glob.glob(str(path / "pre_corpus_*.pkl"))) > 0:
           return []
         encoded_corpus = []
+        cache_lengths  = {}
         chunk_size = 5000000
         i, ch_idx = 0, 0
         bar  = progressbar.ProgressBar(max_value = self.corpus.encoded.size)
@@ -523,9 +525,12 @@ class MaskLMDataGenerator(object):
           if i % chunk_size == 0:
             encoded_corpus = np.array(encoded_corpus)
             corpus_file = "pre_corpus_{}.pkl".format(ch_idx)
+            cache_lengths[corpus_file] = len(encoded_corpus)
             l.getLogger().info("Storing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
             with open(path / corpus_file, 'wb') as outf:
               pickle.dump(encoded_corpus, outf, protocol = 4)
+            with open(path / "pre_lengths_cache.json", 'w') as outf:
+              json.dump(cache_lengths, outf)
             ch_idx += 1
             encoded_corpus = []
           bar.update(i)
@@ -533,8 +538,11 @@ class MaskLMDataGenerator(object):
           encoded_corpus = np.array(encoded_corpus)
           l.getLogger().info("Storing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
           corpus_file = "pre_corpus_{}.pkl".format(ch_idx)
+          cache_lengths[corpus_file] = len(encoded_corpus)
           with open(path / corpus_file, 'wb') as outf:
             pickle.dump(encoded_corpus, outf, protocol = 4)
+          with open(path / "pre_lengths_cache.json", 'w') as outf:
+            json.dump(cache_lengths, outf)
         kernel_length_monitor.plot()
         pool.close()
         return encoded_corpus
