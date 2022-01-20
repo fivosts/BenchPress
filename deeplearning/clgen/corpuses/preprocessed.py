@@ -397,7 +397,7 @@ class PreprocessedContentFiles(sqlutil.Database):
             [x[0].replace("main_files/", "") for x in session.query(PreprocessedContentFile.input_relpath)]
           )
 
-          chunk, idx = min(total_per_node, 6000000), environment.WORLD_RANK * total_per_node
+          chunk, idx = min(total_per_node, 5000), environment.WORLD_RANK * total_per_node
           limit = (environment.WORLD_RANK + 1) * total_per_node + (total % total_per_node if environment.WORLD_RANK == environment.WORLD_SIZE - 1 else 0)
 
           if environment.WORLD_SIZE > 1:
