@@ -416,13 +416,7 @@ class PreprocessedContentFiles(sqlutil.Database):
           while idx < limit:
             try:
               chunk = min(chunk, limit - idx)
-              if environment.WORLD_RANK == 1:
-                time.sleep(20)
-              l.getLogger().error("Node " + str(environment.WORLD_RANK) + " " + str(chunk) + " " + str(idx))
-              # distrib.lock()
               batch = db.main_files_batch(chunk, idx, exclude_id = done)
-              # distrib.unlock()
-              l.getLogger().critical("Node " + str(environment.WORLD_RANK))
               idx += chunk - len(batch)
               if environment.WORLD_RANK == 0:
                 bar.update(idx)
@@ -443,7 +437,6 @@ class PreprocessedContentFiles(sqlutil.Database):
                     session.commit()
                     last_commit = wall_time_end
                     if environment.WORLD_SIZE > 1:
-                      l.getLogger().warn(str(environment.WORLD_RANK) + " " + str(idx))
                       bar.update(idx)
                 idx += 1
                 if environment.WORLD_SIZE == 1:
