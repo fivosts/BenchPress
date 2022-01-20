@@ -98,7 +98,7 @@ class ProgressBar(object):
       outf.write(idx - self.offset)
     return
 
-  def update(idx: int) -> None:
+  def update(self, idx: int) -> None:
     if WORLD_RANK == 0:
       total_idx = self._fetch_indices(idx)
       self.bar.update(total_idx)
