@@ -384,7 +384,7 @@ class LazyRandomSampler(torch.utils.data.Sampler):
 
     if self.distributed:
       rounded_total = (len(rand_tensor) // environment.WORLD_SIZE) * environment.WORLD_SIZE
-      rand_tensor   = rand_tensor[:rounded_total]
+      rand_tensor   = rand_tensor[environment.WORLD_RANK:rounded_total:environment.WORLD_SIZE]
     return iter(rand_tensor)
 
   def __len__(self):
@@ -396,4 +396,3 @@ class LazyRandomSampler(torch.utils.data.Sampler):
     """
     self.epoch = epoch
     return
-  
