@@ -390,7 +390,7 @@ class LazyRandomSampler(torch.utils.data.Sampler):
   def __len__(self):
     return self.num_samples
 
-  def set_epoch(epoch: int) -> None:
+  def set_epoch(self, epoch: int) -> None:
     """
     Sets epoch for deterministic runs across DDP.
     """
