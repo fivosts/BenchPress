@@ -25,6 +25,7 @@ from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import monitors
+from deeplearning.clgen.util import environment
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
@@ -446,7 +447,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         )
       ),
       num_workers = 0,
-      drop_last   = False,
+      drop_last   = True if environment.WORLD_SIZE > 1 else False,
     )
     return dataloader
 
