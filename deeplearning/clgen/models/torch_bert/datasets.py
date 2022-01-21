@@ -312,12 +312,12 @@ class LazyRandomSampler(torch.utils.data.Sampler):
     generator (Generator): Generator used in sampling.
   """
 
-  def __init__(self, data_source, replacement = False, num_samples = None, generator = None, distributed = False):
+  def __init__(self, data_source, replacement = False, num_samples = None, generator = None):
     self.data_source  = data_source
     self.replacement  = replacement
     self._num_samples = num_samples
     self.generator    = generator
-    self.distributed  = distributed
+    self.distributed  = True if environment.WORLD_SIZE > 1 else False
     self.dataset_idx  = self.__datasetIdx_iter__
 
     self.epoch = None
