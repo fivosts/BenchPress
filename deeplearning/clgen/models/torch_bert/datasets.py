@@ -135,7 +135,7 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
     ## Iterate every dataset chunk, and fix the cumulative length distribution.
     for e in sequence:
       if lts:
-        lt = lts[e.name]
+        lt = lts[pathlib.Path(e).name]
       else:
         with open(e, 'rb') as infile:
           lt = len(pickle.load(infile))
@@ -148,7 +148,7 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
       lts = {}
       s = 0
       for e, rx in zip(sequence, r):
-        lts[e.name] = rx - s
+        lts[pathlib.Path(e).name] = rx - s
         s += rx
     return r
 
