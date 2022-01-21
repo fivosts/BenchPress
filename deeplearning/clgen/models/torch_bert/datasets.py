@@ -17,6 +17,7 @@ from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import monitors
+from deeplearning.clgen.util import environment
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.models import lm_data_generator
 from absl import flags
@@ -138,7 +139,10 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
         lt = lts[pathlib.Path(e).name]
       else:
         with open(e, 'rb') as infile:
-          lt = len(pickle.load(infile))
+          length = len(pickle.load(infile))
+          if environment.WORLD_RANK == 0:
+            l.getLogger().error("{} - {}".format(e, length))
+          lt = length
       assert lt > 0, "Dataset {} is empty".format(e)
       r.append(lt + s)
       s += lt
