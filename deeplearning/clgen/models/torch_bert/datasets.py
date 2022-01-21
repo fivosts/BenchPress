@@ -312,12 +312,15 @@ class LazyRandomSampler(torch.utils.data.Sampler):
     generator (Generator): Generator used in sampling.
   """
 
-  def __init__(self, data_source, replacement=False, num_samples=None, generator=None):
-    self.data_source = data_source
-    self.replacement = replacement
+  def __init__(self, data_source, replacement = False, num_samples = None, generator = None, distributed = False):
+    self.data_source  = data_source
+    self.replacement  = replacement
     self._num_samples = num_samples
-    self.generator = generator
-    self.dataset_idx = self.__datasetIdx_iter__
+    self.generator    = generator
+    self.distributed  = distributed
+    self.dataset_idx  = self.__datasetIdx_iter__
+
+    self.epoch = None
     if not isinstance(self.replacement, bool):
       raise TypeError("replacement should be a boolean value, but got "
                       "replacement={}".format(self.replacement))
@@ -366,6 +369,10 @@ class LazyRandomSampler(torch.utils.data.Sampler):
     else:
       bounds = (lb, ub)
 
+    if self.distributed:
+      self.generator = torch.Generator
+      self.generator.manual_seed(self.epoch)
+
     if self.replacement:
       if self._num_samples is None:
         size = bounds[1] - bounds[0]
@@ -374,7 +381,18 @@ class LazyRandomSampler(torch.utils.data.Sampler):
       rand_tensor = torch.randint(low = bounds[0], high = bounds[1], size = (size,), generator = self.generator).tolist()
     else:
       rand_tensor = [x + bounds[0] for x in torch.randperm(bounds[1] - bounds[0], generator = self.generator).tolist()]
+
+    if self.distributed:
+      rounded_total = (len(rand_tensor) // environment.WORLD_SIZE) * environment.WORLD_SIZE
+      rand_tensor   = rand_tensor[:rounded_total]
     return iter(rand_tensor)
 
   def __len__(self):
     return self.num_samples
+
+  def set_epoch(epoch: int) -> None:
+    """
+    Sets epoch for deterministic runs across DDP.
+    """
+    self.epoch = epoch
+    return
