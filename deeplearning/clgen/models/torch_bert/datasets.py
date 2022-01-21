@@ -124,12 +124,12 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
   """
 
   @staticmethod
-  def cumsum(sequence: typing.List[pathlib.Path]):
+  def cumsum(sequence: typing.List[pathlib.Path], length_cache: pathlib.Path):
     lts, r, s = None, [], 0 # Cached lengths list, cumulative lengths, current max length.
 
     ## If lengths cache exists, just load the dictionary.
-    if self.cache_lengths.exists():
-      with open(self.cache_lengths, 'r') as inf:
+    if length_cache.exists():
+      with open(length_cache, 'r') as inf:
         lts = json.load(inf)
 
     ## Iterate every dataset chunk, and fix the cumulative length distribution.
@@ -159,9 +159,8 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
   def __init__(self, dg: lm_data_generator.MaskLMDataGenerator, is_train: bool):
     super(LazyOnlineDataset, self).__init__()
 
-    self.datasets      = glob.glob(str(dg.cache.path / "{}corpus_*.pkl".format("pre_" if dg.pre_train else "")))
-    self.cache_lengths = dg.cache.path / "pre_lengths_cache.json"
-    self.cumulative_sizes = self.cumsum(self.datasets)
+    self.datasets = glob.glob(str(dg.cache.path / "{}corpus_*.pkl".format("pre_" if dg.pre_train else "")))
+    self.cumulative_sizes = self.cumsum(self.datasets, dg.cache.path / "pre_lengths_cache.json")
 
     self.curr_dset_idx = None
     self.dataset       = None
