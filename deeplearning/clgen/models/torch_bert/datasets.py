@@ -396,3 +396,4 @@ class LazyRandomSampler(torch.utils.data.Sampler):
     """
     self.epoch = epoch
     return
+  
