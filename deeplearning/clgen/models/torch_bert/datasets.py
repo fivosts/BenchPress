@@ -370,7 +370,7 @@ class LazyRandomSampler(torch.utils.data.Sampler):
       bounds = (lb, ub)
 
     if self.distributed:
-      self.generator = torch.Generator
+      self.generator = torch.Generator()
       self.generator.manual_seed(self.epoch)
 
     if self.replacement:
