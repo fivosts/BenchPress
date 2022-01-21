@@ -505,7 +505,7 @@ class MaskLMDataGenerator(object):
           return []
         encoded_corpus = []
         cache_lengths  = {}
-        chunk_size = 5000000
+        chunk_size = 250000
         i, ch_idx = 0, 0
         bar  = progressbar.ProgressBar(max_value = self.corpus.encoded.size)
         pool = multiprocessing.Pool()
