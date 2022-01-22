@@ -665,7 +665,7 @@ def initMain(*args, **kwargs):
   """
   Setup module's operations.
   """
-  l.initLogger(name = "bigQuery_database", lvl = 20, mail = (None, 5), colorize = True, step = False)
+  l.initLogger(name = "bigQuery_database")
 
   if not FLAGS.preprocessed_databases:
     raise ValueError("Please input preprocessed databases to merge as a comma separated list.")
