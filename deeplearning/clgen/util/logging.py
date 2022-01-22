@@ -1,8 +1,6 @@
 import logging
 import typing
 
-from deeplearning.clgen.util import environment
-
 from eupy.hermes import client
 
 _logger = None
