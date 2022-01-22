@@ -524,7 +524,7 @@ def main(config: evaluator_pb2.Evaluation):
   return
 
 def initMain(*args, **kwargs):
-  l.initLogger(name = "evaluators", lvl = 20, mail = (None, 5), colorize = True, step = False)
+  l.initLogger(name = "evaluators")
   config = ConfigFromFlags()
   main(config)
   return
