@@ -146,10 +146,10 @@ class Logger:
     return
 
   def info(self,
-          message   : str,
-          color     : bool = True,
-          ddp_nodes : bool = False
-          ) -> None:
+           message   : str,
+           color     : bool = True,
+           ddp_nodes : bool = False
+           ) -> None:
     if environment.WORLD_RANK == 0 or ddp_nodes:
       if color:
         message = output(message, bold, cyan)
