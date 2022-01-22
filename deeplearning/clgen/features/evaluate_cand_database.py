@@ -243,8 +243,8 @@ def rel_length_distribution(data) -> None:
 
 def token_delta_per_gen(data) -> None:
   # 3) Per generation: delta of (filled_tokens - hole_length)
-  print("Filled tokens - hole length will be wrong for multiple holes!")
-  print("For now, I am assigning every hole to the total of sample indices length.")
+  logger.warn("Filled tokens - hole length will be wrong for multiple holes!")
+  logger.warn("For now, I am assigning every hole to the total of sample indices length.")
   gen_hole_deltas = {} # gen -> list of deltas.
   for dp in data:
     gen, ahl, lind = dp.generation_id, dp.abs_hole_lengths, dp.hole_ind_length
@@ -521,7 +521,7 @@ def score_per_abs_hlen(data) -> None:
         else:
           groups[k][str(ahl)] += 1
     except Exception as e:
-      print(e)
+      logger.error(e)
       continue
   for l in range(0, max_abs):
     total = 0
@@ -567,7 +567,7 @@ def comp_vs_len_indices(data) -> None:
       else:
         groups[k][str(len_ind)] += 1
     except Exception as e:
-      print(e)
+      logger.error(e)
       continue
   # for l in range(0, max_len_ind):
   #   total = 0
@@ -615,7 +615,7 @@ def comp_vs_len_indices_over_len_input(data) -> None:
       else:
         groups[k][str(len_ratio)] += 1
     except Exception as e:
-      print(e)
+      logger.error(e)
       continue
   # for l in range(0, max_len_ind):
   #   total = 0
@@ -662,7 +662,7 @@ def comp_vs_num_tokens(data) -> None:
       else:
         groups[k][str(numtok)] += 1
     except Exception as e:
-      print(e)
+      logger.error(e)
       continue
   for l in range(0, max_numtok):
     total = 0
@@ -813,7 +813,7 @@ def run_db_evaluation(db: SearchCandidateDatabase) -> None:
   return
 
 def initMain(*args, **kwargs):
-  # l.initLogger(name = "eval_cand_db")
+  l.initLogger(name = "eval_cand_db")
   db_path = pathlib.Path(FLAGS.eval_cand_db).absolute()
   if not db_path.exists():
     raise FileNotFoundError(str(db_path))
