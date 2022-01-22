@@ -311,11 +311,11 @@ def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int =
       try:
         cpu_error = df[df['device'].str.contains("CPU")].outcome[0]
       except KeyError:
-        pass
+        cpu_error = ""
       try:
         gpu_error = df[df['device'].str.contains("GPU")].outcome[1]
       except KeyError:
-        pass
+        gpu_error = ""
       label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
   else:
     label = "GPU" if avg_time_cpu_ns > avg_time_gpu_ns else "CPU"
