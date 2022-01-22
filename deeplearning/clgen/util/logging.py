@@ -5,7 +5,7 @@ from deeplearning.clgen.util import environment
 
 from eupy.hermes import client
 
-logger = None
+_logger()= None
 
 NOTSET   = logging.NOTSET
 DEBUG    = logging.DEBUG
@@ -83,20 +83,16 @@ class Logger:
                name        : str,
                level       : int,
                mail_client : client.gmail,
-               colorize    : bool,
-               step        : bool,
                ):
     self.mail_client = mail_client
-    self.colorize    = colorize
-    self.step        = step
     self.configLogger(name, level)
     return
 
-  def _configLogger(self, name, level):
+  def configLogger(self, name, level):
     # create logger
     logging.root.handlers = []
-    self.logger = logging.getLogger(name)
-    self.logger.setLevel(level)
+    self.log = logging.getLogger(name)
+    self.log.setLevel(level)
 
     # create console handler and set level to debug
     ch = logging.StreamHandler()
@@ -109,27 +105,27 @@ class Logger:
     ch.setFormatter(formatter)
 
     # add ch to logger
-    if not self.logger.handlers:
-      self.logger.addHandler(ch)
-      self.logger.propagate = False
+    if not self.log.handlers:
+      self.log.addHandler(ch)
+      self.log.propagate = False
     self.info("Logger has been initialized")
     return
 
   @property
   def handlers(self):
-    return self.logger.handlers
+    return self.log.handlers
 
   @property
-  def logger(self):
-    return self.logger
+  def logger()self):
+    return self.log
   
   @property
   def level(self):
-    return logging.getLevelName(self.logger.level)
+    return logging.getLevelName(self.log.level)
 
   @level.setter
   def level(self, lvl):
-    self.logger.setLevel(lvl)
+    self.log.setLevel(lvl)
     self.handlers[0].setLevel(lvl)
     return
 
@@ -146,7 +142,7 @@ class Logger:
         message = output(message, bold, green)
       if self.mail_client:
         self.mail_client.send_message("Logger", message)
-      self.logger.debug(message)
+      self.log.debug(message)
     return
 
   def info(self,
@@ -159,7 +155,7 @@ class Logger:
         message = output(message, bold, cyan)
       if self.mail_client:
         self.mail_client.send_message("Logger", message)
-      self.logger.info(message)
+      self.log.info(message)
     return
 
   def warning(self,
@@ -172,7 +168,7 @@ class Logger:
         message = output(message, bold, yellow)
       if self.mail_client:
         self.mail_client.send_message("Logger", message)
-      self.logger.warning(message)
+      self.log.warning(message)
     return
 
   def warn(self,
@@ -185,7 +181,7 @@ class Logger:
         message = output(message, bold, yellow)
       if self.mail_client:
         self.mail_client.send_message("Logger", message)
-      self.logger.warn(message)
+      self.log.warn(message)
     return
 
   def error(self,
@@ -198,7 +194,7 @@ class Logger:
         message = output(message, bold, red)
       if self.mail_client:
         self.mail_client.send_message("Logger", message)
-      self.logger.error(message)
+      self.log.error(message)
     return
   
   def critical(self,
@@ -211,14 +207,18 @@ class Logger:
         message = output(message, bold, underline, red)
       if self.mail_client:
         self.mail_client.send_message("Logger", message)
-      self.logger.critical(message)
+      self.log.critical(message)
     return
 
   def shutdown(self):
     logging.shutdown()
     return
 
+def logger()) -> Logger:
+  global _logger
+  return _logger
+
 def initLogger(name, lvl = logging.INFO, mail = None):
-  global logger
-  logger = Logger(name, lvl, mail)
-  return logger
+  global _logger
+  _logger()= Logger(name, lvl, mail)
+  return _logger
