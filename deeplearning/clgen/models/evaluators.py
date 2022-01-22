@@ -432,7 +432,7 @@ def TopKCLDrive(**kwargs) -> None:
           if config not in groups:
             groups[config] = {}
           if dbg.group_name not in groups[config]:
-            groups[config][dbg.group_name] = ([], [], [])
+            groups[config][dbg.group_name] = ([], [], [], [])
 
           nruns = 10**5
           if gs > 2**13:
@@ -441,16 +441,24 @@ def TopKCLDrive(**kwargs) -> None:
             nruns = 10**3
           if gs > 2**17:
             nruns = 10**2
-          groups[config][dbg.group_name][0].append((benchmark.name, opencl.CLDriveLabel(benchmark.contents, num_runs = nruns, gsize = gs, lsize = ls)))
+          groups[config][dbg.group_name][0].append(
+            {
+              'benchmark_name'     : benchmark.name,
+              'benchmark_label'    : opencl.CLDriveLabel(benchmark.contents, num_runs = nruns, gsize = gs, lsize = ls),
+              'benchmark_contents' : benchmark.contents
+            }
+          )
           for idx, (src, dist) in enumerate(closest_src):
 
             label = opencl.CLDriveLabel(src, num_runs = 100, gsize = gs, lsize = ls)
             if len(groups[config][dbg.group_name][1]) - 1 < idx:
               groups[config][dbg.group_name][1].append([dist])
               groups[config][dbg.group_name][2].append([label])
+              groups[config][dbg.group_name][2].append([src])
             else:
               groups[config][dbg.group_name][1][idx].append(dist)
               groups[config][dbg.group_name][2][idx].append(label)
+              groups[config][dbg.group_name][3][idx].append(src)
             # Some thoughts: Maybe a dedicated plot to show distribution of execution times, etc. ?
             # In here you basically need the label.
           # Compute target's distance from O(0,0)
