@@ -532,7 +532,7 @@ def initMain(*args, **kwargs):
   """
   Setup module's operations.
   """
-  l.initLogger(name = "bigQuery_database", lvl = 20, mail = (None, 5), colorize = True, step = False)
+  l.initLogger(name = "bigQuery_database")
 
   if not FLAGS.encoded_databases:
     raise ValueError("Please input encoded databases to merge as a comma separated list.")
