@@ -32,13 +32,7 @@ kernel void A(global float *a, global float* n, global float* j, global float* h
 }
 """
 
-l.initLogger(
-  name = "experiments",
-  lvl = 10,
-  mail = (None, 10),
-  colorize = True,
-  step = False
-)
+l.initLogger(name = "experiments")
 
 def confidenceInterval() -> None:
   """
