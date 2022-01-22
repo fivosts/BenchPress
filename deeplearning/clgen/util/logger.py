@@ -82,7 +82,7 @@ class Logger:
   def __init__(self,
                name        : str,
                level       : int,
-               mail_client : typing.Tuple[client.gmail, int],
+               mail_client : client.gmail,
                colorize    : bool,
                step        : bool,
                ):
@@ -218,7 +218,7 @@ class Logger:
     logging.shutdown()
     return
 
-def initLogger(name, lvl = INFO, mail = None):
+def initLogger(name, lvl = logging.INFO, mail = None):
   global logger
   logger = Logger(name, lvl, mail)
   return logger
