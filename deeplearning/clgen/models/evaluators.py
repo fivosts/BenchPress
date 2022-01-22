@@ -410,7 +410,7 @@ def TopKCLDrive(**kwargs) -> None:
 
   # For each db group -> for each target -> k samples -> 1) benchmark.name 2) distance 3) label.
   for dbg in db_groups:
-    l.logger().info(dbg.group_name)
+    l.logger().info("Running {} on cldrive".format(dbg.group_name))
     if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
 
