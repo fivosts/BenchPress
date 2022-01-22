@@ -302,12 +302,18 @@ def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int =
     avg_time_cpu_ns   = None
     avg_time_gpu_ns   = None
 
+  cpu_error = None
+  gpu_error = None
   if avg_time_cpu_ns is None or avg_time_gpu_ns is None or math.isnan(avg_time_cpu_ns) or math.isnan(avg_time_gpu_ns):
     label = "ERR"
+    if df is not None:
+      cpu_error = df[df['device'].str.contains("CPU")].outcome[0]
+      gpu_error = df[df['device'].str.contains("GPU")].outcome[0]
+      label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
   else:
     label = "GPU" if avg_time_cpu_ns > avg_time_gpu_ns else "CPU"
 
-  if label == "ERR":
+  if label == "ERR" or cpu_error == "CL_ERROR" or gpu_error == "CL_ERROR":
     l.logger().warn(src)
     l.logger().warn(stdout)
     l.logger().warn(stderr)
