@@ -196,7 +196,7 @@ class Logger:
         self.mail_client.send_message("Logger", message)
       self.log.error(message)
     return
-  
+
   def critical(self,
                message   : str,
                color     : bool = True,
