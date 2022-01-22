@@ -406,7 +406,7 @@ def TopKCLDrive(**kwargs) -> None:
   workspace_path = kwargs.get('workspace_path')
 
   groups = {}
-  lsize, gsize = [128, 256, 512, 1024, 2048, 4096], [128, 256, 512, 1024] # 1024 is max local size for GTX1080.
+  gsize, lsize = [2**10, 2**15, 2**20, 2**25], [2**10] # 1024 is max local size for GTX1080.
 
   # For each db group -> for each target -> k samples -> 1) benchmark.name 2) distance 3) label.
   for dbg in db_groups:
@@ -433,7 +433,15 @@ def TopKCLDrive(**kwargs) -> None:
             groups[config] = {}
           if dbg.group_name not in groups[config]:
             groups[config][dbg.group_name] = ([], [], [])
-          groups[config][dbg.group_name][0].append((benchmark.name, opencl.CLDriveLabel(benchmark.contents, num_runs = 100, gsize = gs, lsize = ls)))
+
+          nruns = 10**5
+          if gs > 2**13:
+            nruns = 10**4
+          if gs > 2**15:
+            nruns = 10**3
+          if gs > 2**17:
+            nruns = 10**2
+          groups[config][dbg.group_name][0].append((benchmark.name, opencl.CLDriveLabel(benchmark.contents, num_runs = nruns, gsize = gs, lsize = ls)))
           for idx, (src, dist) in enumerate(closest_src):
 
             label = opencl.CLDriveLabel(src, num_runs = 100, gsize = gs, lsize = ls)
