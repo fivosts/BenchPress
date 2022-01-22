@@ -308,7 +308,7 @@ def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int =
     label = "ERR"
     if df is not None:
       cpu_error = df[df['device'].str.contains("CPU")].outcome[0]
-      gpu_error = df[df['device'].str.contains("GPU")].outcome[0]
+      gpu_error = df[df['device'].str.contains("GPU")].outcome[1]
       label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
   else:
     label = "GPU" if avg_time_cpu_ns > avg_time_gpu_ns else "CPU"
