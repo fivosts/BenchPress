@@ -39,12 +39,6 @@ from eupy.hermes import client
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_integer(
-  "level",
-  20,
-  "Define logging level of logger"
-)
-
 flags.DEFINE_string(
   "notify_me",
   None,
@@ -376,7 +370,7 @@ def initMain(*args, **kwargs):
   mail = None
   if FLAGS.notify_me:
     mail = client.initClient(FLAGS.notify_me)
-  l.initLogger(name = "clgen", lvl = FLAGS.level, mail = (mail, FLAGS.notify_me_level), colorize = FLAGS.color, step = FLAGS.step)
+  l.initLogger(name = "clgen")
   if FLAGS.local_filesystem:
     pathlib.Path(FLAGS.local_filesystem).resolve().mkdir(exist_ok = True, parents = True)
   if FLAGS.monitor_mem_usage:
