@@ -454,7 +454,7 @@ def TopKCLDrive(**kwargs) -> None:
             if len(groups[config][dbg.group_name][1]) - 1 < idx:
               groups[config][dbg.group_name][1].append([dist])
               groups[config][dbg.group_name][2].append([label])
-              groups[config][dbg.group_name][2].append([src])
+              groups[config][dbg.group_name][3].append([src])
             else:
               groups[config][dbg.group_name][1][idx].append(dist)
               groups[config][dbg.group_name][2][idx].append(label)
