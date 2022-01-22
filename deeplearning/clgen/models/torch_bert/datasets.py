@@ -148,7 +148,7 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
       s += lt
 
     ## If lengths cache had not been created, fix it now.
-    if not lts:
+    if not lts and environment.WORLD_RANK == 0:
       lts = {}
       s = 0
       for e, rx in zip(sequence, r):
