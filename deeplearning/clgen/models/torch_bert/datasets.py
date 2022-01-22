@@ -153,7 +153,7 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
       s = 0
       for e, rx in zip(sequence, r):
         lts[pathlib.Path(e).name] = rx - s
-        s += rx
+        s = rx
       with open(length_cache, 'w') as outf:
         json.dump(lts, outf)
     return r
