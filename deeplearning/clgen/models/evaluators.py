@@ -406,7 +406,7 @@ def TopKCLDrive(**kwargs) -> None:
   workspace_path = kwargs.get('workspace_path')
 
   groups = {}
-  lsize, gsize = [128, 256, 512, 1024, 2048, 4096], [128, 256, 512, 1024, 2048, 4096, 8192]
+  lsize, gsize = [128, 256, 512, 1024, 2048, 4096], [128, 256, 512, 1024] # 1024 is max local size for GTX1080.
 
   # For each db group -> for each target -> k samples -> 1) benchmark.name 2) distance 3) label.
   for dbg in db_groups:
