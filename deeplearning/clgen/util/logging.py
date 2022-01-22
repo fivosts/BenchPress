@@ -83,8 +83,10 @@ class Logger:
                name        : str,
                level       : int,
                mail_client : client.gmail,
+               rank        : int,
                ):
     self.mail_client = mail_client
+    self.rank = rank
     self.configLogger(name, level)
     return
 
@@ -137,7 +139,7 @@ class Logger:
             color     : bool = True,
             ddp_nodes : bool = False
             ) -> None:
-    if environment.WORLD_RANK == 0 or ddp_nodes:
+    if self.rank == 0 or ddp_nodes:
       if color:
         message = output(message, bold, green)
       if self.mail_client:
@@ -150,7 +152,7 @@ class Logger:
            color     : bool = True,
            ddp_nodes : bool = False
            ) -> None:
-    if environment.WORLD_RANK == 0 or ddp_nodes:
+    if self.rank == 0 or ddp_nodes:
       if color:
         message = output(message, bold, cyan)
       if self.mail_client:
@@ -163,7 +165,7 @@ class Logger:
               color     : bool = True,
               ddp_nodes : bool = False
               ) -> None:
-    if environment.WORLD_RANK == 0 or ddp_nodes:
+    if self.rank == 0 or ddp_nodes:
       if color:
         message = output(message, bold, yellow)
       if self.mail_client:
@@ -176,7 +178,7 @@ class Logger:
            color     : bool = True,
            ddp_nodes : bool = False
            ) -> None:
-    if environment.WORLD_RANK == 0 or ddp_nodes:
+    if self.rank == 0 or ddp_nodes:
       if color:
         message = output(message, bold, yellow)
       if self.mail_client:
@@ -189,7 +191,7 @@ class Logger:
             color     : bool = True,
             ddp_nodes : bool = False
             ) -> None:
-    if environment.WORLD_RANK == 0 or ddp_nodes:
+    if self.rank == 0 or ddp_nodes:
       if color:
         message = output(message, bold, red)
       if self.mail_client:
@@ -202,7 +204,7 @@ class Logger:
                color     : bool = True,
                ddp_nodes : bool = False
                ) -> None:
-    if environment.WORLD_RANK == 0 or ddp_nodes:
+    if self.rank == 0 or ddp_nodes:
       if color:
         message = output(message, bold, underline, red)
       if self.mail_client:
@@ -220,7 +222,7 @@ def logger() -> Logger:
     initLogger()
   return _logger
 
-def initLogger(name = "", lvl = logging.INFO, mail = None):
+def initLogger(name = "", lvl = logging.INFO, mail = None, rank = 0):
   global _logger
-  _logger = Logger(name, lvl, mail)
+  _logger = Logger(name, lvl, mail, rank)
   return _logger
