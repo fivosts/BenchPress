@@ -20,7 +20,7 @@ import typing
 from deeplearning.clgen.preprocessors import public
 # from deeplearning.clgen.util import crypto
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 # FLAGS = flags.FLAGS
 

@@ -28,7 +28,7 @@ from deeplearning.clgen.models.torch_bert import config
 from deeplearning.clgen.models.torch_bert import modeling_utils
 from deeplearning.clgen.models.torch_bert import compiler
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 # import tensorrt as trt
 # import pycuda.autoinit
@@ -834,7 +834,7 @@ class BertForPreTraining(BertPreTrainedModel):
       )
       device = input_ids.get_device()
       device = device if device >= 0 else 'cpu'
-      # l.getLogger().warn("inp shape: {}, device: {}".format(input_ids.shape, input_ids.get_device()))
+      # l.logger().warn("inp shape: {}, device: {}".format(input_ids.shape, input_ids.get_device()))
       return self.compile_sampler.generateSampleWorkload(
         self,
         device,
@@ -1080,7 +1080,7 @@ class BertLMHeadModel(BertPreTrainedModel):
     super().__init__(config)
 
     if not config.is_decoder:
-      l.getLogger().warning("If you want to use `BertLMHeadModel` as a standalone, add `is_decoder=True.`")
+      l.logger().warning("If you want to use `BertLMHeadModel` as a standalone, add `is_decoder=True.`")
 
     self.bert = BertModel(config)
     self.cls = BertOnlyMLMHead(config)
@@ -1186,7 +1186,7 @@ class BertForMaskedLM(BertPreTrainedModel):
     super().__init__(config)
 
     if config.is_decoder:
-      l.getLogger().warning(
+      l.logger().warning(
         "If you want to use `BertForMaskedLM` make sure `config.is_decoder=False` for "
         "bi-directional self-attention."
       )

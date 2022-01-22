@@ -3,7 +3,7 @@ import os
 import subprocess
 import typing
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 NVIDIA_SMI_GET_GPUS = "nvidia-smi --query-gpu=index,uuid,utilization.gpu,memory.total,memory.used,memory.free,driver_version,name,gpu_serial,display_active,display_mode,temperature.gpu --format=csv,noheader,nounits"
 

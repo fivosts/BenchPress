@@ -49,7 +49,7 @@ from deeplearning.clgen.proto import telemetry_pb2
 from deeplearning.clgen.preprocessors import opencl
 from absl import flags
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -186,7 +186,7 @@ class Model(object):
         cached_to_compare.training.data_generator.ClearField("steps_per_epoch")
         cached_to_compare.training.data_generator.ClearField("validation_set")
       if cached_to_compare.training.sequence_length != config_to_compare.training.sequence_length:
-        l.getLogger().warning("Mismatch between pre-trained and current config sequence_length!\
+        l.logger().warning("Mismatch between pre-trained and current config sequence_length!\
           This can only be intended in BERT model!")
       cached_to_compare.training.ClearField("sequence_length")
       config_to_compare.training.ClearField("sequence_length")
@@ -207,7 +207,7 @@ class Model(object):
       model_pb2.NetworkArchitecture.TENSORFLOW_BERT: tf_bert.tfBert,
       model_pb2.NetworkArchitecture.TORCH_BERT: torch_bert.torchBert,
     }[config.architecture.backend](self.config, self.cache, self.hash)
-    l.getLogger().info("Initialized {} in {}".format(self.config.architecture.backend, self.cache.path))
+    l.logger().info("Initialized {} in {}".format(self.config.architecture.backend, self.cache.path))
     return
 
   def GetShortSummary(self) -> str:
@@ -280,7 +280,7 @@ class Model(object):
     self.backend.PreTrain(self.pre_train_corpus, **kwargs)
     pre_telemetry_logs = self.backend.pre_telemetry.EpochTelemetry()
 
-    l.getLogger().info(
+    l.logger().info(
       "Pre-trained model for {} {} in {} ms. " "Training loss: {}."
         .format(
           pre_telemetry_logs[-1].epoch_num,
@@ -306,7 +306,7 @@ class Model(object):
     self.backend.Train(self.corpus, **kwargs)
     telemetry_logs = self.backend.telemetry.EpochTelemetry()
 
-    l.getLogger().info(
+    l.logger().info(
       "Trained model for {} {} in {} ms. " "Training loss: {}."
         .format(
           telemetry_logs[-1].epoch_num,
@@ -394,7 +394,7 @@ class Model(object):
           sampler.start_text = '\n'.join(start_text)
           sampler.Specialize(tokenizer)
     except KeyboardInterrupt:
-      l.getLogger().info("Wrapping up sampling...")
+      l.logger().info("Wrapping up sampling...")
     except Exception as e:
       raise e
 
@@ -404,7 +404,7 @@ class Model(object):
       self.backend.sample.data_generator.samples_cache_obs.endSample()
 
     time_now = datetime.datetime.utcnow()
-    l.getLogger().info( "Produced {} samples at a rate of {} ms / sample."
+    l.logger().info( "Produced {} samples at a rate of {} ms / sample."
                         .format(
                           humanize.intcomma(seq_count),
                           humanize.intcomma(int(1000 * ((time_now - sample_start_time) / max(seq_count, 1)).total_seconds()))

@@ -24,7 +24,7 @@ from deeplearning.clgen.proto import internal_pb2
 from absl import flags
 import humanize
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -52,7 +52,7 @@ cached_corpuses = {}
 cached_samplers = {}
 
 def GetBaseTemplateArgs():
-  l.getLogger().debug("deeplearning.clgen.dashboard.GetBaseTemplateArgs()")
+  l.logger().debug("deeplearning.clgen.dashboard.GetBaseTemplateArgs()")
   return {
     "urls": {
       "cache_tag": str(5),
@@ -539,7 +539,7 @@ def sample_files(workspace: str, model_sha: str, sampler_sha: str, sample_db: st
 
 @flask_app.route("/corpus/<int:corpus_id>/encoded/random/")
 def random_encoded_contentfile(corpus_id: int):
-  l.getLogger().debug("deeplearning.clgen.dashboard.random_encoded_contentfile()")
+  l.logger().debug("deeplearning.clgen.dashboard.random_encoded_contentfile()")
   (encoded_url,) = (
     db.session.query(dashboard_db.Corpus.encoded_url)
     .filter(dashboard_db.Corpus.id == corpus_id)
@@ -561,10 +561,10 @@ def random_encoded_contentfile(corpus_id: int):
 def Launch(host: str = "0.0.0.0",
            debug: bool = False,
            ):
-  l.getLogger().debug("deeplearning.clgen.dashboard.Launch()")
+  l.logger().debug("deeplearning.clgen.dashboard.Launch()")
   """Launch dashboard in a separate thread."""
   port = FLAGS.clgen_dashboard_port or portpicker.pick_unused_port()
-  l.getLogger().info("Launching CLgen dashboard on http://{}:{}".format(host, port))
+  l.logger().info("Launching CLgen dashboard on http://{}:{}".format(host, port))
   kwargs = {
     "port": port,
     # Debugging must be disabled when run in a separate thread.

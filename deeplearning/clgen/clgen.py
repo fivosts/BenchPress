@@ -34,7 +34,7 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.github import miner
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 from eupy.hermes import client
 
 FLAGS = flags.FLAGS
@@ -244,7 +244,7 @@ def SampleObserversFromFlags(instance: Instance) -> typing.List[
 
   sample_observers = []
   if FLAGS.min_samples <= 0:
-    l.getLogger().warning(
+    l.logger().warning(
       "Entering an infinite sample loop, this process will never end!"
     )
   else:
@@ -323,10 +323,10 @@ def DoFlagsAction(
           instance.model.pre_train_corpus.Create(tokenizer = instance.model.corpus.tokenizer)
       elif FLAGS.stop_after == "pre_train":
         instance.PreTrain()
-        l.getLogger().info("Model: {}".format(instance.model.cache.path))
+        l.logger().info("Model: {}".format(instance.model.cache.path))
       elif FLAGS.stop_after == "train":
         instance.Train()
-        l.getLogger().info("Model: {}".format(instance.model.cache.path))
+        l.logger().info("Model: {}".format(instance.model.cache.path))
       elif FLAGS.stop_after:
         raise ValueError(
           f"Invalid --stop_after argument: '{FLAGS.stop_after}'"
@@ -339,10 +339,10 @@ def DoFlagsAction(
             instance.model.hash
           )
         else:
-          l.getLogger().warn("Sampler has not been provided. Use --stop_after to create corpus or train.")
+          l.logger().warn("Sampler has not been provided. Use --stop_after to create corpus or train.")
   else:
     if FLAGS.stop_after in {"corpus", "train"}:
-      l.getLogger().warn("FLAGS.stop_after {} will be ignored without model config.".format(FLAGS.stop_after))
+      l.logger().warn("FLAGS.stop_after {} will be ignored without model config.".format(FLAGS.stop_after))
     if FLAGS.print_cache_path in {"pre_train_corpus", "corpus", "model", "sampler"}:
       raise ValueError("{} config has not been specified.".format(FLAGS.print_cache_path))
     elif FLAGS.print_cache_path:
@@ -391,7 +391,7 @@ def initMain(*args, **kwargs):
   except KeyboardInterrupt:
     return
   except Exception as e:
-    l.getLogger().error(e)
+    l.logger().error(e)
     if mail:
       if FLAGS.config is not None:
         job = pathlib.Path(FLAGS.config)

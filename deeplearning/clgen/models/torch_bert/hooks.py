@@ -4,7 +4,7 @@ import pathlib
 
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.samplers import validation_database
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 class tensorMonitorHook(object):
   def __init__(self, 
@@ -89,7 +89,7 @@ class tensorMonitorHook(object):
               self.plot_tensors[k]['value'].append(v)
               self.plot_tensors[k]['step'].append(ch['step'])
       else:
-        l.getLogger().error("Training json log-file not found. Will keep track from this point on.")
+        l.logger().error("Training json log-file not found. Will keep track from this point on.")
     return
 
   def _step_triggered(self):
@@ -249,7 +249,7 @@ class validationSampleHook(object):
     #     try:
     #       exists = session.query(validation_database.BERTValFile.sha256).filter_by(sha256 = val_trace.sha256).scalar() is not None
     #     except sqlalchemy.orm.exc.MultipleResultsFound as e:
-    #       l.getLogger().error("Selected sha256 has been already found more than once.")
+    #       l.logger().error("Selected sha256 has been already found more than once.")
     #       raise e
     #     if not exists:
     #       session.add(val_trace)
@@ -283,7 +283,7 @@ class validationSampleHook(object):
         entry.results = "\n".join(r)
       else:
         session.add(validation_database.ValResults(key = val_set, results = "\n".join(r)))
-    l.getLogger().info("LM Accuracy: {}, LM Loss: {}, NSP Accuracy: {}, NSP Loss: {}".format(
+    l.logger().info("LM Accuracy: {}, LM Loss: {}, NSP Accuracy: {}, NSP Loss: {}".format(
         masked_lm_accuracy,
         masked_lm_loss,
         next_sentence_accuracy,

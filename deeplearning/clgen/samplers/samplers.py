@@ -37,7 +37,7 @@ from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.models import lm_data_generator
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.util import sqlutil
 
 FLAGS = flags.FLAGS
@@ -471,7 +471,7 @@ class Sampler(object):
         f"length. Sampler sequence length={self.sequence_length}, encoded "
         f"start text length={len(self.encoded_start_text)}"
       )
-    l.getLogger().info("Sampling: '{}'\n".format(self.start_text))
+    l.logger().info("Sampling: '{}'\n".format(self.start_text))
     [terminator.Specialize(tokenizer) for terminator in self.terminators]
 
   def symlinkModelDB(self,

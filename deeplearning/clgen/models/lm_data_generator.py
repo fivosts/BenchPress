@@ -23,7 +23,7 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.models import lm_database
 from absl import flags
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -289,10 +289,10 @@ class MaskLMDataGenerator(object):
       provided in the model's config.
     """
     if FLAGS.force_remake_dataset:
-      l.getLogger().warn("Force remaking datasets can cause lots of problems on an already trained model. Are you sure you want to proceed ? [y/n]")
+      l.logger().warn("Force remaking datasets can cause lots of problems on an already trained model. Are you sure you want to proceed ? [y/n]")
       a = input()
       if a.lower() != "yes" and a.lower() != "y":
-        l.getLogger().warn("Overwriting dataset process was aborted. Good call.")
+        l.logger().warn("Overwriting dataset process was aborted. Good call.")
         exit()
 
     if len(glob.glob(str(self.cache.path / "train_dataset_*.{}".format(self.file_extension)))) == 0 or FLAGS.force_remake_dataset:
@@ -481,7 +481,7 @@ class MaskLMDataGenerator(object):
         if self.num_train_steps:
           self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
           self.steps_per_epoch = self.config.steps_per_epoch
-        l.getLogger().info(
+        l.logger().info(
           "Loaded from file corpus of {} examples in {} ms.".format(
                     humanize.intcomma(len(shaped_corpus)),
                     humanize.intcomma(int((time.time() - start_time) * 1000)),
@@ -509,7 +509,7 @@ class MaskLMDataGenerator(object):
         i, ch_idx = 0, 0
         bar  = progressbar.ProgressBar(max_value = self.corpus.encoded.size)
         pool = multiprocessing.Pool()
-        l.getLogger().info("Processing pre-train corpus chunks...")
+        l.logger().info("Processing pre-train corpus chunks...")
         for dp in pool.imap_unordered(
                             functools.partial(
                               _addStartEndPadToken,
@@ -526,7 +526,7 @@ class MaskLMDataGenerator(object):
             encoded_corpus = np.array(encoded_corpus)
             corpus_file = "pre_corpus_{}.pkl".format(ch_idx)
             cache_lengths[corpus_file] = len(encoded_corpus)
-            l.getLogger().info("Storing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
+            l.logger().info("Storing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
             with open(path / corpus_file, 'wb') as outf:
               pickle.dump(encoded_corpus, outf, protocol = 4)
             with open(path / "pre_lengths_cache.json", 'w') as outf:
@@ -536,7 +536,7 @@ class MaskLMDataGenerator(object):
           bar.update(i)
         if encoded_corpus:
           encoded_corpus = np.array(encoded_corpus)
-          l.getLogger().info("Storing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
+          l.logger().info("Storing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
           corpus_file = "pre_corpus_{}.pkl".format(ch_idx)
           cache_lengths[corpus_file] = len(encoded_corpus)
           with open(path / corpus_file, 'wb') as outf:
@@ -587,8 +587,8 @@ class MaskLMDataGenerator(object):
       assert shaped_corpus.ndim     == 2, "corpus dim: {}".format(shaped_corpus.shape)
       assert shaped_corpus.shape[1] == sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(shaped_corpus.shape[1], sequence_length)
 
-      l.getLogger().info("{} kernels were rejected (larger than sequence_length)".format(initial_length - reduced_length))
-      l.getLogger().info(
+      l.logger().info("{} kernels were rejected (larger than sequence_length)".format(initial_length - reduced_length))
+      l.logger().info(
         "Loaded corpus of shape {} multiplied by dupe factor: {} in {} ms.".format(
                   shaped_corpus.shape,
                   dupe_factor,
@@ -623,7 +623,7 @@ class MaskLMDataGenerator(object):
       assert np_corpus.ndim == 2, "Wrong dimensions for shaped_corpus: {}".format(np_corpus.shape)
       assert np_corpus.shape[1] == sequence_length, "Second dimension is not equal to sequence length: {}".format(np_corpus.shape[1])
 
-      l.getLogger().info(
+      l.logger().info(
         "Loaded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
                   humanize.intcomma(clipped_corpus_length),
                   humanize.intcomma(len(encoded_corpus) - clipped_corpus_length),
@@ -696,7 +696,7 @@ class MaskLMDataGenerator(object):
     extended_corpus  = apply_dupe_factor(corpus, iterations)
     remaining_corpus = apply_dupe_factor(corpus, remaining)
 
-    l.getLogger().info("Estimated element size: {}. Dupe factor {} split into {} iterations of {} (plus {} remaining)".format(
+    l.logger().info("Estimated element size: {}. Dupe factor {} split into {} iterations of {} (plus {} remaining)".format(
         humanize.naturalsize(single_item_bytes), self.training_opts.dupe_factor, iterations, max_dupe, remaining
       )
     )
@@ -865,7 +865,7 @@ class MaskLMDataGenerator(object):
                         ) -> None:
     """Log analytics about the batch."""
     if steps_per_epoch is not None and num_epochs is not None:
-      l.getLogger().info(
+      l.logger().info(
         "Memory: {} per batch, {} per epoch, {} total.".format(
                 humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size, binary = True),
                 humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size * steps_per_epoch, binary = True),
@@ -873,7 +873,7 @@ class MaskLMDataGenerator(object):
             )
       )
     else:
-      l.getLogger().info(
+      l.logger().info(
         "Memory: {} per batch.".format(
                 humanize.naturalsize(self.estimatedSize(1, sequence_length, max_predictions_per_seq) * batch_size, binary = True),
             )

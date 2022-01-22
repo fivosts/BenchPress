@@ -23,7 +23,7 @@ from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.models.torch_bert import generation_utils
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 def find_pruneable_heads_and_indices(
   heads: typing.List[int], n_heads: int, head_size: int, already_pruned_heads: typing.Set[int]
@@ -437,7 +437,7 @@ class PreTrainedModel(torch.nn.Module, ModuleUtilsMixin, generation_utils.Genera
     # tie weights recursively
     tie_encoder_to_decoder_recursively(decoder, encoder, base_model_prefix, uninitialized_encoder_weights)
     if len(uninitialized_encoder_weights) > 0:
-      l.getLogger().warning(
+      l.logger().warning(
         f"The following encoder weights were not tied to the decoder {uninitialized_encoder_weights}"
       )
 
@@ -577,7 +577,7 @@ class PreTrainedModel(torch.nn.Module, ModuleUtilsMixin, generation_utils.Genera
         Directory to which to save. Will be created if it doesn't exist.
     """
     if os.path.isfile(save_directory):
-      l.getLogger().error("Provided path ({}) should be a directory, not a file".format(save_directory))
+      l.logger().error("Provided path ({}) should be a directory, not a file".format(save_directory))
       return
     os.makedirs(save_directory, exist_ok=True)
 
@@ -601,7 +601,7 @@ class PreTrainedModel(torch.nn.Module, ModuleUtilsMixin, generation_utils.Genera
       model_to_save.config.save_pretrained(save_directory)
       torch.save(model_to_save.state_dict(), output_model_file)
 
-    l.getLogger().info("Model weights saved in {}".format(output_model_file))
+    l.logger().info("Model weights saved in {}".format(output_model_file))
 
   @classmethod
   def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
@@ -779,9 +779,9 @@ class PreTrainedModel(torch.nn.Module, ModuleUtilsMixin, generation_utils.Genera
         raise EnvironmentError(msg)
 
       if resolved_archive_file == archive_file:
-        l.getLogger().info("loading weights file {}".format(archive_file))
+        l.logger().info("loading weights file {}".format(archive_file))
       else:
-        l.getLogger().info("loading weights file {} from cache at {}".format(archive_file, resolved_archive_file))
+        l.logger().info("loading weights file {} from cache at {}".format(archive_file, resolved_archive_file))
     else:
       resolved_archive_file = None
 
@@ -812,7 +812,7 @@ class PreTrainedModel(torch.nn.Module, ModuleUtilsMixin, generation_utils.Genera
 
           model = load_tf2_checkpoint_in_pytorch_model(model, resolved_archive_file, allow_missing_keys=True)
         except ImportError:
-          l.getLogger().error(
+          l.logger().error(
             "Loading a torch.TensorFlow model in PyTorch, requires both PyTorch and torch.TensorFlow to be installed. Please see "
             "https://pytorch.org/ and https://www.tensorflow.org/install/ for installation instructions."
           )
@@ -875,7 +875,7 @@ class PreTrainedModel(torch.nn.Module, ModuleUtilsMixin, generation_utils.Genera
           missing_keys = [k for k in missing_keys if re.search(pat, k) is None]
 
       if len(unexpected_keys) > 0:
-        l.getLogger().warning(
+        l.logger().warning(
           f"Some weights of the model checkpoint at {pretrained_model_name_or_path} were not used when "
           f"initializing {model.__class__.__name__}: {unexpected_keys}\n"
           f"- This IS expected if you are initializing {model.__class__.__name__} from the checkpoint of a model trained on another task "
@@ -884,15 +884,15 @@ class PreTrainedModel(torch.nn.Module, ModuleUtilsMixin, generation_utils.Genera
           f"to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model)."
         )
       else:
-        l.getLogger().info(f"All model checkpoint weights were used when initializing {model.__class__.__name__}.\n")
+        l.logger().info(f"All model checkpoint weights were used when initializing {model.__class__.__name__}.\n")
       if len(missing_keys) > 0:
-        l.getLogger().warning(
+        l.logger().warning(
           f"Some weights of {model.__class__.__name__} were not initialized from the model checkpoint at {pretrained_model_name_or_path} "
           f"and are newly initialized: {missing_keys}\n"
           f"You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference."
         )
       else:
-        l.getLogger().info(
+        l.logger().info(
           f"All the weights of {model.__class__.__name__} were initialized from the model checkpoint at {pretrained_model_name_or_path}.\n"
           f"If your task is similar to the task the model of the checkpoint was trained on, "
           f"you can already use {model.__class__.__name__} for predictions without further training."

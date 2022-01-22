@@ -9,7 +9,7 @@ from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 from absl import flags
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -53,8 +53,8 @@ class CompilationSampler(object):
         dump_types = ""
         p = pathlib.Path("./dump_argmax_error.log").absolute()
         if not p.exists():
-          l.getLogger().error(t.shape)
-          l.getLogger().error(p)
+          l.logger().error(t.shape)
+          l.logger().error(p)
           for d0 in t:
             for d1 in d0:
               dump_cf += str(d1) + ", "
@@ -181,25 +181,25 @@ class CompilationSampler(object):
       try:
         new_seq[new_idx] = t
       except IndexError:
-        l.getLogger().info("seq: {}".format(self.tokenizer.tokensToString([x for x in seq.cpu().numpy()])))
-        l.getLogger().info("temp_seq {}".format(self.tokenizer.tokensToString([x for x in temp_seq])))
-        l.getLogger().info("pred idx: {}".format(torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]))
-        l.getLogger().info("pred_toks {}".format(self.tokenizer.tokensToString([int(self.argmax(prediction_scores[idx])) for idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]])))
-        l.getLogger().info("allowed_incr: {}".format(allowed_incr))
-        l.getLogger().info("new_hole: {}".format(new_hole))
-        l.getLogger().info("closed_hole: {}".format(closed_hole))
+        l.logger().info("seq: {}".format(self.tokenizer.tokensToString([x for x in seq.cpu().numpy()])))
+        l.logger().info("temp_seq {}".format(self.tokenizer.tokensToString([x for x in temp_seq])))
+        l.logger().info("pred idx: {}".format(torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]))
+        l.logger().info("pred_toks {}".format(self.tokenizer.tokensToString([int(self.argmax(prediction_scores[idx])) for idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]])))
+        l.logger().info("allowed_incr: {}".format(allowed_incr))
+        l.logger().info("new_hole: {}".format(new_hole))
+        l.logger().info("closed_hole: {}".format(closed_hole))
       new_idx += 1
       if new_hole[idx]:
         try:
           new_seq[new_idx] = self.tokenizer.holeToken
         except IndexError:
-          l.getLogger().warn("seq: {}".format(self.tokenizer.tokensToString([x for x in seq.cpu().numpy()])))
-          l.getLogger().warn("temp_seq {}".format(self.tokenizer.tokensToString([x for x in temp_seq])))
-          l.getLogger().warn("pred idx: {}".format(torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]))
-          l.getLogger().warn("pred_toks {}".format(self.tokenizer.tokensToString([int(self.argmax(prediction_scores[idx])) for idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]])))
-          l.getLogger().warn("allowed_incr: {}".format(allowed_incr))
-          l.getLogger().warn("new_hole: {}".format(new_hole))
-          l.getLogger().warn("closed_hole: {}".format(closed_hole))
+          l.logger().warn("seq: {}".format(self.tokenizer.tokensToString([x for x in seq.cpu().numpy()])))
+          l.logger().warn("temp_seq {}".format(self.tokenizer.tokensToString([x for x in temp_seq])))
+          l.logger().warn("pred idx: {}".format(torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]))
+          l.logger().warn("pred_toks {}".format(self.tokenizer.tokensToString([int(self.argmax(prediction_scores[idx])) for idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]])))
+          l.logger().warn("allowed_incr: {}".format(allowed_incr))
+          l.logger().warn("new_hole: {}".format(new_hole))
+          l.logger().warn("closed_hole: {}".format(closed_hole))
         new_idx += 1
       if new_idx >= seq_length:
         break
@@ -480,7 +480,7 @@ class CompilationSampler(object):
         if FLAGS.sample_indices_limit:
           sidx_length  = torch.cat((sidx_length, torch.full((res, 1), 0).to(device)), 0)
         w_idx += res
-    # l.getLogger().warn("{} is done now and returning workload...".format(device))
+    # l.logger().warn("{} is done now and returning workload...".format(device))
     return queue, sample_indices
 
   def StepSampleSeq(self,

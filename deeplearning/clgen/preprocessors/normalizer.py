@@ -20,7 +20,7 @@ import typing
 
 from deeplearning.clgen.util import environment
 from absl import flags
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -68,7 +68,7 @@ def NormalizeIdentifiers(
       + ["-extra-arg=" + x for x in cflags]
       + ["--"]
     )
-    l.getLogger().debug("$ {}{}".format(
+    l.logger().debug("$ {}{}".format(
                     f'LD_PRELOAD={CLANG_REWRITER_ENV["LD_PRELOAD"]} '
                     if "LD_PRELOAD" in CLANG_REWRITER_ENV
                     else "",
@@ -85,8 +85,8 @@ def NormalizeIdentifiers(
       env=CLANG_REWRITER_ENV,
     )
     stdout, stderr = process.communicate()
-    l.getLogger().debug("stdout: {}".format(stdout))
-    l.getLogger().debug("stderr: {}".format(stderr))
+    l.logger().debug("stdout: {}".format(stdout))
+    l.logger().debug("stderr: {}".format(stderr))
   # If there was nothing to rewrite, the rewriter exits with error code:
   EUGLY_CODE = 204
   if process.returncode == EUGLY_CODE:

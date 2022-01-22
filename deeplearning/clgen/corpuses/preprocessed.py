@@ -39,7 +39,7 @@ from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 from eupy.hermes import client
 
 from absl import app, flags
@@ -269,7 +269,7 @@ class PreprocessedContentFiles(sqlutil.Database):
     #           humanize.intcomma(input_lines),
     #           humanize.intcomma(num_input_files),
     #         )
-    # l.getLogger().info(
+    # l.logger().info(
     #   "Content files: {} chars, {} lines, {} files.".format(
     #           humanize.intcomma(input_chars),
     #           humanize.intcomma(input_lines),
@@ -281,7 +281,7 @@ class PreprocessedContentFiles(sqlutil.Database):
     #           humanize.naturaldelta((total_walltime or 0) / 1000),
     #           (total_time or 1) / (total_walltime or 1),
     #       )
-    # l.getLogger().info(
+    # l.logger().info(
     #   "Pre-processed {} files in {} ({:.2f}x speedup).".format(
     #           humanize.intcomma(num_input_files),
     #           humanize.naturaldelta((total_walltime or 0) / 1000),
@@ -292,7 +292,7 @@ class PreprocessedContentFiles(sqlutil.Database):
     #           (1 - (num_files / max(num_input_files, 1))) * 100,
     #           humanize.intcomma(num_input_files - num_files),
     #       )
-    # l.getLogger().info(
+    # l.logger().info(
     #   "Pre-processing discard rate: {:.1f}% ({} files).".format(
     #           (1 - (num_files / max(num_input_files, 1))) * 100,
     #           humanize.intcomma(num_input_files - num_files),
@@ -303,7 +303,7 @@ class PreprocessedContentFiles(sqlutil.Database):
     #           humanize.intcomma(line_count),
     #           humanize.intcomma(num_files),
     #       )
-    # l.getLogger().info(
+    # l.logger().info(
     #   "Pre-processed corpus: {} chars, {} lines, {} files.".format(
     #           humanize.intcomma(char_count),
     #           humanize.intcomma(line_count),
@@ -317,7 +317,7 @@ class PreprocessedContentFiles(sqlutil.Database):
     if session.query(Meta).filter(Meta.key == "done").first():
       return True
     elif FLAGS.override_preprocessing:
-      l.getLogger().warn("Overriding incomplete pre-processed DB.")
+      l.logger().warn("Overriding incomplete pre-processed DB.")
       return True
     else:
       return False
@@ -336,7 +336,7 @@ class PreprocessedContentFiles(sqlutil.Database):
             [x[0] for x in session.query(PreprocessedContentFile.input_relpath)]
           )
           todo = relpaths - done
-          l.getLogger().info(
+          l.logger().info(
             "Preprocessing {} of {} content files".format(
                     humanize.intcomma(len(todo)),
                     humanize.intcomma(len(relpaths)),
@@ -411,7 +411,7 @@ class PreprocessedContentFiles(sqlutil.Database):
         last_commit     = time.time()
         wall_time_start = time.time()
 
-        l.getLogger().error("Node {} will make idx {} to {}".format(environment.WORLD_RANK, idx, limit))
+        l.logger().error("Node {} will make idx {} to {}".format(environment.WORLD_RANK, idx, limit))
 
         while idx < limit:
           try:
@@ -482,7 +482,7 @@ class PreprocessedContentFiles(sqlutil.Database):
           d,
         ]
         subprocess.check_call(cmd)
-        l.getLogger().info(
+        l.logger().info(
           "Unpacked {} in {} ms".format(
                   ExpandConfigPath(config.local_tar_archive).name,
                   humanize.intcomma(int((time.time() - start_time) * 1000)),
@@ -647,7 +647,7 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
   Collect data from a list of preprocessed databases and merge them.
   """
   for db in dbs:
-    l.getLogger().info("Loading {}...".format(db.url))
+    l.logger().info("Loading {}...".format(db.url))
     pkey = out_db.input_size
     with db.Session() as ses:
       data = ses.query(PreprocessedContentFile).all()

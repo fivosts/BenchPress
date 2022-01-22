@@ -5,7 +5,7 @@ from deeplearning.clgen.util import environment
 
 from eupy.hermes import client
 
-_logger()= None
+_logger = None
 
 NOTSET   = logging.NOTSET
 DEBUG    = logging.DEBUG
@@ -116,7 +116,7 @@ class Logger:
     return self.log.handlers
 
   @property
-  def logger()self):
+  def logger(self):
     return self.log
   
   @property
@@ -214,11 +214,13 @@ class Logger:
     logging.shutdown()
     return
 
-def logger()) -> Logger:
+def logger() -> Logger:
   global _logger
+  if not _logger:
+    initLogger()
   return _logger
 
-def initLogger(name, lvl = logging.INFO, mail = None):
+def initLogger(name = "", lvl = logging.INFO, mail = None):
   global _logger
-  _logger()= Logger(name, lvl, mail)
+  _logger = Logger(name, lvl, mail)
   return _logger

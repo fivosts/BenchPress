@@ -147,7 +147,7 @@ class SamplesDatabaseObserver(SampleObserver):
       try:
         exists = session.query(samples_database.Sample.sha256).filter_by(sha256 = db_sample.sha256).scalar() is not None
       except sqlalchemy.orm.exc.MultipleResultsFound as e:
-        l.getLogger().error("Selected sha256 has been already found more than once.")
+        l.logger().error("Selected sha256 has been already found more than once.")
         raise e
       if not exists:
         session.add(db_sample)

@@ -20,7 +20,7 @@ import time
 import typing
 import humanize
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 import numpy as np
 import progressbar
@@ -94,7 +94,7 @@ class tfSequential(backends.BackendBase):
     tf.compat.v1.disable_eager_execution()
 
     tensorboard_dir = f"{self.cache.path}/tensorboard"
-    l.getLogger().info(
+    l.logger().info(
       "Using tensorboard to log training progress. View progress using:\n"
       f"    $ tensorboard --logdir='{tensorboard_dir}'",
     )
@@ -233,7 +233,7 @@ class tfSequential(backends.BackendBase):
     num_trainable_params = int(
       np.sum([np.prod(v.shape) for v in tf.compat.v1.trainable_variables()])
     )
-    l.getLogger().info(
+    l.logger().info(
       "Instantiated TensorFlow graph with {} trainable parameters " "in {} ms."
         .format(
           humanize.intcomma(num_trainable_params),
@@ -383,7 +383,7 @@ class tfSequential(backends.BackendBase):
 
     # restore model from closest checkpoint.
     if ckpt_path:
-      l.getLogger().info("Restoring checkpoint {}".format(ckpt_path))
+      l.logger().info("Restoring checkpoint {}".format(ckpt_path))
       saver.restore(sess, ckpt_path)
 
     # make sure we don't lose track of other checkpoints
@@ -407,7 +407,7 @@ class tfSequential(backends.BackendBase):
 
       # TODO(cec): refactor data generator to a Python generator.
       self.data_generator.CreateBatches()
-      l.getLogger().info("Epoch {}/{}:".format(epoch_num, self.config.training.num_epochs))
+      l.logger().info("Epoch {}/{}:".format(epoch_num, self.config.training.num_epochs))
       state = sess.run(self.initial_state)
       # Per-batch inner loop.
       bar = progressbar.ProgressBar(max_value=self.data_generator.num_batches)
@@ -430,7 +430,7 @@ class tfSequential(backends.BackendBase):
           last_log_time = now
 
       # Log the loss and delta.
-      l.getLogger().info("Loss: {:.6f}.".format(loss))
+      l.logger().info("Loss: {:.6f}.".format(loss))
 
       # Save after every epoch.
       start_time = time.time()
@@ -439,7 +439,7 @@ class tfSequential(backends.BackendBase):
       checkpoint_path = saver.save(
         sess, str(checkpoint_prefix), global_step=global_step
       )
-      l.getLogger().info(
+      l.logger().info(
         "Saved checkpoint {} in {} ms."
           .format(
             checkpoint_path,

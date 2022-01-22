@@ -45,7 +45,7 @@ from absl import flags
 
 from deeplearning.clgen.util import sqlutil
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -212,7 +212,7 @@ class Corpus(object):
     self.cache = cache.mkcache("corpus", "encoded", encoded_id)
     commit.saveCommit(self.cache.path)
     commit.saveCommit(self.cache.path.parent.parent / "preprocessed" / preprocessed_id)
-    l.getLogger().info("Initialized {}train corpus in {}".format("pre_" if self.pre_train else "", self.cache.path))
+    l.logger().info("Initialized {}train corpus in {}".format("pre_" if self.pre_train else "", self.cache.path))
     return
 
   def GetShortSummary(self) -> str:
@@ -248,7 +248,7 @@ class Corpus(object):
       raise ValueError(
         f"Pre-processed corpus contains no files: '{self.preprocessed.url}'"
       )
-    l.getLogger().info("Pre-processed {}train corpus in corpuses/{}".format("pre_" if self.pre_train else "", pathlib.Path(self.preprocessed.url).parent.stem))
+    l.logger().info("Pre-processed {}train corpus in corpuses/{}".format("pre_" if self.pre_train else "", pathlib.Path(self.preprocessed.url).parent.stem))
     encoded_lock_path = (
       pathlib.Path(self.encoded.url[len("sqlite:///") :]).parent / "LOCK"
     )
@@ -256,7 +256,7 @@ class Corpus(object):
     self._tokenizer = tokenizer
     tokenizer       = self.tokenizer
     if not self.pre_train:
-      l.getLogger().info(
+      l.logger().info(
         "{}: {} tokens".format(
             type(tokenizer).__name__,
             humanize.intcomma(tokenizer.vocab_size),
@@ -265,7 +265,7 @@ class Corpus(object):
     self.encoded.Create(
       self.preprocessed, tokenizer, self.config.contentfile_separator
     )
-    l.getLogger().info("Encoded {}train corpus in corpuses/{}".format("pre_" if self.pre_train else "", pathlib.Path(self.encoded.url).parent.stem))
+    l.logger().info("Encoded {}train corpus in corpuses/{}".format("pre_" if self.pre_train else "", pathlib.Path(self.encoded.url).parent.stem))
     return
 
   def GetTextCorpus(self, shuffle: bool) -> str:
@@ -432,7 +432,7 @@ def WordTokenizerFromEncodedDb(encoded_db: encoded.EncodedContentFiles):
   # a concrete `DatabaseCorpus` class.
   with encoded_db.Session() as s:
     vocab = GetVocabFromMetaTable(s)
-  l.getLogger().info("Loaded vocabulary of {} tokens from meta table".format(len(vocab)))
+  l.logger().info("Loaded vocabulary of {} tokens from meta table".format(len(vocab)))
   return tokenizers.WordTokenizer(vocab)
 
 
@@ -495,7 +495,7 @@ def ResolveContentId(config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrain
     # file if the directory is changed.
     hash_file_path = pathlib.Path(str(local_directory) + ".sha1.txt")
     if hash_file_path.is_file():
-      l.getLogger().info("Reading directory hash: '{}'.".format(hash_file_path))
+      l.logger().info("Reading directory hash: '{}'.".format(hash_file_path))
       with open(hash_file_path) as f:
         content_id = f.read().rstrip()
     else:
@@ -509,7 +509,7 @@ def ResolveContentId(config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrain
       # to reference the hash cache.
       with open(hash_file_path, "w") as f:
         print(content_id, file=f)
-      l.getLogger().info("Wrote directory hash: '{}'.".format(hash_file_path))
+      l.logger().info("Wrote directory hash: '{}'.".format(hash_file_path))
   elif config.HasField("local_tar_archive"):
     # This if not an efficient means of getting the hash, as it requires always
     # unpacking the archive and reading the entire contents. It would be nicer
@@ -531,7 +531,7 @@ def ResolveContentId(config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrain
   #   github_fetcher.fetch()
   #   hash_file_path = pathlib.Path(str(gitfile_path) + ".sha1.txt")
   #   if hash_file_path.is_file():
-  #     l.getLogger().info("Reading directory hash: '{}'.".format(hash_file_path))
+  #     l.logger().info("Reading directory hash: '{}'.".format(hash_file_path))
   #     with open(hash_file_path) as f:
   #       content_id = f.read().rstrip()
   #   else:
@@ -544,7 +544,7 @@ def ResolveContentId(config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrain
   #     # to reference the hash cache.
   #     with open(hash_file_path, "w") as f:
   #       print(content_id, file=f)
-  #     l.getLogger().info("Wrote directory hash: '{}'.".format(hash_file_path))
+  #     l.logger().info("Wrote directory hash: '{}'.".format(hash_file_path))
   else:
     raise NotImplementedError("Unsupported Corpus.contentfiles field value")
   return content_id
@@ -610,7 +610,7 @@ def GetHashOfArchiveContents(archive: pathlib.Path) -> str:
     raise FileNotFoundError("Corpus {} is not registered in corpus_registry".format(archive.name))
 
   if not archive.is_file():
-    l.getLogger().info("Corpus found in registry. Downloading from Google Drive...")
+    l.logger().info("Corpus found in registry. Downloading from Google Drive...")
     gdown.download("https://drive.google.com/uc?id={}".format(reg[archive.name]['url']), str(archive))
 
   if 'hash' in reg[archive.name]:

@@ -7,7 +7,7 @@ from sqlalchemy.dialects import mysql
 from absl import flags
 from deeplearning.clgen.util import sqlutil
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 Base = sqlutil.Base()
@@ -104,5 +104,5 @@ def GetDatabase() -> DashboardDatabase:
   db: DashboardDatabase = DashboardDatabase(
           url = "sqlite:///{}/dashboard.db".format(os.path.abspath(FLAGS.workspace_dir)), must_exist = False
           )
-  l.getLogger().info("Created dashboard database {}".format(db.url))
+  l.logger().info("Created dashboard database {}".format(db.url))
   return db

@@ -37,7 +37,7 @@ from absl import app, flags
 import humanize
 from deeplearning.clgen.util import sqlutil
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -167,7 +167,7 @@ class EncodedContentFile(Base):
     try:
       data = tokenizer.TokenizeString(preprocessed_cf.text)
     except ValueError as e:
-      l.getLogger().warn(e)
+      l.logger().warn(e)
       return None
     ####
     # TODO kernel analytics
@@ -266,14 +266,14 @@ class EncodedContentFiles(sqlutil.Database):
     #     func.sum(EncodedContentFile.wall_time_ms),
     #     func.sum(EncodedContentFile.encoding_time_ms),
     #   ).first()
-    # l.getLogger().info("Encoded {} files in {} ms ({:.2f}x speedup)"
+    # l.logger().info("Encoded {} files in {} ms ({:.2f}x speedup)"
     #                     .format(
     #                         humanize.intcomma(num_files),
     #                         humanize.intcomma(total_walltime),
     #                         total_time / total_walltime,
     #                       ), mail_level = 4
     #                   )
-    # l.getLogger().info("Encoded corpus: {} tokens, {} files."
+    # l.logger().info("Encoded corpus: {} tokens, {} files."
     #                     .format(
     #                         humanize.intcomma(token_count),
     #                         humanize.intcomma(num_files),
@@ -289,7 +289,7 @@ class EncodedContentFiles(sqlutil.Database):
         stats = session.query(EncodedContentFileStats).first()
         return stats.file_count
       else:
-        l.getLogger().warn("Stats table not found. Inserting stats...")
+        l.logger().warn("Stats table not found. Inserting stats...")
         self.SetStats(session)
         return session.query(EncodedContentFileStats).first().file_count
 
@@ -306,7 +306,7 @@ class EncodedContentFiles(sqlutil.Database):
     if session.query(Meta).filter(Meta.key == "done").first():
       return True
     elif FLAGS.override_encoding:
-      l.getLogger().warn("Overriding incomplete encoded DB.")
+      l.logger().warn("Overriding incomplete encoded DB.")
       return True
     else:
       return False
@@ -365,7 +365,7 @@ class EncodedContentFiles(sqlutil.Database):
       #     "Pre-processed corpus contains no files: " f"'{preprocessed_db.url}'"
       #   )
       total_jobs = query.count() # - len(done)
-      l.getLogger().info("Encoding {} of {} preprocessed files"
+      l.logger().info("Encoding {} of {} preprocessed files"
                           .format(
                               humanize.intcomma(total_jobs),
                               humanize.intcomma(
@@ -432,7 +432,7 @@ class EncodedContentFiles(sqlutil.Database):
               m.plot()
           raise e
         except Exception as e:
-          l.getLogger().error(e)
+          l.logger().error(e)
           pool.terminate()
           self.length_monitor.plot()
           if not self.is_pre_train:
@@ -509,7 +509,7 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
   Collect data from a list of preprocessed databases and merge them.
   """
   for db in dbs:
-    l.getLogger().info("Loading {}...".format(db.url))
+    l.logger().info("Loading {}...".format(db.url))
     chunk, idx = 2000000, 0
     bar = progressbar.ProgressBar(max_value = db.size)
     pkey = out_db.size

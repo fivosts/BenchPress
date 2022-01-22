@@ -3,7 +3,7 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 import tensorflow_probability as tfp
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
   """An inference helper that takes a seed text"""

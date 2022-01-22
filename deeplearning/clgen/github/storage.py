@@ -13,7 +13,7 @@ from google.cloud import bigquery
 
 from deeplearning.clgen.proto import github_pb2
 from deeplearning.clgen.github import bigQuery_database as bqdb
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 class Storage(object):
 
@@ -80,7 +80,7 @@ class zipStorage(Storage):
     self.file_count     = 0
     self.repos          = self.loadRepos
     self.data_file      = ""
-    l.getLogger().info("Set up ZIP storage in {}".format(self.cache_path))
+    l.logger().info("Set up ZIP storage in {}".format(self.cache_path))
 
   def __exit__(self, path, name, extension):
     self.zipFiles()
@@ -171,7 +171,7 @@ class fileStorage(Storage):
     self.cache_path = self.cache_path / self.name
     (self.cache_path).mkdir(exist_ok = True)
     self.repos = self.loadRepos
-    l.getLogger().info("Set up folder storage in {}".format(self.cache_path))
+    l.logger().info("Set up folder storage in {}".format(self.cache_path))
 
   def __exit__(self, path, name, extension) -> None:
     with open(self.cache_path / "repos_list.json", 'w') as f:
@@ -242,7 +242,7 @@ class JSONStorage(Storage):
     self.files = []
     self.repos = self.loadRepos
     self.data  = ""
-    l.getLogger().info("Set up JSON storage in {}".format(self.cache_path))
+    l.logger().info("Set up JSON storage in {}".format(self.cache_path))
 
     return
 
@@ -378,7 +378,7 @@ class dbStorage(Storage):
     self.data  = None
     self.flush_freq = 20000
 
-    l.getLogger().info("Set up SQL storage in {}".format(self.cache_path))
+    l.logger().info("Set up SQL storage in {}".format(self.cache_path))
 
   def __exit__(self, path, name, extension):
     self.flush()

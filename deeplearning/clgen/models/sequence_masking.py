@@ -9,7 +9,7 @@ import progressbar
 
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util.tf import tf
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 class tfSequence(typing.NamedTuple):
   """
@@ -228,7 +228,7 @@ def MPHoleSequence(seq: np.array,
     Note that if next_sentence prediction is to be embedded, [SEP] token has to be added.    
   """
   if len(masked_lms) == 0:
-    l.getLogger().warn("No HOLE added to datapoint. Increase probability of hole occuring.")
+    l.logger().warn("No HOLE added to datapoint. Increase probability of hole occuring.")
 
   if is_torch:
     seen_in_training     = np.int64([1] if train_set else [0])

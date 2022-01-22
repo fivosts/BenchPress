@@ -8,7 +8,7 @@ import functools
 import progressbar
 
 from deeplearning.clgen.util import environment
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 MASTER_PORT = environment.MASTER_PORT
 MASTER_ADDR = environment.MASTER_ADDR

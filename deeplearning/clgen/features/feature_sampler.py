@@ -19,10 +19,10 @@ from deeplearning.clgen.features import normalizers
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.preprocessors import c
 from deeplearning.clgen.corpuses import corpuses
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 from absl import flags
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -89,7 +89,7 @@ def GetContentFileRoot(path: pathlib.Path) -> typing.Iterator[pathlib.Path]:
     raise FileNotFoundError("Corpus {} is not registered in benchmarks_registry".format(path.name))
 
   if not path.is_file():
-    l.getLogger().info("Benchmark found in registry. Downloading from Google Drive...")
+    l.logger().info("Benchmark found in registry. Downloading from Google Drive...")
     gdown.download("https://drive.google.com/uc?id={}".format(reg[path.name]['url']), str(path))
 
   with tempfile.TemporaryDirectory(prefix=path.stem, dir = FLAGS.local_filesystem) as d:
@@ -101,7 +101,7 @@ def GetContentFileRoot(path: pathlib.Path) -> typing.Iterator[pathlib.Path]:
       d,
     ]
     subprocess.check_call(cmd)
-    l.getLogger().info("Unpacked benchmark suite {}".format(str(d)))
+    l.logger().info("Unpacked benchmark suite {}".format(str(d)))
     yield pathlib.Path(d)
 
 def iter_cl_files(path: pathlib.Path) -> typing.List[str]:
@@ -120,7 +120,7 @@ def iter_cl_files(path: pathlib.Path) -> typing.List[str]:
       elif c.is_file() and c.suffix == ".cl":
         with open(c, 'r') as inf:
           contentfiles.append((c, inf.read()))
-  l.getLogger().info("Scanned \'.cl\' files in {}".format(str(path)))
+  l.logger().info("Scanned \'.cl\' files in {}".format(str(path)))
   return contentfiles
 
 def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Path, str, str]]:
@@ -140,7 +140,7 @@ def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Pat
   pool = multiprocessing.Pool()
   for kernel_batch in pool.map(preprocessor_worker, contentfiles):
     kernels += kernel_batch
-  l.getLogger().info("Pre-processed {} OpenCL benchmarks".format(len(kernels)))
+  l.logger().info("Pre-processed {} OpenCL benchmarks".format(len(kernels)))
   return kernels
 
 def resolve_benchmark_names(benchmarks: typing.List["Benchmark"]) -> typing.List["Benchmark"]:
@@ -226,7 +226,7 @@ class EuclideanSampler(object):
     self.loadCheckpoint()
     try:
       self.target_benchmark = self.benchmarks.pop(0)
-      l.getLogger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
+      l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     except IndexError:
       self.target_benchmark = None
     return
@@ -238,7 +238,7 @@ class EuclideanSampler(object):
     # self.benchmarks.append(self.benchmarks.pop(0))
     try:
       self.target_benchmark = self.benchmarks.pop(0)
-      l.getLogger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
+      l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     except IndexError:
       self.target_benchmark = None
     self.saveCheckpoint()
@@ -263,7 +263,7 @@ class EuclideanSampler(object):
     else:
       if FLAGS.randomize_selection == 0:
         raise ValueError("randomize_selection, {}, cannot be 0.".format(FLAGS.randomize_selection))
-      l.getLogger().warn("Randomized generation selection has been activated. You must know what you are doing!")
+      l.logger().warn("Randomized generation selection has been activated. You must know what you are doing!")
       kf = min(FLAGS.randomize_selection, len(candidates))
       rng = default_rng()
       indices = set(rng.choice(len(candidates), size = kf, replace = False))
@@ -336,6 +336,6 @@ class EuclideanSampler(object):
           if benchmark:
             self.benchmarks.append(benchmark)
         resolve_benchmark_names(self.benchmarks)
-    l.getLogger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
-    l.getLogger().info(', '.join([x for x in set([x.name for x in self.benchmarks])]))
+    l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
+    l.logger().info(', '.join([x for x in set([x.name for x in self.benchmarks])]))
     return

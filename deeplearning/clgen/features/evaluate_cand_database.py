@@ -14,7 +14,7 @@ from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import plotter as plt
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 

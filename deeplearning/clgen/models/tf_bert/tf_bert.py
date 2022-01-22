@@ -46,7 +46,7 @@ from deeplearning.clgen.models.tf_bert import optimizer
 from deeplearning.clgen.models.tf_bert import hooks
 from deeplearning.clgen.models.tf_bert.data_generator import tfLMDataGenerator
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -112,7 +112,7 @@ class tfBert(backends.BackendBase):
     self.telemetry                       = telemetry.TrainingLogger(self.logfile_path)
 
     self.is_validated                    = False
-    l.getLogger().info("BERT Model config initialized in {}".format(self.cache.path))
+    l.logger().info("BERT Model config initialized in {}".format(self.cache.path))
     return
 
   def _ConfigCheckpointParams(self):
@@ -130,12 +130,12 @@ class tfBert(backends.BackendBase):
       shutil.copy2(ckpt_current / "graph.pbtxt", ckpt_path)
       for ckpt_file in glob.glob(str(ckpt_current / "model.ckpt-{}.*".format(FLAGS.select_checkpoint_step))):
         shutil.copy2(ckpt_file, ckpt_path)
-      l.getLogger().warn("Explicit checkpoint selected. Explicit checkpoints can only be used for validation or sampling.")
+      l.logger().warn("Explicit checkpoint selected. Explicit checkpoints can only be used for validation or sampling.")
     elif FLAGS.select_checkpoint_step == -1:
       ckpt_path = self.cache.path / "checkpoints"
     else:
       raise ValueError("Invalid value {} for --select_checkpoint_step".format(FLAGS.select_checkpoint_step))
-    l.getLogger().info("Configured model checkpoints in {}".format(ckpt_path))
+    l.logger().info("Configured model checkpoints in {}".format(ckpt_path))
     return ckpt_path
 
   def _ConfigModelParams(self):
@@ -215,7 +215,7 @@ class tfBert(backends.BackendBase):
                             ),
                  data_generator
                  )
-    l.getLogger().info(self.GetShortSummary())
+    l.logger().info(self.GetShortSummary())
     return
 
   def _ConfigSampleParams(self,
@@ -262,7 +262,7 @@ class tfBert(backends.BackendBase):
                             ),
                   data_generator
                   )
-    l.getLogger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
+    l.logger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
     return
 
   @property
@@ -310,7 +310,7 @@ class tfBert(backends.BackendBase):
           is_training = True
       )
 
-      l.getLogger().info("Splitting {} steps into {} equivalent epochs, {} steps each. Rejected {} redundant step(s)".format(
+      l.logger().info("Splitting {} steps into {} equivalent epochs, {} steps each. Rejected {} redundant step(s)".format(
                                         self.num_train_steps, self.num_epochs, 
                                         self.steps_per_epoch, self.config.training.num_train_steps - self.num_train_steps
                                         )
@@ -364,12 +364,12 @@ class tfBert(backends.BackendBase):
     return
 
   def Validate(self) -> None:
-    l.getLogger().info("BERT Validation")
+    l.logger().info("BERT Validation")
     if self.max_eval_steps <= 0:
       return
     for tf_set in self.train.data_generator.dataset:
       tf_set_paths = self.train.data_generator.dataset[tf_set]['file']
-      l.getLogger().info("BERT Validation on {}".format(', '.join([pathlib.Path(x).stem for x in tf_set_paths])))
+      l.logger().info("BERT Validation on {}".format(', '.join([pathlib.Path(x).stem for x in tf_set_paths])))
       eval_input_fn = self.train.data_generator.generateTfDataset(
           sequence_length = self.config.training.sequence_length,
           num_cpu_threads = os.cpu_count(),
@@ -391,7 +391,7 @@ class tfBert(backends.BackendBase):
                        self.config.architecture.max_position_embeddings, self.cache.path
                      )
     self._ConfigSampleParams(data_generator, sampler)
-    l.getLogger().info("Initialized model samples in {}".format(self.sample_path))
+    l.logger().info("Initialized model samples in {}".format(self.sample_path))
     return 
 
   def InitSampleBatch(self, *unused_args, **unused_kwargs) -> None:
@@ -445,7 +445,7 @@ class tfBert(backends.BackendBase):
     return sampler, observers
 
   def GetShortSummary(self) -> str:
-    l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
+    l.logger().debug("deeplearning.clgen.models.tf_bert.tfBert.GetShortSummary()")
     return (
       f"h_s: {self.config.architecture.hidden_size}, "
       f"#h_l: {self.config.architecture.num_hidden_layers}, "
@@ -464,7 +464,7 @@ class tfBert(backends.BackendBase):
       A list of absolute paths.
     """
     # The TensorFlow save file.
-    l.getLogger().debug("deeplearning.clgen.models.tf_bert.tfBert.InferenceManifest()")
+    l.logger().debug("deeplearning.clgen.models.tf_bert.tfBert.InferenceManifest()")
     paths = [ path.absolute() for path in (self.cache.path / "checkpoints").iterdir() ]
     paths += [ path.absolute() for path in (self.cache.path / "logs").iterdir() ]
     paths += [ path.absolute() for path in (self.cache.path / "samples").iterdir() ]
@@ -584,7 +584,7 @@ class tfBert(backends.BackendBase):
           scaffold_fn = _tpu_scaffold
         else:
           if mode != self.tf.compat.v1.estimator.ModeKeys.PREDICT:
-            l.getLogger().info("Loading model checkpoint from: {}".format(str(self.ckpt_path)))
+            l.logger().info("Loading model checkpoint from: {}".format(str(self.ckpt_path)))
           self.tf.compat.v1.train.init_from_checkpoint(str(self.ckpt_path), assignment_map)
 
       output_spec = None

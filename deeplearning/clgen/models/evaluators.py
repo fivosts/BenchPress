@@ -28,7 +28,7 @@ from deeplearning.clgen.util import monitors
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import pbutil
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 from absl import app, flags
 
@@ -228,7 +228,7 @@ class DBGroup(object):
           try:
             feats = extractor.RawToDictFeats(x)
           except Exception as e:
-            l.getLogger().warn(x)
+            l.logger().warn(x)
           if feature_space in feats and feats[feature_space]:
             self.features[feature_space].append(feats[feature_space])
     return self.features[feature_space]
@@ -245,7 +245,7 @@ class DBGroup(object):
           try:
             feats = extractor.RawToDictFeats(f)
           except Exception as e:
-            l.getLogger().warn(f)
+            l.logger().warn(f)
           if feature_space in feats and feats[feature_space]:
             self.data_features[feature_space].append((src, feats[feature_space]))
     return self.data_features[feature_space]
@@ -264,7 +264,7 @@ class TargetBenchmarks(object):
     self.target        = target
     self.benchmark_cfs = feature_sampler.yield_cl_kernels(pathlib.Path(feature_sampler.targets[self.target]).resolve())
     self.benchmarks    = {ext: [] for ext in extractor.extractors.keys()}
-    l.getLogger().info("Loaded {} {} benchmarks".format(len(self.benchmark_cfs), self.target))
+    l.logger().info("Loaded {} {} benchmarks".format(len(self.benchmark_cfs), self.target))
     return
 
   def get_benchmarks(self, feature_space: str):
@@ -284,7 +284,7 @@ class TargetBenchmarks(object):
               )
           )
       self.benchmarks[feature_space] = feature_sampler.resolve_benchmark_names(self.benchmarks[feature_space])
-      l.getLogger().info("Extracted features for {} {} benchmarks".format(len(self.benchmarks[feature_space]), self.target))
+      l.logger().info("Extracted features for {} {} benchmarks".format(len(self.benchmarks[feature_space]), self.target))
     return self.benchmarks[feature_space]
 
 def LogFile(**kwargs) -> None:
@@ -410,13 +410,13 @@ def TopKCLDrive(**kwargs) -> None:
 
   # For each db group -> for each target -> k samples -> 1) benchmark.name 2) distance 3) label.
   for dbg in db_groups:
-    l.getLogger().info(dbg.group_name)
+    l.logger().info(dbg.group_name)
     if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
 
     for benchmark in target.get_benchmarks(feature_space):
 
-      l.getLogger().info(benchmark.name)
+      l.logger().info(benchmark.name)
       closest_src = sorted(
         [(src, feature_sampler.calculate_distance(fv, benchmark.features, feature_space))
          for src, fv in dbg.get_data_features(feature_space)],
@@ -620,7 +620,7 @@ def eval(self, topK: int) -> None:
       else:
         names[benchmark.name][1] += 1
 
-    l.getLogger().info("Analyzing {} benchmarks".format(len(final_benchmarks)))
+    l.logger().info("Analyzing {} benchmarks".format(len(final_benchmarks)))
 
     for benchmark in final_benchmarks:
       if names[benchmark.name][1] == 0:

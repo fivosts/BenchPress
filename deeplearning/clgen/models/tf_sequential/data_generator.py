@@ -14,7 +14,7 @@ import humanize
 import numpy as np
 
 from deeplearning.clgen.proto import model_pb2
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""
@@ -31,8 +31,8 @@ class DataBatch(typing.NamedTuple):
                         ) -> None:
 
     """Log analytics about the batch."""
-    l.getLogger().info("Step shape: X: {}, y" ": {}.".format(self.X.shape, self.y.shape))
-    l.getLogger().info(
+    l.logger().info("Step shape: X: {}, y" ": {}.".format(self.X.shape, self.y.shape))
+    l.logger().info(
       "Memory: {} per batch, {} per epoch, {} total.".format(
               humanize.naturalsize(self.sizeof_batch, binary = True),
               humanize.naturalsize(self.sizeof_batch * steps_per_epoch, binary = True),
@@ -96,7 +96,7 @@ class TensorflowBatchGenerator(object):
         np.split(ydata.reshape(batch_size, -1), self.num_batches, 1),
       )
     ]
-    l.getLogger().info(
+    l.logger().info(
       "Encoded corpus of {} tokens (clipped last {} tokens) in {} ms.".format(
                 humanize.intcomma(clipped_corpus_length),
                 humanize.intcomma(len(self.encoded_corpus) - clipped_corpus_length),

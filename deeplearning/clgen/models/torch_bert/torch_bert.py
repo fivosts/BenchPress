@@ -51,7 +51,7 @@ from deeplearning.clgen.models.torch_bert import optimizer
 from deeplearning.clgen.models.torch_bert import hooks
 from deeplearning.clgen.models.torch_bert.data_generator import torchLMDataGenerator
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 from eupy.hermes import client
 
 FLAGS = flags.FLAGS
@@ -105,7 +105,7 @@ flags.DEFINE_boolean(
 #       queue = queue
 #     )
 #   except Exception as e:
-#     l.getLogger().error(e)
+#     l.logger().error(e)
 #     exit(1)
 #   return
 
@@ -113,7 +113,7 @@ stop_thread = False
 def gpu_thread():
   global stop_thread
   while not stop_thread:
-    l.getLogger().warn(
+    l.logger().warn(
       "GPU util: \n{}".format(
         '\n'.join(["id: {}, mem_used: {}, mem_total: {}, gpu_util: {}".format(x['id'], x['mem_used'], x['mem_total'], x['gpu_util']) for x in gpu.getGPUID()])
       )
@@ -176,7 +176,7 @@ class torchBert(backends.BackendBase):
 
     self.is_validated      = False
     self.trained           = False
-    l.getLogger().info("BERT Model config initialized in {}".format(self.cache.path))
+    l.logger().info("BERT Model config initialized in {}".format(self.cache.path))
     return
 
   def _ConfigModelParams(self, is_sampling):
@@ -249,7 +249,7 @@ class torchBert(backends.BackendBase):
     self.train = torchBert.BertEstimator(
                   m, data_generator, opt, lr_scheduler
                 )
-    l.getLogger().info(self.GetShortSummary())
+    l.logger().info(self.GetShortSummary())
     return
 
   def _ConfigSampleParams(self,
@@ -296,7 +296,7 @@ class torchBert(backends.BackendBase):
         mdl_instance.init_engine(self.cache, dev.index, sampler.batch_size, sampler.sequence_length, self.tokenizer.vocab_size, self.config.architecture.max_position_embeddings)
 
     self.sample = torchBert.SampleBertEstimator(m, data_generator)
-    l.getLogger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
+    l.logger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
     return
 
   def samplesWithCategorical(self):
@@ -354,7 +354,7 @@ class torchBert(backends.BackendBase):
       desc = "Sampling"
     bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc=desc, leave = False, position = 0)
     if not is_live:
-      # l.getLogger().warn("Number of GPUs: {}".format(self.pytorch.num_gpus))
+      # l.logger().warn("Number of GPUs: {}".format(self.pytorch.num_gpus))
       # global stop_thread
       # stop_thread = False
       # t = threading.Thread(target = gpu_thread)
@@ -368,18 +368,18 @@ class torchBert(backends.BackendBase):
       )
       # stop_thread = True
       # t.join()
-      # l.getLogger().warn("Finished workload")
+      # l.logger().warn("Finished workload")
       x = samples.detach().cpu().numpy()
-      # l.getLogger().warn("Detached")
+      # l.logger().warn("Detached")
       outputs['generated_samples'] = list(x)
-      # l.getLogger().warn("Moved to CPU")
+      # l.logger().warn("Moved to CPU")
       y = sample_indices.detach().cpu().numpy()
-      # l.getLogger().warn("Detached")
+      # l.logger().warn("Detached")
       outputs['sample_indices']    = list(y)
-      # l.getLogger().warn("Moved to CPU")
+      # l.logger().warn("Moved to CPU")
       outputs['input_ids']         = list(self.torch.reshape(inputs['input_ids'], tuple(samples.shape)).numpy())
       outputs['masked_lm_lengths'] = list(self.torch.reshape(inputs['masked_lm_lengths'], (samples.shape[0], -1)).numpy())
-      # l.getLogger().warn("Finished all CPU tensors")
+      # l.logger().warn("Finished all CPU tensors")
     bar.update(len(outputs['generated_samples']))
     end = time.time()
     return outputs, end-start
@@ -435,7 +435,7 @@ class torchBert(backends.BackendBase):
     #       ln = len(outputs['generated_samples'])
     #       bar.update(len(batch['generated_samples']))
     #     except multiprocessing.queues.Empty:
-    #       l.getLogger().warn("Queue timed-out having gathered {} sequences".format(len(outputs['generated_samples'])))
+    #       l.logger().warn("Queue timed-out having gathered {} sequences".format(len(outputs['generated_samples'])))
     #       pass
     #   for job in procs:
     #     job.join()
@@ -484,7 +484,7 @@ class torchBert(backends.BackendBase):
       
     self.current_step = self.loadCheckpoint(self.train, pre_train = pre_train)
     if self.current_step >= 0:
-      l.getLogger().info("Loaded checkpoint step {}".format(self.current_step))
+      l.logger().info("Loaded checkpoint step {}".format(self.current_step))
 
     if self.current_step < self.num_train_steps:
       self.train.model.zero_grad()
@@ -520,7 +520,7 @@ class torchBert(backends.BackendBase):
         correct_sample_obs = None
       
       total_steps = self.config.training.num_pretrain_steps if pre_train else self.config.training.num_train_steps
-      l.getLogger().info(
+      l.logger().info(
         "Splitting {} steps into {} equivalent epochs, {} steps each. Rejected {} redundant step(s)".format(
           self.num_train_steps, self.num_epochs, 
           self.steps_per_epoch, total_steps - self.num_train_steps
@@ -616,12 +616,12 @@ class torchBert(backends.BackendBase):
 
               self.train.model.zero_grad()
               if self.current_step == 0:
-                l.getLogger().info("Starting Loss: {}".format(total_loss.item()), mail_level = 4)
+                l.logger().info("Starting Loss: {}".format(total_loss.item()), mail_level = 4)
               self.current_step += 1
 
           # End of Epoch
           set_mail = "Epoch {} Loss: {}\n".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss)
-          l.getLogger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss), mail_level = 4)
+          l.logger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss), mail_level = 4)
           self.saveCheckpoint(self.train, pre_train)
 
           if self.pytorch.num_nodes > 1:
@@ -700,7 +700,7 @@ class torchBert(backends.BackendBase):
     if ( (per_epoch and FLAGS.eval_steps_per_epoch <= 0)
       or (not per_epoch and FLAGS.max_eval_steps <= 0)
       or self.config.training.data_generator.validation_split == 0):
-      l.getLogger().info("Skipping BERT Validation.")
+      l.logger().info("Skipping BERT Validation.")
       return None, None
 
     if self.pytorch.num_gpus > 1:
@@ -713,7 +713,7 @@ class torchBert(backends.BackendBase):
     self.train.model.eval()
 
     for set_name, dataloader in self.train.data_generator.eval_dataloaders():
-      l.getLogger().info("BERT Validation on {}".format(set_name))
+      l.logger().info("BERT Validation on {}".format(set_name))
       if self.torch_tpu_available:
         loader = self.pytorch.torch_ploader.ParallelLoader(
                           dataloader, [self.pytorch.device]
@@ -776,11 +776,11 @@ class torchBert(backends.BackendBase):
     self._ConfigSampleParams(data_generator, sampler)
     ckpt_step = self.loadCheckpoint(self.sample)
     if ckpt_step >= 0:
-      l.getLogger().info("Loaded checkpoint step {}".format(ckpt_step))
+      l.logger().info("Loaded checkpoint step {}".format(ckpt_step))
     self.step_inputs   = None
     self.loader        = None
     self.pred_iterator = None
-    l.getLogger().info("Initialized model samples in {}".format(self.sample_path / self.sampler.hash))
+    l.logger().info("Initialized model samples in {}".format(self.sample_path / self.sampler.hash))
     return
 
   def InitSampleBatch(self, sampler: samplers.Sampler, **unused_kwargs) -> None:

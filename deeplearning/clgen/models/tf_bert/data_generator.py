@@ -16,7 +16,7 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.models import lm_data_generator
 from deeplearning.clgen.models import sequence_masking
 from absl import flags
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -255,7 +255,7 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       try:
         start_text = next(self.tfRecordSampler)[:self.sampler.sequence_length]
       except StopIteration:
-        l.getLogger().warn("Repeating iterator on dataset...")
+        l.logger().warn("Repeating iterator on dataset...")
         self.tfRecordSampler = self.tfRecordSampleGenerator()
         try:
           start_text = next(self.tfRecordSampler)[:self.sampler.sequence_length]
@@ -331,7 +331,7 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       # save them and send max_position_embeddings for next step.
       # Then, concat it back.
       if self.sampler.sequence_length > len(batch):
-        l.getLogger().warn("Cropped {} tokens from sample batch".format(self.sampler.sequence_length - len(batch)))
+        l.logger().warn("Cropped {} tokens from sample batch".format(self.sampler.sequence_length - len(batch)))
       batch = batch[:self.sampler.sequence_length]
       updated_sequence.append(batch)
 
@@ -409,6 +409,6 @@ class tfLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     writer.close()
     if FLAGS.write_text_dataset:
       file_writer.close()
-    l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
+    l.logger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
                       .format(inst_index + 1, self.steps_per_epoch, self.training_opts.batch_size, masked_corpus['file']))
     return

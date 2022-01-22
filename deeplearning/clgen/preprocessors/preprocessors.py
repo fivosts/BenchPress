@@ -8,7 +8,7 @@ from detect_secrets.plugins.common import initialize as secrets_init
 
 from deeplearning.clgen.preprocessors import public
 from absl import flags
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 

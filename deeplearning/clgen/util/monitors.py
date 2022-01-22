@@ -7,7 +7,7 @@ import sklearn.manifold
 
 from deeplearning.clgen.util import plotter
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 class Monitor():
   def __init__(self,

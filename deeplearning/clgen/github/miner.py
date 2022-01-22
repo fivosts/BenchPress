@@ -25,7 +25,7 @@ from deeplearning.clgen.github import datasets
 from deeplearning.clgen.github import storage
 from deeplearning.clgen.github import bigQuery_database
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -120,7 +120,7 @@ class BigQuery(GithubMiner):
     self.cache_path.mkdir(exist_ok = True, parents = True)
     self.config = config
 
-    l.getLogger().info("Initializing BigQuery miner in {}".format(self.cache_path))
+    l.logger().info("Initializing BigQuery miner in {}".format(self.cache_path))
     job_config = bigquery.QueryJobConfig(allowLargeResults = True)
     job_config.allow_large_results = True
     self.client = bigquery.Client(default_query_job_config = job_config)
@@ -148,7 +148,7 @@ class BigQuery(GithubMiner):
     with self.storage as st:
 
       if st.content_data is not None and not FLAGS.bq_force_update:
-        l.getLogger().info("Query storage has been updated. Skipping...")
+        l.logger().info("Query storage has been updated. Skipping...")
         return
 
       mainf_it, otherf_it = self.dataset.contentfile_query()
@@ -267,7 +267,7 @@ class BigQuery(GithubMiner):
           except Exception as e:
             st.flush()
             if "404" in str(e):
-              l.getLogger().error("Not found: {}-{}".format(cf.repo_name, cf.path))
+              l.logger().error("Not found: {}-{}".format(cf.repo_name, cf.path))
               st.save(
                 bigQuery_database.bqMainFile(**bigQuery_database.bqMainFile.FromArgs(cf.ToJSONDict()))
               )
@@ -492,7 +492,7 @@ class RecursiveFetcher(GithubMiner):
             self._stored_repos  = data[0]
             self.updated_length = data[1]['total_files']
           except json.JSONDecodeError:
-            l.getLogger().warn("Problem encountered with reading kernel file record.")
+            l.logger().warn("Problem encountered with reading kernel file record.")
       return
 
     def appendHistory(self) -> None:
@@ -532,7 +532,7 @@ class RecursiveFetcher(GithubMiner):
         self.file_size_counter      += kwargs.get('size')
 
       if self.file_size_counter >= self.file_size_limit:
-        l.getLogger().warn("time to flush!")
+        l.logger().warn("time to flush!")
         self.Flush()
         self.collectHistory()
         self.file_size_counter = 0
@@ -542,7 +542,7 @@ class RecursiveFetcher(GithubMiner):
     def update_repo(self, **kwargs) -> bool:
 
       url = kwargs.get('url')
-      l.getLogger().info("Add: {}".format(url))
+      l.logger().info("Add: {}".format(url))
       if url in self._scraped_repos:
         self._scraped_repos[url].update(**kwargs)
         self.repos_modified_counter += 1
@@ -579,7 +579,7 @@ class RecursiveFetcher(GithubMiner):
                ):
     self.cache_path = pathlib.Path(config.path, must_exist = False).expanduser().resolve()
     self.cache_path.mkdir(exist_ok = True, parents = True)
-    l.getLogger().info("Github fetcher initialized: {}".format(self.cache_path))
+    l.logger().info("Github fetcher initialized: {}".format(self.cache_path))
 
     self.token           = config.recursive.access_token
     self.repo_handler    = RecursiveFetcher.GithubRepoHandler(
@@ -628,7 +628,7 @@ class RecursiveFetcher(GithubMiner):
     #   if r in self.bq_repos:
     #     common_repos.add(r)
 
-    # l.getLogger().warn(len(common_repos))
+    # l.logger().warn(len(common_repos))
 
     # file_count = 0
     # with db.Session() as s:
@@ -639,7 +639,7 @@ class RecursiveFetcher(GithubMiner):
     #     if r.repo_name in common_repos:
     #       file_count += 1
 
-    # l.getLogger().info(file_count)
+    # l.logger().info(file_count)
     # exit()
 
     if FLAGS.remove_identical_files:
@@ -687,7 +687,7 @@ class RecursiveFetcher(GithubMiner):
           if self.repo_handler.is_finished:
             self.print_counters()
             self.repo_handler.Flush()
-            l.getLogger().info("Finished gathering Github kernels.")
+            l.logger().info("Finished gathering Github kernels.")
             return
 
           repo_modified = handle_repo(repo)
@@ -741,7 +741,7 @@ class RecursiveFetcher(GithubMiner):
 
     self.print_counters()
     self.repo_handler.Flush()
-    l.getLogger().info("Finished gathering Github kernels.")
+    l.logger().info("Finished gathering Github kernels.")
     return
 
   def process_repo(self, g, repo) -> bool:
@@ -857,7 +857,7 @@ class RecursiveFetcher(GithubMiner):
         break
       except requests.exceptions.RequestException as e:
         if exc_idx == 0:
-          l.getLogger().error(e)
+          l.logger().error(e)
         exc_idx += 1
         time.sleep(10)
 
@@ -912,7 +912,7 @@ class RecursiveFetcher(GithubMiner):
 
   def remove_identical_files(self) -> None:
 
-    l.getLogger().info("Removing duplicate files from mined corpus...")
+    l.logger().info("Removing duplicate files from mined corpus...")
     if os.path.isfile(str(self.cache_path / "record.json")):
       with open(self.cache_path / "record.json", 'r') as f:
         data = json.load(f)
@@ -939,9 +939,9 @@ class RecursiveFetcher(GithubMiner):
     return
 
   def enhance_from_db(self, db_path: pathlib.Path) -> None:
-    l.getLogger().info("Enhancing dataset with {}".format(db_path.name))
+    l.logger().info("Enhancing dataset with {}".format(db_path.name))
     if not db_path.exists():
-      l.getLogger().warn("{} db not found. Returning...".format(db_path))
+      l.logger().warn("{} db not found. Returning...".format(db_path))
     db = bigQuery_database.bqDatabase("sqlite:///{}".format(db_path))
     contentfiles  = [cf.content for cf in db.main_files ]
     contentfiles += [cf.content for cf in db.other_files]
@@ -951,7 +951,7 @@ class RecursiveFetcher(GithubMiner):
         data = json.load(f)
         length = data[1]['total_files']
     else:
-      l.getLogger().warn("record.json not found. Returning...")
+      l.logger().warn("record.json not found. Returning...")
       return
 
     for cf in contentfiles:

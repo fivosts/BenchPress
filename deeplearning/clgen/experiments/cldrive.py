@@ -11,7 +11,7 @@ import scipy.stats as st
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.util import plotter as plt
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 src1 ="""
 kernel void A(global float *a, global float* n, global float* j, global float* h, const unsigned int r) {

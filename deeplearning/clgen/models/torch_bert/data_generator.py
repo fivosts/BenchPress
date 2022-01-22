@@ -37,7 +37,7 @@ from deeplearning.clgen.models.torch_bert import datasets
 from deeplearning.clgen.samplers import sample_observers
 from deeplearning.clgen.preprocessors import opencl
 from absl import flags
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -227,7 +227,7 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
                   gen_id    : int,
                   ) -> None:
   objs = {}
-  # l.getLogger().warn("Before prep loop in eval db")
+  # l.logger().warn("Before prep loop in eval db")
   for sample in samples:
     try:
       _ = opencl.Compile(tokenizer.ArrayToCode(sample.sample))
@@ -256,7 +256,7 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
       objs[sobj.sha256][1] += 1
     else:
       objs[sobj.sha256] = [sobj, 1]
-  # l.getLogger().warn(eval_db.count)
+  # l.logger().warn(eval_db.count)
   with eval_db.Session(commit = True) as session:
     offset_idx = 0
     for sha, obj in objs.items():
@@ -271,15 +271,15 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
           session.add(obj[0])
         session.commit()
       except Exception as e:
-        l.getLogger().error(entry)
+        l.logger().error(entry)
         if entry is not None:
-          l.getLogger().error(entry.id)
-          l.getLogger().error(entry.sha256)
-        l.getLogger().error(sha)
-        l.getLogger().error("count: {}".format(eval_db.count))
-        l.getLogger().error("offset_idx: {}".format(offset_idx))
+          l.logger().error(entry.id)
+          l.logger().error(entry.sha256)
+        l.logger().error(sha)
+        l.logger().error("count: {}".format(eval_db.count))
+        l.logger().error("offset_idx: {}".format(offset_idx))
         print(e)
-  # l.getLogger().warn("Finished eval_DB thread")
+  # l.logger().warn("Finished eval_DB thread")
   return
 
 class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
@@ -588,7 +588,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             except Exception:
               pass
 
-        l.getLogger().info("Benchmark {}, generation {}".format(self.bench_idx, feeds[0].gen_id))
+        l.logger().info("Benchmark {}, generation {}".format(self.bench_idx, feeds[0].gen_id))
         # Compilation rate, execution time, per generation.
         cmp_rate        = [0, 0]
         exec_time       = 0.0
@@ -606,7 +606,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # Iterate until you get a better sample or surpass the limit.
         better_found, it, threshold = None, 0, 160000
 
-        l.getLogger().info("Current input feed scores: {}".format(', '.join([str(round(feed.input_score, 3)) for feed in feeds])))
+        l.logger().info("Current input feed scores: {}".format(', '.join([str(round(feed.input_score, 3)) for feed in feeds])))
         while not better_found and cmp_rate[1] < threshold:
           ## Pre-process inputs
           # workload size: how many batches of sequences you need.
@@ -667,10 +667,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
           ## Write all candidates to eval_cand DB.
           if FLAGS.evaluate_candidates:
-            # l.getLogger().warn("Before join: {}".format(write_eval_proc))
+            # l.logger().warn("Before join: {}".format(write_eval_proc))
             if write_eval_proc:
               write_eval_proc.join()
-            # l.getLogger().warn("After join: {}".format(write_eval_proc))
+            # l.logger().warn("After join: {}".format(write_eval_proc))
             write_eval_proc = multiprocessing.Process(
               target = write_eval_db,
               kwargs = {
@@ -683,10 +683,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               }
             )
             write_eval_proc.start()
-            # l.getLogger().warn("Started process")
+            # l.logger().warn("Started process")
 
           if not FLAGS.evolutionary_search and better_found and feeds[0].gen_id > 0:
-            l.getLogger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
+            l.logger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
           # Calculate how many more to infer.
           try:
             rcands = active_limit_per_feed - len(step_candidates) # Deprecated.
@@ -715,15 +715,15 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # If we just started, get top-K.
         if FLAGS.evolutionary_search:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
-          l.getLogger().info("Top-{} ({} unique) samples of generation {}: {}".format(active_search_width, len(best_cands), feeds[0].gen_id, ', '.join([str(round(c.score, 3)) for c in best_cands])))
+          l.logger().info("Top-{} ({} unique) samples of generation {}: {}".format(active_search_width, len(best_cands), feeds[0].gen_id, ', '.join([str(round(c.score, 3)) for c in best_cands])))
         elif feeds[0].gen_id == 0:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
-          l.getLogger().info("Starting scores: {}".format(', '.join([str(round(c.score, 3)) for c in best_cands])))
+          l.logger().info("Starting scores: {}".format(', '.join([str(round(c.score, 3)) for c in best_cands])))
         else:
           # If nothing was found, there are no best cands, and we will keep searching.
           if not better_found:
             best_cands = []
-            l.getLogger().warn("No better candidate found...")
+            l.logger().warn("No better candidate found...")
           else:
             # Otherwise, this single input feed, provides a new single better sample.
             best_cands = [better_found]
@@ -799,7 +799,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               [x.sample for x in total_cand],
               [[]] * len(total_cand))
     except Exception as e:
-      l.getLogger().error(e)
+      l.logger().error(e)
       self.raised_exception = e
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
@@ -836,7 +836,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           input_feed     = cf, input_features = self.feed_queue[-1].input_features,
         )
       )
-    l.getLogger().info("Feed queue input scores: {}".format(', '.join([str(round(c.input_score, 3)) for c in self.feed_queue])))
+    l.logger().info("Feed queue input scores: {}".format(', '.join([str(round(c.input_score, 3)) for c in self.feed_queue])))
     return self.feed_queue[0].input_feed
 
   def collateInputData(self,
@@ -928,7 +928,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                1st el: Total samples.
     """
     cm_rate = [0, 0]
-    # l.getLogger().warn("Opening pool")
+    # l.logger().warn("Opening pool")
     pool = multiprocessing.Pool()
     cm_rate[1] += len(outputs['generated_samples'])
     better_found = None
@@ -947,7 +947,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           text_candidate_worker, tokenizer = self.tokenizer, feat_sampler = self.feat_sampler,
         )
       t = 0
-      # l.getLogger().warn("Pool opened")
+      # l.logger().warn("Pool opened")
       for idx, batch in enumerate(pool.map(candidate_worker, it)):
         t = idx
         if batch[0]:
@@ -1042,6 +1042,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                       instance['next_sentence_labels']
                                     )
                               )
-    l.getLogger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
+    l.logger().info("Wrote {} instances ({} batches of {} datapoints) to {}"
                  .format(len(masked_corpus['corpus']), self.steps_per_epoch, self.training_opts.batch_size, masked_corpus['file']))
     return

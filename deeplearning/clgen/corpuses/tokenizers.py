@@ -26,7 +26,7 @@ import functools
 import numpy as np
 from collections import Counter
 from absl import flags
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 from deeplearning.clgen.preprocessors import opencl
 
@@ -37,7 +37,7 @@ def FromText(config, contentfile_separator: str, corpus_txt: str):
 
   if config.token_type   == "character":
     if config.token_list:
-      l.getLogger().warning("token list in character-based tokenization is going to be ignored.")
+      l.logger().warning("token list in character-based tokenization is going to be ignored.")
     return AsciiCharacterTokenizer.FromText(corpus_txt, mask_tokens)
   elif config.token_type == "word":
     with open(config.token_list, 'r') as f:

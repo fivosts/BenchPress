@@ -43,7 +43,7 @@ import tensorflow
 tf = tensorflow
 
 def initTensorflow():
-  from eupy.native import logger as l
+  from deeplearning.clgen.util import logging as l
 
   tensorflow.python.util.deprecation._PRINT_DEPRECATION_WARNINGS = FLAGS.tf_print_deprecation
   os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(FLAGS.tf_logging_level).lower()
@@ -53,7 +53,7 @@ def initTensorflow():
     if FLAGS.tf_device == "tpu":
       raise NotImplementedError
     elif FLAGS.tf_device == "gpu" and available_gpus is not None:
-      l.getLogger().info("Selected GPU:{} {}".format(available_gpus[0]['id'], available_gpus[0]['gpu_name']))
+      l.logger().info("Selected GPU:{} {}".format(available_gpus[0]['id'], available_gpus[0]['gpu_name']))
       os.environ['CUDA_VISIBLE_DEVICES'] = str(available_gpus[0]['id'])
     elif re.search("gpu:[0-9]", FLAGS.tf_device) and available_gpus is not None:
       gpuid = int(FLAGS.tf_device.split(':')[-1])
@@ -63,17 +63,17 @@ def initTensorflow():
           selected_gpu = gp
       if selected_gpu is None:
         raise ValueError("Invalid GPU ID: {}".format(gpuid))
-      l.getLogger().info("Selected GPU:{} {}".format(selected_gpu['id'], selected_gpu['gpu_name']))
+      l.logger().info("Selected GPU:{} {}".format(selected_gpu['id'], selected_gpu['gpu_name']))
       os.environ['CUDA_VISIBLE_DEVICES'] = str(selected_gpu['id'])
     else:
-      l.getLogger().info("Selected CPU device.")
+      l.logger().info("Selected CPU device.")
       os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
 
     if FLAGS.tf_logging_level == 0:
-      lvl = l.getLogger().level
-      l.getLogger().level = 'DEBUG'
-      l.getLogger().debug("TF 'CUDA_VISIBLE_DEVICES': {}".format(os.environ['CUDA_VISIBLE_DEVICES']))
-      l.getLogger().level = lvl
+      lvl = l.logger().level
+      l.logger().level = 'DEBUG'
+      l.logger().debug("TF 'CUDA_VISIBLE_DEVICES': {}".format(os.environ['CUDA_VISIBLE_DEVICES']))
+      l.logger().level = lvl
   except RuntimeError as e:
     raise e
 

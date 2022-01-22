@@ -276,7 +276,7 @@ class BertConfig(object):
       try:
         setattr(self, key, value)
       except AttributeError as err:
-        l.getLogger().error("Can't set {} with value {} for {}".format(key, value, self))
+        l.logger().error("Can't set {} with value {} for {}".format(key, value, self))
         raise err
 
   @classmethod

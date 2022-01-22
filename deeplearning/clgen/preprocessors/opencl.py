@@ -26,7 +26,7 @@ from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import normalizer
 from deeplearning.clgen.preprocessors import public
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 from absl import flags
 
@@ -101,8 +101,8 @@ def getOpenCLPlatforms() -> None:
     if stderr:
       raise ValueError(stderr)
   except Exception as e:
-    l.getLogger().error(cmd)
-    l.getLogger().error(e)
+    l.logger().error(cmd)
+    l.logger().error(e)
   lines = stdout.split('\n')
   for line in lines:
     if line and line[:3] == "GPU" and not CL_PLATFORMS['GPU']:
@@ -212,7 +212,7 @@ def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1
   If CLDrive executable exists, run it over provided source code.
   """
   if not CLDRIVE:
-    l.getLogger().warn("CLDrive executable has not been found. Skipping CLDrive execution.")
+    l.logger().warn("CLDrive executable has not been found. Skipping CLDrive execution.")
     return ""
 
   global CL_PLATFORMS
@@ -235,8 +235,8 @@ def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1
     )
     stdout, stderr = proc.communicate()
     if proc.returncode == 9:
-      l.getLogger().error(src)
-      l.getLogger().error(stderr)
+      l.logger().error(src)
+      l.logger().error(stderr)
       raise ValueError("CLDrive has timed out!")
   return stdout, stderr
 
@@ -308,9 +308,9 @@ def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int =
     label = "GPU" if avg_time_cpu_ns > avg_time_gpu_ns else "CPU"
 
   if label == "ERR":
-    l.getLogger().warn(src)
-    l.getLogger().warn(stdout)
-    l.getLogger().warn(stderr)
+    l.logger().warn(src)
+    l.logger().warn(stdout)
+    l.logger().warn(stderr)
   return label
 
 def CompileLlvmBytecode(text: str, header_file = None, use_aux_headers: bool = True) -> str:
@@ -479,7 +479,7 @@ def ExtractSingleKernels(text: str) -> typing.List[str]:
         try:
           cur_tok = chunk[chunk_idx]
         except IndexError:
-          l.getLogger().warn(chunk)
+          l.logger().warn(chunk)
         if   cur_tok == "{":
           num_lbrack += 1
         elif cur_tok == "}":
@@ -535,7 +535,7 @@ def ExtractSingleKernelsHeaders(text: str) -> typing.List[typing.Tuple[str, str]
         try:
           cur_tok = chunk[chunk_idx]
         except IndexError:
-          l.getLogger().warn(chunk)
+          l.logger().warn(chunk)
         if   cur_tok == "{":
           num_lbrack += 1
         elif cur_tok == "}":
@@ -588,7 +588,7 @@ def ExtractOnlySingleKernels(text: str) -> typing.List[str]:
         try:
           cur_tok = chunk[chunk_idx]
         except IndexError:
-          l.getLogger().warn(chunk)
+          l.logger().warn(chunk)
         if cur_tok == ";" and num_lbrack == 0:
           is_declaration = True
           break

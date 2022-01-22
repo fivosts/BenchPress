@@ -9,7 +9,7 @@ from google.cloud import bigquery
 from absl import flags
 
 from deeplearning.clgen.github import bigQuery_database
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -91,7 +91,7 @@ class Dataset(object):
                               for ext in self.extensions
                         ])
     self.file_count = None
-    l.getLogger().info("{} dataset initialized.".format(self.language))
+    l.logger().info("{} dataset initialized.".format(self.language))
     return
 
   def _setupDataset(self, 
@@ -140,19 +140,19 @@ class Dataset(object):
     """.format("" if not self.query_file_id else "WHERE " + self.query_file_id)
 
     dry_run_job = self.client.query(query, job_config = self.queryConfig('main_files', dr = True))
-    l.getLogger().warn("This query is going to consume {}".format(
+    l.logger().warn("This query is going to consume {}".format(
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
     )
-    l.getLogger().info(query)
+    l.logger().info(query)
     if FLAGS.bq_wait_permission:
-      l.getLogger().warn("Hit any button to continue...")
+      l.logger().warn("Hit any button to continue...")
       try:
         input()
       except KeyboardInterrupt:
         return (0, 0)
 
-    l.getLogger().info("Running file count query...")
+    l.logger().info("Running file count query...")
 
     try:
       job = self.client.query(query)
@@ -160,7 +160,7 @@ class Dataset(object):
         self.file_count = (f[0], 0)
         return self.file_count
     except google.api_core.exceptions.Forbidden as e:
-      l.getLogger().error(e)
+      l.logger().error(e)
       exit()
 
   def repository_query(self) -> typing.Tuple[bigquery.table.RowIterator]:
@@ -177,24 +177,24 @@ class Dataset(object):
     """.format("" if not self.query_file_id else "WHERE " + self.query_file_id)
 
     dry_run_job = self.client.query(query, job_config = self.queryConfig('repositories', dr = True))
-    l.getLogger().warn("This query is going to consume {}".format(
+    l.logger().warn("This query is going to consume {}".format(
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
     )
-    l.getLogger().info(query)
+    l.logger().info(query)
     if FLAGS.bq_wait_permission:
-      l.getLogger().warn("Hit any button to continue...")
+      l.logger().warn("Hit any button to continue...")
       try:
         input()
       except KeyboardInterrupt:
         return (None, None)
 
-    l.getLogger().info("Retrieving repository list of specs...")
+    l.logger().info("Retrieving repository list of specs...")
 
     try:
       rows = self.client.query(query, job_config = self.queryConfig('repositories')).result()
     except google.api_core.exceptions.Forbidden as e:
-      l.getLogger().error(e)
+      l.logger().error(e)
       exit()
     return (rows, None)
 
@@ -224,24 +224,24 @@ class Dataset(object):
     # """.format("" if not self.query_file_id else "(" + self.query_file_id + ")")
 
     dry_run_job = self.client.query(query, job_config = self.queryConfig('main_files', dr = True))
-    l.getLogger().warn("This query is going to consume {}".format(
+    l.logger().warn("This query is going to consume {}".format(
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
     )
-    l.getLogger().info(query)
+    l.logger().info(query)
     if FLAGS.bq_wait_permission:
-      l.getLogger().warn("Hit any button to continue...")
+      l.logger().warn("Hit any button to continue...")
       try:
         input()
       except KeyboardInterrupt:
         return (None, None)
 
-    l.getLogger().info("Retrieving {} contentfiles...".format(self.dataset.dataset_id))
+    l.logger().info("Retrieving {} contentfiles...".format(self.dataset.dataset_id))
 
     try:
       rows = self.client.query(query, job_config = self.queryConfig('main_files')).result()
     except google.api_core.exceptions.Forbidden as e:
-      l.getLogger().error(e)
+      l.logger().error(e)
       exit()
     return (rows, None)
 
@@ -291,13 +291,13 @@ class openclDataset(Dataset):
     """.format(self.query_exception or "")
 
     dry_run_job = self.client.query(query, job_config = self.queryConfig('repositories', dr = True))
-    l.getLogger().warn("This query is going to consume {}".format(
+    l.logger().warn("This query is going to consume {}".format(
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
     )
-    l.getLogger().info(query)
+    l.logger().info(query)
     if FLAGS.bq_wait_permission:
-      l.getLogger().warn("Hit any button to continue...")
+      l.logger().warn("Hit any button to continue...")
       try:
         input()
       except KeyboardInterrupt:
@@ -309,7 +309,7 @@ class openclDataset(Dataset):
         self.file_count[1] = f[0]
         return self.file_count
     except google.api_core.exceptions.Forbidden as e:
-      l.getLogger().error(e)
+      l.logger().error(e)
       exit()
 
   def repository_query(self) -> typing.Tuple[bigquery.table.RowIterator, bigquery.table.RowIterator]:
@@ -328,24 +328,24 @@ class openclDataset(Dataset):
     """.format(self.query_exception or "")
 
     dry_run_job = self.client.query(query, job_config = self.queryConfig('repositories', dr = True))
-    l.getLogger().warn("This query is going to consume {}".format(
+    l.logger().warn("This query is going to consume {}".format(
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
     )
-    l.getLogger().info(query)
+    l.logger().info(query)
     if FLAGS.bq_wait_permission:
-      l.getLogger().warn("Hit any button to continue...")
+      l.logger().warn("Hit any button to continue...")
       try:
         input()
       except KeyboardInterrupt:
         return (cl_repo_it, None)
 
-    l.getLogger().info("Retrieving etc. repo list...")
+    l.logger().info("Retrieving etc. repo list...")
 
     try:
       rows = self.client.query(query, job_config = self.queryConfig('repositories')).result()
     except google.api_core.exceptions.Forbidden as e:
-      l.getLogger().error(e)
+      l.logger().error(e)
       exit()
     return (cl_repo_it, rows)
 
@@ -366,24 +366,24 @@ class openclDataset(Dataset):
     """.format(self.query_exception or "")
 
     dry_run_job = self.client.query(query, job_config = self.queryConfig('other_files', dr = True))
-    l.getLogger().warn("This query is going to consume {}".format(
+    l.logger().warn("This query is going to consume {}".format(
         humanize.naturalsize(dry_run_job.total_bytes_processed)
       )
     )
-    l.getLogger().info(query)
+    l.logger().info(query)
     if FLAGS.bq_wait_permission:
-      l.getLogger().warn("Hit any button to continue...")
+      l.logger().warn("Hit any button to continue...")
       try:
         input()
       except KeyboardInterrupt:
         return (cl_file_it, None)
 
-    l.getLogger().info("Retrieving etc. contentfiles...")
+    l.logger().info("Retrieving etc. contentfiles...")
 
     try:
       rows = self.client.query(query, job_config = self.queryConfig('other_files')).result()
     except google.api_core.exceptions.Forbidden as e:
-      l.getLogger().error(e)
+      l.logger().error(e)
       exit()
     return (cl_file_it, rows)
 

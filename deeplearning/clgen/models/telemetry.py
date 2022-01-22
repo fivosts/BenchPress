@@ -9,7 +9,7 @@ from absl import flags
 
 from deeplearning.clgen.proto import telemetry_pb2
 from deeplearning.clgen.util import pbutil
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -99,7 +99,7 @@ class TrainingLogger(object):
             )
           current_time = round_wt
     except KeyError as e:
-      l.getLogger().warn("Model loss log not found! Available Tags: {}".format(event_acc.Tags()))
+      l.logger().warn("Model loss log not found! Available Tags: {}".format(event_acc.Tags()))
       self.telemetry = [
         telemetry_pb2.ModelEpochTelemetry(
           timestamp_unix_epoch_ms = str(0),
@@ -136,7 +136,7 @@ class TrainingLogger(object):
           ) for x in data
         ]
       else:
-        l.getLogger().warn("Training logs have not been found. Invalid reported loss.")
+        l.logger().warn("Training logs have not been found. Invalid reported loss.")
         self.telemetry = [
           telemetry_pb2.ModelEpochTelemetry(
             timestamp_unix_epoch_ms = str(0),

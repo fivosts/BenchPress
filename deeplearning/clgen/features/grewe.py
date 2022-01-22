@@ -8,7 +8,7 @@ import typing
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import crypto
 
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 from absl import flags
 
 FLAGS = flags.FLAGS
@@ -97,7 +97,7 @@ class GreweFeatures(object):
         raise ValueError("{}, {}".format(str(e), str_feats))
     except Exception as e:
       print(e)
-      # l.getLogger().warn("Grewe RawDict: {}".format(e))
+      # l.logger().warn("Grewe RawDict: {}".format(e))
       # Kernel has a syntax error and feature line is empty.
       # Return an empty dict.
       return {}

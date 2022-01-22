@@ -21,7 +21,7 @@ from deeplearning.clgen.util import environment
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.models import lm_data_generator
 from absl import flags
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -141,7 +141,7 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
         with open(e, 'rb') as infile:
           length = len(pickle.load(infile))
           if environment.WORLD_RANK == 0:
-            l.getLogger().error("{} - {}".format(e, length))
+            l.logger().error("{} - {}".format(e, length))
           lt = length
       assert lt > 0, "Dataset {} is empty".format(e)
       r.append(lt + s)

@@ -12,7 +12,7 @@ from sqlalchemy.ext import declarative
 from deeplearning.clgen.util import sqlutil
 
 from absl import app, flags
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -237,15 +237,15 @@ def chunkify_db(bq_db: bqDatabase, chunks: int, prefix: str) -> None:
 
   idx = 0
   for db_idx, db in enumerate(out_dbs):
-    l.getLogger().info("Writing db_{}...".format(db_idx))
+    l.logger().info("Writing db_{}...".format(db_idx))
     batch = bq_db.main_files_batch(limit = chunk_size + (chunks if db_idx == chunks - 1 else 0), offset = idx)
     with db.Session() as s:
       bar = progressbar.ProgressBar(max_value = len(batch))
-      l.getLogger().info(len(batch))
+      l.logger().info(len(batch))
       for f in bar(batch):
         s.add(bqMainFile(**bqMainFile.FromArgs(f.ToJSONDict())))
         idx += 1
-      l.getLogger().info("commit")
+      l.logger().info("commit")
       s.commit()
   return
 
@@ -264,7 +264,7 @@ def initMain(*args, **kwargs):
     bq_db = bqDatabase(url = "sqlite:///{}".format(str(bq_db_path)), must_exist = True)
     chunkify_db(bq_db, FLAGS.chunkify, prefix = "{}/{}".format(bq_db_path.parent, bq_db_path.stem))
   else:
-    l.getLogger().warn("Chunkify has not been set or has been set to less than 2. Nothing to do, exiting...")
+    l.logger().warn("Chunkify has not been set or has been set to less than 2. Nothing to do, exiting...")
   return
 
 if __name__ == "__main__":

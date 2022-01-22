@@ -9,7 +9,7 @@ from tensorboard.backend.event_processing.event_accumulator import EventAccumula
 from deeplearning.clgen.util.tf import tf
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.samplers import validation_database
-from eupy.native import logger as l
+from deeplearning.clgen.util import logging as l
 
 """
 All hooks deployed for this implementation of BERT.
@@ -325,14 +325,14 @@ class tfLogTensorHook(_tfEstimatorHooks):
     for tag in self.tensor_tags:
       stats.append("{}: {:.5f}".format(tag, tensor_values[tag]))
     if elapsed_secs is not None:
-      l.getLogger().info("Epoch {} {} - {}".format(self.current_epoch, ", ".join(stats), humanize.naturaldelta(elapsed_secs)))
+      l.logger().info("Epoch {} {} - {}".format(self.current_epoch, ", ".join(stats), humanize.naturaldelta(elapsed_secs)))
     elif self.current_epoch > 0:
-      l.getLogger().info("Epoch {} {}".format(self.current_epoch, ", ".join(stats)))
+      l.logger().info("Epoch {} {}".format(self.current_epoch, ", ".join(stats)))
     else:
       if self.is_training:
-        l.getLogger().info("Initialization: {}".format(", ".join(stats)))
+        l.logger().info("Initialization: {}".format(", ".join(stats)))
       else:
-        l.getLogger().info("Tensor Values: {}".format(", ".join(stats)))
+        l.logger().info("Tensor Values: {}".format(", ".join(stats)))
 
 class tfPlotTensorHook(_tfEstimatorHooks):
   """Real time training hook that plots tensors against training step."""
@@ -561,7 +561,7 @@ class writeValidationDB(_tfEstimatorHooks):
         try:
           exists = session.query(validation_database.BERTValFile.sha256).filter_by(sha256 = val_trace.sha256).scalar() is not None
         except sqlalchemy.orm.exc.MultipleResultsFound as e:
-          l.getLogger().error("Selected sha256 has been already found more than once.")
+          l.logger().error("Selected sha256 has been already found more than once.")
           raise e
         if not exists:
           session.add(val_trace)
