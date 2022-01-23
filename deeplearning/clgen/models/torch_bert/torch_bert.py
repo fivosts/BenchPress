@@ -565,7 +565,8 @@ class torchBert(backends.BackendBase):
           # End of Epoch
           set_mail = "Epoch {} Loss: {}\n".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss)
           l.logger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss), mail_level = 4)
-          self.saveCheckpoint(self.train, pre_train)
+          if self.is_world_process_zero():
+            self.saveCheckpoint(self.train, pre_train)
 
           if self.pytorch.num_nodes > 1:
             loader.sampler.set_epoch(epoch)
