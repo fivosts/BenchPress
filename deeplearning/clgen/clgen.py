@@ -27,6 +27,8 @@ from deeplearning.clgen.samplers import sample_observers as sample_observers_lib
 from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import memory
+from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.dashboard import dashboard
 from deeplearning.clgen.models import models
 from deeplearning.clgen.proto import clgen_pb2
@@ -34,7 +36,6 @@ from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.github import miner
 
-from deeplearning.clgen.util import logging as l
 from eupy.hermes import client
 
 FLAGS = flags.FLAGS
