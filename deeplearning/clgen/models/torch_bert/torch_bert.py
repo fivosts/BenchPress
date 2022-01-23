@@ -512,7 +512,7 @@ class torchBert(backends.BackendBase):
                 self.torch.distributed.all_reduce(step_out["masked_lm_loss"])
                 self.torch.distributed.all_reduce(step_out["next_sentence_loss"])
                 self.torch.distributed.all_reduce(total_loss)
-                self.torch.distributed.all_reduce(inputs['masked_lm_lengths'])
+                self.torch.distributed.all_reduce(inputs['masked_lm_lengths'].to(self.pytorch.device))
               if FLAGS.reward_compilation >= 0 and FLAGS.reward_compilation <= epoch * self.steps_per_epoch + step and not pre_train:
                 correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'].cpu().numpy())) if step_out['compile_status'][en] == 1]
                 for s in correct_samples:
@@ -541,7 +541,7 @@ class torchBert(backends.BackendBase):
                   compilation_rate        = step_out['batch_compilation_rate'].mean().item(),
                   num_correct_samples     = (correct_sample_obs.sample_id if correct_sample_obs is not None else None),
                   batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
-                                                 for b in inputs['masked_lm_lengths']]) / len(inputs['masked_lm_lengths']),
+                                                 for b in inputs['masked_lm_lengths'].cpu()]) / len(inputs['masked_lm_lengths'].cpu()),
                   batch_execution_time_ms = exec_time_ms,
                   time_per_sample_ms      = exec_time_ms / self.train_batch_size,
                 )
@@ -552,7 +552,7 @@ class torchBert(backends.BackendBase):
                   total_loss              = total_loss.item(),
                   learning_rate           = self.train.scheduler.get_last_lr()[0],
                   batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
-                                                 for b in inputs['masked_lm_lengths']]) / len(inputs['masked_lm_lengths']),
+                                                 for b in inputs['masked_lm_lengths'].cpu()]) / len(inputs['masked_lm_lengths'].cpu()),
                   batch_execution_time_ms = exec_time_ms,
                   time_per_sample_ms      = exec_time_ms / self.train_batch_size,
                 )
