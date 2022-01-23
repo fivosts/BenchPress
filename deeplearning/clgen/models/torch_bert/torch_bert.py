@@ -747,6 +747,7 @@ class torchBert(backends.BackendBase):
             eval_iterator = iter(loader)
             inputs = next(eval_iterator)
 
+          inputs = self.to_device(inputs)
           with self.torch.no_grad():
             step_out = self.model_step(self.train.model, inputs, is_validation = True)
 
