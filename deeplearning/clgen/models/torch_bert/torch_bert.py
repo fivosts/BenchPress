@@ -302,6 +302,17 @@ class torchBert(backends.BackendBase):
   def samplesWithCategorical(self):
     return FLAGS.categorical_sampling
 
+  def to_device(self, inputs) -> 'torch.Tensor':
+    """
+    Move input tensors to torch device and return them.
+    """
+    inputs['input_ids']            = inputs['input_ids'].to(self.pytorch.device)
+    inputs['input_mask']           = inputs['input_mask'].to(self.pytorch.device)
+    inputs['position_ids']         = inputs['position_ids'].to(self.pytorch.device)
+    inputs['mask_labels']          = inputs['mask_labels'].to(self.pytorch.device)
+    inputs['next_sentence_labels'] = inputs['next_sentence_labels'].to(self.pytorch.device)
+    return inputs
+
   def model_step(self,
                  model: typing.TypeVar('nn.Module'),
                  inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
@@ -312,12 +323,6 @@ class torchBert(backends.BackendBase):
     """
     Perform a training step on a batch of inputs.
     """
-    inputs['input_ids']            = inputs['input_ids'].to(self.pytorch.device)
-    inputs['input_mask']           = inputs['input_mask'].to(self.pytorch.device)
-    inputs['position_ids']         = inputs['position_ids'].to(self.pytorch.device)
-    inputs['mask_labels']          = inputs['mask_labels'].to(self.pytorch.device)
-    inputs['next_sentence_labels'] = inputs['next_sentence_labels'].to(self.pytorch.device)
-
     outputs = model(
                 input_ids            = inputs['input_ids'],
                 attention_mask       = inputs['input_mask'],
@@ -552,7 +557,11 @@ class torchBert(backends.BackendBase):
               batch_iterator = iter(loader)
               inputs = next(batch_iterator)
 
-            step_out = self.model_step(self.train.model, inputs, step = epoch * self.steps_per_epoch + step)
+            # Move inputs to torch device.
+            inputs     = self.to_device(inputs)
+            # Run model step on batchj
+            step_out   = self.model_step(self.train.model, inputs, step = epoch * self.steps_per_epoch + step)
+            # Collect losses and backpropagate
             total_loss = step_out['total_loss'].mean()
             total_loss.backward()
 
