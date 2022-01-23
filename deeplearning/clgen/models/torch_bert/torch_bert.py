@@ -359,11 +359,6 @@ class torchBert(backends.BackendBase):
       desc = "Sampling"
     bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc=desc, leave = False, position = 0)
     if not is_live:
-      # l.logger().warn("Number of GPUs: {}".format(self.pytorch.num_gpus))
-      # global stop_thread
-      # stop_thread = False
-      # t = threading.Thread(target = gpu_thread)
-      # t.start()
       samples, sample_indices = model(
         workload = (
           inputs['input_ids'].to(self.pytorch.device),
@@ -371,20 +366,10 @@ class torchBert(backends.BackendBase):
           inputs['position_ids'].to(self.pytorch.device)
         ),
       )
-      # stop_thread = True
-      # t.join()
-      # l.logger().warn("Finished workload")
-      x = samples.detach().cpu().numpy()
-      # l.logger().warn("Detached")
-      outputs['generated_samples'] = list(x)
-      # l.logger().warn("Moved to CPU")
-      y = sample_indices.detach().cpu().numpy()
-      # l.logger().warn("Detached")
-      outputs['sample_indices']    = list(y)
-      # l.logger().warn("Moved to CPU")
+      outputs['generated_samples'] = list(samples.detach().cpu().numpy())
+      outputs['sample_indices']    = list(sample_indices.detach().cpu().numpy())
       outputs['input_ids']         = list(self.torch.reshape(inputs['input_ids'], tuple(samples.shape)).numpy())
       outputs['masked_lm_lengths'] = list(self.torch.reshape(inputs['masked_lm_lengths'], (samples.shape[0], -1)).numpy())
-      # l.logger().warn("Finished all CPU tensors")
     bar.update(len(outputs['generated_samples']))
     end = time.time()
     return outputs, end-start
