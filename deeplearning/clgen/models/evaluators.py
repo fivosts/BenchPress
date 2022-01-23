@@ -427,7 +427,7 @@ def TopKCLDrive(**kwargs) -> None:
         for ls in lsize:
           if ls > gs:
             continue
-          l.getLogger().info("global size: {}, local size: {}".format(gs, ls))
+          l.logger().info("global size: {}, local size: {}".format(gs, ls))
           config = "g{}-l{}".format(gs, ls)
           if config not in groups:
             groups[config] = {}
