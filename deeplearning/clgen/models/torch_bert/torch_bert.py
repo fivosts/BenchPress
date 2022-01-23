@@ -357,8 +357,8 @@ class torchBert(backends.BackendBase):
       desc = "Sampling iteration: {}".format(iteration)
     else:
       desc = "Sampling"
-    bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc=desc, leave = False, position = 0)
     if not is_live:
+      bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc=desc, leave = False, position = 0)
       samples, sample_indices = model(
         workload = (
           inputs['input_ids'].to(self.pytorch.device),
@@ -370,75 +370,24 @@ class torchBert(backends.BackendBase):
       outputs['sample_indices']    = list(sample_indices.detach().cpu().numpy())
       outputs['input_ids']         = list(self.torch.reshape(inputs['input_ids'], tuple(samples.shape)).numpy())
       outputs['masked_lm_lengths'] = list(self.torch.reshape(inputs['masked_lm_lengths'], (samples.shape[0], -1)).numpy())
-    bar.update(len(outputs['generated_samples']))
+      bar.update(len(outputs['generated_samples']))
+    else:
+      raise NotImplementedError ("Haven't implemented live sampling.")
+      out = model(
+        input_ids        = inputs['input_ids'].to(self.pytorch.device),
+        attention_mask   = inputs['input_mask'].to(self.pytorch.device),
+        position_ids     = inputs['position_ids'].to(self.pytorch.device),
+        masked_lm_labels = inputs['mask_labels'].to(self.pytorch.device),
+        is_live          = is_live,
+      )
+      outputs['generated_samples'] += out['generated_samples']
+      outputs['sample_indices']    += out['sample_indices']
+      outputs['input_ids']         += list(inputs['input_ids'].numpy())
+      outputs['masked_lm_lengths'] += list(inputs['masked_lm_lengths'].numpy())
+      return outputs
+
     end = time.time()
     return outputs, end-start
-
-    raise NotImplementedError ("Haven't implemented live sampling.")
-
-    # if not self.pytorch.num_gpus > 1 or is_live:
-    #   bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = False, position = 0)
-    #   for b_idx in range(len(inputs['input_ids'])):
-    #     out = models[0](
-    #             input_ids            = inputs['input_ids'][b_idx].to(devices[0]),
-    #             attention_mask       = inputs['input_mask'][b_idx].to(devices[0]),
-    #             position_ids         = inputs['position_ids'][b_idx].to(devices[0]),
-    #             masked_lm_labels     = inputs['mask_labels'][b_idx].to(devices[0]),
-    #             is_live              = is_live,
-    #           )
-    #     outputs['generated_samples'] += out['generated_samples']
-    #     outputs['sample_indices']    += out['sample_indices']
-    #     outputs['input_ids']         += list(inputs['input_ids'][b_idx].numpy())
-    #     outputs['masked_lm_lengths'] += list(inputs['masked_lm_lengths'][b_idx].numpy())
-    #     bar.update(len(out['generated_samples']))
-    #   return outputs
-
-    # chunk = 1 + (len(inputs['input_ids']) // len(devices))
-    # procs = []
-    # queue = multiprocessing.Queue()
-    # for idx, (m, d) in enumerate(zip(models, devices)):
-    #   if idx*chunk < len(inputs['input_ids']):
-    #     procs.append(multiprocessing.Process(
-    #       target = model_step_worker, kwargs = {
-    #         'queue'                : queue,
-    #         'model'                : m,
-    #         'device'               : d,
-    #         'input_ids'            : inputs['input_ids'][idx * chunk: (idx+1) * chunk],
-    #         'attention_mask'       : inputs['input_mask'][idx * chunk: (idx+1) * chunk],
-    #         'position_ids'         : inputs['position_ids'][idx * chunk: (idx+1) * chunk],
-    #         'masked_lm_labels'     : inputs['mask_labels'][idx * chunk: (idx+1) * chunk],
-    #         'masked_lm_lengths'    : inputs['masked_lm_lengths'][idx * chunk: (idx+1) * chunk],
-    #       }
-    #     ))
-    # try:
-    #   for job in procs:
-    #     job.start()
-    #   bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc="Sampling", leave = False, position = 0)
-    #   ln = 0
-    #   while ln < len(inputs['input_ids']) * len(inputs['input_ids'][0]):
-    #     try:
-    #       batch = queue.get(timeout = 360)
-    #       outputs['generated_samples'] += batch['generated_samples']
-    #       outputs['sample_indices']    += batch['sample_indices']
-    #       outputs['input_ids']         += batch['input_ids']
-    #       outputs['masked_lm_lengths'] += batch['masked_lm_lengths']
-    #       ln = len(outputs['generated_samples'])
-    #       bar.update(len(batch['generated_samples']))
-    #     except multiprocessing.queues.Empty:
-    #       l.logger().warn("Queue timed-out having gathered {} sequences".format(len(outputs['generated_samples'])))
-    #       pass
-    #   for job in procs:
-    #     job.join()
-    #   if not queue.empty():
-    #     raise ValueError("Queue is not empty!")
-    # except KeyboardInterrupt:
-    #   try:
-    #     for job in procs:
-    #       job.terminate()
-    #   except Exception:
-    #     pass
-    #   raise KeyboardInterrupt
-    # return outputs
 
   def PreTrain(self,
                corpus,
