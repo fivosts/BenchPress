@@ -434,12 +434,10 @@ def TopKCLDrive(**kwargs) -> None:
           if dbg.group_name not in groups[config]:
             groups[config][dbg.group_name] = ([], [], [], [])
 
-          nruns = 10**5
+          nruns = 10**4
           if gs > 2**13:
-            nruns = 10**4
-          if gs > 2**15:
             nruns = 10**3
-          if gs > 2**17:
+          if gs > 2**15:
             nruns = 10**2
           groups[config][dbg.group_name][0].append(
             {
