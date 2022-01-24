@@ -169,6 +169,35 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         lambda x: x > 0,
         "top-K factor must be positive",
       )
+    elif ev.HasField("mutec_vs_benchpress"):
+      for dbs in [ev.mutec_vs_benchpress.github, ev.mutec_vs_benchpress.benchpress]:
+        for db in ev.mutec_vs_benchpress.github.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
+      pbutil.AssertFieldIsSet(ev.mutec_vs_benchpress, "mutec")
+      if not pathlib.Path(ev.mutec_vs_benchpress.mutec).resolve().exists():
+        raise FileNotFoundError(pathlib.Path(ev.mutec_vs_benchpress.mutec).resolve())
+      pbutil.AssertFieldConstraint(
+        ev.mutec_vs_benchpress,
+        "target",
+        lambda x: x in feature_sampler.targets,
+        "target {} not found".format(ev.mutec_vs_benchpress.target),
+      )
+      pbutil.AssertFieldIsSet(ev.mutec_vs_benchpress, "feature_space")
+      pbutil.AssertFieldConstraint(
+        ev.mutec_vs_benchpress,
+        "top_k",
+        lambda x: x > 0,
+        "top-K factor must be positive",
+      )
     else:
       raise ValueError(ev)
   return config
@@ -489,17 +518,85 @@ def TopKCLDrive(**kwargs) -> None:
   raise NotImplementedError
   return
 
+def MutecVsBenchPress(**kwargs) -> None:
+  """
+  Compare mutec mutation tool on github's database against BenchPress.
+  Comparison is similar to KAverageScore comparison.
+  """
+  db_groups      = kwargs.get('db_groups')
+  target         = kwargs.get('targets')
+  feature_space  = kwargs.get('feature_space')
+  top_k          = kwargs.get('top_k')
+  plot_config    = kwargs.get('plot_config')
+  workspace_path = kwargs.get('workspace_path')
+  groups = {}
+
+  for dbg in db_groups:
+    if dbg.group_name == "GitHub":
+      if not dbg.db_type == encoded.EncodedContentFiles:
+        raise ValueError("Scores require EncodedContentFiles but received", dbg.db_type)
+      groups["Mutec"] = ([], [])
+      for benchmark in target.get_benchmarks(feature_space):
+
+        ## Tuple of closest src, distance from target benchmark.
+        closest = sorted(
+          [(src, feature_sampler.calculate_distance(fv, benchmark.features, feature_space))
+           for src, fv in dbg.get_data_features(feature_space)],
+           key = lambda x: x[1]
+        )[:top_k]
+
+        # Split source and distances lists.
+        git_src  = [x for x, _ in closest]
+        git_dist = [x for _, x in closest]
+
+        closest_mutec_src  = run_mutec(git_src, benchmark.features, feature_space, top_k) # tuple of (src, distance)
+        closest_mutec_dist = [x for x, _ in closest_mutec_src]
+
+        if sum(closest_mutec_dist) < sum(closest_mutec_dist):
+          groups["Mutec"][0].append(benchmark.name)
+          # Compute target's distance from O(0,0)
+          target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
+          avg_dist           = sum(closest_mutec_dist) / top_k
+          groups["Mutec"][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
+
+  for dbg in db_groups:
+    if dbg.group_name == "BenchPress":
+      if not dbg.db_type == samples_database.SamplesDatabase:
+        raise ValueError("BenchPress scores require SamplesDatabase but received", dbg.db_type)
+      groups[dbg.group_name] = ([], [])
+      for benchmark in target.get_benchmarks(feature_space):
+        if benchmark.name in groups["Mutec"][0]:
+          groups[dbg.group_name][0].append(benchmark.name)
+          # Find shortest distances.
+          distances = sorted(
+            [feature_sampler.calculate_distance(fv, benchmark.features, feature_space)
+             for fv in dbg.get_features(feature_space)]
+          )
+          # Compute target's distance from O(0,0)
+          target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
+          avg_dist = sum(distances[:top_k]) / len(distances[:top_k])
+          groups[dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
+
+  plotter.GrouppedBars(
+    groups = groups,
+    plot_name = "mutec_avg_{}".format(top_k, feature_space.replace("Features", " Features")),
+    path = workspace_path,
+    **plot_config if plot_config else {},
+  )
+  return
+
 def main(config: evaluator_pb2.Evaluation):
   """
   Run the evaluators iteratively.
   """
   evaluation_map = {
-    evaluator_pb2.LogFile       : LogFile,
-    evaluator_pb2.KAverageScore : KAverageScore,
-    evaluator_pb2.MinScore      : MinScore,
-    evaluator_pb2.AnalyzeTarget : AnalyzeTarget,
-    evaluator_pb2.CompMemGrewe  : CompMemGrewe,
-    evaluator_pb2.TopKCLDrive   : TopKCLDrive,
+    evaluator_pb2.LogFile           : LogFile,
+    evaluator_pb2.KAverageScore     : KAverageScore,
+    evaluator_pb2.MinScore          : MinScore,
+    evaluator_pb2.AnalyzeTarget     : AnalyzeTarget,
+    evaluator_pb2.CompMemGrewe      : CompMemGrewe,
+    evaluator_pb2.TopKCLDrive       : TopKCLDrive,
+    evaluator_pb2.MutecVsBenchPress : MutecVsBenchPress
   }
   db_cache       = {}
   target_cache   = {}
@@ -524,16 +621,23 @@ def main(config: evaluator_pb2.Evaluation):
     elif ev.HasField("topk_cldrive"):
       sev = ev.topk_cldrive
       kw_args['top_k']   = sev.top_k
+    elif ev.HasField("mutec_vs_benchpress"):
+      sev = ev.mutec_vs_benchpress
+      kw_args['top_k']  = sev.top_k
+      kw_args['mutec']  = sev.mutec
+      kw_args['github'] = sev.github
+      kw_args['benchpress'] = sev.benchpress
     else:
       raise NotImplementedError(ev)
 
     # Gather database groups and cache them.
-    for dbs in sev.db_group:
-      key = dbs.group_name + ''.join(dbs.database)
-      if key not in db_cache:
-        size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
-        db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
-      kw_args['db_groups'].append(db_cache[key])
+    if sev.HasField("db_group"):
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
     # Gather target benchmarks and cache them
     if sev.HasField("target"):
       if isinstance(sev.target, list):
