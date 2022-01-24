@@ -17,3 +17,4 @@ export MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
 
 # Execute clgen command. Modify the command script accordingly.
 srun ./ddp_run.sh
+
