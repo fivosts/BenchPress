@@ -1,0 +1,20 @@
+workspace: "mutec_eval/workspace"
+tokenizer: "pldi_results/backup_tokenizer.pkl"
+evaluator {
+  mutec_vs_benchpress {
+    target: "rodinia"
+    mutec: "/home/fivosts/PhD/Code/clgen/build/local/bin/mutec"
+    feature_space: "AutophaseFeatures"
+    top_k: 2
+    benchpress {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "pldi_results/BERT/Autophase/merged_samples.db"
+    }
+    github {
+      group_name: "GitHub"
+      db_type: "EncodedContentFiles"
+      database: "pldi_results/Github/encoded.db"
+    }
+  }
+}
