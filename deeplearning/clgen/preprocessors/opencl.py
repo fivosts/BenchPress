@@ -301,6 +301,10 @@ def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int =
   Run CLDrive on given configuration and compute whether it should run on CPU vs GPU based on where it will execute faster (transfer time + execution time).
   """
   stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize, timeout = timeout)
+  if stderr == "TimeOut":
+    l.logger().warn(src)
+    l.logger().warn("CLDrive Timed Out")
+    return "TimeOut"
   df = None
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
