@@ -23,6 +23,7 @@ from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import active_feed_database
 from deeplearning.clgen.preprocessors import opencl
+from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import encoded
@@ -546,19 +547,20 @@ def MutecVsBenchPress(**kwargs) -> None:
         f.write(src)
         f.flush()
         # Fix compile_commands.json for source file.
+        base_path = pathlib.Path(str(f)).resolve()
         compile_command = {
-          'directory' : f.parent,
+          'directory' : base_path,
           'arguments' : [str(clang.CLANG), f.name] + ["-S", "-emit-llvm", "-o", "-"] + opencl.GetClangArgs(),
           'file'      : str(f)
         }
-        with open(f.parent / "compile_commands.json", 'w') as ccf:
+        with open(base_path / "compile_commands.json", 'w') as ccf:
           json.dump([compile_command], ccf)
         # Construct and execute mutec command
         mutec_cmd = [
           str(mutec),
           str(f),
           "-o",
-          str(f.parent)
+          str(base_path)
         ]
         process = subprocess.Popen(
           cmd,
@@ -568,8 +570,9 @@ def MutecVsBenchPress(**kwargs) -> None:
         )
         stdout, stderr = process.communicate()
         # Cleanup compile commands
-        shutil.remove(str(f.parent / "compile_commands.json"))
+        shutil.remove(str(base_path / "compile_commands.json"))
         mutecs = glob.glob(str("{}.mutec*".format(str(f))))
+        l.logger().warn(mutecs)
         ret = []
         if depth < 5:
           for mutated in mutecs:
