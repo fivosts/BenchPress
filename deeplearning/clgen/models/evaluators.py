@@ -685,7 +685,7 @@ def main(config: evaluator_pb2.Evaluation):
         if key not in db_cache:
           size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
           db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
-        kw_args[name].append(db_cache[key])
+        kw_args[name] = db_cache[key]
     else:
       raise NotImplementedError(ev)
 
