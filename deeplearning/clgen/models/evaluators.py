@@ -547,7 +547,7 @@ def MutecVsBenchPress(**kwargs) -> None:
         f.write(src)
         f.flush()
         # Fix compile_commands.json for source file.
-        base_path = pathlib.Path(str(f)).resolve()
+        base_path = pathlib.Path(f.name).resolve().parent
         compile_command = {
           'directory' : base_path,
           'arguments' : 
