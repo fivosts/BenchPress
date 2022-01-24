@@ -593,11 +593,12 @@ def MutecVsBenchPress(**kwargs) -> None:
   if github.db_type != encoded.EncodedContentFiles:
     raise ValueError("Scores require EncodedContentFiles but received", github.db_type)
   groups["Mutec"] = ([], [])
+  l.logger().info("Mutec group")
   for benchmark in target.get_benchmarks(feature_space):
-
+    l.logger().info(benchmark.name)
     ## Tuple of closest src, distance from target benchmark.
     closest = sorted(
-      [(src, feature_sampler.calculate_distance(fv, target_features, feature_space))
+      [(src, feature_sampler.calculate_distance(fv, benchmark.features, feature_space))
        for src, fv in github.get_data_features(feature_space)],
        key = lambda x: x[1]
     )[:top_k]
@@ -616,10 +617,12 @@ def MutecVsBenchPress(**kwargs) -> None:
       avg_dist           = sum(closest_mutec_dist) / top_k
       groups["Mutec"][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
 
+  l.logger().info("Benchpress group")
   if not benchpress.db_type != samples_database.SamplesDatabase:
     raise ValueError("BenchPress scores require SamplesDatabase but received", benchpress.db_type)
   groups[benchpress.group_name] = ([], [])
   for benchmark in target.get_benchmarks(feature_space):
+    l.logger().info(benchmark.name)
     if benchmark.name in groups["Mutec"][0]:
       groups[benchpress.group_name][0].append(benchmark.name)
       # Find shortest distances.
