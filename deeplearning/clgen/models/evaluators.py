@@ -3,6 +3,8 @@ Evaluators - result fetchers for samples across different techniques.
 """
 import typing
 import io
+import glob
+import json
 import tempfile
 import subprocess
 import pickle
@@ -170,6 +172,8 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         "top-K factor must be positive",
       )
     elif ev.HasField("mutec_vs_benchpress"):
+      if ev.mutec_vs_benchpress.HasField("db_group"):
+        raise ValueError("db_group is a placeholder for mutec_vs_benchpress evaluator and should not be used.")
       for dbs in [ev.mutec_vs_benchpress.github, ev.mutec_vs_benchpress.benchpress]:
         for db in ev.mutec_vs_benchpress.github.database:
           p = pathlib.Path(db).resolve()
@@ -586,7 +590,7 @@ def MutecVsBenchPress(**kwargs) -> None:
     )[:top_k]    
     return closest
 
-  if not github.db_type == encoded.EncodedContentFiles:
+  if github.db_type != encoded.EncodedContentFiles:
     raise ValueError("Scores require EncodedContentFiles but received", github.db_type)
   groups["Mutec"] = ([], [])
   for benchmark in target.get_benchmarks(feature_space):
@@ -612,23 +616,21 @@ def MutecVsBenchPress(**kwargs) -> None:
       avg_dist           = sum(closest_mutec_dist) / top_k
       groups["Mutec"][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
 
-  for benchpress in db_groups:
-    if benchpress.group_name == "BenchPress":
-      if not benchpress.db_type == samples_database.SamplesDatabase:
-        raise ValueError("BenchPress scores require SamplesDatabase but received", benchpress.db_type)
-      groups[benchpress.group_name] = ([], [])
-      for benchmark in target.get_benchmarks(feature_space):
-        if benchmark.name in groups["Mutec"][0]:
-          groups[benchpress.group_name][0].append(benchmark.name)
-          # Find shortest distances.
-          distances = sorted(
-            [feature_sampler.calculate_distance(fv, benchmark.features, feature_space)
-             for fv in benchpress.get_features(feature_space)]
-          )
-          # Compute target's distance from O(0,0)
-          target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
-          avg_dist = sum(distances[:top_k]) / len(distances[:top_k])
-          groups[benchpress.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
+  if not benchpress.db_type != samples_database.SamplesDatabase:
+    raise ValueError("BenchPress scores require SamplesDatabase but received", benchpress.db_type)
+  groups[benchpress.group_name] = ([], [])
+  for benchmark in target.get_benchmarks(feature_space):
+    if benchmark.name in groups["Mutec"][0]:
+      groups[benchpress.group_name][0].append(benchmark.name)
+      # Find shortest distances.
+      distances = sorted(
+        [feature_sampler.calculate_distance(fv, benchmark.features, feature_space)
+         for fv in benchpress.get_features(feature_space)]
+      )
+      # Compute target's distance from O(0,0)
+      target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
+      avg_dist = sum(distances[:top_k]) / len(distances[:top_k])
+      groups[benchpress.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
 
   plotter.GrouppedBars(
     groups = groups,
@@ -678,13 +680,17 @@ def main(config: evaluator_pb2.Evaluation):
       sev = ev.mutec_vs_benchpress
       kw_args['top_k']  = sev.top_k
       kw_args['mutec']  = sev.mutec
-      kw_args['github'] = sev.github
-      kw_args['benchpress'] = sev.benchpress
+      for name, dbs in [('github', sev.github), ('benchpress', sev.benchpress)]:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args[name].append(db_cache[key])
     else:
       raise NotImplementedError(ev)
 
     # Gather database groups and cache them.
-    if not ev.HasField("mutec_vs_benchpress") and sev.HasField("db_group"):
+    if sev.HasField("db_group"):
       for dbs in sev.db_group:
         key = dbs.group_name + ''.join(dbs.database)
         if key not in db_cache:
