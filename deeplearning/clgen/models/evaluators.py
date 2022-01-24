@@ -5,6 +5,7 @@ import typing
 import io
 import glob
 import json
+import os
 import tempfile
 import subprocess
 import pickle
@@ -549,7 +550,7 @@ def MutecVsBenchPress(**kwargs) -> None:
         # Fix compile_commands.json for source file.
         base_path = pathlib.Path(f.name).resolve().parent
         compile_command = {
-          'directory' : base_path,
+          'directory' : str(base_path),
           'arguments' : 
             [str(clang.CLANG), f.name] +
             ["-S", "-emit-llvm", "-o", "-"] +
@@ -566,14 +567,14 @@ def MutecVsBenchPress(**kwargs) -> None:
           str(base_path)
         ]
         process = subprocess.Popen(
-          cmd,
+          mutec_cmd,
           stdout=subprocess.PIPE,
           stderr=subprocess.PIPE,
           universal_newlines=True,
         )
         stdout, stderr = process.communicate()
         # Cleanup compile commands
-        shutil.remove(str(base_path / "compile_commands.json"))
+        os.remove(str(base_path / "compile_commands.json"))
         mutecs = glob.glob(str("{}.mutec*".format(str(f))))
         l.logger().warn(mutecs)
         ret = []
