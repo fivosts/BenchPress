@@ -199,18 +199,6 @@ function(install_external_deps)
   #)
   #set(ONNX          ${LOCAL}/onnx PARENT_SCOPE)
 
-  # ExternalProject_Add(llvm6
-  #   URL               https://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
-  #   PREFIX            ${THIRD_PARTY}
-  #   TMP_DIR           ${THIRD_PARTY}/tmp
-  #   STAMP_DIR         ${THIRD_PARTY}/stamp
-  #   DOWNLOAD_DIR      ${THIRD_PARTY}/llvm6
-  #   SOURCE_DIR        ${THIRD_PARTY}/llvm6/llvm6
-  #   INSTALL_DIR       ${LOCAL}
-  #   CONFIGURE_COMMAND ""
-  #   BUILD_COMMAND     ""
-  #   INSTALL_COMMAND   cp -Rn ${THIRD_PARTY}/llvm6/llvm6/ ${LOCAL}
-  # )
   ExternalProject_Add(llvm6
     GIT_REPOSITORY    https://github.com/llvm/llvm-project.git
     GIT_TAG           e4f84abd37bf64bb18352fbef1fdcc88a2431a72
