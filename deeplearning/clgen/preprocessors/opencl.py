@@ -207,7 +207,7 @@ def ClangPreprocessWithShim(text: str) -> str:
   """
   return _ClangPreprocess(text, True, True)
 
-def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> str:
+def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> str:
   """
   If CLDrive executable exists, run it over provided source code.
   """
@@ -228,34 +228,42 @@ def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1
     f.write(src)
     f.flush()
     proc = subprocess.Popen(
-      "{} --srcs={} --num_runs={} --gsize={} --lsize={} --envs={},{}".format(CLDRIVE, f.name, num_runs, gsize, lsize, CL_PLATFORMS['CPU'], CL_PLATFORMS['GPU']).split(),
+      "{} {} --srcs={} --num_runs={} --gsize={} --lsize={} --envs={},{}"
+        .format(
+          "timeout -s9 {}".format(timeout) if timeout > 0 else "",
+          CLDRIVE,
+          f.name,
+          num_runs,
+          gsize,
+          lsize,
+          CL_PLATFORMS['CPU'],
+          CL_PLATFORMS['GPU']
+        ).split(),
       stdout = subprocess.PIPE,
       stderr = subprocess.PIPE,
       universal_newlines = True,
     )
     stdout, stderr = proc.communicate()
     if proc.returncode == 9:
-      l.logger().error(src)
-      l.logger().error(stderr)
-      raise ValueError("CLDrive has timed out!")
+      stderr = "TimeOut"
   return stdout, stderr
 
-def CLDrivePretty(src: str, num_runs: int = 5, gsize: int = 4096, lsize: int = 1024) -> typing.Tuple[pd.DataFrame, str]:
+def CLDrivePretty(src: str, num_runs: int = 5, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> typing.Tuple[pd.DataFrame, str]:
   """
   Run CLDrive with given configuration but pretty print stdout and stderror.
   """
-  stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
+  stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize, timeout = timeout)
   for x in stdout.split('\n'):
     print(x)
   for x in stderr.split('\n'):
     print(x)
   return stdout, stderr
 
-def CLDriveNumBytes(src: str, gsize: int = 4096, lsize: int = 1024) -> int:
+def CLDriveNumBytes(src: str, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> int:
   """
   Run CLDrive once for given configuration to identify number of transferred bytes.
   """
-  stdout, stderr = RunCLDrive(src, num_runs = 1, gsize = gsize, lsize = lsize)
+  stdout, stderr = RunCLDrive(src, num_runs = 1, gsize = gsize, lsize = lsize, timeout = timeout)
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
     transferred_bytes_cpu = df[df['device'].str.contains("CPU")].transferred_bytes[0]
@@ -268,11 +276,11 @@ def CLDriveNumBytes(src: str, gsize: int = 4096, lsize: int = 1024) -> int:
   assert transferred_bytes_cpu == transferred_bytes_gpu, "Mismatch between cpu and gpu transferred bytes: {}".format(transferred_bytes_cpu, transferred_bytes_gpu)
   return transferred_bytes_cpu
 
-def CLDriveExecutionTimes(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
+def CLDriveExecutionTimes(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
   """
   Run CLDrive once for given configuration to identify number of transferred bytes.
   """
-  stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
+  stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize, timeout = timeout)
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
     transfer_time_cpu  = df[df['device'].str.contains("CPU")].transfer_time_ns
@@ -288,11 +296,11 @@ def CLDriveExecutionTimes(src: str, num_runs: int = 1000, gsize: int = 4096, lsi
 
   return transfer_time_cpu, execution_time_cpu, transfer_time_gpu, execution_time_gpu
 
-def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024) -> str:
+def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> str:
   """
   Run CLDrive on given configuration and compute whether it should run on CPU vs GPU based on where it will execute faster (transfer time + execution time).
   """
-  stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize)
+  stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize, timeout = timeout)
   df = None
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
