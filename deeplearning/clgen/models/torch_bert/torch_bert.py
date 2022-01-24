@@ -467,7 +467,8 @@ class torchBert(backends.BackendBase):
 
       try:
         self.train.model.train()
-        for epoch in tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False):
+        epoch_iter = tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False) if self.is_world_process_zero() else range(self.num_epochs)
+        for epoch in epoch_iter:
 
           # In distributed mode, calling the set_epoch() method at
           # the beginning of each epoch before creating the DataLoader iterator
@@ -479,7 +480,8 @@ class torchBert(backends.BackendBase):
           if epoch < self.current_step // self.steps_per_epoch:
             continue # Stupid bar won't resume.
 
-          for step in tqdm.auto.trange(self.steps_per_epoch, desc="Batch", leave = False):
+          batch_iter = tqdm.auto.trange(self.steps_per_epoch, desc="Batch", leave = False) if self.is_world_process_zero() else range(self.steps_per_epoch)
+          for step in batch_iter:
             if self.is_world_process_zero():
               start = datetime.datetime.utcnow()
             try:
@@ -492,7 +494,7 @@ class torchBert(backends.BackendBase):
 
             # Move inputs to torch device.
             inputs     = self.to_device(inputs)
-            # Run model step on batchj
+            # Run model step on batch
             step_out   = self.model_step(self.train.model, inputs, step = epoch * self.steps_per_epoch + step)
             # Collect losses and backpropagate
             total_loss = step_out['total_loss'].mean()
@@ -505,13 +507,24 @@ class torchBert(backends.BackendBase):
               self.train.optimizer.step()
             self.train.scheduler.step()
 
+            ## Collect tensors for logging.
+            if self.pytorch.num_nodes > 1:
+              masked_lm_loss     = [torch.zeros(tuple(step_out['masked_lm_loss'].shape    ), dtype = self.torch.int64) for _ in range(self.torch.distributed.get_world_size())]
+              next_sentence_loss = [torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.int64) for _ in range(self.torch.distributed.get_world_size())]
+              masked_lm_lengths  = [torch.zeros(tuple(step_out['masked_lm_lengths'].shape ), dtype = self.torch.int64) for _ in range(self.torch.distributed.get_world_size())]
+
+              self.torch.distributed.all_gather(step_out["masked_lm_loss"], masked_lm_loss, dst = 0)
+              self.torch.distributed.all_gather(step_out["next_sentence_loss"], next_sentence_loss, dst = 0)
+              self.torch.distributed.all_gather(inputs['masked_lm_lengths'].to(self.pytorch.device), masked_lm_lengths, dst = 0)
+              self.torch.distributed.all_reduce(total_loss)
+            else:
+              masked_lm_loss     = step_out['masked_lm_loss']
+              next_sentence_loss = step_out['next_sentence_loss']
+              masked_lm_lengths  = step_out['masked_lm_lengths']
+
             if self.is_world_process_zero():
               exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
-              if self.pytorch.num_nodes > 1:
-                self.torch.distributed.all_reduce(step_out["masked_lm_loss"])
-                self.torch.distributed.all_reduce(step_out["next_sentence_loss"])
-                self.torch.distributed.all_reduce(total_loss)
-                self.torch.distributed.all_reduce(inputs['masked_lm_lengths'].to(self.pytorch.device))
+
               if FLAGS.reward_compilation >= 0 and FLAGS.reward_compilation <= epoch * self.steps_per_epoch + step and not pre_train:
                 correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'].cpu().numpy())) if step_out['compile_status'][en] == 1]
                 for s in correct_samples:
@@ -560,6 +573,8 @@ class torchBert(backends.BackendBase):
               if self.current_step == 0:
                 l.logger().info("Starting Loss: {}".format(total_loss.item()), mail_level = 4)
               self.current_step += 1
+            if self.torch.distributed.is_initialized():
+              self.torch.distributed.barrier()
 
           # End of Epoch
           set_mail = "Epoch {} Loss: {}\n".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss)
