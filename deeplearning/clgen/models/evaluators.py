@@ -625,7 +625,7 @@ def MutecVsBenchPress(**kwargs) -> None:
       groups["Mutec"][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
 
   l.logger().info("Benchpress group")
-  if not benchpress.db_type != samples_database.SamplesDatabase:
+  if benchpress.db_type != samples_database.SamplesDatabase:
     raise ValueError("BenchPress scores require SamplesDatabase but received", benchpress.db_type)
   groups[benchpress.group_name] = ([], [])
   for benchmark in target.get_benchmarks(feature_space):
