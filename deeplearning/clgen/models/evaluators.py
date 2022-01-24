@@ -550,7 +550,10 @@ def MutecVsBenchPress(**kwargs) -> None:
         base_path = pathlib.Path(str(f)).resolve()
         compile_command = {
           'directory' : base_path,
-          'arguments' : [str(clang.CLANG), f.name] + ["-S", "-emit-llvm", "-o", "-"] + opencl.GetClangArgs(),
+          'arguments' : 
+            [str(clang.CLANG), f.name] +
+            ["-S", "-emit-llvm", "-o", "-"] +
+            opencl.GetClangArgs(use_shim = False, use_aux_headers = False),
           'file'      : str(f)
         }
         with open(base_path / "compile_commands.json", 'w') as ccf:
