@@ -439,16 +439,35 @@ def TopKCLDrive(**kwargs) -> None:
             nruns = 10**3
           if gs > 2**15:
             nruns = 10**2
+
+          benchmark_label = "TimeOut"
+          bench_runs = nruns
+          while benchmark_label == "TimeOut" and bench_runs > 0:
+            try:
+              benchmark_label = opencl.CLDriveLabel(benchmark.contents, num_runs = bench_runs, gsize = gs, lsize = ls, timeout = 600)
+            except TimeoutError:
+              bench_runs = bench_runs // 10
+
           groups[config][dbg.group_name][0].append(
             {
               'benchmark_name'     : benchmark.name,
-              'benchmark_label'    : opencl.CLDriveLabel(benchmark.contents, num_runs = nruns, gsize = gs, lsize = ls),
+              'benchmark_label'    : benchmark_label,
               'benchmark_contents' : benchmark.contents
             }
           )
           for idx, (src, dist) in enumerate(closest_src):
 
-            label = opencl.CLDriveLabel(src, num_runs = 100, gsize = gs, lsize = ls)
+            label  = "TimeOut"
+            c_runs = nrun
+            while label == "TimeOut" and c_runs > 0:
+              try:
+                label = opencl.CLDriveLabel(src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 600)
+              except TimeoutError:
+                c_runs = c_runs // 10
+
+            if label == "TimeOut":
+              l.logger().error(src)
+
             if len(groups[config][dbg.group_name][1]) - 1 < idx:
               groups[config][dbg.group_name][1].append([dist])
               groups[config][dbg.group_name][2].append([label])
