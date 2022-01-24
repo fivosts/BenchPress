@@ -458,7 +458,7 @@ def TopKCLDrive(**kwargs) -> None:
           for idx, (src, dist) in enumerate(closest_src):
 
             label  = "TimeOut"
-            c_runs = nrun
+            c_runs = nruns
             while label == "TimeOut" and c_runs > 0:
               try:
                 label = opencl.CLDriveLabel(src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 600)
