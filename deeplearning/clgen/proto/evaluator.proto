@@ -96,7 +96,7 @@ message MutecVsBenchPress {
   optional DatabasesGroups      github        = 5;
   optional DatabasesGroups      benchpress    = 6;
   optional PlotterConfiguration plot_config   = 7;
-  repeated DatabasesGroups      db_group      = 8; // Dummy selector, not used.
+  optional DatabasesGroups      db_group      = 8; // Dummy selector, not used.
 }
 
 // Define a group of Databases that will be considered jointly.
