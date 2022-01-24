@@ -523,7 +523,9 @@ def MutecVsBenchPress(**kwargs) -> None:
   Compare mutec mutation tool on github's database against BenchPress.
   Comparison is similar to KAverageScore comparison.
   """
-  db_groups      = kwargs.get('db_groups')
+  mutec          = kwargs.get('mutec')
+  github         = kwargs.get('github')
+  benchpress     = kwargs.get('benchpress')
   target         = kwargs.get('targets')
   feature_space  = kwargs.get('feature_space')
   top_k          = kwargs.get('top_k')
@@ -531,51 +533,102 @@ def MutecVsBenchPress(**kwargs) -> None:
   workspace_path = kwargs.get('workspace_path')
   groups = {}
 
-  for dbg in db_groups:
-    if dbg.group_name == "GitHub":
-      if not dbg.db_type == encoded.EncodedContentFiles:
-        raise ValueError("Scores require EncodedContentFiles but received", dbg.db_type)
-      groups["Mutec"] = ([], [])
-      for benchmark in target.get_benchmarks(feature_space):
+  def run_mutec(srcs: typing.List[str], target_features: typing.Dict[str, float], feat_space: str, top_k: int) -> typing.List[typing.Tuple[str, float]]:
 
-        ## Tuple of closest src, distance from target benchmark.
-        closest = sorted(
-          [(src, feature_sampler.calculate_distance(fv, benchmark.features, feature_space))
-           for src, fv in dbg.get_data_features(feature_space)],
-           key = lambda x: x[1]
-        )[:top_k]
+    def run_single(src: str, depth = 0):
 
-        # Split source and distances lists.
-        git_src  = [x for x, _ in closest]
-        git_dist = [x for _, x in closest]
+      with tempfile.NamedTemporaryFile("w", prefix="mutec_src", suffix='.cl', dir = tdir) as f:
+        # Write source file.
+        f.write(src)
+        f.flush()
+        # Fix compile_commands.json for source file.
+        compile_command = {
+          'directory' : f.parent,
+          'arguments' : [str(clang.CLANG), f.name] + ["-S", "-emit-llvm", "-o", "-"] + opencl.GetClangArgs(),
+          'file'      : str(f)
+        }
+        with open(f.parent / "compile_commands.json", 'w') as ccf:
+          json.dump([compile_command], ccf)
+        # Construct and execute mutec command
+        mutec_cmd = [
+          str(mutec),
+          str(f),
+          "-o",
+          str(f.parent)
+        ]
+        process = subprocess.Popen(
+          cmd,
+          stdout=subprocess.PIPE,
+          stderr=subprocess.PIPE,
+          universal_newlines=True,
+        )
+        stdout, stderr = process.communicate()
+        # Cleanup compile commands
+        shutil.remove(str(f.parent / "compile_commands.json"))
+        mutecs = glob.glob(str("{}.mutec*".format(str(f))))
+        ret = []
+        if depth < 5:
+          for mutated in mutecs:
+            ret += run_single(open(mutated, 'r').read(), depth = depth + 1)
+        return mutecs + ret
+    try:
+      tdir = FLAGS.local_filesystem
+    except Exception:
+      tdir = None
 
-        closest_mutec_src  = run_mutec(git_src, benchmark.features, feature_space, top_k) # tuple of (src, distance)
-        closest_mutec_dist = [x for x, _ in closest_mutec_src]
+    cands = []
+    for src in srcs:
+      cands += run_single(src)
+    ## Tuple of closest src, distance from target benchmark.
+    closest = sorted(
+      [(src, feature_sampler.calculate_distance(extractor.ExtractFeatures(src, [feat_space])[feat_space], target_features, feat_space)) for src in cands],
+       key = lambda x: x[1]
+    )[:top_k]    
+    return closest
 
-        if sum(closest_mutec_dist) < sum(closest_mutec_dist):
-          groups["Mutec"][0].append(benchmark.name)
-          # Compute target's distance from O(0,0)
-          target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
-          avg_dist           = sum(closest_mutec_dist) / top_k
-          groups["Mutec"][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
+  if not github.db_type == encoded.EncodedContentFiles:
+    raise ValueError("Scores require EncodedContentFiles but received", github.db_type)
+  groups["Mutec"] = ([], [])
+  for benchmark in target.get_benchmarks(feature_space):
 
-  for dbg in db_groups:
-    if dbg.group_name == "BenchPress":
-      if not dbg.db_type == samples_database.SamplesDatabase:
-        raise ValueError("BenchPress scores require SamplesDatabase but received", dbg.db_type)
-      groups[dbg.group_name] = ([], [])
+    ## Tuple of closest src, distance from target benchmark.
+    closest = sorted(
+      [(src, feature_sampler.calculate_distance(fv, target_features, feature_space))
+       for src, fv in github.get_data_features(feature_space)],
+       key = lambda x: x[1]
+    )[:top_k]
+
+    # Split source and distances lists.
+    git_src  = [x for x, _ in closest]
+    git_dist = [x for _, x in closest]
+
+    closest_mutec_src  = run_mutec(git_src, benchmark.features, feature_space, top_k) # tuple of (src, distance)
+    closest_mutec_dist = [x for x, _ in closest_mutec_src]
+
+    if sum(closest_mutec_dist) < sum(closest_mutec_dist):
+      groups["Mutec"][0].append(benchmark.name)
+      # Compute target's distance from O(0,0)
+      target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
+      avg_dist           = sum(closest_mutec_dist) / top_k
+      groups["Mutec"][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
+
+  for benchpress in db_groups:
+    if benchpress.group_name == "BenchPress":
+      if not benchpress.db_type == samples_database.SamplesDatabase:
+        raise ValueError("BenchPress scores require SamplesDatabase but received", benchpress.db_type)
+      groups[benchpress.group_name] = ([], [])
       for benchmark in target.get_benchmarks(feature_space):
         if benchmark.name in groups["Mutec"][0]:
-          groups[dbg.group_name][0].append(benchmark.name)
+          groups[benchpress.group_name][0].append(benchmark.name)
           # Find shortest distances.
           distances = sorted(
             [feature_sampler.calculate_distance(fv, benchmark.features, feature_space)
-             for fv in dbg.get_features(feature_space)]
+             for fv in benchpress.get_features(feature_space)]
           )
           # Compute target's distance from O(0,0)
           target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
           avg_dist = sum(distances[:top_k]) / len(distances[:top_k])
-          groups[dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
+          groups[benchpress.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
 
   plotter.GrouppedBars(
     groups = groups,
