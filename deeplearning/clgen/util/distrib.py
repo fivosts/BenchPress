@@ -111,7 +111,6 @@ def write(msg: str) -> None:
     with open(PATH / "msg-{}".format(x), 'w') as outf:
       outf.write(msg)
       outf.flush()
-
   msg = read()
   while len(glob.glob(str(PATH / "msg-*"))) > 0:
     time.sleep(0.5)
@@ -123,6 +122,7 @@ def read() -> str:
   """
   while not (PATH / "msg-{}".format(WORLD_RANK)).exists():
     time.sleep(0.5)
+  time.sleep(0.5)
   with open(PATH / "msg-{}".format(WORLD_RANK), 'r') as inf:
     msg = inf.read()
   os.remove(str(PATH / "msg-{}".format(WORLD_RANK)))
