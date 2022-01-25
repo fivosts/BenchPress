@@ -713,8 +713,9 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
       data = ses.query(PreprocessedContentFile).all()
     with out_db.Session() as ses:
       bar = tqdm.auto.trange(len(data), desc = "DB Merging", leave = True)
-      for df in bar(data):
+      for df in data:
         ses.add(PreprocessedContentFile.FromPreprocessedContentFile(df, idx = pkey + df.id))
+        bar.update(1)
       ses.commit()
   with out_db.Session() as ses:
     out_db.SetDone(ses)
