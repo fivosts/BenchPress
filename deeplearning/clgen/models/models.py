@@ -32,6 +32,7 @@ from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import commit
 from deeplearning.clgen.util import sqlutil
+from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.corpuses import tokenizers
@@ -104,7 +105,19 @@ class Model(object):
       self.config.training.num_pretrain_steps = FLAGS.num_pretrain_steps
     if FLAGS.num_epochs:
       self.config.training.num_epochs = FLAGS.num_epochs
-      
+
+    # Initialize distrib lock path.
+    if environment.WORLD_SIZE > 1:
+      lock_cache = cache.mkcache("locks")
+      lock_cache.mkdir(exist_ok = True)
+      distrib.init(lock_cache.path)
+
+    # Initialize corpuses
+    self.corpus           = corpuses.Corpus(config.corpus)
+    self.pre_train_corpus = None
+    if config.HasField("pre_train_corpus"):
+      self.pre_train_corpus = corpuses.Corpus(config.pre_train_corpus)
+
     self.hash = self._ComputeHash(self.pre_train_corpus, self.corpus, self.config)
     self.cache = cache.mkcache("model", self.hash)
     # Create the necessary cache directories.
@@ -112,15 +125,6 @@ class Model(object):
     (self.cache.path / "samples").mkdir(exist_ok=True)
 
     self._created = False
-
-    # Initialize distrib path
-    distrib.init(self.cache.path)
-
-    # Initialize corpuses.
-    self.corpus           = corpuses.Corpus(config.corpus)
-    self.pre_train_corpus = None
-    if config.HasField("pre_train_corpus"):
-      self.pre_train_corpus = corpuses.Corpus(config.pre_train_corpus)
 
     # Create symlink to encoded corpus.
     symlink = self.cache.path / "corpus"
