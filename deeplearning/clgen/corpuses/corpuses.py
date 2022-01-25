@@ -383,10 +383,10 @@ class Corpus(object):
       else:
         if environment.WORLD_RANK == 0:
           self._tokenizer = self._CreateTokenizer()
+          l.logger().warn("Created tokenizer.")
         distrib.barrier()
         if environment.WORLD_RANK != 0:
           self._tokenizer = tokenizers.TokenizerBase.FromFile(self.tokenizer_path)
-        distrib.barrier()
     return self._tokenizer
 
   def _CreateTokenizer(self) -> tokenizers.TokenizerBase:
