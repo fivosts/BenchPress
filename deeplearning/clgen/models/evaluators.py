@@ -582,7 +582,7 @@ def MutecVsBenchPress(**kwargs) -> None:
           if x not in visited]
         )
         visited.update(mutecs)
-        if depth < 3 and len(visited) < 1000:
+        if depth < 3 and len(visited) < 200:
           ret = set()
           for mutated in mutecs:
             ret.update(run_single(mutated, depth = depth + 1, visited = visited))
