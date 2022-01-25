@@ -541,7 +541,7 @@ def MutecVsBenchPress(**kwargs) -> None:
 
   def run_mutec(srcs: typing.List[str], target_features: typing.Dict[str, float], feat_space: str, top_k: int) -> typing.List[typing.Tuple[str, float]]:
 
-    def run_single(src: str, depth = 0):
+    def run_single(src: str, depth = 0, visited: set = set()):
 
       with tempfile.NamedTemporaryFile("w", prefix="mutec_src", suffix='.cl', dir = tdir) as f:
         # Write source file.
@@ -555,7 +555,7 @@ def MutecVsBenchPress(**kwargs) -> None:
             [str(clang.CLANG), f.name] +
             ["-S", "-emit-llvm", "-o", "-"] +
             opencl.GetClangArgs(use_shim = False, use_aux_headers = False),
-          'file'      : str(f)
+          'file'      : str(f.name)
         }
         with open(base_path / "compile_commands.json", 'w') as ccf:
           json.dump([compile_command], ccf)
@@ -573,20 +573,22 @@ def MutecVsBenchPress(**kwargs) -> None:
           universal_newlines=True,
         )
         stdout, stderr = process.communicate()
-        l.logger().error(mutec_cmd)
         l.logger().error(stdout)
-        l.logger().error(stderr)
-        l.logger().error(src)
-        input()
+        l.logger().error(depth)
         # Cleanup compile commands
         os.remove(str(base_path / "compile_commands.json"))
-        mutecs = glob.glob(str("{}.mutec*".format(str(f.name))))
-        l.logger().warn(mutecs)
-        ret = []
+        mutecs = set(
+          [x for x in 
+            [open(x, 'r').read() for x in glob.glob(str("{}.mutec*".format(str(f.name))))]
+          if x not in visited]
+        )
+        visited.update(mutecs)
         if depth < 5:
+          ret = set()
           for mutated in mutecs:
-            ret += run_single(open(mutated, 'r').read(), depth = depth + 1)
-        return mutecs + ret
+            ret.add(run_single(mutated, depth = depth + 1, visited = visited))
+          mutecs.update(ret)
+        return mutecs
     try:
       tdir = FLAGS.local_filesystem
     except Exception:
