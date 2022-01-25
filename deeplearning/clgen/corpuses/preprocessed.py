@@ -236,7 +236,7 @@ class PreprocessedContentFiles(sqlutil.Database):
       super(PreprocessedContentFiles, self).__init__(
         url, Base, must_exist=must_exist
       )
-    if environment.WORLD_SIZE > 1:
+    if environment.WORLD_SIZE > 1 and not is_replica:
       # Conduct engine connections to replicated preprocessed chunks.
       self.base_path = pathlib.Path(url.replace("sqlite:///", "")).resolve().parent
       hash_id = self.base_path.parent.name
