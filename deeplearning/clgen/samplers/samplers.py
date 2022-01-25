@@ -400,12 +400,14 @@ class Sampler(object):
     # Create the necessary cache directories.
     self.cache = cache.mkcache("sampler", self.hash)
     self.samples_directory = self.cache.path / "samples"
-    self.samples_directory.mkdir(exist_ok = True)
+    if environment.WORLD_RANK == 0:
+      self.samples_directory.mkdir(exist_ok = True)
     self.corpus_directory = None
     self.sample_corpus    = None
     if self.config.HasField("sample_corpus"):
       self.corpus_directory = self.cache.path / "sample_corpus"
-      self.corpus_directory.mkdir(exist_ok = True)
+      if environment.WORLD_RANK == 0:
+        self.corpus_directory.mkdir(exist_ok = True)
       if self.config.sample_corpus.HasField("corpus"):
         self.sample_corpus = corpuses.Corpus(self.config.sample_corpus.corpus)
         self.sample_corpus.Create()
@@ -485,7 +487,8 @@ class Sampler(object):
     sampled with symbolic links created in this function.
     """
     assert os.path.isdir(db_path), "Parent path of database is not an existing path!"
-    (self.samples_directory / model_hash).mkdir(exist_ok = True)
+    if environment.WORLD_RANK == 0:
+      (self.samples_directory / model_hash).mkdir(exist_ok = True)
 
     for file in db_path.iterdir():
       symlink = self.samples_directory / model_hash / file.name
