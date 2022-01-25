@@ -258,7 +258,7 @@ class Corpus(object):
         raise ValueError(
           f"Pre-processed corpus contains no files: '{self.preprocessed.url}'"
         )
-    l.logger().info("Pre-processed {}train corpus in corpuses/{}".format("pre_" if self.pre_train else "", pathlib.Path(self.preprocessed.url).parent.stem))
+      l.logger().info("Pre-processed {}train corpus in corpuses/{}".format("pre_" if self.pre_train else "", pathlib.Path(self.preprocessed.url).parent.stem))
 
     start_time      = time.time()
     self._tokenizer = tokenizer
