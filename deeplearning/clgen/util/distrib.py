@@ -56,18 +56,27 @@ def lock() -> None:
   """
   Acquire lockfile to proceed to critical section.
   """
-  locks = glob.glob(str(PATH / "lock-*"))
-  while True:
-    if len(locks) == 0:
-      break
-  with open(PATH / "lock-{}".format(WORLD_RANK), 'w') as outf:
+  locks = glob.glob(str(PATH / "critical-lock-*"))
+  while len(locks) > 0:
+    time.sleep(0.5)
+  with open(PATH / "critical-lock-{}".format(WORLD_RANK), 'w') as outf:
     outf.write("{}\n".format(WORLD_RANK))
+  ## Maybe more than one processes are here already. Prioritize by id.
+  locks = glob.glob(str(PATH / "critical-lock-*"))
+  if len(locks) > 1:
+    min_id = min([int(x.split('critical-lock-')[-1]) for x in locks])
+    if WORLD_RANK != min_id:
+      unlock()
+      lock()
   return
 
 def unlock() -> None:
   """
   Release node lock.
   """
+  if not (PATH / "critical-lock-{}".format(WORLD_RANK)).exists():
+    raise FileNotFoundError("Node {} lock missing.".format(WORLD_RANK))
+  os.remove(PATH / "critical-lock-{}".format(WORLD_RANK))
   return
 
 def init(path: pathlib.Path) -> None:
