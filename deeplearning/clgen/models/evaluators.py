@@ -4,6 +4,7 @@ Evaluators - result fetchers for samples across different techniques.
 import typing
 import io
 import glob
+import progressbar
 import json
 import os
 import tempfile
@@ -593,7 +594,8 @@ def MutecVsBenchPress(**kwargs) -> None:
       tdir = None
 
     cands = []
-    for src in srcs:
+    bar = progressbar.ProgressBar(max_value = len(srcs))
+    for src in bar(srcs):
       cands += run_single(src)
     ## Tuple of closest src, distance from target benchmark.
     closest = sorted(
