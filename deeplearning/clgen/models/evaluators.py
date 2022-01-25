@@ -480,7 +480,7 @@ def TopKCLDrive(**kwargs) -> None:
           bench_runs = nruns
           while benchmark_label == "TimeOut" and bench_runs > 0:
             try:
-              benchmark_label = opencl.CLDriveLabel(benchmark.contents, num_runs = bench_runs, gsize = gs, lsize = ls, timeout = 600)
+              benchmark_label = opencl.CLDriveLabel(benchmark.contents, num_runs = bench_runs, gsize = gs, lsize = ls, timeout = 200)
             except TimeoutError:
               bench_runs = bench_runs // 10
 
@@ -497,7 +497,7 @@ def TopKCLDrive(**kwargs) -> None:
             c_runs = nruns
             while label == "TimeOut" and c_runs > 0:
               try:
-                label = opencl.CLDriveLabel(src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 600)
+                label = opencl.CLDriveLabel(src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 200)
               except TimeoutError:
                 c_runs = c_runs // 10
 
@@ -582,7 +582,7 @@ def MutecVsBenchPress(**kwargs) -> None:
           if x not in visited]
         )
         visited.update(mutecs)
-        if depth < 3:
+        if depth < 3 and len(visited) < 1000:
           ret = set()
           for mutated in mutecs:
             ret.update(run_single(mutated, depth = depth + 1, visited = visited))
