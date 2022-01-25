@@ -248,10 +248,11 @@ class PreprocessedContentFiles(sqlutil.Database):
       tdir.mkdir(parents = True, exist_ok = True)
       distrib.unlock()
       self.replicated_path = tdir / "preprocessed_{}.db".format(environment.WORLD_RANK)
-      self.replicated = PreprocessedContentFiles(
+      self.replicated = super(PreprocessedContentFiles, self).__init__(
         url = "sqlite:///{}".format(str(self.replicated_path))
       )
       distrib.barrier()
+      l.logger().info("Set up replica pre-processed databases.")
     return
 
   def Create(self, config: corpus_pb2.Corpus):
