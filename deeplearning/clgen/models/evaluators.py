@@ -602,7 +602,7 @@ def MutecVsBenchPress(**kwargs) -> None:
     for src in cands:
       feats = extractor.ExtractFeatures(src, [feat_space])
       if feat_space in feats:
-        closest.append(src, feature_sampler.calculate_distance(feats[feat_space], target_features, feat_space))
+        closest.append((src, feature_sampler.calculate_distance(feats[feat_space], target_features, feat_space)))
     closest = sorted(closest, key = lambda x: x[1])[:top_k]
     return closest
 
