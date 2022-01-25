@@ -18,6 +18,13 @@ WORLD_SIZE  = environment.WORLD_SIZE
 
 PATH = None
 
+LOCK_TYPES = [
+  'barrier-lock-*',
+  'barrier-escape-*',
+  'critical-lock-*',
+  'index-*',
+]
+
 def barrier(fn: typing.Callable = None) -> None:
   """
   Node processes are blocked until all nodes have reached this checkpoint.
@@ -94,6 +101,16 @@ def init(path: pathlib.Path) -> None:
     PATH = pathlib.Path(path).resolve()
   else:
     PATH = path
+  return
+
+def cleanup() -> None:
+  """
+  Cleanup any distributed lock files used.
+  """
+  if PATH is not None:
+    for tp in LOCK_TYPES:
+      for f in glob.glob(str(PATH / tp)):
+        os.remove(f)
   return
 
 class ProgressBar(object):
