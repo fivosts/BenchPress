@@ -573,8 +573,6 @@ def MutecVsBenchPress(**kwargs) -> None:
           universal_newlines=True,
         )
         stdout, stderr = process.communicate()
-        l.logger().error(stdout)
-        l.logger().error(depth)
         # Cleanup compile commands
         os.remove(str(base_path / "compile_commands.json"))
         mutecs = set(
