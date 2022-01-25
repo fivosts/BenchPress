@@ -36,6 +36,7 @@ def barrier(fn: typing.Callable = None) -> None:
       raise FileNotFoundError("Distributed env path has not been set!")
     with open(PATH / "barrier-lock-{}".format(WORLD_RANK), 'w') as outf:
       outf.write("{}\n".format(WORLD_RANK))
+      outf.flush()
 
     barriers = glob.glob(str(PATH / "barrier-lock-*"))
 
@@ -47,6 +48,7 @@ def barrier(fn: typing.Callable = None) -> None:
 
     with open(PATH / "barrier-escape-{}".format(WORLD_RANK), 'w') as outf:
       outf.write("{}\n".format(WORLD_RANK))
+      outf.flush()
 
     while len(barriers) > 0:
       barriers = glob.glob(str(PATH / "barrier-lock-*"))
@@ -76,6 +78,7 @@ def lock() -> None:
     raise ValueError("Node {} lock already exists.".format(WORLD_RANK))
   with open(PATH / "critical-lock-{}".format(WORLD_RANK), 'w') as outf:
     outf.write("{}\n".format(WORLD_RANK))
+    outf.flush()
 
   ## Maybe more than one processes are here already. Prioritize by id.
   ## Unlock and Re-lock if you are not the minimum privileged id.
@@ -107,6 +110,8 @@ def write(msg: str) -> None:
   for x in range(WORLD_SIZE):
     with open(PATH / "msg-{}".format(x), 'w') as outf:
       outf.write(msg)
+      outf.flush()
+
   msg = read()
   while len(glob.glob(str(PATH / "msg-*"))) > 0:
     time.sleep(0.5)
@@ -139,10 +144,11 @@ def cleanup() -> None:
   """
   Cleanup any distributed lock files used.
   """
-  if PATH is not None:
+  if WORLD_RANK == 0 and PATH is not None:
     for tp in LOCK_TYPES:
       for f in glob.glob(str(PATH / tp)):
         os.remove(f)
+  barrier()
   return
 
 class ProgressBar(object):
@@ -178,6 +184,7 @@ class ProgressBar(object):
     """
     with open(self.path / "index-{}".format(WORLD_RANK), 'w') as outf:
       outf.write(idx - self.offset)
+      outf.flush()
     return
 
   def update(self, idx: int) -> None:
