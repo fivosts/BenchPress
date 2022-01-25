@@ -241,7 +241,7 @@ class PreprocessedContentFiles(sqlutil.Database):
     if environment.WORLD_SIZE > 1 and not is_replica:
       # Conduct engine connections to replicated preprocessed chunks.
       self.base_path = pathlib.Path(url.replace("sqlite:///", "")).resolve().parent
-      hash_id = self.base_path.parent.name
+      hash_id = self.base_path.name
       try:
         tdir = pathlib.Path(FLAGS.local_filesystem).resolve() / hash_id / "node_preprocessed"
       except Exception:
