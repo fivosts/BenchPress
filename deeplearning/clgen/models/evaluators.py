@@ -712,7 +712,7 @@ def main(config: evaluator_pb2.Evaluation):
       raise NotImplementedError(ev)
 
     # Gather database groups and cache them.
-    if len(sev.db_group) > 0:
+    if not ev.HasField("mutec_vs_benchpress"):
       for dbs in sev.db_group:
         key = dbs.group_name + ''.join(dbs.database)
         if key not in db_cache:
