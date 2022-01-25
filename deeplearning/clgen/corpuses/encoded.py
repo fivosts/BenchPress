@@ -32,6 +32,8 @@ from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.util import monitors
+from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import distrib
 from deeplearning.clgen.features import extractor
 from absl import app, flags
 import humanize
