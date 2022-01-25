@@ -57,11 +57,19 @@ def lock() -> None:
   Acquire lockfile to proceed to critical section.
   """
   locks = glob.glob(str(PATH / "critical-lock-*"))
+
+  ## Busy waiting to acquire lock.
   while len(locks) > 0:
     time.sleep(0.5)
+
+  ## Register lockfile.
+  if (PATH / "critical-lock-{}".format(WORLD_RANK)).exists():
+    raise ValueError("Node {} lock already exists.".format(WORLD_RANK))
   with open(PATH / "critical-lock-{}".format(WORLD_RANK), 'w') as outf:
     outf.write("{}\n".format(WORLD_RANK))
+
   ## Maybe more than one processes are here already. Prioritize by id.
+  ## Unlock and Re-lock if you are not the minimum privileged id.
   locks = glob.glob(str(PATH / "critical-lock-*"))
   if len(locks) > 1:
     min_id = min([int(x.split('critical-lock-')[-1]) for x in locks])
