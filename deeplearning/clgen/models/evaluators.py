@@ -586,7 +586,7 @@ def MutecVsBenchPress(**kwargs) -> None:
         if depth < 5:
           ret = set()
           for mutated in mutecs:
-            ret.add(run_single(mutated, depth = depth + 1, visited = visited))
+            ret.update(run_single(mutated, depth = depth + 1, visited = visited))
           mutecs.update(ret)
         return mutecs
     try:
