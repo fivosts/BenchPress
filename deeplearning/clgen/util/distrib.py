@@ -179,6 +179,10 @@ class ProgressBar(object):
     return
 
   def update(self, idx: int) -> None:
+    """
+    Master node updates the bar,
+    slave nodes update their indices.
+    """
     if WORLD_RANK == 0:
       total_idx = self._fetch_indices(idx)
       self.bar.update(total_idx)
