@@ -442,9 +442,6 @@ class PreprocessedContentFiles(sqlutil.Database):
         else:
           bar = progressbar.ProgressBar(max_value = total)
 
-        # Make sure everyone has read the right copy of done IDs.
-        distrib.barrier()
-
         last_commit     = time.time()
         wall_time_start = time.time()
 
@@ -455,8 +452,6 @@ class PreprocessedContentFiles(sqlutil.Database):
             chunk = min(chunk, limit - idx)
             batch = db.main_files_batch(chunk, idx, exclude_id = done)
             idx += chunk - len(batch)
-            if environment.WORLD_RANK == 0:
-              bar.update(idx)
             pool = multiprocessing.Pool()
             for preprocessed_list in pool.imap_unordered(
                                       functools.partial(
@@ -473,11 +468,8 @@ class PreprocessedContentFiles(sqlutil.Database):
                 if wall_time_end - last_commit > 10:
                   session.commit()
                   last_commit = wall_time_end
-                  if environment.WORLD_SIZE > 1:
-                    bar.update(idx)
               idx += 1
-              if environment.WORLD_SIZE == 1:
-                bar.update(idx)
+              bar.update(idx)
             pool.close()
           except KeyboardInterrupt as e:
             pool.terminate()
@@ -488,8 +480,6 @@ class PreprocessedContentFiles(sqlutil.Database):
         session.commit()
         if environment.WORLD_SIZE > 1:
           bar.finalize(idx)
-    # Make sure every node is done by now.
-    distrib.barrier()
     return
 
   def MergeReplicas(self) -> None:
