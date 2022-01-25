@@ -231,8 +231,8 @@ def BQPreprocessorWorker(file: bqdb.bqMainFile, preprocessors: typing.List[str])
 class PreprocessedContentFiles(sqlutil.Database):
   """A database of pre-processed contentfiles."""
 
-  def __init__(self, url: str, must_exist: bool = False):
-    if environment.WORLD_RANK == 0:
+  def __init__(self, url: str, must_exist: bool = False, is_replica = False):
+    if environment.WORLD_RANK == 0 or is_replica:
       super(PreprocessedContentFiles, self).__init__(
         url, Base, must_exist=must_exist
       )
@@ -248,8 +248,9 @@ class PreprocessedContentFiles(sqlutil.Database):
       tdir.mkdir(parents = True, exist_ok = True)
       distrib.unlock()
       self.replicated_path = tdir / "preprocessed_{}.db".format(environment.WORLD_RANK)
-      self.replicated = super(PreprocessedContentFiles, self).__init__(
-        url = "sqlite:///{}".format(str(self.replicated_path))
+      self.replicated = PreprocessedContentFiles(
+        url = "sqlite:///{}".format(str(self.replicated_path)),
+        is_replica = True
       )
       distrib.barrier()
       l.logger().info("Set up replica pre-processed databases.")
