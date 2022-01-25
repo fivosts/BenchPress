@@ -19,11 +19,11 @@ WORLD_SIZE  = environment.WORLD_SIZE
 PATH = None
 
 LOCK_TYPES = [
-  'barrier-lock-*',
-  'barrier-escape-*',
-  'critical-lock-*',
-  'index-*',
-  'msg-*'
+  'barrier-lock-',
+  'barrier-escape-',
+  'critical-lock-',
+  'index-',
+  'msg*'
 ]
 
 def barrier(fn: typing.Callable = None) -> None:
@@ -144,10 +144,9 @@ def cleanup() -> None:
   """
   Cleanup any distributed lock files used.
   """
-  if WORLD_RANK == 0 and PATH is not None:
-    for tp in LOCK_TYPES:
-      for f in glob.glob(str(PATH / tp)):
-        os.remove(f)
+  for tp in LOCK_TYPES:
+    for f in glob.glob(str(PATH / "{}{}".format(tp, WORLD_RANK))):
+      os.remove(f)
   barrier()
   return
 
