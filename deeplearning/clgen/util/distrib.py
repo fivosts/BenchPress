@@ -60,6 +60,7 @@ def barrier(fn: typing.Callable = None) -> None:
           os.remove(str(b))
       else:
         time.sleep(0.2)
+    time.sleep(0.5)
   return
 
 def lock() -> None:
