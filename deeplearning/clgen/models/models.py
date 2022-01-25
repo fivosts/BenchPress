@@ -105,10 +105,6 @@ class Model(object):
     if FLAGS.num_epochs:
       self.config.training.num_epochs = FLAGS.num_epochs
       
-    self.corpus           = corpuses.Corpus(config.corpus)
-    self.pre_train_corpus = None
-    if config.HasField("pre_train_corpus"):
-      self.pre_train_corpus = corpuses.Corpus(config.pre_train_corpus)
     self.hash = self._ComputeHash(self.pre_train_corpus, self.corpus, self.config)
     self.cache = cache.mkcache("model", self.hash)
     # Create the necessary cache directories.
@@ -119,6 +115,12 @@ class Model(object):
 
     # Initialize distrib path
     distrib.init(self.cache.path)
+
+    # Initialize corpuses.
+    self.corpus           = corpuses.Corpus(config.corpus)
+    self.pre_train_corpus = None
+    if config.HasField("pre_train_corpus"):
+      self.pre_train_corpus = corpuses.Corpus(config.pre_train_corpus)
 
     # Create symlink to encoded corpus.
     symlink = self.cache.path / "corpus"
