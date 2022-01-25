@@ -28,6 +28,7 @@ from sqlalchemy.ext import declarative
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import crypto
+from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import commit
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
