@@ -562,7 +562,7 @@ def MutecVsBenchPress(**kwargs) -> None:
         # Construct and execute mutec command
         mutec_cmd = [
           str(mutec),
-          str(f),
+          str(f.name),
           "-o",
           str(base_path)
         ]
@@ -573,9 +573,14 @@ def MutecVsBenchPress(**kwargs) -> None:
           universal_newlines=True,
         )
         stdout, stderr = process.communicate()
+        l.logger().error(mutec_cmd)
+        l.logger().error(stdout)
+        l.logger().error(stderr)
+        l.logger().error(src)
+        input()
         # Cleanup compile commands
         os.remove(str(base_path / "compile_commands.json"))
-        mutecs = glob.glob(str("{}.mutec*".format(str(f))))
+        mutecs = glob.glob(str("{}.mutec*".format(str(f.name))))
         l.logger().warn(mutecs)
         ret = []
         if depth < 5:
