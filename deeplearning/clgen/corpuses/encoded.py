@@ -277,12 +277,29 @@ class EncodedContentFiles(sqlutil.Database):
       EmptyCorpusException: If the PreprocessedContentFiles database has
         no files.
     """
-    with self.Session() as session:
+    if environment.WORLD_SIZE > 1:
+      if environment.WORLD_RANK == 0:
+        with self.Session() as session:
+          status = self.IsDone(session)
+          distrib.write(str(status))
+          if status:
+            return
+      else:
+        status = distrib.read()
+        if status == "True":
+          return
+        if status != "False":
+          raise OSError("Broken distributed message: '{}'".format(status))
+
+    sessmaker = self.Session if environment.WORLD_SIZE == 1 else self.replicated.Session
+    with sessmaker() as session:
       if not self.IsDone(session):
-        self.Import(session, p, tokenizer, contentfile_separator)
-        self.SetStats(session)
+        self.Import(session, config)
         self.SetDone(session)
         session.commit()
+
+    if environment.WORLD_SIZE > 1:
+      self.MergeReplicas()
 
       # Logging output.
     #   num_files = session.query(EncodedContentFile).count()
@@ -471,6 +488,25 @@ class EncodedContentFiles(sqlutil.Database):
         for m in self.feature_monitors.values():
           m.plot()
     session.commit()
+    return
+
+  def MergeReplicas(self) -> None:
+    """
+    When distributed nodes work for the same encoded DB
+    this function moves finalized encoded chunks back into the AFS
+    and master node merges them into the final encodeddb
+    """
+    shutil.copy(
+      self.replicated.url.replace("sqlite:///", ""), self.base_path / "encoded_{}.db".format(environment.WORLD_RANK)
+    )
+    distrib.barrier()
+    if environment.WORLD_RANK == 0:
+      db_chunks = glob.glob(str(self.base_path / "encoded_*.db"))
+      dbs = [EncodedContentFiles(url = "sqlite:///{}".format(p), must_exist = True) for p in db_chunks]
+      merge_db(dbs, self)
+      for p in db_chunks:
+        os.remove(p)
+    distrib.barrier()
     return
 
   @staticmethod
