@@ -63,6 +63,9 @@ def lock() -> None:
   """
   Acquire lockfile to proceed to critical section.
   """
+  ## Corner-case where no DDP is used.
+  if WORLD_SIZE == 1:
+    return
   ## Busy waiting to acquire lock.
   while len(glob.glob(str(PATH / "critical-lock-*"))) > 0:
     time.sleep(0.5)
@@ -87,6 +90,8 @@ def unlock() -> None:
   """
   Release node lock.
   """
+  if WORLD_SIZE == 1:
+    return
   if not (PATH / "critical-lock-{}".format(WORLD_RANK)).exists():
     raise FileNotFoundError("Node {} lock missing.".format(WORLD_RANK))
   os.remove(PATH / "critical-lock-{}".format(WORLD_RANK))
