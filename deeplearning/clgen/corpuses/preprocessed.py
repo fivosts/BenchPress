@@ -25,7 +25,6 @@ import time
 import typing
 import functools
 import humanize
-import progressbar
 import tqdm
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
@@ -444,7 +443,7 @@ class PreprocessedContentFiles(sqlutil.Database):
         if environment.WORLD_SIZE > 1:
           bar = distrib.ProgressBar(max_value = total, offset = idx)
         else:
-          bar = progressbar.ProgressBar(max_value = total)
+          bar = tqdm.auto.trange(total, desc = "Preprocessing", leave = True)
 
         last_commit     = time.time()
         wall_time_start = time.time()
@@ -711,7 +710,7 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
     with db.Session() as ses:
       data = ses.query(PreprocessedContentFile).all()
     with out_db.Session() as ses:
-      bar = progressbar.ProgressBar(max_value = len(data))
+      bar = tqdm.auto.trange(len(data), desc = "DB Merging", leave = True)
       for df in bar(data):
         ses.add(PreprocessedContentFile.FromPreprocessedContentFile(df, idx = pkey + df.id))
       ses.commit()
