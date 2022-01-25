@@ -97,6 +97,31 @@ def unlock() -> None:
   os.remove(PATH / "critical-lock-{}".format(WORLD_RANK))
   return
 
+def write(msg: str) -> None:
+  """
+  Node broadcasts a message to all other nodes.
+  This function is not process-safe. User must ensure one node calls it
+  and all reads have been complete before re-writing.
+  """
+  for x in range(WORLD_SIZE):
+    with open(PATH / "msg-{}".format(x), 'w') as outf:
+      outf.write(msg)
+  msg = read()
+  while len(glob.glob(str(PATH / "msg-*"))) > 0:
+    time.sleep(0.5)
+  return
+
+def read() -> str:
+  """
+  All nodes read broadcasted message.
+  """
+  while not (PATH / "msg-{}".format(WORLD_RANK)).exist():
+    time.sleep(0.5)
+  with open(PATH / "msg-{}".format(WORLD_RANK), 'r') as inf:
+    msg = inf.read()
+  os.remove(str(PATH / "msg-{}".format(WORLD_RANK)))
+  return msg
+
 def init(path: pathlib.Path) -> None:
   """
   Initialize parent directory for distrib coordination.
