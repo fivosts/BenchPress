@@ -370,6 +370,7 @@ def initMain(*args, **kwargs):
     **kwargs: Arguments to be passed to the function.
   """
   mail = None
+  distrib.cleanup()
   if FLAGS.notify_me:
     mail = client.initClient(FLAGS.notify_me)
   l.initLogger(name = "clgen", mail = mail, rank = environment.WORLD_RANK)
