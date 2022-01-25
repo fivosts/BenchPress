@@ -159,7 +159,7 @@ class Corpus(object):
     self.content_id = ResolveContentId(self.config)
     # Database of pre-processed files.
     preprocessed_id = ResolvePreprocessedId(self.content_id, self.config)
-    if environment.WORLD_RANK == 0
+    if environment.WORLD_RANK == 0:
       cache.cachepath("corpus", "preprocessed", preprocessed_id).mkdir(exist_ok=True, parents=True)
     distrib.barrier()
     preprocessed_db_path = cache.cachepath("corpus", "preprocessed",
