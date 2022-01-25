@@ -271,7 +271,7 @@ class PreprocessedContentFiles(sqlutil.Database):
         if status == "True":
           return
         if status != "False":
-          raise OSError("Broken distributed message: {}".format(status))
+          raise OSError("Broken distributed message: '{}'".format(status))
 
     sessmaker = self.Session if environment.WORLD_SIZE == 1 else self.replicated.Session
     with sessmaker() as session:
