@@ -26,6 +26,7 @@ import typing
 import functools
 import humanize
 import progressbar
+import tqdm
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from sqlalchemy.sql import func
@@ -390,7 +391,7 @@ class PreprocessedContentFiles(sqlutil.Database):
             else:
               jobs[-1].append(t)
             total += 1
-          bar = progressbar.ProgressBar(max_value=total)
+          bar = tqdm.auto.trange(total, desc = "Preprocessing", leave = True)
           c = 0
           last_commit = time.time()
           wall_time_start = time.time()
