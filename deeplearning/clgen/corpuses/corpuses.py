@@ -35,6 +35,8 @@ from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import commit
 from deeplearning.clgen.util import pbutil
+from deeplearning.clgen.util import distrib
+from deeplearning.clgen.util import environment
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.corpuses import preprocessed
@@ -151,11 +153,15 @@ class Corpus(object):
     # Set and used in GetTrainingData().
     self._indices_arrays: typing.Optional[typing.List[np.array]] = None
 
-    cache.cachepath("corpus").mkdir(parents=True, exist_ok=True)
+    if environment.WORLD_RANK == 0
+      cache.cachepath("corpus").mkdir(parents=True, exist_ok=True)
+    distrib.barrier()
     self.content_id = ResolveContentId(self.config)
     # Database of pre-processed files.
     preprocessed_id = ResolvePreprocessedId(self.content_id, self.config)
-    cache.cachepath("corpus", "preprocessed", preprocessed_id).mkdir(exist_ok=True, parents=True)
+    if environment.WORLD_RANK == 0
+      cache.cachepath("corpus", "preprocessed", preprocessed_id).mkdir(exist_ok=True, parents=True)
+    distrib.barrier()
     preprocessed_db_path = cache.cachepath("corpus", "preprocessed",
                                            preprocessed_id, "preprocessed.db")
 
@@ -165,31 +171,35 @@ class Corpus(object):
       f"sqlite:///{preprocessed_db_path}"
     )
     # Create symlink to contentfiles.
-    symlink = (pathlib.Path(self.preprocessed.url[len("sqlite:///") :]).parent / "contentfiles")
-    if not symlink.is_symlink():
-      if config.HasField("local_directory"):
-        os.symlink(
-          str(ExpandConfigPath(config.local_directory,   path_prefix=FLAGS.clgen_local_path_prefix)),
-          symlink,
-        )
-      elif config.HasField("local_tar_archive"):
-        os.symlink(
-          str(ExpandConfigPath(config.local_tar_archive, path_prefix=FLAGS.clgen_local_path_prefix)),
-          symlink,
-        )
-      elif config.HasField("bq_database"):
-        os.symlink(
-          str(ExpandConfigPath(config.bq_database, path_prefix=FLAGS.clgen_local_path_prefix)),
-          symlink,
-        )  
-      # elif config.HasField("fetch_github"):
-      #   os.symlink(
-      #     str(ExpandConfigPath(config.fetch_github, path_prefix=FLAGS.clgen_local_path_prefix)),
-      #     symlink,
-      #   )
+    if environment.WORLD_RANK == 0:
+      symlink = (pathlib.Path(self.preprocessed.url[len("sqlite:///") :]).parent / "contentfiles")
+      if not symlink.is_symlink():
+        if config.HasField("local_directory"):
+          os.symlink(
+            str(ExpandConfigPath(config.local_directory,   path_prefix=FLAGS.clgen_local_path_prefix)),
+            symlink,
+          )
+        elif config.HasField("local_tar_archive"):
+          os.symlink(
+            str(ExpandConfigPath(config.local_tar_archive, path_prefix=FLAGS.clgen_local_path_prefix)),
+            symlink,
+          )
+        elif config.HasField("bq_database"):
+          os.symlink(
+            str(ExpandConfigPath(config.bq_database, path_prefix=FLAGS.clgen_local_path_prefix)),
+            symlink,
+          )  
+        # elif config.HasField("fetch_github"):
+        #   os.symlink(
+        #     str(ExpandConfigPath(config.fetch_github, path_prefix=FLAGS.clgen_local_path_prefix)),
+        #     symlink,
+        #   )
+    distrib.barrier()
     # Data of encoded pre-preprocessed files.
     encoded_id = ResolveEncodedId(self.content_id, self.config)
-    cache.cachepath("corpus", "encoded", encoded_id).mkdir(exist_ok=True, parents=True)
+    if environment.WORLD_RANK == 0:
+      cache.cachepath("corpus", "encoded", encoded_id).mkdir(exist_ok=True, parents=True)
+    distrib.barrier()
     db_path = cache.cachepath("corpus", "encoded", encoded_id, "encoded.db")
     if self.config.HasField("pre_encoded_corpus_url"):
       self.encoded = encoded.EncodedContentFiles(config.pre_encoded_corpus_url, self.pre_train)
@@ -210,8 +220,10 @@ class Corpus(object):
         )
     self.hash = encoded_id
     self.cache = cache.mkcache("corpus", "encoded", encoded_id)
-    commit.saveCommit(self.cache.path)
-    commit.saveCommit(self.cache.path.parent.parent / "preprocessed" / preprocessed_id)
+    if environment.WORLD_RANK == 0:
+      commit.saveCommit(self.cache.path)
+      commit.saveCommit(self.cache.path.parent.parent / "preprocessed" / preprocessed_id)
+    distrib.barrier()
     l.logger().info("Initialized {}train corpus in {}".format("pre_" if self.pre_train else "", self.cache.path))
     return
 
@@ -373,7 +385,12 @@ class Corpus(object):
       if self.tokenizer_path.is_file():
         self._tokenizer = tokenizers.TokenizerBase.FromFile(self.tokenizer_path)
       else:
-        self._tokenizer = self._CreateTokenizer()
+        if environment.WORLD_RANK == 0:
+          self._tokenizer = self._CreateTokenizer()
+        distrib.barrier()
+        if environment.WORLD_RANK != 0:
+          self._tokenizer = tokenizers.TokenizerBase.FromFile(self.tokenizer_path)
+        distrib.barrier()
     return self._tokenizer
 
   def _CreateTokenizer(self) -> tokenizers.TokenizerBase:
@@ -611,7 +628,9 @@ def GetHashOfArchiveContents(archive: pathlib.Path) -> str:
 
   if not archive.is_file():
     l.logger().info("Corpus found in registry. Downloading from Google Drive...")
-    gdown.download("https://drive.google.com/uc?id={}".format(reg[archive.name]['url']), str(archive))
+    if environment.WORLD_RANK == 0:
+      gdown.download("https://drive.google.com/uc?id={}".format(reg[archive.name]['url']), str(archive))
+    distrib.barrier()
 
   if 'hash' in reg[archive.name]:
     return reg[archive.name]['hash']
