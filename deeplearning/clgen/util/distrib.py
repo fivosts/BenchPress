@@ -56,10 +56,8 @@ def lock() -> None:
   """
   Acquire lockfile to proceed to critical section.
   """
-  locks = glob.glob(str(PATH / "critical-lock-*"))
-
   ## Busy waiting to acquire lock.
-  while len(locks) > 0:
+  while len(glob.glob(str(PATH / "critical-lock-*"))) > 0:
     time.sleep(0.5)
 
   ## Register lockfile.
