@@ -598,10 +598,12 @@ def MutecVsBenchPress(**kwargs) -> None:
     for src in bar(srcs):
       cands += run_single(src)
     ## Tuple of closest src, distance from target benchmark.
-    closest = sorted(
-      [(src, feature_sampler.calculate_distance(extractor.ExtractFeatures(src, [feat_space])[feat_space], target_features, feat_space)) for src in cands],
-       key = lambda x: x[1]
-    )[:top_k]    
+    closest = []
+    for src in cands:
+      feats = extractor.ExtractFeatures(src, [feat_space])
+      if feat_space in feats:
+        closest.append(src, feature_sampler.calculate_distance(feats[feat_space], target_features, feat_space))
+    closest = sorted(closest, key = lambda x: x[1])[:top_k]
     return closest
 
   if github.db_type != encoded.EncodedContentFiles:
