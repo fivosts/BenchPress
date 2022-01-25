@@ -208,7 +208,7 @@ class Corpus(object):
     self.tokenizer_path = cache.cachepath(
       "corpus", "encoded", encoded_id, "tokenizer.pkl"
     )
-    if not self.config.HasField("pre_encoded_corpus_url"):
+    if environment.WORLD_RANK == 0 and not self.config.HasField("pre_encoded_corpus_url"):
       symlink = (pathlib.Path(self.encoded.url[len("sqlite:///") :]).parent / "preprocessed")
       if not symlink.is_symlink():
         os.symlink(
