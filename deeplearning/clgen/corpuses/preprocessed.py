@@ -416,7 +416,7 @@ class PreprocessedContentFiles(sqlutil.Database):
                     session.commit()
                     last_commit = wall_time_end
                 c += 1
-                bar.update(c)
+                bar.update(1)
               pool.close()
             except KeyboardInterrupt as e:
               pool.terminate()
@@ -472,7 +472,7 @@ class PreprocessedContentFiles(sqlutil.Database):
                   session.commit()
                   last_commit = wall_time_end
               idx += 1
-              bar.update(idx)
+              bar.update(1)
             pool.close()
           except KeyboardInterrupt as e:
             pool.terminate()
