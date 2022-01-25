@@ -256,7 +256,8 @@ def SampleObserversFromFlags(instance: Instance) -> typing.List[
   if FLAGS.print_samples:
     sample_observers.append(sample_observers_lib.PrintSampleObserver())
   if FLAGS.store_samples_db:
-    (instance.model.cache.path / "samples" / instance.sampler.hash).mkdir(exist_ok = True)
+    if environment.WORLD_RANK == 0:
+      (instance.model.cache.path / "samples" / instance.sampler.hash).mkdir(exist_ok = True)
     sample_observers.append(sample_observers_lib.SamplesDatabaseObserver(
         instance.model.cache.path / "samples" / instance.sampler.hash / instance.sampler.sample_db_name,
         plot_sample_status = True
