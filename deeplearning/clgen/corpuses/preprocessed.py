@@ -260,7 +260,9 @@ class PreprocessedContentFiles(sqlutil.Database):
     return
 
   def Create(self, config: corpus_pb2.Corpus):
-
+    """
+    Create preprocessed database of raw corpus.
+    """
     if environment.WORLD_SIZE > 1:
       if environment.WORLD_RANK == 0:
         with self.Session() as session:
@@ -354,6 +356,7 @@ class PreprocessedContentFiles(sqlutil.Database):
     # )
     # if FLAGS.notify_me:
     #   client.getClient().send_message("clgen:preprocessed", set_mail)
+    return
 
   def IsDone(self, session: sqlutil.Session):
     if session.query(Meta).filter(Meta.key == "done").first():
