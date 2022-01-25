@@ -121,7 +121,7 @@ def read() -> str:
   """
   All nodes read broadcasted message.
   """
-  while not (PATH / "msg-{}".format(WORLD_RANK)).exist():
+  while not (PATH / "msg-{}".format(WORLD_RANK)).exists():
     time.sleep(0.5)
   with open(PATH / "msg-{}".format(WORLD_RANK), 'r') as inf:
     msg = inf.read()
