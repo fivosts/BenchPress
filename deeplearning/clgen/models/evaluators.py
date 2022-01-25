@@ -712,7 +712,7 @@ def main(config: evaluator_pb2.Evaluation):
       raise NotImplementedError(ev)
 
     # Gather database groups and cache them.
-    if sev.HasField("db_group"):
+    if len(sev.db_group) > 0:
       for dbs in sev.db_group:
         key = dbs.group_name + ''.join(dbs.database)
         if key not in db_cache:
