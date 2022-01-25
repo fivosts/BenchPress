@@ -153,7 +153,7 @@ class Corpus(object):
     # Set and used in GetTrainingData().
     self._indices_arrays: typing.Optional[typing.List[np.array]] = None
 
-    if environment.WORLD_RANK == 0
+    if environment.WORLD_RANK == 0:
       cache.cachepath("corpus").mkdir(parents=True, exist_ok=True)
     distrib.barrier()
     self.content_id = ResolveContentId(self.config)
