@@ -247,8 +247,9 @@ class PreprocessedContentFiles(sqlutil.Database):
       distrib.lock()
       tdir.mkdir(parents = True, exist_ok = True)
       distrib.unlock()
+      self.replicated_path = tdir / "preprocessed_{}.db".format(environment.WORLD_RANK)
       self.replicated = PreprocessedContentFiles(
-        url = "sqlite:///" + str(tdir / "preprocessed_{}.db".format(environment.WORLD_RANK))\
+        url = "sqlite:///{}".format(str(self.replicated_path))
       )
       distrib.barrier()
     return
@@ -529,14 +530,16 @@ class PreprocessedContentFiles(sqlutil.Database):
     elif config.HasField("local_tar_archive"):
       with tempfile.TemporaryDirectory(prefix="clgen_corpus_", dir = FLAGS.local_filesystem) as d:
         start_time = time.time()
-        cmd = [
-          "tar",
-          "-xf",
-          str(ExpandConfigPath(config.local_tar_archive)),
-          "-C",
-          d,
-        ]
-        subprocess.check_call(cmd)
+        if environment.WORLD_RANK == 0:
+          cmd = [
+            "tar",
+            "-xf",
+            str(ExpandConfigPath(config.local_tar_archive)),
+            "-C",
+            d,
+          ]
+          subprocess.check_call(cmd)
+        distrib.barrier()
         l.logger().info(
           "Unpacked {} in {} ms".format(
                   ExpandConfigPath(config.local_tar_archive).name,
@@ -545,7 +548,13 @@ class PreprocessedContentFiles(sqlutil.Database):
         )
         yield pathlib.Path(d)
     elif config.HasField("bq_database"):
-      yield pathlib.Path(ExpandConfigPath(config.bq_database))
+      if environment.WORLD_SIZE > 1:
+        input_bq = pathlib.Path(ExpandConfigPath(config.bq_database))
+        target_bq = self.replicated_path / "bq_database_replica_{}.db".format(WORLD_RANK)
+        shutil.copy(bq_db_path, target_bq)
+        yield target_bq
+      else:
+        yield pathlib.Path(ExpandConfigPath(config.bq_database))
     else:
       raise NotImplementedError
 
