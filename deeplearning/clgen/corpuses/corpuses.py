@@ -252,18 +252,13 @@ class Corpus(object):
       raise ValueError("Tokenizer must be specified when encoding pre-training corpus.")
     self._created = True
 
-    preprocessed_lock_path = (
-      pathlib.Path(self.preprocessed.url[len("sqlite:///") :]).parent / "LOCK"
-    )
     self.preprocessed.Create(self.config)
     if not self.preprocessed.size and not FLAGS.override_preprocessing:
       raise ValueError(
         f"Pre-processed corpus contains no files: '{self.preprocessed.url}'"
       )
     l.logger().info("Pre-processed {}train corpus in corpuses/{}".format("pre_" if self.pre_train else "", pathlib.Path(self.preprocessed.url).parent.stem))
-    encoded_lock_path = (
-      pathlib.Path(self.encoded.url[len("sqlite:///") :]).parent / "LOCK"
-    )
+
     start_time      = time.time()
     self._tokenizer = tokenizer
     tokenizer       = self.tokenizer
