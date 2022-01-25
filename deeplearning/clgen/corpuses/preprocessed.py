@@ -250,6 +250,7 @@ class PreprocessedContentFiles(sqlutil.Database):
       self.replicated_path = tdir / "preprocessed_{}.db".format(environment.WORLD_RANK)
       self.replicated = PreprocessedContentFiles(
         url = "sqlite:///{}".format(str(self.replicated_path)),
+        must_exist = must_exist,
         is_replica = True
       )
       distrib.barrier()
