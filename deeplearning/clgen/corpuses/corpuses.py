@@ -253,10 +253,11 @@ class Corpus(object):
     self._created = True
 
     self.preprocessed.Create(self.config)
-    if not self.preprocessed.size and not FLAGS.override_preprocessing:
-      raise ValueError(
-        f"Pre-processed corpus contains no files: '{self.preprocessed.url}'"
-      )
+    if environment.WORLD_RANK == 0:
+      if not self.preprocessed.size and not FLAGS.override_preprocessing:
+        raise ValueError(
+          f"Pre-processed corpus contains no files: '{self.preprocessed.url}'"
+        )
     l.logger().info("Pre-processed {}train corpus in corpuses/{}".format("pre_" if self.pre_train else "", pathlib.Path(self.preprocessed.url).parent.stem))
 
     start_time      = time.time()
