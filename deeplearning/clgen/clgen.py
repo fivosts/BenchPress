@@ -370,7 +370,6 @@ def initMain(*args, **kwargs):
     **kwargs: Arguments to be passed to the function.
   """
   mail = None
-  distrib.cleanup()
   if FLAGS.notify_me:
     mail = client.initClient(FLAGS.notify_me)
   l.initLogger(name = "clgen", mail = mail, rank = environment.WORLD_RANK)
@@ -412,7 +411,6 @@ def initMain(*args, **kwargs):
     else:
       job = ""
     mail.send_message("clgen: {}".format(str(job.stem)), "Program terminated successfully at {}.".format(datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S")))
-  distrib.cleanup()
   return
 
 if __name__ == "__main__":
