@@ -522,6 +522,7 @@ class PreprocessedContentFiles(sqlutil.Database):
       yield pathlib.Path(ExpandConfigPath(config.local_directory))
     elif config.HasField("local_tar_archive"):
       with tempfile.TemporaryDirectory(prefix="clgen_corpus_", dir = FLAGS.local_filesystem) as d:
+        l.logger().info("Unpacking {}...".format(ExpandConfigPath(config.local_tar_archive).name))
         start_time = time.time()
         if environment.WORLD_RANK == 0:
           cmd = [
