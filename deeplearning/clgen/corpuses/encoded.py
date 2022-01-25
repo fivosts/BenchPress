@@ -223,14 +223,37 @@ def EncoderWorker(
 class EncodedContentFiles(sqlutil.Database):
   """A database of encoded pre-processed contentfiles."""
 
-  def __init__(self, url: str, is_pre_train: bool = False, must_exist: bool = False):
-    self.encoded_path = pathlib.Path(url.replace("sqlite:///", "")).parent
-    self.is_pre_train     = is_pre_train
-    self.length_monitor   = monitors.CumulativeHistMonitor(self.encoded_path, "encoded_kernel_length")
-    if not self.is_pre_train:
-      self.token_monitor    = monitors.NormalizedFrequencyMonitor(self.encoded_path, "token_distribution")
-      self.feature_monitors = {ftype: monitors.CategoricalDistribMonitor(self.encoded_path, "{}_distribution".format(ftype)) for ftype in extractor.extractors.keys()}
-    super(EncodedContentFiles, self).__init__(url, Base, must_exist=must_exist)
+  def __init__(self, url: str, is_pre_train: bool = False, must_exist: bool = False, is_replica = False):
+
+    if environment.WORLD_RANK == 0 or is_replica:
+      self.encoded_path = pathlib.Path(url.replace("sqlite:///", "")).parent
+      self.is_pre_train     = is_pre_train
+      self.length_monitor   = monitors.CumulativeHistMonitor(self.encoded_path, "encoded_kernel_length")
+      if not self.is_pre_train:
+        self.token_monitor    = monitors.NormalizedFrequencyMonitor(self.encoded_path, "token_distribution")
+        self.feature_monitors = {ftype: monitors.CategoricalDistribMonitor(self.encoded_path, "{}_distribution".format(ftype)) for ftype in extractor.extractors.keys()}
+      super(EncodedContentFiles, self).__init__(url, Base, must_exist=must_exist)
+    if environment.WORLD_SIZE > 1 and not is_replica:
+      # Conduct engine connections to replicated preprocessed chunks.
+      self.base_path = pathlib.Path(url.replace("sqlite:///", "")).resolve().parent
+      hash_id = self.base_path.parent.name
+      try:
+        tdir = pathlib.Path(FLAGS.local_filesystem).resolve() / hash_id / "node_encoded"
+      except Exception:
+        tdir = pathlib.Path("/tmp").resolve() / hash_id / "node_encoded"
+      distrib.lock()
+      tdir.mkdir(parents = True, exist_ok = True)
+      distrib.unlock()
+      self.replicated_path = tdir / "encoded_{}.db".format(environment.WORLD_RANK)
+      self.replicated = EncodedContentFiles(
+        url = "sqlite:///{}".format(str(self.replicated_path)),
+        is_pre_train = is_pre_train,
+        must_exist = must_exist,
+        is_replica = True
+      )
+      distrib.barrier()
+      l.logger().info("Set up replica encoded databases.")
+    return
 
   def Create(
     self,
