@@ -23,6 +23,7 @@ LOCK_TYPES = [
   'barrier-escape-*',
   'critical-lock-*',
   'index-*',
+  'msg-*'
 ]
 
 def barrier(fn: typing.Callable = None) -> None:
@@ -131,6 +132,7 @@ def init(path: pathlib.Path) -> None:
     PATH = pathlib.Path(path).resolve()
   else:
     PATH = path
+  cleanup()
   return
 
 def cleanup() -> None:
