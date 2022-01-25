@@ -245,7 +245,9 @@ class PreprocessedContentFiles(sqlutil.Database):
       except Exception:
         tdir = pathlib.Path("/tmp").resolve() / hash_id / "node_preprocessed"
       distrib.lock()
+      l.logger().info("Got lock")
       tdir.mkdir(parents = True, exist_ok = True)
+      l.logger().info("Made my folder at {}".format(str(tdir)))
       distrib.unlock()
       self.replicated_path = tdir / "preprocessed_{}.db".format(environment.WORLD_RANK)
       self.replicated = super(PreprocessedContentFiles, self).__init__(
