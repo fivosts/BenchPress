@@ -109,7 +109,7 @@ class Model(object):
     # Initialize distrib lock path.
     if environment.WORLD_SIZE > 1:
       lock_cache = cache.mkcache("locks")
-      lock_cache.mkdir(exist_ok = True)
+      lock_cache.path.mkdir(exist_ok = True)
       distrib.init(lock_cache.path)
 
     # Initialize corpuses
