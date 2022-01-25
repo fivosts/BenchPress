@@ -238,7 +238,8 @@ class PreprocessedContentFiles(sqlutil.Database):
       )
     if environment.WORLD_SIZE > 1:
       # Conduct engine connections to replicated preprocessed chunks.
-      hash_id = pathlib.Path(url).parent
+      self.base_path = pathlib.Path(url.replace("sqlite:///", "")).resolve().parent
+      hash_id = self.base_path.parent.name
       try:
         tdir = pathlib.Path(FLAGS.local_filesystem).resolve() / hash_id / "node_preprocessed"
       except Exception:
@@ -253,11 +254,30 @@ class PreprocessedContentFiles(sqlutil.Database):
     return
 
   def Create(self, config: corpus_pb2.Corpus):
-    with self.Session() as session:
+
+    if environment.WORLD_SIZE > 1:
+      if environment.WORLD_RANK == 0:
+        with self.Session() as session:
+          status = self.IsDone(session)
+          distrib.write(str(status))
+          if status:
+            return
+      else:
+        status = distrib.read()
+        if status == "True":
+          return
+        if status != "False":
+          raise OSError("Broken distributed message: {}".format(status))
+
+    sessmaker = self.Session if environment.WORLD_SIZE == 1 else self.replicated.Session
+    with sessmaker() as session:
       if not self.IsDone(session):
         self.Import(session, config)
         self.SetDone(session)
         session.commit()
+
+    if environment.WORLD_SIZE > 1:
+      self.MergeReplicas()
 
       # Logging output.
     #   num_input_files = session.query(PreprocessedContentFile).count()
@@ -468,6 +488,25 @@ class PreprocessedContentFiles(sqlutil.Database):
         if environment.WORLD_SIZE > 1:
           bar.finalize(idx)
     # Make sure every node is done by now.
+    distrib.barrier()
+    return
+
+  def MergeReplicas(self) -> None:
+    """
+    When distributed nodes work for the same preprocessed DB
+    this function moves finalized preprocessed chunks back into the AFS
+    and master node merges them into the final preprocessed.db
+    """
+    shutil.copy(
+      self.replicated.url.replace("sqlite:///", ""), self.base_path / "preprocessed_{}.db".format(environment.WORLD_RANK)
+    )
+    distrib.barrier()
+    if environment.WORLD_RANK == 0:
+      db_chunks = glob.glob(str(self.base_path / "preprocessed_*.db"))
+      dbs = [PreprocessedContentFiles(url = "sqlite:///{}".format(p), must_exist = True) for p in db_chunks]
+      merge_db(dbs, self)
+      for p in db_chunks:
+        os.remove(p)
     distrib.barrier()
     return
 
