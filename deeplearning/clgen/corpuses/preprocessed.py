@@ -236,9 +236,20 @@ class PreprocessedContentFiles(sqlutil.Database):
       super(PreprocessedContentFiles, self).__init__(
         url, Base, must_exist=must_exist
       )
-    else:
-      self.url = url
-    distrib.barrier()
+    if environment.WORLD_SIZE > 1:
+      # Conduct engine connections to replicated preprocessed chunks.
+      hash_id = pathlib.Path(url).parent
+      try:
+        tdir = pathlib.Path(FLAGS.local_filesystem).resolve() / hash_id / "node_preprocessed"
+      except Exception:
+        tdir = pathlib.Path("/tmp").resolve() / hash_id / "node_preprocessed"
+      distrib.lock()
+      tdir.mkdir(parents = True, exist_ok = True)
+      distrib.unlock()
+      self.replicated = PreprocessedContentFiles(
+        url = "sqlite:///" + str(tdir / "preprocessed_{}.db".format(environment.WORLD_RANK))\
+      )
+      distrib.barrier()
     return
 
   def Create(self, config: corpus_pb2.Corpus):
