@@ -622,9 +622,9 @@ def MutecVsBenchPress(**kwargs) -> None:
     git_dist = [x for _, x in closest]
 
     closest_mutec_src  = run_mutec(git_src, benchmark.features, feature_space, top_k) # tuple of (src, distance)
-    closest_mutec_dist = [x for x, _ in closest_mutec_src]
+    closest_mutec_dist = [x for _, x in closest_mutec_src]
 
-    if sum(closest_mutec_dist) < sum(closest_mutec_dist):
+    if sum(closest_mutec_dist) < sum(git_dist):
       groups["Mutec"][0].append(benchmark.name)
       # Compute target's distance from O(0,0)
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
