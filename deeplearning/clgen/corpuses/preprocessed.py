@@ -470,7 +470,7 @@ class PreprocessedContentFiles(sqlutil.Database):
                                         BQPreprocessorWorker,
                                         preprocessors = list(config.preprocessor)
                                     ), batch):
-              l.logger().error("In loop", ddp_nodes = True)
+              l.logger().error("In loop, node {}".format(environment.WORLD_RANK), ddp_nodes = True)
               for preprocessed_cf in preprocessed_list:
                 wall_time_end = time.time()
                 preprocessed_cf.wall_time_ms = int(
