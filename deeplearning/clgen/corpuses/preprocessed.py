@@ -478,9 +478,9 @@ class PreprocessedContentFiles(sqlutil.Database):
                 wall_time_start = wall_time_end
                 session.add(preprocessed_cf)
                 if wall_time_end - last_commit > 10:
-                  l.logger().warn("Node {} before commiting".format(WORLD_RANK), ddp_nodes = True)
+                  l.logger().warn("Node {} before commiting".format(environment.WORLD_RANK), ddp_nodes = True)
                   session.commit()
-                  l.logger().warn("Node {} after commiting".format(WORLD_RANK), ddp_nodes = True)
+                  l.logger().warn("Node {} after commiting".format(environment.WORLD_RANK), ddp_nodes = True)
                   last_commit = wall_time_end
               idx += 1
               bar.update(idx - bar.n)
