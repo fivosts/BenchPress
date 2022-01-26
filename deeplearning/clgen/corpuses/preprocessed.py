@@ -482,9 +482,7 @@ class PreprocessedContentFiles(sqlutil.Database):
                   session.commit()
                   last_commit = wall_time_end
               idx += 1
-              l.logger().error("Before bar update node {}".format(environment.WORLD_RANK), ddp_nodes = True)
               bar.update(idx - bar.n)
-              l.logger().error("After bar update node {}".format(environment.WORLD_RANK), ddp_nodes = True)
             pool.close()
           except KeyboardInterrupt as e:
             l.logger().critical("keyboard", ddp_nodes = True)
