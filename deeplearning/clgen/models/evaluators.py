@@ -630,7 +630,7 @@ def MutecVsBenchPress(**kwargs) -> None:
     closest_mutec_src  = run_mutec(git_src, benchmark.features, feature_space, top_k) # tuple of (src, distance)
     closest_mutec_dist = [x for _, x in closest_mutec_src]
 
-    if sum(closest_mutec_dist) < sum(git_dist):
+    if sum(closest_mutec_dist) < sum(git_dist[:top_k]):
       l.logger().info("Score reduced from {} to {}".format(sum(git_dist), sum(closest_mutec_dist)))
       l.logger().info("Best score from {} to {}".format(git_dist[0], closest_mutec_dist[0]))
       groups["Mutec"][0].append(benchmark.name)
