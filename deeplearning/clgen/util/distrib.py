@@ -205,7 +205,7 @@ class ProgressBar(object):
         self.bar.update(total_idx - self.bar.n)
       else:
         self._write_index(idx)
-      return
+    return
 
   def finalize(self, idx: int) -> None:
     """
