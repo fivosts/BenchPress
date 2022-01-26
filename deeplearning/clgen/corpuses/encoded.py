@@ -230,11 +230,11 @@ class EncodedContentFiles(sqlutil.Database):
 
     self.is_pre_train = is_pre_train
     if environment.WORLD_RANK == 0 or is_replica:
-      self.encoded_path = pathlib.Path(url.replace("sqlite:///", "")).parent
-      self.length_monitor   = monitors.CumulativeHistMonitor(self.encoded_path, "encoded_kernel_length")
+      encoded_path = pathlib.Path(url.replace("sqlite:///", "")).parent
+      self.length_monitor   = monitors.CumulativeHistMonitor(encoded_path, "encoded_kernel_length")
       if not self.is_pre_train:
-        self.token_monitor    = monitors.NormalizedFrequencyMonitor(self.encoded_path, "token_distribution")
-        self.feature_monitors = {ftype: monitors.CategoricalDistribMonitor(self.encoded_path, "{}_distribution".format(ftype)) for ftype in extractor.extractors.keys()}
+        self.token_monitor    = monitors.NormalizedFrequencyMonitor(encoded_path, "token_distribution")
+        self.feature_monitors = {ftype: monitors.CategoricalDistribMonitor(encoded_path, "{}_distribution".format(ftype)) for ftype in extractor.extractors.keys()}
       super(EncodedContentFiles, self).__init__(url, Base, must_exist=must_exist)
     if environment.WORLD_SIZE > 1 and not is_replica:
       # Conduct engine connections to replicated preprocessed chunks.
@@ -254,6 +254,10 @@ class EncodedContentFiles(sqlutil.Database):
         must_exist = must_exist,
         is_replica = True
       )
+      self.length_monitor = self.replicated.length_monitor
+      if not self.is_pre_train:
+        self.token_monitor    = self.replicated.token_monitor
+        self.feature_monitors = self.replicated.feature_monitors
       distrib.barrier()
       l.logger().info("Set up replica encoded databases.")
     return
