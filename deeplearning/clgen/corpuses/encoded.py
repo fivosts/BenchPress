@@ -18,6 +18,7 @@ import functools
 import multiprocessing
 import pickle
 import time
+import shutil
 import typing
 import pathlib
 
@@ -389,8 +390,8 @@ class EncodedContentFiles(sqlutil.Database):
     tokenizer: tokenizers.TokenizerBase,
     contentfile_separator: str,
   ) -> None:
-    with preprocessed_db.Session() as p_session:
-      if environment.WORLD_RANK == 0:
+    if environment.WORLD_RANK == 0:
+      with preprocessed_db.Session() as p_session:
         query = p_session.query(preprocessed.PreprocessedContentFile).filter(
           preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
         )
