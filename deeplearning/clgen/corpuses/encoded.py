@@ -228,9 +228,9 @@ class EncodedContentFiles(sqlutil.Database):
 
   def __init__(self, url: str, is_pre_train: bool = False, must_exist: bool = False, is_replica = False):
 
+    self.is_pre_train = is_pre_train
     if environment.WORLD_RANK == 0 or is_replica:
       self.encoded_path = pathlib.Path(url.replace("sqlite:///", "")).parent
-      self.is_pre_train     = is_pre_train
       self.length_monitor   = monitors.CumulativeHistMonitor(self.encoded_path, "encoded_kernel_length")
       if not self.is_pre_train:
         self.token_monitor    = monitors.NormalizedFrequencyMonitor(self.encoded_path, "token_distribution")
