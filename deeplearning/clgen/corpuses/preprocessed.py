@@ -368,8 +368,7 @@ class PreprocessedContentFiles(sqlutil.Database):
       return False
 
   def SetDone(self, session: sqlutil.Session):
-    if environment.WORLD_RANK == 0:
-      session.add(Meta(key="done", value="yes"))
+    session.add(Meta(key="done", value="yes"))
     return
 
   def Import(self, session: sqlutil.Session, config: corpus_pb2.Corpus) -> None:
