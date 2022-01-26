@@ -609,6 +609,7 @@ def MutecVsBenchPress(**kwargs) -> None:
   if github.db_type != encoded.EncodedContentFiles:
     raise ValueError("Scores require EncodedContentFiles but received", github.db_type)
   groups["Mutec"] = ([], [])
+  groups["GitHub"] = ([], [])
   l.logger().info("Mutec group")
   for benchmark in target.get_benchmarks(feature_space):
     l.logger().info(benchmark.name)
