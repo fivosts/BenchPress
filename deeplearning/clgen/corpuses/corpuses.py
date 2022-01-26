@@ -273,7 +273,8 @@ class Corpus(object):
     self.encoded.Create(
       self.preprocessed, tokenizer, self.config.contentfile_separator
     )
-    l.logger().info("Encoded {}train corpus in corpuses/{}".format("pre_" if self.pre_train else "", pathlib.Path(self.encoded.url).parent.stem))
+    if environment.WORLD_RANK == 0:
+      l.logger().info("Encoded {}train corpus in corpuses/{}".format("pre_" if self.pre_train else "", pathlib.Path(self.encoded.url).parent.stem))
     return
 
   def GetTextCorpus(self, shuffle: bool) -> str:
