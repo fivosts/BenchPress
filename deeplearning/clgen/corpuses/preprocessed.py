@@ -263,8 +263,10 @@ class PreprocessedContentFiles(sqlutil.Database):
     """
     Create preprocessed database of raw corpus.
     """
+    ## Check if main preprocessed.db is done.
     if environment.WORLD_SIZE > 1:
       if environment.WORLD_RANK == 0:
+        ## If done, broadcast true message and return.
         with self.Session() as session:
           status = self.IsDone(session)
           distrib.write(str(status))
@@ -277,6 +279,7 @@ class PreprocessedContentFiles(sqlutil.Database):
         if status != "False":
           raise OSError("Broken distributed message: '{}'".format(status))
 
+    ## For DDP only: If main DB not done, preprocess the replicas here.
     sessmaker = self.Session if environment.WORLD_SIZE == 1 else self.replicated.Session
     with sessmaker() as session:
       if not self.IsDone(session):
@@ -284,6 +287,7 @@ class PreprocessedContentFiles(sqlutil.Database):
         self.SetDone(session)
         session.commit()
 
+    ## For DDP only: Merge replicas into main DB.
     if environment.WORLD_SIZE > 1:
       self.MergeReplicas()
 
