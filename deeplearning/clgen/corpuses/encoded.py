@@ -390,105 +390,106 @@ class EncodedContentFiles(sqlutil.Database):
     contentfile_separator: str,
   ) -> None:
     with preprocessed_db.Session() as p_session:
-      query = p_session.query(preprocessed.PreprocessedContentFile).filter(
-        preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
-      )
-      done = set([int(x.id) for x in session.query(EncodedContentFile).all()])
-      # jobs = [
-      #   internal_pb2.EncoderWorker(
-      #     id=x.id,
-      #     text=x.text,
-      #     contentfile_separator=contentfile_separator,
-      #     # pickled_tokenizer=pickle.dumps(tokenizer),
-      #   )
-      #   for x in query
-      # ]
-      # if not jobs:
-      #   raise ValueError(
-      #     "Pre-processed corpus contains no files: " f"'{preprocessed_db.url}'"
-      #   )
-      total_jobs = query.count() # - len(done)
-      l.logger().info("Encoding {} of {} preprocessed files"
-                          .format(
-                              humanize.intcomma(total_jobs),
-                              humanize.intcomma(
-                                p_session.query(preprocessed.PreprocessedContentFile)
-                                .filter(preprocessed.PreprocessedContentFile.preprocessing_succeeded == True)
-                                .count()
-                              )
+      if environment.WORLD_RANK == 0:
+        query = p_session.query(preprocessed.PreprocessedContentFile).filter(
+          preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
+        )
+        done = set([int(x.id) for x in session.query(EncodedContentFile).all()])
+        # jobs = [
+        #   internal_pb2.EncoderWorker(
+        #     id=x.id,
+        #     text=x.text,
+        #     contentfile_separator=contentfile_separator,
+        #     # pickled_tokenizer=pickle.dumps(tokenizer),
+        #   )
+        #   for x in query
+        # ]
+        # if not jobs:
+        #   raise ValueError(
+        #     "Pre-processed corpus contains no files: " f"'{preprocessed_db.url}'"
+        #   )
+        total_jobs = query.count() # - len(done)
+        l.logger().info("Encoding {} of {} preprocessed files"
+                            .format(
+                                humanize.intcomma(total_jobs),
+                                humanize.intcomma(
+                                  p_session.query(preprocessed.PreprocessedContentFile)
+                                  .filter(preprocessed.PreprocessedContentFile.preprocessing_succeeded == True)
+                                  .count()
+                                )
+                            )
                           )
-                        )
-      bar = progressbar.ProgressBar(max_value=total_jobs)
-      chunk, idx = 2000000, 0
-      wall_time_start = time.time()
-      while idx < total_jobs:
-        try:
-          if done:
-            batch = []
-            for f in query.limit(chunk).offset(idx).all():
-              if f.id not in done:
-                batch.append(f)
-              else:
-                idx += 1
-                # done.remove(f.id)
-          else:
-            batch = query.limit(chunk).offset(idx).all()
-          pool = multiprocessing.Pool()
-          last_commit = time.time()
-          for encoded_cf in pool.imap_unordered(
-                              functools.partial(EncoderWorker,
-                                                tokenizer = tokenizer,
-                                                contentfile_separator = contentfile_separator,
-                                                is_pre_train = self.is_pre_train,
-                                                ),
-                              batch
-                            ):
-            wall_time_end = time.time()
-            # TODO(cec): Remove the if check once EncoderWorker no longer returns
-            # None on tokenizer encode error.
-            if encoded_cf:
-              encoded_cf.wall_time_ms = int(
-                (wall_time_end - wall_time_start) * 1000
-              )
-              session.add(encoded_cf)
-              self.length_monitor.register(encoded_cf.tokencount)
-              if not self.is_pre_train:
-                self.token_monitor.register([tokenizer.decoder[int(x)] for x in encoded_cf.data.split('.')])
+        bar = progressbar.ProgressBar(max_value=total_jobs)
+        chunk, idx = 2000000, 0
+        wall_time_start = time.time()
+        while idx < total_jobs:
+          try:
+            if done:
+              batch = []
+              for f in query.limit(chunk).offset(idx).all():
+                if f.id not in done:
+                  batch.append(f)
+                else:
+                  idx += 1
+                  # done.remove(f.id)
+            else:
+              batch = query.limit(chunk).offset(idx).all()
+            pool = multiprocessing.Pool()
+            last_commit = time.time()
+            for encoded_cf in pool.imap_unordered(
+                                functools.partial(EncoderWorker,
+                                                  tokenizer = tokenizer,
+                                                  contentfile_separator = contentfile_separator,
+                                                  is_pre_train = self.is_pre_train,
+                                                  ),
+                                batch
+                              ):
+              wall_time_end = time.time()
+              # TODO(cec): Remove the if check once EncoderWorker no longer returns
+              # None on tokenizer encode error.
+              if encoded_cf:
+                encoded_cf.wall_time_ms = int(
+                  (wall_time_end - wall_time_start) * 1000
+                )
+                session.add(encoded_cf)
+                self.length_monitor.register(encoded_cf.tokencount)
+                if not self.is_pre_train:
+                  self.token_monitor.register([tokenizer.decoder[int(x)] for x in encoded_cf.data.split('.')])
 
-                dict_features = extractor.RawToDictFeats(encoded_cf.feature_vector)
-                if dict_features:
-                  for key, value in dict_features.items():
-                    self.feature_monitors[key].register(value)
-            wall_time_start = wall_time_end
-            if wall_time_end - last_commit > 10:
-              session.commit()
-              last_commit = wall_time_end
-            idx += 1
-            bar.update(idx)
-          pool.close()
-        except KeyboardInterrupt as e:
-          pool.terminate()
-          self.length_monitor.plot()
-          if not self.is_pre_train:
-            self.token_monitor.plot()
-            for m in self.feature_monitors.values():
-              m.plot()
-          raise e
-        except Exception as e:
-          l.logger().error(e)
-          pool.terminate()
-          self.length_monitor.plot()
-          if not self.is_pre_train:
-            self.token_monitor.plot()
-            for m in self.feature_monitors.values():
-              m.plot()
-          raise e
-      self.length_monitor.plot()
-      if not self.is_pre_train:
-        self.token_monitor.plot()
-        for m in self.feature_monitors.values():
-          m.plot()
-    session.commit()
+                  dict_features = extractor.RawToDictFeats(encoded_cf.feature_vector)
+                  if dict_features:
+                    for key, value in dict_features.items():
+                      self.feature_monitors[key].register(value)
+              wall_time_start = wall_time_end
+              if wall_time_end - last_commit > 10:
+                session.commit()
+                last_commit = wall_time_end
+              idx += 1
+              bar.update(idx)
+            pool.close()
+          except KeyboardInterrupt as e:
+            pool.terminate()
+            self.length_monitor.plot()
+            if not self.is_pre_train:
+              self.token_monitor.plot()
+              for m in self.feature_monitors.values():
+                m.plot()
+            raise e
+          except Exception as e:
+            l.logger().error(e)
+            pool.terminate()
+            self.length_monitor.plot()
+            if not self.is_pre_train:
+              self.token_monitor.plot()
+              for m in self.feature_monitors.values():
+                m.plot()
+            raise e
+        self.length_monitor.plot()
+        if not self.is_pre_train:
+          self.token_monitor.plot()
+          for m in self.feature_monitors.values():
+            m.plot()
+      session.commit()
     return
 
   def MergeReplicas(self) -> None:
