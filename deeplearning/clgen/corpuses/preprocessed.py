@@ -398,7 +398,7 @@ class PreprocessedContentFiles(sqlutil.Database):
             else:
               jobs[-1].append(t)
             total += 1
-          bar = tqdm.auto.trange(total, desc = "Preprocessing", leave = True)
+          bar = tqdm.trange(total, desc = "Preprocessing", leave = True)
           c = 0
           last_commit = time.time()
           wall_time_start = time.time()
@@ -451,7 +451,7 @@ class PreprocessedContentFiles(sqlutil.Database):
         if environment.WORLD_SIZE > 1:
           bar = distrib.ProgressBar(max_value = total, offset = idx)
         else:
-          bar = tqdm.auto.trange(total, desc = "Preprocessing", leave = True)
+          bar = tqdm.trange(total, desc = "Preprocessing", leave = True)
 
         last_commit     = time.time()
         wall_time_start = time.time()
@@ -718,13 +718,14 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
     with db.Session() as ses:
       data = ses.query(PreprocessedContentFile).all()
     with out_db.Session() as ses:
-      bar = tqdm.auto.trange(len(data), desc = "DB Merging", leave = True)
+      bar = tqdm.trange(len(data), desc = "DB Merging", leave = True)
       for df in data:
         ses.add(PreprocessedContentFile.FromPreprocessedContentFile(df, idx = pkey + df.id))
         bar.update(1)
       ses.commit()
   with out_db.Session() as ses:
     out_db.SetDone(ses)
+    ses.commit()
   return
 
 def initMain(*args, **kwargs):
