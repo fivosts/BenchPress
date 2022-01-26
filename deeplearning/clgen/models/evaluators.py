@@ -629,7 +629,7 @@ def MutecVsBenchPress(**kwargs) -> None:
     git_src  = [x for x, _ in closest]
     git_dist = [x for _, x in closest]
 
-    if sum(git_dist[:top_K]) == 0:
+    if sum(git_dist[:top_k]) == 0:
       continue
 
     closest_mutec_src  = run_mutec(git_src, benchmark.features, feature_space, top_k) # tuple of (src, distance)
