@@ -164,6 +164,7 @@ class ProgressBar(object):
     self.max_value = max_value
     self.offset    = offset
     self.path      = PATH
+    self.n         = 0 # tqdm compatibility getter.
     if self.path is None:
       raise FileNotFoundError("Distributed env path has not been set!")
     if WORLD_RANK == 0:
