@@ -460,7 +460,9 @@ class PreprocessedContentFiles(sqlutil.Database):
         while idx < limit:
           try:
             chunk = min(chunk, limit - idx)
+            l.logger().warn("Node {} before I/O".format(environment.WORLD_RANK))
             batch = db.main_files_batch(chunk, idx, exclude_id = done)
+            l.logger().warn("Node {} after I/O".format(environment.WORLD_RANK))
             idx += chunk - len(batch)
             pool = multiprocessing.Pool()
             for preprocessed_list in pool.imap_unordered(
