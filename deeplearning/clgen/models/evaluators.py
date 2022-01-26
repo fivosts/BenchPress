@@ -547,7 +547,8 @@ def MutecVsBenchPress(**kwargs) -> None:
       try:
         tdir = pathlib.Path(FLAGS.local_filesystem).resolve() / feat_space
       except Exception:
-        tdir = "tmp/{}".format(feat_space)
+        tdir = pathlib.Path("/tmp/{}".format(feat_space)).resolve()
+        tdir.mkdir(exist_ok = True, parents = True)
       with tempfile.NamedTemporaryFile("w", prefix="mutec_src", suffix='.cl', dir = tdir) as f:
         # Write source file.
         f.write(src)
