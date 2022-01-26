@@ -556,7 +556,8 @@ class PreprocessedContentFiles(sqlutil.Database):
       input_bq = pathlib.Path(ExpandConfigPath(config.bq_database))
       if environment.WORLD_SIZE > 1:
         target_bq = self.replicated_path.parent / "bq_database_replica_{}.db".format(environment.WORLD_RANK)
-        shutil.copy(input_bq, target_bq)
+        if not target_bq.exists():
+          shutil.copy(input_bq, target_bq)
         yield target_bq
       else:
         yield input_bq

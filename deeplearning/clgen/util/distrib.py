@@ -177,8 +177,11 @@ class ProgressBar(object):
     total = idx - self.offset
     for n in range(1, WORLD_SIZE):
       if (self.path / "index-{}".format(n)).exists():
-        with open(self.path / "index-{}".format(n), 'r') as inf:
-          total += int(inf.read())
+        try:
+          with open(self.path / "index-{}".format(n), 'r') as inf:
+            total += int(inf.read())
+        except Exception:
+          pass
     return total
 
   def _write_index(self, idx: int) -> None:
