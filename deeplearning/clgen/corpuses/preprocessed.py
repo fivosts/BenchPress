@@ -550,13 +550,13 @@ class PreprocessedContentFiles(sqlutil.Database):
         )
         yield pathlib.Path(d)
     elif config.HasField("bq_database"):
+      input_bq = pathlib.Path(ExpandConfigPath(config.bq_database))
       if environment.WORLD_SIZE > 1:
-        input_bq = pathlib.Path(ExpandConfigPath(config.bq_database))
         target_bq = self.replicated_path / "bq_database_replica_{}.db".format(environment.WORLD_RANK)
-        shutil.copy(bq_db_path, target_bq)
+        shutil.copy(input_bq, target_bq)
         yield target_bq
       else:
-        yield pathlib.Path(ExpandConfigPath(config.bq_database))
+        yield input_bq
     else:
       raise NotImplementedError
 
