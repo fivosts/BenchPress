@@ -617,7 +617,7 @@ def MutecVsBenchPress(**kwargs) -> None:
       [(src, feature_sampler.calculate_distance(fv, benchmark.features, feature_space))
        for src, fv in github.get_data_features(feature_space)],
        key = lambda x: x[1]
-    )[:top_k]
+    )[:5]
 
     # Split source and distances lists.
     git_src  = [x for x, _ in closest]
@@ -640,7 +640,7 @@ def MutecVsBenchPress(**kwargs) -> None:
 
       groups["GitHub"][0].append(benchmark.name)
       # Compute target's distance from O(0,0)
-      avg_dist = sum(git_dist) / top_k
+      avg_dist = sum(git_dist[:top_k]) / top_k
       groups["GitHub"][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
 
   l.logger().info("Benchpress group")
