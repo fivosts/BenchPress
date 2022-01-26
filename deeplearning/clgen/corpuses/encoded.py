@@ -294,7 +294,8 @@ class EncodedContentFiles(sqlutil.Database):
     sessmaker = self.Session if environment.WORLD_SIZE == 1 else self.replicated.Session
     with sessmaker() as session:
       if not self.IsDone(session):
-        self.Import(session, config)
+        self.Import(session, p, tokenizer, contentfile_separator)
+        self.SetStats(session)
         self.SetDone(session)
         session.commit()
 
@@ -586,7 +587,8 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
         ses.commit()
   with out_db.Session() as ses:
     out_db.SetDone(ses)
-
+    ses.commit()
+  ## TODO: Merge File stats.
   return
 
 def initMain(*args, **kwargs):
