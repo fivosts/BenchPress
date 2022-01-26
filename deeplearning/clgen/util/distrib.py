@@ -41,7 +41,8 @@ def barrier(fn: typing.Callable = None) -> None:
     barriers = glob.glob(str(PATH / "barrier-lock-*"))
 
     while len(barriers) < environment.WORLD_SIZE:
-      fn()
+      if fn:
+        fn()
       time.sleep(0.5)
       barriers = glob.glob(str(PATH / "barrier-lock-*"))
 
