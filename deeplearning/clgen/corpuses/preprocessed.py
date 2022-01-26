@@ -722,7 +722,6 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
       ses.commit()
   with out_db.Session() as ses:
     out_db.SetDone(ses)
-
   return
 
 def initMain(*args, **kwargs):
