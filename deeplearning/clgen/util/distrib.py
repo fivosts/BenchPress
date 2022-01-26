@@ -198,7 +198,7 @@ class ProgressBar(object):
     Master node updates the bar,
     slave nodes update their indices.
     """
-    if idx % 100 == 0 or flush:
+    if idx % 1000 == 0 or flush:
       if WORLD_RANK == 0:
         total_idx = self._fetch_indices(idx)
         self.bar.update(total_idx - self.bar.n)
