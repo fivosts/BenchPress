@@ -491,7 +491,7 @@ class PreprocessedContentFiles(sqlutil.Database):
             pool.terminate()
             raise e
           except Exception as e:
-            l.logger().critical("exception", ddp_nodes = True)
+            l.logger().info("exception {}".format(e), ddp_nodes = True)
             pool.terminate()
             raise e
         session.commit()

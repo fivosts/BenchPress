@@ -189,7 +189,7 @@ class ProgressBar(object):
     Update personal node dictionary with current index.
     """
     with open(self.path / "index-{}".format(WORLD_RANK), 'w') as outf:
-      outf.write(idx - self.offset)
+      outf.write(str(idx - self.offset))
       outf.flush()
     return
 
