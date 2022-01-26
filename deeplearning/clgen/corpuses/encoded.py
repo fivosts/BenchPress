@@ -261,7 +261,6 @@ class EncodedContentFiles(sqlutil.Database):
         self.token_monitor    = self.replicated.token_monitor
         self.feature_monitors = self.replicated.feature_monitors
       distrib.barrier()
-      l.logger().info("Set up replica encoded databases.")
     return
 
   def Create(

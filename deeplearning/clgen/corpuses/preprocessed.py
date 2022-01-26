@@ -256,7 +256,6 @@ class PreprocessedContentFiles(sqlutil.Database):
         is_replica = True
       )
       distrib.barrier()
-      l.logger().info("Set up replica pre-processed databases.")
     return
 
   def Create(self, config: corpus_pb2.Corpus):
