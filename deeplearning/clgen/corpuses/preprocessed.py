@@ -460,9 +460,9 @@ class PreprocessedContentFiles(sqlutil.Database):
         while idx < limit:
           try:
             chunk = min(chunk, limit - idx)
-            l.logger().warn("Node {} before I/O".format(environment.WORLD_RANK))
+            l.logger().warn("Node {} before I/O".format(environment.WORLD_RANK), ddp_nodes = True)
             batch = db.main_files_batch(chunk, idx, exclude_id = done)
-            l.logger().warn("Node {} after I/O".format(environment.WORLD_RANK))
+            l.logger().warn("Node {} after I/O".format(environment.WORLD_RANK), ddp_nodes = True)
             idx += chunk - len(batch)
             pool = multiprocessing.Pool()
             for preprocessed_list in pool.imap_unordered(
@@ -478,7 +478,9 @@ class PreprocessedContentFiles(sqlutil.Database):
                 wall_time_start = wall_time_end
                 session.add(preprocessed_cf)
                 if wall_time_end - last_commit > 10:
+                  l.logger().warn("Node {} before commiting".format(WORLD_RANK), ddp_nodes = True)
                   session.commit()
+                  l.logger().warn("Node {} after commiting".format(WORLD_RANK), ddp_nodes = True)
                   last_commit = wall_time_end
               idx += 1
               bar.update(idx - bar.n)
