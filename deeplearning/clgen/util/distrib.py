@@ -126,7 +126,7 @@ def read() -> str:
   while True:
     with open(PATH / "msg-{}".format(WORLD_RANK), 'r') as inf:
       msg = inf.read()
-    if msg == '':
+    if msg != '':
       break
     time.sleep(0.5)
   os.remove(str(PATH / "msg-{}".format(WORLD_RANK)))
