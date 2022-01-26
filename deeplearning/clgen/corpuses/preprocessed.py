@@ -456,10 +456,11 @@ class PreprocessedContentFiles(sqlutil.Database):
         last_commit     = time.time()
         wall_time_start = time.time()
 
-        l.logger().error("Node {} will make idx {} to {}".format(environment.WORLD_RANK, idx, limit), ddp_nodes = True)
+        l.logger().error("Node {} will make idx {} to {} at {}".format(environment.WORLD_RANK, idx, limit, str(contentfile_root)), ddp_nodes = True)
 
         while idx < limit:
           try:
+            l.logger().warn("In try", ddp_nodes = True)
             chunk = min(chunk, limit - idx)
             batch = db.main_files_batch(chunk, idx, exclude_id = done)
             idx += chunk - len(batch)
@@ -469,6 +470,7 @@ class PreprocessedContentFiles(sqlutil.Database):
                                         BQPreprocessorWorker,
                                         preprocessors = list(config.preprocessor)
                                     ), batch):
+              l.logger().error("In loop", ddp_nodes = True)
               for preprocessed_cf in preprocessed_list:
                 wall_time_end = time.time()
                 preprocessed_cf.wall_time_ms = int(
@@ -491,6 +493,7 @@ class PreprocessedContentFiles(sqlutil.Database):
         session.commit()
         if environment.WORLD_SIZE > 1:
           bar.finalize(idx)
+    l.logger().critical("Returning", ddp_nodes = True)
     return
 
   def MergeReplicas(self) -> None:
