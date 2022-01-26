@@ -638,6 +638,11 @@ def MutecVsBenchPress(**kwargs) -> None:
       avg_dist           = sum(closest_mutec_dist) / top_k
       groups["Mutec"][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
 
+      groups["GitHub"][0].append(benchmark.name)
+      # Compute target's distance from O(0,0)
+      avg_dist = sum(git_dist) / top_k
+      groups["GitHub"][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
+
   l.logger().info("Benchpress group")
   if benchpress.db_type != samples_database.SamplesDatabase:
     raise ValueError("BenchPress scores require SamplesDatabase but received", benchpress.db_type)
