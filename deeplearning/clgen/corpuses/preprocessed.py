@@ -552,7 +552,7 @@ class PreprocessedContentFiles(sqlutil.Database):
     elif config.HasField("bq_database"):
       if environment.WORLD_SIZE > 1:
         input_bq = pathlib.Path(ExpandConfigPath(config.bq_database))
-        target_bq = self.replicated_path / "bq_database_replica_{}.db".format(WORLD_RANK)
+        target_bq = self.replicated_path / "bq_database_replica_{}.db".format(environment.WORLD_RANK)
         shutil.copy(bq_db_path, target_bq)
         yield target_bq
       else:
