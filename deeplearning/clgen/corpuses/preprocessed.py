@@ -456,7 +456,7 @@ class PreprocessedContentFiles(sqlutil.Database):
         last_commit     = time.time()
         wall_time_start = time.time()
 
-        l.logger().error("Node {} will make idx {} to {}".format(environment.WORLD_RANK, idx, limit))
+        l.logger().error("Node {} will make idx {} to {}".format(environment.WORLD_RANK, idx, limit), ddp_nodes = True)
 
         while idx < limit:
           try:

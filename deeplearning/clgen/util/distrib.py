@@ -5,7 +5,7 @@ import time
 import pathlib
 import typing
 import functools
-import progressbar
+import tqdm
 
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import logging as l
@@ -167,7 +167,7 @@ class ProgressBar(object):
     if self.path is None:
       raise FileNotFoundError("Distributed env path has not been set!")
     if WORLD_RANK == 0:
-      self.bar = progressbar.ProgressBar(max_value = max_value)
+      self.bar = tqdm.trange(max_value, desc = "Distributed processing")
     return
 
   def _fetch_indices(self, idx: int) -> int:
@@ -197,7 +197,7 @@ class ProgressBar(object):
     """
     if WORLD_RANK == 0:
       total_idx = self._fetch_indices(idx)
-      self.bar.update(total_idx)
+      self.bar.update(total_idx - self.bar.n)
     else:
       self._write_index(idx)
     return
