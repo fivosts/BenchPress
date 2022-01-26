@@ -501,7 +501,7 @@ class PreprocessedContentFiles(sqlutil.Database):
     distrib.barrier()
     if environment.WORLD_RANK == 0:
       db_chunks = glob.glob(str(self.base_path / "preprocessed_*.db"))
-      dbs = [PreprocessedContentFiles(url = "sqlite:///{}".format(p), must_exist = True) for p in db_chunks]
+      dbs = [PreprocessedContentFiles(url = "sqlite:///{}".format(p), must_exist = True, is_replica = True) for p in db_chunks]
       merge_db(dbs, self)
       for p in db_chunks:
         os.remove(p)
