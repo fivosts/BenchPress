@@ -41,8 +41,7 @@ def barrier(fn: typing.Callable = None) -> None:
     barriers = glob.glob(str(PATH / "barrier-lock-*"))
 
     while len(barriers) < environment.WORLD_SIZE:
-      if WORLD_RANK == 0 and fn:
-        fn()
+      fn()
       time.sleep(0.5)
       barriers = glob.glob(str(PATH / "barrier-lock-*"))
 
@@ -194,12 +193,12 @@ class ProgressBar(object):
       outf.flush()
     return
 
-  def update(self, idx: int) -> None:
+  def update(self, idx: int, flush: bool = False) -> None:
     """
     Master node updates the bar,
     slave nodes update their indices.
     """
-    if idx % 100 == 0:
+    if idx % 100 == 0 or flush:
       if WORLD_RANK == 0:
         total_idx = self._fetch_indices(idx)
         self.bar.update(total_idx - self.bar.n)
@@ -211,7 +210,7 @@ class ProgressBar(object):
     """
     Do a final bar update and cleanup progressbar object.
     """
-    fn = functools.partial(self.update, idx = idx)
+    fn = functools.partial(self.update, idx = idx, flush = True)
     barrier(fn)
     if WORLD_RANK == 0:
       indices = glob.glob(str(PATH / "index-*"))
