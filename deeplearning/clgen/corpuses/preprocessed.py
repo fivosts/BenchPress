@@ -470,7 +470,7 @@ class PreprocessedContentFiles(sqlutil.Database):
                                         BQPreprocessorWorker,
                                         preprocessors = list(config.preprocessor)
                                     ), batch):
-              l.logger().error("In loop, node {}".format(environment.WORLD_RANK), ddp_nodes = True)
+              l.logger().error("In loop, node {}, len {}".format(environment.WORLD_RANK, len(batch)), ddp_nodes = True)
               for preprocessed_cf in preprocessed_list:
                 wall_time_end = time.time()
                 preprocessed_cf.wall_time_ms = int(
@@ -485,9 +485,11 @@ class PreprocessedContentFiles(sqlutil.Database):
               bar.update(1)
             pool.close()
           except KeyboardInterrupt as e:
+            l.logger().critical("keyboard", ddp_nodes = True)
             pool.terminate()
             raise e
           except Exception as e:
+            l.logger().critical("exception", ddp_nodes = True)
             pool.terminate()
             raise e
         session.commit()
