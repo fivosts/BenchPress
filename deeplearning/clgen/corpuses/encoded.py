@@ -22,7 +22,7 @@ import typing
 import pathlib
 
 import numpy as np
-import progressbar
+import tqdm
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from sqlalchemy.sql import func
@@ -419,7 +419,7 @@ class EncodedContentFiles(sqlutil.Database):
                                 )
                             )
                           )
-        bar = progressbar.ProgressBar(max_value=total_jobs)
+        bar = tqdm.trange(total_jobs, desc = "DB Encoding", leave = True)
         chunk, idx = 2000000, 0
         wall_time_start = time.time()
         while idx < total_jobs:
@@ -574,7 +574,7 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
   for db in dbs:
     l.logger().info("Loading {}...".format(db.url))
     chunk, idx = 2000000, 0
-    bar = progressbar.ProgressBar(max_value = db.size)
+    bar = tqdm.trange(db.size, desc = "Encoded DB merge", leave = True)
     pkey = out_db.size
     while idx < db.size:
       with db.Session() as ses:
