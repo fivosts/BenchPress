@@ -199,12 +199,13 @@ class ProgressBar(object):
     Master node updates the bar,
     slave nodes update their indices.
     """
-    if WORLD_RANK == 0:
-      total_idx = self._fetch_indices(idx)
-      self.bar.update(total_idx - self.bar.n)
-    else:
-      self._write_index(idx)
-    return
+    if idx % 100 == 0:
+      if WORLD_RANK == 0:
+        total_idx = self._fetch_indices(idx)
+        self.bar.update(total_idx - self.bar.n)
+      else:
+        self._write_index(idx)
+      return
 
   def finalize(self, idx: int) -> None:
     """
