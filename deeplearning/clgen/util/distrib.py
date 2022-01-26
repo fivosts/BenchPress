@@ -123,9 +123,12 @@ def read() -> str:
   """
   while not (PATH / "msg-{}".format(WORLD_RANK)).exists():
     time.sleep(0.5)
-  time.sleep(0.5)
-  with open(PATH / "msg-{}".format(WORLD_RANK), 'r') as inf:
-    msg = inf.read()
+  while True:
+    with open(PATH / "msg-{}".format(WORLD_RANK), 'r') as inf:
+      msg = inf.read()
+    if msg == '':
+      break
+    time.sleep(0.5)
   os.remove(str(PATH / "msg-{}".format(WORLD_RANK)))
   return msg
 
