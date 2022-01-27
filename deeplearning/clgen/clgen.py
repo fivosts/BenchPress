@@ -27,7 +27,6 @@ from deeplearning.clgen.samplers import sample_observers as sample_observers_lib
 from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import memory
-from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.dashboard import dashboard
@@ -385,7 +384,6 @@ def initMain(*args, **kwargs):
     import cgitb
     cgitb.enable(format="text")
     main()
-    distrib.cleanup()
     return
   try:
     if FLAGS.profiling:
@@ -393,7 +391,6 @@ def initMain(*args, **kwargs):
     else:
       main()
   except KeyboardInterrupt:
-    distrib.cleanup()
     return
   except Exception as e:
     l.logger().error(e)
@@ -403,7 +400,6 @@ def initMain(*args, **kwargs):
       else:
         job = ""
       mail.send_message("clgen:{}".format(str(job.stem)), e)
-    distrib.cleanup()
     raise
 
   if mail:
