@@ -1,6 +1,7 @@
 """Cluster node handling for Distributed model training and sampling"""
 import glob
 import os
+import sys
 import time
 import pathlib
 import typing
@@ -201,11 +202,13 @@ class ProgressBar(object):
     Master node updates the bar,
     slave nodes update their indices.
     """
-    if idx % 1000 == 0 or flush:
+    if idx % 100 == 0 or flush:
       l.logger().error("Node {} idx: {} offset {}".format(WORLD_RANK, idx, self.offset), ddp_nodes = True)
       if WORLD_RANK == 0:
         total_idx = self._fetch_indices(idx)
         self.bar.update(total_idx - self.bar.n)
+        sys.stdout.flush()
+        sys.stderr.flush()
       else:
         self._write_index(idx)
     return
