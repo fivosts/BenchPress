@@ -109,7 +109,8 @@ class Model(object):
     # Initialize distrib lock path.
     if environment.WORLD_SIZE > 1:
       lock_cache = cache.mkcache("locks")
-      lock_cache.path.mkdir(exist_ok = True)
+      if environment.WORLD_RANK == 0:
+        lock_cache.path.mkdir(exist_ok = True)
       distrib.init(lock_cache.path)
 
     # Initialize corpuses
@@ -121,8 +122,9 @@ class Model(object):
     self.hash = self._ComputeHash(self.pre_train_corpus, self.corpus, self.config)
     self.cache = cache.mkcache("model", self.hash)
     # Create the necessary cache directories.
-    (self.cache.path / "checkpoints").mkdir(exist_ok=True)
-    (self.cache.path / "samples").mkdir(exist_ok=True)
+    if environment.WORLD_RANK == 0:
+      (self.cache.path / "checkpoints").mkdir(exist_ok=True)
+      (self.cache.path / "samples").mkdir(exist_ok=True)
 
     self._created = False
 
@@ -362,7 +364,8 @@ class Model(object):
     epoch = self.backend.telemetry.EpochTelemetry()[-1].epoch_num
     sample_start_time = datetime.datetime.utcnow()    
 
-    (self.cache.path / "samples" / sampler.hash).mkdir(exist_ok = True)
+    if environment.WORLD_RANK == 0:
+      (self.cache.path / "samples" / sampler.hash).mkdir(exist_ok = True)
     tokenizer = self.corpus.tokenizer
     if sampler.isFixedStr and not sampler.is_active:
       sampler.Specialize(tokenizer)
