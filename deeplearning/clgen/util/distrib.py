@@ -171,7 +171,7 @@ class ProgressBar(object):
     if self.path is None:
       raise FileNotFoundError("Distributed env path has not been set!")
     if WORLD_RANK == 0:
-      self.bar = tqdm.trange(max_value, desc = "Distributed processing")
+      self.bar = tqdm(total = max_value, desc = "Distributed processing")
     return
 
   def _fetch_indices(self, idx: int) -> int:
@@ -223,4 +223,5 @@ class ProgressBar(object):
       indices = glob.glob(str(PATH / "index-*"))
       for ip in indices:
         os.remove(str(ip))
+      self.bar.close()
     return
