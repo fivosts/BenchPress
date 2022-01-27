@@ -171,7 +171,7 @@ class ProgressBar(object):
     if self.path is None:
       raise FileNotFoundError("Distributed env path has not been set!")
     if WORLD_RANK == 0:
-      self.bar = tqdm(total = max_value, desc = "Distributed processing")
+      self.bar = tqdm.tqdm(total = max_value, desc = "Distributed processing")
     return
 
   def _fetch_indices(self, idx: int) -> int:
