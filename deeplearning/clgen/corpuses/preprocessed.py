@@ -228,7 +228,11 @@ def PreprocessorWorker(job: str,
 
 def BQPreprocessorWorker(file: bqdb.bqMainFile, preprocessors: typing.List[str]) -> PreprocessedContentFile:
   """The inner loop of a parallelizable pre-processing job."""
-  return PreprocessedContentFile.FromBQFile(file, preprocessors)
+  t1 = time.time()
+  ret = PreprocessedContentFile.FromBQFile(file, preprocessors)
+  t2 = time.time()
+  l.logger().warn("worker time: {}".format(t2-t1))
+  return ret
 
 class PreprocessedContentFiles(sqlutil.Database):
   """A database of pre-processed contentfiles."""
@@ -459,17 +463,18 @@ class PreprocessedContentFiles(sqlutil.Database):
 
         while idx < limit:
           try:
-            chunk = min(chunk, limit - idx)
+            chunk = min(chunk, limit - idx) # This is equivalent to l447/l448 but needed for last node that gets a bit more.
             l.logger().warn("Node {} before I/O".format(environment.WORLD_RANK), ddp_nodes = True)
             batch = db.main_files_batch(chunk, idx, exclude_id = done)
             l.logger().warn("Node {} after I/O".format(environment.WORLD_RANK), ddp_nodes = True)
-            idx += chunk - len(batch)
+            idx += chunk - len(batch) # This difference will be the number of already done files.
             pool = multiprocessing.Pool()
             for preprocessed_list in pool.imap_unordered(
                                       functools.partial(
                                         BQPreprocessorWorker,
                                         preprocessors = list(config.preprocessor)
                                     ), batch):
+              t1 = time.time()
               for preprocessed_cf in preprocessed_list:
                 wall_time_end = time.time()
                 preprocessed_cf.wall_time_ms = int(
@@ -478,12 +483,12 @@ class PreprocessedContentFiles(sqlutil.Database):
                 wall_time_start = wall_time_end
                 session.add(preprocessed_cf)
                 if wall_time_end - last_commit > 10:
-                  l.logger().warn("Node {} before commiting".format(environment.WORLD_RANK), ddp_nodes = True)
                   session.commit()
-                  l.logger().warn("Node {} after commiting".format(environment.WORLD_RANK), ddp_nodes = True)
                   last_commit = wall_time_end
               idx += 1
               bar.update(idx - bar.n)
+              t2 = time.time()
+              l.logger().warn("Main loop: {}".format(t2-t1))
             pool.close()
           except KeyboardInterrupt as e:
             pool.terminate()
