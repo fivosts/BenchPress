@@ -509,9 +509,9 @@ class torchBert(backends.BackendBase):
 
             ## Collect tensors for logging.
             if self.pytorch.num_nodes > 1:
-              masked_lm_loss     = [torch.zeros(tuple(step_out['masked_lm_loss'].shape    ), dtype = self.torch.int64) for _ in range(self.torch.distributed.get_world_size())]
-              next_sentence_loss = [torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.int64) for _ in range(self.torch.distributed.get_world_size())]
-              masked_lm_lengths  = [torch.zeros(tuple(step_out['masked_lm_lengths'].shape ), dtype = self.torch.int64) for _ in range(self.torch.distributed.get_world_size())]
+              masked_lm_loss     = [self.torch.zeros(tuple(step_out['masked_lm_loss'].shape    ), dtype = self.torch.int64) for _ in range(self.torch.distributed.get_world_size())]
+              next_sentence_loss = [self.torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.int64) for _ in range(self.torch.distributed.get_world_size())]
+              masked_lm_lengths  = [self.torch.zeros(tuple(step_out['masked_lm_lengths'].shape ), dtype = self.torch.int64) for _ in range(self.torch.distributed.get_world_size())]
 
               self.torch.distributed.all_gather(step_out["masked_lm_loss"], masked_lm_loss, dst = 0)
               self.torch.distributed.all_gather(step_out["next_sentence_loss"], next_sentence_loss, dst = 0)
