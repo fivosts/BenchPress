@@ -100,6 +100,7 @@ def unlock() -> None:
   if not (PATH / "critical-lock-{}".format(WORLD_RANK)).exists():
     raise FileNotFoundError("Node {} lock missing.".format(WORLD_RANK))
   os.remove(PATH / "critical-lock-{}".format(WORLD_RANK))
+  time.sleep(0.5)
   return
 
 def write(msg: str) -> None:
