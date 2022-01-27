@@ -518,13 +518,13 @@ class torchBert(backends.BackendBase):
             l.logger().error("Node {} After optimizer".format(environment.WORLD_RANK), ddp_nodes = True)
             ## Collect tensors for logging.
             if self.pytorch.num_nodes > 1:
-              masked_lm_loss     = [self.torch.zeros(tuple(step_out['masked_lm_loss'].shape    ), dtype = self.torch.int64) for _ in range(self.torch.distributed.get_world_size())]
-              next_sentence_loss = [self.torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.int64) for _ in range(self.torch.distributed.get_world_size())]
-              masked_lm_lengths  = [self.torch.zeros(tuple(inputs  ['masked_lm_lengths'].shape ), dtype = self.torch.int64) for _ in range(self.torch.distributed.get_world_size())]
+              masked_lm_loss     = [self.torch.zeros(tuple(step_out['masked_lm_loss'].shape    ), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+              next_sentence_loss = [self.torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+              masked_lm_lengths  = [self.torch.zeros(tuple(inputs['masked_lm_lengths'].shape ), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
 
-              self.torch.distributed.gather(step_out["masked_lm_loss"], masked_lm_loss,                             dst = 0)
-              self.torch.distributed.gather(step_out["next_sentence_loss"], next_sentence_loss,                     dst = 0)
-              self.torch.distributed.gather(inputs['masked_lm_lengths'].to(self.pytorch.device), masked_lm_lengths, dst = 0)
+              self.torch.distributed.all_gather(masked_lm_loss,     step_out["masked_lm_loss"])
+              self.torch.distributed.all_gather(next_sentence_loss, step_out["next_sentence_loss"])
+              self.torch.distributed.all_gather(masked_lm_lengths,  inputs['masked_lm_lengths'].to(self.pytorch.device))
               self.torch.distributed.reduce(total_loss, dst = 0)
             else:
               masked_lm_loss     = step_out['masked_lm_loss'    ]
@@ -578,11 +578,10 @@ class torchBert(backends.BackendBase):
                   batch_execution_time_ms = exec_time_ms,
                   time_per_sample_ms      = exec_time_ms / self.train_batch_size,
                 )
-
-              self.train.model.zero_grad()
-              if self.current_step == 0:
-                l.logger().info("Starting Loss: {}".format(total_loss.item()), mail_level = 4)
-              self.current_step += 1
+            self.train.model.zero_grad()
+            if self.current_step == 0:
+              l.logger().info("Starting Loss: {}".format(total_loss.item()))
+            self.current_step += 1
             l.logger().error("Node {} After logging".format(environment.WORLD_RANK), ddp_nodes = True)
             if self.torch.distributed.is_initialized():
               self.torch.distributed.barrier()
@@ -590,7 +589,7 @@ class torchBert(backends.BackendBase):
 
           # End of Epoch
           set_mail = "Epoch {} Loss: {}\n".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss)
-          l.logger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss), mail_level = 4)
+          l.logger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss))
           if self.is_world_process_zero():
             self.saveCheckpoint(self.train, pre_train)
 
