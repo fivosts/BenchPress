@@ -140,8 +140,6 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
       else:
         with open(e, 'rb') as infile:
           length = len(pickle.load(infile))
-          if environment.WORLD_RANK == 0:
-            l.logger().error("{} - {}".format(e, length))
           lt = length
       assert lt > 0, "Dataset {} is empty".format(e)
       r.append(lt + s)
