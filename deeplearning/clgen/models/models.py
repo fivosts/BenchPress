@@ -14,6 +14,7 @@
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """The CLgen language model."""
 import os
+import time
 import socket
 import shutil
 import getpass
