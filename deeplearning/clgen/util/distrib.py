@@ -207,8 +207,7 @@ class ProgressBar(object):
       if WORLD_RANK == 0:
         total_idx = self._fetch_indices(idx)
         self.bar.update(total_idx - self.bar.n)
-        sys.stdout.flush()
-        sys.stderr.flush()
+        self.bar.refresh()
       else:
         self._write_index(idx)
     return
