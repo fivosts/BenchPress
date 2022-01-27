@@ -474,17 +474,13 @@ class torchBert(backends.BackendBase):
           # the beginning of each epoch before creating the DataLoader iterator
           # is necessary to make shuffling work properly across multiple epochs.
           # Otherwise, the same ordering will be always used.
-          l.logger().error("Node {} Before set epoch".format(environment.WORLD_RANK), ddp_nodes = True)
           if self.pytorch.num_nodes > 1:
             loader.sampler.set_epoch(epoch)
-
-          l.logger().error("Node {} After set epoch".format(environment.WORLD_RANK), ddp_nodes = True)
 
           if epoch < self.current_step // self.steps_per_epoch:
             continue # Stupid bar won't resume.
 
           batch_iter = tqdm.auto.trange(self.steps_per_epoch, desc="Batch", leave = False) if self.is_world_process_zero() else range(self.steps_per_epoch)
-          l.logger().error("Node {} Before batch".format(environment.WORLD_RANK), ddp_nodes = True)
           for step in batch_iter:
             if self.is_world_process_zero():
               start = datetime.datetime.utcnow()
@@ -496,18 +492,14 @@ class torchBert(backends.BackendBase):
               batch_iterator = iter(loader)
               inputs = next(batch_iterator)
 
-            l.logger().error("Node {} After batch".format(environment.WORLD_RANK), ddp_nodes = True)
             # Move inputs to torch device.
             inputs     = self.to_device(inputs)
-            l.logger().error("Node {} After device".format(environment.WORLD_RANK), ddp_nodes = True)
             # Run model step on batch
             step_out   = self.model_step(self.train.model, inputs, step = epoch * self.steps_per_epoch + step)
-            l.logger().error("Node {} After model step".format(environment.WORLD_RANK), ddp_nodes = True)
             # Collect losses and backpropagate
             total_loss = step_out['total_loss'].mean()
             total_loss.backward()
 
-            l.logger().error("Node {} After loss".format(environment.WORLD_RANK), ddp_nodes = True)
             self.torch.nn.utils.clip_grad_norm_(self.train.model.parameters(), self.max_grad_norm)
             if self.torch_tpu_available:
               self.pytorch.torch_xla.optimizer_step(self.train.optimizer)
@@ -515,7 +507,6 @@ class torchBert(backends.BackendBase):
               self.train.optimizer.step()
             self.train.scheduler.step()
 
-            l.logger().error("Node {} After optimizer".format(environment.WORLD_RANK), ddp_nodes = True)
             ## Collect tensors for logging.
             if self.pytorch.num_nodes > 1:
               masked_lm_loss     = [self.torch.zeros(tuple(step_out['masked_lm_loss'].shape    ), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
@@ -530,7 +521,6 @@ class torchBert(backends.BackendBase):
               masked_lm_loss     = step_out['masked_lm_loss'    ]
               next_sentence_loss = step_out['next_sentence_loss']
               masked_lm_lengths  = step_out['masked_lm_lengths' ]
-            l.logger().error("Node {} After gathering".format(environment.WORLD_RANK), ddp_nodes = True)
 
             if self.is_world_process_zero():
               exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
@@ -582,10 +572,8 @@ class torchBert(backends.BackendBase):
             if self.current_step == 0:
               l.logger().info("Starting Loss: {}".format(total_loss.item()))
             self.current_step += 1
-            l.logger().error("Node {} After logging".format(environment.WORLD_RANK), ddp_nodes = True)
-            if self.torch.distributed.is_initialized():
-              self.torch.distributed.barrier()
-            l.logger().error("Node {} After barrier".format(environment.WORLD_RANK), ddp_nodes = True)
+            # if self.torch.distributed.is_initialized():
+            #   self.torch.distributed.barrier()
 
           # End of Epoch
           set_mail = "Epoch {} Loss: {}\n".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss)
