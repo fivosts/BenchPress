@@ -120,94 +120,96 @@ class Model(object):
       self.pre_train_corpus = corpuses.Corpus(config.pre_train_corpus)
 
     self.hash = self._ComputeHash(self.pre_train_corpus, self.corpus, self.config)
-    self.cache = cache.mkcache("model", self.hash)
-    # Create the necessary cache directories.
-    if environment.WORLD_RANK == 0:
-      (self.cache.path / "checkpoints").mkdir(exist_ok=True)
-      (self.cache.path / "samples").mkdir(exist_ok=True)
-
     self._created = False
 
-    # Create symlink to encoded corpus.
-    symlink = self.cache.path / "corpus"
-    if not symlink.is_symlink():
-      os.symlink(
-        os.path.relpath(
-          pathlib.Path(self.corpus.encoded.url[len("sqlite:///") :]).parent,
-          self.cache.path,
-        ),
-        symlink,
-      )
-    if self.pre_train_corpus:
-      symlink = self.cache.path / "pre_train_corpus"
+    distrib.lock()
+    self.cache = cache.mkcache("model", self.hash)
+    distrib.unlock()
+
+    if environment.WORLD_RANK == 0:
+      # Create the necessary cache directories.
+      (self.cache.path / "checkpoints").mkdir(exist_ok=True)
+      (self.cache.path / "samples").mkdir(exist_ok=True)
+      # Create symlink to encoded corpus.
+      symlink = self.cache.path / "corpus"
       if not symlink.is_symlink():
         os.symlink(
           os.path.relpath(
-            pathlib.Path(self.pre_train_corpus.encoded.url[len("sqlite:///") :]).parent,
+            pathlib.Path(self.corpus.encoded.url[len("sqlite:///") :]).parent,
             self.cache.path,
           ),
           symlink,
         )
+      if self.pre_train_corpus:
+        symlink = self.cache.path / "pre_train_corpus"
+        if not symlink.is_symlink():
+          os.symlink(
+            os.path.relpath(
+              pathlib.Path(self.pre_train_corpus.encoded.url[len("sqlite:///") :]).parent,
+              self.cache.path,
+            ),
+            symlink,
+          )
 
-    # Create symlink to the tokenizer and create a backup inside checkpoints.
-    symlink = self.cache.path / "tokenizer"
-    if not symlink.is_symlink():
-      os.symlink(
-        os.path.relpath(self.corpus.tokenizer_path, self.cache.path), symlink
-      )
-    if (self.cache.path / "checkpoints" / "backup_tokenizer.pkl").exists():
-      shutil.copyfile(self.cache.path / "checkpoints" / "backup_tokenizer.pkl", self.corpus.tokenizer_path)
+      # Create symlink to the tokenizer and create a backup inside checkpoints.
+      symlink = self.cache.path / "tokenizer"
+      if not symlink.is_symlink():
+        os.symlink(
+          os.path.relpath(self.corpus.tokenizer_path, self.cache.path), symlink
+        )
+      if (self.cache.path / "checkpoints" / "backup_tokenizer.pkl").exists():
+        shutil.copyfile(self.cache.path / "checkpoints" / "backup_tokenizer.pkl", self.corpus.tokenizer_path)
 
-    # Validate metadata against cache.
-    if self.cache.get("META.pbtxt"):
-      cached_meta = pbutil.FromFile(
-        pathlib.Path(self.cache["META.pbtxt"]), internal_pb2.ModelMeta()
-      )
-      # Exclude num_epochs and corpus location from metadata comparison.
-      config_to_compare = model_pb2.Model()
-      config_to_compare.CopyFrom(self.config)
-      config_to_compare.corpus.ClearField("contentfiles")
-      if config_to_compare.HasField("pre_train_corpus"):
-        config_to_compare.pre_train_corpus.ClearField("contentfiles")
-      config_to_compare.training.ClearField("num_epochs")
-      config_to_compare.training.ClearField("num_train_steps")
-      if config_to_compare.HasField("pre_train_corpus"):
-        config_to_compare.training.ClearField("num_pretrain_steps")
-      config_to_compare.training.ClearField("batch_size")
-      if config_to_compare.training.HasField("data_generator"):
-        config_to_compare.training.data_generator.ClearField("steps_per_epoch")
-        config_to_compare.training.data_generator.ClearField("validation_set")
-      # These fields should have already been cleared, but we'll do it again
-      # so that metadata comparisons don't fail when the cached meta schema
-      # is updated.
-      cached_to_compare = model_pb2.Model()
-      cached_to_compare.CopyFrom(cached_meta.config)
-      cached_to_compare.corpus.ClearField("contentfiles")
-      if cached_to_compare.HasField("pre_train_corpus"):
-        cached_to_compare.pre_train_corpus.ClearField("contentfiles")
-      cached_to_compare.training.ClearField("num_epochs")
-      cached_to_compare.training.ClearField("num_train_steps")
-      if cached_to_compare.HasField("pre_train_corpus"):
-        cached_to_compare.training.ClearField("num_pretrain_steps")
-      cached_to_compare.training.ClearField("batch_size")
-      if cached_to_compare.training.HasField("data_generator"):
-        cached_to_compare.training.data_generator.ClearField("steps_per_epoch")
-        cached_to_compare.training.data_generator.ClearField("validation_set")
-      if cached_to_compare.training.sequence_length != config_to_compare.training.sequence_length:
-        l.logger().warning("Mismatch between pre-trained and current config sequence_length!\
-          This can only be intended in BERT model!")
-      cached_to_compare.training.ClearField("sequence_length")
-      config_to_compare.training.ClearField("sequence_length")
-      if config_to_compare != cached_to_compare:
-        raise SystemError("Metadata mismatch: {} \n\n {}".format(config_to_compare, cached_to_compare))
-      self.meta = cached_meta
-    else:
-      self.meta = internal_pb2.ModelMeta()
-      self.meta.config.CopyFrom(self.config)
-      self._WriteMetafile()
+      # Validate metadata against cache.
+      if self.cache.get("META.pbtxt"):
+        cached_meta = pbutil.FromFile(
+          pathlib.Path(self.cache["META.pbtxt"]), internal_pb2.ModelMeta()
+        )
+        # Exclude num_epochs and corpus location from metadata comparison.
+        config_to_compare = model_pb2.Model()
+        config_to_compare.CopyFrom(self.config)
+        config_to_compare.corpus.ClearField("contentfiles")
+        if config_to_compare.HasField("pre_train_corpus"):
+          config_to_compare.pre_train_corpus.ClearField("contentfiles")
+        config_to_compare.training.ClearField("num_epochs")
+        config_to_compare.training.ClearField("num_train_steps")
+        if config_to_compare.HasField("pre_train_corpus"):
+          config_to_compare.training.ClearField("num_pretrain_steps")
+        config_to_compare.training.ClearField("batch_size")
+        if config_to_compare.training.HasField("data_generator"):
+          config_to_compare.training.data_generator.ClearField("steps_per_epoch")
+          config_to_compare.training.data_generator.ClearField("validation_set")
+        # These fields should have already been cleared, but we'll do it again
+        # so that metadata comparisons don't fail when the cached meta schema
+        # is updated.
+        cached_to_compare = model_pb2.Model()
+        cached_to_compare.CopyFrom(cached_meta.config)
+        cached_to_compare.corpus.ClearField("contentfiles")
+        if cached_to_compare.HasField("pre_train_corpus"):
+          cached_to_compare.pre_train_corpus.ClearField("contentfiles")
+        cached_to_compare.training.ClearField("num_epochs")
+        cached_to_compare.training.ClearField("num_train_steps")
+        if cached_to_compare.HasField("pre_train_corpus"):
+          cached_to_compare.training.ClearField("num_pretrain_steps")
+        cached_to_compare.training.ClearField("batch_size")
+        if cached_to_compare.training.HasField("data_generator"):
+          cached_to_compare.training.data_generator.ClearField("steps_per_epoch")
+          cached_to_compare.training.data_generator.ClearField("validation_set")
+        if cached_to_compare.training.sequence_length != config_to_compare.training.sequence_length:
+          l.logger().warning("Mismatch between pre-trained and current config sequence_length!\
+            This can only be intended in BERT model!")
+        cached_to_compare.training.ClearField("sequence_length")
+        config_to_compare.training.ClearField("sequence_length")
+        if config_to_compare != cached_to_compare:
+          raise SystemError("Metadata mismatch: {} \n\n {}".format(config_to_compare, cached_to_compare))
+        self.meta = cached_meta
+      else:
+        self.meta = internal_pb2.ModelMeta()
+        self.meta.config.CopyFrom(self.config)
+        self._WriteMetafile()
 
-    ## Store current commit
-    commit.saveCommit(self.cache.path)
+      ## Store current commit
+      commit.saveCommit(self.cache.path)
 
     self.backend = {
       model_pb2.NetworkArchitecture.TENSORFLOW_SEQ: tf_sequential.tfSequential,
