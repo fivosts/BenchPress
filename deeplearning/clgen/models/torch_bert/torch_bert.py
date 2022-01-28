@@ -507,24 +507,22 @@ class torchBert(backends.BackendBase):
               self.train.optimizer.step()
             self.train.scheduler.step()
 
-            ## Collect tensors for logging.
-            if self.pytorch.num_nodes > 1:
-              masked_lm_loss     = [self.torch.zeros(tuple(step_out['masked_lm_loss'].shape    ), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-              next_sentence_loss = [self.torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-              masked_lm_lengths  = [self.torch.zeros(tuple(inputs['masked_lm_lengths'].shape ), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-
-              self.torch.distributed.all_gather(masked_lm_loss,     step_out["masked_lm_loss"])
-              self.torch.distributed.all_gather(next_sentence_loss, step_out["next_sentence_loss"])
-              self.torch.distributed.all_gather(masked_lm_lengths,  inputs['masked_lm_lengths'].to(self.pytorch.device))
-              self.torch.distributed.reduce(total_loss, dst = 0)
-            else:
-              masked_lm_loss     = step_out['masked_lm_loss'    ]
-              next_sentence_loss = step_out['next_sentence_loss']
-              masked_lm_lengths  = inputs['masked_lm_lengths' ]
-
             if self.is_world_process_zero():
-              exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
+              ## Collect tensors for logging.
+              if self.pytorch.num_nodes > 1:
+                masked_lm_loss     = [self.torch.zeros(tuple(step_out['masked_lm_loss'].shape    ), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+                next_sentence_loss = [self.torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+                masked_lm_lengths  = [self.torch.zeros(tuple(inputs['masked_lm_lengths'].shape ), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
 
+                self.torch.distributed.all_gather(masked_lm_loss,     step_out["masked_lm_loss"])
+                self.torch.distributed.all_gather(next_sentence_loss, step_out["next_sentence_loss"])
+                self.torch.distributed.all_gather(masked_lm_lengths,  inputs['masked_lm_lengths'].to(self.pytorch.device))
+                self.torch.distributed.reduce(total_loss, dst = 0)
+              else:
+                masked_lm_loss     = step_out['masked_lm_loss'    ]
+                next_sentence_loss = step_out['next_sentence_loss']
+                masked_lm_lengths  = inputs['masked_lm_lengths' ]
+              exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
               if FLAGS.reward_compilation >= 0 and FLAGS.reward_compilation <= epoch * self.steps_per_epoch + step and not pre_train:
                 correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'].cpu().numpy())) if step_out['compile_status'][en] == 1]
                 for s in correct_samples:
