@@ -518,10 +518,10 @@ class torchBert(backends.BackendBase):
               self.torch.distributed.all_gather(masked_lm_lengths,  inputs['masked_lm_lengths'].to(self.pytorch.device))
               self.torch.distributed.all_gather(total_loss,         step_out['total_loss'])
 
-              total_loss         = total_loss    .reshape(-1, total_loss.shape        [-1])
-              masked_lm_loss     = masked_lm_loss.reshape(-1, masked_lm_loss.shape    [-1])
-              next_sentence_loss = masked_lm_loss.reshape(-1, next_sentence_loss.shape[-1])
-              masked_lm_lengths  = masked_lm_loss.reshape(-1, masked_lm_lengths.shape [-1])
+              # total_loss         = total_loss    .reshape(-1, total_loss.shape        [-1])
+              # masked_lm_loss     = masked_lm_loss.reshape(-1, masked_lm_loss.shape    [-1])
+              # next_sentence_loss = masked_lm_loss.reshape(-1, next_sentence_loss.shape[-1])
+              # masked_lm_lengths  = masked_lm_loss.reshape(-1, masked_lm_lengths.shape [-1])
             else:
               masked_lm_loss     = step_out['masked_lm_loss'    ]
               next_sentence_loss = step_out['next_sentence_loss']
@@ -555,7 +555,7 @@ class torchBert(backends.BackendBase):
                 train_hook.step(
                   masked_lm_loss          = masked_lm_loss.mean().item(),
                   next_sentence_loss      = masked_lm_loss.mean().item(),
-                  total_loss              = total_loss.item(),
+                  total_loss              = total_loss.mean().item(),
                   learning_rate           = self.train.scheduler.get_last_lr()[0],
                   num_correct_samples     = (correct_sample_obs.sample_id if correct_sample_obs is not None else None),
                   batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
@@ -568,7 +568,7 @@ class torchBert(backends.BackendBase):
                 train_hook.step(
                   masked_lm_loss          = masked_lm_loss.mean().item(),
                   next_sentence_loss      = masked_lm_loss.mean().item(),
-                  total_loss              = total_loss.item(),
+                  total_loss              = total_loss.mean().item(),
                   learning_rate           = self.train.scheduler.get_last_lr()[0],
                   batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
                                                  for b in masked_lm_lengths.cpu()]) / len(masked_lm_lengths.cpu()),
