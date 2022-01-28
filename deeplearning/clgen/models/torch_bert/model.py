@@ -909,7 +909,6 @@ class BertForPreTraining(BertPreTrainedModel):
         'seq_relationship_logits' : seq_relationship_score,
         'hidden_states'           : hidden_states,
         'attentions'              : attentions,
-        'batch_compilation_rate'  : torch.full((1,), -1, dtype = torch.float).to(device),
       }
 
 
