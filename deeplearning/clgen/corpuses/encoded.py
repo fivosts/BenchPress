@@ -401,19 +401,6 @@ class EncodedContentFiles(sqlutil.Database):
           preprocessed.PreprocessedContentFile.preprocessing_succeeded == True,
         )
         done = set([int(x.id) for x in session.query(EncodedContentFile).all()])
-        # jobs = [
-        #   internal_pb2.EncoderWorker(
-        #     id=x.id,
-        #     text=x.text,
-        #     contentfile_separator=contentfile_separator,
-        #     # pickled_tokenizer=pickle.dumps(tokenizer),
-        #   )
-        #   for x in query
-        # ]
-        # if not jobs:
-        #   raise ValueError(
-        #     "Pre-processed corpus contains no files: " f"'{preprocessed_db.url}'"
-        #   )
         total_jobs = query.count() # - len(done)
         l.logger().info("Encoding {} of {} preprocessed files"
                             .format(
