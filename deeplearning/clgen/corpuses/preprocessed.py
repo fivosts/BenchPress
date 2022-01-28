@@ -464,9 +464,7 @@ class PreprocessedContentFiles(sqlutil.Database):
         while idx < limit:
           try:
             chunk = min(chunk, limit - idx) # This is equivalent to l447/l448 but needed for last node that gets a bit more.
-            l.logger().warn("Node {} before I/O".format(environment.WORLD_RANK), ddp_nodes = True)
             batch = db.main_files_batch(chunk, idx, exclude_id = done)
-            l.logger().warn("Node {} after I/O".format(environment.WORLD_RANK), ddp_nodes = True)
             idx += chunk - len(batch) # This difference will be the number of already done files.
             pool = multiprocessing.Pool()
             for preprocessed_list in pool.imap_unordered(
@@ -488,7 +486,6 @@ class PreprocessedContentFiles(sqlutil.Database):
               idx += 1
               bar.update(idx - bar.n)
               t2 = time.time()
-              l.logger().warn("Main loop: {}".format(t2-t1))
             pool.close()
           except KeyboardInterrupt as e:
             pool.terminate()
