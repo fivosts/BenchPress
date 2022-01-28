@@ -464,7 +464,6 @@ class torchBert(backends.BackendBase):
           self.steps_per_epoch, total_steps - self.num_train_steps
         )
       )
-      from deeplearning.clgen.util import environment
       try:
         self.train.model.train()
         epoch_iter = tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False) if self.is_world_process_zero() else range(self.num_epochs)
@@ -531,6 +530,7 @@ class torchBert(backends.BackendBase):
               exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
               if FLAGS.reward_compilation >= 0 and FLAGS.reward_compilation <= epoch * self.steps_per_epoch + step and not pre_train:
                 ## Logging when compiler reward is enabled in training.
+                ## This is not compatible with using DDP, and basically compiler-rewarded training is deprecated and proven to be wrong and inefficient.
                 correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'].cpu().numpy())) if step_out['compile_status'][en] == 1]
                 for s in correct_samples:
                   feature_vector = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(s[1]))
@@ -552,35 +552,32 @@ class torchBert(backends.BackendBase):
               if not pre_train:
                 ## Fine-tuning logging.
                 train_hook.step(
-                  masked_lm_loss          = step_out['masked_lm_loss'].mean().item(),
-                  next_sentence_loss      = step_out['next_sentence_loss'].mean().item(),
+                  masked_lm_loss          = masked_lm_loss.mean().item(),
+                  next_sentence_loss      = masked_lm_loss.mean().item(),
                   total_loss              = total_loss.item(),
                   learning_rate           = self.train.scheduler.get_last_lr()[0],
-                  compilation_rate        = step_out['batch_compilation_rate'].mean().item(),
                   num_correct_samples     = (correct_sample_obs.sample_id if correct_sample_obs is not None else None),
                   batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
-                                                 for b in inputs['masked_lm_lengths'].cpu()]) / len(inputs['masked_lm_lengths'].cpu()),
+                                                 for b in masked_lm_lengths.cpu()]) / len(masked_lm_lengths.cpu()),
                   batch_execution_time_ms = exec_time_ms,
                   time_per_sample_ms      = exec_time_ms / self.train_batch_size,
                 )
               else:
                 ## Pre-training logging.
                 train_hook.step(
-                  masked_lm_loss          = step_out['masked_lm_loss'].mean().item(),
-                  next_sentence_loss      = step_out['next_sentence_loss'].mean().item(),
+                  masked_lm_loss          = masked_lm_loss.mean().item(),
+                  next_sentence_loss      = masked_lm_loss.mean().item(),
                   total_loss              = total_loss.item(),
                   learning_rate           = self.train.scheduler.get_last_lr()[0],
                   batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
-                                                 for b in inputs['masked_lm_lengths'].cpu()]) / len(inputs['masked_lm_lengths'].cpu()),
+                                                 for b in masked_lm_lengths.cpu()]) / len(masked_lm_lengths.cpu()),
                   batch_execution_time_ms = exec_time_ms,
                   time_per_sample_ms      = exec_time_ms / self.train_batch_size,
                 )
             self.train.model.zero_grad()
             if self.current_step == 0:
-              l.logger().info("Starting Loss: {}".format(total_loss.item()))
+              l.logger().info("Starting Loss: {}".format(total_loss.mean().item()))
             self.current_step += 1
-            # if self.torch.distributed.is_initialized():
-            #   self.torch.distributed.barrier()
 
           # End of Epoch
           set_mail = "Epoch {} Loss: {}\n".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss)
