@@ -517,11 +517,6 @@ class torchBert(backends.BackendBase):
               self.torch.distributed.all_gather(next_sentence_loss, step_out["next_sentence_loss"])
               self.torch.distributed.all_gather(masked_lm_lengths,  inputs['masked_lm_lengths'].to(self.pytorch.device))
               self.torch.distributed.all_gather(total_loss,         step_out['total_loss'])
-
-              # total_loss         = total_loss    .reshape(-1, total_loss.shape        [-1])
-              # masked_lm_loss     = masked_lm_loss.reshape(-1, masked_lm_loss.shape    [-1])
-              # next_sentence_loss = masked_lm_loss.reshape(-1, next_sentence_loss.shape[-1])
-              # masked_lm_lengths  = masked_lm_loss.reshape(-1, masked_lm_lengths.shape [-1])
             else:
               masked_lm_loss     = step_out['masked_lm_loss'    ]
               next_sentence_loss = step_out['next_sentence_loss']
