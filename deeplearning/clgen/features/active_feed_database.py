@@ -2,7 +2,7 @@
 import contextlib
 import math
 import copy
-import progressbar
+import tqdm
 import pathlib
 import multiprocessing
 import datetime
@@ -293,7 +293,7 @@ def merge_databases(dbs: typing.List[ActiveFeedDatabase], out_db: ActiveFeedData
         )
         new_id += 1
   with out_db.Session() as s:
-    bar = progressbar.ProgressBar(max_value = len(sdir.values()))
+    bar = tqdm.tqdm(total = len(sdir.values()), desc = "Merged DB")
     for dp in bar(sdir.values()):
       s.add(s.merge(dp))
     s.commit()
@@ -335,7 +335,7 @@ def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples
   existing = [dp.sha256 for dp in out_db.get_data]
   for db in dbs:
     data = []
-    bar = progressbar.ProgressBar(max_value = db.active_count)
+    bar = tqdm.tqdm(max_value = db.active_count, desc = "{}".format(pathlib.Path(db.url).name))
     pool = multiprocessing.Pool()
     for dp in bar(pool.imap_unordered(ToProto, db.get_data)):
       data.append(dp)
@@ -345,7 +345,7 @@ def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples
         sdir[dp.sha256] = dp
         new_id += 1
   with out_db.Session() as s:
-    bar = progressbar.ProgressBar(max_value = len(sdir.values()))
+    bar = tqdm.tqdm(total = len(sdir.values()), desc = "Output DB")
     for dp in bar(sdir.values()):
       s.add(dp)
     s.commit()
