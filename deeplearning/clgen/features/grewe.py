@@ -53,13 +53,17 @@ class GreweFeatures(object):
     Returns:
       Feature vector and diagnostics in str format.
     """
-    with tempfile.NamedTemporaryFile('w', prefix = "feat_ext_", suffix = '.cl', dir = FLAGS.local_filesystem) as f:
+    try:
+      tdir = FLAGS.local_filesystem
+    except Exception:
+      tdir = None
+    with tempfile.NamedTemporaryFile('w', prefix = "feat_ext_", suffix = '.cl', dir = tdir) as f:
       f.write(src)
       f.flush()
 
       extra_arg = ""
       if header_file:
-        htf = tempfile.NamedTemporaryFile('w', prefix = "feat_ext_head_", suffix = '.h', dir = FLAGS.local_filesystem)
+        htf = tempfile.NamedTemporaryFile('w', prefix = "feat_ext_head_", suffix = '.h', dir = tdir)
         htf.write(header_file)
         htf.flush()
         extra_arg = "-extra-arg=-include{}".format(htf.name)
