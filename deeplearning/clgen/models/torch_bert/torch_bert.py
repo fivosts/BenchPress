@@ -518,9 +518,9 @@ class torchBert(backends.BackendBase):
               self.torch.distributed.all_gather(masked_lm_lengths,  inputs['masked_lm_lengths'].to(self.pytorch.device))
               self.torch.distributed.all_gather(total_loss,         step_out['total_loss'])
             else:
-              masked_lm_loss     = step_out['masked_lm_loss'    ]
-              next_sentence_loss = step_out['next_sentence_loss']
-              masked_lm_lengths  = inputs['masked_lm_lengths' ]
+              masked_lm_loss     = step_out['masked_lm_loss'    ].cpu()
+              next_sentence_loss = step_out['next_sentence_loss'].cpu()
+              masked_lm_lengths  = inputs['masked_lm_lengths' ].cpu()
 
             if self.is_world_process_zero():
               exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
@@ -548,31 +548,31 @@ class torchBert(backends.BackendBase):
               if not pre_train:
                 ## Fine-tuning logging.
                 train_hook.step(
-                  masked_lm_loss          = masked_lm_loss.mean().item(),
-                  next_sentence_loss      = masked_lm_loss.mean().item(),
-                  total_loss              = total_loss.mean().item(),
+                  masked_lm_loss          = sum([ml.mean().item() for ml in masked_lm_loss]) / len(masked_lm_loss),
+                  next_sentence_loss      = sum([nsl.mean().item() for nsl in next_sentence_loss]) / len(next_sentence_loss),
+                  total_loss              = sum([tl.mean().item() for tl in total_loss]) / len(total_loss),
                   learning_rate           = self.train.scheduler.get_last_lr()[0],
                   num_correct_samples     = (correct_sample_obs.sample_id if correct_sample_obs is not None else None),
                   batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
-                                                 for b in masked_lm_lengths.cpu()]) / len(masked_lm_lengths.cpu()),
+                                                 for b in masked_lm_lengths]) / len(masked_lm_lengths),
                   batch_execution_time_ms = exec_time_ms,
                   time_per_sample_ms      = exec_time_ms / self.train_batch_size,
                 )
               else:
                 ## Pre-training logging.
                 train_hook.step(
-                  masked_lm_loss          = masked_lm_loss.mean().item(),
-                  next_sentence_loss      = masked_lm_loss.mean().item(),
-                  total_loss              = total_loss.mean().item(),
+                  masked_lm_loss          = sum([ml.mean().item() for ml in masked_lm_loss]) / len(masked_lm_loss),
+                  next_sentence_loss      = sum([nsl.mean().item() for nsl in next_sentence_loss]) / len(next_sentence_loss),
+                  total_loss              = sum([tl.mean().item() for tl in total_loss]) / len(total_loss),
                   learning_rate           = self.train.scheduler.get_last_lr()[0],
                   batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
-                                                 for b in masked_lm_lengths.cpu()]) / len(masked_lm_lengths.cpu()),
+                                                 for b in masked_lm_lengths]) / len(masked_lm_lengths),
                   batch_execution_time_ms = exec_time_ms,
                   time_per_sample_ms      = exec_time_ms / self.train_batch_size,
                 )
             self.train.model.zero_grad()
             if self.current_step == 0:
-              l.logger().info("Starting Loss: {}".format(total_loss.mean().item()))
+              l.logger().info("Starting Loss: {}".format(sum([tl.mean().item() for tl in total_loss]) / len(total_loss)))
             self.current_step += 1
 
           # End of Epoch
