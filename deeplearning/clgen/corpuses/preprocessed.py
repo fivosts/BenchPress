@@ -228,10 +228,7 @@ def PreprocessorWorker(job: str,
 
 def BQPreprocessorWorker(file: bqdb.bqMainFile, preprocessors: typing.List[str]) -> PreprocessedContentFile:
   """The inner loop of a parallelizable pre-processing job."""
-  t1 = time.time()
   ret = PreprocessedContentFile.FromBQFile(file, preprocessors)
-  t2 = time.time()
-  l.logger().warn("worker time: {}".format(t2-t1))
   return ret
 
 class PreprocessedContentFiles(sqlutil.Database):
@@ -401,7 +398,7 @@ class PreprocessedContentFiles(sqlutil.Database):
             else:
               jobs[-1].append(t)
             total += 1
-          bar = tqdm.trange(total, desc = "Preprocessing", leave = True)
+          bar = tqdm.tqdm(total = total, desc = "Preprocessing", leave = True)
           c = 0
           last_commit = time.time()
           wall_time_start = time.time()
@@ -454,19 +451,15 @@ class PreprocessedContentFiles(sqlutil.Database):
         if environment.WORLD_SIZE > 1:
           bar = distrib.ProgressBar(max_value = total, offset = idx)
         else:
-          bar = tqdm.trange(total, desc = "Preprocessing", leave = True)
+          bar = tqdm.tqdm(total = total, desc = "Preprocessing", leave = True)
 
         last_commit     = time.time()
         wall_time_start = time.time()
 
-        l.logger().error("Node {} will make idx {} to {} at {}".format(environment.WORLD_RANK, idx, limit, str(contentfile_root.name)), ddp_nodes = True)
-
         while idx < limit:
           try:
             chunk = min(chunk, limit - idx) # This is equivalent to l447/l448 but needed for last node that gets a bit more.
-            l.logger().warn("Node {} before I/O".format(environment.WORLD_RANK), ddp_nodes = True)
             batch = db.main_files_batch(chunk, idx, exclude_id = done)
-            l.logger().warn("Node {} after I/O".format(environment.WORLD_RANK), ddp_nodes = True)
             idx += chunk - len(batch) # This difference will be the number of already done files.
             pool = multiprocessing.Pool()
             for preprocessed_list in pool.imap_unordered(
@@ -474,7 +467,6 @@ class PreprocessedContentFiles(sqlutil.Database):
                                         BQPreprocessorWorker,
                                         preprocessors = list(config.preprocessor)
                                     ), batch):
-              t1 = time.time()
               for preprocessed_cf in preprocessed_list:
                 wall_time_end = time.time()
                 preprocessed_cf.wall_time_ms = int(
@@ -487,8 +479,6 @@ class PreprocessedContentFiles(sqlutil.Database):
                   last_commit = wall_time_end
               idx += 1
               bar.update(idx - bar.n)
-              t2 = time.time()
-              l.logger().warn("Main loop: {}".format(t2-t1))
             pool.close()
           except KeyboardInterrupt as e:
             pool.terminate()
@@ -728,7 +718,7 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
     with db.Session() as ses:
       data = ses.query(PreprocessedContentFile).all()
     with out_db.Session() as ses:
-      bar = tqdm.trange(len(data), desc = "DB Merging", leave = True)
+      bar = tqdm.tqdm(total = len(data), desc = "DB Merging", leave = True)
       for df in data:
         ses.add(PreprocessedContentFile.FromPreprocessedContentFile(df, idx = pkey + df.id))
         bar.update(1)
