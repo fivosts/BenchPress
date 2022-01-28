@@ -224,7 +224,6 @@ def EncoderWorker(
   except Exception as e:
     raise e
 
-
 class EncodedContentFiles(sqlutil.Database):
   """A database of encoded pre-processed contentfiles."""
 
