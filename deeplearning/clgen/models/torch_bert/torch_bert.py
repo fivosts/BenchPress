@@ -520,7 +520,7 @@ class torchBert(backends.BackendBase):
             else:
               masked_lm_loss     = step_out['masked_lm_loss'    ]
               next_sentence_loss = step_out['next_sentence_loss']
-              masked_lm_lengths  = step_out['masked_lm_lengths' ]
+              masked_lm_lengths  = inputs['masked_lm_lengths' ]
 
             if self.is_world_process_zero():
               exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
