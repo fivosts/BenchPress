@@ -524,6 +524,7 @@ class torchBert(backends.BackendBase):
                 masked_lm_lengths  = inputs['masked_lm_lengths' ]
               exec_time_ms = int(round((datetime.datetime.utcnow() - start).total_seconds() * 1000))
               if FLAGS.reward_compilation >= 0 and FLAGS.reward_compilation <= epoch * self.steps_per_epoch + step and not pre_train:
+                ## Logging when compiler reward is enabled in training.
                 correct_samples = [(x, y) for en, (x, y) in enumerate(zip(inputs['input_ids'].cpu().numpy(), step_out['generated_samples'].cpu().numpy())) if step_out['compile_status'][en] == 1]
                 for s in correct_samples:
                   feature_vector = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(s[1]))
@@ -543,6 +544,7 @@ class torchBert(backends.BackendBase):
                     )
                   )
               if not pre_train:
+                ## Fine-tuning logging.
                 train_hook.step(
                   masked_lm_loss          = step_out['masked_lm_loss'].mean().item(),
                   next_sentence_loss      = step_out['next_sentence_loss'].mean().item(),
@@ -556,6 +558,7 @@ class torchBert(backends.BackendBase):
                   time_per_sample_ms      = exec_time_ms / self.train_batch_size,
                 )
               else:
+                ## Pre-training logging.
                 train_hook.step(
                   masked_lm_loss          = step_out['masked_lm_loss'].mean().item(),
                   next_sentence_loss      = step_out['next_sentence_loss'].mean().item(),
