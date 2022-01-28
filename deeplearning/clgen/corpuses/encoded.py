@@ -451,8 +451,6 @@ class EncodedContentFiles(sqlutil.Database):
                                 batch
                               ):
               wall_time_end = time.time()
-              # TODO(cec): Remove the if check once EncoderWorker no longer returns
-              # None on tokenizer encode error.
               if encoded_cf:
                 encoded_cf.wall_time_ms = int(
                   (wall_time_end - wall_time_start) * 1000
