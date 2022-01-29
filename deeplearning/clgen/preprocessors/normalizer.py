@@ -50,7 +50,11 @@ def NormalizeIdentifiers(text: str,
     RewriterException: If rewriter found nothing to rewrite.
     ClangTimeout: If rewriter fails to complete within timeout_seconds.
   """
-  with tempfile.NamedTemporaryFile("w", suffix=suffix, dir = FLAGS.local_filesystem) as f:
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
+  with tempfile.NamedTemporaryFile("w", suffix=suffix, dir = tdir) as f:
     f.write(text)
     f.flush()
     REWRITER = SEQ_CLANG_REWRITER if sequential_rewrite else CLANG_REWRITER
