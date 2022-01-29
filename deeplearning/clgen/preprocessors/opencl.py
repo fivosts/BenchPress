@@ -182,31 +182,6 @@ def AtomizeSource(text: str, vocab: typing.Set[str]) -> typing.List[str]:
   """
   return clang.AtomizeSource(text, vocab, ".cl", GetClangArgs(use_shim = False, use_aux_headers=True))
 
-@public.clgen_preprocessor
-def ClangPreprocess(text: str) -> str:
-  """Preprocessor OpenCL source.
-
-  Args:
-    text: OpenCL source to preprocess.
-
-  Returns:
-    Preprocessed source.
-  """
-  return _ClangPreprocess(text, False, True)
-
-
-@public.clgen_preprocessor
-def ClangPreprocessWithShim(text: str) -> str:
-  """Preprocessor OpenCL source with OpenCL shim header injection.
-
-  Args:
-    text: OpenCL source to preprocess.
-
-  Returns:
-    Preprocessed source.
-  """
-  return _ClangPreprocess(text, True, True)
-
 def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> str:
   """
   If CLDrive executable exists, run it over provided source code.
@@ -333,6 +308,31 @@ def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int =
     l.logger().warn(stdout)
     l.logger().warn(stderr)
   return label
+
+@public.clgen_preprocessor
+def ClangPreprocess(text: str) -> str:
+  """Preprocessor OpenCL source.
+
+  Args:
+    text: OpenCL source to preprocess.
+
+  Returns:
+    Preprocessed source.
+  """
+  return _ClangPreprocess(text, False, True)
+
+
+@public.clgen_preprocessor
+def ClangPreprocessWithShim(text: str) -> str:
+  """Preprocessor OpenCL source with OpenCL shim header injection.
+
+  Args:
+    text: OpenCL source to preprocess.
+
+  Returns:
+    Preprocessed source.
+  """
+  return _ClangPreprocess(text, True, True)
 
 def CompileLlvmBytecode(text: str, header_file = None, use_aux_headers: bool = True) -> str:
   """A preprocessor which attempts to compile the given code.
