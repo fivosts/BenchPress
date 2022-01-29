@@ -194,6 +194,24 @@ def NormalizeIdentifiers(text: str) -> str:
   return normalizer.NormalizeIdentifiers(text, ".c", [])
 
 @public.clgen_preprocessor
+def SequentialNormalizeIdentifiers(text: str) -> str:
+  """Normalize identifiers sequentially in OpenCL source code.
+
+  Args:
+    text: The source code to rewrite.
+
+  Returns:
+    Source code with identifier names normalized.
+
+  Raises:
+    RewriterException: If rewriter found nothing to rewrite.
+    ClangTimeout: If rewriter fails to complete within timeout_seconds.
+  """
+  return normalizer.NormalizeIdentifiers(
+    text, ".c", [], sequential_rewrite = True
+  )
+
+@public.clgen_preprocessor
 def ExtractFunctions(text: str) -> str:
   """Splits translation unit into separate functions using tokenizer.
   WARNING! Functions might need formatting after this preprocessor,
