@@ -335,7 +335,7 @@ def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples
   existing = [dp.sha256 for dp in out_db.get_data]
   for db in dbs:
     data = []
-    bar = tqdm.tqdm(max_value = db.active_count, desc = "{}".format(pathlib.Path(db.url).name))
+    bar = tqdm.tqdm(total = db.active_count, desc = "{}".format(pathlib.Path(db.url).name))
     pool = multiprocessing.Pool()
     for dp in bar(pool.imap_unordered(ToProto, db.get_data)):
       data.append(dp)
