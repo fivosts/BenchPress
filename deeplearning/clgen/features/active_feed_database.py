@@ -344,7 +344,7 @@ def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples
         sdir[dp.sha256] = dp
         new_id += 1
   with out_db.Session() as s:
-    for dp in bar(sdir.values(), total = len(sdir.values()), desc = "Output DB"):
+    for dp in tqdm.tqdm(sdir.values(), total = len(sdir.values()), desc = "Output DB"):
       s.add(dp)
     s.commit()
   return
