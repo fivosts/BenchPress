@@ -665,6 +665,24 @@ def NormalizeIdentifiers(text: str) -> str:
   )
 
 @public.clgen_preprocessor
+def SequentialNormalizeIdentifiers(text: str) -> str:
+  """Normalize identifiers sequentially in OpenCL source code.
+
+  Args:
+    text: The source code to rewrite.
+
+  Returns:
+    Source code with identifier names normalized.
+
+  Raises:
+    RewriterException: If rewriter found nothing to rewrite.
+    ClangTimeout: If rewriter fails to complete within timeout_seconds.
+  """
+  return normalizer.NormalizeIdentifiers(
+    text, ".cl", GetClangArgs(use_shim = False, use_aux_headers = True), sequential_rewrite = True
+  )
+
+@public.clgen_preprocessor
 def MinimumStatement1(text: str) -> str:
   """Check that file contains at least one statement.
 
