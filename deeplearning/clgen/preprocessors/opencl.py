@@ -22,6 +22,7 @@ import math
 import pandas as pd
 
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import crypto
 from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import normalizer
 from deeplearning.clgen.preprocessors import public
@@ -181,6 +182,20 @@ def AtomizeSource(text: str, vocab: typing.Set[str]) -> typing.List[str]:
     Source code as a list of tokens.
   """
   return clang.AtomizeSource(text, vocab, ".cl", GetClangArgs(use_shim = False, use_aux_headers=True))
+
+def ContentHash(src: str) -> str:
+  """
+  Re-write code with deterministic, sequential rewriter, remove whitespaces and new lines
+  and calculate the hash of the string.
+
+  Args:
+    src: The source code to compute.
+
+  Returns:
+    256-bit hash of pure source code string.
+  """
+  rw = SequentialNormalizeIdentifiers(src)
+  return crypto.sha256_str(rw.replace(" ", "").replace("\n", ""))
 
 def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> str:
   """
