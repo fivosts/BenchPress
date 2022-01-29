@@ -112,6 +112,20 @@ def ClangPreprocess(text: str) -> str:
   except Exception as e:
     raise e
 
+def ContentHash(src: str) -> str:
+  """
+  Re-write code with deterministic, sequential rewriter, remove whitespaces and new lines
+  and calculate the hash of the string.
+
+  Args:
+    src: The source code to compute.
+
+  Returns:
+    256-bit hash of pure source code string.
+  """
+  rw = SequentialNormalizeIdentifiers(src)
+  return crypto.sha256_str(rw.replace(" ", "").replace("\n", ""))
+
 def CompileLlvmBytecode(text: str) -> str:
   """A preprocessor which attempts to compile the given code.
 
