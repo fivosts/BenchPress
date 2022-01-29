@@ -19,6 +19,7 @@ try:
   CLANG_FORMAT        = check_path_exists(os.environ['CLANG_FORMAT'])
   CLANG_HEADERS       = check_path_exists(os.environ['CLANG_HEADERS'])
   CLANG_REWRITER      = check_path_exists(os.environ['CLANG_REWRITER'])
+  SEQ_CLANG_REWRITER  = check_path_exists(os.environ['SEQ_CLANG_REWRITER'])
   LIBCLC              = check_path_exists(os.environ['LIBCLC'])
   DASHBOARD_TEMPLATES = check_path_exists(os.environ['DASHBOARD_TEMPLATES'])
   DASHBOARD_STATIC    = check_path_exists(os.environ['DASHBOARD_STATIC'])
