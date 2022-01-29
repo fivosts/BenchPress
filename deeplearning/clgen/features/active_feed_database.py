@@ -335,9 +335,9 @@ def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples
   existing = [dp.sha256 for dp in out_db.get_data]
   for db in dbs:
     data = []
-    bar = tqdm.tqdm(total = db.active_count, desc = "{}".format(pathlib.Path(db.url).name))
+    # bar = tqdm(total = db.active_count, desc = "{}".format(pathlib.Path(db.url).name))
     pool = multiprocessing.Pool()
-    for dp in bar(pool.imap_unordered(ToProto, db.get_data)):
+    for dp in tqdm.tqdm(pool.imap_unordered(ToProto, db.get_data)):
       data.append(dp)
     for dp in data:
       if dp.sha256 not in sdir and dp.sha256 not in existing:
@@ -345,7 +345,7 @@ def active_convert_samples(dbs: typing.List[ActiveFeedDatabase], out_db: samples
         sdir[dp.sha256] = dp
         new_id += 1
   with out_db.Session() as s:
-    bar = tqdm.tqdm(total = len(sdir.values()), desc = "Output DB")
+    bar = tqdm(total = len(sdir.values()), desc = "Output DB")
     for dp in bar(sdir.values()):
       s.add(dp)
     s.commit()
