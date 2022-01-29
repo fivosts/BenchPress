@@ -1,17 +1,3 @@
-# Copyright (c) 2016-2020 Chris Cummins.
-#
-# clgen is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# clgen is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """Python entry point to the clang_rewriter binary."""
 import os
 import subprocess
@@ -25,7 +11,8 @@ from deeplearning.clgen.util import logging as l
 FLAGS = flags.FLAGS
 
 # Path of the clang rewriter binary.
-CLANG_REWRITER = environment.CLANG_REWRITER
+CLANG_REWRITER     = environment.CLANG_REWRITER
+SEQ_CLANG_REWRITER = environment.SEQ_CLANG_REWRITER
 
 # On Linux we must preload the LLVM libraries.
 CLANG_REWRITER_ENV = os.environ.copy()
@@ -34,9 +21,12 @@ liblto   = os.path.join(environment.LLVM, "lib/libLTO.so")
 CLANG_REWRITER_ENV["LD_PRELOAD"] = f"{libclang}:{liblto}"
 
 
-def NormalizeIdentifiers(
-  text: str, suffix: str, cflags: typing.List[str], timeout_seconds: int = 60
-) -> str:
+def NormalizeIdentifiers(text: str,
+                         suffix: str,
+                         cflags: typing.List[str],
+                         sequential_rewrite = False,
+                         timeout_seconds: int = 60
+                         ) -> str:
   """Normalize identifiers in source code.
 
   An LLVM rewriter pass which renames all functions and variables with short,
@@ -63,8 +53,9 @@ def NormalizeIdentifiers(
   with tempfile.NamedTemporaryFile("w", suffix=suffix, dir = FLAGS.local_filesystem) as f:
     f.write(text)
     f.flush()
+    REWRITER = SEQ_CLANG_REWRITER if sequential_rewrite else CLANG_REWRITER
     cmd = (
-      ["timeout", "-s9", str(timeout_seconds), str(CLANG_REWRITER), f.name]
+      ["timeout", "-s9", str(timeout_seconds), str(REWRITER), f.name]
       + ["-extra-arg=" + x for x in cflags]
       + ["--"]
     )
