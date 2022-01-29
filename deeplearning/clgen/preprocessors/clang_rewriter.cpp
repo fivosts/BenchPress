@@ -259,7 +259,11 @@ class RewriterVisitor : public clang::RecursiveASTVisitor<RewriterVisitor> {
                               const std::string& prefix = "") {
     if (rewrites.find(name) == rewrites.end()) {
       // New variable:
+      #ifdef RANDOM_REWRITE
       auto replacement = get_next_random_name(rewrites, name, var_base_char, prefix);
+      #elif SEQUENTIAL_REWRITE
+      auto replacement = get_next_name(rewrites, name, var_base_char, prefix);
+      #endif
       return replacement;
     } else {
       // Previously declared variable:
