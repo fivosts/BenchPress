@@ -297,6 +297,7 @@ function(clgen)
   ### Auto-generates clgen binary that initializes app environment and deploys app.
 
   get_target_property(CLANG_REWRITER      clang_rewriter      path)
+  get_target_property(SEQ_CLANG_REWRITER  seq_clang_rewriter  path)
   get_target_property(DASHBOARD_STATIC    dashboard_static    path)
   get_target_property(DASHBOARD_TEMPLATES dashboard_templates path)
   get_target_property(LIBCLC              libclc              path)
@@ -304,17 +305,6 @@ function(clgen)
   get_target_property(GREWE               Grewe               path)
   get_target_property(INSTCOUNT           InstCount           path)
   get_target_property(AUTOPHASE           Autophase           path)
-
-  # add_custom_target(install_binaries
-  #   COMMAND mv ${CLANG_REWRITER}       ${LOCAL}/bin/clang_rewriter
-  #   COMMAND mv ${DASHBOARD_STATIC}     ${LOCAL}/bin/dashboard_static
-  #   COMMAND mv ${DASHBOARD_TEMPLATES}  ${LOCAL}/bin/dashboard_templates
-  #   COMMAND mv ${LIBCLC}               ${LOCAL}/bin/libclc
-  #   COMMAND mv ${DATA_CL_INCLUDE}      ${LOCAL}/bin/data_cl_include
-  #   COMMAND mv ${GREWE}                ${LOCAL}/bin/Grewe
-  #   COMMAND mv ${INSTCOUNT}            ${LOCAL}/bin/InstCount
-  #   COMMAND mv ${AUTOPHASE}            ${LOCAL}/bin/Autophase
-  # )
 
   string(CONCAT CLGEN
     "#######################################\n"
@@ -354,6 +344,7 @@ function(clgen)
     "export CLANG_FORMAT="                   ${LLVM}/bin/clang-format "\n"
     "export CLANG_HEADERS="                  ${LLVM}/lib/clang/${LLVM_VERSION}.0.1/include "\n"
     "export CLANG_REWRITER="                 ${CLANG_REWRITER} "\n"
+    "export SEQ_CLANG_REWRITER="             ${SEQ_CLANG_REWRITER} "\n"
     "export CLDRIVE="                        ${CLDRIVE} "\n"
     "export GREWE="                          ${GREWE} "\n"
     "export INSTCOUNT="                      ${INSTCOUNT} "\n"
