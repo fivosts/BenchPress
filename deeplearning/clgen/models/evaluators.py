@@ -245,11 +245,12 @@ class DBGroup(object):
       "ActiveFeedDatabase" : active_feed_database.ActiveFeedDatabase,
       "EncodedContentFiles": encoded.EncodedContentFiles,
     }[db_type]
-    self.databases     = [self.db_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
-    self.features      = {ext: None for ext in extractor.extractors.keys()}
-    self.data_features = {ext: None for ext in extractor.extractors.keys()}
-    self.tokenizer     = tokenizer
-    self.size_limit    = size_limit
+    self.databases            = [self.db_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
+    self.features             = {ext: None for ext in extractor.extractors.keys()}
+    self.data_features        = {ext: None for ext in extractor.extractors.keys()}
+    self.unique_data_features = {ext: None for ext in extractor.extractors.keys()}
+    self.tokenizer            = tokenizer
+    self.size_limit           = size_limit
     return
 
   def get_features(self, feature_space: str) -> typing.List[typing.Dict[str, float]]:
@@ -285,6 +286,27 @@ class DBGroup(object):
           if feature_space in feats and feats[feature_space]:
             self.data_features[feature_space].append((src, feats[feature_space]))
     return self.data_features[feature_space]
+
+  def get_unique_data_features(self, feature_space: str) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
+    """
+    Get or set feature with data list of tuples.
+    """
+    if not self.unique_data_features[feature_space]:
+      self.unique_data_features[feature_space] = []
+      visited = set()
+      for db in self.databases:
+        db_feats = db.get_data_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_data_features
+        for src, f in db_feats:
+          sha = opencl.ContentHash(src)
+          if sha not in visited:
+            visited.add(sha)
+            try:
+              feats = extractor.RawToDictFeats(f)
+            except Exception as e:
+              l.logger().warn(f)
+            if feature_space in feats and feats[feature_space]:
+              self.unique_data_features[feature_space].append((src, feats[feature_space]))
+    return self.unique_data_features[feature_space]
 
 class Benchmark(typing.NamedTuple):
   path     : pathlib.Path
@@ -354,7 +376,7 @@ def KAverageScore(**kwargs) -> None:
       # Find shortest distances.
       distances = sorted(
         [feature_sampler.calculate_distance(fv, benchmark.features, feature_space)
-         for fv in dbg.get_features(feature_space)]
+         for _, fv in dbg.get_unique_data_features(feature_space)]
       )
       # Compute target's distance from O(0,0)
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
@@ -455,7 +477,7 @@ def TopKCLDrive(**kwargs) -> None:
       l.logger().info(benchmark.name)
       sorted_src = sorted(
         [(src, feature_sampler.calculate_distance(fv, benchmark.features, feature_space))
-         for src, fv in dbg.get_data_features(feature_space)],
+         for src, fv in dbg.get_unique_data_features(feature_space)],
          key = lambda x: x[1]
       )[:top_k]
 
@@ -631,7 +653,7 @@ def MutecVsBenchPress(**kwargs) -> None:
     ## Tuple of closest src, distance from target benchmark.
     closest = sorted(
       [(src, feature_sampler.calculate_distance(fv, benchmark.features, feature_space))
-       for src, fv in github.get_data_features(feature_space)],
+       for src, fv in github.get_unique_data_features(feature_space)],
        key = lambda x: x[1]
     )[:5]
 
@@ -670,7 +692,7 @@ def MutecVsBenchPress(**kwargs) -> None:
       # Find shortest distances.
       distances = sorted(
         [feature_sampler.calculate_distance(fv, benchmark.features, feature_space)
-         for fv in benchpress.get_features(feature_space)]
+         for _, fv in benchpress.get_unique_data_features(feature_space)]
       )
       # Compute target's distance from O(0,0)
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
