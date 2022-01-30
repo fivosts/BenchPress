@@ -854,6 +854,9 @@ def eval(self, topK: int) -> None:
   return
 
   def benchmark_stats(self, reduced_git):
+    """
+    [Deprecated] Prints stats of source codes for reduced git corpus.
+    """
     groups = {}
     names = {}
     final_benchmarks = []
@@ -901,8 +904,11 @@ def eval(self, topK: int) -> None:
         print("Number of IR instructions", "-1")
     return
 
-def kmeans_datasets(bert_db, clgen_db):
-
+def benchpress_vs_clgen_pca(bert_db, clgen_db):
+  """
+  PCA feature reduction for all three feature spaces for benchpress vs CLgen.
+  Used in PCA plots for PLDI paper.
+  """
   scaler = sklearn.preprocessing.StandardScaler()
   for fspace in ["AutophaseFeatures", "InstCountFeatures", "GreweFeatures"]:
 
@@ -949,7 +955,9 @@ def kmeans_datasets(bert_db, clgen_db):
   return
 
 def benchpress_vs_clgen_fig(bert_db, clgen_db):
-
+  """
+  PLDI paper relative distribution plots of token length and number of LLVM-IR instructions length.
+  """
   clgen_ntoks = clgen_db.get_compilable_num_tokens
   clgen_num_insts = [x[1]["InstCountFeatures"]["TotalInsts"] for x in clgen_db.get_samples_features if "InstCountFeatures" in x[1]]
 
@@ -973,7 +981,9 @@ def benchpress_vs_clgen_fig(bert_db, clgen_db):
   )
 
 def get_size_distribution():
-
+  """
+  Calculates distribution of code sizes per database group.
+  """
   gdb = active_feed_database.ActiveFeedDatabase("sqlite:///{}".format(str("/home/fivosts/PhD/Code/clgen/results/BERT/Grewe/merged_active_feed_database.db")))
   adb = active_feed_database.ActiveFeedDatabase("sqlite:///{}".format(str("/home/fivosts/PhD/Code/clgen/results/BERT/Autophase/merged_active_feed_database.db")))
   idb = active_feed_database.ActiveFeedDatabase("sqlite:///{}".format(str("/home/fivosts/PhD/Code/clgen/results/BERT/Instcount/merged_active_feed_database.db")))
