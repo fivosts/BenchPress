@@ -13,6 +13,7 @@ import pickle
 import pathlib
 import tqdm
 import multiprocessing
+import functools
 import sklearn
 import math
 from sklearn.cluster import KMeans
