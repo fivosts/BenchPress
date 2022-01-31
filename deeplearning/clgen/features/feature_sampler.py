@@ -93,7 +93,12 @@ def GetContentFileRoot(path: pathlib.Path) -> typing.Iterator[pathlib.Path]:
     l.logger().info("Benchmark found in registry. Downloading from Google Drive...")
     gdown.download("https://drive.google.com/uc?id={}".format(reg[path.name]['url']), str(path))
 
-  with tempfile.TemporaryDirectory(prefix=path.stem, dir = FLAGS.local_filesystem) as d:
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
+
+  with tempfile.TemporaryDirectory(prefix=path.stem, dir = tdir) as d:
     cmd = [
       "tar",
       "-xf",
