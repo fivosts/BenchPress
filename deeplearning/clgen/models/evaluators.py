@@ -259,7 +259,7 @@ def SortedDistances(data: typing.List[typing.Tuple[str, typing.Dict[str, float]]
                     feature_space: str
                     ) -> typing.List[float]:
   """
-  Return list of euclidean distances from target features in ascending order.
+  Return list of pairs of source with respective euclidean distances from target features in ascending order.
   """
   pool = multiprocessing.Pool()
   dist = []
@@ -275,7 +275,7 @@ def SortedDistances(data: typing.List[typing.Tuple[str, typing.Dict[str, float]]
 def SortedSrcDistances(data: typing.List[typing.Tuple[str, typing.Dict[str, float]]],
                        target_features: typing.Dict[str, float],
                        feature_space: str
-                       ) -> typing.List[typing.Tuple[src, float]]:
+                       ) -> typing.List[typing.Tuple[str, float]]:
   """
   Return list of euclidean distances from target features in ascending order.
   """
