@@ -142,6 +142,7 @@ def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Pat
   for kernel_batch in tqdm.tqdm(pool.map(preprocessor_worker, contentfiles), total = len(contentfiles), desc = "Yield {} benchmarks".format(path.stem)):
     kernels += kernel_batch
   l.logger().info("Pre-processed {} OpenCL benchmarks".format(len(kernels)))
+  pool.close()
   return kernels
 
 def resolve_benchmark_names(benchmarks: typing.List["Benchmark"]) -> typing.List["Benchmark"]:
@@ -336,6 +337,7 @@ class EuclideanSampler(object):
                         ):
           if benchmark:
             self.benchmarks.append(benchmark)
+        pool.close()
         resolve_benchmark_names(self.benchmarks)
     l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     l.logger().info(', '.join([x for x in set([x.name for x in self.benchmarks])]))
