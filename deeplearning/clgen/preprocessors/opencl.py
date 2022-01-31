@@ -359,19 +359,28 @@ def CLDriveLabel(src: str,
   gpu_error = None
   if avg_time_cpu_ns is None or avg_time_gpu_ns is None or math.isnan(avg_time_cpu_ns) or math.isnan(avg_time_gpu_ns):
     label = "ERR"
-    if df is not None:
+    if stdout == "":
+      cpu_error = "NO_STDOUT"
+      gpu_error = "NO_STDOUT"
+      label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
+    elif "CL_OUT_OF_RESOURCES" in stderr:
+      cpu_error = "CL_OUT_OF_RESOURCES"
+      gpu_error = "CL_OUT_OF_RESOURCES"
+      label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
+    elif df is not None:
       try:
         cpu_error = df[df['device'].str.contains("CPU")].outcome[0]
+        if cpu_error == "CL_ERROR" and "-9999" in stderr:
+          cpu_error = "INVALID_BUFFER_READ_WRITE"
       except KeyError:
         cpu_error = ""
       try:
         gpu_error = df[df['device'].str.contains("GPU")].outcome[1]
+        if gpu_error == "CL_ERROR" and "-9999" in stderr:
+          gpu_error = "INVALID_BUFFER_READ_WRITE"
       except KeyError:
         gpu_error = ""
-    if "CL_OUT_OF_RESOURCES" in stderr:
-      cpu_error = "CL_OUT_OF_RESOURCES"
-      gpu_error = "CL_OUT_OF_RESOURCES"
-    label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
+      label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
   else:
     label = "GPU" if avg_time_cpu_ns > avg_time_gpu_ns else "CPU"
 
