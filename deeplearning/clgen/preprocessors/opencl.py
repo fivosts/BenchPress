@@ -197,7 +197,7 @@ def ContentHash(src: str) -> str:
   rw = SequentialNormalizeIdentifiers(src)
   return crypto.sha256_str(rw.replace(" ", "").replace("\n", ""))
 
-def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> str:
+def RunCLDrive(src: str, header_file = None, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> str:
   """
   If CLDrive executable exists, run it over provided source code.
   """
@@ -217,28 +217,50 @@ def RunCLDrive(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1
   with tempfile.NamedTemporaryFile("w", prefix="clgen_opencl_cldrive", suffix = '.cl', dir = tdir) as f:
     f.write(src)
     f.flush()
-    proc = subprocess.Popen(
-      "{} {} --srcs={} --num_runs={} --gsize={} --lsize={} --envs={},{}"
-        .format(
-          "timeout -s9 {}".format(timeout) if timeout > 0 else "",
-          CLDRIVE,
-          f.name,
-          num_runs,
-          gsize,
-          lsize,
-          CL_PLATFORMS['CPU'],
-          CL_PLATFORMS['GPU']
-        ).split(),
-      stdout = subprocess.PIPE,
-      stderr = subprocess.PIPE,
-      universal_newlines = True,
-    )
-    stdout, stderr = proc.communicate()
+    if header_file:
+      with tempfile.NamedTemporaryFile("w", prefix="clgen_opencl_cldheader", suffix = '.h', dir = tdir) as hf:
+        hf.write(header_file)
+        hf.flush()
+        proc = subprocess.Popen(
+          "{} {} --srcs={} --cl_build_opt=\"-I{}\" --num_runs={} --gsize={} --lsize={} --envs={},{}"
+            .format(
+              "timeout -s9 {}".format(timeout) if timeout > 0 else "",
+              CLDRIVE,
+              f.name,
+              pathlib.Path(hf.name).resolve().parent,
+              num_runs,
+              gsize,
+              lsize,
+              CL_PLATFORMS['CPU'],
+              CL_PLATFORMS['GPU']
+            ).split(),
+          stdout = subprocess.PIPE,
+          stderr = subprocess.PIPE,
+          universal_newlines = True,
+        )
+    else:
+      proc = subprocess.Popen(
+        "{} {} --srcs={} --num_runs={} --gsize={} --lsize={} --envs={},{}"
+          .format(
+            "timeout -s9 {}".format(timeout) if timeout > 0 else "",
+            CLDRIVE,
+            f.name,
+            num_runs,
+            gsize,
+            lsize,
+            CL_PLATFORMS['CPU'],
+            CL_PLATFORMS['GPU']
+          ).split(),
+        stdout = subprocess.PIPE,
+        stderr = subprocess.PIPE,
+        universal_newlines = True,
+      )
+      stdout, stderr = proc.communicate()
     if proc.returncode == 9:
       raise TimeoutError("CLDrive TimeOut: {}".format(timeout))
   return stdout, stderr
 
-def CLDrivePretty(src: str, num_runs: int = 5, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> typing.Tuple[pd.DataFrame, str]:
+def CLDrivePretty(src: str, header_file = None, num_runs: int = 5, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> typing.Tuple[pd.DataFrame, str]:
   """
   Run CLDrive with given configuration but pretty print stdout and stderror.
   """
@@ -249,7 +271,7 @@ def CLDrivePretty(src: str, num_runs: int = 5, gsize: int = 4096, lsize: int = 1
     print(x)
   return stdout, stderr
 
-def CLDriveNumBytes(src: str, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> int:
+def CLDriveNumBytes(src: str, header_file = None, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> int:
   """
   Run CLDrive once for given configuration to identify number of transferred bytes.
   """
@@ -266,7 +288,7 @@ def CLDriveNumBytes(src: str, gsize: int = 4096, lsize: int = 1024, timeout: int
   assert transferred_bytes_cpu == transferred_bytes_gpu, "Mismatch between cpu and gpu transferred bytes: {}".format(transferred_bytes_cpu, transferred_bytes_gpu)
   return transferred_bytes_cpu
 
-def CLDriveExecutionTimes(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
+def CLDriveExecutionTimes(src: str, header_file = None, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
   """
   Run CLDrive once for given configuration to identify number of transferred bytes.
   """
@@ -286,7 +308,7 @@ def CLDriveExecutionTimes(src: str, num_runs: int = 1000, gsize: int = 4096, lsi
 
   return transfer_time_cpu, execution_time_cpu, transfer_time_gpu, execution_time_gpu
 
-def CLDriveLabel(src: str, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> str:
+def CLDriveLabel(src: str, header_file = None, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> str:
   """
   Run CLDrive on given configuration and compute whether it should run on CPU vs GPU based on where it will execute faster (transfer time + execution time).
   """
