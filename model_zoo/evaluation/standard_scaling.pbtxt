@@ -1,0 +1,50 @@
+workspace: "/home/foivos/PhD/Code/clgen/standard_scaler_workspace"
+tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "AutophaseFeatures"
+    db_group {
+      group_name: "BenchPress_scaled"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/standard_scaler_results/BERT/Autophase/merged_active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_unscaled"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/full_results/BERT/Autophase/merged_samples.db"
+    }
+  }
+}
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "InstCountFeatures"
+    db_group {
+      group_name: "BenchPress_scaled"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/standard_scaler_results/BERT/Instcount/merged_active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_unscaled"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/full_results/BERT/Instcount/merged_samples.db"
+    }
+  }
+}
+# evaluator {
+#   min_score {
+#     target: "rodinia"
+#     feature_space: "GreweFeatures"
+#     db_group {
+#       group_name: "BenchPress_scaled"
+#       db_type: "SamplesDatabase"
+#       database: "/var/foivos/results/standard_scaler_results/BERT/Grewe/merged_active_feeds.db"
+#     }
+#     db_group {
+#       group_name: "BenchPress_unscaled"
+#       db_type: "SamplesDatabase"
+#       database: "/var/foivos/results/full_results/BERT/Grewe/merged_active_feeds.db"
+#     }
+#   }
+# }
