@@ -531,17 +531,7 @@ def TopKCLDrive(**kwargs) -> None:
     for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
 
       l.logger().info(benchmark.name)
-      sorted_src = SortedSrcDistances(dbg.get_unique_data_features(feature_space), benchmark.features, feature_space)[:top_k]
-
-      closest_src = []
-      visited = set()
-      for src, feats in sorted_src:
-        sha = opencl.ContentHash(src)
-        if sha not in visited:
-          visited.add(sha)
-          closest_src.append((src, feats))
-        if len(closest_src) >= top_k:
-          break
+      closest_src = SortedSrcDistances(dbg.get_unique_data_features(feature_space), benchmark.features, feature_space)[:top_k]
 
       for gs in gsize:
         for ls in lsize:
