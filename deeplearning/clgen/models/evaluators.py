@@ -363,6 +363,7 @@ def KAverageScore(**kwargs) -> None:
   target         = kwargs.get('targets')
   feature_space  = kwargs.get('feature_space')
   top_k          = kwargs.get('top_k')
+  unique_code    = kwargs.get('unique_code', True)
   plot_config    = kwargs.get('plot_config')
   workspace_path = kwargs.get('workspace_path')
   groups = {}
@@ -374,9 +375,14 @@ def KAverageScore(**kwargs) -> None:
     for benchmark in target.get_benchmarks(feature_space):
       groups[dbg.group_name][0].append(benchmark.name)
       # Find shortest distances.
+      if unique_code:
+        get_data = lambda x: dbg.get_unique_data_features
+      else:
+        get_data = lambda x: dbg.get_data_features
+
       distances = sorted(
         [feature_sampler.calculate_distance(fv, benchmark.features, feature_space)
-         for _, fv in dbg.get_unique_data_features(feature_space)]
+         for _, fv in get_data(feature_space)]
       )
       # Compute target's distance from O(0,0)
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
@@ -399,7 +405,7 @@ def MinScore(**kwargs) -> None:
   """
   if 'top_k' in kwargs:
     del kwargs['top_k']
-  KAverageScore(top_k = 1, **kwargs)
+  KAverageScore(top_k = 1, unique_code = False, **kwargs)
   return
 
 def AnalyzeTarget(**kwargs) -> None:
