@@ -197,7 +197,13 @@ def ContentHash(src: str) -> str:
   rw = SequentialNormalizeIdentifiers(src)
   return crypto.sha256_str(rw.replace(" ", "").replace("\n", ""))
 
-def RunCLDrive(src: str, header_file = None, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> str:
+def RunCLDrive(src: str,
+               header_file = None,
+               num_runs: int = 1000,
+               gsize: int = 4096,
+               lsize: int = 1024,
+               timeout: int = 0
+               ) -> str:
   """
   If CLDrive executable exists, run it over provided source code.
   """
@@ -260,7 +266,13 @@ def RunCLDrive(src: str, header_file = None, num_runs: int = 1000, gsize: int = 
       raise TimeoutError("CLDrive TimeOut: {}".format(timeout))
   return stdout, stderr
 
-def CLDrivePretty(src: str, header_file = None, num_runs: int = 5, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> typing.Tuple[pd.DataFrame, str]:
+def CLDrivePretty(src: str,
+                  header_file = None,
+                  num_runs: int = 5,
+                  gsize: int = 4096,
+                  lsize: int = 1024,
+                  timeout: int = 0
+                  ) -> typing.Tuple[pd.DataFrame, str]:
   """
   Run CLDrive with given configuration but pretty print stdout and stderror.
   """
@@ -271,7 +283,11 @@ def CLDrivePretty(src: str, header_file = None, num_runs: int = 5, gsize: int = 
     print(x)
   return stdout, stderr
 
-def CLDriveNumBytes(src: str, header_file = None, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> int:
+def CLDriveNumBytes(src: str,
+                    header_file = None,
+                    gsize: int = 4096,
+                    lsize: int = 1024,
+                    timeout: int = 0) -> int:
   """
   Run CLDrive once for given configuration to identify number of transferred bytes.
   """
@@ -288,7 +304,13 @@ def CLDriveNumBytes(src: str, header_file = None, gsize: int = 4096, lsize: int 
   assert transferred_bytes_cpu == transferred_bytes_gpu, "Mismatch between cpu and gpu transferred bytes: {}".format(transferred_bytes_cpu, transferred_bytes_gpu)
   return transferred_bytes_cpu
 
-def CLDriveExecutionTimes(src: str, header_file = None, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
+def CLDriveExecutionTimes(src: str,
+                          header_file = None,
+                          num_runs: int = 1000,
+                          gsize: int = 4096,
+                          lsize: int = 1024,
+                          timeout: int = 0
+                          ) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
   """
   Run CLDrive once for given configuration to identify number of transferred bytes.
   """
@@ -308,7 +330,13 @@ def CLDriveExecutionTimes(src: str, header_file = None, num_runs: int = 1000, gs
 
   return transfer_time_cpu, execution_time_cpu, transfer_time_gpu, execution_time_gpu
 
-def CLDriveLabel(src: str, header_file = None, num_runs: int = 1000, gsize: int = 4096, lsize: int = 1024, timeout: int = 0) -> str:
+def CLDriveLabel(src: str,
+                 header_file = None,
+                 num_runs: int = 1000,
+                 gsize: int = 4096,
+                 lsize: int = 1024,
+                 timeout: int = 0
+                 ) -> str:
   """
   Run CLDrive on given configuration and compute whether it should run on CPU vs GPU based on where it will execute faster (transfer time + execution time).
   """
