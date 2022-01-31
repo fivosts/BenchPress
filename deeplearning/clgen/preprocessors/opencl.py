@@ -221,10 +221,10 @@ def RunCLDrive(src: str,
     tdir = None
 
   with tempfile.NamedTemporaryFile("w", prefix="clgen_opencl_cldrive", suffix = '.cl', dir = tdir) as f:
-    f.write(src)
-    f.flush()
     if header_file:
       with tempfile.NamedTemporaryFile("w", prefix="clgen_opencl_cldheader", suffix = '.h', dir = tdir) as hf:
+        f.write("#include {}\n{}".format(pathlib.Path(hf.name).resolve().name, src))
+        f.flush()
         hf.write(header_file)
         hf.flush()
         proc = subprocess.Popen(
@@ -245,6 +245,8 @@ def RunCLDrive(src: str,
           universal_newlines = True,
         )
     else:
+      f.write(src)
+      f.flush()
       proc = subprocess.Popen(
         "{} {} --srcs={} --num_runs={} --gsize={} --lsize={} --envs={},{}"
           .format(
