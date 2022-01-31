@@ -15,6 +15,7 @@
 """Preprocessor passes for the OpenCL programming language."""
 import typing
 import os
+import pathlib
 import io
 import subprocess
 import tempfile
@@ -222,8 +223,8 @@ def RunCLDrive(src: str,
 
   with tempfile.NamedTemporaryFile("w", prefix="clgen_opencl_cldrive", suffix = '.cl', dir = tdir) as f:
     if header_file:
-      with tempfile.NamedTemporaryFile("w", prefix="clgen_opencl_cldheader", suffix = '.h', dir = tdir) as hf:
-        f.write("#include {}\n{}".format(pathlib.Path(hf.name).resolve().name, src))
+      with tempfile.NamedTemporaryFile("w", prefix="clgen_opencl_clheader", suffix = '.h', dir = tdir) as hf:
+        f.write("#include \"{}\"\n{}".format(pathlib.Path(hf.name).resolve().name, src))
         f.flush()
         hf.write(header_file)
         hf.flush()
@@ -244,6 +245,7 @@ def RunCLDrive(src: str,
           stderr = subprocess.PIPE,
           universal_newlines = True,
         )
+        stdout, stderr = proc.communicate()
     else:
       f.write(src)
       f.flush()
@@ -278,7 +280,7 @@ def CLDrivePretty(src: str,
   """
   Run CLDrive with given configuration but pretty print stdout and stderror.
   """
-  stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize, timeout = timeout)
+  stdout, stderr = RunCLDrive(src, header_file = header_file, num_runs = num_runs, gsize = gsize, lsize = lsize, timeout = timeout)
   for x in stdout.split('\n'):
     print(x)
   for x in stderr.split('\n'):
@@ -293,7 +295,7 @@ def CLDriveNumBytes(src: str,
   """
   Run CLDrive once for given configuration to identify number of transferred bytes.
   """
-  stdout, stderr = RunCLDrive(src, num_runs = 1, gsize = gsize, lsize = lsize, timeout = timeout)
+  stdout, stderr = RunCLDrive(src, header_file = header_file, num_runs = 1, gsize = gsize, lsize = lsize, timeout = timeout)
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
     transferred_bytes_cpu = df[df['device'].str.contains("CPU")].transferred_bytes[0]
@@ -316,7 +318,7 @@ def CLDriveExecutionTimes(src: str,
   """
   Run CLDrive once for given configuration to identify number of transferred bytes.
   """
-  stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize, timeout = timeout)
+  stdout, stderr = RunCLDrive(src, header_file = header_file, num_runs = num_runs, gsize = gsize, lsize = lsize, timeout = timeout)
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
     transfer_time_cpu  = df[df['device'].str.contains("CPU")].transfer_time_ns
@@ -342,7 +344,7 @@ def CLDriveLabel(src: str,
   """
   Run CLDrive on given configuration and compute whether it should run on CPU vs GPU based on where it will execute faster (transfer time + execution time).
   """
-  stdout, stderr = RunCLDrive(src, num_runs = num_runs, gsize = gsize, lsize = lsize, timeout = timeout)
+  stdout, stderr = RunCLDrive(src, header_file = header_file, num_runs = num_runs, gsize = gsize, lsize = lsize, timeout = timeout)
   df = None
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
@@ -366,7 +368,10 @@ def CLDriveLabel(src: str,
         gpu_error = df[df['device'].str.contains("GPU")].outcome[1]
       except KeyError:
         gpu_error = ""
-      label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
+    if "CL_OUT_OF_RESOURCES" in stderr:
+      cpu_error = "CL_OUT_OF_RESOURCES"
+      gpu_error = "CL_OUT_OF_RESOURCES"
+    label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
   else:
     label = "GPU" if avg_time_cpu_ns > avg_time_gpu_ns else "CPU"
 
