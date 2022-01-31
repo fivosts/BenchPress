@@ -11,6 +11,8 @@ import tempfile
 import subprocess
 import pickle
 import pathlib
+import tqdm
+import multiprocessing
 import sklearn
 import math
 from sklearn.cluster import KMeans
@@ -219,6 +221,30 @@ def ConfigFromFlags() -> evaluator_pb2.Evaluation:
   config = pbutil.FromFile(config_path, evaluator_pb2.Evaluation())
   return AssertIfValid(config)
 
+def ContentHash_worker(db_feat: typing.Tuple[str, str]) -> typing.Tuple[str, typing.Dict[str, float]]:
+  """
+  Multiprocessing Worker calculates contentfile hash
+  of file and returns it.
+  """
+  src, feats = db_feat
+  try:
+    return opencl.ContentHash(src), extractor.RawToDictFeats(feats)
+  except Exception as e:
+    l.logger().warn(e)
+    return None
+
+def ContentFeat_worker(db_feat: typing.Tuple[str, str]) -> typing.Dict[str, float]:
+  """
+  Multiprocessing Worker calculates contentfile hash
+  of file and returns it.
+  """
+  _, feats = db_feat
+  try:
+    return extractor.RawToDictFeats(feats)
+  except Exception as e:
+    l.logger().warn(e)
+    return None
+
 class DBGroup(object):
   """
   Class representation of a group of databases evaluated.
@@ -245,7 +271,7 @@ class DBGroup(object):
       "ActiveFeedDatabase" : active_feed_database.ActiveFeedDatabase,
       "EncodedContentFiles": encoded.EncodedContentFiles,
     }[db_type]
-    self.databases            = [self.db_type("sqlite:///{}".format(pathlib.Path(p).resolve())) for p in databases]
+    self.databases            = [self.db_type("sqlite:///{}".format(pathlib.Path(p).resolve()), must_exist = True) for p in databases]
     self.features             = {ext: None for ext in extractor.extractors.keys()}
     self.data_features        = {ext: None for ext in extractor.extractors.keys()}
     self.unique_data_features = {ext: None for ext in extractor.extractors.keys()}
@@ -278,13 +304,17 @@ class DBGroup(object):
       self.data_features[feature_space] = []
       for db in self.databases:
         db_feats = db.get_data_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_data_features
-        for src, f in db_feats:
-          try:
-            feats = extractor.RawToDictFeats(f)
-          except Exception as e:
-            l.logger().warn(f)
-          if feature_space in feats and feats[feature_space]:
-            self.data_features[feature_space].append((src, feats[feature_space]))
+        pool = multiprocessing.Pool()
+        bar  = tqdm.tqdm(total = len(db_feats), desc = "{} data".format(self.group_name))
+        try:
+          for (src, _), feats in bar(zip(db_feats, pool.imap_unordered(ContentFeat_worker, db_feats))):
+            if sha not in visited:
+              visited.add(sha)
+              if feature_space in feats and feats[feature_space]:
+                self.unique_data_features[feature_space].append((src, feats[feature_space]))
+          pool.close()
+        except Exception as e:
+          pool.terminate()
     return self.data_features[feature_space]
 
   def get_unique_data_features(self, feature_space: str) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
@@ -296,16 +326,17 @@ class DBGroup(object):
       visited = set()
       for db in self.databases:
         db_feats = db.get_data_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_data_features
-        for src, f in db_feats:
-          sha = opencl.ContentHash(src)
-          if sha not in visited:
-            visited.add(sha)
-            try:
-              feats = extractor.RawToDictFeats(f)
-            except Exception as e:
-              l.logger().warn(f)
-            if feature_space in feats and feats[feature_space]:
-              self.unique_data_features[feature_space].append((src, feats[feature_space]))
+        pool = multiprocessing.Pool()
+        bar  = tqdm.tqdm(total = len(db_feats), desc = "{} data".format(self.group_name))
+        try:
+          for (src, _), (sha, feats) in bar(zip(db_feats, pool.imap_unordered(ContentHash_worker, db_feats))):
+            if sha not in visited:
+              visited.add(sha)
+              if feature_space in feats and feats[feature_space]:
+                self.unique_data_features[feature_space].append((src, feats[feature_space]))
+          pool.close()
+        except Exception as e:
+          pool.terminate()
     return self.unique_data_features[feature_space]
 
 class Benchmark(typing.NamedTuple):
@@ -385,8 +416,9 @@ def KAverageScore(**kwargs) -> None:
          for _, fv in get_data(feature_space)]
       )
       # Compute target's distance from O(0,0)
+      assert len(distances) != 0, "Sorted src list for {} is empty!".format(dbg.group_name)
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
-      avg_dist = sum(distances[:top_k]) / len(distances[:top_k])
+      avg_dist = sum(distances[:top_k]) / top_k
 
       groups[dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
 
