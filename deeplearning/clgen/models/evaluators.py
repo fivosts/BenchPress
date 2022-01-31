@@ -376,9 +376,9 @@ def KAverageScore(**kwargs) -> None:
       groups[dbg.group_name][0].append(benchmark.name)
       # Find shortest distances.
       if unique_code:
-        get_data = lambda: dbg.get_unique_data_features(feature_space)
+        get_data = lambda x: dbg.get_unique_data_features(x)
       else:
-        get_data = lambda: dbg.get_data_features(feature_space)
+        get_data = lambda x: dbg.get_data_features(x)
 
       distances = sorted(
         [feature_sampler.calculate_distance(fv, benchmark.features, feature_space)
