@@ -245,6 +245,51 @@ def ContentFeat_worker(db_feat: typing.Tuple[str, str]) -> typing.Dict[str, floa
     l.logger().warn(e)
     return None
 
+def CalculateDistances_worker(input_features : typing.Dict[str, float],
+                              target_features: typing.Dict[str, float],
+                              feature_space  : str
+                              ) -> float:
+  """
+  Parallelized worker to calculate euclidean distances from target benchmark.
+  """
+  return feature_sampler.calculate_distance(input_features, target_features, feature_space)
+
+def SortedDistances(data: typing.List[typing.Tuple[str, typing.Dict[str, float]]],
+                    target_features: typing.Dict[str, float],
+                    feature_space: str
+                    ) -> typing.List[float]:
+  """
+  Return list of euclidean distances from target features in ascending order.
+  """
+  pool = multiprocessing.Pool()
+  dist = []
+  func = functools.partial(CalculateDistances_worker, target_features = target_features, feature_space = feature_space)
+  try:
+    for d in tqdm.tqdm(pool.imap_unordered(func, [x for _, x in data]), total = len(data), desc = "Sorting Distances"):
+      dist.append(d)
+  except Exception as e:
+    l.logger().error(e)
+    raise e
+  return sorted(dist)
+
+def SortedSrcDistances(data: typing.List[typing.Tuple[str, typing.Dict[str, float]]],
+                       target_features: typing.Dict[str, float],
+                       feature_space: str
+                       ) -> typing.List[typing.Tuple[src, float]]:
+  """
+  Return list of euclidean distances from target features in ascending order.
+  """
+  pool = multiprocessing.Pool()
+  dist = []
+  func = functools.partial(CalculateDistances_worker, target_features = target_features, feature_space = feature_space)
+  try:
+    for d in tqdm.tqdm(zip(pool.imap_unordered(func, [x for _, x in data]), [x for x, _ in data]), total = len(data), desc = "Sorting Src Distances"):
+      dist.append((x, d))
+  except Exception as e:
+    l.logger().error(e)
+    raise e
+  return sorted(dist, key = lambda x: x[1])
+
 class DBGroup(object):
   """
   Class representation of a group of databases evaluated.
@@ -313,6 +358,7 @@ class DBGroup(object):
         except Exception as e:
           l.logger().error(e)
           pool.terminate()
+          raise e
     return self.data_features[feature_space]
 
   def get_unique_data_features(self, feature_space: str) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
@@ -335,6 +381,7 @@ class DBGroup(object):
         except Exception as e:
           l.logger().error(e)
           pool.terminate()
+          raise e
     return self.unique_data_features[feature_space]
 
 class Benchmark(typing.NamedTuple):
@@ -409,10 +456,7 @@ def KAverageScore(**kwargs) -> None:
       else:
         get_data = lambda x: dbg.get_data_features(x)
 
-      distances = sorted(
-        [feature_sampler.calculate_distance(fv, benchmark.features, feature_space)
-         for _, fv in get_data(feature_space)]
-      )
+      distances = SortedDistances(get_data(feature_space), benchmark.features, feature_space)
       # Compute target's distance from O(0,0)
       assert len(distances) != 0, "Sorted src list for {} is empty!".format(dbg.group_name)
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
@@ -511,11 +555,7 @@ def TopKCLDrive(**kwargs) -> None:
     for benchmark in target.get_benchmarks(feature_space):
 
       l.logger().info(benchmark.name)
-      sorted_src = sorted(
-        [(src, feature_sampler.calculate_distance(fv, benchmark.features, feature_space))
-         for src, fv in dbg.get_unique_data_features(feature_space)],
-         key = lambda x: x[1]
-      )[:top_k]
+      sorted_src = SortedSrcDistances(dbg.get_unique_data_features(feature_space), benchmark.features, feature_space)[:top_k]
 
       closest_src = []
       visited = set()
@@ -687,11 +727,7 @@ def MutecVsBenchPress(**kwargs) -> None:
   for benchmark in target.get_benchmarks(feature_space):
     l.logger().info(benchmark.name)
     ## Tuple of closest src, distance from target benchmark.
-    closest = sorted(
-      [(src, feature_sampler.calculate_distance(fv, benchmark.features, feature_space))
-       for src, fv in github.get_unique_data_features(feature_space)],
-       key = lambda x: x[1]
-    )[:5]
+    closest = SortedSrcDistances(github.get_unique_data_features(feature_space), benchmark.features, feature_space)[:5]
 
     # Split source and distances lists.
     git_src  = [x for x, _ in closest]
@@ -726,10 +762,7 @@ def MutecVsBenchPress(**kwargs) -> None:
     if benchmark.name in groups["Mutec"][0]:
       groups[benchpress.group_name][0].append(benchmark.name)
       # Find shortest distances.
-      distances = sorted(
-        [feature_sampler.calculate_distance(fv, benchmark.features, feature_space)
-         for _, fv in benchpress.get_unique_data_features(feature_space)]
-      )
+      distances = SortedDistances(benchpress.get_unique_data_features(feature_space), benchmark.features, feature_space)
       # Compute target's distance from O(0,0)
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
       avg_dist = sum(distances[:top_k]) / len(distances[:top_k])
@@ -861,10 +894,10 @@ def eval(self, topK: int) -> None:
   with open(outfile, 'w') as outf:
     for benchmark in self.evaluated_benchmarks:
       try:
-        bc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in bert_corpus ], key = lambda x: x[1])[:topK]
-        cc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in clgen_corpus], key = lambda x: x[1])[:topK]
-        gc  = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in git_corpus  ], key = lambda x: x[1])[:topK]
-        rgc = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features, self.feature_space)) for cf, fts in reduced_git_corpus  ], key = lambda x: x[1])[:topK]
+        bc  = SortedSrcDistances(bert_corpus,        benchmark.features, self.feature_space)
+        cc  = SortedSrcDistances(clgen_corpus,       benchmark.features, self.feature_space)
+        gc  = SortedSrcDistances(git_corpus,         benchmark.features, self.feature_space)
+        rgc = SortedSrcDistances(reduced_git_corpus, benchmark.features, self.feature_space)
       except KeyError:
         print(git_corpus)
 
@@ -912,7 +945,7 @@ def eval(self, topK: int) -> None:
         )
 
     for benchmark in benchmarks:
-      rgc = sorted([(cf, feature_sampler.calculate_distance(fts, benchmark.features[self.feature_space], self.feature_space)) for cf, fts in reduced_git], key = lambda x: x[1])[0]
+      rgc = SortedSrcDistances(reduced_git, benchmark.features[self.feature_space], self.feature_space)
       if rgc[1] > 0:
         final_benchmarks.append(benchmark)
 
