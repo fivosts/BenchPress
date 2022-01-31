@@ -8,6 +8,7 @@ import pathlib
 import pickle
 import gdown
 import json
+import tqdm
 import math
 import subprocess
 import functools
@@ -138,7 +139,7 @@ def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Pat
   contentfiles = iter_cl_files(path)
   kernels = []
   pool = multiprocessing.Pool()
-  for kernel_batch in pool.map(preprocessor_worker, contentfiles):
+  for kernel_batch in tqdm.tqdm(pool.map(preprocessor_worker, contentfiles), total = len(contentfiles), desc = "Yield {} benchmarks".format(path.stem)):
     kernels += kernel_batch
   l.logger().info("Pre-processed {} OpenCL benchmarks".format(len(kernels)))
   return kernels
