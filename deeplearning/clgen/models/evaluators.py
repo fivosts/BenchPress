@@ -246,15 +246,6 @@ def ContentFeat_worker(db_feat: typing.Tuple[str, str]) -> typing.Dict[str, floa
     l.logger().warn(e)
     return None
 
-def CalculateDistances_worker(input_features : typing.Dict[str, float],
-                              target_features: typing.Dict[str, float],
-                              feature_space  : str
-                              ) -> float:
-  """
-  Parallelized worker to calculate euclidean distances from target benchmark.
-  """
-  return feature_sampler.calculate_distance(input_features, target_features, feature_space)
-
 def SortedDistances(data: typing.List[typing.Tuple[str, typing.Dict[str, float]]],
                     target_features: typing.Dict[str, float],
                     feature_space: str
@@ -262,16 +253,7 @@ def SortedDistances(data: typing.List[typing.Tuple[str, typing.Dict[str, float]]
   """
   Return list of pairs of source with respective euclidean distances from target features in ascending order.
   """
-  pool = multiprocessing.Pool()
-  dist = []
-  func = functools.partial(CalculateDistances_worker, target_features = target_features, feature_space = feature_space)
-  try:
-    for d in tqdm.tqdm(pool.imap_unordered(func, [x for _, x in data]), total = len(data), desc = "Sorting Distances"):
-      dist.append(d)
-  except Exception as e:
-    l.logger().error(e)
-    raise e
-  return sorted(dist)
+  return sorted([feature_sampler.calculate_distance(dp, target_features, feature_space) for _, dp in data])
 
 def SortedSrcDistances(data: typing.List[typing.Tuple[str, typing.Dict[str, float]]],
                        target_features: typing.Dict[str, float],
@@ -280,16 +262,7 @@ def SortedSrcDistances(data: typing.List[typing.Tuple[str, typing.Dict[str, floa
   """
   Return list of euclidean distances from target features in ascending order.
   """
-  pool = multiprocessing.Pool()
-  dist = []
-  func = functools.partial(CalculateDistances_worker, target_features = target_features, feature_space = feature_space)
-  try:
-    for d in tqdm.tqdm(zip(pool.imap_unordered(func, [x for _, x in data]), [x for x, _ in data]), total = len(data), desc = "Sorting Src Distances"):
-      dist.append((x, d))
-  except Exception as e:
-    l.logger().error(e)
-    raise e
-  return sorted(dist, key = lambda x: x[1])
+  return sorted([(src, feature_sampler.calculate_distance(dp, target_features, feature_space)) for src, dp in data], key = lambda x: x[1])
 
 class DBGroup(object):
   """
@@ -355,11 +328,11 @@ class DBGroup(object):
           for (src, _), feats in tqdm.tqdm(zip(db_feats, pool.imap_unordered(ContentFeat_worker, db_feats)), total = len(db_feats), desc = "{} data".format(self.group_name)):
             if feature_space in feats and feats[feature_space]:
               self.data_features[feature_space].append((src, feats[feature_space]))
-          pool.close()
         except Exception as e:
           l.logger().error(e)
           pool.terminate()
           raise e
+        pool.close()
     return self.data_features[feature_space]
 
   def get_unique_data_features(self, feature_space: str) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
@@ -378,11 +351,11 @@ class DBGroup(object):
               visited.add(sha)
               if feature_space in feats and feats[feature_space]:
                 self.unique_data_features[feature_space].append((src, feats[feature_space]))
-          pool.close()
         except Exception as e:
           l.logger().error(e)
           pool.terminate()
           raise e
+        pool.close()
     return self.unique_data_features[feature_space]
 
 class Benchmark(typing.NamedTuple):
@@ -449,7 +422,8 @@ def KAverageScore(**kwargs) -> None:
     if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
     groups[dbg.group_name] = ([], [])
-    for benchmark in target.get_benchmarks(feature_space):
+    benchmarks = target.get_benchmarks(feature_space)
+    for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
       groups[dbg.group_name][0].append(benchmark.name)
       # Find shortest distances.
       if unique_code:
@@ -553,7 +527,8 @@ def TopKCLDrive(**kwargs) -> None:
     if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
 
-    for benchmark in target.get_benchmarks(feature_space):
+    benchmarks = target.get_benchmarks(feature_space)
+    for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
 
       l.logger().info(benchmark.name)
       sorted_src = SortedSrcDistances(dbg.get_unique_data_features(feature_space), benchmark.features, feature_space)[:top_k]
@@ -725,7 +700,9 @@ def MutecVsBenchPress(**kwargs) -> None:
   groups["Mutec"] = ([], [])
   groups["GitHub"] = ([], [])
   l.logger().info("Mutec group")
-  for benchmark in target.get_benchmarks(feature_space):
+
+  benchmarks = target.get_benchmarks(feature_space)
+  for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
     l.logger().info(benchmark.name)
     ## Tuple of closest src, distance from target benchmark.
     closest = SortedSrcDistances(github.get_unique_data_features(feature_space), benchmark.features, feature_space)[:5]
@@ -758,7 +735,9 @@ def MutecVsBenchPress(**kwargs) -> None:
   if benchpress.db_type != samples_database.SamplesDatabase:
     raise ValueError("BenchPress scores require SamplesDatabase but received", benchpress.db_type)
   groups[benchpress.group_name] = ([], [])
-  for benchmark in target.get_benchmarks(feature_space):
+
+  benchmarks = target.get_benchmarks(feature_space)
+  for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
     l.logger().info(benchmark.name)
     if benchmark.name in groups["Mutec"][0]:
       groups[benchpress.group_name][0].append(benchmark.name)
