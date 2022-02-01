@@ -7,16 +7,19 @@ import progressbar
 import sqlite3
 import functools
 import pathlib
+import tqdm
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from absl import app, flags
 
 from deeplearning.clgen.features import extractor
+from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import sqlutil
+from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -178,6 +181,7 @@ def merge_databases(dbs: typing.List[SamplesDatabase], out_db: SamplesDatabase) 
   with out_db.Session() as s:
     for dp in sdir.values():
       s.add(dp)
+    s.commit()
   return
 
 def run_extractors(sample: Sample) -> Sample:
@@ -235,6 +239,7 @@ def modernize_samples_db(db: SamplesDatabase, out_db: SamplesDatabase) -> None:
       if idx+1 % 5000:
         s.commit()
     s.commit()
+  pool.close()
   return
 
 def update_tokenizer(sample: Sample, tokenizer) -> Sample:
@@ -275,9 +280,46 @@ def modernize_clgen_tokenizer(db: SamplesDatabase, out_db: SamplesDatabase, toke
       if idx+1 % 5000:
         s.commit()
     s.commit()
+  pool.close()
+  return
+
+def ContentHash_worker(sample: Sample) -> typing.Tuple[str, Sample]:
+  """
+  Return new sample along with content hash of code.
+  """
+  try:
+    return opencl.ContentHash(sample.text), sample
+  except Exception as e:
+    l.logger().warn(e)
+    return None
+
+def to_unique_samples(db: SamplesDatabase, out_db: SamplesDatabase) -> None:
+  """
+  Read input database, pass through deterministic re-writer and keep only unique samples.
+  """
+  pool     = multiprocessing.Pool()
+  inp_data = db.get_data
+  visited  = set()
+  data     = []
+  try:
+    for sha, sample in tqdm.tqdm(pool.imap_unordered(ContentHash_worker, inp_data), total = len(inp_data), desc = "Unique-fy samples database"):
+      if sha not in visited:
+        visited.add(sha)
+        data.append(sample)
+    with out_db.Session() as s:
+      for dp in data:
+        s.add(dp)
+      s.commit()
+    pool.close()
+  except Exception as e:
+    l.logger().error(e)
+    pool.terminate()
+    raise e
   return
 
 def initMain(*args, **kwargs):
+  l.initLogger("samples_database")
+
   if not FLAGS.sample_merged_path:
     raise ValueError("Specify out path for merged database")
 
@@ -293,14 +335,15 @@ def initMain(*args, **kwargs):
       raise FileNotFoundError(p)
   dbs = [SamplesDatabase(url = "sqlite:///{}".format(str(p)), must_exist = True) for p in db_paths]
 
-  tokenizer_path = pathlib.Path(FLAGS.tokenizer_path).resolve()
-  if not tokenizer_path.exists():
-    raise FileNotFoundError(tokenizer_path)
-  tokenizer = tokenizers.TokenizerBase.FromFile(tokenizer_path)
+  # tokenizer_path = pathlib.Path(FLAGS.tokenizer_path).resolve()
+  # if not tokenizer_path.exists():
+  #   raise FileNotFoundError(tokenizer_path)
+  # tokenizer = tokenizers.TokenizerBase.FromFile(tokenizer_path)
 
   # merge_databases(dbs, out_db)
   # modernize_samples_db(dbs[0], out_db)
-  modernize_clgen_tokenizer(dbs[0], out_db, tokenizer)
+  # modernize_clgen_tokenizer(dbs[0], out_db, tokenizer)
+  to_unique_samples(dbs[0], out_db)
   return
 
 if __name__ == "__main__":
