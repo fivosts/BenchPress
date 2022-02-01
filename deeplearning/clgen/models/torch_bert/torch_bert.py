@@ -422,6 +422,8 @@ class torchBert(backends.BackendBase):
       return
       
     self.current_step = self.loadCheckpoint(self.train, pre_train = pre_train)
+    if self.pytorch.num_gpus > 0:
+      self.torch.cuda.empty_cache()
     if self.current_step >= 0:
       l.logger().info("Loaded checkpoint step {}".format(self.current_step))
 
@@ -733,6 +735,8 @@ class torchBert(backends.BackendBase):
                      )
     self._ConfigSampleParams(data_generator, sampler)
     ckpt_step = self.loadCheckpoint(self.sample)
+    if self.pytorch.num_gpus > 0:
+      self.torch.cuda.empty_cache()
     if ckpt_step >= 0:
       l.logger().info("Loaded checkpoint step {}".format(ckpt_step))
     self.step_inputs   = None
