@@ -582,26 +582,68 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
   ## TODO: Merge File stats.
   return
 
+def ContentHash_worker(contentfile: EncodedContentFile, tokenizer) -> typing.Tuple[str, Sample]:
+  """
+  Return new contentfile along with content hash of code.
+  """
+  try:
+    return opencl.ContentHash(tokenizer.ArrayToCode(contentfile.indices_array, with_formatting = False)), contentfile
+  except Exception as e:
+    l.logger().warn(e)
+    return None
+
+def to_unique_samples(db: SamplesDatabase, out_db: SamplesDatabase, tokenizer) -> None:
+  """
+  Read input database, pass through deterministic re-writer and keep only unique samples.
+  """
+  pool     = multiprocessing.Pool()
+  inp_data = db.get_data
+  visited  = set()
+  data     = []
+  try:
+    for sha, cfile in tqdm.tqdm(pool.imap_unordered(ContentHash_worker, inp_data), total = len(inp_data), desc = "Unique-fy encoded database"):
+      if sha not in visited:
+        visited.add(sha)
+        data.append(cfile)
+  except Exception as e:
+    l.logger().error(e)
+    pool.terminate()
+    raise e
+  pool.close()
+  with out_db.Session() as s:
+    for dp in data:
+      s.add(dp)
+    s.commit()
+  return
+
 def initMain(*args, **kwargs):
   """
   Setup module's operations.
   """
   l.initLogger(name = "bigQuery_database")
 
-  if not FLAGS.encoded_databases:
-    raise ValueError("Please input encoded databases to merge as a comma separated list.")
-  db_paths = [pathlib.Path(p).absolute() for p in FLAGS.encoded_databases.replace(" ", "").split(",")]
-  for p in db_paths:
-    if not p.exists():
-      raise FileNotFoundError(p)
-  dbs = [EncodedContentFiles(url = "sqlite:///{}".format(str(p)), must_exist = True) for p in db_paths]
+  # if not FLAGS.encoded_databases:
+  #   raise ValueError("Please input encoded databases to merge as a comma separated list.")
+  # db_paths = [pathlib.Path(p).absolute() for p in FLAGS.encoded_databases.replace(" ", "").split(",")]
+  # for p in db_paths:
+  #   if not p.exists():
+  #     raise FileNotFoundError(p)
+  # dbs = [EncodedContentFiles(url = "sqlite:///{}".format(str(p)), must_exist = True) for p in db_paths]
 
-  if not FLAGS.merged_encoded_database:
-    raise ValueError("You must set a path for merged_encoded_database")
-  out_db_path = pathlib.Path(FLAGS.merged_encoded_database).resolve()
-  out_db_path.parent.mkdir(exist_ok = True, parents = True)
-  out_db = EncodedContentFiles(url = "sqlite:///{}".format(str(out_db_path)), must_exist = False)
-  merge_db(dbs, out_db)
+  # if not FLAGS.merged_encoded_database:
+  #   raise ValueError("You must set a path for merged_encoded_database")
+  # out_db_path = pathlib.Path(FLAGS.merged_encoded_database).resolve()
+  # out_db_path.parent.mkdir(exist_ok = True, parents = True)
+  # out_db = EncodedContentFiles(url = "sqlite:///{}".format(str(out_db_path)), must_exist = False)
+  # merge_db(dbs, out_db)
+
+  tokenizer_path = pathlib.Path(FLAGS.tokenizer_path).resolve()
+  if not tokenizer_path.exists():
+    raise FileNotFoundError(tokenizer_path)
+  tokenizer = tokenizers.TokenizerBase.FromFile(tokenizer_path)
+
+  to_unique_samples(dbs[0], out_db)
+
   return
 
 if __name__ == "__main__":
