@@ -598,7 +598,7 @@ def to_unique_samples(db: EncodedContentFiles, out_db: EncodedContentFiles, toke
   Read input database, pass through deterministic re-writer and keep only unique samples.
   """
   pool     = multiprocessing.Pool()
-  inp_data = db.get_data
+  inp_data = db.get_data()
   visited  = set()
   data     = []
   f = functools.partial(ContentHash_worker, tokenizer = tokenizer)
