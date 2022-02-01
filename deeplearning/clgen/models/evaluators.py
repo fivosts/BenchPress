@@ -527,29 +527,26 @@ def TopKCLDrive(**kwargs) -> None:
     if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
 
+    ## Unpack and collect benchmarks
     benchmarks = target.get_benchmarks(feature_space)
     for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
 
       l.logger().info(benchmark.name)
-      closest_src = SortedSrcDistances(dbg.get_unique_data_features(feature_space), benchmark.features, feature_space)[:top_k]
-
+      closest_src = None
       for gs in gsize:
         for ls in lsize:
           if ls > gs:
             continue
           l.logger().info("global size: {}, local size: {}".format(gs, ls))
-          config = "g{}-l{}".format(gs, ls)
-          if config not in groups:
-            groups[config] = {}
-          if dbg.group_name not in groups[config]:
-            groups[config][dbg.group_name] = ([], [], [], [])
 
+          ## Set-up number of runs.
           nruns = 10**4
           if gs > 2**13:
             nruns = 10**3
           if gs > 2**15:
             nruns = 10**2
 
+          ## Run cldrive on benchmark.
           benchmark_label = "TimeOut"
           bench_runs = nruns
           while benchmark_label == "TimeOut" and bench_runs > 0:
@@ -557,6 +554,15 @@ def TopKCLDrive(**kwargs) -> None:
               benchmark_label = opencl.CLDriveLabel(benchmark.contents, num_runs = bench_runs, gsize = gs, lsize = ls, timeout = 200)
             except TimeoutError:
               bench_runs = bench_runs // 10
+          if benchmark_label not in {"CPU", "GPU"}:
+            continue
+
+          ## Fix dictionary entry.
+          config = "g{}-l{}".format(gs, ls)
+          if config not in groups:
+            groups[config] = {}
+          if dbg.group_name not in groups[config]:
+            groups[config][dbg.group_name] = ([], [], [], [])
 
           groups[config][dbg.group_name][0].append(
             {
@@ -565,8 +571,15 @@ def TopKCLDrive(**kwargs) -> None:
               'benchmark_contents' : benchmark.contents
             }
           )
-          for idx, (src, dist) in enumerate(closest_src):
 
+          ## Get unique contentfiles of database group.
+          if closest_src is None:
+            closest_src = SortedSrcDistances(dbg.get_unique_data_features(feature_space), benchmark.features, feature_space)
+
+          cand_idx = 0
+          for idx, (src, dist) in enumerate(closest_src):
+            if cand_idx >= top_k:
+              break
             label  = "TimeOut"
             c_runs = nruns
             while label == "TimeOut" and c_runs > 0:
@@ -574,9 +587,8 @@ def TopKCLDrive(**kwargs) -> None:
                 label = opencl.CLDriveLabel(src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 200)
               except TimeoutError:
                 c_runs = c_runs // 10
-
-            if label == "TimeOut":
-              l.logger().error(src)
+            if label not in {"CPU", "GPU"}:
+              continue
 
             if len(groups[config][dbg.group_name][1]) - 1 < idx:
               groups[config][dbg.group_name][1].append([dist])
@@ -586,6 +598,7 @@ def TopKCLDrive(**kwargs) -> None:
               groups[config][dbg.group_name][1][idx].append(dist)
               groups[config][dbg.group_name][2][idx].append(label)
               groups[config][dbg.group_name][3][idx].append(src)
+            cand_idx += 1
             # Some thoughts: Maybe a dedicated plot to show distribution of execution times, etc. ?
             # In here you basically need the label.
           # Compute target's distance from O(0,0)
@@ -594,7 +607,7 @@ def TopKCLDrive(**kwargs) -> None:
 
           # groups[config][dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
   print(groups)
-  with open("./data.pkl", 'wb') as inf:
+  with open("./data_{}.pkl".format(feature_space), 'wb') as inf:
     pickle.dump(groups, inf)
   raise NotImplementedError
   return
