@@ -598,10 +598,13 @@ def to_unique_samples(db: EncodedContentFiles, out_db: EncodedContentFiles, toke
   Read input database, pass through deterministic re-writer and keep only unique samples.
   """
   pool     = multiprocessing.Pool()
-  inp_data = db.get_data()
   visited  = set()
   data     = []
   f = functools.partial(ContentHash_worker, tokenizer = tokenizer)
+
+  with db.Session() as s:
+    inp_data = [x for x in s.query(EncodedContentFile).all()]
+
   try:
     for sha, cfile in tqdm.tqdm(pool.imap_unordered(f, inp_data), total = len(inp_data), desc = "Unique-fy encoded database"):
       if sha not in visited:
