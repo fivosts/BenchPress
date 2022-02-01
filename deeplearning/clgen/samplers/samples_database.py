@@ -224,6 +224,26 @@ def run_extractors(sample: Sample) -> Sample:
             )
           )
 
+def get_sample(sample: Sample) -> Sample:
+    return Sample(
+             **Sample.FromProto(0, model_pb2.Sample(
+               train_step             = sample.train_step,
+               text                   = sample.text,
+               sample_indices         = sample.sample_indices,
+               encoded_sample_indices = sample.encoded_sample_indices,
+               original_input         = sample.original_input,
+               sample_feed            = sample.sample_feed,
+               encoded_text           = sample.encoded_text,
+               sample_time_ms         = sample.sample_time_ms,
+               feature_vector         = extractor.ExtractRawFeatures(sample.text),
+               num_tokens             = sample.num_tokens,
+               compile_status         = sample.compile_status,
+               categorical_sampling   = int(sample.categorical_sampling),
+               date_added             = sample.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
+              )
+            )
+          )
+
 def modernize_samples_db(db: SamplesDatabase, out_db: SamplesDatabase) -> None:
   """
   Re-run feature extractors to update old db.
