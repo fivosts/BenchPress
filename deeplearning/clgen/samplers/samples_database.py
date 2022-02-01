@@ -306,15 +306,15 @@ def to_unique_samples(db: SamplesDatabase, out_db: SamplesDatabase) -> None:
       if sha not in visited:
         visited.add(sha)
         data.append(sample)
-    with out_db.Session() as s:
-      for dp in data:
-        s.add(dp)
-      s.commit()
-    pool.close()
   except Exception as e:
     l.logger().error(e)
     pool.terminate()
     raise e
+  pool.close()
+  with out_db.Session() as s:
+    for dp in data:
+      s.add(dp)
+    s.commit()
   return
 
 def initMain(*args, **kwargs):
