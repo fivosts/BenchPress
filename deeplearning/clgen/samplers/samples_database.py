@@ -333,7 +333,7 @@ def to_unique_samples(db: SamplesDatabase, out_db: SamplesDatabase) -> None:
   pool.close()
   with out_db.Session() as s:
     idx = 0
-    for dp in data:
+    for dp in tqdm.tqdm(data, total = len(data), desc = "Adding to DB"):
       new_dp = get_sample(dp)
       new_dp.id = idx
       idx += 1

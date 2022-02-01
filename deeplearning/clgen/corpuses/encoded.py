@@ -618,7 +618,7 @@ def to_unique_samples(db: EncodedContentFiles, out_db: EncodedContentFiles, toke
   pool.close()
   with out_db.Session() as s:
     idx = 0
-    for dp in data:
+    for dp in tqdm.tqdm(data, total = len(data), desc = "Adding to DB"):
       new_dp = EncodedContentFile.FromEncodedContentFile(dp, idx = idx)
       idx += 1
       s.add(new_dp)
