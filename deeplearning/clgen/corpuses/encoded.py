@@ -619,8 +619,7 @@ def to_unique_samples(db: EncodedContentFiles, out_db: EncodedContentFiles, toke
   with out_db.Session() as s:
     idx = 0
     for dp in data:
-      new_dp = get_sample(dp)
-      new_dp.id = idx
+      new_dp = EncodedContentFile.FromEncodedContentFile(dp, idx = idx)
       idx += 1
       s.add(new_dp)
     s.commit()
