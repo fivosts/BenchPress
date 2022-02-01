@@ -622,19 +622,19 @@ def initMain(*args, **kwargs):
   """
   l.initLogger(name = "bigQuery_database")
 
-  # if not FLAGS.encoded_databases:
-  #   raise ValueError("Please input encoded databases to merge as a comma separated list.")
-  # db_paths = [pathlib.Path(p).absolute() for p in FLAGS.encoded_databases.replace(" ", "").split(",")]
-  # for p in db_paths:
-  #   if not p.exists():
-  #     raise FileNotFoundError(p)
-  # dbs = [EncodedContentFiles(url = "sqlite:///{}".format(str(p)), must_exist = True) for p in db_paths]
+  if not FLAGS.encoded_databases:
+    raise ValueError("Please input encoded databases to merge as a comma separated list.")
+  db_paths = [pathlib.Path(p).absolute() for p in FLAGS.encoded_databases.replace(" ", "").split(",")]
+  for p in db_paths:
+    if not p.exists():
+      raise FileNotFoundError(p)
+  dbs = [EncodedContentFiles(url = "sqlite:///{}".format(str(p)), must_exist = True) for p in db_paths]
 
-  # if not FLAGS.merged_encoded_database:
-  #   raise ValueError("You must set a path for merged_encoded_database")
-  # out_db_path = pathlib.Path(FLAGS.merged_encoded_database).resolve()
-  # out_db_path.parent.mkdir(exist_ok = True, parents = True)
-  # out_db = EncodedContentFiles(url = "sqlite:///{}".format(str(out_db_path)), must_exist = False)
+  if not FLAGS.merged_encoded_database:
+    raise ValueError("You must set a path for merged_encoded_database")
+  out_db_path = pathlib.Path(FLAGS.merged_encoded_database).resolve()
+  out_db_path.parent.mkdir(exist_ok = True, parents = True)
+  out_db = EncodedContentFiles(url = "sqlite:///{}".format(str(out_db_path)), must_exist = False)
   # merge_db(dbs, out_db)
 
   tokenizer_path = pathlib.Path(FLAGS.tokenizer_path).resolve()
