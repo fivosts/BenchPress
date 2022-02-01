@@ -582,7 +582,7 @@ def merge_db(dbs: typing.List[EncodedContentFiles], out_db: typing.List[EncodedC
   ## TODO: Merge File stats.
   return
 
-def ContentHash_worker(contentfile: EncodedContentFile, tokenizer) -> typing.Tuple[str, Sample]:
+def ContentHash_worker(contentfile: EncodedContentFile, tokenizer) -> typing.Tuple[str, EncodedContentFile]:
   """
   Return new contentfile along with content hash of code.
   """
@@ -592,7 +592,7 @@ def ContentHash_worker(contentfile: EncodedContentFile, tokenizer) -> typing.Tup
     l.logger().warn(e)
     return None
 
-def to_unique_samples(db: SamplesDatabase, out_db: SamplesDatabase, tokenizer) -> None:
+def to_unique_samples(db: EncodedContentFiles, out_db: EncodedContentFiles, tokenizer) -> None:
   """
   Read input database, pass through deterministic re-writer and keep only unique samples.
   """
