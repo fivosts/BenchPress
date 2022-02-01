@@ -543,7 +543,6 @@ def TopKCLDrive(**kwargs) -> None:
         for ls in lsize:
           if ls > gs:
             continue
-          l.logger().info("global size: {}, local size: {}".format(gs, ls))
 
           ## Set-up number of runs.
           nruns = 10**4
@@ -563,6 +562,7 @@ def TopKCLDrive(**kwargs) -> None:
           if benchmark_label not in {"CPU", "GPU"}:
             continue
 
+          l.logger().info("global size: {}, local size: {}".format(gs, ls))
           ## Fix dictionary entry.
           config = "g{}-l{}".format(gs, ls)
           if config not in groups:
