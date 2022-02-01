@@ -515,6 +515,7 @@ def TopKCLDrive(**kwargs) -> None:
   target         = kwargs.get('targets')
   feature_space  = kwargs.get('feature_space')
   top_k          = kwargs.get('top_k')
+  unique_code    = kwargs.get('unique_code', False)
   plot_config    = kwargs.get('plot_config')
   workspace_path = kwargs.get('workspace_path')
 
@@ -526,6 +527,11 @@ def TopKCLDrive(**kwargs) -> None:
     l.logger().info("Running {} on cldrive".format(dbg.group_name))
     if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
+
+    if unique_code:
+      get_data = lambda x: dbg.get_unique_data_features(x)
+    else:
+      get_data = lambda x: dbg.get_data_features(x)
 
     ## Unpack and collect benchmarks
     benchmarks = target.get_benchmarks(feature_space)
@@ -574,7 +580,7 @@ def TopKCLDrive(**kwargs) -> None:
 
           ## Get unique contentfiles of database group.
           if closest_src is None:
-            closest_src = SortedSrcDistances(dbg.get_unique_data_features(feature_space), benchmark.features, feature_space)
+            closest_src = SortedSrcDistances(get_data(feature_space), benchmark.features, feature_space)
 
           cand_idx = 0
           for idx, (src, dist) in enumerate(closest_src):
