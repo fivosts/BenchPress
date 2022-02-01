@@ -644,7 +644,7 @@ def initMain(*args, **kwargs):
     raise FileNotFoundError(tokenizer_path)
   tokenizer = tokenizers.TokenizerBase.FromFile(tokenizer_path)
 
-  to_unique_samples(dbs[0], out_db)
+  to_unique_samples(dbs[0], out_db, tokenizer)
 
   return
 
