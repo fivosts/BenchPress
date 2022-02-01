@@ -603,7 +603,7 @@ class torchBert(backends.BackendBase):
           if self.torch_tpu_available:
             self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
 
-          if FLAGS.sample_per_epoch:
+          if FLAGS.sample_per_epoch > 0:
             sampler, observers = self._getTestSampler(test_sampler, self.config.training.sequence_length)
             self.InitSampling(sampler, self.config.training.random_seed)
             for _ in range(FLAGS.sample_per_epoch):
