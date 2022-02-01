@@ -235,7 +235,7 @@ def get_sample(sample: Sample) -> Sample:
                sample_feed            = sample.sample_feed,
                encoded_text           = sample.encoded_text,
                sample_time_ms         = sample.sample_time_ms,
-               feature_vector         = extractor.ExtractRawFeatures(sample.text),
+               feature_vector         = sample.feature_vector,
                num_tokens             = sample.num_tokens,
                compile_status         = sample.compile_status,
                categorical_sampling   = int(sample.categorical_sampling),
