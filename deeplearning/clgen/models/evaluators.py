@@ -537,7 +537,6 @@ def TopKCLDrive(**kwargs) -> None:
     benchmarks = target.get_benchmarks(feature_space)
     for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
 
-      l.logger().info(benchmark.name)
       closest_src = None
       for gs in gsize:
         for ls in lsize:
@@ -562,7 +561,6 @@ def TopKCLDrive(**kwargs) -> None:
           if benchmark_label not in {"CPU", "GPU"}:
             continue
 
-          l.logger().info("global size: {}, local size: {}".format(gs, ls))
           ## Fix dictionary entry.
           config = "g{}-l{}".format(gs, ls)
           if config not in groups:
@@ -580,7 +578,9 @@ def TopKCLDrive(**kwargs) -> None:
 
           ## Get unique contentfiles of database group.
           if closest_src is None:
+            l.logger().info(benchmark.name)
             closest_src = SortedSrcDistances(get_data(feature_space), benchmark.features, feature_space)
+          l.logger().info("global size: {}, local size: {}".format(gs, ls))
 
           cand_idx = 0
           for idx, (src, dist) in enumerate(closest_src):
