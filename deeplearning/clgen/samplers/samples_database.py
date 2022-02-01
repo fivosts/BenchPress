@@ -298,7 +298,7 @@ def to_unique_samples(db: SamplesDatabase, out_db: SamplesDatabase) -> None:
   Read input database, pass through deterministic re-writer and keep only unique samples.
   """
   pool     = multiprocessing.Pool()
-  inp_data = [x for x in db.get_data][:200]
+  inp_data = [x for x in db.get_data]
   visited  = set()
   data     = []
   try:
