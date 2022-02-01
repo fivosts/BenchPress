@@ -601,8 +601,9 @@ def to_unique_samples(db: EncodedContentFiles, out_db: EncodedContentFiles, toke
   inp_data = db.get_data
   visited  = set()
   data     = []
+  f = functools.partial(ContentHash_worker, tokenizer = tokenizer)
   try:
-    for sha, cfile in tqdm.tqdm(pool.imap_unordered(ContentHash_worker, inp_data), total = len(inp_data), desc = "Unique-fy encoded database"):
+    for sha, cfile in tqdm.tqdm(pool.imap_unordered(f, inp_data), total = len(inp_data), desc = "Unique-fy encoded database"):
       if sha not in visited:
         visited.add(sha)
         data.append(cfile)
