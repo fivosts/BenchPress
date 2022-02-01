@@ -34,6 +34,7 @@ from sqlalchemy.sql import func
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.proto import internal_pb2
+from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import monitors
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
@@ -637,7 +638,6 @@ def initMain(*args, **kwargs):
   out_db = EncodedContentFiles(url = "sqlite:///{}".format(str(out_db_path)), must_exist = False)
   # merge_db(dbs, out_db)
 
-  from deeplearning.clgen.samplers import samples_database
   tokenizer_path = pathlib.Path(FLAGS.tokenizer_path).resolve()
   if not tokenizer_path.exists():
     raise FileNotFoundError(tokenizer_path)
