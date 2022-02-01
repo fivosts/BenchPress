@@ -35,6 +35,7 @@ from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import preprocessed
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.samplers import samples_database
+from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.util import monitors
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
