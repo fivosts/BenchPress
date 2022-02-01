@@ -637,6 +637,7 @@ def initMain(*args, **kwargs):
   out_db = EncodedContentFiles(url = "sqlite:///{}".format(str(out_db_path)), must_exist = False)
   # merge_db(dbs, out_db)
 
+  from deeplearning.clgen.samplers import samples_database
   tokenizer_path = pathlib.Path(FLAGS.tokenizer_path).resolve()
   if not tokenizer_path.exists():
     raise FileNotFoundError(tokenizer_path)
