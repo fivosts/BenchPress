@@ -617,8 +617,12 @@ def to_unique_samples(db: EncodedContentFiles, out_db: EncodedContentFiles, toke
     raise e
   pool.close()
   with out_db.Session() as s:
+    idx = 0
     for dp in data:
-      s.add(dp)
+      new_dp = get_sample(dp)
+      new_dp.id = idx
+      idx += 1
+      s.add(new_dp)
     s.commit()
   return
 
