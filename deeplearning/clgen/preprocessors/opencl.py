@@ -354,6 +354,10 @@ def CLDriveLabel(src: str,
     # CSV is empty which means src failed miserably.
     avg_time_cpu_ns   = None
     avg_time_gpu_ns   = None
+  except pd.errors.ParserError:
+    # Unexpected parsing error.
+    avg_time_cpu_ns   = None
+    avg_time_gpu_ns   = None
 
   cpu_error = None
   gpu_error = None
