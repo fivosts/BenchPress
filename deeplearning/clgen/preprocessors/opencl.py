@@ -198,6 +198,19 @@ def ContentHash(src: str) -> str:
   rw = SequentialNormalizeIdentifiers(src)
   return crypto.sha256_str(rw.replace(" ", "").replace("\n", ""))
 
+def IRContentHash(src: str, header_file = None, use_aux_headers: bool = True) -> str:
+  """
+  Collect optimized LLVM-IR of source code and compute its hash.
+
+  Args:
+    src: The source code to compute.
+
+  Returns:
+    256-bit hash of pure source code string.
+  """
+  bc = CompileLlvmBytecode(src, header_file = header_file, use_aux_headers = use_aux_headers)
+  return crypto.sha256_str(''.join(bc.split('\n')[2:]))
+
 def RunCLDrive(src: str,
                header_file = None,
                num_runs: int = 1000,
