@@ -17,6 +17,76 @@ from deeplearning.clgen.util import plotter
 
 FLAGS = flags.FLAGS
 
+def run_single(src: str, depth = 0, visited: set = set()):
+
+  try:
+    tdir = pathlib.Path(FLAGS.local_filesystem).resolve() / feat_space
+  except Exception:
+    tdir = pathlib.Path("/tmp/{}".format(feat_space)).resolve()
+    tdir.mkdir(exist_ok = True, parents = True)
+  with tempfile.NamedTemporaryFile("w", prefix="mutec_src", suffix='.cl', dir = tdir) as f:
+    # Write source file.
+    f.write(src)
+    f.flush()
+    # Fix compile_commands.json for source file.
+    base_path = pathlib.Path(f.name).resolve().parent
+    compile_command = {
+      'directory' : str(base_path),
+      'arguments' : 
+        [str(clang.CLANG), f.name] +
+        ["-S", "-emit-llvm", "-o", "-"] +
+        opencl.GetClangArgs(use_shim = False, use_aux_headers = False),
+      'file'      : str(f.name)
+    }
+    with open(base_path / "compile_commands.json", 'w') as ccf:
+      json.dump([compile_command], ccf)
+    # Construct and execute mutec command
+    mutec_cmd = [
+      str(mutec),
+      str(f.name),
+      "-o",
+      str(base_path)
+    ]
+    process = subprocess.Popen(
+      mutec_cmd,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.PIPE,
+      universal_newlines=True,
+    )
+    stdout, stderr = process.communicate()
+    # Cleanup compile commands
+    os.remove(str(base_path / "compile_commands.json"))
+    mutecs = set(
+      [x for x in 
+        [open(x, 'r').read() for x in glob.glob(str("{}.mutec*".format(str(f.name))))]
+      if x not in visited]
+    )
+    visited.update(mutecs)
+    if depth < 3 and len(visited) < 50:
+      ret = set()
+      for mutated in mutecs:
+        ret.update(run_single(mutated, depth = depth + 1, visited = visited))
+      mutecs.update(ret)
+    return mutecs
+
+def run_mutec(srcs: typing.List[str], target_features: typing.Dict[str, float], feat_space: str, top_k: int) -> typing.List[typing.Tuple[str, float]]:
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
+
+  cands = []
+  for src in tqdm.tqdm(srcs, total = len(srcs), desc = "Mutec candidates", leave = False):
+    cands += run_single(src)
+  ## Tuple of closest src, distance from target benchmark.
+  closest = []
+  for src in cands:
+    feats = extractor.ExtractFeatures(src, [feat_space])
+    if feat_space in feats and feats[feat_space]:
+      closest.append((src, feature_sampler.calculate_distance(feats[feat_space], target_features, feat_space)))
+  closest = sorted(closest, key = lambda x: x[1])[:top_k]
+  return closest
+
 def MutecVsBenchPress(**kwargs) -> None:
   """
   Compare mutec mutation tool on github's database against BenchPress.
@@ -31,76 +101,6 @@ def MutecVsBenchPress(**kwargs) -> None:
   plot_config    = kwargs.get('plot_config')
   workspace_path = kwargs.get('workspace_path')
   groups = {}
-
-  def run_mutec(srcs: typing.List[str], target_features: typing.Dict[str, float], feat_space: str, top_k: int) -> typing.List[typing.Tuple[str, float]]:
-
-    def run_single(src: str, depth = 0, visited: set = set()):
-
-      try:
-        tdir = pathlib.Path(FLAGS.local_filesystem).resolve() / feat_space
-      except Exception:
-        tdir = pathlib.Path("/tmp/{}".format(feat_space)).resolve()
-        tdir.mkdir(exist_ok = True, parents = True)
-      with tempfile.NamedTemporaryFile("w", prefix="mutec_src", suffix='.cl', dir = tdir) as f:
-        # Write source file.
-        f.write(src)
-        f.flush()
-        # Fix compile_commands.json for source file.
-        base_path = pathlib.Path(f.name).resolve().parent
-        compile_command = {
-          'directory' : str(base_path),
-          'arguments' : 
-            [str(clang.CLANG), f.name] +
-            ["-S", "-emit-llvm", "-o", "-"] +
-            opencl.GetClangArgs(use_shim = False, use_aux_headers = False),
-          'file'      : str(f.name)
-        }
-        with open(base_path / "compile_commands.json", 'w') as ccf:
-          json.dump([compile_command], ccf)
-        # Construct and execute mutec command
-        mutec_cmd = [
-          str(mutec),
-          str(f.name),
-          "-o",
-          str(base_path)
-        ]
-        process = subprocess.Popen(
-          mutec_cmd,
-          stdout=subprocess.PIPE,
-          stderr=subprocess.PIPE,
-          universal_newlines=True,
-        )
-        stdout, stderr = process.communicate()
-        # Cleanup compile commands
-        os.remove(str(base_path / "compile_commands.json"))
-        mutecs = set(
-          [x for x in 
-            [open(x, 'r').read() for x in glob.glob(str("{}.mutec*".format(str(f.name))))]
-          if x not in visited]
-        )
-        visited.update(mutecs)
-        if depth < 3 and len(visited) < 50:
-          ret = set()
-          for mutated in mutecs:
-            ret.update(run_single(mutated, depth = depth + 1, visited = visited))
-          mutecs.update(ret)
-        return mutecs
-    try:
-      tdir = FLAGS.local_filesystem
-    except Exception:
-      tdir = None
-
-    cands = []
-    for src in tqdm.tqdm(srcs, total = len(srcs), desc = "Mutec candidates", leave = False):
-      cands += run_single(src)
-    ## Tuple of closest src, distance from target benchmark.
-    closest = []
-    for src in cands:
-      feats = extractor.ExtractFeatures(src, [feat_space])
-      if feat_space in feats and feats[feat_space]:
-        closest.append((src, feature_sampler.calculate_distance(feats[feat_space], target_features, feat_space)))
-    closest = sorted(closest, key = lambda x: x[1])[:top_k]
-    return closest
 
   if github.db_type != encoded.EncodedContentFiles:
     raise ValueError("Scores require EncodedContentFiles but received", github.db_type)
