@@ -98,61 +98,81 @@ def MutecVsBenchPress(**kwargs) -> None:
   target         = kwargs.get('targets')
   feature_space  = kwargs.get('feature_space')
   top_k          = kwargs.get('top_k')
+  unique_code    = kwargs.get('unique_code', False)
   plot_config    = kwargs.get('plot_config')
   workspace_path = kwargs.get('workspace_path')
-  groups = {}
 
   if github.db_type != encoded.EncodedContentFiles:
     raise ValueError("Scores require EncodedContentFiles but received", github.db_type)
+
+  if benchpress.db_type != samples_database.SamplesDatabase:
+    raise ValueError("BenchPress scores require SamplesDatabase but received", benchpress.db_type)
+
+  ## Initialize dictionary.
+  groups = {}
   groups["Mutec"] = ([], [])
   groups["GitHub"] = ([], [])
-  l.logger().info("Mutec group")
+  groups[benchpress.group_name] = ([], [])
 
+  ## Fix fetching data functions.
+  if unique_code:
+    git_get_data = lambda x: github.get_unique_data_features(x)
+    bp_get_data  = lambda x: benchpress.get_unique_data_features(x)
+  else:
+    git_get_data = lambda x: github.get_data_features(x)
+    bp_get_data  = lambda x: benchpress.get_data_features(x)
+
+  ## Run engine on mutec.
   benchmarks = target.get_benchmarks(feature_space)
-  for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
-    l.logger().info(benchmark.name)
-    ## Tuple of closest src, distance from target benchmark.
-    closest = SortedSrcDistances(github.get_unique_data_features(feature_space), benchmark.features, feature_space)[:5]
+  for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Mutec"):
+    ## Tuple of closest src, distance from target benchmark.0
+    closest = SortedSrcDistances(git_get_data(feature_space), benchmark.features, feature_space)[:5]
 
     # Split source and distances lists.
     git_src  = [x for x, _ in closest]
     git_dist = [x for _, x in closest]
 
+    ## If distances are already minimized, nothing to do.
     if sum(git_dist[:top_k]) == 0:
       continue
 
-    closest_mutec_src  = run_mutec(git_src, benchmark.features, feature_space, top_k) # tuple of (src, distance)
+    l.logger().info(benchmark.name)
+
+    closest_mutec_src  = beam_mutec(git_src, benchmark.features, feature_space, top_k) # tuple of (src, distance)
     closest_mutec_dist = [x for _, x in closest_mutec_src]
 
+    ## If mutec has provided a better score
     if sum(closest_mutec_dist) < sum(git_dist[:top_k]):
+
       l.logger().info("Score reduced from {} to {}".format(sum(git_dist[:top_k]), sum(closest_mutec_dist)))
       l.logger().info("Best score from {} to {}".format(git_dist[0], closest_mutec_dist[0]))
-      groups["Mutec"][0].append(benchmark.name)
+
       # Compute target's distance from O(0,0)
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
-      avg_dist           = sum(closest_mutec_dist) / top_k
-      groups["Mutec"][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
+      mutec_avg_dist     = sum(closest_mutec_dist) / top_k
 
-      groups["GitHub"][0].append(benchmark.name)
+      groups["Mutec"][0].append(benchmark.name)
+      groups["Mutec"][1].append(100 * ((target_origin_dist - mutec_avg_dist) / target_origin_dist))
+
       # Compute target's distance from O(0,0)
-      avg_dist = sum(git_dist[:top_k]) / top_k
-      groups["GitHub"][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
+      git_avg_dist = sum(git_dist[:top_k]) / top_k
+      groups["GitHub"][0].append(benchmark.name)
+      groups["GitHub"][1].append(100 * ((target_origin_dist - git_avg_dist) / target_origin_dist))
 
-  l.logger().info("Benchpress group")
-  if benchpress.db_type != samples_database.SamplesDatabase:
-    raise ValueError("BenchPress scores require SamplesDatabase but received", benchpress.db_type)
-  groups[benchpress.group_name] = ([], [])
-
+  ## Run engine on benchpress.
   benchmarks = target.get_benchmarks(feature_space)
-  for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
-    l.logger().info(benchmark.name)
+  for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchpress"):
+    ## Run only for benchmarks mutec has improved.
     if benchmark.name in groups["Mutec"][0]:
-      groups[benchpress.group_name][0].append(benchmark.name)
-      # Find shortest distances.
-      distances = SortedDistances(benchpress.get_unique_data_features(feature_space), benchmark.features, feature_space)
+
+      l.logger().info(benchmark.name)
+      distances = SortedDistances(bp_get_data(feature_space), benchmark.features, feature_space)
+
       # Compute target's distance from O(0,0)
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
       avg_dist = sum(distances[:top_k]) / len(distances[:top_k])
+
+      groups[benchpress.group_name][0].append(benchmark.name)
       groups[benchpress.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
 
   plotter.GrouppedBars(
