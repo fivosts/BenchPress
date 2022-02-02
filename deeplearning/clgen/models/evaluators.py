@@ -581,6 +581,7 @@ def TopKCLDrive(**kwargs) -> None:
             l.logger().info(benchmark.name)
             closest_src = SortedSrcDistances(get_data(feature_space), benchmark.features, feature_space)
           l.logger().info("global size: {}, local size: {}".format(gs, ls))
+          l.logger().error("Benchmark label: {}".format(benchmark_label))
 
           cand_idx = 0
           for idx, (src, dist) in enumerate(closest_src):
@@ -595,7 +596,7 @@ def TopKCLDrive(**kwargs) -> None:
                 c_runs = c_runs // 10
             if label not in {"CPU", "GPU"}:
               continue
-
+            l.logger().error("Label: {}, distance: {}".format(label, dist))
             if len(groups[config][dbg.group_name][1]) - 1 < idx:
               groups[config][dbg.group_name][1].append([dist])
               groups[config][dbg.group_name][2].append([label])
