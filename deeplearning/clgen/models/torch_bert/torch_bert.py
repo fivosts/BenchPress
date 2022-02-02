@@ -578,10 +578,10 @@ class torchBert(backends.BackendBase):
             self.current_step += 1
 
           # End of Epoch
+          self.saveCheckpoint(self.train, pre_train)
           if self.is_world_process_zero():
             set_mail = "Epoch {} Loss: {}\n".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss)
             l.logger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss))
-            self.saveCheckpoint(self.train, pre_train)
 
           if self.pytorch.num_nodes > 1:
             loader.sampler.set_epoch(epoch)
@@ -859,33 +859,34 @@ class torchBert(backends.BackendBase):
     """
     Saves model, scheduler, optimizer checkpoints per epoch.
     """
-    ckpt_comp = lambda x: self.ckpt_path / "{}{}-{}.pt".format("pre_" if pre_train else "", x, self.current_step)
+    if self.is_world_process_zero():
+      ckpt_comp = lambda x: self.ckpt_path / "{}{}-{}.pt".format("pre_" if pre_train else "", x, self.current_step)
 
-    if self.torch_tpu_available:
-      if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
-        self.pytorch.torch_xla_model.save(estimator.model, ckpt_comp("model"))
-      self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
-      self.pytorch.torch_xla.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
-      self.pytorch.torch_xla.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
-    elif self.is_world_process_zero():
-      if isinstance(estimator.model, self.torch.nn.DataParallel):
-        self.torch.save(estimator.model.module.state_dict(), ckpt_comp("model"))
+      if self.torch_tpu_available:
+        if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
+          self.pytorch.torch_xla_model.save(estimator.model, ckpt_comp("model"))
+        self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
+        self.pytorch.torch_xla.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
+        self.pytorch.torch_xla.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
       else:
-        self.torch.save(estimator.model.state_dict(), ckpt_comp("model"))
-      self.torch.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
-      self.torch.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
+        if isinstance(estimator.model, self.torch.nn.DataParallel):
+          self.torch.save(estimator.model.module.state_dict(), ckpt_comp("model"))
+        else:
+          self.torch.save(estimator.model.state_dict(), ckpt_comp("model"))
+        self.torch.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
+        self.torch.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
 
-    with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
-      mf.write("{}train_step: {}\n".format("pre_" if pre_train else "", self.current_step))
-    if pre_train:
-      mf = open(self.ckpt_path / "checkpoint.meta", 'r')
-      cf = mf.read()
-      mf.close()
-      if "train_step: 0" not in cf:
-        with open(self.ckpt_path / "checkpoint.meta", 'w') as mf:
-          mf.write(cf + "train_step: 0\n")
-      for x in {"model"}:
-        shutil.copyfile(str(ckpt_comp(x)), str(self.ckpt_path / "{}-0.pt".format(x)))
+      with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
+        mf.write("{}train_step: {}\n".format("pre_" if pre_train else "", self.current_step))
+      if pre_train:
+        mf = open(self.ckpt_path / "checkpoint.meta", 'r')
+        cf = mf.read()
+        mf.close()
+        if "train_step: 0" not in cf:
+          with open(self.ckpt_path / "checkpoint.meta", 'w') as mf:
+            mf.write(cf + "train_step: 0\n")
+        for x in {"model"}:
+          shutil.copyfile(str(ckpt_comp(x)), str(self.ckpt_path / "{}-0.pt".format(x)))
     return
 
   def loadCheckpoint(self,
