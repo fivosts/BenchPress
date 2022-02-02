@@ -126,6 +126,19 @@ def ContentHash(src: str) -> str:
   rw = SequentialNormalizeIdentifiers(src)
   return crypto.sha256_str(rw.replace(" ", "").replace("\n", ""))
 
+def IRContentHash(src: str) -> str:
+  """
+  Collect optimized LLVM-IR of source code and compute its hash.
+
+  Args:
+    src: The source code to compute.
+
+  Returns:
+    256-bit hash of pure source code string.
+  """
+  bc = CompileLlvmBytecode(src)
+  return crypto.sha256_str(''.join(bc.split('\n')[2:]))
+
 def CompileLlvmBytecode(text: str) -> str:
   """A preprocessor which attempts to compile the given code.
 
