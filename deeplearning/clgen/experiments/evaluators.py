@@ -179,7 +179,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       pbutil.AssertFieldIsSet(ev.topk_cldrive, "feature_space")
       pbutil.AssertFieldIsSet(ev.topk_cldrive, "cldrive_cache")
       if not pathlib.Path(ev.topk_cldrive.cldrive_cache).resolve().exists():
-        l.logger().warn("CLDrive cache not found in {}. Will create one from scratch.".format(ev.topk_cldrive))
+        l.logger().warn("CLDrive cache not found in {}. Will create one from scratch.".format(ev.topk_cldrive.cldrive_cache))
       pbutil.AssertFieldConstraint(
         ev.topk_cldrive,
         "top_k",
@@ -204,7 +204,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
 
       pbutil.AssertFieldIsSet(ev.mutec_vs_benchpress, "mutec_cache")
       if not pathlib.Path(ev.mutec_vs_benchpress.mutec_cache).resolve().exists():
-        l.logger().warn("Mutec cache not found in {}. Will create one from scratch.".format(ev.mutec_vs_benchpress))
+        l.logger().warn("Mutec cache not found in {}. Will create one from scratch.".format(ev.mutec_vs_benchpress.mutec_cache))
 
       pbutil.AssertFieldConstraint(
         ev.mutec_vs_benchpress,
