@@ -42,6 +42,10 @@ OPTION(BUILD_CSMITH
       "Select to build Csmith fuzzer."
       OFF
 )
+OPTION(BUILD_CLSMITH
+      "Select to build CLsmith fuzzer."
+      OFF
+)
 
 function(find_binaries)
 
@@ -282,6 +286,26 @@ function(install_external_deps)
     set(CSMITH           ${LOCAL}/bin/csmith PARENT_SCOPE)
   endif ()
 
+  if (BUILD_CLSMITH)
+    # CLSmith OpenCL Fuzzer.
+    ExternalProject_Add(csmith
+      GIT_REPOSITORY    https://github.com/ChrisLidbury/CLSmith.git
+      GIT_TAG           a39a31c43c88352fc65e61dce270d8e1660cbcf0
+      GIT_PROGRESS      true
+      BUILD_IN_SOURCE   true
+      PREFIX            ${THIRD_PARTY}/clsmith
+      TMP_DIR           ${THIRD_PARTY}/tmp
+      STAMP_DIR         ${THIRD_PARTY}/stamp
+      DOWNLOAD_DIR      ${THIRD_PARTY}/clsmith
+      SOURCE_DIR        ${THIRD_PARTY}/clsmith/clsmith
+      INSTALL_DIR       ${LOCAL}
+      CONFIGURE_COMMAND cd ${THIRD_PARTY}/clsmith/clsmith && ${CMAKE_COMMAND} -S . -B build -DCMAKE_INSTALL_PREFIX=${LOCAL}
+      BUILD_COMMAND     cd ${THIRD_PARTY}/clsmith/clsmith/build && $(MAKE)
+      INSTALL_COMMAND   cd ${THIRD_PARTY}/clsmith/clsmith/build && $(MAKE) install
+    )
+    set(BUILD_CLSMITH           ${LOCAL}/bin/csmith PARENT_SCOPE)
+  endif ()
+
   # #include <CL/*>
   # I have forked my own version of OpenCL Headers which I install here.
   # My version excludes the C-API functions from being included,
@@ -398,6 +422,7 @@ function(clgen)
     "export CLDRIVE="                        ${CLDRIVE} "\n"
     "export MUTEC="                          ${MUTEC} "\n"
     "export CSMITH="                         ${CSMITH} "\n"
+    "export CLSMITH="                        ${CLSMITH} "\n"
     "export GREWE="                          ${GREWE} "\n"
     "export INSTCOUNT="                      ${INSTCOUNT} "\n"
     "export AUTOPHASE="                      ${AUTOPHASE} "\n"
