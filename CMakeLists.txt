@@ -106,7 +106,7 @@ function(find_binaries)
 
     # If bazel does not exist, deactivate building cldrive
     find_program(BAZEL bazel)
-    if (NOT BUILD_CLDRIVE)
+    if (BUILD_CLDRIVE)
       if (NOT BAZEL)
         message(WARNING "-- bazel binary " ${BAZEL} " not found. Skipping cldrive build.")
         set(BUILD_CLDRIVE OFF PARENT_SCOPE)
