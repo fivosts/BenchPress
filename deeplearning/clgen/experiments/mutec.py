@@ -91,12 +91,13 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
   """
   better_score = True
   total_beams, beam, closest = set(), [], []
+  gen_id = 0
 
   while better_score:
 
     cands = set()
     ## Generate mutants for current generation.
-    for src, dist in tqdm.tqdm(srcs, total = len(srcs), desc = "Mutec candidates", leave = False):
+    for src, dist in tqdm.tqdm(srcs, total = len(srcs), desc = "Mutec candidates {}".format(gen_id), leave = False):
       cands.update(generate_mutants(src)) ### This should collect all mutants and return them, out of a single source.
 
     ## Extract their features and calculate distances.
@@ -108,7 +109,7 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
         )
     # total.update(cands)
     try:
-      for cand in tqdm.tqdm(pool.imap_unordered(f, cands), total = len(cands), desc = "Extract Features", leave = False):
+      for cand in tqdm.tqdm(pool.imap_unordered(f, cands), total = len(cands), desc = "Extract Features {}".format(gen_id), leave = False):
         if cand:
           beam.append(cand)
     except Exception as e:
@@ -128,6 +129,7 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
       beam = []
     else:
       better_score = False
+    gen_id += 1
 
   ## Store all mutants in database.
   with mutec_cache.Session(commit = True) as s:
