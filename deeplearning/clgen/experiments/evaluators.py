@@ -176,6 +176,9 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         "target {} not found".format(ev.topk_cldrive.target),
       )
       pbutil.AssertFieldIsSet(ev.topk_cldrive, "feature_space")
+      pbutil.AssertFieldIsSet(ev.topk_cldrive, "cldrive_cache")
+      if not pathlib.Path(ev.topk_cldrive.cldrive_cache).resolve().exists():
+        l.logger().warn("CLDrive cache not found in {}. Will create one from scratch.".format(ev.topk_cldrive))
       pbutil.AssertFieldConstraint(
         ev.topk_cldrive,
         "top_k",
@@ -438,7 +441,8 @@ def main(config: evaluator_pb2.Evaluation):
       sev = ev.comp_mem_grewe
     elif ev.HasField("topk_cldrive"):
       sev = ev.topk_cldrive
-      kw_args['top_k'] = sev.top_k
+      kw_args['top_k']         = sev.top_k
+      kw_args['cldrive_cache'] = sev.top_k
     elif ev.HasField("mutec_vs_benchpress"):
       sev = ev.mutec_vs_benchpress
       kw_args['top_k']      = sev.top_k
