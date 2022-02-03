@@ -111,8 +111,8 @@ def beam_mutec(srcs            : typing.List[str],
       raise e
     pool.close()
     closest = sorted(beam, key = lambda x: x[1])[:beam_width]
-    if sum([x for x, _ in closest]) / len([x for x, _ in closest]) < sum(srcs) / len(srcs):
-      srcs = [x for x, _ in closest]
+    if sum([x for _, x in closest]) / len([x for _, x in closest]) < sum(srcs) / len(srcs):
+      srcs = [x for _, X in closest]
       beam = []
     else:
       better_score = False
