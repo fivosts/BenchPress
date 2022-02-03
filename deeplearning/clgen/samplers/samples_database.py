@@ -114,7 +114,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
     Do you want to use SamplesDatabase as a means to store only code
     without much fuss ? This function is for you!
     """
-    return {
+    return Sample(**{
       "id"                     : id,
       "sha256"                 : crypto.sha256_str(text),
       "train_step"             : -1,
@@ -130,7 +130,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "categorical_sampling"   : "False",
       "sample_time_ms"         : 0,
       "date_added"             : datetime.datetime.utcnow(),
-    }
+    })
 
 class SamplesDatabase(sqlutil.Database):
   """A database of CLgen samples."""
