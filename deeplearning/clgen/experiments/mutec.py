@@ -39,6 +39,7 @@ def run_single(src: str, depth = 0, visited: set = set()):
   except Exception:
     tdir = pathlib.Path("/tmp/{}".format(feat_space)).resolve()
     tdir.mkdir(exist_ok = True, parents = True)
+
   with tempfile.NamedTemporaryFile("w", prefix="mutec_src", suffix='.cl', dir = tdir) as f:
     # Write source file.
     f.write(src)
@@ -84,19 +85,20 @@ def run_single(src: str, depth = 0, visited: set = set()):
       mutecs.update(ret)
     return mutecs
 
-def beam_mutec(srcs: typing.List[str], target_features: typing.Dict[str, float], feat_space: str, top_k: int) -> typing.List[typing.Tuple[str, float]]:
+def beam_mutec(srcs: typing.List[str],
+               target_features: typing.Dict[str, float],
+               feat_space: str,
+               top_k: int
+               ) -> typing.List[typing.Tuple[str, float]]:
   """
   Run generational beam search over starting github kernels
   to minimize distance from target features.
   """
-  try:
-    tdir = FLAGS.local_filesystem
-  except Exception:
-    tdir = None
-
   better_score = True
-  beam = []
+  beam, closest = [], []
+
   while better_score:
+
     cands = []
     for src in tqdm.tqdm(srcs, total = len(srcs), desc = "Mutec candidates", leave = False):
       cands += run_single(src) ### This should collect all mutants and return them, out of a single source.
@@ -116,17 +118,11 @@ def beam_mutec(srcs: typing.List[str], target_features: typing.Dict[str, float],
       raise e
     pool.close()
     closest = sorted(beam, key = lambda x: x[1])[:top_k]
-
-  cands = []
-  for src in tqdm.tqdm(srcs, total = len(srcs), desc = "Mutec candidates", leave = False):
-    cands += run_single(src)
-  ## Tuple of closest src, distance from target benchmark.
-  closest = []
-  for src in cands:
-    feats = extractor.ExtractFeatures(src, [feat_space])
-    if feat_space in feats and feats[feat_space]:
-      closest.append((src, feature_sampler.calculate_distance(feats[feat_space], target_features, feat_space)))
-  closest = sorted(closest, key = lambda x: x[1])[:top_k]
+    if sum([x for x, _ in closest]) / len([x for x, _ in closest]) < sum(srcs) / len(srcs):
+      srcs = [x for x, _ in closest]
+      beam = []
+    else:
+      better_score = False
   return closest
 
 def MutecVsBenchPress(**kwargs) -> None:
