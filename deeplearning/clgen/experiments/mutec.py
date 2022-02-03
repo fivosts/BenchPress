@@ -80,7 +80,6 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
                target_features : typing.Dict[str, float],
                feat_space      : str,
                beam_width      : int,
-               top_k           : int,
                mutec_cache     : samples_database.SamplesDatabase,
                ) -> typing.List[typing.Tuple[str, float]]:
   """
@@ -117,7 +116,7 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
 
     ## Sort by distance in ascending order. If score is better, keep doing beam search
     closest = sorted(beam, key = lambda x: x[1])[:beam_width]
-    if sum([x for _, x in closest[:top_k]]) / top_k < sum([x for _, x in srcs[:top_k]]) / top_k:
+    if sum([x for _, x in closest]) / beam_width < sum([x for _, x in srcs]) / beam_width:
       srcs = closest
       beam = []
     else:
@@ -199,7 +198,7 @@ def MutecVsBenchPress(**kwargs) -> None:
 
     l.logger().info(benchmark.name)
 
-    closest_mutec_src  = beam_mutec(closest[:beam_width], benchmark.features, feature_space, beam_width, top_k, mutec_db) # tuple of (src, distance)
+    closest_mutec_src  = beam_mutec(closest[:beam_width], benchmark.features, feature_space, beam_width, mutec_db) # tuple of (src, distance)
     closest_mutec_dist = [x for _, x in closest_mutec_src]
 
     ## If mutec has provided a better score
