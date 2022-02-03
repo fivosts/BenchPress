@@ -1,14 +1,98 @@
 """
 Evaluation script for kernel execution using cldrive or similar drivers.
 """
+import datetime
+import sqlite3
 import tqdm
 import pickle
 import math
+
+import sqlalchemy as sql
+from sqlalchemy.ext import declarative
 
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import plotter
+from deeplearning.clgen.util import sqlutil
+from deeplearning.clgen.util import crypto
+
+Base = declarative.declarative_base()
+
+class Data(Base):
+  __tablename__ = "sampling_results"
+  """
+    DB Table for concentrated validation results.
+  """
+  key     : str = sql.Column(sql.String(1024), primary_key=True)
+  results : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+
+class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
+  """
+  A database row representing a CLDrive execution trace.
+  """
+  __tablename__    = "cldrive_samples"
+  # entry id
+  id                   : int = sql.Column(sql.Integer,    primary_key = True)
+  # unique hash of cldrive execution.
+  sha256               : str = sql.Column(sql.String(64), nullable = False, index = True)
+  # Global size of execution
+  global_size          : int = sql.Column(sql.Integer,   nullable = False)
+  # Local size of execution
+  local_size           : int = sql.Column(sql.Integer,   nullable = False)
+  # Executed source code
+  source               : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # cpu transfer time of kernel
+  cpu_transfer_time_ns : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # cpu execution time of kernel
+  cpu_kernel_time_ns   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # gpu transfer time of kernel
+  gpu_transfer_time_ns : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # gpu execution time of kernel
+  gpu_kernel_time_ns   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # amount of transferred bytes
+  transferred_bytes    : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Date
+  date_added           : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
+
+  @classmethod
+  def FromArgs(cls,
+               id                   : int,
+               global_size          : int,
+               local_size           : int,
+               src                  : str,
+               cpu_transfer_time_ns : int,
+               cpu_kernel_time_ns   : int,
+               gpu_transfer_time_ns : int,
+               gpu_kernel_time_ns   : int,
+               transferred_bytes    : int
+               ) -> typing.Dict[str, typing.Any]:
+    return {
+      "id"                   : id,
+      "sha256"               : crypto.sha256_str(source + str(global_size) + str(local_size)),
+      "global_size"          : global_size,
+      "local_size"           : local_size,
+      "source"               : src,
+      "cpu_transfer_time_ns" : str(cpu_transfer_time_ns),
+      "cpu_kernel_time_ns"   : str(cpu_kernel_time_ns),
+      "gpu_transfer_time_ns" : str(gpu_transfer_time_ns),
+      "gpu_kernel_time_ns"   : str(gpu_kernel_time_ns),
+      "transferred_bytes"    : transferred_bytes,
+      "date_added"           : datetime.datetime.utcnow(),
+    }
+
+class CLDriveExecutions(sqlutil.Database):
+  """A database of CLgen samples."""
+
+  def __init__(self, url: str, must_exist: bool = False):
+    super(CLDriveExecutions, self).__init__(url, Base, must_exist = must_exist)
+
+  @property
+  def count(self):
+    """Number of cldrive traces in DB."""
+    with self.Session() as s:
+      count = s.query(CLDriveSample).count()
+    return count
 
 def TopKCLDrive(**kwargs) -> None:
   """
