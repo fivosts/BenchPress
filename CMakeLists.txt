@@ -34,6 +34,10 @@ OPTION(BUILD_CLDRIVE
       "Select to build CLdrive."
       OFF
 )
+OPTION(BUILD_MUTEC
+      "Select to build Mutec mutator tool."
+      OFF
+)
 
 function(find_binaries)
 
@@ -184,7 +188,6 @@ function(install_external_deps)
     )
     set(CLDRIVE          ${LOCAL}/bin/cldrive PARENT_SCOPE)
   endif ()
-
   ## onnx model
   #ExternalProject_Add(onnx
   #  GIT_REPOSITORY    https://github.com/onnx/onnx.git
@@ -232,6 +235,27 @@ function(install_external_deps)
   )
   set(LLVM6           ${LOCAL}/llvm6   PARENT_SCOPE)
   set(LLVM            ${LOCAL}/llvm10  PARENT_SCOPE)
+
+  if (BUILD_MUTEC)
+    # protoc compiler
+    ExternalProject_Add(mutec
+      GIT_REPOSITORY    https://github.com/chao-peng/mutec.git
+      GIT_TAG           252049da659ecfdbf6a9b5bc153083faad95aabb
+      DEPENDS           llvm6
+      GIT_PROGRESS      true
+      BUILD_IN_SOURCE   true
+      PREFIX            ${THIRD_PARTY}/llvm6/llvm6/clang/tools
+      TMP_DIR           ${THIRD_PARTY}/tmp
+      STAMP_DIR         ${THIRD_PARTY}/stamp
+      SOURCE_DIR        ${THIRD_PARTY}/llvm6/llvm6/clang/tools/mutec
+      INSTALL_DIR       ${LOCAL}
+      CONFIGURE_COMMAND echo "add_subdirectory(mutec)" >> ${THIRD_PARTY}/llvm6/llvm6/clang/tools/CMakeLists.txt && cd ${THIRD_PARTY}/llvm6/llvm6 && ${CMAKE_COMMAND} -S llvm -B build -DLLVM_ENABLE_PROJECTS=clang|libcxx|libcxxabi -DCMAKE_INSTALL_PREFIX=${LOCAL}/llvm6 -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
+      BUILD_COMMAND     cd ${THIRD_PARTY}/llvm6/llvm6/build && $(MAKE) mutec
+      INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm6/llvm6/build && $(MAKE) install mutec
+    )
+    set(MUTEC           ${LOCAL}/bin/mutec PARENT_SCOPE)
+  endif ()
+
   # #include <CL/*>
   # I have forked my own version of OpenCL Headers which I install here.
   # My version excludes the C-API functions from being included,
@@ -346,6 +370,7 @@ function(clgen)
     "export CLANG_REWRITER="                 ${CLANG_REWRITER} "\n"
     "export SEQ_CLANG_REWRITER="             ${SEQ_CLANG_REWRITER} "\n"
     "export CLDRIVE="                        ${CLDRIVE} "\n"
+    "export MUTEC="                          ${MUTEC} "\n"
     "export GREWE="                          ${GREWE} "\n"
     "export INSTCOUNT="                      ${INSTCOUNT} "\n"
     "export AUTOPHASE="                      ${AUTOPHASE} "\n"
