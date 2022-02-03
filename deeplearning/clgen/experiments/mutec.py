@@ -127,7 +127,7 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
         if dp:
           src, feats = dp
           sample = samples_database.Sample.FromArgsLite(idx, src, feats)
-          exists = session.query(samples_database.Sample.sha256).filter_by(sha256 = sample.sha256).scalar() is not None
+          exists = s.query(samples_database.Sample.sha256).filter_by(sha256 = sample.sha256).scalar() is not None
           if not exists:
             s.add(sample)
             idx += 1
