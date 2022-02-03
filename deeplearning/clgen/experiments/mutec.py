@@ -108,7 +108,7 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
       for cand in tqdm.tqdm(pool.imap_unordered(f, cands), total = len(cands), desc = "Extract Features", leave = False):
         if cand:
           beam.append(cand)
-      total += beam
+      total_beams += beam
     except Exception as e:
       l.logger().error(e)
       pool.terminate()
@@ -129,7 +129,7 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
     f = functools.partial(workers.FeatureExtractor)
     try:
       idx = mutec_cache.count
-      for dp in tqdm.tqdm(pool.imap_unordered(f, total), total = len(total), desc = "Add mutants to DB", leave = False):
+      for dp in tqdm.tqdm(pool.imap_unordered(f, total_beams), total = len(total_beams), desc = "Add mutants to DB", leave = False):
         if dp:
           src, feats = dp
           sample = samples_database.Sample.FromArgsLite(idx, src, feats)
