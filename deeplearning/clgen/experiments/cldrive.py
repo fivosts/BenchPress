@@ -131,7 +131,7 @@ def TopKCLDrive(**kwargs) -> None:
   Collect top-K samples per database group for each target benchmark.
   """
   db_groups      = kwargs.get('db_groups')
-  cldrive_cache  = kwargs.get('cldrive_cache')
+  cldrive_cache  = kwargs.get('cldrive_cache', '')
   target         = kwargs.get('targets')
   feature_space  = kwargs.get('feature_space')
   top_k          = kwargs.get('top_k')
