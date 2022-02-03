@@ -2,9 +2,12 @@
 import os
 import ifcfg
 
-def check_path_exists(path):
+def check_path_exists(path, must_exist = True):
   if not os.path.exists(path):
-    raise ValueError("{} does not exist.".format(path))
+    if must_exist:
+      raise ValueError("{} does not exist.".format(path))
+    else:
+      return None
   return path
 
 try:
@@ -26,10 +29,8 @@ try:
   DATA_CL_INCLUDE     = check_path_exists(os.environ['DATA_CL_INCLUDE'])
   AUX_INCLUDE         = check_path_exists(os.environ['AUX_INCLUDE'])
   GREWE               = check_path_exists(os.environ['GREWE'])
-  try:
-    CLDRIVE           = check_path_exists(os.environ['CLDRIVE'])
-  except ValueError:
-    CLDRIVE           = None
+  CLDRIVE             = check_path_exists(os.environ['CLDRIVE'], must_exist = False)
+  MUTEC               = check_path_exists(os.environ['MUTEC'], must_exist = False)
   INSTCOUNT           = check_path_exists(os.environ['INSTCOUNT'])
   AUTOPHASE           = check_path_exists(os.environ['AUTOPHASE'])
   MASTER_PORT         = int(os.environ.get("MASTER_PORT", 8738))
