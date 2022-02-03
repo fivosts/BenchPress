@@ -171,7 +171,14 @@ def MutecVsBenchPress(**kwargs) -> None:
   if benchpress.db_type != samples_database.SamplesDatabase:
     raise ValueError("BenchPress scores require SamplesDatabase but received", benchpress.db_type)
 
+  ## Load database and checkpoint of targets.
   mutec_db = samples_database.SamplesDatabase(url = "sqlite:///{}".format(pathlib.Path(mutec_cache).resolve()), must_exist = False)
+  done = set()
+  with mutec_db.Session(commit = True) as s:
+    res = s.query(samples_database.SampleResults).filter_by(key = feature_space).first()
+    if res is not None:
+      done.update([str(x) for x in res.results.split('\n')])
+    s.commit()
 
   ## Initialize dictionary.
   groups = {}
@@ -190,6 +197,11 @@ def MutecVsBenchPress(**kwargs) -> None:
   ## Run engine on mutec.
   benchmarks = target.get_benchmarks(feature_space)
   for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
+
+    ## This has already been searched for.
+    if benchmark.name in done:
+      continue
+
     ## Tuple of closest src, distance from target benchmark.0
     closest = workers.SortedSrcDistances(git_get_data(feature_space), benchmark.features, feature_space)
 
@@ -213,11 +225,11 @@ def MutecVsBenchPress(**kwargs) -> None:
       l.logger().info("Best score from {} to {}".format(git_dist[0], closest_mutec_dist[0]))
 
       with mutec_db.Session(commit = True) as s:
-        res = s.query(samples_database.SampleResults).first()
+        res = s.query(samples_database.SampleResults).filter_by(key = feature_space).first()
         if res is not None:
           res.results = res.results + "\n" + benchmark.name
         else:
-          s.add(samples_database.SampleResults(key = "Targets optimized", results = benchmark.name))
+          s.add(samples_database.SampleResults(key = feature_space, results = benchmark.name))
         s.commit()
 
       # Compute target's distance from O(0,0)
