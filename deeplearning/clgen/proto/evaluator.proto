@@ -80,10 +80,11 @@ message CompMemGrewe {
 // Collect CPU vs GPU labels for 
 message TopKCLDrive {
   optional string               target        = 1;
-  optional string               feature_space = 2;
-  optional int32                top_k         = 3;
-  repeated DatabasesGroups      db_group      = 4;
-  optional PlotterConfiguration plot_config   = 5;
+  optional string               cldrive_cache = 2;
+  optional string               feature_space = 3;
+  optional int32                top_k         = 4;
+  repeated DatabasesGroups      db_group      = 5;
+  optional PlotterConfiguration plot_config   = 6;
 }
 
 // 7
