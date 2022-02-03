@@ -217,7 +217,7 @@ def MutecVsBenchPress(**kwargs) -> None:
         if res is not None:
           res.results = res.results + "\n" + benchmark.name
         else:
-          s.add(samples_database.SampleResults(key = "Targets optimized", value = benchmark.name))
+          s.add(samples_database.SampleResults(key = "Targets optimized", results = benchmark.name))
         s.commit()
 
       # Compute target's distance from O(0,0)
