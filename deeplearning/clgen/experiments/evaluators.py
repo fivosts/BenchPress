@@ -200,6 +200,11 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
+
+      pbutil.AssertFieldIsSet(ev.mutec_vs_benchpress, "mutec_cache")
+      if not pathlib.Path(ev.mutec_vs_benchpress.mutec_cache).resolve().exists():
+        l.logger().warn("Mutec cache not found in {}. Will create one from scratch.".format(ev.mutec_vs_benchpress))
+
       pbutil.AssertFieldConstraint(
         ev.mutec_vs_benchpress,
         "target",
@@ -446,6 +451,7 @@ def main(config: evaluator_pb2.Evaluation):
     elif ev.HasField("mutec_vs_benchpress"):
       sev = ev.mutec_vs_benchpress
       kw_args['top_k']      = sev.top_k
+      kw_args['mutec_cache']      = sev.mutec_cache
       kw_args['beam_width'] = sev.beam_width
       for name, dbs in [('github', sev.github), ('benchpress', sev.benchpress)]:
         key = dbs.group_name + ''.join(dbs.database)
