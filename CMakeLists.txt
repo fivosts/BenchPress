@@ -267,7 +267,7 @@ function(install_external_deps)
     # Csmith Fuzzer.
     ExternalProject_Add(csmith
       URL               https://embed.cs.utah.edu/csmith/csmith-2.3.0.tar.gz
-      URL_HASH          SHA256=a77ba247f87ca3a2b7367a22522b0a80d71884169133631dc0b78fab3f268775
+      URL_HASH          SHA256=b5b8af97ce349c6479d69bab769c6b1464feed0bd6813b8300271fe49616374a
       PREFIX            ${THIRD_PARTY}
       TMP_DIR           ${THIRD_PARTY}/tmp
       STAMP_DIR         ${THIRD_PARTY}/stamp
@@ -276,8 +276,8 @@ function(install_external_deps)
       BUILD_IN_SOURCE   true
       INSTALL_DIR       ${LOCAL}
       CONFIGURE_COMMAND cd ${THIRD_PARTY}/csmith/csmith/ && ${CMAKE_COMMAND} -S . -B build -DCMAKE_INSTALL_PREFIX=${LOCAL}
-      BUILD_COMMAND     cd ${THIRD_PARTY}/csmith/csmith/ && $(MAKE)
-      INSTALL_COMMAND   cd ${THIRD_PARTY}/csmith/csmith/ && $(MAKE) install
+      BUILD_COMMAND     cd ${THIRD_PARTY}/csmith/csmith/build && $(MAKE)
+      INSTALL_COMMAND   cd ${THIRD_PARTY}/csmith/csmith/build && $(MAKE) install
     )
     set(CSMITH           ${LOCAL}/bin/csmith PARENT_SCOPE)
   endif ()
