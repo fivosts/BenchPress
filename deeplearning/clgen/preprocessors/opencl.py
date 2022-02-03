@@ -283,6 +283,45 @@ def RunCLDrive(src: str,
       raise TimeoutError("CLDrive TimeOut: {}".format(timeout))
   return stdout, stderr
 
+def CollectCLDriveLabel(df: pd.DataFrame, stdout: str, stderr: str) -> str:
+  """
+  Read data from CLDrive execution and compute label.
+  """
+  cpu_error = None
+  gpu_error = None
+  if avg_time_cpu_ns is None or avg_time_gpu_ns is None or math.isnan(avg_time_cpu_ns) or math.isnan(avg_time_gpu_ns):
+    label = "ERR"
+    if stdout == "":
+      cpu_error = "NO_STDOUT"
+      gpu_error = "NO_STDOUT"
+      label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
+    elif "CL_OUT_OF_RESOURCES" in stderr:
+      cpu_error = "CL_OUT_OF_RESOURCES"
+      gpu_error = "CL_OUT_OF_RESOURCES"
+      label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
+    elif df is not None:
+      try:
+        cpu_error = df[df['device'].str.contains("CPU")].outcome[0]
+        if cpu_error == "CL_ERROR" and "-9999" in stderr:
+          cpu_error = "INVALID_BUFFER_READ_WRITE"
+      except KeyError:
+        cpu_error = ""
+      try:
+        gpu_error = df[df['device'].str.contains("GPU")].outcome[1]
+        if gpu_error == "CL_ERROR" and "-9999" in stderr:
+          gpu_error = "INVALID_BUFFER_READ_WRITE"
+      except KeyError:
+        gpu_error = ""
+      label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
+  else:
+    label = "GPU" if avg_time_cpu_ns > avg_time_gpu_ns else "CPU"
+
+  if label == "ERR" or cpu_error == "CL_ERROR" or gpu_error == "CL_ERROR":
+    l.logger().warn(src)
+    l.logger().warn(stdout)
+    l.logger().warn(stderr)
+  return label
+
 def CLDrivePretty(src: str,
                   header_file = None,
                   num_runs: int = 5,
@@ -299,6 +338,24 @@ def CLDrivePretty(src: str,
   for x in stderr.split('\n'):
     print(x)
   return stdout, stderr
+
+def CLDriveDataFrame(src: str,
+                     header_file = None,
+                     num_runs: int = 5,
+                     gsize: int = 4096,
+                     lsize: int = 1024,
+                     timeout: int = 0
+                     ) -> typing.Tuple[pd.DataFrame, str]:
+  """
+  Run CLDrive with given configuration and return pandas dataframe along with collected label.
+  """
+  stdout, stderr = RunCLDrive(src, header_file = header_file, num_runs = num_runs, gsize = gsize, lsize = lsize, timeout = timeout)
+  try:
+    df = pd.read_csv(io.StringIO(stdout), sep = ",")
+  except Exception as e:
+    l.logger().warn(e)
+    df = None
+  return df, CollectCLDriveLabel(df, stdout, stderr)
 
 def CLDriveNumBytes(src: str,
                     header_file = None,
@@ -344,6 +401,12 @@ def CLDriveExecutionTimes(src: str,
     execution_time_cpu = None
     transfer_time_gpu  = None
     execution_time_gpu = None
+  except pd.errors.ParserError:
+    # CSV is empty which means src failed miserably.
+    transfer_time_cpu  = None
+    execution_time_cpu = None
+    transfer_time_gpu  = None
+    execution_time_gpu = None
 
   return transfer_time_cpu, execution_time_cpu, transfer_time_gpu, execution_time_gpu
 
@@ -372,40 +435,7 @@ def CLDriveLabel(src: str,
     avg_time_cpu_ns   = None
     avg_time_gpu_ns   = None
 
-  cpu_error = None
-  gpu_error = None
-  if avg_time_cpu_ns is None or avg_time_gpu_ns is None or math.isnan(avg_time_cpu_ns) or math.isnan(avg_time_gpu_ns):
-    label = "ERR"
-    if stdout == "":
-      cpu_error = "NO_STDOUT"
-      gpu_error = "NO_STDOUT"
-      label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
-    elif "CL_OUT_OF_RESOURCES" in stderr:
-      cpu_error = "CL_OUT_OF_RESOURCES"
-      gpu_error = "CL_OUT_OF_RESOURCES"
-      label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
-    elif df is not None:
-      try:
-        cpu_error = df[df['device'].str.contains("CPU")].outcome[0]
-        if cpu_error == "CL_ERROR" and "-9999" in stderr:
-          cpu_error = "INVALID_BUFFER_READ_WRITE"
-      except KeyError:
-        cpu_error = ""
-      try:
-        gpu_error = df[df['device'].str.contains("GPU")].outcome[1]
-        if gpu_error == "CL_ERROR" and "-9999" in stderr:
-          gpu_error = "INVALID_BUFFER_READ_WRITE"
-      except KeyError:
-        gpu_error = ""
-      label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
-  else:
-    label = "GPU" if avg_time_cpu_ns > avg_time_gpu_ns else "CPU"
-
-  if label == "ERR" or cpu_error == "CL_ERROR" or gpu_error == "CL_ERROR":
-    l.logger().warn(src)
-    l.logger().warn(stdout)
-    l.logger().warn(stderr)
-  return label
+  return CollectCLDriveLabel(df, stdout, stderr)
 
 @public.clgen_preprocessor
 def ClangPreprocess(text: str) -> str:
