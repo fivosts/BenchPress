@@ -76,7 +76,7 @@ def generate_mutants(src: str) -> typing.List[str]:
       os.remove(m)
     return mutants
 
-def beam_mutec(srcs            : typing.List[str],
+def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
                target_features : typing.Dict[str, float],
                feat_space      : str,
                beam_width      : int,
@@ -92,7 +92,7 @@ def beam_mutec(srcs            : typing.List[str],
   while better_score:
 
     cands = set()
-    for src in tqdm.tqdm(srcs, total = len(srcs), desc = "Mutec candidates", leave = False):
+    for src, dist in tqdm.tqdm(srcs, total = len(srcs), desc = "Mutec candidates", leave = False):
       cands.update(generate_mutants(src)) ### This should collect all mutants and return them, out of a single source.
     pool = multiprocessing.Pool()
     f = functools.partial(
@@ -111,8 +111,8 @@ def beam_mutec(srcs            : typing.List[str],
       raise e
     pool.close()
     closest = sorted(beam, key = lambda x: x[1])[:beam_width]
-    if sum([x for _, x in closest]) / len([x for _, x in closest]) < sum(srcs) / len(srcs):
-      srcs = [x for _, X in closest]
+    if sum([x for _, x in closest]) / len([x for _, x in closest]) < sum([x for _, x in srcs]) / len([x for _, x in srcs]):
+      srcs = closest
       beam = []
     else:
       better_score = False
@@ -185,7 +185,6 @@ def MutecVsBenchPress(**kwargs) -> None:
     closest = workers.SortedSrcDistances(git_get_data(feature_space), benchmark.features, feature_space)[:5]
 
     # Split source and distances lists.
-    git_src  = [x for x, _ in closest]
     git_dist = [x for _, x in closest]
 
     ## If distances are already minimized, nothing to do.
@@ -194,7 +193,7 @@ def MutecVsBenchPress(**kwargs) -> None:
 
     l.logger().info(benchmark.name)
 
-    closest_mutec_src  = beam_mutec(git_src[:beam_width], benchmark.features, feature_space, beam_width, mutec_db) # tuple of (src, distance)
+    closest_mutec_src  = beam_mutec(closest[:beam_width], benchmark.features, feature_space, beam_width, mutec_db) # tuple of (src, distance)
     closest_mutec_dist = [x for _, x in closest_mutec_src]
 
     ## If mutec has provided a better score
