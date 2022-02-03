@@ -197,9 +197,6 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
-      pbutil.AssertFieldIsSet(ev.mutec_vs_benchpress, "mutec")
-      if not pathlib.Path(ev.mutec_vs_benchpress.mutec).resolve().exists():
-        raise FileNotFoundError(pathlib.Path(ev.mutec_vs_benchpress.mutec).resolve())
       pbutil.AssertFieldConstraint(
         ev.mutec_vs_benchpress,
         "target",
@@ -446,7 +443,6 @@ def main(config: evaluator_pb2.Evaluation):
       sev = ev.mutec_vs_benchpress
       kw_args['top_k']      = sev.top_k
       kw_args['beam_width'] = sev.beam_width
-      kw_args['mutec']      = sev.mutec
       for name, dbs in [('github', sev.github), ('benchpress', sev.benchpress)]:
         key = dbs.group_name + ''.join(dbs.database)
         if key not in db_cache:

@@ -14,8 +14,11 @@ from absl import flags
 
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.util import plotter
+from deeplearning.clgen.util import environment
 
 FLAGS = flags.FLAGS
+
+MUTEC = environment.MUTEC
 
 def ExtractAndCalculate_worker(src             : str,
                                target_features : typing.Dict[str, float],
@@ -59,7 +62,7 @@ def generate_mutants(src: str) -> typing.List[str]:
       json.dump([compile_command], ccf)
     # Construct and execute mutec command
     mutec_cmd = [
-      str(mutec),
+      MUTEC,
       str(f.name),
       "-o",
       str(base_path)
@@ -125,7 +128,6 @@ def MutecVsBenchPress(**kwargs) -> None:
   Compare mutec mutation tool on github's database against BenchPress.
   Comparison is similar to KAverageScore comparison.
   """
-  mutec          = kwargs.get('mutec')
   github         = kwargs.get('github')
   benchpress     = kwargs.get('benchpress')
   target         = kwargs.get('targets')
@@ -136,6 +138,8 @@ def MutecVsBenchPress(**kwargs) -> None:
   plot_config    = kwargs.get('plot_config')
   workspace_path = kwargs.get('workspace_path')
 
+  if not pathlib.Path(MUTEC).exist():
+    raise FileNotFoundError("Mutec executable not found: {}".format(MUTEC))
   if github.db_type != encoded.EncodedContentFiles:
     raise ValueError("Scores require EncodedContentFiles but received", github.db_type)
 
