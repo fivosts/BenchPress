@@ -62,10 +62,10 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
                global_size          : int,
                local_size           : int,
                src                  : str,
-               cpu_transfer_time_ns : int,
-               cpu_kernel_time_ns   : int,
-               gpu_transfer_time_ns : int,
-               gpu_kernel_time_ns   : int,
+               cpu_transfer_time_ns : typing.List[int],
+               cpu_kernel_time_ns   : typing.List[int],
+               gpu_transfer_time_ns : typing.List[int],
+               gpu_kernel_time_ns   : typing.List[int],
                transferred_bytes    : int
                ) -> typing.Dict[str, typing.Any]:
     return {
@@ -74,10 +74,10 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
       "global_size"          : global_size,
       "local_size"           : local_size,
       "source"               : src,
-      "cpu_transfer_time_ns" : str(cpu_transfer_time_ns),
-      "cpu_kernel_time_ns"   : str(cpu_kernel_time_ns),
-      "gpu_transfer_time_ns" : str(gpu_transfer_time_ns),
-      "gpu_kernel_time_ns"   : str(gpu_kernel_time_ns),
+      "cpu_transfer_time_ns" : '\n'.join([str(x) for x in cpu_transfer_time_ns]),
+      "cpu_kernel_time_ns"   : '\n'.join([str(x) for x in cpu_kernel_time_ns]),
+      "gpu_transfer_time_ns" : '\n'.join([str(x) for x in gpu_transfer_time_ns]),
+      "gpu_kernel_time_ns"   : '\n'.join([str(x) for x in gpu_kernel_time_ns]),
       "transferred_bytes"    : transferred_bytes,
       "date_added"           : datetime.datetime.utcnow(),
     }
@@ -119,10 +119,10 @@ class CLDriveExecutions(sqlutil.Database):
             )
           )
         else:
-          entry.cpu_transfer_time_ns = entry.cpu_transfer_time_ns + "\n" + '\n'.join([x for x in df[df['device'].str.contains("CPU")].transfer_time_ns])
-          entry.cpu_kernel_time_ns   = entry.cpu_kernel_time_ns   + "\n" + '\n'.join([x for x in df[df['device'].str.contains("CPU")].cpu_kernel_time_ns])
-          entry.gpu_transfer_time_ns = entry.gpu_transfer_time_ns + "\n" + '\n'.join([x for x in df[df['device'].str.contains("GPU")].gpu_transfer_time_ns])
-          entry.gpu_kernel_time_ns   = entry.gpu_kernel_time_ns   + "\n" + '\n'.join([x for x in df[df['device'].str.contains("GPU")].gpu_kernel_time_ns])
+          entry.cpu_transfer_time_ns = entry.cpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].transfer_time_ns])
+          entry.cpu_kernel_time_ns   = entry.cpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].cpu_kernel_time_ns])
+          entry.gpu_transfer_time_ns = entry.gpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].gpu_transfer_time_ns])
+          entry.gpu_kernel_time_ns   = entry.gpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].gpu_kernel_time_ns])
         session.commit()
     return
 
