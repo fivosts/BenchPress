@@ -118,10 +118,9 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
     ## srcs are included to the outputs, in order to keep them if the offsprings are worse.
     closest = sorted(beam + srcs, key = lambda x: x[1])[:beam_width]
     total_beams.update([x for x, _ in closest])
-    l.logger().info([x for _, x in closest])
-    l.logger().info([x for _, x in srcs])
-    assert len(closest) == len(srcs), "Input/Output of beam search length mismatch."
-    if sum([x for _, x in closest]) < sum([x for _, x in srcs]):
+
+    min_length = min(len(closest), len(srcs))
+    if sum([x for _, x in closest[:min_length]]) < sum([x for _, x in srcs[:min_length]]):
       srcs = closest
       beam = []
     else:
@@ -192,7 +191,7 @@ def MutecVsBenchPress(**kwargs) -> None:
   benchmarks = target.get_benchmarks(feature_space)
   for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
     ## Tuple of closest src, distance from target benchmark.0
-    closest = workers.SortedSrcDistances(git_get_data(feature_space), benchmark.features, feature_space)[:5]
+    closest = workers.SortedSrcDistances(git_get_data(feature_space), benchmark.features, feature_space)
 
     # Split source and distances lists.
     git_dist = [x for _, x in closest]
@@ -203,9 +202,10 @@ def MutecVsBenchPress(**kwargs) -> None:
 
     l.logger().info(benchmark.name)
 
-    closest_mutec_src  = beam_mutec(closest[:beam_width], benchmark.features, feature_space, beam_width, mutec_db) # tuple of (src, distance)
+    closest_mutec_src  = beam_mutec(closest[:beam_width], benchmark.features, feature_space, beam_width, mutec_db)[:top_k] # tuple of (src, distance)
     closest_mutec_dist = [x for _, x in closest_mutec_src]
 
+    assert len(closest_mutec_dist) == len(git_dist[:top_k])
     ## If mutec has provided a better score
     if sum(closest_mutec_dist) < sum(git_dist[:top_k]):
 
