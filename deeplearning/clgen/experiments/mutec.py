@@ -208,6 +208,14 @@ def MutecVsBenchPress(**kwargs) -> None:
       l.logger().info("Score reduced from {} to {}".format(sum(git_dist[:top_k]), sum(closest_mutec_dist)))
       l.logger().info("Best score from {} to {}".format(git_dist[0], closest_mutec_dist[0]))
 
+      with mutec_cache.Session(commit = True) as s:
+        res = s.query(samples_database.SampleResults).first()
+        if res is not None:
+          res.results = res.results + "\n" + benchmark.name
+        else:
+          s.add(samples_database.SampleResults(key = "Targets optimized", value = benchmark.name))
+        s.commit()
+
       # Compute target's distance from O(0,0)
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
       mutec_avg_dist     = sum(closest_mutec_dist) / top_k
