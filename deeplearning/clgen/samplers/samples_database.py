@@ -109,7 +109,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
     }
 
   @classmethod
-  def FromArgsLite(cls, id: int, text: str, feature_vector: str) -> typing.Dict[str, typing.Any]:
+  def FromArgsLite(cls, id: int, text: str, feature_vector: str) -> Sample:
     """
     Do you want to use SamplesDatabase as a means to store only code
     without much fuss ? This function is for you!
