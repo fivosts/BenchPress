@@ -85,10 +85,10 @@ def run_single(src: str, depth = 0, visited: set = set()):
       mutecs.update(ret)
     return mutecs
 
-def beam_mutec(srcs: typing.List[str],
-               target_features: typing.Dict[str, float],
-               feat_space: str,
-               top_k: int
+def beam_mutec(srcs            : typing.List[str],
+               target_features : typing.Dict[str, float],
+               feat_space      : str,
+               beam_width      : int
                ) -> typing.List[typing.Tuple[str, float]]:
   """
   Run generational beam search over starting github kernels
@@ -117,7 +117,7 @@ def beam_mutec(srcs: typing.List[str],
       pool.terminate()
       raise e
     pool.close()
-    closest = sorted(beam, key = lambda x: x[1])[:top_k]
+    closest = sorted(beam, key = lambda x: x[1])[:beam_width]
     if sum([x for x, _ in closest]) / len([x for x, _ in closest]) < sum(srcs) / len(srcs):
       srcs = [x for x, _ in closest]
       beam = []
@@ -177,7 +177,7 @@ def MutecVsBenchPress(**kwargs) -> None:
 
     l.logger().info(benchmark.name)
 
-    closest_mutec_src  = beam_mutec(git_src, benchmark.features, feature_space, top_k) # tuple of (src, distance)
+    closest_mutec_src  = beam_mutec(git_src, benchmark.features, feature_space, beam_width) # tuple of (src, distance)
     closest_mutec_dist = [x for _, x in closest_mutec_src]
 
     ## If mutec has provided a better score
