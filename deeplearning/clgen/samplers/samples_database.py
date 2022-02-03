@@ -108,6 +108,30 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "date_added"             : datetime.datetime.strptime(proto.date_added, "%m/%d/%Y, %H:%M:%S"),
     }
 
+  @classmethod
+  def FromArgsLite(cls, id: int, text: str) -> typing.Dict[str, typing.Any]:
+    """
+    Do you want to use SamplesDatabase as a means to store only code
+    without much fuss ? This function is for you!
+    """
+    return {
+      "id"                     : id,
+      "sha256"                 : crypto.sha256_str(text),
+      "train_step"             : -1,
+      "encoded_text"           : "",
+      "original_input"         : "",
+      "sample_feed"            : "",
+      "text"                   : text,
+      "sample_indices"         : "",
+      "encoded_sample_indices" : "",
+      "compile_status"         : False,
+      "feature_vector"         : "",
+      "num_tokens"             : 0,
+      "categorical_sampling"   : "False",
+      "sample_time_ms"         : 0,
+      "date_added"             : datetime.datetime.utcnow(),
+    }
+
 class SamplesDatabase(sqlutil.Database):
   """A database of CLgen samples."""
 
