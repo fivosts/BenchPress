@@ -166,6 +166,8 @@ function(install_external_deps)
       SOURCE_DIR        ${THIRD_PARTY}/protobuf/protobuf
       INSTALL_DIR       ${LOCAL}
       CONFIGURE_COMMAND cd ${THIRD_PARTY}/protobuf/protobuf && ./autogen.sh && ${THIRD_PARTY}/protobuf/protobuf/configure --prefix=${LOCAL}
+      BUILD_COMMAND     cd ${THIRD_PARTY}/protobuf/protobuf && $(MAKE)
+      INSTALL_COMMAND   cd ${THIRD_PARTY}/protobuf/protobuf && $(MAKE) install
     )
     set(PROTOC          ${LOCAL}/bin/protoc PARENT_SCOPE)
   endif ()
