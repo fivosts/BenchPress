@@ -260,8 +260,7 @@ function(install_external_deps)
       DOWNLOAD_DIR      ${THIRD_PARTY}/llvm/llvm/clang/tools
       SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm/clang/tools/mutec
       INSTALL_DIR       ${LOCAL}
-      LIST_SEPARATOR    |
-      CONFIGURE_COMMAND echo "add_subdirectory(mutec)" >> ${THIRD_PARTY}/llvm/llvm/clang/tools/CMakeLists.txt && cd ${THIRD_PARTY}/llvm/llvm && ${CMAKE_COMMAND} -S llvm -B build_mutec -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_INSTALL_PREFIX=${LOCAL} -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
+      CONFIGURE_COMMAND grep -qxF "add_subdirectory(mutec)" ${THIRD_PARTY}/llvm/llvm/clang/tools/CMakeLists.txt || echo "add_subdirectory(mutec)" >> ${THIRD_PARTY}/llvm/llvm/clang/tools/CMakeLists.txt && cd ${THIRD_PARTY}/llvm/llvm && ${CMAKE_COMMAND} -S llvm -B build_mutec -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_INSTALL_PREFIX=${LOCAL} -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
       BUILD_COMMAND     cd ${THIRD_PARTY}/llvm/llvm/build_mutec && $(MAKE) mutec
       INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm/llvm/build_mutec && $(MAKE) install mutec
     )
