@@ -80,6 +80,7 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
                target_features : typing.Dict[str, float],
                feat_space      : str,
                beam_width      : int,
+               top_k           : int,
                mutec_cache     : samples_database.SamplesDatabase,
                ) -> typing.List[typing.Tuple[str, float]]:
   """
@@ -92,8 +93,11 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
   while better_score:
 
     cands = set()
+    ## Generate mutants for current generation.
     for src, dist in tqdm.tqdm(srcs, total = len(srcs), desc = "Mutec candidates", leave = False):
       cands.update(generate_mutants(src)) ### This should collect all mutants and return them, out of a single source.
+
+    ## Extract their features and calculate distances.
     pool = multiprocessing.Pool()
     f = functools.partial(
           workers.ExtractAndCalculate,
@@ -110,8 +114,10 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
       pool.terminate()
       raise e
     pool.close()
+
+    ## Sort by distance in ascending order. If score is better, keep doing beam search
     closest = sorted(beam, key = lambda x: x[1])[:beam_width]
-    if sum([x for _, x in closest]) / len([x for _, x in closest]) < sum([x for _, x in srcs]) / len([x for _, x in srcs]):
+    if sum([x for _, x in closest[:top_k]]) / top_k < sum([x for _, x in srcs[:top_k]]) / top_k:
       srcs = closest
       beam = []
     else:
@@ -193,7 +199,7 @@ def MutecVsBenchPress(**kwargs) -> None:
 
     l.logger().info(benchmark.name)
 
-    closest_mutec_src  = beam_mutec(closest[:beam_width], benchmark.features, feature_space, beam_width, mutec_db) # tuple of (src, distance)
+    closest_mutec_src  = beam_mutec(closest[:beam_width], benchmark.features, feature_space, beam_width, top_k, mutec_db) # tuple of (src, distance)
     closest_mutec_dist = [x for _, x in closest_mutec_src]
 
     ## If mutec has provided a better score
