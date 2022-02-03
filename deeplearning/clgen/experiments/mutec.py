@@ -212,7 +212,7 @@ def MutecVsBenchPress(**kwargs) -> None:
       l.logger().info("Score reduced from {} to {}".format(sum(git_dist[:top_k]), sum(closest_mutec_dist)))
       l.logger().info("Best score from {} to {}".format(git_dist[0], closest_mutec_dist[0]))
 
-      with mutec_cache.Session(commit = True) as s:
+      with mutec_db.Session(commit = True) as s:
         res = s.query(samples_database.SampleResults).first()
         if res is not None:
           res.results = res.results + "\n" + benchmark.name
