@@ -283,7 +283,7 @@ function(install_external_deps)
       BUILD_COMMAND     cd ${THIRD_PARTY}/csmith/csmith/build && $(MAKE)
       INSTALL_COMMAND   cd ${THIRD_PARTY}/csmith/csmith/build && $(MAKE) install
     )
-    set(CSMITH           ${LOCAL}/bin/csmith PARENT_SCOPE)
+    set(CSMITH          ${LOCAL}/bin/csmith PARENT_SCOPE)
   endif ()
 
   if (BUILD_CLSMITH)
@@ -303,7 +303,7 @@ function(install_external_deps)
       BUILD_COMMAND     cd ${THIRD_PARTY}/clsmith/clsmith/build && $(MAKE)
       INSTALL_COMMAND   cd ${THIRD_PARTY}/clsmith/clsmith/build && $(MAKE) install
     )
-    set(BUILD_CLSMITH           ${LOCAL}/bin/clsmith PARENT_SCOPE)
+    set(BUILD_CLSMITH   ${LOCAL}/bin/CLSmith PARENT_SCOPE)
   endif ()
 
   # #include <CL/*>
