@@ -83,7 +83,7 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
     }
 
 class CLDriveExecutions(sqlutil.Database):
-  """A database of CLgen samples."""
+  """A database of CLDrive Execution samples."""
 
   @property
   def count(self):
