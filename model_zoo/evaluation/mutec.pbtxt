@@ -6,6 +6,7 @@ evaluator {
     mutec: "/home/foivos/llvm-project/build/bin/mutec"
     feature_space: "AutophaseFeatures"
     top_k: 2
+    beam_width: 10
     benchpress {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
