@@ -39,7 +39,7 @@ def ExtractAndCalculate(src             : str,
   Returns:
     Tuple of source code with distance.
   """
-  f = extractor.ExtractFeatures(src, [feat_space])
+  f = extractor.ExtractFeatures(src, [feature_space])
   if feature_space in f and f[feature_space]:
     return src, feature_sampler.calculate_distance(f[feature_space], target_features, feature_space)
   return None
