@@ -138,7 +138,7 @@ def MutecVsBenchPress(**kwargs) -> None:
   plot_config    = kwargs.get('plot_config')
   workspace_path = kwargs.get('workspace_path')
 
-  if not pathlib.Path(MUTEC).exist():
+  if not pathlib.Path(MUTEC).exists():
     raise FileNotFoundError("Mutec executable not found: {}".format(MUTEC))
   if github.db_type != encoded.EncodedContentFiles:
     raise ValueError("Scores require EncodedContentFiles but received", github.db_type)
