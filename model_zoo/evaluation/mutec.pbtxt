@@ -4,7 +4,7 @@ evaluator {
   mutec_vs_benchpress {
     target: "rodinia"
     feature_space: "AutophaseFeatures"
-    mutec_cahe: "/var/foivos/results/full_results/mutec/mutants.db"
+    mutec_cache: "/var/foivos/results/full_results/mutec/mutants.db"
     top_k: 1
     beam_width: 10
     benchpress {
