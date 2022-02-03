@@ -241,17 +241,18 @@ function(install_external_deps)
     ExternalProject_Add(mutec
       GIT_REPOSITORY    https://github.com/chao-peng/mutec.git
       GIT_TAG           252049da659ecfdbf6a9b5bc153083faad95aabb
-      DEPENDS           llvm6
+      DEPENDS           llvm
       GIT_PROGRESS      true
       BUILD_IN_SOURCE   true
-      PREFIX            ${THIRD_PARTY}/llvm6/llvm6/clang/tools
+      PREFIX            ${THIRD_PARTY}/llvm/llvm/clang/tools
       TMP_DIR           ${THIRD_PARTY}/tmp
       STAMP_DIR         ${THIRD_PARTY}/stamp
-      SOURCE_DIR        ${THIRD_PARTY}/llvm6/llvm6/clang/tools/mutec
+      DOWNLOAD_DIR      ${THIRD_PARTY}/llvm/llvm/clang/tools
+      SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm/clang/tools/mutec
       INSTALL_DIR       ${LOCAL}
-      CONFIGURE_COMMAND echo "add_subdirectory(mutec)" >> ${THIRD_PARTY}/llvm6/llvm6/clang/tools/CMakeLists.txt && cd ${THIRD_PARTY}/llvm6/llvm6 && ${CMAKE_COMMAND} -S llvm -B build -DLLVM_ENABLE_PROJECTS=clang|libcxx|libcxxabi -DCMAKE_INSTALL_PREFIX=${LOCAL}/llvm6 -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
-      BUILD_COMMAND     cd ${THIRD_PARTY}/llvm6/llvm6/build && $(MAKE) mutec
-      INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm6/llvm6/build && $(MAKE) install mutec
+      CONFIGURE_COMMAND echo "add_subdirectory(mutec)" >> ${THIRD_PARTY}/llvm/llvm/clang/tools/CMakeLists.txt && cd ${THIRD_PARTY}/llvm/llvm && ${CMAKE_COMMAND} -S clang -B build_mutec -DCMAKE_INSTALL_PREFIX=${LOCAL} -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
+      BUILD_COMMAND     cd ${THIRD_PARTY}/llvm/llvm/build_mutec && $(MAKE) mutec
+      INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm/llvm/build_mutec && $(MAKE) install mutec
     )
     set(MUTEC           ${LOCAL}/bin/mutec PARENT_SCOPE)
   endif ()
