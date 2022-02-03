@@ -32,8 +32,10 @@ def ExtractAndCalculate_worker(src             : str,
     return src, feature_sampler.calculate_distance(f[feature_space], target_features, feature_space)
   return None
 
-def run_single(src: str, depth = 0, visited: set = set()):
-
+def generate_mutants(src: str) -> typing.List[str]:
+  """
+  Collect all mutants from src and return them
+  """
   try:
     tdir = pathlib.Path(FLAGS.local_filesystem).resolve() / feat_space
   except Exception:
@@ -41,7 +43,6 @@ def run_single(src: str, depth = 0, visited: set = set()):
     tdir.mkdir(exist_ok = True, parents = True)
 
   with tempfile.NamedTemporaryFile("w", prefix="mutec_src", suffix='.cl', dir = tdir) as f:
-    # Write source file.
     f.write(src)
     f.flush()
     # Fix compile_commands.json for source file.
@@ -49,9 +50,9 @@ def run_single(src: str, depth = 0, visited: set = set()):
     compile_command = {
       'directory' : str(base_path),
       'arguments' : 
-        [str(clang.CLANG), f.name] +
-        ["-S", "-emit-llvm", "-o", "-"] +
-        opencl.GetClangArgs(use_shim = False, use_aux_headers = False),
+            [str(clang.CLANG), f.name] +
+            ["-S", "-emit-llvm", "-o", "-"] +
+            opencl.GetClangArgs(use_shim = False, use_aux_headers = False),
       'file'      : str(f.name)
     }
     with open(base_path / "compile_commands.json", 'w') as ccf:
@@ -70,20 +71,14 @@ def run_single(src: str, depth = 0, visited: set = set()):
       universal_newlines=True,
     )
     stdout, stderr = process.communicate()
-    # Cleanup compile commands
     os.remove(str(base_path / "compile_commands.json"))
-    mutecs = set(
-      [x for x in 
-        [open(x, 'r').read() for x in glob.glob(str("{}.mutec*".format(str(f.name))))]
-      if x not in visited]
-    )
-    visited.update(mutecs)
-    if depth < 3 and len(visited) < 50:
-      ret = set()
-      for mutated in mutecs:
-        ret.update(run_single(mutated, depth = depth + 1, visited = visited))
-      mutecs.update(ret)
-    return mutecs
+
+    mutec_paths = glob.glob("{}.mutec*".format(f.name))
+    mutants = set([open(x, 'r').read() for x in mutec_paths])
+
+    for m in mutec_paths:
+      os.remove(m)
+    return mutants
 
 def beam_mutec(srcs            : typing.List[str],
                target_features : typing.Dict[str, float],
@@ -99,9 +94,9 @@ def beam_mutec(srcs            : typing.List[str],
 
   while better_score:
 
-    cands = []
+    cands = set()
     for src in tqdm.tqdm(srcs, total = len(srcs), desc = "Mutec candidates", leave = False):
-      cands += run_single(src) ### This should collect all mutants and return them, out of a single source.
+      cands.update(generate_mutants(src)) ### This should collect all mutants and return them, out of a single source.
     pool = multiprocessing.Pool()
     f = functools.partial(
           ExtractAndCalculate_worker,
@@ -177,7 +172,7 @@ def MutecVsBenchPress(**kwargs) -> None:
 
     l.logger().info(benchmark.name)
 
-    closest_mutec_src  = beam_mutec(git_src, benchmark.features, feature_space, beam_width) # tuple of (src, distance)
+    closest_mutec_src  = beam_mutec(git_src[:beam_mutec], benchmark.features, feature_space, beam_width) # tuple of (src, distance)
     closest_mutec_dist = [x for _, x in closest_mutec_src]
 
     ## If mutec has provided a better score
