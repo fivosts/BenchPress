@@ -249,8 +249,8 @@ function(install_external_deps)
   if (BUILD_MUTEC)
     # Mutec mutation tool
     ExternalProject_Add(mutec
-      GIT_REPOSITORY    https://github.com/chao-peng/mutec.git
-      GIT_TAG           252049da659ecfdbf6a9b5bc153083faad95aabb
+      GIT_REPOSITORY    https://github.com/fivosts/mutec.git
+      GIT_TAG           3c4f2354847a8fddcb2deafffa8405da75046dae
       DEPENDS           llvm
       GIT_PROGRESS      true
       BUILD_IN_SOURCE   true
