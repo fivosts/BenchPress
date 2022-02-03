@@ -70,11 +70,14 @@ def generate_mutants(src: str) -> typing.List[str]:
     os.remove(str(base_path / "compile_commands.json"))
 
     mutec_paths = glob.glob("{}.mutec*".format(f.name))
+    templates   = glob.glob("{}.code_template".format(f.name))
     mutants = set([open(x, 'r').read() for x in mutec_paths])
 
-    for m in mutec_paths:
-      os.remove(m)
-    return mutants
+  for m in mutec_paths:
+    os.remove(m)
+  for m in templates:
+    os.remove(m)
+  return mutants
 
 def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
                target_features : typing.Dict[str, float],
