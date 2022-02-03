@@ -213,6 +213,12 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         lambda x: x > 0,
         "top-K factor must be positive",
       )
+      pbutil.AssertFieldConstraint(
+        ev.mutec_vs_benchpress,
+        "beam_width",
+        lambda x: x > 0,
+        "beam width factor must be positive",
+      )
     else:
       raise ValueError(ev)
   return config

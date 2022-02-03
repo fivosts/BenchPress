@@ -93,10 +93,11 @@ message MutecVsBenchPress {
   optional string               target        = 2;
   optional string               feature_space = 3;
   optional int32                top_k         = 4;
-  optional DatabasesGroups      github        = 5;
-  optional DatabasesGroups      benchpress    = 6;
-  optional PlotterConfiguration plot_config   = 7;
-  optional DatabasesGroups      db_group      = 8; // Dummy selector, not used.
+  optional int32                beam_widt     = 5;
+  optional DatabasesGroups      github        = 6;
+  optional DatabasesGroups      benchpress    = 7;
+  optional PlotterConfiguration plot_config   = 8;
+  optional DatabasesGroups      db_group      = 9; // Dummy selector, not used.
 }
 
 // Define a group of Databases that will be considered jointly.
