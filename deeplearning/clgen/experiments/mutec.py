@@ -17,25 +17,11 @@ from deeplearning.clgen.features import extractor
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.experiments import workers
 
 FLAGS = flags.FLAGS
 
 MUTEC = environment.MUTEC
-
-def ExtractAndCalculate_worker(src             : str,
-                               target_features : typing.Dict[str, float],
-                               feature_space   : str
-                               ) -> typing.Dict[str, float]:
-  """
-  Extract features for source code and calculate distance from target.
-
-  Returns:
-    Tuple of source code with distance.
-  """
-  f = extractor.ExtractFeatures(src, [feat_space])
-  if feature_space in f and f[feature_space]:
-    return src, feature_sampler.calculate_distance(f[feature_space], target_features, feature_space)
-  return None
 
 def generate_mutants(src: str) -> typing.List[str]:
   """
@@ -105,7 +91,7 @@ def beam_mutec(srcs            : typing.List[str],
       cands.update(generate_mutants(src)) ### This should collect all mutants and return them, out of a single source.
     pool = multiprocessing.Pool()
     f = functools.partial(
-          ExtractAndCalculate_worker,
+          workers.ExtractAndCalculate,
           target_features = target_features,
           feature_space = feat_space
         )
@@ -129,11 +115,13 @@ def beam_mutec(srcs            : typing.List[str],
   ## Store all mutants in database.
   with mutec_cache.Session(commit = True) as s:
     pool = multiprocessing.Pool()
+    f = functools.partial(workers.FeatureExtractor)
     try:
       idx = s.count
       for dp in tqdm.tqdm(pool.imap_unordered(f, total), total = len(total), desc = "Add mutants to DB", leave = True):
         if dp:
-          sample = samples_database.FromArgsLite(idx, dp)
+          src, feats = dp
+          sample = samples_database.FromArgsLite(idx, src, feats)
           exists = session.query(samples_database.Sample.sha256).filter_by(sha256 = db_sample.sha256).scalar() is not None
           if not exists:
             s.add(sample)
