@@ -41,6 +41,7 @@ from deeplearning.clgen.experiments import distance_score
 from deeplearning.clgen.experiments import comp_vs_mem
 from deeplearning.clgen.experiments import cldrive
 from deeplearning.clgen.experiments import mutec
+from deeplearning.clgen.experiments import workers
 
 from deeplearning.clgen.util import logging as l
 
@@ -239,48 +240,6 @@ def ConfigFromFlags() -> evaluator_pb2.Evaluation:
   config = pbutil.FromFile(config_path, evaluator_pb2.Evaluation())
   return AssertIfValid(config)
 
-def ContentHash_worker(db_feat: typing.Tuple[str, str]) -> typing.Tuple[str, typing.Dict[str, float]]:
-  """
-  Multiprocessing Worker calculates contentfile hash
-  of file and returns it.
-  """
-  src, feats = db_feat
-  try:
-    return opencl.ContentHash(src), extractor.RawToDictFeats(feats)
-  except Exception as e:
-    l.logger().warn(e)
-    return None
-
-def ContentFeat_worker(db_feat: typing.Tuple[str, str]) -> typing.Dict[str, float]:
-  """
-  Multiprocessing Worker calculates contentfile hash
-  of file and returns it.
-  """
-  _, feats = db_feat
-  try:
-    return extractor.RawToDictFeats(feats)
-  except Exception as e:
-    l.logger().warn(e)
-    return None
-
-def SortedDistances(data: typing.List[typing.Tuple[str, typing.Dict[str, float]]],
-                    target_features: typing.Dict[str, float],
-                    feature_space: str
-                    ) -> typing.List[float]:
-  """
-  Return list of pairs of source with respective euclidean distances from target features in ascending order.
-  """
-  return sorted([feature_sampler.calculate_distance(dp, target_features, feature_space) for _, dp in data])
-
-def SortedSrcDistances(data: typing.List[typing.Tuple[str, typing.Dict[str, float]]],
-                       target_features: typing.Dict[str, float],
-                       feature_space: str
-                       ) -> typing.List[typing.Tuple[str, float]]:
-  """
-  Return list of euclidean distances from target features in ascending order.
-  """
-  return sorted([(src, feature_sampler.calculate_distance(dp, target_features, feature_space)) for src, dp in data], key = lambda x: x[1])
-
 class DBGroup(object):
   """
   Class representation of a group of databases evaluated.
@@ -342,7 +301,7 @@ class DBGroup(object):
         db_feats = db.get_data_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_data_features
         pool = multiprocessing.Pool()
         try:
-          for (src, _), feats in tqdm.tqdm(zip(db_feats, pool.imap_unordered(ContentFeat_worker, db_feats)), total = len(db_feats), desc = "{} data".format(self.group_name)):
+          for (src, _), feats in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentFeat, db_feats)), total = len(db_feats), desc = "{} data".format(self.group_name)):
             if feature_space in feats and feats[feature_space]:
               self.data_features[feature_space].append((src, feats[feature_space]))
         except Exception as e:
@@ -363,7 +322,7 @@ class DBGroup(object):
         db_feats = db.get_data_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_data_features
         pool = multiprocessing.Pool()
         try:
-          for (src, _), (sha, feats) in tqdm.tqdm(zip(db_feats, pool.imap_unordered(ContentHash_worker, db_feats)), total = len(db_feats), desc = "{} unique data".format(self.group_name)):
+          for (src, _), (sha, feats) in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentHash, db_feats)), total = len(db_feats), desc = "{} unique data".format(self.group_name)):
             if sha not in visited:
               visited.add(sha)
               if feature_space in feats and feats[feature_space]:
@@ -532,10 +491,10 @@ def eval(self, topK: int) -> None:
   with open(outfile, 'w') as outf:
     for benchmark in self.evaluated_benchmarks:
       try:
-        bc  = SortedSrcDistances(bert_corpus,        benchmark.features, self.feature_space)
-        cc  = SortedSrcDistances(clgen_corpus,       benchmark.features, self.feature_space)
-        gc  = SortedSrcDistances(git_corpus,         benchmark.features, self.feature_space)
-        rgc = SortedSrcDistances(reduced_git_corpus, benchmark.features, self.feature_space)
+        bc  = workers.SortedSrcDistances(bert_corpus,        benchmark.features, self.feature_space)
+        cc  = workers.SortedSrcDistances(clgen_corpus,       benchmark.features, self.feature_space)
+        gc  = workers.SortedSrcDistances(git_corpus,         benchmark.features, self.feature_space)
+        rgc = workers.SortedSrcDistances(reduced_git_corpus, benchmark.features, self.feature_space)
       except KeyError:
         print(git_corpus)
 
@@ -583,7 +542,7 @@ def eval(self, topK: int) -> None:
         )
 
     for benchmark in benchmarks:
-      rgc = SortedSrcDistances(reduced_git, benchmark.features[self.feature_space], self.feature_space)
+      rgc = workers.SortedSrcDistances(reduced_git, benchmark.features[self.feature_space], self.feature_space)
       if rgc[1] > 0:
         final_benchmarks.append(benchmark)
 
