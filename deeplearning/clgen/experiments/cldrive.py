@@ -99,6 +99,7 @@ def TopKCLDrive(**kwargs) -> None:
   Collect top-K samples per database group for each target benchmark.
   """
   db_groups      = kwargs.get('db_groups')
+  cldrive_cache  = kwargs.get('cldrive_cache')
   target         = kwargs.get('targets')
   feature_space  = kwargs.get('feature_space')
   top_k          = kwargs.get('top_k')
@@ -108,6 +109,8 @@ def TopKCLDrive(**kwargs) -> None:
 
   groups = {}
   gsize, lsize = [2**10, 2**15, 2**20], [2**10] # 1024 is max local size for GTX1080.
+
+  cldrive_db = CLDriveExecutions(url = "sqlite:///{}".format(cldrive_cache), must_exist = False)
 
   # For each db group -> for each target -> k samples -> 1) benchmark.name 2) distance 3) label.
   for dbg in db_groups:
