@@ -12,6 +12,7 @@ import math
 
 from absl import flags
 
+from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import plotter
