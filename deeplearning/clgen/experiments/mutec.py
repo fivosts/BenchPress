@@ -16,6 +16,7 @@ from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import plotter
+from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.experiments import workers
 
