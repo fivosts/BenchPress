@@ -29,7 +29,7 @@ FLAGS = flags.FLAGS
 
 MUTEC = environment.MUTEC
 
-def generate_mutants(src: str) -> typing.List[str]:
+def generate_mutants(src: str, timeout = 30) -> typing.List[str]:
   """
   Collect all mutants from src and return them
   """
@@ -55,6 +55,7 @@ def generate_mutants(src: str) -> typing.List[str]:
       json.dump([compile_command], ccf)
     # Construct and execute mutec command
     mutec_cmd = [
+      "timeout -s9 {}".format(timeout)
       MUTEC,
       str(f.name),
       "-o",
