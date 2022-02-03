@@ -17,6 +17,21 @@ from deeplearning.clgen.util import plotter
 
 FLAGS = flags.FLAGS
 
+def ExtractAndCalculate_worker(src             : str,
+                               target_features : typing.Dict[str, float],
+                               feature_space   : str
+                               ) -> typing.Dict[str, float]:
+  """
+  Extract features for source code and calculate distance from target.
+
+  Returns:
+    Tuple of source code with distance.
+  """
+  f = extractor.ExtractFeatures(src, [feat_space])
+  if feature_space in f and f[feature_space]:
+    return src, feature_sampler.calculate_distance(f[feature_space], target_features, feature_space)
+  return None
+
 def run_single(src: str, depth = 0, visited: set = set()):
 
   try:
@@ -69,11 +84,38 @@ def run_single(src: str, depth = 0, visited: set = set()):
       mutecs.update(ret)
     return mutecs
 
-def run_mutec(srcs: typing.List[str], target_features: typing.Dict[str, float], feat_space: str, top_k: int) -> typing.List[typing.Tuple[str, float]]:
+def beam_mutec(srcs: typing.List[str], target_features: typing.Dict[str, float], feat_space: str, top_k: int) -> typing.List[typing.Tuple[str, float]]:
+  """
+  Run generational beam search over starting github kernels
+  to minimize distance from target features.
+  """
   try:
     tdir = FLAGS.local_filesystem
   except Exception:
     tdir = None
+
+  better_score = True
+  beam = []
+  while better_score:
+    cands = []
+    for src in tqdm.tqdm(srcs, total = len(srcs), desc = "Mutec candidates", leave = False):
+      cands += run_single(src) ### This should collect all mutants and return them, out of a single source.
+    pool = multiprocessing.Pool()
+    f = functools.partial(
+          ExtractAndCalculate_worker,
+          target_features = target_features,
+          feature_space = feat_space
+        )
+    try:
+      for cand in tqdm.tqdm(pool.imap_unordered(f, cands), total = len(cands), desc = "Extract Features", leave = False):
+        if cand:
+          beam.append(cand)
+    except Exception as e:
+      l.logger().error(e)
+      pool.terminate()
+      raise e
+    pool.close()
+    closest = sorted(beam, key = lambda x: x[1])[:top_k]
 
   cands = []
   for src in tqdm.tqdm(srcs, total = len(srcs), desc = "Mutec candidates", leave = False):
