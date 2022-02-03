@@ -136,6 +136,7 @@ def MutecVsBenchPress(**kwargs) -> None:
   target         = kwargs.get('targets')
   feature_space  = kwargs.get('feature_space')
   top_k          = kwargs.get('top_k')
+  beam_width     = kwargs.get('beam_width')
   unique_code    = kwargs.get('unique_code', False)
   plot_config    = kwargs.get('plot_config')
   workspace_path = kwargs.get('workspace_path')
