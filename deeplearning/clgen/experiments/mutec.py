@@ -122,12 +122,12 @@ def beam_mutec(srcs            : typing.List[str],
     pool = multiprocessing.Pool()
     f = functools.partial(workers.FeatureExtractor)
     try:
-      idx = s.count
-      for dp in tqdm.tqdm(pool.imap_unordered(f, total), total = len(total), desc = "Add mutants to DB", leave = True):
+      idx = mutec_cache.count
+      for dp in tqdm.tqdm(pool.imap_unordered(f, total), total = len(total), desc = "Add mutants to DB", leave = False):
         if dp:
           src, feats = dp
           sample = samples_database.FromArgsLite(idx, src, feats)
-          exists = session.query(samples_database.Sample.sha256).filter_by(sha256 = db_sample.sha256).scalar() is not None
+          exists = session.query(samples_database.Sample.sha256).filter_by(sha256 = sample.sha256).scalar() is not None
           if not exists:
             s.add(sample)
             idx += 1
