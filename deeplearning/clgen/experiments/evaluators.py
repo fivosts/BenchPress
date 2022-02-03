@@ -451,9 +451,9 @@ def main(config: evaluator_pb2.Evaluation):
       kw_args['cldrive_cache'] = sev.top_k
     elif ev.HasField("mutec_vs_benchpress"):
       sev = ev.mutec_vs_benchpress
-      kw_args['top_k']      = sev.top_k
-      kw_args['mutec_cache']      = sev.mutec_cache
-      kw_args['beam_width'] = sev.beam_width
+      kw_args['top_k']       = sev.top_k
+      kw_args['mutec_cache'] = sev.mutec_cache
+      kw_args['beam_width']  = sev.beam_width
       for name, dbs in [('github', sev.github), ('benchpress', sev.benchpress)]:
         key = dbs.group_name + ''.join(dbs.database)
         if key not in db_cache:
