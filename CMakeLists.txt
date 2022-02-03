@@ -289,7 +289,7 @@ function(install_external_deps)
 
   if (BUILD_CLSMITH)
     # CLSmith OpenCL Fuzzer.
-    ExternalProject_Add(csmith
+    ExternalProject_Add(clsmith
       GIT_REPOSITORY    https://github.com/ChrisLidbury/CLSmith.git
       GIT_TAG           a39a31c43c88352fc65e61dce270d8e1660cbcf0
       GIT_PROGRESS      true
@@ -304,7 +304,7 @@ function(install_external_deps)
       BUILD_COMMAND     cd ${THIRD_PARTY}/clsmith/clsmith/build && $(MAKE)
       INSTALL_COMMAND   cd ${THIRD_PARTY}/clsmith/clsmith/build && $(MAKE) install
     )
-    set(BUILD_CLSMITH           ${LOCAL}/bin/csmith PARENT_SCOPE)
+    set(BUILD_CLSMITH           ${LOCAL}/bin/clsmith PARENT_SCOPE)
   endif ()
 
   # #include <CL/*>
