@@ -29,10 +29,9 @@ def generate_mutants(src: str) -> typing.List[str]:
   Collect all mutants from src and return them
   """
   try:
-    tdir = pathlib.Path(FLAGS.local_filesystem).resolve() / feat_space
+    tdir = pathlib.Path(FLAGS.local_filesystem).resolve()
   except Exception:
-    tdir = pathlib.Path("/tmp/{}".format(feat_space)).resolve()
-    tdir.mkdir(exist_ok = True, parents = True)
+    tdir = None
 
   with tempfile.NamedTemporaryFile("w", prefix="mutec_src", suffix='.cl', dir = tdir) as f:
     f.write(src)
