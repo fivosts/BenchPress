@@ -354,13 +354,13 @@ function(setup_python)
       COMMENT "Installing python package dependencies"
     )
   endif ()
-  if ("${LLVM_VERSION}" STREQUAL "10")
+  if ("${LLVM_VERSION}" STREQUAL "6")
     # Override pip clang 12 and install 9
     add_custom_target(override_pyclang ALL
       COMMAND ${PYTHON} -m pip uninstall --yes clang
-      COMMAND ${PYTHON} -m pip install clang==10.0.1
+      COMMAND ${PYTHON} -m pip install clang==6.0.0
       DEPENDS requirements
-      COMMENT "Overriding pip clang installation to 10.0."
+      COMMENT "Overriding pip clang installation to 6.0.0"
     )
   endif()
   set(PYTHON ${PYTHON_ENV} PARENT_SCOPE)
