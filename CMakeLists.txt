@@ -38,6 +38,10 @@ OPTION(BUILD_MUTEC
       "Select to build Mutec mutator tool."
       OFF
 )
+OPTION(BUILD_CSMITH
+      "Select to build Csmith fuzzer."
+      OFF
+)
 
 function(find_binaries)
 
@@ -239,7 +243,7 @@ function(install_external_deps)
   set(LLVM            ${LOCAL}/llvm10  PARENT_SCOPE)
 
   if (BUILD_MUTEC)
-    # protoc compiler
+    # Mutec mutation tool
     ExternalProject_Add(mutec
       GIT_REPOSITORY    https://github.com/chao-peng/mutec.git
       GIT_TAG           252049da659ecfdbf6a9b5bc153083faad95aabb
@@ -257,6 +261,25 @@ function(install_external_deps)
       INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm/llvm/build_mutec && $(MAKE) install mutec
     )
     set(MUTEC           ${LOCAL}/bin/mutec PARENT_SCOPE)
+  endif ()
+
+  if (BUILD_CSMITH)
+    # Csmith Fuzzer.
+    ExternalProject_Add(csmith
+      URL               https://embed.cs.utah.edu/csmith/csmith-2.3.0.tar.gz
+      URL_HASH          SHA256=a77ba247f87ca3a2b7367a22522b0a80d71884169133631dc0b78fab3f268775
+      PREFIX            ${THIRD_PARTY}
+      TMP_DIR           ${THIRD_PARTY}/tmp
+      STAMP_DIR         ${THIRD_PARTY}/stamp
+      DOWNLOAD_DIR      ${THIRD_PARTY}/csmith
+      SOURCE_DIR        ${THIRD_PARTY}/csmith/csmith
+      BUILD_IN_SOURCE   true
+      INSTALL_DIR       ${LOCAL}
+      CONFIGURE_COMMAND cd ${THIRD_PARTY}/csmith/csmith/ && ${CMAKE_COMMAND} -S . -B build -DCMAKE_INSTALL_PREFIX=${LOCAL}
+      BUILD_COMMAND     cd ${THIRD_PARTY}/csmith/csmith/ && $(MAKE)
+      INSTALL_COMMAND   cd ${THIRD_PARTY}/csmith/csmith/ && $(MAKE) install
+    )
+    set(CSMITH           ${LOCAL}/bin/csmith PARENT_SCOPE)
   endif ()
 
   # #include <CL/*>
@@ -374,6 +397,7 @@ function(clgen)
     "export SEQ_CLANG_REWRITER="             ${SEQ_CLANG_REWRITER} "\n"
     "export CLDRIVE="                        ${CLDRIVE} "\n"
     "export MUTEC="                          ${MUTEC} "\n"
+    "export CSMITH="                         ${CSMITH} "\n"
     "export GREWE="                          ${GREWE} "\n"
     "export INSTCOUNT="                      ${INSTCOUNT} "\n"
     "export AUTOPHASE="                      ${AUTOPHASE} "\n"
