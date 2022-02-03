@@ -6,6 +6,7 @@ import sqlite3
 import tqdm
 import pickle
 import math
+import pandas
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
@@ -84,15 +85,46 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
 class CLDriveExecutions(sqlutil.Database):
   """A database of CLgen samples."""
 
-  def __init__(self, url: str, must_exist: bool = False):
-    super(CLDriveExecutions, self).__init__(url, Base, must_exist = must_exist)
-
   @property
   def count(self):
     """Number of cldrive traces in DB."""
     with self.Session() as s:
       count = s.query(CLDriveSample).count()
     return count
+
+  def __init__(self, url: str, must_exist: bool = False):
+    super(CLDriveExecutions, self).__init__(url, Base, must_exist = must_exist)
+
+  def add(src: str, global_size: int, local_size: int, df: pandas.DataFrame) -> None:
+    """
+    Adds execution entries from pandas dataframe.
+    """
+    if df:
+      sha256 = crypto.sha256_str(src + str(global_size) + str(local_size))
+      with self.db.Session(commit = True) as session:
+        entry = session.query(CLDriveSample).filter_by(sha256 = sha256)
+        if entry is not None:
+          session.add(
+            CLDriveSample.FromArgs(
+              id     = session.count,
+              sha256 = sha256,
+              global_size = global_size,
+              local_size = local_size,
+              source = src,
+              cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
+              cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
+              gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
+              gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
+              transferred_bytes    = df[df['device'].str.contains("GPU")].transferred_bytes[0],
+            )
+          )
+        else:
+          entry.cpu_transfer_time_ns = entry.cpu_transfer_time_ns + "\n" + '\n'.join([x for x in df[df['device'].str.contains("CPU")].transfer_time_ns])
+          entry.cpu_kernel_time_ns   = entry.cpu_kernel_time_ns   + "\n" + '\n'.join([x for x in df[df['device'].str.contains("CPU")].cpu_kernel_time_ns])
+          entry.gpu_transfer_time_ns = entry.gpu_transfer_time_ns + "\n" + '\n'.join([x for x in df[df['device'].str.contains("GPU")].gpu_transfer_time_ns])
+          entry.gpu_kernel_time_ns   = entry.gpu_kernel_time_ns   + "\n" + '\n'.join([x for x in df[df['device'].str.contains("GPU")].gpu_kernel_time_ns])
+        session.commit()
+    return
 
 def TopKCLDrive(**kwargs) -> None:
   """
@@ -145,7 +177,8 @@ def TopKCLDrive(**kwargs) -> None:
           bench_runs = nruns
           while benchmark_label == "TimeOut" and bench_runs > 0:
             try:
-              benchmark_label = opencl.CLDriveLabel(benchmark.contents, num_runs = bench_runs, gsize = gs, lsize = ls, timeout = 200)
+              df, benchmark_label = opencl.CLDriveDataFrame(benchmark.contents, num_runs = bench_runs, gsize = gs, lsize = ls, timeout = 200)
+              cldrive_db.add(benchmark.contents, gsize, lsize, df)
             except TimeoutError:
               bench_runs = bench_runs // 10
           if benchmark_label not in {"CPU", "GPU"}:
@@ -181,7 +214,8 @@ def TopKCLDrive(**kwargs) -> None:
             c_runs = nruns
             while label == "TimeOut" and c_runs > 0:
               try:
-                label = opencl.CLDriveLabel(src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 200)
+                df, label = opencl.CLDriveDataFrame(src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 200)
+                cldrive_db.add(src, gsize, lsize, df)
               except TimeoutError:
                 c_runs = c_runs // 10
             if label not in {"CPU", "GPU"}:
