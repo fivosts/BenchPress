@@ -108,7 +108,7 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
       for cand in tqdm.tqdm(pool.imap_unordered(f, cands), total = len(cands), desc = "Extract Features", leave = False):
         if cand:
           beam.append(cand)
-      total_beams.update(beam)
+      total_beams.update([x for x, _ in beam])
     except Exception as e:
       l.logger().error(e)
       pool.terminate()
