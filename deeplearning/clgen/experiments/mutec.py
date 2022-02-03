@@ -175,7 +175,7 @@ def MutecVsBenchPress(**kwargs) -> None:
 
   ## Run engine on mutec.
   benchmarks = target.get_benchmarks(feature_space)
-  for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Mutec"):
+  for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
     ## Tuple of closest src, distance from target benchmark.0
     closest = workers.SortedSrcDistances(git_get_data(feature_space), benchmark.features, feature_space)[:5]
 
