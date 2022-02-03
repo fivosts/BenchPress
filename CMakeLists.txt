@@ -261,9 +261,9 @@ function(install_external_deps)
       SOURCE_DIR        ${THIRD_PARTY}/llvm/llvm/clang/tools/mutec
       INSTALL_DIR       ${LOCAL}
       LIST_SEPARATOR    |
-      CONFIGURE_COMMAND echo "add_subdirectory(mutec)" >> ${THIRD_PARTY}/llvm/llvm/clang/tools/CMakeLists.txt && cd ${THIRD_PARTY}/llvm/llvm && ${CMAKE_COMMAND} -S clang -B build -DLLVM_ENABLE_PROJECTS=clang|libcxx|libcxxabi -DCMAKE_INSTALL_PREFIX=${LOCAL} -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
-      BUILD_COMMAND     cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE) mutec
-      INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm/llvm/build && $(MAKE) install mutec
+      CONFIGURE_COMMAND echo "add_subdirectory(mutec)" >> ${THIRD_PARTY}/llvm/llvm/clang/tools/CMakeLists.txt && cd ${THIRD_PARTY}/llvm/llvm && ${CMAKE_COMMAND} -S clang -B build_mutec -DCMAKE_INSTALL_PREFIX=${LOCAL} -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release
+      BUILD_COMMAND     cd ${THIRD_PARTY}/llvm/llvm/build_mutec && $(MAKE) mutec
+      INSTALL_COMMAND   cd ${THIRD_PARTY}/llvm/llvm/build_mutec && $(MAKE) install mutec
     )
     set(MUTEC           ${LOCAL}/bin/mutec PARENT_SCOPE)
   endif ()
@@ -272,7 +272,7 @@ function(install_external_deps)
     # Csmith Fuzzer.
     ExternalProject_Add(csmith
       URL               https://embed.cs.utah.edu/csmith/csmith-2.3.0.tar.gz
-      URL_HASH          SHA256=b5b8af97ce349c6479d69bab769c6b1464feed0bd6813b8300271fe49616374a
+      URL_HASH          SHA256=f247cc0aede5f8a0746271b40a5092b5b5a2d034e5e8f7a836c879dde3fb65d5
       PREFIX            ${THIRD_PARTY}
       TMP_DIR           ${THIRD_PARTY}/tmp
       STAMP_DIR         ${THIRD_PARTY}/stamp
