@@ -4,18 +4,57 @@ evaluator {
   mutec_vs_benchpress {
     target: "rodinia"
     feature_space: "AutophaseFeatures"
-    mutec_cache: "/var/foivos/results/full_results/mutec/mutants.db"
+    mutec_cache: "/var/foivos/results/full_results/Mutec/mutants.db"
     top_k: 1
     beam_width: 10
     benchpress {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Autophase/merged_samples.db"
+      database: "/var/foivos/results/full_results/BERT/Autophase/unique_merged_samples.db"
     }
     github {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/encoded.db"
+      database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
     }
   }
 }
+# evaluator {
+#   mutec_vs_benchpress {
+#     target: "rodinia"
+#     feature_space: "InstCountFeatures"
+#     mutec_cache: "/var/foivos/results/full_results/Mutec/mutants.db"
+#     top_k: 1
+#     beam_width: 10
+#     benchpress {
+#       group_name: "BenchPress"
+#       db_type: "SamplesDatabase"
+#       database: "/var/foivos/results/full_results/BERT/Instcount/unique_merged_samples.db"
+#     }
+#     github {
+#       group_name: "GitHub"
+#       db_type: "EncodedContentFiles"
+#       database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
+#     }
+#   }
+# }
+
+# evaluator {
+#   mutec_vs_benchpress {
+#     target: "rodinia"
+#     feature_space: "GreweFeatures"
+#     mutec_cache: "/var/foivos/results/full_results/Mutec/mutants.db"
+#     top_k: 1
+#     beam_width: 10
+#     benchpress {
+#       group_name: "BenchPress"
+#       db_type: "SamplesDatabase"
+#       database: "/var/foivos/results/full_results/BERT/Grewe/unique_merged_samples.db"
+#     }
+#     github {
+#       group_name: "GitHub"
+#       db_type: "EncodedContentFiles"
+#       database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
+#     }
+#   }
+# }
