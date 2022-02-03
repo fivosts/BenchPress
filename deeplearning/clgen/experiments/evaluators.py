@@ -36,6 +36,7 @@ from deeplearning.clgen.util import monitors
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.experiments import log_file
+from deeplearning.clgen.experiments import benchmark_analysis
 from deeplearning.clgen.experiments import distance_score
 from deeplearning.clgen.experiments import comp_vs_mem
 from deeplearning.clgen.experiments import cldrive
