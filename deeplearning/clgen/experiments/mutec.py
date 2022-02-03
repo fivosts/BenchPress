@@ -13,6 +13,7 @@ import math
 from absl import flags
 
 from deeplearning.clgen.features import extractor
+from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import environment
 
@@ -86,14 +87,15 @@ def generate_mutants(src: str) -> typing.List[str]:
 def beam_mutec(srcs            : typing.List[str],
                target_features : typing.Dict[str, float],
                feat_space      : str,
-               beam_width      : int
+               beam_width      : int,
+               mutec_cache     : samples_database.SamplesDatabase,
                ) -> typing.List[typing.Tuple[str, float]]:
   """
   Run generational beam search over starting github kernels
   to minimize distance from target features.
   """
   better_score = True
-  beam, closest = [], []
+  total, beam, closest = set(), [], []
 
   while better_score:
 
@@ -106,6 +108,7 @@ def beam_mutec(srcs            : typing.List[str],
           target_features = target_features,
           feature_space = feat_space
         )
+    total.update(cands)
     try:
       for cand in tqdm.tqdm(pool.imap_unordered(f, cands), total = len(cands), desc = "Extract Features", leave = False):
         if cand:
@@ -121,6 +124,25 @@ def beam_mutec(srcs            : typing.List[str],
       beam = []
     else:
       better_score = False
+
+  ## Store all mutants in database.
+  with mutec_cache.Session(commit = True) as s:
+    pool = multiprocessing.Pool()
+    try:
+      idx = s.count
+      for dp in tqdm.tqdm(pool.imap_unordered(f, total), total = len(total), desc = "Add mutants to DB", leave = True):
+        if dp:
+          sample = samples_database.FromArgsLite(idx, dp)
+          exists = session.query(samples_database.Sample.sha256).filter_by(sha256 = db_sample.sha256).scalar() is not None
+          if not exists:
+            s.add(sample)
+            idx += 1
+    except Exception as e:
+      l.logger().error(e)
+      pool.terminate()
+      raise e
+    pool.close()
+    s.commit()
   return closest
 
 def MutecVsBenchPress(**kwargs) -> None:
@@ -130,6 +152,7 @@ def MutecVsBenchPress(**kwargs) -> None:
   """
   github         = kwargs.get('github')
   benchpress     = kwargs.get('benchpress')
+  mutec_cache    = kwargs.get('mutec_cache', '')
   target         = kwargs.get('targets')
   feature_space  = kwargs.get('feature_space')
   top_k          = kwargs.get('top_k')
@@ -142,9 +165,10 @@ def MutecVsBenchPress(**kwargs) -> None:
     raise FileNotFoundError("Mutec executable not found: {}".format(MUTEC))
   if github.db_type != encoded.EncodedContentFiles:
     raise ValueError("Scores require EncodedContentFiles but received", github.db_type)
-
   if benchpress.db_type != samples_database.SamplesDatabase:
     raise ValueError("BenchPress scores require SamplesDatabase but received", benchpress.db_type)
+
+  mutec_db = samples_database.SamplesDatabase(url = "sqlite:///{}".format(pathlib.Path(mutec_cache).resolve()), must_exist = False)
 
   ## Initialize dictionary.
   groups = {}
@@ -176,7 +200,7 @@ def MutecVsBenchPress(**kwargs) -> None:
 
     l.logger().info(benchmark.name)
 
-    closest_mutec_src  = beam_mutec(git_src[:beam_mutec], benchmark.features, feature_space, beam_width) # tuple of (src, distance)
+    closest_mutec_src  = beam_mutec(git_src[:beam_mutec], benchmark.features, feature_space, beam_width, mutec_db) # tuple of (src, distance)
     closest_mutec_dist = [x for _, x in closest_mutec_src]
 
     ## If mutec has provided a better score
