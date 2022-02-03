@@ -3,9 +3,9 @@ tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
 evaluator {
   mutec_vs_benchpress {
     target: "rodinia"
-    mutec: "/home/foivos/llvm-project/build/bin/mutec"
     feature_space: "AutophaseFeatures"
-    top_k: 2
+    mutec_cahe: "/var/foivos/results/full_results/mutec/mutants.db"
+    top_k: 1
     beam_width: 10
     benchpress {
       group_name: "BenchPress"
