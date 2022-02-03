@@ -108,7 +108,6 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
       for cand in tqdm.tqdm(pool.imap_unordered(f, cands), total = len(cands), desc = "Extract Features", leave = False):
         if cand:
           beam.append(cand)
-      total_beams.update([x for x, _ in beam])
     except Exception as e:
       l.logger().error(e)
       pool.terminate()
@@ -117,6 +116,7 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
 
     ## Sort by distance in ascending order. If score is better, keep doing beam search
     closest = sorted(beam, key = lambda x: x[1])[:beam_width]
+    total_beams.update([x for x, _ in closest])
     if sum([x for _, x in closest]) / beam_width < sum([x for _, x in srcs]) / beam_width:
       srcs = closest
       beam = []
