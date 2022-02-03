@@ -1,5 +1,5 @@
-workspace: "full_results/workspace"
-tokenizer: "full_results/backup_tokenizer.pkl"
+workspace: "/var/foivos/results/full_results/workspace"
+tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
 evaluator {
   k_average_score {
     target: "rodinia"
@@ -8,22 +8,22 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "full_results/BERT/Autophase/merged_samples.db"
+      database: "/var/foivos/results/full_results/BERT/Autophase/merged_samples.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "full_results/CLgen/updated_clgen_samples.db"
+      database: "/var/foivos/results/full_results/CLgen/updated_clgen_samples.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "full_results/GitHub/encoded.db"
+      database: "/var/foivos/results/full_results/GitHub/encoded.db"
     }
     db_group {
       group_name: "GitHub-768"
       db_type: "EncodedContentFiles"
-      database: "full_results/GitHub/encoded.db"
+      database: "/var/foivos/results/full_results/GitHub/encoded.db"
       size_limit: 768
     }
   }
@@ -36,22 +36,22 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "full_results/BERT/Autophase/merged_samples.db"
+      database: "/var/foivos/results/full_results/BERT/Autophase/merged_samples.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "full_results/CLgen/updated_clgen_samples.db"
+      database: "/var/foivos/results/full_results/CLgen/updated_clgen_samples.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "full_results/GitHub/encoded.db"
+      database: "/var/foivos/results/full_results/GitHub/encoded.db"
     }
     db_group {
       group_name: "GitHub-768"
       db_type: "EncodedContentFiles"
-      database: "full_results/GitHub/encoded.db"
+      database: "/var/foivos/results/full_results/GitHub/encoded.db"
       size_limit: 768
     }
   }
@@ -63,22 +63,22 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "full_results/BERT/Autophase/merged_samples.db"
+      database: "/var/foivos/results/full_results/BERT/Autophase/merged_samples.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "full_results/CLgen/updated_clgen_samples.db"
+      database: "/var/foivos/results/full_results/CLgen/updated_clgen_samples.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "full_results/GitHub/encoded.db"
+      database: "/var/foivos/results/full_results/GitHub/encoded.db"
     }
     db_group {
       group_name: "GitHub-768"
       db_type: "EncodedContentFiles"
-      database: "full_results/GitHub/encoded.db"
+      database: "/var/foivos/results/full_results/GitHub/encoded.db"
       size_limit: 768
     }
   }
@@ -90,49 +90,22 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "full_results/BERT/Autophase/merged_samples.db"
+      database: "/var/foivos/results/full_results/BERT/Autophase/merged_samples.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "full_results/CLgen/updated_clgen_samples.db"
+      database: "/var/foivos/results/full_results/CLgen/updated_clgen_samples.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "full_results/GitHub/encoded.db"
+      database: "/var/foivos/results/full_results/GitHub/encoded.db"
     }
     db_group {
       group_name: "GitHub-768"
       db_type: "EncodedContentFiles"
-      database: "full_results/GitHub/encoded.db"
-      size_limit: 768
-    }
-  }
-}
-evaluator {
-  topk_cldrive {
-    target: "rodinia"
-    feature_space: "InstCountFeatures"
-    db_group {
-      group_name: "BenchPress"
-      db_type: "SamplesDatabase"
-      database: "full_results/BERT/Autophase/merged_samples.db"
-    }
-    db_group {
-      group_name: "CLgen"
-      db_type: "SamplesDatabase"
-      database: "full_results/CLgen/updated_clgen_samples.db"
-    }
-    db_group {
-      group_name: "GitHub"
-      db_type: "EncodedContentFiles"
-      database: "full_results/GitHub/encoded.db"
-    }
-    db_group {
-      group_name: "GitHub-768"
-      db_type: "EncodedContentFiles"
-      database: "full_results/GitHub/encoded.db"
+      database: "/var/foivos/results/full_results/GitHub/encoded.db"
       size_limit: 768
     }
   }
