@@ -115,9 +115,13 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
     pool.close()
 
     ## Sort by distance in ascending order. If score is better, keep doing beam search
-    closest = sorted(beam, key = lambda x: x[1])[:beam_width]
+    ## srcs are included to the outputs, in order to keep them if the offsprings are worse.
+    closest = sorted(beam + srcs, key = lambda x: x[1])[:beam_width]
     total_beams.update([x for x, _ in closest])
-    if sum([x for _, x in closest]) / beam_width < sum([x for _, x in srcs]) / beam_width:
+    l.logger().info([x for _, x in closest])
+    l.logger().info([x for _, x in srcs])
+    assert len(closest) == len(srcs), "Input/Output of beam search length mismatch."
+    if sum([x for _, x in closest]) < sum([x for _, x in srcs]):
       srcs = closest
       beam = []
     else:
