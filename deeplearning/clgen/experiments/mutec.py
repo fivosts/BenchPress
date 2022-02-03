@@ -87,7 +87,7 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
   to minimize distance from target features.
   """
   better_score = True
-  total, beam, closest = set(), [], []
+  total_beams, beam, closest = set(), [], []
 
   while better_score:
 
@@ -103,11 +103,12 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
           target_features = target_features,
           feature_space = feat_space
         )
-    total.update(cands)
+    # total.update(cands)
     try:
       for cand in tqdm.tqdm(pool.imap_unordered(f, cands), total = len(cands), desc = "Extract Features", leave = False):
         if cand:
           beam.append(cand)
+      total += beam
     except Exception as e:
       l.logger().error(e)
       pool.terminate()
