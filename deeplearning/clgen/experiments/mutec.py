@@ -55,7 +55,7 @@ def generate_mutants(src: str, timeout = 30) -> typing.List[str]:
       json.dump([compile_command], ccf)
     # Construct and execute mutec command
     mutec_cmd = [
-      "timeout -s9 {}".format(timeout)
+      "timeout -s9 {}".format(timeout),
       MUTEC,
       str(f.name),
       "-o",
@@ -67,7 +67,10 @@ def generate_mutants(src: str, timeout = 30) -> typing.List[str]:
       stderr=subprocess.PIPE,
       universal_newlines=True,
     )
-    stdout, stderr = process.communicate()
+    try:
+      stdout, stderr = process.communicate()
+    except TimeoutError:
+      pass
     os.remove(str(base_path / "compile_commands.json"))
 
     mutec_paths = glob.glob("{}.mutec*".format(f.name))
