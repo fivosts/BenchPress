@@ -183,7 +183,7 @@ def GenerateCLSmith(**kwargs) -> None:
   try:
     while True:
       chunk_size = 1000
-      with clsmith_db.Session(commit = True) as s:
+      with clsmith_db.Session() as s:
         db_idx = clsmith_db.count
         pool = multiprocessing.Pool()
         f = functools.partial(execute_clsmith, tokenizer = tokenizer, timeout_seconds = 15)
