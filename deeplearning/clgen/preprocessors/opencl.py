@@ -445,7 +445,7 @@ def CLDriveLabel(src: str,
   return CollectCLDriveLabel(df, stdout, stderr)
 
 @public.clgen_preprocessor
-def ClangPreprocess(text: str) -> str:
+def ClangPreprocess(text: str, extra_args = []) -> str:
   """Preprocessor OpenCL source.
 
   Args:
@@ -454,11 +454,11 @@ def ClangPreprocess(text: str) -> str:
   Returns:
     Preprocessed source.
   """
-  return _ClangPreprocess(text, False, True)
+  return _ClangPreprocess(text, False, True, extra_args = extra_args)
 
 
 @public.clgen_preprocessor
-def ClangPreprocessWithShim(text: str) -> str:
+def ClangPreprocessWithShim(text: str, extra_args = []) -> str:
   """Preprocessor OpenCL source with OpenCL shim header injection.
 
   Args:
@@ -467,7 +467,7 @@ def ClangPreprocessWithShim(text: str) -> str:
   Returns:
     Preprocessed source.
   """
-  return _ClangPreprocess(text, True, True)
+  return _ClangPreprocess(text, True, True, extra_args = extra_args)
 
 def CompileLlvmBytecode(text: str, header_file = None, use_aux_headers: bool = True, extra_args: typing.List[str] = []) -> str:
   """A preprocessor which attempts to compile the given code.
