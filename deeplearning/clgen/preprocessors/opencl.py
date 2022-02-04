@@ -51,7 +51,7 @@ OPENCL_C_BASE  = os.path.join(environment.DATA_CL_INCLUDE, "opencl-c-base.h")
 SHIMFILE       = os.path.join(environment.DATA_CL_INCLUDE, "opencl-shim.h")
 STRUCTS        = os.path.join(environment.DATA_CL_INCLUDE, "structs.h")
 
-def GetClangArgs(use_shim: bool, use_aux_headers: bool) -> typing.List[str]:
+def GetClangArgs(use_shim: bool, use_aux_headers: bool, extra_args: typing.List[str] = []) -> typing.List[str]:
   """Get the arguments to pass to clang for handling OpenCL.
 
   Args:
@@ -81,7 +81,7 @@ def GetClangArgs(use_shim: bool, use_aux_headers: bool) -> typing.List[str]:
     ]
   if use_shim:
     args += ["-include", str(SHIMFILE)]
-  return args
+  return args + extra_args
 
 def getOpenCLPlatforms() -> None:
   """
@@ -113,7 +113,7 @@ def getOpenCLPlatforms() -> None:
       CL_PLATFORMS['CPU'] = line
   return
 
-def _ClangPreprocess(text: str, use_shim: bool, use_aux_headers: bool) -> str:
+def _ClangPreprocess(text: str, use_shim: bool, use_aux_headers: bool, extra_args: typing.List[str]) -> str:
   """Private preprocess OpenCL source implementation.
 
   Inline macros, removes comments, etc.
@@ -125,7 +125,7 @@ def _ClangPreprocess(text: str, use_shim: bool, use_aux_headers: bool) -> str:
   Returns:
     Preprocessed source.
   """
-  return clang.Preprocess(text, GetClangArgs(use_shim=use_shim, use_aux_headers=use_aux_headers))
+  return clang.Preprocess(text, GetClangArgs(use_shim = use_shim, use_aux_headers = use_aux_headers, extra_args = extra_args))
 
 def _ExtractTypedefs(text: str, dtype: str) -> str:
   """
@@ -158,7 +158,7 @@ def _ExtractTypedefs(text: str, dtype: str) -> str:
   print("\n\n".join(dtypes))
   return ''.join(new_text)
 
-def DeriveSourceVocab(text: str, token_list: typing.Set[str] = set()) -> typing.Dict[str, str]:
+def DeriveSourceVocab(text: str, token_list: typing.Set[str] = set(), extra_args: typing.List[str] = []) -> typing.Dict[str, str]:
   """Pass CL code through clang's lexer and return set of
   tokens with appropriate delimiters for vocabulary construction.
 
@@ -169,9 +169,9 @@ def DeriveSourceVocab(text: str, token_list: typing.Set[str] = set()) -> typing.
   Returns:
     Set of unique source code tokens.
   """
-  return clang.DeriveSourceVocab(text, token_list, ".cl", GetClangArgs(use_shim = False, use_aux_headers=True))
+  return clang.DeriveSourceVocab(text, token_list, ".cl", GetClangArgs(use_shim = False, use_aux_headers = True, extra_args = extra_args))
 
-def AtomizeSource(text: str, vocab: typing.Set[str]) -> typing.List[str]:
+def AtomizeSource(text: str, vocab: typing.Set[str], extra_args: typing.List[str] = []) -> typing.List[str]:
   """
   Atomize OpenCL source with clang's lexer into token atoms.
 
@@ -182,7 +182,7 @@ def AtomizeSource(text: str, vocab: typing.Set[str]) -> typing.List[str]:
   Returns:
     Source code as a list of tokens.
   """
-  return clang.AtomizeSource(text, vocab, ".cl", GetClangArgs(use_shim = False, use_aux_headers=True))
+  return clang.AtomizeSource(text, vocab, ".cl", GetClangArgs(use_shim = False, use_aux_headers = True, extra_args = extra_args))
 
 def ContentHash(src: str) -> str:
   """
@@ -469,7 +469,7 @@ def ClangPreprocessWithShim(text: str) -> str:
   """
   return _ClangPreprocess(text, True, True)
 
-def CompileLlvmBytecode(text: str, header_file = None, use_aux_headers: bool = True) -> str:
+def CompileLlvmBytecode(text: str, header_file = None, use_aux_headers: bool = True, extra_args: typing.List[str] = []) -> str:
   """A preprocessor which attempts to compile the given code.
 
   Args:
@@ -483,7 +483,7 @@ def CompileLlvmBytecode(text: str, header_file = None, use_aux_headers: bool = T
   return clang.CompileLlvmBytecode(
     text,
     ".cl",
-    GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers),# + ["-Werror=implicit-function-declaration"],
+    GetClangArgs(use_shim = False, use_aux_headers = use_aux_headers, extra_args = extra_args),# + ["-Werror=implicit-function-declaration"],
     header_file = header_file,
   )
 
@@ -492,6 +492,7 @@ def CompileOptimizer(text: str,
                      timeout_seconds: int = 60,
                      header_file: str = None,
                      use_aux_headers: bool = True,
+                     extra_args: typing.List[str] = []
                      ) -> str:
   """Compile source code to IR and apply optimization pass to source code.
   Args:
@@ -503,13 +504,13 @@ def CompileOptimizer(text: str,
   return clang.CompileOptimizer(
     src = text,
     suffix = ".cl",
-    cflags = GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers),
+    cflags = GetClangArgs(use_shim = False, use_aux_headers = use_aux_headers, extra_args = extra_args),
     optimization = optimization,
     header_file = header_file,
   )
 
 @public.clgen_preprocessor
-def Compile(text: str, header_file = None, use_aux_headers = True, return_diagnostics = False) -> str:
+def Compile(text: str, header_file = None, use_aux_headers = True, extra_args: typing.List[str] = [], return_diagnostics = False) -> str:
   """Check that the OpenCL source compiles.
 
   This does not modify the input.
@@ -525,7 +526,7 @@ def Compile(text: str, header_file = None, use_aux_headers = True, return_diagno
   return clang.Compile(
     text,
     ".cl",
-    GetClangArgs(use_shim=False, use_aux_headers = use_aux_headers),# + ["-Werror=implicit-function-declaration"],
+    GetClangArgs(use_shim = False, use_aux_headers = use_aux_headers, extra_args = extra_args),# + ["-Werror=implicit-function-declaration"],
     header_file = header_file,
     return_diagnostics = return_diagnostics,
   )
@@ -782,7 +783,7 @@ def StringKernelsToSource(text: str) -> str:
     return text
 
 @public.clgen_preprocessor
-def NormalizeIdentifiers(text: str) -> str:
+def NormalizeIdentifiers(text: str, extra_args: typing.List[str] = []) -> str:
   """Normalize identifiers in OpenCL source code.
 
   Args:
@@ -796,11 +797,11 @@ def NormalizeIdentifiers(text: str) -> str:
     ClangTimeout: If rewriter fails to complete within timeout_seconds.
   """
   return normalizer.NormalizeIdentifiers(
-    text, ".cl", GetClangArgs(use_shim = False, use_aux_headers = True)
+    text, ".cl", GetClangArgs(use_shim = False, use_aux_headers = True, extra_args = extra_args)
   )
 
 @public.clgen_preprocessor
-def SequentialNormalizeIdentifiers(text: str) -> str:
+def SequentialNormalizeIdentifiers(text: str, extra_args: typing.List[str] = []) -> str:
   """Normalize identifiers sequentially in OpenCL source code.
 
   Args:
@@ -814,7 +815,7 @@ def SequentialNormalizeIdentifiers(text: str) -> str:
     ClangTimeout: If rewriter fails to complete within timeout_seconds.
   """
   return normalizer.NormalizeIdentifiers(
-    text, ".cl", GetClangArgs(use_shim = False, use_aux_headers = True), sequential_rewrite = True
+    text, ".cl", GetClangArgs(use_shim = False, use_aux_headers = True, extra_args = extra_args), sequential_rewrite = True
   )
 
 @public.clgen_preprocessor
