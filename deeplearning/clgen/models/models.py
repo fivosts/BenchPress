@@ -39,7 +39,6 @@ from deeplearning.clgen.features import extractor
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.models import builders
-from deeplearning.clgen.models import evaluators
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models.keras_sequential import keras_sequential
 from deeplearning.clgen.models.tf_sequential import tf_sequential
