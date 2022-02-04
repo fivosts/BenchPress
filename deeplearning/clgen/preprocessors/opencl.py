@@ -291,11 +291,11 @@ def CollectCLDriveLabel(df: pd.DataFrame, stdout: str, stderr: str) -> str:
   gpu_error = None
 
   try:
-    transferred_bytes_cpu = df[df['device'].str.contains("CPU")].transferred_bytes[0]
-    transferred_bytes_gpu = df[df['device'].str.contains("GPU")].transferred_bytes[0]
+    avg_time_cpu_ns = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean())
+    avg_time_gpu_ns = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean())
   except Exception:
-    transferred_bytes_cpu = None
-    transferred_bytes_gpu = None
+    avg_time_cpu_ns = None
+    avg_time_gpu_ns = None
 
   if avg_time_cpu_ns is None or avg_time_gpu_ns is None or math.isnan(avg_time_cpu_ns) or math.isnan(avg_time_gpu_ns):
     label = "ERR"
