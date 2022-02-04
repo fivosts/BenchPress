@@ -118,7 +118,7 @@ class CLDriveExecutions(sqlutil.Database):
               cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
               gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
               gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
-              transferred_bytes    = df[df['device'].str.contains("GPU")].transferred_bytes[0],
+              transferred_bytes    = int(df[df['device'].str.contains("GPU")].transferred_bytes[0]),
             )
           )
         else:
@@ -181,11 +181,11 @@ def TopKCLDrive(**kwargs) -> None:
           while benchmark_label == "TimeOut" and bench_runs > 0:
             try:
               df, benchmark_label = opencl.CLDriveDataFrame(benchmark.contents, num_runs = bench_runs, gsize = gs, lsize = ls, timeout = 200)
-              cldrive_db.add(benchmark.contents, gsize, lsize, df)
             except TimeoutError:
               bench_runs = bench_runs // 10
           if benchmark_label not in {"CPU", "GPU"}:
             continue
+          cldrive_db.add(benchmark.contents, gsize, lsize, df)
 
           ## Fix dictionary entry.
           config = "g{}-l{}".format(gs, ls)
@@ -223,6 +223,7 @@ def TopKCLDrive(**kwargs) -> None:
                 c_runs = c_runs // 10
             if label not in {"CPU", "GPU"}:
               continue
+            cldrive_db.add(src, gsize, lsize, df)
             l.logger().error("Label: {}, distance: {}".format(label, dist))
             if len(groups[config][dbg.group_name][1]) - 1 < idx:
               groups[config][dbg.group_name][1].append([dist])
