@@ -303,7 +303,8 @@ function(install_external_deps)
       BUILD_COMMAND     cd ${THIRD_PARTY}/clsmith/clsmith/build && $(MAKE)
       INSTALL_COMMAND   cd ${THIRD_PARTY}/clsmith/clsmith/build && $(MAKE) install
     )
-    set(CLSMITH   ${LOCAL}/bin/CLSmith PARENT_SCOPE)
+    set(CLSMITH         ${LOCAL}/bin/CLSmith PARENT_SCOPE)
+    set(CLSMITH_INCLUDE ${LOCAL}/include/CLSmith)
   endif ()
 
   # #include <CL/*>
@@ -423,6 +424,7 @@ function(clgen)
     "export MUTEC="                          ${MUTEC} "\n"
     "export CSMITH="                         ${CSMITH} "\n"
     "export CLSMITH="                        ${CLSMITH} "\n"
+    "export CLSMITH_INCLUDE="                ${CLSMITH_INCLUDE} "\n"
     "export GREWE="                          ${GREWE} "\n"
     "export INSTCOUNT="                      ${INSTCOUNT} "\n"
     "export AUTOPHASE="                      ${AUTOPHASE} "\n"
@@ -447,6 +449,7 @@ function(clgen)
     "unset CLDRIVE\n"
     "unset MUTEC\n"
     "unset CSMITH\n"
+    "unset CSMITH_INCLUDE\n"
     "unset CLSMITH\n"
     "unset GREWE\n"
     "unset INSTCOUNT\n"
