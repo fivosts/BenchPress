@@ -21,6 +21,7 @@ from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.experiments import workers
+from deeplearning.clgen.experiments import public
 
 Base = declarative.declarative_base()
 
@@ -132,6 +133,7 @@ class CLDriveExecutions(sqlutil.Database):
         l.logger().warn(df)
     return
 
+@public.evaluator
 def TopKCLDrive(**kwargs) -> None:
   """
   Collect top-K samples per database group for each target benchmark.

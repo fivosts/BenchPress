@@ -15,6 +15,7 @@ from absl import flags
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.experiments import public
 
 FLAGS = flags.FLAGS
 
@@ -35,6 +36,7 @@ def ExtractAndCalculate_worker(src             : str,
     return src, feature_sampler.calculate_distance(f[feature_space], target_features, feature_space)
   return None
 
+@public.evaluator
 def GenerateCLSmith(**kwargs) -> None:
   """
   Compare mutec mutation tool on github's database against BenchPress.
