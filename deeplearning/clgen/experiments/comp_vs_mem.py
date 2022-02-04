@@ -3,7 +3,9 @@ Evaluation script for mem vs comp Grewe features against multiple database group
 """
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import plotter
+from deeplearning.clgen.experiments import public
 
+@public.evaluator
 def CompMemGrewe(**kwargs) -> None:
   """
   Compare Computation vs Memory instructions for each database group
