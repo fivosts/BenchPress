@@ -360,7 +360,6 @@ def CLDriveDataFrame(src: str,
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
   except Exception as e:
-    l.logger().warn(e)
     df = None
   return df, CollectCLDriveLabel(df, stdout, stderr)
 
