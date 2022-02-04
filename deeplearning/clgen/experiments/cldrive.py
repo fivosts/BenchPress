@@ -20,6 +20,7 @@ from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import logging as l
+from deeplearning.clgen.experiments import workers
 
 Base = declarative.declarative_base()
 
@@ -104,28 +105,31 @@ class CLDriveExecutions(sqlutil.Database):
     """
     if df is not None:
       sha = crypto.sha256_str(src + str(global_size) + str(local_size))
-      with self.Session(commit = True) as session:
-        entry = session.query(CLDriveSample).filter_by(sha256 = sha)
-        if entry is not None:
-          session.add(
-            CLDriveSample.FromArgs(
-              id          = self.count,
-              global_size = global_size,
-              local_size  = local_size,
-              source      = src,
-              cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
-              cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
-              gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
-              gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
-              transferred_bytes    = int(df.transferred_bytes[0]),
+      try:
+        with self.Session(commit = True) as session:
+          entry = session.query(CLDriveSample).filter_by(sha256 = sha)
+          if entry is not None:
+            session.add(
+              CLDriveSample.FromArgs(
+                id          = self.count,
+                global_size = global_size,
+                local_size  = local_size,
+                source      = src,
+                cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
+                cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
+                gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
+                gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
+                transferred_bytes    = int(df.transferred_bytes[0]),
+              )
             )
-          )
-        else:
-          entry.cpu_transfer_time_ns = entry.cpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].transfer_time_ns])
-          entry.cpu_kernel_time_ns   = entry.cpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].cpu_kernel_time_ns])
-          entry.gpu_transfer_time_ns = entry.gpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].gpu_transfer_time_ns])
-          entry.gpu_kernel_time_ns   = entry.gpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].gpu_kernel_time_ns])
-        session.commit()
+          else:
+            entry.cpu_transfer_time_ns = entry.cpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].transfer_time_ns])
+            entry.cpu_kernel_time_ns   = entry.cpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].cpu_kernel_time_ns])
+            entry.gpu_transfer_time_ns = entry.gpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].gpu_transfer_time_ns])
+            entry.gpu_kernel_time_ns   = entry.gpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].gpu_kernel_time_ns])
+          session.commit()
+      except Exception:
+        l.logger().warn(df)
     return
 
 def TopKCLDrive(**kwargs) -> None:
@@ -184,7 +188,7 @@ def TopKCLDrive(**kwargs) -> None:
               bench_runs = bench_runs // 10
           if benchmark_label not in {"CPU", "GPU"}:
             continue
-          cldrive_db.add_entry(benchmark.contents, gsize, lsize, df)
+          cldrive_db.add_entry(benchmark.contents, gs, ls, df)
 
           ## Fix dictionary entry.
           config = "g{}-l{}".format(gs, ls)
@@ -204,7 +208,7 @@ def TopKCLDrive(**kwargs) -> None:
           ## Get unique contentfiles of database group.
           if closest_src is None:
             l.logger().info(benchmark.name)
-            closest_src = SortedSrcDistances(get_data(feature_space), benchmark.features, feature_space)
+            closest_src = workers.SortedSrcDistances(get_data(feature_space), benchmark.features, feature_space)
           l.logger().info("global size: {}, local size: {}".format(gs, ls))
           l.logger().error("Benchmark label: {}".format(benchmark_label))
 
@@ -217,12 +221,11 @@ def TopKCLDrive(**kwargs) -> None:
             while label == "TimeOut" and c_runs > 0:
               try:
                 df, label = opencl.CLDriveDataFrame(src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 200)
-                cldrive_db.add_entry(src, gsize, lsize, df)
               except TimeoutError:
                 c_runs = c_runs // 10
             if label not in {"CPU", "GPU"}:
               continue
-            cldrive_db.add_entry(src, gsize, lsize, df)
+            cldrive_db.add_entry(src, gs, ls, df)
             l.logger().error("Label: {}, distance: {}".format(label, dist))
             if len(groups[config][dbg.group_name][1]) - 1 < idx:
               groups[config][dbg.group_name][1].append([dist])
