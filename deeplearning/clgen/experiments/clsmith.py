@@ -75,7 +75,7 @@ class CLSmithSample(Base, sqlutil.ProtoBackedMixin):
     """
     return CLSmithSample(**{
       "id"             : id,
-      "sha256"         : crypto.sha256_str(sample + include),
+      "sha256"         : crypto.sha256_str(sample),
       "sample"         : sample,
       "include"        : include,
       "encoded_sample" : encoded_sample,
@@ -196,12 +196,12 @@ def GenerateCLSmith(**kwargs) -> None:
                 s.add(sample)
                 db_idx += 1
         s.commit()
+    except KeyboardInterrupt as e:
+      pool.terminate()
+      break
     except Exception as e:
       l.logger().error(e)
       pool.terminate()
       raise e
-    except KeyboardInterrupt as e:
-      pool.terminate()
-      break
     pool.close()
   return
