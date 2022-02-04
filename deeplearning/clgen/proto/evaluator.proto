@@ -101,6 +101,11 @@ message MutecVsBenchPress {
   optional DatabasesGroups      db_group      = 9; // Dummy selector, not used.
 }
 
+// 8
+message GenerateCLSmith {
+  optional string clsmith_db = 1;
+}
+
 // Define a group of Databases that will be considered jointly.
 message DatabasesGroups {
   optional string group_name = 1;
