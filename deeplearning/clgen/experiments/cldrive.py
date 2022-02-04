@@ -118,7 +118,7 @@ class CLDriveExecutions(sqlutil.Database):
               cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
               gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
               gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
-              transferred_bytes    = int(df[df['device'].str.contains("GPU")].transferred_bytes[0]),
+              transferred_bytes    = int(df.transferred_bytes[0]),
             )
           )
         else:
