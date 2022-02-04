@@ -18,8 +18,9 @@ extractors = {
 
 def ExtractFeatures(src: str,
                     ext: typing.List[str] = None,
-                    header_file: str = None,
-                    use_aux_headers: bool = True,
+                    header_file     : str = None,
+                    use_aux_headers : bool = True,
+                    extra_args      : typing.List[str] = []
                     ) -> typing.Dict[str, typing.Dict[str, float]]:
   """
   Wrapper method for core feature functions.
@@ -27,12 +28,13 @@ def ExtractFeatures(src: str,
   """
   if not ext:
     ext = list(extractors.keys())
-  return {xt: extractors[xt].ExtractFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers) for xt in ext}
+  return {xt: extractors[xt].ExtractFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers, extra_args = extra_args) for xt in ext}
 
 def ExtractRawFeatures(src: str,
                        ext: typing.List[str] = None,
-                       header_file: str = None,
-                       use_aux_headers: bool = True,
+                       header_file     : str = None,
+                       use_aux_headers : bool = True,
+                       extra_args      : typing.List[str] = []
                        ) -> str:
   """
   Wrapper method for core feature functions.
@@ -42,7 +44,7 @@ def ExtractRawFeatures(src: str,
     ext = list(extractors.keys())
   if ext and not isinstance(ext, list):
     raise TypeError("Requested feature space extractors must be a list, {} received".format(type(ext)))
-  return '\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractRawFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers)) for xt in ext])
+  return '\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractRawFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers, extra_args = extra_args)) for xt in ext])
 
 def RawToDictFeats(str_feats: str) -> typing.Dict[str, typing.Dict[str, float]]:
   """
