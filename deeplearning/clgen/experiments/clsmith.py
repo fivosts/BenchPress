@@ -180,11 +180,12 @@ def GenerateCLSmith(**kwargs) -> None:
 
   while True:
     chunk_size = 1000
+    it = 0
     f = functools.partial(execute_clsmith, tokenizer = tokenizer, timeout_seconds = 15)
     pool = multiprocessing.Pool()
     try:
       entries = []
-      for samples in tqdm.tqdm(pool.imap_unordered(f, range(chunk_size)), total = chunk_size, desc = "Generate CLSmith Samples", leave = False):
+      for samples in tqdm.tqdm(pool.imap_unordered(f, range(chunk_size)), total = chunk_size, desc = "Generate CLSmith Samples {}".format(it), leave = False):
         if samples:
           for sample in samples:
             entries.append(sample)
@@ -206,4 +207,5 @@ def GenerateCLSmith(**kwargs) -> None:
       pool.terminate()
       raise e
     pool.close()
+    it += 1
   return
