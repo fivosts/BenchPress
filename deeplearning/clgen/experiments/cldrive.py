@@ -143,7 +143,7 @@ def TopKCLDrive(**kwargs) -> None:
   groups = {}
   gsize, lsize = [2**10, 2**15, 2**20], [2**10] # 1024 is max local size for GTX1080.
 
-  cldrive_db = CLDriveExecutions(url = "sqlite:///{}".format(cldrive_cache), must_exist = False)
+  cldrive_db = CLDriveExecutions(url = "sqlite:///{}".format(pathlib.Path(cldrive_cache).resolve()), must_exist = False)
 
   # For each db group -> for each target -> k samples -> 1) benchmark.name 2) distance 3) label.
   for dbg in db_groups:
