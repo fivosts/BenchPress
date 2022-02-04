@@ -24,6 +24,7 @@ from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.experiments import workers
+from deeplearning.clgen.experiments import public
 
 FLAGS = flags.FLAGS
 
@@ -165,6 +166,7 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
     s.commit()
   return closest
 
+@public.evaluator
 def MutecVsBenchPress(**kwargs) -> None:
   """
   Compare mutec mutation tool on github's database against BenchPress.
