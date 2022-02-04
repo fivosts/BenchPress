@@ -39,8 +39,12 @@ def generate_mutants(src: str, timeout_seconds: int = 15) -> typing.List[str]:
     tdir = None
 
   with tempfile.NamedTemporaryFile("w", prefix="mutec_src", suffix='.cl', dir = tdir) as f:
-    f.write(src)
-    f.flush()
+    try:
+      f.write(src)
+      f.flush()
+    except UnicodeDecodeError:
+      return []
+
     # Fix compile_commands.json for source file.
     base_path = pathlib.Path(f.name).resolve().parent
     compile_command = {
