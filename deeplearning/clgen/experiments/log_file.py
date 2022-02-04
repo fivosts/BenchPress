@@ -1,7 +1,9 @@
 """
 Log file evaluation.
 """
+from deeplearning.clgen.experiments import public
 
+@public.evaluator
 def LogFile(**kwargs) -> None:
   """
   Write benchmarks  and target stats in log file.
