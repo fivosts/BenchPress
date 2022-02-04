@@ -20,6 +20,7 @@ from absl import flags
 
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.preprocessors import opencl
+from deeplearning.clgen.preprocessors import c
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import crypto
@@ -28,7 +29,8 @@ from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.experiments import public
 
 FLAGS = flags.FLAGS
-CLSMITH = environment.CLSMITH
+CLSMITH         = environment.CLSMITH
+CLSMITH_INCLUDE = environment.CLSMITH
 
 Base = declarative.declarative_base()
 
@@ -104,6 +106,7 @@ def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.Li
   except Exception:
     tdir = None
 
+  extra_args = "-I{}".format(CLSMITH_INCLUDE)
   with tempfile.NamedTemporaryFile("w", prefix = "clsmith_", suffix = ".cl", dir = tdir) as f:
     cmd =[
       "timeout",
@@ -126,16 +129,27 @@ def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.Li
 
     contentfile = open(str(f.name), 'r').read()
 
-  ks = opencl.ExtractSingleKernelsHeaders(
-       opencl.StripDoubleUnderscorePrefixes(
-       opencl.ClangPreprocess(contentfile)))
+  try:
+    ks = opencl.ExtractSingleKernelsHeaders(
+          opencl.StripDoubleUnderscorePrefixes(
+            opencl.ClangPreprocess(
+              c.StripIncludes(contentfile),
+              extra_args = extra_args 
+            ),
+            extra_args = extra_args
+          ),
+          extra_args = extra_args
+        )
+  except ValueError as e:
+    l.logger().error(contentfile)
+    raise e
 
   samples = []
   for kernel, include in ks:
     sample = opencl.SequentialNormalizeIdentifiers(k)
     encoded_sample = tokenizer.AtomizeString(sample)
     try:
-      stdout = opencl.Compile(sample, header_file = include)
+      stdout = opencl.Compile(sample, header_file = include, extra_args = extra_args)
       compile_status = True
     except ValueError:
       compile_status = False
@@ -146,7 +160,7 @@ def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.Li
         include        = include,
         encoded_sample = encoded_sample,
         compile_status = compile_status,
-        feature_vector = extractor.ExtractRawFeatures(sample, header_file = include),
+        feature_vector = extractor.ExtractRawFeatures(sample, header_file = include, extra_args = extra_args),
         num_tokens     = len(encoded_sample)
       )
     )
