@@ -157,7 +157,7 @@ def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.Li
         id             = idx,
         sample         = sample,
         include        = include,
-        encoded_sample = encoded_sample,
+        encoded_sample = ','.join(encoded_sample),
         compile_status = compile_status,
         feature_vector = extractor.ExtractRawFeatures(sample, header_file = include, extra_args = extra_args),
         num_tokens     = len(encoded_sample)
