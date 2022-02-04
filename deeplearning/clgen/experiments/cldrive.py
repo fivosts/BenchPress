@@ -104,7 +104,7 @@ class CLDriveExecutions(sqlutil.Database):
     """
     if df is not None:
       sha256 = crypto.sha256_str(src + str(global_size) + str(local_size))
-      with self.db.Session(commit = True) as session:
+      with self.Session(commit = True) as session:
         entry = session.query(CLDriveSample).filter_by(sha256 = sha256)
         if entry is not None:
           session.add(
