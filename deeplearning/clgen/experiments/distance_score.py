@@ -7,7 +7,9 @@ import math
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import plotter
+from deeplearning.clgen.experiments import public
 
+@public.evaluator
 def KAverageScore(**kwargs) -> None:
   """
   Compare the average of top-K closest per target benchmark
