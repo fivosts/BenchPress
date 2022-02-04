@@ -107,7 +107,7 @@ def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.Li
   except Exception:
     tdir = None
 
-  extra_args = ["-I{}".format(CLSMITH_INCLUDE)]
+  extra_args = ["-include{}".format(pathlib.Path(CLSMITH_INCLUDE) / "CLSmith.h")]
   with tempfile.NamedTemporaryFile("w", prefix = "clsmith_", suffix = ".cl", dir = tdir) as f:
     cmd =[
       "timeout",
