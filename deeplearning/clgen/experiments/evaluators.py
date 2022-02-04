@@ -478,7 +478,7 @@ def main(config: evaluator_pb2.Evaluation):
       raise NotImplementedError(ev)
 
     # Gather database groups and cache them.
-    if not ev.HasField("mutec_vs_benchpress"):
+    if not ev.HasField("mutec_vs_benchpress") and not ev.HasField("generate_clsmith"):
       for dbs in sev.db_group:
         key = dbs.group_name + ''.join(dbs.database)
         if key not in db_cache:
