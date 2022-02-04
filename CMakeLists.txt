@@ -304,7 +304,7 @@ function(install_external_deps)
       INSTALL_COMMAND   cd ${THIRD_PARTY}/clsmith/clsmith/build && $(MAKE) install
     )
     set(CLSMITH         ${LOCAL}/bin/CLSmith PARENT_SCOPE)
-    set(CLSMITH_INCLUDE ${LOCAL}/include/CLSmith)
+    set(CLSMITH_INCLUDE ${LOCAL}/include/CLSmith PARENT_SCOPE)
   endif ()
 
   # #include <CL/*>
