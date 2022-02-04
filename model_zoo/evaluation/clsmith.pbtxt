@@ -1,4 +1,4 @@
-tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
+tokenizer: "backup_tokenizer.pkl"
 evaluator {
   generate_clsmith {
     clsmith_db: "samples.db"
