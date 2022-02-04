@@ -56,6 +56,137 @@ flags.DEFINE_string(
   "Set path to evaluator config file",
 )
 
+class DBGroup(object):
+  """
+  Class representation of a group of databases evaluated.
+  """
+  @property
+  def data(self) -> typing.List[str]:
+    """
+    Get concatenated data of all databases.
+    """
+    if self.data:
+      return self.data
+    else:
+      self.data = []
+      for db in self.databases:
+        if self.db_type == encoded.EncodedContentFiles:
+          self.data += db.get_data(self.size_limit)
+        else:
+          self.data += db.get_data
+
+  def __init__(self, group_name: str, db_type: str, databases: typing.List[pathlib.Path], tokenizer = None, size_limit: int = None):
+    self.group_name = group_name
+    self.db_type = {
+      "SamplesDatabase"    : samples_database.SamplesDatabase,
+      "ActiveFeedDatabase" : active_feed_database.ActiveFeedDatabase,
+      "EncodedContentFiles": encoded.EncodedContentFiles,
+    }[db_type]
+    self.databases            = [self.db_type("sqlite:///{}".format(pathlib.Path(p).resolve()), must_exist = True) for p in databases]
+    self.features             = {ext: None for ext in extractor.extractors.keys()}
+    self.data_features        = {ext: None for ext in extractor.extractors.keys()}
+    self.unique_data_features = {ext: None for ext in extractor.extractors.keys()}
+    self.tokenizer            = tokenizer
+    self.size_limit           = size_limit
+    return
+
+  def get_features(self, feature_space: str) -> typing.List[typing.Dict[str, float]]:
+    """
+    Get or set and get features for a specific feature space.
+    """
+    if not self.features[feature_space]:
+      self.features[feature_space] = []
+      for db in self.databases:
+        db_feats = db.get_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_features
+        for x in db_feats:
+          try:
+            feats = extractor.RawToDictFeats(x)
+          except Exception as e:
+            l.logger().warn(x)
+          if feature_space in feats and feats[feature_space]:
+            self.features[feature_space].append(feats[feature_space])
+    return self.features[feature_space]
+
+  def get_data_features(self, feature_space: str) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
+    """
+    Get or set feature with data list of tuples.
+    """
+    if not self.data_features[feature_space]:
+      self.data_features[feature_space] = []
+      for db in self.databases:
+        db_feats = db.get_data_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_data_features
+        pool = multiprocessing.Pool()
+        try:
+          for (src, _), feats in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentFeat, db_feats)), total = len(db_feats), desc = "{} data".format(self.group_name)):
+            if feature_space in feats and feats[feature_space]:
+              self.data_features[feature_space].append((src, feats[feature_space]))
+        except Exception as e:
+          l.logger().error(e)
+          pool.terminate()
+          raise e
+        pool.close()
+    return self.data_features[feature_space]
+
+  def get_unique_data_features(self, feature_space: str) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
+    """
+    Get or set feature with data list of tuples.
+    """
+    if not self.unique_data_features[feature_space]:
+      self.unique_data_features[feature_space] = []
+      visited = set()
+      for db in self.databases:
+        db_feats = db.get_data_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_data_features
+        pool = multiprocessing.Pool()
+        try:
+          for (src, _), (sha, feats) in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentHash, db_feats)), total = len(db_feats), desc = "{} unique data".format(self.group_name)):
+            if sha not in visited:
+              visited.add(sha)
+              if feature_space in feats and feats[feature_space]:
+                self.unique_data_features[feature_space].append((src, feats[feature_space]))
+        except Exception as e:
+          l.logger().error(e)
+          pool.terminate()
+          raise e
+        pool.close()
+    return self.unique_data_features[feature_space]
+
+class Benchmark(typing.NamedTuple):
+  path     : pathlib.Path
+  name     : str
+  contents : str
+  features : typing.Dict[str, float]
+
+class TargetBenchmarks(object):
+  """
+  Class representation of target benchmarks.
+  """
+  def __init__(self, target: str):
+    self.target        = target
+    self.benchmark_cfs = feature_sampler.yield_cl_kernels(pathlib.Path(feature_sampler.targets[self.target]).resolve())
+    self.benchmarks    = {ext: [] for ext in extractor.extractors.keys()}
+    l.logger().info("Loaded {} {} benchmarks".format(len(self.benchmark_cfs), self.target))
+    return
+
+  def get_benchmarks(self, feature_space: str):
+    """
+    Get or set and get benchmarks with their features for a feature space.
+    """
+    if not self.benchmarks[feature_space]:
+      for p, k, h in self.benchmark_cfs:
+        features = extractor.ExtractFeatures(k, [feature_space], header_file = h, use_aux_headers = False)
+        if features[feature_space]:
+          self.benchmarks[feature_space].append(
+            Benchmark(
+                p,
+                p.name,
+                k,
+                features[feature_space],
+              )
+          )
+      self.benchmarks[feature_space] = feature_sampler.resolve_benchmark_names(self.benchmarks[feature_space])
+      l.logger().info("Extracted features for {} {} benchmarks".format(len(self.benchmarks[feature_space]), self.target))
+    return self.benchmarks[feature_space]
+
 def AssertIfValid(config: evaluator_pb2.Evaluation):
   """
   Parse config file and check for validity.
@@ -187,7 +318,6 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       )
     elif ev.HasField("topk_cldrive"):
       ### TopKCLDrive
-
       # Generic Fields
       pbutil.AssertFieldIsSet(config, "workspace")
       pbutil.AssertFieldIsSet(config, "tokenizer")
@@ -270,6 +400,10 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         "beam width factor must be positive",
       )
     elif ev.HasField("generate_clsmith"):
+      # Generic Fields
+      pbutil.AssertFieldIsSet(config, "tokenizer")
+      if not pathlib.Path(config.tokenizer).resolve().exists():
+        raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
       # Specialized fields.
       pbutil.AssertFieldIsSet(ev.generate_clsmith, "clsmith_db")
       if not pathlib.Path(ev.generate_clsmith.clsmith_db).resolve().exists():
@@ -287,137 +421,6 @@ def ConfigFromFlags() -> evaluator_pb2.Evaluation:
     raise FileNotFoundError (f"Evaluation --evaluator_config file not found: '{config_path}'")
   config = pbutil.FromFile(config_path, evaluator_pb2.Evaluation())
   return AssertIfValid(config)
-
-class DBGroup(object):
-  """
-  Class representation of a group of databases evaluated.
-  """
-  @property
-  def data(self) -> typing.List[str]:
-    """
-    Get concatenated data of all databases.
-    """
-    if self.data:
-      return self.data
-    else:
-      self.data = []
-      for db in self.databases:
-        if self.db_type == encoded.EncodedContentFiles:
-          self.data += db.get_data(self.size_limit)
-        else:
-          self.data += db.get_data
-
-  def __init__(self, group_name: str, db_type: str, databases: typing.List[pathlib.Path], tokenizer = None, size_limit: int = None):
-    self.group_name = group_name
-    self.db_type = {
-      "SamplesDatabase"    : samples_database.SamplesDatabase,
-      "ActiveFeedDatabase" : active_feed_database.ActiveFeedDatabase,
-      "EncodedContentFiles": encoded.EncodedContentFiles,
-    }[db_type]
-    self.databases            = [self.db_type("sqlite:///{}".format(pathlib.Path(p).resolve()), must_exist = True) for p in databases]
-    self.features             = {ext: None for ext in extractor.extractors.keys()}
-    self.data_features        = {ext: None for ext in extractor.extractors.keys()}
-    self.unique_data_features = {ext: None for ext in extractor.extractors.keys()}
-    self.tokenizer            = tokenizer
-    self.size_limit           = size_limit
-    return
-
-  def get_features(self, feature_space: str) -> typing.List[typing.Dict[str, float]]:
-    """
-    Get or set and get features for a specific feature space.
-    """
-    if not self.features[feature_space]:
-      self.features[feature_space] = []
-      for db in self.databases:
-        db_feats = db.get_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_features
-        for x in db_feats:
-          try:
-            feats = extractor.RawToDictFeats(x)
-          except Exception as e:
-            l.logger().warn(x)
-          if feature_space in feats and feats[feature_space]:
-            self.features[feature_space].append(feats[feature_space])
-    return self.features[feature_space]
-
-  def get_data_features(self, feature_space: str) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
-    """
-    Get or set feature with data list of tuples.
-    """
-    if not self.data_features[feature_space]:
-      self.data_features[feature_space] = []
-      for db in self.databases:
-        db_feats = db.get_data_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_data_features
-        pool = multiprocessing.Pool()
-        try:
-          for (src, _), feats in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentFeat, db_feats)), total = len(db_feats), desc = "{} data".format(self.group_name)):
-            if feature_space in feats and feats[feature_space]:
-              self.data_features[feature_space].append((src, feats[feature_space]))
-        except Exception as e:
-          l.logger().error(e)
-          pool.terminate()
-          raise e
-        pool.close()
-    return self.data_features[feature_space]
-
-  def get_unique_data_features(self, feature_space: str) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
-    """
-    Get or set feature with data list of tuples.
-    """
-    if not self.unique_data_features[feature_space]:
-      self.unique_data_features[feature_space] = []
-      visited = set()
-      for db in self.databases:
-        db_feats = db.get_data_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_data_features
-        pool = multiprocessing.Pool()
-        try:
-          for (src, _), (sha, feats) in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentHash, db_feats)), total = len(db_feats), desc = "{} unique data".format(self.group_name)):
-            if sha not in visited:
-              visited.add(sha)
-              if feature_space in feats and feats[feature_space]:
-                self.unique_data_features[feature_space].append((src, feats[feature_space]))
-        except Exception as e:
-          l.logger().error(e)
-          pool.terminate()
-          raise e
-        pool.close()
-    return self.unique_data_features[feature_space]
-
-class Benchmark(typing.NamedTuple):
-  path     : pathlib.Path
-  name     : str
-  contents : str
-  features : typing.Dict[str, float]
-
-class TargetBenchmarks(object):
-  """
-  Class representation of target benchmarks.
-  """
-  def __init__(self, target: str):
-    self.target        = target
-    self.benchmark_cfs = feature_sampler.yield_cl_kernels(pathlib.Path(feature_sampler.targets[self.target]).resolve())
-    self.benchmarks    = {ext: [] for ext in extractor.extractors.keys()}
-    l.logger().info("Loaded {} {} benchmarks".format(len(self.benchmark_cfs), self.target))
-    return
-
-  def get_benchmarks(self, feature_space: str):
-    """
-    Get or set and get benchmarks with their features for a feature space.
-    """
-    if not self.benchmarks[feature_space]:
-      for p, k, h in self.benchmark_cfs:
-        features = extractor.ExtractFeatures(k, [feature_space], header_file = h, use_aux_headers = False)
-        if features[feature_space]:
-          self.benchmarks[feature_space].append(
-            Benchmark(
-                p,
-                p.name,
-                k,
-                features[feature_space],
-              )
-          )
-      self.benchmarks[feature_space] = feature_sampler.resolve_benchmark_names(self.benchmarks[feature_space])
-      l.logger().info("Extracted features for {} {} benchmarks".format(len(self.benchmarks[feature_space]), self.target))
-    return self.benchmarks[feature_space]
 
 def main(config: evaluator_pb2.Evaluation):
   """
