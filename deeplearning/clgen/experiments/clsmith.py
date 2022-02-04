@@ -155,7 +155,7 @@ def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.Li
     samples.append(
       CLSmithSample.FromArgs(
         id             = idx,
-        sample         = sample,
+        sample         = stdout,
         include        = include,
         encoded_sample = ','.join(encoded_sample),
         compile_status = compile_status,
@@ -182,19 +182,23 @@ def GenerateCLSmith(**kwargs) -> None:
 
   while True:
     chunk_size = 1000
-    db_idx = clsmith_db.count
     f = functools.partial(execute_clsmith, tokenizer = tokenizer, timeout_seconds = 15)
     pool = multiprocessing.Pool()
     try:
-      with clsmith_db.Session() as s:
-        for samples in tqdm.tqdm(pool.imap_unordered(f, range(chunk_size)), total = chunk_size, desc = "Generate CLSmith Samples", leave = False):
-          if samples:
-            for sample in samples:
-              exists = s.query(CLSmithSample.sha256).filter_by(sha256 = sample.sha256).scalar() is not None
-              if not exists:
-                sample.id = db_idx
-                s.add(sample)
-                db_idx += 1
+      entries = []
+      for samples in tqdm.tqdm(pool.imap_unordered(f, range(chunk_size)), total = chunk_size, desc = "Generate CLSmith Samples", leave = False):
+        if samples:
+          for sample in samples:
+            entries.append(sample)
+
+      db_idx = clsmith_db.count
+      with clsmith_db.Session(commit = True) as s:
+        for entry in entries:
+          exists = s.query(CLSmithSample.sha256).filter_by(sha256 = entry.sha256).scalar() is not None
+          if not exists:
+            entry.id = db_idx
+            s.add(entry)
+            db_idx += 1
         s.commit()
     except KeyboardInterrupt as e:
       pool.terminate()
