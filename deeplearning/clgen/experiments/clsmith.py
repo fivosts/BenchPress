@@ -4,8 +4,10 @@ Evaluation script for clsmith mutation program.
 import typing
 import tempfile
 import subprocess
+import multiprocessing
 import pathlib
 import json
+import functools
 import os
 import tqdm
 import math
@@ -13,28 +15,135 @@ import math
 from absl import flags
 
 from deeplearning.clgen.features import extractor
+from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import crypto
 from deeplearning.clgen.experiments import public
 
 FLAGS = flags.FLAGS
 
 CLSMITH = environment.CLSMITH
 
-def ExtractAndCalculate_worker(src             : str,
-                               target_features : typing.Dict[str, float],
-                               feature_space   : str
-                               ) -> typing.Dict[str, float]:
-  """
-  Extract features for source code and calculate distance from target.
+class CLSmithSample(Base, sqlutil.ProtoBackedMixin):
+  """A database row representing a CLgen sample.
 
-  Returns:
-    Tuple of source code with distance.
+  This is the clgen.CLSmithSample protocol buffer in SQL format.
   """
-  f = extractor.ExtractFeatures(src, [feat_space])
-  if feature_space in f and f[feature_space]:
-    return src, feature_sampler.calculate_distance(f[feature_space], target_features, feature_space)
-  return None
+  __tablename__    = "samples"
+  # entry id
+  id                     : int = sql.Column(sql.Integer,    primary_key = True)
+  # unique hash of sample text
+  sha256                 : str = sql.Column(sql.String(64), nullable = False, index = True)
+  # String-format generated kernel
+  sample                 : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # String-format generated header file
+  include                : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # encoded sample text
+  encoded_sample         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Whether the generated sample compiles or not.
+  compile_status         : bool = sql.Column(sql.Boolean,  nullable = False)
+  # CLSmithSample's vector of features.
+  feature_vector         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Length of total sequence in number of tokens
+  num_tokens             : int = sql.Column(sql.Integer,   nullable = False)
+  # Date
+  date_added             : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
+
+  def FromArgs(cls,
+               id      : int,
+               sample  : str,
+               include : str,
+               encoded_sample : str,
+               compile_status : bool,
+               feature_vector : str,
+               num_tokens     : int,
+               ) -> "CLSmithSample":
+    """
+    Do you want to use CLSmithDatabase as a means to store only code
+    without much fuss ? This function is for you!
+    """
+    return CLSmithSample(**{
+      "id"             : id,
+      "sha256"         : crypto.sha256_str(sample + include),
+      "sample"         : sample,
+      "include"        : include,
+      "encoded_sample" : encoded_sample,
+      "compile_status" : compile_status,
+      "feature_vector" : feature_vector,
+      "num_tokens"     : num_tokens,
+      "date_added"     : datetime.datetime.utcnow(),
+    })
+
+class CLSmithDatabase(sqlutil.Database):
+  """A database of CLgen samples."""
+
+  def __init__(self, url: str, must_exist: bool = False):
+    super(CLSmithDatabase, self).__init__(url, Base, must_exist = must_exist)
+
+  @property
+  def count(self):
+    """Number of samples in DB."""
+    with self.Session() as s:
+      count = s.query(CLSmithSample).count()
+    return count
+
+def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.List[CLSmithSample]:
+  """
+  Execute clsmith and return sample.
+  """
+  try:
+    tdir = pathlib.Path(FLAGS.local_filesystem).resolve()
+  except Exception:
+    tdir = None
+
+  with tempfile.NamedTemporaryFile("w", prefix = "clsmith_", suffix = ".cl", dir = tdir) as f:
+    cmd =[
+      "timeout",
+      "-s9",
+      str(timeout_seconds),
+      CLSMITH,
+      "-o",
+      str(f.name)
+    ]
+    process = subprocess.Popen(
+      cmd,
+      stdout = subprocess.PIPE,
+      stderr = subprocess.PIPE,
+      universal_newlines = True,
+    )
+    try:
+      stdout, stderr = process.communicate()
+    except TimeoutError:
+      return None
+
+    contentfile = open(str(f.name), 'r').read()
+
+  ks = opencl.ExtractSingleKernelsHeaders(
+       opencl.StripDoubleUnderscorePrefixes(
+       opencl.ClangPreprocess(contentfile)))
+
+  samples = []
+  for kernel, include in ks:
+    sample = opencl.SequentialNormalizeIdentifiers(k)
+    encoded_sample = tokenizer.AtomizeString(sample)
+    try:
+      stdout = opencl.Compile(sample, header_file = include)
+      compile_status = True
+    except ValueError:
+      compile_status = False
+    samples.append(
+      CLSmithSample.FromArgs(
+        id             = idx,
+        sample         = sample,
+        include        = include,
+        encoded_sample = encoded_sample,
+        compile_status = compile_status,
+        feature_vector = extractor.ExtractRawFeatures(sample, header_file = include),
+        num_tokens     = len(encoded_sample)
+      )
+    )
+  return samples
 
 @public.evaluator
 def GenerateCLSmith(**kwargs) -> None:
@@ -43,14 +152,32 @@ def GenerateCLSmith(**kwargs) -> None:
   Comparison is similar to KAverageScore comparison.
   """
   clsmith_path = kwargs.get('clsmith_path', '')
+  tokenizer    = kwargs.get('tokenizer')
 
   if not pathlib.Path(CLSMITH).exists():
     raise FileNotFoundError("CLSmith executable not found: {}".format(CLSMITH))
 
   # Initialize clsmith database
-  clsmith_db = samples_database.SamplesDatabase(url = "sqlite:///{}".format(str(pathlib.Path(clsmith_path).resolve())), must_exist = False)
+  clsmith_db = samples_database.CLSmithDatabase(url = "sqlite:///{}".format(str(pathlib.Path(clsmith_path).resolve())), must_exist = False)
 
-  ## Somewhere in here you should execute a subprocess command in a while loop.
-  raise NotImplementedError
-
+  try:
+    while True:
+      chunk_size = 1000
+      with clsmith_db.Session(commit = True) as s:
+        db_idx = clsmith_db.count
+        pool = multiprocessing.Pool()
+        f = functools.partial(execute_clsmith, tokenizer = tokenizer, timeout_seconds = 15)
+        try:
+          for sample in tqdm.tqdm(pool.imap_unordered(f, range(db_idx, db_idx + chunk_size)), total = chunk_size, desc = "Generate CLSmith Samples", leave = False):
+            exists = s.query(CLSmithSample.sha256).filter_by(sha256 = sample.sha256).scalar() is not None
+            if not exists:
+              s.add(sample)
+          s.commit()
+        except Exception as e:
+          l.logger().error(e)
+          pool.terminate()
+          raise e
+        pool.close()
+  except KeyboardInterrupt:
+    pool.terminate()
   return
