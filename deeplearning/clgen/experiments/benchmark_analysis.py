@@ -1,6 +1,9 @@
 """
 Target benchmark analysis evaluator.
 """
+from deeplearning.clgen.experiments import public
+
+@public.evaluator
 def AnalyzeTarget(**kwargs) -> None:
   """
   Analyze requested target benchmark suites.
