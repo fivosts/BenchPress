@@ -109,7 +109,7 @@ class CLDriveExecutions(sqlutil.Database):
         if entry is not None:
           session.add(
             CLDriveSample.FromArgs(
-              id     = session.count,
+              id     = self.count,
               sha256 = sha256,
               global_size = global_size,
               local_size = local_size,
