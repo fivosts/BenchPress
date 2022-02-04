@@ -32,6 +32,7 @@ message evaluators {
     CompMemGrewe      comp_mem_grewe      = 5;
     TopKCLDrive       topk_cldrive        = 6;
     MutecVsBenchPress mutec_vs_benchpress = 7;
+    GenerateCLSmith   generate_clsmith    = 8;
   }
 }
 
