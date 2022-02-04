@@ -40,6 +40,7 @@ from deeplearning.clgen.experiments import benchmark_analysis
 from deeplearning.clgen.experiments import distance_score
 from deeplearning.clgen.experiments import comp_vs_mem
 from deeplearning.clgen.experiments import cldrive
+from deeplearning.clgen.experiments import clsmith
 from deeplearning.clgen.experiments import mutec
 from deeplearning.clgen.experiments import workers
 
@@ -59,13 +60,16 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
   """
   Parse config file and check for validity.
   """
-  pbutil.AssertFieldIsSet(config, "workspace")
-  pbutil.AssertFieldIsSet(config, "tokenizer")
-  if not pathlib.Path(config.tokenizer).resolve().exists():
-    raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
   pathlib.Path(config.workspace).resolve().mkdir(exist_ok = True, parents = True)
   for ev in config.evaluator:
     if ev.HasField("k_average_score"):
+      ### KAverageScore
+      # Generic Fields
+      pbutil.AssertFieldIsSet(config, "workspace")
+      pbutil.AssertFieldIsSet(config, "tokenizer")
+      if not pathlib.Path(config.tokenizer).resolve().exists():
+        raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
+      # DB groups
       for dbs in ev.k_average_score.db_group:
         for db in dbs.database:
           p = pathlib.Path(db).resolve()
@@ -78,6 +82,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
+      # Specialized fields.
       pbutil.AssertFieldConstraint(
         ev.k_average_score,
         "target",
@@ -92,6 +97,13 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         "top-K factor must be positive",
       )
     elif ev.HasField("min_score"):
+      ### MinScore
+      # Generic Fields
+      pbutil.AssertFieldIsSet(config, "workspace")
+      pbutil.AssertFieldIsSet(config, "tokenizer")
+      if not pathlib.Path(config.tokenizer).resolve().exists():
+        raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
+      # DB groups
       for dbs in ev.min_score.db_group:
         for db in dbs.database:
           p = pathlib.Path(db).resolve()
@@ -104,6 +116,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
+      # Specialized fields.
       pbutil.AssertFieldConstraint(
         ev.min_score,
         "target",
@@ -112,6 +125,8 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       )
       pbutil.AssertFieldIsSet(ev.min_score, "feature_space")
     elif ev.HasField("analyze_target"):
+      ### AnalyzeTarget
+      # DB groups
       for dbs in ev.analyze_target.db_group:
         for db in dbs.database:
           p = pathlib.Path(db).resolve()
@@ -124,9 +139,12 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
+      # Specialized fields.
       for target in ev.analyze_target.targets:
         assert target in feature_sampler.targets, target
     elif ev.HasField("log_file"):
+      ### LogFile
+      # DB groups
       for dbs in ev.log_file.db_group:
         for db in dbs.database:
           p = pathlib.Path(db).resolve()
@@ -140,6 +158,14 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
     elif ev.HasField("comp_mem_grewe"):
+      ### CompMemGrewe
+
+      # Generic Fields
+      pbutil.AssertFieldIsSet(config, "workspace")
+      pbutil.AssertFieldIsSet(config, "tokenizer")
+      if not pathlib.Path(config.tokenizer).resolve().exists():
+        raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
+      # DB groups
       for dbs in ev.comp_mem_grewe.db_group:
         for db in dbs.database:
           p = pathlib.Path(db).resolve()
@@ -152,6 +178,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
+      # Specialized fields.
       pbutil.AssertFieldConstraint(
         ev.comp_mem_grewe,
         "target",
@@ -159,6 +186,14 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         "target {} not found".format(ev.comp_mem_grewe.target),
       )
     elif ev.HasField("topk_cldrive"):
+      ### TopKCLDrive
+
+      # Generic Fields
+      pbutil.AssertFieldIsSet(config, "workspace")
+      pbutil.AssertFieldIsSet(config, "tokenizer")
+      if not pathlib.Path(config.tokenizer).resolve().exists():
+        raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
+      # DB groups
       for dbs in ev.topk_cldrive.db_group:
         for db in dbs.database:
           p = pathlib.Path(db).resolve()
@@ -171,6 +206,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
+      # Specialized fields.
       pbutil.AssertFieldConstraint(
         ev.topk_cldrive,
         "target",
@@ -188,6 +224,13 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         "top-K factor must be positive",
       )
     elif ev.HasField("mutec_vs_benchpress"):
+      ### MutecVsBenchPress
+      # Generic Fields
+      pbutil.AssertFieldIsSet(config, "workspace")
+      pbutil.AssertFieldIsSet(config, "tokenizer")
+      if not pathlib.Path(config.tokenizer).resolve().exists():
+        raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
+      # DB groups
       if ev.mutec_vs_benchpress.HasField("db_group"):
         raise ValueError("db_group is a placeholder for mutec_vs_benchpress evaluator and should not be used.")
       for dbs in [ev.mutec_vs_benchpress.github, ev.mutec_vs_benchpress.benchpress]:
@@ -202,7 +245,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
-
+      # Specialized fields.
       pbutil.AssertFieldIsSet(ev.mutec_vs_benchpress, "mutec_cache")
       if not pathlib.Path(ev.mutec_vs_benchpress.mutec_cache).resolve().exists():
         l.logger().warn("Mutec cache not found in {}. Will create one from scratch.".format(ev.mutec_vs_benchpress.mutec_cache))
@@ -226,6 +269,11 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         lambda x: x > 0,
         "beam width factor must be positive",
       )
+    elif ev.HasField("generate_clsmith"):
+      # Specialized fields.
+      pbutil.AssertFieldIsSet(ev.generate_clsmith, "clsmith_db")
+      if not pathlib.Path(ev.generate_clsmith.clsmith_db).resolve().exists():
+        l.logger().warn("CLSmith samples DB not found in {}. Will create one from scratch.".format(ev.generate_clsmith.clsmith_db))
     else:
       raise ValueError(ev)
   return config
@@ -382,7 +430,8 @@ def main(config: evaluator_pb2.Evaluation):
     evaluator_pb2.AnalyzeTarget     : benchmark_analysis.AnalyzeTarget,
     evaluator_pb2.CompMemGrewe      : comp_vs_mem.CompMemGrewe,
     evaluator_pb2.TopKCLDrive       : cldrive.TopKCLDrive,
-    evaluator_pb2.MutecVsBenchPress : mutec.MutecVsBenchPress
+    evaluator_pb2.MutecVsBenchPress : mutec.MutecVsBenchPress,
+    evaluator_pb2.GenerateCLSmith   : clsmith.GenerateCLSmith,
   }
   db_cache       = {}
   target_cache   = {}
@@ -390,8 +439,8 @@ def main(config: evaluator_pb2.Evaluation):
   for ev in config.evaluator:
     kw_args = {
       "db_groups"      : [],
-      "tokenizer"      : tokenizers.TokenizerBase.FromFile(pathlib.Path(config.tokenizer).resolve()),
-      "workspace_path" : pathlib.Path(config.workspace).resolve(),
+      "tokenizer"      : tokenizers.TokenizerBase.FromFile(pathlib.Path(config.tokenizer).resolve()) if config.HasField("tokenizer") else None,
+      "workspace_path" : pathlib.Path(config.workspace).resolve() if config.HasField("workspace") else None,
     }
     if ev.HasField("k_average_score"):
       sev = ev.k_average_score
@@ -419,6 +468,9 @@ def main(config: evaluator_pb2.Evaluation):
           size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
           db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
         kw_args[name] = db_cache[key]
+    elif ev.HasField("generate_clsmith"):
+      sev = ev.generate_clsmith
+      kw_args['clsmith_path'] = sev.clsmith_db
     else:
       raise NotImplementedError(ev)
 
