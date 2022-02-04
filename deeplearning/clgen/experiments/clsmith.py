@@ -30,7 +30,7 @@ from deeplearning.clgen.experiments import public
 
 FLAGS = flags.FLAGS
 CLSMITH         = environment.CLSMITH
-CLSMITH_INCLUDE = environment.CLSMITH
+CLSMITH_INCLUDE = environment.CLSMITH_INCLUDE
 
 Base = declarative.declarative_base()
 
