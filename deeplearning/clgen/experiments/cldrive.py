@@ -19,6 +19,7 @@ from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import crypto
+from deeplearning.clgen.util import logging as l
 
 Base = declarative.declarative_base()
 
