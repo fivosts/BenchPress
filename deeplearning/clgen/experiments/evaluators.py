@@ -407,7 +407,7 @@ def main(config: evaluator_pb2.Evaluation):
     elif ev.HasField("topk_cldrive"):
       sev = ev.topk_cldrive
       kw_args['top_k']         = sev.top_k
-      kw_args['cldrive_cache'] = sev.top_k
+      kw_args['cldrive_cache'] = sev.cldrive_cache
     elif ev.HasField("mutec_vs_benchpress"):
       sev = ev.mutec_vs_benchpress
       kw_args['top_k']       = sev.top_k
