@@ -33,6 +33,7 @@ try:
   MUTEC               = check_path_exists(os.environ['MUTEC'], must_exist = False)
   CSMITH              = check_path_exists(os.environ['CSMITH'], must_exist = False)
   CLSMITH             = check_path_exists(os.environ['CLSMITH'], must_exist = False)
+  CLSMITH_INCLUDE     = check_path_exists(os.environ['CLSMITH'], must_exist = False)
   INSTCOUNT           = check_path_exists(os.environ['INSTCOUNT'])
   AUTOPHASE           = check_path_exists(os.environ['AUTOPHASE'])
   MASTER_PORT         = int(os.environ.get("MASTER_PORT", 8738))
