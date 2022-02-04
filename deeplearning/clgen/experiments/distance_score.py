@@ -53,6 +53,7 @@ def KAverageScore(**kwargs) -> None:
   )
   return
 
+@public.evaluator
 def MinScore(**kwargs) -> None:
   """
   Compare the closest sample per target benchmark
