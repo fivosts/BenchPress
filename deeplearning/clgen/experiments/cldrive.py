@@ -64,7 +64,7 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
                id                   : int,
                global_size          : int,
                local_size           : int,
-               src                  : str,
+               source               : str,
                cpu_transfer_time_ns : typing.List[int],
                cpu_kernel_time_ns   : typing.List[int],
                gpu_transfer_time_ns : typing.List[int],
@@ -76,7 +76,7 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
       "sha256"               : crypto.sha256_str(source + str(global_size) + str(local_size)),
       "global_size"          : global_size,
       "local_size"           : local_size,
-      "source"               : src,
+      "source"               : source,
       "cpu_transfer_time_ns" : '\n'.join([str(x) for x in cpu_transfer_time_ns]),
       "cpu_kernel_time_ns"   : '\n'.join([str(x) for x in cpu_kernel_time_ns]),
       "gpu_transfer_time_ns" : '\n'.join([str(x) for x in gpu_transfer_time_ns]),
@@ -103,17 +103,16 @@ class CLDriveExecutions(sqlutil.Database):
     Adds execution entries from pandas dataframe.
     """
     if df is not None:
-      sha256 = crypto.sha256_str(src + str(global_size) + str(local_size))
+      sha = crypto.sha256_str(src + str(global_size) + str(local_size))
       with self.Session(commit = True) as session:
-        entry = session.query(CLDriveSample).filter_by(sha256 = sha256)
+        entry = session.query(CLDriveSample).filter_by(sha256 = sha)
         if entry is not None:
           session.add(
             CLDriveSample.FromArgs(
-              id     = self.count,
-              sha256 = sha256,
+              id          = self.count,
               global_size = global_size,
-              local_size = local_size,
-              source = src,
+              local_size  = local_size,
+              source      = src,
               cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
               cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
               gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
