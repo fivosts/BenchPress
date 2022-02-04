@@ -488,11 +488,11 @@ def CompileLlvmBytecode(text: str, header_file = None, use_aux_headers: bool = T
   )
 
 def CompileOptimizer(text: str,
-                     optimization: typing.List[str],
-                     timeout_seconds: int = 60,
-                     header_file: str = None,
-                     use_aux_headers: bool = True,
-                     extra_args: typing.List[str] = []
+                     optimization    : typing.List[str],
+                     timeout_seconds : int = 60,
+                     header_file     : str = None,
+                     use_aux_headers : bool = True,
+                     extra_args      : typing.List[str] = []
                      ) -> str:
   """Compile source code to IR and apply optimization pass to source code.
   Args:
@@ -510,7 +510,7 @@ def CompileOptimizer(text: str,
   )
 
 @public.clgen_preprocessor
-def Compile(text: str, header_file = None, use_aux_headers = True, extra_args: typing.List[str] = [], return_diagnostics = False) -> str:
+def Compile(text: str, header_file = None, use_aux_headers = True, extra_args = [], return_diagnostics = False) -> str:
   """Check that the OpenCL source compiles.
 
   This does not modify the input.
@@ -783,7 +783,7 @@ def StringKernelsToSource(text: str) -> str:
     return text
 
 @public.clgen_preprocessor
-def NormalizeIdentifiers(text: str, extra_args: typing.List[str] = []) -> str:
+def NormalizeIdentifiers(text: str, extra_args = []) -> str:
   """Normalize identifiers in OpenCL source code.
 
   Args:
@@ -801,7 +801,7 @@ def NormalizeIdentifiers(text: str, extra_args: typing.List[str] = []) -> str:
   )
 
 @public.clgen_preprocessor
-def SequentialNormalizeIdentifiers(text: str, extra_args: typing.List[str] = []) -> str:
+def SequentialNormalizeIdentifiers(text: str, extra_args = []) -> str:
   """Normalize identifiers sequentially in OpenCL source code.
 
   Args:
