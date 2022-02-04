@@ -183,16 +183,18 @@ def GenerateCLSmith(**kwargs) -> None:
   try:
     while True:
       chunk_size = 1000
+      db_idx = clsmith_db.count
       with clsmith_db.Session() as s:
-        db_idx = clsmith_db.count
         pool = multiprocessing.Pool()
         f = functools.partial(execute_clsmith, tokenizer = tokenizer, timeout_seconds = 15)
         try:
-          for samples in tqdm.tqdm(pool.imap_unordered(f, range(db_idx, db_idx + chunk_size)), total = chunk_size, desc = "Generate CLSmith Samples", leave = False):
+          for samples in tqdm.tqdm(pool.imap_unordered(f, range(db_idx, db_idx)), total = chunk_size, desc = "Generate CLSmith Samples", leave = False):
             for sample in samples:
               exists = s.query(CLSmithSample.sha256).filter_by(sha256 = sample.sha256).scalar() is not None
               if not exists:
+                sample.id = db_idx
                 s.add(sample)
+                db_idx += 1
           s.commit()
         except Exception as e:
           l.logger().error(e)
