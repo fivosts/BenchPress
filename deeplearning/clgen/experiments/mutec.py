@@ -44,6 +44,8 @@ def generate_mutants(src: str, timeout_seconds: int = 15) -> typing.List[str]:
       f.flush()
     except UnicodeDecodeError:
       return []
+    except UnicodeEncodeError:
+      return []
 
     # Fix compile_commands.json for source file.
     base_path = pathlib.Path(f.name).resolve().parent
