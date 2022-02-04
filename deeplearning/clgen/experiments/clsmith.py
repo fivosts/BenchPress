@@ -59,6 +59,7 @@ class CLSmithSample(Base, sqlutil.ProtoBackedMixin):
   # Date
   date_added             : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
+  @classmethod
   def FromArgs(cls,
                id      : int,
                sample  : str,
@@ -131,22 +132,20 @@ def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.Li
 
   try:
     ks = opencl.ExtractSingleKernelsHeaders(
-          opencl.StripDoubleUnderscorePrefixes(
-            opencl.ClangPreprocess(
-              c.StripIncludes(contentfile),
-              extra_args = extra_args 
-            ),
-            extra_args = extra_args
-          ),
-          extra_args = extra_args
-        )
+           opencl.StripDoubleUnderscorePrefixes(
+             opencl.ClangPreprocess(
+               c.StripIncludes(contentfile),
+               extra_args = extra_args,
+             )
+           )
+         )
   except ValueError as e:
     l.logger().error(contentfile)
     raise e
 
   samples = []
   for kernel, include in ks:
-    sample = opencl.SequentialNormalizeIdentifiers(k)
+    sample = opencl.SequentialNormalizeIdentifiers(kernel, extra_args = extra_args)
     encoded_sample = tokenizer.AtomizeString(sample)
     try:
       stdout = opencl.Compile(sample, header_file = include, extra_args = extra_args)
@@ -189,10 +188,11 @@ def GenerateCLSmith(**kwargs) -> None:
         pool = multiprocessing.Pool()
         f = functools.partial(execute_clsmith, tokenizer = tokenizer, timeout_seconds = 15)
         try:
-          for sample in tqdm.tqdm(pool.imap_unordered(f, range(db_idx, db_idx + chunk_size)), total = chunk_size, desc = "Generate CLSmith Samples", leave = False):
-            exists = s.query(CLSmithSample.sha256).filter_by(sha256 = sample.sha256).scalar() is not None
-            if not exists:
-              s.add(sample)
+          for samples in tqdm.tqdm(pool.imap_unordered(f, range(db_idx, db_idx + chunk_size)), total = chunk_size, desc = "Generate CLSmith Samples", leave = False):
+            for sample in samples:
+              exists = s.query(CLSmithSample.sha256).filter_by(sha256 = sample.sha256).scalar() is not None
+              if not exists:
+                s.add(sample)
           s.commit()
         except Exception as e:
           l.logger().error(e)
