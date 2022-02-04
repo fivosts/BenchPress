@@ -448,45 +448,7 @@ def main(config: evaluator_pb2.Evaluation):
     if ev.HasField("k_average_score"):
       sev = ev.k_average_score
       kw_args['top_k'] = sev.top_k
-    elif ev.HasField("min_score"):
-      sev = ev.min_score
-    elif ev.HasField("analyze_target"):
-      sev = ev.analyze_target
-    elif ev.HasField("log_file"):
-      sev = ev.log_file
-    elif ev.HasField("comp_mem_grewe"):
-      sev = ev.comp_mem_grewe
-    elif ev.HasField("topk_cldrive"):
-      sev = ev.topk_cldrive
-      kw_args['top_k']         = sev.top_k
-      kw_args['cldrive_cache'] = sev.cldrive_cache
-    elif ev.HasField("mutec_vs_benchpress"):
-      sev = ev.mutec_vs_benchpress
-      kw_args['top_k']       = sev.top_k
-      kw_args['mutec_cache'] = sev.mutec_cache
-      kw_args['beam_width']  = sev.beam_width
-      for name, dbs in [('github', sev.github), ('benchpress', sev.benchpress)]:
-        key = dbs.group_name + ''.join(dbs.database)
-        if key not in db_cache:
-          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
-          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
-        kw_args[name] = db_cache[key]
-    elif ev.HasField("generate_clsmith"):
-      sev = ev.generate_clsmith
-      kw_args['clsmith_path'] = sev.clsmith_db
-    else:
-      raise NotImplementedError(ev)
-
-    # Gather database groups and cache them.
-    if not ev.HasField("mutec_vs_benchpress") and not ev.HasField("generate_clsmith"):
-      for dbs in sev.db_group:
-        key = dbs.group_name + ''.join(dbs.database)
-        if key not in db_cache:
-          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
-          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
-        kw_args['db_groups'].append(db_cache[key])
-    # Gather target benchmarks and cache them
-    if sev.HasField("target"):
+      # Gather target benchmarks and cache them
       if isinstance(sev.target, list):
         kw_args["targets"] = []
         for t in sev.target:
@@ -497,12 +459,186 @@ def main(config: evaluator_pb2.Evaluation):
         if sev.target not in target_cache:
           target_cache[sev.target] = TargetBenchmarks(sev.target)
         kw_args["targets"] = target_cache[sev.target]
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
     # Gather feature spaces if applicable.
     if sev.HasField("feature_space"):
       kw_args['feature_space'] = sev.feature_space
     # Gather plotter configuration
     if sev.HasField("plot_config"):
       kw_args['plot_config'] = sev.plot_config
+
+    elif ev.HasField("min_score"):
+      sev = ev.min_score
+      # Gather target benchmarks and cache them
+      if isinstance(sev.target, list):
+        kw_args["targets"] = []
+        for t in sev.target:
+          if t not in target_cache:
+            target_cache[t] = TargetBenchmarks(t)
+          kw_args["targets"].append(target_cache[t])
+      else:
+        if sev.target not in target_cache:
+          target_cache[sev.target] = TargetBenchmarks(sev.target)
+        kw_args["targets"] = target_cache[sev.target]
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
+    # Gather feature spaces if applicable.
+    if sev.HasField("feature_space"):
+      kw_args['feature_space'] = sev.feature_space
+    # Gather plotter configuration
+    if sev.HasField("plot_config"):
+      kw_args['plot_config'] = sev.plot_config
+
+    elif ev.HasField("analyze_target"):
+      sev = ev.analyze_target
+      # Gather target benchmarks and cache them
+      if isinstance(sev.target, list):
+        kw_args["targets"] = []
+        for t in sev.target:
+          if t not in target_cache:
+            target_cache[t] = TargetBenchmarks(t)
+          kw_args["targets"].append(target_cache[t])
+      else:
+        if sev.target not in target_cache:
+          target_cache[sev.target] = TargetBenchmarks(sev.target)
+        kw_args["targets"] = target_cache[sev.target]
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
+    # Gather feature spaces if applicable.
+    if sev.HasField("feature_space"):
+      kw_args['feature_space'] = sev.feature_space
+    # Gather plotter configuration
+    if sev.HasField("plot_config"):
+      kw_args['plot_config'] = sev.plot_config
+
+    elif ev.HasField("log_file"):
+      sev = ev.log_file
+      # Gather target benchmarks and cache them
+      if isinstance(sev.target, list):
+        kw_args["targets"] = []
+        for t in sev.target:
+          if t not in target_cache:
+            target_cache[t] = TargetBenchmarks(t)
+          kw_args["targets"].append(target_cache[t])
+      else:
+        if sev.target not in target_cache:
+          target_cache[sev.target] = TargetBenchmarks(sev.target)
+        kw_args["targets"] = target_cache[sev.target]
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
+    # Gather feature spaces if applicable.
+    if sev.HasField("feature_space"):
+      kw_args['feature_space'] = sev.feature_space
+    # Gather plotter configuration
+    if sev.HasField("plot_config"):
+      kw_args['plot_config'] = sev.plot_config
+
+    elif ev.HasField("comp_mem_grewe"):
+      sev = ev.comp_mem_grewe
+      # Gather target benchmarks and cache them
+      if isinstance(sev.target, list):
+        kw_args["targets"] = []
+        for t in sev.target:
+          if t not in target_cache:
+            target_cache[t] = TargetBenchmarks(t)
+          kw_args["targets"].append(target_cache[t])
+      else:
+        if sev.target not in target_cache:
+          target_cache[sev.target] = TargetBenchmarks(sev.target)
+        kw_args["targets"] = target_cache[sev.target]
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
+    # Gather feature spaces if applicable.
+    if sev.HasField("feature_space"):
+      kw_args['feature_space'] = sev.feature_space
+    # Gather plotter configuration
+    if sev.HasField("plot_config"):
+      kw_args['plot_config'] = sev.plot_config
+
+    elif ev.HasField("topk_cldrive"):
+      sev = ev.topk_cldrive
+      kw_args['top_k']         = sev.top_k
+      kw_args['cldrive_cache'] = sev.cldrive_cache
+      # Gather target benchmarks and cache them
+      if isinstance(sev.target, list):
+        kw_args["targets"] = []
+        for t in sev.target:
+          if t not in target_cache:
+            target_cache[t] = TargetBenchmarks(t)
+          kw_args["targets"].append(target_cache[t])
+      else:
+        if sev.target not in target_cache:
+          target_cache[sev.target] = TargetBenchmarks(sev.target)
+        kw_args["targets"] = target_cache[sev.target]
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
+    # Gather feature spaces if applicable.
+    if sev.HasField("feature_space"):
+      kw_args['feature_space'] = sev.feature_space
+    # Gather plotter configuration
+    if sev.HasField("plot_config"):
+      kw_args['plot_config'] = sev.plot_config
+
+    elif ev.HasField("mutec_vs_benchpress"):
+      sev = ev.mutec_vs_benchpress
+      kw_args['top_k']       = sev.top_k
+      kw_args['mutec_cache'] = sev.mutec_cache
+      kw_args['beam_width']  = sev.beam_width
+      # Gather target benchmarks and cache them
+      if isinstance(sev.target, list):
+        kw_args["targets"] = []
+        for t in sev.target:
+          if t not in target_cache:
+            target_cache[t] = TargetBenchmarks(t)
+          kw_args["targets"].append(target_cache[t])
+      else:
+        if sev.target not in target_cache:
+          target_cache[sev.target] = TargetBenchmarks(sev.target)
+        kw_args["targets"] = target_cache[sev.target]
+      for name, dbs in [('github', sev.github), ('benchpress', sev.benchpress)]:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args[name] = db_cache[key]
+    # Gather feature spaces if applicable.
+    if sev.HasField("feature_space"):
+      kw_args['feature_space'] = sev.feature_space
+    # Gather plotter configuration
+    if sev.HasField("plot_config"):
+      kw_args['plot_config'] = sev.plot_config
+
+    elif ev.HasField("generate_clsmith"):
+      sev = ev.generate_clsmith
+      kw_args['clsmith_path'] = sev.clsmith_db
+
+    else:
+      raise NotImplementedError(ev)
 
     evaluation_map[type(sev)](**kw_args)
   return
