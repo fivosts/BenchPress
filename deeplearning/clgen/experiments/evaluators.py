@@ -465,12 +465,12 @@ def main(config: evaluator_pb2.Evaluation):
           size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
           db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
         kw_args['db_groups'].append(db_cache[key])
-    # Gather feature spaces if applicable.
-    if sev.HasField("feature_space"):
-      kw_args['feature_space'] = sev.feature_space
-    # Gather plotter configuration
-    if sev.HasField("plot_config"):
-      kw_args['plot_config'] = sev.plot_config
+      # Gather feature spaces if applicable.
+      if sev.HasField("feature_space"):
+        kw_args['feature_space'] = sev.feature_space
+      # Gather plotter configuration
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = sev.plot_config
 
     elif ev.HasField("min_score"):
       sev = ev.min_score
@@ -491,12 +491,12 @@ def main(config: evaluator_pb2.Evaluation):
           size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
           db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
         kw_args['db_groups'].append(db_cache[key])
-    # Gather feature spaces if applicable.
-    if sev.HasField("feature_space"):
-      kw_args['feature_space'] = sev.feature_space
-    # Gather plotter configuration
-    if sev.HasField("plot_config"):
-      kw_args['plot_config'] = sev.plot_config
+      # Gather feature spaces if applicable.
+      if sev.HasField("feature_space"):
+        kw_args['feature_space'] = sev.feature_space
+      # Gather plotter configuration
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = sev.plot_config
 
     elif ev.HasField("analyze_target"):
       sev = ev.analyze_target
@@ -517,12 +517,12 @@ def main(config: evaluator_pb2.Evaluation):
           size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
           db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
         kw_args['db_groups'].append(db_cache[key])
-    # Gather feature spaces if applicable.
-    if sev.HasField("feature_space"):
-      kw_args['feature_space'] = sev.feature_space
-    # Gather plotter configuration
-    if sev.HasField("plot_config"):
-      kw_args['plot_config'] = sev.plot_config
+      # Gather feature spaces if applicable.
+      if sev.HasField("feature_space"):
+        kw_args['feature_space'] = sev.feature_space
+      # Gather plotter configuration
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = sev.plot_config
 
     elif ev.HasField("log_file"):
       sev = ev.log_file
@@ -543,12 +543,12 @@ def main(config: evaluator_pb2.Evaluation):
           size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
           db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
         kw_args['db_groups'].append(db_cache[key])
-    # Gather feature spaces if applicable.
-    if sev.HasField("feature_space"):
-      kw_args['feature_space'] = sev.feature_space
-    # Gather plotter configuration
-    if sev.HasField("plot_config"):
-      kw_args['plot_config'] = sev.plot_config
+      # Gather feature spaces if applicable.
+      if sev.HasField("feature_space"):
+        kw_args['feature_space'] = sev.feature_space
+      # Gather plotter configuration
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = sev.plot_config
 
     elif ev.HasField("comp_mem_grewe"):
       sev = ev.comp_mem_grewe
@@ -569,12 +569,12 @@ def main(config: evaluator_pb2.Evaluation):
           size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
           db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
         kw_args['db_groups'].append(db_cache[key])
-    # Gather feature spaces if applicable.
-    if sev.HasField("feature_space"):
-      kw_args['feature_space'] = sev.feature_space
-    # Gather plotter configuration
-    if sev.HasField("plot_config"):
-      kw_args['plot_config'] = sev.plot_config
+      # Gather feature spaces if applicable.
+      if sev.HasField("feature_space"):
+        kw_args['feature_space'] = sev.feature_space
+      # Gather plotter configuration
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = sev.plot_config
 
     elif ev.HasField("topk_cldrive"):
       sev = ev.topk_cldrive
@@ -597,12 +597,12 @@ def main(config: evaluator_pb2.Evaluation):
           size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
           db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
         kw_args['db_groups'].append(db_cache[key])
-    # Gather feature spaces if applicable.
-    if sev.HasField("feature_space"):
-      kw_args['feature_space'] = sev.feature_space
-    # Gather plotter configuration
-    if sev.HasField("plot_config"):
-      kw_args['plot_config'] = sev.plot_config
+      # Gather feature spaces if applicable.
+      if sev.HasField("feature_space"):
+        kw_args['feature_space'] = sev.feature_space
+      # Gather plotter configuration
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = sev.plot_config
 
     elif ev.HasField("mutec_vs_benchpress"):
       sev = ev.mutec_vs_benchpress
@@ -626,12 +626,12 @@ def main(config: evaluator_pb2.Evaluation):
           size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
           db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
         kw_args[name] = db_cache[key]
-    # Gather feature spaces if applicable.
-    if sev.HasField("feature_space"):
-      kw_args['feature_space'] = sev.feature_space
-    # Gather plotter configuration
-    if sev.HasField("plot_config"):
-      kw_args['plot_config'] = sev.plot_config
+      # Gather feature spaces if applicable.
+      if sev.HasField("feature_space"):
+        kw_args['feature_space'] = sev.feature_space
+      # Gather plotter configuration
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = sev.plot_config
 
     elif ev.HasField("generate_clsmith"):
       sev = ev.generate_clsmith
