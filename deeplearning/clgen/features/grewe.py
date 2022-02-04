@@ -26,8 +26,9 @@ class GreweFeatures(object):
   @classmethod
   def ExtractFeatures(cls,
                       src: str,
-                      header_file: str = None,
-                      use_aux_headers: bool = True
+                      header_file     : str = None,
+                      use_aux_headers : bool = True,
+                      extra_args      : typing.List[str] = [],
                       ) -> typing.Dict[str, float]:
     """
     Invokes clgen_features extractor on source code and return feature mappings
@@ -36,14 +37,16 @@ class GreweFeatures(object):
     If the code has syntax errors, features will not be obtained and empty dict
     is returned.
     """
+    del extra_args # Unused param.
     str_features = cls.ExtractRawFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers)
     return cls.RawToDictFeats(str_features)
 
   @classmethod
   def ExtractRawFeatures(cls,
                          src: str,
-                         header_file: str = None,
-                         use_aux_headers: bool = True
+                         header_file     : str = None,
+                         use_aux_headers : bool = True,
+                         extra_args      : typing.List[str] = [],
                          ) -> str:
     """
     Invokes clgen_features extractor on a single kernel.
@@ -53,6 +56,7 @@ class GreweFeatures(object):
     Returns:
       Feature vector and diagnostics in str format.
     """
+    del extra_args # Unused param.
     try:
       tdir = FLAGS.local_filesystem
     except Exception:
