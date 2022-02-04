@@ -150,8 +150,10 @@ def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.Li
     try:
       stdout = opencl.Compile(sample, header_file = include, extra_args = extra_args)
       compile_status = True
-    except ValueError:
+    except ValueError as e:
+      stdout = e
       compile_status = False
+
     samples.append(
       CLSmithSample.FromArgs(
         id             = idx,
