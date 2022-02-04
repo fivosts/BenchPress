@@ -133,10 +133,7 @@ def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.Li
   try:
     ks = opencl.ExtractSingleKernelsHeaders(
            opencl.StripDoubleUnderscorePrefixes(
-             opencl.ClangPreprocess(
                c.StripIncludes(contentfile),
-               extra_args = extra_args,
-             )
            )
          )
   except ValueError as e:
@@ -145,10 +142,9 @@ def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.Li
 
   samples = []
   for kernel, include in ks:
-    sample = opencl.SequentialNormalizeIdentifiers(kernel, extra_args = extra_args)
-    encoded_sample = tokenizer.AtomizeString(sample)
+    encoded_sample = tokenizer.AtomizeString(kernel)
     try:
-      stdout = opencl.Compile(sample, header_file = include, extra_args = extra_args)
+      stdout = opencl.Compile(kernel, header_file = include, extra_args = extra_args)
       compile_status = True
     except ValueError as e:
       stdout = str(e)
@@ -161,7 +157,7 @@ def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.Li
         include        = include,
         encoded_sample = ','.join(encoded_sample),
         compile_status = compile_status,
-        feature_vector = extractor.ExtractRawFeatures(sample, header_file = include, extra_args = extra_args),
+        feature_vector = extractor.ExtractRawFeatures(kernel, header_file = include, extra_args = extra_args),
         num_tokens     = len(encoded_sample)
       )
     )
