@@ -7,11 +7,15 @@ import subprocess
 import multiprocessing
 import pathlib
 import json
+import datetime
+import sqlite3
 import functools
 import os
 import tqdm
 import math
 
+import sqlalchemy as sql
+from sqlalchemy.ext import declarative
 from absl import flags
 
 from deeplearning.clgen.features import extractor
@@ -19,18 +23,21 @@ from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import crypto
+from deeplearning.clgen.util import sqlutil
+from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.experiments import public
 
 FLAGS = flags.FLAGS
-
 CLSMITH = environment.CLSMITH
+
+Base = declarative.declarative_base()
 
 class CLSmithSample(Base, sqlutil.ProtoBackedMixin):
   """A database row representing a CLgen sample.
 
   This is the clgen.CLSmithSample protocol buffer in SQL format.
   """
-  __tablename__    = "samples"
+  __tablename__    = "clsmith_samples"
   # entry id
   id                     : int = sql.Column(sql.Integer,    primary_key = True)
   # unique hash of sample text
