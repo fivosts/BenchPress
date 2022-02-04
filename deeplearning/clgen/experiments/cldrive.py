@@ -98,7 +98,7 @@ class CLDriveExecutions(sqlutil.Database):
   def __init__(self, url: str, must_exist: bool = False):
     super(CLDriveExecutions, self).__init__(url, Base, must_exist = must_exist)
 
-  def add(src: str, global_size: int, local_size: int, df: pandas.DataFrame) -> None:
+  def add(self, src: str, global_size: int, local_size: int, df: pandas.DataFrame) -> None:
     """
     Adds execution entries from pandas dataframe.
     """
