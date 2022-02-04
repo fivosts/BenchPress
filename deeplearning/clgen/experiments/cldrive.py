@@ -98,35 +98,35 @@ class CLDriveExecutions(sqlutil.Database):
   def __init__(self, url: str, must_exist: bool = False):
     super(CLDriveExecutions, self).__init__(url, Base, must_exist = must_exist)
 
-  def add(self, src: str, global_size: int, local_size: int, df: pandas.DataFrame) -> None:
-    """
-    Adds execution entries from pandas dataframe.
-    """
-    if df is not None:
-      sha = crypto.sha256_str(src + str(global_size) + str(local_size))
-      with self.Session(commit = True) as session:
-        entry = session.query(CLDriveSample).filter_by(sha256 = sha)
-        if entry is not None:
-          session.add(
-            CLDriveSample.FromArgs(
-              id          = self.count,
-              global_size = global_size,
-              local_size  = local_size,
-              source      = src,
-              cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
-              cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
-              gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
-              gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
-              transferred_bytes    = int(df.transferred_bytes[0]),
-            )
+def add_file(db: CLDriveExecutions, src: str, global_size: int, local_size: int, df: pandas.DataFrame) -> None:
+  """
+  Adds execution entries from pandas dataframe.
+  """
+  if df is not None:
+    sha = crypto.sha256_str(src + str(global_size) + str(local_size))
+    with db.Session(commit = True) as session:
+      entry = session.query(CLDriveSample).filter_by(sha256 = sha)
+      if entry is not None:
+        session.add(
+          CLDriveSample.FromArgs(
+            id          = db.count,
+            global_size = global_size,
+            local_size  = local_size,
+            source      = src,
+            cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
+            cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
+            gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
+            gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
+            transferred_bytes    = int(df.transferred_bytes[0]),
           )
-        else:
-          entry.cpu_transfer_time_ns = entry.cpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].transfer_time_ns])
-          entry.cpu_kernel_time_ns   = entry.cpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].cpu_kernel_time_ns])
-          entry.gpu_transfer_time_ns = entry.gpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].gpu_transfer_time_ns])
-          entry.gpu_kernel_time_ns   = entry.gpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].gpu_kernel_time_ns])
-        session.commit()
-    return
+        )
+      else:
+        entry.cpu_transfer_time_ns = entry.cpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].transfer_time_ns])
+        entry.cpu_kernel_time_ns   = entry.cpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].cpu_kernel_time_ns])
+        entry.gpu_transfer_time_ns = entry.gpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].gpu_transfer_time_ns])
+        entry.gpu_kernel_time_ns   = entry.gpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].gpu_kernel_time_ns])
+      session.commit()
+  return
 
 def TopKCLDrive(**kwargs) -> None:
   """
@@ -184,7 +184,7 @@ def TopKCLDrive(**kwargs) -> None:
               bench_runs = bench_runs // 10
           if benchmark_label not in {"CPU", "GPU"}:
             continue
-          cldrive_db.add(benchmark.contents, gsize, lsize, df)
+          add_file(cldrive_db, benchmark.contents, gsize, lsize, df)
 
           ## Fix dictionary entry.
           config = "g{}-l{}".format(gs, ls)
@@ -217,12 +217,12 @@ def TopKCLDrive(**kwargs) -> None:
             while label == "TimeOut" and c_runs > 0:
               try:
                 df, label = opencl.CLDriveDataFrame(src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 200)
-                cldrive_db.add(src, gsize, lsize, df)
+                add_file(cldrive_db, src, gsize, lsize, df)
               except TimeoutError:
                 c_runs = c_runs // 10
             if label not in {"CPU", "GPU"}:
               continue
-            cldrive_db.add(src, gsize, lsize, df)
+            add_file(cldrive_db, src, gsize, lsize, df)
             l.logger().error("Label: {}, distance: {}".format(label, dist))
             if len(groups[config][dbg.group_name][1]) - 1 < idx:
               groups[config][dbg.group_name][1].append([dist])
