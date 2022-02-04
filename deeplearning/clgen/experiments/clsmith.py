@@ -165,7 +165,7 @@ def GenerateCLSmith(**kwargs) -> None:
     raise FileNotFoundError("CLSmith executable not found: {}".format(CLSMITH))
 
   # Initialize clsmith database
-  clsmith_db = samples_database.CLSmithDatabase(url = "sqlite:///{}".format(str(pathlib.Path(clsmith_path).resolve())), must_exist = False)
+  clsmith_db = CLSmithDatabase(url = "sqlite:///{}".format(str(pathlib.Path(clsmith_path).resolve())), must_exist = False)
 
   try:
     while True:
