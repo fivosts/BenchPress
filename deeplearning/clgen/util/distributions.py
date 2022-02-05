@@ -152,3 +152,30 @@ class ProgLinearDistribution(Distribution):
 
   def sample(self):
     return
+
+class UnknownDistribution(Distribution):
+  """
+  A small sample distribution of datapoints
+  that we don't know what distribution they follow. Used
+  to perform statistics on small samples.
+  """
+  @classmethod
+  def FromConvolution(d1: "UnknownDistribution", d2: "UnknownDistribution") -> "UnknownDistribution":
+    ## If you take the raw samples, it makes more sense to use dot-dot-multiplication and then construct the distribution.
+    ## If you use the dictionaries, maybe you should do convolution
+    return
+
+  def __init__(self, samples: typing.List[int]):
+    super(UnknownDistribution, self).__init__(
+      sample_length   = len(samples),
+      relative_length = float('NaN'),
+      log_path        = log_path,
+      set_name        = set_name,
+    )
+    self.distribution = {}
+    for s in samples:
+      if s in self.distribution:
+        self.distribution[s] = 1
+      else:
+        self.distribution[s] += 1
+    return
