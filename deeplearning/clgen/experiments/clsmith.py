@@ -98,6 +98,26 @@ class CLSmithDatabase(sqlutil.Database):
       count = s.query(CLSmithSample).count()
     return count
 
+  def get_features(self, sequence_length: int = None) -> typing.List[str]:
+    """
+    Get feature vectors of training instances within the specified sequence length.
+    """
+    with self.Session() as session:
+      if sequence_length:
+        return [x.feature_vector for x in session.query(CLSmithSample).filter(CLSmithSample.num_tokens <= sequence_length).all()]
+      else:
+        return [x.feature_vector for x in session.query(CLSmithSample).all()]
+
+  def get_data_features(self, tokenizer, sequence_length: int = None) -> typing.List[typing.Tuple[str, str]]:
+    """
+    Collect list of source with features
+    """
+    with self.Session() as session:
+      if sequence_length:
+        return [(tokenizer.ArrayToCode(x.indices_array, with_formatting = False), x.feature_vector) for x in session.query(CLSmithSample).filter(CLSmithSample.num_tokens <= sequence_length).all()]
+      else:
+        return [(tokenizer.ArrayToCode(x.indices_array, with_formatting = False), x.feature_vector) for x in session.query(CLSmithSample).all()]
+
 def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.List[CLSmithSample]:
   """
   Execute clsmith and return sample.
