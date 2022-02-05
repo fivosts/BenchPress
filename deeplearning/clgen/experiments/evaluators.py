@@ -364,8 +364,8 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       # DB groups
       if ev.mutec_vs_benchpress.HasField("db_group"):
         raise ValueError("db_group is a placeholder for mutec_vs_benchpress evaluator and should not be used.")
-      for dbs in [ev.mutec_vs_benchpress.github, ev.mutec_vs_benchpress.benchpress]:
-        for db in ev.mutec_vs_benchpress.github.database:
+      for dbs in [ev.mutec_vs_benchpress.seed, ev.mutec_vs_benchpress.benchpress]:
+        for db in ev.mutec_vs_benchpress.seed.database:
           p = pathlib.Path(db).resolve()
           if not p.exists():
             raise FileNotFoundError(p)
@@ -621,7 +621,7 @@ def main(config: evaluator_pb2.Evaluation):
         if sev.target not in target_cache:
           target_cache[sev.target] = TargetBenchmarks(sev.target)
         kw_args["targets"] = target_cache[sev.target]
-      for name, dbs in [('github', sev.github), ('benchpress', sev.benchpress)]:
+      for name, dbs in [('seed', sev.seed), ('benchpress', sev.benchpress)]:
         key = dbs.group_name + ''.join(dbs.database)
         if key not in db_cache:
           size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
