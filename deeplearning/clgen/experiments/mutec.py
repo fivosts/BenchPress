@@ -30,8 +30,9 @@ from deeplearning.clgen.experiments import clsmith
 FLAGS = flags.FLAGS
 
 MUTEC = environment.MUTEC
+CLSMITH_INCLUDE = environment.CLSMITH_INCLUDE
 
-def generate_mutants(src: str, timeout_seconds: int = 15) -> typing.List[str]:
+def generate_mutants(src: str, incl: str, timeout_seconds: int = 15) -> typing.Set[typing.Tuple[str, str]]:
   """
   Collect all mutants from src and return them
   """
@@ -49,14 +50,19 @@ def generate_mutants(src: str, timeout_seconds: int = 15) -> typing.List[str]:
     except UnicodeEncodeError:
       return []
 
+    if incl:
+      with open("/tmp/mutec_src_temp_header.h", 'w') as f:
+        f.write(incl)
+        f.flush()
+
     # Fix compile_commands.json for source file.
     base_path = pathlib.Path(f.name).resolve().parent
     compile_command = {
       'directory' : str(base_path),
-      'arguments' : 
-            [str(clang.CLANG), f.name] +
-            ["-S", "-emit-llvm", "-o", "-"] +
-            opencl.GetClangArgs(use_shim = False, use_aux_headers = False),
+      'arguments' : [str(clang.CLANG), f.name] +
+                    ["-S", "-emit-llvm", "-o", "-"] +
+                    opencl.GetClangArgs(use_shim = False, use_aux_headers = False, extra_args = ["-include{}".format(pathlib.Path(CLSMITH_INCLUDE) / "CLSmith.h")] if incl else None) +
+                    "-include/tmp/mutec_src_temp_header.h" if incl else "",
       'file'      : str(f.name)
     }
     with open(base_path / "compile_commands.json", 'w') as ccf:
@@ -85,15 +91,16 @@ def generate_mutants(src: str, timeout_seconds: int = 15) -> typing.List[str]:
 
     mutec_paths = glob.glob("{}.mutec*".format(f.name))
     templates   = glob.glob("{}.code_template".format(f.name))
-    mutants = set([open(x, 'r').read() for x in mutec_paths])
+    mutants = set([(open(x, 'r').read(), incl) for x in mutec_paths])
 
   for m in mutec_paths:
     os.remove(m)
   for m in templates:
     os.remove(m)
+  os.remove("/tmp/mutec_src_temp_header.h")
   return mutants
 
-def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
+def beam_mutec(srcs            : typing.List[typing.Tuple[str, str, float]],
                target_features : typing.Dict[str, float],
                feat_space      : str,
                beam_width      : int,
@@ -111,15 +118,15 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
 
     cands = set()
     ## Generate mutants for current generation.
-    for src, dist in tqdm.tqdm(srcs, total = len(srcs), desc = "Mutec candidates {}".format(gen_id), leave = False):
-      cands.update(generate_mutants(src)) ### This should collect all mutants and return them, out of a single source.
+    for src, incl, dist in tqdm.tqdm(srcs, total = len(srcs), desc = "Mutec candidates {}".format(gen_id), leave = False):
+      cands.update(generate_mutants(src, incl)) ### This should collect all mutants and return them, out of a single source.
 
     ## Extract their features and calculate distances.
     pool = multiprocessing.Pool()
     f = functools.partial(
           workers.ExtractAndCalculate,
           target_features = target_features,
-          feature_space = feat_space
+          feature_space = feat_space,
         )
     # total.update(cands)
     try:
@@ -134,11 +141,11 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
 
     ## Sort by distance in ascending order. If score is better, keep doing beam search
     ## srcs are included to the outputs, in order to keep them if the offsprings are worse.
-    closest = sorted(beam + srcs, key = lambda x: x[1])[:beam_width]
-    total_beams.update([x for x, _ in closest])
+    closest = sorted(beam + srcs, key = lambda x: x[2])[:beam_width]
+    total_beams.update([(x, y) for x, y, _ in closest])
 
     min_length = min(len(closest), len(srcs))
-    if sum([x for _, x in closest[:min_length]]) < sum([x for _, x in srcs[:min_length]]):
+    if sum([x for _, _, x in closest[:min_length]]) < sum([x for _, _, x in srcs[:min_length]]):
       srcs = closest
       beam = []
     else:
@@ -148,13 +155,12 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, float]],
   ## Store all mutants in database.
   with mutec_cache.Session(commit = True) as s:
     pool = multiprocessing.Pool()
-    f = functools.partial(workers.FeatureExtractor)
     try:
       idx = mutec_cache.count
-      for dp in tqdm.tqdm(pool.imap_unordered(f, total_beams), total = len(total_beams), desc = "Add mutants to DB", leave = False):
+      for dp in tqdm.tqdm(pool.imap_unordered(workers.FeatureExtractor, total_beams), total = len(total_beams), desc = "Add mutants to DB", leave = False):
         if dp:
-          src, feats = dp
-          sample = samples_database.Sample.FromArgsLite(idx, src, feats)
+          src, incl, feats = dp
+          sample = samples_database.Sample.FromArgsLite(idx, incl + src, feats)
           exists = s.query(samples_database.Sample.sha256).filter_by(sha256 = sample.sha256).scalar() is not None
           if not exists:
             s.add(sample)
@@ -229,7 +235,7 @@ def MutecVsBenchPress(**kwargs) -> None:
     ## the code.
 
     # Split source and distances lists.
-    git_dist = [x for _, x in closest]
+    git_dist = [x for _, _, x in closest]
 
     ## If distances are already minimized, nothing to do.
     if sum(git_dist[:top_k]) == 0:
@@ -237,8 +243,8 @@ def MutecVsBenchPress(**kwargs) -> None:
 
     l.logger().info(benchmark.name)
 
-    closest_mutec_src  = beam_mutec([(x,y) for x, y in closest[:beam_width] if y > 0], benchmark.features, feature_space, beam_width, mutec_db)[:top_k] # tuple of (src, distance)
-    closest_mutec_dist = [x for _, x in closest_mutec_src]
+    closest_mutec_src  = beam_mutec([(src, inc, y) for x, inc, y in closest[:beam_width] if y > 0], benchmark.features, feature_space, beam_width, mutec_db)[:top_k] # tuple of (src, distance)
+    closest_mutec_dist = [x for _, _, x in closest_mutec_src]
 
     assert len(closest_mutec_dist) == len(git_dist[:top_k])
     ## If mutec has provided a better score
