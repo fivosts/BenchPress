@@ -13,9 +13,9 @@ evaluator {
       database: "/var/foivos/results/full_results/BERT/Autophase/unique_merged_samples.db"
     }
     seed {
-      group_name: "GitHub"
-      db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
+      group_name: "CLSmith"
+      db_type: "CLSmithDatabase"
+      database: "/var/foivos/results/full_results/CLSmith/clsmith.db"
     }
   }
 }
@@ -32,9 +32,9 @@ evaluator {
       database: "/var/foivos/results/full_results/BERT/Instcount/unique_merged_samples.db"
     }
     seed {
-      group_name: "GitHub"
-      db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
+      group_name: "CLSmith"
+      db_type: "CLSmithDatabase"
+      database: "/var/foivos/results/full_results/CLSmith/clsmith.db"
     }
   }
 }
@@ -52,9 +52,9 @@ evaluator {
       database: "/var/foivos/results/full_results/BERT/Grewe/unique_merged_samples.db"
     }
     seed {
-      group_name: "GitHub"
-      db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
+      group_name: "CLSmith"
+      db_type: "CLSmithDatabase"
+      database: "/var/foivos/results/full_results/CLSmith/clsmith.db"
     }
   }
 }
