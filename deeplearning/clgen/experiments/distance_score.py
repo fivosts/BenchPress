@@ -8,6 +8,7 @@ from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.experiments import public
+from deeplearning.clgen.experiments import workers
 
 @public.evaluator
 def KAverageScore(**kwargs) -> None:
@@ -37,7 +38,7 @@ def KAverageScore(**kwargs) -> None:
       else:
         get_data = lambda x: dbg.get_data_features(x)
 
-      distances = SortedDistances(get_data(feature_space), benchmark.features, feature_space)
+      distances = workers.SortedDistances(get_data(feature_space), benchmark.features, feature_space)
       # Compute target's distance from O(0,0)
       assert len(distances) != 0, "Sorted src list for {} is empty!".format(dbg.group_name)
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
