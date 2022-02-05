@@ -1,6 +1,7 @@
 """Statistical distributions used for sampling"""
 import pathlib
 import typing
+import math
 import numpy as np
 
 from deeplearning.clgen.proto import model_pb2
@@ -167,14 +168,17 @@ class GenericDistribution(Distribution):
       set_name        = set_name,
     )
     self.min_idx, self.max_idx = math.inf, -math.inf
-    for s in sample:
-      if s > self.max_idx:
-        self.max_idx = s
-      if s < self.min_idx:
-        self.min_idx = s
-    self.distribution = [0] * abs(1 + self.max_idx - self.min_idx)
-    for s in samples:
-      self.distribution[s - self.min_idx] += 1
+    if len(samples) > 0:
+      for s in samples:
+        if s > self.max_idx:
+          self.max_idx = s
+        if s < self.min_idx:
+          self.min_idx = s
+      self.distribution = [0] * abs(1 + self.max_idx - self.min_idx)
+      for s in samples:
+        self.distribution[s - self.min_idx] += 1
+    else:
+      self.distribution = []
     return
 
   def __add__(self, d: "GenericDistribution") -> "GenericDistribution":
@@ -184,19 +188,33 @@ class GenericDistribution(Distribution):
 
     P[X1=X + X2=Y] = P[X1=X] ** P[X2=Y] = Σn Σk (Pd1[k] * Pd2[n-k])
     """
-    min_idx = min(self.min_idx, d.min_idx)
-
     if self.min_idx > d.min_idx:
       d1 = self.realign(self.min_idx - d.min_idx)
-      d2 = d
+      d2 = d.distribution
     else:
-      d1 = self
       d2 = d.realign(d.min_idx - self.min_idx)
+      d1 = self.distribution
 
-    added_distr = np.convolve(d1, d2)
+    if len(d1) > len(d2):
+      d2 = d2 + [0] * (len(d1) - len(d2))
+    else:
+      d1 = d1 + [0] * (len(d2) - len(d1))
+
     ret = GenericDistribution([], self.log_path, "{}+{}".format(self.set_name, d.set_name))
+
+    summed  = list(np.convolve(d1, d2, mode = 'full'))
+    min_idx = ((len(d1) // 2) + min(self.min_idx, d.min_idx)) - (len(summed) // 2)
+    max_idx = len(summed) - 1 + min_idx
+    while summed[0] == 0:
+      summed.pop(0)
+      min_idx += 1
+    while summed[-1] == 0:
+      summed.pop()
+      max_idx -= 1
+
+    ret.distribution = summed
     ret.min_idx = min_idx
-    ret.max_idx = len(added_distr) + min_idx
+    ret.max_idx = max_idx
     return ret
 
   def __sub__(self, d: "GenericDistribution") -> "GenericDistribution":
@@ -213,7 +231,7 @@ class GenericDistribution(Distribution):
     """
     Probability of P[X >= v]
     """
-    voffset = v + self.min_idx
+    voffset = v - self.min_idx
     hits  = 0
     total = 0
     for idx, s in enumerate(self.distribution):
@@ -226,7 +244,7 @@ class GenericDistribution(Distribution):
     """
     Probability of P[X > v]
     """
-    voffset = v + self.min_idx
+    voffset = v - self.min_idx
     hits  = 0
     total = 0
     for idx, s in enumerate(self.distribution):
@@ -239,7 +257,7 @@ class GenericDistribution(Distribution):
     """
     Probability of P[X <= v]
     """
-    voffset = v + self.min_idx
+    voffset = v - self.min_idx
     hits  = 0
     total = 0
     for idx, s in enumerate(self.distribution):
@@ -252,7 +270,7 @@ class GenericDistribution(Distribution):
     """
     Probability of P[X < v]
     """
-    voffset = v + self.min_idx
+    voffset = v - self.min_idx
     hits  = 0
     total = 0
     for idx, s in enumerate(self.distribution):
@@ -265,7 +283,7 @@ class GenericDistribution(Distribution):
     """
     Probability of P[X = v]
     """
-    voffset = v + self.min_idx
+    voffset = v - self.min_idx
     hits  = 0
     total = 0
     for idx, s in enumerate(self.distribution):
@@ -278,11 +296,8 @@ class GenericDistribution(Distribution):
     """
     Inverts distribution: P[Y] -> P[-Y]
     """
-    neg_distr = []
-    for idx in self.distribution[::-1]:
-      neg_distr.append(ix)
     neg = GenericDistribution([], self.log_path, "neg-{}".format(self.set_name))
-    neg.distribution = neg_distr
+    neg.distribution = self.distribution[::-1]
     neg.min_idx = -self.max_idx
     neg.max_idx = -self.min_idx
     return neg
