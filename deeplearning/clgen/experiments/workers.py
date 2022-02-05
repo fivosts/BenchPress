@@ -40,7 +40,7 @@ def ContentFeat(db_feat: typing.Tuple[str, str]) -> typing.Dict[str, float]:
 def ExtractAndCalculate(src_incl        : typing.Tuple[str, str],
                         target_features : typing.Dict[str, float],
                         feature_space   : str
-                        ) -> typing.Dict[str, str, float]:
+                        ) -> typing.Tuple[str, str, float]:
   """
   Extract features for source code and calculate distance from target.
 
