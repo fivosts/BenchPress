@@ -153,29 +153,147 @@ class ProgLinearDistribution(Distribution):
   def sample(self):
     return
 
-class UnknownDistribution(Distribution):
+class GenericDistribution(Distribution):
   """
   A small sample distribution of datapoints
   that we don't know what distribution they follow. Used
   to perform statistics on small samples.
   """
-  @classmethod
-  def FromConvolution(d1: "UnknownDistribution", d2: "UnknownDistribution") -> "UnknownDistribution":
-    ## If you take the raw samples, it makes more sense to use dot-dot-multiplication and then construct the distribution.
-    ## If you use the dictionaries, maybe you should do convolution
-    return
-
-  def __init__(self, samples: typing.List[int]):
-    super(UnknownDistribution, self).__init__(
+  def __init__(self, samples: typing.List[int], log_path: pathlib.Path, set_name: str):
+    super(GenericDistribution, self).__init__(
       sample_length   = len(samples),
       relative_length = float('NaN'),
       log_path        = log_path,
       set_name        = set_name,
     )
-    self.distribution = {}
+    self.min_idx, self.max_idx = math.inf, -math.inf
+    for s in sample:
+      if s > self.max_idx:
+        self.max_idx = s
+      if s < self.min_idx:
+        self.min_idx = s
+    self.distribution = [0] * abs(1 + self.max_idx - self.min_idx)
     for s in samples:
-      if s in self.distribution:
-        self.distribution[s] = 1
-      else:
-        self.distribution[s] += 1
+      self.distribution[s - self.min_idx] += 1
     return
+
+  def __add__(self, d: "GenericDistribution") -> "GenericDistribution":
+    """
+    The addition of two distribution happens with convolution.
+    For two discrete distributions d1, d2:
+
+    P[X1=X + X2=Y] = P[X1=X] ** P[X2=Y] = Σn Σk (Pd1[k] * Pd2[n-k])
+    """
+    min_idx = min(self.min_idx, d.min_idx)
+
+    if self.min_idx > d.min_idx:
+      d1 = self.realign(self.min_idx - d.min_idx)
+      d2 = d
+    else:
+      d1 = self
+      d2 = d.realign(d.min_idx - self.min_idx)
+
+    added_distr = np.convolve(d1, d2)
+    ret = GenericDistribution([], self.log_path, "{}+{}".format(self.set_name, d.set_name))
+    ret.min_idx = min_idx
+    ret.max_idx = len(added_distr) + min_idx
+    return ret
+
+  def __sub__(self, d: "GenericDistribution") -> "GenericDistribution":
+    """
+    Subtraction of distributions is equal to addition of inverted distribution.
+    P[X - Y] = P[X + (-Y)]
+    """
+    neg = d.negate(d)
+    sub = self + neg
+    sub.set_name = "{}-{}".format(self.set_name, d.set_name)
+    return sub
+
+  def __ge__(self, v: int) -> float:
+    """
+    Probability of P[X >= v]
+    """
+    voffset = v + self.min_idx
+    hits  = 0
+    total = 0
+    for idx, s in enumerate(self.distribution):
+      if idx >= voffset:
+        hits += s
+      total += s
+    return hits / total
+
+  def __gt__(self, v: int) -> float:
+    """
+    Probability of P[X > v]
+    """
+    voffset = v + self.min_idx
+    hits  = 0
+    total = 0
+    for idx, s in enumerate(self.distribution):
+      if idx > voffset:
+        hits += s
+      total += s
+    return hits / total
+
+  def __le__(self, v: int) -> float:
+    """
+    Probability of P[X <= v]
+    """
+    voffset = v + self.min_idx
+    hits  = 0
+    total = 0
+    for idx, s in enumerate(self.distribution):
+      if idx <= voffset:
+        hits += s
+      total += s
+    return hits / total
+
+  def __lt__(self, v: int) -> float:
+    """
+    Probability of P[X < v]
+    """
+    voffset = v + self.min_idx
+    hits  = 0
+    total = 0
+    for idx, s in enumerate(self.distribution):
+      if idx < voffset:
+        hits += s
+      total += s
+    return hits / total
+
+  def __eq__(self, v: int) -> float:
+    """
+    Probability of P[X = v]
+    """
+    voffset = v + self.min_idx
+    hits  = 0
+    total = 0
+    for idx, s in enumerate(self.distribution):
+      if idx == voffset:
+        hits += s
+      total += s
+    return hits / total
+
+  def negate(self) -> "GenericDistribution":
+    """
+    Inverts distribution: P[Y] -> P[-Y]
+    """
+    neg_distr = []
+    for idx in self.distribution[::-1]:
+      neg_distr.append(ix)
+    neg = GenericDistribution([], self.log_path, "neg-{}".format(self.set_name))
+    neg.distribution = neg_distr
+    neg.min_idx = -self.max_idx
+    neg.max_idx = -self.min_idx
+    return neg
+
+  def realign(self, offset: int) -> typing.List[int]:
+    """
+    When performing operations with distributions,
+    both distributions must have the same reference as to
+    what index does array's 0th index refers to.
+
+    This function slides to the right, the index array
+    that is leftmost, and aligns it with the others.
+    """
+    return [0] * offset + self.distribution
