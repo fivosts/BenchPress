@@ -32,6 +32,11 @@ FLAGS = flags.FLAGS
 MUTEC = environment.MUTEC
 CLSMITH_INCLUDE = environment.CLSMITH_INCLUDE
 
+## Some hard limits in order to finish the experiments this year.
+# max amount of mutants per input source.
+PER_INPUT_HARD_LIMIT = 1000
+SEARCH_DEPTH_HARD_LIMIT = 30
+
 def generate_mutants(src: str, incl: str, timeout_seconds: int = 15) -> typing.Set[typing.Tuple[str, str]]:
   """
   Collect all mutants from src and return them
@@ -91,7 +96,7 @@ def generate_mutants(src: str, incl: str, timeout_seconds: int = 15) -> typing.S
 
     mutec_paths = glob.glob("{}.mutec*".format(f.name))
     templates   = glob.glob("{}.code_template".format(f.name))
-    mutants = set([(open(x, 'r').read(), incl) for x in mutec_paths])
+    mutants = set([(open(x, 'r').read(), incl) for x in mutec_paths[:PER_INPUT_HARD_LIMIT]])
 
   for m in mutec_paths:
     os.remove(m)
@@ -145,7 +150,7 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, str, float]],
     total_beams.update([(x, y) for x, y, _ in closest])
 
     min_length = min(len(closest), len(srcs))
-    if sum([x for _, _, x in closest[:min_length]]) < sum([x for _, _, x in srcs[:min_length]]):
+    if sum([x for _, _, x in closest[:min_length]]) < sum([x for _, _, x in srcs[:min_length]]) and gen_id < SEARCH_DEPTH_HARD_LIMIT:
       srcs = closest
       beam = []
     else:
