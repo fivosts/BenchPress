@@ -67,7 +67,7 @@ def generate_mutants(src: str, incl: str, timeout_seconds: int = 15) -> typing.S
       'arguments' : [str(clang.CLANG), f.name] +
                     ["-S", "-emit-llvm", "-o", "-"] +
                     opencl.GetClangArgs(use_shim = False, use_aux_headers = False, extra_args = ["-include{}".format(pathlib.Path(CLSMITH_INCLUDE) / "CLSmith.h")] if incl else None) +
-                    "-include/tmp/mutec_src_temp_header.h" if incl else "",
+                    ["-include/tmp/mutec_src_temp_header.h" if incl else ""],
       'file'      : str(f.name)
     }
     with open(base_path / "compile_commands.json", 'w') as ccf:
