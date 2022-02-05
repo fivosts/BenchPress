@@ -257,22 +257,22 @@ def TopKCLDrive(**kwargs) -> None:
             l.logger().info(benchmark.name)
             closest_src = workers.SortedSrcDistances(get_data(feature_space), benchmark.features, feature_space)
           l.logger().info("global size: {}, local size: {}".format(gs, ls))
-          l.logger().error("Benchmark label: {}".format(benchmark_label))
+          l.logger().error("Benchmark label: {}".format("CPU:{}/GPU:{}".format(prob_labels['CPU'], prob_labels['GPU'])))
 
           cand_idx = 0
-          for idx, (src, dist) in enumerate(closest_src):
+          for idx, (src, incl, dist) in enumerate(closest_src):
             if cand_idx >= top_k:
               break
             label  = "TimeOut"
             c_runs = nruns
             while label == "TimeOut" and c_runs > 0:
               try:
-                df, label = opencl.CLDriveDataFrame(src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 200)
+                df, label = opencl.CLDriveDataFrame(incl + src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 200)
               except TimeoutError:
                 c_runs = c_runs // 10
             if label not in {"CPU", "GPU"}:
               continue
-            cldrive_db.add_entry(src, gs, ls, df)
+            cldrive_db.add_entry(incl + src, gs, ls, df)
             times = cldrive_db.get_execution_times(benchmark.contents, gs, ls)
             if times:
               ctt, ckt, gtt, gkt = times
@@ -284,11 +284,11 @@ def TopKCLDrive(**kwargs) -> None:
             if len(groups[config][dbg.group_name][1]) - 1 < idx:
               groups[config][dbg.group_name][1].append([dist])
               groups[config][dbg.group_name][2].append(["CPU:{}/GPU:{}".format(prob_labels['CPU'], prob_labels['GPU'])])
-              groups[config][dbg.group_name][3].append([src])
+              groups[config][dbg.group_name][3].append([incl + src])
             else:
               groups[config][dbg.group_name][1][idx].append(dist)
               groups[config][dbg.group_name][2][idx].append("CPU:{}/GPU:{}".format(prob_labels['CPU'], prob_labels['GPU']))
-              groups[config][dbg.group_name][3][idx].append(src)
+              groups[config][dbg.group_name][3][idx].append(incl + src)
             cand_idx += 1
             # Some thoughts: Maybe a dedicated plot to show distribution of execution times, etc. ?
             # In here you basically need the label.
