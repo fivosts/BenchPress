@@ -37,7 +37,7 @@ CLSMITH_INCLUDE = environment.CLSMITH_INCLUDE
 PER_INPUT_HARD_LIMIT = 1000
 SEARCH_DEPTH_HARD_LIMIT = 30
 
-def generate_mutants(src: str, incl: str, timeout_seconds: int = 15) -> typing.Set[typing.Tuple[str, str]]:
+def generate_mutants(src: str, incl: str, timeout_seconds: int = 45) -> typing.Set[typing.Tuple[str, str]]:
   """
   Collect all mutants from src and return them
   """
