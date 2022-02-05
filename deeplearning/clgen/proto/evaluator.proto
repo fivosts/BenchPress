@@ -96,7 +96,7 @@ message MutecVsBenchPress {
   optional int32                top_k         = 3;
   optional int32                beam_width    = 4;
   optional string               mutec_cache   = 5;
-  optional DatabasesGroups      github        = 6;
+  optional DatabasesGroups      seed          = 6;
   optional DatabasesGroups      benchpress    = 7;
   optional PlotterConfiguration plot_config   = 8;
   optional DatabasesGroups      db_group      = 9; // Dummy selector, not used.
