@@ -123,7 +123,7 @@ class DBGroup(object):
               src, _ = inp
               include = None
             else:
-              src, include = inp
+              src, include, _ = inp
             if feature_space in feats and feats[feature_space]:
               self.data_features[feature_space].append((src, include, feats[feature_space]))
         except Exception as e:
@@ -149,7 +149,7 @@ class DBGroup(object):
               src, _ = inp
               include = None
             else:
-              src, include = inp
+              src, include, _ = inp
             if sha not in visited:
               visited.add(sha)
               if feature_space in feats and feats[feature_space]:
