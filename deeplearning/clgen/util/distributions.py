@@ -121,34 +121,34 @@ class NormalDistribution(Distribution):
       sample = int(round(np.random.RandomState().normal(loc = self.mean, scale = self.variance)))
     return sample
 
-  class ProgLinearDistribution(Distribution):
-    """
-    A sampling distribution used in training per stage mode.
-    Distribution starts with empty or tiny holes and
-    gradually progresses into sampling bigger holes while still
-    feeding small holes as well, until max hole length is met.
-    Gradual increase is an interval based on number of stages
-    and number of train steps.
+class ProgLinearDistribution(Distribution):
+  """
+  A sampling distribution used in training per stage mode.
+  Distribution starts with empty or tiny holes and
+  gradually progresses into sampling bigger holes while still
+  feeding small holes as well, until max hole length is met.
+  Gradual increase is an interval based on number of stages
+  and number of train steps.
 
-    Cumulative stage distribution appears as negative linear.
-    At any given moment, probability of selecting a hole
-    length should be uniform.
+  Cumulative stage distribution appears as negative linear.
+  At any given moment, probability of selecting a hole
+  length should be uniform.
 
-    Parameters:
-      number of stages
-      number of training steps
-      max hole length
-    """
-    def __init__(self,
-                 num_train_steps : int,
-                 max_hole_length : int,
-                 log_path        : typing.Union[pathlib.Path, str],
-                 set_name        : str,
-                 ):
-      super(ProgLinearDistribution, self).__init__(
-        max_hole_length, log_path, set_name
-      )
-      self.num_train_steps = num_train_steps
+  Parameters:
+    number of stages
+    number of training steps
+    max hole length
+  """
+  def __init__(self,
+               num_train_steps : int,
+               max_hole_length : int,
+               log_path        : typing.Union[pathlib.Path, str],
+               set_name        : str,
+               ):
+    super(ProgLinearDistribution, self).__init__(
+      max_hole_length, log_path, set_name
+    )
+    self.num_train_steps = num_train_steps
 
-    def sample(self):
-      return
+  def sample(self):
+    return
