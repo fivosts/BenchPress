@@ -118,9 +118,14 @@ class DBGroup(object):
         db_feats = db.get_data_features(self.tokenizer, self.size_limit) if (self.db_type == encoded.EncodedContentFiles or self.db_type == clsmith.CLSmithDatabase) else db.get_data_features
         pool = multiprocessing.Pool()
         try:
-          for (src, _), feats in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentFeat, db_feats)), total = len(db_feats), desc = "{} data".format(self.group_name)):
+          for inp, feats in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentFeat, db_feats)), total = len(db_feats), desc = "{} data".format(self.group_name)):
+            if len(inp) == 2:
+              src, _ = inp
+              include = None
+            else:
+              src, include = inp
             if feature_space in feats and feats[feature_space]:
-              self.data_features[feature_space].append((src, feats[feature_space]))
+              self.data_features[feature_space].append((src, include, feats[feature_space]))
         except Exception as e:
           l.logger().error(e)
           pool.terminate()
@@ -139,11 +144,16 @@ class DBGroup(object):
         db_feats = db.get_data_features(self.tokenizer, self.size_limit) if (self.db_type == encoded.EncodedContentFiles or self.db_type == clsmith.CLSmithDatabase) else db.get_data_features
         pool = multiprocessing.Pool()
         try:
-          for (src, _), (sha, feats) in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentHash, db_feats)), total = len(db_feats), desc = "{} unique data".format(self.group_name)):
+          for inp, (sha, feats) in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentHash, db_feats)), total = len(db_feats), desc = "{} unique data".format(self.group_name)):
+            if len(inp) == 2:
+              src, _ = inp
+              include = None
+            else:
+              src, include = inp
             if sha not in visited:
               visited.add(sha)
               if feature_space in feats and feats[feature_space]:
-                self.unique_data_features[feature_space].append((src, feats[feature_space]))
+                self.unique_data_features[feature_space].append((src, include, feats[feature_space]))
         except Exception as e:
           l.logger().error(e)
           pool.terminate()
