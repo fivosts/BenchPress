@@ -248,7 +248,7 @@ def MutecVsBenchPress(**kwargs) -> None:
 
     l.logger().info(benchmark.name)
 
-    closest_mutec_src  = beam_mutec([(src, inc, y) for x, inc, y in closest[:beam_width] if y > 0], benchmark.features, feature_space, beam_width, mutec_db)[:top_k] # tuple of (src, distance)
+    closest_mutec_src  = beam_mutec([(src, inc, dist) for src, inc, dist in closest[:beam_width] if dist > 0], benchmark.features, feature_space, beam_width, mutec_db)[:top_k] # tuple of (src, distance)
     closest_mutec_dist = [x for _, _, x in closest_mutec_src]
 
     assert len(closest_mutec_dist) == len(git_dist[:top_k])
