@@ -141,7 +141,7 @@ class CLDriveExecutions(sqlutil.Database):
     sha = crypto.sha256_str(src + str(global_size) + str(local_size))
     ctt, ckt, gtt, gkt = [], [], [], []
     with self.Session() as session:
-      entry = session.query(CLDriveSample).filter_by(sha256 = sha)
+      entry = session.query(CLDriveSample).filter_by(sha256 = sha).first()
       if entry is None:
         return None
       else:
