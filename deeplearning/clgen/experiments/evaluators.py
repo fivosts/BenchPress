@@ -121,7 +121,7 @@ class DBGroup(object):
           for inp, feats in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentFeat, db_feats)), total = len(db_feats), desc = "{} data".format(self.group_name)):
             if len(inp) == 2:
               src, _ = inp
-              include = None
+              include = ""
             else:
               src, include, _ = inp
             if feature_space in feats and feats[feature_space]:
@@ -147,7 +147,7 @@ class DBGroup(object):
           for inp, (sha, feats) in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentHash, db_feats)), total = len(db_feats), desc = "{} unique data".format(self.group_name)):
             if len(inp) == 2:
               src, _ = inp
-              include = None
+              include = ""
             else:
               src, include, _ = inp
             if sha not in visited:
