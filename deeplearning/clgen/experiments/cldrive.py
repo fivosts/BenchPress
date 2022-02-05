@@ -8,7 +8,7 @@ import pickle
 import math
 import pathlib
 import typing
-import pandas
+import pandas as pd
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
@@ -19,6 +19,7 @@ from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import crypto
+from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.experiments import workers
 from deeplearning.clgen.experiments import public
@@ -100,7 +101,7 @@ class CLDriveExecutions(sqlutil.Database):
   def __init__(self, url: str, must_exist: bool = False):
     super(CLDriveExecutions, self).__init__(url, Base, must_exist = must_exist)
 
-  def add_entry(self, src: str, global_size: int, local_size: int, df: pandas.DataFrame) -> None:
+  def add_entry(self, src: str, global_size: int, local_size: int, df: pd.DataFrame) -> None:
     """
     Adds execution entries from pandas dataframe.
     """
@@ -132,6 +133,51 @@ class CLDriveExecutions(sqlutil.Database):
       except Exception:
         l.logger().warn(df)
     return
+
+  def get_execution_times(self, src: str, global_size: int, local_size: int) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
+    """
+    Search code by hash and return lists with all different execution times.
+    """
+    sha = crypto.sha256_str(src + str(global_size) + str(local_size))
+    ctt, ckt, gtt, gkt = [], [], [], []
+    with self.Session() as session:
+      entry = session.query(CLDriveSample).filter_by(sha256 = sha)
+      if entry is None:
+        return None
+      else:
+        ctt = [int(x) for x in entry.cpu_transfer_time_ns.split('\n')]
+        ckt = [int(x) for x in entry.cpu_kernel_time_ns.split('\n')]
+        gtt = [int(x) for x in entry.gpu_transfer_time_ns.split('\n')]
+        gkt = [int(x) for x in entry.gpu_kernel_time_ns.split('\n')]
+    return ctt, ckt, gtt, gkt
+
+def ComputeLabel(cpu_transfer : typing.List[int],
+                 cpu_execute  : typing.List[int],
+                 gpu_transfer : typing.List[int],
+                 gpu_execute  : typing.List[int],
+                 workspace    : pathlib.Path,
+                 ) -> typing.Dict[str, float]:
+  """
+  Collects execution metrics of kernels, computes statistical
+  distribution of execution times and returns optimal device
+  to execute with certainty metrics.
+  """
+  cput_dist = distributions.GenericDistribution(cpu_transfer, workspace, "cpu_transfer_time")
+  cpue_dist = distributions.GenericDistribution(cpu_transfer, workspace, "cpu_execution_time")
+  gput_dist = distributions.GenericDistribution(cpu_transfer, workspace, "gpu_transfer_time")
+  gpue_dist = distributions.GenericDistribution(cpu_transfer, workspace, "gpu_execution_time")
+
+  ## P[CPUt + CPUe] and P[GPUt + GPUe].
+  cpu_dist = cput_dist + cpue_dist
+  gpu_dist = gput_dist + gpue_dist
+
+  ## P[CPU - GPU]
+  dist = cput_dist + gpu_dist.negate()
+
+  return {
+    "CPU": dist < 0,
+    "GPU": dist > 0,
+  }
 
 @public.evaluator
 def TopKCLDrive(**kwargs) -> None:
@@ -172,16 +218,9 @@ def TopKCLDrive(**kwargs) -> None:
         for ls in lsize:
           if ls > gs:
             continue
-
-          ## Set-up number of runs.
-          nruns = 10**4
-          if gs > 2**13:
-            nruns = 10**3
-          if gs > 2**15:
-            nruns = 10**2
-
           ## Run cldrive on benchmark.
           benchmark_label = "TimeOut"
+          nruns = 10**3
           bench_runs = nruns
           while benchmark_label == "TimeOut" and bench_runs > 0:
             try:
@@ -191,6 +230,12 @@ def TopKCLDrive(**kwargs) -> None:
           if benchmark_label not in {"CPU", "GPU"}:
             continue
           cldrive_db.add_entry(benchmark.contents, gs, ls, df)
+          times = cldrive_db.get_execution_times(benchmark.contents, gs, ls)
+          if times:
+            ctt, ckt, gtt, gkt = times
+            prob_labels = ComputeLabel(ctt, ckt, gtt, gkt, workspace_path)
+          else:
+            raise ValueError("Why can you not find a file you just inserted ?")
 
           ## Fix dictionary entry.
           config = "g{}-l{}".format(gs, ls)
@@ -202,7 +247,7 @@ def TopKCLDrive(**kwargs) -> None:
           groups[config][dbg.group_name][0].append(
             {
               'benchmark_name'     : benchmark.name,
-              'benchmark_label'    : benchmark_label,
+              'benchmark_label'    : "CPU:{}/GPU:{}".format(prob_labels['CPU'], prob_labels['GPU']),
               'benchmark_contents' : benchmark.contents
             }
           )
@@ -228,14 +273,21 @@ def TopKCLDrive(**kwargs) -> None:
             if label not in {"CPU", "GPU"}:
               continue
             cldrive_db.add_entry(src, gs, ls, df)
-            l.logger().error("Label: {}, distance: {}".format(label, dist))
+            times = cldrive_db.get_execution_times(benchmark.contents, gs, ls)
+            if times:
+              ctt, ckt, gtt, gkt = times
+              prob_labels = ComputeLabel(ctt, ckt, gtt, gkt, workspace_path)
+            else:
+              raise ValueError("Why can you not find a file you just inserted ?")
+
+            l.logger().error("Label: {}, distance: {}".format("CPU:{}/GPU:{}".format(prob_labels['CPU'], prob_labels['GPU']), dist))
             if len(groups[config][dbg.group_name][1]) - 1 < idx:
               groups[config][dbg.group_name][1].append([dist])
-              groups[config][dbg.group_name][2].append([label])
+              groups[config][dbg.group_name][2].append(["CPU:{}/GPU:{}".format(prob_labels['CPU'], prob_labels['GPU'])])
               groups[config][dbg.group_name][3].append([src])
             else:
               groups[config][dbg.group_name][1][idx].append(dist)
-              groups[config][dbg.group_name][2][idx].append(label)
+              groups[config][dbg.group_name][2][idx].append("CPU:{}/GPU:{}".format(prob_labels['CPU'], prob_labels['GPU']))
               groups[config][dbg.group_name][3][idx].append(src)
             cand_idx += 1
             # Some thoughts: Maybe a dedicated plot to show distribution of execution times, etc. ?
