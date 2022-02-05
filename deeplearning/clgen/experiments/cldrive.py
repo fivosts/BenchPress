@@ -134,7 +134,7 @@ class CLDriveExecutions(sqlutil.Database):
         l.logger().warn(df)
     return
 
-  def get_execution_times(self, src: str, global_size: int, local_size: int) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
+  def get_execution_times_ms(self, src: str, global_size: int, local_size: int) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
     """
     Search code by hash and return lists with all different execution times.
     """
@@ -145,10 +145,10 @@ class CLDriveExecutions(sqlutil.Database):
       if entry is None:
         return None
       else:
-        ctt = [int(x) for x in entry.cpu_transfer_time_ns.split('\n')]
-        ckt = [int(x) for x in entry.cpu_kernel_time_ns.split('\n')]
-        gtt = [int(x) for x in entry.gpu_transfer_time_ns.split('\n')]
-        gkt = [int(x) for x in entry.gpu_kernel_time_ns.split('\n')]
+        ctt = [int(x) // 1000 for x in entry.cpu_transfer_time_ns.split('\n')]
+        ckt = [int(x) // 1000 for x in entry.cpu_kernel_time_ns.split('\n')]
+        gtt = [int(x) // 1000 for x in entry.gpu_transfer_time_ns.split('\n')]
+        gkt = [int(x) // 1000 for x in entry.gpu_kernel_time_ns.split('\n')]
     return ctt, ckt, gtt, gkt
 
 def ComputeLabel(cpu_transfer : typing.List[int],
@@ -175,8 +175,8 @@ def ComputeLabel(cpu_transfer : typing.List[int],
   dist = cput_dist + gpu_dist.negate()
 
   return {
-    "CPU": dist < 0,
-    "GPU": dist > 0,
+    "CPU": round(100 * (dist < 0), 2),
+    "GPU": round(100 * (dist > 0), 2),
   }
 
 @public.evaluator
@@ -230,7 +230,7 @@ def TopKCLDrive(**kwargs) -> None:
           if benchmark_label not in {"CPU", "GPU"}:
             continue
           cldrive_db.add_entry(benchmark.contents, gs, ls, df)
-          times = cldrive_db.get_execution_times(benchmark.contents, gs, ls)
+          times = cldrive_db.get_execution_times_ms(benchmark.contents, gs, ls)
           if times:
             ctt, ckt, gtt, gkt = times
             prob_labels = ComputeLabel(ctt, ckt, gtt, gkt, workspace_path)
@@ -273,7 +273,7 @@ def TopKCLDrive(**kwargs) -> None:
             if label not in {"CPU", "GPU"}:
               continue
             cldrive_db.add_entry(incl + src, gs, ls, df)
-            times = cldrive_db.get_execution_times(benchmark.contents, gs, ls)
+            times = cldrive_db.get_execution_times_ms(benchmark.contents, gs, ls)
             if times:
               ctt, ckt, gtt, gkt = times
               prob_labels = ComputeLabel(ctt, ckt, gtt, gkt, workspace_path)
