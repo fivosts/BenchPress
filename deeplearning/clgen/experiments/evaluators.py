@@ -70,7 +70,7 @@ class DBGroup(object):
     else:
       self.data = []
       for db in self.databases:
-        if self.db_type == encoded.EncodedContentFiles:
+        if self.db_type == encoded.EncodedContentFiles or self.db_type == clsmith.CLSmithDatabase:
           self.data += db.get_data(self.size_limit)
         else:
           self.data += db.get_data
@@ -81,6 +81,7 @@ class DBGroup(object):
       "SamplesDatabase"    : samples_database.SamplesDatabase,
       "ActiveFeedDatabase" : active_feed_database.ActiveFeedDatabase,
       "EncodedContentFiles": encoded.EncodedContentFiles,
+      "CLSmithDatabase"    : clsmith.CLSmithDatabase,
     }[db_type]
     self.databases            = [self.db_type("sqlite:///{}".format(pathlib.Path(p).resolve()), must_exist = True) for p in databases]
     self.features             = {ext: None for ext in extractor.extractors.keys()}
@@ -97,7 +98,7 @@ class DBGroup(object):
     if not self.features[feature_space]:
       self.features[feature_space] = []
       for db in self.databases:
-        db_feats = db.get_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_features
+        db_feats = db.get_features(self.tokenizer, self.size_limit) if (self.db_type == encoded.EncodedContentFiles or self.db_type == clsmith.CLSmithDatabase) else db.get_features
         for x in db_feats:
           try:
             feats = extractor.RawToDictFeats(x)
@@ -114,7 +115,7 @@ class DBGroup(object):
     if not self.data_features[feature_space]:
       self.data_features[feature_space] = []
       for db in self.databases:
-        db_feats = db.get_data_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_data_features
+        db_feats = db.get_data_features(self.tokenizer, self.size_limit) if (self.db_type == encoded.EncodedContentFiles or self.db_type == clsmith.CLSmithDatabase) else db.get_data_features
         pool = multiprocessing.Pool()
         try:
           for (src, _), feats in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentFeat, db_feats)), total = len(db_feats), desc = "{} data".format(self.group_name)):
@@ -135,7 +136,7 @@ class DBGroup(object):
       self.unique_data_features[feature_space] = []
       visited = set()
       for db in self.databases:
-        db_feats = db.get_data_features(self.tokenizer, self.size_limit) if self.db_type == encoded.EncodedContentFiles else db.get_data_features
+        db_feats = db.get_data_features(self.tokenizer, self.size_limit) if (self.db_type == encoded.EncodedContentFiles or self.db_type == clsmith.CLSmithDatabase) else db.get_data_features
         pool = multiprocessing.Pool()
         try:
           for (src, _), (sha, feats) in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentHash, db_feats)), total = len(db_feats), desc = "{} unique data".format(self.group_name)):
