@@ -104,9 +104,9 @@ class CLSmithDatabase(sqlutil.Database):
     """
     with self.Session() as session:
       if sequence_length:
-        return [x.feature_vector for x in session.query(CLSmithSample).filter(CLSmithSample.num_tokens <= sequence_length).all()]
+        return [x.feature_vector for x in session.query(CLSmithSample).filter(CLSmithSample.num_tokens <= sequence_length).limit(100000).offset(0).all()]
       else:
-        return [x.feature_vector for x in session.query(CLSmithSample).all()]
+        return [x.feature_vector for x in session.query(CLSmithSample).limit(100000).offset(0).all()]
 
   def get_data_features(self, tokenizer, sequence_length: int = None) -> typing.List[typing.Tuple[str, str, str]]:
     """
@@ -114,9 +114,9 @@ class CLSmithDatabase(sqlutil.Database):
     """
     with self.Session() as session:
       if sequence_length:
-        return [(x.sample, x.include, x.feature_vector) for x in session.query(CLSmithSample).filter(CLSmithSample.num_tokens <= sequence_length).all()]
+        return [(x.sample, x.include, x.feature_vector) for x in session.query(CLSmithSample).filter(CLSmithSample.num_tokens <= sequence_length).limit(100000).offset(0).all()]
       else:
-        return [(x.sample, x.include, x.feature_vector) for x in session.query(CLSmithSample).all()]
+        return [(x.sample, x.include, x.feature_vector) for x in session.query(CLSmithSample).limit(100000).offset(0).all()]
 
 def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.List[CLSmithSample]:
   """
