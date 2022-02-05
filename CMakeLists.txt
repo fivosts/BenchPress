@@ -46,6 +46,10 @@ OPTION(BUILD_CLSMITH
       "Select to build CLsmith fuzzer."
       OFF
 )
+OPTION(BUILD_SRCIROR
+      "Select to build srciror mutator."
+      OFF
+)
 
 function(find_binaries)
 
@@ -305,6 +309,33 @@ function(install_external_deps)
     )
     set(CLSMITH         ${LOCAL}/bin/CLSmith PARENT_SCOPE)
     set(CLSMITH_INCLUDE ${LOCAL}/include/CLSmith PARENT_SCOPE)
+  endif ()
+
+  if (BUILD_SRCIROR)
+    # CLSmith OpenCL Fuzzer.
+    ExternalProject_Add(srciror
+      GIT_REPOSITORY    https://github.com/TestingResearchIllinois/srciror.git
+      GIT_TAG           163d4403672a90d10c26de6fa16f124000a92ddd
+      GIT_PROGRESS      true
+      BUILD_IN_SOURCE   true
+      PREFIX            ${THIRD_PARTY}/srciror
+      TMP_DIR           ${THIRD_PARTY}/tmp
+      STAMP_DIR         ${THIRD_PARTY}/stamp
+      DOWNLOAD_DIR      ${THIRD_PARTY}/srciror
+      SOURCE_DIR        ${THIRD_PARTY}/srciror/srciror
+      INSTALL_DIR       ${LOCAL}
+      CONFIGURE_COMMAND cd ${THIRD_PARTY}/srciror/srciror && export CC=gcc-7 && export CXX=g++-7 && ./llvm-build.sh && unset CC && unset CXX
+      BUILD_COMMAND     cd ${THIRD_PARTY}/srciror/srciror/SRCMutation
+                        && $(MAKE)
+                        && cp -rf ${THIRD_PARTY}/srciror/srciror/IRMutation/LLVMPasses/Mutation   ${THIRD_PARTY}/srciror/srciror/llvm/lib/Transforms
+                        && cp ${THIRD_PARTY}/srciror/srciror/IRMutation/LLVMPasses/Makefile       ${THIRD_PARTY}/srciror/srciror/llvm/lib/Transforms
+                        && cp ${THIRD_PARTY}/srciror/srciror/IRMutation/LLVMPasses/CMakeLists.txt ${THIRD_PARTY}/srciror/srciror/llvm/lib/Transforms
+                        && cd ${THIRD_PARTY}/srciror/srciror/llvm-build/
+                        && $(MAKE)
+                        && cd ${THIRD_PARTY}/srciror/srciror/IRMutation/InstrumentationLib
+                        && ./build-lib.sh
+      INSTALL_COMMAND   echo ""
+    )
   endif ()
 
   # #include <CL/*>
