@@ -203,7 +203,7 @@ def MutecVsBenchPress(**kwargs) -> None:
   ## Initialize dictionary.
   groups = {}
   groups["Mutec"] = ([], [])
-  groups["GitHub"] = ([], [])
+  groups[seed.group_name] = ([], [])
   groups[benchpress.group_name] = ([], [])
 
   ## Fix fetching data functions.
@@ -264,8 +264,8 @@ def MutecVsBenchPress(**kwargs) -> None:
 
       # Compute target's distance from O(0,0)
       git_avg_dist = sum(git_dist[:top_k]) / top_k
-      groups["GitHub"][0].append(benchmark.name)
-      groups["GitHub"][1].append(100 * ((target_origin_dist - git_avg_dist) / target_origin_dist))
+      groups[seed.group_name][0].append(benchmark.name)
+      groups[seed.group_name][1].append(100 * ((target_origin_dist - git_avg_dist) / target_origin_dist))
 
   ## Run engine on benchpress.
   benchmarks = target.get_benchmarks(feature_space)
