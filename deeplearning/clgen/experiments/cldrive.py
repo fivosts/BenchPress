@@ -257,7 +257,7 @@ def TopKCLDrive(**kwargs) -> None:
             l.logger().info(benchmark.name)
             closest_src = workers.SortedSrcDistances(get_data(feature_space), benchmark.features, feature_space)
           l.logger().info("global size: {}, local size: {}".format(gs, ls))
-          l.logger().error("Benchmark label: {}".format("CPU:{}/GPU:{}".format(prob_labels['CPU'], prob_labels['GPU'])))
+          l.logger().error("Benchmark label: {}, prob: {}".format(benchmark_label, "CPU:{}/GPU:{}".format(prob_labels['CPU'], prob_labels['GPU'])))
 
           cand_idx = 0
           for idx, (src, incl, dist) in enumerate(closest_src):
@@ -280,7 +280,7 @@ def TopKCLDrive(**kwargs) -> None:
             else:
               raise ValueError("Why can you not find a file you just inserted ?")
 
-            l.logger().error("Label: {}, distance: {}".format("CPU:{}/GPU:{}".format(prob_labels['CPU'], prob_labels['GPU']), dist))
+            l.logger().error("Label: {}, probs: {}, distance: {}".format(label, "CPU:{}/GPU:{}".format(prob_labels['CPU'], prob_labels['GPU']), dist))
             if len(groups[config][dbg.group_name][1]) - 1 < idx:
               groups[config][dbg.group_name][1].append([dist])
               groups[config][dbg.group_name][2].append(["CPU:{}/GPU:{}".format(prob_labels['CPU'], prob_labels['GPU'])])
