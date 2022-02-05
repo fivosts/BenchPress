@@ -2,6 +2,8 @@
 Helper module the provides range of worker functions for experiments.
 """
 import typing
+import pathlib
+
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.util import environment
