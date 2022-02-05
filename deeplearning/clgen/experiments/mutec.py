@@ -25,6 +25,7 @@ from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.experiments import workers
 from deeplearning.clgen.experiments import public
+from deeplearning.clgen.experiments import clsmith
 
 FLAGS = flags.FLAGS
 
@@ -172,7 +173,7 @@ def MutecVsBenchPress(**kwargs) -> None:
   Compare mutec mutation tool on github's database against BenchPress.
   Comparison is similar to KAverageScore comparison.
   """
-  github         = kwargs.get('github')
+  seed           = kwargs.get('seed')
   benchpress     = kwargs.get('benchpress')
   mutec_cache    = kwargs.get('mutec_cache', '')
   target         = kwargs.get('targets')
@@ -185,8 +186,8 @@ def MutecVsBenchPress(**kwargs) -> None:
 
   if not pathlib.Path(MUTEC).exists():
     raise FileNotFoundError("Mutec executable not found: {}".format(MUTEC))
-  if github.db_type != encoded.EncodedContentFiles:
-    raise ValueError("Scores require EncodedContentFiles but received", github.db_type)
+  if seed.db_type != encoded.EncodedContentFiles and seed.db_type != clsmith.CLSmithDatabase:
+    raise ValueError("Scores require EncodedContentFiles or CLSmithDatabase but received", seed.db_type)
   if benchpress.db_type != samples_database.SamplesDatabase:
     raise ValueError("BenchPress scores require SamplesDatabase but received", benchpress.db_type)
 
@@ -207,10 +208,10 @@ def MutecVsBenchPress(**kwargs) -> None:
 
   ## Fix fetching data functions.
   if unique_code:
-    git_get_data = lambda x: github.get_unique_data_features(x)
+    git_get_data = lambda x: seed.get_unique_data_features(x)
     bp_get_data  = lambda x: benchpress.get_unique_data_features(x)
   else:
-    git_get_data = lambda x: github.get_data_features(x)
+    git_get_data = lambda x: seed.get_data_features(x)
     bp_get_data  = lambda x: benchpress.get_data_features(x)
 
   ## Run engine on mutec.
@@ -223,6 +224,9 @@ def MutecVsBenchPress(**kwargs) -> None:
 
     ## Tuple of closest src, distance from target benchmark.0
     closest = workers.SortedSrcDistances(git_get_data(feature_space), benchmark.features, feature_space)
+
+    ## IF CLsmith takes too long here, collect only features, then for the beam size go and fetch
+    ## the code.
 
     # Split source and distances lists.
     git_dist = [x for _, x in closest]
