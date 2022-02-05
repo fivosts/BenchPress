@@ -108,15 +108,15 @@ class CLSmithDatabase(sqlutil.Database):
       else:
         return [x.feature_vector for x in session.query(CLSmithSample).all()]
 
-  def get_data_features(self, tokenizer, sequence_length: int = None) -> typing.List[typing.Tuple[str, str]]:
+  def get_data_features(self, tokenizer, sequence_length: int = None) -> typing.List[typing.Tuple[str, str, str]]:
     """
     Collect list of source with features
     """
     with self.Session() as session:
       if sequence_length:
-        return [(tokenizer.ArrayToCode(x.indices_array, with_formatting = False), x.feature_vector) for x in session.query(CLSmithSample).filter(CLSmithSample.num_tokens <= sequence_length).all()]
+        return [(x.sample, x.include, x.feature_vector) for x in session.query(CLSmithSample).filter(CLSmithSample.num_tokens <= sequence_length).all()]
       else:
-        return [(tokenizer.ArrayToCode(x.indices_array, with_formatting = False), x.feature_vector) for x in session.query(CLSmithSample).all()]
+        return [(x.sample, x.include, x.feature_vector) for x in session.query(CLSmithSample).all()]
 
 def execute_clsmith(idx: int, tokenizer, timeout_seconds: int = 15) -> typing.List[CLSmithSample]:
   """
