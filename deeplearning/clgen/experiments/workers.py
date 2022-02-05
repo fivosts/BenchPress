@@ -81,4 +81,4 @@ def SortedSrcDistances(data: typing.List[typing.Tuple[str, typing.Dict[str, floa
   """
   Return list of euclidean distances from target features in ascending order.
   """
-  return sorted([(src, include, feature_sampler.calculate_distance(dp, target_features, feature_space)) for src, include, dp in data], key = lambda x: x[1])
+  return sorted([(src, include, feature_sampler.calculate_distance(dp, target_features, feature_space)) for src, include, dp in data], key = lambda x: x[2])
