@@ -492,7 +492,7 @@ def main(config: evaluator_pb2.Evaluation):
     evaluator_pb2.CompMemGrewe            : comp_vs_mem.CompMemGrewe,
     evaluator_pb2.TopKCLDrive             : cldrive.TopKCLDrive,
     evaluator_pb2.MutecVsBenchPress       : mutec.MutecVsBenchPress,
-    evaluator_pb2.SRCIROR_srcVsBenchPress : mutec.SRCIROR_srcVsBenchPress,
+    evaluator_pb2.SRCIROR_srcVsBenchPress : srciror.SRCIROR_srcVsBenchPress,
     evaluator_pb2.GenerateCLSmith         : clsmith.GenerateCLSmith,
   }
   db_cache       = {}
