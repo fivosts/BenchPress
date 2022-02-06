@@ -70,7 +70,7 @@ class GreweFeatures(object):
       f.write(src)
       f.flush()
 
-      extra_arg = ""
+      arguments = []
       if header_file:
         htf = tempfile.NamedTemporaryFile('w', prefix = "feat_ext_head_", suffix = '.h', dir = tdir)
         htf.write(header_file)
