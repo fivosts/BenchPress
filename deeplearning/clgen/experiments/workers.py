@@ -55,6 +55,21 @@ def ExtractAndCalculate(src_incl        : typing.Tuple[str, str],
     return src, incl, feature_sampler.calculate_distance(f[feature_space], target_features, feature_space)
   return None
 
+def IRExtractAndCalculate(bytecode      : str,
+                        target_features : typing.Dict[str, float],
+                        feature_space   : str
+                        ) -> typing.Tuple[str, str, float]:
+  """
+  Extract features for source code and calculate distance from target.
+
+  Returns:
+    Tuple of source code with distance.
+  """
+  f = extractor.ExtractIRFeatures(bytecode, [feature_space])
+  if feature_space in f and f[feature_space]:
+    return bytecode, "", feature_sampler.calculate_distance(f[feature_space], target_features, feature_space)
+  return None
+
 def FeatureExtractor(src_incl: typing.Tuple[str, str]) -> typing.Tuple[str, str, str]:
   """
   Extracts Raw features for all feat spaces and returns tuple of source and features.
@@ -64,6 +79,15 @@ def FeatureExtractor(src_incl: typing.Tuple[str, str]) -> typing.Tuple[str, str,
     return src, incl, extractor.ExtractRawFeatures(src, header_file = incl, extra_args = ["-include{}".format(pathlib.Path(environment.CLSMITH_INCLUDE) / "CLSmith.h")] if incl else None)
   except ValueError:
     return src, incl, ""
+
+def IRFeatureExtractor(bytecode: str) -> typing.Tuple[str, str, str]:
+  """
+  Extracts Raw features for all feat spaces and returns tuple of source and features.
+  """
+  try:
+    return bytecode, "", extractor.ExtractIRRawFeatures(bytecode)
+  except ValueError:
+    return bytecode, "", ""
 
 def SortedDistances(data: typing.List[typing.Tuple[str, str, typing.Dict[str, float]]],
                     target_features: typing.Dict[str, float],
