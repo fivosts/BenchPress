@@ -192,8 +192,8 @@ class GenericDistribution(Distribution):
       d1 = self.realign(self.min_idx - d.min_idx)
       d2 = d.distribution
     else:
-      d2 = d.realign(d.min_idx - self.min_idx)
       d1 = self.distribution
+      d2 = d.realign(d.min_idx - self.min_idx)
 
     if len(d1) > len(d2):
       d2 = d2 + [0] * (len(d1) - len(d2))
@@ -201,16 +201,15 @@ class GenericDistribution(Distribution):
       d1 = d1 + [0] * (len(d2) - len(d1))
 
     ret = GenericDistribution([], self.log_path, "{}+{}".format(self.set_name, d.set_name))
-
     summed  = list(np.convolve(d1, d2, mode = 'full'))
-    min_idx = ((len(d1) // 2) + min(self.min_idx, d.min_idx)) - (len(summed) // 2)
-    max_idx = len(summed) - 1 + min_idx
+
     while summed[0] == 0:
       summed.pop(0)
-      min_idx += 1
     while summed[-1] == 0:
       summed.pop()
-      max_idx -= 1
+
+    min_idx = self.min_idx + d.min_idx
+    max_idx = len(summed) - 1 + min_idx
 
     ret.distribution = summed
     ret.min_idx = min_idx
@@ -222,7 +221,7 @@ class GenericDistribution(Distribution):
     Subtraction of distributions is equal to addition of inverted distribution.
     P[X - Y] = P[X + (-Y)]
     """
-    neg = d.negate(d)
+    neg = d.negate()
     sub = self + neg
     sub.set_name = "{}-{}".format(self.set_name, d.set_name)
     return sub
