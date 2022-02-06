@@ -445,6 +445,7 @@ function(clgen)
     "export CLANG="                          ${LLVM}/bin/clang "\n"
     "export OPT="                            ${LLVM}/bin/opt "\n"
     "export LLVM_EXTRACT="                   ${LLVM}/bin/llvm-extract "\n"
+    "export LLVM_DIS="                       ${LLVM}/bin/llvm-dis "\n"
     "export DASHBOARD_TEMPLATES="            ${DASHBOARD_TEMPLATES} "\n"
     "export DASHBOARD_STATIC="               ${DASHBOARD_STATIC} "\n"
     "export DATA_CL_INCLUDE="                ${DATA_CL_INCLUDE} "\n"

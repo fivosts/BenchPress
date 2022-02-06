@@ -19,6 +19,7 @@ try:
   CLANG               = check_path_exists(os.environ['CLANG'])
   OPT                 = check_path_exists(os.environ['OPT'])
   LLVM_EXTRACT        = check_path_exists(os.environ['LLVM_EXTRACT'])
+  LLVM_DIS            = check_path_exists(os.environ['LLVM_DIS'])
   CLANG_FORMAT        = check_path_exists(os.environ['CLANG_FORMAT'])
   CLANG_HEADERS       = check_path_exists(os.environ['CLANG_HEADERS'])
   CLANG_REWRITER      = check_path_exists(os.environ['CLANG_REWRITER'])
