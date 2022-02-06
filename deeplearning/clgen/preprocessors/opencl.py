@@ -324,9 +324,9 @@ def CollectCLDriveLabel(df: pd.DataFrame, stdout: str, stderr: str) -> str:
   else:
     label = "GPU" if avg_time_cpu_ns > avg_time_gpu_ns else "CPU"
 
-  if label == "ERR" or cpu_error == "CL_ERROR" or gpu_error == "CL_ERROR":
-    l.logger().warn(stdout)
-    l.logger().warn(stderr)
+  # if label == "ERR" or cpu_error == "CL_ERROR" or gpu_error == "CL_ERROR":
+  #   l.logger().warn(stdout)
+  #   l.logger().warn(stderr)
   return label
 
 def CLDrivePretty(src: str,
