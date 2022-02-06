@@ -172,7 +172,7 @@ def ComputeLabel(cpu_transfer : typing.List[int],
   gpu_dist = gput_dist + gpue_dist
 
   ## P[CPU - GPU]
-  dist = cput_dist + gpu_dist.negate()
+  dist = cput_dist - gpu_dist
 
   return {
     "CPU": round(100 * (dist < 0), 2),
@@ -220,7 +220,7 @@ def TopKCLDrive(**kwargs) -> None:
             continue
           ## Run cldrive on benchmark.
           benchmark_label = "TimeOut"
-          nruns = 10**3
+          nruns = 1000
           bench_runs = nruns
           while benchmark_label == "TimeOut" and bench_runs > 0:
             try:
@@ -273,7 +273,7 @@ def TopKCLDrive(**kwargs) -> None:
             if label not in {"CPU", "GPU"}:
               continue
             cldrive_db.add_entry(incl + src, gs, ls, df)
-            times = cldrive_db.get_execution_times_ms(benchmark.contents, gs, ls)
+            times = cldrive_db.get_execution_times_ms(incl + src, gs, ls)
             if times:
               ctt, ckt, gtt, gkt = times
               prob_labels = ComputeLabel(ctt, ckt, gtt, gkt, workspace_path)
