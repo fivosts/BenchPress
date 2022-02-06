@@ -279,7 +279,7 @@ def SRCIROR_srcVsBenchPress(**kwargs) -> None:
 
   plotter.GrouppedBars(
     groups = groups,
-    plot_name = "mutec_avg_{}".format(top_k, feature_space.replace("Features", " Features")),
+    plot_name = "srciror_src_avg_{}_{}_{}".format(top_k, seed.group_name, feature_space.replace("Features", " Features")),
     path = workspace_path,
     **plot_config if plot_config else {},
   )
