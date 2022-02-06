@@ -42,6 +42,7 @@ from deeplearning.clgen.experiments import comp_vs_mem
 from deeplearning.clgen.experiments import cldrive
 from deeplearning.clgen.experiments import clsmith
 from deeplearning.clgen.experiments import mutec
+from deeplearning.clgen.experiments import srciror
 from deeplearning.clgen.experiments import workers
 
 from deeplearning.clgen.util import logging as l
@@ -410,6 +411,52 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         lambda x: x > 0,
         "beam width factor must be positive",
       )
+    elif ev.HasField("srciror_src_vs_benchpress"):
+      ### MutecVsBenchPress
+      # Generic Fields
+      pbutil.AssertFieldIsSet(config, "workspace")
+      pbutil.AssertFieldIsSet(config, "tokenizer")
+      if not pathlib.Path(config.tokenizer).resolve().exists():
+        raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
+      # DB groups
+      if ev.srciror_src_vs_benchpress.HasField("db_group"):
+        raise ValueError("db_group is a placeholder for srciror_src_vs_benchpress evaluator and should not be used.")
+      for dbs in [ev.srciror_src_vs_benchpress.seed, ev.srciror_src_vs_benchpress.benchpress]:
+        for db in ev.srciror_src_vs_benchpress.seed.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
+      # Specialized fields.
+      pbutil.AssertFieldIsSet(ev.srciror_src_vs_benchpress, "srciror_src_cache")
+      if not pathlib.Path(ev.srciror_src_vs_benchpress.srciror_src_cache).resolve().exists():
+        l.logger().warn("Mutec cache not found in {}. Will create one from scratch.".format(ev.srciror_src_vs_benchpress.srciror_src_cache))
+
+      pbutil.AssertFieldConstraint(
+        ev.srciror_src_vs_benchpress,
+        "target",
+        lambda x: x in feature_sampler.targets,
+        "target {} not found".format(ev.srciror_src_vs_benchpress.target),
+      )
+      pbutil.AssertFieldIsSet(ev.srciror_src_vs_benchpress, "feature_space")
+      pbutil.AssertFieldConstraint(
+        ev.srciror_src_vs_benchpress,
+        "top_k",
+        lambda x: x > 0,
+        "top-K factor must be positive",
+      )
+      pbutil.AssertFieldConstraint(
+        ev.srciror_src_vs_benchpress,
+        "beam_width",
+        lambda x: x > 0,
+        "beam width factor must be positive",
+      )
     elif ev.HasField("generate_clsmith"):
       # Generic Fields
       pbutil.AssertFieldIsSet(config, "tokenizer")
@@ -438,14 +485,15 @@ def main(config: evaluator_pb2.Evaluation):
   Run the evaluators iteratively.
   """
   evaluation_map = {
-    evaluator_pb2.LogFile           : log_file.LogFile,
-    evaluator_pb2.KAverageScore     : distance_score.KAverageScore,
-    evaluator_pb2.MinScore          : distance_score.MinScore,
-    evaluator_pb2.AnalyzeTarget     : benchmark_analysis.AnalyzeTarget,
-    evaluator_pb2.CompMemGrewe      : comp_vs_mem.CompMemGrewe,
-    evaluator_pb2.TopKCLDrive       : cldrive.TopKCLDrive,
-    evaluator_pb2.MutecVsBenchPress : mutec.MutecVsBenchPress,
-    evaluator_pb2.GenerateCLSmith   : clsmith.GenerateCLSmith,
+    evaluator_pb2.LogFile                 : log_file.LogFile,
+    evaluator_pb2.KAverageScore           : distance_score.KAverageScore,
+    evaluator_pb2.MinScore                : distance_score.MinScore,
+    evaluator_pb2.AnalyzeTarget           : benchmark_analysis.AnalyzeTarget,
+    evaluator_pb2.CompMemGrewe            : comp_vs_mem.CompMemGrewe,
+    evaluator_pb2.TopKCLDrive             : cldrive.TopKCLDrive,
+    evaluator_pb2.MutecVsBenchPress       : mutec.MutecVsBenchPress,
+    evaluator_pb2.SRCIROR_srcVsBenchPress : mutec.SRCIROR_srcVsBenchPress,
+    evaluator_pb2.GenerateCLSmith         : clsmith.GenerateCLSmith,
   }
   db_cache       = {}
   target_cache   = {}
