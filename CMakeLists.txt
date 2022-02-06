@@ -324,7 +324,7 @@ function(install_external_deps)
       DOWNLOAD_DIR      ${THIRD_PARTY}/srciror
       SOURCE_DIR        ${THIRD_PARTY}/srciror/srciror
       INSTALL_DIR       ${LOCAL}
-      CONFIGURE_COMMAND cd ${THIRD_PARTY}/srciror/srciror && export CC=gcc-7 && export CXX=g++-7 && ./llvm-build.sh && unset CC && unset CXX
+      CONFIGURE_COMMAND cd ${THIRD_PARTY}/srciror/srciror && ./llvm-build.sh
       BUILD_COMMAND     cd ${THIRD_PARTY}/srciror/srciror/SRCMutation
                         && $(MAKE)
                         && cp -rf ${THIRD_PARTY}/srciror/srciror/IRMutation/LLVMPasses/Mutation   ${THIRD_PARTY}/srciror/srciror/llvm/lib/Transforms
