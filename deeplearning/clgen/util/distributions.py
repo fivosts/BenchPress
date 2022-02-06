@@ -318,7 +318,7 @@ class GenericDistribution(Distribution):
     Plot distribution.
     """
     plotter.FrequencyBars(
-      x = [idx - self.min_idx for idx, _ in enumerate(self.distribution)],
+      x = [idx + self.min_idx for idx, _ in enumerate(self.distribution)],
       y = [v for v in self.distribution],
       plot_name = self.set_name,
       path      = self.log_path,
