@@ -336,6 +336,8 @@ function(install_external_deps)
                         && ./build-lib.sh
       INSTALL_COMMAND   echo ""
     )
+    set(SRCIROR_SRC ${THIRD_PARTY}/srciror/srciror/Examples/mutateSRC.sh)
+    set(SRCIROR_IR  ${THIRD_PARTY}/srciror/srciror/Examples/mutateIR.sh)
   endif ()
 
   # #include <CL/*>
@@ -453,6 +455,8 @@ function(clgen)
     "export SEQ_CLANG_REWRITER="             ${SEQ_CLANG_REWRITER} "\n"
     "export CLDRIVE="                        ${CLDRIVE} "\n"
     "export MUTEC="                          ${MUTEC} "\n"
+    "export SRCIROR_SRC="                    ${SRCIROR_SRC} "\n"
+    "export SRCIROR_IR="                     ${SRCIROR_IR} "\n"
     "export CSMITH="                         ${CSMITH} "\n"
     "export CLSMITH="                        ${CLSMITH} "\n"
     "export CLSMITH_INCLUDE="                ${CLSMITH_INCLUDE} "\n"
