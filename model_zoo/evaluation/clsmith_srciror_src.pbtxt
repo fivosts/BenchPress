@@ -13,64 +13,6 @@ evaluator {
       database: "/disk/scratch/s1879742/autophase_bert_samples.db"
     }
     seed {
-      group_name: "GitHub"
-      db_type: "EncodedContentFiles"
-      database: "/disk/scratch/s1879742/unique_encoded.db"
-    }
-  }
-}
-evaluator {
-  srciror_src_vs_benchpress {
-    target: "rodinia"
-    feature_space: "InstCountFeatures"
-    srciror_src_cache: "/disk/scratch/s1879742/srciror_src_mutants.db"
-    top_k: 1
-    beam_width: 10
-    benchpress {
-      group_name: "BenchPress"
-      db_type: "SamplesDatabase"
-      database: "/disk/scratch/s1879742/instcount_bert_samples.db"
-    }
-    seed {
-      group_name: "GitHub"
-      db_type: "EncodedContentFiles"
-      database: "/disk/scratch/s1879742/unique_encoded.db"
-    }
-  }
-}
-evaluator {
-  srciror_src_vs_benchpress {
-    target: "rodinia"
-    feature_space: "GreweFeatures"
-    srciror_src_cache: "/disk/scratch/s1879742/srciror_src_mutants.db"
-    top_k: 1
-    beam_width: 10
-    benchpress {
-      group_name: "BenchPress"
-      db_type: "SamplesDatabase"
-      database: "/disk/scratch/s1879742/grewe_bert_samples.db"
-    }
-    seed {
-      group_name: "GitHub"
-      db_type: "EncodedContentFiles"
-      database: "/disk/scratch/s1879742/unique_encoded.db"
-    }
-  }
-}
-
-evaluator {
-  srciror_src_vs_benchpress {
-    target: "rodinia"
-    feature_space: "AutophaseFeatures"
-    srciror_src_cache: "/disk/scratch/s1879742/srciror_src_mutants.db"
-    top_k: 1
-    beam_width: 10
-    benchpress {
-      group_name: "BenchPress"
-      db_type: "SamplesDatabase"
-      database: "/disk/scratch/s1879742/autophase_bert_samples.db"
-    }
-    seed {
       group_name: "CLSmith"
       db_type: "CLSmithDatabase"
       database: "/disk/scratch/s1879742/clsmith.db"
