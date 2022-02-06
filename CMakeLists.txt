@@ -314,8 +314,8 @@ function(install_external_deps)
   if (BUILD_SRCIROR)
     # CLSmith OpenCL Fuzzer.
     ExternalProject_Add(srciror
-      GIT_REPOSITORY    https://github.com/TestingResearchIllinois/srciror.git
-      GIT_TAG           163d4403672a90d10c26de6fa16f124000a92ddd
+      GIT_REPOSITORY    https://github.com/fivosts/srciror.git
+      GIT_TAG           6b664370410a81ec040ec8f6cc091c95a0897ecc
       GIT_PROGRESS      true
       BUILD_IN_SOURCE   true
       PREFIX            ${THIRD_PARTY}/srciror
@@ -474,6 +474,7 @@ function(clgen)
     "unset CLANG\n"
     "unset OPT\n"
     "unset LLVM_EXTRACT\n"
+    "unset LLVM_DIS\n"
     "unset DASHBOARD_TEMPLATES\n"
     "unset DASHBOARD_STATIC\n"
     "unset DATA_CL_INCLUDE\n"
