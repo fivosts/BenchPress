@@ -321,6 +321,53 @@ def CompileOptimizer(src: str,
     raise ValueError("/*\n{}\n*/\n{}".format(stderr, src))
   return stdout
 
+def CompileOptimizerIR(bytecode: str,
+                       suffix: str,
+                       optimization: typing.List[str],
+                       timeout_seconds: int = 60,
+                       ) -> str:
+  """Apply optimization pass directly to LLVM-IR bytecode.
+
+  Args:
+    bytecode: The source code to compile.
+    suffix: The suffix to append to the source code temporary file. E.g. '.c'
+      for a C program.
+    timeout_seconds: The number of seconds to allow before killing clang.
+
+  Returns:
+    Dictionary with 70-dimensional InstCount  or 58-dimensional Autophase feature vector.
+
+  Raises:
+    ValueError: In case of an error.
+    ValueError: If clang does not complete before timeout_seconds.
+  """
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
+
+  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix='.ll', dir = tdir) as f:
+    f.write(bc)
+    f.flush()
+
+    cmd = (
+      ["timeout", "-s9", str(timeout_seconds), str(OPT)]
+      + optimization
+      + [f.name, "-o", "/dev/null"]
+    )
+    process = subprocess.Popen(
+      cmd,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.PIPE,
+      universal_newlines=True,
+    )
+    stdout, stderr = process.communicate()
+  if process.returncode == 9:
+    raise ValueError(f"Clang timed out after {timeout_seconds}s")
+  elif process.returncode != 0:
+    raise ValueError("/*\n{}\n*/\n{}".format(stderr, bytecode))
+  return stdout
+
 def Compile(src: str,
             suffix: str,
             cflags: typing.List[str],
