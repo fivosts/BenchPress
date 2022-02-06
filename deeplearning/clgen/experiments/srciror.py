@@ -18,7 +18,6 @@ from absl import flags
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.samplers import samples_database
-from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import logging as l
@@ -81,7 +80,13 @@ def generate_IR_mutants(src: str, incl: str, timeout_seconds: int = 45) -> typin
   os.remove(str(SRCIROR_BASE / "incl.h"))
 
   srciror_ir_paths = glob.glob(str(SRCIROR_BASE / "test-*.ll"))
-  mutants = set([(x, incl) for x in srciror_ir_paths[:PER_INPUT_HARD_LIMIT]])
+
+  mutants = set()
+  for path in srciror_ir_paths[:PER_INPUT_HARD_LIMIT]:
+    try:
+      mutants.add((opencl.HumanReadableBytecode(path), incl))
+    except ValueError:
+      continue
   return mutants
 
 def generate_src_mutants(src: str, incl: str, timeout_seconds: int = 45) -> typing.Set[typing.Tuple[str, str]]:
@@ -157,13 +162,13 @@ def beam_srciror(srcs              : typing.List[typing.Tuple[str, str, float]],
         )
     db_func = workers.FeatureExtractor
   else:
-    generate_mutants = lambda x, y: generate_ir_mutants(x, y)
+    generate_mutants = lambda x, y: generate_IR_mutants(x, y)
     ext_func = functools.partial(
-          workers.BcExtractAndCalculate,
+          workers.IRExtractAndCalculate,
           target_features = target_features,
           feature_space   = feat_space,
         )
-    db_func = workers.BcFeatureExtractor
+    db_func = workers.IRFeatureExtractor
 
   while better_score:
 
