@@ -129,7 +129,8 @@ def generate_src_mutants(src: str, incl: str, timeout_seconds: int = 45) -> typi
   except TimeoutError:
     pass
   os.remove(str(SRCIROR_BASE / "test.c"))
-  os.remove(str(SRCIROR_BASE / "incl.h"))
+  if incl:
+    os.remove(str(SRCIROR_BASE / "incl.h"))
 
   srciror_src_paths = glob.glob(str(SRCIROR_BASE / "test.*.c"))
   mutants = set([(open(x, 'r').read(), incl) for x in srciror_src_paths[:PER_INPUT_HARD_LIMIT]])
