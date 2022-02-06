@@ -312,3 +312,17 @@ class GenericDistribution(Distribution):
     that is leftmost, and aligns it with the others.
     """
     return [0] * offset + self.distribution
+
+  def plot(self) -> None:
+    """
+    Plot distribution.
+    """
+    plotter.FrequencyBars(
+      x = [idx - self.min_idx for idx, _ in enumerate(self.distribution)],
+      y = [v for v in self.distribution],
+      plot_name = self.set_name,
+      path      = self.log_path,
+      title     = self.set_name,
+      x_name    = self.set_name,
+    )
+    return
