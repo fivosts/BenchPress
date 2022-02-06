@@ -28,10 +28,13 @@ from deeplearning.clgen.experiments import clsmith
 
 FLAGS = flags.FLAGS
 
-SRCIROR_SRC  = environment.SRCIROR_SRC
-SRCIROR_IR   = environment.SRCIROR_IR
-SRCIROR_BASE = pathlib.Path(SRCIROR_SRC).resolve().parent
-CLSMITH_INCLUDE = environment.CLSMITH_INCLUDE
+try:
+  SRCIROR_SRC  = environment.SRCIROR_SRC
+  SRCIROR_IR   = environment.SRCIROR_IR
+  SRCIROR_BASE = pathlib.Path(SRCIROR_SRC).resolve().parent
+  CLSMITH_INCLUDE = environment.CLSMITH_INCLUDE
+except Exception:
+  pass
 
 ## Some hard limits in order to finish the experiments this year.
 # max amount of mutants per input source.
