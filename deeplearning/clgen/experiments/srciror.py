@@ -29,8 +29,9 @@ from deeplearning.clgen.experiments import clsmith
 
 FLAGS = flags.FLAGS
 
-SRCIROR_src = environment.SRCIROR_SRC
-SRCIROR_IR = environment.SRCIROR_IR
+SRCIROR_SRC  = environment.SRCIROR_SRC
+SRCIROR_IR   = environment.SRCIROR_IR
+SRCIROR_BASE = pathlib.Path(SRCIROR_SRC).resolve()
 CLSMITH_INCLUDE = environment.CLSMITH_INCLUDE
 
 ## Some hard limits in order to finish the experiments this year.
@@ -42,12 +43,15 @@ def generate_src_mutants(src: str, incl: str, timeout_seconds: int = 45) -> typi
   """
   Collect all mutants from src and return them
   """
-  try:
-    tdir = pathlib.Path(FLAGS.local_filesystem).resolve()
-  except Exception:
-    tdir = None
 
-  with tempfile.NamedTemporaryFile("w", prefix="mutec_src", suffix='.cl', dir = tdir) as f:
+  if incl:
+    with open(SRCIROR_BASE / "incl.h", 'w') as f:
+      f.write(incl)
+      f.flush()
+      src = "#include \"incl.h\"\n" + src
+
+
+  with open(SRCIROR_BASE / "test.c", 'w') as f:
     try:
       f.write(src)
       f.flush()
@@ -56,54 +60,32 @@ def generate_src_mutants(src: str, incl: str, timeout_seconds: int = 45) -> typi
     except UnicodeEncodeError:
       return []
 
-    if incl:
-      with open("/tmp/mutec_src_temp_header.h", 'w') as f:
-        f.write(incl)
-        f.flush()
+  # Construct and execute mutec command
+  mutec_cmd = [
+    "timeout",
+    "-s9",
+    str(timeout_seconds),
+    "bash",
+    SRCIROR_SRC
+  ]
+  process = subprocess.Popen(
+    mutec_cmd,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    universal_newlines=True,
+  )
+  try:
+    stdout, stderr = process.communicate()
+  except TimeoutError:
+    pass
+  os.remove(str(SRCIROR_BASE / "test.c"))
+  os.remove(str(SRCIROR_BASE / "incl.h"))
 
-    # Fix compile_commands.json for source file.
-    base_path = pathlib.Path(f.name).resolve().parent
-    compile_command = {
-      'directory' : str(base_path),
-      'arguments' : [str(clang.CLANG), f.name] +
-                    ["-S", "-emit-llvm", "-o", "-"] +
-                    opencl.GetClangArgs(use_shim = False, use_aux_headers = False, extra_args = ["-include{}".format(pathlib.Path(CLSMITH_INCLUDE) / "CLSmith.h")] if incl else None) +
-                    ["-include/tmp/mutec_src_temp_header.h" if incl else ""],
-      'file'      : str(f.name)
-    }
-    with open(base_path / "compile_commands.json", 'w') as ccf:
-      json.dump([compile_command], ccf)
-    # Construct and execute mutec command
-    mutec_cmd = [
-      "timeout",
-      "-s9",
-      str(timeout_seconds),
-      MUTEC,
-      str(f.name),
-      "-o",
-      str(base_path)
-    ]
-    process = subprocess.Popen(
-      mutec_cmd,
-      stdout=subprocess.PIPE,
-      stderr=subprocess.PIPE,
-      universal_newlines=True,
-    )
-    try:
-      stdout, stderr = process.communicate()
-    except TimeoutError:
-      pass
-    os.remove(str(base_path / "compile_commands.json"))
+  srciror_src_paths = glob.glob("{}.mutec*".format(f.name))
+  mutants = set([(open(x, 'r').read(), incl) for x in srciror_src_paths[:PER_INPUT_HARD_LIMIT]])
 
-    mutec_paths = glob.glob("{}.mutec*".format(f.name))
-    templates   = glob.glob("{}.code_template".format(f.name))
-    mutants = set([(open(x, 'r').read(), incl) for x in mutec_paths[:PER_INPUT_HARD_LIMIT]])
-
-  for m in mutec_paths:
+  for m in srciror_src_paths:
     os.remove(m)
-  for m in templates:
-    os.remove(m)
-  os.remove("/tmp/mutec_src_temp_header.h")
   return mutants
 
 def beam_srciror_src(srcs            : typing.List[typing.Tuple[str, str, float]],
