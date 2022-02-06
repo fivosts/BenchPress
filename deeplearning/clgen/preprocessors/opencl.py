@@ -517,6 +517,23 @@ def CompileOptimizer(text: str,
     header_file = header_file,
   )
 
+def CompileOptimizerIR(bytecode: str,
+                       optimization    : typing.List[str],
+                       timeout_seconds : int = 60,
+                       ) -> str:
+  """Apply optimization pass to LLVM-IR bytecode file.
+  Args:
+    bytecode: The source code to optimize.
+    optimization: optimization pass to apply.
+  Returns:
+    Dictionary with 70-dimensional InstCount feature vector.
+  """
+  return clang.CompileOptimizerIR(
+    bytecode = bytecode,
+    suffix   = ".ll",
+    optimization = optimization,
+  )
+
 @public.clgen_preprocessor
 def Compile(text: str, header_file = None, use_aux_headers = True, extra_args = [], return_diagnostics = False) -> str:
   """Check that the OpenCL source compiles.
