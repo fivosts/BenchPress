@@ -25,14 +25,15 @@ message Evaluation {
 message evaluators {
   // Define all different evauators supported.
   oneof evaluator {
-    LogFile           log_file            = 1;
-    KAverageScore     k_average_score     = 2;
-    MinScore          min_score           = 3;
-    AnalyzeTarget     analyze_target      = 4;
-    CompMemGrewe      comp_mem_grewe      = 5;
-    TopKCLDrive       topk_cldrive        = 6;
-    MutecVsBenchPress mutec_vs_benchpress = 7;
-    GenerateCLSmith   generate_clsmith    = 8;
+    LogFile                 log_file                  = 1;
+    KAverageScore           k_average_score           = 2;
+    MinScore                min_score                 = 3;
+    AnalyzeTarget           analyze_target            = 4;
+    CompMemGrewe            comp_mem_grewe            = 5;
+    TopKCLDrive             topk_cldrive              = 6;
+    MutecVsBenchPress       mutec_vs_benchpress       = 7;
+    SRCIROR_srcVsBenchPress srciror_src_vs_benchpress = 8;
+    GenerateCLSmith         generate_clsmith          = 9;
   }
 }
 
@@ -103,6 +104,20 @@ message MutecVsBenchPress {
 }
 
 // 8
+// Calculate and plot the average score of the top-K best samples per target from each DB group.
+message SRCIROR_srcVsBenchPress {
+  optional string               target            = 1;
+  optional string               feature_space     = 2;
+  optional int32                top_k             = 3;
+  optional int32                beam_width        = 4;
+  optional string               srciror_src_cache = 5;
+  optional DatabasesGroups      seed              = 6;
+  optional DatabasesGroups      benchpress        = 7;
+  optional PlotterConfiguration plot_config       = 8;
+  optional DatabasesGroups      db_group          = 9; // Dummy selector, not used.
+}
+
+// 9
 message GenerateCLSmith {
   optional string clsmith_db = 1;
 }
