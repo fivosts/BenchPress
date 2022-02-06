@@ -37,8 +37,7 @@ class GreweFeatures(object):
     If the code has syntax errors, features will not be obtained and empty dict
     is returned.
     """
-    del extra_args # Unused param.
-    str_features = cls.ExtractRawFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers)
+    str_features = cls.ExtractRawFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers, extra_args = extra_args)
     return cls.RawToDictFeats(str_features)
 
   @classmethod
@@ -63,7 +62,6 @@ class GreweFeatures(object):
     Returns:
       Feature vector and diagnostics in str format.
     """
-    del extra_args # Unused param.
     try:
       tdir = FLAGS.local_filesystem
     except Exception:
@@ -77,9 +75,12 @@ class GreweFeatures(object):
         htf = tempfile.NamedTemporaryFile('w', prefix = "feat_ext_head_", suffix = '.h', dir = tdir)
         htf.write(header_file)
         htf.flush()
-        extra_arg = "-extra-arg=-include{}".format(htf.name)
+        arguments = ["-extra-arg=-include{}".format(htf.name)]
+        if extra_args:
+          for arg in extra_args:
+            arguments.append("--extra-arg={}".format(arg)) 
 
-      cmd = [str(GREWE), extra_arg, f.name]
+      cmd = [str(GREWE)] + extra_arguments + [f.name]
 
       process = subprocess.Popen(
         cmd,
