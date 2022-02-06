@@ -31,13 +31,58 @@ FLAGS = flags.FLAGS
 
 SRCIROR_SRC  = environment.SRCIROR_SRC
 SRCIROR_IR   = environment.SRCIROR_IR
-SRCIROR_BASE = pathlib.Path(SRCIROR_SRC).resolve()
+SRCIROR_BASE = pathlib.Path(SRCIROR_SRC).resolve().parent
 CLSMITH_INCLUDE = environment.CLSMITH_INCLUDE
 
 ## Some hard limits in order to finish the experiments this year.
 # max amount of mutants per input source.
 PER_INPUT_HARD_LIMIT = 1000
 SEARCH_DEPTH_HARD_LIMIT = 30
+
+def generate_IR_mutants(src: str, incl: str, timeout_seconds: int = 45) -> typing.Set[typing.Tuple[pathlib.Path, str]]:
+  """
+  Collect all mutants from src and return them
+  """
+
+  if incl:
+    with open(SRCIROR_BASE / "incl.h", 'w') as f:
+      f.write(incl)
+      f.flush()
+      src = "#include \"CLSmith.h\"\n#include \"incl.h\"\n" + src
+
+  with open(SRCIROR_BASE / "test.c", 'w') as f:
+    try:
+      f.write(src)
+      f.flush()
+    except UnicodeDecodeError:
+      return []
+    except UnicodeEncodeError:
+      return []
+
+  # Construct and execute mutec command
+  mutec_cmd = [
+    "timeout",
+    "-s9",
+    str(timeout_seconds),
+    "bash",
+    SRCIROR_IR
+  ]
+  process = subprocess.Popen(
+    mutec_cmd,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    universal_newlines=True,
+  )
+  try:
+    stdout, stderr = process.communicate()
+  except TimeoutError:
+    pass
+  os.remove(str(SRCIROR_BASE / "test.c"))
+  os.remove(str(SRCIROR_BASE / "incl.h"))
+
+  srciror_ir_paths = glob.glob(str(SRCIROR_BASE / "test-*.ll"))
+  mutants = set([(x, incl) for x in srciror_ir_paths[:PER_INPUT_HARD_LIMIT]])
+  return mutants
 
 def generate_src_mutants(src: str, incl: str, timeout_seconds: int = 45) -> typing.Set[typing.Tuple[str, str]]:
   """
@@ -81,19 +126,20 @@ def generate_src_mutants(src: str, incl: str, timeout_seconds: int = 45) -> typi
   os.remove(str(SRCIROR_BASE / "test.c"))
   os.remove(str(SRCIROR_BASE / "incl.h"))
 
-  srciror_src_paths = glob.glob("{}.mutec*".format(f.name))
+  srciror_src_paths = glob.glob(str(SRCIROR_BASE / "test.*.c"))
   mutants = set([(open(x, 'r').read(), incl) for x in srciror_src_paths[:PER_INPUT_HARD_LIMIT]])
 
   for m in srciror_src_paths:
     os.remove(m)
   return mutants
 
-def beam_srciror_src(srcs            : typing.List[typing.Tuple[str, str, float]],
-                     target_features : typing.Dict[str, float],
-                     feat_space      : str,
-                     beam_width      : int,
-                     srciror_src_cache     : samples_database.SamplesDatabase,
-                     ) -> typing.List[typing.Tuple[str, float]]:
+def beam_srciror(srcs              : typing.List[typing.Tuple[str, str, float]],
+                 target_features   : typing.Dict[str, float],
+                 feat_space        : str,
+                 beam_width        : int,
+                 srciror_src_cache : samples_database.SamplesDatabase,
+                 src_mode          : bool = True,
+                 ) -> typing.List[typing.Tuple[str, float]]:
   """
   Run generational beam search over starting github kernels
   to minimize distance from target features.
@@ -102,23 +148,35 @@ def beam_srciror_src(srcs            : typing.List[typing.Tuple[str, str, float]
   total_beams, beam, closest = set(), [], []
   gen_id = 0
 
+  if src_mode:
+    generate_mutants = lambda x, y: generate_src_mutants(x, y)
+    ext_func = functools.partial(
+          workers.ExtractAndCalculate,
+          target_features = target_features,
+          feature_space = feat_space,
+        )
+    db_func = workers.FeatureExtractor
+  else:
+    generate_mutants = lambda x, y: generate_ir_mutants(x, y)
+    ext_func = functools.partial(
+          workers.BcExtractAndCalculate,
+          target_features = target_features,
+          feature_space   = feat_space,
+        )
+    db_func = workers.BcFeatureExtractor
+
   while better_score:
 
     cands = set()
     ## Generate mutants for current generation.
     for src, incl, dist in tqdm.tqdm(srcs, total = len(srcs), desc = "SRCIROR_src candidates {}".format(gen_id), leave = False):
-      cands.update(generate_src_mutants(src, incl)) ### This should collect all mutants and return them, out of a single source.
+      cands.update(generate_mutants(src, incl)) ### This should collect all mutants and return them, out of a single source.
 
     ## Extract their features and calculate distances.
     pool = multiprocessing.Pool()
-    f = functools.partial(
-          workers.ExtractAndCalculate,
-          target_features = target_features,
-          feature_space = feat_space,
-        )
     # total.update(cands)
     try:
-      for cand in tqdm.tqdm(pool.imap_unordered(f, cands), total = len(cands), desc = "Extract Features {}".format(gen_id), leave = False):
+      for cand in tqdm.tqdm(pool.imap_unordered(ext_func, cands), total = len(cands), desc = "Extract Features {}".format(gen_id), leave = False):
         if cand:
           beam.append(cand)
     except Exception as e:
@@ -145,7 +203,7 @@ def beam_srciror_src(srcs            : typing.List[typing.Tuple[str, str, float]
     pool = multiprocessing.Pool()
     try:
       idx = srciror_src_cache.count
-      for dp in tqdm.tqdm(pool.imap_unordered(workers.FeatureExtractor, total_beams), total = len(total_beams), desc = "Add mutants to DB", leave = False):
+      for dp in tqdm.tqdm(pool.imap_unordered(db_func, total_beams), total = len(total_beams), desc = "Add mutants to DB", leave = False):
         if dp:
           src, incl, feats = dp
           sample = samples_database.Sample.FromArgsLite(idx, incl + src, feats)
@@ -231,7 +289,7 @@ def SRCIROR_srcVsBenchPress(**kwargs) -> None:
 
     l.logger().info(benchmark.name)
 
-    closest_mutec_src  = beam_srciror_src([(src, inc, dist) for src, inc, dist in closest[:beam_width] if dist > 0], benchmark.features, feature_space, beam_width, mutec_db)[:top_k] # tuple of (src, distance)
+    closest_mutec_src  = beam_srciror([(src, inc, dist) for src, inc, dist in closest[:beam_width] if dist > 0], benchmark.features, feature_space, beam_width, mutec_db)[:top_k] # tuple of (src, distance)
     closest_mutec_dist = [x for _, _, x in closest_mutec_src]
 
     assert len(closest_mutec_dist) == len(git_dist[:top_k])
