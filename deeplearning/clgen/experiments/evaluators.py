@@ -692,6 +692,35 @@ def main(config: evaluator_pb2.Evaluation):
       if sev.HasField("plot_config"):
         kw_args['plot_config'] = sev.plot_config
 
+    elif ev.HasField("srciror_src_vs_benchpress"):
+      sev = ev.srciror_src_vs_benchpress
+      kw_args['top_k']       = sev.top_k
+      kw_args['srciror_src_cache'] = sev.srciror_src_cache
+      kw_args['beam_width']  = sev.beam_width
+      # Gather target benchmarks and cache them
+      if isinstance(sev.target, list):
+        kw_args["targets"] = []
+        for t in sev.target:
+          if t not in target_cache:
+            target_cache[t] = TargetBenchmarks(t)
+          kw_args["targets"].append(target_cache[t])
+      else:
+        if sev.target not in target_cache:
+          target_cache[sev.target] = TargetBenchmarks(sev.target)
+        kw_args["targets"] = target_cache[sev.target]
+      for name, dbs in [('seed', sev.seed), ('benchpress', sev.benchpress)]:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args[name] = db_cache[key]
+      # Gather feature spaces if applicable.
+      if sev.HasField("feature_space"):
+        kw_args['feature_space'] = sev.feature_space
+      # Gather plotter configuration
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = sev.plot_config
+
     elif ev.HasField("generate_clsmith"):
       sev = ev.generate_clsmith
       kw_args['clsmith_path'] = sev.clsmith_db
