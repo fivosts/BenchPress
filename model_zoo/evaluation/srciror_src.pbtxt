@@ -38,7 +38,6 @@ evaluator {
     }
   }
 }
-
 evaluator {
   srciror_src_vs_benchpress {
     target: "rodinia"
@@ -97,7 +96,6 @@ evaluator {
     }
   }
 }
-
 evaluator {
   srciror_src_vs_benchpress {
     target: "rodinia"
