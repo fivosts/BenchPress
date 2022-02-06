@@ -137,7 +137,7 @@ def beam_srciror(srcs              : typing.List[typing.Tuple[str, str, float]],
                  target_features   : typing.Dict[str, float],
                  feat_space        : str,
                  beam_width        : int,
-                 srciror_src_cache : samples_database.SamplesDatabase,
+                 srciror_cache : samples_database.SamplesDatabase,
                  src_mode          : bool = True,
                  ) -> typing.List[typing.Tuple[str, float]]:
   """
@@ -199,10 +199,10 @@ def beam_srciror(srcs              : typing.List[typing.Tuple[str, str, float]],
     gen_id += 1
 
   ## Store all mutants in database.
-  with srciror_src_cache.Session(commit = True) as s:
+  with srciror_cache.Session(commit = True) as s:
     pool = multiprocessing.Pool()
     try:
-      idx = srciror_src_cache.count
+      idx = srciror_cache.count
       for dp in tqdm.tqdm(pool.imap_unordered(db_func, total_beams), total = len(total_beams), desc = "Add mutants to DB", leave = False):
         if dp:
           src, incl, feats = dp
@@ -220,14 +220,15 @@ def beam_srciror(srcs              : typing.List[typing.Tuple[str, str, float]],
   return closest
 
 @public.evaluator
-def SRCIROR_srcVsBenchPress(**kwargs) -> None:
+def SRCIRORVsBenchPress(**kwargs) -> None:
   """
   Compare mutec mutation tool on github's database against BenchPress.
   Comparison is similar to KAverageScore comparison.
   """
   seed              = kwargs.get('seed')
   benchpress        = kwargs.get('benchpress')
-  srciror_src_cache = kwargs.get('srciror_src_cache', '')
+  srciror_cache     = kwargs.get('srciror_cache', '')
+  mutation_level    = kwargs.get('mutation_level')
   target            = kwargs.get('targets')
   feature_space     = kwargs.get('feature_space')
   top_k             = kwargs.get('top_k')
@@ -236,15 +237,22 @@ def SRCIROR_srcVsBenchPress(**kwargs) -> None:
   plot_config       = kwargs.get('plot_config')
   workspace_path    = kwargs.get('workspace_path')
 
-  if not pathlib.Path(SRCIROR_SRC).exists():
-    raise FileNotFoundError("SRCIROR_src executable not found: {}".format(SRCIROR_SRC))
+  if mutation_level == 'src':
+    if not pathlib.Path(SRCIROR_SRC).exists():
+      raise FileNotFoundError("SRCIROR_src executable not found: {}".format(SRCIROR_SRC))
+  else:
+    if not pathlib.Path(SRCIROR_IR).exists():
+      raise FileNotFoundError("SRCIROR_IR executable not found: {}".format(SRCIROR_IR))
   if seed.db_type != encoded.EncodedContentFiles and seed.db_type != clsmith.CLSmithDatabase:
     raise ValueError("Scores require EncodedContentFiles or CLSmithDatabase but received", seed.db_type)
   if benchpress.db_type != samples_database.SamplesDatabase:
     raise ValueError("BenchPress scores require SamplesDatabase but received", benchpress.db_type)
+  if seed.db_type == clsmith.CLSmithDatabase:
+    if not pathlib.Path(CLSMITH_INCLUDE).exists():
+      raise FileNotFoundError("CLSMITH_INCLUDE folder does not exist: {}".format(CLSMITH_INCLUDE))
 
   ## Load database and checkpoint of targets.
-  mutec_db = samples_database.SamplesDatabase(url = "sqlite:///{}".format(pathlib.Path(srciror_src_cache).resolve()), must_exist = False)
+  mutec_db = samples_database.SamplesDatabase(url = "sqlite:///{}".format(pathlib.Path(srciror_cache).resolve()), must_exist = False)
   done = set()
   with mutec_db.Session(commit = True) as s:
     res = s.query(samples_database.SampleResults).filter_by(key = feature_space).first()
@@ -254,7 +262,7 @@ def SRCIROR_srcVsBenchPress(**kwargs) -> None:
 
   ## Initialize dictionary.
   groups = {}
-  groups["SRCIROR_src"] = ([], [])
+  groups["SRCIROR_{}".format(mutation_level)] = ([], [])
   groups[seed.group_name] = ([], [])
   groups[benchpress.group_name] = ([], [])
 
@@ -311,8 +319,8 @@ def SRCIROR_srcVsBenchPress(**kwargs) -> None:
       target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
       mutec_avg_dist     = sum(closest_mutec_dist) / top_k
 
-      groups["SRCIROR_src"][0].append(benchmark.name)
-      groups["SRCIROR_src"][1].append(100 * ((target_origin_dist - mutec_avg_dist) / target_origin_dist))
+      groups["SRCIROR_{}".format(mutation_level)][0].append(benchmark.name)
+      groups["SRCIROR_{}".format(mutation_level)][1].append(100 * ((target_origin_dist - mutec_avg_dist) / target_origin_dist))
 
       # Compute target's distance from O(0,0)
       git_avg_dist = sum(git_dist[:top_k]) / top_k
@@ -323,7 +331,7 @@ def SRCIROR_srcVsBenchPress(**kwargs) -> None:
   benchmarks = target.get_benchmarks(feature_space)
   for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchpress"):
     ## Run only for benchmarks mutec has improved.
-    if benchmark.name in groups["SRCIROR_src"][0]:
+    if benchmark.name in groups["SRCIROR_{}".format(mutation_level)][0]:
 
       l.logger().info(benchmark.name)
       distances = workers.SortedDistances(bp_get_data(feature_space), benchmark.features, feature_space)
