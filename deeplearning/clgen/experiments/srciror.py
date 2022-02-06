@@ -241,7 +241,7 @@ def SRCIROR_srcVsBenchPress(**kwargs) -> None:
   plot_config       = kwargs.get('plot_config')
   workspace_path    = kwargs.get('workspace_path')
 
-  if not pathlib.Path(MUTEC).exists():
+  if not pathlib.Path(SRCIROR_SRC).exists():
     raise FileNotFoundError("SRCIROR_src executable not found: {}".format(MUTEC))
   if seed.db_type != encoded.EncodedContentFiles and seed.db_type != clsmith.CLSmithDatabase:
     raise ValueError("Scores require EncodedContentFiles or CLSmithDatabase but received", seed.db_type)
