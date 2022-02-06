@@ -110,7 +110,7 @@ def beam_srciror_src(srcs            : typing.List[typing.Tuple[str, str, float]
                      target_features : typing.Dict[str, float],
                      feat_space      : str,
                      beam_width      : int,
-                     mutec_cache     : samples_database.SamplesDatabase,
+                     srciror_src_cache     : samples_database.SamplesDatabase,
                      ) -> typing.List[typing.Tuple[str, float]]:
   """
   Run generational beam search over starting github kernels
@@ -159,10 +159,10 @@ def beam_srciror_src(srcs            : typing.List[typing.Tuple[str, str, float]
     gen_id += 1
 
   ## Store all mutants in database.
-  with mutec_cache.Session(commit = True) as s:
+  with srciror_src_cache.Session(commit = True) as s:
     pool = multiprocessing.Pool()
     try:
-      idx = mutec_cache.count
+      idx = srciror_src_cache.count
       for dp in tqdm.tqdm(pool.imap_unordered(workers.FeatureExtractor, total_beams), total = len(total_beams), desc = "Add mutants to DB", leave = False):
         if dp:
           src, incl, feats = dp
@@ -185,16 +185,16 @@ def SRCIROR_srcVsBenchPress(**kwargs) -> None:
   Compare mutec mutation tool on github's database against BenchPress.
   Comparison is similar to KAverageScore comparison.
   """
-  seed           = kwargs.get('seed')
-  benchpress     = kwargs.get('benchpress')
-  mutec_cache    = kwargs.get('mutec_cache', '')
-  target         = kwargs.get('targets')
-  feature_space  = kwargs.get('feature_space')
-  top_k          = kwargs.get('top_k')
-  beam_width     = kwargs.get('beam_width')
-  unique_code    = kwargs.get('unique_code', False)
-  plot_config    = kwargs.get('plot_config')
-  workspace_path = kwargs.get('workspace_path')
+  seed              = kwargs.get('seed')
+  benchpress        = kwargs.get('benchpress')
+  srciror_src_cache = kwargs.get('srciror_src_cache', '')
+  target            = kwargs.get('targets')
+  feature_space     = kwargs.get('feature_space')
+  top_k             = kwargs.get('top_k')
+  beam_width        = kwargs.get('beam_width')
+  unique_code       = kwargs.get('unique_code', False)
+  plot_config       = kwargs.get('plot_config')
+  workspace_path    = kwargs.get('workspace_path')
 
   if not pathlib.Path(MUTEC).exists():
     raise FileNotFoundError("SRCIROR_src executable not found: {}".format(MUTEC))
@@ -204,7 +204,7 @@ def SRCIROR_srcVsBenchPress(**kwargs) -> None:
     raise ValueError("BenchPress scores require SamplesDatabase but received", benchpress.db_type)
 
   ## Load database and checkpoint of targets.
-  mutec_db = samples_database.SamplesDatabase(url = "sqlite:///{}".format(pathlib.Path(mutec_cache).resolve()), must_exist = False)
+  mutec_db = samples_database.SamplesDatabase(url = "sqlite:///{}".format(pathlib.Path(srciror_src_cache).resolve()), must_exist = False)
   done = set()
   with mutec_db.Session(commit = True) as s:
     res = s.query(samples_database.SampleResults).filter_by(key = feature_space).first()
