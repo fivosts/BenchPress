@@ -62,7 +62,7 @@ def generate_IR_mutants(src: str, incl: str, timeout_seconds: int = 45) -> typin
 
   # Construct and execute mutec command
   srciror_cmd = (["timeout", "-s9", str(timeout_seconds), "bash", SRCIROR_IR]
-              + opencl.GetClangArgs(use_shim = False, use_aux_headers = False, extra_args = ["-include{}".format(pathlib.Path(CLSMITH_INCLUDE) / "CLSmith.h")] if incl else "")
+              + opencl.GetClangArgs(use_shim = False, use_aux_headers = False, extra_args = ["-include{}".format(pathlib.Path(CLSMITH_INCLUDE) / "CLSmith.h")] if incl else [""])
               + ["-include/tmp/mutec_src_temp_header.h" if incl else ""])
   process = subprocess.Popen(
     srciror_cmd,
@@ -110,7 +110,7 @@ def generate_src_mutants(src: str, incl: str, timeout_seconds: int = 45) -> typi
 
   # Construct and execute mutec command
   srciror_cmd = (["timeout", "-s9", str(timeout_seconds), "bash", SRCIROR_SRC]
-              + opencl.GetClangArgs(use_shim = False, use_aux_headers = False, extra_args = ["-include{}".format(pathlib.Path(CLSMITH_INCLUDE) / "CLSmith.h")] if incl else "")
+              + opencl.GetClangArgs(use_shim = False, use_aux_headers = False, extra_args = ["-include{}".format(pathlib.Path(CLSMITH_INCLUDE) / "CLSmith.h")] if incl else [""])
               + ["-include/tmp/mutec_src_temp_header.h" if incl else ""])
   process = subprocess.Popen(
     srciror_cmd,
