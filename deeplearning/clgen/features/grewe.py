@@ -80,7 +80,7 @@ class GreweFeatures(object):
           for arg in extra_args:
             arguments.append("--extra-arg={}".format(arg)) 
 
-      cmd = [str(GREWE)] + extra_arguments + [f.name]
+      cmd = [str(GREWE)] + arguments + [f.name]
 
       process = subprocess.Popen(
         cmd,
