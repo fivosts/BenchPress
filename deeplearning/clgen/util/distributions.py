@@ -168,6 +168,7 @@ class GenericDistribution(Distribution):
       set_name        = set_name,
     )
     self.min_idx, self.max_idx = math.inf, -math.inf
+    total = len(samples)
     if len(samples) > 0:
       for s in samples:
         if s > self.max_idx:
@@ -177,6 +178,8 @@ class GenericDistribution(Distribution):
       self.distribution = [0] * abs(1 + self.max_idx - self.min_idx)
       for s in samples:
         self.distribution[s - self.min_idx] += 1
+      for idx, v in enumerate(self.distribution):
+        self.distribution[idx] = v / total
     else:
       self.distribution = []
     return
@@ -231,65 +234,55 @@ class GenericDistribution(Distribution):
     Probability of P[X >= v]
     """
     voffset = v - self.min_idx
-    hits  = 0
-    total = 0
+    probs = 0.0
     for idx, s in enumerate(self.distribution):
       if idx >= voffset:
-        hits += s
-      total += s
-    return hits / total
+        probs += s
+    return probs
 
   def __gt__(self, v: int) -> float:
     """
     Probability of P[X > v]
     """
     voffset = v - self.min_idx
-    hits  = 0
-    total = 0
+    probs = 0.0
     for idx, s in enumerate(self.distribution):
       if idx > voffset:
-        hits += s
-      total += s
-    return hits / total
+        probs += s
+    return probs
 
   def __le__(self, v: int) -> float:
     """
     Probability of P[X <= v]
     """
     voffset = v - self.min_idx
-    hits  = 0
-    total = 0
+    probs = 0.0
     for idx, s in enumerate(self.distribution):
       if idx <= voffset:
-        hits += s
-      total += s
-    return hits / total
+        probs += s
+    return probs
 
   def __lt__(self, v: int) -> float:
     """
     Probability of P[X < v]
     """
     voffset = v - self.min_idx
-    hits  = 0
-    total = 0
+    probs = 0.0
     for idx, s in enumerate(self.distribution):
       if idx < voffset:
-        hits += s
-      total += s
-    return hits / total
+        probs += s
+    return probs
 
   def __eq__(self, v: int) -> float:
     """
     Probability of P[X = v]
     """
     voffset = v - self.min_idx
-    hits  = 0
-    total = 0
+    probs = 0.0
     for idx, s in enumerate(self.distribution):
       if idx == voffset:
-        hits += s
-      total += s
-    return hits / total
+        probs += s
+    return probs
 
   def negate(self) -> "GenericDistribution":
     """
