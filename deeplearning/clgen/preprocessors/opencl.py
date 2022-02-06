@@ -486,6 +486,15 @@ def CompileLlvmBytecode(text: str, header_file = None, use_aux_headers: bool = T
     header_file = header_file,
   )
 
+def HumanReadableBytecode(bc_path: pathlib.Path) -> str:
+  """Run llvm-dis to disassemble binary bytecode file to human readable format.
+  Args:
+    bc_path: The path to bytecode.
+  Returns:
+    The textual LLVM byte code.
+  """
+  return clang.HumanReadableBytecode(bc_path)
+
 def CompileOptimizer(text: str,
                      optimization    : typing.List[str],
                      timeout_seconds : int = 60,

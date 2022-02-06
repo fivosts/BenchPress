@@ -21,6 +21,7 @@ for an example.
 """
 import json
 import re
+import pathlib
 import humanize
 import subprocess
 import tempfile
@@ -64,6 +65,7 @@ CLANG        = environment.CLANG
 CLANG_FORMAT = environment.CLANG_FORMAT
 OPT          = environment.OPT
 LLVM_EXTRACT = environment.LLVM_EXTRACT
+LLVM_DIS     = environment.LLVM_DIS
 
 def StripPreprocessorLines(src: str) -> str:
   """Strip preprocessor remnants from clang frontend output.
@@ -195,6 +197,50 @@ def CompileLlvmBytecode(src: str,
   elif process.returncode != 0:
     raise ValueError("/*\n{}\n*/\n{}".format(stderr, src))
   return stdout
+
+def HumanReadableBytecode(bc_path: pathlib.Path, timeout_seconds: int = 60) -> str:
+  """Run llvm-dis to disassemble binary bytecode file to human readable format.
+
+  Args:
+    bc_path: The path to bytecode.
+    timeout_seconds: The number of seconds to allow before killing clang.
+
+  Returns:
+    The textual LLVM byte code.
+
+  Raises:
+    ValueError: In case of an error.
+    ValueError: If clang does not complete before timeout_seconds.
+  """
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
+  with tempfile.NamedTemporaryFile("w", prefix="human_readable_ll", suffix='.ll', dir = tdir) as f:
+
+    cmd = (
+      ["timeout",
+       "-s9",
+       str(timeout_seconds),
+       str(LLVM_DIS),
+       str(bc_path),
+       "-o",
+       str(f.name)]
+    )
+    process = subprocess.Popen(
+      cmd,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.PIPE,
+      universal_newlines=True,
+    )
+    stdout, stderr = process.communicate()
+    readable_bc = open(str(f.name), 'r').read()
+
+  if process.returncode == 9:
+    raise ValueError(f"Clang timed out after {timeout_seconds}s")
+  elif process.returncode != 0:
+    raise ValueError("/*\n{}\n*/\n{}".format(stderr, str(bc_path)))
+  return readable_bc
 
 def CompileOptimizer(src: str,
                      suffix: str,
