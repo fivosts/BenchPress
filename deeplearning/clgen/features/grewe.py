@@ -42,6 +42,13 @@ class GreweFeatures(object):
     return cls.RawToDictFeats(str_features)
 
   @classmethod
+  def ExtractIRFeatures(cls, bytecode: str) -> typing.Dict[str, float]:
+    """
+    Bytecode input in text-level feature space makes no sense. Therefore this function is just a decoy.
+    """
+    return {}
+
+  @classmethod
   def ExtractRawFeatures(cls,
                          src: str,
                          header_file     : str = None,
@@ -84,6 +91,13 @@ class GreweFeatures(object):
     return stdout
 
   @classmethod
+  def ExtractIRRawFeatures(cls, bytecode: str) -> str:
+    """
+    Bytecode input in text-level feature space makes no sense. Therefore this function is just a decoy.
+    """
+    return ""
+
+  @classmethod
   def RawToDictFeats(cls, str_feats: str) -> typing.Dict[str, float]:
     """
     Converts clgen_features subprocess output from raw string
@@ -104,8 +118,4 @@ class GreweFeatures(object):
       except ValueError as e:
         raise ValueError("{}, {}".format(str(e), str_feats))
     except Exception as e:
-      print(e)
-      # l.logger().warn("Grewe RawDict: {}".format(e))
-      # Kernel has a syntax error and feature line is empty.
-      # Return an empty dict.
       return {}
