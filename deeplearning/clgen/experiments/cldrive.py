@@ -172,7 +172,7 @@ def ComputeLabel(cpu_transfer : typing.List[int],
   gpu_dist = gput_dist + gpue_dist
 
   ## P[CPU - GPU]
-  dist = cput_dist + gpu_dist.negate()
+  dist = cput_dist - gpu_dist
 
   return {
     "CPU": round(100 * (dist < 0), 2),
