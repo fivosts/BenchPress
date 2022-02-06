@@ -61,9 +61,9 @@ def generate_IR_mutants(src: str, incl: str, timeout_seconds: int = 45) -> typin
       return []
 
   # Construct and execute mutec command
-  mutec_cmd = ["timeout", "-s9", str(timeout_seconds), "bash", SRCIROR_IR ]
+  mutec_cmd = (["timeout", "-s9", str(timeout_seconds), "bash", SRCIROR_IR]
               + opencl.GetClangArgs(use_shim = False, use_aux_headers = False, extra_args = ["-include{}".format(pathlib.Path(CLSMITH_INCLUDE) / "CLSmith.h")] if incl else None)
-              + ["-include/tmp/mutec_src_temp_header.h" if incl else "",]
+              + ["-include/tmp/mutec_src_temp_header.h" if incl else ""])
   process = subprocess.Popen(
     mutec_cmd,
     stdout=subprocess.PIPE,
