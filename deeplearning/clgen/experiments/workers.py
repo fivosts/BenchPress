@@ -50,7 +50,7 @@ def ExtractAndCalculate(src_incl        : typing.Tuple[str, str],
     Tuple of source code with distance.
   """
   src, incl = src_incl
-  f = extractor.ExtractFeatures(src, [feature_space], header_file = incl, extra_args = ["-include{}".format(pathlib.Path(environment.CLSMITH_INCLUDE) / "CLSmith.h")] if incl else None)
+  f = extractor.ExtractFeatures(src, [feature_space], header_file = incl, extra_args = ["-include{}".format(pathlib.Path(environment.CLSMITH_INCLUDE) / "CLSmith.h")] if incl else "")
   if feature_space in f and f[feature_space]:
     return src, incl, feature_sampler.calculate_distance(f[feature_space], target_features, feature_space)
   return None
@@ -76,7 +76,7 @@ def FeatureExtractor(src_incl: typing.Tuple[str, str]) -> typing.Tuple[str, str,
   """
   src, incl = src_incl
   try:
-    return src, incl, extractor.ExtractRawFeatures(src, header_file = incl, extra_args = ["-include{}".format(pathlib.Path(environment.CLSMITH_INCLUDE) / "CLSmith.h")] if incl else None)
+    return src, incl, extractor.ExtractRawFeatures(src, header_file = incl, extra_args = ["-include{}".format(pathlib.Path(environment.CLSMITH_INCLUDE) / "CLSmith.h")] if incl else "")
   except ValueError:
     return src, incl, ""
 
