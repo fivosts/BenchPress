@@ -163,9 +163,9 @@ def ComputeLabel(cpu_transfer : typing.List[int],
   to execute with certainty metrics.
   """
   cput_dist = distributions.GenericDistribution(cpu_transfer, workspace, "cpu_transfer_time")
-  cpue_dist = distributions.GenericDistribution(cpu_transfer, workspace, "cpu_execution_time")
-  gput_dist = distributions.GenericDistribution(cpu_transfer, workspace, "gpu_transfer_time")
-  gpue_dist = distributions.GenericDistribution(cpu_transfer, workspace, "gpu_execution_time")
+  cpue_dist = distributions.GenericDistribution(cpu_execute, workspace, "cpu_execution_time")
+  gput_dist = distributions.GenericDistribution(gpu_transfer, workspace, "gpu_transfer_time")
+  gpue_dist = distributions.GenericDistribution(gpu_execute, workspace, "gpu_execution_time")
 
   ## P[CPUt + CPUe] and P[GPUt + GPUe].
   cpu_dist = cput_dist + cpue_dist
