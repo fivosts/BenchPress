@@ -31,7 +31,12 @@ class InstCountFeatures(object):
     return cls.RawToDictFeats(cls.ExtractIRRawFeatures(bytecode))
 
   @classmethod
-  def ExtractRawFeatures(cls, bytecode: str) -> str:
+  def ExtractRawFeatures(cls,
+                         src: str,
+                         header_file     : str = None,
+                         use_aux_headers : bool = True,
+                         extra_args      : typing.List[str] = [],
+                         ) -> str:
     try:
       return opencl.CompileOptimizer(src, INSTCOUNT, header_file = header_file, use_aux_headers = use_aux_headers, extra_args = extra_args)
     except ValueError:
