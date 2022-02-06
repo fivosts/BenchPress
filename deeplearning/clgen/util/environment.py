@@ -31,6 +31,8 @@ try:
   GREWE               = check_path_exists(os.environ['GREWE'])
   CLDRIVE             = check_path_exists(os.environ['CLDRIVE'], must_exist = False)
   MUTEC               = check_path_exists(os.environ['MUTEC'], must_exist = False)
+  SRCIROR_SRC         = check_path_exists(os.environ['SRCIROR_SRC'], must_exist = False)
+  SRCIROR_IR          = check_path_exists(os.environ['SRCIROR_IR'], must_exist = False)
   CSMITH              = check_path_exists(os.environ['CSMITH'], must_exist = False)
   CLSMITH             = check_path_exists(os.environ['CLSMITH'], must_exist = False)
   CLSMITH_INCLUDE     = check_path_exists(os.environ['CLSMITH_INCLUDE'], must_exist = False)
