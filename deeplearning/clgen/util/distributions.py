@@ -180,8 +180,10 @@ class GenericDistribution(Distribution):
         self.distribution[s - self.min_idx] += 1
       for idx, v in enumerate(self.distribution):
         self.distribution[idx] = v / total
+      self.pmf_to_pdf()
     else:
       self.distribution = []
+      self.pdf = []
     return
 
   def __add__(self, d: "GenericDistribution") -> "GenericDistribution":
@@ -217,6 +219,7 @@ class GenericDistribution(Distribution):
     ret.distribution = summed
     ret.min_idx = min_idx
     ret.max_idx = max_idx
+    ret.pmf_to_pdf()
     return ret
 
   def __sub__(self, d: "GenericDistribution") -> "GenericDistribution":
@@ -292,6 +295,7 @@ class GenericDistribution(Distribution):
     neg.distribution = self.distribution[::-1]
     neg.min_idx = -self.max_idx
     neg.max_idx = -self.min_idx
+    neg.pmf_to_pdf()
     return neg
 
   def realign(self, offset: int) -> typing.List[int]:
@@ -305,6 +309,17 @@ class GenericDistribution(Distribution):
     """
     return [0] * offset + self.distribution
 
+  def pmf_to_pdf(self) -> None:
+    """
+    Compute pdf from pmf.
+    """
+    self.pdf = [0] * len(self.distribution)
+    cur = 0.0
+    for idx, prob in enumerate(self.distribution):
+      cur += prob
+      self.pdf[idx] = cur
+    return
+
   def plot(self) -> None:
     """
     Plot distribution.
@@ -312,9 +327,17 @@ class GenericDistribution(Distribution):
     plotter.FrequencyBars(
       x = [idx + self.min_idx for idx, _ in enumerate(self.distribution)],
       y = [v for v in self.distribution],
-      plot_name = self.set_name,
+      plot_name = "pmf_{}".format(self.set_name),
       path      = self.log_path,
-      title     = self.set_name,
+      title     = "pmf_{}".format(self.set_name),
+      x_name    = self.set_name,
+    )
+    plotter.FrequencyBars(
+      x = [idx + self.min_idx for idx, _ in enumerate(self.pdf)],
+      y = [v for v in self.pdf],
+      plot_name = "pdf_{}".format(self.set_name),
+      path      = self.log_path,
+      title     = "pdf_{}".format(self.set_name),
       x_name    = self.set_name,
     )
     return
