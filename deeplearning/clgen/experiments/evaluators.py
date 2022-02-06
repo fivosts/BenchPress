@@ -457,6 +457,52 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         lambda x: x > 0,
         "beam width factor must be positive",
       )
+    elif ev.HasField("srciror_ir_vs_benchpress"):
+      ### MutecVsBenchPress
+      # Generic Fields
+      pbutil.AssertFieldIsSet(config, "workspace")
+      pbutil.AssertFieldIsSet(config, "tokenizer")
+      if not pathlib.Path(config.tokenizer).resolve().exists():
+        raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
+      # DB groups
+      if ev.srciror_ir_vs_benchpress.HasField("db_group"):
+        raise ValueError("db_group is a placeholder for srciror_ir_vs_benchpress evaluator and should not be used.")
+      for dbs in [ev.srciror_ir_vs_benchpress.seed, ev.srciror_ir_vs_benchpress.benchpress]:
+        for db in ev.srciror_ir_vs_benchpress.seed.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
+      # Specialized fields.
+      pbutil.AssertFieldIsSet(ev.srciror_ir_vs_benchpress, "srciror_ir_cache")
+      if not pathlib.Path(ev.srciror_ir_vs_benchpress.srciror_ir_cache).resolve().exists():
+        l.logger().warn("Mutec cache not found in {}. Will create one from scratch.".format(ev.srciror_ir_vs_benchpress.srciror_ir_cache))
+
+      pbutil.AssertFieldConstraint(
+        ev.srciror_ir_vs_benchpress,
+        "target",
+        lambda x: x in feature_sampler.targets,
+        "target {} not found".format(ev.srciror_ir_vs_benchpress.target),
+      )
+      pbutil.AssertFieldIsSet(ev.srciror_ir_vs_benchpress, "feature_space")
+      pbutil.AssertFieldConstraint(
+        ev.srciror_ir_vs_benchpress,
+        "top_k",
+        lambda x: x > 0,
+        "top-K factor must be positive",
+      )
+      pbutil.AssertFieldConstraint(
+        ev.srciror_ir_vs_benchpress,
+        "beam_width",
+        lambda x: x > 0,
+        "beam width factor must be positive",
+      )
     elif ev.HasField("generate_clsmith"):
       # Generic Fields
       pbutil.AssertFieldIsSet(config, "tokenizer")
@@ -492,7 +538,8 @@ def main(config: evaluator_pb2.Evaluation):
     evaluator_pb2.CompMemGrewe            : comp_vs_mem.CompMemGrewe,
     evaluator_pb2.TopKCLDrive             : cldrive.TopKCLDrive,
     evaluator_pb2.MutecVsBenchPress       : mutec.MutecVsBenchPress,
-    evaluator_pb2.SRCIROR_srcVsBenchPress : srciror.SRCIROR_srcVsBenchPress,
+    evaluator_pb2.SRCIROR_srcVsBenchPress : srciror.SRCIRORVsBenchPress,
+    evaluator_pb2.SRCIROR_IRVsBenchPress  : srciror.SRCIRORVsBenchPress,
     evaluator_pb2.GenerateCLSmith         : clsmith.GenerateCLSmith,
   }
   db_cache       = {}
@@ -692,11 +739,19 @@ def main(config: evaluator_pb2.Evaluation):
       if sev.HasField("plot_config"):
         kw_args['plot_config'] = sev.plot_config
 
-    elif ev.HasField("srciror_src_vs_benchpress"):
-      sev = ev.srciror_src_vs_benchpress
-      kw_args['top_k']       = sev.top_k
-      kw_args['srciror_src_cache'] = sev.srciror_src_cache
-      kw_args['beam_width']  = sev.beam_width
+    elif ev.HasField("srciror_src_vs_benchpress") or ev.HasField("srciror_ir_vs_benchpress"):
+      if ev.HasField("srciror_src_vs_benchpress"):
+        sev = ev.srciror_src_vs_benchpress
+        kw_args['srciror_cache']  = sev.srciror_src_cache
+        kw_args['mutation_level'] = "src"
+      else:
+        sev = ev.srciror_ir_vs_benchpress
+        kw_args['srciror_cache'] = sev.srciror_ir_cache
+        kw_args['mutation_level'] = "IR"
+  
+      kw_args['top_k']         = sev.top_k
+      kw_args['srciror_cache'] = sev.srciror_src_cache
+      kw_args['beam_width']    = sev.beam_width
       # Gather target benchmarks and cache them
       if isinstance(sev.target, list):
         kw_args["targets"] = []
@@ -720,6 +775,10 @@ def main(config: evaluator_pb2.Evaluation):
       # Gather plotter configuration
       if sev.HasField("plot_config"):
         kw_args['plot_config'] = sev.plot_config
+
+    elif ev.HasField("generate_clsmith"):
+      sev = ev.generate_clsmith
+      kw_args['clsmith_path'] = sev.clsmith_db
 
     elif ev.HasField("generate_clsmith"):
       sev = ev.generate_clsmith
