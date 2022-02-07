@@ -20,7 +20,7 @@ def KAverageScore(**kwargs) -> None:
   target         = kwargs.get('targets')
   feature_space  = kwargs.get('feature_space')
   top_k          = kwargs.get('top_k')
-  unique_code    = kwargs.get('unique_code', True)
+  unique_code    = kwargs.get('unique_code', False)
   plot_config    = kwargs.get('plot_config')
   workspace_path = kwargs.get('workspace_path')
   groups = {}
