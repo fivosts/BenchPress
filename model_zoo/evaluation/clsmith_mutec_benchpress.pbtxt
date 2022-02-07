@@ -1,0 +1,128 @@
+workspace: "/var/foivos/results/full_results/workspace"
+tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "AutophaseFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/full_results/BERT/Autophase/merged_samples.db"
+    }
+    db_group {
+      group_name: "CLSmith"
+      db_type: "CLSmithDatabase"
+      database: "/var/foivos/results/full_results/CLSmith/clsmith.db"
+    }
+    db_group {
+      group_name: "Mutec"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/full_results/Mutec/clsmith_mutants.db"
+    }
+  }
+}
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "InstCountFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/full_results/BERT/Instcount/merged_samples.db"
+    }
+    db_group {
+      group_name: "CLSmith"
+      db_type: "CLSmithDatabase"
+      database: "/var/foivos/results/full_results/CLSmith/clsmith.db"
+    }
+    db_group {
+      group_name: "Mutec"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/full_results/Mutec/clsmith_mutants.db"
+    }
+  }
+}
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "GreweFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/full_results/BERT/Grewe/merged_samples.db"
+    }
+    db_group {
+      group_name: "CLSmith"
+      db_type: "CLSmithDatabase"
+      database: "/var/foivos/results/full_results/CLSmith/clsmith.db"
+    }
+    db_group {
+      group_name: "Mutec"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/full_results/Mutec/clsmith_mutants.db"
+    }
+  }
+}
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "AutophaseFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/full_results/BERT/Autophase/merged_samples.db"
+    }
+    db_group {
+      group_name: "GitHub"
+      db_type: "EncodedContentFiles"
+      database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
+    }
+    db_group {
+      group_name: "GitHub+Mutec"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/full_results/Mutec/github_mutants.db"
+    }
+  }
+}
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "InstCountFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/full_results/BERT/Instcount/merged_samples.db"
+    }
+    db_group {
+      group_name: "GitHub"
+      db_type: "EncodedContentFiles"
+      database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
+    }
+    db_group {
+      group_name: "GitHub+Mutec"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/full_results/Mutec/github_mutants.db"
+    }
+  }
+}
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "GreweFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/full_results/BERT/Grewe/merged_samples.db"
+    }
+    db_group {
+      group_name: "GitHub"
+      db_type: "EncodedContentFiles"
+      database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
+    }
+    db_group {
+      group_name: "GitHub+Mutec"
+      db_type: "SamplesDatabase"
+      database: "/var/foivos/results/full_results/Mutec/github_mutants.db"
+    }
+  }
+}
