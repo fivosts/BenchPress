@@ -1,4 +1,4 @@
-workspace: "/var/foivos/results/full_results/workspace"
+workspace: "/home/foivos/clsmith_github_mutec_benchpress"
 tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
 evaluator {
   k_average_score {
