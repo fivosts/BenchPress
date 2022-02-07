@@ -8,6 +8,7 @@ from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.experiments import public
+from deeplearning.clgen.experiments import clsmith
 from deeplearning.clgen.experiments import workers
 
 @public.evaluator
@@ -28,7 +29,7 @@ def KAverageScore(**kwargs) -> None:
   benchmarks = target.get_benchmarks(feature_space)
   target_origin_dists = {}
   for dbg in db_groups:
-    if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
+    if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles or dbg.db_type == clsmith.CLSmithDatabase):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
     groups[dbg.group_name] = ([], [])
     for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
