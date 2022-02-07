@@ -7,7 +7,7 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Autophase/merged_samples.db"
+      database: "/var/foivos/results/full_results/BERT/Autophase/unique_merged_samples.db"
     }
     db_group {
       group_name: "CLSmith"
@@ -28,7 +28,7 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Instcount/merged_samples.db"
+      database: "/var/foivos/results/full_results/BERT/Instcount/unique_merged_samples.db"
     }
     db_group {
       group_name: "CLSmith"
@@ -49,7 +49,7 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Grewe/merged_samples.db"
+      database: "/var/foivos/results/full_results/BERT/Grewe/unique_merged_samples.db"
     }
     db_group {
       group_name: "CLSmith"
@@ -70,7 +70,7 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Autophase/merged_samples.db"
+      database: "/var/foivos/results/full_results/BERT/Autophase/unique_merged_samples.db"
     }
     db_group {
       group_name: "GitHub"
@@ -91,7 +91,7 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Instcount/merged_samples.db"
+      database: "/var/foivos/results/full_results/BERT/Instcount/unique_merged_samples.db"
     }
     db_group {
       group_name: "GitHub"
@@ -112,7 +112,7 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Grewe/merged_samples.db"
+      database: "/var/foivos/results/full_results/BERT/Grewe/unique_merged_samples.db"
     }
     db_group {
       group_name: "GitHub"
