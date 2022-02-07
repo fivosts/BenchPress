@@ -25,11 +25,12 @@ def KAverageScore(**kwargs) -> None:
   workspace_path = kwargs.get('workspace_path')
   groups = {}
 
+  benchmarks = target.get_benchmarks(feature_space)
+  target_origin_dists = {}
   for dbg in db_groups:
     if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
     groups[dbg.group_name] = ([], [])
-    benchmarks = target.get_benchmarks(feature_space)
     for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
       groups[dbg.group_name][0].append(benchmark.name)
       # Find shortest distances.
@@ -41,10 +42,18 @@ def KAverageScore(**kwargs) -> None:
       distances = workers.SortedDistances(get_data(feature_space), benchmark.features, feature_space)
       # Compute target's distance from O(0,0)
       assert len(distances) != 0, "Sorted src list for {} is empty!".format(dbg.group_name)
-      target_origin_dist = math.sqrt(sum([x**2 for x in benchmark.features.values()]))
       avg_dist = sum(distances[:top_k]) / top_k
+      if benchmark.name in target_origin_dists:
+        target_origin_dists[benchmark.name] = max(target_origin_dists[benchmark.name], avg_dist)
+      else:
+        target_origin_dists[benchmark.name] = max(math.sqrt(sum([x**2 for x in benchmark.features.values()])), avg_dist)
 
-      groups[dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
+      # groups[dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
+      groups[dbg.group_name][1].append(avg_dist)
+
+  for group_name, tup in groups.items():
+    for idx, (bench_name, raw_dist) in enumerate(tup):
+      groups[group_name][1][idx] = 100 * ( (target_origin_dists[bench_name] - raw_dist / target_origin_dists[bench_name]))
 
   plotter.GrouppedBars(
     groups = groups,
