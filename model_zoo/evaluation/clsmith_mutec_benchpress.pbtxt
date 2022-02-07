@@ -1,5 +1,5 @@
-workspace: "/var/foivos/results/full_results/workspace"
-tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
+workspace: "/disk/scratch/s1879742/clsmith_mutec_github_benchpress"
+tokenizer: "../backup_tokenizer.pkl"
 evaluator {
   min_score {
     target: "rodinia"
@@ -7,17 +7,17 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Autophase/unique_merged_samples.db"
+      database: "/disk/scratch/s1879742/autophase_bert_samples.db"
     }
     db_group {
       group_name: "CLSmith"
       db_type: "CLSmithDatabase"
-      database: "/var/foivos/results/full_results/CLSmith/clsmith.db"
+      database: "/disk/scratch/s1879742/clsmith.db"
     }
     db_group {
       group_name: "Mutec"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/Mutec/clsmith_mutants.db"
+      database: "/disk/scratch/s1879742/Mutec/clsmith_mutants.db"
     }
   }
 }
@@ -28,17 +28,17 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Instcount/unique_merged_samples.db"
+      database: "/disk/scratch/s1879742/instcount_bert_samples.db"
     }
     db_group {
       group_name: "CLSmith"
       db_type: "CLSmithDatabase"
-      database: "/var/foivos/results/full_results/CLSmith/clsmith.db"
+      database: "/disk/scratch/s1879742/clsmith.db"
     }
     db_group {
       group_name: "Mutec"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/Mutec/clsmith_mutants.db"
+      database: "/disk/scratch/s1879742/Mutec/clsmith_mutants.db"
     }
   }
 }
@@ -49,17 +49,17 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Grewe/unique_merged_samples.db"
+      database: "/disk/scratch/s1879742/grewe_bert_samples.db"
     }
     db_group {
       group_name: "CLSmith"
       db_type: "CLSmithDatabase"
-      database: "/var/foivos/results/full_results/CLSmith/clsmith.db"
+      database: "/disk/scratch/s1879742/clsmith.db"
     }
     db_group {
       group_name: "Mutec"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/Mutec/clsmith_mutants.db"
+      database: "/disk/scratch/s1879742/Mutec/clsmith_mutants.db"
     }
   }
 }
@@ -70,17 +70,17 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Autophase/unique_merged_samples.db"
+      database: "/disk/scratch/s1879742/autophase_bert_samples.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
+      database: "/disk/scratch/s1879742/unique_encoded.db"
     }
     db_group {
       group_name: "GitHub+Mutec"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/Mutec/github_mutants.db"
+      database: "/disk/scratch/s1879742/Mutec/github_mutants.db"
     }
   }
 }
@@ -91,17 +91,17 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Instcount/unique_merged_samples.db"
+      database: "/disk/scratch/s1879742/instcount_bert_samples.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
+      database: "/disk/scratch/s1879742/unique_encoded.db"
     }
     db_group {
       group_name: "GitHub+Mutec"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/Mutec/github_mutants.db"
+      database: "/disk/scratch/s1879742/Mutec/github_mutants.db"
     }
   }
 }
@@ -112,17 +112,17 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Grewe/unique_merged_samples.db"
+      database: "/disk/scratch/s1879742/grewe_bert_samples.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
+      database: "/disk/scratch/s1879742/unique_encoded.db"
     }
     db_group {
       group_name: "GitHub+Mutec"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/Mutec/github_mutants.db"
+      database: "/disk/scratch/s1879742/Mutec/github_mutants.db"
     }
   }
 }
