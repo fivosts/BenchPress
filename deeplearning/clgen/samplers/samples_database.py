@@ -125,7 +125,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "sample_indices"         : "",
       "encoded_sample_indices" : "",
       "compile_status"         : compiles,
-      "feature_vector"         : "",
+      "feature_vector"         : feature_vector,
       "num_tokens"             : 0,
       "categorical_sampling"   : "False",
       "sample_time_ms"         : 0,
