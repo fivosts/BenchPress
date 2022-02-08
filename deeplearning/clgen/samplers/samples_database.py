@@ -109,7 +109,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
     }
 
   @classmethod
-  def FromArgsLite(cls, id: int, text: str, feature_vector: str) -> "Sample":
+  def FromArgsLite(cls, id: int, text: str, feature_vector: str, compiles: bool) -> "Sample":
     """
     Do you want to use SamplesDatabase as a means to store only code
     without much fuss ? This function is for you!
@@ -124,7 +124,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
       "text"                   : text,
       "sample_indices"         : "",
       "encoded_sample_indices" : "",
-      "compile_status"         : False,
+      "compile_status"         : compiles,
       "feature_vector"         : "",
       "num_tokens"             : 0,
       "categorical_sampling"   : "False",
