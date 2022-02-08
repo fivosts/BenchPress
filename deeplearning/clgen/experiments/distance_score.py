@@ -55,7 +55,7 @@ def KAverageScore(**kwargs) -> None:
   for group_name, tup in groups.items():
     bench_names, raw_dists = tup
     for idx, (bench_name, raw_dist) in enumerate(zip(bench_names, raw_dists)):
-      groups[group_name][1][idx] = 100 * ( (target_origin_dists[bench_name] - raw_dist / target_origin_dists[bench_name]))
+      groups[group_name][1][idx] = 100 * ( (target_origin_dists[bench_name] - raw_dist ) / target_origin_dists[bench_name])
 
   plotter.GrouppedBars(
     groups = groups,
