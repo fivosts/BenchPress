@@ -59,7 +59,7 @@ def KAverageScore(**kwargs) -> None:
 
   plotter.GrouppedBars(
     groups = groups,
-    plot_name = "avg_{}_dist_{}_{}".format(top_k, feature_space.replace("Features", " Features"), '-'.join([dbg.group_name for dbg in db_groups])),
+    plot_name = "avg_{}_dist_{}_{}".format(top_k, feature_space.replace("Features", ""), '-'.join([dbg.group_name for dbg in db_groups])),
     path = workspace_path,
     **plot_config if plot_config else {},
   )
