@@ -66,7 +66,7 @@ def generate_mutants(src: str, incl: str, timeout_seconds: int = 45) -> typing.S
       'directory' : str(base_path),
       'arguments' : [str(clang.CLANG), f.name] +
                     ["-S", "-emit-llvm", "-o", "-"] +
-                    opencl.GetClangArgs(use_shim = False, use_aux_headers = False, extra_args = ["-include{}".format(pathlib.Path(CLSMITH_INCLUDE) / "CLSmith.h")] if incl else None) +
+                    opencl.GetClangArgs(use_shim = False, use_aux_headers = False, extra_args = ["-include{}".format(pathlib.Path(CLSMITH_INCLUDE) / "CLSmith.h")] if incl else [""]) +
                     ["-include/tmp/mutec_src_temp_header.h" if incl else ""],
       'file'      : str(f.name)
     }
@@ -165,7 +165,12 @@ def beam_mutec(srcs            : typing.List[typing.Tuple[str, str, float]],
       for dp in tqdm.tqdm(pool.imap_unordered(workers.FeatureExtractor, total_beams), total = len(total_beams), desc = "Add mutants to DB", leave = False):
         if dp:
           src, incl, feats = dp
-          sample = samples_database.Sample.FromArgsLite(idx, incl + src, feats)
+          try:
+            _ = opencl.Compile(src, header_file = incl, extra_args = ["-include{}".format(pathlib.Path(environment.CLSMITH_INCLUDE) / "CLSmith.h")] if incl else [""])
+            compiles = True
+          except ValueError:
+            compiles = False
+          sample = samples_database.Sample.FromArgsLite(idx, incl + src, feats, compiles)
           exists = s.query(samples_database.Sample.sha256).filter_by(sha256 = sample.sha256).scalar() is not None
           if not exists:
             s.add(sample)
