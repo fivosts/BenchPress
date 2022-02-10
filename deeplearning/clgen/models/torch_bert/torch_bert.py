@@ -284,9 +284,8 @@ class torchBert(backends.BackendBase):
     if self.pytorch.num_nodes > 1:
       m = self.torch.nn.parallel.DistributedDataParallel(
         m,
-        device_ids=[dummy_num_machines],
-        output_device=dummy_num_machines,
-        find_unused_parameters=True,
+        device_ids = [self.pytorch.offset_device],
+        output_device = self.pytorch.offset_device,
       )
     elif self.pytorch.num_gpus > 1:
       m = self.torch.nn.DataParallel(m)
