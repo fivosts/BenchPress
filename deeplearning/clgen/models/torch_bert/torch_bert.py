@@ -447,10 +447,11 @@ class torchBert(backends.BackendBase):
         loader = self.train.data_generator.dataloader
 
       # Get dataloader iterator and setup hooks.
-      batch_iterator = iter(loader)    
-      train_hook = hooks.tensorMonitorHook(
-        self.logfile_path if not pre_train else self.pre_logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
-      )
+      batch_iterator = iter(loader)
+      if self.is_world_process_zero():
+        train_hook = hooks.tensorMonitorHook(
+          self.logfile_path if not pre_train else self.pre_logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
+        )
       if FLAGS.reward_compilation >= 0 and not pre_train:
         correct_sample_obs = sample_observers.SamplesDatabaseObserver(
           self.logfile_path / "correct_samples.db"
@@ -587,13 +588,14 @@ class torchBert(backends.BackendBase):
 
           if FLAGS.validate_per_epoch and self.train.data_generator.config.validation_split > 0:
             val_ml_loss, val_nsp_loss = self.Validate(per_epoch = True, pre_train = pre_train)
-            train_hook.end_epoch(
-            val_masked_lm_loss      = val_ml_loss,
-            val_next_sentence_loss  = val_nsp_loss,
-            val_total_loss          = val_ml_loss + val_nsp_loss,
-            )
+            if self.is_world_process_zero():
+              train_hook.end_epoch(
+              val_masked_lm_loss      = val_ml_loss,
+              val_next_sentence_loss  = val_nsp_loss,
+              val_total_loss          = val_ml_loss + val_nsp_loss,
+              )
             set_mail += "Validation Loss: {}\n".format(val_ml_loss)
-          else:
+          elif self.is_world_process_zero():
             train_hook.end_epoch()
 
           if FLAGS.notify_me:
@@ -645,7 +647,7 @@ class torchBert(backends.BackendBase):
       _, _ = self.Validate(pre_train = pre_train)
     return
 
-  def Validate(self, per_epoch = False, pre_train = False) -> None:
+  def Validate(self, per_epoch = False, pre_train = False) -> typing.Tuple[float, float]:
     """
     Validation function for torch BERT.
 
@@ -660,9 +662,6 @@ class torchBert(backends.BackendBase):
       or self.config.training.data_generator.validation_split == 0):
       l.logger().info("Skipping BERT Validation.")
       return None, None
-
-    if self.pytorch.num_gpus > 1:
-      model = self.torch.nn.DataParallel(self.train.model)
 
     avg_mask_loss = []
     avg_nsp_loss  = []
@@ -679,7 +678,7 @@ class torchBert(backends.BackendBase):
       else:
         loader = dataloader
 
-      if not per_epoch:
+      if not per_epoch and self.is_world_process_zero():
         val_hook = hooks.validationSampleHook(
           url = "sqlite:///{}".format(str((self.logfile_path if not pre_train else self.pre_logfile_path) / "validation_samples.db")),
           tokenizer = self.tokenizer,
@@ -689,7 +688,8 @@ class torchBert(backends.BackendBase):
       eval_steps = FLAGS.max_eval_steps if not per_epoch else FLAGS.eval_steps_per_epoch
 
       try:
-        for step in tqdm.auto.trange(eval_steps, desc = "Validation", leave = False):
+        eval_iter = tqdm.auto.trange(self.num_epochs, desc="Epoch", leave = False) if self.is_world_process_zero() else range(self.num_epochs)
+        for step in eval_iter:
           try:
             inputs = next(eval_iterator)
           except StopIteration:
@@ -700,15 +700,24 @@ class torchBert(backends.BackendBase):
           with self.torch.no_grad():
             step_out = self.model_step(self.train.model, inputs, is_validation = True)
 
-          if not per_epoch:
+          if not per_epoch and self.is_world_process_zero():
             val_hook.step(inputs, step_out)
 
-          avg_mask_loss.append(step_out['masked_lm_loss'].mean().item())
-          avg_nsp_loss.append(step_out['next_sentence_loss'].mean().item())
+          if self.is_world_process_zero():
+            if self.pytorch.num_nodes > 1:
+              masked_lm_loss     = [self.torch.zeros(tuple(step_out['masked_lm_loss'    ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+              next_sentence_loss = [self.torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+              self.torch.distributed.all_gather(masked_lm_loss,     step_out["masked_lm_loss"])
+              self.torch.distributed.all_gather(next_sentence_loss, step_out["next_sentence_loss"])
+            else:
+              masked_lm_loss     = step_out['masked_lm_loss'    ].cpu()
+              next_sentence_loss = step_out['next_sentence_loss'].cpu()
+            avg_mask_loss.append(masked_lm_loss.mean().item())
+            avg_nsp_loss.append(next_sentence_loss.mean().item())
       except KeyboardInterrupt:
         pass
 
-      if avg_mask_loss and avg_nsp_loss and not per_epoch:
+      if self.is_world_process_zero() and avg_mask_loss and avg_nsp_loss and not per_epoch:
         val_hook.final(set_name, sum(avg_mask_loss) / len(avg_mask_loss), sum(avg_nsp_loss) / len(avg_nsp_loss))
       if self.pytorch.torch_tpu_available:
         # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
