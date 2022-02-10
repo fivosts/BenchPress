@@ -703,17 +703,17 @@ class torchBert(backends.BackendBase):
           if not per_epoch and self.is_world_process_zero():
             val_hook.step(inputs, step_out)
 
-          if self.is_world_process_zero():
-            if self.pytorch.num_nodes > 1:
-              masked_lm_loss     = [self.torch.zeros(tuple(step_out['masked_lm_loss'    ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-              next_sentence_loss = [self.torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-              self.torch.distributed.all_gather(masked_lm_loss,     step_out["masked_lm_loss"])
-              self.torch.distributed.all_gather(next_sentence_loss, step_out["next_sentence_loss"])
-            else:
-              masked_lm_loss     = step_out['masked_lm_loss'    ].cpu()
-              next_sentence_loss = step_out['next_sentence_loss'].cpu()
-            avg_mask_loss.append(masked_lm_loss.mean().item())
-            avg_nsp_loss.append(next_sentence_loss.mean().item())
+          if self.pytorch.num_nodes > 1:
+            masked_lm_loss     = [self.torch.zeros(tuple(step_out['masked_lm_loss'    ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+            next_sentence_loss = [self.torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+            self.torch.distributed.all_gather(masked_lm_loss,     step_out["masked_lm_loss"])
+            self.torch.distributed.all_gather(next_sentence_loss, step_out["next_sentence_loss"])
+          else:
+            masked_lm_loss     = step_out['masked_lm_loss'    ].cpu()
+            next_sentence_loss = step_out['next_sentence_loss'].cpu()
+
+          avg_mask_loss.append(masked_lm_loss.mean().item())
+          avg_nsp_loss.append(next_sentence_loss.mean().item())
       except KeyboardInterrupt:
         pass
 
@@ -784,7 +784,10 @@ class torchBert(backends.BackendBase):
         self.pred_iterator = iter(self.loader)
         inputs = next(self.pred_iterator)
 
-      self.step_inputs = {x: inputs[x].unsqueeze(0).repeat(self.pytorch.num_gpus, 1, 1) for x in inputs}
+      self.step_inputs = {
+        x: inputs[x].unsqueeze(0).repeat(self.pytorch.num_gpus if self.torch.distributed.get_world_size() == 1 else 1, 1, 1)
+        for x in inputs
+      }
 
       # This loop below is purely for proper printing reasons:
       sample_text = set(
@@ -820,8 +823,23 @@ class torchBert(backends.BackendBase):
             self.step_inputs,
             is_live = self.sampler.is_live
         )
+        if self.pytorch.num_nodes > 1:
+          generated_samples = [self.torch.zeros(tuple(step_out['generated_samples'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+          sample_indices    = [self.torch.zeros(tuple(step_out['sample_indices'   ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+          self.torch.distributed.all_gather(generated_samples, step_out["generated_samples"])
+          self.torch.distributed.all_gather(sample_indices,    step_out["sample_indices"])
+        else:
+          generated_samples = step_out['generated_samples'].cpu()
+          sample_indices    = step_out['sample_indices'].cpu()
+
         if self.sampler.is_live and input("Show logits figure ? [y/!y]") == "y":
-          for hole, indcs in zip(step_out['prediction_scores'], step_out['sample_indices']):
+          if self.pytorch.num_nodes > 1:
+            prediction_scores = [self.torch.zeros(tuple(step_out['prediction_scores'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+            self.torch.distributed.all_gather(prediction_scores, step_out["prediction_scores"])
+          else:
+            prediction_scores = step_out['prediction_scores'].cpu()
+
+          for hole, indcs in zip(prediction_scores, sample_indices):
             plotter.LogitsStepsDistrib(
               x = self.torch.nn.Softmax(dim = 1)(self.torch.FloatTensor(hole[:10])).numpy(),
               atoms = [self.tokenizer.decoder[i] for i in range(self.tokenizer.vocab_size)],
@@ -833,8 +851,8 @@ class torchBert(backends.BackendBase):
         return (
           self.step_inputs['original_input'].cpu().view(-1, self.step_inputs['original_input'].shape[2]).numpy(),
           self.step_inputs['input_ids'].cpu().view(-1, self.sampler.sequence_length).numpy(),
-          step_out['generated_samples'],
-          step_out['sample_indices']
+          generated_samples,
+          sample_indices
         )
 
   def _getTestSampler(self, test_sampler, sequence_length):
