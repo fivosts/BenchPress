@@ -18,7 +18,7 @@ import numpy as np
 import pathlib
 import multiprocessing
 import math
-import progressbar
+import tqdm
 import threading
 
 from deeplearning.clgen.util import pytorch
@@ -521,8 +521,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     return dataloader
 
   def ActiveGeneration(self,
-                       mwrapper: typing.TypeVar('torch_bert.torchBert'),
-                       estimator: typing.TypeVar('torch_bert.SampleBertEstimator')
+                       mwrapper  : typing.TypeVar('torch_bert.torchBert'),
+                       estimator : typing.TypeVar('torch_bert.SampleBertEstimator')
                       ) -> typing.Tuple[np.array, np.array, np.array, np.array]:
     """
     Active Learning generation core routine.
@@ -625,8 +625,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           ## Post-process outputs.
           # Keep step_candidates and evaluate them. Keep rejected candidates only for eval_cand database.
           step_candidates, rejected_candidates = [], []
-          bar = progressbar.ProgressBar(max_value = len(feeds) * wsize * self.sample_batch_size)
-          bar.update(0)
+          bar = lambda x: tqdm.tqdm(x, total = len(feeds) * wsize * self.sample_batch_size, desc = "Register Output Data", leave = False)
           tcs, ts = 0, 0
           # outputs = torch.reshape(outputs.unsqueeze(0), (len(feeds), -1, 768))
           # for idx, feed in enumerate(feeds):
@@ -831,12 +830,13 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           gen_id         = 0,
         )
       )
-      self.addToDB(
-        active_feed_database.ActiveInput.FromArgs(
-          tokenizer      = self.tokenizer, id = self.active_db.input_count,
-          input_feed     = cf, input_features = self.feed_queue[-1].input_features,
+      if environment.WORLD_RANK == 0:
+        self.addToDB(
+          active_feed_database.ActiveInput.FromArgs(
+            tokenizer      = self.tokenizer, id = self.active_db.input_count,
+            input_feed     = cf, input_features = self.feed_queue[-1].input_features,
+          )
         )
-      )
     l.logger().info("Feed queue input scores: {}".format(', '.join([str(round(c.input_score, 3)) for c in self.feed_queue])))
     return self.feed_queue[0].input_feed
 
@@ -911,7 +911,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                          feeds      : ActiveSampleFeed,
                          candidates : typing.List[ActiveSample],
                          rejected_candidates: typing.List[ActiveSample],
-                         bar: progressbar.ProgressBar,
+                         bar: tqdm.tqdm,
                          ) -> typing.List[int]:
     """
     Gets workload output from model.
@@ -921,7 +921,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     Args:
       outputs: Dictionary output of workload
       candidates: Passed by reference and filled within this function
-      bar: progressbar for status checking
+      bar: tqdm bar for status checking
 
     Returns:
       cm_rate: List of two elements that express compilation rate of workload.
@@ -949,7 +949,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         )
       t = 0
       # l.logger().warn("Pool opened")
-      for idx, batch in enumerate(pool.map(candidate_worker, it)):
+      for idx, batch in bar(enumerate(pool.map(candidate_worker, it))):
         t = idx
         if batch[0]:
           cm_rate[0] += 1
@@ -969,7 +969,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           outfeats = {k: v for k, v in zip(cd.features.keys(), scaler.transform([[float(x) for x in cd.features.values()]])[0])}
           candidates[idx]._replace(score = feature_sampler.calculate_distance(outfeats, target_feats, self.feat_sampler.feature_space))
 
-      bar.update(bar.value + 1 + t)
       pool.close()
       pool.terminate()
     except KeyboardInterrupt as e:
