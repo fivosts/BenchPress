@@ -430,7 +430,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         dataset = datasets.LazyOnlineDataset(self, is_train)
         sampler = datasets.LazyRandomSampler(dataset, replacement = False)
       else:
-        raise NotImplementedError("Fix set_epoch for OnlineDataset as well")
         dataset = datasets.OnlineDataset(self, is_train)
         sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
     else:
