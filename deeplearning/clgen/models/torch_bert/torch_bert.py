@@ -425,6 +425,7 @@ class torchBert(backends.BackendBase):
       self.torch.cuda.empty_cache()
     if self.current_step >= 0:
       l.logger().info("Loaded checkpoint step {}".format(self.current_step))
+    self.current_step = max(0, self.current_step)
 
     if self.current_step < self.num_train_steps:
       self.train.model.zero_grad()
