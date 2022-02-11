@@ -827,12 +827,13 @@ class BertForPreTraining(BertPreTrainedModel):
     >>> prediction_logits = outptus.prediction_logits
     >>> seq_relationship_logits = outputs.seq_relationship_logits
     """
-
+    if workload is not None:
+      input_ids, attention_mask, position_ids = workload
+    
     device = input_ids.get_device()
     device = device if device >= 0 else 'cpu'
 
     if workload is not None:
-      input_ids, attention_mask, position_ids = workload
       prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
         input_ids[0], attention_mask[0], position_ids[0]
       )
