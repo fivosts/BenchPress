@@ -616,7 +616,6 @@ class torchBert(backends.BackendBase):
               org_inputs, input_ids, samples, indices = self.SampleNextIndices()
               end_time = datetime.datetime.utcnow()
               for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
-                sample = [int(x) for x in sample]
                 try:
                   stdout = opencl.Compile(self.tokenizer.ArrayToCode(sample))
                   compile_flag = 1
@@ -839,9 +838,8 @@ class torchBert(backends.BackendBase):
           self.torch.distributed.all_gather(generated_samples, step_out["generated_samples"])
           self.torch.distributed.all_gather(sample_indices,    step_out["sample_indices"])
           raise NotImplementedError("This will not work because generated_samples and sample indices are lists and not tensors")
-          raise NotImplementedError("Also maybe unsqueeze to match dimension")
         else:
-          generated_samples = [step_out['generated_samples']]
+          generated_samples = step_out['generated_samples']
           sample_indices    = [step_out['sample_indices']]
 
         if self.sampler.is_live and input("Show logits figure ? [y/!y]") == "y":
