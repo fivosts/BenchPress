@@ -493,6 +493,7 @@ class torchBert(backends.BackendBase):
               batch_iterator = iter(loader)
               inputs = next(batch_iterator)
 
+            self.current_step += 1
             # Move inputs to torch device.
             inputs     = self.to_device(inputs)
             # Run model step on batch
@@ -576,7 +577,6 @@ class torchBert(backends.BackendBase):
             self.train.model.zero_grad()
             if self.current_step == 0:
               l.logger().info("Starting Loss: {}".format(sum([tl.mean().item() for tl in total_loss]) / len(total_loss)))
-            self.current_step += 1
 
           # End of Epoch
           self.saveCheckpoint(self.train, pre_train)
