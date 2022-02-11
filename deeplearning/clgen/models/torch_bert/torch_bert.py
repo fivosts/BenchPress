@@ -837,9 +837,10 @@ class torchBert(backends.BackendBase):
           sample_indices    = [self.torch.zeros(tuple(step_out['sample_indices'   ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
           self.torch.distributed.all_gather(generated_samples, step_out["generated_samples"])
           self.torch.distributed.all_gather(sample_indices,    step_out["sample_indices"])
+          raise NotImplementedError("This will not work because generated_samples and sample indices are lists and not tensors")
         else:
-          generated_samples = step_out['generated_samples'].cpu()
-          sample_indices    = step_out['sample_indices'].cpu()
+          generated_samples = step_out['generated_samples']
+          sample_indices    = step_out['sample_indices']
 
         if self.sampler.is_live and input("Show logits figure ? [y/!y]") == "y":
           if self.pytorch.num_nodes > 1:
