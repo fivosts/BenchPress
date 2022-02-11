@@ -616,6 +616,7 @@ class torchBert(backends.BackendBase):
               org_inputs, input_ids, samples, indices = self.SampleNextIndices()
               end_time = datetime.datetime.utcnow()
               for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
+                sample = [int(x) for x in sample]
                 try:
                   stdout = opencl.Compile(self.tokenizer.ArrayToCode(sample))
                   compile_flag = 1
