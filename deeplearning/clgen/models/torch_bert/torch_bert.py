@@ -37,6 +37,7 @@ from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import gpu
 from deeplearning.clgen.util import distrib
+from deeplearning.clgen.util import environment
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
@@ -789,7 +790,7 @@ class torchBert(backends.BackendBase):
       self.step_inputs = {
         x: inputs[x].unsqueeze(0).repeat(
           self.pytorch.num_gpus
-          if self.pytorch.num_nodes > 1 and self.torch.distributed.get_world_size() == 1
+          if environment.WORLD_SIZE == 1
           else 1,
           1,
           1
