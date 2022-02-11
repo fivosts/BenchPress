@@ -786,7 +786,13 @@ class torchBert(backends.BackendBase):
         inputs = next(self.pred_iterator)
 
       self.step_inputs = {
-        x: inputs[x].unsqueeze(0).repeat(self.pytorch.num_gpus if self.torch.distributed.get_world_size() == 1 else 1, 1, 1)
+        x: inputs[x].unsqueeze(0).repeat(
+          self.pytorch.num_gpus
+          if self.pytorch.num_nodes > 1 and self.torch.distributed.get_world_size() == 1
+          else 1,
+          1,
+          1
+        )
         for x in inputs
       }
 
