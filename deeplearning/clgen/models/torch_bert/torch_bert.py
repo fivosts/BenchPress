@@ -520,9 +520,9 @@ class torchBert(backends.BackendBase):
               self.torch.distributed.all_gather(masked_lm_lengths,  inputs['masked_lm_lengths'].to(self.pytorch.device))
               self.torch.distributed.all_gather(total_loss,         step_out['total_loss'])
             else:
-              total_loss         = step_out['total_loss'].cpu()
-              masked_lm_loss     = step_out['masked_lm_loss'    ].cpu()
-              next_sentence_loss = step_out['next_sentence_loss'].cpu()
+              total_loss         = step_out['total_loss'        ].unsqueeze(0).cpu()
+              masked_lm_loss     = step_out['masked_lm_loss'    ].unsqueeze(0).cpu()
+              next_sentence_loss = step_out['next_sentence_loss'].unsqueeze(0).cpu()
               masked_lm_lengths  = inputs['masked_lm_lengths' ].cpu()
 
             if self.is_world_process_zero():
