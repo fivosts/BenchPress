@@ -449,9 +449,9 @@ class PreprocessedContentFiles(sqlutil.Database):
         limit = (environment.WORLD_RANK + 1) * total_per_node + (total % total_per_node if environment.WORLD_RANK == environment.WORLD_SIZE - 1 else 0)
 
         if environment.WORLD_SIZE > 1:
-          bar = distrib.ProgressBar(max_value = total, offset = idx)
+          bar = distrib.ProgressBar(total = total, offset = idx, decs = "Preprocessing DB")
         else:
-          bar = tqdm.tqdm(total = total, desc = "Preprocessing", leave = True)
+          bar = tqdm.tqdm(total = total, desc = "Preprocessing DB", leave = True)
 
         last_commit     = time.time()
         wall_time_start = time.time()
@@ -484,7 +484,7 @@ class PreprocessedContentFiles(sqlutil.Database):
             pool.terminate()
             raise e
           except Exception as e:
-            l.logger().info("exception {}".format(e), ddp_nodes = True)
+            l.logger().error(e, ddp_nodes = True)
             pool.terminate()
             raise e
         session.commit()
