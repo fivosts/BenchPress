@@ -415,7 +415,10 @@ class EncodedContentFiles(sqlutil.Database):
                               )
                           )
                         )
-      bar = tqdm.trange(total_jobs, desc = "DB Encoding", leave = True)
+      if environment.WORLD_SIZE > 1:
+        bar = distrib.ProgressBar(total = total, offset = idx, desc = "Encoding DB")
+      else:
+        bar = tqdm.tqdm(total = total, desc = "Encoding DB", leave = True)
       chunk, idx = 2000000, 0
       wall_time_start = time.time()
       while idx < total_jobs:
@@ -459,7 +462,7 @@ class EncodedContentFiles(sqlutil.Database):
               session.commit()
               last_commit = wall_time_end
             idx += 1
-            bar.update(idx)
+            bar.update(idx - bar.n)
           pool.close()
         except KeyboardInterrupt as e:
           pool.terminate()
@@ -470,7 +473,7 @@ class EncodedContentFiles(sqlutil.Database):
               m.plot()
           raise e
         except Exception as e:
-          l.logger().error(e)
+          l.logger().error(e, ddp_nodes = True)
           pool.terminate()
           self.length_monitor.plot()
           if not self.is_pre_train:
@@ -484,6 +487,8 @@ class EncodedContentFiles(sqlutil.Database):
         for m in self.feature_monitors.values():
           m.plot()
       session.commit()
+      if environment.WORLD_SIZE > 1:
+        bar.finalize(idx)
     return
 
   def MergeReplicas(self) -> None:
