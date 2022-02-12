@@ -63,17 +63,17 @@ class MaskedLmInstance():
     self.extend_left = extend_left
 
 def MPHoleSequence(seq: np.array,
-                 train_set: bool,
-                 max_predictions: int,
-                 pickled_distribution: distributions.Distribution,
-                 pickled_tokenizer,
-                 training_opts,
-                 is_torch: bool,
-                 repair_locations: typing.List[int] = None,
-                 ) -> typing.Tuple[
-                        typing.Union[typing.Dict[str, np.array], tfSequence],
-                        typing.List[MaskedLmInstance],
-                      ]:
+                   train_set: bool,
+                   max_predictions: int,
+                   pickled_distribution: distributions.Distribution,
+                   pickled_tokenizer,
+                   training_opts,
+                   is_torch: bool,
+                   repair_locations: typing.List[int] = None,
+                   ) -> typing.Tuple[
+                          typing.Union[typing.Dict[str, np.array], tfSequence],
+                          typing.List[MaskedLmInstance],
+                        ]:
   """
   Inserts hole tokens to a given sequence.
 
@@ -290,13 +290,13 @@ def MPHoleSequence(seq: np.array,
                         ), hole_analytics
 
 def MPMaskSequence(seq: np.array,
-                 train_set: bool,
-                 max_predictions: int,
-                 pickled_tokenizer,
-                 training_opts,
-                 config,
-                 is_torch: bool,
-                 ) -> typing.Dict:
+                   train_set: bool,
+                   max_predictions: int,
+                   pickled_tokenizer,
+                   training_opts,
+                   config,
+                   is_torch: bool,
+                   ) -> typing.Dict:
   """
   Inserts masks to a given sequence.
 
@@ -561,6 +561,142 @@ def HoleSequence(seq: np.array,
       'mask_labels'         : mask_labels,
       'masked_lm_lengths'   : masked_lm_lengths,
       'next_sentence_labels': next_sentence_labels,
+    }
+
+def HoleSequenceSeqMasks(seq: np.array,
+                         train_set: bool,
+                         max_predictions: int,
+                         masked_lm_prob: int,
+                         distribution: distributions.Distribution,
+                         tokenizer,
+                         ) -> typing.Dict[str, np.array]:
+  """
+  Instead of a hole, place left context on the leftmost part,
+  the right context on the rightmost part and all remaining
+  stuff are the masks in the middle. When the actual to-predict
+  sentence.
+
+  This is PLDI Reviewer B's idea.
+  """
+  use_start_end = True if seq[0] == tokenizer.startToken else False
+
+  # Actual length represents the sequence length before pad begins
+  if use_start_end:
+    actual_length   = np.where(seq == tokenizer.endToken)[0][0]
+    last_elem       = actual_length
+  elif tokenizer.padToken in seq:
+    actual_length   = np.where(seq == tokenizer.padToken)[0][0]
+    last_elem       = actual_length - 1
+  else:
+    actual_length   = len(seq)
+    last_elem       = actual_length - 1
+
+  # total tokens to add in holes.
+  # No more than max_predictions_per_seq (or otherwise specified), no less than actual seq length x the probability of hiding a token
+  holes_to_predict  = min(max_predictions,
+                         max(1, int(round(actual_length * masked_lm_prob))))
+
+  assert holes_to_predict == 1, "This mode only supports a single hole."
+
+  extend_left = True if np.random.RandomState().randint(0, 2) == 1 else False
+  input_ids   = list(np.copy(seq))
+  # List of (seq_idx, token_id, hole_length) tuples
+  masked_lms        = []
+  # Set with all candidate_indexes that have been holed.
+  visited_indices   = set()
+  # Total masks placed so far.
+  total_predictions = 0
+  while total_predictions < holes_to_predict:
+    pos_index = np.random.RandomState().randint(0, actual_length) # Fixed seed doesn't work!
+    # Element in processed array can be found in its original index +/- offset
+    if total_predictions >= holes_to_predict:
+      break
+    elif pos_index in visited_indices:
+      # Do not target an index, already holed
+      continue
+    elif input_ids[pos_index] in {tokenizer.startToken, tokenizer.endToken}:
+      # Do not target [START] or [END] token
+      continue
+
+    # Sampled number from distribution to represent the actual hole length
+    hole_length = distribution.sample(actual_length)
+
+    # Increase hole length a little bit, if too many empty holes have pushed rightmost elements
+    # over the edge.
+    while last_elem + 1 - hole_length >= len(seq):
+      hole_length += 1
+
+    # Inside range, make sure hole length does not run over pos_index bounds
+    # This may be redundant given the next for loop
+    if extend_left:
+      hole_length = min(hole_length, pos_index)
+    else:
+      hole_length = min(hole_length, last_elem - pos_index)
+
+    # Confirm there is no conflict with another hole, further down the sequence.
+    for i in range(hole_length):
+      if extend_left:
+        if (input_ids[pos_index - i] == tokenizer.holeToken
+         or input_ids[pos_index - i] == tokenizer.startToken
+         or input_ids[pos_index - i] == tokenizer.endToken
+         # or pos_index - i == 0
+         ):
+          hole_length = i
+          break
+      else:
+        if (input_ids[pos_index + i] == tokenizer.holeToken
+         or input_ids[pos_index + i] == tokenizer.startToken
+         or input_ids[pos_index + i] == tokenizer.endToken
+         # or pos_index + i == len(input_ids)
+         ):
+          hole_length = i
+          break
+
+    if 1 - hole_length >= len(seq):
+      # This hole can't help but explode the sequence. Go find a new position.
+      continue
+
+    assert hole_length >= 0, "hole length is negative: {}".format(hole_length)
+
+    pos_index -= hole_length - 1 if hole_length != 0 and extend_left else 0
+
+    # Target token for classifier is either the first token of the hole, or endholeToken if hole is empty
+    targets = input_ids[pos_index: pos_index + hole_length] if hole_length > 0 else tokenizer.endholeToken
+    input_ids = input_ids[:pos_index] + [tokenizer.holeToken] + input_ids[pos_index + hole_length:]
+
+    lc = input_ids[:pos_index]
+    rc = input_ids[pos_index + hole_length:actual_length]
+    pad_len = len(seq) - len(lc) - len(rc) - len(targets)
+    input_ids = lc + [tokenizer.maskToken]*(len(targets) + len(pad_len)) + rc
+
+    # Store position index, and after making all masks, update with updated offset array
+    masked_lms.append(MaskedLmInstance(
+        pos_index = pos_index, token_id = targets, hole_length = hole_length, extend_left = extend_left
+      )
+    )
+    # Adjust the offset of all affected tokens, from pos_index and after.
+    total_predictions += max(1, hole_length)
+    visited_indices.update(range(pos_index, pos_index + hole_length))
+
+  assert len(input_ids) == len(seq), "Input sequence and sequence length mismatch: {} / {}".format(len(input_ids), len(seq))
+
+  # Now update the entries with offset index.
+  masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
+  mask_labels = np.full(len(seq), -100, dtype = np.int64)
+  for p in masked_lms:
+    if p.pos_index < len(seq):
+      for idx, tid in enumerate(p.token_id):
+        mask_labels[p.pos_index + idx] = tid
+
+  return {
+      'seen_in_training'    : np.int64([1] if train_set else [0]),
+      'original_input'      : seq,
+      'input_ids'           : np.asarray(input_ids[:len(seq)], dtype = np.int64),
+      'input_mask'          : np.ones(len(seq), dtype = np.int64),
+      'position_ids'        : np.arange(len(seq), dtype = np.int64),
+      'mask_labels'         : mask_labels,
+      'masked_lm_lengths'   : np.int64([1]),
+      'next_sentence_labels': np.int64([0]),
     }
 
 def MaskedSeqToBlob(enc_text: np.array,
