@@ -507,7 +507,7 @@ class MaskLMDataGenerator(object):
         cache_lengths  = {}
         chunk_size = 250000
         i, ch_idx = 0, 0
-        bar  = progressbar.ProgressBar(max_value = self.corpus.encoded.size)
+        bar  = tqdm.tqdm(total = self.corpus.encoded.size, desc = "Chunk pre-train corpus")
         pool = multiprocessing.Pool()
         l.logger().info("Processing pre-train corpus chunks...")
         for dp in pool.imap_unordered(
@@ -533,7 +533,7 @@ class MaskLMDataGenerator(object):
               json.dump(cache_lengths, outf)
             ch_idx += 1
             encoded_corpus = []
-          bar.update(i)
+          bar.update(1)
         if encoded_corpus:
           encoded_corpus = np.array(encoded_corpus)
           l.logger().info("Storing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
@@ -751,92 +751,92 @@ class MaskLMDataGenerator(object):
 
     ## Core loop of masking.
     masked_corpus = []
-    with progressbar.ProgressBar(max_value = len(corpus) * self.training_opts.dupe_factor) as bar:
-      kernel_idx = 0
-      try:
-        for iteration in range(iterations + 1):
-          masked_corpus = []
-          # Select between normal iterations or dupe factor residual and shuffle
-          if iteration != iterations:
-            multiproc_corpus = maskedSeq(extended_corpus)
-            if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
-              self.rngen.shuffle(extended_corpus)
-          elif remaining != 0:
-            multiproc_corpus = maskedSeq(remaining_corpus)
-            if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
-              self.rngen.shuffle(remaining_corpus)
-          else:
-            continue
+    bar = tqdm.tqdm(total = len(corpus) * self.training_opts.dupe_factor, desc = "Masking datapoints")
+    kernel_idx = 0
+    try:
+      for iteration in range(iterations + 1):
+        masked_corpus = []
+        # Select between normal iterations or dupe factor residual and shuffle
+        if iteration != iterations:
+          multiproc_corpus = maskedSeq(extended_corpus)
+          if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
+            self.rngen.shuffle(extended_corpus)
+        elif remaining != 0:
+          multiproc_corpus = maskedSeq(remaining_corpus)
+          if self.training_opts.shuffle_corpus_contentfiles_between_epochs:
+            self.rngen.shuffle(remaining_corpus)
+        else:
+          continue
 
-          # Do parallel masking over corpus
-          for kernel, masked_idxs in multiproc_corpus:
-            if distribution:
-              distribution.register([mid.hole_length for mid in masked_idxs])
+        # Do parallel masking over corpus
+        for kernel, masked_idxs in multiproc_corpus:
+          if distribution:
+            distribution.register([mid.hole_length for mid in masked_idxs])
 
-            try:
-              if self.is_torch:
-                actual_length = np.where(kernel['original_input'] == self.tokenizer.padToken)[0][0]
-              else:
-                actual_length = np.where(kernel.original_input == self.tokenizer.padToken)[0][0]
-            except IndexError:
-              actual_length = len(kernel['original_input'])
+          try:
+            if self.is_torch:
+              actual_length = np.where(kernel['original_input'] == self.tokenizer.padToken)[0][0]
+            else:
+              actual_length = np.where(kernel.original_input == self.tokenizer.padToken)[0][0]
+          except IndexError:
+            actual_length = len(kernel['original_input'])
 
-            token_monitor.register([
-              self.tokenizer.decoder[int(x)]
-              for x in kernel['input_ids'] if x != self.tokenizer.padToken]
-            )
-            for hole in masked_idxs:
-              hole_idx = hole.pos_index
-              selected_idx = hole.pos_index
-              if hole.extend_left:
-                selected_idx += hole.hole_length - 1 if hole.hole_length != 0 else 0
-              abs_start_idx_monitor.register(selected_idx)
-              start_idx_monitor.register(int(2 * round(100.0 * (selected_idx / actual_length) / 2.0)))
-              abs_idx_monitor.register([hole_idx + i for i in range(hole.hole_length)])
-              idx_monitor.register([int(2 * round(100.0 * ((hole_idx + i) / actual_length) / 2.0)) for i in range(hole.hole_length)])
-              direction_monitor.register(1 if hole.extend_left else 0)
+          token_monitor.register([
+            self.tokenizer.decoder[int(x)]
+            for x in kernel['input_ids'] if x != self.tokenizer.padToken]
+          )
+          for hole in masked_idxs:
+            hole_idx = hole.pos_index
+            selected_idx = hole.pos_index
+            if hole.extend_left:
+              selected_idx += hole.hole_length - 1 if hole.hole_length != 0 else 0
+            abs_start_idx_monitor.register(selected_idx)
+            start_idx_monitor.register(int(2 * round(100.0 * (selected_idx / actual_length) / 2.0)))
+            abs_idx_monitor.register([hole_idx + i for i in range(hole.hole_length)])
+            idx_monitor.register([int(2 * round(100.0 * ((hole_idx + i) / actual_length) / 2.0)) for i in range(hole.hole_length)])
+            direction_monitor.register(1 if hole.extend_left else 0)
 
-            masked_corpus.append(kernel)
-            bar.update(kernel_idx)
-            kernel_idx += 1
-            if kernel_idx == 1:
-              self.LogBatchTelemetry(
-                self.training_opts.batch_size, self.training_opts.sequence_length,
-                max_predictions, self.steps_per_epoch, self.num_epochs
-                )
+          masked_corpus.append(kernel)
+          bar.update(1)
+          kernel_idx += 1
+          if kernel_idx == 1:
+            self.LogBatchTelemetry(
+              self.training_opts.batch_size, self.training_opts.sequence_length,
+              max_predictions, self.steps_per_epoch, self.num_epochs
+              )
 
-          if FLAGS.store_datasets_to_DB:
-            with lm_db.Session(commit = True) as s:
-              count = lm_db.count
-              for idx, kernel in enumerate(masked_corpus):
-                s.add(
-                  lm_database.LMInstance(**lm_database.LMInstance.FromArgs(
-                    id = count + idx,
-                    original_input = self.tokenizer.tokensToString(kernel['original_input'], ignore_token = self.tokenizer.padToken),
-                    input_ids = self.tokenizer.tokensToString(kernel['input_ids'],           ignore_token = self.tokenizer.padToken),
-                    masked_lm_lengths = kernel['masked_lm_lengths'],
-                    masked_lm_predictions = [self.tokenizer.tokensToString([x]) for x in kernel['mask_labels'] if x != -100],
-                  ))
-                )
-          # write masked_corpus before flushing the list
-          self.dataset[set_name]['file'].append(
-            path / "{}_{}.{}".format(set_name, iteration, self.file_extension)
-            )
-          self.dataset[set_name]['txt'].append(
-            path / "{}_{}.txt".format(set_name, iteration)
-            )
-          self._saveCorpusRecord({
-              'corpus': masked_corpus,
-              'file'  : path / "{}_{}.{}".format(set_name, iteration, self.file_extension),
-              'txt'   : path / "{}_{}.txt".format(set_name, iteration)
-            })
-        pool.close()
-      except KeyboardInterrupt as e:
-        pool.terminate()
-        raise e
-      except Exception as e:
-        pool.terminate()
-        raise e
+        if FLAGS.store_datasets_to_DB:
+          with lm_db.Session(commit = True) as s:
+            count = lm_db.count
+            for idx, kernel in enumerate(masked_corpus):
+              s.add(
+                lm_database.LMInstance(**lm_database.LMInstance.FromArgs(
+                  id = count + idx,
+                  original_input = self.tokenizer.tokensToString(kernel['original_input'], ignore_token = self.tokenizer.padToken),
+                  input_ids = self.tokenizer.tokensToString(kernel['input_ids'],           ignore_token = self.tokenizer.padToken),
+                  masked_lm_lengths = kernel['masked_lm_lengths'],
+                  masked_lm_predictions = [self.tokenizer.tokensToString([x]) for x in kernel['mask_labels'] if x != -100],
+                ))
+              )
+        # write masked_corpus before flushing the list
+        self.dataset[set_name]['file'].append(
+          path / "{}_{}.{}".format(set_name, iteration, self.file_extension)
+          )
+        self.dataset[set_name]['txt'].append(
+          path / "{}_{}.txt".format(set_name, iteration)
+          )
+        self._saveCorpusRecord({
+            'corpus': masked_corpus,
+            'file'  : path / "{}_{}.{}".format(set_name, iteration, self.file_extension),
+            'txt'   : path / "{}_{}.txt".format(set_name, iteration)
+          })
+      pool.close()
+    except KeyboardInterrupt as e:
+      pool.terminate()
+      raise e
+    except Exception as e:
+      pool.terminate()
+      raise e
 
     if distribution:
       distribution.plot()
