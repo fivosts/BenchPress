@@ -18,6 +18,8 @@ from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import monitors
+from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import distrib
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.models import sequence_masking
@@ -501,50 +503,58 @@ class MaskLMDataGenerator(object):
         if self.num_train_steps:
           self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
         self.steps_per_epoch = self.config.steps_per_epoch
-        if len(glob.glob(str(path / "pre_corpus_*.pkl"))) > 0:
-          return []
-        encoded_corpus = []
-        cache_lengths  = {}
-        chunk_size = 250000
-        i, ch_idx = 0, 0
-        bar  = tqdm.tqdm(total = self.corpus.encoded.size, desc = "Chunk pre-train corpus")
-        pool = multiprocessing.Pool()
-        l.logger().info("Processing pre-train corpus chunks...")
-        for dp in pool.imap_unordered(
-                            functools.partial(
-                              _addStartEndPadToken,
-                              tokenizer = pickle.dumps(self.tokenizer),
-                              trunc     = effect_seq_length,
-                              seq_len   = sequence_length),
-                            self.corpus.GetTrainingDataGenerator()):
-          if dp:
-            rlen, enc_kernel = dp
-            kernel_length_monitor.register(rlen)
-            encoded_corpus.append(enc_kernel)
-          i += 1
-          if i % chunk_size == 0:
+        if environment.WORLD_RANK == 0:
+          if len(glob.glob(str(path / "pre_corpus_*.pkl"))) > 0:
+            return []
+          encoded_corpus = []
+          cache_lengths  = {}
+          chunk_size = 250000
+          i, ch_idx = 0, 0
+          bar  = tqdm.tqdm(total = self.corpus.encoded.size, desc = "Chunk pre-train corpus")
+          pool = multiprocessing.Pool()
+          l.logger().info("Processing pre-train corpus chunks...")
+          for dp in pool.imap_unordered(
+                              functools.partial(
+                                _addStartEndPadToken,
+                                tokenizer = pickle.dumps(self.tokenizer),
+                                trunc     = effect_seq_length,
+                                seq_len   = sequence_length),
+                              self.corpus.GetTrainingDataGenerator()):
+            if dp:
+              rlen, enc_kernel = dp
+              kernel_length_monitor.register(rlen)
+              encoded_corpus.append(enc_kernel)
+            i += 1
+            if i % chunk_size == 0:
+              encoded_corpus = np.array(encoded_corpus)
+              corpus_file = "pre_corpus_{}.pkl".format(ch_idx)
+              cache_lengths[corpus_file] = len(encoded_corpus)
+              l.logger().info("Storing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
+              with open(path / corpus_file, 'wb') as outf:
+                pickle.dump(encoded_corpus, outf, protocol = 4)
+              with open(path / "pre_lengths_cache.json", 'w') as outf:
+                json.dump(cache_lengths, outf)
+              ch_idx += 1
+              encoded_corpus = []
+            bar.update(1)
+          if encoded_corpus:
             encoded_corpus = np.array(encoded_corpus)
+            l.logger().info("Storing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
             corpus_file = "pre_corpus_{}.pkl".format(ch_idx)
             cache_lengths[corpus_file] = len(encoded_corpus)
-            l.logger().info("Storing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
             with open(path / corpus_file, 'wb') as outf:
               pickle.dump(encoded_corpus, outf, protocol = 4)
             with open(path / "pre_lengths_cache.json", 'w') as outf:
               json.dump(cache_lengths, outf)
-            ch_idx += 1
-            encoded_corpus = []
-          bar.update(1)
-        if encoded_corpus:
-          encoded_corpus = np.array(encoded_corpus)
-          l.logger().info("Storing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
-          corpus_file = "pre_corpus_{}.pkl".format(ch_idx)
-          cache_lengths[corpus_file] = len(encoded_corpus)
-          with open(path / corpus_file, 'wb') as outf:
-            pickle.dump(encoded_corpus, outf, protocol = 4)
-          with open(path / "pre_lengths_cache.json", 'w') as outf:
-            json.dump(cache_lengths, outf)
-        kernel_length_monitor.plot()
-        pool.close()
+          kernel_length_monitor.plot()
+          pool.close()
+          distrib.barrier()
+        else:
+          distrib.barrier()
+          if len(glob.glob(str(path / "pre_corpus_*.pkl"))) > 0:
+            return []
+          else:
+            raise FileNotFoundError(glob.glob(str(path / "pre_corpus_*.pkl")))
         return encoded_corpus
       else:
         encoded_corpus  = self.corpus.GetTrainingData(sequence_length = effect_seq_length if not self.config.truncate_large_kernels else None)
