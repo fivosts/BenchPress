@@ -169,15 +169,15 @@ class ProgressBar(object):
   All nodes write their current index to a distinct file.
   Only master node reads the indices and updates the progressbar.
   """
-  def __init__(self, max_value: int, offset: int):
-    self.max_value = max_value
-    self.offset    = offset
-    self.path      = PATH
-    self.n         = 0 # tqdm compatibility getter.
+  def __init__(self, total: int, offset: int, desc: str = ""):
+    self.total  = total
+    self.offset = offset
+    self.path   = PATH
+    self.n      = 0 # tqdm compatibility getter.
     if self.path is None:
       raise FileNotFoundError("Distributed env path has not been set!")
     if WORLD_RANK == 0:
-      self.bar = tqdm.tqdm(total = max_value, desc = "Distributed processing")
+      self.bar = tqdm.tqdm(total = total, desc = desc, leave = True)
     return
 
   def _fetch_indices(self, idx: int) -> int:
