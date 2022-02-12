@@ -317,14 +317,6 @@ class Corpus(object):
     Returns:
       The encoded corpus.
     """
-    # Load all indices from the database into memory, and keep them there.
-    # This is to remove the latency from reading the contents from a
-    # database.
-    #
-    # TODO(https://github.com/ChrisCummins/clgen/issues/128): Storing the
-    # entire corpus in memory like this prevents training on corpuses larger
-    # than system memory. Replace this method with an interface for streaming
-    # data from the encoded database.
     if self._indices_arrays is None:
       with self.encoded.Session() as session:
         if sequence_length:
