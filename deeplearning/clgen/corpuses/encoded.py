@@ -416,9 +416,9 @@ class EncodedContentFiles(sqlutil.Database):
                           )
                         )
       if environment.WORLD_SIZE > 1:
-        bar = distrib.ProgressBar(total = total, offset = idx, desc = "Encoding DB")
+        bar = distrib.ProgressBar(total = total_jobs, offset = idx, desc = "Encoding DB")
       else:
-        bar = tqdm.tqdm(total = total, desc = "Encoding DB", leave = True)
+        bar = tqdm.tqdm(total = total_jobs, desc = "Encoding DB", leave = True)
       chunk, idx = 2000000, 0
       wall_time_start = time.time()
       while idx < total_jobs:
