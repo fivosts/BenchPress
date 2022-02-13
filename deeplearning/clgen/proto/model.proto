@@ -154,8 +154,9 @@ message DataGenerator {
   oneof mask_technique {
     Mask mask = 7;
     Hole hole = 8;
+    MaskSeq mask_seq = 9;
   }
-  repeated ValidationSet validation_set = 9;
+  repeated ValidationSet validation_set = 10;
 }
 
 message Mask {
@@ -169,6 +170,23 @@ message Mask {
 message Hole {
   // In case sequences are hole-d, choose upper 
   // bound range of possible hole length (will be [0, hole_length]).
+  oneof length {
+    int32 absolute_length = 1;
+    float relative_length = 2;
+  }
+  // Select distribution from which each hole length will be sampled.
+  oneof length_distribution {
+    bool    uniform_distribution = 3;
+    Normal  normal_distribution  = 4;
+  }
+  // Learning holes is a difficult task. Stage training to start from
+  // many single-token holes (equivalent to masks) and slightly move to fewer
+  // and increasingly lengthier holes.
+  optional bool stage_training = 5;
+}
+
+message MaskSeq {
+  // Special category of a hole represented as a set of masks.
   oneof length {
     int32 absolute_length = 1;
     float relative_length = 2;

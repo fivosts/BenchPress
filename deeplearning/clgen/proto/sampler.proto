@@ -91,6 +91,7 @@ message CorpusConfig {
   oneof mask_technique {
     Mask mask = 6;
     Hole hole = 7;
+    MaskSeq mask_seq = 8;
   }
 }
 

@@ -134,6 +134,32 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
             )
           elif not config.sample_corpus.corpus_config.hole.HasField("uniform_distribution"):
             raise ValueError("Hole length distribution has not been set.")
+        elif config.sample_corpus.corpus_config.HasField("mask_seq"):
+          if config.sample_corpus.corpus_config.mask_seq.HasField("absolute_length"):
+            pbutil.AssertFieldConstraint(
+              config.sample_corpus.corpus_config.mask_seq,
+              "absolute_length",
+              lambda x : x > 0,
+              "absolute length is the upper bound range of a mask_seq's length. Therefore should be > 0."
+            )
+          else:
+            pbutil.AssertFieldConstraint(
+              config.sample_corpus.corpus_config.mask_seq,
+              "relative_length",
+              lambda x : 0.0 < x <= 1.0,
+              "relative length must be between 0 and 100% of a kernel's actual length."
+            )
+          if config.sample_corpus.corpus_config.mask_seq.HasField("normal_distribution"):
+            pbutil.AssertFieldIsSet(
+              config.sample_corpus.corpus_config.mask_seq.normal_distribution,
+              "mean",
+            )
+            pbutil.AssertFieldIsSet(
+              config.sample_corpus.corpus_config.mask_seq.normal_distribution,
+              "variance",
+            )
+          elif not config.sample_corpus.corpus_config.mask_seq.HasField("uniform_distribution"):
+            raise ValueError("Hole length distribution has not been set.")
       else:
         raise ValueError("sample_corpus has no corpus_config field.")
 

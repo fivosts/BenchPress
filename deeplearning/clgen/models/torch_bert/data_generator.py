@@ -328,6 +328,17 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                               distribution    = distribution,
                               tokenizer       = d.tokenizer,
                             )
+      elif corpus_config.HasField("mask_seq"):
+        distribution = distributions.Distribution.FromHoleConfig(
+          corpus_config.mask_seq, d.sampler.corpus_directory, "sample_corpus"
+        )
+        d.func = functools.partial(sequence_masking.HoleSequenceSeqMasks,
+                              train_set       = False,
+                              max_predictions = corpus_config.max_predictions_per_seq,
+                              masked_lm_prob  = corpus_config.masked_lm_prob,
+                              distribution    = distribution,
+                              tokenizer       = d.tokenizer,
+                            )
       elif corpus_config.HasField("mask"):
         d.func = functools.partial(sequence_masking.MaskSequence,
                               train_set         = False,

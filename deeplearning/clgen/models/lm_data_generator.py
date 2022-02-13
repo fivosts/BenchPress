@@ -122,6 +122,32 @@ def AssertConfigIsValid(config: model_pb2.DataGenerator,
           )
         elif not val_opt.hole.HasField("uniform_distribution"):
           raise ValueError("Hole length distribution has not been set.")
+      elif val_opt.HasField("mask_seq"):
+        if val_opt.HasField("absolute_length"):
+          pbutil.AssertFieldConstraint(
+            val_opt.mask_seq,
+            "absolute_length",
+            lambda x : x > 0,
+            "absolute length is the upper bound range of a mask_seq's length. Therefore should be > 0."
+          )
+        else:
+          pbutil.AssertFieldConstraint(
+            val_opt.mask_seq,
+            "relative_length",
+            lambda x : 0.0 < x <= 1.0,
+            "relative length must be between 0 and 100% of a kernel's actual length."
+          )
+        if val_opt.mask_seq.HasField("normal_distribution"):
+          pbutil.AssertFieldIsSet(
+            val_opt.mask_seq.normal_distribution,
+            "mean",
+          )
+          pbutil.AssertFieldIsSet(
+            val_opt.mask_seq.normal_distribution,
+            "variance",
+          )
+        elif not val_opt.mask_seq.HasField("uniform_distribution"):
+          raise ValueError("Hole length distribution has not been set.")
   # Parse masking technique for bert's data generator
   pbutil.AssertFieldIsSet(config, "mask_technique")
   if config.HasField("mask"):
@@ -157,6 +183,36 @@ def AssertConfigIsValid(config: model_pb2.DataGenerator,
       raise ValueError("Hole length distribution has not been set.")
     pbutil.AssertFieldIsSet(
       config.hole,
+      "stage_training",
+    )
+  elif config.HasField("mask_seq"):
+    if config.mask_seq.HasField("absolute_length"):
+      pbutil.AssertFieldConstraint(
+        config.mask_seq,
+        "absolute_length",
+        lambda x : x > 0,
+        "absolute length is the upper bound range of a mask_seq's length. Therefore should be > 0."
+      )
+    else:
+      pbutil.AssertFieldConstraint(
+        config.mask_seq,
+        "relative_length",
+        lambda x : 0.0 < x <= 1.0,
+        "relative length must be between 0 and 100% of a kernel's actual length."
+      )
+    if config.mask_seq.HasField("normal_distribution"):
+      pbutil.AssertFieldIsSet(
+        config.mask_seq.normal_distribution,
+        "mean",
+      )
+      pbutil.AssertFieldIsSet(
+        config.mask_seq.normal_distribution,
+        "variance",
+      )
+    elif not config.mask_seq.HasField("uniform_distribution"):
+      raise ValueError("Hole length distribution has not been set.")
+    pbutil.AssertFieldIsSet(
+      config.mask_seq,
       "stage_training",
     )
   return config
@@ -206,6 +262,7 @@ class MaskLMDataGenerator(object):
     self.file_extension = file_extension
     self.mask_func      = sequence_masking.MPMaskSequence
     self.hole_func      = sequence_masking.MPHoleSequence
+    self.mask_seq_func  = sequence_masking.HoleSequenceSeqMasks
 
     self.dataset                 = None
     self.corpus                  = None
@@ -719,6 +776,21 @@ class MaskLMDataGenerator(object):
       )
       maskedSeq    = lambda c: pool.imap_unordered(
         functools.partial(self.hole_func,
+                          train_set            = train_set,
+                          max_predictions      = max_predictions,
+                          pickled_distribution = pickle.dumps(distribution),
+                          pickled_tokenizer    = pickle.dumps(self.tokenizer),
+                          training_opts        = self.training_opts,
+                          is_torch             = self.is_torch,
+                          ),
+        c
+      )
+    elif config.HasField("mask_seq"):
+      distribution = distributions.Distribution.FromHoleConfig(
+        config.mask_seq, path, "mask_seq_length_{}".format(set_name)
+      )
+      maskedSeq    = lambda c: pool.imap_unordered(
+        functools.partial(self.mask_seq_func,
                           train_set            = train_set,
                           max_predictions      = max_predictions,
                           pickled_distribution = pickle.dumps(distribution),
