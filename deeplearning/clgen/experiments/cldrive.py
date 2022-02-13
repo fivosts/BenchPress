@@ -211,8 +211,9 @@ def TopKCLDrive(**kwargs) -> None:
 
     ## Unpack and collect benchmarks
     benchmarks = target.get_benchmarks(feature_space)
-    for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
-
+    for idx, benchmark in enumerate(tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks")):
+      # if feature_space == "AutophaseFeatures" and (idx < 25 or benchmark.name == "particle_double.cl-1" or benchmark.name == "particle_double.cl-3" or benchmark.name == "particle_naive.cl" or benchmark.name == "particle_single.cl-1"):
+      #   continue
       closest_src = None
       for gs in gsize:
         for ls in lsize:
@@ -220,13 +221,12 @@ def TopKCLDrive(**kwargs) -> None:
             continue
           ## Run cldrive on benchmark.
           benchmark_label = "TimeOut"
-          nruns = 1000
+          nruns = 50
           bench_runs = nruns
-          while benchmark_label == "TimeOut" and bench_runs > 0:
-            try:
-              df, benchmark_label = opencl.CLDriveDataFrame(benchmark.contents, num_runs = bench_runs, gsize = gs, lsize = ls, timeout = 200)
-            except TimeoutError:
-              bench_runs = bench_runs // 10
+          try:
+            df, benchmark_label = opencl.CLDriveDataFrame(benchmark.contents, num_runs = bench_runs, gsize = gs, lsize = ls, timeout = 200)
+          except TimeoutError:
+            pass
           if benchmark_label not in {"CPU", "GPU"}:
             continue
           cldrive_db.add_entry(benchmark.contents, gs, ls, df)
@@ -265,11 +265,10 @@ def TopKCLDrive(**kwargs) -> None:
               break
             label  = "TimeOut"
             c_runs = nruns
-            while label == "TimeOut" and c_runs > 0:
-              try:
-                df, label = opencl.CLDriveDataFrame(incl + src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 200)
-              except TimeoutError:
-                c_runs = c_runs // 10
+            try:
+              df, label = opencl.CLDriveDataFrame(incl + src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 200)
+            except TimeoutError:
+              pass
             if label not in {"CPU", "GPU"}:
               continue
             cldrive_db.add_entry(incl + src, gs, ls, df)
@@ -300,5 +299,4 @@ def TopKCLDrive(**kwargs) -> None:
   print(groups)
   with open("./data_{}.pkl".format(feature_space), 'wb') as inf:
     pickle.dump(groups, inf)
-  raise NotImplementedError
   return
