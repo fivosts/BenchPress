@@ -661,13 +661,19 @@ def HoleSequenceSeqMasks(seq: np.array,
     pos_index -= hole_length - 1 if hole_length != 0 and extend_left else 0
 
     # Target token for classifier is either the first token of the hole, or endholeToken if hole is empty
-    targets = input_ids[pos_index: pos_index + hole_length] if hole_length > 0 else tokenizer.endholeToken
-    input_ids = input_ids[:pos_index] + [tokenizer.holeToken] + input_ids[pos_index + hole_length:]
+    targets = input_ids[pos_index: pos_index + hole_length]
 
     lc = input_ids[:pos_index]
     rc = input_ids[pos_index + hole_length:actual_length]
     pad_len = len(seq) - len(lc) - len(rc) - len(targets)
-    input_ids = lc + [tokenizer.maskToken]*(len(targets) + len(pad_len)) + rc
+    input_ids = lc + [tokenizer.maskToken]*(len(targets) + pad_len) + rc
+
+    if pad_len == 0:
+      if len(rc) > 0:
+        input_ids = input_ids[:-2] + [input_ids[-1]]
+        targets += [tokenizer.endholeToken]
+      else:
+        targets[-1] = [tokenizer.endholeToken]
 
     # Store position index, and after making all masks, update with updated offset array
     masked_lms.append(MaskedLmInstance(
