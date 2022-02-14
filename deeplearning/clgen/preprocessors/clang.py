@@ -198,6 +198,61 @@ def CompileLlvmBytecode(src: str,
     raise ValueError("/*\n{}\n*/\n{}".format(stderr, src))
   return stdout
 
+def CompileStdin(src: str,
+                 suffix: str,
+                 cflags: typing.List[str],
+                 header_file: str = None,
+                 timeout_seconds: int = 60
+                 ) -> str:
+  """Compile input code into textual LLVM byte code using clang system binary from standard input.
+
+  Args:
+    src: The source code to compile.
+    suffix: The suffix to append to the source code temporary file. E.g. '.c'
+      for a C program.
+    cflags: A list of flags to be passed to clang.
+    timeout_seconds: The number of seconds to allow before killing clang.
+
+  Returns:
+    The textual LLVM byte code.
+
+  Raises:
+    ValueError: In case of an error.
+    ValueError: If clang does not complete before timeout_seconds.
+  """
+  builtin_cflags = ["-S", "-emit-llvm", "-o", "-"]
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
+
+  extra_args = []
+  if header_file:
+    htf = tempfile.NamedTemporaryFile('w', prefix = "clgen_preprocessors_clang_header_", suffix = ".h", dir = tdir)
+    htf.write(header_file)
+    htf.flush()
+    extra_args = ['-include{}'.format(htf.name)]
+
+  cmd = (
+    ["timeout", "-s9", str(timeout_seconds), str(CLANG), f.name]
+    + builtin_cflags
+    + cflags
+    + extra_args
+  )
+  process = subprocess.Popen(
+    cmd,
+    stdout=subprocess.PIPE,
+    stdin = subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    universal_newlines=True,
+  )
+  stdout, stderr = process.communicate(input = src)
+  if process.returncode == 9:
+    raise ValueError(f"Clang timed out after {timeout_seconds}s")
+  elif process.returncode != 0:
+    raise ValueError("/*\n{}\n*/\n{}".format(stderr, src))
+  return stdout
+
 def HumanReadableBytecode(bc_path: pathlib.Path, timeout_seconds: int = 60) -> str:
   """Run llvm-dis to disassemble binary bytecode file to human readable format.
 
