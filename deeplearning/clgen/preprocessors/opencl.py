@@ -486,6 +486,24 @@ def CompileLlvmBytecode(text: str, header_file = None, use_aux_headers: bool = T
     header_file = header_file,
   )
 
+def CompileStdin(text: str, header_file = None, use_aux_headers: bool = True, extra_args: typing.List[str] = []) -> str:
+  """A preprocessor which attempts to compile the given code.
+
+  Args:
+    text: Code to compile.
+
+  Returns:
+    LLVM IR of input source code.
+  """
+  # We must override the flag -Wno-implicit-function-declaration from
+  # GetClangArgs() to ensure that undefined functions are treated as errors.
+  return clang.CompileLlvmBytecode(
+    text,
+    ".cl",
+    GetClangArgs(use_shim = False, use_aux_headers = use_aux_headers, extra_args = extra_args),# + ["-Werror=implicit-function-declaration"],
+    header_file = header_file,
+  )
+
 def HumanReadableBytecode(bc_path: pathlib.Path) -> str:
   """Run llvm-dis to disassemble binary bytecode file to human readable format.
   Args:
