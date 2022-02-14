@@ -664,16 +664,20 @@ def HoleSequenceSeqMasks(seq: np.array,
     targets = input_ids[pos_index: pos_index + hole_length]
 
     lc = input_ids[:pos_index]
-    rc = input_ids[pos_index + hole_length:actual_length]
+    rc = input_ids[pos_index + hole_length:actual_length+1]
     pad_len = len(seq) - len(lc) - len(rc) - len(targets)
-    input_ids = lc + [tokenizer.maskToken]*(len(targets) + pad_len) + rc
 
     if pad_len == 0:
-      if len(rc) > 0:
-        input_ids = input_ids[:-2] + [input_ids[-1]]
-        targets += [tokenizer.endholeToken]
+      if len(rc) > 1:
+        # input_ids = input_ids[:-2] + [input_ids[-1]]
+        input_ids = lc + [tokenizer.maskToken]*(len(targets) + pad_len + 1) + rc[:-2] + [rc[-1]]
+        targets   += [tokenizer.endholeToken]
       else:
-        targets[-1] = [tokenizer.endholeToken]
+        targets[-1] = tokenizer.endholeToken
+        input_ids = lc + [tokenizer.maskToken]*(len(targets) + pad_len) + rc
+    else:
+      input_ids = lc + [tokenizer.maskToken]*(len(targets) + pad_len) + rc
+      targets   += [tokenizer.endholeToken] * pad_len
 
     # Store position index, and after making all masks, update with updated offset array
     masked_lms.append(MaskedLmInstance(
@@ -684,8 +688,9 @@ def HoleSequenceSeqMasks(seq: np.array,
     total_predictions += max(1, hole_length)
     visited_indices.update(range(pos_index, pos_index + hole_length))
 
-  assert len(input_ids) == len(seq), "Input sequence and sequence length mismatch: {} / {}".format(len(input_ids), len(seq))
-
+  assert len(input_ids) == len(seq), "Input sequence and sequence length mismatch: {} / {}, {}".format(len(input_ids), len(seq), tokenizer.tokensToString(input_ids))
+  assert input_ids[0] == tokenizer.startToken, "{}".format(tokenizer.tokensToString(input_ids[0]))
+  assert input_ids[-1] == tokenizer.endToken, "{}".format(tokenizer.tokensToString(input_ids[-1]))
   # Now update the entries with offset index.
   masked_lms = sorted(masked_lms, key=lambda x: x.pos_index)
   mask_labels = np.full(len(seq), -100, dtype = np.int64)
