@@ -232,6 +232,31 @@ class GenericDistribution(Distribution):
     sub.set_name = "{}-{}".format(self.set_name, d.set_name)
     return sub
 
+  def __mul__(self, d: "GenericDistribution") -> "GenericDistribution":
+    """
+    Multiplication of two independent random variables.
+    P[X*Y = c] = Σx Σy P[X=x]*P[Y=y]
+    """
+    l_idx = self.min_idx*d.min_idx
+    r_idx = self.max_idx*d.max_idx
+    out_distr = [0] * (r_idx - l_idx)
+    for x in range(self.min_idx, self.max_idx + 1):
+      for y in range(d.min_idx, d.max_idx + 1):
+        out_distr[x*y - l_idx] = self.distribution[x] * d.distribution[y]
+
+    while out_distr[0] == 0:
+      out_distr.pop(0)
+      l_idx += 1
+    while out_distr[-1] == 0:
+      out_distr.pop()
+      r_idx -= 1
+
+    mul = GenericDistribution([], self.log_path, "{}*{}".format(self.set_name, d.set_name))
+    mul.distribution = out_distr
+    mul.min_idx = l_idx
+    mul.max_idx = r_idx
+    return mul
+
   def __ge__(self, v: int) -> float:
     """
     Probability of P[X >= v]
