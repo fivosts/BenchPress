@@ -867,12 +867,20 @@ class torchBert(backends.BackendBase):
 
   def _getTestSampler(self, test_sampler, sequence_length):
     if test_sampler is None or test_sampler.is_live or test_sampler.is_active:
-      sampler_str = [
-          "start_text: \"[START]kernel void A([HOLE]}[END]\"",
-          "batch_size: 2",
-          "sequence_length: {}".format(sequence_length),
-          "temperature_micros: 600000",
-      ]
+      if self.config.training.data_generator.HasField("hole"):
+        sampler_str = [
+            "start_text: \"[START]kernel void A([HOLE]}[END]\"",
+            "batch_size: 2",
+            "sequence_length: {}".format(sequence_length),
+            "temperature_micros: 700000",
+        ]
+      elif self.config.training.data_generator.HasField("data_generator"):
+        sampler_str = [
+            "start_text: \"[START]kernel void A({}}[END]\"".format(''.join(["[MASK]"] * sequence_length - 7)),
+            "batch_size: 2",
+            "sequence_length: {}".format(sequence_length),
+            "temperature_micros: 700000",
+        ]
       mock_config = pbutil.FromString('\n'.join(sampler_str), sampler_pb2.Sampler())
       sampler = samplers.Sampler(mock_config, sample_db_name = "epoch_samples.db")
     else:
