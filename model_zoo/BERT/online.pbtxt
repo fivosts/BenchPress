@@ -52,7 +52,7 @@ model {
     num_train_steps: 10000000
     num_warmup_steps: 20000
     sequence_length: 768
-    batch_size: 16
+    batch_size: 32
     max_predictions_per_seq: 1
     dupe_factor: 1
     masked_lm_prob: 0.4
@@ -65,7 +65,7 @@ model {
       truncate_large_kernels: true
       steps_per_epoch: 200000
       validation_split: 0
-      hole {
+      mask_seq {
         relative_length: 0.9
         uniform_distribution: true
 		    stage_training: false
@@ -104,21 +104,21 @@ sampler {
       active {
         target: "rodinia"
         active_limit_per_feed: 2000
-        active_search_depth: 320
-        active_search_width: 5
+        active_search_depth: 100
+        active_search_width: 32
         batch_size_per_feed: 2
-        feature_space: "AutophaseFeatures"
+        feature_space: "GreweFeatures"
       }
       max_predictions_per_seq: 1
       masked_lm_prob: 0.6
       hole {
-        relative_length: 0.9
+        relative_length: 0.45
         uniform_distribution: true
       }
     }
     start_text: "[START]kernel void [HOLE]}[END]"
   }
-  batch_size: 256
+  batch_size: 64
   sequence_length: 768
   temperature_micros: 700000  # = 0.8 real value
   termination_criteria {
