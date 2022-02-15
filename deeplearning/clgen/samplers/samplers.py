@@ -522,16 +522,16 @@ class Sampler(object):
     if environment.WORLD_RANK == 0:
       (self.samples_directory / model_hash).mkdir(exist_ok = True)
 
-    for file in db_path.iterdir():
-      symlink = self.samples_directory / model_hash / file.name
-      if not symlink.is_symlink():
-        os.symlink(
-          os.path.relpath(
-            db_path / file.name,
-            self.samples_directory / model_hash
-          ),
-          symlink
-        )
+      for file in db_path.iterdir():
+        symlink = self.samples_directory / model_hash / file.name
+        if not symlink.is_symlink():
+          os.symlink(
+            os.path.relpath(
+              db_path / file.name,
+              self.samples_directory / model_hash
+            ),
+            symlink
+          )
     return
 
   def symlinkSampleCorpus(self,
