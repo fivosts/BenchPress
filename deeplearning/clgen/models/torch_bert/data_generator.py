@@ -725,7 +725,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # If we just started, get top-K.
         if FLAGS.evolutionary_search:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
-          if environment.WORLD_SIZE > 0:
+          # if environment.WORLD_SIZE > 0:
             #1. gather best cands from every process
             #2. Per rank, call again sample from set for the gathered stuff.
             #3. Replace best cands with the new stuff
