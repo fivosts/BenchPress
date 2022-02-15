@@ -18,6 +18,8 @@ import pathlib
 from deeplearning.clgen.proto import model_pb2
 from absl import flags
 from deeplearning.clgen.util import crypto
+from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import monitors
 from deeplearning.clgen.util import fs
@@ -131,7 +133,9 @@ class SamplesDatabaseObserver(SampleObserver):
     plot_sample_status = False,
     commit_sample_frequency: int = 1024,
   ):
+    distrib.lock()
     self.db = samples_database.SamplesDatabase("sqlite:///{}".format(str(path)), must_exist = must_exist)
+    distrib.unlock()
     self.sample_id = self.db.count
     self.plot_sample_status = plot_sample_status
     if self.plot_sample_status:
