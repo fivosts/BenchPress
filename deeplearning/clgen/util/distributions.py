@@ -1,5 +1,6 @@
 """Statistical distributions used for sampling"""
 import pathlib
+import sys
 import typing
 import math
 import numpy as np
@@ -160,6 +161,51 @@ class GenericDistribution(Distribution):
   that we don't know what distribution they follow. Used
   to perform statistics on small samples.
   """
+  @property
+  def average(self):
+    if self.avg:
+      return self.avg
+    else:
+      avg = 0.0
+      for idx, p in enumerate(self.distribution):
+        avg += p * (idx + self.min_idx)
+      self.avg = avg
+      return self.avg
+
+  @property
+  def median(self):
+    if self.med:
+      return self.med
+    else:
+      l_idx, r_idx = 0, len(self.distribution)
+      l,r = self.distribution[l_idx], None
+
+      queue = self.distribution
+      cur = queue.pop(0)
+      offset = -cur
+      if cur != 0:
+        l = cur
+      while queue:
+        if offset < 0:
+          cur    = queue.pop()
+          r_idx -= 1
+          if cur != 0:
+            r       = r_idx
+            offset += cur
+        else:
+          cur    = queue.pop(0)
+          l_idx += 1
+          if cur != 0:
+            l    = l_idx
+            offset -= cur
+      if offset > sys.float_info.epsilon:
+        self.med = r + self.min_idx
+      elif offset < -sys.float_info.epsilon:
+        self.med = l + self.min_idx
+      else:
+        self.med = (l+r+2*self.min_idx) / 2
+      return self.med
+
   def __init__(self, samples: typing.List[int], log_path: pathlib.Path, set_name: str):
     super(GenericDistribution, self).__init__(
       sample_length   = len(samples),
@@ -168,6 +214,7 @@ class GenericDistribution(Distribution):
       set_name        = set_name,
     )
     self.min_idx, self.max_idx = math.inf, -math.inf
+    self.avg, self.med = None, None
     total = len(samples)
     if len(samples) > 0:
       for s in samples:
