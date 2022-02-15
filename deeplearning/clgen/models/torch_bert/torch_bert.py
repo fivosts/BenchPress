@@ -874,7 +874,7 @@ class torchBert(backends.BackendBase):
             "sequence_length: {}".format(sequence_length),
             "temperature_micros: 700000",
         ]
-      elif self.config.training.data_generator.HasField("data_generator"):
+      elif self.config.training.data_generator.HasField("mask_seq"):
         sampler_str = [
             "start_text: \"[START]kernel void A({}}[END]\"".format(''.join(["[MASK]"] * sequence_length - 7)),
             "batch_size: 2",
