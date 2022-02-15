@@ -29,6 +29,7 @@ from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import commit
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
@@ -425,7 +426,9 @@ class Sampler(object):
     self.sample_db_name = sample_db_name
 
     # Create the necessary cache directories.
+    distrib.lock()
     self.cache = cache.mkcache("sampler", self.hash)
+    distrib.unlock()
     self.samples_directory = self.cache.path / "samples"
     if environment.WORLD_RANK == 0:
       self.samples_directory.mkdir(exist_ok = True)
@@ -448,13 +451,15 @@ class Sampler(object):
         self.start_text = self.config.sample_corpus.start_text
         text_data = [self.start_text]
       # Text data is dumped in order to specialize with all different model tokenizers.
-      with open(self.cache.path / "sample_corpus" / "text_corpus.pkl", 'wb') as outf:
-        pickle.dump(text_data, outf)
+      if environment.WORLD_RANK == 0:
+        with open(self.cache.path / "sample_corpus" / "text_corpus.pkl", 'wb') as outf:
+          pickle.dump(text_data, outf)
 
-    meta = internal_pb2.SamplerMeta()
-    meta.config.CopyFrom(self.config)
-    pbutil.ToFile(meta, path = self.cache.path / "META.pbtxt")
-    commit.saveCommit(self.cache.path)
+    if environment.WORLD_RANK == 0:
+      meta = internal_pb2.SamplerMeta()
+      meta.config.CopyFrom(self.config)
+      pbutil.ToFile(meta, path = self.cache.path / "META.pbtxt")
+      commit.saveCommit(self.cache.path)
 
     # Set in Specialize().
     self.encoded_start_text = None
