@@ -497,7 +497,7 @@ def CompileStdin(text: str, header_file = None, use_aux_headers: bool = True, ex
   """
   # We must override the flag -Wno-implicit-function-declaration from
   # GetClangArgs() to ensure that undefined functions are treated as errors.
-  return clang.CompileLlvmBytecode(
+  return clang.CompileStdin(
     text,
     ".cl",
     GetClangArgs(use_shim = False, use_aux_headers = use_aux_headers, extra_args = extra_args),# + ["-Werror=implicit-function-declaration"],
@@ -528,6 +528,28 @@ def CompileOptimizer(text: str,
     Dictionary with 70-dimensional InstCount feature vector.
   """
   return clang.CompileOptimizer(
+    src = text,
+    suffix = ".cl",
+    cflags = GetClangArgs(use_shim = False, use_aux_headers = use_aux_headers, extra_args = extra_args),
+    optimization = optimization,
+    header_file = header_file,
+  )
+
+def CompileOptimizerStdin(text: str,
+                          optimization    : typing.List[str],
+                          timeout_seconds : int = 60,
+                          header_file     : str = None,
+                          use_aux_headers : bool = True,
+                          extra_args      : typing.List[str] = []
+                          ) -> str:
+  """Compile source code to IR and apply optimization pass to source code.
+  Args:
+    src: The source code to compile.
+    optimization: optimization pass to apply.
+  Returns:
+    Dictionary with 70-dimensional InstCount feature vector.
+  """
+  return clang.CompileOptimizerStdin(
     src = text,
     suffix = ".cl",
     cflags = GetClangArgs(use_shim = False, use_aux_headers = use_aux_headers, extra_args = extra_args),
