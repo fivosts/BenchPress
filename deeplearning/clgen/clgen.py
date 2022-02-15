@@ -154,7 +154,8 @@ class Instance(object):
       if config.HasField("sampler"):
         self.sampler: samplers.Sampler = samplers.Sampler(config.sampler)
 
-    self.dashboard = dashboard.Launch()
+    if environment.WORLD_RANK == 0:
+      self.dashboard = dashboard.Launch()
 
   @contextlib.contextmanager
   def Session(self) -> "Instance":
@@ -354,7 +355,8 @@ def DoFlagsAction(
 def main():
   """Main entry point."""
   if FLAGS.dashboard_only:
-    dash = dashboard.Launch(debug = {"debug": True})
+    if environment.WORLD_RANK == 0:
+      dash = dashboard.Launch(debug = {"debug": True})
   else:
     instance = Instance(ConfigFromFlags())
     sample_observers = SampleObserversFromFlags(instance)
