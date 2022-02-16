@@ -539,7 +539,7 @@ class MaskLMDataGenerator(object):
         shaped_corpus = pickle.load(infile)
         if self.num_train_steps:
           self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
-          self.steps_per_epoch = self.config.steps_per_epoch
+        self.steps_per_epoch = self.config.steps_per_epoch
         l.logger().info(
           "Loaded from file corpus of {} examples in {} ms.".format(
                     humanize.intcomma(len(shaped_corpus)),
@@ -614,56 +614,63 @@ class MaskLMDataGenerator(object):
             raise FileNotFoundError(glob.glob(str(path / "pre_corpus_*.pkl")))
         return encoded_corpus
       else:
-        encoded_corpus  = self.corpus.GetTrainingData(sequence_length = effect_seq_length if not self.config.truncate_large_kernels else None)
+        if environment.WORLD_RANK == 0:
+          encoded_corpus  = self.corpus.GetTrainingData(sequence_length = effect_seq_length if not self.config.truncate_large_kernels else None)
 
     if self.config.datapoint_type == "kernel":
-      # Reject larger than sequence length
-      initial_length = copy.deepcopy(len(encoded_corpus))
+      if environment.WORLD_RANK == 0:
+        # Reject larger than sequence length
+        initial_length = copy.deepcopy(len(encoded_corpus))
 
-      if not self.pre_train:
-        # Get features of fitting dataset within sequence length
-        for feature in self.corpus.GetTrainingFeatures(effect_seq_length):
-          for ftype, fvector in feature.items():
-            feature_monitors[ftype].register(fvector)
+        if not self.pre_train:
+          # Get features of fitting dataset within sequence length
+          for feature in self.corpus.GetTrainingFeatures(effect_seq_length):
+            for ftype, fvector in feature.items():
+              feature_monitors[ftype].register(fvector)
 
-      if self.config.truncate_large_kernels:
-        encoded_corpus     = [list(x[:effect_seq_length]) for x in encoded_corpus if len(x[:effect_seq_length]) <= effect_seq_length] # Account for start and end token
+        if self.config.truncate_large_kernels:
+          encoded_corpus     = [list(x[:effect_seq_length]) for x in encoded_corpus if len(x[:effect_seq_length]) <= effect_seq_length] # Account for start and end token
+        else:
+          encoded_corpus     = [list(x) for x in encoded_corpus if len(x) <= effect_seq_length] # Account for start and end token
+
+        reduced_length       = copy.deepcopy(len(encoded_corpus))
+        # Add start/end tokens
+        if self.config.use_start_end:
+          encoded_corpus     = [self._addStartEndToken(kf) for kf in encoded_corpus]
+        # Register the actual lengths before padding.
+        kernel_length_monitor.register([len(x) for x in encoded_corpus])
+        # pad sequences to sequence length
+        encoded_corpus       = np.array([x + pad * (sequence_length - len(x)) for x in encoded_corpus])
+        # Clone datapoints dupe_factor times
+        # shaped_corpus   = np.repeat(encoded_corpus, dupe_factor, axis = 0)
+        shaped_corpus     = encoded_corpus
+        # Shuffle
+        if shuffle:
+          self.rngen.shuffle(shaped_corpus)
+        assert len(shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
+
+        # Set corpus epoch parameters
+        if self.num_train_steps:
+          self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
+        self.steps_per_epoch = self.config.steps_per_epoch
+        assert shaped_corpus.ndim     == 2, "corpus dim: {}".format(shaped_corpus.shape)
+        assert shaped_corpus.shape[1] == sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(shaped_corpus.shape[1], sequence_length)
+
+        l.logger().info("{} kernels were rejected (larger than sequence_length)".format(initial_length - reduced_length))
+        l.logger().info(
+          "Loaded corpus of shape {} multiplied by dupe factor: {} in {} ms.".format(
+                    shaped_corpus.shape,
+                    dupe_factor,
+                    humanize.intcomma(int((time.time() - start_time) * 1000)),
+                )
+        )
       else:
-        encoded_corpus     = [list(x) for x in encoded_corpus if len(x) <= effect_seq_length] # Account for start and end token
-
-      reduced_length       = copy.deepcopy(len(encoded_corpus))
-      # Add start/end tokens
-      if self.config.use_start_end:
-        encoded_corpus     = [self._addStartEndToken(kf) for kf in encoded_corpus]
-      # Register the actual lengths before padding.
-      kernel_length_monitor.register([len(x) for x in encoded_corpus])
-      # pad sequences to sequence length
-      encoded_corpus       = np.array([x + pad * (sequence_length - len(x)) for x in encoded_corpus])
-      # Clone datapoints dupe_factor times
-      # shaped_corpus   = np.repeat(encoded_corpus, dupe_factor, axis = 0)
-      shaped_corpus     = encoded_corpus
-      # Shuffle
-      if shuffle:
-        self.rngen.shuffle(shaped_corpus)
-      assert len(shaped_corpus) != 0, "Not enought data. All kernels have been rejected."
-
-      # Set corpus epoch parameters
-      if self.num_train_steps:
-        self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
-      self.steps_per_epoch = self.config.steps_per_epoch
-      assert shaped_corpus.ndim     == 2, "corpus dim: {}".format(shaped_corpus.shape)
-      assert shaped_corpus.shape[1] == sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(shaped_corpus.shape[1], sequence_length)
-
-      l.logger().info("{} kernels were rejected (larger than sequence_length)".format(initial_length - reduced_length))
-      l.logger().info(
-        "Loaded corpus of shape {} multiplied by dupe factor: {} in {} ms.".format(
-                  shaped_corpus.shape,
-                  dupe_factor,
-                  humanize.intcomma(int((time.time() - start_time) * 1000)),
-              )
-      )
+        # Set corpus epoch parameters
+        if self.num_train_steps:
+          self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
+        self.steps_per_epoch = self.config.steps_per_epoch
     elif self.config.datapoint_type == "statement":
-    ## This branch is legacy data processing
+    ## This branch is legacy data processing and does not support DDP.
 
       if shuffle:
         self.rngen.shuffle(encoded_corpus)
@@ -700,12 +707,13 @@ class MaskLMDataGenerator(object):
     else:
       raise ValueError("Unrecognized datapoint_type: {}".format(self.config.datapoint_type))
 
-    kernel_length_monitor.plot()
-    if not self.pre_train:
-      for fm in feature_monitors.values():
-        fm.plot()
-    with open(path / corpus_file, 'wb') as outf:
-      pickle.dump(shaped_corpus, outf)
+    if environment.WORLD_RANK == 0:
+      kernel_length_monitor.plot()
+      if not self.pre_train:
+        for fm in feature_monitors.values():
+          fm.plot()
+      with open(path / corpus_file, 'wb') as outf:
+        pickle.dump(shaped_corpus, outf)
     return shaped_corpus
 
   def _maskCorpus(self,
