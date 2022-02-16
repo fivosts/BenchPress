@@ -445,7 +445,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         if environment.WORLD_SIZE == 1:
           sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
         else:
-          sampler = torch.utils.data.DistributedSampler(dataset, replacement = False)
+          sampler = torch.utils.data.DistributedSampler(dataset)
     else:
       raise ValueError(self.config.datapoint_time)
 
@@ -500,7 +500,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           if environment.WORLD_SIZE == 1:
             sampler = torch.utils.data.RandomSampler(dataset, replacement = False)
           else:
-            sampler = torch.utils.data.DistributedSampler(dataset, replacement = False)
+            sampler = torch.utils.data.DistributedSampler(dataset)
       elif self.sampler.is_active:
         if self.sampler.isFixedStr:
           dataset = [np.asarray(self.tokenizer.TokenizeString(self.sampler.start_text))]
