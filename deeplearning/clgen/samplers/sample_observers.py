@@ -136,33 +136,50 @@ class SamplesDatabaseObserver(SampleObserver):
     distrib.lock()
     self.db = samples_database.SamplesDatabase("sqlite:///{}".format(str(path)), must_exist = must_exist)
     distrib.unlock()
-    self.sample_id = self.db.count
+    self.sample_id   = self.db.count
+    self.visited     = set(self.db.get_hash_entries)
+    self.flush_queue = []
     self.plot_sample_status = plot_sample_status
+
     if self.plot_sample_status:
       self.saturation_monitor = monitors.CumulativeHistMonitor(path.parent, "cumulative_sample_count")
 
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback."""
 
-    with self.db.Session(commit = True) as session:
-      db_sample = samples_database.Sample(
-        **samples_database.Sample.FromProto(self.sample_id, sample)
-      )
-      try:
-        exists = session.query(samples_database.Sample.sha256).filter_by(sha256 = db_sample.sha256).scalar() is not None
-      except sqlalchemy.orm.exc.MultipleResultsFound as e:
-        l.logger().error("Selected sha256 has been already found more than once.")
-        raise e
-      if not exists:
-        session.add(db_sample)
-        self.sample_id += 1
-      if self.plot_sample_status:
-        self.saturation_monitor.register(self.sample_id)
-        self.saturation_monitor.plot()
+    # with self.db.Session(commit = True) as session:
+    db_sample = samples_database.Sample(
+      **samples_database.Sample.FromProto(self.sample_id + len(self.flush_queue), sample)
+    )
+    if db_sample.sha256 not in self.visited:
+      self.flush_queue.append(db_sample)
+      self.visited.add(db_sample.sha256)
+
+    if len(self.flush_queue) > 1000:
+      with self.db.Session(commit = True) as s:
+        for sample in self.flush_queue:
+          s.add(sample)
+          if self.plot_sample_status:
+            self.saturation_monitor.register(sample.id)
+            self.saturation_monitor.plot()
+        s.commit()
+        self.sample_id += len(self.flush_queue)
+        self.flush_queue = []
     return True
 
   def endSample(self) -> None:
     """Write final summed data about sampling session."""
+    ## Flush final queue, if exists.
+    with self.db.Session(commit = True) as s:
+      for sample in self.flush_queue:
+        s.add(sample)
+        if self.plot_sample_status:
+          self.saturation_monitor.register(sample.id)
+          self.saturation_monitor.plot()
+      s.commit()
+      self.sample_id += len(self.flush_queue)
+      self.flush_queue = []
+
     # Create feature vector plots
     db_path = pathlib.Path(self.db.url[len("sqlite:///"):]).parent
     # feature_monitor = monitors.CategoricalDistribMonitor(db_path, "samples_feature_vector_distribution")
