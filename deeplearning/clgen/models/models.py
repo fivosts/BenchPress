@@ -449,41 +449,51 @@ class Model(object):
       return True, seq_count
 
     continue_sampling = True
-    for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
 
-      src = self.tokenizer.ArrayToCode(sample, with_formatting = True)
-      try:
-        stdout = opencl.Compile(src)
-        compile_flag = True
-        features = extractor.ExtractRawFeatures(src)
-      except ValueError:
-        compile_flag = False
-        features     = ""
+    if environment.WORLD_RANK == 0:
+      for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
 
-      end_time = datetime.datetime.utcnow()
-      sample = model_pb2.Sample(
-        train_step                = epoch,
-        text                      = src,
-        sample_indices            = '\n'.join([','.join([self.tokenizer.decoder[idx] for idx in hole_idxs]).replace('\n', '\\n') for hole_idxs in idxs]),
-        encoded_sample_indices    = '\n'.join([','.join([str(idx) for idx in hole_idxs]) for hole_idxs in idxs]),
-        original_input            = self.tokenizer.tokensToString(org, with_formatting = False, ignore_token = self.tokenizer.padToken),
-        sample_feed               = self.tokenizer.tokensToString(inp, with_formatting = False, ignore_token = self.tokenizer.padToken),
-        encoded_text              = ",".join([str(x) for x in sample]),
-        sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
-        sample_time_ms            = int(round(1000 * ((end_time - start_time) / len(samples)).total_seconds())),
-        wall_time_ms              = int(round(1000 * ((end_time - start_time) / len(samples)).total_seconds())),
-        feature_vector            = features,
-        num_tokens                = np.where(sample == self.tokenizer.padToken)[0][0] if self.tokenizer.padToken in sample else len(sample),
-        compile_status            = compile_flag,
-        categorical_sampling      = self.backend.samplesWithCategorical(),
-        date_added                = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
-      )
-      # Notify sample observers.
-      continue_sampling &= all(
-        [obs.OnSample(sample) for obs in sample_observers]
-      )
-      seq_count += 1
+        src = self.tokenizer.ArrayToCode(sample, with_formatting = True)
+        try:
+          stdout = opencl.Compile(src)
+          compile_flag = True
+          features = extractor.ExtractRawFeatures(src)
+        except ValueError:
+          compile_flag = False
+          features     = ""
 
+        end_time = datetime.datetime.utcnow()
+        sample = model_pb2.Sample(
+          train_step                = epoch,
+          text                      = src,
+          sample_indices            = '\n'.join([','.join([self.tokenizer.decoder[idx] for idx in hole_idxs]).replace('\n', '\\n') for hole_idxs in idxs]),
+          encoded_sample_indices    = '\n'.join([','.join([str(idx) for idx in hole_idxs]) for hole_idxs in idxs]),
+          original_input            = self.tokenizer.tokensToString(org, with_formatting = False, ignore_token = self.tokenizer.padToken),
+          sample_feed               = self.tokenizer.tokensToString(inp, with_formatting = False, ignore_token = self.tokenizer.padToken),
+          encoded_text              = ",".join([str(x) for x in sample]),
+          sample_start_epoch_ms_utc = int(start_time.strftime("%s%f")),
+          sample_time_ms            = int(round(1000 * ((end_time - start_time) / len(samples)).total_seconds())),
+          wall_time_ms              = int(round(1000 * ((end_time - start_time) / len(samples)).total_seconds())),
+          feature_vector            = features,
+          num_tokens                = np.where(sample == self.tokenizer.padToken)[0][0] if self.tokenizer.padToken in sample else len(sample),
+          compile_status            = compile_flag,
+          categorical_sampling      = self.backend.samplesWithCategorical(),
+          date_added                = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
+        )
+        # Notify sample observers.
+        continue_sampling &= all(
+          [obs.OnSample(sample) for obs in sample_observers]
+        )
+        seq_count += 1
+      distrib.write(str(continue_sampling))
+    else:
+      status = distrib.read()
+      if status == "True":
+        continue_sampling = True        
+      elif status == "False":
+        continue_sampling = False
+      else:
+        raise OSError("Broken distributed message: '{}'".format(status))
     return continue_sampling, seq_count
 
   def _SampleSeqBatch(
