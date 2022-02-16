@@ -714,6 +714,7 @@ class MaskLMDataGenerator(object):
           fm.plot()
       with open(path / corpus_file, 'wb') as outf:
         pickle.dump(shaped_corpus, outf)
+    distrib.barrier()
     return shaped_corpus
 
   def _maskCorpus(self,
