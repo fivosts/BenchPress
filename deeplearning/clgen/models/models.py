@@ -445,7 +445,7 @@ class Model(object):
 
     if not samples:
       # Return empty means model has not produced something that can be stored.
-      # This if accommodates active sampling, which is very selective.
+      # This 'if' accommodates active sampling, which is very selective.
       return True, seq_count
 
     continue_sampling = True
