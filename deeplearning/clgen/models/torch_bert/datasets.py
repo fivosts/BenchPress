@@ -52,11 +52,11 @@ class OnlineDataset(torch.utils.data.Dataset):
 
     self.hlen_monitor = None
     if is_train:
-      if (self.cache_path / "{}hole_length_mon.pkl".format("pre_" if dg.pre_train else "")).exists():
-        with open(self.cache_path / "{}hole_length_mon.pkl".format("pre_" if dg.pre_train else ""), 'rb') as infile:
+      if (self.cache_path / "{}hole_length_mon{}.pkl".format("pre_" if dg.pre_train else "", "_{}".format(environment.WORLD_RANK) if environment.WORLD_SIZE > 1 else "")).exists():
+        with open(self.cache_path / "{}hole_length_mon{}.pkl".format("pre_" if dg.pre_train else "", "_{}".format(environment.WORLD_RANK) if environment.WORLD_SIZE > 1 else ""), 'rb') as infile:
           self.hlen_monitor = pickle.load(infile)
       else:
-        self.hlen_monitor = monitors.NormalizedFrequencyMonitor(self.cache_path, "{}online_hole_length".format("pre_" if dg.pre_train else ""))
+        self.hlen_monitor = monitors.NormalizedFrequencyMonitor(self.cache_path, "{}online_hole_length{}".format("pre_" if dg.pre_train else "", "_{}".format(environment.WORLD_RANK) if environment.WORLD_SIZE > 1 else ""))
 
     """
     TODO, add custom config just like in lm_data_generator
@@ -111,7 +111,7 @@ class OnlineDataset(torch.utils.data.Dataset):
       self.hlen_monitor.register([x for x in k['masked_lm_lengths'] if x >= 0])
       if self.cur_step % self.steps_per_epoch == 0:
         self.hlen_monitor.plot()
-        with open(self.cache_path / "hole_length_mon.pkl", 'wb') as outf:
+        with open(self.cache_path / "hole_length_mon{}.pkl".format("_{}".format(environment.WORLD_RANK) if environment.WORLD_SIZE > 1 else ""), 'wb') as outf:
           pickle.dump(self.hlen_monitor, outf)
 
     # raise NotImplementedError("Fix a) init state of rngen)
@@ -190,11 +190,11 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
 
     self.hlen_monitor    = None
     if is_train:
-      if (self.cache_path / "{}hole_length_mon.pkl".format("pre_" if dg.pre_train else "")).exists():
-        with open(self.cache_path / "{}hole_length_mon.pkl".format("pre_" if dg.pre_train else ""), 'rb') as infile:
+      if (self.cache_path / "{}hole_length_mon{}.pkl".format("pre_" if dg.pre_train else "", "_{}".format(environment.WORLD_RANK) if environment.WORLD_SIZE > 1 else "")).exists():
+        with open(self.cache_path / "{}hole_length_mon{}.pkl".format("pre_" if dg.pre_train else "", "_{}".format(environment.WORLD_RANK) if environment.WORLD_SIZE > 1 else ""), 'rb') as infile:
           self.hlen_monitor = pickle.load(infile)
       else:
-        self.hlen_monitor = monitors.NormalizedFrequencyMonitor(self.cache_path, "{}online_hole_length".format("pre_" if dg.pre_train else ""))
+        self.hlen_monitor = monitors.NormalizedFrequencyMonitor(self.cache_path, "{}online_hole_length{}".format("pre_" if dg.pre_train else "", "_{}".format(environment.WORLD_RANK) if environment.WORLD_SIZE > 1 else ""))
 
     """
     TODO, add custom config just like in lm_data_generator
@@ -251,7 +251,7 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
       self.hlen_monitor.register([x for x in k['masked_lm_lengths'] if x >= 0])
       if self.cur_step % self.steps_per_epoch == 0:
         self.hlen_monitor.plot()
-        with open(self.cache_path / "hole_length_mon.pkl", 'wb') as outf:
+        with open(self.cache_path / "hole_length_mon{}.pkl".format("_{}".format(environment.WORLD_RANK) if environment.WORLD_SIZE > 1 else "", 'wb') as outf:
           pickle.dump(self.hlen_monitor, outf)
     return k
 
