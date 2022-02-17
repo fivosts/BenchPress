@@ -126,15 +126,20 @@ def write(msg: str) -> None:
     time.sleep(0.5)
   return
 
-def read() -> str:
+def read(d:int=0) -> str:
   """
   All nodes read broadcasted message.
   """
+  if d > 10:
+    raise FileNotFoundError(str(PATH / "msg-{}".format(WORLD_RANK)))
   while not (PATH / "msg-{}".format(WORLD_RANK)).exists():
     time.sleep(0.5)
   while True:
-    with open(PATH / "msg-{}".format(WORLD_RANK), 'r') as inf:
-      msg = inf.read()
+    try:
+      with open(PATH / "msg-{}".format(WORLD_RANK), 'r') as inf:
+        msg = inf.read()
+    except FileNotFoundError:
+      return read(d = d+1)
     if msg != '':
       break
     time.sleep(0.5)
