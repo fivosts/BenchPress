@@ -251,7 +251,7 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
       self.hlen_monitor.register([x for x in k['masked_lm_lengths'] if x >= 0])
       if self.cur_step % self.steps_per_epoch == 0:
         self.hlen_monitor.plot()
-        with open(self.cache_path / "hole_length_mon{}.pkl".format("_{}".format(environment.WORLD_RANK) if environment.WORLD_SIZE > 1 else "", 'wb') as outf:
+        with open(self.cache_path / "hole_length_mon{}.pkl".format("_{}".format(environment.WORLD_RANK) if environment.WORLD_SIZE > 1 else ""), 'wb') as outf:
           pickle.dump(self.hlen_monitor, outf)
     return k
 
