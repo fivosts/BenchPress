@@ -11,6 +11,8 @@ from plotly import graph_objs as go
 import plotly.figure_factory as ff
 import plotly.express as px
 
+from deeplearning.clgen.util import logging as l
+
 example_formats = """
   margin = {'l': 0, 'r': 0, 't': 0, 'b': 0}   # Eliminates excess background around the plot (Can hide the title)
   plot_bgcolor = 'rgba(0,0,0,0)' or "#000fff" # Sets the background color of the plot
@@ -96,8 +98,14 @@ def _write_figure(fig       : go.Figure,
   if path:
     path.mkdir(parents = True, exist_ok = True)
     outf = lambda ext: str(path / "{}.{}".format(plot_name, ext))
-    fig.write_html (outf("html"))
-    fig.write_image(outf("png"), width = kwargs.get('width'), height = kwargs.get('height'))
+    try:
+      fig.write_html (outf("html"))
+    except ValueError:
+      l.logger().warn("HTML plot failed", ddp_nodes = True)
+    try:
+      fig.write_image(outf("png"), width = kwargs.get('width'), height = kwargs.get('height'))
+    except ValueError:
+      l.logger().warn("PNG plot failed", ddp_nodes = True)
   else:
     fig.show()
   return
