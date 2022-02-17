@@ -152,6 +152,12 @@ class SamplesDatabase(sqlutil.Database):
       return s.query(Sample).all()
 
   @property
+  def get_hash_entries(self):
+    """Return all unique hash entries found in DB."""
+    with self.Session() as s:
+      return s.query(Sample.sha256).all()
+
+  @property
   def samples(self) -> typing.List[Sample]:
     """Get a list of all files in database."""
     with self.Session() as s:
