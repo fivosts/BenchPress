@@ -6,13 +6,10 @@ import sys
 from collections import Counter
 
 # code for the paper:
-# import clgen.sampler
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from IPython.core.display import HTML, display
-# from clgen import config as cfg
 from numpy.random import RandomState
 from sklearn.neighbors import KNeighborsClassifier, NearestNeighbors
 
@@ -68,56 +65,6 @@ plt.style.use(["seaborn-white", "seaborn-paper"])
 
 # tables config:
 pd.set_option('display.max_rows', 15)
-
-# warn if CLgen doesn't have OpenCL support
-# if not cfg.USE_OPENCL:
-#   print("warning: CLgen does not have OpenCL support. Some of the "
-#         "experiments in this notebook are disabled.", file=sys.stderr)
-
-
-# def has_opencl():
-#   """determine if platform supports cldrive"""
-#   return cfg.USE_OPENCL
-
-
-# def can_reproduce_experiments():
-#   """determine if platform can reproduce experiments"""
-#   if cfg.USE_OPENCL:
-#     import pyopencl as cl
-#     import clgen.cldrive
-#     try:
-#       clgen.cldrive.init_opencl(cl.device_type.CPU)
-#       clgen.cldrive.init_opencl(cl.device_type.GPU)
-#       return True
-#     except Exception:
-#       return False
-#   else:
-#     return False
-
-
-# warn if CLgen version is incorrect
-# REQUIRED_CLGEN_VERSION = "0.1.7"
-# if clgen.version() != REQUIRED_CLGEN_VERSION:
-#   print("warning: This notebook requires CLgen version {required}. "
-#         "You have version {actual} installed."
-#         .format(required=REQUIRED_CLGEN_VERSION, actual=clgen.version()),
-#         file=sys.stderr)
-#   print("         There may be incompatabilities.", file=sys.stderr)
-
-
-class DictTable(dict):
-  """takes a dict and renders an HTML table"""
-
-  def _repr_html_(self):
-    html = ["<table width=100%>"]
-    for key, value in self.items():
-      html.append("<tr>")
-      html.append("<td><b>{0}</b></td>".format(key))
-      html.append("<td>{0}</td>".format(value))
-      html.append("</tr>")
-    html.append("</table>")
-    return ''.join(html)
-
 
 def line_word_char_count(path):
   """count words, lines, chars in file"""
@@ -285,39 +232,6 @@ def get_nearest_neighbour_distance(F1, F2):
   nbrs = NearestNeighbors(n_neighbors=1, algorithm='brute').fit(F2)
   distances, indices = nbrs.kneighbors(F1)
   return distances
-
-
-def complete(condition=True, msg=None):
-  """passed/failed display"""
-  if msg is None:
-    msg_html = ""
-  else:
-    msg_html = """
-        <div style="margin-top:-.7em; padding-bottom:.2em;">{msg}</div>
-        """.format(msg=msg)
-
-  if condition:
-    html = """
-<div style="background-color:#5cb85c; color:#fff; text-align:center; border-radius:10px;">
-  <h1 style="padding:.5em; font-weight:400;">&#9745; Complete</h1>
-  {message}
-</div>
-""".format(message=msg_html)
-  else:
-    html = """
-<div style="background-color:#d9534f; color:#fff; text-align:center; border-radius:10px;">
-  <h1 style="padding:.5em; font-weight:400;">&#9746; Failed</h1>
-  {message}
-</div>
-""".format(message=msg_html)
-
-  display(HTML(html))
-
-
-def header(*msg, sep=" "):
-  """html header"""
-  display(HTML("<h3>{msg}</h3>".format(msg=sep.join(msg))))
-
 
 def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
   """
