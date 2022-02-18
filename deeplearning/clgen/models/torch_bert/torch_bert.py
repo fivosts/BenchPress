@@ -87,41 +87,6 @@ flags.DEFINE_boolean(
   "Use TensorRT for the sampling model."
 )
 
-# def model_step_worker(queue  : multiprocessing.Queue,
-#                       model  : typing.TypeVar('torch.nn.Module'),
-#                       device : str,
-#                       input_ids            : typing.List[typing.TypeVar('torch.Tensor')],
-#                       attention_mask       : typing.List[typing.TypeVar('torch.Tensor')],
-#                       position_ids         : typing.List[typing.TypeVar('torch.Tensor')],
-#                       masked_lm_labels     : typing.List[typing.TypeVar('torch.Tensor')],
-#                       masked_lm_lengths    : typing.List[typing.TypeVar('torch.Tensor')],
-#                       ) -> typing.Dict[str, typing.List[typing.List[int]]]:
-#   try:
-
-#     model.sample_workload(
-#       input_ids            = input_ids,
-#       attention_mask       = attention_mask,
-#       position_ids         = position_ids[0].to(device),
-#       device = device,
-#       queue = queue
-#     )
-#   except Exception as e:
-#     l.logger().error(e)
-#     exit(1)
-#   return
-
-stop_thread = False
-def gpu_thread():
-  global stop_thread
-  while not stop_thread:
-    l.logger().warn(
-      "GPU util: \n{}".format(
-        '\n'.join(["id: {}, mem_used: {}, mem_total: {}, gpu_util: {}".format(x['id'], x['mem_used'], x['mem_total'], x['gpu_util']) for x in gpu.getGPUID()])
-      )
-    )
-    time.sleep(5)
-  return
-
 class torchBert(backends.BackendBase):
 
   class BertEstimator(typing.NamedTuple):
@@ -135,7 +100,6 @@ class torchBert(backends.BackendBase):
     """Named tuple for sampling BERT."""
     model          : typing.List[typing.TypeVar('nn.Module')]
     data_generator : torchLMDataGenerator
-    # devices        : typing.List[str]
 
   def __init__(self, *args, **kwargs):
 
@@ -828,7 +792,6 @@ class torchBert(backends.BackendBase):
       else:
         step_out, time = self.sample_model_step(
             self.sample.model,
-            # self.sample.devices,
             self.step_inputs,
             is_live = self.sampler.is_live
         )
