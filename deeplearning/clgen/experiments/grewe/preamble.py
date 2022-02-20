@@ -14,6 +14,8 @@ from numpy.random import RandomState
 from sklearn.neighbors import KNeighborsClassifier, NearestNeighbors
 
 from deeplearning.clgen.experiments.grewe import model
+from deeplearning.clgen.util import distributions
+from deeplearning.clgen.util import plotter
 
 def Finalize(
   output: typing.Optional[typing.Union[str, pathlib.Path]] = None,
@@ -259,28 +261,34 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
     for b in B["benchmark"] if b.startswith(suite)
   ]))
 
-  B_out, BS_out = [], []
-  for benchmark in benchmark_names:
+  B_out, S_out, BS_out = [], [], []
+  for benchmark in benchmark_names[:1]:
     clf = model.model()
     features = get_cgo13_features
     # cross validate on baseline
     B_out += model.leave_one_benchmark_out(clf, features, B, benchmark)
     # reset model
     clf = model.model()
+    S_out += model.leave_one_benchmark_out(clf, features, BS, benchmark, synthetics = True, is_clgen = True)
+    clf = model.model()
     # repeate cross-validation with synthetic kernels
-    BS_out += model.leave_one_benchmark_out(clf, features, BS, benchmark)
+    BS_out += model.leave_one_benchmark_out(clf, features, BS, benchmark, synthetics = False, is_clgen = True)
 
   # create results frame
   R_out = []
-  for b, bs in zip(B_out, BS_out):
+  for b, s, bs in zip(B_out, S_out, BS_out):
     # get runtimes of device using predicted device
     b_p_runtime = b["runtime_" + b["p"].lower()]
+    s_p_runtime = s["runtime_" + s["p"].lower()]
     bs_p_runtime = bs["runtime_" + bs["p"].lower()]
 
     # speedup is the ratio of runtime using the predicted device
     # over runtime using ZeroR device
     b["p_speedup"] = b_p_runtime / b[zeror_runtime]
+    s["p_speedup"] = s_p_runtime / s[zeror_runtime]
     bs["p_speedup"] = bs_p_runtime / bs[zeror_runtime]
+
+    print(b_p_runtime, s_p_runtime, bs_p_runtime, b[zeror_runtime], s[zeror_runtime], bs[zeror_runtime])
 
     if "training" in benchmarks_data:
       # $benchmark
@@ -290,22 +298,105 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
       group = re.sub(r"[^-]+-[0-9\.]+-([^-]+)-.+", r"\1",
                      b["benchmark"]) + "." + b["dataset"]
     b["group"] = group
+    s["group"] = group
     bs["group"] = group
 
     # set the training data type
     b["training"] = "Grewe et al."
+    s["training"] = "Only CLgen"
     bs["training"] = "w. CLgen"
 
     R_out.append(b)
+    R_out.append(s)
     R_out.append(bs)
 
   R = pd.DataFrame(R_out)
 
   b_mask = R["training"] == "Grewe et al."
+  s_mask = R["training"] == "Only CLgen"
   bs_mask = R["training"] == "w. CLgen"
 
   B_speedup = mean(R[b_mask].groupby(["group"])["p_speedup"].mean())
+  S_speedup = mean(R[s_mask].groupby(["group"])["p_speedup"].mean())
   BS_speedup = mean(R[bs_mask].groupby(["group"])["p_speedup"].mean())
+
+  groups = {
+    "Benchmarks": {},
+    "Bench+Synth": {},
+    "Synthetics": {},
+  }
+
+  bench_times = 0.0
+  benchsynth_times = 0.0
+  synth_times = 0.0
+
+  print(zeror)
+  print(R[b_mask])
+  R.to_csv("./test.csv")
+  for x in R[b_mask]:
+    print(x)
+    print(x["p"])
+    bench_times += x["runtime_" + x["p"].lower()]
+
+  for x in R[bs_mask]:
+    benchsynth_times += x["runtime_" + x["p"].lower()]
+
+  for x in R[s_mask]:
+    synth_times += x["runtime_" + x["p"].lower()]
+
+  print(bench_times)
+  print(benchsynth_times)
+  print(synth_times)
+
+  print(len(R[b_mask]["p_speedup"]))
+  print(len(R[s_mask]["p_speedup"]))
+  print(len(R[bs_mask]["p_speedup"]))
+
+  for x in R[b_mask]["p_speedup"]:
+    x = int(x)
+    if x not in groups["Benchmarks"]:
+      groups["Benchmarks"][x] = 1
+    else:
+      groups["Benchmarks"][x] += 1
+
+  for x in R[bs_mask]["p_speedup"]:
+    x = int(x)
+    if x not in groups["Bench+Synth"]:
+      groups["Bench+Synth"][x] = 1
+    else:
+      groups["Bench+Synth"][x] += 1
+
+  for x in R[s_mask]["p_speedup"]:
+    x = int(x)
+    if x not in groups["Synthetics"]:
+      groups["Synthetics"][x] = 1
+    else:
+      groups["Synthetics"][x] += 1
+
+  for k, v in groups.items():
+    groups[k] = (list(v.keys()), list(v.values()))
+
+  plotter.GrouppedBars(
+    groups = groups, # Dict[Dict[int, int]]
+    plot_name = "speedup_distribution",
+    path = pathlib.Path("."),
+    title = "Speedup distribution frequency",
+    x_name = "Speedup absolute value",
+  )
+
+  b_distr = distributions.GenericDistribution([int(x) for x in R[b_mask]["p_speedup"]], "plots", "benchmarks")
+  s_distr = distributions.GenericDistribution([int(x) for x in R[s_mask]["p_speedup"]], "plots", "synthetics")
+  bs_distr = distributions.GenericDistribution([int(x) for x in R[bs_mask]["p_speedup"]], "plots", "synthetics_benchmarks")
+
+  b_distr.plot()
+  s_distr.plot()
+  bs_distr.plot()
+
+  print(s_distr - b_distr > 0)
+  print(bs_distr - b_distr > 0)
+
+  (s_distr - b_distr).plot()
+  (bs_distr - b_distr).plot()
 
   print("  #. benchmarks:                  ",
         len(set(B["benchmark"])), "kernels,", len(B), "observations")
@@ -314,8 +405,10 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
   print()
   print("  ZeroR device:                    {}".format(zeror))
   print()
-  print("  Speedup of Grewe et al.:         {:.2f} x".format(B_speedup))
-  print("  Speedup w. CLgen:                {:.2f} x".format(BS_speedup))
+  # print("  Speedup of Grewe et al.:         {:.2f} x".format(B_speedup))
+  print("  Speedup of Grewe et al.:         {:.2f} x".format(model.geomean([x for x in R[b_mask]["p_speedup"]])))
+  print("  Speedup w. CLgen:                {:.2f} x".format(model.geomean([x for x in R[bs_mask]["p_speedup"]])))
+  print("  Speedup Only CLgen:              {:.2f} x".format(model.geomean([x for x in R[s_mask]["p_speedup"]])))
 
   R = R.append({  # average bars
     "group": "Average",
