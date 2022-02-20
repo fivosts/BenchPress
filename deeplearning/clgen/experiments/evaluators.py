@@ -44,6 +44,7 @@ from deeplearning.clgen.experiments import clsmith
 from deeplearning.clgen.experiments import mutec
 from deeplearning.clgen.experiments import srciror
 from deeplearning.clgen.experiments import workers
+from deeplearning.clgen.experiments.grewe import api as grewe_api
 
 from deeplearning.clgen.util import logging as l
 
@@ -512,6 +513,72 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       pbutil.AssertFieldIsSet(ev.generate_clsmith, "clsmith_db")
       if not pathlib.Path(ev.generate_clsmith.clsmith_db).resolve().exists():
         l.logger().warn("CLSmith samples DB not found in {}. Will create one from scratch.".format(ev.generate_clsmith.clsmith_db))
+    elif ev.HasField("grewe_top_k_csv"):
+      ### TopKCLDrive
+      # Generic Fields
+      pbutil.AssertFieldIsSet(config, "workspace")
+      pbutil.AssertFieldIsSet(config, "tokenizer")
+      if not pathlib.Path(config.tokenizer).resolve().exists():
+        raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
+      # DB groups
+      for dbs in ev.grewe_top_k_csv.db_group:
+        for db in dbs.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
+      # Specialized fields.
+      pbutil.AssertFieldConstraint(
+        ev.grewe_top_k_csv,
+        "target",
+        lambda x: x in feature_sampler.targets,
+        "target {} not found".format(ev.grewe_top_k_csv.target),
+      )
+      pbutil.AssertFieldConstraint(
+        ev.grewe_top_k_csv,
+        "top_k",
+        lambda x: x > 0,
+        "top-K factor must be positive",
+      )
+    elif ev.HasField("grewe_csv"):
+      ### TopKCLDrive
+      # Generic Fields
+      pbutil.AssertFieldIsSet(config, "workspace")
+      pbutil.AssertFieldIsSet(config, "tokenizer")
+      if not pathlib.Path(config.tokenizer).resolve().exists():
+        raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
+      # DB groups
+      for dbs in ev.grewe_csv.db_group:
+        for db in dbs.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
+      # Specialized fields.
+      pbutil.AssertFieldConstraint(
+        ev.grewe_csv,
+        "target",
+        lambda x: x in feature_sampler.targets,
+        "target {} not found".format(ev.grewe_csv.target),
+      )
+      pbutil.AssertFieldConstraint(
+        ev.grewe_csv,
+        "top_k",
+        lambda x: x > 0,
+        "top-K factor must be positive",
+      )
     else:
       raise ValueError(ev)
   return config
@@ -541,6 +608,8 @@ def main(config: evaluator_pb2.Evaluation):
     evaluator_pb2.SRCIROR_srcVsBenchPress : srciror.SRCIRORVsBenchPress,
     evaluator_pb2.SRCIROR_IRVsBenchPress  : srciror.SRCIRORVsBenchPress,
     evaluator_pb2.GenerateCLSmith         : clsmith.GenerateCLSmith,
+    evaluator_pb2.GreweTopKCSV            : grewe_api.GreweTopKCSV,
+    evaluator_pb2.GreweCSV                : grewe_api.GreweCSV,
   }
   db_cache       = {}
   target_cache   = {}
@@ -780,9 +849,38 @@ def main(config: evaluator_pb2.Evaluation):
       sev = ev.generate_clsmith
       kw_args['clsmith_path'] = sev.clsmith_db
 
-    elif ev.HasField("generate_clsmith"):
-      sev = ev.generate_clsmith
-      kw_args['clsmith_path'] = sev.clsmith_db
+    elif ev.HasField("grewe_top_k_csv"):
+      sev = ev.grewe_top_k_csv
+      kw_args['top_k']         = sev.top_k
+      # Gather target benchmarks and cache them
+      if isinstance(sev.target, list):
+        kw_args["targets"] = []
+        for t in sev.target:
+          if t not in target_cache:
+            target_cache[t] = TargetBenchmarks(t)
+          kw_args["targets"].append(target_cache[t])
+      else:
+        if sev.target not in target_cache:
+          target_cache[sev.target] = TargetBenchmarks(sev.target)
+        kw_args["targets"] = target_cache[sev.target]
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
+      kw_args['feature_space'] = "GreweFeatures"
+
+    elif ev.HasField("grewe_csv"):
+      sev = ev.grewe_csv
+      # Gather target benchmarks and cache them
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
+      kw_args['feature_space'] = "GreweFeatures"
 
     else:
       raise NotImplementedError(ev)

@@ -1,9 +1,11 @@
-import tensorflow as tf
 
 import tensorflow_addons as tfa
 import tensorflow_probability as tfp
 
 from deeplearning.clgen.util import logging as l
+from deeplearning.clgen.util import tf as local_tf
+
+tf = local_tf.tf
 
 class CustomInferenceHelper(tfa.seq2seq.sampler.TrainingSampler):
   """An inference helper that takes a seed text"""

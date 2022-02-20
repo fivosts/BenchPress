@@ -31,10 +31,13 @@ from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.proto import model_pb2
+from deeplearning.clgen.util import tf as local_tf
 from deeplearning.clgen.models.tf_sequential.data_generator import TensorflowBatchGenerator
 from absl import flags
 
 FLAGS = flags.FLAGS
+
+tf = local_tf.tf
 
 flags.DEFINE_boolean(
   "clgen_tf_backend_reset_inference_state_between_batches",
@@ -66,6 +69,8 @@ class tfSequential(backends.BackendBase):
     """
     super(tfSequential, self).__init__(*args, **kwargs)
 
+    local_tf.initTensorflow()
+
     # Attributes that will be lazily set.
     self.cell = None
     self.input_data = None
@@ -90,7 +95,6 @@ class tfSequential(backends.BackendBase):
 
     # Create the summary writer, shared between Train() and
     # _EndOfEpochTestSample().
-    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
 
     tensorboard_dir = f"{self.cache.path}/tensorboard"
@@ -99,7 +103,6 @@ class tfSequential(backends.BackendBase):
       f"    $ tensorboard --logdir='{tensorboard_dir}'",
     )
     self.summary_writer = tf.compat.v1.summary.FileWriter(tensorboard_dir)
-    self.telemetry = telemetry.TrainingLogger(pathlib.Path(tensorboard_dir))
 
   def samplesWithCategorical(self):
     return True
@@ -127,7 +130,6 @@ class tfSequential(backends.BackendBase):
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
     # Deferred importing of TensorFlow.
-    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
     from deeplearning.clgen.models.tf_sequential import helper
 
@@ -340,7 +342,7 @@ class tfSequential(backends.BackendBase):
     del unused_kwargs
 
     self.num_epochs = self.config.training.num_epochs
-    if self.is_trained or FLAGS.only_sample:
+    if self.is_trained:
       return
 
     if self.data_generator is None:
@@ -374,91 +376,89 @@ class tfSequential(backends.BackendBase):
       assert checkpoint_state.model_checkpoint_path
       ckpt_path, ckpt_paths = self.GetParamsPath(checkpoint_state)
 
-    tf.compat.v1.global_variables_initializer().run()
+    with tf.compat.v1.Session() as sess:
+      tf.compat.v1.global_variables_initializer().run()
 
-    # Keep all checkpoints.
-    saver = tf.compat.v1.train.Saver(
-      tf.compat.v1.global_variables(), max_to_keep=100, save_relative_paths=True
-    )
-
-    # restore model from closest checkpoint.
-    if ckpt_path:
-      l.logger().info("Restoring checkpoint {}".format(ckpt_path))
-      saver.restore(sess, ckpt_path)
-
-    # make sure we don't lose track of other checkpoints
-    if ckpt_paths:
-      saver.recover_last_checkpoints(ckpt_paths)
-
-    # Offset epoch counts by 1 so that they are in the range [1..n]
-    current_epoch = sess.run(self.epoch) + 1
-    max_epoch = self.config.training.num_epochs + 1
-
-    # Per-epoch training loop.
-    for epoch_num in range(current_epoch, max_epoch):
-      self.telemetry.EpochBeginCallback()
-
-      # decay and set learning rate
-      new_learning_rate = initial_learning_rate * (
-        (float(100 - decay_rate) / 100.0) ** (epoch_num - 1)
+      # Keep all checkpoints.
+      saver = tf.compat.v1.train.Saver(
+        tf.compat.v1.global_variables(), max_to_keep=100, save_relative_paths=True
       )
-      sess.run(tf.compat.v1.assign(self.learning_rate, new_learning_rate))
-      sess.run(tf.compat.v1.assign(self.epoch, epoch_num))
 
-      # TODO(cec): refactor data generator to a Python generator.
-      self.data_generator.CreateBatches()
-      l.logger().info("Epoch {}/{}:".format(epoch_num, self.config.training.num_epochs))
-      state = sess.run(self.initial_state)
-      # Per-batch inner loop.
-      bar = progressbar.ProgressBar(max_value=self.data_generator.num_batches)
-      last_log_time = time.time()
-      for i in bar(range(self.data_generator.num_batches)):
-        x, y = self.data_generator.NextBatch()
-        feed = {self.input_data: x, self.targets: y}
-        for j, (c, h) in enumerate(self.initial_state):
-          feed[c], feed[h] = state[j].c, state[j].h
-        summary, loss, state, _ = sess.run(
-          [merged, self.loss, self.final_state, self.train_op], feed
+      # restore model from closest checkpoint.
+      if ckpt_path:
+        l.logger().info("Restoring checkpoint {}".format(ckpt_path))
+        saver.restore(sess, ckpt_path)
+
+      # make sure we don't lose track of other checkpoints
+      if ckpt_paths:
+        saver.recover_last_checkpoints(ckpt_paths)
+
+      # Offset epoch counts by 1 so that they are in the range [1..n]
+      current_epoch = sess.run(self.epoch) + 1
+      max_epoch = self.config.training.num_epochs + 1
+
+      # Per-epoch training loop.
+      for epoch_num in range(current_epoch, max_epoch):
+        self.telemetry.EpochBeginCallback()
+
+        # decay and set learning rate
+        new_learning_rate = initial_learning_rate * (
+          (float(100 - decay_rate) / 100.0) ** (epoch_num - 1)
         )
+        sess.run(tf.compat.v1.assign(self.learning_rate, new_learning_rate))
+        sess.run(tf.compat.v1.assign(self.epoch, epoch_num))
 
-        # Periodically write progress to tensorboard.
-        if i % FLAGS.clgen_tf_backend_tensorboard_summary_step_count == 0:
-          step = (epoch_num - 1) * self.data_generator.num_batches + i
-          self.summary_writer.add_summary(summary, step)
-          now = time.time()
-          duration_ns = int((now - last_log_time) * 1e6)
-          last_log_time = now
+        # TODO(cec): refactor data generator to a Python generator.
+        self.data_generator.CreateBatches()
+        l.logger().info("Epoch {}/{}:".format(epoch_num, self.config.training.num_epochs))
+        state = sess.run(self.initial_state)
+        # Per-batch inner loop.
+        bar = progressbar.ProgressBar(max_value=self.data_generator.num_batches)
+        last_log_time = time.time()
+        for i in bar(range(self.data_generator.num_batches)):
+          x, y = self.data_generator.NextBatch()
+          feed = {self.input_data: x, self.targets: y}
+          for j, (c, h) in enumerate(self.initial_state):
+            feed[c], feed[h] = state[j].c, state[j].h
+          summary, loss, state, _ = sess.run(
+            [merged, self.loss, self.final_state, self.train_op], feed
+          )
 
-      # Log the loss and delta.
-      l.logger().info("Loss: {:.6f}.".format(loss))
+          # Periodically write progress to tensorboard.
+          if i % FLAGS.clgen_tf_backend_tensorboard_summary_step_count == 0:
+            step = (epoch_num - 1) * self.data_generator.num_batches + i
+            self.summary_writer.add_summary(summary, step)
 
-      # Save after every epoch.
-      start_time = time.time()
-      global_step = epoch_num
-      checkpoint_prefix = self.cache.path / "checkpoints" / "checkpoint"
-      checkpoint_path = saver.save(
-        sess, str(checkpoint_prefix), global_step=global_step
-      )
-      l.logger().info(
-        "Saved checkpoint {} in {} ms."
-          .format(
-            checkpoint_path,
-            humanize.intcomma(int((time.time() - start_time) * 1000)),
-            )
-      )
-      assert pathlib.Path(
-        f"{checkpoint_prefix}-{global_step}.index"
-      ).is_file()
-      assert pathlib.Path(f"{checkpoint_prefix}-{global_step}.meta").is_file()
+        # Log the loss and delta.
+        l.logger().info("Loss: {:.6f}.".format(loss))
 
-      self.telemetry.EpochEndCallback(epoch_num, loss)
-      # If we have a sampler that we can use at the end of epochs, then
-      # break now to run the test sampler.
-      # This is confusing logic! Consider a refactor to simplify things.
-      if test_sampler:
-        break
-    else:
-      return
+        # Save after every epoch.
+        start_time = time.time()
+        global_step = epoch_num
+        checkpoint_prefix = self.cache.path / "checkpoints" / "checkpoint"
+        checkpoint_path = saver.save(
+          sess, str(checkpoint_prefix), global_step=global_step
+        )
+        l.logger().info(
+          "Saved checkpoint {} in {} ms."
+            .format(
+              checkpoint_path,
+              humanize.intcomma(int((time.time() - start_time) * 1000)),
+              )
+        )
+        assert pathlib.Path(
+          f"{checkpoint_prefix}-{global_step}.index"
+        ).is_file()
+        assert pathlib.Path(f"{checkpoint_prefix}-{global_step}.meta").is_file()
+
+        self.telemetry.EpochEndCallback(epoch_num, loss)
+        # If we have a sampler that we can use at the end of epochs, then
+        # break now to run the test sampler.
+        # This is confusing logic! Consider a refactor to simplify things.
+        if test_sampler:
+          break
+      else:
+        return
 
     if test_sampler and FLAGS.clgen_per_epoch_test_samples > 0:
       self._EndOfEpochTestSample(corpus, test_sampler, step, epoch_num)
@@ -468,7 +468,6 @@ class tfSequential(backends.BackendBase):
     self, corpus, sampler: samplers.Sampler, step: int, epoch_num: int
   ):
     """Run sampler"""
-    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
 
     tokenizer = corpus.tokenizer
@@ -500,6 +499,21 @@ class tfSequential(backends.BackendBase):
             done[0] = True
             break
 
+    # Write samples to file.
+    with self.dashboard_db.Session(commit=True) as dbs:
+      dbs.add_all(
+        [
+          dashboard_db.TrainingSample(
+            model_id=self.dashboard_model_id,
+            epoch=epoch_num,
+            step=step,
+            sample=sample,
+            token_count=stats[0],
+            sample_time=stats[1],
+          )
+          for sample, stats in zip(samples, stats)
+        ]
+      )
     samples_as_markdown = [
       self.FormatCodeAsMarkdown(sample) for sample in samples
     ]
@@ -516,7 +530,6 @@ class tfSequential(backends.BackendBase):
     self, sampler: samplers.Sampler, seed: typing.Optional[int] = None
   ) -> None:
     """Initialize model for sampling."""
-    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
     
     # Delete any previous sampling session.
@@ -592,10 +605,9 @@ class tfSequential(backends.BackendBase):
     self.inference_indices = generated[:, -1].reshape((sampler.batch_size, 1))
     if length > 1:
       generated = generated[:, length - 1 :]
-    return generated
+    return generated, generated
 
   def RandomizeSampleState(self) -> None:
-    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
 
     self.inference_state = [
@@ -646,4 +658,3 @@ class tfSequential(backends.BackendBase):
     ]
     epoch_nums = [int(x.split("-")[-1]) for x in checkpoint_files]
     return self.config.training.num_epochs in epoch_nums
-
