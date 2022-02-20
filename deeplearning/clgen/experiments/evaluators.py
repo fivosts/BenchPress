@@ -566,19 +566,6 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
-      # Specialized fields.
-      pbutil.AssertFieldConstraint(
-        ev.grewe_csv,
-        "target",
-        lambda x: x in feature_sampler.targets,
-        "target {} not found".format(ev.grewe_csv.target),
-      )
-      pbutil.AssertFieldConstraint(
-        ev.grewe_csv,
-        "top_k",
-        lambda x: x > 0,
-        "top-K factor must be positive",
-      )
     else:
       raise ValueError(ev)
   return config
