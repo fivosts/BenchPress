@@ -431,12 +431,17 @@ def model(seed=204):
   return DecisionTreeClassifier(
       random_state=seed, splitter="best", criterion="entropy")
 
+original_pair = [0, 0]
+synthetics_pair = [0, 0]
 
-def leave_one_benchmark_out(clf, get_features, D, benchmark):
+def leave_one_benchmark_out(clf, get_features, D, benchmark, synthetics = False, is_clgen = False):
   # Create data masks. For training we exclude all results from
   # the test benchmark.
   test_mask = D["benchmark"].str.contains(r"^" + benchmark)
-  train_mask = ~test_mask
+  if synthetics:
+    train_mask = D["benchmark"].str.contains(".cl-A")
+  else:
+    train_mask = ~test_mask
 
   # Create training and testing data:
   X_train = get_features(D[train_mask])
@@ -452,10 +457,33 @@ def leave_one_benchmark_out(clf, get_features, D, benchmark):
   # Make predictions
   predicted = clf.predict(X_test)
   D_out = []
+
+  total = 0
+  correct = 0
+
   for d, y, p in zip(D_test.to_dict('records'), y_test, predicted):
     d["p"] = p
     d["p_correct"] = 1 if y == p else 0
+    if y == p:
+      correct += 1
+    total += 1
     D_out.append(d)
+
+  global original_pair
+  global synthetics_pair
+
+  if is_clgen:
+    synthetics_pair[0] += correct
+    synthetics_pair[1] += total
+  else:
+    original_pair[0] += correct
+    original_pair[1] += total
+
+  # if is_clgen:
+  #   print("######")
+  #   print("CLgen", synthetics_pair)
+  #   print("Benchmarks", original_pair)
+  #   input()
 
   # Return a list of dicts
   return D_out
