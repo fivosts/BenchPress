@@ -12,8 +12,10 @@ import tqdm
 import pandas as pd
 
 from deeplearning.clgen.experiments import public
+from deeplearning.clgen.experiments import workers
+from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.samplers import samples_database
-
+from deeplearning.clgen.util import logging as l
 """
 1. You may insert database groups as usual to convert to csv
 2. You need to introduce a systematic way to insert the amd/nvidia/clgen csv's from clgen's artifacts.
@@ -53,10 +55,10 @@ def DataFrameSchema() -> typing.List[str]:
     "kernel_size"
   ]
 
-def ToDataFrame(name: str,
-                grewe_feats: typing.Dict[str, float],
-                cldrive_data: pd.DataFrame,
-                ) -> pd.DataFrame:
+def ToDataFrameRow(name: str,
+                   grewe_feats: typing.Dict[str, float],
+                   cldrive_data: pd.DataFrame,
+                   ) -> pd.DataFrame:
   """
   Convert a samples DB to a csv with the same columns found in paper's artifact.
   """
@@ -131,13 +133,14 @@ def GreweTopKCSV(**kwargs) -> None:
     if unique_code:
       get_data = lambda: dbg.get_unique_data_features("GreweFeatures")
     else:
-      get_data = lambda: get_data_features("GreweFeatures")
+      get_data = lambda: dbg.get_data_features("GreweFeatures")
 
     ## Unpack and collect benchmarks
-    benchmarks = target.get_benchmarks(feature_space)
+    benchmarks = target.get_benchmarks("GreweFeatures")
     for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
       top_k_idx = 0
-      for idx, (src, feats) in enumerate(tqdm.tqdm(workers.SortedSrcDistances(get_data(), benchmark.features, "GreweFeatures"))):
+      d = workers.SortedSrcDistances(get_data(), benchmark.features, "GreweFeatures")
+      for idx, (src, _, feats) in enumerate(tqdm.tqdm(d)):
         toggle = False
         for row in DriveSource(src, feats, idx):
           if row:
@@ -172,7 +175,7 @@ def GreweCSV(**kwargs) -> None:
     if unique_code:
       get_data = lambda: dbg.get_unique_data_features("GreweFeatures")
     else:
-      get_data = lambda: get_data_features("GreweFeatures")
+      get_data = lambda: dbg.get_data_features("GreweFeatures")
 
     for idx, (src, feats) in enumerate(tqdm.tqdm(get_data(), desc = "Src", leave = True)):
       for row in DriveSource(src, feats, idx):
