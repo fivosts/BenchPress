@@ -31,10 +31,13 @@ from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.proto import model_pb2
+from deeplearning.clgen.util import tf
 from deeplearning.clgen.models.tf_sequential.data_generator import TensorflowBatchGenerator
 from absl import flags
 
 FLAGS = flags.FLAGS
+
+tf = tf.tf
 
 flags.DEFINE_boolean(
   "clgen_tf_backend_reset_inference_state_between_batches",
@@ -66,6 +69,8 @@ class tfSequential(backends.BackendBase):
     """
     super(tfSequential, self).__init__(*args, **kwargs)
 
+    tf.initTensorflow()
+
     # Attributes that will be lazily set.
     self.cell = None
     self.input_data = None
@@ -90,7 +95,6 @@ class tfSequential(backends.BackendBase):
 
     # Create the summary writer, shared between Train() and
     # _EndOfEpochTestSample().
-    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
 
     tensorboard_dir = f"{self.cache.path}/tensorboard"
@@ -126,7 +130,6 @@ class tfSequential(backends.BackendBase):
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
     # Deferred importing of TensorFlow.
-    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
     from deeplearning.clgen.models.tf_sequential import helper
 
@@ -465,7 +468,6 @@ class tfSequential(backends.BackendBase):
     self, corpus, sampler: samplers.Sampler, step: int, epoch_num: int
   ):
     """Run sampler"""
-    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
 
     tokenizer = corpus.tokenizer
@@ -528,7 +530,6 @@ class tfSequential(backends.BackendBase):
     self, sampler: samplers.Sampler, seed: typing.Optional[int] = None
   ) -> None:
     """Initialize model for sampling."""
-    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
     
     # Delete any previous sampling session.
@@ -607,7 +608,6 @@ class tfSequential(backends.BackendBase):
     return generated, generated
 
   def RandomizeSampleState(self) -> None:
-    import tensorflow as tf
     tf.compat.v1.disable_eager_execution()
 
     self.inference_state = [
