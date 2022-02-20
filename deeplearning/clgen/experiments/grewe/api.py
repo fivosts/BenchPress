@@ -57,36 +57,37 @@ def DataFrameSchema() -> typing.List[str]:
 
 def ToDataFrameRow(name: str,
                    grewe_feats: typing.Dict[str, float],
-                   cldrive_data: pd.DataFrame,
+                   df: pd.DataFrame,
                    ) -> pd.DataFrame:
   """
   Convert a samples DB to a csv with the same columns found in paper's artifact.
   """
+  cts, cks, gts, gks = df[df['device'].str.contains("CPU")].transfer_time_ns.mean(), df[df['device'].str.contains("CPU")].kernel_time_ns.mean(), df[df['device'].str.contains("GPU")].transfer_time_ns.mean(), df[df['device'].str.contains("GPU")].kernel_time_ns.mean()
   return [
     name,
-    cldrive_data.global_size,
+    df.global_size[0],
     grewe_feats['comp'],
     grewe_feats['rational'],
     grewe_feats['mem'],
     grewe_feats['localmem'],
     grewe_feats['coalesced'],
     grewe_feats['atomic'],
-    cldrive_data.transferred_bytes,
-    cldrive_data.local_size,
-    cldrive_data.transferred_bytes / (grewe_feats['comp'] + grewe_feats['mem']),
+    df[df['device'].str.contains("CPU")].transferred_bytes[0],
+    df.local_size[0],
+    df[df['device'].str.contains("CPU")].transferred_bytes[0] / (grewe_feats['comp'] + grewe_feats['mem']),
     grewe_feats["F2:coalesced/mem"],
-    (grewe_feats['localmem'] / grewe_feats['mem']) * cldrive_data.local_size,
+    (grewe_feats['localmem'] / grewe_feats['mem']) * df.local_size[0],
     grewe_feats["F4:comp/mem"],
-    "GPU" if cldrive_data.transfer_time_cpu_ns + cldrive_data.kernel_time_cpu_ns > cldrive_data.transfer_time_gpu_ns + cldrive_data.kernel_time_gpu_ns else "CPU",
-    min(cldrive_data.transfer_time_cpu_ns + cldrive_data.kernel_time_cpu_ns, cldrive_data.transfer_time_gpu_ns + cldrive_data.kernel_time_gpu_ns),
-    max(cldrive_data.transfer_time_cpu_ns + cldrive_data.kernel_time_cpu_ns / cldrive_data.transfer_time_gpu_ns + cldrive_data.kernel_time_gpu_ns, cldrive_data.transfer_time_gpu_ns + cldrive_data.kernel_time_gpu_ns / cldrive_data.transfer_time_cpu_ns + cldrive_data.kernel_time_cpu_ns),
-    min(cldrive_data.transfer_time_cpu_ns + cldrive_data.kernel_time_cpu_ns / cldrive_data.transfer_time_gpu_ns + cldrive_data.kernel_time_gpu_ns, cldrive_data.transfer_time_gpu_ns + cldrive_data.kernel_time_gpu_ns / cldrive_data.transfer_time_cpu_ns + cldrive_data.kernel_time_cpu_ns),
-    cldrive_data.transfer_time_cpu_ns + cldrive_data.kernel_time_cpu_ns,
-    cldrive_data.transfer_time_cpu_ns,
-    cldrive_data.kernel_time_cpu_ns,
-    cldrive_data.transfer_time_gpu_ns + cldrive_data.kernel_time_gpu_ns,
-    cldrive_data.transfer_time_gpu_ns,
-    cldrive_data.kernel_time_gpu_ns,
+    "GPU" if cts + cks > gts + gks else "CPU",
+    min(cts + cks, gts + gks),
+    max(cts + cks / gts + gks, gts + gks / cts + cks),
+    min(cts + cks / gts + gks, gts + gks / cts + cks),
+    cts + cks,
+    cts,
+    cks,
+    gts + gks,
+    gts,
+    gks,
     0,
     0
   ]
@@ -107,7 +108,7 @@ def DriveSource(src: str, feats: typing.Dict[str, float], idx: int) -> typing.Ge
         yield ToDataFrameRow(
             name = "{}.cl".format(idx),
             grewe_feats = feats,
-            cldrive_data = data,
+            df = data,
           )
 
 @public.evaluator
@@ -139,8 +140,8 @@ def GreweTopKCSV(**kwargs) -> None:
     benchmarks = target.get_benchmarks("GreweFeatures")
     for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
       top_k_idx = 0
-      d = workers.SortedSrcDistances(get_data(), benchmark.features, "GreweFeatures")
-      for idx, (src, _, feats) in enumerate(tqdm.tqdm(d)):
+      top_k_bar = tqdm.tqdm(total = top_k, desc = "Top K cands", leave = True)
+      for idx, (src, _, feats, dist) in enumerate(tqdm.tqdm(workers.SortedSrcFeatsDistances(get_data(), benchmark.features, "GreweFeatures"), desc = "Sorted Data", leave = False)):
         toggle = False
         for row in DriveSource(src, feats, idx):
           if row:
@@ -148,6 +149,7 @@ def GreweTopKCSV(**kwargs) -> None:
             datapoints.append(row)
         if toggle:
           top_k_idx += 1
+          top_k_bar.update(1)
         if top_k_idx >= top_k:
           break
 
