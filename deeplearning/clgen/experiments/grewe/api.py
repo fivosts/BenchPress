@@ -89,7 +89,7 @@ def ToDataFrame(name: str,
     0
   ]
 
-def DriveSource(src: str, feats: typing.Dict[str, float], idx: int) -> typing.Generator[typing.List]:
+def DriveSource(src: str, feats: typing.Dict[str, float], idx: int) -> typing.Generator:
   """
   For a given source code, drive to CLDrive and return a ready row.
   """
