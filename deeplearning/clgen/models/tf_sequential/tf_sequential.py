@@ -374,7 +374,7 @@ class tfSequential(backends.BackendBase):
       assert checkpoint_state.model_checkpoint_path
       ckpt_path, ckpt_paths = self.GetParamsPath(checkpoint_state)
 
-    tf.compat.v1.global_variables_initializer().run()
+    tf.compat.v1.global_variables_initializer().run(sess)
 
     # Keep all checkpoints.
     saver = tf.compat.v1.train.Saver(
