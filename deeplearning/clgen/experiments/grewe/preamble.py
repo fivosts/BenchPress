@@ -1,6 +1,7 @@
 # preamble
 import typing
 import pathlib
+import tempfile
 import re
 import sys
 from collections import Counter
@@ -633,4 +634,14 @@ if __name__ == "__main__":
     open("/var/foivos/results/clgen_paper_artifacts/nvidia-benchmarks.csv", 'r'),
     open("/var/foivos/results/clgen_paper_artifacts/nvidia-clgen.csv", 'r')
   )
+
+  db_path = pathlib.Path("/var/foivos/results/pldi_results/BERT/Fixed_input/samples.db")
+  db = samples_database.SamplesDatabase(db_path, must_exist = True)
+  d = api.ToDataFrame(db)
+  d.to_csv(str(db_path.parent / "samples_dataframe.csv"))
+  with tempfile.NamedTemporaryFile("w", prefix="preamble_", suffix=".csv") as f:
+    plot_speedups_with_clgen(
+      open("/var/foivos/results/clgen_paper_artifacts/nvidia-benchmarks.csv", 'r'),
+      open("/var/foivos/results/pldi_results/BERT/Fixed_input/samples_dataframe.csv", 'r'),
+    )
   exit()
