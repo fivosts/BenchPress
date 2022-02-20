@@ -31,13 +31,13 @@ from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.util import tf
+from deeplearning.clgen.util import tf as local_tf
 from deeplearning.clgen.models.tf_sequential.data_generator import TensorflowBatchGenerator
 from absl import flags
 
 FLAGS = flags.FLAGS
 
-tf = tf.tf
+tf = local_tf.tf
 
 flags.DEFINE_boolean(
   "clgen_tf_backend_reset_inference_state_between_batches",
@@ -69,7 +69,7 @@ class tfSequential(backends.BackendBase):
     """
     super(tfSequential, self).__init__(*args, **kwargs)
 
-    tf.initTensorflow()
+    local_tf.initTensorflow()
 
     # Attributes that will be lazily set.
     self.cell = None
