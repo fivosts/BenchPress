@@ -94,7 +94,7 @@ class tfSequential(backends.BackendBase):
     tf.compat.v1.disable_eager_execution()
 
     tensorboard_dir = f"{self.cache.path}/tensorboard"
-    l.getLogger().info(
+    l.logger().info(
       "Using tensorboard to log training progress. View progress using:\n"
       f"    $ tensorboard --logdir='{tensorboard_dir}'",
     )
@@ -232,7 +232,7 @@ class tfSequential(backends.BackendBase):
     num_trainable_params = int(
       np.sum([np.prod(v.shape) for v in tf.compat.v1.trainable_variables()])
     )
-    l.getLogger().info(
+    l.logger().info(
       "Instantiated TensorFlow graph with {} trainable parameters " "in {} ms."
         .format(
           humanize.intcomma(num_trainable_params),
