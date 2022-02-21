@@ -105,11 +105,14 @@ class CLDriveExecutions(sqlutil.Database):
   @property
   def status_cache(self):
     """Return list of tuples [hash, status]"""
-    with self.Session as s:
-      return [(f.sha256, f.status) for f in s.query(CLDriveSample).all().yield_per(1000)]
+    if self._status_cache is None:
+      with self.Session as s:
+        self._status_cache = {f.sha256: f.status for f in s.query(CLDriveSample).all().yield_per(1000)}
+    return self._status_cache
 
   def __init__(self, url: str, must_exist: bool = False):
     super(CLDriveExecutions, self).__init__(url, Base, must_exist = must_exist)
+    self._status_cache = {}
 
   def add_entry(self, src: str, status: str, global_size: int, local_size: int, df: pd.DataFrame) -> None:
     """
@@ -120,7 +123,7 @@ class CLDriveExecutions(sqlutil.Database):
       try:
         with self.Session(commit = True) as session:
           entry = session.query(CLDriveSample).filter_by(sha256 = sha)
-          if entry is not None:
+          if entry is None:
             session.add(
               CLDriveSample.FromArgs(
                 id          = self.count,
@@ -135,6 +138,9 @@ class CLDriveExecutions(sqlutil.Database):
                 status               = "OK" if status in {"CPU", "GPU"} else status,
               )
             )
+            if self._status_cache is not None:
+              assert entry.sha256 in self._status_cache:
+              self._status_cache[entry.sha256] = entry.status
           else:
             entry.cpu_transfer_time_ns = entry.cpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].transfer_time_ns])
             entry.cpu_kernel_time_ns   = entry.cpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].cpu_kernel_time_ns])
