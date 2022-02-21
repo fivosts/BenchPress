@@ -34,7 +34,7 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/pldi_results/BERT/Fixed_input/samples.db"
+      database: "/var/foivos/results/pldi_results/BERT/Fixed_input/unique_samples.db"
     }
     db_group {
       group_name: "CLgen"
