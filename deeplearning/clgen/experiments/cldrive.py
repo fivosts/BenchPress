@@ -125,6 +125,13 @@ class CLDriveExecutions(sqlutil.Database):
           entry = session.query(CLDriveSample).filter_by(sha256 = sha).first()
           if entry is None:
             if status in {"CPU", "GPU"}:
+              idx = 0
+              transferred_bytes = float('NaN')
+              while idx < len(df.transferred_bytes) and math.isnan(transferred_bytes):
+                try:
+                  transferred_bytes = int(df.transferred_bytes[idx])
+                except ValueError:
+                  idx += 1
               session.add(
                 CLDriveSample.FromArgs(
                   id          = self.count,
@@ -135,7 +142,7 @@ class CLDriveExecutions(sqlutil.Database):
                   cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
                   gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
                   gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
-                  transferred_bytes    = int(df.transferred_bytes[0]),
+                  transferred_bytes    = transferred_bytes,
                   status               = status,
                 )
               )
