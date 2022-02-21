@@ -59,6 +59,8 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
   gpu_kernel_time_ns   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # amount of transferred bytes
   transferred_bytes    : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Whether cldrive executes correctly or not.
+  status               : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Date
   date_added           : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
@@ -72,7 +74,8 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
                cpu_kernel_time_ns   : typing.List[int],
                gpu_transfer_time_ns : typing.List[int],
                gpu_kernel_time_ns   : typing.List[int],
-               transferred_bytes    : int
+               transferred_bytes    : int,
+               status               : str,
                ) -> typing.Dict[str, typing.Any]:
     return CLDriveSample(**{
       "id"                   : id,
@@ -85,6 +88,7 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
       "gpu_transfer_time_ns" : '\n'.join([str(x) for x in gpu_transfer_time_ns]),
       "gpu_kernel_time_ns"   : '\n'.join([str(x) for x in gpu_kernel_time_ns]),
       "transferred_bytes"    : transferred_bytes,
+      "status"               : status,
       "date_added"           : datetime.datetime.utcnow(),
     })
 
@@ -101,7 +105,7 @@ class CLDriveExecutions(sqlutil.Database):
   def __init__(self, url: str, must_exist: bool = False):
     super(CLDriveExecutions, self).__init__(url, Base, must_exist = must_exist)
 
-  def add_entry(self, src: str, global_size: int, local_size: int, df: pd.DataFrame) -> None:
+  def add_entry(self, src: str, status: str, global_size: int, local_size: int, df: pd.DataFrame) -> None:
     """
     Adds execution entries from pandas dataframe.
     """
@@ -122,6 +126,7 @@ class CLDriveExecutions(sqlutil.Database):
                 gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
                 gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
                 transferred_bytes    = int(df.transferred_bytes[0]),
+                status               = "OK" if status in {"CPU", "GPU"} else status,
               )
             )
           else:
@@ -227,9 +232,11 @@ def TopKCLDrive(**kwargs) -> None:
             df, benchmark_label = opencl.CLDriveDataFrame(benchmark.contents, num_runs = bench_runs, gsize = gs, lsize = ls, timeout = 200)
           except TimeoutError:
             pass
+
+          cldrive_db.add_entry(benchmark.contents, benchmark_label, gs, ls, df)
           if benchmark_label not in {"CPU", "GPU"}:
             continue
-          cldrive_db.add_entry(benchmark.contents, gs, ls, df)
+
           times = cldrive_db.get_execution_times_ms(benchmark.contents, gs, ls)
           if times:
             ctt, ckt, gtt, gkt = times
@@ -269,9 +276,10 @@ def TopKCLDrive(**kwargs) -> None:
               df, label = opencl.CLDriveDataFrame(incl + src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 200)
             except TimeoutError:
               pass
+            cldrive_db.add_entry(incl + src, label, gs, ls, df)
+
             if label not in {"CPU", "GPU"}:
               continue
-            cldrive_db.add_entry(incl + src, gs, ls, df)
             times = cldrive_db.get_execution_times_ms(incl + src, gs, ls)
             if times:
               ctt, ckt, gtt, gkt = times
