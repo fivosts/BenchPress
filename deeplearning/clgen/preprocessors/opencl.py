@@ -278,7 +278,10 @@ def RunCLDrive(src: str,
         stderr = subprocess.PIPE,
         universal_newlines = True,
       )
-      stdout, stderr = proc.communicate()
+      try:
+        stdout, stderr = proc.communicate()
+      except UnicodeDecodeError:
+        return "", ""
     if proc.returncode == 9:
       raise TimeoutError("CLDrive TimeOut: {}".format(timeout))
   return stdout, stderr
