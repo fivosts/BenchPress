@@ -498,22 +498,6 @@ class tfSequential(backends.BackendBase):
             samples.append(sample)
             done[0] = True
             break
-
-    # Write samples to file.
-    with self.dashboard_db.Session(commit=True) as dbs:
-      dbs.add_all(
-        [
-          dashboard_db.TrainingSample(
-            model_id=self.dashboard_model_id,
-            epoch=epoch_num,
-            step=step,
-            sample=sample,
-            token_count=stats[0],
-            sample_time=stats[1],
-          )
-          for sample, stats in zip(samples, stats)
-        ]
-      )
     samples_as_markdown = [
       self.FormatCodeAsMarkdown(sample) for sample in samples
     ]
