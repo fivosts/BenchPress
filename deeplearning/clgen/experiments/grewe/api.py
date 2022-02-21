@@ -16,6 +16,7 @@ from deeplearning.clgen.experiments import workers
 from deeplearning.clgen.experiments import cldrive
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.samplers import samples_database
+from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import logging as l
 """
 1. You may insert database groups as usual to convert to csv
