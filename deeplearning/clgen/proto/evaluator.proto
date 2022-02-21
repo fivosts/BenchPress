@@ -143,15 +143,17 @@ message GenerateCLSmith {
 // 11
 // Calculate top samples to target per db group and store to csv for Grewe's predictive model.
 message GreweTopKCSV {
-  optional string          target   = 1;
-  optional int32           top_k    = 2;
-  repeated DatabasesGroups db_group = 3;
+  optional string          target        = 1;
+  optional string          cldrive_cache = 2;
+  optional int32           top_k         = 3;
+  repeated DatabasesGroups db_group      = 4;
 }
 
 // 12
 // Convert databases per db group to CSV for Grewe's predictive model.
 message GreweCSV {
-  repeated DatabasesGroups db_group = 1;
+  optional string          cldrive_cache = 1;
+  repeated DatabasesGroups db_group      = 2;
 }
 
 // Define a group of Databases that will be considered jointly.
