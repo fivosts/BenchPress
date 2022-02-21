@@ -135,7 +135,7 @@ class CLDriveExecutions(sqlutil.Database):
                 gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
                 gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
                 transferred_bytes    = int(df.transferred_bytes[0]),
-                status               = "OK" if status in {"CPU", "GPU"} else status,
+                status               = status,
               )
             )
             if self._status_cache is not None:
