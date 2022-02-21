@@ -122,33 +122,50 @@ class CLDriveExecutions(sqlutil.Database):
       sha = crypto.sha256_str(src + str(global_size) + str(local_size))
       try:
         with self.Session(commit = True) as session:
-          entry = session.query(CLDriveSample).filter_by(sha256 = sha)
+          entry = session.query(CLDriveSample).filter_by(sha256 = sha).first()
           if entry is None:
-            session.add(
-              CLDriveSample.FromArgs(
-                id          = self.count,
-                global_size = global_size,
-                local_size  = local_size,
-                source      = src,
-                cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
-                cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
-                gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
-                gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
-                transferred_bytes    = int(df.transferred_bytes[0]),
-                status               = status,
+            if status in {"CPU", "GPU"}:
+              session.add(
+                CLDriveSample.FromArgs(
+                  id          = self.count,
+                  global_size = global_size,
+                  local_size  = local_size,
+                  source      = src,
+                  cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
+                  cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
+                  gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
+                  gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
+                  transferred_bytes    = int(df.transferred_bytes[0]),
+                  status               = status,
+                )
               )
-            )
+            else:
+              session.add(
+                CLDriveSample.FromArgs(
+                  id          = self.count,
+                  global_size = global_size,
+                  local_size  = local_size,
+                  source      = src,
+                  cpu_transfer_time_ns = [],
+                  cpu_kernel_time_ns   = [],
+                  gpu_transfer_time_ns = [],
+                  gpu_kernel_time_ns   = [],
+                  transferred_bytes    = -1,
+                  status               = status,
+                )
+              )
             if self._status_cache is not None:
-              assert entry.sha256 in self._status_cache, "{} should not be in DB".format(entry.sha256)
-              self._status_cache[entry.sha256] = entry.status
-          else:
+              assert sha not in self._status_cache, "{} should not be in DB".format(sha)
+              self._status_cache[sha] = status
+          elif status in {"CPU", "GPU"}:
             entry.cpu_transfer_time_ns = entry.cpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].transfer_time_ns])
             entry.cpu_kernel_time_ns   = entry.cpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].cpu_kernel_time_ns])
             entry.gpu_transfer_time_ns = entry.gpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].gpu_transfer_time_ns])
             entry.gpu_kernel_time_ns   = entry.gpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].gpu_kernel_time_ns])
           session.commit()
-      except Exception:
+      except Exception as e:
         l.logger().warn(df)
+        raise e
     return
 
   def get_entry(self, src: str, global_size: int, local_size: int) -> "CLDriveSample":
@@ -158,7 +175,7 @@ class CLDriveExecutions(sqlutil.Database):
     sha = crypto.sha256_str(src + str(global_size) + str(local_size))
     try:
       with self. Session() as session:
-        entry = session.query(CLDriveSample).filter_by(sha256 = sha)
+        entry = session.query(CLDriveSample).filter_by(sha256 = sha).first()
         if entry is not None:
           return entry
         else:
