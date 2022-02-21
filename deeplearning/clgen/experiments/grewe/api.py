@@ -13,6 +13,7 @@ import pandas as pd
 
 from deeplearning.clgen.experiments import public
 from deeplearning.clgen.experiments import workers
+from deeplearning.clgen.experiments import cldrive
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import logging as l
@@ -92,9 +93,16 @@ def ToDataFrameRow(name: str,
     0
   ]
 
-def DriveSource(src: str, feats: typing.Dict[str, float], idx: int) -> typing.Generator:
+def DriveSource(src: str,
+                feats: typing.Dict[str, float],
+                cldrive_cache: typing.Set[str, str]
+                ) -> typing.Generator:
   """
   For a given source code, drive to CLDrive and return a ready row.
+  Args:
+    src: source code to process
+    feats: Grewe Feature vector of source code.
+    cldrive_cache: CLDriveExecutions DB with stored exections to load.
   """
   for gsize in tqdm.tqdm([2**6, 2**7, 2**8, 2**10, 2**12, 2**14, 2**16, 2**18, 2**20], desc = "gsize", leave = False):
     for lsize in tqdm.tqdm([2**2, 2**3, 2**4, 2**5, 2**6, 2**7, 2**8], desc = "lsize", leave = False):
@@ -116,12 +124,16 @@ def GreweTopKCSV(**kwargs) -> None:
   """
   Sample top-K candidates for each db group to target, and store them to CSV.
   """
-  db_groups   = kwargs.get('db_groups')
-  target      = kwargs.get('targets')
-  top_k       = kwargs.get('top_k')
-  unique_code = kwargs.get('unique_code', False)
-  workspace   = kwargs.get('workspace_path')
-  tokenizer   = kwargs.get('tokenizer')
+  db_groups     = kwargs.get('db_groups')
+  cldrive_cache = kwargs.get('cldrive_cache', '')
+  target        = kwargs.get('targets')
+  top_k         = kwargs.get('top_k')
+  unique_code   = kwargs.get('unique_code', False)
+  workspace     = kwargs.get('workspace_path')
+  tokenizer     = kwargs.get('tokenizer')
+
+  cldrive_db = CLDriveExecutions(url = "sqlite:///{}".format(pathlib.Path(cldrive_cache).resolve()), must_exist = False)
+  cache      = cldrive_db.status_cache
 
   for dbg in tqdm.tqdm(db_groups, desc = "DB Groups", leave = True):
     l.logger().info("Running {} on cldrive".format(dbg.group_name))
@@ -141,9 +153,9 @@ def GreweTopKCSV(**kwargs) -> None:
     for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
       top_k_idx = 0
       top_k_bar = tqdm.tqdm(total = top_k, desc = "Top K cands", leave = True)
-      for idx, (src, _, feats, dist) in enumerate(tqdm.tqdm(workers.SortedSrcFeatsDistances(get_data(), benchmark.features, "GreweFeatures"), desc = "Sorted Data", leave = False)):
+      for (src, _, feats, dist) in tqdm.tqdm(workers.SortedSrcFeatsDistances(get_data(), benchmark.features, "GreweFeatures"), desc = "Sorted Data", leave = False):
         toggle = False
-        for row in DriveSource(src, feats, idx):
+        for row in DriveSource(src, feats, cache):
           if row:
             toggle = True
             datapoints.append(row)
@@ -179,11 +191,10 @@ def GreweCSV(**kwargs) -> None:
     else:
       get_data = lambda: dbg.get_data_features("GreweFeatures")
 
-    for idx, (src, feats) in enumerate(tqdm.tqdm(get_data(), desc = "Src", leave = True)):
-      for row in DriveSource(src, feats, idx):
+    for (src, feats) in tqdm.tqdm(get_data(), desc = "Src", leave = True):
+      for row in DriveSource(src, feats, cache):
         if row:
           datapoints.append(row)
     frame = pd.DataFrame(datapoints, columns = DataFrameSchema())
     frame.to_csv(out_path)
-
   return
