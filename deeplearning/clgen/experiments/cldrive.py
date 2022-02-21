@@ -139,7 +139,7 @@ class CLDriveExecutions(sqlutil.Database):
               )
             )
             if self._status_cache is not None:
-              assert entry.sha256 in self._status_cache:
+              assert entry.sha256 in self._status_cache, "{} should not be in DB".format(entry.sha256)
               self._status_cache[entry.sha256] = entry.status
           else:
             entry.cpu_transfer_time_ns = entry.cpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].transfer_time_ns])
