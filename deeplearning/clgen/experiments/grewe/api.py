@@ -140,10 +140,17 @@ def DriveSource(src: str,
         if label not in {"CPU", "GPU"}:
           yield None
         else:
+          idx = 0
+          transferred_bytes = float('NaN')
+          while idx < len(df.transferred_bytes) and math.isnan(transferred_bytes):
+            try:
+              transferred_bytes = int(df.transferred_bytes[idx])
+            except ValueError:
+              idx += 1
           yield ToDataFrameRow(
             name              = "{}.cl".format(sha),
             grewe_feats       = feats,
-            transferred_bytes = df[df['device'].str.contains("CPU")].transferred_bytes[0],
+            transferred_bytes = transferred_bytes,
             global_size       = gsize,
             local_size        = lsize,
             label             = label,
