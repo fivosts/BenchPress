@@ -3,6 +3,7 @@ tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
 evaluator {
   grewe_top_k_csv {
     top_k: 5
+    cldrive_cache: "/var/foivos/results/full_results/cldrive_cache.db"
     target: "rodinia"
     db_group {
       group_name: "BenchPress"
@@ -29,10 +30,11 @@ evaluator {
 }
 evaluator {
   grewe_csv {
+    cldrive_cache: "/var/foivos/results/full_results/cldrive_cache.db"
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/pldi_results/BERT/Fixed_input/unique_sampless.db"
+      database: "/var/foivos/results/pldi_results/BERT/Fixed_input/samples.db"
     }
     db_group {
       group_name: "CLgen"
