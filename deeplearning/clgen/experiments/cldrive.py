@@ -139,6 +139,22 @@ class CLDriveExecutions(sqlutil.Database):
         l.logger().warn(df)
     return
 
+  def get_entry(self, src: str, global_size: int, local_size: int) -> "CLDriveSample":
+    """
+    Fetch row from DB, if exists.
+    """
+    sha = crypto.sha256_str(src + str(global_size) + str(local_size))
+    try:
+      with self. Session() as session:
+        entry = session.query(CLDriveSample).filter_by(sha256 = sha)
+        if entry is not None:
+          return entry
+        else:
+          return None
+    except Exception as e:
+      l.logger().error(e)
+    return
+
   def get_execution_times_ms(self, src: str, global_size: int, local_size: int) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
     """
     Search code by hash and return lists with all different execution times.
