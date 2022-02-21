@@ -116,7 +116,7 @@ def DriveSource(src: str,
       if lsize > gsize:
         continue
 
-      sha = crypto.sha256_str(src + str(gsize) + str(local_size))
+      sha = crypto.sha256_str(src + str(gsize) + str(lsize))
       if sha in cldrive_db.status_cache:
         cached = cldrive_db.get_entry(src, gsize, lsize)
         if cached.status in {"CPU", "GPU"}:
