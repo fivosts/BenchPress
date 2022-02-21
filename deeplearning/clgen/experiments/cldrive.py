@@ -102,6 +102,12 @@ class CLDriveExecutions(sqlutil.Database):
       count = s.query(CLDriveSample).count()
     return count
 
+  @property
+  def status_cache(self):
+    """Return list of tuples [hash, status]"""
+    with self.Session as s:
+      return [(f.sha256, f.status) for f in s.query(CLDriveSample).all().yield_per(1000)]
+
   def __init__(self, url: str, must_exist: bool = False):
     super(CLDriveExecutions, self).__init__(url, Base, must_exist = must_exist)
 
