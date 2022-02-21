@@ -534,6 +534,9 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
       # Specialized fields.
+      pbutil.AssertFieldIsSet(ev.grewe_top_k_csv, "cldrive_cache")
+      if not pathlib.Path(ev.grewe_top_k_csv.cldrive_cache).resolve().exists():
+        l.logger().warn("CLDrive cache not found in {}. Will create one from scratch.".format(ev.grewe_top_k_csv.cldrive_cache))
       pbutil.AssertFieldConstraint(
         ev.grewe_top_k_csv,
         "target",
@@ -566,6 +569,9 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
+      pbutil.AssertFieldIsSet(ev.grewe_csv, "cldrive_cache")
+      if not pathlib.Path(ev.grewe_csv.cldrive_cache).resolve().exists():
+        l.logger().warn("CLDrive cache not found in {}. Will create one from scratch.".format(ev.grewe_csv.cldrive_cache))
     else:
       raise ValueError(ev)
   return config
@@ -838,7 +844,8 @@ def main(config: evaluator_pb2.Evaluation):
 
     elif ev.HasField("grewe_top_k_csv"):
       sev = ev.grewe_top_k_csv
-      kw_args['top_k']         = sev.top_k
+      kw_args['top_k'] = sev.top_k
+      kw_args['cldrive_cache'] = sev.cldrive_cache
       # Gather target benchmarks and cache them
       if isinstance(sev.target, list):
         kw_args["targets"] = []
@@ -860,6 +867,7 @@ def main(config: evaluator_pb2.Evaluation):
 
     elif ev.HasField("grewe_csv"):
       sev = ev.grewe_csv
+      kw_args['cldrive_cache'] = sev.cldrive_cache
       # Gather target benchmarks and cache them
       for dbs in sev.db_group:
         key = dbs.group_name + ''.join(dbs.database)
