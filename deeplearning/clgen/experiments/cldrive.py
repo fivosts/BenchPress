@@ -49,14 +49,16 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
   local_size           : int = sql.Column(sql.Integer,   nullable = False)
   # Executed source code
   source               : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Name of dataset where this sample comes from.
+  dataset              : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # cpu transfer time of kernel
-  cpu_transfer_time_ns : int = sql.Column(sql.Integer,   nullable = False)
+  cpu_transfer_time_ns : str = sql.Column(sql.Integer,   nullable = False)
   # cpu execution time of kernel
-  cpu_kernel_time_ns   : int = sql.Column(sql.Integer,   nullable = False)
+  cpu_kernel_time_ns   : str = sql.Column(sql.Integer,   nullable = False)
   # gpu transfer time of kernel
-  gpu_transfer_time_ns : int = sql.Column(sql.Integer,   nullable = False)
+  gpu_transfer_time_ns : str = sql.Column(sql.Integer,   nullable = False)
   # gpu execution time of kernel
-  gpu_kernel_time_ns   : int = sql.Column(sql.Integer,   nullable = False)
+  gpu_kernel_time_ns   : str = sql.Column(sql.Integer,   nullable = False)
   # amount of transferred bytes
   transferred_bytes    : int = sql.Column(sql.Integer,   nullable = False)
   # Whether cldrive executes correctly or not.
@@ -70,6 +72,7 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
                global_size          : int,
                local_size           : int,
                source               : str,
+               dataset              : str,
                cpu_transfer_time_ns : typing.List[int],
                cpu_kernel_time_ns   : typing.List[int],
                gpu_transfer_time_ns : typing.List[int],
@@ -79,10 +82,11 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
                ) -> typing.Dict[str, typing.Any]:
     return CLDriveSample(**{
       "id"                   : id,
-      "sha256"               : crypto.sha256_str(source + str(global_size) + str(local_size)),
+      "sha256"               : crypto.sha256_str(source + dataset + str(global_size) + str(local_size)),
       "global_size"          : global_size,
       "local_size"           : local_size,
       "source"               : source,
+      "dataset"              : dataset,
       "cpu_transfer_time_ns" : '\n'.join([str(x) for x in cpu_transfer_time_ns]),
       "cpu_kernel_time_ns"   : '\n'.join([str(x) for x in cpu_kernel_time_ns]),
       "gpu_transfer_time_ns" : '\n'.join([str(x) for x in gpu_transfer_time_ns]),
@@ -114,12 +118,12 @@ class CLDriveExecutions(sqlutil.Database):
     super(CLDriveExecutions, self).__init__(url, Base, must_exist = must_exist)
     self._status_cache = {}
 
-  def add_entry(self, src: str, status: str, global_size: int, local_size: int, df: pd.DataFrame) -> None:
+  def add_entry(self, src: str, dataset: str, status: str, global_size: int, local_size: int, df: pd.DataFrame) -> None:
     """
     Adds execution entries from pandas dataframe.
     """
     if df is not None:
-      sha = crypto.sha256_str(src + str(global_size) + str(local_size))
+      sha = crypto.sha256_str(src + dataset + str(global_size) + str(local_size))
       try:
         with self.Session(commit = True) as session:
           entry = session.query(CLDriveSample).filter_by(sha256 = sha).first()
@@ -138,6 +142,7 @@ class CLDriveExecutions(sqlutil.Database):
                   global_size = global_size,
                   local_size  = local_size,
                   source      = src,
+                  dataset     = dataset,
                   cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
                   cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
                   gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
@@ -153,6 +158,7 @@ class CLDriveExecutions(sqlutil.Database):
                   global_size = global_size,
                   local_size  = local_size,
                   source      = src,
+                  dataset     = dataset,
                   cpu_transfer_time_ns = [],
                   cpu_kernel_time_ns   = [],
                   gpu_transfer_time_ns = [],
@@ -175,11 +181,11 @@ class CLDriveExecutions(sqlutil.Database):
         raise e
     return
 
-  def get_entry(self, src: str, global_size: int, local_size: int) -> "CLDriveSample":
+  def get_entry(self, src: str, dataset: str, global_size: int, local_size: int) -> "CLDriveSample":
     """
     Fetch row from DB, if exists.
     """
-    sha = crypto.sha256_str(src + str(global_size) + str(local_size))
+    sha = crypto.sha256_str(src + dataset + str(global_size) + str(local_size))
     try:
       with self. Session() as session:
         entry = session.query(CLDriveSample).filter_by(sha256 = sha).first()
@@ -191,11 +197,11 @@ class CLDriveExecutions(sqlutil.Database):
       l.logger().error(e)
     return
 
-  def get_execution_times_ms(self, src: str, global_size: int, local_size: int) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
+  def get_execution_times_ms(self, src: str, dataset: str, global_size: int, local_size: int) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
     """
     Search code by hash and return lists with all different execution times.
     """
-    sha = crypto.sha256_str(src + str(global_size) + str(local_size))
+    sha = crypto.sha256_str(src + dataset + str(global_size) + str(local_size))
     ctt, ckt, gtt, gkt = [], [], [], []
     with self.Session() as session:
       entry = session.query(CLDriveSample).filter_by(sha256 = sha).first()
@@ -285,11 +291,11 @@ def TopKCLDrive(**kwargs) -> None:
           except TimeoutError:
             pass
 
-          cldrive_db.add_entry(benchmark.contents, benchmark_label, gs, ls, df)
+          cldrive_db.add_entry(benchmark.contents, target.target, benchmark_label, gs, ls, df)
           if benchmark_label not in {"CPU", "GPU"}:
             continue
 
-          times = cldrive_db.get_execution_times_ms(benchmark.contents, gs, ls)
+          times = cldrive_db.get_execution_times_ms(benchmark.contents, target.target, gs, ls)
           if times:
             ctt, ckt, gtt, gkt = times
             prob_labels = ComputeLabel(ctt, ckt, gtt, gkt, workspace_path)
@@ -328,11 +334,11 @@ def TopKCLDrive(**kwargs) -> None:
               df, label = opencl.CLDriveDataFrame(incl + src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 200)
             except TimeoutError:
               pass
-            cldrive_db.add_entry(incl + src, label, gs, ls, df)
+            cldrive_db.add_entry(incl + src, dbg.group_name, label, gs, ls, df)
 
             if label not in {"CPU", "GPU"}:
               continue
-            times = cldrive_db.get_execution_times_ms(incl + src, gs, ls)
+            times = cldrive_db.get_execution_times_ms(incl + src, dbg.group_name, gs, ls)
             if times:
               ctt, ckt, gtt, gkt = times
               prob_labels = ComputeLabel(ctt, ckt, gtt, gkt, workspace_path)

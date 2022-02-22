@@ -7,6 +7,7 @@ to the expected csv files by the script and also fill in
 missing cldrive data.
 """
 import pathlib
+import tempfile
 import typing
 import math
 import tqdm
@@ -101,9 +102,10 @@ def ToDataFrameRow(name              : str,
     0
   ]
 
-def DriveSource(src: str,
-                feats: typing.Dict[str, float],
-                cldrive_db: cldrive.CLDriveExecutions,
+def DriveSource(src        : str,
+                group_name : str,
+                feats      : typing.Dict[str, float],
+                cldrive_db : cldrive.CLDriveExecutions,
                 ) -> typing.Generator:
   """
   For a given source code, drive to CLDrive and return a ready row.
@@ -117,9 +119,9 @@ def DriveSource(src: str,
       if lsize > gsize:
         continue
 
-      sha = crypto.sha256_str(src + str(gsize) + str(lsize))
+      sha = crypto.sha256_str(src + group_name + str(gsize) + str(lsize))
       if sha in cldrive_db.status_cache:
-        cached = cldrive_db.get_entry(src, gsize, lsize)
+        cached = cldrive_db.get_entry(src, group_name, gsize, lsize)
         if cached.status in {"CPU", "GPU"}:
           yield ToDataFrameRow(
             name              = "{}.cl".format(sha),
@@ -128,16 +130,16 @@ def DriveSource(src: str,
             global_size       = gsize,
             local_size        = lsize,
             label             = cached.status,
-            cpu_transfer_time = cached.cpu_transfer_time_ns,
-            cpu_kernel_time   = cached.cpu_kernel_time_ns,
-            gpu_transfer_time = cached.gpu_transfer_time_ns,
-            gpu_kernel_time   = cached.gpu_kernel_time_ns,
+            cpu_transfer_time = sum([int(x) for x in cached.cpu_transfer_time_ns.split('\n')]) // len(cached.cpu_transfer_time.split('\n')),
+            cpu_kernel_time   = sum([int(x) for x in cached.cpu_kernel_time_ns.split('\n')])   // len(cached.cpu_kernel_time.split('\n')),
+            gpu_transfer_time = sum([int(x) for x in cached.gpu_transfer_time_ns.split('\n')]) // len(cached.gpu_transfer_time.split('\n')),
+            gpu_kernel_time   = sum([int(x) for x in cached.gpu_kernel_time_ns.split('\n')])   // len(cached.gpu_kernel_time.split('\n')),
           )
         else:
           yield None
       else:
         df, label = opencl.CLDriveDataFrame(src, num_runs = 400, gsize = gsize, lsize = lsize, timeout = 60)
-        cldrive_db.add_entry(src, label, gsize, lsize, df)
+        cldrive_db.add_entry(src, group_name, label, gsize, lsize, df)
         if label not in {"CPU", "GPU"}:
           yield None
         else:
@@ -196,7 +198,7 @@ def GreweTopKCSV(**kwargs) -> None:
       top_k_bar = tqdm.tqdm(total = top_k, desc = "Top K cands", leave = True)
       for (src, _, feats, dist) in tqdm.tqdm(workers.SortedSrcFeatsDistances(get_data(), benchmark.features, "GreweFeatures"), desc = "Sorted Data", leave = False):
         toggle = False
-        for row in DriveSource(src, feats, cldrive_db):
+        for row in DriveSource(src, dbg.group_name, feats, cldrive_db):
           if row:
             toggle = True
             datapoints.append(row)
@@ -236,9 +238,36 @@ def GreweCSV(**kwargs) -> None:
       get_data = lambda: dbg.get_data_features("GreweFeatures")
 
     for (src, feats) in tqdm.tqdm(get_data(), desc = "Src", leave = True):
-      for row in DriveSource(src, feats, cldrive_db):
+      for row in DriveSource(src, dbg.group_name, feats, cldrive_db):
         if row:
           datapoints.append(row)
     frame = pd.DataFrame(datapoints, columns = DataFrameSchema())
     frame.to_csv(out_path)
+  return
+
+@public.evaluator
+def TrainGrewe(**kwargs) -> None:
+  """
+  Collect CSV files in the same formate expected by 'preamble.py'
+  and train Grewe et al. predictive model.
+  """
+  grewe_baseline = kwargs.get('grewe_baseline')
+  csv_groups     = kwargs.get('csv_groups')
+  plot_config    = kwargs.get('plot_config')
+
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
+
+  csv_contents = open(grewe_baseline, 'r').read()
+  for group in csv_groups:
+    with tempfile.NamedTemporaryFile("w", prefix="grewe_csv_", suffix='.csv', dir = tdir) as f:
+      gfd = open(group.path, 'r').readlines()
+      f.write(csv_contents + '\n'.join([x for x in gfd[1:]]))
+      f.flush()
+      preamble.plot_speedups_with_clgen(
+        open(grewe_baseline, 'r'),
+        f
+      )
   return

@@ -37,6 +37,7 @@ message evaluators {
     GenerateCLSmith         generate_clsmith          = 10;
     GreweTopKCSV            grewe_top_k_csv           = 11;
     GreweCSV                grewe_csv                 = 12;
+    TrainGrewe              train_grewe               = 13;
   }
 }
 
@@ -156,6 +157,13 @@ message GreweCSV {
   repeated DatabasesGroups db_group      = 2;
 }
 
+// 13
+message TrainGrewe {
+  optional string               grewe_baseline = 1;
+  repeated GreweCSV             csv            = 2;
+  optional PlotterConfiguration plot_config    = 3;
+}
+
 // Define a group of Databases that will be considered jointly.
 message DatabasesGroups {
   optional string group_name = 1;
@@ -163,6 +171,12 @@ message DatabasesGroups {
   repeated string database   = 3;
   // Length of datapoint threshold.
   optional int32  size_limit = 4;
+}
+
+// Define a message representing a CSV for Grewe's predictive model.
+message GreweCSV {
+  optional string name = 1;
+  optional string path = 2;
 }
 
 // Plot configurations
