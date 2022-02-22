@@ -243,3 +243,12 @@ def GreweCSV(**kwargs) -> None:
     frame = pd.DataFrame(datapoints, columns = DataFrameSchema())
     frame.to_csv(out_path)
   return
+
+@public.evaluator
+def TrainGrewe(**kwargs) -> None:
+  """
+  Collect CSV files in the same formate expected by 'preamble.py'
+  and train Grewe et al. predictive model.
+  """
+  plot_config = kwargs.get('plot_config')
+  return
