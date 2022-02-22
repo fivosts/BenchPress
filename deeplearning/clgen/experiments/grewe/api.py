@@ -138,7 +138,7 @@ def DriveSource(src        : str,
         else:
           yield None
       else:
-        df, label = opencl.CLDriveDataFrame(src, num_runs = 250, gsize = gsize, lsize = lsize, timeout = 600)
+        df, label = opencl.CLDriveDataFrame(src, num_runs = 100, gsize = gsize, lsize = lsize, timeout = 60)
         cldrive_db.add_entry(src, group_name, label, gsize, lsize, df)
         if label not in {"CPU", "GPU"}:
           yield None
