@@ -572,6 +572,17 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       pbutil.AssertFieldIsSet(ev.grewe_csv, "cldrive_cache")
       if not pathlib.Path(ev.grewe_csv.cldrive_cache).resolve().exists():
         l.logger().warn("CLDrive cache not found in {}. Will create one from scratch.".format(ev.grewe_csv.cldrive_cache))
+    elif ev.HasField("train_grewe"):
+      ### TrainGrewe
+      # Generic fields
+      pbutil.AssertFieldIsSet(config, "workspace")
+      # CSV groups
+      for c in ev.train_grewe.csv:
+        pbutil.AssertFieldIsSet(c.name)
+        pbutil.AssertFieldIsSet(c.path)
+        p = pathlib.Path(c.path)
+        if not p.exists():
+          raise FileNotFoundError(p)
     else:
       raise ValueError(ev)
   return config
@@ -876,6 +887,14 @@ def main(config: evaluator_pb2.Evaluation):
           db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
         kw_args['db_groups'].append(db_cache[key])
       kw_args['feature_space'] = "GreweFeatures"
+
+    elif ev.HasField("train_grewe"):
+      sev = ev.train_grewe
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = sev.plot_config
+      kw_args['csv_groups'] = []
+      for c in sev.csv:
+        kw_args['csv_groups'].append({'name': c.name, 'path': pathlib.Path(c.path).resolve()})
 
     else:
       raise NotImplementedError(ev)
