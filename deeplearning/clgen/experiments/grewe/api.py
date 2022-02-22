@@ -59,16 +59,16 @@ def DataFrameSchema() -> typing.List[str]:
     "kernel_size"
   ]
 
-def ToDataFrameRow(name              : str,
-                   grewe_feats       : typing.Dict[str, float],
-                   transferred_bytes : int,
-                   global_size       : int,
-                   local_size        : int,
-                   label             : str,
-                   cpu_transfer_time : int,
-                   cpu_kernel_time   : int,
-                   gpu_transfer_time : int,
-                   gpu_kernel_time   : int,
+def ToDataFrameRow(name                 : str,
+                   grewe_feats          : typing.Dict[str, float],
+                   transferred_bytes    : int,
+                   global_size          : int,
+                   local_size           : int,
+                   label                : str,
+                   cpu_transfer_time_ns : int,
+                   cpu_kernel_time_ns   : int,
+                   gpu_transfer_time_ns : int,
+                   gpu_kernel_time_ns   : int,
                    ) -> pd.DataFrame:
   """
   Convert a samples DB to a csv with the same columns found in paper's artifact.
@@ -89,15 +89,15 @@ def ToDataFrameRow(name              : str,
     (grewe_feats['localmem'] / grewe_feats['mem']) * local_size,
     grewe_feats["F4:comp/mem"],
     label,
-    min(cpu_transfer_time + cpu_kernel_time, gpu_transfer_time + gpu_kernel_time),
-    max(cpu_transfer_time + cpu_kernel_time / gpu_transfer_time + gpu_kernel_time, gpu_transfer_time + gpu_kernel_time / cpu_transfer_time + cpu_kernel_time),
-    min(cpu_transfer_time + cpu_kernel_time / gpu_transfer_time + gpu_kernel_time, gpu_transfer_time + gpu_kernel_time / cpu_transfer_time + cpu_kernel_time),
-    cpu_transfer_time + cpu_kernel_time,
-    cpu_transfer_time,
-    cpu_kernel_time,
-    gpu_transfer_time + gpu_kernel_time,
-    gpu_transfer_time,
-    gpu_kernel_time,
+    min(cpu_transfer_time_ns + cpu_kernel_time_ns, gpu_transfer_time_ns + gpu_kernel_time_ns) / (10**9),
+    max(cpu_transfer_time_ns + cpu_kernel_time_ns / gpu_transfer_time_ns + gpu_kernel_time_ns, gpu_transfer_time_ns + gpu_kernel_time_ns / cpu_transfer_time_ns + cpu_kernel_time_ns) / (10**9),
+    min(cpu_transfer_time_ns + cpu_kernel_time_ns / gpu_transfer_time_ns + gpu_kernel_time_ns, gpu_transfer_time_ns + gpu_kernel_time_ns / cpu_transfer_time_ns + cpu_kernel_time_ns) / (10**9),
+    (cpu_transfer_time_ns + cpu_kernel_time_ns) / 10**9,
+    cpu_transfer_time_ns / 10**9,
+    cpu_kernel_time_ns / 10**9,
+    (gpu_transfer_time_ns + gpu_kernel_time_ns) / 10**9,
+    gpu_transfer_time_ns / 10**9,
+    gpu_kernel_time_ns / 10**9,
     0,
     0
   ]
@@ -124,21 +124,21 @@ def DriveSource(src        : str,
         cached = cldrive_db.get_entry(src, group_name, gsize, lsize)
         if cached.status in {"CPU", "GPU"}:
           yield ToDataFrameRow(
-            name              = "{}.cl".format(sha),
-            grewe_feats       = feats,
-            transferred_bytes = cached.transferred_bytes,
-            global_size       = gsize,
-            local_size        = lsize,
-            label             = cached.status,
-            cpu_transfer_time = sum([int(x) for x in cached.cpu_transfer_time_ns.split('\n')]) // len(cached.cpu_transfer_time.split('\n')),
-            cpu_kernel_time   = sum([int(x) for x in cached.cpu_kernel_time_ns.split('\n')])   // len(cached.cpu_kernel_time.split('\n')),
-            gpu_transfer_time = sum([int(x) for x in cached.gpu_transfer_time_ns.split('\n')]) // len(cached.gpu_transfer_time.split('\n')),
-            gpu_kernel_time   = sum([int(x) for x in cached.gpu_kernel_time_ns.split('\n')])   // len(cached.gpu_kernel_time.split('\n')),
+            name                 = "{}.cl".format(sha),
+            grewe_feats          = feats,
+            transferred_bytes    = cached.transferred_bytes,
+            global_size          = gsize,
+            local_size           = lsize,
+            label                = cached.status,
+            cpu_transfer_time_ns = sum([int(x) for x in cached.cpu_transfer_time_ns.split('\n')]) // len(cached.cpu_transfer_time_ns.split('\n')),
+            cpu_kernel_time_ns   = sum([int(x) for x in cached.cpu_kernel_time_ns.split('\n')])   // len(cached.cpu_kernel_time_ns.split('\n')),
+            gpu_transfer_time_ns = sum([int(x) for x in cached.gpu_transfer_time_ns.split('\n')]) // len(cached.gpu_transfer_time_ns.split('\n')),
+            gpu_kernel_time_ns   = sum([int(x) for x in cached.gpu_kernel_time_ns.split('\n')])   // len(cached.gpu_kernel_time_ns.split('\n')),
           )
         else:
           yield None
       else:
-        df, label = opencl.CLDriveDataFrame(src, num_runs = 400, gsize = gsize, lsize = lsize, timeout = 60)
+        df, label = opencl.CLDriveDataFrame(src, num_runs = 250, gsize = gsize, lsize = lsize, timeout = 600)
         cldrive_db.add_entry(src, group_name, label, gsize, lsize, df)
         if label not in {"CPU", "GPU"}:
           yield None
@@ -151,16 +151,16 @@ def DriveSource(src        : str,
             except ValueError:
               idx += 1
           yield ToDataFrameRow(
-            name              = "{}.cl".format(sha),
-            grewe_feats       = feats,
-            transferred_bytes = transferred_bytes,
-            global_size       = gsize,
-            local_size        = lsize,
-            label             = label,
-            cpu_transfer_time = df[df['device'].str.contains("CPU")].transfer_time_ns.mean(),
-            cpu_kernel_time   = df[df['device'].str.contains("CPU")].kernel_time_ns.mean(),
-            gpu_transfer_time = df[df['device'].str.contains("GPU")].transfer_time_ns.mean(),
-            gpu_kernel_time   = df[df['device'].str.contains("GPU")].kernel_time_ns.mean(),
+            name                 = "{}.cl".format(sha),
+            grewe_feats          = feats,
+            transferred_bytes    = transferred_bytes,
+            global_size          = gsize,
+            local_size           = lsize,
+            label                = label,
+            cpu_transfer_time_ns = df[df['device'].str.contains("CPU")].transfer_time_ns.mean(),
+            cpu_kernel_time_ns   = df[df['device'].str.contains("CPU")].kernel_time_ns.mean(),
+            gpu_transfer_time_ns = df[df['device'].str.contains("GPU")].transfer_time_ns.mean(),
+            gpu_kernel_time_ns   = df[df['device'].str.contains("GPU")].kernel_time_ns.mean(),
           )
 
 @public.evaluator
@@ -187,9 +187,9 @@ def GreweTopKCSV(**kwargs) -> None:
     out_path = workspace / "{}.csv".format(dbg.group_name)
 
     if unique_code:
-      get_data = lambda: dbg.get_unique_data_features("GreweFeatures")
+      get_data = lambda: dbg.get_unique_data_features("GreweFeatures", use_mp = False)
     else:
-      get_data = lambda: dbg.get_data_features("GreweFeatures")
+      get_data = lambda: dbg.get_data_features("GreweFeatures", use_mp = False)
 
     ## Unpack and collect benchmarks
     benchmarks = target.get_benchmarks("GreweFeatures")
@@ -233,9 +233,9 @@ def GreweCSV(**kwargs) -> None:
     out_path = workspace / "{}.csv".format(dbg.group_name)
 
     if unique_code:
-      get_data = lambda: dbg.get_unique_data_features("GreweFeatures")
+      get_data = lambda: dbg.get_unique_data_features("GreweFeatures", use_mp = False)
     else:
-      get_data = lambda: dbg.get_data_features("GreweFeatures")
+      get_data = lambda: dbg.get_data_features("GreweFeatures", use_mp = False)
 
     for (src, feats) in tqdm.tqdm(get_data(), desc = "Src", leave = True):
       for row in DriveSource(src, dbg.group_name, feats, cldrive_db):
