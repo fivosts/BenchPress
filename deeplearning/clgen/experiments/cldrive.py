@@ -50,15 +50,15 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
   # Executed source code
   source               : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # cpu transfer time of kernel
-  cpu_transfer_time_ns : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  cpu_transfer_time_ns : int = sql.Column(sql.Integer,   nullable = False)
   # cpu execution time of kernel
-  cpu_kernel_time_ns   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  cpu_kernel_time_ns   : int = sql.Column(sql.Integer,   nullable = False)
   # gpu transfer time of kernel
-  gpu_transfer_time_ns : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  gpu_transfer_time_ns : int = sql.Column(sql.Integer,   nullable = False)
   # gpu execution time of kernel
-  gpu_kernel_time_ns   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  gpu_kernel_time_ns   : int = sql.Column(sql.Integer,   nullable = False)
   # amount of transferred bytes
-  transferred_bytes    : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  transferred_bytes    : int = sql.Column(sql.Integer,   nullable = False)
   # Whether cldrive executes correctly or not.
   status               : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Date
