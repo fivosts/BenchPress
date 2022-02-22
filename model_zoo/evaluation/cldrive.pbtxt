@@ -1,15 +1,11 @@
-workspace: "/var/foivos/results/full_results/workspace"
+workspace: "cldrive_workspace"
 tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
 evaluator {
   topk_cldrive {
+    cldrive_cache: "/var/foivos/results/full_results/cldrive_cache.db"
     top_k: 5
     target: "rodinia"
     feature_space: "AutophaseFeatures"
-    db_group {
-      group_name: "BenchPress"
-      db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Autophase/unique_merged_samples.db"
-    }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
@@ -30,6 +26,7 @@ evaluator {
 }
 evaluator {
   topk_cldrive {
+    cldrive_cache: "/var/foivos/results/full_results/cldrive_cache.db"
     top_k: 5
     target: "rodinia"
     feature_space: "InstCountFeatures"
@@ -58,6 +55,7 @@ evaluator {
 }
 evaluator {
   topk_cldrive {
+    cldrive_cache: "/var/foivos/results/full_results/cldrive_cache.db"
     top_k: 5
     target: "rodinia"
     feature_space: "GreweFeatures"
