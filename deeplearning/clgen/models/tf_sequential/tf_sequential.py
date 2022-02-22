@@ -495,6 +495,7 @@ class tfSequential(backends.BackendBase):
               (len(sample_in_progress), int((time.time() - start_time) * 1000))
             )
             sample = "".join(sample_in_progress)
+            print(f"=== CLGEN SAMPLE ===\n\n{sample}\n")
             samples.append(sample)
             done[0] = True
             break
