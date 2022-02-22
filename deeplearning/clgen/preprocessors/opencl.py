@@ -283,7 +283,7 @@ def RunCLDrive(src: str,
       except UnicodeDecodeError:
         return "", ""
     if proc.returncode == 9:
-      stderr = "TimeOut"
+      stderr = "TIMEOUT"
   return stdout, stderr
 
 def CollectCLDriveLabel(df: pd.DataFrame, stdout: str, stderr: str) -> str:
@@ -305,8 +305,8 @@ def CollectCLDriveLabel(df: pd.DataFrame, stdout: str, stderr: str) -> str:
 
   if avg_time_cpu_ns is None or avg_time_gpu_ns is None or math.isnan(avg_time_cpu_ns) or math.isnan(avg_time_gpu_ns):
     label = "ERR"
-    if stderr == "TimeOut":
-      label = "TimeOut"
+    if stderr == "TIMEOUT":
+      label = "TIMEOUT"
     elif stdout == "":
       cpu_error = "NO_STDOUT"
       gpu_error = "NO_STDOUT"
