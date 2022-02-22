@@ -159,8 +159,9 @@ message GreweCSV {
 
 // 13
 message TrainGrewe {
-  repeated GreweCSV             csv         = 1;
-  optional PlotterConfiguration plot_config = 2;
+  optional string               grewe_baseline = 1;
+  repeated GreweCSV             csv            = 2;
+  optional PlotterConfiguration plot_config    = 3;
 }
 
 // Define a group of Databases that will be considered jointly.
