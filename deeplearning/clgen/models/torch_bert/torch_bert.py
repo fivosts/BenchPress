@@ -274,7 +274,7 @@ class torchBert(backends.BackendBase):
     inputs['input_mask']           = inputs['input_mask'].to(self.pytorch.device)
     inputs['position_ids']         = inputs['position_ids'].to(self.pytorch.device)
     inputs['mask_labels']          = inputs['mask_labels'].to(self.pytorch.device)
-    inputs['next_sentence_labels'] = inputs['next_sentence_labels'].to(self.pytorch.device)
+    # inputs['next_sentence_labels'] = inputs['next_sentence_labels'].to(self.pytorch.device)
     return inputs
 
   def model_step(self,
@@ -292,7 +292,7 @@ class torchBert(backends.BackendBase):
                 attention_mask       = inputs['input_mask'],
                 position_ids         = inputs['position_ids'],
                 masked_lm_labels     = inputs['mask_labels'],
-                next_sentence_labels = inputs['next_sentence_labels'],
+                # next_sentence_labels = inputs['next_sentence_labels'],
                 is_validation        = is_validation,
                 step                 = step,
                 is_live              = is_live,
