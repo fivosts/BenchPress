@@ -7,6 +7,7 @@ to the expected csv files by the script and also fill in
 missing cldrive data.
 """
 import pathlib
+import tempfile
 import typing
 import math
 import tqdm
@@ -253,10 +254,20 @@ def TrainGrewe(**kwargs) -> None:
   grewe_baseline = kwargs.get('grewe_baseline')
   csv_groups     = kwargs.get('csv_groups')
   plot_config    = kwargs.get('plot_config')
+
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
+
+  csv_contents = open(grewe_baseline, 'r').read()
   for group in csv_groups:
-    raise NotImplementedError("Merge group with baseline right here.")
-    preamble.plot_speedups_with_clgen(
-      open(grewe_baseline, 'r'),
-      open(group.path, 'r')
-    )
+    with tempfile.NamedTemporaryFile("w", prefix="grewe_csv_", suffix='.csv', dir = tdir) as f:
+      gfd = open(group.path, 'r').readlines()
+      f.write(csv_contents + '\n'.join([x for x in gfd[1:]]))
+      f.flush()
+      preamble.plot_speedups_with_clgen(
+        open(grewe_baseline, 'r'),
+        f
+      )
   return
