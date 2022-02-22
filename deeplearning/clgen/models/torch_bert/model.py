@@ -53,7 +53,7 @@ class BertEmbeddings(torch.nn.Module):
     super().__init__()
     self.word_embeddings = torch.nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
     self.position_embeddings = torch.nn.Embedding(config.max_position_embeddings, config.hidden_size)
-    self.token_type_embeddings = torch.nn.Embedding(config.type_vocab_size, config.hidden_size)
+    # self.token_type_embeddings = torch.nn.Embedding(config.type_vocab_size, config.hidden_size)
 
     # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
     # any TensorFlow checkpoint file
@@ -80,9 +80,9 @@ class BertEmbeddings(torch.nn.Module):
     if inputs_embeds is None:
       inputs_embeds = self.word_embeddings(input_ids)
     position_embeddings = self.position_embeddings(position_ids)
-    token_type_embeddings = self.token_type_embeddings(token_type_ids)
+    # token_type_embeddings = self.token_type_embeddings(token_type_ids)
 
-    embeddings = inputs_embeds + position_embeddings + token_type_embeddings
+    embeddings = inputs_embeds + position_embeddings # + token_type_embeddings
     embeddings = self.LayerNorm(embeddings)
     embeddings = self.dropout(embeddings)
     return embeddings
