@@ -110,75 +110,74 @@ class CLDriveExecutions(sqlutil.Database):
   def status_cache(self):
     """Return list of tuples [hash, status]"""
     if self._status_cache is None:
-      with self.Session as s:
-        self._status_cache = {f.sha256: f.status for f in s.query(CLDriveSample).all().yield_per(1000)}
+      with self.Session() as s:
+        self._status_cache = {f.sha256: f.status for f in s.query(CLDriveSample).yield_per(1000)}
     return self._status_cache
 
   def __init__(self, url: str, must_exist: bool = False):
     super(CLDriveExecutions, self).__init__(url, Base, must_exist = must_exist)
-    self._status_cache = {}
+    self._status_cache = None
 
   def add_entry(self, src: str, dataset: str, status: str, global_size: int, local_size: int, df: pd.DataFrame) -> None:
     """
     Adds execution entries from pandas dataframe.
     """
-    if df is not None:
-      sha = crypto.sha256_str(src + dataset + str(global_size) + str(local_size))
-      try:
-        with self.Session(commit = True) as session:
-          entry = session.query(CLDriveSample).filter_by(sha256 = sha).first()
-          if entry is None:
-            if status in {"CPU", "GPU"}:
-              idx = 0
-              transferred_bytes = float('NaN')
-              while idx < len(df.transferred_bytes) and math.isnan(transferred_bytes):
-                try:
-                  transferred_bytes = int(df.transferred_bytes[idx])
-                except ValueError:
-                  idx += 1
-              session.add(
-                CLDriveSample.FromArgs(
-                  id          = self.count,
-                  global_size = global_size,
-                  local_size  = local_size,
-                  source      = src,
-                  dataset     = dataset,
-                  cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
-                  cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
-                  gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
-                  gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
-                  transferred_bytes    = transferred_bytes,
-                  status               = status,
-                )
+    sha = crypto.sha256_str(src + dataset + str(global_size) + str(local_size))
+    try:
+      with self.Session(commit = True) as session:
+        entry = session.query(CLDriveSample).filter_by(sha256 = sha).first()
+        if entry is None:
+          if status in {"CPU", "GPU"}:
+            idx = 0
+            transferred_bytes = float('NaN')
+            while idx < len(df.transferred_bytes) and math.isnan(transferred_bytes):
+              try:
+                transferred_bytes = int(df.transferred_bytes[idx])
+              except ValueError:
+                idx += 1
+            session.add(
+              CLDriveSample.FromArgs(
+                id          = self.count,
+                global_size = global_size,
+                local_size  = local_size,
+                source      = src,
+                dataset     = dataset,
+                cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
+                cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
+                gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
+                gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
+                transferred_bytes    = transferred_bytes,
+                status               = status,
               )
-            else:
-              session.add(
-                CLDriveSample.FromArgs(
-                  id          = self.count,
-                  global_size = global_size,
-                  local_size  = local_size,
-                  source      = src,
-                  dataset     = dataset,
-                  cpu_transfer_time_ns = [],
-                  cpu_kernel_time_ns   = [],
-                  gpu_transfer_time_ns = [],
-                  gpu_kernel_time_ns   = [],
-                  transferred_bytes    = -1,
-                  status               = status,
-                )
+            )
+          else:
+            session.add(
+              CLDriveSample.FromArgs(
+                id          = self.count,
+                global_size = global_size,
+                local_size  = local_size,
+                source      = src,
+                dataset     = dataset,
+                cpu_transfer_time_ns = [],
+                cpu_kernel_time_ns   = [],
+                gpu_transfer_time_ns = [],
+                gpu_kernel_time_ns   = [],
+                transferred_bytes    = -1,
+                status               = status,
               )
-            if self._status_cache is not None:
-              assert sha not in self._status_cache, "{} should not be in DB".format(sha)
-              self._status_cache[sha] = status
-          elif status in {"CPU", "GPU"}:
-            entry.cpu_transfer_time_ns = entry.cpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].transfer_time_ns])
-            entry.cpu_kernel_time_ns   = entry.cpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].kernel_time_ns])
-            entry.gpu_transfer_time_ns = entry.gpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].transfer_time_ns])
-            entry.gpu_kernel_time_ns   = entry.gpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].kernel_time_ns])
-          session.commit()
-      except Exception as e:
-        l.logger().warn(df)
-        raise e
+            )
+          if self._status_cache is not None:
+            assert sha not in self._status_cache, "{} should not be in DB".format(sha)
+            self._status_cache[sha] = status
+        elif status in {"CPU", "GPU"}:
+          assert False, "This shouldnt happen"
+          entry.cpu_transfer_time_ns = entry.cpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].transfer_time_ns])
+          entry.cpu_kernel_time_ns   = entry.cpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].kernel_time_ns])
+          entry.gpu_transfer_time_ns = entry.gpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].transfer_time_ns])
+          entry.gpu_kernel_time_ns   = entry.gpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].kernel_time_ns])
+        session.commit()
+    except Exception as e:
+      raise e
     return
 
   def get_entry(self, src: str, dataset: str, global_size: int, local_size: int) -> "CLDriveSample":
