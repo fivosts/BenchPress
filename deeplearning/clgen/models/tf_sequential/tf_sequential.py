@@ -52,7 +52,7 @@ flags.DEFINE_integer(
 )
 flags.DEFINE_integer(
   "clgen_per_epoch_test_samples",
-  12,
+  16,
   "The number of samples to make at the end of each training epoch.",
 )
 
