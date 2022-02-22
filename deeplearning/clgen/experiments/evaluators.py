@@ -110,7 +110,7 @@ class DBGroup(object):
             self.features[feature_space].append(feats[feature_space])
     return self.features[feature_space]
 
-  def get_data_features(self, feature_space: str) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
+  def get_data_features(self, feature_space: str, use_mp = True) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
     """
     Get or set feature with data list of tuples.
     """
@@ -120,14 +120,25 @@ class DBGroup(object):
         db_feats = db.get_data_features(self.tokenizer, self.size_limit) if (self.db_type == encoded.EncodedContentFiles or self.db_type == clsmith.CLSmithDatabase) else db.get_data_features
         pool = multiprocessing.Pool()
         try:
-          for inp, feats in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentFeat, db_feats)), total = len(db_feats), desc = "{} data".format(self.group_name)):
-            if len(inp) == 2:
-              src, _ = inp
-              include = ""
-            else:
-              src, include, _ = inp
-            if feature_space in feats and feats[feature_space]:
-              self.data_features[feature_space].append((src, include, feats[feature_space]))
+          if use_mp:
+            for inp, feats in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentFeat, db_feats)), total = len(db_feats), desc = "{} data".format(self.group_name)):
+              if len(inp) == 2:
+                src, _ = inp
+                include = ""
+              else:
+                src, include, _ = inp
+              if feature_space in feats and feats[feature_space]:
+                self.data_features[feature_space].append((src, include, feats[feature_space]))
+          else:
+            for feats in tqdm.tqdm(db_feats, total = len(db_feats), desc = "{} data".format(self.group_name)):
+              inp = workers.ContentFeat(feats)
+              if len(inp) == 2:
+                src, _ = inp
+                include = ""
+              else:
+                src, include, _ = inp
+              if feature_space in feats and feats[feature_space]:
+                self.data_features[feature_space].append((src, include, feats[feature_space]))
         except Exception as e:
           l.logger().error(e)
           pool.terminate()
