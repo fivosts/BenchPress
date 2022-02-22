@@ -118,9 +118,9 @@ class DBGroup(object):
       self.data_features[feature_space] = []
       for db in self.databases:
         db_feats = db.get_data_features(self.tokenizer, self.size_limit) if (self.db_type == encoded.EncodedContentFiles or self.db_type == clsmith.CLSmithDatabase) else db.get_data_features
-        pool = multiprocessing.Pool()
-        try:
-          if use_mp:
+        if use_mp:
+          try:
+            pool = multiprocessing.Pool()
             for inp, feats in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentFeat, db_feats)), total = len(db_feats), desc = "{} data".format(self.group_name)):
               if len(inp) == 2:
                 src, _ = inp
@@ -129,24 +129,24 @@ class DBGroup(object):
                 src, include, _ = inp
               if feature_space in feats and feats[feature_space]:
                 self.data_features[feature_space].append((src, include, feats[feature_space]))
-          else:
-            for feats in tqdm.tqdm(db_feats, total = len(db_feats), desc = "{} data".format(self.group_name)):
-              inp = workers.ContentFeat(feats)
-              if len(inp) == 2:
-                src, _ = inp
-                include = ""
-              else:
-                src, include, _ = inp
-              if feature_space in feats and feats[feature_space]:
-                self.data_features[feature_space].append((src, include, feats[feature_space]))
-        except Exception as e:
-          l.logger().error(e)
-          pool.terminate()
-          raise e
-        pool.close()
+            pool.close()
+          except Exception as e:
+            l.logger().error(e)
+            pool.terminate()
+            raise e
+        else:
+          for inp in tqdm.tqdm(db_feats, total = len(db_feats), desc = "{} data".format(self.group_name)):
+            feats = workers.ContentFeat(inp)
+            if len(inp) == 2:
+              src, _ = inp
+              include = ""
+            else:
+              src, include, _ = inp
+            if feature_space in feats and feats[feature_space]:
+              self.data_features[feature_space].append((src, include, feats[feature_space]))
     return self.data_features[feature_space]
 
-  def get_unique_data_features(self, feature_space: str) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
+  def get_unique_data_features(self, feature_space: str, use_mp = True) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
     """
     Get or set feature with data list of tuples.
     """
@@ -155,9 +155,27 @@ class DBGroup(object):
       visited = set()
       for db in self.databases:
         db_feats = db.get_data_features(self.tokenizer, self.size_limit) if (self.db_type == encoded.EncodedContentFiles or self.db_type == clsmith.CLSmithDatabase) else db.get_data_features
-        pool = multiprocessing.Pool()
-        try:
-          for inp, (sha, feats) in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentHash, db_feats)), total = len(db_feats), desc = "{} unique data".format(self.group_name)):
+        if use_mp:
+          try:
+            pool = multiprocessing.Pool()
+            for inp, (sha, feats) in tqdm.tqdm(zip(db_feats, pool.imap_unordered(workers.ContentHash, db_feats)), total = len(db_feats), desc = "{} unique data".format(self.group_name)):
+              if len(inp) == 2:
+                src, _ = inp
+                include = ""
+              else:
+                src, include, _ = inp
+              if sha not in visited:
+                visited.add(sha)
+                if feature_space in feats and feats[feature_space]:
+                  self.unique_data_features[feature_space].append((src, include, feats[feature_space]))
+          except Exception as e:
+            l.logger().error(e)
+            pool.terminate()
+            raise e
+          pool.close()
+        else:
+          for inp in db_feats:
+            sha, feats = workers.ContentHash(inp)
             if len(inp) == 2:
               src, _ = inp
               include = ""
@@ -167,11 +185,6 @@ class DBGroup(object):
               visited.add(sha)
               if feature_space in feats and feats[feature_space]:
                 self.unique_data_features[feature_space].append((src, include, feats[feature_space]))
-        except Exception as e:
-          l.logger().error(e)
-          pool.terminate()
-          raise e
-        pool.close()
     return self.unique_data_features[feature_space]
 
 class Benchmark(typing.NamedTuple):
