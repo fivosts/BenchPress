@@ -127,7 +127,8 @@ class CompilationSampler(object):
     new_holes, next_input_ids, attention_mask = self.StepTrainingSeq(input_ids, prediction_scores)
     with torch.no_grad():
       while new_holes:
-        next_prediction_scores, _, _, _ = model.get_output(
+        # next_prediction_scores, _, _, _ = model.get_output(
+        next_prediction_scores, _, _ = model.get_output(
           next_input_ids.to(device), attention_mask.to(device), position_ids,
         )
         new_holes, next_input_ids, attention_mask = self.StepTrainingSeq(
@@ -299,7 +300,8 @@ class CompilationSampler(object):
       input_ids, prediction_scores, sample_indices, scores_history
     )
     while holes:
-      next_prediction_scores, _, _, _ = model.get_output(
+      # next_prediction_scores, _, _, _ = model.get_output(
+      next_prediction_scores, _, _ = model.get_output(
         next_input_ids.to(device), attention_mask.to(device), position_ids,
       )
       holes, next_input_ids, attention_mask = self.StepSampleSeq(
@@ -350,7 +352,8 @@ class CompilationSampler(object):
 
     while torch.any(new_holes):
 
-      prediction_scores, _, _, _ = model.get_output(
+      # prediction_scores, _, _, _ = model.get_output(
+      prediction_scores, _, _ = model.get_output(
         input_ids, attention_mask, position_ids[:len(input_ids)],
       )
 
@@ -445,7 +448,8 @@ class CompilationSampler(object):
 
     while w_idx < nseq or torch.any(new_holes):
 
-      prediction_scores, _, _, _ = model.get_output(
+      # prediction_scores, _, _, _ = model.get_output(
+      prediction_scores, _, _ = model.get_output(
         input_ids, attention_mask, position_ids[:len(input_ids)],
       )
       # Array of new hole existence per seq idx

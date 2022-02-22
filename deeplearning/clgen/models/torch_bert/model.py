@@ -611,7 +611,7 @@ class BertForPreTraining(BertPreTrainedModel):
     super().__init__(config)
 
     self.bert = BertModel(config)
-    self.cls  = BertPreTrainingHeads(config)
+    self.cls  = BertOnlyMLMHead(config)
 
     if self.config.reward_compilation >= 0 or self.config.is_sampling:
       self.compile_sampler = compiler.CompilationSampler(
@@ -646,8 +646,10 @@ class BertForPreTraining(BertPreTrainedModel):
       output_hidden_states = output_hidden_states,
     )
     sequence_output, pooled_output = outputs[:2]
-    prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
-    return prediction_scores, seq_relationship_score, outputs[0], outputs[1]
+    # prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
+    prediction_scores = self.cls(sequence_output)
+    # return prediction_scores, seq_relationship_score, outputs[0], outputs[1]
+    return prediction_scores, outputs[0], outputs[1]
 
   def forward(
     self,
@@ -704,7 +706,8 @@ class BertForPreTraining(BertPreTrainedModel):
     device = device if device >= 0 else 'cpu'
 
     if workload is not None:
-      prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
+      # prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
+      prediction_scores, hidden_states, attentions = self.get_output(
         input_ids[0], attention_mask[0], position_ids[0]
       )
       return self.compile_sampler.generateSampleWorkload(
@@ -716,7 +719,8 @@ class BertForPreTraining(BertPreTrainedModel):
         position_ids[0],
       )
 
-    prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
+    # prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
+    prediction_scores, hidden_states, attentions = self.get_output(
       input_ids, attention_mask, position_ids, token_type_ids, head_mask,
       inputs_embeds, output_attentions, output_hidden_states 
     )
