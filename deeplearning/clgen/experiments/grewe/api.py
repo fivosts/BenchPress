@@ -130,10 +130,10 @@ def DriveSource(src        : str,
             global_size       = gsize,
             local_size        = lsize,
             label             = cached.status,
-            cpu_transfer_time = [int(x) for x in cached.cpu_transfer_time_ns] // len(cached.cpu_transfer_time),
-            cpu_kernel_time   = [int(x) for x in cached.cpu_kernel_time_ns]   // len(cached.cpu_kernel_time),
-            gpu_transfer_time = [int(x) for x in cached.gpu_transfer_time_ns] // len(cached.gpu_transfer_time),
-            gpu_kernel_time   = [int(x) for x in cached.gpu_kernel_time_ns]   // len(cached.gpu_kernel_time),
+            cpu_transfer_time = sum([int(x) for x in cached.cpu_transfer_time_ns.split('\n')]) // len(cached.cpu_transfer_time.split('\n')),
+            cpu_kernel_time   = sum([int(x) for x in cached.cpu_kernel_time_ns.split('\n')])   // len(cached.cpu_kernel_time.split('\n')),
+            gpu_transfer_time = sum([int(x) for x in cached.gpu_transfer_time_ns.split('\n')]) // len(cached.gpu_transfer_time.split('\n')),
+            gpu_kernel_time   = sum([int(x) for x in cached.gpu_kernel_time_ns.split('\n')])   // len(cached.gpu_kernel_time.split('\n')),
           )
         else:
           yield None
