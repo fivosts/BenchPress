@@ -293,6 +293,9 @@ def CollectCLDriveLabel(df: pd.DataFrame, stdout: str, stderr: str) -> str:
   cpu_error = None
   gpu_error = None
 
+  if df is None:
+    return "I/O_ERROR"
+
   try:
     avg_time_cpu_ns = (df[df['device'].str.contains("CPU")].transfer_time_ns.mean() + df[df['device'].str.contains("CPU")].kernel_time_ns.mean())
     avg_time_gpu_ns = (df[df['device'].str.contains("GPU")].transfer_time_ns.mean() + df[df['device'].str.contains("GPU")].kernel_time_ns.mean())
