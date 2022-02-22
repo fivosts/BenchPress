@@ -46,9 +46,7 @@ def Finalize(
     output = pathlib.Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(str(output), **savefig_opts)
-    app.Log(1, "Wrote '%s'", output)
   plt.close()
-
 
 def mean(array):
   """
@@ -263,7 +261,7 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
   ]))
 
   B_out, S_out, BS_out = [], [], []
-  for benchmark in benchmark_names[:1]:
+  for benchmark in benchmark_names:
     clf = model.model()
     features = get_cgo13_features
     # cross validate on baseline
@@ -331,23 +329,20 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
   benchsynth_times = 0.0
   synth_times = 0.0
 
-  print(zeror)
-  print(R[b_mask])
-  R.to_csv("./test.csv")
-  for x in R[b_mask]:
-    print(x)
-    print(x["p"])
-    bench_times += x["runtime_" + x["p"].lower()]
+  R.to_csv("./investigate.csv")
+  # for x in R[b_mask]:
+  #   print(x)
+  #   bench_times += x["runtime_" + x["p"].lower()]
 
-  for x in R[bs_mask]:
-    benchsynth_times += x["runtime_" + x["p"].lower()]
+  # for x in R[bs_mask]:
+  #   benchsynth_times += x["runtime_" + x["p"].lower()]
 
-  for x in R[s_mask]:
-    synth_times += x["runtime_" + x["p"].lower()]
+  # for x in R[s_mask]:
+  #   synth_times += x["runtime_" + x["p"].lower()]
 
-  print(bench_times)
-  print(benchsynth_times)
-  print(synth_times)
+  # print(bench_times)
+  # print(benchsynth_times)
+  # print(synth_times)
 
   print(len(R[b_mask]["p_speedup"]))
   print(len(R[s_mask]["p_speedup"]))
@@ -406,10 +401,24 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
   print()
   print("  ZeroR device:                    {}".format(zeror))
   print()
-  # print("  Speedup of Grewe et al.:         {:.2f} x".format(B_speedup))
-  print("  Speedup of Grewe et al.:         {:.2f} x".format(model.geomean([x for x in R[b_mask]["p_speedup"]])))
-  print("  Speedup w. CLgen:                {:.2f} x".format(model.geomean([x for x in R[bs_mask]["p_speedup"]])))
-  print("  Speedup Only CLgen:              {:.2f} x".format(model.geomean([x for x in R[s_mask]["p_speedup"]])))
+  print("  Speedup of Grewe et al.:         {:.2f} x".format(B_speedup))
+  print("  Speedup w. CLgen:                {:.2f} x".format(BS_speedup))
+  print("  Speedup Only CLgen:              {:.2f} x".format(S_speedup))
+  # print("  Speedup of Grewe et al.:         {:.2f} x".format(model.geomean([x for x in R[b_mask]["p_speedup"]])))
+  # print("  Speedup w. CLgen:                {:.2f} x".format(model.geomean([x for x in R[bs_mask]["p_speedup"]])))
+  # print("  Speedup Only CLgen:              {:.2f} x".format(model.geomean([x for x in R[s_mask]["p_speedup"]])))
+
+  bft = [x.p_speedup for idx, x in R[b_mask].iterrows() if x.group == "FT.B"]
+  sft = [x.p_speedup for idx, x in R[s_mask].iterrows() if x.group == "FT.B"]
+  bsft = [x.p_speedup for idx, x in R[bs_mask].iterrows() if x.group == "FT.B"]
+
+  print()
+  print()
+  print()
+
+  print("FT.B Grewe: {}".format(sum(bft) / len(bft)))
+  print("FT.B w Clgen: {}".format(sum(bsft) / len(bsft)))
+  print("FT.B Only Clgen: {}".format(sum(sft) / len(sft)))
 
   R = R.append({  # average bars
     "group": "Average",
@@ -443,13 +452,13 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
   ax.get_legend().draw_frame(True)
 
   # plot shape and size
-  figsize = (9, 2.2)
+  figsize = (3*9, 3*2.2)
   if "nvidia" in benchmarks_data:
     typecast = int;
     plt.ylim(-1, 16)
   elif "training" in benchmarks_data:
     typecast = float;
-    figsize = (7, 3.2)
+    figsize = (3*7, 3*3.2)
   else:
     typecast = float
 
@@ -458,7 +467,7 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
 
   plt.setp(ax.get_xticklabels(), rotation=90)
 
-  Finalize(figsize=figsize, tight=True)
+  Finalize(output = "plot.png", figsize=figsize, tight=True)
   return B_speedup, BS_speedup
 
 
@@ -722,19 +731,24 @@ def plot_speedups_extended_model(benchmarks_data, clgen_data):
   Finalize(figsize=(7, 3.7), tight=True)
   return speedup
 
-if __name__ == "__main__":
-  plot_speedups_with_clgen(
-    open("/var/foivos/results/clgen_paper_artifacts/nvidia-benchmarks.csv", 'r'),
-    open("/var/foivos/results/clgen_paper_artifacts/nvidia-clgen.csv", 'r')
-  )
+plot_speedups_with_clgen(
+  open("/var/foivos/results/clgen_paper_artifacts/nvidia-benchmarks.csv", 'r'),
+  open("/var/foivos/results/clgen_paper_artifacts/nvidia-clgen.csv", 'r')
+)
 
-  db_path = pathlib.Path("/var/foivos/results/pldi_results/BERT/Fixed_input/samples.db")
-  db = samples_database.SamplesDatabase(db_path, must_exist = True)
-  d = api.ToDataFrame(db)
-  d.to_csv(str(db_path.parent / "samples_dataframe.csv"))
-  with tempfile.NamedTemporaryFile("w", prefix="preamble_", suffix=".csv") as f:
-    plot_speedups_with_clgen(
-      open("/var/foivos/results/clgen_paper_artifacts/nvidia-benchmarks.csv", 'r'),
-      open("/var/foivos/results/pldi_results/BERT/Fixed_input/samples_dataframe.csv", 'r'),
-    )
-  exit()
+# if __name__ == "__main__":
+#   plot_speedups_with_clgen(
+#     open("/var/foivos/results/clgen_paper_artifacts/nvidia-benchmarks.csv", 'r'),
+#     open("/var/foivos/results/clgen_paper_artifacts/nvidia-clgen.csv", 'r')
+#   )
+
+#   db_path = pathlib.Path("/var/foivos/results/pldi_results/BERT/Fixed_input/samples.db")
+#   db = samples_database.SamplesDatabase(db_path, must_exist = True)
+#   d = api.ToDataFrame(db)
+#   d.to_csv(str(db_path.parent / "samples_dataframe.csv"))
+#   with tempfile.NamedTemporaryFile("w", prefix="preamble_", suffix=".csv") as f:
+#     plot_speedups_with_clgen(
+#       open("/var/foivos/results/clgen_paper_artifacts/nvidia-benchmarks.csv", 'r'),
+#       open("/var/foivos/results/pldi_results/BERT/Fixed_input/samples_dataframe.csv", 'r'),
+#     )
+#   exit()
