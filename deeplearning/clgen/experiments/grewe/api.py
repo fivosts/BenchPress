@@ -250,5 +250,12 @@ def TrainGrewe(**kwargs) -> None:
   Collect CSV files in the same formate expected by 'preamble.py'
   and train Grewe et al. predictive model.
   """
-  plot_config = kwargs.get('plot_config')
+  grewe_baseline = kwargs.get('grewe_baseline')
+  csv_groups     = kwargs.get('csv_groups')
+  plot_config    = kwargs.get('plot_config')
+  for group in csv_groups:
+    preamble.plot_speedups_with_clgen(
+      open(grewe_baseline, 'r'),
+      open(group.path, 'r')
+    )
   return
