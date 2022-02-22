@@ -379,7 +379,7 @@ def CLDriveNumBytes(src: str,
   """
   Run CLDrive once for given configuration to identify number of transferred bytes.
   """
-  stdout, stderr = RunCLDrive(src, header_file = header_file, num_runs = 1, gsize = gsize, lsize = lsize, timeout = timeout)
+  stdout, stderr = RunCLDrive(src, header_file = header_file, num_runs = 5, gsize = gsize, lsize = lsize, timeout = timeout)
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
     transferred_bytes_cpu = df[df['device'].str.contains("CPU")].transferred_bytes[0]
