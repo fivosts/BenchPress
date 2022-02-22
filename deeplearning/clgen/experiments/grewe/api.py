@@ -254,6 +254,7 @@ def TrainGrewe(**kwargs) -> None:
   csv_groups     = kwargs.get('csv_groups')
   plot_config    = kwargs.get('plot_config')
   for group in csv_groups:
+    raise NotImplementedError("Merge group with baseline right here.")
     preamble.plot_speedups_with_clgen(
       open(grewe_baseline, 'r'),
       open(group.path, 'r')
