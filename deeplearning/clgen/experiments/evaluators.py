@@ -577,6 +577,10 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       # Generic fields
       pbutil.AssertFieldIsSet(config, "workspace")
       # CSV groups
+      pbutil.AssertFieldIsSet(config, "grewe_baseline")
+      p = pathlib.Path(config.grewe_baseline)
+      if not p.exists():
+        raise FileNotFoundError(p)
       for c in ev.train_grewe.csv:
         pbutil.AssertFieldIsSet(c.name)
         pbutil.AssertFieldIsSet(c.path)
@@ -892,6 +896,7 @@ def main(config: evaluator_pb2.Evaluation):
       sev = ev.train_grewe
       if sev.HasField("plot_config"):
         kw_args['plot_config'] = sev.plot_config
+      kw_args['grewe_baseline'] = pathlib.Path(sev.grewe_baseline).resolve()
       kw_args['csv_groups'] = []
       for c in sev.csv:
         kw_args['csv_groups'].append({'name': c.name, 'path': pathlib.Path(c.path).resolve()})
