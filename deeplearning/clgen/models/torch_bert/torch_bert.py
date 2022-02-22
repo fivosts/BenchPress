@@ -479,17 +479,17 @@ class torchBert(backends.BackendBase):
             if self.pytorch.num_nodes > 1:
               total_loss         = [self.torch.zeros(tuple(step_out['total_loss'        ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
               masked_lm_loss     = [self.torch.zeros(tuple(step_out['masked_lm_loss'    ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-              next_sentence_loss = [self.torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+              # next_sentence_loss = [self.torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
               masked_lm_lengths  = [self.torch.zeros(tuple(inputs  ['masked_lm_lengths' ].shape), dtype = self.torch.int64  ).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
 
               self.torch.distributed.all_gather(masked_lm_loss,     step_out["masked_lm_loss"])
-              self.torch.distributed.all_gather(next_sentence_loss, step_out["next_sentence_loss"])
+              # self.torch.distributed.all_gather(next_sentence_loss, step_out["next_sentence_loss"])
               self.torch.distributed.all_gather(masked_lm_lengths,  inputs['masked_lm_lengths'].to(self.pytorch.device))
               self.torch.distributed.all_gather(total_loss,         step_out['total_loss'])
             else:
               total_loss         = step_out['total_loss'        ].unsqueeze(0).cpu()
               masked_lm_loss     = step_out['masked_lm_loss'    ].unsqueeze(0).cpu()
-              next_sentence_loss = step_out['next_sentence_loss'].unsqueeze(0).cpu()
+              # next_sentence_loss = step_out['next_sentence_loss'].unsqueeze(0).cpu()
               masked_lm_lengths  = inputs['masked_lm_lengths' ].cpu()
 
             if self.is_world_process_zero():
@@ -519,7 +519,7 @@ class torchBert(backends.BackendBase):
                 ## Fine-tuning logging.
                 train_hook.step(
                   masked_lm_loss          = sum([ml.mean().item() for ml in masked_lm_loss]) / len(masked_lm_loss),
-                  next_sentence_loss      = sum([nsl.mean().item() for nsl in next_sentence_loss]) / len(next_sentence_loss),
+                  # next_sentence_loss      = sum([nsl.mean().item() for nsl in next_sentence_loss]) / len(next_sentence_loss),
                   total_loss              = sum([tl.mean().item() for tl in total_loss]) / len(total_loss),
                   learning_rate           = self.train.scheduler.get_last_lr()[0],
                   num_correct_samples     = (correct_sample_obs.sample_id if correct_sample_obs is not None else None),
@@ -532,7 +532,7 @@ class torchBert(backends.BackendBase):
                 ## Pre-training logging.
                 train_hook.step(
                   masked_lm_loss          = sum([ml.mean().item() for ml in masked_lm_loss]) / len(masked_lm_loss),
-                  next_sentence_loss      = sum([nsl.mean().item() for nsl in next_sentence_loss]) / len(next_sentence_loss),
+                  # next_sentence_loss      = sum([nsl.mean().item() for nsl in next_sentence_loss]) / len(next_sentence_loss),
                   total_loss              = sum([tl.mean().item() for tl in total_loss]) / len(total_loss),
                   learning_rate           = self.train.scheduler.get_last_lr()[0],
                   batch_avg_hole_len      = sum([sum([int(l) for l in b if l != -1]) / len([int(l) for l in b if l != -1])
@@ -554,12 +554,12 @@ class torchBert(backends.BackendBase):
             loader.sampler.set_epoch(epoch)
 
           if FLAGS.validate_per_epoch and self.train.data_generator.config.validation_split > 0:
-            val_ml_loss, val_nsp_loss = self.Validate(per_epoch = True, pre_train = pre_train)
+            val_ml_loss = self.Validate(per_epoch = True, pre_train = pre_train)
             if self.is_world_process_zero():
               train_hook.end_epoch(
               val_masked_lm_loss      = val_ml_loss,
-              val_next_sentence_loss  = val_nsp_loss,
-              val_total_loss          = val_ml_loss + val_nsp_loss,
+              # val_next_sentence_loss  = val_nsp_loss,
+              val_total_loss          = val_ml_loss # + val_nsp_loss,
               )
             set_mail += "Validation Loss: {}\n".format(val_ml_loss)
           elif self.is_world_process_zero():
@@ -608,13 +608,13 @@ class torchBert(backends.BackendBase):
         pass
 
       if not FLAGS.force_eval:
-        _, _ = self.Validate(pre_train = pre_train)
+        _ = self.Validate(pre_train = pre_train)
 
     if FLAGS.force_eval and not self.is_validated:
-      _, _ = self.Validate(pre_train = pre_train)
+      _ = self.Validate(pre_train = pre_train)
     return
 
-  def Validate(self, per_epoch = False, pre_train = False) -> typing.Tuple[float, float]:
+  def Validate(self, per_epoch = False, pre_train = False) -> float:
     """
     Validation function for torch BERT.
 
@@ -672,20 +672,20 @@ class torchBert(backends.BackendBase):
 
           if self.pytorch.num_nodes > 1:
             masked_lm_loss     = [self.torch.zeros(tuple(step_out['masked_lm_loss'    ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-            next_sentence_loss = [self.torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+            # next_sentence_loss = [self.torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
             self.torch.distributed.all_gather(masked_lm_loss,     step_out["masked_lm_loss"])
-            self.torch.distributed.all_gather(next_sentence_loss, step_out["next_sentence_loss"])
+            # self.torch.distributed.all_gather(next_sentence_loss, step_out["next_sentence_loss"])
           else:
             masked_lm_loss     = step_out['masked_lm_loss'    ].cpu()
-            next_sentence_loss = step_out['next_sentence_loss'].cpu()
+            # next_sentence_loss = step_out['next_sentence_loss'].cpu()
 
           avg_mask_loss.append(masked_lm_loss.mean().item())
-          avg_nsp_loss.append(next_sentence_loss.mean().item())
+          # avg_nsp_loss.append(next_sentence_loss.mean().item())
       except KeyboardInterrupt:
         pass
 
-      if self.is_world_process_zero() and avg_mask_loss and avg_nsp_loss and not per_epoch:
-        val_hook.final(set_name, sum(avg_mask_loss) / len(avg_mask_loss), sum(avg_nsp_loss) / len(avg_nsp_loss))
+      if self.is_world_process_zero() and avg_mask_loss and not per_epoch:
+        val_hook.final(set_name, sum(avg_mask_loss) / len(avg_mask_loss))
       if self.pytorch.torch_tpu_available:
         # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
         self.pytorch.torch_xla_model.master_print(self.pytorch.torch_xla_met.metrics_report())
@@ -693,7 +693,7 @@ class torchBert(backends.BackendBase):
     if not per_epoch:
       self.is_validated = True
     try:
-      return sum(avg_mask_loss) / len(avg_mask_loss), sum(avg_nsp_loss) / len(avg_nsp_loss)
+      return sum(avg_mask_loss) / len(avg_mask_loss)
     except ZeroDivisionError:
       return float('inf'), float('inf')
 
