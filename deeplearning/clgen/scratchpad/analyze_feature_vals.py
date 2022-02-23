@@ -9,6 +9,7 @@ import pathlib
 import typing
 import tqdm
 import multiprocessing
+import pickle
 
 from absl import app
 
@@ -17,8 +18,8 @@ from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.experiments import workers
 
-ENCODED_DB_PATH = ""
-TOKENIZER_PATH = ""
+ENCODED_DB_PATH = "/home/foivos/unique_encoded.db"
+TOKENIZER_PATH = "/home/foivos/backup_tokenizer.pkl"
 
 db = encoded.EncodedContentFiles(url = "sqlite:///{}".format(ENCODED_DB_PATH), must_exist = True)
 tokenizer = tokenizers.FromFile(pathlib.Path(TOKENIZER_PATH).resolve())
