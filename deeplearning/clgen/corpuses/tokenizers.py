@@ -745,3 +745,49 @@ class ASTokenizer(TokenizerBase):
                          ) -> typing.List[int]:
 
     raise NotImplementedError("TODO")
+
+class FeatureTokenizer(TokenizerBase):
+  """
+  A numerical value tokenizer used to represent
+  integer numerical values of Grewe, InstCount and Autophase Features.
+  """
+
+  @classmethod
+  def FromFeatures(cls,
+                   feature_corpus        : typing.Dict[str, typing.List[typing.Dict[str, typing.Union[int, float]]]],
+                   singular_threshold    : int,
+                   exponential_threshold : int,
+                   ) -> "FeatureTokenizer":
+    """Instantiate an AST tokenizer from a corpus text.
+
+    Args:
+      feature corpus: A corpus of all features for all different feature spaces.
+                      Each key holds a list of vectors.
+      singular_threshold: This threshold is config-defined and defines how many int values will be 
+      1-1 represented in the tokenizer as tokens. After this threshold, next values will be included in ranges.
+      This prevents the vocabulary from exploding when some cornercases have a value of 30k or similar.
+
+    Returns:
+      An tokenizer instance.
+    """
+    metaTokens = {
+        'padToken' : '[PAD]',
+    }
+
+    token_list = [str(x) for x in range(singular_threshold)]
+    lb, rb = singular_threshold. singular_threshold*2
+    while rb < exponential_threshold:
+      token_list.append("[{}->{}]".format(lb, rb))
+      lb, rb = rb, rb * 2
+    token_list.append("[{}->inf]".format(rb))
+    token_list += list(metaTokens.values())
+
+    # Create full vocab and initialize Feature Tokenizer.
+    return FeatureTokenizer(dict(zip(token_list, range(len(token_list)))), metaTokens)
+
+  def __init__(self, 
+               vocab:      typing.Dict[str, int], 
+               metaTokens: typing.Dict[str, str],
+               ):
+    super(FeatureTokenizer, self).__init__(vocab, metaTokens)
+    return
