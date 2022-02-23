@@ -111,6 +111,12 @@ class TokenizerBase(object):
     self._UpdateVocabulary()
     self.metaTokenValues = set(value for key, value in self.__dict__.items() if key in self.metaTokens)
 
+  def __len__(self):
+    """
+    Intrinsic function to return length of vocab.
+    """
+    return len(self.vocab)
+
   def _UpdateVocabulary(self) -> None:
     """Private method which must be called if vocab is modified."""
     if not isinstance(self.vocab, dict):
@@ -754,19 +760,25 @@ class FeatureTokenizer(TokenizerBase):
 
   @classmethod
   def FromFeatures(cls,
-                   feature_corpus        : typing.Dict[str, typing.List[typing.Dict[str, typing.Union[int, float]]]],
                    singular_threshold    : int,
                    exponential_threshold : int,
+                   threshold_range       : int,
                    ) -> "FeatureTokenizer":
     """Instantiate an AST tokenizer from a corpus text.
 
     Args:
-      feature corpus: A corpus of all features for all different feature spaces.
-                      Each key holds a list of vectors.
-      singular_threshold: This threshold is config-defined and defines how many int values will be 
-      1-1 represented in the tokenizer as tokens. After this threshold, next values will be included in ranges.
-      This prevents the vocabulary from exploding when some cornercases have a value of 30k or similar.
-
+      feature corpus: 
+              A corpus of all features for all different feature spaces.
+              Each key holds a list of vectors.
+      singular_threshold:
+              This threshold is config-defined and defines how many int values will be 
+              1-1 represented in the tokenizer as tokens. After this threshold,
+              next values will be included in ranges. This prevents the vocabulary from
+              exploding when some cornercases have a value of 30k or similar.
+      exponential threshold:
+              Choose the upper bound of feature values that will be represented.
+      threshold_range:
+              After surpassing singular_threshold, feature values are groupped in 'threshold_range' windows.
     Returns:
       An tokenizer instance.
     """
@@ -775,10 +787,10 @@ class FeatureTokenizer(TokenizerBase):
     }
 
     token_list = [str(x) for x in range(singular_threshold)]
-    lb, rb = singular_threshold. singular_threshold*2
+    lb, rb = singular_threshold, singular_threshold + threshold_range
     while rb < exponential_threshold:
       token_list.append("[{}->{}]".format(lb, rb))
-      lb, rb = rb, rb * 2
+      lb, rb = rb, rb + threshold_range
     token_list.append("[{}->inf]".format(rb))
     token_list += list(metaTokens.values())
 
@@ -791,3 +803,34 @@ class FeatureTokenizer(TokenizerBase):
                ):
     super(FeatureTokenizer, self).__init__(vocab, metaTokens)
     return
+
+  def TokenizeString(self, text: str) -> np.array:
+    raise TypeError("Operation not supported for FeatureTokenizer")
+
+  def AtomizeString(self, text: str) -> typing.List[str]:
+    raise TypeError("Operation not supported for FeatureTokenizer")
+
+  def tokensToString(self, 
+                     encoded: np.array,
+                     ignore_token: int = None,
+                     with_formatting: bool = False,
+                     ):
+    raise TypeError("Operation not supported for FeatureTokenizer")
+
+  def ArrayToCode(self,
+                  encoded: np.array,
+                  with_formatting: bool = False,
+                  ) -> str:
+    raise TypeError("Operation not supported for FeatureTokenizer")
+
+  def StringArrToCode(self,
+                      text: typing.List[str],
+                      with_formatting: bool = False,
+                      ) -> str:
+    raise TypeError("Operation not supported for FeatureTokenizer")
+
+  def SrcLocationToIndex(self,
+                         encoded: np.array,
+                         locations: typing.List[typing.Tuple[int, int]],
+                         ) -> typing.List[int]:
+    raise TypeError("Operation not supported for FeatureTokenizer")
