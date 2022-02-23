@@ -195,7 +195,7 @@ def GreweTopKCSV(**kwargs) -> None:
     benchmarks = target.get_benchmarks("GreweFeatures")
     for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
       top_k_idx = 0
-      top_k_bar = tqdm.tqdm(total = top_k, desc = "Top K cands", leave = True)
+      top_k_bar = tqdm.tqdm(total = top_k, desc = "Top K cands", leave = False)
       for (src, _, feats, dist) in tqdm.tqdm(workers.SortedSrcFeatsDistances(get_data(), benchmark.features, "GreweFeatures"), desc = "Sorted Data", leave = False):
         toggle = False
         for row in DriveSource(src, dbg.group_name, feats, cldrive_db):
