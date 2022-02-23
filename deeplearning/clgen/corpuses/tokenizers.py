@@ -760,9 +760,9 @@ class FeatureTokenizer(TokenizerBase):
 
   @classmethod
   def FromFeatures(cls,
-                   singular_threshold    : int,
-                   exponential_threshold : int,
-                   threshold_range       : int,
+                   singular_threshold : int,
+                   max_value          : int,
+                   threshold_range    : int,
                    ) -> "FeatureTokenizer":
     """Instantiate an AST tokenizer from a corpus text.
 
@@ -788,21 +788,40 @@ class FeatureTokenizer(TokenizerBase):
 
     token_list = [str(x) for x in range(singular_threshold)]
     lb, rb = singular_threshold, singular_threshold + threshold_range
-    while rb < exponential_threshold:
+    while rb < max_value:
       token_list.append("[{}->{}]".format(lb, rb))
       lb, rb = rb, rb + threshold_range
     token_list.append("[{}->inf]".format(rb))
     token_list += list(metaTokens.values())
 
     # Create full vocab and initialize Feature Tokenizer.
-    return FeatureTokenizer(dict(zip(token_list, range(len(token_list)))), metaTokens)
+    vocab = dict(zip(token_list, range(len(token_list))))
+    return FeatureTokenizer(vocab, metaTokens, singular_threshold, max_value, threshold_range)
 
   def __init__(self, 
                vocab:      typing.Dict[str, int], 
                metaTokens: typing.Dict[str, str],
+               st        : int,
+               max_val   : int,
+               th_range  : int,
                ):
     super(FeatureTokenizer, self).__init__(vocab, metaTokens)
+    self.singular_threshold = st
+    self.max_value          = max_val
+    self.threshold_range    = th_range
     return
+
+  def TokenizeFeature(self, value: int) -> int:
+    if value < self.singular_threshold:
+      return self.vocab[str(value)]
+    else:
+      lb, rb = self.singular_threshold, self.singular_threshold + self.threshold_range
+      while rb < self.max_value:
+        # token_list.append("[{}->{}]".format(lb, rb))
+        if value >= lb and value < rb:
+          return self.vocab["[{}->{}]".format(lb, rb)]
+        lb, rb = rb, rb + self.threshold_range
+      raise KeyError(value)
 
   def TokenizeString(self, text: str) -> np.array:
     raise TypeError("Operation not supported for FeatureTokenizer")
