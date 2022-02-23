@@ -21,10 +21,7 @@ from deeplearning.clgen.experiments import workers
 ENCODED_DB_PATH = "/home/foivos/unique_encoded.db"
 TOKENIZER_PATH = "/home/foivos/backup_tokenizer.pkl"
 
-db = encoded.EncodedContentFiles(url = "sqlite:///{}".format(ENCODED_DB_PATH), must_exist = True)
-tokenizer = tokenizers.FromFile(pathlib.Path(TOKENIZER_PATH).resolve())
-
-def get_data_features(self, feature_space: str) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
+def get_data_features(self, feature_space: str, db, tokenizer) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
   """
   Get or set feature with data list of tuples.
   """
@@ -42,6 +39,10 @@ def get_data_features(self, feature_space: str) -> typing.List[typing.Tuple[str,
   return data_features[feature_space]
 
 def main(*args):
+
+  db = encoded.EncodedContentFiles(url = "sqlite:///{}".format(ENCODED_DB_PATH), must_exist = True)
+  tokenizer = tokenizers.FromFile(pathlib.Path(TOKENIZER_PATH).resolve())
+
   flat_ints = {
     "GreweFeatures" : [],
     "AutophaseFeatures" : [],
@@ -55,7 +56,7 @@ def main(*args):
   }
 
   for fspace in {"GreweFeatures", "AutophaseFeatures", "InstcountFeatures"}:
-    feat_vecs = [v for s, v in get_data_features(fspace)]
+    feat_vecs = [v for s, v in get_data_features(fspace, db, tokenizer)]
     flat_vals = []
     for vec in feat_vecs:
       for v in vec.values():
