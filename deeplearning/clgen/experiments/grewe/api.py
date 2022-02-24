@@ -130,10 +130,10 @@ def DriveSource(src        : str,
             global_size          = gsize,
             local_size           = lsize,
             label                = cached.status,
-            cpu_transfer_time_ns = sum([int(x) for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan']) // len([x for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan']),
-            cpu_kernel_time_ns   = sum([int(x) for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan'])   // len([x for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan']),
-            gpu_transfer_time_ns = sum([int(x) for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan']) // len([x for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan']),
-            gpu_kernel_time_ns   = sum([int(x) for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan'])   // len([x for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan']),
+            cpu_transfer_time_ns = sum([int(float(x)) for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan']) // len([x for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan']),
+            cpu_kernel_time_ns   = sum([int(float(x)) for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan'])   // len([x for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan']),
+            gpu_transfer_time_ns = sum([int(float(x)) for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan']) // len([x for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan']),
+            gpu_kernel_time_ns   = sum([int(float(x)) for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan'])   // len([x for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan']),
           )
         else:
           yield None
