@@ -10,7 +10,6 @@ import typing
 import tqdm
 import multiprocessing
 import pickle
-import torchtext
 
 from absl import app
 
@@ -18,32 +17,48 @@ from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.util import distributions
+from deeplearning.clgen.util import logging as l
+from deeplearning.clgen.models.torch_bert import optimizer
+from deeplearning.clgen.models.torch_bert import hooks
 from deeplearning.clgen.experiments import workers
 
 torch = pytorch.torch
+
+ENCODED_DB_PATH = "/home/foivos/unique_encoded.db"
+TOKENIZER_PATH = "/home/foivos/backup_tokenizer.pkl"
 
 class TransformerModel(torch.nn.Module):
 
   def __init__(self, ntoken: int, d_model: int, nhead: int, d_hid: int,
                nlayers: int, pad_idx, dropout: float = 0.5):
     super().__init__()
-    self.model_type = 'Transformer'
+    self.model_type  = 'Transformer'
+    self.embed       = torch.nn.Embedding(ntoken, d_model, padding_idx = pad_idx)
     self.pos_encoder = PositionalEncoding(d_model, dropout)
-    encoder_layers = torch.nn.TransformerEncoderLayer(d_model, nhead, d_hid, dropout)
-    self.transformer_encoder = torch.nn.TransformerEncoder(encoder_layers, nlayers)
-    self.encoder = torch.nn.Embedding(ntoken, d_model)
-    self.d_model = d_model
-    self.decoder = torch.nn.Linear(d_model, ntoken)
+
+    self.target_embed       = torch.nn.Embedding(ntoken, d_model)
+    self.target_pos_encoder = PositionalEncoding(d_model, dropout)
+
+    self.d_model     = d_model
+
+    encoder_layers           = torch.nn.TransformerEncoderLayer(d_model, nhead, d_hid, dropout, batch_first = True)
+    encoder_norm             = torch.nn.LayerNorm(d_model, eps=1e-5)
+    self.transformer_encoder = torch.nn.TransformerEncoder(encoder_layers, nlayers, encoder_norm)
+
+    decoder_layer            = torch.nn.TransformerDecoderLayer(d_model, nhead, d_hid, dropout, batch_first = True)
+    decoder_norm             = torch.nn.LayerNorm(d_model, eps=1e-5)
+    self.transformer_decoder = torch.nn.TransformerDecoder(decoder_layer, nlayers, decoder_norm)
+    self.linear = torch.nn.Linear(d_model, ntoken)
 
     self.init_weights()
 
   def init_weights(self) -> None:
     initrange = 0.1
-    self.encoder.weight.data.uniform_(-initrange, initrange)
-    self.decoder.bias.data.zero_()
-    self.decoder.weight.data.uniform_(-initrange, initrange)
+    self.embed.weight.data.uniform_(-initrange, initrange)
+    # self.decoder.bias.data.zero_()
+    # self.decoder.weight.data.uniform_(-initrange, initrange)
 
-  def forward(self, src: torch.Tensor, src_mask: torch.Tensor = None, src_key_padding_idx = None) -> torch.Tensor:
+  def forward(self, src: torch.Tensor, target: torch.Tensor, src_mask: torch.Tensor = None, src_key_padding_mask = None) -> torch.Tensor:
     """
     Args:
         src: Tensor, shape [seq_len, batch_size]
@@ -52,11 +67,22 @@ class TransformerModel(torch.nn.Module):
     Returns:
         output Tensor of shape [seq_len, batch_size, ntoken]
     """
-    src = self.encoder(src) * math.sqrt(self.d_model)
-    src = self.pos_encoder(src)
-    output = self.transformer_encoder(src, mask = src_mask, src_key_padding_idx = src_key_padding_idx)
-    output = self.decoder(output)
-    return output
+    src1 = self.embed(src) * math.sqrt(self.d_model)
+    src2 = self.pos_encoder(src1)
+    output1 = self.transformer_encoder(src2, mask = src_mask, src_key_padding_mask = src_key_padding_mask)
+    tgt1 = self.embed(target) * math.sqrt(self.d_model)
+    tgt2 = self.pos_encoder(tgt1)
+
+    output2 = self.transformer_decoder(tgt2, output1)
+    output3 = self.linear(output2)
+    # print(src.shape)
+    # print(src1.shape)
+    # print(src2.shape)
+    # print(output1.shape)
+    # print(output2.shape)
+    # print(output3.shape)
+    # input()
+    return output3
 
 class PositionalEncoding(torch.nn.Module):
 
@@ -94,15 +120,15 @@ class FeatureDataset(torch.utils.data.Dataset):
       if -idx > len(self):
         raise ValueError
       idx = len(self) + idx
-    return self.dataset[sidx]
+    return self.dataset[idx]
 
   def compute_dataset(self):
     seq_len   = 256
 
     f_len = {
       "GreweFeatures": 6,
-      "AutophaseFeatures": 52,
-      "InstCountFeatures": 71,
+      "AutophaseFeatures": 56,
+      "InstCountFeatures": 70,
     }
     pad_len = seq_len - sum(list(f_len.values()))
     dataset   = []
@@ -111,13 +137,14 @@ class FeatureDataset(torch.utils.data.Dataset):
       for fspace in {"GreweFeatures", "AutophaseFeatures", "InstCountFeatures"}:
 
         inp = []
-        for x in dp[fspace].values():
-          try:
-            x = int(x)
-          except Exception:
-            continue
-          inp.append(self.tokenizeFeature(int(x)))
-        assert len(inp) == f_len[fspace]
+        for n, x in dp[fspace].items():
+          if n not in {"F2:coalesced/mem", "F4:comp/mem"}:
+            try:
+              x = int(x)
+            except Exception:
+              continue
+            inp.append(self.feat_tokenizer.TokenizeFeature(int(x)))
+        assert len(inp) == f_len[fspace], len(inp)
 
         target_feats = dp["AutophaseFeatures"]
         target = []
@@ -126,25 +153,25 @@ class FeatureDataset(torch.utils.data.Dataset):
             x = int(x)
           except Exception:
             continue
-          target.append(self.tokenizeFeature(int(x)))
-        assert len(target) == f_len["AutophaseFeatures"]
+          target.append(self.feat_tokenizer.TokenizeFeature(int(x)))
+        assert len(target) == f_len["AutophaseFeatures"], len(target)
 
         if fspace == "GreweFeatures":
           d = {
-            'inputs'         : torch.LongTensor(inp + [self.tokenizer.padToken] * (f_len["AutophaseFeatures"] + f_len["InstCountFeatures"] + pad_len)),
+            'inputs'         : torch.LongTensor(inp + [self.feat_tokenizer.padToken] * (f_len["AutophaseFeatures"] + f_len["InstCountFeatures"] + pad_len)),
             'target'         : torch.LongTensor(target)
           }
         elif fspace == "AutophaseFeatures":
           d = {
-            'inputs'        : torch.LongTensor([self.tokenizer.padToken] * f_len["GreweFeatures"] + inp + [self.tokenizer.padToken] * (f_len["InstCountFeatures"] + pad_len)),
+            'inputs'        : torch.LongTensor([self.feat_tokenizer.padToken] * f_len["GreweFeatures"] + inp + [self.feat_tokenizer.padToken] * (f_len["InstCountFeatures"] + pad_len)),
             'target'        : torch.LongTensor(target)
           }
         else:
           d = {
-            'inputs'         : torch.LongTensor([self.tokenizer.padToken] * (f_len["GreweFeatures"] + f_len["AutophaseFeatures"]) + inp + [self.tokenizer.padToken] * pad_len),
+            'inputs'         : torch.LongTensor([self.feat_tokenizer.padToken] * (f_len["GreweFeatures"] + f_len["AutophaseFeatures"]) + inp + [self.feat_tokenizer.padToken] * pad_len),
             'target'         : torch.LongTensor(target)
           }
-        d['padding_mask'] = d['inputs'] != self.tokenizer.padToken
+        d['padding_mask'] = d['inputs'] == self.feat_tokenizer.padToken
         dataset.append(d)
     return dataset
 
@@ -186,22 +213,20 @@ def get_data_features(db, tokenizer, size_limit = None) -> typing.List[typing.Di
       include = ""
     else:
       src, include, _ = inp
-    datapoints.append({
-      "GreweFeatures"     : feats["GreweFeatures"],
-      "AutophaseFeatures" : feats["AutophaseFeatures"],
-      "InstCountFeatures" : feats["InstCountFeatures"],
-    })
+    try:
+      datapoints.append({
+        "GreweFeatures"     : feats["GreweFeatures"],
+        "AutophaseFeatures" : feats["AutophaseFeatures"],
+        "InstCountFeatures" : feats["InstCountFeatures"],
+      })
+    except KeyError as e:
+      l.logger().warn(e)
   return datapoints
 
-def main(*args):
-
-  db = encoded.EncodedContentFiles(url = "sqlite:///{}".format(ENCODED_DB_PATH), must_exist = True)
-  tokenizer = tokenizers.TokenizerBase.FromFile(pathlib.Path(TOKENIZER_PATH).resolve())
-  feat_vecs = get_data_features(db, tokenizer)
-
-  data = process_data(feat_vecs)
-  size = len(data)
-  train_data, val_data = data[:(9 * size) // 10], data[(9 * size) // 10:]
+def Train(feat_vecs):
+  size = len(feat_vecs)
+  train_data, val_data = feat_vecs[:(9 * size) // 10], feat_vecs[(9 * size) // 10:]
+  device = 'cuda'
 
   num_epochs = 30
   batch_size = 32
@@ -214,10 +239,10 @@ def main(*args):
 
   vocab_size = len(train_dataset.feat_tokenizer)
   emsize  = 64  # embedding dimension
-  d_hid   = 256  # dimension of the feedforward network model in nn.TransformerEncoder
-  nlayers = 2  # number of nn.TransformerEncoderLayer in nn.TransformerEncoder
-  nhead   = 2  # number of heads in nn.MultiheadAttention
-  dropout = 0.1  # dropout probability
+  d_hid   = 128  # dimension of the feedforward network model in nn.TransformerEncoder
+  nlayers = 2   # number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+  nhead   = 2   # number of heads in nn.MultiheadAttention
+  dropout = 0.1 # dropout probability
   model = TransformerModel(
     vocab_size,
     emsize,
@@ -251,170 +276,90 @@ def main(*args):
     learning_rate   = learning_rate,
   )
   loss_fn = torch.nn.CrossEntropyLoss()
+  model.zero_grad()
 
-  for ep in tqdm.tqdm(num_epochs, desc = "Epoch", leave = True):
+  hook_path = pathlib.Path("./feat_reconstruction").resolve()
+  hook_path.mkdir(exist_ok = True, parents = True)
+  train_hook = hooks.tensorMonitorHook(hook_path, 0, 50)
+  val_hook = hooks.tensorMonitorHook(pathlib.Path("./feat_reconstruction").resolve(), 0, 10)
+
+  for ep in tqdm.tqdm(range(num_epochs), desc = "Epoch", leave = False):
     model.train()
-    for batch in tqdm.tqdm(train_loader, total = len(train_loader), desc = "Batch", leave = True):
+    for batch in tqdm.tqdm(train_loader, total = len(train_loader), desc = "Batch", leave = False):
       inp, att, target = batch['inputs'], batch['padding_mask'], batch['target']
 
-      ## Insert model step here
-      output = model(data, src_key_padding_idx = att)
+      output = model(inp.to(device), target.to(device) ) #, src_key_padding_mask = att.to(device))
+      loss = loss_fn(output.view(-1, len(train_dataset.feat_tokenizer)), target.to(device).view(-1))
 
-      ## Insert target cross entropy calculation.
-
-      loss = loss_fn(output.view(-1, len(train_dataset.feat_tokenizer)), targets)
-
-      optimizer.zero_grad()
+      opt.zero_grad()
       loss.backward()
       torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
-      optimizer.step()
+      opt.step()
       scheduler.step()
 
-      loss_val = loss.item()
-      print(loss_val)
+      train_hook.step(loss = loss.item())
+    train_hook.end_epoch()
+    l.logger().info("Epoch {} loss {}".format(ep, train_hook.epoch_loss))
+
+    model.eval()
+
+    for batch in tqdm.tqdm(train_loader, total = len(train_loader), desc = "Val Train Batch", leave = False):
+      inp, att, target = batch['inputs'], batch['padding_mask'], batch['target']
+
+      output = model(inp.to(device), target.to(device) ) #, src_key_padding_mask = att.to(device))
+      loss = loss_fn(output.view(-1, len(train_dataset.feat_tokenizer)), target.to(device).view(-1))
+
+      euclids = []
+      accuracy = []
+      for bi in range(output.size(0)):
+        raw_out = torch.argmax(output[bi], dim = 1).cpu()
+        targ    = target[bi].cpu()
+        assert len(raw_out) == len(targ), "{}/{}".format(len(raw_out), len(targ))
+        dist = 0.0
+        for vi in range(len(targ)):
+          dist += (targ[vi] - raw_out[vi])**2
+        euclids.append(math.sqrt(dist))
+        accuracy.append(len(torch.where(targ == raw_out)[0]))
+      mean_dist = sum(euclids) / len(euclids)
+      mean_accuracy = sum(accuracy) / len(accuracy)
+      val_hook.step(val_train_loss = loss.item(), val_train_dist = mean_dist, val_train_accuracy = mean_accuracy)
+
+    for batch in tqdm.tqdm(val_loader, total = len(val_loader), desc = "Val Batch", leave = False):
+      inp, att, target = batch['inputs'], batch['padding_mask'], batch['target']
+
+      output = model(inp.to(device), target.to(device) ) #, src_key_padding_mask = att.to(device))
+      loss = loss_fn(output.view(-1, len(train_dataset.feat_tokenizer)), target.to(device).view(-1))
+
+      euclids = []
+      accuracy = []
+      for bi in range(output.size(0)):
+        raw_out = torch.argmax(output[bi], dim = 1).cpu()
+        targ    = target[bi].cpu()
+        assert len(raw_out) == len(targ), "{}/{}".format(len(raw_out), len(targ))
+        dist = 0.0
+        for vi in range(len(targ)):
+          dist += (targ[vi] - raw_out[vi])**2
+        euclids.append(math.sqrt(dist))
+        accuracy.append(len(torch.where(targ == raw_out)[0]))
+
+      mean_dist = sum(euclids) / len(euclids)
+      mean_accuracy = sum(accuracy) / len(accuracy)
+      val_hook.step(val_loss = loss.item(), val_dist = mean_dist, val_accuracy = mean_accuracy)
+  return
+
+def Validate(model, tokenizer, train_loader, val_loader):
+
+
+  return
+
+def main(*args):
+
+  db = encoded.EncodedContentFiles(url = "sqlite:///{}".format(ENCODED_DB_PATH), must_exist = True)
+  tokenizer = tokenizers.TokenizerBase.FromFile(pathlib.Path(TOKENIZER_PATH).resolve())
+  feat_vecs = get_data_features(db, tokenizer)
+
+  Train(feat_vecs)
   return
 
 if __name__ == "__main__":
   app.run(main)  
-
-
-
-# train_iter = torchtext.datasets.WikiText2(split='train')
-# tokenizer = torchtext.data.utils.get_tokenizer('basic_english')
-# vocab = torchtext.vocab.build_vocab_from_iterator(map(tokenizer, train_iter), specials=['<unk>'])
-# vocab.set_default_index(vocab['<unk>'])
-
-# # train_iter was "consumed" by the process of building the vocab,
-# # so we have to create it again
-# train_iter, val_iter, test_iter = torchtext.datasets.WikiText2()
-# train_data = data_process(train_iter)
-# val_data = data_process(val_iter)
-# test_data = data_process(test_iter)
-
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# batch_size = 10
-# eval_batch_size = 10
-# train_data = batchify(train_data, batch_size)  # shape [seq_len, batch_size]
-# val_data = batchify(val_data, eval_batch_size)
-# test_data = batchify(test_data, eval_batch_size)
-
-# bptt = 35
-
-# ntokens = len(vocab)  # size of vocabulary
-# emsize = 200  # embedding dimension
-# d_hid = 200  # dimension of the feedforward network model in nn.TransformerEncoder
-# nlayers = 2  # number of nn.TransformerEncoderLayer in nn.TransformerEncoder
-# nhead = 2  # number of heads in nn.MultiheadAttention
-# dropout = 0.2  # dropout probability
-# model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, dropout).to(device)
-
-
-# criterion = torch.nn.CrossEntropyLoss()
-# lr = 5.0  # learning rate
-# optimizer = torch.optim.SGD(model.parameters(), lr=lr)
-# scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
-
-# best_val_loss = float('inf')
-# epochs = 3
-# best_model = None
-
-
-# def get_batch(source: torch.Tensor, i: int) -> typing.Tuple[torch.Tensor, torch.Tensor]:
-#   """
-#   Args:
-#       source: Tensor, shape [full_seq_len, batch_size]
-#       i: int
-
-#   Returns:
-#       tuple (data, target), where data has shape [seq_len, batch_size] and
-#       target has shape [seq_len * batch_size]
-#   """
-#   print()
-#   print()
-#   print()
-#   print()
-#   print(source.shape)
-#   seq_len = min(bptt, len(source) - 1 - i)
-#   print(seq_len)
-#   data = source[i:i+seq_len]
-#   print(data.shape)
-#   target = source[i+1:i+1+seq_len].reshape(-1)
-#   print(target.shape)
-#   print(data)
-#   print(target)
-#   for b in data:
-#     print(vocab.lookup_tokens([int(x) for x in b]))
-#   print(vocab.lookup_tokens([int(x) for x in target]))
-#   input()
-#   return data, target
-
-# def train(model: torch.nn.Module) -> None:
-#   model.train()  # turn on train mode
-#   total_loss = 0.
-#   log_interval = 200
-#   start_time = time.time()
-#   src_mask = generate_square_subsequent_mask(bptt).to(device)
-
-#   num_batches = len(train_data) // bptt
-#   for batch, i in enumerate(range(0, train_data.size(0) - 1, bptt)):
-#     print()
-#     print(batch)
-#     print(i)
-#     data, targets = get_batch(train_data, i)
-#     batch_size = data.size(0)
-#     if batch_size != bptt:  # only on last batch
-#         src_mask = src_mask[:batch_size, :batch_size]
-#     output = model(data, src_mask)
-#     print(output.view(-1, ntokens).shape)
-#     input()
-#     loss = criterion(output.view(-1, ntokens), targets)
-
-#     optimizer.zero_grad()
-#     loss.backward()
-#     torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
-#     optimizer.step()
-
-#     total_loss += loss.item()
-#     if batch % log_interval == 0 and batch > 0:
-#       lr = scheduler.get_last_lr()[0]
-#       ms_per_batch = (time.time() - start_time) * 1000 / log_interval
-#       cur_loss = total_loss / log_interval
-#       ppl = math.exp(cur_loss)
-#       print(f'| epoch {epoch:3d} | {batch:5d}/{num_batches:5d} batches | '
-#             f'lr {lr:02.2f} | ms/batch {ms_per_batch:5.2f} | '
-#             f'loss {cur_loss:5.2f} | ppl {ppl:8.2f}')
-#       total_loss = 0
-#       start_time = time.time()
-
-# def evaluate(model: torch.nn.Module, eval_data: torch.Tensor) -> float:
-#   model.eval()  # turn on evaluation mode
-#   total_loss = 0.
-#   src_mask = generate_square_subsequent_mask(bptt).to(device)
-#   with torch.no_grad():
-#     for i in range(0, eval_data.size(0) - 1, bptt):
-#       data, targets = get_batch(eval_data, i)
-#       batch_size = data.size(0)
-#       if batch_size != bptt:
-#         src_mask = src_mask[:batch_size, :batch_size]
-#       output = model(data, src_mask)
-#       output_flat = output.view(-1, ntokens)
-#       total_loss += batch_size * criterion(output_flat, targets).item()
-#   return total_loss / (len(eval_data) - 1)
-
-# for epoch in range(1, epochs + 1):
-#   epoch_start_time = time.time()
-#   train(model)
-#   val_loss = evaluate(model, val_data)
-#   val_ppl = math.exp(val_loss)
-#   elapsed = time.time() - epoch_start_time
-#   print('-' * 89)
-#   print(f'| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | '
-#         f'valid loss {val_loss:5.2f} | valid ppl {val_ppl:8.2f}')
-#   print('-' * 89)
-
-#   if val_loss < best_val_loss:
-#     best_val_loss = val_loss
-#     best_model = copy.deepcopy(model)
-
-#   scheduler.step()
