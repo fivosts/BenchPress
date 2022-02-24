@@ -322,11 +322,19 @@ def CollectCLDriveLabel(df: pd.DataFrame, stdout: str, stderr: str) -> str:
           cpu_error = "INVALID_BUFFER_READ_WRITE"
       except KeyError:
         cpu_error = stderr
+      except ValueError:
+        cpu_error = stderr
+      except Exception:
+        cpu_error = stderr
       try:
         gpu_error = df[df['device'].str.contains("GPU")].outcome[1]
         if gpu_error == "CL_ERROR" and "-9999" in stderr:
           gpu_error = "INVALID_BUFFER_READ_WRITE"
       except KeyError:
+        gpu_error = stderr
+      except ValueError:
+        gpu_error = stderr
+      except Exception:
         gpu_error = stderr
       label = "CPU-{}_GPU-{}".format(cpu_error, gpu_error)
   else:
