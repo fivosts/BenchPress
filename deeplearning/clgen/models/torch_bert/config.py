@@ -227,6 +227,7 @@ class BertConfig(object):
     self.feature_encoder                 = kwargs.pop("feature_encoder", False)
     self.feature_sequence_length         = kwargs.pop("feature_sequence_length", 256)
     self.feature_embedding_size          = kwargs.pop("feature_embedding_size", 512)
+    self.feature_pad_idx                 = kwargs.pop("feature_pad_idx", -1)
     self.feature_dropout_prob            = kwargs.pop("feature_dropout_prob", 0.1)
     self.feature_vocab_size              = kwargs.pop("feature_vocab_size",  768)
     self.feature_num_attention_heads     = kwargs.pop("feature_num_attention_heads", 4)
