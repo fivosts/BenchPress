@@ -223,6 +223,17 @@ class BertConfig(object):
     self.use_bfloat16 = kwargs.pop("use_bfloat16", False)
     self.pruned_heads = kwargs.pop("pruned_heads", {})
 
+    # Attributes for feature vector encoding
+    self.feature_encoder                 = kwargs.pop("feature_encoder", False)
+    self.feature_sequence_length         = kwargs.pop("feature_sequence_length", 256)
+    self.feature_embedding_size          = kwargs.pop("feature_embedding_size", 512)
+    self.feature_dropout_prob            = kwargs.pop("feature_dropout_prob", 0.1)
+    self.feature_vocab_size              = kwargs.pop("feature_vocab_size",  768)
+    self.feature_num_attention_heads     = kwargs.pop("feature_num_attention_heads", 4)
+    self.feature_transformer_feedforward = kwargs.pop("feature_transformer_feedforward", 2048)
+    self.feature_layer_norm_eps          = kwargs.pop("feature_layer_norm_eps", 1e-5)
+    self.feature_num_hidden_layers       = kwargs.pop("feature_num_hidden_layers", 2)
+
     # Is decoder is used in encoder-decoder models to differentiate encoder from decoder
     self.is_encoder_decoder = kwargs.pop("is_encoder_decoder", False)
     self.is_decoder = kwargs.pop("is_decoder", False)
