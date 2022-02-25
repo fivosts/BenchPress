@@ -115,7 +115,8 @@ class torchBert(backends.BackendBase):
     self.torch.manual_seed(self.config.training.random_seed)
     self.torch.cuda.manual_seed_all(self.config.training.random_seed)
 
-    self.bertAttrs         = None
+    self.bertAttrs         = {}
+    self.featureAttrs      = {}
     self.bert_config       = None
 
     self.train             = None
@@ -161,10 +162,24 @@ class torchBert(backends.BackendBase):
           "layer_norm_eps"               : self.config.architecture.layer_norm_eps,
           "pad_token_id"                 : self.tokenizer.padToken,
     }
+    if self.config.architecture.feature_encoder:
+      self.featureAttrs = {
+        "feature_encoder"                 : self.config.architecture.feature_encoder
+        "feature_sequence_length"         : self.config.architecture.feature_sequence_length
+        "feature_embedding_size"          : self.config.architecture.feature_embedding_size
+        "feature_dropout_prob"            : self.config.architecture.feature_dropout_prob
+        "feature_vocab_size"              : self.config.architecture.feature_vocab_size
+        "feature_num_attention_heads"     : self.config.architecture.feature_num_attention_heads
+        "feature_transformer_feedforward" : self.config.architecture.feature_transformer_feedforward
+        "feature_layer_norm_eps"          : self.config.architecture.feature_layer_norm_eps
+        "feature_num_hidden_layers"       : self.config.architecture.feature_num_hidden_layers
+      }
     self.bert_config = config.BertConfig.from_dict(
-      self.bertAttrs, xla_device = self.torch_tpu_available,
+      self.bertAttrs,
+      self.featureAttrs,
+      xla_device         = self.torch_tpu_available,
       reward_compilation = FLAGS.reward_compilation,
-      is_sampling = is_sampling,
+      is_sampling        = is_sampling,
     )
     return
 
