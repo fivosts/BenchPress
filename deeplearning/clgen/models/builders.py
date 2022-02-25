@@ -147,7 +147,15 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         )
         pbutil.AssertFieldIsSet(
           config.architecture,
-          "feature_vocab_size"
+          "feature_singular_token_thr"
+        )
+        pbutil.AssertFieldIsSet(
+          config.architecture,
+          "feature_max_value_token"
+        )
+        pbutil.AssertFieldIsSet(
+          config.architecture,
+          "feature_token_range"
         )
         pbutil.AssertFieldIsSet(
           config.architecture,
