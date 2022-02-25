@@ -377,23 +377,118 @@ class BertPooler(torch.nn.Module):
     pooled_output = self.activation(pooled_output)
     return pooled_output
 
+class FeaturePositionalEncoding(torch.nn.Module):
+  def __init__(self, config):
+    super().__init__()
+
+    position = torch.arange(config.feature_sequence_length).unsqueeze(1)
+    div_term = torch.exp(torch.arange(0, config.feature_embedding_size, 2) * (-math.log(10000.0) / config.feature_embedding_size))
+    pe = torch.zeros(config.feature_sequence_length, 1, config.feature_embedding_size)
+    pe[:, 0, 0::2] = torch.sin(position * div_term)
+    pe[:, 0, 1::2] = torch.cos(position * div_term)
+    self.register_buffer('pe', pe)
+
+    self.dropout = torch.nn.Dropout(config.feature_dropout_prob)
+    return
+
+  def forward(self, x: torch.Tensor) -> torch.Tensor:
+    x = x + self.pe[:x.size(0)]
+    return self.dropout(x)
+
+class FeatureTransformer(torch.nn.Module):
+  def __init__(self, config):
+    super().__init__()
+    ## Encoding space
+    self.encoder_embedding = torch.nn.Embedding(
+      num_embeddings = config.feature_vocab_size,
+      embedding_dim  = config.feature_embedding_size,
+      padding_idx    = feature_pad_idx
+    )
+    self.encoder_pos_encoder = FeaturePositionalEncoding(config)
+    encoder_layers = torch.nn.TransformerEncoderLayer(
+      d_model      = config.feature_embedding_size,
+      nhead        = config.feature_num_attention_heads,
+      feedforward  = config.feature_transformer_feedforward,
+      dropout      = config.feature_dropout_prob,
+      batch_fist   = True
+    )
+    encoder_norm = torch.nn.LayerNorm(
+      config.feature_embedding_size,
+      eps = config.feature_layer_norm_eps
+    )
+    self.encoder_transformer = torch.nn.TransformerEncoder(
+      encoder_layer = encoder_layers,
+      num_layers    = config.feature_num_hidden_layers,
+      norm          = encoder_norm,
+    )
+
+    ## Decoder space
+    # self.decoder_embedding = torch.nn.Embedding(
+    #   num_embeddings = config.feature_vocab_size,
+    #   embedding_dim  = config.feature_embedding_size,
+    #   padding_idx    = feature_pad_idx
+    # )
+    # self.encoder_pos_encoder = FeaturePositionalEncoding(config)
+    # decoder_layers = torch.nn.TransformerDecoderLayer(
+    #   d_model      = config.feature_embedding_size,
+    #   nhead        = config.feature_num_attention_heads,
+    #   feedforward  = config.feature_transformer_feedforward,
+    #   dropout      = config.feature_dropout_prob,
+    #   batch_fist   = True
+    # )
+    # decoder_norm = torch.nn.LayerNorm(
+    #   config.feature_embedding_size,
+    #   eps = config.feature_layer_norm_eps
+    # )
+    # self.decoder_transformer = torch.nn.TransformerDecoder(
+    #   decoder_layer = decoder_layers,
+    #   num_layers    = config.feature_num_hidden_layers,
+    #   norm          = decoder_norm,
+    # )
+
+    self.decoder = torch.nn.Linear(config.feature_embedding_size, config.feature_vocab_size)
+    self.embedding_size = config.feature_embedding_size
+    self.init_weights()
+    return
+
+  def init_weights(self) -> None:
+    initrange = 0.1
+    self.embed.weight.data.uniform_(-initrange, initrange)
+    self.decoder.bias.data.zero_()
+    self.decoder.weight.data.uniform_(-initrange, initrange)
+    return
+
+  def forward(self,
+              features                  : torch.Tensor,
+              features_mask             : torch.Tensor = None,
+              features_key_padding_mask : torch.Tensor = None
+              ) -> torch.Tensor:
+    embed     = self.encoder_embedding(features) * math.sqrt(self.embedding_size)
+    pos_embed = self.encoder_pos_encoder(embed)
+    encoded   = self.encoder_transformer(
+      pos_embed,
+      mask = features_mask,
+      src_key_padding_mask = features_key_padding_mask
+    )
+    output = self.decoder(encoded)
+    return output
 
 class BertPredictionHeadTransform(torch.nn.Module):
   def __init__(self, config):
     super().__init__()
-    self.dense = torch.nn.Linear(config.hidden_size, config.hidden_size)
+    hidden_size = config.hidden_size + config.feature_embedding_size
+    self.dense = torch.nn.Linear(hidden_size, hidden_size)
     if isinstance(config.hidden_act, str):
       self.transform_act_fn = ACT2FN[config.hidden_act]
     else:
       self.transform_act_fn = config.hidden_act
-    self.LayerNorm = torch.nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+    self.LayerNorm = torch.nn.LayerNorm(hidden_size, eps=config.layer_norm_eps)
 
   def forward(self, hidden_states):
     hidden_states = self.dense(hidden_states)
     hidden_states = self.transform_act_fn(hidden_states)
     hidden_states = self.LayerNorm(hidden_states)
     return hidden_states
-
 
 class BertLMPredictionHead(torch.nn.Module):
   def __init__(self, config):
@@ -414,6 +509,25 @@ class BertLMPredictionHead(torch.nn.Module):
     hidden_states = self.decoder(hidden_states)
     return hidden_states
 
+class BertLMFeaturePredictionHead(torch.nn.Module):
+  def __init__(self, config):
+    super().__init__()
+    self.transform = BertPredictionHeadTransform(config)
+    # Transformer for raw features encoding.
+    self.feature_encoder = FeatureTransformer(config)
+    # The output weights are the same as the input embeddings, but there is
+    # an output-only bias for each token.
+    self.decoder = torch.nn.Linear(config.hidden_size + config.feature_embedding_size, config.vocab_size, bias=False)
+    self.bias = torch.nn.Parameter(torch.zeros(config.vocab_size))
+    # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
+    self.decoder.bias = self.bias
+    return
+
+  def forward(self, hidden_states, features):
+    encoded_features = self.feature_encoder(features)
+    hidden_states = self.transform(hidden_states + encoded_features)
+    hidden_states = self.decoder(hidden_states + encoded_features)
+    return hidden_states, encoded_features
 
 class BertOnlyMLMHead(torch.nn.Module):
   def __init__(self, config):
@@ -424,7 +538,6 @@ class BertOnlyMLMHead(torch.nn.Module):
     prediction_scores = self.predictions(sequence_output)
     return prediction_scores
 
-
 class BertOnlyNSPHead(torch.nn.Module):
   def __init__(self, config):
     super().__init__()
@@ -434,6 +547,14 @@ class BertOnlyNSPHead(torch.nn.Module):
     seq_relationship_score = self.seq_relationship(pooled_output)
     return seq_relationship_score
 
+class BertMLMFeatureHead(torch.nn.Module):
+  def __init__(self, config):
+    super().__init__()
+    self.predictions = BertLMFeaturePredictionHead(config)
+
+  def forward(self, sequence_output):
+    prediction_scores, encoded_features = self.predictions(sequence_output)
+    return prediction_scores
 
 class BertPreTrainingHeads(torch.nn.Module):
   def __init__(self, config):
@@ -611,7 +732,10 @@ class BertForPreTraining(BertPreTrainedModel):
     super().__init__(config)
 
     self.bert = BertModel(config)
-    self.cls  = BertOnlyMLMHead(config)
+    if self.config.feature_encoder:
+      self.cls = BertLMFeaturePredictionHead(config)
+    else:
+      self.cls = BertOnlyMLMHead(config)
 
     if self.config.reward_compilation >= 0 or self.config.is_sampling:
       self.compile_sampler = compiler.CompilationSampler(
