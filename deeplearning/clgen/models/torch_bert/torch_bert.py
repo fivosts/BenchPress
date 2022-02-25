@@ -108,6 +108,9 @@ class torchBert(backends.BackendBase):
     from deeplearning.clgen.util import pytorch
     pytorch.initPytorch()
 
+    if self.config.architecture.feature_encoder:
+      self.feature_tokenizer = kwargs.pop('feature_tokenizer')
+
     self.pytorch             = pytorch
     self.torch               = pytorch.torch
     self.torch_tpu_available = pytorch.torch_tpu_available
@@ -164,15 +167,16 @@ class torchBert(backends.BackendBase):
     }
     if self.config.architecture.feature_encoder:
       self.featureAttrs = {
-        "feature_encoder"                 : self.config.architecture.feature_encoder
-        "feature_sequence_length"         : self.config.architecture.feature_sequence_length
-        "feature_embedding_size"          : self.config.architecture.feature_embedding_size
-        "feature_dropout_prob"            : self.config.architecture.feature_dropout_prob
-        "feature_vocab_size"              : self.config.architecture.feature_vocab_size
-        "feature_num_attention_heads"     : self.config.architecture.feature_num_attention_heads
-        "feature_transformer_feedforward" : self.config.architecture.feature_transformer_feedforward
-        "feature_layer_norm_eps"          : self.config.architecture.feature_layer_norm_eps
-        "feature_num_hidden_layers"       : self.config.architecture.feature_num_hidden_layers
+        "feature_encoder"                 : self.config.architecture.feature_encoder,
+        "feature_sequence_length"         : self.config.architecture.feature_sequence_length,
+        "feature_embedding_size"          : self.config.architecture.feature_embedding_size,
+        "feature_pad_idx"                 : self.feature_tokenizer.padToken,
+        "feature_dropout_prob"            : self.config.architecture.feature_dropout_prob,
+        "feature_vocab_size"              : len(self.feature_tokenizer),
+        "feature_num_attention_heads"     : self.config.architecture.feature_num_attention_heads,
+        "feature_transformer_feedforward" : self.config.architecture.feature_transformer_feedforward,
+        "feature_layer_norm_eps"          : self.config.architecture.feature_layer_norm_eps,
+        "feature_num_hidden_layers"       : self.config.architecture.feature_num_hidden_layers,
       }
     self.bert_config = config.BertConfig.from_dict(
       self.bertAttrs,
