@@ -91,6 +91,28 @@ message NetworkArchitecture {
   optional float initializer_range = 16;
   // The epsilon used by the layer normalization layers.
   optional float layer_norm_eps = 17;
+  // Usage flag for feature vector encoding during training.
+  optional bool feature_encoder = 18;
+  // Concatenated raw features vector input length.
+  optional int32 feature_sequence_length = 19;
+  // Embedding dimension of feature transformer input.
+  optional int32 feature_embedding_size = 20;
+  // Dropout probs of feature transformer encoder.
+  optional float feature_dropout_prob = 21;
+  // Threshold up to which every numerical value maps to a single token.
+  optional int32 feature_singular_token_thr = 22;
+  // Maximum value allowed for feature numerical encoding.
+  optional int32 feature_max_value_token = 23;
+  // Length of value range mapping to single token for feature tokenizer.
+  optional int32 feature_token_range = 24;
+  // Num of attention heads for feature transformer
+  optional int32 feature_num_attention_heads = 25;
+  // Size of feature encoder's internal feedforward.
+  optional int32 feature_transformer_feedforward = 26;
+  // Layer norm epsilon for feature encoder.
+  optional float feature_layer_norm_eps = 27;
+  // Num of hidden layers for feature encoder.
+  optional int32 feature_num_hidden_layers = 28;
 }
 
 // Options used for training a CLgen language model.
