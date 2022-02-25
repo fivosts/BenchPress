@@ -402,7 +402,7 @@ class FeatureTransformer(torch.nn.Module):
     self.encoder_embedding = torch.nn.Embedding(
       num_embeddings = config.feature_vocab_size,
       embedding_dim  = config.feature_embedding_size,
-      padding_idx    = feature_pad_idx
+      padding_idx    = config.feature_pad_idx
     )
     self.encoder_pos_encoder = FeaturePositionalEncoding(config)
     encoder_layers = torch.nn.TransformerEncoderLayer(
