@@ -131,6 +131,40 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         config.architecture,
         "layer_norm_eps",
       )
+      ## Optional feature encoder attributes
+      if config.HasField("feature_encoder") and config.feature_encoder == True:
+        pbutil.AssertFieldIsSet(
+          config.architecture,
+          "feature_sequence_length"
+        )
+        pbutil.AssertFieldIsSet(
+          config.architecture,
+          "feature_embedding_size"
+        )
+        pbutil.AssertFieldIsSet(
+          config.architecture,
+          "feature_dropout_prob"
+        )
+        pbutil.AssertFieldIsSet(
+          config.architecture,
+          "feature_vocab_size"
+        )
+        pbutil.AssertFieldIsSet(
+          config.architecture,
+          "feature_num_attention_heads"
+        )
+        pbutil.AssertFieldIsSet(
+          config.architecture,
+          "feature_transformer_feedforward"
+        )
+        pbutil.AssertFieldIsSet(
+          config.architecture,
+          "feature_layer_norm_eps"
+        )
+        pbutil.AssertFieldIsSet(
+          config.architecture,
+          "feature_num_hidden_layers"
+        )
       ## .training params
       pbutil.AssertFieldIsSet(
         config.training,
