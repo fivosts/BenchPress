@@ -759,11 +759,11 @@ class FeatureTokenizer(TokenizerBase):
   """
 
   @classmethod
-  def FromFeatures(cls,
-                   singular_threshold : int,
-                   max_value          : int,
-                   threshold_range    : int,
-                   ) -> "FeatureTokenizer":
+  def FromArgs(cls,
+               singular_threshold : int,
+               max_value          : int,
+               threshold_range    : int,
+               ) -> "FeatureTokenizer":
     """Instantiate an AST tokenizer from a corpus text.
 
     Args:
@@ -823,17 +823,48 @@ class FeatureTokenizer(TokenizerBase):
         lb, rb = rb, rb + self.threshold_range
       raise KeyError(value)
 
-  def TokenizeString(self, text: str) -> np.array:
-    raise TypeError("Operation not supported for FeatureTokenizer")
+  def TokenizeFeatureVector(self, fv: typing.Dict[str, float], fspace: str, seq_len: int) -> np.array:
+    """
+    Sort feature space keys, exclude derivative feature and float values
+    and return np array of encoded feature tensor.
+    """
+    f_len = {
+      "GreweFeatures": 6,
+      "AutophaseFeatures": 56,
+      "InstCountFeatures": 70,
+    }
 
-  def AtomizeString(self, text: str) -> typing.List[str]:
-    raise TypeError("Operation not supported for FeatureTokenizer")
+    assert seq_len > sum(list(f_len.values())), "Feature sequence length is not large enough to fit concatenation of feature spaces."
+    pad_len = seq_len - sum(list(f_len.values()))
+
+    fv = sorted([[x, y] for x, y in fv.items()], key = lambda x: x[0])
+    vals = [self.TokenizeFeature(int(x)) for n, x in fv if fspace != "GreweFeatures" or n not in {"F2:coalesced/mem", "F4:comp/mem"}]
+
+    if fspace == "GreweFeatures":
+      lp = []
+      rp = [self.padToken] * (f_len["AutophaseFeatures"] + f_len["InstCountFeatures"] + pad_len)
+    elif fspace == "AutophaseFeatures":
+      lp = [self.padToken] * f_len["GreweFeatures"]
+      rp = [self.padToken] * (f_len["InstCountFeatures"] + pad_len)
+    elif fspace == "InstCountFeatures":
+      lp = [self.padToken] * (f_len["GreweFeatures"] + f_len["AutophaseFeatures"])
+      rp = [self.padToken] * pad_len
+
+    encoded = np.array(lp + vals + rp)
+    assert len(encoded) == seq_len, "Encoded length mismatch with sequence length: {}/{}".format(len(encoded), seq_len)
+    return encoded
 
   def tokensToString(self, 
                      encoded: np.array,
                      ignore_token: int = None,
                      with_formatting: bool = False,
                      ):
+    raise NotImplementedError("TODO")
+
+  def TokenizeString(self, text: str) -> np.array:
+    raise TypeError("Operation not supported for FeatureTokenizer")
+
+  def AtomizeString(self, text: str) -> typing.List[str]:
     raise TypeError("Operation not supported for FeatureTokenizer")
 
   def ArrayToCode(self,
