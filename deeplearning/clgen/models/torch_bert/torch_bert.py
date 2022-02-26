@@ -117,7 +117,7 @@ class torchBert(backends.BackendBase):
       )
       self.feature_sequence_length = self.config.architecture.feature_sequence_length
     else:
-      self.feature_encoder         = True
+      self.feature_encoder         = False
       self.feature_tokenizer       = None
       self.feature_sequence_length = None
 
@@ -129,7 +129,6 @@ class torchBert(backends.BackendBase):
     self.torch.cuda.manual_seed_all(self.config.training.random_seed)
 
     self.bertAttrs         = {}
-    self.featureAttrs      = {}
     self.bert_config       = None
 
     self.train             = None
@@ -176,7 +175,7 @@ class torchBert(backends.BackendBase):
           "pad_token_id"                 : self.tokenizer.padToken,
     }
     if self.feature_encoder:
-      self.featureAttrs = {
+      featureAttrs = {
         "feature_encoder"                 : self.feature_encoder,
         "feature_sequence_length"         : self.feature_sequence_length,
         "feature_embedding_size"          : self.config.architecture.feature_embedding_size,
@@ -188,9 +187,9 @@ class torchBert(backends.BackendBase):
         "feature_layer_norm_eps"          : self.config.architecture.feature_layer_norm_eps,
         "feature_num_hidden_layers"       : self.config.architecture.feature_num_hidden_layers,
       }
+      self.bertAttrs.update(featureAttrs)
     self.bert_config = config.BertConfig.from_dict(
       self.bertAttrs,
-      self.featureAttrs,
       xla_device         = self.torch_tpu_available,
       reward_compilation = FLAGS.reward_compilation,
       is_sampling        = is_sampling,
