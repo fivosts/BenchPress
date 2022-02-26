@@ -291,10 +291,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                cache_path,
                                num_train_steps: int = None,
                                pre_train: bool = False,
+                               feature_encoder         : bool                        = False,
+                               feature_tokenizer       : tokenizers.FeatureTokenizer = None,
+                               feature_sequence_length : int                         = None,
                                ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for training."""
     d = super(torchLMDataGenerator, torchLMDataGenerator()).TrainMaskLMBatchGenerator(
-                corpus, training_opts, cache_path, num_train_steps, pre_train
+                corpus, training_opts, cache_path, num_train_steps, pre_train,
+                feature_encoder, feature_tokenizer, feature_sequence_length,
         )
     d.dataloader = d.train_dataloader()
     return d
@@ -309,11 +313,15 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                  max_position_embeddings: int,
                                  cache_path,
                                  corpus: "corpuses.Corpus" = None,
+                                 feature_encoder         : bool                        = False,
+                                 feature_tokenizer       : tokenizers.FeatureTokenizer = None,
+                                 feature_sequence_length : int                         = None,
                                  ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
     d = super(torchLMDataGenerator, torchLMDataGenerator()).SampleMaskLMBatchGenerator(
               model_opts, sampler, tokenizer, seed,
-              sample_batch_size, max_position_embeddings, cache_path
+              sample_batch_size, max_position_embeddings, cache_path,
+              feature_encoder, feature_tokenizer, feature_sequence_length
         )
     if sampler.is_active:
       corpus_config = d.sampler.config.sample_corpus.corpus_config
