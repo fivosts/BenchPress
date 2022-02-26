@@ -476,7 +476,10 @@ class FeatureTransformer(torch.nn.Module):
 class BertPredictionHeadTransform(torch.nn.Module):
   def __init__(self, config):
     super().__init__()
-    hidden_size = config.hidden_size + config.feature_embedding_size
+    if config.feature_encoder:
+      hidden_size = config.hidden_size + config.feature_embedding_size
+    else:
+      hidden_size = config.hidden_size
     self.dense = torch.nn.Linear(hidden_size, hidden_size)
     if isinstance(config.hidden_act, str):
       self.transform_act_fn = ACT2FN[config.hidden_act]
@@ -830,7 +833,6 @@ class BertForPreTraining(BertPreTrainedModel):
     device = device if device >= 0 else 'cpu'
 
     if workload is not None:
-      # prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
       prediction_scores, hidden_states, attentions = self.get_output(
         input_ids[0], attention_mask[0], position_ids[0]
       )
@@ -843,7 +845,6 @@ class BertForPreTraining(BertPreTrainedModel):
         position_ids[0],
       )
 
-    # prediction_scores, seq_relationship_score, hidden_states, attentions = self.get_output(
     prediction_scores, hidden_states, attentions = self.get_output(
       input_ids, attention_mask, position_ids, token_type_ids, head_mask,
       inputs_embeds, output_attentions, output_hidden_states 
@@ -859,19 +860,16 @@ class BertForPreTraining(BertPreTrainedModel):
       )
       loss_fct = torch.nn.CrossEntropyLoss()
       masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
-      # next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
-      total_loss = masked_lm_loss # + next_sentence_loss
+      total_loss = masked_lm_loss
       return {
-        'masked_lm_loss'          : masked_lm_loss,
-        # 'next_sentence_loss'      : next_sentence_loss,
-        'total_loss'              : total_loss,
-        'prediction_logits'       : prediction_scores,
-        'seq_relationship_logits' : seq_relationship_score,
-        'hidden_states'           : hidden_states,
-        'attentions'              : attentions,
-        'compile_status'          : torch.LongTensor(compile_flag).to(device),
-        'generated_samples'       : torch.LongTensor(samples).to(device),
-        'batch_compilation_rate'  : torch.full((1,), float(sum(compile_flag)) / len(compile_flag), dtype = torch.float).to(device),
+        'masked_lm_loss'         : masked_lm_loss,
+        'total_loss'             : total_loss,
+        'prediction_logits'      : prediction_scores,
+        'hidden_states'          : hidden_states,
+        'attentions'             : attentions,
+        'compile_status'         : torch.LongTensor(compile_flag).to(device),
+        'generated_samples'      : torch.LongTensor(samples).to(device),
+        'batch_compilation_rate' : torch.full((1,), float(sum(compile_flag)) / len(compile_flag), dtype = torch.float).to(device),
         # 'sample_indices'          : [0],
       }
     elif not is_validation and self.compile_sampler and self.config.is_sampling:
@@ -897,19 +895,15 @@ class BertForPreTraining(BertPreTrainedModel):
     else:
       loss_fct = torch.nn.CrossEntropyLoss()
       masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
-      # next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_labels.view(-1))
-      total_loss = masked_lm_loss # + next_sentence_loss
+      total_loss = masked_lm_loss
 
       return {
-        'masked_lm_loss'          : masked_lm_loss,
-        # 'next_sentence_loss'      : next_sentence_loss,
-        'total_loss'              : total_loss,
-        'prediction_logits'       : prediction_scores,
-        'seq_relationship_logits' : seq_relationship_score,
-        'hidden_states'           : hidden_states,
-        'attentions'              : attentions,
+        'masked_lm_loss'    : masked_lm_loss,
+        'total_loss'        : total_loss,
+        'prediction_logits' : prediction_scores,
+        'hidden_states'     : hidden_states,
+        'attentions'        : attentions,
       }
-
 
 class BertForPreTrainingTRT(BertForPreTraining):
   def __init__(self, config, tokenizer = None, use_categorical = False, temperature = None):
