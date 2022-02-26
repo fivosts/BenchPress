@@ -27,6 +27,7 @@ from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import monitors
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.proto import model_pb2
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.features import active_feed_database
