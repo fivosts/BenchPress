@@ -20,6 +20,7 @@ from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import monitors
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.models import sequence_masking
@@ -325,7 +326,7 @@ class MaskLMDataGenerator(object):
 
   def SampleMaskLMBatchGenerator(self,
                                  model_opts              : model_pb2.TrainingOptions,
-                                 sampler                 : samplers.Sampler,
+                                 sampler                 : "samplers.Sampler",
                                  tokenizer               : tokenizers.TokenizerBase,
                                  seed                    : int,
                                  sample_batch_size       : int,
