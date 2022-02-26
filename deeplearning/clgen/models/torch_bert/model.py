@@ -731,7 +731,13 @@ class BertModel(BertPreTrainedModel):
     return (sequence_output, pooled_output) + encoder_outputs[1:]
 
 class BertForPreTraining(BertPreTrainedModel):
-  def __init__(self, config, tokenizer = None, use_categorical = False, temperature = None):
+  def __init__(self,
+               config,
+               tokenizer = None,
+               use_categorical : bool = False,
+               temperature     : int = None,
+               target_lm       : str = "hole"
+               ):
     super().__init__(config)
 
     self.bert = BertModel(config)
@@ -742,7 +748,7 @@ class BertForPreTraining(BertPreTrainedModel):
 
     if self.config.reward_compilation >= 0 or self.config.is_sampling:
       self.compile_sampler = compiler.CompilationSampler(
-        tokenizer, use_categorical, temperature
+        tokenizer, use_categorical, temperature, target_lm
       )
     else:
       self.compile_sampler = None
