@@ -132,7 +132,7 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         "layer_norm_eps",
       )
       ## Optional feature encoder attributes
-      if config.HasField("feature_encoder") and config.feature_encoder == True:
+      if config.architecture.HasField("feature_encoder") and config.architecture.feature_encoder == True:
         pbutil.AssertFieldIsSet(
           config.architecture,
           "feature_sequence_length"
