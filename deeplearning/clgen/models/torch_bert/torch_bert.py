@@ -220,7 +220,11 @@ class torchBert(backends.BackendBase):
     self.validation_results_file          = "val_results.txt"
     self.validation_results_path          = os.path.join(str(self.logfile_path if not pre_train else self.pre_logfile_path), self.validation_results_file)
 
-    m = model.BertForPreTraining(self.bert_config, tokenizer = self.tokenizer, target_lm = "hole" if self.config.training.HasField("hole") else "mask").to(self.pytorch.offset_device)
+    m = model.BertForPreTraining(
+          self.bert_config,
+          tokenizer = self.tokenizer,
+          target_lm = "hole" if self.config.training.data_generator.HasField("hole") else "mask"
+          ).to(self.pytorch.offset_device)
 
     if self.pytorch.num_nodes > 1:
       distrib.barrier()
@@ -269,9 +273,10 @@ class torchBert(backends.BackendBase):
 
     m = mdl(
       self.bert_config,
-      tokenizer = self.tokenizer,
+      tokenizer       = self.tokenizer,
       use_categorical = FLAGS.categorical_sampling,
-      temperature = self.temperature
+      temperature     = self.temperature,
+      target_lm       = "hole" if self.config.training.data_generator.HasField("hole") else "mask"
     ).to(self.pytorch.offset_device)
 
     if self.pytorch.num_nodes > 1:
