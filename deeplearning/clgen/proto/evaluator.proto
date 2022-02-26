@@ -160,7 +160,7 @@ message GreweCSV {
 // 13
 message TrainGrewe {
   optional string               grewe_baseline = 1;
-  repeated GreweCSV             csv            = 2;
+  repeated GreweCSVGroup        csv            = 2;
   optional PlotterConfiguration plot_config    = 3;
 }
 
@@ -174,7 +174,7 @@ message DatabasesGroups {
 }
 
 // Define a message representing a CSV for Grewe's predictive model.
-message GreweCSV {
+message GreweCSVGroup {
   optional string name = 1;
   optional string path = 2;
 }
