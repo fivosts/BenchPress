@@ -30,13 +30,20 @@ class CompilationSampler(object):
   compilation status.
   """
   def __init__(self,
-               tokenizer        : tokenizers.TokenizerBase,
+               tokenizer       : tokenizers.TokenizerBase,
                use_categorical : bool,
                temperature     : float,
+               target_lm       : str,
                ):
-    self.tokenizer        = tokenizer
+    self.tokenizer       = tokenizer
     self.temperature     = temperature
     self.use_categorical = use_categorical
+    if target_lm == "hole":
+      self.step_batch = self.StepHoleSeq
+    elif target_lm == "mask":
+      self.step_batch = self.StepMaskSeq
+    else:
+      raise KeyError(target_lm)
     return
 
   def argmax(self, t):
@@ -229,7 +236,7 @@ class CompilationSampler(object):
     res_idx = 0
     samples = torch.zeros_like(input_ids)
 
-    new_holes = self.BatchStepSampleSeq(input_ids, prediction_scores, device)
+    new_holes = self.step_batch(input_ids, prediction_scores, device)
     open_holes = torch.where(new_holes == True)[0]
     closed_holes = torch.where(new_holes == False)[0]
 
@@ -245,7 +252,7 @@ class CompilationSampler(object):
         input_ids, attention_mask, position_ids[:len(input_ids)],
       )
 
-      new_holes = self.BatchStepSampleSeq(input_ids, prediction_scores, device)
+      new_holes = self.step_batch(input_ids, prediction_scores, device)
       open_holes = torch.where(new_holes == True)[0]
       closed_holes = torch.where(new_holes == False)[0]
 
@@ -300,7 +307,7 @@ class CompilationSampler(object):
     #! This is the return queue [nseq x sequence_length].
     queue = torch.zeros(tuple(queue_input_ids.shape)).to(device)
 
-    new_holes = self.BatchStepSampleSeq(
+    new_holes = self.step_batch(
       input_ids,
       input_idxs,
       sample_indices,
@@ -336,7 +343,7 @@ class CompilationSampler(object):
         input_ids, attention_mask, position_ids[:len(input_ids)],
       )
       # Array of new hole existence per seq idx
-      new_holes = self.BatchStepSampleSeq(
+      new_holes = self.step_batch(
         input_ids,
         input_idxs,
         sample_indices,
@@ -370,138 +377,20 @@ class CompilationSampler(object):
     # l.logger().warn("{} is done now and returning workload...".format(device))
     return queue, sample_indices
 
-
-  # def iterSampleSeq(self,
-  #                   model             : typing.TypeVar("model.BertPreTrainedModel"),
-  #                   device            : torch.device,
-  #                   input_ids         : torch.LongTensor,
-  #                   prediction_scores : torch.LongTensor,
-  #                   position_ids      : torch.LongTensor,
-  #                   is_live           : bool,
-  #                   ) -> typing.Tuple[torch.LongTensor, typing.List[typing.List[int]], typing.List[np.array]]:
-  #   """
-  #   Main sampling sequence filling loop.
-
-  #   Function takes model's initial input, prediction and states.
-  #   Fills input sequence with step predictions and keeps asking
-  #   iteratively for predictions until target [MASK] or [HOLE] tokens
-  #   are closed.
-
-  #   Compiler is invoked for final sequence to get binary compilation status.
-  #   ##!! This function is designed to work with multithreading and exercises
-  #        said functionalities on a single sequence. CANNOT be applied to the
-  #        whole batch at the same time.
-  #   """
-  #   sample_indices = [
-  #     [] for _ in range(
-  #       len(torch.where((input_ids == self.tokenizer.holeToken) | (input_ids == self.tokenizer.maskToken))[0])
-  #     )
-  #   ]
-  #   if is_live:
-  #     scores_history = []
-  #   else:
-  #     scores_history = None
-  #   holes, next_input_ids, attention_mask = self.StepSampleSeq(
-  #     input_ids, prediction_scores, sample_indices, scores_history
-  #   )
-  #   while holes:
-  #     # next_prediction_scores, _, _, _ = model.get_output(
-  #     next_prediction_scores, _, _ = model.get_output(
-  #       next_input_ids.to(device), attention_mask.to(device), position_ids,
-  #     )
-  #     holes, next_input_ids, attention_mask = self.StepSampleSeq(
-  #       next_input_ids[0],
-  #       next_prediction_scores[0].detach().cpu(),
-  #       sample_indices,
-  #       scores_history,
-  #     )
-  #   return next_input_ids[0], sample_indices, scores_history
-
-  def StepSampleSeq(self,
-                    seq               : torch.LongTensor,
-                    prediction_scores : torch.LongTensor,
-                    sample_indices    : typing.List[typing.List[int]],
-                    scores_history    : typing.List[np.array],
-                    ) -> typing.Tuple[
-                          bool,
-                          torch.LongTensor,
-                          np.array,
-                         ]:
+  def StepHoleSeq(self,
+                  batch             : torch.LongTensor,
+                  batch_idxs        : torch.LongTensor,
+                  sample_indices    : torch.LongTensor,
+                  indices_lengths   : torch.LongTensor,
+                  prediction_scores : torch.LongTensor,
+                  device,
+                  ) -> typing.Tuple[
+                         bool,
+                         torch.LongTensor,
+                         np.array,
+                       ]:
     """
-    Applies sample step predictions to input sequence.
-    """
-    step_indices  = []
-    seq_length    = tuple(seq.shape)[0]
-    allowed_incr  = (seq_length - int(torch.where(seq==self.tokenizer.padToken)[0][0])
-                     if self.tokenizer.padToken in seq
-                     else 0)
-
-    endTokens = self.tokenizer.metaTokenValues
-    closed_hole = np.zeros(seq_length, dtype=np.bool)
-    new_hole = np.zeros(seq_length, dtype=np.bool)
-    temp_seq = seq.numpy().copy()
-
-    for target_idx in torch.where((seq == self.tokenizer.holeToken) | (seq == self.tokenizer.maskToken))[0]:
-      idx        = int(target_idx)
-      if scores_history is not None:
-        scores_history.append(prediction_scores[target_idx].numpy())
-      prediction = int(self.argmax(prediction_scores[target_idx]))
-      step_indices.append([prediction])
-      is_hole = temp_seq[idx] == self.tokenizer.holeToken
-
-      if prediction in endTokens:
-        # Model predicted sth that will close the hole.
-        closed_hole[idx] = True
-        continue
-
-      # We replace the hole with a prediction
-      temp_seq[idx] = prediction
-      rem_adds = allowed_incr + np.sum(closed_hole) - np.sum(new_hole)
-      if is_hole and rem_adds:
-        # if this was a hole and we have more empty space, reinsert the hole
-        new_hole[idx] = True
-      else:
-        step_indices[-1].append(self.tokenizer.endholeToken)
-
-    new_seq = np.full(seq_length, self.tokenizer.padToken, dtype=np.int64)
-    new_idx = 0
-    for idx, t in enumerate(temp_seq):
-      if closed_hole[idx]:
-        continue
-      new_seq[new_idx] = t
-      new_idx += 1
-      if new_hole[idx]:
-        new_seq[new_idx] = self.tokenizer.holeToken
-        new_idx += 1
-      if new_idx >= seq_length:
-        break
-
-    new_seq = torch.LongTensor([new_seq])
-    attention_mask = (new_seq != self.tokenizer.padToken)
-
-    # Update sample indices
-    t_idx = 0
-    for target_indices, _ in enumerate(sample_indices):
-      if len(sample_indices[target_indices]) == 0 or sample_indices[target_indices][-1] not in endTokens:
-        sample_indices[target_indices] += step_indices[t_idx]
-        t_idx += 1
-
-    return np.any(new_hole), new_seq, attention_mask
-
-  def BatchStepSampleSeq(self,
-                         batch             : torch.LongTensor,
-                         batch_idxs        : torch.LongTensor,
-                         sample_indices    : torch.LongTensor,
-                         indices_lengths   : torch.LongTensor,
-                         prediction_scores : torch.LongTensor,
-                         device,
-                         ) -> typing.Tuple[
-                                bool,
-                                torch.LongTensor,
-                                np.array,
-                              ]:
-    """
-    Applies sample step predictions to input batch of sequences.
+    Applies sample step with hole predictions to input batch.
     """
     endTokens = self.tokenizer.metaTokenValues
     # Array of boolean values, shows where holes are still left.
@@ -526,6 +415,46 @@ class CompilationSampler(object):
         # Replace with prediction and keep hole.
         batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], predictions[seq_idx].unsqueeze(0), batch[seq_idx][el_idx:][:-1]), 0)
         new_hole[seq_idx] = True
+      q_idx = batch_idxs[seq_idx]
+      sample_indices[q_idx][el_idx] = predictions[seq_idx]
+      if indices_lengths is not None:
+        indices_lengths[seq_idx] += 1
+
+    return new_hole
+
+  def StepMaskSeq(self,
+                  batch             : torch.LongTensor,
+                  batch_idxs        : torch.LongTensor,
+                  sample_indices    : torch.LongTensor,
+                  indices_lengths   : torch.LongTensor,
+                  prediction_scores : torch.LongTensor,
+                  device,
+                  ) -> typing.Tuple[
+                         bool,
+                         torch.LongTensor,
+                         np.array,
+                       ]:
+    """
+    Applies sample step with mask predictions to input batch.
+    """
+    endTokens = self.tokenizer.metaTokenValues
+    # Array of boolean values, shows where holes are still left.
+    new_hole = torch.zeros(len(batch), dtype=np.bool)
+
+    # [seq_idx, hole_idx] of batch.
+    idxs, targets = torch.where(batch == self.tokenizer.maskToken)
+    # Predictions for these indices.
+    predictions = self.argmax(prediction_scores[(idxs, targets)])
+
+    for seq_idx, el_idx in zip(idxs, targets):
+      # seq_idx -> indices within the batch
+      # el_idx  -> element index within a sequence
+      if int(predictions[seq_idx]) in endTokens:
+        # Close hole, shift left one position, add pad to the end.
+        batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], batch[seq_idx][el_idx+1:], torch.LongTensor([self.tokenizer.padToken]).to(device)), 0)
+      else:
+        # Casually replace the [MASK] with the single predicted token.
+        batch[seq_idx][el_idx] = predictions[seq_idx]
       q_idx = batch_idxs[seq_idx]
       sample_indices[q_idx][el_idx] = predictions[seq_idx]
       if indices_lengths is not None:
