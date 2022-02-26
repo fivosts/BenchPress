@@ -437,10 +437,6 @@ class CompilationSampler(object):
     """
     Applies sample step with mask predictions to input batch.
     """
-    endTokens = self.tokenizer.metaTokenValues
-    # Array of boolean values, shows where holes are still left.
-    new_hole = torch.zeros(len(batch), dtype=np.bool)
-
     # [seq_idx, hole_idx] of batch.
     idxs, targets = torch.where(batch == self.tokenizer.maskToken)
     # Predictions for these indices.
@@ -449,7 +445,7 @@ class CompilationSampler(object):
     for seq_idx, el_idx in zip(idxs, targets):
       # seq_idx -> indices within the batch
       # el_idx  -> element index within a sequence
-      if int(predictions[seq_idx]) in endTokens:
+      if int(predictions[seq_idx]) in self.tokenizer.metaTokenValues:
         # Close hole, shift left one position, add pad to the end.
         batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], batch[seq_idx][el_idx+1:], torch.LongTensor([self.tokenizer.padToken]).to(device)), 0)
       else:
@@ -460,4 +456,4 @@ class CompilationSampler(object):
       if indices_lengths is not None:
         indices_lengths[seq_idx] += 1
 
-    return new_hole
+    return torch.zeros(len(batch), dtype=np.bool)
