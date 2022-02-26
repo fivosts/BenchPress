@@ -294,7 +294,7 @@ class Corpus(object):
         query = query.order_by(func.random())
       return self.config.contentfile_separator.join([x[0] for x in query])
 
-  def GetTrainingDataGenerator(self, offset: int = None):
+  def GetTrainingDataGenerator(self, offset: int = None) -> typing.Generator:
     with self.encoded.Session() as session:
       if offset is None:
         for x in session.query(encoded.EncodedContentFile).yield_per(1000000):
@@ -329,6 +329,28 @@ class Corpus(object):
       random.shuffle(self._indices_arrays)
 
     return self._indices_arrays
+
+  def GetTrainingDataWFeatures(self,
+                               shuffle: bool = False,
+                               sequence_length: int = False,
+                               ) -> np.ndarray:
+    """Concatenate the entire encoded corpus into an array.
+
+    Args:
+      shuffle: If true, randomize order of encoded contentfiles.
+      sequence_length: If set, query is optimized to bring only fitting sequences.
+
+    Returns:
+      The encoded corpus.
+    """
+    with self.encoded.Session() as session:
+      if sequence_length:
+        data = [[x.indices_array, x.features] for x in session.query(encoded.EncodedContentFile).filter(encoded.EncodedContentFile.tokencount <= sequence_length).yield_per(1000000)]
+      else:
+        data = [[x.indices_array, x.features] for x in session.query(encoded.EncodedContentFile).yield_per(1000000)]
+    if shuffle:
+      random.shuffle(data)
+    return data
 
   def GetTrainingFeatures(self, sequence_length: int) -> typing.List[typing.Dict[str, typing.Dict[str, float]]]:
     """
