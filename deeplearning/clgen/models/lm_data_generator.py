@@ -278,16 +278,23 @@ class MaskLMDataGenerator(object):
     self.max_position_embeddings = None
     self.num_epochs              = None
 
+    self.feature_encoder         = None
+    self.feature_tokenizer       = None
+    self.feature_sequence_length = None
+
     self.sampler                 = None
     self.rngen                   = None
     return
 
   def TrainMaskLMBatchGenerator(self,
-                                corpus: "corpuses.Corpus",
-                                training_opts: model_pb2.TrainingOptions,
-                                cache_path: pathlib.Path,
-                                num_train_steps: int = None,
-                                pre_train: bool = False,
+                                corpus                  : "corpuses.Corpus",
+                                training_opts           : model_pb2.TrainingOptions,
+                                cache_path              : pathlib.Path,
+                                num_train_steps         : int                         = None,
+                                pre_train               : bool                        = False,
+                                feature_encoder         : bool                        = False,
+                                feature_tokenizer       : tokenizers.FeatureTokenizer = None,
+                                feature_sequence_length : int                         = None,
                                 ) -> "data_generator.MaskLMDataGenerator":
     """Initializes data generator for training."""
     self.cache         = cache.mkcache(cache_path, "dataset")
@@ -300,6 +307,9 @@ class MaskLMDataGenerator(object):
     self.training_opts = training_opts
     self.rngen         = np.random # random.Random(training_opts.random_seed)
     self.pre_train     = pre_train
+    self.feature_encoder         = feature_encoder
+    self.feature_tokenizer       = feature_tokenizer
+    self.feature_sequence_length = feature_sequence_length
     if num_train_steps:
       self.num_train_steps = num_train_steps
     else:
@@ -312,13 +322,16 @@ class MaskLMDataGenerator(object):
     return self
 
   def SampleMaskLMBatchGenerator(self,
-                                 model_opts,
-                                 sampler,
-                                 tokenizer,
-                                 seed: int,
-                                 sample_batch_size: int,
-                                 max_position_embeddings: int,
-                                 cache_path: pathlib.Path,
+                                 model_opts              : model_pb2.TrainingOptions,
+                                 sampler                 : samplers.Sampler,
+                                 tokenizer               : tokenizers.TokenizerBase,
+                                 seed                    : int,
+                                 sample_batch_size       : int,
+                                 max_position_embeddings : int,
+                                 cache_path              : pathlib.Path,
+                                 feature_encoder         : bool                        = False,
+                                 feature_tokenizer       : tokenizers.FeatureTokenizer = None,
+                                 feature_sequence_length : int                         = None,
                                  ) -> "data_generator.MaskLMBatchGenerator":
     """Initializes data generator for inference."""
     self.cache                   = cache.mkcache(cache_path, "dataset")
@@ -332,6 +345,10 @@ class MaskLMDataGenerator(object):
     self.rngen                   = np.random
     self.sample_batch_size       = sample_batch_size
     self.max_position_embeddings = max_position_embeddings
+
+    self.feature_encoder         = feature_encoder
+    self.feature_tokenizer       = feature_tokenizer
+    self.feature_sequence_length = feature_sequence_length
 
     self.training_opts                 = model_opts
     self.training_opts.sequence_length = sampler.sequence_length
@@ -615,7 +632,10 @@ class MaskLMDataGenerator(object):
         return encoded_corpus
       else:
         if environment.WORLD_RANK == 0:
-          encoded_corpus  = self.corpus.GetTrainingData(sequence_length = effect_seq_length if not self.config.truncate_large_kernels else None)
+          if not self.feature_encoder:
+            encoded_corpus = self.corpus.GetTrainingData(sequence_length = effect_seq_length if not self.config.truncate_large_kernels else None)
+          else:
+            encoded_corpus = self.corpus.GetTrainingDataWFeatures(sequence_length = effect_seq_length if not self.config.truncate_large_kernels else None)
 
     if self.config.datapoint_type == "kernel":
       if environment.WORLD_RANK == 0:
@@ -628,10 +648,26 @@ class MaskLMDataGenerator(object):
             for ftype, fvector in feature.items():
               feature_monitors[ftype].register(fvector)
 
+        if self.feature_encoder:
+          training_features = [x for _, x in encoded_corpus]
+          encoded_corpus    = [x for x, _ in encoded_corpus]
+
+        idx, t = set(), []
         if self.config.truncate_large_kernels:
-          encoded_corpus     = [list(x[:effect_seq_length]) for x in encoded_corpus if len(x[:effect_seq_length]) <= effect_seq_length] # Account for start and end token
+          for i, x in enumerate(encoded_corpus):
+            if len(x[:effect_seq_length]) <= effect_seq_length:
+              t.append(list(x[:effect_seq_length]))
+            else:
+              idx.add(i)
         else:
-          encoded_corpus     = [list(x) for x in encoded_corpus if len(x) <= effect_seq_length] # Account for start and end token
+          for i, x in enumerate(encoded_corpus):
+            if len(x) <= effect_seq_length:
+              t.append(list(x))
+            else:
+              idx.add(i)
+        encoded_corpus = t
+        if self.feature_encoder:
+          training_features = [x for i, x in enumerate(training_features) if i not in idx]
 
         reduced_length       = copy.deepcopy(len(encoded_corpus))
         # Add start/end tokens
@@ -641,9 +677,18 @@ class MaskLMDataGenerator(object):
         kernel_length_monitor.register([len(x) for x in encoded_corpus])
         # pad sequences to sequence length
         encoded_corpus       = np.array([x + pad * (sequence_length - len(x)) for x in encoded_corpus])
-        # Clone datapoints dupe_factor times
-        # shaped_corpus   = np.repeat(encoded_corpus, dupe_factor, axis = 0)
-        shaped_corpus     = encoded_corpus
+
+        if self.feature_encoder:
+          expanded_corpus  = []
+          encoded_features = []
+          for dp, fvec in zip(encoded_corpus, training_features):
+            for fspace in extractor.extractors.keys():
+              if fspace in fvec:
+                expanded_corpus.append(dp)
+                encoded_features.append(self.feature_tokenizer.TokenizeVector(fvec[fspace], fspace, self.feature_sequence_length))
+          shaped_corpus = [[src, feats] for src, feats in zip(expanded_corpus, encoded_features)]
+        else:
+          shaped_corpus     = encoded_corpus
         # Shuffle
         if shuffle:
           self.rngen.shuffle(shaped_corpus)
@@ -653,13 +698,12 @@ class MaskLMDataGenerator(object):
         if self.num_train_steps:
           self.num_epochs      = self.num_train_steps // self.config.steps_per_epoch
         self.steps_per_epoch = self.config.steps_per_epoch
-        assert shaped_corpus.ndim     == 2, "corpus dim: {}".format(shaped_corpus.shape)
-        assert shaped_corpus.shape[1] == sequence_length, "Dim 1 shape mismatch: {}, target: {}".format(shaped_corpus.shape[1], sequence_length)
 
         l.logger().info("{} kernels were rejected (larger than sequence_length)".format(initial_length - reduced_length))
         l.logger().info(
-          "Loaded corpus of shape {} multiplied by dupe factor: {} in {} ms.".format(
-                    shaped_corpus.shape,
+          "Loaded corpus of shape {}x{} multiplied by dupe factor: {} in {} ms.".format(
+                    len(shaped_corpus),
+                    sequence_length,
                     dupe_factor,
                     humanize.intcomma(int((time.time() - start_time) * 1000)),
                 )
