@@ -316,6 +316,8 @@ class MaskLMDataGenerator(object):
       self.num_train_steps = self.training_opts.num_train_steps
     shaped_corpus = self.createCorpus(self.cache.path)
     if self.config.datapoint_time == "pre":
+      if self.feature_encoder:
+        raise NotImplementedError("Pre masking corpus does not work with feature encoding model.")
       # 'pre' pre-processes/masks training/validation/sampling corpus for the model to use.
       # 'online' stores the raw data and masks them on the fly.
       self.configDataset(shaped_corpus)
@@ -685,7 +687,7 @@ class MaskLMDataGenerator(object):
             for fspace in extractor.extractors.keys():
               if fspace in fvec:
                 expanded_corpus.append(dp)
-                encoded_features.append(self.feature_tokenizer.TokenizeVector(fvec[fspace], fspace, self.feature_sequence_length))
+                encoded_features.append(self.feature_tokenizer.TokenizeFeatureVector(fvec[fspace], fspace, self.feature_sequence_length))
           shaped_corpus = [[src, feats] for src, feats in zip(expanded_corpus, encoded_features)]
         else:
           shaped_corpus     = encoded_corpus
