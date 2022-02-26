@@ -108,8 +108,18 @@ class torchBert(backends.BackendBase):
     from deeplearning.clgen.util import pytorch
     pytorch.initPytorch()
 
-    if self.config.architecture.feature_encoder:
-      self.feature_tokenizer = kwargs.pop('feature_tokenizer')
+    if self.config.architecture.HasField("feature_encoder") and self.config.architecture.feature_encoder:
+      self.feature_encoder   = True
+      self.feature_tokenizer = tokenizers.FeatureTokenizer.FromArgs(
+        self.config.architecture.feature_singular_token_thr,
+        self.config.architecture.feature_max_value_token,
+        self.config.architecture.feature_token_range
+      )
+      self.feature_sequence_length = self.config.architecture.feature_sequence_length
+    else:
+      self.feature_encoder         = True
+      self.feature_tokenizer       = None
+      self.feature_sequence_length = None
 
     self.pytorch             = pytorch
     self.torch               = pytorch.torch
@@ -165,10 +175,10 @@ class torchBert(backends.BackendBase):
           "layer_norm_eps"               : self.config.architecture.layer_norm_eps,
           "pad_token_id"                 : self.tokenizer.padToken,
     }
-    if self.config.architecture.feature_encoder:
+    if self.feature_encoder:
       self.featureAttrs = {
-        "feature_encoder"                 : self.config.architecture.feature_encoder,
-        "feature_sequence_length"         : self.config.architecture.feature_sequence_length,
+        "feature_encoder"                 : self.feature_encoder,
+        "feature_sequence_length"         : self.feature_sequence_length,
         "feature_embedding_size"          : self.config.architecture.feature_embedding_size,
         "feature_pad_idx"                 : self.feature_tokenizer.padToken,
         "feature_dropout_prob"            : self.config.architecture.feature_dropout_prob,
@@ -397,7 +407,10 @@ class torchBert(backends.BackendBase):
         corpus, self.config.training,
         self.cache.path,
         self.config.training.num_pretrain_steps if pre_train else None,
-        pre_train
+        pre_train,
+        self.feature_encoder,
+        self.feature_tokenizer,
+        self.feature_sequence_length,
       ), pre_train
     )
 
@@ -725,7 +738,10 @@ class torchBert(backends.BackendBase):
     sample_batch_size = sampler.batch_size
     data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
                        self.config.training, sampler, self.tokenizer, seed, sample_batch_size,
-                       self.config.architecture.max_position_embeddings, self.cache.path, corpus
+                       self.config.architecture.max_position_embeddings, self.cache.path, corpus,
+                       self.feature_encoder,
+                       self.feature_tokenizer,
+                       self.feature_sequence_length,
                      )
     self._ConfigSampleParams(data_generator, sampler)
     ckpt_step = self.loadCheckpoint(self.sample)
@@ -748,7 +764,10 @@ class torchBert(backends.BackendBase):
       self.sample = self.sample._replace(
         data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
           self.config.training, sampler, self.tokenizer, 0, sampler.batch_size,
-          self.config.architecture.max_position_embeddings, self.cache.path
+          self.config.architecture.max_position_embeddings, self.cache.path,
+          self.feature_encoder,
+          self.feature_tokenizer,
+          self.feature_sequence_length,
         )
       )
       self.step_inputs, self.loader, self.pred_iterator = None, None, None
