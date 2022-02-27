@@ -89,6 +89,7 @@ class CompilationSampler(object):
                             model             : typing.TypeVar("model.BertPreTrainedModel"),
                             device            : torch.device,
                             input_ids         : torch.LongTensor,
+                            input_features    : torch.LongTensor,
                             prediction_scores : torch.FloatTensor,
                             position_ids      : torch.LongTensor,
                             masked_lm_labels  : torch.LongTensor,
@@ -99,6 +100,7 @@ class CompilationSampler(object):
                               model             = model,
                               device            = device,
                               input_ids         = input_ids        [i],
+                              input_features    = input_features   [i],
                               prediction_scores = prediction_scores[i],
                               position_ids      = position_ids     [i],
                               masked_lm_labels  = masked_lm_labels [i],
@@ -114,6 +116,7 @@ class CompilationSampler(object):
                       model             : typing.TypeVar("model.BertPreTrainedModel"),
                       device            : torch.device,
                       input_ids         : torch.LongTensor,
+                      input_features    : torch.LongTensor,
                       prediction_scores : torch.FloatTensor,
                       position_ids      : torch.LongTensor,
                       masked_lm_labels  : torch.LongTensor,
@@ -134,9 +137,8 @@ class CompilationSampler(object):
     new_holes, next_input_ids, attention_mask = self.StepTrainingSeq(input_ids, prediction_scores)
     with torch.no_grad():
       while new_holes:
-        # next_prediction_scores, _, _, _ = model.get_output(
-        next_prediction_scores, _, _ = model.get_output(
-          next_input_ids.to(device), attention_mask.to(device), position_ids,
+        next_prediction_scores, _, _, _ = model.get_output(
+          next_input_ids.to(device), attention_mask.to(device), position_ids, input_features
         )
         new_holes, next_input_ids, attention_mask = self.StepTrainingSeq(
           next_input_ids[0], next_prediction_scores[0],
@@ -220,6 +222,7 @@ class CompilationSampler(object):
                           model             : typing.TypeVar("model.BertPreTrainedModel"),
                           device            : torch.device,
                           input_ids         : torch.LongTensor,
+                          input_features    : torch.LongTensor,
                           prediction_scores : torch.FloatTensor,
                           position_ids      : torch.LongTensor,
                           is_live           : bool,
@@ -247,9 +250,8 @@ class CompilationSampler(object):
 
     while torch.any(new_holes):
 
-      # prediction_scores, _, _, _ = model.get_output(
-      prediction_scores, _, _ = model.get_output(
-        input_ids, attention_mask, position_ids[:len(input_ids)],
+      prediction_scores, _, _, _ = model.get_output(
+        input_ids, attention_mask, position_ids[:len(input_ids)], input_features,
       )
 
       new_holes = self.step_batch(input_ids, prediction_scores, device)
@@ -268,8 +270,10 @@ class CompilationSampler(object):
                              device                  : torch.device,
                              workload_input_ids      : torch.LongTensor,
                              workload_attention_mask : torch.LongTensor,
+                             workload_input_features : torch.LongTensor,
                              prediction_scores       : torch.FloatTensor,
                              position_ids            : torch.LongTensor,
+                             bar                     : 'tqdm.tqdm', = None,
                              ) -> typing.Tuple[typing.List[np.array], typing.List[typing.List[int]]]:
     """
     This function receives a full workload of input ids to be sampled.
@@ -291,6 +295,10 @@ class CompilationSampler(object):
     input_ids      = workload_input_ids[0]
     input_idxs     = torch.arange(batch_size).to(device)
     attention_mask = workload_attention_mask[0]
+    if workload_input_features is not None:
+      input_features = workload_input_features[0]
+    else:
+      input_features = None
 
     # sample indices array that will be returned.
     sample_indices = torch.full((nseq, sequence_length), self.tokenizer.padToken).to(device)
@@ -303,6 +311,8 @@ class CompilationSampler(object):
     queue_input_ids      = torch.reshape(workload_input_ids, (1, nseq, sequence_length)).squeeze()
     queue_input_idxs     = torch.arange(nseq).to(device)
     queue_attention_mask = torch.reshape(workload_attention_mask, (1, nseq, sequence_length)).squeeze()
+    if workload_input_features is not None:
+      queue_input_features = torch.reshape(workload_input_features, (1, nseq, sequence_length)).squeeze()
 
     #! This is the return queue [nseq x sequence_length].
     queue = torch.zeros(tuple(queue_input_ids.shape)).to(device)
@@ -320,6 +330,8 @@ class CompilationSampler(object):
 
     for i in closed_holes:
       queue[input_idxs[i]] = input_ids[i]
+      if bar:
+        bar.update(1)
 
     input_ids      = torch.index_select(input_ids, 0, open_holes)
     input_idxs     = torch.index_select(input_idxs, 0, open_holes)
@@ -332,15 +344,16 @@ class CompilationSampler(object):
       input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res]), 0)
       input_idxs     = torch.cat((input_idxs, queue_input_idxs[w_idx: w_idx + res]), 0)
       attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res]), 0)
+      if input_features is not None:
+        input_features = torch.cat((input_features, queue_input_features[w_idx: w_idx + res]), 0)
       if FLAGS.sample_indices_limit:
         sidx_length  = torch.cat((sidx_length, torch.full((res, 1), 0).to(device)), 0)
       w_idx += res
 
     while w_idx < nseq or torch.any(new_holes):
 
-      # prediction_scores, _, _, _ = model.get_output(
-      prediction_scores, _, _ = model.get_output(
-        input_ids, attention_mask, position_ids[:len(input_ids)],
+      prediction_scores, _, _, _ = model.get_output(
+        input_ids, attention_mask, position_ids[:len(input_ids)], input_features
       )
       # Array of new hole existence per seq idx
       new_holes = self.step_batch(
@@ -359,7 +372,9 @@ class CompilationSampler(object):
       # Add to return queue those that have finished.
       for i in closed_holes:
         queue[input_idxs[i]] = input_ids[i]
-
+        if bar:
+          bar.update(1)
+    
       input_ids      = torch.index_select(input_ids, 0, open_holes)
       input_idxs     = torch.index_select(input_idxs, 0, open_holes)
       attention_mask = (input_ids != self.tokenizer.padToken)
@@ -371,6 +386,8 @@ class CompilationSampler(object):
         input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res]), 0)
         input_idxs     = torch.cat((input_idxs, queue_input_idxs[w_idx: w_idx + res]), 0)
         attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res]), 0)
+        if input_features is not None:
+          input_features = torch.cat((input_features, queue_input_features[w_idx: w_idx + res]), 0)
         if FLAGS.sample_indices_limit:
           sidx_length  = torch.cat((sidx_length, torch.full((res, 1), 0).to(device)), 0)
         w_idx += res
