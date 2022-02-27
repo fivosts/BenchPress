@@ -45,6 +45,7 @@ class OnlineDataset(torch.utils.data.Dataset):
       self.dataset       = full_dataset[:int(len(full_dataset) * (1 - (dg.config.validation_split / 100)))]
     else:
       self.dataset       = full_dataset[int(len(full_dataset) * (1 - (dg.config.validation_split / 100))):]
+    self.feature_encoder = dg.feature_encoder
     self.cache_path      = dg.cache.path
     self.size            = len(self.dataset)
     self.cur_step        = 0
@@ -105,7 +106,11 @@ class OnlineDataset(torch.utils.data.Dataset):
       if -idx > len(self):
         raise ValueError("absolute value of index should not exceed dataset length")
       idx = len(self) + idx
-    k = self.func(self.dataset[idx])
+    if not self.feature_encoder:
+      k = self.func(self.dataset[idx])
+    else:
+      k = self.func(self.dataset[idx][0])
+      k['input_features'] = self.dataset[idx][1]
 
     if self.hlen_monitor:
       self.hlen_monitor.register([x for x in k['masked_lm_lengths'] if x >= 0])
@@ -177,6 +182,7 @@ class LazyOnlineDataset(torch.utils.data.Dataset):
     self.datasets = glob.glob(str(dg.cache.path / "{}corpus_*.pkl".format("pre_" if dg.pre_train else "")))
     self.cumulative_sizes = self.cumsum(self.datasets, dg.cache.path / "pre_lengths_cache.json")
 
+    self.feature_encoder = dg.feature_encoder
     self.curr_dset_idx = None
     self.dataset       = None
     self.is_train      = is_train
