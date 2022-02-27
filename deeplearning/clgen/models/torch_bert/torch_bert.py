@@ -629,8 +629,8 @@ class torchBert(backends.BackendBase):
                   original_input         = self.tokenizer.tokensToString(org,    with_formatting = True, ignore_token = self.tokenizer.padToken),
                   text                   = self.tokenizer.tokensToString(sample, with_formatting = True, ignore_token = self.tokenizer.padToken).replace("\\n", "\n"),
                   encoded_text           = ",".join([str(t) for t in sample]),
-                  sample_indices         = '\n'.join([','.join([self.tokenizer.decoder[idx] for idx in hole_idxs]).replace('\n', '\\n') for hole_idxs in idxs]),
-                  encoded_sample_indices = '\n'.join([','.join([str(idx) for idx in hole_idxs]) for hole_idxs in idxs]),
+                  sample_indices         = ','.join([self.tokenizer.decoder[idx].replace('\n', '\\n') for idx in idxs]).replace('\n', '\\n'),
+                  encoded_sample_indices = ','.join([str(idx) for idx in idxs]),
                   sample_time_ms         = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
                   feature_vector         = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
                   num_tokens             = len(sample),
@@ -845,7 +845,7 @@ class torchBert(backends.BackendBase):
           raise NotImplementedError("This will not work because generated_samples and sample indices are lists and not tensors")
         else:
           generated_samples = step_out['generated_samples']
-          sample_indices    = [step_out['sample_indices']]
+          sample_indices    = step_out['sample_indices']
 
         if self.sampler.is_live and input("Show logits figure ? [y/!y]") == "y":
           if self.pytorch.num_nodes > 1:
