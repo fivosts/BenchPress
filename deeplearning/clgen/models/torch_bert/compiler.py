@@ -273,7 +273,7 @@ class CompilationSampler(object):
                              workload_input_features : torch.LongTensor,
                              prediction_scores       : torch.FloatTensor,
                              position_ids            : torch.LongTensor,
-                             bar                     : 'tqdm.tqdm', = None,
+                             bar                     : 'tqdm.tqdm' = None,
                              ) -> typing.Tuple[typing.List[np.array], typing.List[typing.List[int]]]:
     """
     This function receives a full workload of input ids to be sampled.
