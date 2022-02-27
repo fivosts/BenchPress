@@ -555,9 +555,9 @@ class BertMLMFeatureHead(torch.nn.Module):
     super().__init__()
     self.predictions = BertLMFeaturePredictionHead(config)
 
-  def forward(self, sequence_output):
-    prediction_scores, encoded_features = self.predictions(sequence_output)
-    return prediction_scores
+  def forward(self, sequence_output, features):
+    prediction_scores, encoded_features = self.predictions(sequence_output, features)
+    return prediction_scores, encoded_features
 
 class BertPreTrainingHeads(torch.nn.Module):
   def __init__(self, config):
@@ -742,9 +742,11 @@ class BertForPreTraining(BertPreTrainedModel):
 
     self.bert = BertModel(config)
     if self.config.feature_encoder:
-      self.cls = BertLMFeaturePredictionHead(config)
+      self.cls        = BertMLMFeatureHead(config)
+      self.get_output = self.get_lm_feature_output
     else:
       self.cls = BertOnlyMLMHead(config)
+      self.get_output = self.get_lm_output
 
     if self.config.reward_compilation >= 0 or self.config.is_sampling:
       self.compile_sampler = compiler.CompilationSampler(
@@ -758,16 +760,17 @@ class BertForPreTraining(BertPreTrainedModel):
   def get_output_embeddings(self):
     return self.cls.predictions.decoder
 
-  def get_output(self,
-                 input_ids,
-                 attention_mask,
-                 position_ids,
-                 token_type_ids       = None,
-                 head_mask            = None,
-                 inputs_embeds        = None,
-                 output_attentions    = None,
-                 output_hidden_states = None,
-                 ) -> typing.Tuple[torch.FloatTensor, torch.FloatTensor]:
+  def get_lm_output(self,
+                    input_ids,
+                    attention_mask,
+                    position_ids,
+                    input_features       = None,
+                    token_type_ids       = None,
+                    head_mask            = None,
+                    inputs_embeds        = None,
+                    output_attentions    = None,
+                    output_hidden_states = None,
+                    ) -> typing.Tuple[torch.FloatTensor, torch.FloatTensor]:
     outputs = self.bert(
       input_ids            = input_ids,
       attention_mask       = attention_mask,
@@ -779,15 +782,39 @@ class BertForPreTraining(BertPreTrainedModel):
       output_hidden_states = output_hidden_states,
     )
     sequence_output, pooled_output = outputs[:2]
-    # prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
     prediction_scores = self.cls(sequence_output)
-    # return prediction_scores, seq_relationship_score, outputs[0], outputs[1]
-    return prediction_scores, outputs[0], outputs[1]
+    return prediction_scores, None, outputs[0], outputs[1]
+
+  def get_lm_feature_output(self,
+                            input_ids,
+                            attention_mask,
+                            position_ids,
+                            input_features       = None,
+                            token_type_ids       = None,
+                            head_mask            = None,
+                            inputs_embeds        = None,
+                            output_attentions    = None,
+                            output_hidden_states = None,
+                            ) -> typing.Tuple[torch.FloatTensor, torch.FloatTensor]:
+    outputs = self.bert(
+      input_ids            = input_ids,
+      attention_mask       = attention_mask,
+      position_ids         = position_ids,
+      token_type_ids       = token_type_ids,
+      head_mask            = head_mask,
+      inputs_embeds        = inputs_embeds,
+      output_attentions    = output_attentions,
+      output_hidden_states = output_hidden_states,
+    )
+    sequence_output, pooled_output = outputs[:2]
+    prediction_scores, encoded_features = self.cls(sequence_output, input_features)
+    return prediction_scores, encoded_features, outputs[0], outputs[1]
 
   def forward(
     self,
     input_ids        = None,
     attention_mask   = None,
+    input_features   = None,
     token_type_ids   = None,
     position_ids     = None,
     head_mask        = None,
@@ -833,33 +860,38 @@ class BertForPreTraining(BertPreTrainedModel):
     >>> seq_relationship_logits = outputs.seq_relationship_logits
     """
     if workload is not None:
-      input_ids, attention_mask, position_ids = workload
+      input_ids, attention_mask, position_ids, input_features = workload
     
     device = input_ids.get_device()
     device = device if device >= 0 else 'cpu'
 
     if workload is not None:
-      prediction_scores, hidden_states, attentions = self.get_output(
-        input_ids[0], attention_mask[0], position_ids[0]
+      prediction_scores, encoded_features, hidden_states, attentions = self.get_output(
+        input_ids[0], attention_mask[0], position_ids[0], input_features[0]
       )
+      bar = kwargs.get('bar', None)
       return self.compile_sampler.generateSampleWorkload(
         self,
         device,
         input_ids,
         attention_mask,
+        input_features,
         prediction_scores,
         position_ids[0],
+        bar = bar,
       )
 
-    prediction_scores, hidden_states, attentions = self.get_output(
-      input_ids, attention_mask, position_ids, token_type_ids, head_mask,
-      inputs_embeds, output_attentions, output_hidden_states 
+    prediction_scores, encoded_features, hidden_states, attentions = self.get_output(
+      input_ids, attention_mask, position_ids, input_features,
+      token_type_ids, head_mask, inputs_embeds,
+      output_attentions, output_hidden_states 
     )
     if not is_validation and self.compile_sampler and step >= self.config.reward_compilation and not self.config.is_sampling:
       samples, compile_flag, masked_lm_labels = self.compile_sampler.generateTrainingBatch(
         self,
         device,
         input_ids.cpu(),
+        input_features.cpu(),
         prediction_scores.cpu(),
         torch.clone(position_ids),
         masked_lm_labels.cpu().numpy(),
@@ -883,6 +915,7 @@ class BertForPreTraining(BertPreTrainedModel):
         self,
         device,
         input_ids,
+        input_features,
         prediction_scores,
         position_ids,
         is_live,
