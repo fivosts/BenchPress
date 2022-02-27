@@ -30,6 +30,7 @@ import numpy as np
 from absl import flags
 import tqdm
 
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.samplers import sample_observers
 from deeplearning.clgen.samplers import validation_database
@@ -307,7 +308,10 @@ class torchBert(backends.BackendBase):
     inputs['input_mask']           = inputs['input_mask'].to(self.pytorch.device)
     inputs['position_ids']         = inputs['position_ids'].to(self.pytorch.device)
     inputs['mask_labels']          = inputs['mask_labels'].to(self.pytorch.device)
-    # inputs['next_sentence_labels'] = inputs['next_sentence_labels'].to(self.pytorch.device)
+    if 'input_features' in inputs:
+      inputs['input_features'] = inputs['input_features'].to(self.pytorch.device)
+    else:
+      inputs['input_features'] = None
     return inputs
 
   def model_step(self,
@@ -324,8 +328,8 @@ class torchBert(backends.BackendBase):
                 input_ids            = inputs['input_ids'],
                 attention_mask       = inputs['input_mask'],
                 position_ids         = inputs['position_ids'],
+                input_features       = inputs['input_features'],
                 masked_lm_labels     = inputs['mask_labels'],
-                # next_sentence_labels = inputs['next_sentence_labels'],
                 is_validation        = is_validation,
                 step                 = step,
                 is_live              = is_live,
@@ -355,12 +359,15 @@ class torchBert(backends.BackendBase):
     else:
       desc = "Sampling"
     if not is_live:
-      bar = tqdm.auto.trange(len(inputs['input_ids']) * len(inputs['input_ids'][0]), desc=desc, leave = False, position = 0)
+      wload_size = len(inputs['input_ids']) * len(inputs['input_ids'][0])
+      inputs = self.to_device(inputs)
+      bar = tqdm.auto.trange(wload_size, desc=desc, leave = False, position = 0)
       samples, sample_indices = model(
         workload = (
-          inputs['input_ids'].to(self.pytorch.device),
-          inputs['input_mask'].to(self.pytorch.device),
-          inputs['position_ids'].to(self.pytorch.device)
+          inputs['input_ids'],
+          inputs['input_mask'],
+          inputs['position_ids'],
+          inputs['input_features'],
         ),
       )
       outputs['generated_samples'] = list(samples.detach().cpu().numpy())
@@ -370,11 +377,12 @@ class torchBert(backends.BackendBase):
       bar.update(len(outputs['generated_samples']))
     else:
       raise NotImplementedError ("Haven't implemented live sampling.")
+      inputs = self.to_device(inputs)
       out = model(
-        input_ids        = inputs['input_ids'].to(self.pytorch.device),
-        attention_mask   = inputs['input_mask'].to(self.pytorch.device),
-        position_ids     = inputs['position_ids'].to(self.pytorch.device),
-        masked_lm_labels = inputs['mask_labels'].to(self.pytorch.device),
+        input_ids        = inputs['input_ids'],
+        attention_mask   = inputs['input_mask'],
+        position_ids     = inputs['position_ids'],
+        masked_lm_labels = inputs['mask_labels'],
         is_live          = is_live,
       )
       outputs['generated_samples'] += out['generated_samples']
