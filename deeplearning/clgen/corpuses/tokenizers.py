@@ -834,7 +834,7 @@ class FeatureTokenizer(TokenizerBase):
       "InstCountFeatures": 70,
     }
 
-    assert seq_len > sum(list(f_len.values())), "Feature sequence length is not large enough to fit concatenation of feature spaces."
+    assert seq_len > sum(list(f_len.values())), "Feature sequence length is not large enough to fit concatenation of feature spaces: {}.".format(sum(list(f_len.values())))
     pad_len = seq_len - sum(list(f_len.values()))
 
     fv = sorted([[x, y] for x, y in fv.items()], key = lambda x: x[0])
