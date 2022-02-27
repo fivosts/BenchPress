@@ -451,6 +451,7 @@ class Model(object):
     continue_sampling = True
 
     if environment.WORLD_RANK == 0:
+      assert len(org_inputs) == len(input_ids) == len(samples) == len(indices), "Length mismatch, {}-{}-{}-{}".format(len(org_inputs), len(input_ids), len(samples), len(indices))
       for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
 
         src = self.tokenizer.ArrayToCode(sample, with_formatting = True)
@@ -466,8 +467,8 @@ class Model(object):
         sample = model_pb2.Sample(
           train_step                = epoch,
           text                      = src,
-          sample_indices            = '\n'.join([','.join([self.tokenizer.decoder[idx] for idx in hole_idxs]).replace('\n', '\\n') for hole_idxs in idxs]),
-          encoded_sample_indices    = '\n'.join([','.join([str(idx) for idx in hole_idxs]) for hole_idxs in idxs]),
+          sample_indices            = ','.join([self.tokenizer.decoder[idx].replace('\n', '\\n') for idx in idxs]).replace('\n', '\\n'),
+          encoded_sample_indices    = ','.join([str(idx) for idx in idxs]),
           original_input            = self.tokenizer.tokensToString(org, with_formatting = False, ignore_token = self.tokenizer.padToken),
           sample_feed               = self.tokenizer.tokensToString(inp, with_formatting = False, ignore_token = self.tokenizer.padToken),
           encoded_text              = ",".join([str(x) for x in sample]),
@@ -485,7 +486,8 @@ class Model(object):
           [obs.OnSample(sample) for obs in sample_observers]
         )
         seq_count += 1
-      distrib.write(str(continue_sampling))
+      if environment.WORLD_SIZE > 1:
+        distrib.write(str(continue_sampling))
     else:
       status = distrib.read()
       if status == "True":
