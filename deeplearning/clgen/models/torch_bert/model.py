@@ -896,7 +896,7 @@ class BertForPreTraining(BertPreTrainedModel):
       else:
         return {
           'generated_samples': samples,
-          # 'sample_indices'   : sample_indices,
+          'sample_indices'   : sample_indices,
         }
     else:
       loss_fct = torch.nn.CrossEntropyLoss()
