@@ -10,6 +10,9 @@ TASKS = {
 }
 
 class DownstreamTask(object):
+  """
+  Downstream Task generic class.
+  """
   @classmethod
   def FromTask(cls, task: str) -> "DownstreamTask":
     return TASKS[task]()
