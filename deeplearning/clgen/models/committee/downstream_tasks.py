@@ -14,10 +14,16 @@ class DownstreamTask(object):
   def FromTask(cls, task: str) -> "DownstreamTask":
     return TASKS[task]()
 
-  def __init__(self, task) -> None:
+  def __init__(self, name) -> None:
+    self.name = name
     return
 
 class GrewePredictive(DownstreamTask):
+  
   def __init__(self) -> None:
-    super(GrewePredictive, self).__init__()
+    super(GrewePredictive, self).__init__("GrewePredictive")
+    self.inputs        = ["comp", "mem", "localmem", "coalesced", "atomic"]
+    self.input_size    = 10
+    self.output_labels = ["CPU", "GPU"]
+    self.output_size   = 2
     return
