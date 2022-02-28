@@ -19,7 +19,9 @@ class DownstreamTask(object):
     return
 
 class GrewePredictive(DownstreamTask):
-  
+  """
+  Specification class for Grewe et al. CGO 2013 predictive model.
+  """
   def __init__(self) -> None:
     super(GrewePredictive, self).__init__("GrewePredictive")
     self.inputs        = ["comp", "mem", "localmem", "coalesced", "atomic"]
