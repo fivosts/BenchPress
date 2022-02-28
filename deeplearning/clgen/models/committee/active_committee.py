@@ -7,11 +7,24 @@ b) the confidence level of the committee for a datapoint (using entropy)
 """
 import typing
 import pathlib
+import copy
 
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.util.pytorch import torch
 
 class ActiveCommittee(backends.BackendBase):
+
+  class CommitteeEstimator(typing.NamedTuple):
+    """Named tuple to wrap BERT pipeline."""
+    model          : typing.TypeVar('nn.Module')
+    data_generator : torchLMDataGenerator
+    optimizer      : typing.Any
+    scheduler      : typing.Any
+
+  class SampleCommitteeEstimator(typing.NamedTuple):
+    """Named tuple for sampling BERT."""
+    model          : typing.List[typing.TypeVar('nn.Module')]
+    data_generator : torchLMDataGenerator
 
   def __init__(self, *args, **kwargs):
 
@@ -78,9 +91,73 @@ class ActiveCommittee(backends.BackendBase):
     )
     return
 
+  def _ConfigTrainParams(self, 
+                         data_generator: torchLMDataGenerator,
+                         ) -> None:
+    """
+    Model parameter initialization for training and validation.
+    """
+    self._ConfigModelParams(is_sampling = False)
+
+    self.train_batch_size                 = self.config.training.batch_size
+    self.eval_batch_size                  = self.config.training.batch_size
+    self.learning_rate                    = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
+    self.num_warmup_steps                 = self.config.training.num_warmup_steps
+    self.max_grad_norm                    = 1.0
+
+    self.steps_per_epoch                  = data_generator.steps_per_epoch
+    self.current_step                     = None
+    self.num_epochs                       = data_generator.num_epochs
+    self.num_train_steps                  = self.steps_per_epoch * self.num_epochs
+    self.max_eval_steps                   = FLAGS.max_eval_steps
+
+    self.validation_results_file          = "val_results.txt"
+    self.validation_results_path          = os.path.join(str(self.logfile_path), self.validation_results_file)
+
+    self.train = []
+
+    for model in model_committee:
+      m = model(self.config).to(self.pytorch.offset_device)
+      if self.pytorch.num_nodes > 1:
+        distrib.barrier()
+        m = self.torch.nn.parallel.DistributedDataParallel(
+          m,
+          device_ids    = [self.pytorch.offset_device],
+          output_device = self.pytorch.offset_device,
+        )
+      elif self.pytorch.num_gpus > 1:
+        m = self.torch.nn.DataParallel(m)
+
+      opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
+        model           = m,
+        num_train_steps = self.num_train_steps,
+        warmup_steps    = self.num_warmup_steps,
+        learning_rate   = self.learning_rate,
+      )
+      self.train.append(
+        ActiveCommittee.CommitteeEstimator(
+          m, copy.deepcopy(data_generator), opt, lr_scheduler
+        )
+      )
+    l.logger().info(self.GetShortSummary())
+    return
+
   def Train(self, corpus, **kwargs) -> None:
     """
     Training point of active learning committee.
     """
     raise NotImplementedError
+
+    self._ConfigTrainParams(
+      torchLMDataGenerator.TrainMaskLMBatchGenerator(
+        corpus, self.config.training,
+        self.cache.path,
+        self.config.training.num_pretrain_steps if pre_train else None,
+        pre_train,
+        self.feature_encoder,
+        self.feature_tokenizer,
+        self.feature_sequence_length,
+      ), pre_train
+    )
+
     return
