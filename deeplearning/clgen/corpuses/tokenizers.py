@@ -791,7 +791,7 @@ class FeatureTokenizer(TokenizerBase):
     while rb < max_value:
       token_list.append("[{}->{}]".format(lb, rb))
       lb, rb = rb, rb + threshold_range
-    token_list.append("[{}->inf]".format(rb))
+    token_list.append("[{}->inf]".format(lb))
     token_list += list(metaTokens.values())
 
     # Create full vocab and initialize Feature Tokenizer.
@@ -821,7 +821,7 @@ class FeatureTokenizer(TokenizerBase):
         if value >= lb and value < rb:
           return self.vocab["[{}->{}]".format(lb, rb)]
         lb, rb = rb, rb + self.threshold_range
-      raise KeyError(value)
+      return self.vocab["[{}->inf]".format(lb)]
 
   def TokenizeFeatureVector(self, fv: typing.Dict[str, float], fspace: str, seq_len: int) -> np.array:
     """
