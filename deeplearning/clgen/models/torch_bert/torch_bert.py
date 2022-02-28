@@ -107,7 +107,8 @@ class torchBert(backends.BackendBase):
     super(torchBert, self).__init__(*args, **kwargs)
     
     from deeplearning.clgen.util import pytorch
-    pytorch.initPytorch()
+    if not pytorch.initialized:
+      pytorch.initPytorch()
 
     if self.config.architecture.HasField("feature_encoder") and self.config.architecture.feature_encoder:
       self.feature_encoder   = True
