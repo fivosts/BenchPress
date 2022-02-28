@@ -37,6 +37,7 @@ devices       = None
 device        = None
 num_gpus      = None
 num_nodes     = None
+initialized   = False
 
 def initPytorch() -> None:
   global torch_tpu_available
@@ -45,6 +46,7 @@ def initPytorch() -> None:
   global device
   global num_gpus
   global num_nodes
+  global initialized
   if FLAGS.pt_cpu_only:
     device = torch.device("cpu")
     num_gpus  = 0
@@ -97,5 +99,5 @@ def initPytorch() -> None:
       device = torch.device("cuda", environment.LOCAL_RANK)
       offset_device = torch.device("cuda", environment.LOCAL_RANK)
       torch.cuda.set_device(device)
-
+  initialized = True
   return
