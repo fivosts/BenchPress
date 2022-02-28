@@ -859,7 +859,26 @@ class FeatureTokenizer(TokenizerBase):
                      ignore_token: int = None,
                      with_formatting: bool = False,
                      ):
-    raise NotImplementedError("TODO")
+    """Translate atomized features back into a string.
+
+    Args:
+      encoded: An nparray of encoded vocabulary indices.
+      ignore_token: A specific token to ignore from the text string (e.g. exclude pads)
+      with_formatting: Bool flag used to run clang format on stringified kernel. Used only in AST tokenizer.
+    Returns:
+      The decoded text.
+      Returns string if nparray is one-dimensional.
+      Else returns list for each extra dimension of strings.
+    """
+    try:
+      if np.ndim(encoded) > 1:
+        return [ self.tokensToString(x, ignore_token) for x in encoded ]
+      elif np.ndim(encoded) == 1:
+        return ",".join(list(map(lambda x: self.decoder[x] if x != ignore_token else '', encoded)))
+      else:
+        raise ValueError("Wrong encoded array specified")
+    except KeyError:
+      raise KeyError("Out of vocab: {}".format(encoded))
 
   def TokenizeString(self, text: str) -> np.array:
     raise TypeError("Operation not supported for FeatureTokenizer")
