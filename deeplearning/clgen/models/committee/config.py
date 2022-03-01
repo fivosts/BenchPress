@@ -3,6 +3,31 @@ class CommitteeConfig(object):
 
   model_type = "committee"
 
+  @classmethod
+  def FromConfig(cls, config: active_learning_pb2.Committee, downstream_task: downstream_tasks.DownstreamTask):
+    config = CommitteeConfig(config, downstream_task)
+    return config
+
+  @property
+  def use_return_dict(self) -> bool:
+    """
+    :obj:`bool`: Whether or not return :class:`~transformers.file_utils.ModelOutput` instead of tuples.
+    """
+    # If torchscript is set, force `return_dict=False` to avoid jit errors
+    return self.return_dict and not self.torchscript
+
+  @property
+  def num_labels(self) -> int:
+    """
+    :obj:`int`: The number of labels for classification models.
+    """
+    return len(self.id2label)
+
+  @num_labels.setter
+  def num_labels(self, num_labels: int):
+    self.id2label = {i: "LABEL_{}".format(i) for i in range(num_labels)}
+    self.label2id = dict(zip(self.id2label.values(), self.id2label.keys()))
+
   def __init__(
     self,
     vocab_size,
@@ -114,43 +139,3 @@ class CommitteeConfig(object):
       except AttributeError as err:
         l.logger().error("Can't set {} with value {} for {}".format(key, value, self))
         raise err
-
-  @classmethod
-  def from_dict(cls, bert_dict, **extra_args):
-    config = CommitteeConfig(
-      vocab_size                   = bert_dict['vocab_size'],
-      hidden_size                  = bert_dict['hidden_size'],
-      num_hidden_layers            = bert_dict['num_hidden_layers'],
-      num_attention_heads          = bert_dict['num_attention_heads'],
-      intermediate_size            = bert_dict['intermediate_size'],
-      hidden_act                   = bert_dict['hidden_act'],
-      hidden_dropout_prob          = bert_dict['hidden_dropout_prob'],
-      attention_probs_dropout_prob = bert_dict['attention_probs_dropout_prob'],
-      max_position_embeddings      = bert_dict['max_position_embeddings'],
-      type_vocab_size              = bert_dict['type_vocab_size'],
-      initializer_range            = bert_dict['initializer_range'],
-      layer_norm_eps               = bert_dict['layer_norm_eps'],
-      pad_token_id                 = bert_dict['pad_token_id'],
-      **extra_args,
-      )
-    return config
-
-  @property
-  def use_return_dict(self) -> bool:
-    """
-    :obj:`bool`: Whether or not return :class:`~transformers.file_utils.ModelOutput` instead of tuples.
-    """
-    # If torchscript is set, force `return_dict=False` to avoid jit errors
-    return self.return_dict and not self.torchscript
-
-  @property
-  def num_labels(self) -> int:
-    """
-    :obj:`int`: The number of labels for classification models.
-    """
-    return len(self.id2label)
-
-  @num_labels.setter
-  def num_labels(self, num_labels: int):
-    self.id2label = {i: "LABEL_{}".format(i) for i in range(num_labels)}
-    self.label2id = dict(zip(self.id2label.values(), self.id2label.keys()))
