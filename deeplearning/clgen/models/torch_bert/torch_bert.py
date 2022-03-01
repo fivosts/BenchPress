@@ -107,7 +107,8 @@ class torchBert(backends.BackendBase):
     super(torchBert, self).__init__(*args, **kwargs)
     
     from deeplearning.clgen.util import pytorch
-    pytorch.initPytorch()
+    if not pytorch.initialized:
+      pytorch.initPytorch()
 
     if self.config.architecture.HasField("feature_encoder") and self.config.architecture.feature_encoder:
       self.feature_encoder   = True
@@ -210,7 +211,7 @@ class torchBert(backends.BackendBase):
     self.train_batch_size                 = self.config.training.batch_size
     self.eval_batch_size                  = self.config.training.batch_size
     self.learning_rate                    = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
-    self.num_warmup_steps                 = self.config.training.num_warmup_steps if pre_train else self.config.training.num_prewarmup_steps
+    self.num_warmup_steps                 = self.config.training.num_warmup_steps if not pre_train else self.config.training.num_prewarmup_steps
     self.max_grad_norm                    = 1.0
 
     self.steps_per_epoch                  = data_generator.steps_per_epoch
