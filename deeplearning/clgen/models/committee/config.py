@@ -27,5 +27,7 @@ class CommitteeConfig(object):
                config: active_learning_pb2.Committee,
                downstream_task: downstream_tasks.DownstreamTask
                ) -> "CommitteeConfig":
+    self.config
+    self.task = downstream_task
 
     return
