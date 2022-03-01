@@ -23,6 +23,13 @@ class CommitteeConfig(object):
     """
     return self.task.output_size
 
+  @property
+  def num_features(self) -> int:
+    """
+    The number of input features to model committee.
+    """
+    return self.input_size
+
   def __init__(self,
                config: active_learning_pb2.Committee,
                downstream_task: downstream_tasks.DownstreamTask
