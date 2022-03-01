@@ -1,0 +1,140 @@
+# Compared to standard:
+# 1. 12 attention heads vs 4
+# 2. Hidden size is 768 vs 1024
+# 3. Intermediate size is 768 vs 1024
+# 4. warmup is 10,000 vs 5,000
+# 5. dupe factor is 20 instead of 50
+# 6. There can be up to 3 holes.
+# 7. Holes can be up to 10 tokens long.
+# 8. Learning rate increased to 45 from 40.
+working_dir: "AST" ## This path is relative to "workspace_dir", which is an app FLAG
+model {
+  corpus {
+    local_tar_archive: "$PWD/../corpus/corpus_1000.tar.bz2"
+    tokenizer {
+      token_type: "ast"
+      token_list: "deeplearning/clgen/corpuses/token_lists.json"
+      mask_tokens: true
+      wordpiece_tokenization: false
+    }
+    contentfile_separator: "\n\n\n\n"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangPreprocessWithShim"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:InvertKernelSpecifier"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:ExtractOnlySingleKernels"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:StringKernelsToSource"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:NormalizeIdentifiers"
+    preprocessor: "deeplearning.clgen.preprocessors.common:StripDuplicateEmptyLines"
+    preprocessor: "deeplearning.clgen.preprocessors.common:StripMultipleWhitespaces"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:SanitizeKernelPrototype"
+    preprocessor: "deeplearning.clgen.preprocessors.common:StripTrailingWhitespace"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:ClangFormat"
+    preprocessor: "deeplearning.clgen.preprocessors.common:MinimumLineCount3"
+    preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
+  }
+  architecture {
+    backend: TORCH_BERT
+    hidden_size: 768
+    num_hidden_layers: 2
+    num_attention_heads: 12
+    intermediate_size: 768
+    hidden_act: "gelu"
+    hidden_dropout_prob: 0.1
+    attention_probs_dropout_prob: 0.1
+    max_position_embeddings: 1024
+    layer_norm_eps: 1e-12
+    type_vocab_size: 16
+    initializer_range: 0.02
+    feature_encoder: true
+    feature_sequence_length: 256
+    feature_embedding_size: 256
+    feature_dropout_prob: 0.15
+    feature_singular_token_thr: 512
+    feature_max_value_token: 32768
+    feature_token_range: 2048
+    feature_num_attention_heads: 4
+    feature_transformer_feedforward: 2048
+    feature_layer_norm_eps: 1e-5
+    feature_num_hidden_layers: 2
+  }
+  training {
+    num_train_steps: 5000000
+    num_warmup_steps: 20000
+    sequence_length: 768
+    batch_size: 32
+    max_predictions_per_seq: 1
+    dupe_factor: 1
+    masked_lm_prob: 0.4
+    random_seed: 12345
+    shuffle_corpus_contentfiles_between_epochs: true
+    data_generator {
+      datapoint_type: "kernel"
+      datapoint_time: "online"
+      use_start_end : true
+      truncate_large_kernels: true
+      steps_per_epoch: 100000
+      validation_split: 0
+      hole {
+        relative_length: 1.0
+        uniform_distribution: true
+		    stage_training: false
+      }
+    }
+    adam_optimizer {
+      initial_learning_rate_micros: 45  # = 0.02 real value
+    }
+  }
+}
+# sampler {
+#   live_sampling: true
+#   batch_size: 4
+#   sequence_length: 768
+#   temperature_micros: 800000  # = 0.8 real value
+#   termination_criteria {
+#     maxlen {
+#       maximum_tokens_in_sample: 768
+#     }
+#   }
+# }
+# sampler {
+#   start_text: "[START]kernel void [HOLE]}[END]"
+#   batch_size: 4
+#   sequence_length: 768
+#   temperature_micros: 700000  # = 0.8 real value
+#   termination_criteria {
+#     maxlen {
+#       maximum_tokens_in_sample: 768
+#     }
+#   }
+# }
+sampler {
+  sample_corpus {
+    corpus_config {
+      active {
+        target: "rodinia"
+        active_limit_per_feed: 2000
+        active_search_depth: 100
+        active_search_width: 32
+        batch_size_per_feed: 2
+        feature_space: "GreweFeatures"
+      }
+      max_predictions_per_seq: 1
+      masked_lm_prob: 0.6
+      hole {
+        relative_length: 0.45
+        uniform_distribution: true
+      }
+    }
+    start_text: "[START]kernel void [HOLE]}[END]"
+  }
+  batch_size: 64
+  sequence_length: 768
+  temperature_micros: 700000  # = 0.8 real value
+  termination_criteria {
+    maxlen {
+      maximum_tokens_in_sample: 768
+    }
+  }
+}
