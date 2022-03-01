@@ -23,23 +23,10 @@ class CommitteeConfig(object):
     """
     return len(self.id2label)
 
-  def __init__(
-    self,
-    vocab_size,
-    hidden_size,
-    num_hidden_layers,
-    num_attention_heads,
-    intermediate_size,
-    hidden_act,
-    hidden_dropout_prob,
-    attention_probs_dropout_prob,
-    max_position_embeddings,
-    pad_token_id,
-    type_vocab_size,
-    initializer_range,
-    layer_norm_eps,
-    **kwargs
-  ):
+  def __init__(self,
+               config: active_learning_pb2.Committee,
+               downstream_task: downstream_tasks.DownstreamTask
+               ) -> "CommitteeConfig":
 
     ## Bert-specific attributes
     self.vocab_size = vocab_size
