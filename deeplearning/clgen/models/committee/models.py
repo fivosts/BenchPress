@@ -28,13 +28,40 @@ class Committee(torch.nn.Module):
   Abstract representation of model committee.
   """
   @classmethod
-  def FromConfig(cls, config: config.CommitteeConfig) -> "Committee":
+  def FromConfig(cls, config: config.CommitteeConfig) -> typing.List["Committee"]:
+    for idx, cf in config.models.items():
+      yield {
+        'MLP': MLP,
+      }[cf.name](idx, cf)
     return
 
-class MLP(torch.nn.Module):
-  def __init__(self, config: config.CommitteeConfig):
+  def __init__(self, id: int):
+    self.id = id
+    return
 
+class MLP(Committee):
+  """
+  A modular MLP model that supports Linear, Dropout, LayerNorm and activations.
+  """
+  def __init__(self, id: int, config: config.MLPConfig):
+    super(self, MLP).__init__(id)
+    self.config = config
+    self.layers = []
+
+    layers = {
+      'Linear'    : torch.nn.Linear,
+      'Dropout'   : torch.nn.Dropout,
+      'LayerNorm' : torch.nn.LayerNorm,
+    }
+    layers.update(ACT2FN)
+    for name, params in config.layers.items():
+      self.layers.append(
+        layers[name](**params)
+      )
     return
 
   def forward(self, inp: torch.Tensor) -> torch.Tensor:
-    return
+    out = inp
+    for layer in self.layers:
+      out = layer(out)
+    return out
