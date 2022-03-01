@@ -1,0 +1,51 @@
+// The file defines the protos for specificying Active learning commmittee for
+// query by committee sampling.
+syntax = "proto2";
+
+package clgen;
+
+option go_package = "clgenpb";
+option java_multiple_files = true;
+option java_outer_classname = "ActiveLearningProto";
+option java_package = "com.clgen";
+
+message ActiveLearner {
+  optional Committee committee    = 1;
+  optional string downstream_task = 2;
+}
+
+// Committee is a list of models.
+message Committee {
+  repeated MLP mlp = 1;
+  // repeated <ModelType> model_type = x;
+}
+
+// MLP-type architecture.
+message MLP {
+  repeated Linear    linear = 1;
+  repeated Dropout   dropout = 2;
+  repeated LayerNorm layer_norm = 3;
+  repeated ACT_fn    act_fn = 4;
+}
+
+// Linear specs.
+message Linear {
+  optional int32 in_features = 1;
+  optional int32 out_features = 2;
+}
+
+// Dropout Specs.
+message Dropout {
+  optional float dropout_prob = 1;
+}
+
+// LayerNorm specs.
+message LayerNorm {
+  optional float layer_norm_eps = 1;
+}
+
+// Activation function specs.
+message ACT_fn {
+  // Name of activation function.
+  optional string act_fn = 1;
+}
