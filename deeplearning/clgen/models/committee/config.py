@@ -8,6 +8,7 @@ def AssertConfigIsValid(config: active_learning_pb2:CommitteeConfig) -> active_l
   """
   Parse proto description and check for validity.
   """
+
   return
 
 class CommitteeConfig(object):
@@ -40,7 +41,10 @@ class CommitteeConfig(object):
                config: active_learning_pb2.Committee,
                downstream_task: downstream_tasks.DownstreamTask
                ) -> "CommitteeConfig":
-    self.config
-    self.task = downstream_task
-
+    self.config = config
+    self.task   = downstream_task
+    """
+    The config must look like this:
+    
+    """
     return
