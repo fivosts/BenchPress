@@ -4,7 +4,10 @@ class CommitteeConfig(object):
   model_type = "committee"
 
   @classmethod
-  def FromConfig(cls, config: active_learning_pb2.Committee, downstream_task: downstream_tasks.DownstreamTask):
+  def FromConfig(cls,
+                 config: active_learning_pb2.Committee,
+                 downstream_task: downstream_tasks.DownstreamTask
+                 ) -> "CommitteeConfig":
     config = CommitteeConfig(config, downstream_task)
     return config
 
