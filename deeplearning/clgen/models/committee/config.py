@@ -19,9 +19,9 @@ class CommitteeConfig(object):
   @property
   def num_labels(self) -> int:
     """
-    :obj:`int`: The number of labels for classification models.
+    The number of output labels for classification models.
     """
-    return len(self.id2label)
+    return self.task.output_size
 
   def __init__(self,
                config: active_learning_pb2.Committee,
