@@ -53,8 +53,7 @@ flags.DEFINE_boolean(
   "Set True to store masked datasets to SQL Database for observation."
 )
 
-def AssertConfigIsValid(config: model_pb2.DataGenerator,
-                        ) -> model_pb2.DataGenerator:
+def AssertConfigIsValid(config: model_pb2.DataGenerator) -> model_pb2.DataGenerator:
   """
   Parse data generator protobuf message.
   Raise Exception if format is wrong.
