@@ -12,6 +12,17 @@ from deeplearning.clgen.util.pytorch import torch
 
 from deeplearning.clgen.util import logging as l
 
+def mish(x):
+  return x * torch.tanh(torch.nn.functional.softplus(x))
+
+ACT2FN = {
+  "gelu": activations.gelu,
+  "relu": torch.nn.functional.relu,
+  "swish": activations.swish,
+  "gelu_new": activations.gelu_new,
+  "mish": mish
+}
+
 class Committee(torch.nn.Module):
   """
   Abstract representation of model committee.
