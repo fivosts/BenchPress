@@ -4,6 +4,12 @@ import typing
 from deeplearning.clgen.models.committee import downstream_tasks
 from deeplearning.clgen.models.proto import active_learning_pb2
 
+def AssertConfigIsValid(config: active_learning_pb2:CommitteeConfig) -> active_learning_pb2:CommitteeConfig:
+  """
+  Parse proto description and check for validity.
+  """
+  return
+
 class CommitteeConfig(object):
 
   model_type = "committee"
