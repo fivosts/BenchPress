@@ -1,4 +1,9 @@
 """ Configuration base class for committee models."""
+import typing
+
+from deeplearning.clgen.models.committee import downstream_tasks
+from deeplearning.clgen.models.proto import active_learning_pb2
+
 class CommitteeConfig(object):
 
   model_type = "committee"
