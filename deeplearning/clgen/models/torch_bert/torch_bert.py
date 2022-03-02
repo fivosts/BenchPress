@@ -802,16 +802,18 @@ class torchBert(backends.BackendBase):
         self.pred_iterator = iter(self.loader)
         inputs = next(self.pred_iterator)
 
-      ## I think this dictionary holds tensors of the following size:
-      ## [num_gpus x batch_size x seq_len] if only one node works.
-      ## Otherwise, [1 x batch_size x seq_len] since each process manages its own GPU.
+      if workload_size is None:
+        ## I think this dictionary holds tensors of the following size:
+        ## [num_gpus x batch_size x seq_len] if only one node works.
+        ## Otherwise, [1 x batch_size x seq_len] since each process manages its own GPU.
+        padded_wsize = self.pytorch.num_gpus if environment.WORLD_SIZE == 1 else 1
+      else:
+        ## If a workload is specified, then after you pad to the dimension of GPU or num processes
+        ## Divide the size by GPU size or num processes size.
+        padded_wsize = (workload_size // self.pytorch.num_gpus) * self.pytorch.num_gpus if environment.WORLD_SIZE == 1 else (workload_size // self.pytorch.num_nodes) * self.pytorch.num_nodes
       self.step_inputs = {
         x: inputs[x].unsqueeze(0).repeat(
-          self.pytorch.num_gpus
-          if environment.WORLD_SIZE == 1
-          else 1,
-          1,
-          1
+          padded_wsize, 1
         )
         for x in inputs
       }
