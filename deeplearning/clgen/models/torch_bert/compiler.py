@@ -100,7 +100,7 @@ class CompilationSampler(object):
                               model             = model,
                               device            = device,
                               input_ids         = input_ids        [i],
-                              input_features    = input_features   [i],
+                              input_features    = input_features   [i] if input_features else None,
                               prediction_scores = prediction_scores[i],
                               position_ids      = position_ids     [i],
                               masked_lm_labels  = masked_lm_labels [i],
@@ -231,15 +231,13 @@ class CompilationSampler(object):
     Get a batch of input ids and iteratively fill the holes and return a batch of samples.
     """
     batch_size, sequence_length = tuple(input_ids.shape)
-    sample_indices = []
-    for inpids in input_ids:
-      sample_indices.append([
-        [] for _ in range(len(torch.where((inpids == self.tokenizer.holeToken) | (inpids == self.tokenizer.maskToken))[0]))
-      ])
+    input_idxs = torch.arange(batch_size).to(device)
+    sample_indices = torch.full((batch_size, sequence_length), self.tokenizer.padToken).to(device)
+
     res_idx = 0
     samples = torch.zeros_like(input_ids)
 
-    new_holes = self.step_batch(input_ids, prediction_scores, device)
+    new_holes = self.step_batch(input_ids, input_idxs, sample_indices, None, prediction_scores, device)
     open_holes = torch.where(new_holes == True)[0]
     closed_holes = torch.where(new_holes == False)[0]
 
@@ -254,7 +252,7 @@ class CompilationSampler(object):
         input_ids, attention_mask, position_ids[:len(input_ids)], input_features,
       )
 
-      new_holes = self.step_batch(input_ids, prediction_scores, device)
+      new_holes = self.step_batch(input_ids, input_idxs, sample_indices, None, prediction_scores, device)
       open_holes = torch.where(new_holes == True)[0]
       closed_holes = torch.where(new_holes == False)[0]
 
@@ -299,7 +297,6 @@ class CompilationSampler(object):
       input_features = workload_input_features[0]
     else:
       input_features = None
-
     # sample indices array that will be returned.
     sample_indices = torch.full((nseq, sequence_length), self.tokenizer.padToken).to(device)
 
