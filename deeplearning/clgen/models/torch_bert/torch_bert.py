@@ -988,33 +988,33 @@ class torchBert(backends.BackendBase):
     ckpt_comp = lambda x: self.ckpt_path / "{}{}-{}.pt".format("pre_" if pre_train else "", x, ckpt_step)
 
     # self.train.model = model.BertModel.from_pretrained(ckpt_comp("model"))
-    if isinstance(estimator.model, self.torch.nn.DataParallel):
-        estimator.model.module.load_state_dict(
-          self.torch.load(ckpt_comp("model"))
-        )
-    else:
-      try:
-        estimator.model.load_state_dict(
-          self.torch.load(ckpt_comp("model"), map_location=self.pytorch.device)
-        )
-      except RuntimeError:
-        """
-        Pytorch doesn't love loading a DataParallel checkpoint
-        to a simple model. So, the following hack is needed
-        to remove the 'module.' prefix from state keys.
+    # if isinstance(estimator.model, self.torch.nn.DataParallel):
+    #     estimator.model.module.load_state_dict(
+    #       self.torch.load(ckpt_comp("model"))
+    #     )
+    # else:
+    try:
+      estimator.model.load_state_dict(
+        self.torch.load(ckpt_comp("model"), map_location=self.pytorch.device)
+      )
+    except RuntimeError:
+      """
+      Pytorch doesn't love loading a DataParallel checkpoint
+      to a simple model. So, the following hack is needed
+      to remove the 'module.' prefix from state keys.
 
-        OR it might as well need the opposite. Transitioning from
-        single to multiple GPUs will mean that 'module.' prefix is missing
-        """
-        from collections import OrderedDict
-        new_state_dict = OrderedDict()
-        for k, v in self.torch.load(ckpt_comp("model")).items():
-          if k[:7] == 'module.':
-            name = k[7:] # remove `module.`
-          else:
-            name = 'module.' + k # Add 'module.'
-          new_state_dict[name] = v
-        estimator.model.load_state_dict(new_state_dict)
+      OR it might as well need the opposite. Transitioning from
+      single to multiple GPUs will mean that 'module.' prefix is missing
+      """
+      from collections import OrderedDict
+      new_state_dict = OrderedDict()
+      for k, v in self.torch.load(ckpt_comp("model")).items():
+        if k[:7] == 'module.':
+          name = k[7:] # remove `module.`
+        else:
+          name = 'module.' + k # Add 'module.'
+        new_state_dict[name] = v
+      estimator.model.load_state_dict(new_state_dict)
     if isinstance(estimator, torchBert.BertEstimator):
       if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
         estimator.optimizer.load_state_dict(
