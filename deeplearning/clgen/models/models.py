@@ -72,6 +72,12 @@ flags.DEFINE_integer(
   "Bypass num_epochs provided by protobuf file."
 )
 
+flags.DEFINE_integer(
+  "sample_workload_size",
+  2048,
+  "Select size of workload samples for single sample step."
+)
+
 class Model(object):
   """A CLgen language model.
 
@@ -437,7 +443,7 @@ class Model(object):
     """
     start_time = datetime.datetime.utcnow()
     seq_count  = 0
-    self.backend.InitSampleBatch(sampler)
+    self.backend.InitSampleBatch(sampler, workload_size = FLAGS.sample_workload_size)
     try:
       org_inputs, input_ids, samples, indices = self.backend.SampleNextIndices(sampler)
     except StopIteration:
