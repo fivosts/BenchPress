@@ -60,12 +60,6 @@ flags.DEFINE_boolean(
   "Select to perform independent per-generation candidate search instead of son-better-than-parent paradigm."
 )
 
-flags.DEFINE_integer(
-  "sample_workload_size",
-  8192,
-  "Select size of workload per inference step."
-)
-
 flags.DEFINE_boolean(
   "features_standard_scaler",
   False,
