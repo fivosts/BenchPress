@@ -371,12 +371,12 @@ class torchBert(backends.BackendBase):
           inputs['position_ids'],
           inputs['input_features'],
         ),
+        bar = bar,
       )
       outputs['generated_samples'] = list(samples.detach().cpu().numpy())
       outputs['sample_indices']    = list(sample_indices.detach().cpu().numpy())
-      outputs['input_ids']         = list(self.torch.reshape(inputs['input_ids'], tuple(samples.shape)).numpy())
-      outputs['masked_lm_lengths'] = list(self.torch.reshape(inputs['masked_lm_lengths'], (samples.shape[0], -1)).numpy())
-      bar.update(len(outputs['generated_samples']))
+      outputs['input_ids']         = list(self.torch.reshape(inputs['input_ids'].cpu(), tuple(samples.shape)).numpy())
+      outputs['masked_lm_lengths'] = list(self.torch.reshape(inputs['masked_lm_lengths'].cpu(), (samples.shape[0], -1)).numpy())
     else:
       raise NotImplementedError ("Haven't implemented live sampling.")
       inputs = self.to_device(inputs)
@@ -810,11 +810,12 @@ class torchBert(backends.BackendBase):
       else:
         ## If a workload is specified, then after you pad to the dimension of GPU or num processes
         ## Divide the size by GPU size or num processes size.
-        padded_wsize = (workload_size // self.pytorch.num_gpus) * self.pytorch.num_gpus if environment.WORLD_SIZE == 1 else (workload_size // self.pytorch.num_nodes) * self.pytorch.num_nodes
+        padded_wsize = (
+          (workload_size // (self.pytorch.num_gpus * sampler.batch_size)) * self.pytorch.num_gpus
+          if environment.WORLD_SIZE == 1
+          else (workload_size // (self.pytorch.num_nodes * sampler.batch_size)) * self.pytorch.num_nodes)
       self.step_inputs = {
-        x: inputs[x].unsqueeze(0).repeat(
-          padded_wsize, 1
-        )
+        x: inputs[x].unsqueeze(0).repeat(padded_wsize, 1, 1)
         for x in inputs
       }
 
@@ -987,34 +988,52 @@ class torchBert(backends.BackendBase):
 
     ckpt_comp = lambda x: self.ckpt_path / "{}{}-{}.pt".format("pre_" if pre_train else "", x, ckpt_step)
 
-    # self.train.model = model.BertModel.from_pretrained(ckpt_comp("model"))
-    # if isinstance(estimator.model, self.torch.nn.DataParallel):
-    #     estimator.model.module.load_state_dict(
-    #       self.torch.load(ckpt_comp("model"))
-    #     )
-    # else:
-    try:
-      estimator.model.load_state_dict(
-        self.torch.load(ckpt_comp("model"), map_location=self.pytorch.device)
-      )
-    except RuntimeError:
-      """
-      Pytorch doesn't love loading a DataParallel checkpoint
-      to a simple model. So, the following hack is needed
-      to remove the 'module.' prefix from state keys.
+    if isinstance(estimator.model, self.torch.nn.DataParallel):
+      try:
+        estimator.model.module.load_state_dict(
+          self.torch.load(ckpt_comp("model"))
+        )
+      except RuntimeError:
+        """
+        Pytorch doesn't love loading a DataParallel checkpoint
+        to a simple model. So, the following hack is needed
+        to remove the 'module.' prefix from state keys.
 
-      OR it might as well need the opposite. Transitioning from
-      single to multiple GPUs will mean that 'module.' prefix is missing
-      """
-      from collections import OrderedDict
-      new_state_dict = OrderedDict()
-      for k, v in self.torch.load(ckpt_comp("model")).items():
-        if k[:7] == 'module.':
-          name = k[7:] # remove `module.`
-        else:
-          name = 'module.' + k # Add 'module.'
-        new_state_dict[name] = v
-      estimator.model.load_state_dict(new_state_dict)
+        OR it might as well need the opposite. Transitioning from
+        single to multiple GPUs will mean that 'module.' prefix is missing
+        """
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in self.torch.load(ckpt_comp("model")).items():
+          if k[:7] == 'module.':
+            name = k[7:] # remove `module.`
+          else:
+            name = 'module.' + k # Add 'module.'
+          new_state_dict[name] = v
+        estimator.model.module.load_state_dict(new_state_dict)
+    else:
+      try:
+        estimator.model.load_state_dict(
+          self.torch.load(ckpt_comp("model"), map_location=self.pytorch.device)
+        )
+      except RuntimeError:
+        """
+        Pytorch doesn't love loading a DataParallel checkpoint
+        to a simple model. So, the following hack is needed
+        to remove the 'module.' prefix from state keys.
+
+        OR it might as well need the opposite. Transitioning from
+        single to multiple GPUs will mean that 'module.' prefix is missing
+        """
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in self.torch.load(ckpt_comp("model")).items():
+          if k[:7] == 'module.':
+            name = k[7:] # remove `module.`
+          else:
+            name = 'module.' + k # Add 'module.'
+          new_state_dict[name] = v
+        estimator.model.load_state_dict(new_state_dict)
     if isinstance(estimator, torchBert.BertEstimator):
       if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
         estimator.optimizer.load_state_dict(
