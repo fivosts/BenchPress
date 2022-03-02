@@ -769,10 +769,9 @@ class torchBert(backends.BackendBase):
     l.logger().info("Initialized model samples in {}".format(self.sample_path / self.sampler.hash))
     return
 
-  def InitSampleBatch(self, sampler: samplers.Sampler, **unused_kwargs) -> None:
+  def InitSampleBatch(self, sampler: samplers.Sampler, **kwargs) -> None:
     """Batch-specific initialization. Called once when a new batch is going to be generated"""
-    del unused_kwargs
-
+    workload_size = kwargs.get('workload_size', None)
     if sampler.is_live:
       # For live sampling, start text must be re-instated at each iteration.
       self.sample = self.sample._replace(
@@ -803,6 +802,9 @@ class torchBert(backends.BackendBase):
         self.pred_iterator = iter(self.loader)
         inputs = next(self.pred_iterator)
 
+      ## I think this dictionary holds tensors of the following size:
+      ## [num_gpus x batch_size x seq_len] if only one node works.
+      ## Otherwise, [1 x batch_size x seq_len] since each process manages its own GPU.
       self.step_inputs = {
         x: inputs[x].unsqueeze(0).repeat(
           self.pytorch.num_gpus
