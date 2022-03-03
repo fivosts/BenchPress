@@ -51,54 +51,12 @@ class ActiveCommittee(backends.BackendBase):
     l.logger().info("Active Committee config initialized in {}".format(self.cache.path))
     return
 
-  def _ConfigModelParams(self, is_sampling):
-    """General model hyperparameters initialization."""
-    raise NotImplementedError
-    self.bertAttrs = {
-          "vocab_size"                   : self.tokenizer.vocab_size,
-          "hidden_size"                  : self.config.architecture.hidden_size,
-          "num_hidden_layers"            : self.config.architecture.num_hidden_layers,
-          "num_attention_heads"          : self.config.architecture.num_attention_heads,
-          "intermediate_size"            : self.config.architecture.intermediate_size,
-          "hidden_act"                   : self.config.architecture.hidden_act,
-          "hidden_dropout_prob"          : self.config.architecture.hidden_dropout_prob,
-          "attention_probs_dropout_prob" : self.config.architecture.attention_probs_dropout_prob,
-          "max_position_embeddings"      : self.config.architecture.max_position_embeddings,
-          "type_vocab_size"              : self.config.architecture.type_vocab_size,
-          "initializer_range"            : self.config.architecture.initializer_range,
-          "layer_norm_eps"               : self.config.architecture.layer_norm_eps,
-          "pad_token_id"                 : self.tokenizer.padToken,
-    }
-    if self.feature_encoder:
-      self.featureAttrs = {
-        "feature_encoder"                 : self.feature_encoder,
-        "feature_sequence_length"         : self.feature_sequence_length,
-        "feature_embedding_size"          : self.config.architecture.feature_embedding_size,
-        "feature_pad_idx"                 : self.feature_tokenizer.padToken,
-        "feature_dropout_prob"            : self.config.architecture.feature_dropout_prob,
-        "feature_vocab_size"              : len(self.feature_tokenizer),
-        "feature_num_attention_heads"     : self.config.architecture.feature_num_attention_heads,
-        "feature_transformer_feedforward" : self.config.architecture.feature_transformer_feedforward,
-        "feature_layer_norm_eps"          : self.config.architecture.feature_layer_norm_eps,
-        "feature_num_hidden_layers"       : self.config.architecture.feature_num_hidden_layers,
-      }
-    self.bert_config = config.BertConfig.from_dict(
-      self.bertAttrs,
-      **self.featureAttrs,
-      xla_device         = self.torch_tpu_available,
-      reward_compilation = FLAGS.reward_compilation,
-      is_sampling        = is_sampling,
-    )
-    return
-
   def _ConfigTrainParams(self, 
                          data_generator: torchLMDataGenerator,
                          ) -> None:
     """
     Model parameter initialization for training and validation.
     """
-    self._ConfigModelParams(is_sampling = False)
-
     self.train_batch_size                 = self.config.training.batch_size
     self.eval_batch_size                  = self.config.training.batch_size
     self.learning_rate                    = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
