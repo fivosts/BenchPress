@@ -432,6 +432,9 @@ class Sampler(object):
     else:
       self.start_text = ""
 
+    if self.has_active_learning:
+      self.active_learner = active_models.Model(config)
+
     self.temperature = self.config.temperature_micros / 1e6
     self.batch_size = self.config.batch_size
     self.sequence_length = self.config.sequence_length
@@ -485,6 +488,13 @@ class Sampler(object):
     """
     self.start_text = start_text
     return
+
+  def Create(self) -> None:
+    if not self.has_active_learning:
+      return None
+    else:
+      self.active_learner.Train()
+      return
 
   def Specialize(self, tokenizer: tokenizers.TokenizerBase) -> None:
     """Specialize a sampler a vocabulary.
