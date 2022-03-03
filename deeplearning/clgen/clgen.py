@@ -174,6 +174,29 @@ class Instance(object):
   def PreTrain(self, *args, **kwargs) -> None:
     if self.config.model.HasField("pre_train_corpus"):
       with self.Session():
+        test_sampler = None
+        if not self.sampler.is_active:
+          test_sampler_config = sampler_pb2.Sampler()
+          test_sampler_config.CopyFrom(self.sampler.config)
+          # Make all test samples the same sequence_length length.
+          del test_sampler_config.termination_criteria[:]
+          test_sampler_config.termination_criteria.extend(
+            [
+              sampler_pb2.SampleTerminationCriterion(
+                maxlen=sampler_pb2.MaxTokenLength(maximum_tokens_in_sample=self.sampler.sequence_length)
+              ),
+            ]
+          )
+          test_sampler = samplers.Sampler(test_sampler_config, sample_db_name = "pre_epoch_samples.db")
+
+        # We inject the `test_sampler` argument so that we can create samples
+        # during training.
+        self.model.PreTrain(*args, test_sampler = test_sampler, **kwargs)
+
+  def Train(self, *args, **kwargs) -> None:
+    with self.Session():
+      test_sampler = None
+      if not self.sampler.is_active:
         test_sampler_config = sampler_pb2.Sampler()
         test_sampler_config.CopyFrom(self.sampler.config)
         # Make all test samples the same sequence_length length.
@@ -185,26 +208,7 @@ class Instance(object):
             ),
           ]
         )
-        test_sampler = samplers.Sampler(test_sampler_config, sample_db_name = "pre_epoch_samples.db")
-
-        # We inject the `test_sampler` argument so that we can create samples
-        # during training.
-        self.model.PreTrain(*args, test_sampler = test_sampler, **kwargs)
-
-  def Train(self, *args, **kwargs) -> None:
-    with self.Session():
-      test_sampler_config = sampler_pb2.Sampler()
-      test_sampler_config.CopyFrom(self.sampler.config)
-      # Make all test samples the same sequence_length length.
-      del test_sampler_config.termination_criteria[:]
-      test_sampler_config.termination_criteria.extend(
-        [
-          sampler_pb2.SampleTerminationCriterion(
-            maxlen=sampler_pb2.MaxTokenLength(maximum_tokens_in_sample=self.sampler.sequence_length)
-          ),
-        ]
-      )
-      test_sampler = samplers.Sampler(test_sampler_config, sample_db_name = "epoch_samples.db")
+        test_sampler = samplers.Sampler(test_sampler_config, sample_db_name = "epoch_samples.db")
 
       # We inject the `test_sampler` argument so that we can create samples
       # during training.
