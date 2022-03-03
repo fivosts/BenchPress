@@ -26,7 +26,6 @@ import humanize
 import numpy as np
 
 from deeplearning.clgen.samplers import sample_observers as sample_observers_lib
-from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import cache
@@ -339,7 +338,7 @@ class Model(object):
 
   def Sample(
     self,
-    sampler: samplers.Sampler,
+    sampler: 'samplers.Sampler',
     sample_observers: typing.List[sample_observers_lib.SampleObserver],
     seed: int = None,
   ) -> None:
@@ -433,7 +432,7 @@ class Model(object):
     )
 
   def _SampleLMBatch(self,
-                     sampler: samplers.Sampler,
+                     sampler: 'samplers.Sampler',
                      tokenizer: tokenizers.TokenizerBase,
                      sample_observers: typing.List[sample_observers_lib.SampleObserver],
                      epoch: int,
@@ -506,7 +505,7 @@ class Model(object):
 
   def _SampleSeqBatch(
     self,
-    sampler: samplers.Sampler,
+    sampler: 'samplers.Sampler',
     tokenizer: tokenizers.TokenizerBase,
     sample_observers: typing.List[sample_observers_lib.SampleObserver],
     epoch: int,
@@ -582,7 +581,7 @@ class Model(object):
             break
     return continue_sampling, seq_count
 
-  def SamplerCache(self, sampler: samplers.Sampler) -> pathlib.Path:
+  def SamplerCache(self, sampler: 'samplers.Sampler') -> pathlib.Path:
     """Get the path to a sampler cache.
 
     Args:
