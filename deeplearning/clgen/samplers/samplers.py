@@ -38,6 +38,7 @@ from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.models import lm_data_generator
+from deeplearning.clgen.models.committee import config as com_config
 
 from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.util import sqlutil
@@ -91,12 +92,17 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
             lambda x : x in set(extractor.extractors.keys()),
             "feature_space can only be one of {}".format(', '.join(list(extractor.extractors.keys())))
           )
-          pbutil.AssertFieldConstraint(
-            config.sample_corpus.corpus_config.active,
-            "target",
-            lambda x : x in set(feature_sampler.targets.keys()),
-            "target can only be one of {}".format(', '.join(list(feature_sampler.targets.keys())))
-          )
+          if config.sample_corpus.corpus_config.active.HasField("target"):
+            pbutil.AssertFieldConstraint(
+              config.sample_corpus.corpus_config.active,
+              "target",
+              lambda x : x in set(feature_sampler.targets.keys()),
+              "target can only be one of {}".format(', '.join(list(feature_sampler.targets.keys())))
+            )
+          elif config.sample_corpus.corpus_config.active.HasField("active_learner"):
+            com_config.AssertConfigIsValid(config.sample_corpus.corpus_config.active.active_learner)
+          else:
+            raise ValueError(config.sample_corpus.corpus_config.active)
         else:
           raise ValueError("Sampling type is undefined: {}".format(config.sample_corpus.corpus_config))
 
