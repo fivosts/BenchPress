@@ -22,10 +22,17 @@ message Committee {
 
 // MLP-type architecture.
 message MLP {
-  repeated Linear    linear = 1;
-  repeated Dropout   dropout = 2;
-  repeated LayerNorm layer_norm = 3;
-  repeated ACT_fn    act_fn = 4;
+  repeated Layer layers = 1;
+}
+
+message Layer {
+  oneof layers {
+    Linear    linear     = 1;
+    Dropout   dropout    = 2;
+    LayerNorm layer_norm = 3;
+    ACT_fn    act_fn     = 4;
+
+  }
 }
 
 // Linear specs.
