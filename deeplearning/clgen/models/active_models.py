@@ -25,8 +25,6 @@ import humanize
 
 import numpy as np
 
-from deeplearning.clgen.samplers import sample_observers as sample_observers_lib
-from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import crypto
@@ -34,20 +32,9 @@ from deeplearning.clgen.util import commit
 from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.models import downstream_tasks
 from deeplearning.clgen.models.committee import config as com_config
-from deeplearning.clgen.models import telemetry
-from deeplearning.clgen.models.keras_sequential import keras_sequential
-from deeplearning.clgen.models.tf_sequential import tf_sequential
-from deeplearning.clgen.models.tf_bert import tf_bert
-from deeplearning.clgen.models.torch_bert import torch_bert
-from deeplearning.clgen.proto import internal_pb2
-from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import telemetry_pb2
-from deeplearning.clgen.preprocessors import opencl
 from absl import flags
 
 from deeplearning.clgen.util import logging as l
@@ -129,7 +116,6 @@ class Model(object):
     if environment.WORLD_RANK == 0:
       ## Store current commit
       commit.saveCommit(self.cache.path)
-
     self.backend = active_committee.ActiveCommittee(self.config)
     l.logger().info("Initialized {} in {}".format(self.config.architecture.backend, self.cache.path))
     return
@@ -144,16 +130,12 @@ class Model(object):
       UnableToAcquireLockError: If the model is locked (i.e. there is another
         process currently modifying the model).
     """
-    self.Create()
-
     self.backend.Train(self.corpus, **kwargs)
-    telemetry_logs = self.backend.telemetry.EpochTelemetry()
-
     l.logger().info(
       "Trained model for {} {} in {} ms. " "Training loss: {}."
         .format(
           telemetry_logs[-1].epoch_num,
-          "steps" if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert) else "epochs",
+          "steps",
           humanize.intcomma(sum(t.epoch_wall_time_ms for t in telemetry_logs)),
           telemetry_logs[-1].loss,
           )
