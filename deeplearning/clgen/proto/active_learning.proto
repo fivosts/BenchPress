@@ -25,6 +25,7 @@ message MLP {
   repeated Layer layers = 1;
 }
 
+// Layer wrapper to help with layer's ordering consistency.
 message Layer {
   oneof layers {
     Linear    linear     = 1;
