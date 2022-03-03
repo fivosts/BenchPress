@@ -169,12 +169,12 @@ class ActiveCommittee(backends.BackendBase):
     raise NotImplementedError
     return
 
-  def saveCheckpoint(self, estimator, pre_train):
+  def saveCheckpoint(self, estimator):
     """
     Saves model, scheduler, optimizer checkpoints per epoch.
     """
     if self.is_world_process_zero():
-      ckpt_comp = lambda x: self.ckpt_path / "{}{}-{}.pt".format("pre_" if pre_train else "", x, self.current_step)
+      ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, self.current_step)
 
       if self.torch_tpu_available:
         if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
@@ -191,16 +191,7 @@ class ActiveCommittee(backends.BackendBase):
         self.torch.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
 
       with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
-        mf.write("{}train_step: {}\n".format("pre_" if pre_train else "", self.current_step))
-      if pre_train:
-        mf = open(self.ckpt_path / "checkpoint.meta", 'r')
-        cf = mf.read()
-        mf.close()
-        if "train_step: 0" not in cf:
-          with open(self.ckpt_path / "checkpoint.meta", 'w') as mf:
-            mf.write(cf + "train_step: 0\n")
-        for x in {"model"}:
-          shutil.copyfile(str(ckpt_comp(x)), str(self.ckpt_path / "{}-0.pt".format(x)))
+        mf.write("train_step: {}\n".format(self.current_step))
     return
 
   def loadCheckpoint(self,
@@ -208,7 +199,6 @@ class ActiveCommittee(backends.BackendBase):
                                   typing.TypeVar('torchBert.BertEstimator'),
                                   typing.TypeVar('torchBert.SampleBertEstimator')
                                 ],
-                     pre_train: bool = False
                      ) -> int:
     """
     Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
@@ -217,18 +207,11 @@ class ActiveCommittee(backends.BackendBase):
       return -1
 
     with open(self.ckpt_path / "checkpoint.meta", 'r') as mf:
-      if pre_train:
-        key     = "pre_train_step"
-        exclude = "None"
-      else:
-        key     = "train_step"
-        exclude = "pre_train_step"
+      key     = "train_step"
       get_step  = lambda x: int(x.replace("\n", "").replace("{}: ".format(key), ""))
-
       lines     = mf.readlines()
-      entries   = set({get_step(x) for x in lines if key in x and exclude not in x})
-
-    if FLAGS.select_checkpoint_step == -1 or pre_train:
+      entries   = set({get_step(x) for x in lines if key in x})
+    if FLAGS.select_checkpoint_step == -1:
       ckpt_step = max(entries)
     else:
       if FLAGS.select_checkpoint_step in entries:
@@ -236,7 +219,7 @@ class ActiveCommittee(backends.BackendBase):
       else:
         raise ValueError("{} not found in checkpoint folder.".format(FLAGS.select_checkpoint_step))
 
-    ckpt_comp = lambda x: self.ckpt_path / "{}{}-{}.pt".format("pre_" if pre_train else "", x, ckpt_step)
+    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, ckpt_step)
 
     if isinstance(estimator.model, self.torch.nn.DataParallel):
       try:
