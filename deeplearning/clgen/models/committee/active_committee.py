@@ -159,5 +159,150 @@ class ActiveCommittee(backends.BackendBase):
         self.feature_sequence_length,
       ), pre_train
     )
-
     return
+
+  def Validate(self) -> None:
+    raise NotImplementedError
+    return
+
+  def Sample(self) -> None:
+    raise NotImplementedError
+    return
+
+  def saveCheckpoint(self, estimator, pre_train):
+    """
+    Saves model, scheduler, optimizer checkpoints per epoch.
+    """
+    if self.is_world_process_zero():
+      ckpt_comp = lambda x: self.ckpt_path / "{}{}-{}.pt".format("pre_" if pre_train else "", x, self.current_step)
+
+      if self.torch_tpu_available:
+        if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
+          self.pytorch.torch_xla_model.save(estimator.model, ckpt_comp("model"))
+        self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
+        self.pytorch.torch_xla.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
+        self.pytorch.torch_xla.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
+      else:
+        if isinstance(estimator.model, self.torch.nn.DataParallel):
+          self.torch.save(estimator.model.module.state_dict(), ckpt_comp("model"))
+        else:
+          self.torch.save(estimator.model.state_dict(), ckpt_comp("model"))
+        self.torch.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
+        self.torch.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
+
+      with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
+        mf.write("{}train_step: {}\n".format("pre_" if pre_train else "", self.current_step))
+      if pre_train:
+        mf = open(self.ckpt_path / "checkpoint.meta", 'r')
+        cf = mf.read()
+        mf.close()
+        if "train_step: 0" not in cf:
+          with open(self.ckpt_path / "checkpoint.meta", 'w') as mf:
+            mf.write(cf + "train_step: 0\n")
+        for x in {"model"}:
+          shutil.copyfile(str(ckpt_comp(x)), str(self.ckpt_path / "{}-0.pt".format(x)))
+    return
+
+  def loadCheckpoint(self,
+                     estimator: typing.Union[
+                                  typing.TypeVar('torchBert.BertEstimator'),
+                                  typing.TypeVar('torchBert.SampleBertEstimator')
+                                ],
+                     pre_train: bool = False
+                     ) -> int:
+    """
+    Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
+    """
+    if not (self.ckpt_path / "checkpoint.meta").exists():
+      return -1
+
+    with open(self.ckpt_path / "checkpoint.meta", 'r') as mf:
+      if pre_train:
+        key     = "pre_train_step"
+        exclude = "None"
+      else:
+        key     = "train_step"
+        exclude = "pre_train_step"
+      get_step  = lambda x: int(x.replace("\n", "").replace("{}: ".format(key), ""))
+
+      lines     = mf.readlines()
+      entries   = set({get_step(x) for x in lines if key in x and exclude not in x})
+
+    if FLAGS.select_checkpoint_step == -1 or pre_train:
+      ckpt_step = max(entries)
+    else:
+      if FLAGS.select_checkpoint_step in entries:
+        ckpt_step = FLAGS.select_checkpoint_step
+      else:
+        raise ValueError("{} not found in checkpoint folder.".format(FLAGS.select_checkpoint_step))
+
+    ckpt_comp = lambda x: self.ckpt_path / "{}{}-{}.pt".format("pre_" if pre_train else "", x, ckpt_step)
+
+    if isinstance(estimator.model, self.torch.nn.DataParallel):
+      try:
+        estimator.model.module.load_state_dict(
+          self.torch.load(ckpt_comp("model"))
+        )
+      except RuntimeError:
+        """
+        Pytorch doesn't love loading a DataParallel checkpoint
+        to a simple model. So, the following hack is needed
+        to remove the 'module.' prefix from state keys.
+
+        OR it might as well need the opposite. Transitioning from
+        single to multiple GPUs will mean that 'module.' prefix is missing
+        """
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in self.torch.load(ckpt_comp("model")).items():
+          if k[:7] == 'module.':
+            name = k[7:] # remove `module.`
+          else:
+            name = 'module.' + k # Add 'module.'
+          new_state_dict[name] = v
+        estimator.model.module.load_state_dict(new_state_dict)
+    else:
+      try:
+        estimator.model.load_state_dict(
+          self.torch.load(ckpt_comp("model"), map_location=self.pytorch.device)
+        )
+      except RuntimeError:
+        """
+        Pytorch doesn't love loading a DataParallel checkpoint
+        to a simple model. So, the following hack is needed
+        to remove the 'module.' prefix from state keys.
+
+        OR it might as well need the opposite. Transitioning from
+        single to multiple GPUs will mean that 'module.' prefix is missing
+        """
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in self.torch.load(ckpt_comp("model")).items():
+          if k[:7] == 'module.':
+            name = k[7:] # remove `module.`
+          else:
+            name = 'module.' + k # Add 'module.'
+          new_state_dict[name] = v
+        estimator.model.load_state_dict(new_state_dict)
+    if isinstance(estimator, torchBert.BertEstimator):
+      if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
+        estimator.optimizer.load_state_dict(
+          self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
+        )
+        estimator.scheduler.load_state_dict(
+          self.torch.load(ckpt_comp("scheduler"), map_location=self.pytorch.device)
+        )
+    estimator.model.eval()
+    return ckpt_step
+
+  def is_world_process_zero(self) -> bool:
+    """
+    Whether or not this process is the global main process (when training in a distributed fashion on
+    several machines, this is only going to be :obj:`True` for one process).
+    """
+    if self.torch_tpu_available:
+      return self.pytorch.torch_xla_model.is_master_ordinal(local=False)
+    elif self.pytorch.num_nodes > 1:
+      return self.torch.distributed.get_rank() == 0
+    else:
+      return True
