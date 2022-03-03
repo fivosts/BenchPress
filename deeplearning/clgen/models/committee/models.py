@@ -54,10 +54,7 @@ class MLP(Committee):
       'LayerNorm' : torch.nn.LayerNorm,
     }
     layers.update(ACT2FN)
-    for name, params in config.layers.items():
-      self.layers.append(
-        layers[name](**params)
-      )
+    self.layers = torch.nn.ModuleList([layers[name](**params) for name, params in config.layers.items()])
     return
 
   def forward(self, inp: torch.Tensor) -> torch.Tensor:
