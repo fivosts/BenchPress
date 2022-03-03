@@ -38,6 +38,7 @@ from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.models import lm_data_generator
+from deeplearning.clgen.models import models
 from deeplearning.clgen.models.committee import config as com_config
 
 from deeplearning.clgen.util import logging as l
@@ -380,6 +381,12 @@ class Sampler(object):
       return self.config.sample_corpus.corpus_config.HasField("active")
     else:
       return False
+
+  @property
+  def has_active_learning(self):
+    if not self.is_active:
+      return False
+    return self.config.sample_corpus.corpus_config.active.HasField("active_learner")
 
   @property
   def is_online(self):
