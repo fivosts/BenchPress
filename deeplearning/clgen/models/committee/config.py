@@ -9,13 +9,6 @@ def AssertConfigIsValid(config: active_learning_pb2:ActiveLearner) -> active_lea
   """
   Parse proto description and check for validity.
   """
-  pbutil.AssertFieldConstraint(
-    config,
-    "downstream_task",
-    lambda x: x in downstream_tasks.TASKS,
-    "Downstream task has to be one of {}".format(', '.join([str(x) for x in downstream_tasks.TASKS]))
-  )
-  pbutil.AssertFieldIsSet(config, "committee")
   tm = 0
   for nn in config.committee.mlp:
     tl = 0
