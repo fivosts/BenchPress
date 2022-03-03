@@ -30,7 +30,7 @@ from deeplearning.clgen.util import memory
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.dashboard import dashboard
-from deeplearning.clgen.models import models
+from deeplearning.clgen.models import language_models
 from deeplearning.clgen.proto import clgen_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
