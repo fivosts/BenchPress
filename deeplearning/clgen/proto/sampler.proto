@@ -32,6 +32,7 @@ option java_package = "com.clgen";
 
 import "deeplearning/clgen/proto/model.proto";
 import "deeplearning/clgen/proto/corpus.proto";
+import "deeplearning/clgen/proto/active_learning.proto";
 
 // The specification of a CLgen sampler.
 message Sampler {
@@ -102,7 +103,16 @@ message ActiveSampler {
   optional int32  active_search_width   = 3;
   optional int32  batch_size_per_feed   = 4;
   optional string feature_space         = 5;
-  optional string target                = 6;
+  oneof target_features {
+    string target                = 6;
+    ActiveLearner active_learner = 7;
+  }
+}
+
+// Active learning message.
+message ActiveLearner {
+  optional string    downstream_task = 1;
+  optional Committee committee       = 2;
 }
 
 // Criteria used for determining when to stop sampling.
