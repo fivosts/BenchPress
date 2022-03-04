@@ -47,7 +47,7 @@ def initPytorch() -> None:
   global num_gpus
   global num_nodes
   global initialized
-  if FLAGS.pt_cpu_only:
+  if FLAGS.pt_cpu_only or not torch.cuda.is_available():
     device = torch.device("cpu")
     num_gpus  = 0
     num_nodes = 1
@@ -62,14 +62,16 @@ def initPytorch() -> None:
     # GPUs available in the environment, so `CUDA_VISIBLE_DEVICES=1,2` with `cuda:0`
     # will use the first GPU in that env, i.e. GPU#1
     offset_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    if torch.cuda.is_available():
-      available_gpus = gpu.getGPUID()
-      devices = ["cuda:{}".format(str(x['id'])) for x in available_gpus]
-      device  = torch.device("cuda:0") # = torch.device("cuda:{}".format(str(available_gpus[0]['id'])) if torch.cuda.is_available() and available_gpus else "cpu")
-      num_gpus  = torch.cuda.device_count()
-      num_nodes = 1
-      if device.type == "cuda":
-        torch.cuda.set_device(device)
+    device  = torch.device("cuda:0") # = torch.device("cuda:{}".format(str(available_gpus[0]['id'])) if torch.cuda.is_available() and available_gpus else "cpu")
+
+    available_gpus = gpu.getGPUID()
+    devices = ["cuda:{}".format(str(x['id'])) for x in available_gpus]
+
+    num_nodes = 1
+    num_gpus  = torch.cuda.device_count()
+
+    if device.type == "cuda":
+      torch.cuda.set_device(device)
   else:
     # Here, we'll use torch.distributed.
     # Initializes the distributed backend which will take care of sychronizing nodes/GPUs.
