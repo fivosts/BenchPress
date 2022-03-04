@@ -372,6 +372,8 @@ class Model(object):
       raise ValueError("Cannot sample without any observers")
 
     self.Create()
+    sampler.Create()
+
     epoch = self.backend.telemetry.EpochTelemetry()[-1].epoch_num
     sample_start_time = datetime.datetime.utcnow()    
 
