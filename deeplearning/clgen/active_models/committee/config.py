@@ -71,6 +71,8 @@ class ModelConfig(object):
                config          : typing.Union[active_learning_pb2.MLP],
                downstream_task : downstream_tasks.DownstreamTask,
                ) -> "ModelConfig":
+    if isinstance(config, active_learning_pb2.MLP):
+      self.name = "MLP"
     self.config           = config
     self.downstream_task  = downstream_task
     self.sha256           = crypto.sha256_str(str(config))
@@ -92,5 +94,34 @@ class ModelConfig(object):
             self.config.layer[0].linear.in_features,
             self.downstream_task.input_size
           )
+        )
+    self.layer_config = []
+    for l in self.config.layer:
+      if l.HasField("linear"):
+        self.layer_config.append({
+            'Linear': {
+              'in_features': l.linear.in_features,
+              'out_features': l.linear.out_features,
+            }
+          }
+        )
+      elif l.HasField("dropout"):
+        self.layer_config.append({
+            'Dropout': {
+              'dropout_prob': l.dropout.dropout_prob
+            }
+          }
+        )
+      elif l.HasField("layer_norm"):
+        self.layer_config.append({
+            'LayerNorm': {
+              'layer_norm_eps': l.dropout.layer_norm_eps
+            }
+          }
+        )
+      elif l.HasField("act_fn"):
+        self.layer_config.append({
+            l.act_fn: {}
+          }
         )
     return
