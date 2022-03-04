@@ -65,11 +65,11 @@ def initPytorch() -> None:
     if torch.cuda.is_available():
       available_gpus = gpu.getGPUID()
       devices = ["cuda:{}".format(str(x['id'])) for x in available_gpus]
-    device  = torch.device("cuda:0") # = torch.device("cuda:{}".format(str(available_gpus[0]['id'])) if torch.cuda.is_available() and available_gpus else "cpu")
-    num_gpus  = torch.cuda.device_count()
-    num_nodes = 1
-    if device.type == "cuda":
-      torch.cuda.set_device(device)
+      device  = torch.device("cuda:0") # = torch.device("cuda:{}".format(str(available_gpus[0]['id'])) if torch.cuda.is_available() and available_gpus else "cpu")
+      num_gpus  = torch.cuda.device_count()
+      num_nodes = 1
+      if device.type == "cuda":
+        torch.cuda.set_device(device)
   else:
     # Here, we'll use torch.distributed.
     # Initializes the distributed backend which will take care of sychronizing nodes/GPUs.
