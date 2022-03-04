@@ -2,6 +2,7 @@
 import typing
 import numpy as np
 
+from deeplearning.clgen.active_models import downstream_tasks
 from deeplearning.clgen.proto import active_learning_pb2
 from deeplearning.clgen.util import cache
 
@@ -11,11 +12,13 @@ class BackendBase(object):
   """
   def __init__(
     self,
-    config: active_learning_pb2.ActiveLearner,
-    fs_cache: cache.FSCache,
+    config          : active_learning_pb2.ActiveLearner,
+    fs_cache        : cache.FSCache,
+    downstream_task : downstream_tasks.DownstreamTask
   ):
-    self.config = config
-    self.cache = fs_cache
+    self.config          = config
+    self.cache           = fs_cache
+    self.downstream_task = downstream_task
     return
 
   def Train(self, corpus: "Corpus", **extra_kwargs) -> None:
