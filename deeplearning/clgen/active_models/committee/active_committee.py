@@ -17,7 +17,7 @@ from deeplearning.clgen.active_models.committee import config
 from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.util import logging as l
 
-class ActiveCommittee(backends.BackendBase):
+class QueryByCommittee(backends.BackendBase):
 
   class TrainingOpts(typing.NamedTuple):
     """Wrapper class for training options"""
@@ -45,11 +45,11 @@ class ActiveCommittee(backends.BackendBase):
     sha256         : str
 
   def __repr__(self):
-    return "ActiveCommittee"
+    return "QueryByCommittee"
 
   def __init__(self, *args, **kwargs):
 
-    super(ActiveCommittee, self).__init__(*args, **kwargs)
+    super(QueryByCommittee, self).__init__(*args, **kwargs)
     
     from deeplearning.clgen.util import pytorch
     if not pytorch.initialized:
@@ -83,7 +83,7 @@ class ActiveCommittee(backends.BackendBase):
 
     self.committee_configs = config.ModelConfig.FromConfig(self.config.committee, self.downstream_task)
     for idx, cconfig in enumerate(self.committee_configs):
-      training_opts = ActiveCommittee.TrainingOpts(
+      training_opts = QueryByCommittee.TrainingOpts(
         train_batch_size = cconfig.batch_size,
         learning_rate    = cconfig.learning_rate,
         num_warmup_steps = cconfig.num_warmup_steps,
@@ -100,7 +100,7 @@ class ActiveCommittee(backends.BackendBase):
         learning_rate   = training_opts.learning_rate,
       )
       self.committee.append(
-        ActiveCommittee.CommitteeEstimator(
+        QueryByCommittee.CommitteeEstimator(
           model          = cm,
           data_generator = data_generator,
           optimizer      = opt,
@@ -121,7 +121,7 @@ class ActiveCommittee(backends.BackendBase):
     outputs = model(inputs.to(self.pytorch.device))
     return outputs
 
-  def TrainMember(self, member: 'ActiveCommittee.CommitteeEstimator') -> None:
+  def TrainMember(self, member: 'QueryByCommittee.CommitteeEstimator') -> None:
     """
     Member-dispatching function for loading checkpoint, training and saving back.
     """
