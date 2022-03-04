@@ -27,6 +27,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
       tl += 1
     assert tl > 0, "Model is empty. No layers found."
     tm += 1
+  ## Add another for loop here if more committee model types are added.
   assert tm > 0, "Committee is empty. No models found."
   return
 
