@@ -48,7 +48,6 @@ class ActiveCommittee(backends.BackendBase):
 
     self.ckpt_path         = self.cache.path / "checkpoints"
     self.sample_path       = self.cache.path / "samples"
-
     self.logfile_path      = self.cache.path / "logs"
 
     self.is_validated      = False
