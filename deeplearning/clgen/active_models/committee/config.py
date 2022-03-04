@@ -13,6 +13,10 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
   pbutil.AssertFieldIsSet(config.committee.random_seed)
   for nn in config.committee.mlp:
     tl = 0
+    pbutil.AssertFieldIsSet(nn, "initial_learning_rate_micros")
+    pbutil.AssertFieldIsSet(nn, "batch_size")
+    pbutil.AssertFieldIsSet(nn, "num_train_steps")
+    pbutil.AssertFieldIsSet(nn, "num_warmup_steps")
     for l in nn.layer:
       if l.HasField("linear"):
         pbutil.AssertFieldIsSet(l.linear, "in_features")
