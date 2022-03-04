@@ -103,6 +103,7 @@ sampler {
             }
           }
           downstream_task: "GrewePredictive"
+          training_corpus: ""
         }
         active_limit_per_feed: 2000
         active_search_depth: 100
