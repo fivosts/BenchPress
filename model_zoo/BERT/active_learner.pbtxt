@@ -76,33 +76,29 @@ model {
     }
   }
 }
-# sampler {
-#   live_sampling: true
-#   batch_size: 4
-#   sequence_length: 768
-#   temperature_micros: 800000  # = 0.8 real value
-#   termination_criteria {
-#     maxlen {
-#       maximum_tokens_in_sample: 768
-#     }
-#   }
-# }
-# sampler {
-#   start_text: "[START]kernel void [HOLE]}[END]"
-#   batch_size: 4
-#   sequence_length: 768
-#   temperature_micros: 700000  # = 0.8 real value
-#   termination_criteria {
-#     maxlen {
-#       maximum_tokens_in_sample: 768
-#     }
-#   }
-# }
 sampler {
   sample_corpus {
     corpus_config {
       active {
-        target: "rodinia"
+        active_learner {
+          committee {
+            mlp {
+              layer {
+                linear {
+                  in_features: 10
+                  out_features: 256
+                }
+              }
+              layer {
+                linear {
+                  in_features: 256
+                  out_features: 4
+                }
+              }
+            }
+          }
+          downstream_task: "Grewe"
+        }
         active_limit_per_feed: 2000
         active_search_depth: 100
         active_search_width: 32
