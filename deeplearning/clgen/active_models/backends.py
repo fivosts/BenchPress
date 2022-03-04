@@ -2,6 +2,7 @@
 import typing
 import numpy as np
 
+from deeplearning.clgen.proto import active_learning_pb2
 from deeplearning.clgen.util import cache
 
 class BackendBase(object):
