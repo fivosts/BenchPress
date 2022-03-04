@@ -98,30 +98,30 @@ class ModelConfig(object):
     self.layer_config = []
     for l in self.config.layer:
       if l.HasField("linear"):
-        self.layer_config.append({
-            'Linear': {
+        self.layer_config.append((
+            'Linear', {
               'in_features': l.linear.in_features,
               'out_features': l.linear.out_features,
             }
-          }
+          )
         )
       elif l.HasField("dropout"):
-        self.layer_config.append({
-            'Dropout': {
+        self.layer_config.append((
+            'Dropout', {
               'dropout_prob': l.dropout.dropout_prob
             }
-          }
+          )
         )
       elif l.HasField("layer_norm"):
-        self.layer_config.append({
-            'LayerNorm': {
+        self.layer_config.append((
+            'LayerNorm', {
               'layer_norm_eps': l.dropout.layer_norm_eps
             }
-          }
+          )
         )
       elif l.HasField("act_fn"):
-        self.layer_config.append({
-            l.act_fn: {}
-          }
+        self.layer_config.append((
+            l.act_fn, {}
+          )
         )
     return
