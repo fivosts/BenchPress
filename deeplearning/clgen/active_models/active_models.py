@@ -108,7 +108,7 @@ class Model(object):
       UnableToAcquireLockError: If the model is locked (i.e. there is another
         process currently modifying the model).
     """
-    self.backend.Train(self.corpus, **kwargs)
+    self.backend.Train(**kwargs)
     l.logger().info(
       "Trained model for {} {} in {} ms. " "Training loss: {}."
         .format(
