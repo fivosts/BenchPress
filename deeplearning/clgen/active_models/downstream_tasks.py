@@ -47,7 +47,7 @@ class GrewePredictive(DownstreamTask):
     self.output_labels  = ["CPU", "GPU"]
     self.output_size    = 2
     self.setup_dataset()
-    # self.data_generator = data_generator.GrewePredictiveLoader(self.corpus_db.get_the_right_data)
+    self.data_generator = data_generator.Dataloader(self.dataset)
     return
 
   def setup_dataset(self) -> None:
@@ -55,7 +55,6 @@ class GrewePredictive(DownstreamTask):
     Fetch data and preprocess into corpus for Grewe's predictive model.
     """
     self.dataset = []
-
     self.corpus_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
     data    = [x for x in self.corpus_db.get_valid_data()]
     pool = multiprocessing.Pool()
@@ -63,10 +62,13 @@ class GrewePredictive(DownstreamTask):
     for dp in tqdm.tqdm(it, total = len(data), desc = "Grewe corpus setup", leave = False):
       if dp:
         feats, entry = dp
-
         self.dataset.append(
-          (self.process_inputs())
+          (
+            self.InputtoEncodedVector(feats, entry.transferred_bytes, dp.global_size),
+            self.TargetLabeltoEncodedVector(entry.status)
+          )
         )
+    return
 
   def InputtoEncodedVector(self,
                            static_feats      : typing.Dict[str, float],
