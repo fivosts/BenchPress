@@ -17,7 +17,6 @@ import typing
 
 import numpy as np
 
-from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.proto import model_pb2
 from absl import flags
@@ -58,17 +57,17 @@ class BackendBase(object):
     raise NotImplementedError
 
   def InitSampling(
-    self, sampler: samplers.Sampler, seed: typing.Optional[int] = None
+    self, sampler: 'samplers.Sampler', seed: typing.Optional[int] = None
   ) -> None:
     """Initialize backend for sampling."""
     raise NotImplementedError
 
-  def InitSampleBatch(self, sampler: samplers.Sampler) -> None:
+  def InitSampleBatch(self, sampler: 'samplers.Sampler') -> None:
     """Begin a new sampling batch. Only called after InitSampling()."""
     raise NotImplementedError
 
   def SampleNextIndices(
-    self, sampler: samplers.Sampler, done: np.ndarray, tokenizer = None
+    self, sampler: 'samplers.Sampler', done: np.ndarray, tokenizer = None
   ) -> np.ndarray:
     """Sample the next indices for the current sample batch.
 
