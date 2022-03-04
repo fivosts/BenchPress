@@ -102,6 +102,9 @@ class torchBert(backends.BackendBase):
     model          : typing.List[typing.TypeVar('nn.Module')]
     data_generator : torchLMDataGenerator
 
+  def __repr__(self):
+    return "BenchPress"
+
   def __init__(self, *args, **kwargs):
 
     super(torchBert, self).__init__(*args, **kwargs)
