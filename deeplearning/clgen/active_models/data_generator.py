@@ -4,8 +4,8 @@ Data generators for active learning committee.
 import typing
 import pathlib
 
-from deeplearning.clgen.utils import pytorch
-from deeplearning.clgen.utils.pytorch import torch
+from deeplearning.clgen.util import pytorch
+from deeplearning.clgen.util.pytorch import torch
 
 class Dataloader(torch.utils.data.Dataset):
   """
