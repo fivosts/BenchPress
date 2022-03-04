@@ -57,7 +57,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
     com_config.AssertConfigIsValid(config)
   else:
     raise NotImplementedError(config)
-  return
+  return config
 
 class Model(object):
   """Predictive models for active learning.
