@@ -12,12 +12,12 @@ from deeplearning.clgen.active_models import data_generator
 from deeplearning.clgen.experiments import cldrive
 from deeplearning.clgen.features import extractors
 
-def ExtractorWorker(src: str, fspace: str, cldrive_entry: cldrive.CLDriveSample):
+def ExtractorWorker(cldrive_entry: cldrive.CLDriveSample, fspace: str):
   """
   Worker that extracts features and buffers cldrive entry, to maintain consistency
   among multiprocessed data.
   """
-  features = extractors.ExtractFeatures(src, [fspace])
+  features = extractors.ExtractFeatures(cldrive_entry.source, [fspace])
   if fspace in features and features[fspace]:
     return features, cldrive_entry
   return None
@@ -37,6 +37,8 @@ class DownstreamTask(object):
 class GrewePredictive(DownstreamTask):
   """
   Specification class for Grewe et al. CGO 2013 predictive model.
+  This class is responsible to fetch the raw data and act as a tokenizer
+  for the data. Reason is, the data generator should be agnostic of the labels.
   """
   def __init__(self, corpus_path: pathlib.Path) -> None:
     super(GrewePredictive, self).__init__("GrewePredictive")
@@ -56,13 +58,31 @@ class GrewePredictive(DownstreamTask):
 
     self.corpus_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
     data    = [x for x in self.corpus_db.get_valid_data()]
-    sources = [(x, "") for x.source in data]
-
     pool = multiprocessing.Pool()
-    it = zip(pool.imap_unordered(workers.data), sources)
-    for dp in tqdm.tqdm(self.corpus_db.get_valid_data(), total = self.corpus_db.count, desc = "Grewe corpus setup", leave = False):
-      feats = 
+    it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = "GreweFeatures"), data)
+    for dp in tqdm.tqdm(it, total = len(data), desc = "Grewe corpus setup", leave = False):
+      if dp:
+        feats, entry = dp
 
+        self.dataset.append(
+          (self.process_inputs())
+        )
+
+  def InputtoEncodedVector(self,
+                           static_feats      : typing.Dict[str, float],
+                           transferred_bytes : int,
+                           global_size       : int,
+                           ) -> typing.List[float]:
+    """
+    Encode consistently raw features to Grewe's predictive model inputs.
+    """
+    return [
+      transferred_bytes         / (static_feats['comp'] + static_feats['mem']),
+      static_feats['coalesced'] / static_feats['mem'],
+      static_feats['localmem']  / (static_feats['mem'] * global_size),
+      transferred_bytes         / (static_feats['comp'] + static_feats['mem']),
+      static_feats['comp']      / static_feats['mem']
+    ]
 
   def TargettoLabels(id: int) -> str:
     """
