@@ -109,12 +109,6 @@ message ActiveSampler {
   }
 }
 
-// Active learning message.
-message ActiveLearner {
-  optional string    downstream_task = 1;
-  optional Committee committee       = 2;
-}
-
 // Criteria used for determining when to stop sampling.
 message SampleTerminationCriterion {
   oneof criterion {
