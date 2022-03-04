@@ -10,7 +10,7 @@
 working_dir: "AST" ## This path is relative to "workspace_dir", which is an app FLAG
 model {
   corpus {
-    local_tar_archive: "$PWD/../corpus/ultimate_corpus.tar.bz2"
+    local_tar_archive: "$PWD/../corpus/corpus_250.tar.bz2"
     tokenizer {
       token_type: "ast"
       token_list: "deeplearning/clgen/corpuses/token_lists.json"
@@ -82,7 +82,12 @@ sampler {
       active {
         active_learner {
           committee {
+            random_seed: 12345
             mlp {
+              initial_learning_rate_micros: 20
+              batch_size: 32
+              num_train_steps: 500
+              num_warmup_steps: 100
               layer {
                 linear {
                   in_features: 10
@@ -97,7 +102,7 @@ sampler {
               }
             }
           }
-          downstream_task: "Grewe"
+          downstream_task: "GrewePredictive"
         }
         active_limit_per_feed: 2000
         active_search_depth: 100
