@@ -84,7 +84,7 @@ class GrewePredictive(DownstreamTask):
       static_feats['comp']      / static_feats['mem']
     ]
 
-  def TargettoLabels(id: int) -> str:
+  def TargetIDtoLabels(id: int) -> str:
     """
     Integer ID to label of predictive model.
     """
@@ -93,7 +93,7 @@ class GrewePredictive(DownstreamTask):
       1: "GPU",
     }[id]
 
-  def TargettoID(label: str) -> int:
+  def TargetLabeltoID(label: str) -> int:
     """
     Predictive label to ID.
     """
@@ -102,7 +102,7 @@ class GrewePredictive(DownstreamTask):
       "GPU": 1,
     }
 
-  def TargettoEncodedVector(label: str) -> typing.List[int]:
+  def TargetLabeltoEncodedVector(label: str) -> typing.List[int]:
     """
     Label to target vector.
     """
