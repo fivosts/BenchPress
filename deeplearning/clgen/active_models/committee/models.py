@@ -3,7 +3,6 @@ Here all the committee members are defined.
 """
 import math
 import typing
-
 import numpy as np
 
 from deeplearning.clgen.active_models.committee import config
@@ -30,6 +29,7 @@ class CommitteeModels(torch.nn.Module):
   """
   @classmethod
   def FromConfig(cls, config: config.ModelConfig) -> "CommitteeModels":
+    print(config)
     return {
       'MLP': MLP,
     }[config.name](config)
@@ -42,7 +42,7 @@ class MLP(CommitteeModels):
   """
   A modular MLP model that supports Linear, Dropout, LayerNorm and activations.
   """
-  def __init__(self, id: int, config: config.MLPConfig):
+  def __init__(self, id: int, config: config):
     super(self, MLP).__init__(id)
     self.config = config
     self.layers = []
