@@ -38,7 +38,7 @@ from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.models import lm_data_generator
-from deeplearning.clgen.models import active_models
+from deeplearning.clgen.active_models import active_models
 
 from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.util import sqlutil
