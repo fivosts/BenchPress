@@ -150,7 +150,7 @@ class Instance(object):
     # working directory.
     with self.Session():
       if config.HasField("model"):
-        self.model: models.Model = models.Model(config.model)
+        self.model: language_models.Model = language_models.Model(config.model)
       if config.HasField("sampler"):
         self.sampler: samplers.Sampler = samplers.Sampler(config.sampler)
 
