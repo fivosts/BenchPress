@@ -10,7 +10,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
   Parse proto description and check for validity.
   """
   tm = 0
-  pbutil.AssertFieldIsSet(config.committee.random_seed)
+  pbutil.AssertFieldIsSet(config.committee, "random_seed")
   for nn in config.committee.mlp:
     tl = 0
     pbutil.AssertFieldIsSet(nn, "initial_learning_rate_micros")
