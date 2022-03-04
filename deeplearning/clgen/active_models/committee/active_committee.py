@@ -12,6 +12,7 @@ import copy
 from deeplearning.clgen.active_models import backends
 from deeplearning.clgen.active_models import data_generator
 from deeplearning.clgen.util.pytorch import torch
+from deeplearning.clgen.util import logging as l
 
 class ActiveCommittee(backends.BackendBase):
 
@@ -39,8 +40,8 @@ class ActiveCommittee(backends.BackendBase):
     self.torch               = pytorch.torch
     self.torch_tpu_available = pytorch.torch_tpu_available
 
-    self.torch.manual_seed(self.config.training.random_seed)
-    self.torch.cuda.manual_seed_all(self.config.training.random_seed)
+    self.torch.manual_seed(self.config.committee.random_seed)
+    self.torch.cuda.manual_seed_all(self.config.committee.random_seed)
 
     self.ckpt_path         = self.cache.path / "checkpoints"
     self.sample_path       = self.cache.path / "samples"
