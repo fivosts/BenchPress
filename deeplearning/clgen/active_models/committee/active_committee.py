@@ -114,6 +114,13 @@ class ActiveCommittee(backends.BackendBase):
     l.logger().info(self.GetShortSummary())
     return
 
+  def model_step(self, model, inputs) -> float:
+    """
+    Run forward function for member model.
+    """
+    outputs = model(inputs.to(self.pytorch.device))
+    return outputs
+
   def TrainMember(self, member: 'ActiveCommittee.CommitteeEstimator') -> None:
     """
     Member-dispatching function for loading checkpoint, training and saving back.
