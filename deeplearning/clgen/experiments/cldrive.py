@@ -196,6 +196,13 @@ class CLDriveExecutions(sqlutil.Database):
       l.logger().error(e)
     return
 
+  def get_valid_data(self) -> typing.List[CLDriveSample]:
+    """
+    Return all valid entries, labelled either as CPU or GPU.
+    """
+    with self.Session() as session:
+      return session.query(CLDriveSample).filter(session.CLDriveSample.status in {"CPU", "GPU"}).yield_per(1000)
+
   def get_execution_times_ms(self, src: str, dataset: str, global_size: int, local_size: int) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
     """
     Search code by hash and return lists with all different execution times.
