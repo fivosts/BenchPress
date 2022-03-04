@@ -432,9 +432,6 @@ class Sampler(object):
     else:
       self.start_text = ""
 
-    if self.has_active_learning:
-      self.active_learner = active_models.Model(config.sample_corpus.corpus_config.active.active_learner)
-
     self.temperature = self.config.temperature_micros / 1e6
     self.batch_size = self.config.batch_size
     self.sequence_length = self.config.sequence_length
@@ -469,6 +466,9 @@ class Sampler(object):
       if environment.WORLD_RANK == 0:
         with open(self.cache.path / "sample_corpus" / "text_corpus.pkl", 'wb') as outf:
           pickle.dump(text_data, outf)
+
+    if self.has_active_learning:
+      self.active_learner = active_models.Model(config.sample_corpus.corpus_config.active.active_learner)
 
     if environment.WORLD_RANK == 0:
       meta = internal_pb2.SamplerMeta()
