@@ -18,14 +18,14 @@ class ActiveCommittee(backends.BackendBase):
   class CommitteeEstimator(typing.NamedTuple):
     """Named tuple to wrap BERT pipeline."""
     model          : typing.TypeVar('nn.Module')
-    data_generator : active_data_generator.Dataloader
+    data_generator : data_generator.Dataloader
     optimizer      : typing.Any
     scheduler      : typing.Any
 
   class SampleCommitteeEstimator(typing.NamedTuple):
     """Named tuple for sampling BERT."""
     model          : typing.List[typing.TypeVar('nn.Module')]
-    data_generator : active_data_generator.Dataloader
+    data_generator : data_generator.Dataloader
 
   def __init__(self, *args, **kwargs):
 
@@ -53,7 +53,7 @@ class ActiveCommittee(backends.BackendBase):
     return
 
   def _ConfigTrainParams(self, 
-                         data_generator: active_data_generator.Dataloader,
+                         data_generator: data_generator.Dataloader,
                          ) -> None:
     """
     Model parameter initialization for training and validation.
@@ -108,7 +108,7 @@ class ActiveCommittee(backends.BackendBase):
     raise NotImplementedError
 
     self._ConfigTrainParams(
-      active_data_generator.Dataloader.TrainMaskLMBatchGenerator(
+      data_generator.Dataloader.TrainMaskLMBatchGenerator(
         corpus, self.config.training,
         self.cache.path,
         self.config.training.num_pretrain_steps if pre_train else None,
