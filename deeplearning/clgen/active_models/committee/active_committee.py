@@ -262,11 +262,23 @@ class QueryByCommittee(backends.BackendBase):
     raise NotImplementedError
     return
 
+  def SampleMember(self) -> None:
+    """
+    Sample member of committee.
+    """
+    raise NotImplementedError
+
+  def SampleCommittee(self) -> None:
+    """
+    Sample committee with a set of inputs.
+    """
+    raise NotImplementedError
+
   def Sample(self) -> None:
     """
-    Sample committee members.
-
-    Collect predictions for given inputs of downstream task.
+    Active learner sampling.
+    This method queries all committee members and measures their cross-entropy to validate
+    the usefulness of parts of the feature space.
     """
     raise NotImplementedError
     return
