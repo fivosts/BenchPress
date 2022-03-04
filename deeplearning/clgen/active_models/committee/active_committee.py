@@ -9,8 +9,8 @@ import typing
 import pathlib
 import copy
 
-from deeplearning.clgen.models import backends
-from deeplearning.clgen.models import active_data_generator
+from deeplearning.clgen.active_models import backends
+from deeplearning.clgen.active_models import active_data_generator
 from deeplearning.clgen.util.pytorch import torch
 
 class ActiveCommittee(backends.BackendBase):
