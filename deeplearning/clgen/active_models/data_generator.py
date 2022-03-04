@@ -20,6 +20,7 @@ class GrewePredictiveLoader(Dataloader):
   """
   Specified dataloader for Grewe predictive model.
   """
-  def __init__(self):
+  def __init__(self, corpus: typing.List[typing.Tuple[int, int, str]]):
     super(GrewePredictiveLoader, self).__init__()
+    # self.
     return
