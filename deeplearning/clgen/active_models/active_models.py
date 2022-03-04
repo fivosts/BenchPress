@@ -93,7 +93,7 @@ class Model(object):
 
     if environment.WORLD_RANK == 0:
       ## Store current commit
-      commit.saveCommit(self.cache.path)
+      commit.saveCommit(self.cache.path, self.cache)
     self.backend = active_committee.ActiveCommittee(self.config)
     l.logger().info("Initialized {} in {}".format(self.config.architecture.backend, self.cache.path))
     return
