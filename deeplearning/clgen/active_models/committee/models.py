@@ -28,12 +28,10 @@ class Committee(torch.nn.Module):
   Abstract representation of model committee.
   """
   @classmethod
-  def FromConfig(cls, config: config.CommitteeConfig) -> typing.List["Committee"]:
-    for idx, cf in config.models.items():
-      yield {
-        'MLP': MLP,
-      }[cf.name](idx, cf)
-    return
+  def FromConfig(cls, config: config.ModelConfig) -> "Committee":
+    return {
+      'MLP': MLP,
+    }[config.name](config)
 
   def __init__(self, id: int):
     self.id = id
