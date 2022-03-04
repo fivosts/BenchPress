@@ -78,7 +78,7 @@ class ActiveCommittee(backends.BackendBase):
     Model parameter initialization.
     """
 
-    self.committee_configs = config.CommitteeConfig.FromConfig(self.config.committee)
+    self.committee_configs = config.CommitteeConfig.FromConfig(self.config.committee, self.downstream_task)
 
     self.validation_results_file = "val_results.txt"
     self.validation_results_path = os.path.join(str(self.logfile_path), self.validation_results_file)
@@ -90,10 +90,10 @@ class ActiveCommittee(backends.BackendBase):
         num_warmup_steps = cconfig.num_warmup_steps,
         max_grad_norm    = cconfig.max_grad_norm,
         steps_per_epoch  = cconfig.steps_per_epoch,
-        num_epochs       = cconfig.steps_per_epoch,
+        num_epochs       = cconfig.num_epochs,
         num_train_steps  = cconfig.num_train_steps,
       )
-      cm = models.Committee.FromConfig(cconfig)
+      cm = models.CommitteeModels.FromConfig(cconfig.layers_config)
       opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
         model           = cm,
         num_train_steps = training_opts.num_train_steps,
@@ -119,7 +119,7 @@ class ActiveCommittee(backends.BackendBase):
     """
     Training point of active learning committee.
     """
-    self._ConfigTrainParams()
+    self._ConfigModelParams(self.downstream_task.data_generator)
     raise NotImplementedError
 
     ## config model array
