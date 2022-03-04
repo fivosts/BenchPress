@@ -95,7 +95,7 @@ class Model(object):
       ## Store current commit
       commit.saveCommit(self.cache.path)
     self.backend = active_committee.ActiveCommittee(self.config, self.cache)
-    l.logger().info("Initialized {} in {}".format(self.config.architecture.backend, self.cache.path))
+    l.logger().info("Initialized {} in {}".format(self.backend, self.cache.path))
     return
 
   def Train(self, **kwargs) -> "Model":
