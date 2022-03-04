@@ -231,7 +231,7 @@ class ActiveCommittee(backends.BackendBase):
             if current_step == 0:
             l.logger().info("Starting Loss: {}".format(sum([tl.mean().item() for tl in total_loss]) / len(total_loss)))
           # End of epoch
-          self.saveCheckpoint(model, optimizer, scheduler, member_path)
+          self.saveCheckpoint(model, optimizer, scheduler, member_path, current_step)
           if self.pytorch.num_nodes > 1:
             loader.sampler.set_epoch(epoch)
 
@@ -271,39 +271,39 @@ class ActiveCommittee(backends.BackendBase):
     raise NotImplementedError
     return
 
-  def saveCheckpoint(self, model, optimizer, scheduler, path) -> None:
+  def saveCheckpoint(self, model, optimizer, scheduler, path, step) -> None:
     """
     Saves model, scheduler, optimizer checkpoints per epoch.
     """
     if self.is_world_process_zero():
-      ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, self.current_step)
+      ckpt_comp = lambda x: path / "{}-{}.pt".format(x, step)
 
       if self.torch_tpu_available:
         if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
-          self.pytorch.torch_xla_model.save(estimator.model, ckpt_comp("model"))
+          self.pytorch.torch_xla_model.save(model, ckpt_comp("model"))
         self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
-        self.pytorch.torch_xla.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
-        self.pytorch.torch_xla.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
+        self.pytorch.torch_xla.save(optimizer.state_dict(), ckpt_comp("optimizer"))
+        self.pytorch.torch_xla.save(scheduler.state_dict(), ckpt_comp("scheduler"))
       else:
-        if isinstance(estimator.model, self.torch.nn.DataParallel):
-          self.torch.save(estimator.model.module.state_dict(), ckpt_comp("model"))
+        if isinstance(model, self.torch.nn.DataParallel):
+          self.torch.save(model.module.state_dict(), ckpt_comp("model"))
         else:
-          self.torch.save(estimator.model.state_dict(), ckpt_comp("model"))
-        self.torch.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
-        self.torch.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
+          self.torch.save(model.state_dict(), ckpt_comp("model"))
+        self.torch.save(optimizer.state_dict(), ckpt_comp("optimizer"))
+        self.torch.save(scheduler.state_dict(), ckpt_comp("scheduler"))
 
-      with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
-        mf.write("train_step: {}\n".format(self.current_step))
+      with open(path / "checkpoint.meta", 'a') as mf:
+        mf.write("train_step: {}\n".format(step))
     return
 
   def loadCheckpoint(self, model, optimizer, scheduler, path) -> int:
     """
     Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
     """
-    if not (self.ckpt_path / "checkpoint.meta").exists():
+    if not (path / "checkpoint.meta").exists():
       return -1
 
-    with open(self.ckpt_path / "checkpoint.meta", 'r') as mf:
+    with open(path / "checkpoint.meta", 'r') as mf:
       key     = "train_step"
       get_step  = lambda x: int(x.replace("\n", "").replace("{}: ".format(key), ""))
       lines     = mf.readlines()
@@ -311,16 +311,13 @@ class ActiveCommittee(backends.BackendBase):
     if FLAGS.select_checkpoint_step == -1:
       ckpt_step = max(entries)
     else:
-      if FLAGS.select_checkpoint_step in entries:
-        ckpt_step = FLAGS.select_checkpoint_step
-      else:
-        raise ValueError("{} not found in checkpoint folder.".format(FLAGS.select_checkpoint_step))
+      raise ValueError("{} not found in checkpoint folder.".format(FLAGS.select_checkpoint_step))
 
-    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, ckpt_step)
+    ckpt_comp = lambda x: path / "{}-{}.pt".format(x, ckpt_step)
 
-    if isinstance(estimator.model, self.torch.nn.DataParallel):
+    if isinstance(model, self.torch.nn.DataParallel):
       try:
-        estimator.model.module.load_state_dict(
+        model.module.load_state_dict(
           self.torch.load(ckpt_comp("model"))
         )
       except RuntimeError:
@@ -340,10 +337,10 @@ class ActiveCommittee(backends.BackendBase):
           else:
             name = 'module.' + k # Add 'module.'
           new_state_dict[name] = v
-        estimator.model.module.load_state_dict(new_state_dict)
+        model.module.load_state_dict(new_state_dict)
     else:
       try:
-        estimator.model.load_state_dict(
+        model.load_state_dict(
           self.torch.load(ckpt_comp("model"), map_location=self.pytorch.device)
         )
       except RuntimeError:
@@ -363,16 +360,8 @@ class ActiveCommittee(backends.BackendBase):
           else:
             name = 'module.' + k # Add 'module.'
           new_state_dict[name] = v
-        estimator.model.load_state_dict(new_state_dict)
-    if isinstance(estimator, ActiveCommittee.CommitteeEstimator):
-      if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
-        estimator.optimizer.load_state_dict(
-          self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
-        )
-        estimator.scheduler.load_state_dict(
-          self.torch.load(ckpt_comp("scheduler"), map_location=self.pytorch.device)
-        )
-    estimator.model.eval()
+        model.load_state_dict(new_state_dict)
+    model.eval()
     return ckpt_step
 
   def is_world_process_zero(self) -> bool:
