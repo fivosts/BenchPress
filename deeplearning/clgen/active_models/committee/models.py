@@ -23,12 +23,12 @@ ACT2FN = {
   "mish": mish
 }
 
-class Committee(torch.nn.Module):
+class CommitteeModels(torch.nn.Module):
   """
   Abstract representation of model committee.
   """
   @classmethod
-  def FromConfig(cls, config: config.ModelConfig) -> "Committee":
+  def FromConfig(cls, config: config.ModelConfig) -> "CommitteeModels":
     return {
       'MLP': MLP,
     }[config.name](config)
@@ -37,7 +37,7 @@ class Committee(torch.nn.Module):
     self.id = id
     return
 
-class MLP(Committee):
+class MLP(CommitteeModels):
   """
   A modular MLP model that supports Linear, Dropout, LayerNorm and activations.
   """
