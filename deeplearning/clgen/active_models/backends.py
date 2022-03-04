@@ -13,11 +13,10 @@ class BackendBase(object):
     self,
     config: active_learning_pb2.ActiveLearner,
     fs_cache: cache.FSCache,
-    hash: str,
   ):
     self.config = config
     self.cache = fs_cache
-    self.hash = hash
+    return
 
   def Train(self, corpus: "Corpus", **extra_kwargs) -> None:
     """Train the backend."""
