@@ -33,8 +33,10 @@ from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
 from deeplearning.clgen.models import downstream_tasks
+from deeplearning.clgen.samplers import sample_observers as sample_observers_lib
 from deeplearning.clgen.models.committee import config as com_config
 from deeplearning.clgen.proto import telemetry_pb2
+from deeplearning.clgen.proto import active_learning_pb2
 from absl import flags
 
 from deeplearning.clgen.util import logging as l
