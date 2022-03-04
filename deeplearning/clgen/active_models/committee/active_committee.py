@@ -28,6 +28,9 @@ class ActiveCommittee(backends.BackendBase):
     model          : typing.List[typing.TypeVar('nn.Module')]
     data_generator : data_generator.Dataloader
 
+  def __repr__(self):
+    return "ActiveCommittee"
+
   def __init__(self, *args, **kwargs):
 
     super(ActiveCommittee, self).__init__(*args, **kwargs)
