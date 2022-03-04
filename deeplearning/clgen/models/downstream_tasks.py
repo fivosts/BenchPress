@@ -4,6 +4,8 @@ downstream tasks that the committee can be trained on.
 
 The input and output features per downstream task are defined.
 """
+from deeplearning.clgen.models.committee import data_generator
+
 class DownstreamTask(object):
   """
   Downstream Task generic class.
@@ -22,10 +24,11 @@ class GrewePredictive(DownstreamTask):
   """
   def __init__(self) -> None:
     super(GrewePredictive, self).__init__("GrewePredictive")
-    self.inputs        = ["comp", "mem", "localmem", "coalesced", "atomic"]
-    self.input_size    = 10
-    self.output_labels = ["CPU", "GPU"]
-    self.output_size   = 2
+    self.inputs         = ["comp", "mem", "localmem", "coalesced", "atomic"]
+    self.input_size     = 10
+    self.output_labels  = ["CPU", "GPU"]
+    self.output_size    = 2
+    self.data_generator = data_generator.GrewePredictiveLoader()
     return
 
 TASKS = {
