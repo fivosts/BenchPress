@@ -21,7 +21,7 @@ class BackendBase(object):
     self.downstream_task = downstream_task
     return
 
-  def Train(self, corpus: "Corpus", **extra_kwargs) -> None:
+  def Train(self, **extra_kwargs) -> None:
     """Train the backend."""
     raise NotImplementedError
 
