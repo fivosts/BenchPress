@@ -65,7 +65,7 @@ flags.DEFINE_integer(
   "Select size of workload samples for single sample step."
 )
 
-def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_learning_pb2:ActiveLearner:
+def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_learning_pb2.ActiveLearner:
   """
   Parse proto description and check for validity.
   """
