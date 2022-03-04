@@ -9,14 +9,13 @@ import typing
 import pathlib
 import copy
 
+from deeplearning.clgen.models.torch_bert import optimizer
 from deeplearning.clgen.active_models import backends
 from deeplearning.clgen.active_models import data_generator
 from deeplearning.clgen.active_models.committee import models
 from deeplearning.clgen.active_models.committee import config
 from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.util import logging as l
-
-
 
 class ActiveCommittee(backends.BackendBase):
 
