@@ -433,7 +433,7 @@ class Sampler(object):
       self.start_text = ""
 
     if self.has_active_learning:
-      self.active_learner = active_models.Model(config)
+      self.active_learner = active_models.Model(config.sample_corpus.corpus_config.active.active_learner)
 
     self.temperature = self.config.temperature_micros / 1e6
     self.batch_size = self.config.batch_size
