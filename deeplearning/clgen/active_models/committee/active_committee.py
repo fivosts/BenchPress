@@ -100,9 +100,11 @@ class ActiveCommittee(backends.BackendBase):
         learning_rate   = training_opts.learning_rate,
       )
       self.committee.append(
-        CommitteeEstimator(
+        ActiveCommittee.CommitteeEstimator(
           model          = cm,
           data_generator = data_generator,
+          optimizer      = opt,
+          scheduler      = lr_scheduler,
           training_opts  = training_opts,
           sha256         = cconfig.sha256,
         )
@@ -112,7 +114,7 @@ class ActiveCommittee(backends.BackendBase):
     l.logger().info(self.GetShortSummary())
     return
 
-  def TrainMember(self, member: CommitteeEstimator) -> None:
+  def TrainMember(self, member: 'ActiveCommittee.CommitteeEstimator') -> None:
     raise NotImplementedError
     return
 
@@ -259,3 +261,6 @@ class ActiveCommittee(backends.BackendBase):
       return self.torch.distributed.get_rank() == 0
     else:
       return True
+
+  def GetShortSummary(self) -> str:
+    return "TODO"
