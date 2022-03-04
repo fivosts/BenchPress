@@ -73,17 +73,13 @@ class ActiveCommittee(backends.BackendBase):
     l.logger().info("Active Committee config initialized in {}".format(self.cache.path))
     return
 
-  def _ConfigModelParams(self) -> None:
+  def _ConfigModelParams(self, data_generator: data_generator.Dataloader) -> None:
     """
-    Initialize configuration for model array.
+    Model parameter initialization.
     """
-    self.committee_configs = config.CommitteeConfig.FromConfig(self.config.committee)
-    return
 
-  def _ConfigTrainParams(self, data_generator: data_generator.Dataloader) -> None:
-    """
-    Model parameter initialization for training and validation.
-    """
+    self.committee_configs = config.CommitteeConfig.FromConfig(self.config.committee)
+
     self.validation_results_file = "val_results.txt"
     self.validation_results_path = os.path.join(str(self.logfile_path), self.validation_results_file)
 
