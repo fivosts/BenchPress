@@ -249,11 +249,18 @@ class ActiveCommittee(backends.BackendBase):
     return
 
   def Validate(self) -> None:
+    """
+    Perform validation for committee members.
+    """
     raise NotImplementedError
     return
 
   def Sample(self) -> None:
-    raise NotImplementedError
+    """
+    Sample committee members.
+
+    Collect predictions for given inputs of downstream task.
+    """
     return
 
   def saveCheckpoint(self, estimator):
