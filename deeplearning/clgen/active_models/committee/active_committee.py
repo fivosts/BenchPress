@@ -92,7 +92,7 @@ class ActiveCommittee(backends.BackendBase):
         num_epochs       = cconfig.num_epochs,
         num_train_steps  = cconfig.num_train_steps,
       )
-      cm = models.CommitteeModels.FromConfig(cconfig.layers_config)
+      cm = models.CommitteeModels.FromConfig(cconfig.layer_config)
       opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
         model           = cm,
         num_train_steps = training_opts.num_train_steps,
