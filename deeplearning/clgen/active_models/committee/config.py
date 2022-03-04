@@ -73,7 +73,7 @@ class ModelConfig(object):
                ) -> "ModelConfig":
     self.config           = config
     self.downstream_task  = downstream_task
-    self.sha256           = crypto.sha256_str(config)
+    self.sha256           = crypto.sha256_str(str(config))
 
     self.num_train_steps  = config.num_train_steps
     self.num_warmup_steps = config.num_warmup_steps
