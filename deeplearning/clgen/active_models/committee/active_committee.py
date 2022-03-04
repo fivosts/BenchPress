@@ -11,10 +11,23 @@ import copy
 
 from deeplearning.clgen.active_models import backends
 from deeplearning.clgen.active_models import data_generator
+from deeplearning.clgen.active_models.committee import config
 from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.util import logging as l
 
+
+
 class ActiveCommittee(backends.BackendBase):
+
+  class TrainingOpts(typing.NamedTuple):
+    """Wrapper class for training options"""
+    train_batch_size : int
+    learning_rate    : float
+    num_warmup_steps : int
+    max_grad_norm    : float
+    steps_per_epoch  : int
+    num_epochs       : int
+    num_train_steps  : int
 
   class CommitteeEstimator(typing.NamedTuple):
     """Named tuple to wrap BERT pipeline."""
@@ -22,11 +35,14 @@ class ActiveCommittee(backends.BackendBase):
     data_generator : data_generator.Dataloader
     optimizer      : typing.Any
     scheduler      : typing.Any
+    training_opts  : 'TrainingOpts'
+    sha256         : str
 
   class SampleCommitteeEstimator(typing.NamedTuple):
     """Named tuple for sampling BERT."""
     model          : typing.List[typing.TypeVar('nn.Module')]
     data_generator : data_generator.Dataloader
+    sha256         : str
 
   def __repr__(self):
     return "ActiveCommittee"
@@ -50,65 +66,71 @@ class ActiveCommittee(backends.BackendBase):
     self.sample_path       = self.cache.path / "samples"
     self.logfile_path      = self.cache.path / "logs"
 
+    self.committee         = []
+
     self.is_validated      = False
     self.trained           = False
     l.logger().info("Active Committee config initialized in {}".format(self.cache.path))
     return
 
-  def _ConfigTrainParams(self, 
-                         data_generator: data_generator.Dataloader,
-                         ) -> None:
+  def _ConfigModelParams(self) -> None:
+    """
+    Initialize configuration for model array.
+    """
+    self.committee_configs = config.CommitteeConfig.FromConfig(self.config.committee)
+    return
+
+  def _ConfigTrainParams(self, data_generator: data_generator.Dataloader) -> None:
     """
     Model parameter initialization for training and validation.
     """
-    self.train_batch_size                 = self.config.training.batch_size
-    self.eval_batch_size                  = self.config.training.batch_size
-    self.learning_rate                    = self.config.training.adam_optimizer.initial_learning_rate_micros / 1e6
-    self.num_warmup_steps                 = self.config.training.num_warmup_steps
-    self.max_grad_norm                    = 1.0
+    self.validation_results_file = "val_results.txt"
+    self.validation_results_path = os.path.join(str(self.logfile_path), self.validation_results_file)
 
-    self.steps_per_epoch                  = data_generator.steps_per_epoch
-    self.current_step                     = None
-    self.num_epochs                       = data_generator.num_epochs
-    self.num_train_steps                  = self.steps_per_epoch * self.num_epochs
-    self.max_eval_steps                   = FLAGS.max_eval_steps
-
-    self.validation_results_file          = "val_results.txt"
-    self.validation_results_path          = os.path.join(str(self.logfile_path), self.validation_results_file)
-
-    self.train = []
-
-    for model in model_committee:
-      m = model(self.config).to(self.pytorch.offset_device)
-      if self.pytorch.num_nodes > 1:
-        distrib.barrier()
-        m = self.torch.nn.parallel.DistributedDataParallel(
-          m,
-          device_ids    = [self.pytorch.offset_device],
-          output_device = self.pytorch.offset_device,
-        )
-      elif self.pytorch.num_gpus > 1:
-        m = self.torch.nn.DataParallel(m)
-
+    for cconfig in self.committee_configs:
+      training_opts = ActiveCommittee.TrainingOpts(
+        train_batch_size = cconfig.batch_size,
+        learning_rate    = cconfig.learning_rate,
+        num_warmup_steps = cconfig.num_warmup_steps,
+        max_grad_norm    = cconfig.max_grad_norm,
+        steps_per_epoch  = cconfig.steps_per_epoch,
+        num_epochs       = cconfig.steps_per_epoch,
+        num_train_steps  = cconfig.num_train_steps,
+      )
+      cm = models.Committee.FromConfig(cconfig)
       opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
-        model           = m,
-        num_train_steps = self.num_train_steps,
-        warmup_steps    = self.num_warmup_steps,
-        learning_rate   = self.learning_rate,
+        model           = cm,
+        num_train_steps = training_opts.num_train_steps,
+        warmup_steps    = training_opts.num_warmup_steps,
+        learning_rate   = training_opts.learning_rate,
       )
-      self.train.append(
-        ActiveCommittee.CommitteeEstimator(
-          m, copy.deepcopy(data_generator), opt, lr_scheduler
-        )
+      self.committee.append(
+        model          = cm,
+        data_generator = data_generator,
+        training_opts  = training_opts,
+        sha256         = cconfig.sha256,
       )
+      (self.ckpt_path / cconfig.sha256).mkdir(exist_ok = True, parents = True),
+      (self.logfile_path / cconfig.sha256).mkdir(exist_ok = True, parents = True),
     l.logger().info(self.GetShortSummary())
+    return
+
+  def TrainMember(self, member: CommitteeEstimator) -> None:
+    raise NotImplementedError
     return
 
   def Train(self, **kwargs) -> None:
     """
     Training point of active learning committee.
     """
+    self._ConfigTrainParams()
     raise NotImplementedError
+
+    ## config model array
+    ## load checkpoint
+    ## Data generator
+    ## Schedulers, optimizers
+    ## Train member
 
     return
 
