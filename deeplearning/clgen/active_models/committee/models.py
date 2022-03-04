@@ -57,6 +57,9 @@ class MLP(CommitteeModels):
     self.layers = torch.nn.ModuleList([layers[layer[0]](**layer[1]) for layer in config])
     return
 
+  def calculate_loss(output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    raise NotImplementedError
+
   def forward(self,
               inp: torch.Tensor,
               target: torch.Tensor,
