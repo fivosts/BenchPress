@@ -115,8 +115,127 @@ class ActiveCommittee(backends.BackendBase):
     return
 
   def TrainMember(self, member: 'ActiveCommittee.CommitteeEstimator') -> None:
-    current_step = self.loadCheckpoint(member)
-    raise NotImplementedError
+    """
+    Member-dispatching function for loading checkpoint, training and saving back.
+    """
+    model           = member.model.to(self.pytorch.offset_device)
+    dataloader      = member.dataloader
+    optimizer       = member.optimizer
+    scheduler       = member.scheduler
+    member_path     = self.ckpt_path / member.sha256
+    member_log_path = self.logfile_path / member.sha256
+
+    if self.pytorch.num_nodes > 1:
+      distrib.barrier()
+      model = self.torch.nn.parallel.DistributedDataParallel(
+        model,
+        device_ids    = [self.pytorch.offset_device],
+        output_device = self.pytorch.offset_device,
+      )
+    elif self.pytorch.num_gpus > 1:
+      model = self.torch.nn.DataParallel(model)
+
+    current_step = self.loadCheckpoint(model, optimizer, scheduler, member_path)
+    if self.pytorch.num_gpus > 0:
+      self.torch.cuda.empty_cache()
+
+    if current_step >= 0:
+      l.logger().info("Loaded checkpoint step {}".format(current_step))
+
+    if current_step < member.num_train_steps:
+      model.zero_grad()
+
+      ## Set batch size in case of TPU training or distributed training.
+      if self.torch_tpu_available:
+        total_train_batch_size = self.train_batch_size * self.pytorch.torch_xla.xrt_world_size()
+      else:
+        total_train_batch_size = (
+          member.train_batch_size
+          * (self.torch.distributed.get_world_size() if self.pytorch.num_nodes > 1 else 1)
+        )
+
+      raise NotImplementedError("Right here implement the loader, sampler etc. thing.")
+
+      # Set dataloader in case of TPU training.
+      if self.torch_tpu_available:
+        loader = self.pytorch.torch_ploader.ParallelLoader(
+                            self.train.data_generator.dataloader, [self.pytorch.device]
+                          ).per_device_loader(self.pytorch.device)
+
+      # Get dataloader iterator and setup hooks.
+      batch_iterator = iter(loader)
+      if self.is_world_process_zero():
+        train_hook = hooks.tensorMonitorHook(
+          member_log_path, current_step, min(steps_per_epoch, 50)
+        )
+      total_steps = member.num_train_steps
+      try:
+        model.train()
+        epoch_iter = tqdm.auto.trange(member.num_epochs, desc="Epoch", leave = False) if self.is_world_process_zero() else range(member.num_epochs)
+        for epoch in epoch_iter:
+          # In distributed mode, calling the set_epoch() method at
+          # the beginning of each epoch before creating the DataLoader iterator
+          # is necessary to make shuffling work properly across multiple epochs.
+          # Otherwise, the same ordering will be always used.
+          if self.pytorch.num_nodes > 1:
+            loader.sampler.set_epoch(epoch)
+
+          if epoch < current_step // member.steps_per_epoch:
+            continue
+
+          batch_iter = tqdm.auto.trange(member.steps_per_epoch, desc="Batch", leave = False) if self.is_world_process_zero() else range(member.steps_per_epoch)
+          for step in batch_iter:
+            if self.is_world_process_zero():
+              start = datetime.datetime.utcnow()
+            try:
+              inputs = next(batch_iterator)
+            except StopIteration:
+              # dataloader has different len() than steps_per_epoch.
+              # This is the easiest way to infinite-loop dataloaders in pytorch.
+              batch_iterator = iter(loader)
+              inputs = next(batch_iterator)
+
+            current_step += 1
+            # Run model step on inputs
+            step_out = self.model_step(model, inputs)
+            # Backpropagate losses
+            total_loss = step_out['total_loss'].mean()
+            total_loss.backward()
+
+            self.torch.nn.utils.clip_grad_norm_(model.parameters(), member.max_grad_norm)
+            if self.torch_tpu_available:
+              self.pytorch.torch_xla.optimizer_step(optimizer)
+            else:
+              optimizer.step()
+            scheduler.step()
+
+            ## Collect tensors for logging.
+            if self.pytorch.num_nodes > 1:
+              total_loss = [self.torch.zeros(tuple(step_out['total_loss'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+              self.torch.distributed.all_gather(masked_lm_loss, step_out["masked_lm_loss"])
+            else:
+              total_loss = step_out['total_loss'].unsqueeze(0).cpu()
+            if self.is_world_process_zero():
+              train_hook.step(
+                train_step = current_step,
+                total_loss = total_loss
+              )
+            model.zero_grad()
+            if current_step == 0:
+            l.logger().info("Starting Loss: {}".format(sum([tl.mean().item() for tl in total_loss]) / len(total_loss)))
+          # End of epoch
+          self.saveCheckpoint(model, optimizer, scheduler, member_path)
+          if self.pytorch.num_nodes > 1:
+            loader.sampler.set_epoch(epoch)
+
+          if self.is_world_process_zero():
+            l.logger().info("Epoch {} Loss: {}".format(member.current_step // member.steps_per_epoch, train_hook.epoch_loss))
+            train_hook.end_epoch()
+
+          if self.torch_tpu_available:
+            self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
+      except KeyboardInterrupt:
+        pass
     return
 
   def Train(self, **kwargs) -> None:
