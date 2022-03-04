@@ -32,7 +32,7 @@ class GrewePredictive(DownstreamTask):
     self.output_labels  = ["CPU", "GPU"]
     self.output_size    = 2
     # self.corpus_db      = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus)), must_exist = True)
-    self.data_generator = data_generator.GrewePredictiveLoader()
+    # self.data_generator = data_generator.GrewePredictiveLoader(self.corpus_db.get_the_right_data)
     return
 
 TASKS = {
