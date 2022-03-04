@@ -22,7 +22,7 @@ message Committee {
 
 // MLP-type architecture.
 message MLP {
-  repeated Layer layers = 1;
+  repeated Layer layer = 1;
 }
 
 // Layer wrapper to help with layer's ordering consistency.
