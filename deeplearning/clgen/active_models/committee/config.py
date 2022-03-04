@@ -10,6 +10,10 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
   Parse proto description and check for validity.
   """
   tm = 0
+  pbutil.AssertFieldIsSet(config,       "training_corpus")
+  p = pathlib.Path(config.training_corpus).resolve():
+  if not p.exists():
+    raise FileNotFoundError(p)
   pbutil.AssertFieldIsSet(config.committee, "random_seed")
   for nn in config.committee.mlp:
     tl = 0
