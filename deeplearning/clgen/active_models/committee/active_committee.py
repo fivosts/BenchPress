@@ -264,7 +264,7 @@ class ActiveCommittee(backends.BackendBase):
     raise NotImplementedError
     return
 
-  def saveCheckpoint(self, estimator):
+  def saveCheckpoint(self, model, optimizer, scheduler, path) -> None:
     """
     Saves model, scheduler, optimizer checkpoints per epoch.
     """
@@ -289,12 +289,7 @@ class ActiveCommittee(backends.BackendBase):
         mf.write("train_step: {}\n".format(self.current_step))
     return
 
-  def loadCheckpoint(self,
-                     estimator: typing.Union[
-                                  typing.TypeVar('ActiveCommittee.CommitteeEstimator'),
-                                  typing.TypeVar('ActiveCommittee.SampleCommitteeEstimator')
-                                ],
-                     ) -> int:
+  def loadCheckpoint(self, model, optimizer, scheduler, path) -> int:
     """
     Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
     """
