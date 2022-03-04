@@ -66,6 +66,9 @@ class ActiveCommittee(backends.BackendBase):
     self.sample_path       = self.cache.path / "samples"
     self.logfile_path      = self.cache.path / "logs"
 
+    self.validation_results_file = "val_results.txt"
+    self.validation_results_path = self.logfile_path / self.validation_results_file
+
     self.committee         = []
 
     self.is_validated      = False
@@ -79,10 +82,6 @@ class ActiveCommittee(backends.BackendBase):
     """
 
     self.committee_configs = config.ModelConfig.FromConfig(self.config.committee, self.downstream_task)
-
-    self.validation_results_file = "val_results.txt"
-    self.validation_results_path = os.path.join(str(self.logfile_path), self.validation_results_file)
-
     for cconfig in self.committee_configs:
       training_opts = ActiveCommittee.TrainingOpts(
         train_batch_size = cconfig.batch_size,
