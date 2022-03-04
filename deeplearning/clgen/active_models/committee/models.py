@@ -6,7 +6,7 @@ import typing
 
 import numpy as np
 
-from deeplearning.clgen.models.committee import config
+from deeplearning.clgen.active_models.committee import config
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 
