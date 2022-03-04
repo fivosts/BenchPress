@@ -58,6 +58,9 @@ class MLP(CommitteeModels):
     return
 
   def calculate_loss(output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    """
+    Categorical cross-entropy function.
+    """
     raise NotImplementedError
 
   def forward(self,
