@@ -1,16 +1,10 @@
 """Neural network backends for language models."""
 import typing
-
 import numpy as np
 
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.proto import model_pb2
-from absl import flags
-
 from deeplearning.clgen.util import cache
-
-FLAGS = flags.FLAGS
-
 
 class BackendBase(object):
   """The base class for a language model backend.
