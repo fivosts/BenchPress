@@ -33,3 +33,12 @@ class Dataloader(torch.utils.data.Dataset):
         }
       )
     return
+
+  def __getitem__(self, idx):
+
+    if idx < 0:
+      if -idx > len(self):
+        raise ValueError("absolute value of index should not exceed dataset length")
+      idx = len(self) + idx
+
+    return self.dataset[idx]
