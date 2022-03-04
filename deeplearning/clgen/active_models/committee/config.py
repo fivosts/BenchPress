@@ -46,7 +46,7 @@ class CommitteeConfig(object):
   model_type = "committee"
 
   @classmethod
-  def FromConfig(cls, config: active_learning_pb2.ActiveLearner) -> "CommitteeConfig":
+  def FromConfig(cls, config: active_learning_pb2.Committee) -> typing.List["CommitteeConfig"]:
     config = CommitteeConfig(config, downstream_task)
     return config
 
@@ -67,4 +67,6 @@ class CommitteeConfig(object):
   def __init__(self, config: active_learning_pb2.ActiveLearner) -> "CommitteeConfig":
     self.config = config
     self.task   = config.downstream_task
+    print(config)
+    raise NotImplementedError
     return
