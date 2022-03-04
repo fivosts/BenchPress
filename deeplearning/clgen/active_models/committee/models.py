@@ -57,8 +57,22 @@ class MLP(CommitteeModels):
     self.layers = torch.nn.ModuleList([layers[layer[0]](**layer[1]) for layer in config])
     return
 
-  def forward(self, inp: torch.Tensor) -> torch.Tensor:
+  def forward(self,
+              inp: torch.Tensor,
+              target: torch.Tensor,
+              is_sampling: bool = False
+              ) -> torch.Tensor:
     out = inp
     for layer in self.layers:
       out = layer(out)
-    return out
+
+    if not is_sampling:
+      total_loss = self.calculate_loss(out, target)
+      return {
+        'total_loss'   : total_loss,
+        'output_label' : torch.argmax(out)
+      }
+    else:
+      return {
+        'output_label' : torch.argmax(out)
+      }
