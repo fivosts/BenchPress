@@ -12,15 +12,6 @@ class Dataloader(torch.utils.data.Dataset):
   Abstract torch dataloading class.
   Inherit for this for multiple downstream tasks.
   """
-  def __init__(self):
+  def __init__(self, dataset: typing.List[typing.Tuple[typing.List[int], typing.List[int]]]):
     super(Dataloader, self).__init__()
-    return
-
-class GrewePredictiveLoader(Dataloader):
-  """
-  Specified dataloader for Grewe predictive model.
-  """
-  def __init__(self, corpus: typing.List[typing.Tuple[int, int, str]]):
-    super(GrewePredictiveLoader, self).__init__()
-    # self.
     return
