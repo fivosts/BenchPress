@@ -29,7 +29,7 @@ class ActiveCommittee(backends.BackendBase):
 
   def __init__(self, *args, **kwargs):
 
-    super(torchBert, self).__init__(*args, **kwargs)
+    super(ActiveCommittee, self).__init__(*args, **kwargs)
     
     from deeplearning.clgen.util import pytorch
     if not pytorch.initialized:
@@ -155,8 +155,8 @@ class ActiveCommittee(backends.BackendBase):
 
   def loadCheckpoint(self,
                      estimator: typing.Union[
-                                  typing.TypeVar('torchBert.BertEstimator'),
-                                  typing.TypeVar('torchBert.SampleBertEstimator')
+                                  typing.TypeVar('ActiveCommittee.CommitteeEstimator'),
+                                  typing.TypeVar('ActiveCommittee.SampleCommitteeEstimator')
                                 ],
                      ) -> int:
     """
@@ -226,7 +226,7 @@ class ActiveCommittee(backends.BackendBase):
             name = 'module.' + k # Add 'module.'
           new_state_dict[name] = v
         estimator.model.load_state_dict(new_state_dict)
-    if isinstance(estimator, torchBert.BertEstimator):
+    if isinstance(estimator, ActiveCommittee.CommitteeEstimator):
       if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
         estimator.optimizer.load_state_dict(
           self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
