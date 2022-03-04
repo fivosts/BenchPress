@@ -78,7 +78,7 @@ class ActiveCommittee(backends.BackendBase):
     Model parameter initialization.
     """
 
-    self.committee_configs = config.CommitteeConfig.FromConfig(self.config.committee, self.downstream_task)
+    self.committee_configs = config.ModelConfig.FromConfig(self.config.committee, self.downstream_task)
 
     self.validation_results_file = "val_results.txt"
     self.validation_results_path = os.path.join(str(self.logfile_path), self.validation_results_file)
