@@ -91,10 +91,12 @@ class Model(object):
     self.cache = cache.mkcache("active_model")
     distrib.unlock()
 
+    self.downstream_task = downstream_tasks.DownstreamTask.FromTask(self.config.downstream_task)
+
     if environment.WORLD_RANK == 0:
       ## Store current commit
       commit.saveCommit(self.cache.path)
-    self.backend = active_committee.ActiveCommittee(self.config, self.cache)
+    self.backend = active_committee.ActiveCommittee(self.config, self.cache, self.downstream_task)
     l.logger().info("Initialized {} in {}".format(self.backend, self.cache.path))
     return
 
