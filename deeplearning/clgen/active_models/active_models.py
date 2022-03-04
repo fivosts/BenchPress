@@ -91,7 +91,9 @@ class Model(object):
     self.cache = cache.mkcache("active_model")
     distrib.unlock()
 
-    self.downstream_task = downstream_tasks.DownstreamTask.FromTask(self.config.downstream_task)
+    self.downstream_task = downstream_tasks.DownstreamTask.FromTask(
+      self.config.downstream_task, self.config.training_corpus
+    )
 
     if environment.WORLD_RANK == 0:
       ## Store current commit
