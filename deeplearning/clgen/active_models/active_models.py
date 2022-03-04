@@ -32,11 +32,10 @@ from deeplearning.clgen.util import commit
 from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
-from deeplearning.clgen.models import downstream_tasks
-from deeplearning.clgen.models.committee import active_committee
+from deeplearning.clgen.active_models import downstream_tasks
+from deeplearning.clgen.active_models.committee import active_committee
+from deeplearning.clgen.active_models.committee import config
 from deeplearning.clgen.samplers import sample_observers as sample_observers_lib
-from deeplearning.clgen.models.committee import config as com_config
-from deeplearning.clgen.proto import telemetry_pb2
 from deeplearning.clgen.proto import active_learning_pb2
 from absl import flags
 
@@ -55,7 +54,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
     "Downstream task has to be one of {}".format(', '.join([str(x) for x in downstream_tasks.TASKS]))
   )
   if config.HasField("committee"):
-    com_config.AssertConfigIsValid(config)
+    config.AssertConfigIsValid(config)
   else:
     raise NotImplementedError(config)
   return config
