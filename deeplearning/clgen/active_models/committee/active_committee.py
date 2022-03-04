@@ -261,6 +261,7 @@ class ActiveCommittee(backends.BackendBase):
 
     Collect predictions for given inputs of downstream task.
     """
+    raise NotImplementedError
     return
 
   def saveCheckpoint(self, estimator):
