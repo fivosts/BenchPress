@@ -43,30 +43,6 @@ from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_integer(
-  "num_train_steps",
-  None,
-  "Bypass num_train_steps provided by protobuf file."
-)
-
-flags.DEFINE_integer(
-  "num_pretrain_steps",
-  None,
-  "Bypass num_pretrain_steps provided by protobuf file."
-)
-
-flags.DEFINE_integer(
-  "num_epochs",
-  None,
-  "Bypass num_epochs provided by protobuf file."
-)
-
-flags.DEFINE_integer(
-  "sample_workload_size",
-  2048,
-  "Select size of workload samples for single sample step."
-)
-
 def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_learning_pb2.ActiveLearner:
   """
   Parse proto description and check for validity.
