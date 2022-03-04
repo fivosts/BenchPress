@@ -115,6 +115,7 @@ class ActiveCommittee(backends.BackendBase):
     return
 
   def TrainMember(self, member: 'ActiveCommittee.CommitteeEstimator') -> None:
+    current_step = self.loadCheckpoint(member)
     raise NotImplementedError
     return
 
@@ -122,15 +123,10 @@ class ActiveCommittee(backends.BackendBase):
     """
     Training point of active learning committee.
     """
+    # Configure committee members.
     self._ConfigModelParams(self.downstream_task.data_generator)
-    raise NotImplementedError
-
-    ## config model array
-    ## load checkpoint
-    ## Data generator
-    ## Schedulers, optimizers
-    ## Train member
-
+    for member in self.committee:
+      TrainMember(member)
     return
 
   def Validate(self) -> None:
