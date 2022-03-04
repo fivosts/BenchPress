@@ -104,23 +104,12 @@ class ActiveCommittee(backends.BackendBase):
     l.logger().info(self.GetShortSummary())
     return
 
-  def Train(self, corpus, **kwargs) -> None:
+  def Train(self, **kwargs) -> None:
     """
     Training point of active learning committee.
     """
     raise NotImplementedError
 
-    self._ConfigTrainParams(
-      data_generator.Dataloader.TrainMaskLMBatchGenerator(
-        corpus, self.config.training,
-        self.cache.path,
-        self.config.training.num_pretrain_steps if pre_train else None,
-        pre_train,
-        self.feature_encoder,
-        self.feature_tokenizer,
-        self.feature_sequence_length,
-      ), pre_train
-    )
     return
 
   def Validate(self) -> None:
