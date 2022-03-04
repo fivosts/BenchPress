@@ -10,8 +10,9 @@ option java_outer_classname = "ActiveLearningProto";
 option java_package = "com.clgen";
 
 message ActiveLearner {
-  optional Committee committee    = 1;
-  optional string downstream_task = 2;
+  optional Committee committee       = 1;
+  optional string    downstream_task = 2;
+  optional string    training_corpus = 3;
 }
 
 // Committee is a list of models.
