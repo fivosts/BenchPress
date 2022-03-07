@@ -366,12 +366,19 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           must_exist = False,
         )
       raise NotImplementedError("sampler must be passed here in the Euclidean sampler to sample the fspace")
-      d.feat_sampler      = feature_sampler.EuclideanSampler(
-        d.sampler.corpus_directory,
-        corpus_config.active.feature_space,
-        corpus_config.active.target,
-        git_corpus = corpus
-      )
+      if corpus_config.active.HasField("target"):
+        d.feat_sampler = feature_sampler.BenchmarkSampler(
+          workspace     = d.sampler.corpus_directory,
+          feature_space = corpus_config.active.feature_space,
+          target        = corpus_config.active.target,
+          git_corpus    = corpus
+        )
+      else:
+        d.feat_sampler = feature_sampler.ActiveSampler(
+          workspace      = d.sampler.corpus_directory,
+          feature_space  = corpus_config.active.feature_space,
+          active_learner = d.sampler.active_learner,
+        )
       d.candidate_monitor = monitors.CategoricalDistribMonitor.loadCheckpoint(
         d.sampler.corpus_directory, "feature_distance"
       )
