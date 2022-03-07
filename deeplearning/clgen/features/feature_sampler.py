@@ -9,6 +9,7 @@ import functools
 import multiprocessing
 from numpy.random import default_rng
 
+from deeplearning.clgen.active_models import active_models
 from deeplearning.clgen.features import normalizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.corpuses import benchmarks
@@ -127,10 +128,23 @@ class FeatureSampler(object):
       candidates = unique_candidates
     return self.topK_candidates(candidates, search_width)
 
+  def iter_benchmark(self) -> None:
+    """
+    Override this method to set how new parts of the feature space are going to
+    be targetted.
+    """
+    raise NotImplementedError("Abstract class.")
+
   def saveCheckpoint(self) -> None:
+    """
+    Override to select how the feature sampler will be checkpointed.
+    """
     raise NotImplementedError("Abstract class.")
 
   def loadCheckpoint(self) -> None:
+    """
+    Override to select checkpoints are going to be loaded.
+    """
     raise NotImplementedError("Abstract class.")
 
 class BenchmarkSampler(FeatureSampler):
@@ -220,3 +234,38 @@ class BenchmarkSampler(FeatureSampler):
     l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     l.logger().info(', '.join([x for x in set([x.name for x in self.benchmarks])]))
     return
+
+class ActiveSampler(FeatureSampler):
+  """
+  Euclidean distance-based feature space sampler for active learning.
+  The downstream task and active learner are encapsulated.
+  This class is the API between the language model's searching method/generation
+  and the active learner's query by committee.
+  """
+  def __init__(self,
+               workspace      : pathlib.Path,
+               feature_space  : str,
+               active_learner : active_models.Model,
+               ):
+    super(ActiveSampler, self).__init__(workspace, feature_space)
+    self.active_learner = active_learner
+    return
+
+  def iter_benchmark(self) -> None:
+    """
+    Override this method to set how new parts of the feature space are going to
+    be targetted.
+    """
+    raise NotImplementedError("TODO")
+
+  def saveCheckpoint(self) -> None:
+    """
+    Override to select how the feature sampler will be checkpointed.
+    """
+    raise NotImplementedError("TODO.")
+
+  def loadCheckpoint(self) -> None:
+    """
+    Override to select checkpoints are going to be loaded.
+    """
+    raise NotImplementedError("TODO.")
