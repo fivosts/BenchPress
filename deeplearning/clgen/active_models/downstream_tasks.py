@@ -81,7 +81,7 @@ class GrewePredictive(DownstreamTask):
           feats, entry = dp
           self.dataset.append(
             (
-              self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.global_size),
+              self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.local_size),
               self.TargetLabeltoEncodedVector(entry.status)
             )
           )
@@ -104,7 +104,7 @@ class GrewePredictive(DownstreamTask):
   def InputtoEncodedVector(self,
                            static_feats      : typing.Dict[str, float],
                            transferred_bytes : int,
-                           global_size       : int,
+                           local_size       : int,
                            ) -> typing.List[float]:
     """
     Encode consistently raw features to Grewe's predictive model inputs.
@@ -112,7 +112,7 @@ class GrewePredictive(DownstreamTask):
     return [
       transferred_bytes         / (static_feats['comp'] + static_feats['mem']),
       static_feats['coalesced'] / static_feats['mem'],
-      static_feats['localmem']  / (static_feats['mem'] * global_size),
+      static_feats['localmem']  / (static_feats['mem'] * local_size),
       static_feats['comp']      / static_feats['mem']
     ]
 
