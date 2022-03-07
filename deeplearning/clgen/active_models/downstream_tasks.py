@@ -5,6 +5,7 @@ downstream tasks that the committee can be trained on.
 The input and output features per downstream task are defined.
 """
 import pathlib
+import typing
 import tqdm
 import multiprocessing
 
