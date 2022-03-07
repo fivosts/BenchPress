@@ -320,7 +320,13 @@ class QueryByCommittee(backends.BackendBase):
     self.SampleCommittee()
     return
 
-  def saveCheckpoint(self, model, optimizer, scheduler, path, step) -> None:
+  def saveCheckpoint(self, 
+                     model : 'torch.nn.Module',
+                     path  : pathlib.Path,
+                     optimizer,
+                     scheduler,
+                     step : int,
+                     ) -> None:
     """
     Saves model, scheduler, optimizer checkpoints per epoch.
     """
