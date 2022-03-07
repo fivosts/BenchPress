@@ -90,20 +90,20 @@ sampler {
               num_warmup_steps: 100
               layer {
                 linear {
-                  in_features: 10
+                  in_features: 4
                   out_features: 256
                 }
               }
               layer {
                 linear {
                   in_features: 256
-                  out_features: 4
+                  out_features: 2
                 }
               }
             }
           }
           downstream_task: "GrewePredictive"
-          training_corpus: ""
+          training_corpus: "/home/fivosts/cldrive_cache.db"
         }
         active_limit_per_feed: 2000
         active_search_depth: 100
