@@ -170,7 +170,7 @@ class QueryByCommittee(backends.BackendBase):
 
       loader = self.torch.utils.data.dataloader.DataLoader(
         dataset    = data_generator,
-        batch_size = member.training_opts.batch_size,
+        batch_size = member.training_opts.train_batch_size,
         sampler    = (self.torch.utils.data.RandomSampler(data_generator, replacement = False)
           if self.pytorch.num_nodes <= 1 or not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
           else self.torch.utils.data.distributed.DistributedSampler(
