@@ -117,14 +117,13 @@ class Model(object):
     self.backend.Train(**kwargs)
     return self
 
-  def Sample(self, seed: int = None) -> None:
+  def Sample(self) -> typing.List[typing.Dict[str, float]]:
     """
     Sample the active learner.
     Knowing a downstream task, the active learning model samples
     and returns the datapoints that are deemed valuable.
     """
-    self.backend.Sample(seed)
-    return
+    return self.backend.Sample(seed)
 
   def SamplerCache(self, sampler: 'samplers.Sampler') -> pathlib.Path:
     """Get the path to a sampler cache.
