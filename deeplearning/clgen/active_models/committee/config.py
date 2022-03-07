@@ -32,7 +32,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
       elif l.HasField("layer_norm"):
         pbutil.AssertFieldIsSet(l.layer_norm, "layer_norm_eps")
       elif l.HasField("act_fn"):
-        pbutil.AssertFieldIsSet(l.act_fn, "act_fn")
+        pbutil.AssertFieldIsSet(l.act_fn, "fn")
       else:
         raise AttributeError(l)
       tl += 1
