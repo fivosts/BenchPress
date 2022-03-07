@@ -47,6 +47,7 @@ class GrewePredictive(DownstreamTask):
     self.input_size     = 10
     self.output_labels  = ["CPU", "GPU"]
     self.output_size    = 2
+    self.corpus_path    = corpus_path
     self.setup_dataset()
     self.data_generator = data_generator.Dataloader(self.dataset)
     return
