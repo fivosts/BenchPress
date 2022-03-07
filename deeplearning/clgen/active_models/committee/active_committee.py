@@ -20,6 +20,10 @@ from deeplearning.clgen.active_models.committee import config
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import logging as l
 
+from absl import flags
+
+FLAGS = flags.FLAGS
+
 class QueryByCommittee(backends.BackendBase):
 
   class TrainingOpts(typing.NamedTuple):
