@@ -318,7 +318,7 @@ class QueryByCommittee(backends.BackendBase):
     predictions = []
     for batch in inputs:
       out = self.model_step(member, batch)
-      prediction.append(self.downstream_task.TargetIDtoLabels(out['target_id']))
+      prediction.append(self.downstream_task.TargetIDtoLabels(out['output_label']))
     return predictions
 
   def SampleCommittee(self,
