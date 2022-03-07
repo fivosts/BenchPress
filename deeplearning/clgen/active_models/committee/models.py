@@ -20,7 +20,8 @@ ACT2FN = {
   "relu"     : torch.nn.functional.relu,
   "swish"    : activations.swish,
   "gelu_new" : activations.gelu_new,
-  "mish"     : mish
+  "mish"     : mish,
+  "softmax"  : torch.nn.Softmax()
 }
 
 class CommitteeModels(torch.nn.Module):
