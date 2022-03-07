@@ -297,7 +297,11 @@ class QueryByCommittee(backends.BackendBase):
       l.logger().info("Loaded checkpoint step {}".format(current_step))
 
     model.eval()
-    return prediction
+    predictions = []
+    for batch in inputs:
+      out = self.model_step(member, batch)
+      prediction.append(self.downstream_task.TargetIDtoLabels(out['target_id']))
+    return predictions
 
   def SampleCommittee(self) -> None:
     """
