@@ -104,7 +104,7 @@ class ActiveSample(typing.NamedTuple):
 
 def IR_candidate_worker(sample       : np.array,
                         # feed         : np.array,
-                        feat_sampler : feature_sampler.EuclideanSampler,
+                        feat_sampler : feature_sampler.FeatureSampler,
                         tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
                         ) -> ActiveSample:
   # sample, indices, input_ids, masked_lm_lengths = sample_out
@@ -140,7 +140,7 @@ def IR_candidate_worker(sample       : np.array,
 
 def text_candidate_worker(sample       : np.array,
                           # feed         : np.array,
-                          feat_sampler : feature_sampler.EuclideanSampler,
+                          feat_sampler : feature_sampler.FeatureSampler,
                           tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
                           ) -> ActiveSample:
   sample, sample_indices, input_ids, mlm_lengths, feed = sample
