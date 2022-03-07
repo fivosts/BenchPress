@@ -271,7 +271,7 @@ class QueryByCommittee(backends.BackendBase):
 
   def SampleMember(self,
                    member: 'QueryByCommittee.CommitteeEstimator',
-                   inputs: typing.Dict[str, 'torch.Tensor']
+                   inputs: typing.List[typing.Dict[str, 'torch.Tensor']],
                    ) -> str:
     """
     Sample member of committee. Return predicted label.
