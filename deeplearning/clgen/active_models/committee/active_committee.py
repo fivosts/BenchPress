@@ -97,12 +97,15 @@ class QueryByCommittee(backends.BackendBase):
           num_train_steps  = cconfig.num_train_steps,
         )
         cm = models.CommitteeModels.FromConfig(idx, cconfig)
-        opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
-          model           = cm,
-          num_train_steps = training_opts.num_train_steps,
-          warmup_steps    = training_opts.num_warmup_steps,
-          learning_rate   = training_opts.learning_rate,
-        )
+        if not is_sampling:
+          opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
+            model           = cm,
+            num_train_steps = training_opts.num_train_steps,
+            warmup_steps    = training_opts.num_warmup_steps,
+            learning_rate   = training_opts.learning_rate,
+          )
+        else:
+          opt, lr_scheduler = None, None
         self.committee.append(
           QueryByCommittee.CommitteeEstimator(
             model          = cm,
