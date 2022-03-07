@@ -90,6 +90,7 @@ class Model(object):
     if environment.WORLD_RANK == 0:
       self.cache_path = cache_path / "active_model"
       self.cache_path.mkdir(exist_ok = True, parents = True)
+      (self.cache_path / "samples").mkdir(exist_ok = True)
     distrib.barrier()
 
     self.downstream_task = downstream_tasks.DownstreamTask.FromTask(
@@ -122,10 +123,7 @@ class Model(object):
     Knowing a downstream task, the active learning model samples
     and returns the datapoints that are deemed valuable.
     """
-    self.Create()
-    if environment.WORLD_RANK == 0:
-      (self.cache_path / "samples").mkdir(exist_ok = True)
-    self.backend.Sample()
+    self.backend.Sample(seed)
     return
 
   def SamplerCache(self, sampler: 'samplers.Sampler') -> pathlib.Path:
