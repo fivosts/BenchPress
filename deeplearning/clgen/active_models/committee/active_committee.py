@@ -66,8 +66,8 @@ class QueryByCommittee(backends.BackendBase):
     self.torch               = pytorch.torch
     self.torch_tpu_available = pytorch.torch_tpu_available
 
-    self.torch.manual_seed(self.config.committee.random_seed)
-    self.torch.cuda.manual_seed_all(self.config.committee.random_seed)
+    self.torch.manual_seed(self.config.random_seed)
+    self.torch.cuda.manual_seed_all(self.config.random_seed)
 
     self.ckpt_path         = self.cache_path / "checkpoints"
     self.sample_path       = self.cache_path / "samples"
