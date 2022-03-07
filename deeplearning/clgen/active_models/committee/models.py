@@ -84,7 +84,7 @@ class MLP(CommitteeModels):
     for out, target in zip(torch.argmax(outputs, dim = 1), target_ids):
       if out == target:
         hits += 1
-    return label_loss, torch.FloatTensor(hits / total)
+    return label_loss, torch.FloatTensor([hits / total])
 
   def forward(self,
               input_ids   : torch.Tensor,
