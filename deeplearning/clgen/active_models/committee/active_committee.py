@@ -128,7 +128,10 @@ class QueryByCommittee(backends.BackendBase):
     """
     Run forward function for member model.
     """
-    outputs = model(inputs.to(self.pytorch.device))
+    outputs = model(
+      input_ids  = inputs['input_ids'].to(self.pytorch.device),
+      target_ids = inputs['target_ids'].to(self.pytorch.device),
+    )
     return outputs
 
   def TrainMember(self, member: 'QueryByCommittee.CommitteeEstimator') -> None:
