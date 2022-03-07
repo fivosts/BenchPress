@@ -29,11 +29,12 @@ class DownstreamTask(object):
   Downstream Task generic class.
   """
   @classmethod
-  def FromTask(cls, task: str, corpus_path: pathlib.Path) -> "DownstreamTask":
-    return TASKS[task](corpus_path)
+  def FromTask(cls, task: str, corpus_path: pathlib.Path, random_seed: int) -> "DownstreamTask":
+    return TASKS[task](corpus_path, random_seed)
 
-  def __init__(self, name) -> None:
-    self.name = name
+  def __init__(self, name: str, random_seed: int) -> None:
+    self.name        = name
+    self.random_seed = random_seed
     return
 
 class GrewePredictive(DownstreamTask):
@@ -67,8 +68,8 @@ class GrewePredictive(DownstreamTask):
   def feature_space(self) -> str:
     return "GreweFeatures"
 
-  def __init__(self, corpus_path: pathlib.Path) -> None:
-    super(GrewePredictive, self).__init__("GrewePredictive")
+  def __init__(self, corpus_path: pathlib.Path, random_seed: int) -> None:
+    super(GrewePredictive, self).__init__("GrewePredictive", random_seed)
     self.corpus_path    = corpus_path
     self.setup_dataset()
     self.data_generator = data_generator.Dataloader(self.dataset)
