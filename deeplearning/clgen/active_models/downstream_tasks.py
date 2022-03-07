@@ -44,7 +44,7 @@ class GrewePredictive(DownstreamTask):
   """
   @property
   def input_size(self) -> int:
-    return 5
+    return 4
   
   @property
   def input_labels(self) -> typing.List[str]:
@@ -52,7 +52,6 @@ class GrewePredictive(DownstreamTask):
       "tr_bytes/(comp+mem)",
       "coalesced/mem",
       "localmem/(mem+wgsize)",
-      "tr_bytes/(comp+mem)",
       "comp/mem"
     ]
 
@@ -114,7 +113,6 @@ class GrewePredictive(DownstreamTask):
       transferred_bytes         / (static_feats['comp'] + static_feats['mem']),
       static_feats['coalesced'] / static_feats['mem'],
       static_feats['localmem']  / (static_feats['mem'] * global_size),
-      transferred_bytes         / (static_feats['comp'] + static_feats['mem']),
       static_feats['comp']      / static_feats['mem']
     ]
 
