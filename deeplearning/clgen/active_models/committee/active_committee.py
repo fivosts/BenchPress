@@ -79,7 +79,7 @@ class QueryByCommittee(backends.BackendBase):
     self.committee         = None
 
     self.is_validated      = False
-    self.trained           = False
+    self.is_trained        = False
     l.logger().info("Active Committee config initialized in {}".format(self.cache.path))
     return
 
@@ -280,8 +280,10 @@ class QueryByCommittee(backends.BackendBase):
     """
     # Configure committee members.
     self._ConfigModelParams(self.downstream_task.data_generator)
-    for member in self.committee:
-      self.TrainMember(member)
+    if not self.is_trained:
+      for member in self.committee:
+        self.TrainMember(member)
+    self.is_trained = True
     return
 
   def Validate(self) -> None:
