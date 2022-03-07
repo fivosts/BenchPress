@@ -246,18 +246,25 @@ class ActiveSampler(FeatureSampler):
     self.active_learner = active_learner
     return
 
+  def sample_active_learner(self) -> typing.List[Benchmark]:
+    return [Benchmark("", "", "", feats) for feats in self.active_learner.Sample()]
+
   def iter_benchmark(self) -> None:
     """
-    Override this method to set how new parts of the feature space are going to
-    be targetted.
+    Set the next item from list to target.
+    If doesn't exist, ask from the active learner for new stuff,
+    unless a termination criteria has been met.
     """
-    raise NotImplementedError("TODO")
-
-  def saveCheckpoint(self) -> None:
-    """
-    Override to select how the feature sampler will be checkpointed.
-    """
-    raise NotImplementedError("TODO.")
+    try:
+      self.target_benchmark = self.benchmarks.pop(0)
+      l.logger().info("Target fetures: {}".format(self.target_benchmark.features))
+    except IndexError:
+      l.logger().warn("Implement a termination criteria here.")
+      self.benchmarks = self.sample_active_learner()
+      self.iter_benchmark()
+      return
+    self.saveCheckpoint()
+    return
 
   def loadCheckpoint(self) -> None:
     """
@@ -268,13 +275,7 @@ class ActiveSampler(FeatureSampler):
       with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
         self.benchmarks = pickle.load(infile)
     else:
-      self.benchmarks = [Benchmark(
-          "",
-          "",
-          "",
-          feats
-        ) for feats in self.active_learner.Sample()
-      ]
+      self.benchmarks = self.sample_active_learner()
     return
     l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     return
