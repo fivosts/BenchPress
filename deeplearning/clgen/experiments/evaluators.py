@@ -24,12 +24,12 @@ import pandas as pd
 from deeplearning.clgen.proto import evaluator_pb2
 from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.samplers import samples_database
-from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import active_feed_database
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.corpuses import corpuses
+from deeplearning.clgen.corpuses import benchmarks
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.util import monitors
@@ -199,7 +199,7 @@ class TargetBenchmarks(object):
   """
   def __init__(self, target: str):
     self.target        = target
-    self.benchmark_cfs = feature_sampler.yield_cl_kernels(pathlib.Path(feature_sampler.targets[self.target]).resolve())
+    self.benchmark_cfs = benchmarks.yield_cl_kernels(pathlib.Path(benchmarks.targets[self.target]).resolve())
     self.benchmarks    = {ext: [] for ext in extractor.extractors.keys()}
     l.logger().info("Loaded {} {} benchmarks".format(len(self.benchmark_cfs), self.target))
     return
@@ -220,7 +220,7 @@ class TargetBenchmarks(object):
                 features[feature_space],
               )
           )
-      self.benchmarks[feature_space] = feature_sampler.resolve_benchmark_names(self.benchmarks[feature_space])
+      self.benchmarks[feature_space] = benchmarks.resolve_benchmark_names(self.benchmarks[feature_space])
       l.logger().info("Extracted features for {} {} benchmarks".format(len(self.benchmarks[feature_space]), self.target))
     return self.benchmarks[feature_space]
 
@@ -254,7 +254,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       pbutil.AssertFieldConstraint(
         ev.k_average_score,
         "target",
-        lambda x: x in feature_sampler.targets,
+        lambda x: x in benchmarks.targets,
         "target {} not found".format(ev.k_average_score.target),
       )
       pbutil.AssertFieldIsSet(ev.k_average_score, "feature_space")
@@ -288,7 +288,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       pbutil.AssertFieldConstraint(
         ev.min_score,
         "target",
-        lambda x: x in feature_sampler.targets,
+        lambda x: x in benchmarks.targets,
         "target {} not found".format(ev.min_score.target),
       )
       pbutil.AssertFieldIsSet(ev.min_score, "feature_space")
@@ -309,7 +309,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
           )
       # Specialized fields.
       for target in ev.analyze_target.targets:
-        assert target in feature_sampler.targets, target
+        assert target in benchmarks.targets, target
     elif ev.HasField("log_file"):
       ### LogFile
       # DB groups
@@ -350,7 +350,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       pbutil.AssertFieldConstraint(
         ev.comp_mem_grewe,
         "target",
-        lambda x: x in feature_sampler.targets,
+        lambda x: x in benchmarks.targets,
         "target {} not found".format(ev.comp_mem_grewe.target),
       )
     elif ev.HasField("topk_cldrive"):
@@ -377,7 +377,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       pbutil.AssertFieldConstraint(
         ev.topk_cldrive,
         "target",
-        lambda x: x in feature_sampler.targets,
+        lambda x: x in benchmarks.targets,
         "target {} not found".format(ev.topk_cldrive.target),
       )
       pbutil.AssertFieldIsSet(ev.topk_cldrive, "feature_space")
@@ -420,7 +420,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       pbutil.AssertFieldConstraint(
         ev.mutec_vs_benchpress,
         "target",
-        lambda x: x in feature_sampler.targets,
+        lambda x: x in benchmarks.targets,
         "target {} not found".format(ev.mutec_vs_benchpress.target),
       )
       pbutil.AssertFieldIsSet(ev.mutec_vs_benchpress, "feature_space")
@@ -466,7 +466,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       pbutil.AssertFieldConstraint(
         ev.srciror_src_vs_benchpress,
         "target",
-        lambda x: x in feature_sampler.targets,
+        lambda x: x in benchmarks.targets,
         "target {} not found".format(ev.srciror_src_vs_benchpress.target),
       )
       pbutil.AssertFieldIsSet(ev.srciror_src_vs_benchpress, "feature_space")
@@ -512,7 +512,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       pbutil.AssertFieldConstraint(
         ev.srciror_ir_vs_benchpress,
         "target",
-        lambda x: x in feature_sampler.targets,
+        lambda x: x in benchmarks.targets,
         "target {} not found".format(ev.srciror_ir_vs_benchpress.target),
       )
       pbutil.AssertFieldIsSet(ev.srciror_ir_vs_benchpress, "feature_space")
@@ -564,7 +564,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       pbutil.AssertFieldConstraint(
         ev.grewe_top_k_csv,
         "target",
-        lambda x: x in feature_sampler.targets,
+        lambda x: x in benchmarks.targets,
         "target {} not found".format(ev.grewe_top_k_csv.target),
       )
       pbutil.AssertFieldConstraint(
@@ -1007,7 +1007,7 @@ def eval(self, topK: int) -> None:
     final_benchmarks = []
 
     benchmarks = []
-    kernels = feature_sampler.yield_cl_kernels(self.target_path)
+    kernels = benchmarks.yield_cl_kernels(self.target_path)
     for p, k, h in kernels:
       features = extractor.ExtractFeatures(k, header_file = h, use_aux_headers = False)
       if features:
