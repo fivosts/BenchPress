@@ -58,14 +58,14 @@ class ModelConfig(object):
     """
     The number of output labels for classification models.
     """
-    return self.task.output_size
+    return self.downstream_task.output_size
 
   @property
   def num_features(self) -> int:
     """
     The number of input features to model committee.
     """
-    return self.input_size
+    return self.downstream_task.input_size
 
   def __init__(self,
                config          : typing.Union[active_learning_pb2.MLP],
