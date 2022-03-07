@@ -13,10 +13,10 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
   """
   tm = 0
   pbutil.AssertFieldIsSet(config, "training_corpus")
+  pbutil.AssertFieldIsSet(config, "random_seed")
   p = pathlib.Path(config.training_corpus).resolve()
   if not p.exists():
     raise FileNotFoundError(p)
-  pbutil.AssertFieldIsSet(config.committee, "random_seed")
   for nn in config.committee.mlp:
     tl = 0
     pbutil.AssertFieldIsSet(nn, "initial_learning_rate_micros")
