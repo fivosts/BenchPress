@@ -39,6 +39,13 @@ class CommitteeModels(torch.nn.Module):
     self.id = id
     return
 
+  def forward(self,
+              input_ids   : torch.Tensor,
+              target_ids  : torch.Tensor,
+              is_sampling : bool = False
+              ) -> typing.Dict[str, torch.Tensor]:
+    raise NotImplementedError("Abstract class.")
+
 class MLP(CommitteeModels):
   """
   A modular MLP model that supports Linear, Dropout, LayerNorm and activations.
