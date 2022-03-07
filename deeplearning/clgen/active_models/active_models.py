@@ -92,7 +92,7 @@ class Model(object):
     distrib.unlock()
 
     self.downstream_task = downstream_tasks.DownstreamTask.FromTask(
-      self.config.downstream_task, self.config.training_corpus
+      self.config.downstream_task, pathlib.Path(self.config.training_corpus).resolve()
     )
 
     if environment.WORLD_RANK == 0:
