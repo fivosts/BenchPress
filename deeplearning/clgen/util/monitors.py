@@ -389,6 +389,9 @@ class TSNEMonitor(Monitor):
     """
     Plot groupped scatter graph.
     """
+    if len(self.features) <= 0:
+      # Nothing to plot.
+      return
     tsne = sklearn.manifold.TSNE()
     embeddings = tsne.fit_transform(np.array(self.features))
     groupped_data = {}
