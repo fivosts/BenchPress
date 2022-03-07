@@ -32,7 +32,7 @@ class Struct(Base, sqlutil.ProtoBackedMixin):
   """
   __tablename__    = "structs"
   # entry id.
-  id         : int = sql.Column(sql.Integer,    primary_key = True)
+  id         : int = sql.Column(sql.Integer, primary_key = True)
   # unique, indexable content has of struct.
   sha256     : str = sql.Column(sql.String(64), nullable = False, index = True)
   # Struct contents.
