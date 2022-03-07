@@ -201,7 +201,7 @@ class CLDriveExecutions(sqlutil.Database):
     Return all valid entries, labelled either as CPU or GPU.
     """
     with self.Session() as session:
-      return session.query(CLDriveSample).filter(CLDriveSample.status in {"CPU", "GPU"}).yield_per(1000)
+      return session.query(CLDriveSample).filter(CLDriveSample.status == "CPU" or CLDriveSample.status == "GPU").yield_per(1000)
 
   def get_execution_times_ms(self, src: str, dataset: str, global_size: int, local_size: int) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
     """
