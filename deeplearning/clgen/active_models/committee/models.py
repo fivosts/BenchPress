@@ -64,25 +64,43 @@ class MLP(CommitteeModels):
     self.layers = torch.nn.ModuleList([layers[layer[0]](**layer[1]) for layer in config])
     return
 
-  def calculate_loss(output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+  def calculate_loss(outputs: torch.Tensor,
+                     target_ids: torch.Tensor,
+                     ) -> torch.Tensor:
     """
     Categorical cross-entropy function.
     """
-    raise NotImplementedError
+    ## Calculate categorical label loss.
+    loss_fn = torch.nn.CrossEntropyLoss()
+    label_loss = loss_fn(outputs.to(torch.float32), target_ids.squeeze(1))
+
+    ## Calculate top-1 accuracy of predictions across batch.
+    hits, total = 0, int(outputs.size(0))
+    probs       = self.softmax(outputs)
+    outputs     = torch.argmax(probs, dim = 1)
+    for out, target in zip(outputs, target_ids):
+      if out == target:
+        hits += 1
+    return label_loss, torch.FloatTensor(hits / total)
 
   def forward(self,
               input_ids   : torch.Tensor,
               target_ids  : torch.Tensor = None,
               is_sampling : bool = False
               ) -> torch.Tensor:
+
+    device = input_ids.get_device()
+    device = device if device >= 0 else 'cpu'
+
     out = input_ids
     for layer in self.layers:
       out = layer(out)
 
     if not is_sampling:
-      total_loss = self.calculate_loss(out, target)
+      total_loss, batch_accuracy = self.calculate_loss(out, target_ids)
       return {
         'total_loss'   : total_loss,
+        'accuracy'     : batch_accuracy.to(device),
         'output_label' : torch.argmax(out)
       }
     else:
