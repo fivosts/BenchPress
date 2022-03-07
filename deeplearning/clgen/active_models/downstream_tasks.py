@@ -121,7 +121,7 @@ class GrewePredictive(DownstreamTask):
     return {
       "CPU": 0,
       "GPU": 1,
-    }
+    }[label]
 
   def TargetLabeltoEncodedVector(self, label: str) -> typing.List[int]:
     """
@@ -130,7 +130,7 @@ class GrewePredictive(DownstreamTask):
     return {
       "CPU": [1, 0],
       "GPU": [0, 1],
-    }
+    }[label]
 
 TASKS = {
   "GrewePredictive": GrewePredictive,
