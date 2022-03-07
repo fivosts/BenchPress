@@ -9,7 +9,6 @@ import functools
 import multiprocessing
 from numpy.random import default_rng
 
-from deeplearning.clgen.active_models import active_models
 from deeplearning.clgen.features import normalizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.corpuses import benchmarks
@@ -245,7 +244,7 @@ class ActiveSampler(FeatureSampler):
   def __init__(self,
                workspace      : pathlib.Path,
                feature_space  : str,
-               active_learner : active_models.Model,
+               active_learner : 'active_models.Model',
                ):
     super(ActiveSampler, self).__init__(workspace, feature_space)
     self.active_learner = active_learner
