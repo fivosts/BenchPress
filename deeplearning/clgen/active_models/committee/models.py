@@ -72,9 +72,6 @@ class MLP(CommitteeModels):
     """
     Categorical cross-entropy function.
     """
-    print(target_ids)
-    print(outputs.shape)
-    print(target_ids.shape)
     ## Calculate categorical label loss.
     loss_fn = torch.nn.CrossEntropyLoss()
     label_loss = loss_fn(outputs.to(torch.float32), target_ids.squeeze(1))
