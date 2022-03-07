@@ -72,6 +72,7 @@ class MLP(CommitteeModels):
     """
     Categorical cross-entropy function.
     """
+    print(target_ids)
     print(outputs.shape)
     print(target_ids.shape)
     ## Calculate categorical label loss.
@@ -80,9 +81,7 @@ class MLP(CommitteeModels):
 
     ## Calculate top-1 accuracy of predictions across batch.
     hits, total = 0, int(outputs.size(0))
-    probs       = self.softmax(outputs)
-    outputs     = torch.argmax(probs, dim = 1)
-    for out, target in zip(outputs, target_ids):
+    for out, target in zip(torch.argmax(outputs, dim = 1), target_ids):
       if out == target:
         hits += 1
     return label_loss, torch.FloatTensor(hits / total)
