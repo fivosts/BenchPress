@@ -123,7 +123,7 @@ class Model(object):
     Knowing a downstream task, the active learning model samples
     and returns the datapoints that are deemed valuable.
     """
-    return self.backend.Sample(seed)
+    return self.backend.Sample()
 
   def SamplerCache(self, sampler: 'samplers.Sampler') -> pathlib.Path:
     """Get the path to a sampler cache.
