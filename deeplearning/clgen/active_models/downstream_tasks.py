@@ -109,7 +109,8 @@ class GrewePredictive(DownstreamTask):
 
   def sample_space(self, num_samples: int = 512) -> typing.List[float]:
     """
-    Randomly sample Grewe's et al. feature space.
+    Go fetch Grewe Predictive model's feature space and randomly return num_samples samples
+    to evaluate.
     """
     raise NotImplementedError("What the fuck do we do with runtime features for god's sake?")
     return
