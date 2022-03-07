@@ -156,7 +156,7 @@ class QueryByCommittee(backends.BackendBase):
     if current_step >= 0:
       l.logger().info("Loaded checkpoint step {}".format(current_step))
 
-    if current_step < member.num_train_steps:
+    if current_step < member.training_opts.num_train_steps:
       model.zero_grad()
 
       ## Set batch size in case of TPU training or distributed training.
@@ -164,7 +164,7 @@ class QueryByCommittee(backends.BackendBase):
         total_train_batch_size = self.train_batch_size * self.pytorch.torch_xla.xrt_world_size()
       else:
         total_train_batch_size = (
-          member.train_batch_size
+          member.training_opts.train_batch_size
           * (self.torch.distributed.get_world_size() if self.pytorch.num_nodes > 1 else 1)
         )
 
@@ -182,10 +182,10 @@ class QueryByCommittee(backends.BackendBase):
         train_hook = hooks.tensorMonitorHook(
           member_log_path, current_step, min(steps_per_epoch, 50)
         )
-      total_steps = member.num_train_steps
+      total_steps = member.training_opts.num_train_steps
       try:
         model.train()
-        epoch_iter = tqdm.auto.trange(member.num_epochs, desc="Epoch", leave = False) if self.is_world_process_zero() else range(member.num_epochs)
+        epoch_iter = tqdm.auto.trange(member.training_opts.num_epochs, desc="Epoch", leave = False) if self.is_world_process_zero() else range(member.training_opts.num_epochs)
         for epoch in epoch_iter:
           # In distributed mode, calling the set_epoch() method at
           # the beginning of each epoch before creating the DataLoader iterator
@@ -194,10 +194,10 @@ class QueryByCommittee(backends.BackendBase):
           if self.pytorch.num_nodes > 1:
             loader.sampler.set_epoch(epoch)
 
-          if epoch < current_step // member.steps_per_epoch:
+          if epoch < current_step // member.training_optssteps_per_epoch:
             continue
 
-          batch_iter = tqdm.auto.trange(member.steps_per_epoch, desc="Batch", leave = False) if self.is_world_process_zero() else range(member.steps_per_epoch)
+          batch_iter = tqdm.auto.trange(member.training_opts.steps_per_epoch, desc="Batch", leave = False) if self.is_world_process_zero() else range(member.training_opts.steps_per_epoch)
           for step in batch_iter:
             if self.is_world_process_zero():
               start = datetime.datetime.utcnow()
@@ -216,7 +216,7 @@ class QueryByCommittee(backends.BackendBase):
             total_loss = step_out['total_loss'].mean()
             total_loss.backward()
 
-            self.torch.nn.utils.clip_grad_norm_(model.parameters(), member.max_grad_norm)
+            self.torch.nn.utils.clip_grad_norm_(model.parameters(), member.training_opts.max_grad_norm)
             if self.torch_tpu_available:
               self.pytorch.torch_xla.optimizer_step(optimizer)
             else:
@@ -243,7 +243,7 @@ class QueryByCommittee(backends.BackendBase):
             loader.sampler.set_epoch(epoch)
 
           if self.is_world_process_zero():
-            l.logger().info("Epoch {} Loss: {}".format(member.current_step // member.steps_per_epoch, train_hook.epoch_loss))
+            l.logger().info("Epoch {} Loss: {}".format(member.training_opts.current_step // member.training_opts.steps_per_epoch, train_hook.epoch_loss))
             train_hook.end_epoch()
 
           if self.torch_tpu_available:
