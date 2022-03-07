@@ -64,7 +64,8 @@ class MLP(CommitteeModels):
     self.layers = torch.nn.ModuleList([layers[layer[0]](**layer[1]) for layer in config])
     return
 
-  def calculate_loss(outputs: torch.Tensor,
+  def calculate_loss(self,
+                     outputs: torch.Tensor,
                      target_ids: torch.Tensor,
                      ) -> torch.Tensor:
     """
