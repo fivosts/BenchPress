@@ -168,7 +168,6 @@ class QueryByCommittee(backends.BackendBase):
           * (self.torch.distributed.get_world_size() if self.pytorch.num_nodes > 1 else 1)
         )
 
-      raise NotImplementedError("Right here implement the loader, sampler etc. thing.")
       loader = self.torch.utils.data.dataloader.DataLoader(
         dataset    = data_generator,
         batch_size = member.training_opts.batch_size,
