@@ -6,6 +6,7 @@ a) the passive training of the committee,
 b) the confidence level of the committee for a datapoint (using entropy)
 """
 import typing
+import tqdm
 import pathlib
 import copy
 
