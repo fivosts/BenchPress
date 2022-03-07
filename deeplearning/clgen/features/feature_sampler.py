@@ -244,6 +244,12 @@ class ActiveSampler(FeatureSampler):
                ):
     super(ActiveSampler, self).__init__(workspace, feature_space, active_learner.downstream_task)
     self.active_learner = active_learner
+    self.loadCheckpoint()
+    try:
+      self.target_benchmark = self.benchmarks.pop(0)
+      l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
+    except IndexError:
+      self.target_benchmark = None
     return
 
   def sample_active_learner(self) -> typing.List[Benchmark]:
