@@ -106,9 +106,9 @@ class FeatureSampler(object):
       return [c for idx, c in enumerate(candidates) if idx in indices]
 
   def sample_from_set(self, 
-                      candidates: typing.List[typing.TypeVar("ActiveSample")],
-                      search_width: int,
-                      only_unique: bool = True,
+                      candidates   : typing.List[typing.TypeVar("ActiveSample")],
+                      search_width : int,
+                      only_unique  : bool = True,
                       ) -> bool:
     """
     Find top K candidates by getting minimum
