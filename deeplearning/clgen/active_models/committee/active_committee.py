@@ -69,9 +69,9 @@ class QueryByCommittee(backends.BackendBase):
     self.torch.manual_seed(self.config.committee.random_seed)
     self.torch.cuda.manual_seed_all(self.config.committee.random_seed)
 
-    self.ckpt_path         = self.cache.path / "checkpoints"
-    self.sample_path       = self.cache.path / "samples"
-    self.logfile_path      = self.cache.path / "logs"
+    self.ckpt_path         = self.cache_path / "checkpoints"
+    self.sample_path       = self.cache_path / "samples"
+    self.logfile_path      = self.cache_path / "logs"
 
     self.validation_results_file = "val_results.txt"
     self.validation_results_path = self.logfile_path / self.validation_results_file
@@ -80,7 +80,7 @@ class QueryByCommittee(backends.BackendBase):
 
     self.is_validated      = False
     self.is_trained        = False
-    l.logger().info("Active Committee config initialized in {}".format(self.cache.path))
+    l.logger().info("Active Committee config initialized in {}".format(self.cache_path))
     return
 
   def _ConfigModelParams(self,
