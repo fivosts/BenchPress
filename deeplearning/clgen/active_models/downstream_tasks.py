@@ -55,11 +55,16 @@ class GrewePredictive(DownstreamTask):
       "comp/mem"
     ]
 
+  @property
+  def output_size(self) -> int:
+    return 2
+
+  @property
+  def output_labels(self):
+    return ["CPU", "GPU"]
+
   def __init__(self, corpus_path: pathlib.Path) -> None:
     super(GrewePredictive, self).__init__("GrewePredictive")
-    self.inputs         = ["comp", "mem", "localmem", "coalesced", "atomic"]
-    self.output_labels  = ["CPU", "GPU"]
-    self.output_size    = 2
     self.corpus_path    = corpus_path
     self.setup_dataset()
     self.data_generator = data_generator.Dataloader(self.dataset)
