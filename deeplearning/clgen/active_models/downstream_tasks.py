@@ -67,7 +67,7 @@ class GrewePredictive(DownstreamTask):
         feats, entry = dp
         self.dataset.append(
           (
-            self.InputtoEncodedVector(feats, entry.transferred_bytes, dp.global_size),
+            self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.global_size),
             self.TargetLabeltoEncodedVector(entry.status)
           )
         )
