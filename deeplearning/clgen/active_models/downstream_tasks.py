@@ -70,6 +70,9 @@ class GrewePredictive(DownstreamTask):
     self.data_generator = data_generator.Dataloader(self.dataset)
     return
 
+  def __repr__(self) -> str:
+    return "GrewePredictive"
+
   def setup_dataset(self) -> None:
     """
     Fetch data and preprocess into corpus for Grewe's predictive model.
