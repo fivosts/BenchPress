@@ -149,7 +149,7 @@ class QueryByCommittee(backends.BackendBase):
     elif self.pytorch.num_gpus > 1:
       model = self.torch.nn.DataParallel(model)
 
-    current_step = self.loadCheckpoint(model, optimizer, scheduler, member_path)
+    current_step = self.loadCheckpoint(model, member_path, optimizer, scheduler)
     if self.pytorch.num_gpus > 0:
       self.torch.cuda.empty_cache()
 
@@ -269,11 +269,35 @@ class QueryByCommittee(backends.BackendBase):
     raise NotImplementedError
     return
 
-  def SampleMember(self) -> None:
+  def SampleMember(self,
+                   member: 'QueryByCommittee.CommitteeEstimator',
+                   inputs: typing.Dict[str, 'torch.Tensor']
+                   ) -> str:
     """
-    Sample member of committee.
+    Sample member of committee. Return predicted label.
     """
-    raise NotImplementedError
+    model           = member.model.to(self.pytorch.offset_device)
+    member_path     = self.ckpt_path / member.sha256
+    member_log_path = self.logfile_path / member.sha256
+
+    if self.pytorch.num_nodes > 1:
+      distrib.barrier()
+      model = self.torch.nn.parallel.DistributedDataParallel(
+        model,
+        device_ids    = [self.pytorch.offset_device],
+        output_device = self.pytorch.offset_device,
+      )
+    elif self.pytorch.num_gpus > 1:
+      model = self.torch.nn.DataParallel(model)
+
+    current_step = self.loadCheckpoint(model, member_path)
+    if self.pytorch.num_gpus > 0:
+      self.torch.cuda.empty_cache()
+    if current_step >= 0:
+      l.logger().info("Loaded checkpoint step {}".format(current_step))
+
+    model.eval()
+    return prediction
 
   def SampleCommittee(self) -> None:
     """
@@ -317,7 +341,12 @@ class QueryByCommittee(backends.BackendBase):
         mf.write("train_step: {}\n".format(step))
     return
 
-  def loadCheckpoint(self, model, optimizer, scheduler, path) -> int:
+  def loadCheckpoint(self,
+                     model : 'torch.nn.Module',
+                     path  : pathlib.Path,
+                     optimizer = None,
+                     scheduler = None
+                     ) -> int:
     """
     Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
     """
