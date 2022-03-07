@@ -38,11 +38,11 @@ def mish(x):
   return x * torch.tanh(torch.nn.functional.softplus(x))
 
 ACT2FN = {
-  "gelu": activations.gelu,
-  "relu": torch.nn.functional.relu,
-  "swish": activations.swish,
-  "gelu_new": activations.gelu_new,
-  "mish": mish
+  "gelu"     : activations.gelu,
+  "relu"     : torch.nn.functional.relu,
+  "swish"    : activations.swish,
+  "gelu_new" : activations.gelu_new,
+  "mish"     : mish
 }
 
 class BertEmbeddings(torch.nn.Module):
