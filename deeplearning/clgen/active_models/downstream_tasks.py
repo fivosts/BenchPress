@@ -19,7 +19,7 @@ def ExtractorWorker(cldrive_entry: cldrive.CLDriveSample, fspace: str):
   Worker that extracts features and buffers cldrive entry, to maintain consistency
   among multiprocessed data.
   """
-  features = extractors.ExtractFeatures(cldrive_entry.source, [fspace])
+  features = extractor.ExtractFeatures(cldrive_entry.source, [fspace])
   if fspace in features and features[fspace]:
     return features, cldrive_entry
   return None
