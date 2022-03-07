@@ -113,15 +113,6 @@ class Model(object):
         process currently modifying the model).
     """
     self.backend.Train(**kwargs)
-    l.logger().info(
-      "Trained model for {} {} in {} ms. " "Training loss: {}."
-        .format(
-          telemetry_logs[-1].epoch_num,
-          "steps",
-          humanize.intcomma(sum(t.epoch_wall_time_ms for t in telemetry_logs)),
-          telemetry_logs[-1].loss,
-          )
-    )
     return self
 
   def Sample(
