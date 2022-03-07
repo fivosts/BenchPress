@@ -86,7 +86,7 @@ class Model(object):
     self.config = active_learning_pb2.ActiveLearner()
     # Validate config options.
     self.config.CopyFrom(AssertConfigIsValid(config))
-    raise ValueError
+
     if environment.WORLD_RANK == 0:
       self.cache_path = cache_path / "active_model"
       self.cache_path.mkdir(exist_ok = True, parents = True)
