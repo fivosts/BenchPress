@@ -1,5 +1,6 @@
 """Neural network backends for active learning models."""
 import typing
+import pathlib
 import numpy as np
 
 from deeplearning.clgen.active_models import downstream_tasks
@@ -13,11 +14,11 @@ class BackendBase(object):
   def __init__(
     self,
     config          : active_learning_pb2.ActiveLearner,
-    fs_cache        : cache.FSCache,
+    cache_path      : pathlib.Path,
     downstream_task : downstream_tasks.DownstreamTask
   ):
     self.config          = config
-    self.cache           = fs_cache
+    self.cache_path      = cache_path
     self.downstream_task = downstream_task
     return
 
