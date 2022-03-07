@@ -71,6 +71,13 @@ class GrewePredictive(DownstreamTask):
         )
     return
 
+  def sample_space(self, num_samples: int = 512) -> typing.List[float]:
+    """
+    Randomly sample Grewe's et al. feature space.
+    """
+    raise NotImplementedError("What the fuck do we do with runtime features for god's sake?")
+    return
+
   def InputtoEncodedVector(self,
                            static_feats      : typing.Dict[str, float],
                            transferred_bytes : int,
