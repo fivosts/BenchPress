@@ -16,11 +16,11 @@ def mish(x):
   return x * torch.tanh(torch.nn.functional.softplus(x))
 
 ACT2FN = {
-  "gelu": activations.gelu,
-  "relu": torch.nn.functional.relu,
-  "swish": activations.swish,
-  "gelu_new": activations.gelu_new,
-  "mish": mish
+  "gelu"     : activations.gelu,
+  "relu"     : torch.nn.functional.relu,
+  "swish"    : activations.swish,
+  "gelu_new" : activations.gelu_new,
+  "mish"     : mish
 }
 
 class CommitteeModels(torch.nn.Module):
@@ -71,6 +71,8 @@ class MLP(CommitteeModels):
     """
     Categorical cross-entropy function.
     """
+    print(outputs.shape)
+    print(target_ids.shape)
     ## Calculate categorical label loss.
     loss_fn = torch.nn.CrossEntropyLoss()
     label_loss = loss_fn(outputs.to(torch.float32), target_ids.squeeze(1))
