@@ -280,7 +280,8 @@ class QueryByCommittee(backends.BackendBase):
     This method queries all committee members and measures their cross-entropy to validate
     the usefulness of parts of the feature space.
     """
-    raise NotImplementedError
+    self.sample_space()
+    self.SampleCommittee()
     return
 
   def saveCheckpoint(self, model, optimizer, scheduler, path, step) -> None:
