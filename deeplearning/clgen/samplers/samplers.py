@@ -32,8 +32,8 @@ from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import commit
 from deeplearning.clgen.features import extractor
-from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.corpuses import tokenizers
+from deeplearning.clgen.corpuses import benchmarks
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.proto import internal_pb2
@@ -96,8 +96,8 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
             pbutil.AssertFieldConstraint(
               config.sample_corpus.corpus_config.active,
               "target",
-              lambda x : x in set(feature_sampler.targets.keys()),
-              "target can only be one of {}".format(', '.join(list(feature_sampler.targets.keys())))
+              lambda x : x in set(benchmarks.targets.keys()),
+              "target can only be one of {}".format(', '.join(list(benchmarks.targets.keys())))
             )
           elif config.sample_corpus.corpus_config.active.HasField("active_learner"):
             active_models.AssertConfigIsValid(config.sample_corpus.corpus_config.active.active_learner)
