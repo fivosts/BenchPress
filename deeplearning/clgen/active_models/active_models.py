@@ -99,7 +99,7 @@ class Model(object):
     if environment.WORLD_RANK == 0:
       ## Store current commit
       commit.saveCommit(self.cache_path)
-    self.backend = active_committee.QueryByCommittee(self.config, self.cache, self.downstream_task)
+    self.backend = active_committee.QueryByCommittee(self.config, self.cache_path, self.downstream_task)
     l.logger().info("Initialized {} in {}".format(self.backend, self.cache_path))
     return
 
