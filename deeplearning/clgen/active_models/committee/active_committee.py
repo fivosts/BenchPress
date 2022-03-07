@@ -312,7 +312,7 @@ class QueryByCommittee(backends.BackendBase):
     self._ConfigModelParams()
     committee_predictions = {}
     for member in self.committee:
-      committee_predictions[member] = self.TrainMember(member)
+      committee_predictions[member] = self.TrainMember(member, sample_vectors)
     return committee_predictions
 
 
