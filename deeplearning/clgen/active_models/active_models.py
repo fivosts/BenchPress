@@ -94,7 +94,9 @@ class Model(object):
     distrib.barrier()
 
     self.downstream_task = downstream_tasks.DownstreamTask.FromTask(
-      self.config.downstream_task, pathlib.Path(self.config.training_corpus).resolve()
+      self.config.downstream_task,
+      pathlib.Path(self.config.training_corpus).resolve(),
+      self.config.random_seed,
     )
 
     if environment.WORLD_RANK == 0:
