@@ -122,66 +122,10 @@ class Model(object):
     Knowing a downstream task, the active learning model samples
     and returns the datapoints that are deemed valuable.
     """
-
     self.Create()
-    epoch = self.backend.telemetry.EpochTelemetry()[-1].epoch_num
-    sample_start_time = datetime.datetime.utcnow()    
-
     if environment.WORLD_RANK == 0:
-      (self.cache_path / "samples" / sampler.hash).mkdir(exist_ok = True)
-    tokenizer = self.corpus.tokenizer
-    if sampler.isFixedStr and not sampler.is_active:
-      sampler.Specialize(tokenizer)
-    elif sampler.is_live:
-      start_text = [str(input("Live Feed: "))]
-      while True:
-        try:
-          start_text.append(str(input()))
-        except EOFError:
-          break
-      sampler.start_text = '\n'.join(start_text)
-      sampler.Specialize(tokenizer)
-
-    self.backend.InitSampling(sampler, seed, self.corpus)
-    [obs.Specialize(self, sampler) for obs in sample_observers]
-
-    if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert):
-      sample_batch = lambda : self._SampleLMBatch(sampler, tokenizer, sample_observers, epoch)
-    elif isinstance(self.backend, tf_sequential.tfSequential) or isinstance(self.backend, keras_sequential.kerasSequential):
-      sample_batch = lambda : self._SampleSeqBatch(sampler, tokenizer, sample_observers, epoch)
-    else:
-      raise ValueError("Unrecognized backend.")
-
-    try:
-      seq_count, cont = 0, True
-      while cont:
-        cont, seq_count = sample_batch()
-        if sampler.is_live:
-          start_text = [str(input("Live Feed: "))]
-          while True:
-            try:
-              start_text.append(str(input()))
-            except EOFError:
-              break
-          sampler.start_text = '\n'.join(start_text)
-          sampler.Specialize(tokenizer)
-    except KeyboardInterrupt:
-      l.logger().info("Wrapping up sampling...")
-    except Exception as e:
-      raise e
-
-    for obs in sample_observers:
-      obs.endSample()
-    if isinstance(self.backend, torch_bert.torchBert) and sampler.is_active:
-      self.backend.sample.data_generator.samples_cache_obs.endSample()
-
-    time_now = datetime.datetime.utcnow()
-    l.logger().info( "Produced {} samples at a rate of {} ms / sample."
-                        .format(
-                          humanize.intcomma(seq_count),
-                          humanize.intcomma(int(1000 * ((time_now - sample_start_time) / max(seq_count, 1)).total_seconds()))
-                        )
-    )
+      (self.cache_path / "samples").mkdir(exist_ok = True)
+    self.backend.Sample()
     return
 
   def SamplerCache(self, sampler: 'samplers.Sampler') -> pathlib.Path:
