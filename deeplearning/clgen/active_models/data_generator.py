@@ -35,10 +35,10 @@ class Dataloader(torch.utils.data.Dataset):
       )
     return
 
-  def __len__(self):
+  def __len__(self) -> int:
     return len(self.dataset)
 
-  def __getitem__(self, idx):
+  def __getitem__(self, idx: int) -> typing.Dict[str, torch.Tensor]:
 
     if idx < 0:
       if -idx > len(self):
