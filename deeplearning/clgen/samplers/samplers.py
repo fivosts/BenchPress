@@ -471,6 +471,12 @@ class Sampler(object):
       self.active_learner = active_models.Model(
         config.sample_corpus.corpus_config.active.active_learner, self.cache.path
       )
+      if config.sample_corpus.corpus_config.active.feature_space != self.active_learner.downstream_task.feature_space:
+        raise ValueError("Feature space {} does not match downstream task {}".format(
+            config.sample_corpus.corpus_config.active.feature_space,
+            self.active_learner.downstream_task
+          )
+        )
 
     if environment.WORLD_RANK == 0:
       meta = internal_pb2.SamplerMeta()
