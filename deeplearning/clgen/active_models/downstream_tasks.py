@@ -21,7 +21,7 @@ def ExtractorWorker(cldrive_entry: cldrive.CLDriveSample, fspace: str):
   """
   features = extractor.ExtractFeatures(cldrive_entry.source, [fspace])
   if fspace in features and features[fspace]:
-    return features, cldrive_entry
+    return features[fspace], cldrive_entry
   return None
 
 class DownstreamTask(object):
