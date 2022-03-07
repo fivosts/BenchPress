@@ -10,6 +10,7 @@ import pathlib
 import copy
 
 from deeplearning.clgen.models.torch_bert import optimizer
+from deeplearning.clgen.models.torch_bert import hooks
 from deeplearning.clgen.active_models import backends
 from deeplearning.clgen.active_models import data_generator
 from deeplearning.clgen.active_models.committee import models
@@ -192,7 +193,7 @@ class QueryByCommittee(backends.BackendBase):
       batch_iterator = iter(loader)
       if self.is_world_process_zero():
         train_hook = hooks.tensorMonitorHook(
-          member_log_path, current_step, min(steps_per_epoch, 50)
+          member_log_path, current_step, min(member.training_opts.steps_per_epoch, 50)
         )
       total_steps = member.training_opts.num_train_steps
       try:
