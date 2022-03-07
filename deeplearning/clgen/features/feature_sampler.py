@@ -140,9 +140,11 @@ class FeatureSampler(object):
 
   def saveCheckpoint(self) -> None:
     """
-    Override to select how the feature sampler will be checkpointed.
+    Save feature sampler state.
     """
-    raise NotImplementedError("Abstract class.")
+    with open(self.workspace / "feature_sampler_state.pkl", 'wb') as outf:
+      pickle.dump(self.benchmarks, outf)
+    return
 
   def loadCheckpoint(self) -> None:
     """
@@ -188,14 +190,6 @@ class BenchmarkSampler(FeatureSampler):
     except IndexError:
       self.target_benchmark = None
     self.saveCheckpoint()
-    return
-
-  def saveCheckpoint(self) -> None:
-    """
-    Save feature sampler state.
-    """
-    with open(self.workspace / "feature_sampler_state.pkl", 'wb') as outf:
-      pickle.dump(self.benchmarks, outf)
     return
 
   def loadCheckpoint(self) -> None:
@@ -267,6 +261,20 @@ class ActiveSampler(FeatureSampler):
 
   def loadCheckpoint(self) -> None:
     """
-    Override to select checkpoints are going to be loaded.
+    Load pickled list of benchmarks, if exists.
+    Otherwise, ask the first batch of features from the active learner.
     """
-    raise NotImplementedError("TODO.")
+    if (self.workspace / "feature_sampler_state.pkl").exists():
+      with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
+        self.benchmarks = pickle.load(infile)
+    else:
+      self.benchmarks = [Benchmark(
+          "",
+          "",
+          "",
+          feats
+        ) for feats in self.active_learner.Sample()
+      ]
+    return
+    l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
+    return
