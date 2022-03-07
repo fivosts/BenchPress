@@ -261,7 +261,7 @@ class QueryByCommittee(backends.BackendBase):
             loader.sampler.set_epoch(epoch)
 
           if self.is_world_process_zero():
-            l.logger().info("Epoch {} Loss: {}".format(member.training_opts.current_step // member.training_opts.steps_per_epoch, train_hook.epoch_loss))
+            l.logger().info("Epoch {} Loss: {}".format(current_step // member.training_opts.steps_per_epoch, train_hook.epoch_loss))
             train_hook.end_epoch()
 
           if self.torch_tpu_available:
