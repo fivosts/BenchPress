@@ -244,7 +244,7 @@ class QueryByCommittee(backends.BackendBase):
             ## Collect tensors for logging.
             if self.pytorch.num_nodes > 1:
               total_loss = [self.torch.zeros(tuple(step_out['total_loss'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-              self.torch.distributed.all_gather(masked_lm_loss, step_out["masked_lm_loss"])
+              self.torch.distributed.all_gather(total_loss, step_out["total_loss"])
             else:
               total_loss = step_out['total_loss'].unsqueeze(0).cpu()
             if self.is_world_process_zero():
