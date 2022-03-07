@@ -340,7 +340,7 @@ class QueryByCommittee(backends.BackendBase):
     return committee_predictions
 
 
-  def Sample(self) -> None:
+  def Sample(self, seed: int = None) -> None:
     """
     Active learner sampling.
     This method queries all committee members and measures their cross-entropy to validate
