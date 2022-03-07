@@ -256,7 +256,7 @@ class QueryByCommittee(backends.BackendBase):
             if current_step == 0:
               l.logger().info("Starting Loss: {}".format(sum([tl.mean().item() for tl in total_loss]) / len(total_loss)))
           # End of epoch
-          self.saveCheckpoint(model, optimizer, scheduler, member_path, current_step)
+          self.saveCheckpoint(model, member_path, optimizer, scheduler, current_step)
           if self.pytorch.num_nodes > 1:
             loader.sampler.set_epoch(epoch)
 
