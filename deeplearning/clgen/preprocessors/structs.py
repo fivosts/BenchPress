@@ -8,6 +8,7 @@ import datetime
 import sqlite3
 import pathlib
 import typing
+import clang.cindex
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
