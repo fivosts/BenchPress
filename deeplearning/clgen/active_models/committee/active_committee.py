@@ -69,48 +69,52 @@ class QueryByCommittee(backends.BackendBase):
     self.validation_results_file = "val_results.txt"
     self.validation_results_path = self.logfile_path / self.validation_results_file
 
-    self.committee         = []
+    self.committee         = None
 
     self.is_validated      = False
     self.trained           = False
     l.logger().info("Active Committee config initialized in {}".format(self.cache.path))
     return
 
-  def _ConfigModelParams(self, data_generator: data_generator.Dataloader) -> None:
+  def _ConfigModelParams(self,
+                         data_generator: data_generator.Dataloader = None,
+                         is_sampling = False
+                         ) -> None:
     """
     Model parameter initialization.
     """
-
-    self.committee_configs = config.ModelConfig.FromConfig(self.config.committee, self.downstream_task)
-    for idx, cconfig in enumerate(self.committee_configs):
-      training_opts = QueryByCommittee.TrainingOpts(
-        train_batch_size = cconfig.batch_size,
-        learning_rate    = cconfig.learning_rate,
-        num_warmup_steps = cconfig.num_warmup_steps,
-        max_grad_norm    = cconfig.max_grad_norm,
-        steps_per_epoch  = cconfig.steps_per_epoch,
-        num_epochs       = cconfig.num_epochs,
-        num_train_steps  = cconfig.num_train_steps,
-      )
-      cm = models.CommitteeModels.FromConfig(idx, cconfig)
-      opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
-        model           = cm,
-        num_train_steps = training_opts.num_train_steps,
-        warmup_steps    = training_opts.num_warmup_steps,
-        learning_rate   = training_opts.learning_rate,
-      )
-      self.committee.append(
-        QueryByCommittee.CommitteeEstimator(
-          model          = cm,
-          data_generator = data_generator,
-          optimizer      = opt,
-          scheduler      = lr_scheduler,
-          training_opts  = training_opts,
-          sha256         = cconfig.sha256,
+    if not self.committee:
+      self.committee = []
+      self.committee_configs = config.ModelConfig.FromConfig(self.config.committee, self.downstream_task)
+      for idx, cconfig in enumerate(self.committee_configs):
+        training_opts = QueryByCommittee.TrainingOpts(
+          train_batch_size = cconfig.batch_size,
+          learning_rate    = cconfig.learning_rate,
+          num_warmup_steps = cconfig.num_warmup_steps,
+          max_grad_norm    = cconfig.max_grad_norm,
+          steps_per_epoch  = cconfig.steps_per_epoch,
+          num_epochs       = cconfig.num_epochs,
+          num_train_steps  = cconfig.num_train_steps,
         )
-      )
-      (self.ckpt_path / cconfig.sha256).mkdir(exist_ok = True, parents = True),
-      (self.logfile_path / cconfig.sha256).mkdir(exist_ok = True, parents = True),
+        cm = models.CommitteeModels.FromConfig(idx, cconfig)
+        opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
+          model           = cm,
+          num_train_steps = training_opts.num_train_steps,
+          warmup_steps    = training_opts.num_warmup_steps,
+          learning_rate   = training_opts.learning_rate,
+        )
+        self.committee.append(
+          QueryByCommittee.CommitteeEstimator(
+            model          = cm,
+            data_generator = data_generator,
+            optimizer      = opt,
+            scheduler      = lr_scheduler,
+            training_opts  = training_opts,
+            sha256         = cconfig.sha256,
+          )
+        )
+        (self.ckpt_path / cconfig.sha256).mkdir(exist_ok = True, parents = True),
+        (self.logfile_path / cconfig.sha256).mkdir(exist_ok = True, parents = True),
     l.logger().info(self.GetShortSummary())
     return
 
@@ -272,6 +276,7 @@ class QueryByCommittee(backends.BackendBase):
     """
     Sample committee with a set of inputs.
     """
+    self._ConfigModelParams(self.downstream_task.data_generator)
     raise NotImplementedError
 
   def Sample(self) -> None:
