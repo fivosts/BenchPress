@@ -24,6 +24,7 @@ class Dataloader(torch.utils.data.Dataset):
     """
     Convert list dataset to torch tensors.
     """
+    self.dataset = []
     for dp in dataset:
       inp, targ = dp
       self.dataset.append(
