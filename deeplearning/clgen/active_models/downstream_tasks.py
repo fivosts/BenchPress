@@ -60,8 +60,12 @@ class GrewePredictive(DownstreamTask):
     return 2
 
   @property
-  def output_labels(self):
+  def output_labels(self) -> typing.Tuple[str, str]:
     return ["CPU", "GPU"]
+
+  @property
+  def feature_space(self) -> str:
+    return "GreweFeatures"
 
   def __init__(self, corpus_path: pathlib.Path) -> None:
     super(GrewePredictive, self).__init__("GrewePredictive")
