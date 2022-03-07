@@ -72,8 +72,10 @@ class FeatureSampler(object):
                workspace : pathlib.Path,
                feature_space: str,
                ):
-    self.workspace     = workspace
-    self.feature_space = feature_space
+    self.workspace        = workspace
+    self.feature_space    = feature_space
+    self.benchmarks       = []
+    self.target_benchmark = None
     return
 
   def calculate_distance(self, infeat: typing.Dict[str, float]) -> float:
@@ -159,7 +161,6 @@ class BenchmarkSampler(FeatureSampler):
                ):
     super(BenchmarkSampler, self).__init__(workspace, feature_space)
     self.target     = target
-    self.benchmarks = []
     if self.target  != "grid_walk":
       self.path        = pathlib.Path(targets[target]).resolve()
     self.reduced_git_corpus = [
