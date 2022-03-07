@@ -87,7 +87,7 @@ class GrewePredictive(DownstreamTask):
           self.dataset.append(
             (
               self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.local_size),
-              self.TargetLabeltoID(entry.status)
+              [self.TargetLabeltoID(entry.status)]
             )
           )
           idx += 1
