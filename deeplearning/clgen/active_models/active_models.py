@@ -68,7 +68,7 @@ class Model(object):
   can lead to bad things happening.
   """
 
-  def __init__(self, config: active_learning_pb2.ActiveLearner):
+  def __init__(self, config: active_learning_pb2.ActiveLearner, cache_path: pathlib.Path):
     """Instantiate a model.
 
     Args:
@@ -86,10 +86,11 @@ class Model(object):
     self.config = active_learning_pb2.ActiveLearner()
     # Validate config options.
     self.config.CopyFrom(AssertConfigIsValid(config))
-
-    distrib.lock()
-    self.cache = cache.mkcache("active_model")
-    distrib.unlock()
+    raise ValueError
+    if environment.WORLD_RANK == 0:
+      self.cache_path = cache_path / "active_model"
+      self.cache_path.mkdir(exist_ok = True, parents = True)
+    distrib.barrier()
 
     self.downstream_task = downstream_tasks.DownstreamTask.FromTask(
       self.config.downstream_task, pathlib.Path(self.config.training_corpus).resolve()
@@ -97,9 +98,9 @@ class Model(object):
 
     if environment.WORLD_RANK == 0:
       ## Store current commit
-      commit.saveCommit(self.cache.path)
+      commit.saveCommit(self.cache_path)
     self.backend = active_committee.QueryByCommittee(self.config, self.cache, self.downstream_task)
-    l.logger().info("Initialized {} in {}".format(self.backend, self.cache.path))
+    l.logger().info("Initialized {} in {}".format(self.backend, self.cache_path))
     return
 
   def Train(self, **kwargs) -> "Model":
@@ -155,7 +156,7 @@ class Model(object):
     sample_start_time = datetime.datetime.utcnow()    
 
     if environment.WORLD_RANK == 0:
-      (self.cache.path / "samples" / sampler.hash).mkdir(exist_ok = True)
+      (self.cache_path / "samples" / sampler.hash).mkdir(exist_ok = True)
     tokenizer = self.corpus.tokenizer
     if sampler.isFixedStr and not sampler.is_active:
       sampler.Specialize(tokenizer)
@@ -220,7 +221,7 @@ class Model(object):
       A path to a directory. Note that this directory may not exist - it is
       created only after a call to Sample().
     """
-    return self.cache.path / "samples" / sampler.hash
+    return self.cache_path / "samples" / sampler.hash
 
   @property
   def is_trained(self) -> bool:
