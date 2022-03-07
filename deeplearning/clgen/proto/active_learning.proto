@@ -37,7 +37,7 @@ message Layer {
     Linear    linear     = 1;
     Dropout   dropout    = 2;
     LayerNorm layer_norm = 3;
-    ACT_fn    act_fn     = 4;
+    ACT_fn    fn         = 4;
 
   }
 }
