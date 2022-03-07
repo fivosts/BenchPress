@@ -365,7 +365,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           url = "sqlite:///{}".format(d.sampler.corpus_directory / "evaluated_candidates.db"),
           must_exist = False,
         )
-      raise NotImplementedError("sampler must be passed here in the Euclidean sampler to sample the fspace")
       if corpus_config.active.HasField("target"):
         d.feat_sampler = feature_sampler.BenchmarkSampler(
           workspace     = d.sampler.corpus_directory,
