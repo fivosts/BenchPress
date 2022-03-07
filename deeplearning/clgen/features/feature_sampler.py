@@ -69,11 +69,13 @@ class FeatureSampler(object):
   Abstract class for sampling features.
   """
   def __init__(self,
-               workspace : pathlib.Path,
-               feature_space: str,
+               workspace     : pathlib.Path,
+               feature_space : str,
+               target        : str,
                ):
     self.workspace        = workspace
     self.feature_space    = feature_space
+    self.target           = target
     self.benchmarks       = []
     self.target_benchmark = None
     return
@@ -159,8 +161,7 @@ class BenchmarkSampler(FeatureSampler):
                target        : str,
                git_corpus    : corpuses.Corpus = None,
                ):
-    super(BenchmarkSampler, self).__init__(workspace, feature_space)
-    self.target     = target
+    super(BenchmarkSampler, self).__init__(workspace, feature_space, target)
     if self.target  != "grid_walk":
       self.path        = pathlib.Path(targets[target]).resolve()
     self.reduced_git_corpus = [
@@ -247,7 +248,7 @@ class ActiveSampler(FeatureSampler):
                feature_space  : str,
                active_learner : 'active_models.Model',
                ):
-    super(ActiveSampler, self).__init__(workspace, feature_space)
+    super(ActiveSampler, self).__init__(workspace, feature_space, active_learner.downstream_task)
     self.active_learner = active_learner
     return
 
