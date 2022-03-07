@@ -10,7 +10,7 @@ import multiprocessing
 
 from deeplearning.clgen.active_models import data_generator
 from deeplearning.clgen.experiments import cldrive
-from deeplearning.clgen.features import extractors
+from deeplearning.clgen.features import extractor
 
 def ExtractorWorker(cldrive_entry: cldrive.CLDriveSample, fspace: str):
   """
