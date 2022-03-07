@@ -64,47 +64,16 @@ class Benchmark(typing.NamedTuple):
   contents : str
   features : typing.Dict[str, float]
 
-class EuclideanSampler(object):
+class FeatureSampler(object):
   """
-  This is a shitty experimental class to work with benchmark comparison.
-  Will be refactored obviously.
+  Abstract class for sampling features.
   """
   def __init__(self,
-               workspace     : pathlib.Path,
-               feature_space : str,
-               target        : str,
-               git_corpus    : corpuses.Corpus = None,
+               workspace : pathlib.Path,
+               feature_space: str,
                ):
-    self.target     = target
-    self.benchmarks = []
-    if self.target  != "grid_walk":
-      self.path        = pathlib.Path(targets[target]).resolve()
     self.workspace     = workspace
     self.feature_space = feature_space
-    self.reduced_git_corpus = [
-      (cf, feats[self.feature_space])
-      for cf, feats in git_corpus.getFeaturesContents(sequence_length = 768)
-      if self.feature_space in feats and feats[self.feature_space]
-    ]
-    self.loadCheckpoint()
-    try:
-      self.target_benchmark = self.benchmarks.pop(0)
-      l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
-    except IndexError:
-      self.target_benchmark = None
-    return
-
-  def iter_benchmark(self):
-    """
-    When it's time, cycle through the next target benchmark.
-    """
-    # self.benchmarks.append(self.benchmarks.pop(0))
-    try:
-      self.target_benchmark = self.benchmarks.pop(0)
-      l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
-    except IndexError:
-      self.target_benchmark = None
-    self.saveCheckpoint()
     return
 
   def calculate_distance(self, infeat: typing.Dict[str, float]) -> float:
@@ -157,6 +126,54 @@ class EuclideanSampler(object):
           hset.add(sample_str)
       candidates = unique_candidates
     return self.topK_candidates(candidates, search_width)
+
+  def saveCheckpoint(self) -> None:
+    raise NotImplementedError("Abstract class.")
+
+  def loadCheckpoint(self) -> None:
+    raise NotImplementedError("Abstract class.")
+
+class BenchmarkSampler(FeatureSampler):
+  """
+  This is a shitty experimental class to work with benchmark comparison.
+  Will be refactored obviously.
+  """
+  def __init__(self,
+               workspace     : pathlib.Path,
+               feature_space : str,
+               target        : str,
+               git_corpus    : corpuses.Corpus = None,
+               ):
+    super(BenchmarkSampler, self).__init__(workspace, feature_space)
+    self.target     = target
+    self.benchmarks = []
+    if self.target  != "grid_walk":
+      self.path        = pathlib.Path(targets[target]).resolve()
+    self.reduced_git_corpus = [
+      (cf, feats[self.feature_space])
+      for cf, feats in git_corpus.getFeaturesContents(sequence_length = 768)
+      if self.feature_space in feats and feats[self.feature_space]
+    ]
+    self.loadCheckpoint()
+    try:
+      self.target_benchmark = self.benchmarks.pop(0)
+      l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
+    except IndexError:
+      self.target_benchmark = None
+    return
+
+  def iter_benchmark(self):
+    """
+    When it's time, cycle through the next target benchmark.
+    """
+    # self.benchmarks.append(self.benchmarks.pop(0))
+    try:
+      self.target_benchmark = self.benchmarks.pop(0)
+      l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
+    except IndexError:
+      self.target_benchmark = None
+    self.saveCheckpoint()
+    return
 
   def saveCheckpoint(self) -> None:
     """
