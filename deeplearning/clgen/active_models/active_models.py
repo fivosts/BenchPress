@@ -116,40 +116,12 @@ class Model(object):
     self.backend.Train(**kwargs)
     return self
 
-  def Sample(
-    self,
-    sampler: 'samplers.Sampler',
-    sample_observers: typing.List[sample_observers_lib.SampleObserver],
-    seed: int = None,
-  ) -> None:
-    """Sample a model.
-
-    This method uses the observer model, returning nothing. To access the
-    samples produced, implement a SampleObserver and pass it in as an argument.
-    Sampling continues indefinitely until one of the sample observers returns
-    False when notified of a new sample.
-
-    If the model is not already trained, calling Sample() first trains the
-    model. Thus a call to Sample() is equivalent to calling Train() then
-    Sample().
-
-    Args:
-      sampler: The sampler to sample using.
-      sample_observers: A list of SampleObserver objects that are notified of
-        new generated samples.
-      seed: A numeric value to seed the RNG with. If not present, the RNG is
-        seeded randomly.
-
-    Raises:
-      UserError: If called with no sample observers.
-      UnableToAcquireLockError: If the model is locked (i.e. there is another
-        process currently modifying the model).
-      InvalidStartText: If the sampler start text cannot be encoded.
-      InvalidSymtokTokens: If the sampler symmetrical depth tokens cannot be
-        encoded.
+  def Sample(self, seed: int = None) -> None:
     """
-    if not sample_observers:
-      raise ValueError("Cannot sample without any observers")
+    Sample the active learner.
+    Knowing a downstream task, the active learning model samples
+    and returns the datapoints that are deemed valuable.
+    """
 
     self.Create()
     epoch = self.backend.telemetry.EpochTelemetry()[-1].epoch_num
@@ -210,6 +182,7 @@ class Model(object):
                           humanize.intcomma(int(1000 * ((time_now - sample_start_time) / max(seq_count, 1)).total_seconds()))
                         )
     )
+    return
 
   def SamplerCache(self, sampler: 'samplers.Sampler') -> pathlib.Path:
     """Get the path to a sampler cache.
