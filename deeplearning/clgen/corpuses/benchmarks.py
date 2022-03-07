@@ -1,5 +1,5 @@
 """
-Feature space sampling of source code.
+Module for benchmarks suite pre-processing, encoding and feature extraction.
 """
 import typing
 import tempfile
