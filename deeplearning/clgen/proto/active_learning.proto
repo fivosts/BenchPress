@@ -34,11 +34,11 @@ message MLP {
 // Layer wrapper to help with layer's ordering consistency.
 message Layer {
   oneof layers {
-    Linear    linear     = 1;
-    Dropout   dropout    = 2;
-    LayerNorm layer_norm = 3;
-    ACT_fn    act_fn     = 4;
-
+    Embedding embedding  = 1;
+    Linear    linear     = 2;
+    Dropout   dropout    = 3;
+    LayerNorm layer_norm = 4;
+    ACT_fn    act_fn     = 5;
   }
 }
 
