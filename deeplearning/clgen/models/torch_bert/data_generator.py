@@ -391,7 +391,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         d.sampler.corpus_directory, "exec_time_per_gen"
       )
       # Check if benchmark set has been registed to monitor.
-      raise NotImplementedError("TODO below")
       if d.feat_sampler.target not in d.tsne_monitor.groups_set:
         for b in d.feat_sampler.benchmarks:
           d.tsne_monitor.register((b.features, d.feat_sampler.target, b.name))
