@@ -259,7 +259,7 @@ class QueryByCommittee(backends.BackendBase):
     # Configure committee members.
     self._ConfigModelParams(self.downstream_task.data_generator)
     for member in self.committee:
-      TrainMember(member)
+      self.TrainMember(member)
     return
 
   def Validate(self) -> None:
@@ -303,12 +303,16 @@ class QueryByCommittee(backends.BackendBase):
       prediction.append(self.downstream_task.TargetIDtoLabels(out['target_id']))
     return predictions
 
-  def SampleCommittee(self) -> None:
+  def SampleCommittee(self) -> typing.Dict[str, typing.List[str]]:
     """
     Sample committee with a set of inputs.
     """
     self._ConfigModelParams(self.downstream_task.data_generator)
-    raise NotImplementedError
+    committee_predictions = {}
+    for member in self.committee:
+      committee_predictions[member] = self.TrainMember(member)
+    return committee_predictions
+
 
   def Sample(self) -> None:
     """
@@ -316,8 +320,10 @@ class QueryByCommittee(backends.BackendBase):
     This method queries all committee members and measures their cross-entropy to validate
     the usefulness of parts of the feature space.
     """
-    self.sample_space()
-    self.SampleCommittee()
+    sampled_vectors = self.downstream_task.sample_space()
+    committee_predictions = self.SampleCommittee(sampled_vectors)
+    raise NotImplementedError("For each of inputs provided to SampleCommittee, calculate cross entropy")
+    raise NotImplementedError("Return those feature vectors that have the highest entropy.")
     return
 
   def saveCheckpoint(self, 
