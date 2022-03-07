@@ -35,6 +35,9 @@ class Dataloader(torch.utils.data.Dataset):
       )
     return
 
+  def __len__(self):
+    return len(self.dataset)
+
   def __getitem__(self, idx):
 
     if idx < 0:
