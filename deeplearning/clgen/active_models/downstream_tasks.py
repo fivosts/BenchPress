@@ -42,10 +42,23 @@ class GrewePredictive(DownstreamTask):
   This class is responsible to fetch the raw data and act as a tokenizer
   for the data. Reason is, the data generator should be agnostic of the labels.
   """
+  @property
+  def input_size(self) -> int:
+    return 5
+  
+  @property
+  def input_labels(self) -> typing.List[str]:
+    return [
+      "tr_bytes/(comp+mem)",
+      "coalesced/mem",
+      "localmem/(mem+wgsize)",
+      "tr_bytes/(comp+mem)",
+      "comp/mem"
+    ]
+
   def __init__(self, corpus_path: pathlib.Path) -> None:
     super(GrewePredictive, self).__init__("GrewePredictive")
     self.inputs         = ["comp", "mem", "localmem", "coalesced", "atomic"]
-    self.input_size     = 10
     self.output_labels  = ["CPU", "GPU"]
     self.output_size    = 2
     self.corpus_path    = corpus_path
