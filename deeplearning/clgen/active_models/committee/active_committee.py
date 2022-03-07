@@ -77,8 +77,8 @@ class QueryByCommittee(backends.BackendBase):
     return
 
   def _ConfigModelParams(self,
-                         data_generator: data_generator.Dataloader = None,
-                         is_sampling = False
+                         data_generator : data_generator.Dataloader = None,
+                         is_sampling    : bool = False
                          ) -> None:
     """
     Model parameter initialization.
