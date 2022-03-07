@@ -133,7 +133,7 @@ class QueryByCommittee(backends.BackendBase):
     Member-dispatching function for loading checkpoint, training and saving back.
     """
     model           = member.model.to(self.pytorch.offset_device)
-    dataloader      = member.dataloader
+    dataloader      = member.data_generator
     optimizer       = member.optimizer
     scheduler       = member.scheduler
     member_path     = self.ckpt_path / member.sha256
@@ -173,7 +173,7 @@ class QueryByCommittee(backends.BackendBase):
       # Set dataloader in case of TPU training.
       if self.torch_tpu_available:
         loader = self.pytorch.torch_ploader.ParallelLoader(
-                            self.train.data_generator.dataloader, [self.pytorch.device]
+                            self.train.data_generator.data_generator, [self.pytorch.device]
                           ).per_device_loader(self.pytorch.device)
 
       # Get dataloader iterator and setup hooks.
