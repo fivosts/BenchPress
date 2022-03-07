@@ -458,4 +458,4 @@ class QueryByCommittee(backends.BackendBase):
       return True
 
   def GetShortSummary(self) -> str:
-    return "TODO"
+    return "Short summary TODO"
