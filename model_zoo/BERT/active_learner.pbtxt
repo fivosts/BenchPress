@@ -100,11 +100,6 @@ sampler {
                   out_features: 2
                 }
               }
-              layer {
-                act_fn {
-                  fn: "softmax"
-                }
-              }
             }
           }
           downstream_task: "GrewePredictive"
