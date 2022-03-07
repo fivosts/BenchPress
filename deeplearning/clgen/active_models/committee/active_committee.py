@@ -208,7 +208,7 @@ class QueryByCommittee(backends.BackendBase):
           if self.pytorch.num_nodes > 1:
             loader.sampler.set_epoch(epoch)
 
-          if epoch < current_step // member.training_optssteps_per_epoch:
+          if epoch < current_step // member.training_opts.steps_per_epoch:
             continue
 
           batch_iter = tqdm.auto.trange(member.training_opts.steps_per_epoch, desc="Batch", leave = False) if self.is_world_process_zero() else range(member.training_opts.steps_per_epoch)
