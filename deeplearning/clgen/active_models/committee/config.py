@@ -24,7 +24,10 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
     pbutil.AssertFieldIsSet(nn, "num_train_steps")
     pbutil.AssertFieldIsSet(nn, "num_warmup_steps")
     for l in nn.layer:
-      if l.HasField("linear"):
+      if l.HasField("embedding"):
+        pbutil.AssertFieldIsSet(l.embedding, "num_embeddings")
+        pbutil.AssertFieldIsSet(l.embedding, "embedding_dim")
+      elif l.HasField("linear"):
         pbutil.AssertFieldIsSet(l.linear, "in_features")
         pbutil.AssertFieldIsSet(l.linear, "out_features")
       elif l.HasField("dropout"):
@@ -104,7 +107,16 @@ class ModelConfig(object):
         )
     self.layer_config = []
     for l in self.config.layer:
-      if l.HasField("linear"):
+      if l.HasField("embedding"):
+        self.layer_config.append((
+            'Embedding', {
+              'num_embeddings': l.embedding.num_embeddings,
+              'embedding_dim' : l.embedding.embedding_dim,
+              'padding_idx'   : l.embedding.padding_idx if l.embedding.HasField("padding_idx") else None
+            }
+          )
+        )
+      elif l.HasField("linear"):
         self.layer_config.append((
             'Linear', {
               'in_features': l.linear.in_features,
