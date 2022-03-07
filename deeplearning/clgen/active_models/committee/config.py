@@ -95,6 +95,13 @@ class ModelConfig(object):
             self.downstream_task.input_size
           )
         )
+    if self.config.layer[-1].HasField("linear"):
+      if self.config.layer[-1].linear.out_features != self.downstream_task.output_size:
+        raise ValueError("Mismatch between committee member's output size {} and downstream task's output size {}".format(
+            self.config.layer[-1].linear.out_features,
+            self.downstream_task.output_size
+          )
+        )
     self.layer_config = []
     for l in self.config.layer:
       if l.HasField("linear"):
