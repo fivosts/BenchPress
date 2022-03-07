@@ -57,6 +57,7 @@ class MLP(CommitteeModels):
     self.layers = []
 
     layers = {
+      'Embedding' : torch.nn.Embedding,
       'Linear'    : torch.nn.Linear,
       'Dropout'   : torch.nn.Dropout,
       'LayerNorm' : torch.nn.LayerNorm,
