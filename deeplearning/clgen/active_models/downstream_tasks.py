@@ -62,15 +62,24 @@ class GrewePredictive(DownstreamTask):
     data    = [x for x in self.corpus_db.get_valid_data()]
     pool = multiprocessing.Pool()
     it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = "GreweFeatures"), data)
-    for dp in tqdm.tqdm(it, total = len(data), desc = "Grewe corpus setup", leave = False):
-      if dp:
-        feats, entry = dp
-        self.dataset.append(
-          (
-            self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.global_size),
-            self.TargetLabeltoEncodedVector(entry.status)
+    idx = 0
+    try:
+      for dp in tqdm.tqdm(it, total = len(data), desc = "Grewe corpus setup", leave = False):
+        if dp:
+          feats, entry = dp
+          self.dataset.append(
+            (
+              self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.global_size),
+              self.TargetLabeltoEncodedVector(entry.status)
+            )
           )
-        )
+          idx += 1
+        if idx >= 100:
+          break
+      pool.close()
+    except Exception as e:
+      pool.terminate()
+      raise e
     return
 
   def sample_space(self, num_samples: int = 512) -> typing.List[float]:
