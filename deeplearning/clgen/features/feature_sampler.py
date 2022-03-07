@@ -2,6 +2,7 @@
 Feature space sampling of source code.
 """
 import typing
+import pathlib
 import pickle
 import math
 import functools
