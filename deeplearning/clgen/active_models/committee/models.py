@@ -71,9 +71,9 @@ class MLP(CommitteeModels):
     raise NotImplementedError
 
   def forward(self,
-              input_ids  : torch.Tensor,
-              target_ids : torch.Tensor = None,
-              is_sampling: bool = False
+              input_ids   : torch.Tensor,
+              target_ids  : torch.Tensor = None,
+              is_sampling : bool = False
               ) -> torch.Tensor:
     out = input_ids
     for layer in self.layers:
