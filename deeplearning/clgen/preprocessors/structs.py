@@ -39,16 +39,16 @@ class Struct(Base, sqlutil.ProtoBackedMixin):
   contents   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Struct name.
   name       : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  # 
-
+  # Struct fields.
+  fields     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Number of fields a struct has.
   num_fields : int = sql.Column(sql.Integer, nullable = False)
   # Repo name where struct was found.
-  repo_name   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  repo_name  : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Repo ref.
-  ref         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  ref        : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Date
-  date_added  : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
+  date_added : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
   def FromArgs(cls,
