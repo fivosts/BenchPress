@@ -14,7 +14,7 @@ from deeplearning.clgen.active_models import backends
 from deeplearning.clgen.active_models import data_generator
 from deeplearning.clgen.active_models.committee import models
 from deeplearning.clgen.active_models.committee import config
-from deeplearning.clgen.util.pytorch import torch
+from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import logging as l
 
 class QueryByCommittee(backends.BackendBase):
@@ -133,7 +133,7 @@ class QueryByCommittee(backends.BackendBase):
     Member-dispatching function for loading checkpoint, training and saving back.
     """
     model           = member.model.to(self.pytorch.offset_device)
-    dataloader      = member.data_generator
+    data_generator  = member.data_generator
     optimizer       = member.optimizer
     scheduler       = member.scheduler
     member_path     = self.ckpt_path / member.sha256
@@ -169,7 +169,20 @@ class QueryByCommittee(backends.BackendBase):
         )
 
       raise NotImplementedError("Right here implement the loader, sampler etc. thing.")
-
+      loader = self.torch.utils.data.dataloader.DataLoader(
+        dataset    = data_generator,
+        batch_size = member.training_opts.batch_size,
+        sampler    = (self.torch.utils.data.RandomSampler(data_generator, replacement = False)
+          if self.pytorch.num_nodes <= 1 or not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
+          else self.torch.utils.data.distributed.DistributedSampler(
+            dataset      = data_generator,
+            num_replicas = self.pytorch.num_nodes if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.xrt_world_size(),
+            rank         = self.pytorch.torch.distributed.get_rank() if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.get_ordinal()
+          )
+        ),
+        num_workers = 0,
+        drop_last   = True if environment.WORLD_SIZE > 1 else False,
+      )
       # Set dataloader in case of TPU training.
       if self.torch_tpu_available:
         loader = self.pytorch.torch_ploader.ParallelLoader(
