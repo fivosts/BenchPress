@@ -13,13 +13,13 @@ message ActiveLearner {
   optional Committee committee       = 1;
   optional string    downstream_task = 2;
   optional string    training_corpus = 3;
+  optional int32     random_seed     = 4;
 }
 
 // Committee is a list of models.
 message Committee {
   repeated MLP mlp = 1;
   // repeated <ModelType> model_type = x;
-  optional int32 random_seed = 2;
 }
 
 // MLP-type architecture.
