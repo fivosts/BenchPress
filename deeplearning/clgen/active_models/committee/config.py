@@ -128,7 +128,7 @@ class ModelConfig(object):
         )
       elif l.HasField("act_fn"):
         self.layer_config.append((
-            l.act_fn, {}
+            l.act_fn.fn, {}
           )
         )
     return
