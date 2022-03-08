@@ -134,8 +134,18 @@ class GrewePredictive(DownstreamTask):
     """
     l.logger().warn("Assuming wgsize (local size) and transferred_bytes is very problematic.")
     samples = []
-    # for x in range(num_samples):
-      
+    for x in range(num_samples):
+      fvec = {
+        x: self.rand_generators[x]() 
+        for x in grewe.KEYS if x not in {'F2:coalesced/mem', 'F4:comp/mem'}
+      }
+      fvec['F2:coalesced/mem'] = fvec['coalesced'] / fvec['mem']
+      fvec['F4:comp/mem'] = fvec['comp'] / fvec['mem']
+      samples.append(
+        fvec,
+        80000,
+        256,
+      )
     return
 
   def InputtoEncodedVector(self,
