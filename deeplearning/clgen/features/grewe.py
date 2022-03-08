@@ -15,14 +15,14 @@ FLAGS = flags.FLAGS
 GREWE = environment.GREWE
 
 KEYS = [
-  'comp',
-  'rational',
-  'mem',
-  'localmem',
-  'coalesced',
-  'atomic',
-  'F2:coalesced/mem',
-  'F4:comp/mem',
+  "comp",
+  "rational",
+  "mem",
+  "localmem",
+  "coalesced",
+  "atomic",
+  "F2:coalesced/mem",
+  "F4:comp/mem",
 ]
 
 class GreweFeatures(object):
