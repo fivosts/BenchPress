@@ -127,12 +127,13 @@ class GrewePredictive(DownstreamTask):
       raise e
     return
 
-  def sample_space(self, num_samples: int = 512) -> typing.List[float]:
+  def sample_space(self, num_samples: int = 512) -> typing.List[typing.List[float]]:
     """
     Go fetch Grewe Predictive model's feature space and randomly return num_samples samples
     to evaluate.
     """
     l.logger().warn("Assuming wgsize (local size) and transferred_bytes is very problematic.")
+    samples = []
     # for x in range(num_samples):
       
     return
