@@ -76,6 +76,23 @@ class GrewePredictive(DownstreamTask):
     self.data_generator = data_generator.Dataloader(self.dataset)
 
     ## Setup random seed np random stuff
+    self.seed_generator = np.random
+    self.seed_generator.seed(random_seed)
+    self.rand_generators = {}
+    max_fval {
+      'comp'      : 300,
+      'rational'  : 50,
+      'mem'       : 50,
+      'localmem'  : 50,
+      'coalesced' : 10,
+      'atomic'    : 10,
+    }
+    for fk in grewe.KEYS():
+      if fk not in {'F2:coalesced/mem', 'F4:comp/mem'}:
+        seed = self.seed_generator.randint(0, 10000000000)
+        rgen = np.random
+        rgen.seed(seed)
+        self.rand_generators[fk] = lambda: rgen.randint(0, max_fval[fk])
     return
 
   def __repr__(self) -> str:
@@ -115,7 +132,9 @@ class GrewePredictive(DownstreamTask):
     Go fetch Grewe Predictive model's feature space and randomly return num_samples samples
     to evaluate.
     """
-    raise NotImplementedError("What the fuck do we do with runtime features for god's sake?")
+    l.logger().warn("Assuming wgsize (local size) and transferred_bytes is very problematic.")
+    # for x in range(num_samples):
+      
     return
 
   def InputtoEncodedVector(self,
