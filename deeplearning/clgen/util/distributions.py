@@ -87,17 +87,22 @@ class UniformDistribution(Distribution):
                sample_length  : int,
                relative_length: float,
                log_path       : typing.Union[pathlib.Path, str],
-               set_name       : str
+               set_name       : str,
+               seed           : int = None,
                ):
     super(UniformDistribution, self).__init__(sample_length, relative_length, log_path, set_name)
+    if seed:
+      self.seed = seed
+    else:
+      if self.sample_length:
+        self.sampler = lambda: np.random.RandomState().randint(0, self.sample_length + 1)
+      else:
+        self.sampler = lambda: np.random.RandomState().randint(0, int(length * self.relative_length))
 
   def sample(self, length = None):
-    if self.sample_length:
-      return np.random.RandomState().randint(0, self.sample_length + 1)
-    elif length:
-      return np.random.RandomState().randint(0, int(length * self.relative_length))
-    else:
+    if not self.sample_length and not length:
       raise ValueErrror("One of sample length and upper length must be specified.")
+    return self.sampler()
 
 class NormalDistribution(Distribution):
   """
