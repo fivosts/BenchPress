@@ -9,6 +9,7 @@ import functools
 import typing
 import tqdm
 import multiprocessing
+import numpy as np
 
 from deeplearning.clgen.active_models import data_generator
 from deeplearning.clgen.experiments import cldrive
