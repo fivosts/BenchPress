@@ -79,7 +79,7 @@ class GrewePredictive(DownstreamTask):
     self.seed_generator = np.random
     self.seed_generator.seed(random_seed)
     self.rand_generators = {}
-    max_fval {
+    max_fval = {
       'comp'      : 300,
       'rational'  : 50,
       'mem'       : 50,
