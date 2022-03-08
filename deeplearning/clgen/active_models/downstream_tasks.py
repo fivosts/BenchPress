@@ -91,7 +91,7 @@ class GrewePredictive(DownstreamTask):
     }
     for fk in grewe.KEYS:
       if fk not in {'F2:coalesced/mem', 'F4:comp/mem'}:
-        seed = self.seed_generator.randint(0, 10000000000)
+        seed = self.seed_generator.randint(0, 2**32-1)
         rgen = np.random
         rgen.seed(seed)
         self.rand_generators[fk] = lambda: rgen.randint(0, max_fval[fk])
