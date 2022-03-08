@@ -139,8 +139,8 @@ class GrewePredictive(DownstreamTask):
     samples = []
     for x in range(num_samples):
       fvec = {
-        x: self.rand_generators[x]() 
-        for x in grewe.KEYS if x not in {'F2:coalesced/mem', 'F4:comp/mem'}
+        k: self.rand_generators[k]() 
+        for k in grewe.KEYS if k not in {'F2:coalesced/mem', 'F4:comp/mem'}
       }
       fvec['F2:coalesced/mem'] = fvec['coalesced'] / fvec['mem']
       fvec['F4:comp/mem'] = fvec['comp'] / fvec['mem']
