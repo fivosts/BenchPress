@@ -93,6 +93,12 @@ class UniformDistribution(Distribution):
     super(UniformDistribution, self).__init__(sample_length, relative_length, log_path, set_name)
     if seed:
       self.seed = seed
+      self.sample_gen = np.random
+      self.sample_gen.seed(seed)
+      if self.sample_length:
+        self.sampler = lambda: self.sample_gen.randint(0, self.sample_length + 1)
+      else:
+        self.sampler = lambda: self.sample_gen.randint(0, int(length * self.relative_length))
     else:
       if self.sample_length:
         self.sampler = lambda: np.random.RandomState().randint(0, self.sample_length + 1)
