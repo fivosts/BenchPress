@@ -16,6 +16,7 @@ from deeplearning.clgen.experiments import cldrive
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import grewe
 from deeplearning.clgen.util import distributions
+from deeplearning.clgen.util import logging as l
 
 def ExtractorWorker(cldrive_entry: cldrive.CLDriveSample, fspace: str):
   """
