@@ -14,6 +14,7 @@ import numpy as np
 from deeplearning.clgen.active_models import data_generator
 from deeplearning.clgen.experiments import cldrive
 from deeplearning.clgen.features import extractor
+from deeplearning.clgen.features import grewe
 from deeplearning.clgen.util import distributions
 
 def ExtractorWorker(cldrive_entry: cldrive.CLDriveSample, fspace: str):
@@ -88,7 +89,7 @@ class GrewePredictive(DownstreamTask):
       'coalesced' : 10,
       'atomic'    : 10,
     }
-    for fk in grewe.KEYS():
+    for fk in grewe.KEYS:
       if fk not in {'F2:coalesced/mem', 'F4:comp/mem'}:
         seed = self.seed_generator.randint(0, 10000000000)
         rgen = np.random
