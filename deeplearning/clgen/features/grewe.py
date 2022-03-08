@@ -14,6 +14,17 @@ from absl import flags
 FLAGS = flags.FLAGS
 GREWE = environment.GREWE
 
+KEYS = [
+  'comp',
+  'rational',
+  'mem',
+  'localmem',
+  'coalesced',
+  'atomic',
+  'F2:coalesced/mem',
+  'F4:comp/mem',
+]
+
 class GreweFeatures(object):
   """
   Source code features as defined in paper
