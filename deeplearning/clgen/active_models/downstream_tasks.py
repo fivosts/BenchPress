@@ -13,6 +13,7 @@ import multiprocessing
 from deeplearning.clgen.active_models import data_generator
 from deeplearning.clgen.experiments import cldrive
 from deeplearning.clgen.features import extractor
+from deeplearning.clgen.util import distributions
 
 def ExtractorWorker(cldrive_entry: cldrive.CLDriveSample, fspace: str):
   """
@@ -73,6 +74,8 @@ class GrewePredictive(DownstreamTask):
     self.corpus_path    = corpus_path
     self.setup_dataset()
     self.data_generator = data_generator.Dataloader(self.dataset)
+
+    ## Setup random seed np random stuff
     return
 
   def __repr__(self) -> str:
