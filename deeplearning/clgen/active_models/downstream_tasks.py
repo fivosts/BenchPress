@@ -91,11 +91,12 @@ class GrewePredictive(DownstreamTask):
       'atomic'    : 10,
     }
     for fk in grewe.KEYS:
-      if fk not in {'F2:coalesced/mem', 'F4:comp/mem'}:
+      if fk not in {"F2:coalesced/mem", "F4:comp/mem"}:
         seed = self.seed_generator.randint(0, 2**32-1)
         rgen = np.random
         rgen.seed(seed)
-        self.rand_generators[fk] = lambda: rgen.randint(0, max_fval[fk])
+        bound = max_fval[fk]
+        self.rand_generators[fk] = lambda: rgen.randint(0, bound)
     return
 
   def __repr__(self) -> str:
@@ -139,15 +140,23 @@ class GrewePredictive(DownstreamTask):
     samples = []
     for x in range(num_samples):
       fvec = {
-        k: self.rand_generators[k]() 
-        for k in grewe.KEYS if k not in {'F2:coalesced/mem', 'F4:comp/mem'}
+        k: self.rand_generators[k]()
+        for k in grewe.KEYS if k not in {"F2:coalesced/mem", "F4:comp/mem"}
       }
-      fvec['F2:coalesced/mem'] = fvec['coalesced'] / fvec['mem']
-      fvec['F4:comp/mem'] = fvec['comp'] / fvec['mem']
+      try:
+        fvec['F2:coalesced/mem'] = fvec['coalesced'] / fvec['mem']
+      except ZeroDivisionError:
+        fvec['F2:coalesced/mem'] = 0.0
+      try:
+        fvec['F4:comp/mem'] = fvec['comp'] / fvec['mem']      
+      except ZeroDivisionError:
+        fvec['F4:comp/mem'] = 0.0
       samples.append(
-        fvec,
-        80000,
-        256,
+        self.InputtoEncodedVector(
+          fvec,
+          80000,
+          256,
+        )
       )
     return
 
@@ -159,12 +168,23 @@ class GrewePredictive(DownstreamTask):
     """
     Encode consistently raw features to Grewe's predictive model inputs.
     """
-    return [
-      transferred_bytes         / (static_feats['comp'] + static_feats['mem']),
-      static_feats['coalesced'] / static_feats['mem'],
-      static_feats['localmem']  / (static_feats['mem'] * local_size),
-      static_feats['comp']      / static_feats['mem']
-    ]
+    try:
+      i1 = transferred_bytes / (static_feats['comp'] + static_feats['mem'])
+    except ZeroDivisionError:
+      i1 = 0.0
+    try:
+      i2 = static_feats['coalesced'] / static_feats['mem']
+    except ZeroDivisionError:
+      i2 = 0.0
+    try:
+      i3 = static_feats['localmem'] / (static_feats['mem'] * local_size)
+    except ZeroDivisionError:
+      i3 = 0.0
+    try:
+      i4 = static_feats['comp'] / static_feats['mem']
+    except ZeroDivisionError:
+      i4 = 0.0
+    return [i1, i2, i3, i4]
 
   def TargetIDtoLabels(self, id: int) -> str:
     """
