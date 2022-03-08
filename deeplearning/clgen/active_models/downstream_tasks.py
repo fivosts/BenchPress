@@ -158,7 +158,7 @@ class GrewePredictive(DownstreamTask):
           256,
         )
       )
-    return
+    return samples
 
   def InputtoEncodedVector(self,
                            static_feats      : typing.Dict[str, float],
