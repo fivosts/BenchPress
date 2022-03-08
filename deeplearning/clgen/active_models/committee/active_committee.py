@@ -328,12 +328,14 @@ class QueryByCommittee(backends.BackendBase):
     return predictions
 
   def SampleCommittee(self,
-                      sample_vectors: typing.Dict[str, 'torch.Tensor']
+                      sample_vectors: typing.List[typing.List[float]],
                       ) -> typing.Dict[str, typing.List[str]]:
     """
     Sample committee with a set of inputs.
     """
     self._ConfigModelParams()
+    raise NotImplementedError("Initialize dataset here, out of list of lists.")
+    raise NotImplementedError("Implement sampler as well.")
     committee_predictions = {}
     for member in self.committee:
       committee_predictions[member] = self.TrainMember(member, sample_vectors)
@@ -346,8 +348,7 @@ class QueryByCommittee(backends.BackendBase):
     the usefulness of parts of the feature space.
     """
     sample_vectors = self.downstream_task.sample_space(num_samples = 512)
-    raise NotImplementedError("Batch sample vectors, to WxBxS, where WxB = 512")
-    committee_predictions = self.SampleCommittee(inputs)
+    committee_predictions = self.SampleCommittee(sample_vectors)
     raise NotImplementedError("For each of inputs provided to SampleCommittee, calculate cross entropy")
     raise NotImplementedError("Return those feature vectors that have the highest entropy.")
     return
