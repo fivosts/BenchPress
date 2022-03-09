@@ -371,8 +371,8 @@ class QueryByCommittee(backends.BackendBase):
     This method queries all committee members and measures their cross-entropy to validate
     the usefulness of parts of the feature space.
     """
-    sample_set         = self.downstream_task.sample_space(num_samples = 512)
-    sample_predictions = self.SampleCommittee(sample_set)
+    sample_set            = self.downstream_task.sample_space(num_samples = 512)
+    committee_predictions = self.SampleCommittee(sample_set)
     raise NotImplementedError("For each of inputs provided to SampleCommittee, calculate cross entropy")
     raise NotImplementedError("Return those feature vectors that have the highest entropy.")
     return
