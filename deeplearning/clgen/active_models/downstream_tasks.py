@@ -131,7 +131,7 @@ class GrewePredictive(DownstreamTask):
       raise e
     return
 
-  def sample_space(self, num_samples: int = 512) -> typing.List[typing.Dict]:
+  def sample_space(self, num_samples: int = 512) -> data_generator.DictPredictionDataloader:
     """
     Go fetch Grewe Predictive model's feature space and randomly return num_samples samples
     to evaluate. The predictive model samples are mapped as a value to the static features
@@ -158,7 +158,7 @@ class GrewePredictive(DownstreamTask):
           'input_ids'      : self.InputtoEncodedVector(fvec, 80000, 256)
         }
       )
-    return samples
+    return data_generator.DictPredictionDataloader(samples)
 
   def StaticFeatDictToVec(self, static_feats: typing.Dict[str, float]) -> typing.List[float]:
     """
