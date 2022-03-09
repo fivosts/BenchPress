@@ -156,7 +156,6 @@ class GrewePredictive(DownstreamTask):
         {
           'static_features': fvec,
           'input_ids'      : self.InputtoEncodedVector(fvec, 80000, 256)
-          'predictions'    : [-1, -1],
         }
       )
     return samples
