@@ -152,13 +152,11 @@ class GrewePredictive(DownstreamTask):
         fvec['F4:comp/mem'] = fvec['comp'] / fvec['mem']      
       except ZeroDivisionError:
         fvec['F4:comp/mem'] = 0.0
-      samples.append(
-        self.InputtoEncodedVector(
+      samples[fvec] = self.InputtoEncodedVector(
           fvec,
           80000,
           256,
         )
-      )
     return samples
 
   def InputtoEncodedVector(self,
