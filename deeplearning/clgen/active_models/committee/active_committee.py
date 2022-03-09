@@ -362,7 +362,7 @@ class QueryByCommittee(backends.BackendBase):
     raise NotImplementedError("Implement sampler as well.")
     committee_predictions = {}
     for member in self.committee:
-      committee_predictions[member] = self.TrainMember(member, sample_set)
+      committee_predictions[member] = self.SampleMember(member, sample_set)
     return committee_predictions
 
   def Sample(self) -> typing.List[typing.Dict[str, float]]:
