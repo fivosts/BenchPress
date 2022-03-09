@@ -160,6 +160,18 @@ class GrewePredictive(DownstreamTask):
       )
     return samples
 
+  def StaticFeatDictToVec(self, static_feats: typing.Dict[str, float]) -> typing.List[float]:
+    """
+    Process grewe static features dictionary into list of floats to be passed as tensor.
+    """
+    return [static_feats[key] for key in grewe.KEYS]
+
+  def VecToStaticFeatDict(self, feature_values: typing.List[float]) -> typing.Dict[str, float]:
+    """
+    Process float vector of feature values to dictionary of features.
+    """
+    return {key: val for key, val in zip(grewe.KEYS, feature_values)}
+
   def InputtoEncodedVector(self,
                            static_feats      : typing.Dict[str, float],
                            transferred_bytes : int,
