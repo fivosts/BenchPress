@@ -7,7 +7,7 @@ import pathlib
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 
-class Dataloader(torch.utils.data.Dataset):
+class ListTrainDataloader(torch.utils.data.Dataset):
   """
   Modular dataloading class for downstream tasks.
   """
