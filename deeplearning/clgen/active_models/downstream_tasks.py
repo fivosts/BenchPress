@@ -131,14 +131,14 @@ class GrewePredictive(DownstreamTask):
       raise e
     return
 
-  def sample_space(self, num_samples: int = 512) -> typing.Dict[typing.Dict[str, float], typing.List[float]]:
+  def sample_space(self, num_samples: int = 512) -> typing.List[typing.Dict]:
     """
     Go fetch Grewe Predictive model's feature space and randomly return num_samples samples
     to evaluate. The predictive model samples are mapped as a value to the static features
     as a key.
     """
     l.logger().warn("Assuming wgsize (local size) and transferred_bytes is very problematic.")
-    samples = {}
+    samples = []
     for x in range(num_samples):
       fvec = {
         k: self.rand_generators[k]()
@@ -152,12 +152,13 @@ class GrewePredictive(DownstreamTask):
         fvec['F4:comp/mem'] = fvec['comp'] / fvec['mem']      
       except ZeroDivisionError:
         fvec['F4:comp/mem'] = 0.0
-      if fvec not in samples:
-        samples[fvec] = self.InputtoEncodedVector(
-            fvec,
-            80000,
-            256,
-          )
+      samples.append(
+        {
+          'static_features': fvec,
+          'input_ids'      : self.InputtoEncodedVector(fvec, 80000, 256)
+          'predictions'    : [-1, -1],
+        }
+      )
     return samples
 
   def InputtoEncodedVector(self,
