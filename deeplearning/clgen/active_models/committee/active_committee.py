@@ -195,7 +195,7 @@ class QueryByCommittee(backends.BackendBase):
       # Set dataloader in case of TPU training.
       if self.torch_tpu_available:
         loader = self.pytorch.torch_ploader.ParallelLoader(
-                            self.train.data_generator.data_generator, [self.pytorch.device]
+                            data_generator, [self.pytorch.device]
                           ).per_device_loader(self.pytorch.device)
 
       # Get dataloader iterator and setup hooks.
@@ -294,8 +294,8 @@ class QueryByCommittee(backends.BackendBase):
     return
 
   def SampleMember(self,
-                   member: 'QueryByCommittee.CommitteeEstimator',
-                   inputs: typing.List[typing.Dict[str, 'torch.Tensor']],
+                   member     : 'QueryByCommittee.CommitteeEstimator',
+                   sample_set : data_generator.DictPredictionDataloader,
                    ) -> str:
     """
     Sample member of committee. Return predicted label.
@@ -320,6 +320,28 @@ class QueryByCommittee(backends.BackendBase):
     if current_step >= 0:
       l.logger().info("Loaded checkpoint step {}".format(current_step))
 
+    loader = self.torch.utils.data.dataloader.DataLoader(
+      dataset    = sample_set,
+      batch_size = member.training_opts.train_batch_size,
+      sampler    = (self.torch.utils.data.RandomSampler(sample_set, replacement = False)
+        if self.pytorch.num_nodes <= 1 or not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
+        else self.torch.utils.data.distributed.DistributedSampler(
+          dataset      = sample_set,
+          num_replicas = self.pytorch.num_nodes if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.xrt_world_size(),
+          rank         = self.pytorch.torch.distributed.get_rank() if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.get_ordinal()
+        )
+      ),
+      num_workers = 0,
+      drop_last   = True if environment.WORLD_SIZE > 1 else False,
+    )
+    # Set dataloader in case of TPU training.
+    if self.torch_tpu_available:
+      loader = self.pytorch.torch_ploader.ParallelLoader(
+                          sample_set, [self.pytorch.device]
+                        ).per_device_loader(self.pytorch.device)
+    # Get dataloader iterator and setup hooks.
+    batch_iterator = iter(loader)
+
     model.eval()
     predictions = []
     for batch in inputs:
@@ -328,17 +350,19 @@ class QueryByCommittee(backends.BackendBase):
     return predictions
 
   def SampleCommittee(self,
-                      sample_vectors: typing.List[typing.List[float]],
-                      ) -> typing.Dict[str, typing.List[str]]:
+                      sample_set: data_generator.DictPredictionDataloader,
+                      ) -> typing.List[typing.Dict[str, torch.Tensor]]:
     """
     Sample committee with a set of inputs.
+    Return a list where each element is the
+    total workload computed by a committee member.
     """
     self._ConfigModelParams()
     raise NotImplementedError("Initialize dataset here, out of list of lists.")
     raise NotImplementedError("Implement sampler as well.")
     committee_predictions = {}
     for member in self.committee:
-      committee_predictions[member] = self.TrainMember(member, sample_vectors)
+      committee_predictions[member] = self.TrainMember(member, sample_set)
     return committee_predictions
 
   def Sample(self) -> typing.List[typing.Dict[str, float]]:
@@ -347,8 +371,8 @@ class QueryByCommittee(backends.BackendBase):
     This method queries all committee members and measures their cross-entropy to validate
     the usefulness of parts of the feature space.
     """
-    samples = self.downstream_task.sample_space(num_samples = 512)
-    sample_predictions = self.SampleCommittee(sample_vectors)
+    sample_set         = self.downstream_task.sample_space(num_samples = 512)
+    sample_predictions = self.SampleCommittee(sample_set)
     raise NotImplementedError("For each of inputs provided to SampleCommittee, calculate cross entropy")
     raise NotImplementedError("Return those feature vectors that have the highest entropy.")
     return
