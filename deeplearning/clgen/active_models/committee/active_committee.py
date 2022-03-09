@@ -351,10 +351,10 @@ class QueryByCommittee(backends.BackendBase):
 
   def SampleCommittee(self,
                       sample_set: data_generator.DictPredictionDataloader,
-                      ) -> typing.List[typing.Dict[str, torch.Tensor]]:
+                      ) -> typing.Dict[typing.Dict[str, torch.Tensor]]:
     """
     Sample committee with a set of inputs.
-    Return a list where each element is the
+    Return a dictionary mapped from each member to the
     total workload computed by a committee member.
     """
     self._ConfigModelParams()
