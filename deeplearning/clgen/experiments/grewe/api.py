@@ -13,6 +13,7 @@ import math
 import tqdm
 import pandas as pd
 
+from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.experiments import public
 from deeplearning.clgen.experiments import workers
 from deeplearning.clgen.experiments import cldrive
