@@ -358,8 +358,6 @@ class QueryByCommittee(backends.BackendBase):
     total workload computed by a committee member.
     """
     self._ConfigModelParams()
-    raise NotImplementedError("Initialize dataset here, out of list of lists.")
-    raise NotImplementedError("Implement sampler as well.")
     committee_predictions = {}
     for member in self.committee:
       committee_predictions[member] = self.SampleMember(member, sample_set)
