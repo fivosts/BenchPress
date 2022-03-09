@@ -340,13 +340,18 @@ class QueryByCommittee(backends.BackendBase):
                           sample_set, [self.pytorch.device]
                         ).per_device_loader(self.pytorch.device)
     # Get dataloader iterator and setup hooks.
-    batch_iterator = iter(loader)
-
     model.eval()
-    predictions = []
-    for batch in inputs:
+    predictions = {
+      'static_features': [],
+      'input_ids'      : [],
+      'predictions'    : [].
+    }
+    for batch in tqdm.tqdm(loader, total = len(loader), desc = "Sammple member", leave = False):
+      predictions['static_features'] += batch['static_features']
+      predictions['input_ids']       += batch['input_ids']
       out = self.model_step(member, batch)
-      prediction.append(self.downstream_task.TargetIDtoLabels(out['output_label']))
+      cur = batch
+      predictions['predictions'] += list(self.downstream_task.TargetIDtoLabels(out['output_label'].cpu().numpy()))
     return predictions
 
   def SampleCommittee(self,
