@@ -154,7 +154,7 @@ class GrewePredictive(DownstreamTask):
         fvec['F4:comp/mem'] = 0.0
       samples.append(
         {
-          'static_features': fvec,
+          'static_features': self.StaticFeatDictToVec(fvec),
           'input_ids'      : self.InputtoEncodedVector(fvec, 80000, 256)
         }
       )
