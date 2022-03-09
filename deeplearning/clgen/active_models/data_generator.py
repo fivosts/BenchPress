@@ -53,4 +53,13 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
   """
   def __init__(self, dataset: typing.):
     super(Dataloader, self).__init__()
-    if len
+    if len(dataset) <= 0:
+      raise ValuError("Sample dataset is empty.")
+    self.compute_dataset(dataset)
+    return
+
+  def compute_dataset(self,
+                      dataset: typing.List[typing.Dict[str, typing.Union[typing.Dict, typing.List]]]
+                      ) -> None:
+    
+    return
