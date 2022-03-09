@@ -61,5 +61,25 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
   def compute_dataset(self,
                       dataset: typing.List[typing.Dict[str, typing.Union[typing.Dict, typing.List]]]
                       ) -> None:
-    
+    self.dataset = []
+    for dp in dataset:
+      self.dataset.append(
+        {
+          'static_features' : dp['static_features'],
+          'input_ids'       : torch.FloatTensor(dp['input_ids']),
+          'predictions'     : torch.LongTensor([-1, -1]),
+        }
+      )
     return
+
+  def __len__(self) -> int:
+    return len(self.dataset)
+
+  def __getitem__(self, idx: int) -> typing.Dict[str, torch.Tensor]:
+
+    if idx < 0:
+      if -idx > len(self):
+        raise ValueError("absolute value of index should not exceed dataset length")
+      idx = len(self) + idx
+
+    return self.dataset[idx]
