@@ -87,7 +87,14 @@ class MLP(CommitteeModels):
               predictions     : torch.Tensor = None,
               is_sampling     : bool = False
               ) -> torch.Tensor:
-
+    """
+    Args:
+      input_ids: Input features for training or prediction.
+      target_ids: Target tokens to predict during training.
+      static_features: List of static input features of respective sample to predict.
+      predictions: Returned tensor that contains the predictions of the model.
+      is_sampling: Select between training and sampling method.
+    """
     device = input_ids.get_device()
     device = device if device >= 0 else 'cpu'
 
