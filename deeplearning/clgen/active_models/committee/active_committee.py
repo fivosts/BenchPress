@@ -240,7 +240,6 @@ class QueryByCommittee(backends.BackendBase):
               batch_iterator = iter(loader)
               inputs = next(batch_iterator)
 
-            current_step += 1
             # Run model step on inputs
             step_out = self.model_step(model, inputs)
             # Backpropagate losses
@@ -268,6 +267,7 @@ class QueryByCommittee(backends.BackendBase):
             model.zero_grad()
             if current_step == 0:
               l.logger().info("Starting Loss: {}".format(sum([tl.mean().item() for tl in total_loss]) / len(total_loss)))
+            current_step += 1
           # End of epoch
           self.saveCheckpoint(model, member_path, optimizer, scheduler, current_step)
           if self.pytorch.num_nodes > 1:
@@ -328,6 +328,7 @@ class QueryByCommittee(backends.BackendBase):
       self.torch.cuda.empty_cache()
     if current_step >= 0:
       l.logger().info("Loaded checkpoint step {}".format(current_step))
+    current_step = max(0, current_step)
 
     loader = self.torch.utils.data.dataloader.DataLoader(
       dataset    = sample_set,
