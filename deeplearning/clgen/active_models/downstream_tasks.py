@@ -96,7 +96,6 @@ class GrewePredictive(DownstreamTask):
         rgen = np.random
         rgen.seed(seed)
         low_bound = 1 if fk in {"comp", "mem"} else 0
-        print(fk, low_bound)
         up_bound  = max_fval[fk]
         self.rand_generators[fk] = lambda: rgen.randint(low_bound, up_bound)
     return
