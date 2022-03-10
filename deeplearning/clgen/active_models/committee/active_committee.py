@@ -10,6 +10,8 @@ import datetime
 import tqdm
 import pathlib
 import copy
+import math
+import numpy as np
 
 from deeplearning.clgen.models.torch_bert import optimizer
 from deeplearning.clgen.models.torch_bert import hooks
@@ -399,9 +401,9 @@ class QueryByCommittee(backends.BackendBase):
     ent = 0.
 
     # Compute entropy
-    base = e if base is None else base
+    base = math.e if base is None else base
     for i in probs:
-      ent -= i * log(i, base)
+      ent -= i * math.log(i, base)
 
     return ent
 
@@ -429,7 +431,7 @@ class QueryByCommittee(backends.BackendBase):
         # label_distrib[k] += 1
       print("Calculate cross entropy for ")
       print("Can you create a distribution of the labels while being agnostic to them ?")
-      x = self.entropy2(com_preds)
+      x = self.entropy2(com_preds + ["CPU"])
       print(x)
       input()
 
