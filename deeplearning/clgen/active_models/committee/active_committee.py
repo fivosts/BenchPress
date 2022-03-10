@@ -393,7 +393,7 @@ class QueryByCommittee(backends.BackendBase):
       for model, samples in committee_predictions.items():
         if not feats:
           static_feats = self.downstream_task.VecToStaticFeatDict(samples['static_features'][nsample])
-          pred_feats   = self.downstream_task.EncodedToDynamicFeats(samples['input_ids'][nsample], static_feats)
+          pred_feats   = self.downstream_task.VecToRuntimeFeatDict(samples['runtime_features'][nsample])
 
     raise NotImplementedError("Return those feature vectors that have the highest entropy.")
     return
