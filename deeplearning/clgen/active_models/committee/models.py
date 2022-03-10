@@ -40,12 +40,7 @@ class CommitteeModels(torch.nn.Module):
     self.id = id
     return
 
-  def forward(self,
-              input_ids   : torch.Tensor,
-              target_ids  : torch.Tensor,
-              is_sampling : bool = False,
-              **kwargs,
-              ) -> typing.Dict[str, torch.Tensor]:
+  def forward(self, *args, **kwargs) -> typing.Dict[str, torch.Tensor]:
     raise NotImplementedError("Abstract class.")
 
 class MLP(CommitteeModels):
