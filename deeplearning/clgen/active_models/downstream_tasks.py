@@ -175,6 +175,16 @@ class GrewePredictive(DownstreamTask):
     """
     return {key: val for key, val in zip(grewe.KEYS, feature_values)}
 
+  def VecToRuntimeFeatDict(self, runtime_values: typing.List[int]) -> typing.Dict[str, int]:
+    """
+    Process runtime int values to runtime features dictionary.
+    """
+    trb, ls = runtime_values
+    return {
+      'transferred_bytes' : trb,
+      'local_size'        : ls,
+    }
+
   def InputtoEncodedVector(self,
                            static_feats      : typing.Dict[str, float],
                            transferred_bytes : int,
