@@ -44,6 +44,7 @@ class QueryByCommittee(backends.BackendBase):
     scheduler      : typing.Any
     training_opts  : 'TrainingOpts'
     sha256         : str
+    config         : config.ModelConfig
 
   class SampleCommitteeEstimator(typing.NamedTuple):
     """Named tuple for sampling BERT."""
@@ -121,6 +122,7 @@ class QueryByCommittee(backends.BackendBase):
             scheduler      = lr_scheduler,
             training_opts  = training_opts,
             sha256         = cconfig.sha256,
+            config         = cconfig,
           )
         )
         (self.ckpt_path / cconfig.sha256).mkdir(exist_ok = True, parents = True),
@@ -373,7 +375,7 @@ class QueryByCommittee(backends.BackendBase):
     self._ConfigModelParams()
     committee_predictions = {}
     for member in self.committee:
-      key = "{}_{}".format(member.model.config.name, member.model.id)
+      key = "{}_{}".format(member.config.name, member.model.id)
       committee_predictions[key] = self.SampleMember(member, sample_set)
     return committee_predictions
 
