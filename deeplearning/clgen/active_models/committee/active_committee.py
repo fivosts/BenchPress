@@ -356,7 +356,7 @@ class QueryByCommittee(backends.BackendBase):
 
   def SampleCommittee(self,
                       sample_set: data_generator.DictPredictionDataloader,
-                      ) -> typing.Dict[typing.Dict[str, torch.Tensor]]:
+                      ) -> typing.Dict[typing.Dict[str, 'torch.Tensor']]:
     """
     Sample committee with a set of inputs.
     Return a dictionary mapped from each member to the
