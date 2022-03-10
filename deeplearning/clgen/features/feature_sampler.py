@@ -244,7 +244,7 @@ class ActiveSampler(FeatureSampler):
                feature_space  : str,
                active_learner : 'active_models.Model',
                ):
-    super(ActiveSampler, self).__init__(workspace, feature_space, active_learner.downstream_task)
+    super(ActiveSampler, self).__init__(workspace, feature_space, str(active_learner.downstream_task))
     self.active_learner = active_learner
     self.loadCheckpoint()
     try:
