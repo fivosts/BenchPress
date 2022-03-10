@@ -59,10 +59,11 @@ def calculate_distance(infeat: typing.Dict[str, float],
   return math.sqrt(d)
 
 class Benchmark(typing.NamedTuple):
-  path : pathlib.Path
-  name : str
-  contents : str
-  features : typing.Dict[str, float]
+  path             : pathlib.Path
+  name             : str
+  contents         : str
+  features         : typing.Dict[str, float]
+  runtime_features : typing.Dict[str, float]
 
 class FeatureSampler(object):
   """
@@ -209,6 +210,7 @@ class BenchmarkSampler(FeatureSampler):
               "",
               "",
               target_features,
+              {}
             )
           )
         self.saveCheckpoint()
@@ -253,7 +255,7 @@ class ActiveSampler(FeatureSampler):
     return
 
   def sample_active_learner(self) -> typing.List[Benchmark]:
-    return [Benchmark("", "", "", feats) for feats in self.active_learner.Sample()]
+    return [Benchmark("", "", "", sample['static_features'], sample['runtime_features']) for sample in self.active_learner.Sample()]
 
   def iter_benchmark(self) -> None:
     """
