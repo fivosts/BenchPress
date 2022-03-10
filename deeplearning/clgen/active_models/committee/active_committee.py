@@ -373,7 +373,8 @@ class QueryByCommittee(backends.BackendBase):
     self._ConfigModelParams()
     committee_predictions = {}
     for member in self.committee:
-      committee_predictions[member] = self.SampleMember(member, sample_set)
+      key = "{}_{}".format(member.model.config.name, member.model.id)
+      committee_predictions[key] = self.SampleMember(member, sample_set)
     return committee_predictions
 
   def Sample(self) -> typing.List[typing.Dict[str, float]]:
