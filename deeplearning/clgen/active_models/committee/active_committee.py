@@ -388,7 +388,19 @@ class QueryByCommittee(backends.BackendBase):
     sample_set            = self.downstream_task.sample_space(num_samples = 512)
     committee_predictions = self.SampleCommittee(sample_set)
 
-    print(committee_predictions['MLP_0'])
+    print(committee_predictions['MLP_0']['static_features'])
+    print()
+    print(committee_predictions['MLP_0']['input_ids'])
+    print()
+    print(committee_predictions['MLP_0']['predictions'])
+    space_samples = []
+    for nsample in range(len(sample_set)):
+      feats = None
+      for model, samples in committee_predictions.items():
+        if not feats:
+          static_feats = self.downstream_task.VecToStaticFeatDict(samples['static_features'])
+          pred_feats   = self.downstream_task.
+
     raise NotImplementedError("Return those feature vectors that have the highest entropy.")
     return
 
