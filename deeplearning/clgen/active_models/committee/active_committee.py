@@ -383,30 +383,6 @@ class QueryByCommittee(backends.BackendBase):
       committee_predictions[key] = self.SampleMember(member, sample_set)
     return committee_predictions
 
-  def entropy2(self, labels, base=None):
-    """ Computes entropy of label distribution. """
-
-    n_labels = len(labels)
-
-    if n_labels <= 1:
-      return 0
-
-    value,counts = np.unique(labels, return_counts=True)
-    probs = counts / n_labels
-    n_classes = np.count_nonzero(probs)
-
-    if n_classes <= 1:
-      return 0
-
-    ent = 0.
-
-    # Compute entropy
-    base = math.e if base is None else base
-    for i in probs:
-      ent -= i * math.log(i, base)
-
-    return ent
-
   def Sample(self) -> typing.List[typing.Dict[str, float]]:
     """
     Active learner sampling.
@@ -424,19 +400,31 @@ class QueryByCommittee(backends.BackendBase):
           static_feats = self.downstream_task.VecToStaticFeatDict(samples['static_features'][nsample])
           run_feats    = self.downstream_task.VecToRuntimeFeatDict(samples['runtime_features'][nsample])
         com_preds.append(samples['predictions'][nsample])
-      # label_distrib = {
-        # k: 0 for k in self.downstream_task.output_labels
-      # }
-      # for l in com_preds:
-        # label_distrib[k] += 1
-      print("Calculate cross entropy for ")
-      print("Can you create a distribution of the labels while being agnostic to them ?")
-      x = self.entropy2(com_preds + ["CPU"])
+      x = self.entropy(com_preds + ["CPU"])
       print(x)
       input()
 
     raise NotImplementedError("Return those feature vectors that have the highest entropy.")
     return
+
+  def entropy(self, labels, base=None):
+    """ Computes entropy of label distribution. """
+    if len(labels) <= 1:
+      return 0
+
+    value,counts = np.unique(labels, return_counts=True)
+    probs = counts / len(labels)
+    n_classes = np.count_nonzero(probs)
+
+    if n_classes <= 1:
+      return 0
+
+    entropy = 0.0
+    # Compute entropy
+    base = math.e if base is None else base
+    for p in probs:
+      entropy -= p * math.log(p, base)
+    return entropy
 
   def saveCheckpoint(self, 
                      model : 'torch.nn.Module',
