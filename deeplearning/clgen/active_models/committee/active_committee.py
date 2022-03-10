@@ -128,14 +128,26 @@ class QueryByCommittee(backends.BackendBase):
     l.logger().info(self.GetShortSummary())
     return
 
-  def model_step(self, model, inputs) -> float:
+  def model_step(self,
+                 model: 'torch.nn.module',
+                 inputs: typing.Dict[str, 'torch.Tensor'],
+                 is_sampling: bool = False
+                 ) -> float:
     """
     Run forward function for member model.
     """
-    outputs = model(
-      input_ids  = inputs['input_ids'].to(self.pytorch.device),
-      target_ids = inputs['target_ids'].to(self.pytorch.device),
-    )
+    if not is_sampling:
+      outputs = model(
+        input_ids  = inputs['input_ids'].to(self.pytorch.device),
+        target_ids = inputs['target_ids'].to(self.pytorch.device),
+      )
+    else:
+      outputs = model(
+        input_ids       = inputs['input_ids'].to(self.pytorch.device),
+        predictions     = inputs['predictions'].to(self.pytorch.device),
+        static_features = inputs['static_features'].to(self.pytorch.device),
+        is_sampling     = is_sampling,
+      )
     return outputs
 
   def TrainMember(self, member: 'QueryByCommittee.CommitteeEstimator') -> None:
@@ -349,7 +361,7 @@ class QueryByCommittee(backends.BackendBase):
     for batch in tqdm.tqdm(loader, total = len(loader), desc = "Sammple member", leave = False):
       predictions['static_features'] += batch['static_features']
       predictions['input_ids']       += batch['input_ids']
-      out = self.model_step(member, batch)
+      out = self.model_step(member, batch, is_sampling = True)
       cur = batch
       predictions['predictions'] += list(self.downstream_task.TargetIDtoLabels(out['output_label'].cpu().numpy()))
     return predictions
