@@ -96,6 +96,7 @@ class GrewePredictive(DownstreamTask):
         rgen = np.random
         rgen.seed(seed)
         low_bound = 1 if fk in {"comp", "mem"} else 0
+        print(fk, low_bound)
         up_bound  = max_fval[fk]
         self.rand_generators[fk] = lambda: rgen.randint(low_bound, up_bound)
     return
@@ -155,8 +156,9 @@ class GrewePredictive(DownstreamTask):
         fvec['F4:comp/mem'] = 0.0
       samples.append(
         {
-          'static_features': self.StaticFeatDictToVec(fvec),
-          'input_ids'      : self.InputtoEncodedVector(fvec, 80000, 256)
+          'static_features'  : self.StaticFeatDictToVec(fvec),
+          'runtime_features' : [80000, 256],
+          'input_ids'        : self.InputtoEncodedVector(fvec, 80000, 256)
         }
       )
     return data_generator.DictPredictionDataloader(samples)
@@ -198,18 +200,6 @@ class GrewePredictive(DownstreamTask):
     except ZeroDivisionError:
       i4 = 0.0
     return [i1, i2, i3, i4]
-
-  def EncodedToDynamicFeats(self,
-                            input_ids    : typing.List[float],
-                            static_feats : typing.Dict[str, float]
-                            ) -> typing.Dict[str, float]:
-    """
-    Convert float input ids to dictionary of predictive model's features.
-    """
-    return {
-      'transferred_bytes' : int(input_ids[0] * (static_feats['comp'] * static_feats['mem'])),
-      'local_size'        : int(static_feats['localmem'] / (static_feats['mem'] * input_ids[2])),
-    }
 
   def TargetIDtoLabels(self, id: int) -> str:
     """
