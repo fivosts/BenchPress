@@ -349,13 +349,15 @@ class QueryByCommittee(backends.BackendBase):
     # Get dataloader iterator and setup hooks.
     model.eval()
     predictions = {
-      'static_features': [],
-      'input_ids'      : [],
-      'predictions'    : [],
+      'static_features' : [],
+      'runtime_features': [],
+      'input_ids'       : [],
+      'predictions'     : [],
     }
     for batch in tqdm.tqdm(loader, total = len(loader), desc = "Sammple member", leave = False):
-      predictions['static_features'] += list(batch['static_features'].cpu().numpy())
-      predictions['input_ids']       += list(batch['input_ids'].cpu().numpy())
+      predictions['static_features']  += list(batch['static_features'].cpu().numpy())
+      predictions['runtime_features'] += list(batch['runtime_features'].cpu().numpy())
+      predictions['input_ids']        += list(batch['input_ids'].cpu().numpy())
       out = self.model_step(model, batch, is_sampling = True)
       cur = batch
       predictions['predictions'] += [self.downstream_task.TargetIDtoLabels(i) for i in out['output_label'].cpu().numpy()]
