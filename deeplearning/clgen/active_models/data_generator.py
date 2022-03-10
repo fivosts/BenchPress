@@ -59,14 +59,15 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
     return
 
   def compute_dataset(self,
-                      dataset: typing.List[typing.Dict[str, typing.Union[typing.Dict, typing.List]]]
+                      dataset: typing.List[typing.Dict[str, typing.List]]
                       ) -> None:
     self.dataset = []
     for dp in dataset:
       self.dataset.append(
         {
-          'static_features' : torch.FloatTensor(dp['static_features']),
-          'input_ids'       : torch.FloatTensor(dp['input_ids']),
+          'static_features'  : torch.FloatTensor(dp['static_features']),
+          'runtime_features' : torch.LongTensor(dp['runtime_features']),
+          'input_ids'        : torch.FloatTensor(dp['input_ids']),
         }
       )
     return
