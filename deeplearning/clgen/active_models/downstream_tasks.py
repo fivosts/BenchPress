@@ -198,6 +198,19 @@ class GrewePredictive(DownstreamTask):
       i4 = 0.0
     return [i1, i2, i3, i4]
 
+  def EncodedToDynamicFeats(self,
+                            input_ids    : typing.List[float],
+                            static_feats : typing.Dict[str, float]
+                            ) -> typing.Dict[str, float]:
+    """
+    Convert float input ids to dictionary of predictive model's features.
+    """
+    return {
+      'transferred_bytes' : int(input_ids[0] * (static_feats['comp'] * static_feats['mem'])),
+      'local_size'        : int(static_feats['localmem'] / (static_feats['mem'] * input_ids[2])),
+    }
+
+
   def TargetIDtoLabels(self, id: int) -> str:
     """
     Integer ID to label of predictive model.
