@@ -96,7 +96,7 @@ class GrewePredictive(DownstreamTask):
         rgen = np.random
         rgen.seed(seed)
         bound = max_fval[fk]
-        self.rand_generators[fk] = lambda: rgen.randint(0, bound)
+        self.rand_generators[fk] = lambda: rgen.randint(1, bound)
     return
 
   def __repr__(self) -> str:
@@ -209,7 +209,6 @@ class GrewePredictive(DownstreamTask):
       'transferred_bytes' : int(input_ids[0] * (static_feats['comp'] * static_feats['mem'])),
       'local_size'        : int(static_feats['localmem'] / (static_feats['mem'] * input_ids[2])),
     }
-
 
   def TargetIDtoLabels(self, id: int) -> str:
     """
