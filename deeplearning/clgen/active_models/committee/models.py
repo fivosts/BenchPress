@@ -104,9 +104,11 @@ class MLP(CommitteeModels):
       return {
         'total_loss'   : total_loss,
         'accuracy'     : batch_accuracy.to(device),
+        'output_probs' : out,
         'output_label' : torch.argmax(out)
       }
     else:
       return {
-        'output_label'    : torch.argmax(out),
+        'output_probs' : out,
+        'output_label' : torch.argmax(out, dim = 1),
       }
