@@ -361,7 +361,7 @@ class QueryByCommittee(backends.BackendBase):
     for batch in tqdm.tqdm(loader, total = len(loader), desc = "Sammple member", leave = False):
       predictions['static_features'] += batch['static_features']
       predictions['input_ids']       += batch['input_ids']
-      out = self.model_step(member, batch, is_sampling = True)
+      out = self.model_step(model, batch, is_sampling = True)
       cur = batch
       predictions['predictions'] += list(self.downstream_task.TargetIDtoLabels(out['output_label'].cpu().numpy()))
     return predictions
