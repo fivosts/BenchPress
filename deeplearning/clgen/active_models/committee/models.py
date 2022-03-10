@@ -43,7 +43,8 @@ class CommitteeModels(torch.nn.Module):
   def forward(self,
               input_ids   : torch.Tensor,
               target_ids  : torch.Tensor,
-              is_sampling : bool = False
+              is_sampling : bool = False,
+              **kwargs,
               ) -> typing.Dict[str, torch.Tensor]:
     raise NotImplementedError("Abstract class.")
 
