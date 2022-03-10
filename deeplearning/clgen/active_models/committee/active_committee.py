@@ -344,7 +344,7 @@ class QueryByCommittee(backends.BackendBase):
     predictions = {
       'static_features': [],
       'input_ids'      : [],
-      'predictions'    : [].
+      'predictions'    : [],
     }
     for batch in tqdm.tqdm(loader, total = len(loader), desc = "Sammple member", leave = False):
       predictions['static_features'] += batch['static_features']
