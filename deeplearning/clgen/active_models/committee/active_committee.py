@@ -138,7 +138,7 @@ class QueryByCommittee(backends.BackendBase):
     """
     outputs = model(
       input_ids   = inputs['input_ids'].to(self.pytorch.device),
-      target_ids  = inputs['target_ids'].to(self.pytorch.device) is not is_sampling else None,
+      target_ids  = inputs['target_ids'].to(self.pytorch.device) if not is_sampling else None,
       is_sampling = is_sampling,
     )
     return outputs
