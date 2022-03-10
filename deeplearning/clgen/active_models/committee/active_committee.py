@@ -400,12 +400,13 @@ class QueryByCommittee(backends.BackendBase):
           static_feats = self.downstream_task.VecToStaticFeatDict(samples['static_features'][nsample])
           run_feats    = self.downstream_task.VecToRuntimeFeatDict(samples['runtime_features'][nsample])
         com_preds.append(samples['predictions'][nsample])
-      x = self.entropy(com_preds + ["CPU"])
-      print(x)
-      input()
-
-    raise NotImplementedError("Return those feature vectors that have the highest entropy.")
-    return
+      ent = self.entropy(com_preds + ["CPU"])
+      space_samples.append(
+        'static_features'  : static_feats,
+        'runtime_features' : run_feats,
+        'entropy'          : ent,
+      )
+    return sorted(space_samples, key = lambda x: x['entropy'], reverse = True)
 
   def entropy(self, labels, base=None):
     """ Computes entropy of label distribution. """
