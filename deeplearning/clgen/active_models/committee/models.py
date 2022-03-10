@@ -83,8 +83,6 @@ class MLP(CommitteeModels):
   def forward(self,
               input_ids       : torch.Tensor,
               target_ids      : torch.Tensor = None,
-              static_features : torch.Tensor = None,
-              predictions     : torch.Tensor = None,
               is_sampling     : bool = False
               ) -> torch.Tensor:
     """
@@ -92,7 +90,6 @@ class MLP(CommitteeModels):
       input_ids: Input features for training or prediction.
       target_ids: Target tokens to predict during training.
       static_features: List of static input features of respective sample to predict.
-      predictions: Returned tensor that contains the predictions of the model.
       is_sampling: Select between training and sampling method.
     """
     device = input_ids.get_device()
@@ -111,5 +108,5 @@ class MLP(CommitteeModels):
       }
     else:
       return {
-        'output_label' : torch.argmax(out)
+        'output_label'    : torch.argmax(out),
       }
