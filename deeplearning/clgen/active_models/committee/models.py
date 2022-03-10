@@ -30,7 +30,6 @@ class CommitteeModels(torch.nn.Module):
   """
   @classmethod
   def FromConfig(cls, id: int, config: config.ModelConfig) -> "CommitteeModels":
-    print(config)
     return {
       'MLP': MLP,
     }[config.name](id, config.layer_config)
