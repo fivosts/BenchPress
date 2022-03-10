@@ -354,8 +354,8 @@ class QueryByCommittee(backends.BackendBase):
       'predictions'    : [],
     }
     for batch in tqdm.tqdm(loader, total = len(loader), desc = "Sammple member", leave = False):
-      predictions['static_features'] += batch['static_features']
-      predictions['input_ids']       += batch['input_ids']
+      predictions['static_features'] += list(batch['static_features'].cpu().numpy())
+      predictions['input_ids']       += list(batch['input_ids'].cpu().numpy())
       out = self.model_step(model, batch, is_sampling = True)
       cur = batch
       predictions['predictions'] += [self.downstream_task.TargetIDtoLabels(i) for i in out['output_label'].cpu().numpy()]
@@ -387,7 +387,8 @@ class QueryByCommittee(backends.BackendBase):
     """
     sample_set            = self.downstream_task.sample_space(num_samples = 512)
     committee_predictions = self.SampleCommittee(sample_set)
-    raise NotImplementedError("For each of inputs provided to SampleCommittee, calculate cross entropy")
+
+    print(committee_predictions['MLP_0'])
     raise NotImplementedError("Return those feature vectors that have the highest entropy.")
     return
 
