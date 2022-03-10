@@ -136,18 +136,11 @@ class QueryByCommittee(backends.BackendBase):
     """
     Run forward function for member model.
     """
-    if not is_sampling:
-      outputs = model(
-        input_ids  = inputs['input_ids'].to(self.pytorch.device),
-        target_ids = inputs['target_ids'].to(self.pytorch.device),
-      )
-    else:
-      outputs = model(
-        input_ids       = inputs['input_ids'].to(self.pytorch.device),
-        predictions     = inputs['predictions'].to(self.pytorch.device),
-        static_features = inputs['static_features'].to(self.pytorch.device),
-        is_sampling     = is_sampling,
-      )
+    outputs = model(
+      input_ids   = inputs['input_ids'].to(self.pytorch.device),
+      target_ids  = inputs['target_ids'].to(self.pytorch.device) is not is_sampling else None,
+      is_sampling = is_sampling,
+    )
     return outputs
 
   def TrainMember(self, member: 'QueryByCommittee.CommitteeEstimator') -> None:
