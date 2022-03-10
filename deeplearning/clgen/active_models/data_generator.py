@@ -67,7 +67,6 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
         {
           'static_features' : torch.FloatTensor(dp['static_features']),
           'input_ids'       : torch.FloatTensor(dp['input_ids']),
-          'predictions'     : torch.LongTensor([-1, -1]),
         }
       )
     return
