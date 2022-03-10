@@ -39,7 +39,7 @@ class QueryByCommittee(backends.BackendBase):
   class CommitteeEstimator(typing.NamedTuple):
     """Named tuple to wrap BERT pipeline."""
     model          : typing.TypeVar('nn.Module')
-    data_generator : data_generator.Dataloader
+    data_generator : data_generator.ListTrainDataloader
     optimizer      : typing.Any
     scheduler      : typing.Any
     training_opts  : 'TrainingOpts'
@@ -48,7 +48,7 @@ class QueryByCommittee(backends.BackendBase):
   class SampleCommitteeEstimator(typing.NamedTuple):
     """Named tuple for sampling BERT."""
     model          : typing.List[typing.TypeVar('nn.Module')]
-    data_generator : data_generator.Dataloader
+    data_generator : data_generator.ListTrainDataloader
     sha256         : str
 
   def __repr__(self):
@@ -84,7 +84,7 @@ class QueryByCommittee(backends.BackendBase):
     return
 
   def _ConfigModelParams(self,
-                         data_generator : data_generator.Dataloader = None,
+                         data_generator : data_generator.ListTrainDataloader = None,
                          is_sampling    : bool = False
                          ) -> None:
     """
