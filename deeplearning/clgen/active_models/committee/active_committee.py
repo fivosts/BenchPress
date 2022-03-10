@@ -381,6 +381,30 @@ class QueryByCommittee(backends.BackendBase):
       committee_predictions[key] = self.SampleMember(member, sample_set)
     return committee_predictions
 
+  def entropy2(self, labels, base=None):
+    """ Computes entropy of label distribution. """
+
+    n_labels = len(labels)
+
+    if n_labels <= 1:
+      return 0
+
+    value,counts = np.unique(labels, return_counts=True)
+    probs = counts / n_labels
+    n_classes = np.count_nonzero(probs)
+
+    if n_classes <= 1:
+      return 0
+
+    ent = 0.
+
+    # Compute entropy
+    base = e if base is None else base
+    for i in probs:
+      ent -= i * log(i, base)
+
+    return ent
+
   def Sample(self) -> typing.List[typing.Dict[str, float]]:
     """
     Active learner sampling.
@@ -391,11 +415,23 @@ class QueryByCommittee(backends.BackendBase):
     committee_predictions = self.SampleCommittee(sample_set)
     space_samples = []
     for nsample in range(len(sample_set)):
-      feats = None
+      static_feats, run_feats = None, None
+      com_preds = []
       for model, samples in committee_predictions.items():
-        if not feats:
+        if not static_feats or not run_feats:
           static_feats = self.downstream_task.VecToStaticFeatDict(samples['static_features'][nsample])
-          pred_feats   = self.downstream_task.VecToRuntimeFeatDict(samples['runtime_features'][nsample])
+          run_feats    = self.downstream_task.VecToRuntimeFeatDict(samples['runtime_features'][nsample])
+        com_preds.append(samples['predictions'][nsample])
+      # label_distrib = {
+        # k: 0 for k in self.downstream_task.output_labels
+      # }
+      # for l in com_preds:
+        # label_distrib[k] += 1
+      print("Calculate cross entropy for ")
+      print("Can you create a distribution of the labels while being agnostic to them ?")
+      x = self.entropy2(com_preds)
+      print(x)
+      input()
 
     raise NotImplementedError("Return those feature vectors that have the highest entropy.")
     return
