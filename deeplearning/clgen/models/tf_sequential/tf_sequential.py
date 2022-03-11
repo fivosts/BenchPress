@@ -342,6 +342,8 @@ class tfSequential(backends.BackendBase):
     del unused_kwargs
 
     self.num_epochs = self.config.training.num_epochs
+    self.telemetry = telemetry.TrainingLogger(self.cache.path / "logs")
+
     if self.is_trained:
       return
 
@@ -350,8 +352,6 @@ class tfSequential(backends.BackendBase):
         corpus, self.config.training
       )
     tf = self.InitTfGraph()
-
-    self.telemetry = telemetry.TrainingLogger(self.cache.path / "logs")
 
     # Create and merge the tensorboard summary ops.
     merged = tf.compat.v1.summary.merge_all()
