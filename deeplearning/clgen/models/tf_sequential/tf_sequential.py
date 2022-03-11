@@ -370,7 +370,7 @@ class tfSequential(backends.BackendBase):
     ckpt_path, ckpt_paths = None, None
     if (self.cache.path / "checkpoints" / "checkpoint").exists():
       checkpoint_state = tf.train.get_checkpoint_state(
-        self.cache.path / "checkpoints"
+        self.cache.path / "checkpoints",
       )
       assert checkpoint_state
       assert checkpoint_state.model_checkpoint_path
@@ -551,7 +551,7 @@ class tfSequential(backends.BackendBase):
       self.inference_tf.compat.v1.global_variables()
     )
     checkpoint_state = self.inference_tf.train.get_checkpoint_state(
-      self.cache.path / "checkpoints"
+      self.cache.path / "checkpoints",
     )
 
     # These assertions will fail if the model has no checkpoints. Since this
@@ -560,7 +560,10 @@ class tfSequential(backends.BackendBase):
     assert checkpoint_state
     assert checkpoint_state.model_checkpoint_path
 
-    saver.restore(self.inference_sess, checkpoint_state.model_checkpoint_path)
+    if FLAGS.select_checkpoint_step == -1:
+      saver.restore(self.inference_sess, checkpoint_state.model_checkpoint_path)
+    else:
+      saver.restore(self.inference_sess, str(self.cache.path / "checkpoints" / "checkpoint-{}".format(FLAGS.select_checkpoint_step)))
     self.inference_sess.run(
       tf.compat.v1.assign(self.temperature, sampler.temperature)
     )
