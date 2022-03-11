@@ -405,7 +405,7 @@ class Model(object):
     try:
       seq_count, cont = 0, True
       while cont:
-        cont, seq_count, c, t = sample_batch()
+        cont, seq_count, (c, t) = sample_batch()
         if sampler.is_live:
           start_text = [str(input("Live Feed: "))]
           while True:
@@ -538,7 +538,7 @@ class Model(object):
 
     # Sampling loop. Continues until all samples in the batch are done.
     while not done.all():
-      indices = self.backend.SampleNextIndices(sampler, done)
+      indices, _ = self.backend.SampleNextIndices(sampler, done)
       # Iterate over all samples in batch to determine whether they're
       # done.
 
@@ -566,7 +566,7 @@ class Model(object):
 
             sample = model_pb2.Sample(
               train_step                = epoch,
-              text                      = samples_in_progress[i],
+              text                      = ''.join(samples_in_progress[i]),
               sample_indices            = "",
               encoded_sample_indices    = "",
               sample_feed               = sampler.start_text,
