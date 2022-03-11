@@ -511,10 +511,13 @@ class tfSequential(backends.BackendBase):
   def FormatCodeAsMarkdown(text: str) -> str:
     return f"<pre>{text.strip()}</pre>"
 
-  def InitSampling(
-    self, sampler: samplers.Sampler, seed: typing.Optional[int] = None
-  ) -> None:
+  def InitSampling(self,
+                   sampler: samplers.Sampler,
+                   seed: typing.Optional[int] = None,
+                   **unused_kwargs
+                   ) -> None:
     """Initialize model for sampling."""
+    del unused_kwargs
     tf.compat.v1.disable_eager_execution()
     
     # Delete any previous sampling session.
