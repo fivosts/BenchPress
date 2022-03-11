@@ -324,14 +324,13 @@ class Model(object):
 
     self.backend.Train(self.corpus, **kwargs)
     telemetry_logs = self.backend.telemetry.EpochTelemetry()
-
     l.logger().info(
       "Trained model for {} {} in {} ms. " "Training loss: {}."
         .format(
-          telemetry_logs[-1].epoch_num if FLAGS.select_checkpoint_step == -1 else telemetry_logs[FLAGS.select_checkpoint_step],
+          telemetry_logs[-1].epoch_num if FLAGS.select_checkpoint_step == -1 else telemetry_logs[FLAGS.select_checkpoint_step-1].epoch_num,
           "steps" if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert) else "epochs",
           humanize.intcomma(sum(t.epoch_wall_time_ms for t in telemetry_logs)),
-          telemetry_logs[-1].loss if FLAGS.select_checkpoint_step == -1 else telemetry_logs[FLAGS.select_checkpoint_step],
+          telemetry_logs[-1].loss if FLAGS.select_checkpoint_step == -1 else telemetry_logs[FLAGS.select_checkpoint_step-1].loss,
           )
     )
     return self
