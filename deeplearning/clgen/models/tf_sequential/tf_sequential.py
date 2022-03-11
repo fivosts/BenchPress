@@ -514,9 +514,11 @@ class tfSequential(backends.BackendBase):
   def InitSampling(self,
                    sampler: samplers.Sampler,
                    seed: typing.Optional[int] = None,
-                   **unused_kwargs
+                   *unused_args,
+                   **unused_kwargs,
                    ) -> None:
     """Initialize model for sampling."""
+    del unused_args
     del unused_kwargs
     tf.compat.v1.disable_eager_execution()
     
