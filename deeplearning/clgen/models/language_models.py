@@ -405,7 +405,7 @@ class Model(object):
     try:
       seq_count, cont = 0, True
       while cont:
-        cont, seq_count = sample_batch()
+        cont, seq_count, c, t = sample_batch()
         if sampler.is_live:
           start_text = [str(input("Live Feed: "))]
           while True:
@@ -426,10 +426,11 @@ class Model(object):
       self.backend.sample.data_generator.samples_cache_obs.endSample()
 
     time_now = datetime.datetime.utcnow()
-    l.logger().info( "Produced {} samples at a rate of {} ms / sample."
+    l.logger().info( "Produced {} samples at a rate of {} ms / sample. Session's compilation rate was {}%"
                         .format(
                           humanize.intcomma(seq_count),
-                          humanize.intcomma(int(1000 * ((time_now - sample_start_time) / max(seq_count, 1)).total_seconds()))
+                          humanize.intcomma(int(1000 * ((time_now - sample_start_time) / max(seq_count, 1)).total_seconds())),
+                          round(100 * (c / t), 1),
                         )
     )
 
@@ -444,6 +445,7 @@ class Model(object):
     """
     start_time = datetime.datetime.utcnow()
     seq_count  = 0
+    compiled, total = 0, 0
     self.backend.InitSampleBatch(sampler, workload_size = FLAGS.sample_workload_size)
     try:
       org_inputs, input_ids, samples, indices = self.backend.SampleNextIndices(sampler)
@@ -462,9 +464,11 @@ class Model(object):
       for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
 
         src = self.tokenizer.ArrayToCode(sample, with_formatting = True)
+        total += 1
         try:
           stdout = opencl.Compile(src)
           compile_flag = True
+          compiled += 1
           features = extractor.ExtractRawFeatures(src)
         except ValueError:
           compile_flag = False
@@ -503,7 +507,7 @@ class Model(object):
         continue_sampling = False
       else:
         raise OSError("Broken distributed message: '{}'".format(status))
-    return continue_sampling, seq_count
+    return continue_sampling, seq_count, (compiled, total)
 
   def _SampleSeqBatch(
     self,
@@ -525,6 +529,7 @@ class Model(object):
     done = np.zeros(sampler.batch_size, dtype=np.bool)
     wall_time_start = start_time
     seq_count  = 0
+    compiled, total = 0, 0
 
     # The return value of this method. If any of the sample_observers return
     # False, this value is set to False.
@@ -550,9 +555,11 @@ class Model(object):
             sample_kernel  = [x for x in samples_in_progress[i]]
             features       = extractor.ExtractRawFeatures(''.join(samples_in_progress[i]))
             done[i]        = 1
+            total         += 1
             try:
               stdout = opencl.Compile(''.join(samples_in_progress[i]))
               compile_flag = True
+              compiled += 1
             except ValueError:
               compile_flag = False
 
@@ -581,7 +588,7 @@ class Model(object):
             # sample and the end of the current sample.
             wall_time_start = datetime.datetime.utcnow()
             break
-    return continue_sampling, seq_count
+    return continue_sampling, seq_count, (compiled, total)
 
   def SamplerCache(self, sampler: 'samplers.Sampler') -> pathlib.Path:
     """Get the path to a sampler cache.
