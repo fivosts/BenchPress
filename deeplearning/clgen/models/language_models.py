@@ -433,6 +433,7 @@ class Model(object):
                           round(100 * (c / t), 1),
                         )
     )
+    return
 
   def _SampleLMBatch(self,
                      sampler: 'samplers.Sampler',
