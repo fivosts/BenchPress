@@ -151,7 +151,7 @@ class GrewePredictive(DownstreamTask):
       gsize        = 1
       prev         = math.inf
       while not found and gsize <= 20:
-        tr_bytes = opencl.RunCLDrive(sample.text, global_size = 2**gsize, local_size = local_size, num_runs = 10)
+        tr_bytes = opencl.CLDriveNumBytes(sample.text, global_size = 2**gsize, local_size = local_size, num_runs = 10)
         if tr_bytes:
           if tr_bytes < exp_tr_bytes:
             gsize += 1
