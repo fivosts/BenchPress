@@ -129,7 +129,7 @@ class QueryByCommittee(backends.BackendBase):
         )
         (self.ckpt_path / cconfig.sha256).mkdir(exist_ok = True, parents = True),
         (self.logfile_path / cconfig.sha256).mkdir(exist_ok = True, parents = True),
-    l.logger().info(self.GetShortSummary())
+      l.logger().info(self.GetShortSummary())
     return
 
   def model_step(self,
@@ -288,6 +288,11 @@ class QueryByCommittee(backends.BackendBase):
     Training point of active learning committee.
     """
     # Configure committee members.
+    update_dataloader = kwargs.get('update_dataloader', None)
+    if update_dataloader:
+      l.logger().error("We are in update traing mode.")
+      l.logger().error("This means two things: 1) update_dataloader should feed the data.")
+      l.logger().error("2) Updated training regime configurations must take place.")
     self._ConfigModelParams(self.downstream_task.data_generator)
     if not self.is_trained:
       for member in self.committee:
