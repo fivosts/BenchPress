@@ -69,6 +69,10 @@ class FeatureSampler(object):
   """
   Abstract class for sampling features.
   """
+  @property
+  def is_active(self):
+    return False
+
   def __init__(self,
                workspace     : pathlib.Path,
                feature_space : str,
@@ -239,6 +243,10 @@ class ActiveSampler(FeatureSampler):
   This class is the API between the language model's searching method/generation
   and the active learner's query by committee.
   """
+  @property
+  def is_active(self):
+    return True
+
   def __init__(self,
                workspace      : pathlib.Path,
                feature_space  : str,
