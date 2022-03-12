@@ -136,7 +136,7 @@ class FeatureSampler(object):
       candidates = unique_candidates
     return self.topK_candidates(candidates, search_width)
 
-  def iter_benchmark(self) -> None:
+  def iter_benchmark(self, *unused_args, **unused_kwargs) -> None:
     """
     Override this method to set how new parts of the feature space are going to
     be targetted.
@@ -184,7 +184,7 @@ class BenchmarkSampler(FeatureSampler):
       self.target_benchmark = None
     return
 
-  def iter_benchmark(self):
+  def iter_benchmark(self, *unused_args, **unused_kwargs):
     """
     When it's time, cycle through the next target benchmark.
     """
@@ -265,7 +265,7 @@ class ActiveSampler(FeatureSampler):
   def sample_active_learner(self) -> typing.List[Benchmark]:
     return [Benchmark("", "", "", sample['static_features'], sample['runtime_features']) for sample in self.active_learner.Sample()]
 
-  def iter_benchmark(self) -> None:
+  def iter_benchmark(self, *unused_args, **unused_kwargs) -> None:
     """
     Set the next item from list to target.
     If doesn't exist, ask from the active learner for new stuff,
