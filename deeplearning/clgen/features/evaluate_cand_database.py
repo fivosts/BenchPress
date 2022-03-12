@@ -66,6 +66,8 @@ class SearchCandidate(Base, sqlutil.ProtoBackedMixin):
   num_tokens        : int   = sql.Column(sql.Integer, nullable = False)
   # Sample's vector of features.
   output_features   : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # The runtime features it must achieve.
+  runtime_features  : str   = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Sample distance from target benchmark.
   sample_score      : float = sql.Column(sql.Float,  nullable = False)
   # Name and contents of target benchmark specified.
@@ -93,6 +95,7 @@ class SearchCandidate(Base, sqlutil.ProtoBackedMixin):
                sample           : np.array,
                sample_indices   : np.array,
                output_features  : typing.Dict[str, float],
+               runtime_features : typing.Dict[str, float],
                sample_score     : float,
                target_benchmark : typing.Tuple[str, str],
                target_features  : typing.Dict[str, float],
@@ -132,6 +135,7 @@ class SearchCandidate(Base, sqlutil.ProtoBackedMixin):
       sample_indices    = sample_indices,
       num_tokens        = int(num_tokens),
       output_features   = '\n'.join(["{}:{}".format(k, v) for k, v in output_features.items()]) if output_features else "None",
+      runtime_features  = '\n'.join(["{}:{}".format(k, v) for k, v in runtime_features.items()]) if runtime_features else "None",
       sample_score      = sample_score,
       target_benchmark  = "// {}\n{}".format(target_benchmark[0], target_benchmark[1]),
       target_features   = '\n'.join(["{}:{}".format(k, v) for k, v in target_features.items()]) if target_features else "None",
