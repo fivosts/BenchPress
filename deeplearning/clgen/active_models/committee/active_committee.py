@@ -41,7 +41,7 @@ class QueryByCommittee(backends.BackendBase):
   class CommitteeEstimator(typing.NamedTuple):
     """Named tuple to wrap BERT pipeline."""
     model          : typing.TypeVar('nn.Module')
-    data_generator : data_generator.ListTrainDataloader
+    data_generator : 'torch.utils.data.Dataset'
     optimizer      : typing.Any
     scheduler      : typing.Any
     training_opts  : 'TrainingOpts'
@@ -51,7 +51,7 @@ class QueryByCommittee(backends.BackendBase):
   class SampleCommitteeEstimator(typing.NamedTuple):
     """Named tuple for sampling BERT."""
     model          : typing.List[typing.TypeVar('nn.Module')]
-    data_generator : data_generator.ListTrainDataloader
+    data_generator : 'torch.utils.data.Dataset'
     sha256         : str
 
   def __repr__(self):
@@ -87,7 +87,7 @@ class QueryByCommittee(backends.BackendBase):
     return
 
   def _ConfigModelParams(self,
-                         data_generator : data_generator.ListTrainDataloader = None,
+                         data_generator : 'torch.utils.data.Dataset' = None,
                          is_sampling    : bool = False
                          ) -> None:
     """
@@ -304,7 +304,7 @@ class QueryByCommittee(backends.BackendBase):
 
   def SampleMember(self,
                    member     : 'QueryByCommittee.CommitteeEstimator',
-                   sample_set : data_generator.DictPredictionDataloader,
+                   sample_set : 'torch.utils.data.Dataset',
                    ) -> str:
     """
     Sample member of committee. Return predicted label.
@@ -367,7 +367,7 @@ class QueryByCommittee(backends.BackendBase):
     return predictions
 
   def SampleCommittee(self,
-                      sample_set: data_generator.DictPredictionDataloader,
+                      sample_set: 'torch.utils.data.Dataset',
                       ) -> typing.Dict[
                              'QueryByCommittee.CommitteeEstimator',
                              typing.Dict[str, 'torch.Tensor']
