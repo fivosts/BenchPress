@@ -96,9 +96,11 @@ class ActiveSample(typing.NamedTuple):
   # number of tokens the model filled holes with.
   sample_indices_size : int
   # Output features of sample
-  features       : typing.Dict[str, float]
+  features         : typing.Dict[str, float]
+  # Runtime features of ActiveSample (will be populated lazily.)
+  runtime_features : typing.Dict[str, float]
   # Score of sample based on active learning search.
-  score          : typing.Union[bool, float]
+  score            : typing.Union[bool, float]
   # Active batch timestep where sample was acquired.
   # timestep       : int
 
@@ -120,8 +122,9 @@ def IR_candidate_worker(sample       : np.array,
         input_ids      = [x for x in input_ids if x != tokenizer.padToken],
         hole_lengths   = mlm_lengths,
         sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
-        features       = features,
-        score          = feat_sampler.calculate_distance(features),
+        features         = features,
+        runtime_features = feat_sampler.target_benchmark.runtime_features,
+        score            = feat_sampler.calculate_distance(features),
       ))
   except ValueError:
     pass
@@ -134,8 +137,9 @@ def IR_candidate_worker(sample       : np.array,
     input_ids      = [x for x in input_ids if x != tokenizer.padToken],
     hole_lengths   = mlm_lengths,
     sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
-    features       = {},
-    score          = math.inf,
+    features         = {},
+    runtime_features = feat_sampler.target_benchmark.runtime_features,
+    score            = math.inf,
   ))
 
 def text_candidate_worker(sample       : np.array,
@@ -156,8 +160,9 @@ def text_candidate_worker(sample       : np.array,
         input_ids      = [x for x in input_ids if x != tokenizer.padToken],
         hole_lengths   = mlm_lengths,
         sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
-        features       = features,
-        score          = feat_sampler.calculate_distance(features),
+        features         = features,
+        runtime_features = feat_sampler.target_benchmark.runtime_features,
+        score            = feat_sampler.calculate_distance(features),
       ))
   except ValueError:
     pass
@@ -170,8 +175,9 @@ def text_candidate_worker(sample       : np.array,
     input_ids      = [x for x in input_ids if x != tokenizer.padToken],
     hole_lengths   = mlm_lengths,
     sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
-    features       = {},
-    score          = math.inf,
+    features         = {},
+    runtime_features = feat_sampler.target_benchmark.runtime_features,
+    score            = math.inf,
   ))
 
 def dataload_worker(x              : int,
@@ -241,6 +247,7 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
       sample           = sample.sample,
       sample_indices   = sample.sample_indices,
       output_features  = sample.features,
+      runtime_features = sample.runtime_features,
       sample_score     = sample.score,
       target_benchmark = target_benchmark,
       target_features  = target_features,
