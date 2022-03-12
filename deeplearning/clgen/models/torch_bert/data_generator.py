@@ -398,10 +398,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         d.sampler.corpus_directory, "exec_time_per_gen"
       )
       # Check if benchmark set has been registed to monitor.
-      if d.feat_sampler.target not in d.tsne_monitor.groups_set:
-        for b in d.feat_sampler.benchmarks:
-          d.tsne_monitor.register((b.features, d.feat_sampler.target, b.name))
-        d.tsne_monitor.plot()
+      if not d.feat_sampler.is_active:
+        if d.feat_sampler.target not in d.tsne_monitor.groups_set:
+          for b in d.feat_sampler.benchmarks:
+            d.tsne_monitor.register((b.features, d.feat_sampler.target, b.name))
+          d.tsne_monitor.plot()
       # Store unique specs to database once.
       d.addToDB(
         active_feed_database.ActiveSamplingSpecs.FromArgs(
@@ -599,6 +600,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     if FLAGS.evaluate_candidates:
       write_eval_proc = None
 
+    # If the sampler is active, monitor on the go each target benchmark separately.
+    if self.feat_sampler.is_active:
+      self.tsne_monitor.register((self.feat_sampler.target_benchmark.features,
+                                  self.feat_sampler.target,
+                                  self.feat_sampler.target_benchmark.name
+                                )
+                              )
+      self.tsne_monitor.plot()
     try:
       ## BFS style. While you have jobs, keep going.
       while self.feed_queue:
