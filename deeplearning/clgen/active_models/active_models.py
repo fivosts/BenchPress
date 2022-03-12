@@ -119,11 +119,11 @@ class Model(object):
     self.backend.Train(**kwargs)
     return self
 
-  def UpdateLearn(self, updated_dataloader: 'torch.utils.data.Dataset') -> None:
+  def UpdateLearn(self, update_dataloader: 'torch.utils.data.Dataset') -> None:
     """
     Train-update active learner with new generated datapoints.
     """
-    self.Train(updated_dataloader = updated_dataloader)
+    self.Train(update_dataloader = updated_dataloader)
     return
 
   def Sample(self) -> typing.List[typing.Dict[str, float]]:
