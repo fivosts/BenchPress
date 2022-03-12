@@ -13,6 +13,7 @@ import numpy as np
 
 from deeplearning.clgen.active_models import data_generator
 from deeplearning.clgen.experiments import cldrive
+from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import grewe
 from deeplearning.clgen.util import distributions
@@ -130,7 +131,62 @@ class GrewePredictive(DownstreamTask):
     except Exception as e:
       pool.terminate()
       raise e
+    pool.terminate()
     return
+
+  def CollectRuntimeFeatures(self,
+                             samples: typing.List['ActiveSample'],
+                             top_k  : int
+                            ) -> typing.List['ActiveSample']:
+    """
+    Collect the top_k samples that can run on CLDrive and set their global size
+    to the appropriate value so it can match the transferred bytes.
+    """
+    new_samples = []
+    total = 0
+    for sample in sorted(samples, key = lambda x: x.score):
+      exp_tr_bytes = sample.runtime_features['transferred_bytes']
+      local_size   = sample.runtime_features['local_size']
+      found        = False
+      gsize        = 1
+      prev         = math.inf
+      while not found and gsize <= 20:
+        tr_bytes = opencl.RunCLDrive(sample.text, global_size = 2**gsize, local_size = local_size, num_runs = 10)
+        if tr_bytes:
+          if tr_bytes < exp_tr_bytes:
+            gsize += 1
+            prev = tr_bytes
+          else:
+            found = True
+            if abs(exp_tr_bytes - tr_bytes) > abs(exp_tr_bytes - prev):
+              gsize -= 1
+              tr_bytes  = abs(exp_tr_bytes - prev)
+            else:
+              tr_bytes  = abs(exp_tr_bytes - tr_bytes)
+        else:
+          gsize += 1
+      if found:
+        new_runtime_feats = sample.runtime_features
+        new_runtime_feats['transferred_bytes'] = tr_bytes
+        new_runtime_feats['global_size'] = 2**gsize
+        new_samples.append(sample._replace(runtime_features = new_runtime_feats))
+        total += 1
+      if top_k != -1 and total >= top_k:
+        break
+    return new_samples
+
+  def UpdateDataGenerator(self,
+                          new_samples: typing.List['ActiveSample'],
+                          top_k: int,
+                          ) -> data_generator.ListTrainDataloader:
+    """
+    Collect new generated samples, find their runtime features and processs to a torch dataset.
+    """
+    new_samples = self.CollectRuntimeFeatures(new_samples, top_k)
+    raise NotImplementedError("Transform new samples to correct updated dataset")
+    raise NotImplementedError("Return all the information to the feature_sampler")
+    raise NotImplementedError("The feature sampler will monitor appropriate data, and feed to training the rest")
+    return data_generator.ListTrainDataloader(updated_dataset)
 
   def sample_space(self, num_samples: int = 512) -> data_generator.DictPredictionDataloader:
     """
