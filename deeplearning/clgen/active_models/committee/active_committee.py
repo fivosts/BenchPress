@@ -173,9 +173,9 @@ class QueryByCommittee(backends.BackendBase):
     current_step = self.loadCheckpoint(model, member_path, optimizer, scheduler)
     if self.pytorch.num_gpus > 0:
       self.torch.cuda.empty_cache()
-
     if current_step >= 0:
       l.logger().info("Loaded checkpoint step {}".format(current_step))
+    current_step = max(0, current_step)
 
     if current_step < member.training_opts.num_train_steps:
       model.zero_grad()
