@@ -388,17 +388,14 @@ def CLDriveNumBytes(src: str,
   Run CLDrive once for given configuration to identify number of transferred bytes.
   """
   stdout, stderr = RunCLDrive(src, header_file = header_file, num_runs = 5, gsize = gsize, lsize = lsize, timeout = timeout)
+
+
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
-    transferred_bytes_cpu = df[df['device'].str.contains("CPU")].transferred_bytes[0]
-    transferred_bytes_gpu = df[df['device'].str.contains("GPU")].transferred_bytes[0]
   except pd.errors.EmptyDataError:
-    # CSV is empty which means src failed miserably.
-    transferred_bytes_cpu = None
-    transferred_bytes_gpu = None
-
-  assert transferred_bytes_cpu == transferred_bytes_gpu, "Mismatch between cpu and gpu transferred bytes: {}".format(transferred_bytes_cpu, transferred_bytes_gpu)
-  return transferred_bytes_cpu
+    return None
+  label = CollectCLDriveLabel(df, stdout, stderr)
+  return df[df['device'].str.contains("CPU")].transferred_bytes[0] if label in {"CPU", "GPU"} else None
 
 def CLDriveExecutionTimes(src: str,
                           header_file = None,
