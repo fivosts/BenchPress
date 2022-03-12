@@ -267,12 +267,26 @@ class ActiveSampler(FeatureSampler):
   def sample_active_learner(self) -> typing.List[Benchmark]:
     return [Benchmark("", "", "", sample['static_features'], sample['runtime_features']) for sample in self.active_learner.Sample()]
 
-  def iter_benchmark(self, *unused_args, **unused_kwargs) -> None:
+  def teach_active_learner(self, target_samples: typing.List[Benchmark], top_k: int) -> None:
+    """
+    Update active learner with targetted generated samples by the language model.
+    """
+    self.active_learner.UpdateLearn(target_samples, top_k)
+    return
+
+  def iter_benchmark(self, target_samples = None, top_k: int = -1) -> None:
     """
     Set the next item from list to target.
     If doesn't exist, ask from the active learner for new stuff,
     unless a termination criteria has been met.
+
+    At the first iteration, target samples is None.
+    But when the LM generates targets and calls for iter_benchmark()
+    it provides the generated samples and gives them to the active_learner
+    for updated learning.
     """
+    if target_samples:
+      self.teach_active_learner(target_samples, top_k)
     try:
       self.target_benchmark = self.benchmarks.pop(0)
       l.logger().info("Target fetures: {}".format(self.target_benchmark.features))
