@@ -607,7 +607,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                   self.feat_sampler.target_benchmark.name
                                 )
                               )
-      self.tsne_monitor.plot()
     try:
       ## BFS style. While you have jobs, keep going.
       while self.feed_queue:
