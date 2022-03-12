@@ -632,8 +632,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
         l.logger().info("Benchmark {}, generation {}".format(self.bench_idx, feeds[0].gen_id))
         # Compilation rate, execution time, per generation.
-        cmp_rate        = [0, 0]
-        exec_time       = 0.0
+        cmp_rate  = [0, 0]
+        exec_time = 0.0
 
         if feeds[0].gen_id not in self.comp_rate:
           self.comp_rate[feeds[0].gen_id] = [0, 0]
