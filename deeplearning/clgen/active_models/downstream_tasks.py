@@ -197,10 +197,16 @@ class GrewePredictive(DownstreamTask):
     Collect new generated samples, find their runtime features and processs to a torch dataset.
     """
     new_samples = self.CollectRuntimeFeatures(new_samples, top_k)
-    raise NotImplementedError("Transform new samples to correct updated dataset")
-    raise NotImplementedError("Return all the information to the feature_sampler")
-    raise NotImplementedError("The feature sampler will monitor appropriate data, and feed to training the rest")
-    return data_generator.ListTrainDataloader(updated_dataset)
+    updated_dataset = [
+      (
+        self.InputtoEncodedVector(feats,
+                                  entry.runtime_features['transferred_bytes'],
+                                  entry.runtime_features['local_size']
+                                  ),
+        [self.TargetLabeltoID(entry.runtime_features['label'])]
+      ) for entry in new_samples
+    ]
+    return new_samples, data_generator.ListTrainDataloader(updated_dataset)
 
   def sample_space(self, num_samples: int = 512) -> data_generator.DictPredictionDataloader:
     """
