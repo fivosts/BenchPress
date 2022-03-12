@@ -147,12 +147,14 @@ class QueryByCommittee(backends.BackendBase):
     )
     return outputs
 
-  def TrainMember(self, member: 'QueryByCommittee.CommitteeEstimator') -> None:
+  def TrainMember(self, member: 'QueryByCommittee.CommitteeEstimator', **kwargs) -> None:
     """
     Member-dispatching function for loading checkpoint, training and saving back.
     """
+    update_dataloader = kwargs.get('update_dataloader', None)
+
     model           = member.model.to(self.pytorch.offset_device)
-    data_generator  = member.data_generator
+    data_generator  = member.data_generator if update_dataloader is None else update_dataloader
     optimizer       = member.optimizer
     scheduler       = member.scheduler
     member_path     = self.ckpt_path / member.sha256
@@ -296,7 +298,7 @@ class QueryByCommittee(backends.BackendBase):
     self._ConfigModelParams(self.downstream_task.data_generator)
     if not self.is_trained:
       for member in self.committee:
-        self.TrainMember(member)
+        self.TrainMember(member, update_dataloader = update_dataloader)
     self.is_trained = True
     return
 
