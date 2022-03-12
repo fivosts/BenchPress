@@ -189,6 +189,8 @@ class BenchmarkSampler(FeatureSampler):
     When it's time, cycle through the next target benchmark.
     """
     # self.benchmarks.append(self.benchmarks.pop(0))
+    del unused_args
+    del unused_kwargs
     try:
       self.target_benchmark = self.benchmarks.pop(0)
       l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
