@@ -151,7 +151,13 @@ class GrewePredictive(DownstreamTask):
       gsize        = 1
       prev         = math.inf
       while not found and gsize <= 20:
-        tr_bytes = opencl.CLDriveNumBytes(sample.text, global_size = 2**gsize, local_size = local_size, num_runs = 10)
+        tr_bytes = opencl.CLDriveNumBytes(
+          sample.text,
+          global_size = 2**gsize,
+          local_size  = local_size,
+          num_runs    = 10,
+          timeout     = 15,
+        )
         if tr_bytes:
           if tr_bytes < exp_tr_bytes:
             gsize += 1
@@ -169,6 +175,14 @@ class GrewePredictive(DownstreamTask):
         new_runtime_feats = sample.runtime_features
         new_runtime_feats['transferred_bytes'] = tr_bytes
         new_runtime_feats['global_size'] = 2**gsize
+        df, label = cldrive.CLDriveDataFrame(
+          global_size = new_runtime_feats['global_size'],
+          local_size  = new_runtime_feats['local_size'],
+          num_runs    = 1000,
+          timeout     = 60,
+        )
+        raise NotImplementedError("Cache this to cldrive cache and get the correct label.")
+        new_runtime_feats['label'] = label
         new_samples.append(sample._replace(runtime_features = new_runtime_feats))
         total += 1
       if top_k != -1 and total >= top_k:
