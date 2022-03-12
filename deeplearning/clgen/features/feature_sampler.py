@@ -267,15 +267,22 @@ class ActiveSampler(FeatureSampler):
   def sample_active_learner(self) -> typing.List[Benchmark]:
     return [Benchmark("", "", "", sample['static_features'], sample['runtime_features']) for sample in self.active_learner.Sample()]
 
-  def teach_active_learner(self, target_samples: typing.List[Benchmark], top_k: int) -> None:
+  def teach_active_learner(self,
+                           target_samples: typing.List['ActiveSample'],
+                           top_k: int
+                           ) -> None:
     """
     Update active learner with targetted generated samples by the language model.
     """
-    updated_dataloader = self.active_learner.downstream_task.TrainDataGenerator(target_samples, top_k)
-    self.active_learner.UpdateLearn(updated_dataloader)
+    upd_samples, upd_loader = self.active_learner.downstream_task.UpdateDataGenerator(target_samples, top_k)
+    raise NotImplementedError("Monitor updated samples, or return them for active generator to monitor them.")
+    self.active_learner.UpdateLearn(upd_loader)
     return
 
-  def iter_benchmark(self, target_samples = None, top_k: int = -1) -> None:
+  def iter_benchmark(self,
+                     target_samples: typing.List['ActiveSample'] = None,
+                     top_k: int = -1
+                     ) -> None:
     """
     Set the next item from list to target.
     If doesn't exist, ask from the active learner for new stuff,
@@ -287,7 +294,7 @@ class ActiveSampler(FeatureSampler):
     for updated learning.
     """
     if target_samples:
-      self.teach_active_learner(target_samples, top_k)
+      self.teach_active_learner(self.target_benchmark.runtime_features, target_samples, top_k)
     try:
       self.target_benchmark = self.benchmarks.pop(0)
       l.logger().info("Target fetures: {}".format(self.target_benchmark.features))
