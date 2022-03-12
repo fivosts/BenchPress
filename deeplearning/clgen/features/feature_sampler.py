@@ -271,7 +271,8 @@ class ActiveSampler(FeatureSampler):
     """
     Update active learner with targetted generated samples by the language model.
     """
-    self.active_learner.UpdateLearn(target_samples, top_k)
+    updated_dataloader = self.active_learner.downstream_task.TrainDataGenerator(target_samples, top_k)
+    self.active_learner.UpdateLearn(updated_dataloader)
     return
 
   def iter_benchmark(self, target_samples = None, top_k: int = -1) -> None:
