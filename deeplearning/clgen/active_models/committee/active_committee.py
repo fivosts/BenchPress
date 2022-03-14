@@ -308,8 +308,20 @@ class QueryByCommittee(backends.BackendBase):
     Train non-NeuralNetwork based architectures, such as DecisionTrees or KMeans.
     """
     update_dataloader = kwargs.get('update_dataloader', None)
-    if update_dataloader:
-      raise NotImplementedError
+
+    model           = member.model
+    data_generator  = member.data_generator if update_dataloader is None else update_dataloader
+    train_dataset   = data_generator.get_batched_dataset()
+
+    member_path     = self.ckpt_path / member.sha256
+    member_log_path = self.logfile_path / member.sha256
+
+    outputs = model(
+      input_ids   = train_dataset['input_ids'],
+      target_ids  = train_dataset['target_ids'],
+      is_sampling = False,
+    )
+    return
 
   def Train(self, **kwargs) -> None:
     """
