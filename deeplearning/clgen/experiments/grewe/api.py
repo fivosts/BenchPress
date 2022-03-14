@@ -225,7 +225,7 @@ def GreweCSV(**kwargs) -> None:
   workspace   = kwargs.get('workspace_path')
   tokenizer   = kwargs.get('tokenizer')
 
-  cldrive_db = CLDriveExecutions(url = "sqlite:///{}".format(pathlib.Path(cldrive_cache).resolve()), must_exist = False)
+  cldrive_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(pathlib.Path(cldrive_cache).resolve()), must_exist = False)
 
   for dbg in tqdm.tqdm(db_groups, desc = "DB Groups", leave = True):
     if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
