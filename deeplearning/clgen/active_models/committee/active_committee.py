@@ -303,6 +303,12 @@ class QueryByCommittee(backends.BackendBase):
         pass
     return
 
+  def TrainUnsupervisedMember(self, **kwargs) -> None:
+    """
+    Train non-NeuralNetwork based architectures, such as DecisionTrees or KMeans.
+    """
+    raise NotImplementedError
+
   def Train(self, **kwargs) -> None:
     """
     Training point of active learning committee.
@@ -390,6 +396,12 @@ class QueryByCommittee(backends.BackendBase):
       cur = batch
       predictions['predictions'] += [self.downstream_task.TargetIDtoLabels(i) for i in out['output_label'].cpu().numpy()]
     return predictions
+
+  def SampleUnsupervisedMember(self, **kwargs) -> None:
+    """
+    Sample non-NeuralNetwork based architectures, such as DecisionTrees or KMeans.
+    """
+    raise NotImplementedError
 
   def SampleCommittee(self,
                       sample_set: 'torch.utils.data.Dataset',
