@@ -409,16 +409,21 @@ class QueryByCommittee(backends.BackendBase):
     This method queries all committee members and measures their cross-entropy to validate
     the usefulness of parts of the feature space.
     """
+    # Collect random space samples.
     sample_set            = self.downstream_task.sample_space(num_samples = 512)
+    # Ask the committee for their predictions.
     committee_predictions = self.SampleCommittee(sample_set)
     space_samples = []
     for nsample in range(len(sample_set)):
+      # Get the feature vectors for each sample.
       for model, samples in committee_predictions.items():
         static_feats = self.downstream_task.VecToStaticFeatDict(samples['static_features'][nsample])
         run_feats    = self.downstream_task.VecToRuntimeFeatDict(samples['runtime_features'][nsample])
         input_feats  = self.downstream_task.VecToInputFeatDict(samples['input_ids'][nsample])
         break
+      # Calculate entropy for that sample.
       ent = self.entropy([x['predictions'][nsample] for x in committee_predictions.values()])
+      # Save the dictionary entry.
       space_samples.append({
         'static_features'    : static_feats,
         'runtime_features'   : run_feats,
@@ -429,6 +434,7 @@ class QueryByCommittee(backends.BackendBase):
         }
         'entropy'            : ent,
       })
+    # Add everything to database.
     self.committee_samples.add_samples(??, space_samples)
     return sorted(space_samples, key = lambda x: x['entropy'], reverse = True)
 
