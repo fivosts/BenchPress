@@ -81,7 +81,7 @@ class CommitteeSample(Base, sqlutil.ProtoBackedMixin):
                runtime_features   : typing.Dict[str, float],
                input_features     : typing.Dict[str, float],
                member_predictions : typing.Dict[str, str],
-               entropy            : float
+               entropy            : float,
                ) -> 'CommitteeSample':
     str_static_features    = '\n'.join(["{}:{}".format(k, v) for k, v in static_features.items()])
     str_runtime_features   = '\n'.join(["{}:{}".format(k, v) for k, v in runtime_features.items()])
@@ -132,6 +132,29 @@ class CommitteeSamples(sqlutil.Database):
     with self.Session(commit = True) as s:
       exists = s.query(CommitteeConfig).filter_by(member_id = member_id).first()
       if not exists:
-        s.add(CommitteeConfig.FromArgs(member_id, member_name, type, configuration))
+        s.add(CommitteeConfig.FromArgs(s.member_count, member_id, member_name, type, configuration))
         s.commit()
+    return
+
+  def add_samples(self, samples: typing.Dict[str, typing.Any]) -> None:
+    """
+    If not exists, add sample to Samples table.
+    """
+    hash_cache = set()
+    offset_idx = 0
+    with self.Session(commit = True) as s:
+      for sample in samples:
+        sample_entry = CommitteeSample.FromArgs(
+          id                 = s.sample_count + offset_idx,
+          static_features    = ['static_features'],
+          runtime_features   = ['runtime_features'],
+          input_features     = ['input_features'],
+          member_predictions = ['member_predictions'],
+          entropy            = ['entropy'],
+        )
+        exists = s.query(CommitteeSample).filter_by(sha256 = sample_entry.sha256).first()
+        if not exists:
+          s.add(sample_entry)
+          offset_idx += 1
+      s.commit()
     return
