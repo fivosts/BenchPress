@@ -420,7 +420,7 @@ class QueryByCommittee(backends.BackendBase):
           static_feats = self.downstream_task.VecToStaticFeatDict(samples['static_features'][nsample])
           run_feats    = self.downstream_task.VecToRuntimeFeatDict(samples['runtime_features'][nsample])
         com_preds.append(samples['predictions'][nsample])
-      ent = self.entropy(com_preds + ["CPU"])
+      ent = self.entropy(com_preds)
       space_samples.append({
         'static_features'  : static_feats,
         'runtime_features' : run_feats,
