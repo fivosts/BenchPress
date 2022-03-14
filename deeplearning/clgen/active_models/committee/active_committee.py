@@ -327,7 +327,7 @@ class QueryByCommittee(backends.BackendBase):
     raise NotImplementedError
     return
 
-  def SampleMember(self,
+  def SampleNNMember(self,
                    member     : 'QueryByCommittee.CommitteeEstimator',
                    sample_set : 'torch.utils.data.Dataset',
                    ) -> str:
@@ -406,7 +406,7 @@ class QueryByCommittee(backends.BackendBase):
     committee_predictions = {}
     for member in self.committee:
       key = "{}_{}".format(member.config.name, member.model.id)
-      committee_predictions[key] = self.SampleMember(member, sample_set)
+      committee_predictions[key] = self.SampleNNMember(member, sample_set)
     return committee_predictions
 
   def Sample(self) -> typing.List[typing.Dict[str, float]]:
