@@ -19,6 +19,7 @@ from deeplearning.clgen.active_models import backends
 from deeplearning.clgen.active_models import data_generator
 from deeplearning.clgen.active_models.committee import models
 from deeplearning.clgen.active_models.committee import config
+from deeplearning.clgen.active_models.committee import committee_database
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import logging as l
 
