@@ -239,7 +239,7 @@ def GreweCSV(**kwargs) -> None:
     else:
       get_data = lambda: dbg.get_data_features("GreweFeatures", use_mp = False)
 
-    for (src, _, feats, dist) in tqdm.tqdm(get_data(), desc = "Src", leave = True):
+    for (src, inc, feats) in tqdm.tqdm(get_data(), desc = "Src", leave = True):
       for row in DriveSource(src, dbg.group_name, feats, cldrive_db):
         if row:
           datapoints.append(row)
