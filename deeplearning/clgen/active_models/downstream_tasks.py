@@ -215,7 +215,8 @@ class GrewePredictive(DownstreamTask):
         [self.TargetLabeltoID(entry.runtime_features['label'])]
       ) for entry in new_samples
     ]
-    return new_samples, data_generator.ListTrainDataloader(updated_dataset)
+    self.dataset += updated_dataset
+    return new_samples, data_generator.ListTrainDataloader(self.dataset)
 
   def sample_space(self, num_samples: int = 512) -> data_generator.DictPredictionDataloader:
     """
