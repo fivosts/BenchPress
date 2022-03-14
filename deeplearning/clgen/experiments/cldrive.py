@@ -180,7 +180,12 @@ class CLDriveExecutions(sqlutil.Database):
       raise e
     return
 
-  def get_entry(self, src: str, dataset: str, global_size: int, local_size: int) -> "CLDriveSample":
+  def get_entry(self,
+                src         : str,
+                dataset     : str,
+                global_size : int,
+                local_size  : int
+                ) -> "CLDriveSample":
     """
     Fetch row from DB, if exists.
     """
