@@ -35,6 +35,15 @@ class ListTrainDataloader(torch.utils.data.Dataset):
       )
     return
 
+  def get_batched_dataset(self) -> typing.Dict[str, np.array]:
+    """
+    Batch the whole dataset by keys and return it.
+    """
+    return {
+      'input_ids'  : np.as_array([x['input_ids'].numpy() for x in self.dataset]),
+      'target_ids' : np.as_array([x['target_ids'].numpy() for x in self.dataset]),
+    }
+
   def __len__(self) -> int:
     return len(self.dataset)
 
@@ -71,6 +80,16 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
         }
       )
     return
+
+  def get_batched_dataset(self) -> typing.Dict[str, np.array]:
+    """
+    Batch the whole dataset by keys and return it.
+    """
+    return {
+      'static_features'  : np.as_array([x['static_features'].numpy() for x in self.dataset]),
+      'runtime_features' : np.as_array([x['runtime_features'].numpy() for x in self.dataset]),
+      'input_ids'        : np.as_array([x['input_ids'].numpy() for x in self.dataset]),
+    }
 
   def __len__(self) -> int:
     return len(self.dataset)
