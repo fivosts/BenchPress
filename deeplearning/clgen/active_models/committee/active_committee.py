@@ -160,7 +160,7 @@ class QueryByCommittee(backends.BackendBase):
     )
     return outputs
 
-  def TrainMember(self, member: 'QueryByCommittee.CommitteeEstimator', **kwargs) -> None:
+  def TrainNNMember(self, member: 'QueryByCommittee.CommitteeEstimator', **kwargs) -> None:
     """
     Member-dispatching function for loading checkpoint, training and saving back.
     """
@@ -310,7 +310,7 @@ class QueryByCommittee(backends.BackendBase):
     self._ConfigModelParams(self.downstream_task.data_generator)
     if not self.is_trained:
       for member in self.committee:
-        self.TrainMember(member, update_dataloader = update_dataloader)
+        self.TrainNNMember(member, update_dataloader = update_dataloader)
     self.is_trained = True
     return
 
