@@ -215,8 +215,11 @@ class GrewePredictive(DownstreamTask):
         [self.TargetLabeltoID(entry.runtime_features['label'])]
       ) for entry in new_samples
     ]
-    self.dataset += updated_dataset
-    return new_samples, data_generator.ListTrainDataloader(self.dataset)
+    ## Add new samples along with 100 old random samples.
+    extra_steps = 100
+    keys = set(np.RandomState().randint(0, len(self.dataset)) for _ in range(extra_steps))
+    updated_dataset += [x for idx, x in self.dataset if idx in keys]
+    return new_samples, data_generator.ListTrainDataloader(updated_dataset)
 
   def sample_space(self, num_samples: int = 512) -> data_generator.DictPredictionDataloader:
     """
