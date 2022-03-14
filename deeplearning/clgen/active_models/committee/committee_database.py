@@ -124,3 +124,14 @@ class CommitteeSamples(sqlutil.Database):
     """Return all database in list format"""
     with self.Session() as s:
       return s.query(CommitteeSample).all()
+
+  def add_member(self, member_id: int, member_name: str, type: str, configuration: str) -> None:
+    """
+    Add committee member if not exists.
+    """
+    with self.Session(commit = True) as s:
+      exists = s.query(CommitteeConfig).filter_by(member_id = member_id).first()
+      if not exists:
+        s.add(CommitteeConfig.FromArgs(member_id, member_name, type, configuration))
+        s.commit()
+    return
