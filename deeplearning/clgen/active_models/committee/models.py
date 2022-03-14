@@ -119,7 +119,8 @@ class KMeans(CommitteeModels):
   """
   def __init__(self, id: int, config: ModelConfig):
     super(KMeans, self).__init__(id)
-    self.config = config
+    self.config     = config
+    self.target_ids = self.config.downstream_task.output_ids
     self.kmeans = sklearn.cluster.KMeans(
       n_clusters = self.config.n_clusters,
       init       = self.config.init,
