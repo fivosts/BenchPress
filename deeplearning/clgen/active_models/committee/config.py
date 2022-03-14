@@ -191,3 +191,12 @@ class KMeansModelConfig(ModelConfig):
                downstream_task : downstream_tasks.DownstreamTask,
                ) -> "ModelConfig":
     super(KMeansModelConfig, self).__init__("KMeans", config, downstream_task)
+
+    ## KMeans-specific attributes.
+    self.n_clusters = self.config.n_clusters
+    self.init       = self.config.init
+    self.n_init     = self.config.n_init
+    self.max_iter   = self.config.max_iter
+    self.tol        = self.config.tol
+    self.algorithm  = self.config.algorithm
+    return
