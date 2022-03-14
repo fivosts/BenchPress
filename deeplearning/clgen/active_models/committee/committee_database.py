@@ -77,6 +77,7 @@ class CommitteeSample(Base, sqlutil.ProtoBackedMixin):
   @classmethod
   def FromArgs(cls,
                id                 : int,
+               train_step         : int,
                static_features    : typing.Dict[str, float],
                runtime_features   : typing.Dict[str, float],
                input_features     : typing.Dict[str, float],
@@ -136,7 +137,7 @@ class CommitteeSamples(sqlutil.Database):
         s.commit()
     return
 
-  def add_samples(self, samples: typing.Dict[str, typing.Any]) -> None:
+  def add_samples(self, train_step: int, samples: typing.Dict[str, typing.Any]) -> None:
     """
     If not exists, add sample to Samples table.
     """
@@ -146,6 +147,7 @@ class CommitteeSamples(sqlutil.Database):
       for sample in samples:
         sample_entry = CommitteeSample.FromArgs(
           id                 = s.sample_count + offset_idx,
+          train_step         = train_step,
           static_features    = ['static_features'],
           runtime_features   = ['runtime_features'],
           input_features     = ['input_features'],
