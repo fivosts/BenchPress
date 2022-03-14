@@ -70,6 +70,9 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
   def compute_dataset(self,
                       dataset: typing.List[typing.Dict[str, typing.List]]
                       ) -> None:
+    """
+    Batch the whole dataset by keys and return it.
+    """
     self.dataset = []
     for dp in dataset:
       self.dataset.append(
