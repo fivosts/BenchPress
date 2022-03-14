@@ -413,14 +413,11 @@ class QueryByCommittee(backends.BackendBase):
     committee_predictions = self.SampleCommittee(sample_set)
     space_samples = []
     for nsample in range(len(sample_set)):
-      # static_feats, run_feats = None, None
-      # com_preds = {}
       for model, samples in committee_predictions.items():
         static_feats = self.downstream_task.VecToStaticFeatDict(samples['static_features'][nsample])
         run_feats    = self.downstream_task.VecToRuntimeFeatDict(samples['runtime_features'][nsample])
         input_feats  = self.downstream_task.VecToInputFeatDict(samples['input_ids'][nsample])
         break
-        # com_preds[model] = samples['predictions'][nsample]
       ent = self.entropy([x['predictions'][nsample] for x in committee_predictions.values()])
       space_samples.append({
         'static_features'    : static_feats,
