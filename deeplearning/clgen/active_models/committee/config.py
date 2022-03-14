@@ -107,9 +107,11 @@ class ModelConfig(object):
     return
 
 class NNModelConfig(ModelConfig):
-
+  """
+  NeuralNetwork-based architectural config.
+  """
   def __init__(self,
-               config          : typing.Union[active_learning_pb2.MLP, active_learning_pb2.KMeans],
+               config          : active_learning_pb2.MLP,
                downstream_task : downstream_tasks.DownstreamTask,
                ) -> "ModelConfig":
     super(NNModelConfig, self).__init__("MLP", config, downstream_task)
@@ -179,3 +181,13 @@ class NNModelConfig(ModelConfig):
           )
         )
     return
+
+class KMeansModelConfig(ModelConfig):
+  """
+  KMeans config subclass.
+  """
+  def __init__(self,
+               config          : active_learning_pb2.KMeans,
+               downstream_task : downstream_tasks.DownstreamTask,
+               ) -> "ModelConfig":
+    super(KMeansModelConfig, self).__init__("KMeans", config, downstream_task)
