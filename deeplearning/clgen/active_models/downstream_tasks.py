@@ -69,6 +69,10 @@ class GrewePredictive(DownstreamTask):
     return ["CPU", "GPU"]
 
   @property
+  def output_ids(self) -> typing.Tuple[str, str]:
+    return [0, 1]
+
+  @property
   def feature_space(self) -> str:
     return "GreweFeatures"
 
