@@ -66,6 +66,10 @@ class QueryByCommittee(backends.BackendBase):
     if not pytorch.initialized:
       pytorch.initPytorch()
 
+    self.committee_samples   = committee_database.CommitteeSamples(
+      url        = "sqlite:///{}".format(),
+      must_exist = False,
+    )
     self.pytorch             = pytorch
     self.torch               = pytorch.torch
     self.torch_tpu_available = pytorch.torch_tpu_available
