@@ -413,19 +413,26 @@ class QueryByCommittee(backends.BackendBase):
     committee_predictions = self.SampleCommittee(sample_set)
     space_samples = []
     for nsample in range(len(sample_set)):
-      static_feats, run_feats = None, None
-      com_preds = []
+      # static_feats, run_feats = None, None
+      # com_preds = {}
       for model, samples in committee_predictions.items():
-        if not static_feats or not run_feats:
-          static_feats = self.downstream_task.VecToStaticFeatDict(samples['static_features'][nsample])
-          run_feats    = self.downstream_task.VecToRuntimeFeatDict(samples['runtime_features'][nsample])
-        com_preds.append(samples['predictions'][nsample])
-      ent = self.entropy(com_preds)
+        static_feats = self.downstream_task.VecToStaticFeatDict(samples['static_features'][nsample])
+        run_feats    = self.downstream_task.VecToRuntimeFeatDict(samples['runtime_features'][nsample])
+        input_feats  = self.downstream_task.VecToInputFeatDict(samples['input_ids'][nsample])
+        break
+        # com_preds[model] = samples['predictions'][nsample]
+      ent = self.entropy([x['predictions'][nsample] for x in committee_predictions.values()])
       space_samples.append({
-        'static_features'  : static_feats,
-        'runtime_features' : run_feats,
-        'entropy'          : ent,
+        'static_features'    : static_feats,
+        'runtime_features'   : run_feats,
+        'input_features'     : input_feats,
+        'member_predictions' : {
+          k: self.downstream_task.TargetIDtoLabels(v['predictions'][nsample])
+          for k, v in committee_predictions.items()
+        }
+        'entropy'            : ent,
       })
+    self.committee_samples.add_samples(??, space_samples)
     return sorted(space_samples, key = lambda x: x['entropy'], reverse = True)
 
   def entropy(self, labels, base=None):
