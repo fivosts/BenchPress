@@ -129,3 +129,10 @@ class KMeans(CommitteeModels):
       algorithm  = self.config.algorithm,
     )
     return
+
+  def __call__(self,
+               input_ids   : np.array,
+               target_ids  : np.array,
+               is_sampling : bool = False
+               ) -> None:
+    raise NotImplementedError
