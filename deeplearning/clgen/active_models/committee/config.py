@@ -64,7 +64,7 @@ class ModelConfig(object):
                  config: active_learning_pb2.Committee,
                  downstream_task: downstream_tasks.DownstreamTask
                  ) -> typing.List["ModelConfig"]:
-    return [ModelConfig(m, downstream_task) for m in config.mlp] # Extend for more model types.
+    return [ModelConfig(m, downstream_task) for m in config.mlp + config.k_means] # Extend for more model types.
 
   @property
   def num_labels(self) -> int:
