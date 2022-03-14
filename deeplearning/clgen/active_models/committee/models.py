@@ -128,11 +128,29 @@ class KMeans(CommitteeModels):
       tol        = self.config.tol,
       algorithm  = self.config.algorithm,
     )
+    ## The following two variables are the model's attributes.
+    self.classifier  = None
+    self.cluster_map = {}
     return
 
   def __call__(self,
                input_ids   : np.array,
-               target_ids  : np.array,
+               target_ids  : np.array = None,
                is_sampling : bool = False
                ) -> None:
-    raise NotImplementedError
+    if not is_sampling:
+      ## Create a map for labels from target ids, and cluster IDS.
+      self.cluster_map = {}
+      self.classifier  = self.kmeans.fit(input_ids)
+      for cluster_id, target_id in zip(self.classifier.labels_, self.target_ids):
+        if cluster_id not in self.cluster_map:
+          self.cluster_map[cluster_id] = {'total': 0}
+        if target_id not in self.cluster_map[cluster_id]:
+          self.cluster_map[cluster_id][target_id] = 1
+        else:
+          self.cluster_map[cluster_id][target_id] += 1
+        self.cluster_map[cluster_id]['total'] += 1
+    else:
+      cluster_labels = self.classifier.predict(input_ids)
+      raise NotImplementedError
+      target_labels  = [self.cluster_map for x in cluster_labels]
