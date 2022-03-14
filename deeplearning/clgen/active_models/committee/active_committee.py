@@ -111,12 +111,18 @@ class QueryByCommittee(backends.BackendBase):
           steps_per_epoch  = cconfig.steps_per_epoch,
           num_epochs       = cconfig.num_epochs,
           num_train_steps  = cconfig.num_train_steps,
+          n_clusters       = config.n_clusters,
+          init             = config.init,
+          n_init           = config.n_init,
+          max_iter         = config.max_iter,
+          tol              = config.tol,
+          algorithm        = config.algorithm,
         )
         cm = models.CommitteeModels.FromConfig(idx, cconfig)
         if not is_sampling:
           opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
             model           = cm,
-            num_train_steps = 10**10,
+            num_train_steps = 10**5,
             warmup_steps    = training_opts.num_warmup_steps,
             learning_rate   = training_opts.learning_rate,
           )
