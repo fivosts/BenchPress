@@ -222,12 +222,15 @@ class CLDriveExecutions(sqlutil.Database):
     self.add_entry(src, dataset, label, global_size, local_size, df)
     return self.get_entry(src, dataset, global_size, local_size)
 
-  def get_valid_data(self) -> typing.List[CLDriveSample]:
+  def get_valid_data(self, dataset: str = None) -> typing.List[CLDriveSample]:
     """
     Return all valid entries, labelled either as CPU or GPU.
     """
     with self.Session() as session:
-      return session.query(CLDriveSample).filter(CLDriveSample.status == "CPU" or CLDriveSample.status == "GPU").yield_per(1000)
+      if dataset:
+        return session.query(CLDriveSample).filter(CLDriveSample.dataset == dataset and (CLDriveSample.status == "CPU" or CLDriveSample.status == "GPU")).yield_per(1000)
+      else;
+        return session.query(CLDriveSample).filter(CLDriveSample.status == "CPU" or CLDriveSample.status == "GPU").yield_per(1000)
 
   def get_execution_times_ms(self, src: str, dataset: str, global_size: int, local_size: int) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
     """
