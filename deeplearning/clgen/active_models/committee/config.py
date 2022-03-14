@@ -64,7 +64,12 @@ class ModelConfig(object):
                  config: active_learning_pb2.Committee,
                  downstream_task: downstream_tasks.DownstreamTask
                  ) -> typing.List["ModelConfig"]:
-    return [ModelConfig(m, downstream_task) for m in config.mlp + config.k_means] # Extend for more model types.
+    model_configs = []
+    for m in config.mlp:
+      model_configs.append(NNModelConfig(m, downstream_task))
+    for m in config.k_means:
+      model_configs.append(KMeansModelConfig(m, downstream_task))
+    return model_configs
 
   @property
   def num_labels(self) -> int:
@@ -81,19 +86,35 @@ class ModelConfig(object):
     return self.downstream_task.input_size
 
   def __init__(self,
+               name: str,
+               config : typing.Union[active_learning_pb2.MLP, active_learning_pb2.KMeans],
+               downstream_task: downstream_tasks.DownstreamTask
+               ) -> "ModelConfig":
+    self.name            = name
+    self.config          = config
+    self.downstream_task = downstream_task
+    self.sha256          = crypto.sha256_str(str(config))
+
+    ## Placeholding initialization
+    self.num_train_steps  = None
+    self.num_warmup_steps = None
+    self.num_epochs       = None
+    self.steps_per_epoch  = None
+    self.batch_size       = None
+    self.learning_rate    = None
+    self.max_grad_norm    = None
+    self.layer_config     = None
+    return
+
+class NNModelConfig(ModelConfig):
+
+  def __init__(self,
                config          : typing.Union[active_learning_pb2.MLP, active_learning_pb2.KMeans],
                downstream_task : downstream_tasks.DownstreamTask,
                ) -> "ModelConfig":
-    if isinstance(config, active_learning_pb2.MLP):
-      self.name = "MLP"
-    elif isinstance(config, active_learning_pb2.KMeans):
-      self.name = "KMeans"
-    else:
-      raise TypeError(config)
-    self.config           = config
-    self.downstream_task  = downstream_task
-    self.sha256           = crypto.sha256_str(str(config))
+    super(NNModelConfig, self).__init__("MLP", config, downstream_task)
 
+    ## NN-specific attributes
     self.num_train_steps  = config.num_train_steps
     self.num_warmup_steps = config.num_warmup_steps
     self.num_epochs       = 1
