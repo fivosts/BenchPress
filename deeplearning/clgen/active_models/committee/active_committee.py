@@ -303,11 +303,13 @@ class QueryByCommittee(backends.BackendBase):
         pass
     return
 
-  def TrainUnsupervisedMember(self, **kwargs) -> None:
+  def TrainUnsupervisedMember(self, member: 'QueryByCommittee.CommitteeEstimator', **kwargs) -> None:
     """
     Train non-NeuralNetwork based architectures, such as DecisionTrees or KMeans.
     """
-    raise NotImplementedError
+    update_dataloader = kwargs.get('update_dataloader', None)
+    if update_dataloader:
+      raise NotImplementedError
 
   def Train(self, **kwargs) -> None:
     """
