@@ -136,6 +136,13 @@ class QueryByCommittee(backends.BackendBase):
         (self.ckpt_path / cconfig.sha256).mkdir(exist_ok = True, parents = True),
         (self.logfile_path / cconfig.sha256).mkdir(exist_ok = True, parents = True),
       l.logger().info(self.GetShortSummary())
+    for member in self.committee:
+      self.committee_samples.add_member(
+        member_id     = member.model.id,
+        member_name   = member.config.name,
+        type          = "supervised" if isinstance(member.model, self.torch.nn.Module) else "unsupervised",
+        configuration = member.config.config,
+      )
     return
 
   def model_step(self,
