@@ -13,7 +13,6 @@ import numpy as np
 
 from deeplearning.clgen.active_models import data_generator
 from deeplearning.clgen.experiments import cldrive
-from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import grewe
 from deeplearning.clgen.util import distributions
