@@ -153,7 +153,7 @@ class KMeans(CommitteeModels):
       }
     else:
       cluster_labels = self.classifier.predict(input_ids)
-      target_labels  = [self.cluster_map for x in cluster_labels]
+      target_labels  = [np.argmax(self.cluster_map[x]) for x in cluster_labels]
       return {
         'cluster_labels'   : cluster_labels,
         'predicted_labels' : target_labels,
