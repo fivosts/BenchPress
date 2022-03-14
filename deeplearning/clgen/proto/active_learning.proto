@@ -18,7 +18,8 @@ message ActiveLearner {
 
 // Committee is a list of models.
 message Committee {
-  repeated MLP mlp = 1;
+  repeated MLP mlp        = 1;
+  repeated KMeans k_means = 2;
   // repeated <ModelType> model_type = x;
 }
 
@@ -29,6 +30,17 @@ message MLP {
   optional int32 batch_size                   = 3;
   optional int32 num_train_steps              = 4;
   optional int32 num_warmup_steps             = 5;
+}
+
+// KMeans type architecture.
+// See scitkit-learn specs for parameters below.
+message KMeans {
+  optional int32  n_clusters = 1;
+  optional string init       = 2;
+  optional int32  n_init     = 3;
+  optional int32  max_iter   = 4;
+  optional float  tol        = 5;
+  optional string algorithm  = 6;
 }
 
 // Layer wrapper to help with layer's ordering consistency.
