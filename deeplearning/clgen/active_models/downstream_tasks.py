@@ -274,6 +274,17 @@ class GrewePredictive(DownstreamTask):
       'local_size'        : ls,
     }
 
+  def VecToInputFeatDict(self, input_values: typing.List[float]) -> typing.Dict[str, float]:
+    """
+    Convert to dictionary of predictive model input features.
+    """
+    return {
+      "tr_bytes/(comp+mem)"   : input_values[0],
+      "coalesced/mem"         : input_values[1],
+      "localmem/(mem+wgsize)" : input_values[2],
+      "comp/mem"              : input_values[3],
+    }
+
   def InputtoEncodedVector(self,
                            static_feats      : typing.Dict[str, float],
                            transferred_bytes : int,
