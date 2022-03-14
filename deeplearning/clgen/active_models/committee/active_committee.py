@@ -110,7 +110,7 @@ class QueryByCommittee(backends.BackendBase):
         if not is_sampling:
           opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
             model           = cm,
-            num_train_steps = training_opts.num_train_steps,
+            num_train_steps = 10**10,
             warmup_steps    = training_opts.num_warmup_steps,
             learning_rate   = training_opts.learning_rate,
           )
@@ -215,7 +215,6 @@ class QueryByCommittee(backends.BackendBase):
         train_hook = hooks.tensorMonitorHook(
           member_log_path, current_step, min(member.training_opts.steps_per_epoch, 50)
         )
-      total_steps = member.training_opts.num_train_steps
       try:
         model.train()
         epoch_iter = tqdm.auto.trange(member.training_opts.num_epochs, desc="Epoch", leave = False) if self.is_world_process_zero() else range(member.training_opts.num_epochs)
