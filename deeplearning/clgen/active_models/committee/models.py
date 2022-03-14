@@ -24,15 +24,16 @@ ACT2FN = {
   "softmax"  : torch.nn.Softmax
 }
 
-class CommitteeModels(torch.nn.Module):
+class CommitteeModels(object):
   """
   Abstract representation of model committee.
   """
   @classmethod
   def FromConfig(cls, id: int, config: config.ModelConfig) -> "CommitteeModels":
     return {
-      'MLP': MLP,
-    }[config.name](id, config.layer_config)
+      'MLP'    : MLP,
+      'KMeans' : KMeans,
+    }[config.name](id, config)
 
   def __init__(self, id: int):
     super(CommitteeModels, self).__init__()
@@ -42,13 +43,13 @@ class CommitteeModels(torch.nn.Module):
   def forward(self, *args, **kwargs) -> typing.Dict[str, torch.Tensor]:
     raise NotImplementedError("Abstract class.")
 
-class MLP(CommitteeModels):
+class MLP(CommitteeModels, torch.nn.Module):
   """
   A modular MLP model that supports Linear, Dropout, LayerNorm and activations.
   """
-  def __init__(self, id: int, config: typing.List):
+  def __init__(self, id: int, config: config.ModelConfig):
     super(MLP, self).__init__(id)
-    self.config = config
+    self.config = config.layer_config
     self.layers = []
 
     layers = {
@@ -111,3 +112,20 @@ class MLP(CommitteeModels):
         'output_probs' : out,
         'output_label' : torch.argmax(out, dim = 1),
       }
+
+class KMeans(CommitteeModels):
+  """
+  Wrapper class to manage, fit and predict KMeans clusters.
+  """
+  def __init__(self, id: int, config: ModelConfig):
+    super(KMeans, self).__init__(id)
+    self.config = config
+    self.kmeans = sklearn.cluster.KMeans(
+      n_clusters = self.config.n_clusters,
+      init       = self.config.init,
+      n_init     = self.config.n_init,
+      max_iter   = self.config.max_iter,
+      tol        = self.config.tol,
+      algorithm  = self.config.algorithm,
+    )
+    return
