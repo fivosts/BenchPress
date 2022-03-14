@@ -196,6 +196,27 @@ class CLDriveExecutions(sqlutil.Database):
       l.logger().error(e)
     return
 
+  def update_and_get(self,
+                     src         : str,
+                     dataset     : str,
+                     global_size : int,
+                     local_size  : int,
+                     num_runs    : int,
+                     timeout     : int = 0,
+                     ) -> "CLDriveSample":
+    """
+    Add or update incoming entry by running CLDrive and pinging the database.
+    """
+    df, label = opencl.CLDriveDataFrame(
+      src,
+      num_runs = num_runs,
+      gsize    = global_size,
+      lsize    = local_size,
+      timeout  = timeout,
+    )
+    self.add_entry(src, dataset, label, global_size, local_size, df)
+    return self.get_entry(src, dataset, global_size, local_size)
+
   def get_valid_data(self) -> typing.List[CLDriveSample]:
     """
     Return all valid entries, labelled either as CPU or GPU.
