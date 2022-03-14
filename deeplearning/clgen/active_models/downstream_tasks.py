@@ -110,7 +110,7 @@ class GrewePredictive(DownstreamTask):
     """
     self.dataset = []
     self.corpus_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
-    data    = [x for x in self.corpus_db.get_valid_data("GitHub")]
+    data    = [x for x in self.corpus_db.get_valid_data(dataset = "GitHub")]
     pool = multiprocessing.Pool()
     it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = "GreweFeatures"), data)
     idx = 0
