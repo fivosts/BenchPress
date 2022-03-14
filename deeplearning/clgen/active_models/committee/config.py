@@ -17,6 +17,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
   p = pathlib.Path(config.training_corpus).resolve()
   if not p.exists():
     raise FileNotFoundError(p)
+  ## Parse all MLPs.
   for nn in config.committee.mlp:
     tl = 0
     pbutil.AssertFieldIsSet(nn, "initial_learning_rate_micros")
@@ -40,6 +41,15 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
         raise AttributeError(l)
       tl += 1
     assert tl > 0, "Model is empty. No layers found."
+    tm += 1
+  ## Parse all KMeans algos.
+  for km in config.committee.k_means:
+    pbutil.AssertFieldIsSet(km, "n_clusters")
+    pbutil.AssertFieldIsSet(km, "init")
+    pbutil.AssertFieldIsSet(km, "n_init")
+    pbutil.AssertFieldIsSet(km, "max_iter")
+    pbutil.AssertFieldIsSet(km, "tol")
+    pbutil.AssertFieldIsSet(km, "algorithm")
     tm += 1
   ## Add another for loop here if more committee model types are added.
   assert tm > 0, "Committee is empty. No models found."
@@ -71,11 +81,15 @@ class ModelConfig(object):
     return self.downstream_task.input_size
 
   def __init__(self,
-               config          : typing.Union[active_learning_pb2.MLP],
+               config          : typing.Union[active_learning_pb2.MLP, active_learning_pb2.KMeans],
                downstream_task : downstream_tasks.DownstreamTask,
                ) -> "ModelConfig":
     if isinstance(config, active_learning_pb2.MLP):
       self.name = "MLP"
+    elif isinstance(config, active_learning_pb2.KMeans):
+      self.name = "KMeans"
+    else:
+      raise TypeError(config)
     self.config           = config
     self.downstream_task  = downstream_task
     self.sha256           = crypto.sha256_str(str(config))
