@@ -104,6 +104,12 @@ class ModelConfig(object):
     self.learning_rate    = None
     self.max_grad_norm    = None
     self.layer_config     = None
+    self.n_clusters       = None
+    self.init             = None
+    self.n_init           = None
+    self.max_iter         = None
+    self.tol              = None
+    self.algorithm        = None
     return
 
 class NNModelConfig(ModelConfig):
