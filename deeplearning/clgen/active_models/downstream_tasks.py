@@ -192,7 +192,6 @@ class GrewePredictive(DownstreamTask):
           num_runs    = 1000,
           timeout     = 60,
         )
-        raise NotImplementedError("Cache this to cldrive cache and get the correct label.")
         new_runtime_feats['label'] = cached.label
         new_samples.append(sample._replace(runtime_features = new_runtime_feats))
         total += 1
