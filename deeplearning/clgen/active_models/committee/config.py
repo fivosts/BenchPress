@@ -54,7 +54,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
     pbutil.AssertFieldIsSet(km, "n_init")
     pbutil.AssertFieldIsSet(km, "max_iter")
     pbutil.AssertFieldIsSet(km, "tol")
-    pbutil.AssertFieldIsSet(
+    pbutil.AssertFieldConstraint(
       km,
       "algorithm",
       lambda x : x in {"auto", "full", "elkan"},
