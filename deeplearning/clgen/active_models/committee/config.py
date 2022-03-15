@@ -205,15 +205,15 @@ class NNModelConfig(ModelConfig):
       elif l.HasField("dropout"):
         self.layer_config.append((
             'Dropout', {
-              'dropout_prob': l.dropout.dropout_prob
+              'dropout_prob': l.dropout.dropout_prob,
             }
           )
         )
       elif l.HasField("layer_norm"):
         self.layer_config.append((
             'LayerNorm', {
-              'normalized_shape': l.layer_norm.normalized_shape
-              'eps': l.layer_norm.eps
+              'normalized_shape': l.layer_norm.normalized_shape,
+              'eps': l.layer_norm.eps,
             }
           )
         )
