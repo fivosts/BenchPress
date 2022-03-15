@@ -422,6 +422,7 @@ class QueryByCommittee(backends.BackendBase):
     # Get dataloader iterator and setup hooks.
     model.eval()
     predictions = {
+      'train_step'      : current_step,
       'static_features' : [],
       'runtime_features': [],
       'input_ids'       : [],
@@ -499,7 +500,6 @@ class QueryByCommittee(backends.BackendBase):
     for nsample in range(len(sample_set)):
       # Get the feature vectors for each sample.
       for model, samples in committee_predictions.items():
-        train_step   = samples['train_step'][nsample]
         static_feats = self.downstream_task.VecToStaticFeatDict(samples['static_features'][nsample])
         run_feats    = self.downstream_task.VecToRuntimeFeatDict(samples['runtime_features'][nsample])
         input_feats  = self.downstream_task.VecToInputFeatDict(samples['input_ids'][nsample])
@@ -508,14 +508,11 @@ class QueryByCommittee(backends.BackendBase):
       ent = self.entropy([x['predictions'][nsample] for x in committee_predictions.values()])
       # Save the dictionary entry.
       space_samples.append({
-        'train_step'         : train_step,
+        'train_step'         : {k: v['train_step'] for k, v in committee_predictions.items()},
         'static_features'    : static_feats,
         'runtime_features'   : run_feats,
         'input_features'     : input_feats,
-        'member_predictions' : {
-          k: self.downstream_task.TargetIDtoLabels(v['predictions'][nsample])
-          for k, v in committee_predictions.items()
-        },
+        'member_predictions' : {k: v['predictions'][nsample] for k, v in committee_predictions.items()},
         'entropy'            : ent,
       })
     # Add everything to database.
