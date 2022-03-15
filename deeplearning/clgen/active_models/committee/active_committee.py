@@ -186,6 +186,7 @@ class QueryByCommittee(backends.BackendBase):
     update_dataloader = kwargs.get('update_dataloader', None)
 
     model           = member.model.to(self.pytorch.offset_device)
+    l.logger().warn("These two datasets are distinct. Maybe blend instead of replacing ?")
     data_generator  = member.data_generator if update_dataloader is None else update_dataloader
     optimizer       = member.optimizer
     scheduler       = member.scheduler
