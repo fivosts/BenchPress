@@ -3,6 +3,7 @@ Data generators for active learning committee.
 """
 import typing
 import pathlib
+import numpy as np
 
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
