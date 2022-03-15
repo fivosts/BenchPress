@@ -17,7 +17,7 @@ class ListTrainDataloader(torch.utils.data.Dataset):
     ## The dataset here should be a list, and each entry
     ## must be a tuple containing the input and the target vector.
     if len(dataset) <= 0:
-      raise ValuError("Predictive model dataset seems empty.")
+      raise ValueError("Predictive model dataset seems empty.")
     self.compute_dataset(dataset)
     return
 
