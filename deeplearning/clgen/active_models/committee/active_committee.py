@@ -289,7 +289,13 @@ class QueryByCommittee(backends.BackendBase):
               l.logger().info("Starting Loss: {}".format(sum([tl.mean().item() for tl in total_loss]) / len(total_loss)))
             current_step += 1
           # End of epoch
-          self.saveCheckpoint(model, member_path, optimizer, scheduler, current_step)
+          self.saveCheckpoint(
+            model,
+            member_path,
+            optimizer = optimizer,
+            scheduler = scheduler,
+            step = current_step
+          )
           if self.pytorch.num_nodes > 1:
             loader.sampler.set_epoch(epoch)
 
@@ -322,7 +328,11 @@ class QueryByCommittee(backends.BackendBase):
       is_sampling = False,
     )
     raise NotImplementedError
-    self.saveCheckpoint
+    self.saveCheckpoint(
+      model,
+      member_path,
+      step = current_step
+    )
     return
 
   def Train(self, **kwargs) -> None:
@@ -494,9 +504,9 @@ class QueryByCommittee(backends.BackendBase):
   def saveCheckpoint(self, 
                      model : 'torch.nn.Module',
                      path  : pathlib.Path,
-                     optimizer,
-                     scheduler,
-                     step : int,
+                     optimizer  = None,
+                     scheduler  = None,
+                     step : int = None,
                      ) -> None:
     """
     Saves model, scheduler, optimizer checkpoints per epoch.
@@ -504,19 +514,24 @@ class QueryByCommittee(backends.BackendBase):
     if self.is_world_process_zero():
       ckpt_comp = lambda x: path / "{}-{}.pt".format(x, step)
 
-      if self.torch_tpu_available:
-        if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
-          self.pytorch.torch_xla_model.save(model, ckpt_comp("model"))
-        self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
-        self.pytorch.torch_xla.save(optimizer.state_dict(), ckpt_comp("optimizer"))
-        self.pytorch.torch_xla.save(scheduler.state_dict(), ckpt_comp("scheduler"))
-      else:
-        if isinstance(model, self.torch.nn.DataParallel):
-          self.torch.save(model.module.state_dict(), ckpt_comp("model"))
+      if isinstance(model, self.torch.nn.Module):
+        if self.torch_tpu_available:
+          if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
+            self.pytorch.torch_xla_model.save(model, ckpt_comp("model"))
+          self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
+          self.pytorch.torch_xla.save(optimizer.state_dict(), ckpt_comp("optimizer"))
+          self.pytorch.torch_xla.save(scheduler.state_dict(), ckpt_comp("scheduler"))
         else:
-          self.torch.save(model.state_dict(), ckpt_comp("model"))
-        self.torch.save(optimizer.state_dict(), ckpt_comp("optimizer"))
-        self.torch.save(scheduler.state_dict(), ckpt_comp("scheduler"))
+          if isinstance(model, self.torch.nn.DataParallel):
+            self.torch.save(model.module.state_dict(), ckpt_comp("model"))
+          else:
+            self.torch.save(model.state_dict(), ckpt_comp("model"))
+          self.torch.save(optimizer.state_dict(), ckpt_comp("optimizer"))
+          self.torch.save(scheduler.state_dict(), ckpt_comp("scheduler"))
+      else:
+        checkpoint_dict = model.get_checkpoint_state()
+        with open(ckpt_comp("model"), 'wb') as outf:
+          pickle.dump(checkpoint_dict, outf)
 
       with open(path / "checkpoint.meta", 'a') as mf:
         mf.write("train_step: {}\n".format(step))
@@ -569,7 +584,8 @@ class QueryByCommittee(backends.BackendBase):
             name = 'module.' + k # Add 'module.'
           new_state_dict[name] = v
         model.module.load_state_dict(new_state_dict)
-    else:
+      model.eval()
+    elif isinstance(model, self.torch.nn.Module):
       try:
         model.load_state_dict(
           self.torch.load(ckpt_comp("model"), map_location=self.pytorch.device)
@@ -592,7 +608,10 @@ class QueryByCommittee(backends.BackendBase):
             name = 'module.' + k # Add 'module.'
           new_state_dict[name] = v
         model.load_state_dict(new_state_dict)
-    model.eval()
+      model.eval()
+    else:
+      checkpoint_dict = pickle.load(open(ckpt_comp("model"), 'rb'))
+      model.load_checkpoint_state(checkpoint_dict)
     return ckpt_step
 
   def is_world_process_zero(self) -> bool:
