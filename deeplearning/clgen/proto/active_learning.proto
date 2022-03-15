@@ -72,7 +72,7 @@ message Embedding {
 
 // Linear specs.
 message Linear {
-  optional int32 in_features = 1;
+  optional int32 in_features  = 1;
   optional int32 out_features = 2;
 }
 
