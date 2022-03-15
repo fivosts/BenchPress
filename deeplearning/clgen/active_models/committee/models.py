@@ -125,7 +125,7 @@ class KMeans(CommitteeModels):
   """
   Wrapper class to manage, fit and predict KMeans clusters.
   """
-  def __init__(self, id: int, config: ModelConfig):
+  def __init__(self, id: int, config: config.ModelConfig):
     super(KMeans, self).__init__(id)
     self.config     = config
     self.target_ids = self.config.downstream_task.output_ids
@@ -188,7 +188,7 @@ class KNN(CommitteeModels):
   """
   Wrapper class to manage, fit and predict KNN algorithm.
   """
-  def __init__(self, id: int, config: ModelConfig):
+  def __init__(self, id: int, config: config.ModelConfig):
     super(KNN, self).__init__(id)
     self.config     = config
     self.knn = sklearn.neighbors.KNeighborsRegressor(
