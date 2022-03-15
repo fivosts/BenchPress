@@ -4,6 +4,7 @@ Here all the committee members are defined.
 import math
 import typing
 import numpy as np
+import sklearn
 
 from deeplearning.clgen.active_models.committee import config
 from deeplearning.clgen.models.torch_bert import activations
