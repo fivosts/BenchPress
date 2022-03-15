@@ -138,7 +138,7 @@ class CommitteeSamples(sqlutil.Database):
         s.commit()
     return
 
-  def add_samples(self, train_step: typing.Dict[str, int], samples: typing.Dict[str, typing.Any]) -> None:
+  def add_samples(self, samples: typing.Dict[str, typing.Any]) -> None:
     """
     If not exists, add sample to Samples table.
     """
@@ -148,12 +148,12 @@ class CommitteeSamples(sqlutil.Database):
       for sample in samples:
         sample_entry = CommitteeSample.FromArgs(
           id                 = s.sample_count + offset_idx,
-          train_step         = train_step,
-          static_features    = ['static_features'],
-          runtime_features   = ['runtime_features'],
-          input_features     = ['input_features'],
-          member_predictions = ['member_predictions'],
-          entropy            = ['entropy'],
+          train_step         = sample['train_step'],
+          static_features    = sample['static_features'],
+          runtime_features   = sample['runtime_features'],
+          input_features     = sample['input_features'],
+          member_predictions = sample['member_predictions'],
+          entropy            = sample['entropy'],
         )
         exists = s.query(CommitteeSample).filter_by(sha256 = sample_entry.sha256).first()
         if not exists and sample.sha256 not in hash_cache:
