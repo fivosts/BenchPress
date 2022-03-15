@@ -60,7 +60,7 @@ class CommitteeSample(Base, sqlutil.ProtoBackedMixin):
   # unique hash of sample text
   sha256                 : str = sql.Column(sql.String(64), nullable = False, index = True)
   # model's train step that generated the sample
-  train_step             : int = sql.Column(sql.Integer,    nullable = False)
+  train_step             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Original input where the feed came from
   static_features        : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Starting feed of model
@@ -77,19 +77,20 @@ class CommitteeSample(Base, sqlutil.ProtoBackedMixin):
   @classmethod
   def FromArgs(cls,
                id                 : int,
-               train_step         : int,
+               train_step         : typing.Dict[str, int],
                static_features    : typing.Dict[str, float],
                runtime_features   : typing.Dict[str, float],
                input_features     : typing.Dict[str, float],
                member_predictions : typing.Dict[str, str],
                entropy            : float,
                ) -> 'CommitteeSample':
+    str_train_step         = '\n'.join(["{}:{}".format(k, v) for k, v in train_step.items()])
     str_static_features    = '\n'.join(["{}:{}".format(k, v) for k, v in static_features.items()])
     str_runtime_features   = '\n'.join(["{}:{}".format(k, v) for k, v in runtime_features.items()])
     str_input_features     = '\n'.join(["{}:{}".format(k, v) for k, v in input_features.items()])
     str_member_predictions = '\n'.join(["{}:{}".format(k, v) for k, v in member_predictions.items()])
     sha256 = crypto.sha256_str(
-      str(train_step)
+      str_train_step
       + str_static_features
       + str_runtime_features
       + str_input_features
@@ -98,7 +99,7 @@ class CommitteeSample(Base, sqlutil.ProtoBackedMixin):
     return CommitteeSample(
       id                 = id,
       sha256             = sha256,
-      train_step         = train_step,
+      train_step         = str_train_step,
       static_features    = str_static_features,
       runtime_features   = str_runtime_features,
       input_features     = str_input_features,
@@ -137,7 +138,7 @@ class CommitteeSamples(sqlutil.Database):
         s.commit()
     return
 
-  def add_samples(self, train_step: int, samples: typing.Dict[str, typing.Any]) -> None:
+  def add_samples(self, train_step: typing.Dict[str, int], samples: typing.Dict[str, typing.Any]) -> None:
     """
     If not exists, add sample to Samples table.
     """
