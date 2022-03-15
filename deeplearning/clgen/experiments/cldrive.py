@@ -135,21 +135,24 @@ class CLDriveExecutions(sqlutil.Database):
                 transferred_bytes = int(df.transferred_bytes[idx])
               except ValueError:
                 idx += 1
-            session.add(
-              CLDriveSample.FromArgs(
-                id          = self.count,
-                global_size = global_size,
-                local_size  = local_size,
-                source      = src,
-                dataset     = dataset,
-                cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
-                cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
-                gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
-                gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
-                transferred_bytes    = transferred_bytes,
-                status               = status,
+            try:
+              session.add(
+                CLDriveSample.FromArgs(
+                  id          = self.count,
+                  global_size = global_size,
+                  local_size  = local_size,
+                  source      = src,
+                  dataset     = dataset,
+                  cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
+                  cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
+                  gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
+                  gpu_kernel_time_ns   = list(df[df['device'].str.contains("GPU")].kernel_time_ns),
+                  transferred_bytes    = transferred_bytes,
+                  status               = status,
+                )
               )
-            )
+            except ValueError:
+              pass
           else:
             session.add(
               CLDriveSample.FromArgs(
