@@ -123,7 +123,7 @@ sampler {
           }
           random_seed: 12345
           downstream_task: "GrewePredictive"
-          training_corpus: "/home/fivosts/cldrive_cache.db"
+          training_corpus: "/var/foivos/results/full_results/cldrive_cache.db"
         }
         active_limit_per_feed: 500
         active_search_depth: 100
