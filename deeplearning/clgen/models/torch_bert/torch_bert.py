@@ -1017,7 +1017,9 @@ class torchBert(backends.BackendBase):
         from collections import OrderedDict
         new_state_dict = OrderedDict()
         for k, v in self.torch.load(ckpt_comp("model")).items():
-          if k not in {"bert.embeddings.token_type_embeddings.weight", "cls.seq_relationship.weight", "cls.seq_relationship.bias"}:
+          if k not in {"bert.embeddings.token_type_embeddings.weight", "cls.seq_relationship.weight", "cls.seq_relationship.bias",
+                        "module.bert.embeddings.token_type_embeddings.weight", "module.cls.seq_relationship.weight", "module.cls.seq_relationship.bias"
+                      }:
             if k[:7] == 'module.':
               name = k[7:] # remove `module.`
             else:
