@@ -338,6 +338,7 @@ class QueryByCommittee(backends.BackendBase):
 
     current_step = self.loadCheckpoint(model, member_path)
     if current_step < 0 or update_dataloader:
+      current_step = max(0, current_step)
       outputs = model(
         input_ids   = train_dataset['input_ids'],
         target_ids  = train_dataset['target_ids'],
