@@ -12,11 +12,14 @@ class ListTrainDataloader(torch.utils.data.Dataset):
   """
   Modular dataloading class for downstream tasks.
   """
-  def __init__(self, dataset: typing.List[typing.Tuple[typing.List, typing.List]]):
+  def __init__(self, 
+               dataset : typing.List[typing.Tuple[typing.List, typing.List]],
+               lazy    : bool = False,
+               ):
     super(ListTrainDataloader, self).__init__()
     ## The dataset here should be a list, and each entry
     ## must be a tuple containing the input and the target vector.
-    if len(dataset) <= 0:
+    if len(dataset) <= 0 and not lazy:
       raise ValueError("Predictive model dataset seems empty.")
     self.compute_dataset(dataset)
     return
@@ -68,9 +71,12 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
   """
   Dataloading class that takes datapoint dictionary.
   """
-  def __init__(self, dataset: typing.List[typing.Dict[str, typing.List]]):
+  def __init__(self, 
+               dataset: typing.List[typing.Dict[str, typing.List]],
+               lazy    : bool = False,
+               ):
     super(DictPredictionDataloader, self).__init__()
-    if len(dataset) <= 0:
+    if len(dataset) <= 0 and not lazy:
       raise ValuError("Sample dataset is empty.")
     self.compute_dataset(dataset)
     return
