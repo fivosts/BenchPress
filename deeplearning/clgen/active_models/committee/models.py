@@ -190,7 +190,6 @@ class KNN(CommitteeModels):
   def __init__(self, id: int, config: ModelConfig):
     super(KNN, self).__init__(id)
     self.config     = config
-    self.target_ids = self.config.downstream_task.output_ids
     self.knn = sklearn.neighbors.KNeighborsRegressor(
       n_neighbors = self.config.n_neighbors,
       weights     = self.config.weights,
@@ -199,9 +198,8 @@ class KNN(CommitteeModels):
       p           = self.config.p,
       n_jobs      = -1,
     )
-    ## The following two variables are the model's attributes.
+    ## The model's attributes
     self.classifier  = None
-    self.cluster_map = {}
     return
 
   def __call__(self,
@@ -222,15 +220,11 @@ class KNN(CommitteeModels):
     """
     Return the blob that is to be checkpointed.
     """
-    return {
-      'knn'      : self.classifier,
-      'cluster_map' : self.cluster_map,
-    }
+    return {'knn' : self.classifier,}
 
   def load_checkpoint_state(self, checkpoint_state: typing.Dict[typing.Any]) -> None:
     """
     Load the checkpoints to the class states.
     """
-    self.classifier  = checkpoint_state['knn']
-    self.cluster_map = checkpoint_state['cluster_map']
+    self.classifier = checkpoint_state['knn']
     return
