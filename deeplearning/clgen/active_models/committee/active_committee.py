@@ -146,7 +146,7 @@ class QueryByCommittee(backends.BackendBase):
             sha256         = cconfig.sha256,
             config         = cconfig,
             train_fn       = self.TrainNNMember if isinstance(cm, self.torch.nn.Module) else self.TrainUnsupervisedMember,
-            train_fn       = self.SampleNNMember if isinstance(cm, self.torch.nn.Module) else self.SampleUnsupervisedMember,
+            sample_fn      = self.SampleNNMember if isinstance(cm, self.torch.nn.Module) else self.SampleUnsupervisedMember,
           )
         )
         (self.ckpt_path / cconfig.sha256).mkdir(exist_ok = True, parents = True),
