@@ -211,7 +211,7 @@ class NNModelConfig(ModelConfig):
       elif l.HasField("layer_norm"):
         self.layer_config.append((
             'LayerNorm', {
-              'layer_norm_eps': l.dropout.layer_norm_eps
+              'layer_norm_eps': l.layer_norm.layer_norm_eps
             }
           )
         )
