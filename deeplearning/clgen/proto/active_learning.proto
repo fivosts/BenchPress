@@ -49,7 +49,8 @@ message KNN {
   optional int32  n_neighbors = 1;
   optional string weights     = 2;
   optional string algorithm   = 3;
-  optional int32  leaf_size   = 4;  
+  optional int32  leaf_size   = 4;
+  optional float  p           = 5;
 }
 
 // Layer wrapper to help with layer's ordering consistency.
