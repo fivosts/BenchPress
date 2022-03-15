@@ -373,9 +373,9 @@ class QueryByCommittee(backends.BackendBase):
     return
 
   def SampleNNMember(self,
-                   member     : 'QueryByCommittee.CommitteeEstimator',
-                   sample_set : 'torch.utils.data.Dataset',
-                   ) -> typing.Dict[str, typing.List]:
+                     member     : 'QueryByCommittee.CommitteeEstimator',
+                     sample_set : 'torch.utils.data.Dataset',
+                     ) -> typing.Dict[str, typing.List]:
     """
     Sample member of committee. Return predicted label.
     """
@@ -436,7 +436,10 @@ class QueryByCommittee(backends.BackendBase):
       predictions['predictions'] += [self.downstream_task.TargetIDtoLabels(i) for i in out['output_label'].cpu().numpy()]
     return predictions
 
-  def SampleUnsupervisedMember(self, **kwargs) -> typing.Dict[str, typing.List]:
+  def SampleUnsupervisedMember(self,
+                               member     : 'QueryByCommittee.CommitteeEstimator',
+                               sample_set : 'torch.utils.data.Dataset',
+                               ) -> typing.Dict[str, typing.List]:
     """
     Sample non-NeuralNetwork based architectures, such as DecisionTrees or KMeans.
     """
