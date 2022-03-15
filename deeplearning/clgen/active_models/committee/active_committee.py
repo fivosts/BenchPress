@@ -57,6 +57,8 @@ class QueryByCommittee(backends.BackendBase):
     training_opts  : 'TrainingOpts'
     sha256         : str
     config         : config.ModelConfig
+    train_fn       : typing.Callable
+    sample_fn      : typing.Callable
 
   def __repr__(self):
     return "QueryByCommittee"
@@ -143,6 +145,8 @@ class QueryByCommittee(backends.BackendBase):
             training_opts  = training_opts,
             sha256         = cconfig.sha256,
             config         = cconfig,
+            train_fn       = self.TrainNNMember if isinstance(cm, self.torch.nn.Module) else self.TrainUnsupervisedMember,
+            train_fn       = self.SampleNNMember if isinstance(cm, self.torch.nn.Module) else self.SampleUnsupervisedMember,
           )
         )
         (self.ckpt_path / cconfig.sha256).mkdir(exist_ok = True, parents = True),
