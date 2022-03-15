@@ -18,8 +18,9 @@ message ActiveLearner {
 
 // Committee is a list of models.
 message Committee {
-  repeated MLP mlp        = 1;
+  repeated MLP    mlp     = 1;
   repeated KMeans k_means = 2;
+  repeated KNN    knn     = 3;
   // repeated <ModelType> model_type = x;
 }
 
@@ -41,6 +42,14 @@ message KMeans {
   optional int32  max_iter   = 4;
   optional float  tol        = 5;
   optional string algorithm  = 6;
+}
+
+// kNN architeture.
+message KNN {
+  optional int32  n_neighbors = 1;
+  optional string weights     = 2;
+  optional string algorithm   = 3;
+  optional int32  leaf_size   = 4;  
 }
 
 // Layer wrapper to help with layer's ordering consistency.
