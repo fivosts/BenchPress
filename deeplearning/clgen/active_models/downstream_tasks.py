@@ -5,6 +5,7 @@ downstream tasks that the committee can be trained on.
 The input and output features per downstream task are defined.
 """
 import pathlib
+import math
 import functools
 import typing
 import tqdm
@@ -156,7 +157,7 @@ class GrewePredictive(DownstreamTask):
       exp_tr_bytes = sample.runtime_features['transferred_bytes']
       local_size   = sample.runtime_features['local_size']
       found        = False
-      gsize        = 1
+      gsize        = max(1, math.log2(local_size))
       prev         = math.inf
       while not found and gsize <= 20:
         sha256 = crypto.sha256_str(sample.text + "BenchPress" + str(2**gsize) + str(local_size))
