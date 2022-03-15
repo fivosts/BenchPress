@@ -334,6 +334,7 @@ class QueryByCommittee(backends.BackendBase):
     member_path     = self.ckpt_path / member.sha256
     member_log_path = self.logfile_path / member.sha256
 
+    current_step = self.loadCheckpoint(model, member_path)
     outputs = model(
       input_ids   = train_dataset['input_ids'],
       target_ids  = train_dataset['target_ids'],
@@ -342,7 +343,7 @@ class QueryByCommittee(backends.BackendBase):
     self.saveCheckpoint(
       model,
       member_path,
-      step = current_step
+      step = current_step + 1,
     )
     return
 
