@@ -443,8 +443,6 @@ class QueryByCommittee(backends.BackendBase):
     """
     Sample non-NeuralNetwork based architectures, such as DecisionTrees or KMeans.
     """
-    update_dataloader = kwargs.get('update_dataloader', None)
-
     model          = member.model
     sample_dataset = sample_set.get_batched_dataset()
 
