@@ -45,10 +45,10 @@ class CommitteeModels(object):
   def forward(self, *args, **kwargs) -> typing.Dict[str, torch.Tensor]:
     raise NotImplementedError("Abstract class.")
 
-  def get_checkpoint_state(self) -> typing.Dict[typing.Any]:
+  def get_checkpoint_state(self, *args, **kwargs) -> typing.Dict[typing.Any]:
     raise NotImplementedError("Only for non-NN modules")
 
-  def load_checkpoint_state(self) -> typing.Dict[typing.Any]:
+  def load_checkpoint_state(self, *args, **kwargs) -> typing.Dict[typing.Any]:
     raise NotImplementedError("Only for non-NN modules")
 
 class MLP(CommitteeModels, torch.nn.Module):
