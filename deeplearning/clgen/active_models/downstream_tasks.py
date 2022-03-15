@@ -227,7 +227,14 @@ class GrewePredictive(DownstreamTask):
     ]
     if len(updated_dataset) == 0:
       l.logger().warn("Update dataset is empty.")
-    return new_samples, data_generator.ListTrainDataloader(updated_dataset, lazy = True)
+    return updated_dataset, data_generator.ListTrainDataloader(updated_dataset, lazy = True)
+
+  def UpdateTrainDataset(self, updated_dataloader: data_generator.ListTrainDataloader) -> None:
+    """
+    After active learner has been updated, store updated samples to original train dataset.
+    """
+    self.data_generator = self.data_generator + updated_dataloader
+    return
 
   def sample_space(self, num_samples: int = 512) -> data_generator.DictPredictionDataloader:
     """
