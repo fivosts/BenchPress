@@ -33,6 +33,7 @@ class CommitteeModels(object):
     return {
       'MLP'    : MLP,
       'KMeans' : KMeans,
+      'KNN'    : KNN,
     }[config.name](id, config)
 
   def __init__(self, id: int):
@@ -179,5 +180,51 @@ class KMeans(CommitteeModels):
     Load the checkpoints to the class states.
     """
     self.classifier  = checkpoint_state['kmeans']
+    self.cluster_map = checkpoint_state['cluster_map']
+    return
+
+class KNN(CommitteeModels):
+  """
+  Wrapper class to manage, fit and predict KNN algorithm.
+  """
+  def __init__(self, id: int, config: ModelConfig):
+    super(KNN, self).__init__(id)
+    self.config     = config
+    self.target_ids = self.config.downstream_task.output_ids
+    self.knn = sklearn.neighbors.KNeighborsRegressor(
+      n_neighbors = self.config.n_neighbors,
+      weights     = self.config.weights,
+      algorithm   = self.config.algorithm,
+      leaf_size   = self.config.leaf_size,
+      p           = self.config.p,
+      n_jobs      = -1,
+    )
+    ## The following two variables are the model's attributes.
+    self.classifier  = None
+    self.cluster_map = {}
+    return
+
+  def __call__(self,
+               input_ids   : np.array,
+               target_ids  : np.array = None,
+               is_sampling : bool = False,
+               ) -> typing.Dict[str, np.array]:
+    raise NotImplementedError
+    return
+
+  def get_checkpoint_state(self) -> typing.Dict[typing.Any]:
+    """
+    Return the blob that is to be checkpointed.
+    """
+    return {
+      'knn'      : self.classifier,
+      'cluster_map' : self.cluster_map,
+    }
+
+  def load_checkpoint_state(self, checkpoint_state: typing.Dict[typing.Any]) -> None:
+    """
+    Load the checkpoints to the class states.
+    """
+    self.classifier  = checkpoint_state['knn']
     self.cluster_map = checkpoint_state['cluster_map']
     return
