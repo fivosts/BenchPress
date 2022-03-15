@@ -756,10 +756,8 @@ class BertForPreTraining(BertPreTrainedModel):
     self.bert = BertModel(config)
     if self.config.feature_encoder:
       self.cls        = BertMLMFeatureHead(config)
-      self.get_output = self.get_lm_feature_output
     else:
       self.cls = BertOnlyMLMHead(config)
-      self.get_output = self.get_lm_output
 
     if self.config.reward_compilation >= 0 or self.config.is_sampling:
       self.compile_sampler = compiler.CompilationSampler(
