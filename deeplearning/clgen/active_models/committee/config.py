@@ -77,6 +77,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
       "KNN algorithm can only be 'auto', 'ball_tree', 'kd_tree' or 'brute'."
     )
     pbutil.AssertFieldIsSet(k, "leaf_size")
+    pbutil.AssertFieldIsSet(k, "p")
   ## Add another for loop here if more committee model types are added.
   assert tm > 0, "Committee is empty. No models found."
   return
@@ -142,6 +143,7 @@ class ModelConfig(object):
     self.weights          = None
     self.algorithm        = None
     self.leaf_size        = None
+    self.p                = None
     return
 
 class NNModelConfig(ModelConfig):
@@ -254,4 +256,5 @@ class KNNModelConfig(ModelConfig):
     self.weights     = self.config.weights
     self.algorithm   = self.config.algorithm
     self.leaf_size   = self.config.leaf_size
+    self.p           = self.config.p
     return
