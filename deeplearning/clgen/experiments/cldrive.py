@@ -231,7 +231,7 @@ class CLDriveExecutions(sqlutil.Database):
         return session.query(
           CLDriveSample
         ).filter(
-          sqlalchemy.or_(
+          sql.or_(
             CLDriveSample.dataset == dataset,
             CLDriveSample.status.in_({"CPU", "GPU"})
           )
