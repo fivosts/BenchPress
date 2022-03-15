@@ -216,7 +216,7 @@ class KNN(CommitteeModels):
     else:
       labels = self.classifier.predict(input_ids)
       return {
-        'predicted_labels' : [int(round(x + sys.float_info.epsilon)) for x in labels]
+        'predicted_labels' : [int(round(float(x) + sys.float_info.epsilon)) for x in labels]
       }
 
   def get_checkpoint_state(self) -> typing.Dict[str, typing.Any]:
