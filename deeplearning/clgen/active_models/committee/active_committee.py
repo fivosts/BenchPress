@@ -327,9 +327,9 @@ class QueryByCommittee(backends.BackendBase):
     """
     update_dataloader = kwargs.get('update_dataloader', None)
 
-    model           = member.model
-    data_generator  = member.data_generator if update_dataloader is None else update_dataloader
-    train_dataset   = data_generator.get_batched_dataset()
+    model          = member.model
+    data_generator = member.data_generator + update_dataloader
+    train_dataset  = data_generator.get_batched_dataset()
 
     member_path     = self.ckpt_path / member.sha256
     member_log_path = self.logfile_path / member.sha256
@@ -440,9 +440,9 @@ class QueryByCommittee(backends.BackendBase):
     """
     update_dataloader = kwargs.get('update_dataloader', None)
 
-    model           = member.model
-    data_generator  = member.data_generator if update_dataloader is None else update_dataloader
-    sample_dataset   = data_generator.get_batched_dataset()
+    model          = member.model
+    data_generator = member.data_generator + update_dataloader
+    sample_dataset = data_generator.get_batched_dataset()
 
     member_path     = self.ckpt_path / member.sha256
     member_log_path = self.logfile_path / member.sha256
