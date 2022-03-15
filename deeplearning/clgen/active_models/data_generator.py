@@ -57,6 +57,13 @@ class ListTrainDataloader(torch.utils.data.Dataset):
 
     return self.dataset[idx]
 
+  def __add__(self, dl: 'ListTrainDataloader') -> 'ListTrainDataloader':
+    ret = ListTrainDataloader([])
+    ret.dataset = self.dataset
+    if dl:
+      ret.dataset += dl.dataset
+    return ret
+
 class DictPredictionDataloader(torch.utils.data.Dataset):
   """
   Dataloading class that takes datapoint dictionary.
@@ -106,3 +113,10 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
       idx = len(self) + idx
 
     return self.dataset[idx]
+
+  def __add__(self, dl: 'DictPredictionDataloader') -> 'DictPredictionDataloader':
+    ret = DictPredictionDataloader([])
+    ret.dataset = self.dataset
+    if dl:
+      ret.dataset += dl.dataset
+    return ret
