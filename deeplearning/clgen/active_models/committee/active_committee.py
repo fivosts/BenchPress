@@ -458,6 +458,7 @@ class QueryByCommittee(backends.BackendBase):
       is_sampling = True,
     )
     predictions = {
+      'train_step'      : current_step,
       'static_features' : sample_dataset['static_features'],
       'runtime_features': sample_dataset['runtime_features'],
       'input_ids'       : sample_dataset['input_ids'],
@@ -497,6 +498,7 @@ class QueryByCommittee(backends.BackendBase):
     for nsample in range(len(sample_set)):
       # Get the feature vectors for each sample.
       for model, samples in committee_predictions.items():
+        train_step   = samples['train_step'][nsample]
         static_feats = self.downstream_task.VecToStaticFeatDict(samples['static_features'][nsample])
         run_feats    = self.downstream_task.VecToRuntimeFeatDict(samples['runtime_features'][nsample])
         input_feats  = self.downstream_task.VecToInputFeatDict(samples['input_ids'][nsample])
@@ -505,6 +507,7 @@ class QueryByCommittee(backends.BackendBase):
       ent = self.entropy([x['predictions'][nsample] for x in committee_predictions.values()])
       # Save the dictionary entry.
       space_samples.append({
+        'train_step'         : train_step,
         'static_features'    : static_feats,
         'runtime_features'   : run_feats,
         'input_features'     : input_feats,
@@ -515,7 +518,7 @@ class QueryByCommittee(backends.BackendBase):
         'entropy'            : ent,
       })
     # Add everything to database.
-    self.committee_samples.add_samples(??, space_samples)
+    self.committee_samples.add_samples(space_samples)
     return sorted(space_samples, key = lambda x: x['entropy'], reverse = True)
 
   def entropy(self, labels, base=None):
