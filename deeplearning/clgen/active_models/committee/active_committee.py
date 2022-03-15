@@ -358,7 +358,7 @@ class QueryByCommittee(backends.BackendBase):
     self._ConfigModelParams(self.downstream_task.data_generator)
     if not self.is_trained:
       for member in self.committee:
-        self.TrainNNMember(member, update_dataloader = update_dataloader)
+        member.train_fn(member, update_dataloader = update_dataloader)
     self.is_trained = True
     return
 
@@ -479,7 +479,7 @@ class QueryByCommittee(backends.BackendBase):
     committee_predictions = {}
     for member in self.committee:
       key = "{}_{}".format(member.config.name, member.model.id)
-      committee_predictions[key] = self.SampleNNMember(member, sample_set)
+      committee_predictions[key] = member.sample_fn(member, sample_set)
     return committee_predictions
 
   def Sample(self) -> typing.List[typing.Dict[str, float]]:
