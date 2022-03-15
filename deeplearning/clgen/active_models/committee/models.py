@@ -43,6 +43,12 @@ class CommitteeModels(object):
   def forward(self, *args, **kwargs) -> typing.Dict[str, torch.Tensor]:
     raise NotImplementedError("Abstract class.")
 
+  def get_checkpoint_state(self) -> typing.Dict[typing.Any]:
+    raise NotImplementedError("Only for non-NN modules")
+
+  def load_checkpoint_state(self) -> typing.Dict[typing.Any]:
+    raise NotImplementedError("Only for non-NN modules")
+
 class MLP(CommitteeModels, torch.nn.Module):
   """
   A modular MLP model that supports Linear, Dropout, LayerNorm and activations.
@@ -158,3 +164,20 @@ class KMeans(CommitteeModels):
         'cluster_labels'   : cluster_labels,
         'predicted_labels' : target_labels,
       }
+
+  def get_checkpoint_state(self) -> typing.Dict[typing.Any]:
+    """
+    Return the blob that is to be checkpointed.
+    """
+    return {
+      'kmeans'      : self.classifier,
+      'cluster_map' : self.cluster_map,
+    }
+
+  def load_checkpoint_state(self, checkpoint_state: typing.Dict[typing.Any]) -> None:
+    """
+    Load the checkpoints to the class states.
+    """
+    self.classifier  = checkpoint_state['kmeans']
+    self.cluster_map = checkpoint_state['cluster_map']
+    return
