@@ -404,14 +404,15 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             d.tsne_monitor.register((b.features, d.feat_sampler.target, b.name))
           d.tsne_monitor.plot()
       # Store unique specs to database once.
-      d.addToDB(
-        active_feed_database.ActiveSamplingSpecs.FromArgs(
-          act_l_pf   = corpus_config.active.active_limit_per_feed,
-          act_s_dep  = corpus_config.active.active_search_depth,
-          act_s_wid  = corpus_config.active.active_search_width,
-          feat_space = corpus_config.active.feature_space
+      if environment.WORLD_RANK == 0:
+        d.addToDB(
+          active_feed_database.ActiveSamplingSpecs.FromArgs(
+            act_l_pf   = corpus_config.active.active_limit_per_feed,
+            act_s_dep  = corpus_config.active.active_search_depth,
+            act_s_wid  = corpus_config.active.active_search_width,
+            feat_space = corpus_config.active.feature_space
+          )
         )
-      )
       d.raised_keyboard_int = False
       d.raised_exception    = None
       d.skip_first_queue    = FLAGS.skip_first_queue
