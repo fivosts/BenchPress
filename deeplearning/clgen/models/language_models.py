@@ -450,12 +450,12 @@ class Model(object):
     try:
       org_inputs, input_ids, samples, indices = self.backend.SampleNextIndices(sampler)
     except StopIteration:
-      return False, seq_count
+      return False, seq_count, (compiled, total)
 
     if not samples:
       # Return empty means model has not produced something that can be stored.
       # This 'if' accommodates active sampling, which is very selective.
-      return True, seq_count, (0, 0)
+      return True, seq_count, (compiled, total)
 
     continue_sampling = True
 
