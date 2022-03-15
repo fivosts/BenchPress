@@ -34,7 +34,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
       elif l.HasField("dropout"):
         pbutil.AssertFieldIsSet(l.dropout, "dropout_prob")
       elif l.HasField("layer_norm"):
-        pbutil.AssertFieldIsSet(l.layer_norm, "layer_norm_eps")
+        pbutil.AssertFieldIsSet(l.layer_norm, "eps")
       elif l.HasField("act_fn"):
         pbutil.AssertFieldIsSet(l.act_fn, "fn")
       else:
@@ -211,7 +211,7 @@ class NNModelConfig(ModelConfig):
       elif l.HasField("layer_norm"):
         self.layer_config.append((
             'LayerNorm', {
-              'layer_norm_eps': l.layer_norm.layer_norm_eps
+              'eps': l.layer_norm.eps
             }
           )
         )
