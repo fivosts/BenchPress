@@ -228,9 +228,20 @@ class CLDriveExecutions(sqlutil.Database):
     """
     with self.Session() as session:
       if dataset:
-        return session.query(CLDriveSample).filter(CLDriveSample.dataset == dataset and (CLDriveSample.status == "CPU" or CLDriveSample.status == "GPU")).yield_per(1000)
+        return session.query(
+          CLDriveSample
+        ).filter(
+          sqlalchemy.or_(
+            CLDriveSample.dataset == dataset,
+            CLDriveSample.status.in_({"CPU", "GPU"})
+          )
+        ).yield_per(1000)
       else:
-        return session.query(CLDriveSample).filter(CLDriveSample.status == "CPU" or CLDriveSample.status == "GPU").yield_per(1000)
+        return session.query(
+          CLDriveSample
+        ).filter(
+          CLDriveSample.status.in_({"CPU", "GPU"})
+        ).yield_per(1000)
 
   def get_execution_times_ms(self, src: str, dataset: str, global_size: int, local_size: int) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
     """
