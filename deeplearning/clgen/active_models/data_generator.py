@@ -61,7 +61,7 @@ class ListTrainDataloader(torch.utils.data.Dataset):
     return self.dataset[idx]
 
   def __add__(self, dl: 'ListTrainDataloader') -> 'ListTrainDataloader':
-    ret = ListTrainDataloader([])
+    ret = ListTrainDataloader([], lazy = True)
     ret.dataset = self.dataset
     if dl:
       ret.dataset += dl.dataset
@@ -121,7 +121,7 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
     return self.dataset[idx]
 
   def __add__(self, dl: 'DictPredictionDataloader') -> 'DictPredictionDataloader':
-    ret = DictPredictionDataloader([])
+    ret = DictPredictionDataloader([], lazy = True)
     ret.dataset = self.dataset
     if dl:
       ret.dataset += dl.dataset
