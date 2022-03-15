@@ -155,11 +155,9 @@ class KMeans(CommitteeModels):
       self.classifier  = self.kmeans.fit(input_ids)
 
       for cluster_id, target_id in zip(self.classifier.labels_, target_ids):
-        print(cluster_id, target_id)
-        input()
         if cluster_id not in self.cluster_map:
           self.cluster_map[cluster_id] = [0] * self.config.num_labels
-        self.cluster_map[cluster_id][target_id] += 1
+        self.cluster_map[cluster_id][int(target_id)] += 1
       return {
         'cluster_map'    : self.cluster_map,
         'cluster_labels' : self.classifier.labels_,
