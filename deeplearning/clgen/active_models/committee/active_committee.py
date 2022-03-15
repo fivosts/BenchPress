@@ -212,7 +212,7 @@ class QueryByCommittee(backends.BackendBase):
     if self.pytorch.num_gpus > 0:
       self.torch.cuda.empty_cache()
     if current_step >= 0:
-      l.logger().info("Loaded checkpoint step {}".format(current_step))
+      l.logger().info("Loaded {} checkpoint step {}".format("{}-{}".format(member.config.name, member.model.id), current_step))
     current_step = max(0, current_step)
 
     if current_step < member.training_opts.num_train_steps:
@@ -405,7 +405,7 @@ class QueryByCommittee(backends.BackendBase):
     if self.pytorch.num_gpus > 0:
       self.torch.cuda.empty_cache()
     if current_step >= 0:
-      l.logger().info("Loaded checkpoint step {}".format(current_step))
+      l.logger().info("Loaded {} checkpoint step {}".format("{}-{}".format(member.config.name, member.model.id), current_step))
     current_step = max(0, current_step)
 
     loader = self.torch.utils.data.dataloader.DataLoader(
@@ -460,7 +460,7 @@ class QueryByCommittee(backends.BackendBase):
 
     current_step = self.loadCheckpoint(model, member_path)
     if current_step >= 0:
-      l.logger().info("Loaded checkpoint step {}".format(current_step))
+      l.logger().info("Loaded {} checkpoint step {}".format("{}-{}".format(member.config.name, member.model.id), current_step))
     current_step = max(0, current_step)
 
     outputs = model(
