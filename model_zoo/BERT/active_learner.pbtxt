@@ -95,6 +95,7 @@ sampler {
               }
               layer {
                 layer_norm{
+                  normalized_shape: 256
                   eps: 1e-5
                 }
               }
