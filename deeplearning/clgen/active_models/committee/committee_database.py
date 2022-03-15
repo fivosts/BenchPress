@@ -170,9 +170,9 @@ class CommitteeSamples(sqlutil.Database):
           entropy            = sample['entropy'],
         )
         exists = s.query(CommitteeSample).filter_by(sha256 = sample_entry.sha256).first()
-        if not exists and sample.sha256 not in hash_cache:
+        if not exists and sample_entry.sha256 not in hash_cache:
           s.add(sample_entry)
-          hash_cache.add(sample.sha256)
+          hash_cache.add(sample_entry.sha256)
           offset_idx += 1
       s.commit()
     return
