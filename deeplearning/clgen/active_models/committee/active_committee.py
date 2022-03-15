@@ -336,16 +336,17 @@ class QueryByCommittee(backends.BackendBase):
     member_log_path = self.logfile_path / member.sha256
 
     current_step = self.loadCheckpoint(model, member_path)
-    outputs = model(
-      input_ids   = train_dataset['input_ids'],
-      target_ids  = train_dataset['target_ids'],
-      is_sampling = False,
-    )
-    self.saveCheckpoint(
-      model,
-      member_path,
-      step = current_step + 1,
-    )
+    if current_step < 0 or update_dataloader:
+      outputs = model(
+        input_ids   = train_dataset['input_ids'],
+        target_ids  = train_dataset['target_ids'],
+        is_sampling = False,
+      )
+      self.saveCheckpoint(
+        model,
+        member_path,
+        step = current_step + 1,
+      )
     return
 
   def Train(self, **kwargs) -> None:
