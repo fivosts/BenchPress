@@ -95,6 +95,8 @@ class ModelConfig(object):
       model_configs.append(NNModelConfig(m, downstream_task))
     for m in config.k_means:
       model_configs.append(KMeansModelConfig(m, downstream_task))
+    for m in config.knn:
+      model_configs.append(KNNModelConfig(m, downstream_task))
     return model_configs
 
   @property
