@@ -225,10 +225,6 @@ class GrewePredictive(DownstreamTask):
         [self.TargetLabeltoID(entry.runtime_features['label'])]
       ) for entry in new_samples
     ]
-    ## Add new samples along with 100 old random samples.
-    extra_steps = 100
-    keys = set(np.RandomState().randint(0, len(self.dataset)) for _ in range(extra_steps))
-    updated_dataset += [x for idx, x in self.dataset if idx in keys]
     l.logger().warn("What happens if all runtime features crash and you don't have any new samples?")
     return new_samples, data_generator.ListTrainDataloader(updated_dataset)
 
