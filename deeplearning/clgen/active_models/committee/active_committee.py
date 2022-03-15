@@ -38,6 +38,15 @@ class QueryByCommittee(backends.BackendBase):
     steps_per_epoch  : int
     num_epochs       : int
     num_train_steps  : int
+    n_clusters       : int
+    init             : str
+    n_init           : int
+    max_iter         : int
+    tol              : float
+    algorithm        : str
+    n_neighbors      : int
+    weights          : str
+    leaf_size        : int
 
   class CommitteeEstimator(typing.NamedTuple):
     """Named tuple to wrap BERT pipeline."""
@@ -117,6 +126,9 @@ class QueryByCommittee(backends.BackendBase):
           max_iter         = config.max_iter,
           tol              = config.tol,
           algorithm        = config.algorithm,
+          n_neighbors      = config.n_neighbors,
+          weights          = config.weights,
+          leaf_size        = config.leaf_size,
         )
         cm = models.CommitteeModels.FromConfig(idx, cconfig)
         if not is_sampling:
