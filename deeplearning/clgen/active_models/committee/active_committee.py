@@ -186,8 +186,13 @@ class QueryByCommittee(backends.BackendBase):
     update_dataloader = kwargs.get('update_dataloader', None)
 
     model           = member.model.to(self.pytorch.offset_device)
-    l.logger().warn("These two datasets are distinct. Maybe blend instead of replacing ?")
-    data_generator  = member.data_generator if update_dataloader is None else update_dataloader
+    data_generator  = (
+      member.data_generator
+      if update_dataloader is None
+      else update_dataloader
+           + member.data_generator.get_random_subset(
+               max(0, len(update_dataloader) - member.training_opts.num_train_steps))
+    )
     optimizer       = member.optimizer
     scheduler       = member.scheduler
     member_path     = self.ckpt_path / member.sha256
