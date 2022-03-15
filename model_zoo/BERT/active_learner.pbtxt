@@ -95,7 +95,7 @@ sampler {
               }
               layer {
                 layer_norm{
-                  layer_norm_eps: 1e-5
+                  eps: 1e-5
                 }
               }
               layer {
