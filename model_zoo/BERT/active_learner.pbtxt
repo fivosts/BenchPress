@@ -10,7 +10,7 @@
 working_dir: "AST" ## This path is relative to "workspace_dir", which is an app FLAG
 model {
   corpus {
-    local_tar_archive: "$PWD/../corpus/corpus_250.tar.bz2"
+    local_tar_archive: "$PWD/../corpus/ultimate_corpus.tar.bz2"
     tokenizer {
       token_type: "ast"
       token_list: "deeplearning/clgen/corpuses/token_lists.json"
@@ -125,9 +125,9 @@ sampler {
           downstream_task: "GrewePredictive"
           training_corpus: "/home/fivosts/cldrive_cache.db"
         }
-        active_limit_per_feed: 2000
+        active_limit_per_feed: 500
         active_search_depth: 100
-        active_search_width: 32
+        active_search_width: 16
         batch_size_per_feed: 2
         feature_space: "GreweFeatures"
       }
@@ -140,9 +140,9 @@ sampler {
     }
     start_text: "[START]kernel void [HOLE]}[END]"
   }
-  batch_size: 8
+  batch_size: 16
   sequence_length: 768
-  temperature_micros: 700000  # = 0.8 real value
+  temperature_micros: 800000  # = 0.8 real value
   termination_criteria {
     maxlen {
       maximum_tokens_in_sample: 768
