@@ -550,9 +550,9 @@ class BertOnlyMLMHead(torch.nn.Module):
     super().__init__()
     self.predictions = BertLMPredictionHead(config)
 
-  def forward(self, sequence_output):
+  def forward(self, sequence_output, features):
     prediction_scores = self.predictions(sequence_output)
-    return prediction_scores
+    return prediction_scores, None
 
 class BertOnlyNSPHead(torch.nn.Module):
   def __init__(self, config):
@@ -773,42 +773,17 @@ class BertForPreTraining(BertPreTrainedModel):
   def get_output_embeddings(self):
     return self.cls.predictions.decoder
 
-  def get_lm_output(self,
-                    input_ids,
-                    attention_mask,
-                    position_ids,
-                    input_features       = None,
-                    token_type_ids       = None,
-                    head_mask            = None,
-                    inputs_embeds        = None,
-                    output_attentions    = None,
-                    output_hidden_states = None,
-                    ) -> typing.Tuple[torch.FloatTensor, torch.FloatTensor]:
-    outputs = self.bert(
-      input_ids            = input_ids,
-      attention_mask       = attention_mask,
-      position_ids         = position_ids,
-      token_type_ids       = token_type_ids,
-      head_mask            = head_mask,
-      inputs_embeds        = inputs_embeds,
-      output_attentions    = output_attentions,
-      output_hidden_states = output_hidden_states,
-    )
-    sequence_output, pooled_output = outputs[:2]
-    prediction_scores = self.cls(sequence_output)
-    return prediction_scores, None, outputs[0], outputs[1]
-
-  def get_lm_feature_output(self,
-                            input_ids,
-                            attention_mask,
-                            position_ids,
-                            input_features       = None,
-                            token_type_ids       = None,
-                            head_mask            = None,
-                            inputs_embeds        = None,
-                            output_attentions    = None,
-                            output_hidden_states = None,
-                            ) -> typing.Tuple[torch.FloatTensor, torch.FloatTensor]:
+  def get_output(self,
+                 input_ids,
+                 attention_mask,
+                 position_ids,
+                 input_features       = None,
+                 token_type_ids       = None,
+                 head_mask            = None,
+                 inputs_embeds        = None,
+                 output_attentions    = None,
+                 output_hidden_states = None,
+                 ) -> typing.Tuple[torch.FloatTensor, torch.FloatTensor]:
     outputs = self.bert(
       input_ids            = input_ids,
       attention_mask       = attention_mask,
