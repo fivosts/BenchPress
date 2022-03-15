@@ -170,7 +170,7 @@ class BenchmarkSampler(FeatureSampler):
                ):
     super(BenchmarkSampler, self).__init__(workspace, feature_space, target)
     if self.target  != "grid_walk":
-      self.path        = pathlib.Path(targets[target]).resolve()
+      self.path        = pathlib.Path(benchmarks.targets[target]).resolve()
     self.reduced_git_corpus = [
       (cf, feats[self.feature_space])
       for cf, feats in git_corpus.getFeaturesContents(sequence_length = 768)
