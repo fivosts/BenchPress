@@ -106,8 +106,7 @@ class ActiveSample(typing.NamedTuple):
 
 def IR_candidate_worker(sample                  : np.array,
                         feature_space           : str,
-                        target_runtime_features : typing.Dict[str, float],
-                        calculate_distance      : typing.Callable,
+                        target_benchmark        : feature_sampler.Benchmark,
                         tokenizer               : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
                         ) -> ActiveSample:
   # sample, indices, input_ids, masked_lm_lengths = sample_out
@@ -124,8 +123,8 @@ def IR_candidate_worker(sample                  : np.array,
         hole_lengths   = mlm_lengths,
         sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
         features         = features,
-        runtime_features = target_runtime_features,
-        score            = calculate_distance(features),
+        runtime_features = target_benchmark.runtime_features,
+        score            = feature_sampler.calculate_distance(features, target_benchmark.features, feature_space),
       ))
   except ValueError:
     pass
@@ -139,14 +138,13 @@ def IR_candidate_worker(sample                  : np.array,
     hole_lengths   = mlm_lengths,
     sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
     features         = {},
-    runtime_features = target_runtime_features,
+    runtime_features = target_benchmark.runtime_features,
     score            = math.inf,
   ))
 
 def text_candidate_worker(sample                  : np.array,
                           feature_space           : str,
-                          target_runtime_features : typing.Dict[str, float],
-                          calculate_distance      : typing.Callable,
+                          target_benchmark        : feature_sampler.Benchmark,
                           tokenizer               : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
                           ) -> ActiveSample:
   sample, sample_indices, input_ids, mlm_lengths, feed = sample
@@ -163,8 +161,8 @@ def text_candidate_worker(sample                  : np.array,
         hole_lengths   = mlm_lengths,
         sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
         features         = features,
-        runtime_features = target_runtime_features,
-        score            = calculate_distance(features),
+        runtime_features = target_benchmark.runtime_features,
+        score            = feature_sampler.calculate_distance(features, target_benchmark.features, feature_space),
       ))
   except ValueError:
     pass
@@ -178,7 +176,7 @@ def text_candidate_worker(sample                  : np.array,
     hole_lengths   = mlm_lengths,
     sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
     features         = {},
-    runtime_features = target_runtime_features,
+    runtime_features = target_benchmark.runtime_features,
     score            = math.inf,
   ))
 
@@ -993,16 +991,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           IR_candidate_worker,
           tokenizer               = self.tokenizer,
           feature_space           = self.feat_sampler.feature_space,
-          target_runtime_features = self.feat_sampler.target_benchmark.runtime_features,
-          calculate_distance      = self.feat_sampler.calculate_distance,
+          target_benchmark        = self.feat_sampler.target_benchmark,
         )
       else:
         candidate_worker = functools.partial(
           text_candidate_worker,
           tokenizer               = self.tokenizer,
           feature_space           = self.feat_sampler.feature_space,
-          target_runtime_features = self.feat_sampler.target_benchmark.runtime_features,
-          calculate_distance      = self.feat_sampler.calculate_distance,
+          target_benchmark        = self.feat_sampler.target_benchmark,
         )
       t = 0
       # l.logger().warn("Pool opened")
