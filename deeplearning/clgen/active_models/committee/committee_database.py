@@ -40,10 +40,17 @@ class CommitteeConfig(Base, sqlutil.ProtoBackedMixin):
   date_added    : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
-  def FromArgs(cls, id: int, member_id: int, type: str, configuration: str) -> 'CommitteeConfig':
+  def FromArgs(cls,
+               id            : int,
+               member_id     : int,
+               member_name   : str,
+               type          : str,
+               configuration : str
+               ) -> 'CommitteeConfig':
     return CommitteeConfig(
       id            = id,
       member_id     = member_id,
+      member_name   = member_name,
       type          = type,
       configuration = configuration,
       date_added    = datetime.datetime.utcnow(),
