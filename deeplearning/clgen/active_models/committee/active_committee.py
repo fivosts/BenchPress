@@ -361,7 +361,7 @@ class QueryByCommittee(backends.BackendBase):
   def SampleNNMember(self,
                    member     : 'QueryByCommittee.CommitteeEstimator',
                    sample_set : 'torch.utils.data.Dataset',
-                   ) -> str:
+                   ) -> typing.Dict[str, typing.List[]]:
     """
     Sample member of committee. Return predicted label.
     """
@@ -422,11 +422,35 @@ class QueryByCommittee(backends.BackendBase):
       predictions['predictions'] += [self.downstream_task.TargetIDtoLabels(i) for i in out['output_label'].cpu().numpy()]
     return predictions
 
-  def SampleUnsupervisedMember(self, **kwargs) -> None:
+  def SampleUnsupervisedMember(self, **kwargs) -> typing.Dict[str, typing.List[]]:
     """
     Sample non-NeuralNetwork based architectures, such as DecisionTrees or KMeans.
     """
-    raise NotImplementedError
+    update_dataloader = kwargs.get('update_dataloader', None)
+
+    model           = member.model
+    data_generator  = member.data_generator if update_dataloader is None else update_dataloader
+    sample_dataset   = data_generator.get_batched_dataset()
+
+    member_path     = self.ckpt_path / member.sha256
+    member_log_path = self.logfile_path / member.sha256
+
+    current_step = self.loadCheckpoint(model, member_path)
+    if current_step >= 0:
+      l.logger().info("Loaded checkpoint step {}".format(current_step))
+    current_step = max(0, current_step)
+
+    outputs = model(
+      input_ids   = sample_dataset['input_ids'],
+      is_sampling = True,
+    )
+    predictions = {
+      'static_features' : sample_dataset['static_features'],
+      'runtime_features': sample_dataset['runtime_features'],
+      'input_ids'       : sample_dataset['input_ids'],
+      'predictions'     : [self.downstream_task.TargetIDtoLabels(i) for i in outputs['predicted_labels']],
+    }
+    return predictions
 
   def SampleCommittee(self,
                       sample_set: 'torch.utils.data.Dataset',
