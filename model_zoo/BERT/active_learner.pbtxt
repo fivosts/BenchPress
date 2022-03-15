@@ -85,7 +85,7 @@ sampler {
             mlp {
               initial_learning_rate_micros: 20
               batch_size: 32
-              num_train_steps: 500
+              num_train_steps: 1000
               num_warmup_steps: 100
               layer {
                 linear {
