@@ -374,7 +374,7 @@ class QueryByCommittee(backends.BackendBase):
   def SampleNNMember(self,
                    member     : 'QueryByCommittee.CommitteeEstimator',
                    sample_set : 'torch.utils.data.Dataset',
-                   ) -> typing.Dict[str, typing.List[]]:
+                   ) -> typing.Dict[str, typing.List]:
     """
     Sample member of committee. Return predicted label.
     """
