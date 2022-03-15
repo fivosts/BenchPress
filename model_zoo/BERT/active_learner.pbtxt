@@ -94,11 +94,31 @@ sampler {
                 }
               }
               layer {
+                layer_norm{
+                  layer_norm_eps: 1e-5
+                }
+              }
+              layer {
                 linear {
                   in_features: 256
                   out_features: 2
                 }
               }
+            }
+            k_means {
+            n_clusters: 2
+              init: "k-means++"
+              n_init: 10
+              max_iter: 300
+              tol: 1e-4
+              algorithm: "auto"
+            }
+            knn {
+              n_neighbors: 5
+              weights: "uniform"
+              algorithm: "auto"
+              leaf_size: 30
+              p: 2
             }
           }
           random_seed: 12345
