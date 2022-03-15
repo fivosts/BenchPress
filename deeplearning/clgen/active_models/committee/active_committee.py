@@ -48,6 +48,7 @@ class QueryByCommittee(backends.BackendBase):
     n_neighbors      : int
     weights          : str
     leaf_size        : int
+    p                : float
 
   class CommitteeEstimator(typing.NamedTuple):
     """Named tuple to wrap BERT pipeline."""
@@ -126,6 +127,7 @@ class QueryByCommittee(backends.BackendBase):
           n_neighbors      = cconfig.n_neighbors,
           weights          = cconfig.weights,
           leaf_size        = cconfig.leaf_size,
+          p                = cconfig.p,
         )
         cm = models.CommitteeModels.FromConfig(idx, cconfig)
         if not is_sampling and isinstance(cm, self.torch.nn.Module):
