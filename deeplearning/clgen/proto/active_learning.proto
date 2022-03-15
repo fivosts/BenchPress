@@ -84,7 +84,8 @@ message Dropout {
 
 // LayerNorm specs.
 message LayerNorm {
-  optional float eps = 1;
+  optional int32 normalized_shape = 1;
+  optional float eps              = 2;
 }
 
 // Activation function specs.
