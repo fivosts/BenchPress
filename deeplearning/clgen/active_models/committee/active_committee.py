@@ -58,12 +58,6 @@ class QueryByCommittee(backends.BackendBase):
     sha256         : str
     config         : config.ModelConfig
 
-  class SampleCommitteeEstimator(typing.NamedTuple):
-    """Named tuple for sampling BERT."""
-    model          : typing.List[typing.TypeVar('nn.Module')]
-    data_generator : 'torch.utils.data.Dataset'
-    sha256         : str
-
   def __repr__(self):
     return "QueryByCommittee"
 
