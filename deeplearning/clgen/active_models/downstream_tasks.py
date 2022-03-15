@@ -226,7 +226,7 @@ class GrewePredictive(DownstreamTask):
       ) for entry in new_samples
     ]
     l.logger().warn("What happens if all runtime features crash and you don't have any new samples?")
-    return new_samples, data_generator.ListTrainDataloader(updated_dataset)
+    return new_samples, data_generator.ListTrainDataloader(updated_dataset, lazy = True)
 
   def sample_space(self, num_samples: int = 512) -> data_generator.DictPredictionDataloader:
     """
