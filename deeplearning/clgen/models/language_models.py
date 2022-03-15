@@ -429,7 +429,7 @@ class Model(object):
                         .format(
                           humanize.intcomma(seq_count),
                           humanize.intcomma(int(1000 * ((time_now - sample_start_time) / max(seq_count, 1)).total_seconds())),
-                          round(100 * (c / t), 10),
+                          round(100 * ((c / t if t > 0 else 0)), 10),
                         )
     )
     return
@@ -455,7 +455,7 @@ class Model(object):
     if not samples:
       # Return empty means model has not produced something that can be stored.
       # This 'if' accommodates active sampling, which is very selective.
-      return True, seq_count
+      return True, seq_count, (0, 0)
 
     continue_sampling = True
 
