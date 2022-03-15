@@ -104,16 +104,17 @@ class ActiveSample(typing.NamedTuple):
   # Active batch timestep where sample was acquired.
   # timestep       : int
 
-def IR_candidate_worker(sample       : np.array,
-                        # feed         : np.array,
-                        feat_sampler : feature_sampler.FeatureSampler,
-                        tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
+def IR_candidate_worker(sample                  : np.array,
+                        feature_space           : str,
+                        target_runtime_features : typing.Dict[str, float],
+                        calculate_distance      : typing.Callable,
+                        tokenizer               : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
                         ) -> ActiveSample:
   # sample, indices, input_ids, masked_lm_lengths = sample_out
   sample, sample_indices, input_ids, mlm_lengths, feed = sample
   try:
     code = tokenizer.ArrayToCode(sample, with_formatting = False)
-    features = extractor.ExtractFeatures(code, [feat_sampler.feature_space])[feat_sampler.feature_space]
+    features = extractor.ExtractFeatures(code, [feature_space])[feature_space]
     if features:
       return (True, ActiveSample(
         sample_feed = feed,
@@ -123,8 +124,8 @@ def IR_candidate_worker(sample       : np.array,
         hole_lengths   = mlm_lengths,
         sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
         features         = features,
-        runtime_features = feat_sampler.target_benchmark.runtime_features,
-        score            = feat_sampler.calculate_distance(features),
+        runtime_features = target_runtime_features,
+        score            = calculate_distance(features),
       ))
   except ValueError:
     pass
@@ -138,20 +139,21 @@ def IR_candidate_worker(sample       : np.array,
     hole_lengths   = mlm_lengths,
     sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
     features         = {},
-    runtime_features = feat_sampler.target_benchmark.runtime_features,
+    runtime_features = target_runtime_features,
     score            = math.inf,
   ))
 
-def text_candidate_worker(sample       : np.array,
-                          # feed         : np.array,
-                          feat_sampler : feature_sampler.FeatureSampler,
-                          tokenizer    : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
+def text_candidate_worker(sample                  : np.array,
+                          feature_space           : str,
+                          target_runtime_features : typing.Dict[str, float],
+                          calculate_distance      : typing.Callable,
+                          tokenizer               : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
                           ) -> ActiveSample:
   sample, sample_indices, input_ids, mlm_lengths, feed = sample
   try:
     code = tokenizer.ArrayToCode(sample, with_formatting = False)
     _ = opencl.Compile(code)
-    features = extractor.ExtractFeatures(code, [feat_sampler.feature_space])[feat_sampler.feature_space]
+    features = extractor.ExtractFeatures(code, [feature_space])[feature_space]
     if features:
       return (True, ActiveSample(
         sample_feed = feed,
@@ -161,8 +163,8 @@ def text_candidate_worker(sample       : np.array,
         hole_lengths   = mlm_lengths,
         sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
         features         = features,
-        runtime_features = feat_sampler.target_benchmark.runtime_features,
-        score            = feat_sampler.calculate_distance(features),
+        runtime_features = target_runtime_features,
+        score            = calculate_distance(features),
       ))
   except ValueError:
     pass
@@ -176,7 +178,7 @@ def text_candidate_worker(sample       : np.array,
     hole_lengths   = mlm_lengths,
     sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
     features         = {},
-    runtime_features = feat_sampler.target_benchmark.runtime_features,
+    runtime_features = target_runtime_features,
     score            = math.inf,
   ))
 
@@ -988,11 +990,19 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       )
       if self.feat_sampler.feature_space != "GreweFeatures":
         candidate_worker = functools.partial(
-          IR_candidate_worker, tokenizer = self.tokenizer, feat_sampler = self.feat_sampler,
+          IR_candidate_worker,
+          tokenizer               = self.tokenizer,
+          feature_space           = self.feat_sampler.feature_space,
+          target_runtime_features = self.feat_sampler.target_benchmark.runtime_features,
+          calculate_distance      = self.feat_sampler.calculate_distance,
         )
       else:
         candidate_worker = functools.partial(
-          text_candidate_worker, tokenizer = self.tokenizer, feat_sampler = self.feat_sampler,
+          text_candidate_worker,
+          tokenizer               = self.tokenizer,
+          feature_space           = self.feat_sampler.feature_space,
+          target_runtime_features = self.feat_sampler.target_benchmark.runtime_features,
+          calculate_distance      = self.feat_sampler.calculate_distance,
         )
       t = 0
       # l.logger().warn("Pool opened")
