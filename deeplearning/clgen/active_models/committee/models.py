@@ -67,7 +67,7 @@ class MLP(CommitteeModels, torch.nn.Module):
       'LayerNorm' : torch.nn.LayerNorm,
     }
     layers.update(ACT2FN)
-    self.layers = torch.nn.ModuleList([layers[layer[0]](**layer[1]) for layer in config])
+    self.layers = torch.nn.ModuleList([layers[layer[0]](**layer[1]) for layer in self.config])
     return
 
   def calculate_loss(self,
