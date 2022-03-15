@@ -93,6 +93,8 @@ class GrewePredictive(DownstreamTask):
       'localmem'  : 50,
       'coalesced' : 10,
       'atomic'    : 10,
+      'transferred_bytes': 31, # 2**pow,
+      'local_size': 8, # 2**pow,
     }
     for fk in grewe.KEYS:
       if fk not in {"F2:coalesced/mem", "F4:comp/mem"}:
@@ -102,6 +104,8 @@ class GrewePredictive(DownstreamTask):
         low_bound = 1 if fk in {"comp", "mem"} else 0
         up_bound  = max_fval[fk]
         self.rand_generators[fk] = lambda: rgen.randint(low_bound, up_bound)
+    self.rand_generators['transferred_bytes'] = lambda: 2**rgen.randint(1, 31)
+    self.rand_generators['local_size']        = lambda: 2**rgen.randint(1, 8)
     return
 
   def __repr__(self) -> str:
@@ -113,7 +117,8 @@ class GrewePredictive(DownstreamTask):
     """
     self.dataset = []
     self.corpus_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
-    data    = [x for x in self.corpus_db.get_valid_data(dataset = "GitHub")]
+    data    = [x for x in self.corpus_db.get_valid_data(dataset = "BenchPress")]
+    l.logger().warn("TODO: Fix me when you have github data")
     pool = multiprocessing.Pool()
     it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = "GreweFeatures"), data)
     idx = 0
@@ -232,7 +237,6 @@ class GrewePredictive(DownstreamTask):
     to evaluate. The predictive model samples are mapped as a value to the static features
     as a key.
     """
-    l.logger().warn("Assuming wgsize (local size) and transferred_bytes is very problematic.")
     samples = []
     for x in range(num_samples):
       fvec = {
@@ -247,11 +251,13 @@ class GrewePredictive(DownstreamTask):
         fvec['F4:comp/mem'] = fvec['comp'] / fvec['mem']      
       except ZeroDivisionError:
         fvec['F4:comp/mem'] = 0.0
+      transferred_bytes = self.rand_generators['transferred_bytes']()
+      local_size        = self.rand_generators['local_size']()
       samples.append(
         {
           'static_features'  : self.StaticFeatDictToVec(fvec),
-          'runtime_features' : [80000, 256],
-          'input_ids'        : self.InputtoEncodedVector(fvec, 80000, 256)
+          'runtime_features' : [transferred_bytes, local_size],
+          'input_ids'        : self.InputtoEncodedVector(fvec, transferred_bytes, local_size)
         }
       )
     return data_generator.DictPredictionDataloader(samples)
