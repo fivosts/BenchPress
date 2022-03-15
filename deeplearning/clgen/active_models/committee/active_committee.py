@@ -131,7 +131,7 @@ class QueryByCommittee(backends.BackendBase):
           leaf_size        = cconfig.leaf_size,
         )
         cm = models.CommitteeModels.FromConfig(idx, cconfig)
-        if not is_sampling:
+        if not is_sampling and isinstance(cm, self.torch.nn.Module):
           opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
             model           = cm,
             num_train_steps = 10**5,
