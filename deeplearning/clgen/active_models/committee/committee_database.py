@@ -115,7 +115,14 @@ class CommitteeSamples(sqlutil.Database):
     super(CommitteeSamples, self).__init__(url, Base, must_exist = must_exist)
 
   @property
-  def count(self):
+  def member_count(self):
+    """Number of committee members in DB."""
+    with self.Session() as s:
+      count = s.query(CommitteeConfig).count()
+    return count
+
+  @property
+  def sample_count(self):
     """Number of samples in DB."""
     with self.Session() as s:
       count = s.query(CommitteeSample).count()
@@ -134,7 +141,7 @@ class CommitteeSamples(sqlutil.Database):
     with self.Session(commit = True) as s:
       exists = s.query(CommitteeConfig).filter_by(member_id = member_id).first()
       if not exists:
-        s.add(CommitteeConfig.FromArgs(s.member_count, member_id, member_name, type, configuration))
+        s.add(CommitteeConfig.FromArgs(self.member_count, member_id, member_name, type, configuration))
         s.commit()
     return
 
@@ -147,7 +154,7 @@ class CommitteeSamples(sqlutil.Database):
     with self.Session(commit = True) as s:
       for sample in samples:
         sample_entry = CommitteeSample.FromArgs(
-          id                 = s.sample_count + offset_idx,
+          id                 = self.sample_count + offset_idx,
           train_step         = sample['train_step'],
           static_features    = sample['static_features'],
           runtime_features   = sample['runtime_features'],
