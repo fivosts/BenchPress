@@ -118,8 +118,7 @@ class GrewePredictive(DownstreamTask):
     """
     self.dataset = []
     self.corpus_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
-    data    = [x for x in self.corpus_db.get_valid_data(dataset = "BenchPress")]
-    l.logger().warn("TODO: Fix me when you have github data")
+    data    = [x for x in self.corpus_db.get_valid_data(dataset = "GitHub")]
     pool = multiprocessing.Pool()
     it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = "GreweFeatures"), data)
     idx = 0
@@ -134,13 +133,13 @@ class GrewePredictive(DownstreamTask):
             )
           )
           idx += 1
-        if idx >= 100:
-          break
+        # if idx >= 100:
+          # break
       pool.close()
     except Exception as e:
       pool.terminate()
       raise e
-    pool.terminate()
+    # pool.terminate()
     return
 
   def CollectRuntimeFeatures(self,
