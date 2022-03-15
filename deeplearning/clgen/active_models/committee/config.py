@@ -136,6 +136,10 @@ class ModelConfig(object):
     self.max_iter         = None
     self.tol              = None
     self.algorithm        = None
+    self.n_neighbors      = None
+    self.weights          = None
+    self.algorithm        = None
+    self.leaf_size        = None
     return
 
 class NNModelConfig(ModelConfig):
@@ -231,4 +235,21 @@ class KMeansModelConfig(ModelConfig):
     self.max_iter   = self.config.max_iter
     self.tol        = self.config.tol
     self.algorithm  = self.config.algorithm
+    return
+
+class KNNModelConfig(ModelConfig):
+  """
+  KNN config subclass.
+  """
+  def __init__(self,
+               config          : active_learning_pb2.KMeans,
+               downstream_task : downstream_tasks.DownstreamTask,
+               ) -> "ModelConfig":
+    super(KMeansModelConfig, self).__init__("KMeans", config, downstream_task)
+
+    ## KMeans-specific attributes.
+    self.n_neighbors = self.config.n_neighbors
+    self.weights       = self.config.weights
+    self.algorithm     = self.config.algorithm
+    self.leaf_size   = self.config.leaf_size
     return
