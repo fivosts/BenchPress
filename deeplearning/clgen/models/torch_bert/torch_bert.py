@@ -993,11 +993,12 @@ class torchBert(backends.BackendBase):
         from collections import OrderedDict
         new_state_dict = OrderedDict()
         for k, v in self.torch.load(ckpt_comp("model")).items():
-          if k[:7] == 'module.':
-            name = k[7:] # remove `module.`
-          else:
-            name = 'module.' + k # Add 'module.'
-          new_state_dict[name] = v
+          if k not in {"bert.embeddings.token_type_embeddings.weight", "cls.seq_relationship.weight", "cls.seq_relationship.bias"}:
+            if k[:7] == 'module.':
+              name = k[7:] # remove `module.`
+            else:
+              name = 'module.' + k # Add 'module.'
+            new_state_dict[name] = v
         estimator.model.module.load_state_dict(new_state_dict)
     else:
       try:
@@ -1016,11 +1017,12 @@ class torchBert(backends.BackendBase):
         from collections import OrderedDict
         new_state_dict = OrderedDict()
         for k, v in self.torch.load(ckpt_comp("model")).items():
-          if k[:7] == 'module.':
-            name = k[7:] # remove `module.`
-          else:
-            name = 'module.' + k # Add 'module.'
-          new_state_dict[name] = v
+          if k not in {"bert.embeddings.token_type_embeddings.weight", "cls.seq_relationship.weight", "cls.seq_relationship.bias"}:
+            if k[:7] == 'module.':
+              name = k[7:] # remove `module.`
+            else:
+              name = 'module.' + k # Add 'module.'
+            new_state_dict[name] = v
         estimator.model.load_state_dict(new_state_dict)
     if isinstance(estimator, torchBert.BertEstimator):
       if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
