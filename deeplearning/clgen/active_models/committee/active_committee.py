@@ -511,7 +511,7 @@ class QueryByCommittee(backends.BackendBase):
         'member_predictions' : {
           k: self.downstream_task.TargetIDtoLabels(v['predictions'][nsample])
           for k, v in committee_predictions.items()
-        }
+        },
         'entropy'            : ent,
       })
     # Add everything to database.
