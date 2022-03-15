@@ -247,7 +247,7 @@ class KNNModelConfig(ModelConfig):
                config          : active_learning_pb2.KMeans,
                downstream_task : downstream_tasks.DownstreamTask,
                ) -> "ModelConfig":
-    super(KMeansModelConfig, self).__init__("KMeans", config, downstream_task)
+    super(KNNModelConfig, self).__init__("KMeans", config, downstream_task)
 
     ## KMeans-specific attributes.
     self.n_neighbors = self.config.n_neighbors
