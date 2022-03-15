@@ -209,8 +209,14 @@ class KNN(CommitteeModels):
                target_ids  : np.array = None,
                is_sampling : bool = False,
                ) -> typing.Dict[str, np.array]:
-    raise NotImplementedError
-    return
+    if not is_sampling:
+      self.classifier = self.knn.fit(input_ids, target_ids)
+      return {}
+    else:
+      labels = self.classifier.predict(input_ids)
+      return {
+        'predicted_labels' : labels
+      }
 
   def get_checkpoint_state(self) -> typing.Dict[typing.Any]:
     """
