@@ -327,7 +327,6 @@ class QueryByCommittee(backends.BackendBase):
       target_ids  = train_dataset['target_ids'],
       is_sampling = False,
     )
-    raise NotImplementedError
     self.saveCheckpoint(
       model,
       member_path,
