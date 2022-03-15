@@ -167,7 +167,7 @@ class KMeans(CommitteeModels):
         'predicted_labels' : target_labels,
       }
 
-  def get_checkpoint_state(self) -> typing.Dict[typing.Any]:
+  def get_checkpoint_state(self) -> typing.Dict[str, typing.Any]:
     """
     Return the blob that is to be checkpointed.
     """
@@ -176,7 +176,7 @@ class KMeans(CommitteeModels):
       'cluster_map' : self.cluster_map,
     }
 
-  def load_checkpoint_state(self, checkpoint_state: typing.Dict[typing.Any]) -> None:
+  def load_checkpoint_state(self, checkpoint_state: typing.Dict[str, typing.Any]) -> None:
     """
     Load the checkpoints to the class states.
     """
@@ -217,13 +217,13 @@ class KNN(CommitteeModels):
         'predicted_labels' : labels
       }
 
-  def get_checkpoint_state(self) -> typing.Dict[typing.Any]:
+  def get_checkpoint_state(self) -> typing.Dict[str, typing.Any]:
     """
     Return the blob that is to be checkpointed.
     """
     return {'knn' : self.classifier,}
 
-  def load_checkpoint_state(self, checkpoint_state: typing.Dict[typing.Any]) -> None:
+  def load_checkpoint_state(self, checkpoint_state: typing.Dict[str, typing.Any]) -> None:
     """
     Load the checkpoints to the class states.
     """
