@@ -2,6 +2,7 @@
 Here all the committee members are defined.
 """
 import math
+import sys
 import typing
 import numpy as np
 from sklearn import cluster as sklearn_cluster
@@ -215,7 +216,7 @@ class KNN(CommitteeModels):
     else:
       labels = self.classifier.predict(input_ids)
       return {
-        'predicted_labels' : labels
+        'predicted_labels' : [int(round(x + sys.float_info.epsilon)) for x in labels]
       }
 
   def get_checkpoint_state(self) -> typing.Dict[str, typing.Any]:
