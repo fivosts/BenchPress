@@ -4,7 +4,8 @@ Here all the committee members are defined.
 import math
 import typing
 import numpy as np
-import sklearn
+from sklearn import cluster as sklearn_cluster
+from sklearn import neighbors as sklearn_neighbors
 
 from deeplearning.clgen.active_models.committee import config
 from deeplearning.clgen.models.torch_bert import activations
@@ -129,7 +130,7 @@ class KMeans(CommitteeModels):
     super(KMeans, self).__init__(id)
     self.config     = config
     self.target_ids = self.config.downstream_task.output_ids
-    self.kmeans = sklearn.cluster.KMeans(
+    self.kmeans = sklearn_cluster.KMeans(
       n_clusters = self.config.n_clusters,
       init       = self.config.init,
       n_init     = self.config.n_init,
@@ -191,7 +192,7 @@ class KNN(CommitteeModels):
   def __init__(self, id: int, config: config.ModelConfig):
     super(KNN, self).__init__(id)
     self.config     = config
-    self.knn = sklearn.neighbors.KNeighborsRegressor(
+    self.knn = sklearn_neighbors.KNeighborsRegressor(
       n_neighbors = self.config.n_neighbors,
       weights     = self.config.weights,
       algorithm   = self.config.algorithm,
