@@ -96,19 +96,23 @@ class UniformDistribution(Distribution):
       self.sample_gen = np.random
       self.sample_gen.seed(seed)
       if self.sample_length:
-        self.sampler = lambda length: self.sample_gen.randint(0, self.sample_length + 1)
+        self.sampler = self.sample_gen.randint
       else:
-        self.sampler = lambda length: self.sample_gen.randint(0, int(length * self.relative_length))
+        self.sampler = self.sample_gen.randint
     else:
       if self.sample_length:
-        self.sampler = lambda length: np.random.RandomState().randint(0, self.sample_length + 1)
+        self.sampler = np.random.RandomState().randint
       else:
-        self.sampler = lambda length: np.random.RandomState().randint(0, int(length * self.relative_length))
+        self.sampler = np.random.RandomState().randint
+    return
 
   def sample(self, length = None):
     if not self.sample_length and not length:
       raise ValueErrror("One of sample length and upper length must be specified.")
-    return self.sampler(length)
+    if self.sample_length:
+      return self.sampler(0, self.sample_length + 1)
+    else:
+      return self.sampler(0, int(length * self.relative_length))
 
 class NormalDistribution(Distribution):
   """
