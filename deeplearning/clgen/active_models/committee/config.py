@@ -45,12 +45,38 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
   ## Parse all KMeans algos.
   for km in config.committee.k_means:
     pbutil.AssertFieldIsSet(km, "n_clusters")
-    pbutil.AssertFieldIsSet(km, "init")
+    pbutil.AssertFieldConstraint(
+      km,
+      "init",
+      lambda x: x in {"k-means++", "random"},
+      "KMeans algorithm can only be 'k-means++' or 'random'."
+    )
     pbutil.AssertFieldIsSet(km, "n_init")
     pbutil.AssertFieldIsSet(km, "max_iter")
     pbutil.AssertFieldIsSet(km, "tol")
-    pbutil.AssertFieldIsSet(km, "algorithm")
+    pbutil.AssertFieldIsSet(
+      km,
+      "algorithm",
+      lambda x : x in {"auto", "full", "elkan"},
+      "KMeans algorithm can only be 'auto', 'full' or 'elkan'."
+    )
     tm += 1
+  ## Parse KNN algos.
+  for k in config.committee.knn:
+    pbutil.AssertFieldIsSet(k, "n_neighbors")
+    pbutil.AssertFieldConstraint(
+      k,
+      "weights",
+      lambda x: x in {"uniform", "distance"},
+      "KNN weights can only be 'uniform' or 'distance'."
+    )
+    pbutil.AssertFieldConstraint(
+      k,
+      "algorithm",
+      lambda x: x in {"auto", "ball_tree", "kd_tree", "brute"},
+      "KNN algorithm can only be 'auto', 'ball_tree', 'kd_tree' or 'brute'."
+    )
+    pbutil.AssertFieldIsSet(k, "leaf_size")
   ## Add another for loop here if more committee model types are added.
   assert tm > 0, "Committee is empty. No models found."
   return
