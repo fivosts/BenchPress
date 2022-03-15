@@ -52,7 +52,7 @@ class CommitteeConfig(Base, sqlutil.ProtoBackedMixin):
       member_id     = member_id,
       member_name   = member_name,
       type          = type,
-      configuration = configuration,
+      configuration = str(configuration),
       date_added    = datetime.datetime.utcnow(),
     )
 
