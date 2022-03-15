@@ -249,7 +249,7 @@ class KNNModelConfig(ModelConfig):
 
     ## KMeans-specific attributes.
     self.n_neighbors = self.config.n_neighbors
-    self.weights       = self.config.weights
-    self.algorithm     = self.config.algorithm
+    self.weights     = self.config.weights
+    self.algorithm   = self.config.algorithm
     self.leaf_size   = self.config.leaf_size
     return
