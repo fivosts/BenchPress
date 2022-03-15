@@ -141,7 +141,7 @@ sampler {
     }
     start_text: "[START]kernel void [HOLE]}[END]"
   }
-  batch_size: 16
+  batch_size: 32
   sequence_length: 768
   temperature_micros: 800000  # = 0.8 real value
   termination_criteria {
