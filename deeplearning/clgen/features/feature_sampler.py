@@ -308,7 +308,7 @@ class ActiveSampler(FeatureSampler):
     self.saveCheckpoint()
     return
 
-  def saveCheckpoint() -> None:
+  def saveCheckpoint(self) -> None:
     super(ActiveSampler, self).saveCheckpoint()
     with open(self.workspace / "downstream_task_dg.pkl", 'wb') as outf:
       pickle.dump(self.active_learner.downstream_task.data_generator, outf)
