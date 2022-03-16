@@ -228,7 +228,7 @@ class GrewePredictive(DownstreamTask):
     new_samples = self.CollectRuntimeFeatures(new_samples, top_k, tokenizer)
     updated_dataset = [
       (
-        self.InputtoEncodedVector(feats,
+        self.InputtoEncodedVector(entry.features,
                                   entry.runtime_features['transferred_bytes'],
                                   entry.runtime_features['local_size']
                                   ),
