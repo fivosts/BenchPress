@@ -210,7 +210,7 @@ class GrewePredictive(DownstreamTask):
           num_runs    = 1000,
           timeout     = 60,
         )
-        new_runtime_feats['label'] = cached.label
+        new_runtime_feats['label'] = cached.status
         new_samples.append(sample._replace(runtime_features = new_runtime_feats))
         total += 1
       if top_k != -1 and total >= top_k:
