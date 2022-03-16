@@ -831,7 +831,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       self.bench_idx += 1
       self.saveCheckpoint()
       self.feat_sampler.iter_benchmark(target_samples = total_cand, top_k = 5)
-      raise NotImplementedError("Pass back the generated candidates and the downstream task should refeed to active learner for learning.")
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
