@@ -306,6 +306,12 @@ class ActiveSampler(FeatureSampler):
     self.saveCheckpoint()
     return
 
+  def saveCheckpoint() -> None:
+    super(ActiveSampler, self).saveCheckpoint()
+    with open(self.workspace / "downstream_task_dg.pkl", 'wb') as outf:
+      pickle.dump(self.active_learner.downstream_task.data_generator, outf)
+    return
+
   def loadCheckpoint(self) -> None:
     """
     Load pickled list of benchmarks, if exists.
@@ -316,6 +322,8 @@ class ActiveSampler(FeatureSampler):
         self.benchmarks = pickle.load(infile)
     else:
       self.benchmarks = self.sample_active_learner()
-    return
+    if (self.workspace / "downstream_task_dg.pkl").exists():
+      with open(self.workspace / "downstream_task_dg.pkl", 'rb') as infile:
+        self.active_learner.downstream_task.data_generator = pickle.load(infile)
     l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     return
