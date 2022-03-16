@@ -367,7 +367,7 @@ class QueryByCommittee(backends.BackendBase):
       l.logger().error("This means two things: 1) update_dataloader should feed the data.")
       l.logger().error("2) Updated training regime configurations must take place.")
     self._ConfigModelParams(self.downstream_task.data_generator)
-    if not self.is_trained:
+    if not self.is_trained and update_dataloader is None:
       for member in self.committee:
         member.train_fn(member, update_dataloader = update_dataloader)
     self.is_trained = True
