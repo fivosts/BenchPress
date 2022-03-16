@@ -5,6 +5,7 @@ downstream tasks that the committee can be trained on.
 The input and output features per downstream task are defined.
 """
 import pathlib
+import pickle
 import math
 import functools
 import typing
@@ -17,6 +18,7 @@ from deeplearning.clgen.experiments import cldrive
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import grewe
 from deeplearning.clgen.util import distributions
+from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import logging as l
 
 def ExtractorWorker(cldrive_entry: cldrive.CLDriveSample, fspace: str):
@@ -41,6 +43,12 @@ class DownstreamTask(object):
     self.name        = name
     self.random_seed = random_seed
     return
+
+  def saveCheckpoint(self) -> None:
+    raise NotImplementedError("Abstract Class")
+
+  def loadCheckpoint(self) -> None:
+    raise NotImplementedError("Abstract Class")
 
 class GrewePredictive(DownstreamTask):
   """
@@ -118,7 +126,7 @@ class GrewePredictive(DownstreamTask):
     """
     self.dataset = []
     self.corpus_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
-    data    = [x for x in self.corpus_db.get_valid_data(dataset = "GitHub")]
+    data = [x for x in self.corpus_db.get_valid_data(dataset = "GitHub")]
     pool = multiprocessing.Pool()
     it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = "GreweFeatures"), data)
     idx = 0
@@ -351,6 +359,12 @@ class GrewePredictive(DownstreamTask):
       "CPU": [1, 0],
       "GPU": [0, 1],
     }[label]
+
+  def saveCheckpoint(self) -> None:
+    """
+    Store data generator.
+    """
+    return
 
 TASKS = {
   "GrewePredictive": GrewePredictive,
