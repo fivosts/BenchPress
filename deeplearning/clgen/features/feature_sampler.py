@@ -253,6 +253,7 @@ class ActiveSampler(FeatureSampler):
                workspace      : pathlib.Path,
                feature_space  : str,
                active_learner : 'active_models.Model',
+               tokenizer      : 'tokenizers.TokenizerBase',
                ):
     super(ActiveSampler, self).__init__(workspace, feature_space, str(active_learner.downstream_task))
     self.active_learner = active_learner
@@ -262,6 +263,7 @@ class ActiveSampler(FeatureSampler):
       l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     except IndexError:
       self.target_benchmark = None
+    self.tokenizer = tokenizer
     return
 
   def sample_active_learner(self) -> typing.List[Benchmark]:
@@ -274,7 +276,7 @@ class ActiveSampler(FeatureSampler):
     """
     Update active learner with targetted generated samples by the language model.
     """
-    upd_samples, upd_loader = self.active_learner.downstream_task.UpdateDataGenerator(target_samples, top_k)
+    upd_samples, upd_loader = self.active_learner.downstream_task.UpdateDataGenerator(target_samples, top_k, self.tokenizer)
     self.active_learner.UpdateLearn(upd_loader)
     self.active_learner.downstream_task.UpdateTrainDataset(upd_samples)
     return
