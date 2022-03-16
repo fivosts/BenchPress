@@ -294,7 +294,7 @@ class ActiveSampler(FeatureSampler):
     for updated learning.
     """
     if target_samples:
-      self.teach_active_learner(self.target_benchmark.runtime_features, target_samples, top_k)
+      self.teach_active_learner(target_samples, top_k)
     try:
       self.target_benchmark = self.benchmarks.pop(0)
       l.logger().info("Target fetures: {}".format(self.target_benchmark.features))
