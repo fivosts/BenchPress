@@ -384,6 +384,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           workspace      = d.sampler.corpus_directory,
           feature_space  = corpus_config.active.feature_space,
           active_learner = d.sampler.active_learner,
+          tokenizer      = d.tokenizer,
         )
       d.candidate_monitor = monitors.CategoricalDistribMonitor.loadCheckpoint(
         d.sampler.corpus_directory, "feature_distance"
