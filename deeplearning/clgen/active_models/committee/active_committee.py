@@ -191,7 +191,7 @@ class QueryByCommittee(backends.BackendBase):
       if update_dataloader is None
       else update_dataloader
            + member.data_generator.get_random_subset(
-               max(0, len(update_dataloader) - member.training_opts.num_train_steps))
+               max(0, abs(len(update_dataloader) - member.training_opts.num_train_steps)))
     )
     optimizer       = member.optimizer
     scheduler       = member.scheduler
@@ -214,7 +214,6 @@ class QueryByCommittee(backends.BackendBase):
     if current_step >= 0:
       l.logger().info("Loaded {} checkpoint step {}".format("{}-{}".format(member.config.name, member.model.id), current_step))
     current_step = max(0, current_step)
-
     num_train_steps = member.training_opts.num_train_steps if update_dataloader is None else member.training_opts.num_train_steps + current_step
 
     if current_step < num_train_steps:
@@ -256,18 +255,16 @@ class QueryByCommittee(backends.BackendBase):
           member_log_path, current_step, min(member.training_opts.steps_per_epoch, 50)
         )
       try:
-        model.train()
-        epoch_iter = tqdm.auto.trange(member.training_opts.num_epochs, desc="Epoch", leave = False) if self.is_world_process_zero() else range(member.training_opts.num_epochs)
-        for epoch in epoch_iter:
+        with self.torch.enable_grad():
+          model.train()
+          # epoch_iter = tqdm.auto.trange(member.training_opts.num_epochs, desc="Epoch", leave = False) if self.is_world_process_zero() else range(member.training_opts.num_epochs)
+          epoch = num_train_steps // member.training_opts.steps_per_epoch
           # In distributed mode, calling the set_epoch() method at
           # the beginning of each epoch before creating the DataLoader iterator
           # is necessary to make shuffling work properly across multiple epochs.
           # Otherwise, the same ordering will be always used.
           if self.pytorch.num_nodes > 1:
             loader.sampler.set_epoch(epoch)
-
-          if epoch < current_step // member.training_opts.steps_per_epoch:
-            continue
 
           batch_iter = tqdm.auto.trange(member.training_opts.steps_per_epoch, desc="Batch", leave = False) if self.is_world_process_zero() else range(member.training_opts.steps_per_epoch)
           for step in batch_iter:
@@ -344,7 +341,9 @@ class QueryByCommittee(backends.BackendBase):
     member_log_path = self.logfile_path / member.sha256
 
     current_step = self.loadCheckpoint(model, member_path)
-    if current_step < 0 or update_dataloader:
+    if current_step >= 0:
+      l.logger().info("Loaded {} checkpoint step {}".format("{}-{}".format(member.config.name, member.model.id), current_step))
+    if current_step < 0 or update_dataloader is not None:
       current_step = max(0, current_step)
       outputs = model(
         input_ids   = train_dataset['input_ids'],
@@ -364,12 +363,9 @@ class QueryByCommittee(backends.BackendBase):
     """
     # Configure committee members.
     update_dataloader = kwargs.get('update_dataloader', None)
-    if update_dataloader:
-      l.logger().error("We are in update traing mode.")
-      l.logger().error("This means two things: 1) update_dataloader should feed the data.")
-      l.logger().error("2) Updated training regime configurations must take place.")
+
     self._ConfigModelParams(self.downstream_task.data_generator)
-    if not self.is_trained and update_dataloader is None:
+    if not self.is_trained or update_dataloader is not None:
       for member in self.committee:
         member.train_fn(member, update_dataloader = update_dataloader)
     self.is_trained = True
