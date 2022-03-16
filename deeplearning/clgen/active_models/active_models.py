@@ -123,7 +123,7 @@ class Model(object):
     """
     Train-update active learner with new generated datapoints.
     """
-    self.Train(update_dataloader = updated_dataloader)
+    self.Train(update_dataloader = update_dataloader)
     return
 
   def Sample(self) -> typing.List[typing.Dict[str, float]]:
