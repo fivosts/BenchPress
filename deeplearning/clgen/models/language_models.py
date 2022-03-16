@@ -404,7 +404,8 @@ class Model(object):
     try:
       seq_count, cont = 0, True
       while cont:
-        cont, seq_count, (c, t) = sample_batch()
+        cont, s, (c, t) = sample_batch()
+        seq_count += s
         if sampler.is_live:
           start_text = [str(input("Live Feed: "))]
           while True:
