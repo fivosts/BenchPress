@@ -215,7 +215,9 @@ class QueryByCommittee(backends.BackendBase):
       l.logger().info("Loaded {} checkpoint step {}".format("{}-{}".format(member.config.name, member.model.id), current_step))
     current_step = max(0, current_step)
 
-    if current_step < member.training_opts.num_train_steps:
+    num_train_steps = member.training_opts.num_train_steps if update_dataloader is None else member.training_opts.num_train_steps + current_step
+
+    if current_step < num_train_steps:
       model.zero_grad()
 
       ## Set batch size in case of TPU training or distributed training.
