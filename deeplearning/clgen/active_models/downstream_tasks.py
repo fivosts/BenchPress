@@ -151,8 +151,9 @@ class GrewePredictive(DownstreamTask):
     return
 
   def CollectRuntimeFeatures(self,
-                             samples: typing.List['ActiveSample'],
-                             top_k  : int
+                             samples   : typing.List['ActiveSample'],
+                             top_k     : int,
+                             tokenizer : 'tokenizers.TokenizerBase',
                             ) -> typing.List['ActiveSample']:
     """
     Collect the top_k samples that can run on CLDrive and set their global size
@@ -166,13 +167,14 @@ class GrewePredictive(DownstreamTask):
       found        = False
       gsize        = max(1, math.log2(local_size))
       prev         = math.inf
+      code         = tokenizer.ArrayToCode(sample.sample)
       while not found and gsize <= 20:
-        sha256 = crypto.sha256_str(sample.sample + "BenchPress" + str(2**gsize) + str(local_size))
+        sha256 = crypto.sha256_str(code + "BenchPress" + str(2**gsize) + str(local_size))
         if sha256 in self.corpus_db.status_cache:
-          cached = self.corpus_db.get_entry(sample.sample, "BenchPress", 2**gsize, local_size)
+          cached = self.corpus_db.get_entry(code, "BenchPress", 2**gsize, local_size)
         else:
           cached = self.corpus_db.update_and_get(
-            sample.sample,
+            code,
             "BenchPress",
             global_size = 2**gsize,
             local_size  = local_size,
@@ -201,7 +203,7 @@ class GrewePredictive(DownstreamTask):
         new_runtime_feats['transferred_bytes'] = tr_bytes
         new_runtime_feats['global_size'] = 2**gsize
         cached = self.corpus_db.update_and_get(
-          sample.text,
+          code,
           "BenchPress",
           global_size = new_runtime_feats['global_size'],
           local_size  = new_runtime_feats['local_size'],
@@ -218,11 +220,12 @@ class GrewePredictive(DownstreamTask):
   def UpdateDataGenerator(self,
                           new_samples: typing.List['ActiveSample'],
                           top_k: int,
+                          tokenizer: 'tokenizers.TokenizerBase',
                           ) -> data_generator.ListTrainDataloader:
     """
     Collect new generated samples, find their runtime features and processs to a torch dataset.
     """
-    new_samples = self.CollectRuntimeFeatures(new_samples, top_k)
+    new_samples = self.CollectRuntimeFeatures(new_samples, top_k, tokenizer)
     updated_dataset = [
       (
         self.InputtoEncodedVector(feats,
