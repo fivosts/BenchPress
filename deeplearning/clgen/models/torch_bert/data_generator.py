@@ -668,7 +668,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           ## Post-process outputs.
           # Keep step_candidates and evaluate them. Keep rejected candidates only for eval_cand database.
           step_candidates, rejected_candidates = [], []
-          bar = lambda x: tqdm.tqdm(x, total = len(feeds) * wsize * self.sample_batch_size, desc = "Register Output Data", leave = False)
           tcs, ts = 0, 0
           # outputs = torch.reshape(outputs.unsqueeze(0), (len(feeds), -1, 768))
           # for idx, feed in enumerate(feeds):
@@ -1000,7 +999,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         )
       t = 0
       # l.logger().warn("Pool opened")
-      for idx, batch in bar(enumerate(pool.map(candidate_worker, it))):
+      for idx, batch in tqdm.tqdm((enumerate(pool.map(candidate_worker, it))), desc = "Register Output Data", leave = False):
         t = idx
         if batch[0]:
           cm_rate[0] += 1
