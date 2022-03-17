@@ -492,7 +492,7 @@ class QueryByCommittee(backends.BackendBase):
       committee_predictions[key] = member.sample_fn(member, sample_set)
     return committee_predictions
 
-  def Sample(self) -> typing.List[typing.Dict[str, float]]:
+  def Sample(self, num_samples: int = 512) -> typing.List[typing.Dict[str, float]]:
     """
     Active learner sampling.
     This method queries all committee members and measures their cross-entropy to validate
