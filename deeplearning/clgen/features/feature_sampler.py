@@ -266,8 +266,17 @@ class ActiveSampler(FeatureSampler):
     self.tokenizer = tokenizer
     return
 
-  def sample_active_learner(self) -> typing.List[Benchmark]:
-    return [Benchmark("", "", "", sample['static_features'], sample['runtime_features']) for sample in self.active_learner.Sample()]
+  def sample_active_learner(self,
+                            keep_top_k  : int = 1,
+                            num_samples : int = 512,
+                            ) -> typing.List[Benchmark]:
+    """
+    Sample active learner for num_samples and sort by highest entropy.
+    """
+    return [
+      Benchmark("", "", "", sample['static_features'], sample['runtime_features'])
+      for sample in self.active_learner.Sample(num_samples = num_samples)
+    ][:keep_top_k]
 
   def teach_active_learner(self,
                            target_samples: typing.List['ActiveSample'],
