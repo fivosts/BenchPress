@@ -408,7 +408,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       if environment.WORLD_RANK == 0:
         d.addToDB(
           active_feed_database.ActiveSamplingSpecs.FromArgs(
-            act_l_pf   = corpus_config.active.active_limit_per_feed,
             act_s_dep  = corpus_config.active.active_search_depth,
             act_s_wid  = corpus_config.active.active_search_width,
             feat_space = corpus_config.active.feature_space
@@ -587,7 +586,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       raise self.raised_exception
 
     # Active sampling specs initialization
-    active_limit_per_feed = self.sampler.config.sample_corpus.corpus_config.active.active_limit_per_feed
     active_search_depth   = self.sampler.config.sample_corpus.corpus_config.active.active_search_depth
     active_search_width   = self.sampler.config.sample_corpus.corpus_config.active.active_search_width
     sample_batch_per_feed = self.sampler.config.sample_corpus.corpus_config.active.batch_size_per_feed
@@ -728,13 +726,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
           if not FLAGS.evolutionary_search and better_found and feeds[0].gen_id > 0:
             l.logger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
-          # Calculate how many more to infer.
-          try:
-            rcands = active_limit_per_feed - len(step_candidates) # Deprecated.
-            crate  = cmp_rate[0] / cmp_rate[1] # Get current compilation rate.
-            wsize = max(2, int((rcands // self.sample_batch_size) / crate)) # Deprecated.
-          except ZeroDivisionError:
-            pass
           # Step counter.
           it += 1
           if FLAGS.evolutionary_search:
