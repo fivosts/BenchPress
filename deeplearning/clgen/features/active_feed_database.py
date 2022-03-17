@@ -1,4 +1,4 @@
-"""A module for databases of CLgen samples."""
+"""A module for databases of search-based generation."""
 import contextlib
 import math
 import copy
