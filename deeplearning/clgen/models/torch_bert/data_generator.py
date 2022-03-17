@@ -66,6 +66,12 @@ flags.DEFINE_boolean(
   "Select to use sklearn StandardScaler for generation standardization."
 )
 
+flags.DEFINE_boolean(
+  "start_from_cached",
+  False,
+  "Select to start from cached active feeds instead of restarting from axis origins."
+)
+
 class ActiveSampleFeed(typing.NamedTuple):
   """
   Representation of an active learning input to the model.
@@ -591,7 +597,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     sample_batch_per_feed = self.sampler.config.sample_corpus.corpus_config.active.batch_size_per_feed
 
     # Initialize feed queue
-    org_inp = self.initOrGetQueue()
+    org_inp = self.initOrGetQueue(self.feat_sampler.target_benchmark.features)
     org_ids = copy.copy(org_inp)
     total_cand, total_cand_hash = [], set()
 
@@ -653,7 +659,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           ## Pre-process inputs
           # workload size: how many batches of sequences you need.
           wsize = FLAGS.sample_workload_size // self.sample_batch_size
-          if FLAGS.evolutionary_search and feeds[0].gen_id == 0:
+          if FLAGS.evolutionary_search and feeds[0].gen_id == 0 and len(feeds) == 1:
             wsize = wsize * active_search_width
           # Give the input feed and some specs, get the tensor ready to feed.
           inputs = self.collateInputData([feed.input_feed for feed in feeds], wsize, sample_batch_per_feed)
@@ -842,7 +848,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               [x.sample for x in total_cand],
               [[]] * len(total_cand))
 
-  def initOrGetQueue(self) -> np.array:
+  def initOrGetQueue(self, target_features: typing.Dict[str, float] = None) -> np.array:
     """
     If feed queue is not initialized, initialize it by getting new datapoint.
     Otherwise, don't do anything as feed_queue is already loaded from checkpoint.
@@ -852,27 +858,53 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       Starting input feed of sampling.
     """
     if not self.feed_queue:
-      try:
-        cf = next(self.loader).squeeze(0)
-      except StopIteration:
-        self.loader = iter(self.dataloader)
-        cf = next(self.loader).squeeze(0)
-      cf = [int(x) for x in cf]
-      self.feed_queue.append(
-        ActiveSampleFeed(
-          input_feed     = cf,
-          input_features = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), [self.feat_sampler.feature_space])[self.feat_sampler.feature_space],
-          input_score    = math.inf,
-          gen_id         = 0,
-        )
-      )
-      if environment.WORLD_RANK == 0:
-        self.addToDB(
-          active_feed_database.ActiveInput.FromArgs(
-            tokenizer      = self.tokenizer, id = self.active_db.input_count,
-            input_feed     = cf, input_features = self.feed_queue[-1].input_features,
+      if FLAGS.start_from_cached and target_features is not None:
+        cached_samples = [[x.sample, x.output_features, -1] for x in self.active_db.get_data]
+        if len(cached_samples) == 0:
+          return self.initOrGetQueue()
+        else:
+          for idx, cs in enumerate(cached_samples):
+            cached_samples[idx][-1] = self.feat_sampler.calculate_distance(cs[0])
+          sorted_cache_samples = sorted(cached_samples, key = lambda x: x[-1])
+          for scs in sorted_cache_samples[:self.sampler.config.sample_corpus.corpus_config.active.active_search_width]:
+            encoded = self._padToMaxPosition(self._addStartEndToken(self.tokenizer.TokenizeString(scs[0])))
+            self.feed_queue.append(
+              ActiveSampleFeed(
+                input_feed     = encoded,
+                input_features = scs[1],
+                input_score    = scs[-1],
+                gen_id         = 0,
+              )
+            )
+            if environment.WORLD_RANK == 0:
+              self.addToDB(
+                active_feed_database.ActiveInput.FromArgs(
+                  tokenizer      = self.tokenizer, id = self.active_db.input_count,
+                  input_feed     = encoded,        input_features = scs[1],
+                )
+              )
+      else:
+        try:
+          cf = next(self.loader).squeeze(0)
+        except StopIteration:
+          self.loader = iter(self.dataloader)
+          cf = next(self.loader).squeeze(0)
+        cf = [int(x) for x in cf]
+        self.feed_queue.append(
+          ActiveSampleFeed(
+            input_feed     = cf,
+            input_features = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), [self.feat_sampler.feature_space])[self.feat_sampler.feature_space],
+            input_score    = math.inf,
+            gen_id         = 0,
           )
         )
+        if environment.WORLD_RANK == 0:
+          self.addToDB(
+            active_feed_database.ActiveInput.FromArgs(
+              tokenizer      = self.tokenizer, id = self.active_db.input_count,
+              input_feed     = cf, input_features = self.feed_queue[-1].input_features,
+            )
+          )
     l.logger().info("Feed queue input scores: {}".format(', '.join([str(round(c.input_score, 3)) for c in self.feed_queue])))
     return self.feed_queue[0].input_feed
 
