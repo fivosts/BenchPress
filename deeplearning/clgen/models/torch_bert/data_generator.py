@@ -597,10 +597,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     sample_batch_per_feed = self.sampler.config.sample_corpus.corpus_config.active.batch_size_per_feed
 
     # Initialize feed queue
-    try:
-      org_inp = self.initOrGetQueue(self.feat_sampler.target_benchmark.features)
-    except Exception as e:
-      raise e
+    org_inp = self.initOrGetQueue(self.feat_sampler.target_benchmark.features)
     org_ids = copy.copy(org_inp)
     total_cand, total_cand_hash = [], set()
 
