@@ -53,21 +53,18 @@ class ActiveSamplingSpecs(Base):
     DB Table for concentrated online/active sampling results.
   """
   sha256                : str = sql.Column(sql.String(1024), primary_key=True)
-  active_limit_per_feed : int = sql.Column(sql.Integer, nullable = False)
   active_search_depth   : int = sql.Column(sql.Integer, nullable = False)
   active_search_width   : int = sql.Column(sql.Integer, nullable = False)
   feature_space         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
 
   @classmethod
   def FromArgs(cls,
-               act_l_pf   : int,
                act_s_dep  : int,
                act_s_wid  : int,
                feat_space : str
                ) -> typing.TypeVar("ActiveSamplingSpecs"):
     return ActiveSamplingSpecs(
-      sha256                = crypto.sha256_str(str(act_l_pf) + str(act_s_dep) + str(act_s_wid) + feat_space),
-      active_limit_per_feed = act_l_pf,
+      sha256                = crypto.sha256_str(str(act_s_dep) + str(act_s_wid) + feat_space),
       active_search_depth   = act_s_dep,
       active_search_width   = act_s_wid,
       feature_space         = feat_space,
