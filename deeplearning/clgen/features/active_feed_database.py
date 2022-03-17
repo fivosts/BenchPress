@@ -115,9 +115,8 @@ class ActiveInput(Base, sqlutil.ProtoBackedMixin):
     )
 
 class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
-  """A database row representing a CLgen sample.
-
-  This is the clgen.Sample protocol buffer in SQL format.
+  """
+  A database row representing a search-based generational sample.
   """
   __tablename__    = "active_feeds"
   # entry id
