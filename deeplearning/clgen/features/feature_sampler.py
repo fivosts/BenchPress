@@ -143,12 +143,19 @@ class FeatureSampler(object):
     """
     raise NotImplementedError("Abstract class.")
 
+  def is_terminated(self) -> bool:
+    raise NotImplementedError
+
   def saveCheckpoint(self) -> None:
     """
     Save feature sampler state.
     """
+    state_dict = {
+      'benchmarks'       : self.benchmarks,
+      'target_benchmark' : self.target_benchmark,
+    }
     with open(self.workspace / "feature_sampler_state.pkl", 'wb') as outf:
-      pickle.dump(self.benchmarks, outf)
+      pickle.dump(state_dict, outf)
     return
 
   def loadCheckpoint(self) -> None:
@@ -178,8 +185,10 @@ class BenchmarkSampler(FeatureSampler):
     ]
     self.loadCheckpoint()
     try:
-      self.target_benchmark = self.benchmarks.pop(0)
-      l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
+      if self.target_benchmark is None:
+        self.benchmarks.pop(0)
+        self.target_benchmark = self.benchmarks.pop(0)
+        l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     except IndexError:
       self.target_benchmark = None
     return
@@ -199,15 +208,23 @@ class BenchmarkSampler(FeatureSampler):
     self.saveCheckpoint()
     return
 
+  def is_terminated(self) -> bool:
+    if not self.target_benchmark:
+      return True
+    return False
+
   def loadCheckpoint(self) -> None:
     """
     Load feature sampler state.
     """
     if (self.workspace / "feature_sampler_state.pkl").exists():
       with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
-        self.benchmarks = pickle.load(infile)
+        state_dict = pickle.load(infile)
+      self.benchmarks       = state_dict['benchmarks']
+      self.target_benchmark = state_dict['target_benchmark']
     else:
       self.benchmarks = []
+      self.target_benchmark = None
       if self.target == "grid_walk":
         for target_features in grid_walk_generator(self.feature_space):
           self.benchmarks.append(
@@ -259,10 +276,13 @@ class ActiveSampler(FeatureSampler):
     self.active_learner = active_learner
     self.loadCheckpoint()
     try:
-      self.target_benchmark = self.benchmarks.pop(0)
-      l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
+      if self.target_benchmark is None:
+        self.benchmarks.pop(0)
+        self.target_benchmark = self.benchmarks.pop(0)
+        l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     except IndexError:
-      self.target_benchmark = None
+      self.benchmarks = self.sample_active_learner()
+      self.target_benchmark = self.benchmarks.pop(0)
     self.tokenizer = tokenizer
     return
 
@@ -317,6 +337,10 @@ class ActiveSampler(FeatureSampler):
     self.saveCheckpoint()
     return
 
+  def is_terminated(self) -> bool:
+    l.logger().warn("You need to find a termination criteria for the active learner.")
+    return False
+
   def saveCheckpoint(self) -> None:
     super(ActiveSampler, self).saveCheckpoint()
     with open(self.workspace / "downstream_task_dg.pkl", 'wb') as outf:
@@ -330,7 +354,9 @@ class ActiveSampler(FeatureSampler):
     """
     if (self.workspace / "feature_sampler_state.pkl").exists():
       with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
-        self.benchmarks = pickle.load(infile)
+        state_dict = pickle.load(infile)
+      self.benchmarks       = state_dict['benchmarks']
+      self.target_benchmark = state_dict['target_benchmark']
     else:
       self.benchmarks = self.sample_active_learner()
     if (self.workspace / "downstream_task_dg.pkl").exists():
