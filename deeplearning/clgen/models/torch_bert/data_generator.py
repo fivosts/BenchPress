@@ -678,7 +678,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             [feeds[idx] for fidx, _ in enumerate(feeds) for idx in [fidx]*wsize*self.sample_batch_size],
             step_candidates,
             rejected_candidates,
-            bar
           )
           tcs += cs
           ts  =  s
@@ -958,7 +957,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                          feeds      : ActiveSampleFeed,
                          candidates : typing.List[ActiveSample],
                          rejected_candidates: typing.List[ActiveSample],
-                         bar: tqdm.tqdm,
                          ) -> typing.List[int]:
     """
     Gets workload output from model.
