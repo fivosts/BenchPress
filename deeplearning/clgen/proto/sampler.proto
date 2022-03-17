@@ -98,14 +98,13 @@ message CorpusConfig {
 
 // Active Sampling specifications message.
 message ActiveSampler {
-  optional int32  active_limit_per_feed = 1;
-  optional int32  active_search_depth   = 2;
-  optional int32  active_search_width   = 3;
-  optional int32  batch_size_per_feed   = 4;
-  optional string feature_space         = 5;
+  optional int32  active_search_depth   = 1;
+  optional int32  active_search_width   = 2;
+  optional int32  batch_size_per_feed   = 3;
+  optional string feature_space         = 4;
   oneof target_features {
-    string target                = 6;
-    ActiveLearner active_learner = 7;
+    string target                = 5;
+    ActiveLearner active_learner = 6;
   }
 }
 
