@@ -126,13 +126,13 @@ class Model(object):
     self.Train(update_dataloader = update_dataloader)
     return
 
-  def Sample(self) -> typing.List[typing.Dict[str, float]]:
+  def Sample(self, num_samples: int = 512) -> typing.List[typing.Dict[str, float]]:
     """
     Sample the active learner.
     Knowing a downstream task, the active learning model samples
     and returns the datapoints that are deemed valuable.
     """
-    return self.backend.Sample()
+    return self.backend.Sample(num_samples = num_samples)
 
   def SamplerCache(self, sampler: 'samplers.Sampler') -> pathlib.Path:
     """Get the path to a sampler cache.
