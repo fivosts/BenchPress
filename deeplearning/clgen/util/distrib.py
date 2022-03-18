@@ -111,7 +111,7 @@ def unlock() -> None:
     time.sleep(0.5)
   return
 
-def write(msg: str) -> None:
+def write_broadcast(msg: str) -> None:
   """
   Node broadcasts a message to all other nodes.
   This function is not process-safe. User must ensure one node calls it
@@ -121,12 +121,12 @@ def write(msg: str) -> None:
     with open(PATH / "msg-{}".format(x), 'w') as outf:
       outf.write(msg)
       outf.flush()
-  msg = read()
+  msg = read_broadcast()
   while len(glob.glob(str(PATH / "msg-*"))) > 0:
     time.sleep(0.5)
   return
 
-def read(d:int=0) -> str:
+def read_broadcast(d:int=0) -> str:
   """
   All nodes read broadcasted message.
   """
@@ -139,7 +139,42 @@ def read(d:int=0) -> str:
       with open(PATH / "msg-{}".format(WORLD_RANK), 'r') as inf:
         msg = inf.read()
     except FileNotFoundError:
-      return read(d = d+1)
+      return read_broadcast(d = d+1)
+    if msg != '':
+      break
+    time.sleep(0.5)
+  os.remove(str(PATH / "msg-{}".format(WORLD_RANK)))
+  return msg
+
+def write_update(msg: typing.Union[str, bytes], is_bytes: bool = False) -> None:
+  """
+  Node broadcasts a message to all other nodes.
+  This function is not process-safe. User must ensure one node calls it
+  and all reads have been complete before re-writing.
+  """
+  for x in range(WORLD_SIZE):
+    with open(PATH / "msg-{}".format(x), 'wb' if is_bytes else 'w') as outf:
+      outf.write(msg)
+      outf.flush()
+  msg = read_update()
+  while len(glob.glob(str(PATH / "msg-*"))) > 0:
+    time.sleep(0.5)
+  return
+
+def read_update(d: int = 0, is_bytes: bool = False) -> typing.Union[str, bytes]:
+  """
+  All nodes read broadcasted message.
+  """
+  if d > 10:
+    raise FileNotFoundError(str(PATH / "msg-{}".format(WORLD_RANK)))
+  while not (PATH / "msg-{}".format(WORLD_RANK)).exists():
+    time.sleep(0.5)
+  while True:
+    try:
+      with open(PATH / "msg-{}".format(WORLD_RANK), 'rb' if is_bytes else False) as inf:
+        msg = inf.read()
+    except FileNotFoundError:
+      return read_update(d = d+1)
     if msg != '':
       break
     time.sleep(0.5)
