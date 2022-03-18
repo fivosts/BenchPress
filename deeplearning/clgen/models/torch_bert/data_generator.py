@@ -411,14 +411,13 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             d.tsne_monitor.register((b.features, d.feat_sampler.target, b.name))
           d.tsne_monitor.plot()
       # Store unique specs to database once.
-      if environment.WORLD_RANK == 0:
-        d.addToDB(
-          active_feed_database.ActiveSamplingSpecs.FromArgs(
-            act_s_dep  = corpus_config.active.active_search_depth,
-            act_s_wid  = corpus_config.active.active_search_width,
-            feat_space = corpus_config.active.feature_space
-          )
+      d.addToDB(
+        active_feed_database.ActiveSamplingSpecs.FromArgs(
+          act_s_dep  = corpus_config.active.active_search_depth,
+          act_s_wid  = corpus_config.active.active_search_width,
+          feat_space = corpus_config.active.feature_space
         )
+      )
       d.raised_keyboard_int = False
       d.raised_exception    = None
       d.skip_first_queue    = FLAGS.skip_first_queue
@@ -686,8 +685,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           tcs += cs
           ts  =  s
 
+          """
+          !!!! Maybe you need DDP processes to merge step and rejected candidates here, for the monitors and the while loop to be correct.
+          """
+
           ## Register good offsprings, along with step candidates in tsne monitor.
-          if not FLAGS.evolutionary_search and better_found:
+          if not FLAGS.evolutionary_search and better_found and environment.WORLD_RANK == 0:
             self.tsne_monitor.register((better_found.features, "gen_{}_accepted".format(str(feeds[0].gen_id)), str(better_found.score)))
             for c in step_candidates:
               self.tsne_monitor.register((c.features, "gen_{}".format(str(feeds[0].gen_id))))
@@ -712,7 +715,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           # write_cache_proc.start()
 
           ## Write all candidates to eval_cand DB.
-          if FLAGS.evaluate_candidates:
+          if FLAGS.evaluate_candidates and environment.WORLD_RANK == 0:
             # l.logger().warn("Before join: {}".format(write_eval_proc))
             if write_eval_proc:
               write_eval_proc.join()
@@ -742,13 +745,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         ######## End of while.
 
         ## Update all monitors.
-        self.comp_rate[feeds[0].gen_id] = [sum(x) for x in zip(self.comp_rate[feeds[0].gen_id], cmp_rate)]
-        self.exec_time[feeds[0].gen_id] += exec_time
-        self.comp_rate_mon.register((feeds[0].gen_id, self.comp_rate[feeds[0].gen_id][0] / self.comp_rate[feeds[0].gen_id][1]))
-        self.exec_time_mon.register((feeds[0].gen_id, self.exec_time[feeds[0].gen_id]    / self.comp_rate[feeds[0].gen_id][1]))
-        self.comp_rate_mon.plot()
-        self.exec_time_mon.plot()
-        # self.tsne_monitor.plot()
+        if environment.WORLD_RANK == 0:
+          self.comp_rate[feeds[0].gen_id] = [sum(x) for x in zip(self.comp_rate[feeds[0].gen_id], cmp_rate)]
+          self.exec_time[feeds[0].gen_id] += exec_time
+          self.comp_rate_mon.register((feeds[0].gen_id, self.comp_rate[feeds[0].gen_id][0] / self.comp_rate[feeds[0].gen_id][1]))
+          self.exec_time_mon.register((feeds[0].gen_id, self.exec_time[feeds[0].gen_id]    / self.comp_rate[feeds[0].gen_id][1]))
+          self.comp_rate_mon.plot()
+          self.exec_time_mon.plot()
+          # self.tsne_monitor.plot()
 
         ## Collect surviving candidates of generation.
         # If we just started, get top-K.
@@ -780,7 +784,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # Add them back to queue and to active feed database.
         found_match = False
         for nc in best_cands:
-          if FLAGS.evolutionary_search:
+          if FLAGS.evolutionary_search and environment.WORLD_RANK == 0:
             self.tsne_monitor.register((nc.features, "gen_{}_accepted".format(str(feeds[0].gen_id))))
           sample_hash = ''.join([str(x) for x in nc.sample])
           if FLAGS.evolutionary_search or (sample_hash not in total_cand_hash):
@@ -813,14 +817,15 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                 generation_id    = nc.sample_feed.gen_id,
               )
             )
-        self.tsne_monitor.plot()
+        if environment.WORLD_RANK == 0:
+          self.tsne_monitor.plot()
         # save state and re-loop.
         self.saveCheckpoint()
 
       # Catch threads on last iteration.
-      if write_cache_proc:
+      if write_cache_proc and environment.WORLD_RANK == 0:
         write_cache_proc.join()
-      if FLAGS.evaluate_candidates and write_eval_proc:
+      if FLAGS.evaluate_candidates and write_eval_proc and environment.WORLD_RANK == 0:
         write_eval_proc.join()
 
       ## Finished, save state, switch benchmark, return samples.
@@ -833,9 +838,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               [[]] * len(total_cand))
     except KeyboardInterrupt:
       self.raised_keyboard_int = True
-      if write_cache_proc:
+      if write_cache_proc and environment.WORLD_RANK == 0:
         write_cache_proc.terminate()
-      if FLAGS.evaluate_candidates and write_eval_proc:
+      if FLAGS.evaluate_candidates and write_eval_proc and environment.WORLD_RANK == 0:
         write_eval_proc.terminate()
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
@@ -877,13 +882,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                 gen_id         = 0,
               )
             )
-            if environment.WORLD_RANK == 0:
-              self.addToDB(
-                active_feed_database.ActiveInput.FromArgs(
-                  tokenizer      = self.tokenizer, id = self.active_db.input_count,
-                  input_feed     = encoded,        input_features = scs[1],
-                )
+            self.addToDB(
+              active_feed_database.ActiveInput.FromArgs(
+                tokenizer      = self.tokenizer, id = self.active_db.input_count,
+                input_feed     = encoded,        input_features = scs[1],
               )
+            )
       else:
         try:
           cf = next(self.loader).squeeze(0)
@@ -899,13 +903,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             gen_id         = 0,
           )
         )
-        if environment.WORLD_RANK == 0:
-          self.addToDB(
-            active_feed_database.ActiveInput.FromArgs(
-              tokenizer      = self.tokenizer, id = self.active_db.input_count,
-              input_feed     = cf, input_features = self.feed_queue[-1].input_features,
-            )
+        self.addToDB(
+          active_feed_database.ActiveInput.FromArgs(
+            tokenizer      = self.tokenizer, id = self.active_db.input_count,
+            input_feed     = cf, input_features = self.feed_queue[-1].input_features,
           )
+        )
     l.logger().info("Feed queue input scores: {}".format(', '.join([str(round(c.input_score, 3)) for c in self.feed_queue])))
     return self.feed_queue[0].input_feed
 
