@@ -109,7 +109,7 @@ class FeatureSampler(object):
           rep = np.random.RandomState().rand()
           visited = set()
           if rep <= dropout_prob and len(visited) < len(candidates):
-            swap_idx = rng.choice(set(range(len(candidates))) - visited)
+            swap_idx = rng.choice(list(set(range(len(candidates))) - visited))
             sorted_cands[kidx], sorted_cands[swap_idx] = sorted_cands[swap_idx], sorted_cands[kidx]
             visited.add(swap_idx)
       return sorted_cands[:K]
