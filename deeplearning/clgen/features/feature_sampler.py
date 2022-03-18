@@ -93,14 +93,25 @@ class FeatureSampler(object):
     return calculate_distance(infeat, self.target_benchmark.features, self.feature_space)
 
   def topK_candidates(self,
-                      candidates: typing.List[typing.TypeVar("ActiveSample")],
-                      K : int,
+                      candidates   : typing.List[typing.TypeVar("ActiveSample")],
+                      K            : int,
+                      dropout_prob : float = None,
                       ) -> typing.List[typing.TypeVar("ActiveSample")]:
     """
     Return top-K candidates.
     """
     if FLAGS.randomize_selection is None:
-      return sorted(candidates, key = lambda x: x.score)[:K]
+      sorted_cands = sorted(candidates, key = lambda x: x.score)  # [:K]
+      if dropout_prob > 0.0:
+        rng = default_rng()
+        for kidx in range(K):
+          rep = rng.rand()
+          visited = set()
+          if rep <= dropout_prob and len(visited) < len(candidates):
+            swap_idx = rng.choice(set(range(len(candidates))) - visited)
+            sorted_cands[kidx], sorted_cands[swap_idx] = sorted_cands[swap_idx], sorted_cands[kidx]
+            visited.add(swap_idx)
+      return sorted_cands[:K]
     else:
       if FLAGS.randomize_selection == 0:
         raise ValueError("randomize_selection, {}, cannot be 0.".format(FLAGS.randomize_selection))
@@ -113,6 +124,7 @@ class FeatureSampler(object):
   def sample_from_set(self, 
                       candidates   : typing.List[typing.TypeVar("ActiveSample")],
                       search_width : int,
+                      dropout_prob : float = None,
                       only_unique  : bool = True,
                       ) -> bool:
     """
