@@ -7,6 +7,7 @@ import pickle
 import math
 import functools
 import multiprocessing
+import numpy as np
 from numpy.random import default_rng
 
 from deeplearning.clgen.features import normalizers
@@ -105,7 +106,7 @@ class FeatureSampler(object):
       if dropout_prob > 0.0:
         rng = default_rng()
         for kidx in range(K):
-          rep = rng.rand()
+          rep = np.random.RandomState().rand()
           visited = set()
           if rep <= dropout_prob and len(visited) < len(candidates):
             swap_idx = rng.choice(set(range(len(candidates))) - visited)
