@@ -499,9 +499,9 @@ class Model(object):
         )
         seq_count += 1
       if environment.WORLD_SIZE > 1:
-        distrib.write(str(continue_sampling))
+        distrib.write_broadcast(str(continue_sampling))
     else:
-      status = distrib.read()
+      status = distrib.read_broadcast()
       if status == "True":
         continue_sampling = True        
       elif status == "False":
