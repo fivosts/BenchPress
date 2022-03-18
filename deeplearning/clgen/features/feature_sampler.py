@@ -95,7 +95,7 @@ class FeatureSampler(object):
   def topK_candidates(self,
                       candidates   : typing.List[typing.TypeVar("ActiveSample")],
                       K            : int,
-                      dropout_prob : float = None,
+                      dropout_prob : float,
                       ) -> typing.List[typing.TypeVar("ActiveSample")]:
     """
     Return top-K candidates.
@@ -124,7 +124,7 @@ class FeatureSampler(object):
   def sample_from_set(self, 
                       candidates   : typing.List[typing.TypeVar("ActiveSample")],
                       search_width : int,
-                      dropout_prob : float = None,
+                      dropout_prob : float,
                       only_unique  : bool = True,
                       ) -> bool:
     """
@@ -146,7 +146,7 @@ class FeatureSampler(object):
           unique_candidates.append(c)
           hset.add(sample_str)
       candidates = unique_candidates
-    return self.topK_candidates(candidates, search_width)
+    return self.topK_candidates(candidates, search_width, dropout_prob = dropout_prob)
 
   def iter_benchmark(self, *unused_args, **unused_kwargs) -> None:
     """
