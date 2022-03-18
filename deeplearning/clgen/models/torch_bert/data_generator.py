@@ -594,6 +594,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     # Active sampling specs initialization
     active_search_depth   = self.sampler.config.sample_corpus.corpus_config.active.active_search_depth
     active_search_width   = self.sampler.config.sample_corpus.corpus_config.active.active_search_width
+    active_dropout_prob   = self.sampler.config.sample_corpus.corpus_config.active.active_dropout_prob
     sample_batch_per_feed = self.sampler.config.sample_corpus.corpus_config.active.batch_size_per_feed
 
     # Initialize feed queue
@@ -752,14 +753,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         ## Collect surviving candidates of generation.
         # If we just started, get top-K.
         if FLAGS.evolutionary_search:
-          best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
+          best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width, active_dropout_prob)
           # if environment.WORLD_SIZE > 0:
             #1. gather best cands from every process
             #2. Per rank, call again sample from set for the gathered stuff.
             #3. Replace best cands with the new stuff
           l.logger().info("Top-{} ({} unique) samples of generation {}: {}".format(active_search_width, len(best_cands), feeds[0].gen_id, ', '.join([str(round(c.score, 3)) for c in best_cands])))
         elif feeds[0].gen_id == 0:
-          best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
+          best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width, active_dropout_prob)
           l.logger().info("Starting scores: {}".format(', '.join([str(round(c.score, 3)) for c in best_cands])))
         else:
           # If nothing was found, there are no best cands, and we will keep searching.
