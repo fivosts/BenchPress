@@ -583,7 +583,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         d) Sample indices
       The arrays are ordered by index.
     """
-    if not self.feat_sampler.target_benchmark:
+    if self.feat_sampler.is_terminated():
       raise StopIteration
     if self.raised_keyboard_int:
       self.raised_keyboard_int = False
@@ -860,12 +860,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     """
     if not self.feed_queue:
       if FLAGS.start_from_cached and target_features is not None:
-        cached_samples = [[x.sample, x.output_features, -1] for x in self.active_db.get_data]
+        cached_samples = [[x.sample, {':'.join(f.split(':')[:-1]): float(f.split(':')[-1]) for f in x.output_features.split('\n')}, -1] for x in self.active_db.get_data]
         if len(cached_samples) == 0:
           return self.initOrGetQueue()
         else:
           for idx, cs in enumerate(cached_samples):
-            cached_samples[idx][-1] = self.feat_sampler.calculate_distance(cs[0])
+            cached_samples[idx][-1] = self.feat_sampler.calculate_distance(cs[1])
           sorted_cache_samples = sorted(cached_samples, key = lambda x: x[-1])
           for scs in sorted_cache_samples[:self.sampler.config.sample_corpus.corpus_config.active.active_search_width]:
             encoded = self._padToMaxPosition(self._addStartEndToken(self.tokenizer.TokenizeString(scs[0])))

@@ -238,14 +238,13 @@ def _addStartEndPadToken(inp: list, tokenizer, trunc: int = None, seq_len: int =
     start = [tokenizer.startToken] if inp[0]  != tokenizer.startToken else []
     end   = [tokenizer.endToken  ] if inp[-1] != tokenizer.endToken   else []
 
-    if isinstance(inp, list):
-      ret = start + inp + end
-      rlen = len(ret)
-      if seq_len is not None:
-        ret += [tokenizer.padToken] * (seq_len - len(ret))
-      return rlen, np.array(ret)
-    elif isinstance(inp, np.ndarray):
-      raise NotImplementedError
+    if isinstance(inp, np.ndarray):
+      inp = list(inp)
+    ret = start + inp + end
+    rlen = len(ret)
+    if seq_len is not None:
+      ret += [tokenizer.padToken] * (seq_len - len(ret))
+    return rlen, np.array(ret)
   except AssertionError:
     return None
 
@@ -1046,10 +1045,9 @@ class MaskLMDataGenerator(object):
 
     start = [self.tokenizer.startToken] if inp[0]  != self.tokenizer.startToken else []
     end   = [self.tokenizer.endToken  ] if inp[-1] != self.tokenizer.endToken   else []
-    if isinstance(inp, list):
-      return start + inp + end
-    elif isinstance(inp, np.ndarray):
-      raise NotImplementedError
+    if isinstance(inp, np.ndarray):
+      inp = list(inp)
+    return start + inp + end
 
   def GetShortSummary(self) -> str:
     return (
