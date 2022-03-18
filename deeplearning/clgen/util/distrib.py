@@ -41,7 +41,7 @@ def barrier(fn: typing.Callable = None) -> None:
 
     barriers = glob.glob(str(PATH / "barrier-lock-*"))
 
-    while len(barriers) < environment.WORLD_SIZE:
+    while len(barriers) < WORLD_SIZE:
       if fn:
         fn()
       time.sleep(0.5)
@@ -54,7 +54,7 @@ def barrier(fn: typing.Callable = None) -> None:
     while len(barriers) > 0:
       barriers = glob.glob(str(PATH / "barrier-lock-*"))
       escapes  = glob.glob(str(PATH / "barrier-escape-*"))
-      if environment.WORLD_RANK == 0 and len(escapes) == environment.WORLD_SIZE:
+      if WORLD_RANK == 0 and len(escapes) == WORLD_SIZE:
         for be in escapes:
           os.remove(str(be))
         for b in barriers:
@@ -146,40 +146,42 @@ def read_broadcast(d:int=0) -> str:
   os.remove(str(PATH / "msg-{}".format(WORLD_RANK)))
   return msg
 
-def write_update(msg: typing.Union[str, bytes], is_bytes: bool = False) -> None:
+def consistent_write(msg: typing.Union[str, bytes], is_bytes: bool = False) -> None:
   """
-  Node broadcasts a message to all other nodes.
-  This function is not process-safe. User must ensure one node calls it
-  and all reads have been complete before re-writing.
+  All nodes become consistent on a set of discrete chunks of data.
+  All nodes must get updated with the same merged blob.
   """
-  for x in range(WORLD_SIZE):
-    with open(PATH / "msg-{}".format(x), 'wb' if is_bytes else 'w') as outf:
-      outf.write(msg)
-      outf.flush()
-  msg = read_update()
-  while len(glob.glob(str(PATH / "msg-*"))) > 0:
-    time.sleep(0.5)
+  with open(PATH / "msg-{}".format(WORLD_RANK), 'wb' if is_bytes else 'w') as outf:
+    outf.write(msg)
+    outf.flush()
   return
 
-def read_update(d: int = 0, is_bytes: bool = False) -> typing.Union[str, bytes]:
+def consistent_read(is_bytes: bool = False) -> typing.Dict[int, typing.Union[str, bytes]]:
   """
-  All nodes read broadcasted message.
+  Nodes read other nodes' data and become consistent.
   """
-  if d > 10:
-    raise FileNotFoundError(str(PATH / "msg-{}".format(WORLD_RANK)))
-  while not (PATH / "msg-{}".format(WORLD_RANK)).exists():
+  dc = 0
+  while len(glob.glob(str(PATH / "msg-*"))) < WORLD_SIZE:
     time.sleep(0.5)
-  while True:
-    try:
-      with open(PATH / "msg-{}".format(WORLD_RANK), 'rb' if is_bytes else False) as inf:
-        msg = inf.read()
-    except FileNotFoundError:
-      return read_update(d = d+1)
-    if msg != '':
-      break
-    time.sleep(0.5)
-  os.remove(str(PATH / "msg-{}".format(WORLD_RANK)))
-  return msg
+    dc += 1
+    if dc > 200:
+      raise OSError("I'm stuck here!")
+
+  data = {}
+  while len(data.keys()) < WORLD_SIZE:
+    for i in range(WORLD_SIZE):
+      if i not in data and (PATH / "msg-{}".format(i)).exists():
+        try:
+          with open(PATH / "msg-{}".format(i), 'rb' if is_bytes else False) as inf:        
+            msg = inf.read()
+          if msg != '':
+            data[i] = msg
+        except FileNotFoundError:
+          pass
+  barrier()
+  while (PATH / "msg-{}".format(WORLD_RANK)).exists():
+    os.remove(str(PATH / "msg-{}".format(WORLD_RANK)))
+  return data
 
 def init(path: pathlib.Path) -> None:
   """
