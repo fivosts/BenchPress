@@ -78,6 +78,12 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
           pbutil.AssertFieldIsSet(config.sample_corpus.corpus_config.active, "active_search_width")
           pbutil.AssertFieldConstraint(
             config.sample_corpus.corpus_config.active,
+            "active_dropout_prob",
+            lambda x: x >= 0 and x <= 1,
+            "Active dropout rate must be a float between in range [0.0, 1.0]",
+          )
+          pbutil.AssertFieldConstraint(
+            config.sample_corpus.corpus_config.active,
             "batch_size_per_feed",
             lambda x : config.batch_size % x == 0,
             "batch_size {} must be a multiple of batch_size_per_feed".format(
