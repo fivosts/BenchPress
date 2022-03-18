@@ -274,11 +274,11 @@ class EncodedContentFiles(sqlutil.Database):
       if environment.WORLD_RANK == 0:
         with self.Session() as session:
           status = self.IsDone(session)
-          distrib.write(str(status))
+          distrib.write_broadcast(str(status))
           if status:
             return
       else:
-        status = distrib.read()
+        status = distrib.read_broadcast()
         if status == "True":
           return
         if status != "False":
