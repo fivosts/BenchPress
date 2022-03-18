@@ -685,9 +685,20 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           tcs += cs
           ts  =  s
 
-          """
-          !!!! Maybe you need DDP processes to merge step and rejected candidates here, for the monitors and the while loop to be correct.
-          """
+          if environment.WORLD_SIZE > 1:
+            ## Become consistent with step_candidates
+            distrib.consistent_write(pickle.dumps(step_candidates), is_bytes = True)
+            bdstep_cands    = distrib.consistent_read(is_bytes = True)
+            step_candidates = []
+            for chunk in bdstep_cands.values():
+              step_candidates += pickle.loads(chunk)
+
+            ## Become consistent with rejected_candidates
+            distrib.consistent_write(pickle.dumps(rejected_candidates), is_bytes = True)
+            bdrejected_cands = distrib.consistent_read(is_bytes = True)
+            rejected_candidates = []
+            for chunk in bdrejected_cands.values():
+              rejected_candidates += pickle.loads(chunk)
 
           ## Register good offsprings, along with step candidates in tsne monitor.
           if not FLAGS.evolutionary_search and better_found and environment.WORLD_RANK == 0:
@@ -758,7 +769,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # If we just started, get top-K.
         if FLAGS.evolutionary_search:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width, active_dropout_prob)
-          # if environment.WORLD_SIZE > 0:
+          # if environment.WORLD_SIZE > 1:
             #1. gather best cands from every process
             #2. Per rank, call again sample from set for the gathered stuff.
             #3. Replace best cands with the new stuff
