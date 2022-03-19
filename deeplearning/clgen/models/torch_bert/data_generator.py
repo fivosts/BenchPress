@@ -769,10 +769,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # If we just started, get top-K.
         if FLAGS.evolutionary_search:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width, active_dropout_prob)
-          # if environment.WORLD_SIZE > 1:
-            #1. gather best cands from every process
-            #2. Per rank, call again sample from set for the gathered stuff.
-            #3. Replace best cands with the new stuff
           l.logger().info("Top-{} ({} unique) samples of generation {}: {}".format(active_search_width, len(best_cands), feeds[0].gen_id, ', '.join([str(round(c.score, 3)) for c in best_cands])))
         elif feeds[0].gen_id == 0:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width, active_dropout_prob)
@@ -830,8 +826,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             )
         if environment.WORLD_RANK == 0:
           self.tsne_monitor.plot()
-        # save state and re-loop.
-        self.saveCheckpoint()
+          self.feat_sampler.step_generation(best_cands)          
+          # save state for this generation and re-loop for the next.
+          self.saveCheckpoint()
 
       # Catch threads on last iteration.
       if write_cache_proc and environment.WORLD_RANK == 0:
@@ -841,7 +838,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
       ## Finished, save state, switch benchmark, return samples.
       self.bench_idx += 1
-      self.saveCheckpoint()
+      if environment.WORLD_RANK == 0:
+        self.saveCheckpoint()
       self.feat_sampler.iter_benchmark(target_samples = total_cand, top_k = 5)
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
