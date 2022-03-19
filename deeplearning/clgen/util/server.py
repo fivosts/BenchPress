@@ -135,7 +135,7 @@ def client():
     kwargs = {
       'in_queue': iiq,
       'out_queue': ooq,
-      'target_host': "ft3.inf.ed.ac.uk",
+      'target_host': "cc3.inf.ed.ac.uk",
       'listen_port': 8085,
       'send_port': 8080,
     }
@@ -152,4 +152,4 @@ def client():
 
 def server():
   iq, oq = multiprocessing.Queue(), multiprocessing.Queue()
-  serve(iq, oq, "ft1.inf.ed.ac.uk", 8080, 8085)
+  serve(iq, oq, "cc1.inf.ed.ac.uk", 8080, 8085)
