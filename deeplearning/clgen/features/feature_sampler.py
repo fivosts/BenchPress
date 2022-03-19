@@ -7,6 +7,7 @@ import pickle
 import math
 import functools
 import multiprocessing
+import numpy as np
 from numpy.random import default_rng
 
 from deeplearning.clgen.features import normalizers
@@ -93,14 +94,25 @@ class FeatureSampler(object):
     return calculate_distance(infeat, self.target_benchmark.features, self.feature_space)
 
   def topK_candidates(self,
-                      candidates: typing.List[typing.TypeVar("ActiveSample")],
-                      K : int,
+                      candidates   : typing.List[typing.TypeVar("ActiveSample")],
+                      K            : int,
+                      dropout_prob : float,
                       ) -> typing.List[typing.TypeVar("ActiveSample")]:
     """
     Return top-K candidates.
     """
     if FLAGS.randomize_selection is None:
-      return sorted(candidates, key = lambda x: x.score)[:K]
+      sorted_cands = sorted(candidates, key = lambda x: x.score)  # [:K]
+      if dropout_prob > 0.0:
+        rng = default_rng()
+        for kidx in range(K):
+          rep = np.random.RandomState().rand()
+          visited = set()
+          if rep <= dropout_prob and len(visited) < len(candidates):
+            swap_idx = rng.choice(list(set(range(len(candidates))) - visited))
+            sorted_cands[kidx], sorted_cands[swap_idx] = sorted_cands[swap_idx], sorted_cands[kidx]
+            visited.add(swap_idx)
+      return sorted_cands[:K]
     else:
       if FLAGS.randomize_selection == 0:
         raise ValueError("randomize_selection, {}, cannot be 0.".format(FLAGS.randomize_selection))
@@ -113,6 +125,7 @@ class FeatureSampler(object):
   def sample_from_set(self, 
                       candidates   : typing.List[typing.TypeVar("ActiveSample")],
                       search_width : int,
+                      dropout_prob : float,
                       only_unique  : bool = True,
                       ) -> bool:
     """
@@ -134,7 +147,7 @@ class FeatureSampler(object):
           unique_candidates.append(c)
           hset.add(sample_str)
       candidates = unique_candidates
-    return self.topK_candidates(candidates, search_width)
+    return self.topK_candidates(candidates, search_width, dropout_prob = dropout_prob)
 
   def iter_benchmark(self, *unused_args, **unused_kwargs) -> None:
     """
@@ -143,12 +156,19 @@ class FeatureSampler(object):
     """
     raise NotImplementedError("Abstract class.")
 
+  def is_terminated(self) -> bool:
+    raise NotImplementedError
+
   def saveCheckpoint(self) -> None:
     """
     Save feature sampler state.
     """
+    state_dict = {
+      'benchmarks'       : self.benchmarks,
+      'target_benchmark' : self.target_benchmark,
+    }
     with open(self.workspace / "feature_sampler_state.pkl", 'wb') as outf:
-      pickle.dump(self.benchmarks, outf)
+      pickle.dump(state_dict, outf)
     return
 
   def loadCheckpoint(self) -> None:
@@ -178,8 +198,10 @@ class BenchmarkSampler(FeatureSampler):
     ]
     self.loadCheckpoint()
     try:
-      self.target_benchmark = self.benchmarks.pop(0)
-      l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
+      if self.target_benchmark is None:
+        self.benchmarks.pop(0)
+        self.target_benchmark = self.benchmarks.pop(0)
+        l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     except IndexError:
       self.target_benchmark = None
     return
@@ -199,15 +221,23 @@ class BenchmarkSampler(FeatureSampler):
     self.saveCheckpoint()
     return
 
+  def is_terminated(self) -> bool:
+    if not self.target_benchmark:
+      return True
+    return False
+
   def loadCheckpoint(self) -> None:
     """
     Load feature sampler state.
     """
     if (self.workspace / "feature_sampler_state.pkl").exists():
       with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
-        self.benchmarks = pickle.load(infile)
+        state_dict = pickle.load(infile)
+      self.benchmarks       = state_dict['benchmarks']
+      self.target_benchmark = state_dict['target_benchmark']
     else:
       self.benchmarks = []
+      self.target_benchmark = None
       if self.target == "grid_walk":
         for target_features in grid_walk_generator(self.feature_space):
           self.benchmarks.append(
@@ -259,15 +289,27 @@ class ActiveSampler(FeatureSampler):
     self.active_learner = active_learner
     self.loadCheckpoint()
     try:
-      self.target_benchmark = self.benchmarks.pop(0)
-      l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
+      if self.target_benchmark is None:
+        self.benchmarks.pop(0)
+        self.target_benchmark = self.benchmarks.pop(0)
+        l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     except IndexError:
-      self.target_benchmark = None
+      self.benchmarks = self.sample_active_learner()
+      self.target_benchmark = self.benchmarks.pop(0)
     self.tokenizer = tokenizer
     return
 
-  def sample_active_learner(self) -> typing.List[Benchmark]:
-    return [Benchmark("", "", "", sample['static_features'], sample['runtime_features']) for sample in self.active_learner.Sample()]
+  def sample_active_learner(self,
+                            keep_top_k  : int = 1,
+                            num_samples : int = 512,
+                            ) -> typing.List[Benchmark]:
+    """
+    Sample active learner for num_samples and sort by highest entropy.
+    """
+    return [
+      Benchmark("", "", "", sample['static_features'], sample['runtime_features'])
+      for sample in self.active_learner.Sample(num_samples = num_samples)
+    ][:keep_top_k]
 
   def teach_active_learner(self,
                            target_samples: typing.List['ActiveSample'],
@@ -308,6 +350,10 @@ class ActiveSampler(FeatureSampler):
     self.saveCheckpoint()
     return
 
+  def is_terminated(self) -> bool:
+    l.logger().warn("You need to find a termination criteria for the active learner.")
+    return False
+
   def saveCheckpoint(self) -> None:
     super(ActiveSampler, self).saveCheckpoint()
     with open(self.workspace / "downstream_task_dg.pkl", 'wb') as outf:
@@ -321,7 +367,9 @@ class ActiveSampler(FeatureSampler):
     """
     if (self.workspace / "feature_sampler_state.pkl").exists():
       with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
-        self.benchmarks = pickle.load(infile)
+        state_dict = pickle.load(infile)
+      self.benchmarks       = state_dict['benchmarks']
+      self.target_benchmark = state_dict['target_benchmark']
     else:
       self.benchmarks = self.sample_active_learner()
     if (self.workspace / "downstream_task_dg.pkl").exists():

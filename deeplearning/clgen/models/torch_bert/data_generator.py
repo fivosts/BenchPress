@@ -66,6 +66,12 @@ flags.DEFINE_boolean(
   "Select to use sklearn StandardScaler for generation standardization."
 )
 
+flags.DEFINE_boolean(
+  "start_from_cached",
+  False,
+  "Select to start from cached active feeds instead of restarting from axis origins."
+)
+
 class ActiveSampleFeed(typing.NamedTuple):
   """
   Representation of an active learning input to the model.
@@ -405,15 +411,13 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             d.tsne_monitor.register((b.features, d.feat_sampler.target, b.name))
           d.tsne_monitor.plot()
       # Store unique specs to database once.
-      if environment.WORLD_RANK == 0:
-        d.addToDB(
-          active_feed_database.ActiveSamplingSpecs.FromArgs(
-            act_l_pf   = corpus_config.active.active_limit_per_feed,
-            act_s_dep  = corpus_config.active.active_search_depth,
-            act_s_wid  = corpus_config.active.active_search_width,
-            feat_space = corpus_config.active.feature_space
-          )
+      d.addToDB(
+        active_feed_database.ActiveSamplingSpecs.FromArgs(
+          act_s_dep  = corpus_config.active.active_search_depth,
+          act_s_wid  = corpus_config.active.active_search_width,
+          feat_space = corpus_config.active.feature_space
         )
+      )
       d.raised_keyboard_int = False
       d.raised_exception    = None
       d.skip_first_queue    = FLAGS.skip_first_queue
@@ -578,7 +582,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         d) Sample indices
       The arrays are ordered by index.
     """
-    if not self.feat_sampler.target_benchmark:
+    if self.feat_sampler.is_terminated():
       raise StopIteration
     if self.raised_keyboard_int:
       self.raised_keyboard_int = False
@@ -587,13 +591,13 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       raise self.raised_exception
 
     # Active sampling specs initialization
-    active_limit_per_feed = self.sampler.config.sample_corpus.corpus_config.active.active_limit_per_feed
     active_search_depth   = self.sampler.config.sample_corpus.corpus_config.active.active_search_depth
     active_search_width   = self.sampler.config.sample_corpus.corpus_config.active.active_search_width
+    active_dropout_prob   = self.sampler.config.sample_corpus.corpus_config.active.active_dropout_prob
     sample_batch_per_feed = self.sampler.config.sample_corpus.corpus_config.active.batch_size_per_feed
 
     # Initialize feed queue
-    org_inp = self.initOrGetQueue()
+    org_inp = self.initOrGetQueue(self.feat_sampler.target_benchmark.features)
     org_ids = copy.copy(org_inp)
     total_cand, total_cand_hash = [], set()
 
@@ -655,7 +659,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           ## Pre-process inputs
           # workload size: how many batches of sequences you need.
           wsize = FLAGS.sample_workload_size // self.sample_batch_size
-          if FLAGS.evolutionary_search and feeds[0].gen_id == 0:
+          if FLAGS.evolutionary_search and feeds[0].gen_id == 0 and len(feeds) == 1:
             wsize = wsize * active_search_width
           # Give the input feed and some specs, get the tensor ready to feed.
           inputs = self.collateInputData([feed.input_feed for feed in feeds], wsize, sample_batch_per_feed)
@@ -668,7 +672,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           ## Post-process outputs.
           # Keep step_candidates and evaluate them. Keep rejected candidates only for eval_cand database.
           step_candidates, rejected_candidates = [], []
-          bar = lambda x: tqdm.tqdm(x, total = len(feeds) * wsize * self.sample_batch_size, desc = "Register Output Data", leave = False)
           tcs, ts = 0, 0
           # outputs = torch.reshape(outputs.unsqueeze(0), (len(feeds), -1, 768))
           # for idx, feed in enumerate(feeds):
@@ -678,13 +681,27 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             [feeds[idx] for fidx, _ in enumerate(feeds) for idx in [fidx]*wsize*self.sample_batch_size],
             step_candidates,
             rejected_candidates,
-            bar
           )
           tcs += cs
           ts  =  s
 
+          if environment.WORLD_SIZE > 1:
+            ## Become consistent with step_candidates
+            distrib.consistent_write(pickle.dumps(step_candidates), is_bytes = True)
+            bdstep_cands    = distrib.consistent_read(is_bytes = True)
+            step_candidates = []
+            for chunk in bdstep_cands.values():
+              step_candidates += pickle.loads(chunk)
+
+            ## Become consistent with rejected_candidates
+            distrib.consistent_write(pickle.dumps(rejected_candidates), is_bytes = True)
+            bdrejected_cands = distrib.consistent_read(is_bytes = True)
+            rejected_candidates = []
+            for chunk in bdrejected_cands.values():
+              rejected_candidates += pickle.loads(chunk)
+
           ## Register good offsprings, along with step candidates in tsne monitor.
-          if not FLAGS.evolutionary_search and better_found:
+          if not FLAGS.evolutionary_search and better_found and environment.WORLD_RANK == 0:
             self.tsne_monitor.register((better_found.features, "gen_{}_accepted".format(str(feeds[0].gen_id)), str(better_found.score)))
             for c in step_candidates:
               self.tsne_monitor.register((c.features, "gen_{}".format(str(feeds[0].gen_id))))
@@ -709,7 +726,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           # write_cache_proc.start()
 
           ## Write all candidates to eval_cand DB.
-          if FLAGS.evaluate_candidates:
+          if FLAGS.evaluate_candidates and environment.WORLD_RANK == 0:
             # l.logger().warn("Before join: {}".format(write_eval_proc))
             if write_eval_proc:
               write_eval_proc.join()
@@ -730,13 +747,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
           if not FLAGS.evolutionary_search and better_found and feeds[0].gen_id > 0:
             l.logger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
-          # Calculate how many more to infer.
-          try:
-            rcands = active_limit_per_feed - len(step_candidates) # Deprecated.
-            crate  = cmp_rate[0] / cmp_rate[1] # Get current compilation rate.
-            wsize = max(2, int((rcands // self.sample_batch_size) / crate)) # Deprecated.
-          except ZeroDivisionError:
-            pass
           # Step counter.
           it += 1
           if FLAGS.evolutionary_search:
@@ -746,25 +756,26 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         ######## End of while.
 
         ## Update all monitors.
-        self.comp_rate[feeds[0].gen_id] = [sum(x) for x in zip(self.comp_rate[feeds[0].gen_id], cmp_rate)]
-        self.exec_time[feeds[0].gen_id] += exec_time
-        self.comp_rate_mon.register((feeds[0].gen_id, self.comp_rate[feeds[0].gen_id][0] / self.comp_rate[feeds[0].gen_id][1]))
-        self.exec_time_mon.register((feeds[0].gen_id, self.exec_time[feeds[0].gen_id]    / self.comp_rate[feeds[0].gen_id][1]))
-        self.comp_rate_mon.plot()
-        self.exec_time_mon.plot()
-        # self.tsne_monitor.plot()
+        if environment.WORLD_RANK == 0:
+          self.comp_rate[feeds[0].gen_id] = [sum(x) for x in zip(self.comp_rate[feeds[0].gen_id], cmp_rate)]
+          self.exec_time[feeds[0].gen_id] += exec_time
+          self.comp_rate_mon.register((feeds[0].gen_id, self.comp_rate[feeds[0].gen_id][0] / self.comp_rate[feeds[0].gen_id][1]))
+          self.exec_time_mon.register((feeds[0].gen_id, self.exec_time[feeds[0].gen_id]    / self.comp_rate[feeds[0].gen_id][1]))
+          self.comp_rate_mon.plot()
+          self.exec_time_mon.plot()
+          # self.tsne_monitor.plot()
 
         ## Collect surviving candidates of generation.
         # If we just started, get top-K.
         if FLAGS.evolutionary_search:
-          best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
-          # if environment.WORLD_SIZE > 0:
+          best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width, active_dropout_prob)
+          # if environment.WORLD_SIZE > 1:
             #1. gather best cands from every process
             #2. Per rank, call again sample from set for the gathered stuff.
             #3. Replace best cands with the new stuff
           l.logger().info("Top-{} ({} unique) samples of generation {}: {}".format(active_search_width, len(best_cands), feeds[0].gen_id, ', '.join([str(round(c.score, 3)) for c in best_cands])))
         elif feeds[0].gen_id == 0:
-          best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width)
+          best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width, active_dropout_prob)
           l.logger().info("Starting scores: {}".format(', '.join([str(round(c.score, 3)) for c in best_cands])))
         else:
           # If nothing was found, there are no best cands, and we will keep searching.
@@ -784,7 +795,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # Add them back to queue and to active feed database.
         found_match = False
         for nc in best_cands:
-          if FLAGS.evolutionary_search:
+          if FLAGS.evolutionary_search and environment.WORLD_RANK == 0:
             self.tsne_monitor.register((nc.features, "gen_{}_accepted".format(str(feeds[0].gen_id))))
           sample_hash = ''.join([str(x) for x in nc.sample])
           if FLAGS.evolutionary_search or (sample_hash not in total_cand_hash):
@@ -817,14 +828,15 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                 generation_id    = nc.sample_feed.gen_id,
               )
             )
-        self.tsne_monitor.plot()
+        if environment.WORLD_RANK == 0:
+          self.tsne_monitor.plot()
         # save state and re-loop.
         self.saveCheckpoint()
 
       # Catch threads on last iteration.
-      if write_cache_proc:
+      if write_cache_proc and environment.WORLD_RANK == 0:
         write_cache_proc.join()
-      if FLAGS.evaluate_candidates and write_eval_proc:
+      if FLAGS.evaluate_candidates and write_eval_proc and environment.WORLD_RANK == 0:
         write_eval_proc.join()
 
       ## Finished, save state, switch benchmark, return samples.
@@ -837,9 +849,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               [[]] * len(total_cand))
     except KeyboardInterrupt:
       self.raised_keyboard_int = True
-      if write_cache_proc:
+      if write_cache_proc and environment.WORLD_RANK == 0:
         write_cache_proc.terminate()
-      if FLAGS.evaluate_candidates and write_eval_proc:
+      if FLAGS.evaluate_candidates and write_eval_proc and environment.WORLD_RANK == 0:
         write_eval_proc.terminate()
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
@@ -853,7 +865,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               [x.sample for x in total_cand],
               [[]] * len(total_cand))
 
-  def initOrGetQueue(self) -> np.array:
+  def initOrGetQueue(self, target_features: typing.Dict[str, float] = None) -> np.array:
     """
     If feed queue is not initialized, initialize it by getting new datapoint.
     Otherwise, don't do anything as feed_queue is already loaded from checkpoint.
@@ -863,21 +875,45 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       Starting input feed of sampling.
     """
     if not self.feed_queue:
-      try:
-        cf = next(self.loader).squeeze(0)
-      except StopIteration:
-        self.loader = iter(self.dataloader)
-        cf = next(self.loader).squeeze(0)
-      cf = [int(x) for x in cf]
-      self.feed_queue.append(
-        ActiveSampleFeed(
-          input_feed     = cf,
-          input_features = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), [self.feat_sampler.feature_space])[self.feat_sampler.feature_space],
-          input_score    = math.inf,
-          gen_id         = 0,
+      if FLAGS.start_from_cached and target_features is not None:
+        cached_samples = [[x.sample, {':'.join(f.split(':')[:-1]): float(f.split(':')[-1]) for f in x.output_features.split('\n')}, -1] for x in self.active_db.get_data]
+        if len(cached_samples) == 0:
+          return self.initOrGetQueue()
+        else:
+          for idx, cs in enumerate(cached_samples):
+            cached_samples[idx][-1] = self.feat_sampler.calculate_distance(cs[1])
+          sorted_cache_samples = sorted(cached_samples, key = lambda x: x[-1])
+          for scs in sorted_cache_samples[:self.sampler.config.sample_corpus.corpus_config.active.active_search_width]:
+            encoded = self._padToMaxPosition(self._addStartEndToken(self.tokenizer.TokenizeString(scs[0])))
+            self.feed_queue.append(
+              ActiveSampleFeed(
+                input_feed     = encoded,
+                input_features = scs[1],
+                input_score    = scs[-1],
+                gen_id         = 0,
+              )
+            )
+            self.addToDB(
+              active_feed_database.ActiveInput.FromArgs(
+                tokenizer      = self.tokenizer, id = self.active_db.input_count,
+                input_feed     = encoded,        input_features = scs[1],
+              )
+            )
+      else:
+        try:
+          cf = next(self.loader).squeeze(0)
+        except StopIteration:
+          self.loader = iter(self.dataloader)
+          cf = next(self.loader).squeeze(0)
+        cf = [int(x) for x in cf]
+        self.feed_queue.append(
+          ActiveSampleFeed(
+            input_feed     = cf,
+            input_features = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), [self.feat_sampler.feature_space])[self.feat_sampler.feature_space],
+            input_score    = math.inf,
+            gen_id         = 0,
+          )
         )
-      )
-      if environment.WORLD_RANK == 0:
         self.addToDB(
           active_feed_database.ActiveInput.FromArgs(
             tokenizer      = self.tokenizer, id = self.active_db.input_count,
@@ -958,7 +994,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                          feeds      : ActiveSampleFeed,
                          candidates : typing.List[ActiveSample],
                          rejected_candidates: typing.List[ActiveSample],
-                         bar: tqdm.tqdm,
                          ) -> typing.List[int]:
     """
     Gets workload output from model.
@@ -1002,7 +1037,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         )
       t = 0
       # l.logger().warn("Pool opened")
-      for idx, batch in bar(enumerate(pool.map(candidate_worker, it))):
+      for idx, batch in tqdm.tqdm((enumerate(pool.map(candidate_worker, it))), desc = "Register Output Data", leave = False):
         t = idx
         if batch[0]:
           cm_rate[0] += 1

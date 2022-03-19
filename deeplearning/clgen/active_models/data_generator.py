@@ -54,7 +54,7 @@ class ListTrainDataloader(torch.utils.data.Dataset):
     """
     ret  = ListTrainDataloader([], lazy = True)
     num  = min(num, len(self.dataset))
-    rand = set(torch.randperm(num, generator = None).tolist())
+    rand = set(torch.randperm(len(self.dataset), generator = None).tolist()[:num])
     ret.dataset = [x for idx, x in enumerate(self.dataset) if idx in rand]
     return ret
 
@@ -124,9 +124,10 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
     """
     ret  = DictPredictionDataloader([], lazy = True)
     num  = min(num, len(self.dataset))
-    rand = set(torch.randperm(num, generator = None).tolist())
+    rand = set(torch.randperm(len(self.dataset), generator = None).tolist()[:num])
     ret.dataset = [x for idx, x in enumerate(self.dataset) if idx in rand]
     return ret
+
 
   def __len__(self) -> int:
     return len(self.dataset)

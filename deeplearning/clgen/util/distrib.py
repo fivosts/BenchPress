@@ -41,7 +41,7 @@ def barrier(fn: typing.Callable = None) -> None:
 
     barriers = glob.glob(str(PATH / "barrier-lock-*"))
 
-    while len(barriers) < environment.WORLD_SIZE:
+    while len(barriers) < WORLD_SIZE:
       if fn:
         fn()
       time.sleep(0.5)
@@ -54,7 +54,7 @@ def barrier(fn: typing.Callable = None) -> None:
     while len(barriers) > 0:
       barriers = glob.glob(str(PATH / "barrier-lock-*"))
       escapes  = glob.glob(str(PATH / "barrier-escape-*"))
-      if environment.WORLD_RANK == 0 and len(escapes) == environment.WORLD_SIZE:
+      if WORLD_RANK == 0 and len(escapes) == WORLD_SIZE:
         for be in escapes:
           os.remove(str(be))
         for b in barriers:
@@ -111,7 +111,7 @@ def unlock() -> None:
     time.sleep(0.5)
   return
 
-def write(msg: str) -> None:
+def write_broadcast(msg: str) -> None:
   """
   Node broadcasts a message to all other nodes.
   This function is not process-safe. User must ensure one node calls it
@@ -121,12 +121,12 @@ def write(msg: str) -> None:
     with open(PATH / "msg-{}".format(x), 'w') as outf:
       outf.write(msg)
       outf.flush()
-  msg = read()
+  msg = read_broadcast()
   while len(glob.glob(str(PATH / "msg-*"))) > 0:
     time.sleep(0.5)
   return
 
-def read(d:int=0) -> str:
+def read_broadcast(d:int=0) -> str:
   """
   All nodes read broadcasted message.
   """
@@ -139,12 +139,49 @@ def read(d:int=0) -> str:
       with open(PATH / "msg-{}".format(WORLD_RANK), 'r') as inf:
         msg = inf.read()
     except FileNotFoundError:
-      return read(d = d+1)
+      return read_broadcast(d = d+1)
     if msg != '':
       break
     time.sleep(0.5)
   os.remove(str(PATH / "msg-{}".format(WORLD_RANK)))
   return msg
+
+def consistent_write(msg: typing.Union[str, bytes], is_bytes: bool = False) -> None:
+  """
+  All nodes become consistent on a set of discrete chunks of data.
+  All nodes must get updated with the same merged blob.
+  """
+  with open(PATH / "msg-{}".format(WORLD_RANK), 'wb' if is_bytes else 'w') as outf:
+    outf.write(msg)
+    outf.flush()
+  return
+
+def consistent_read(is_bytes: bool = False) -> typing.Dict[int, typing.Union[str, bytes]]:
+  """
+  Nodes read other nodes' data and become consistent.
+  """
+  dc = 0
+  while len(glob.glob(str(PATH / "msg-*"))) < WORLD_SIZE:
+    time.sleep(0.5)
+    dc += 1
+    if dc > 200:
+      raise OSError("I'm stuck here!")
+
+  data = {}
+  while len(data.keys()) < WORLD_SIZE:
+    for i in range(WORLD_SIZE):
+      if i not in data and (PATH / "msg-{}".format(i)).exists():
+        try:
+          with open(PATH / "msg-{}".format(i), 'rb' if is_bytes else False) as inf:        
+            msg = inf.read()
+          if msg != '':
+            data[i] = msg
+        except FileNotFoundError:
+          pass
+  barrier()
+  while (PATH / "msg-{}".format(WORLD_RANK)).exists():
+    os.remove(str(PATH / "msg-{}".format(WORLD_RANK)))
+  return data
 
 def init(path: pathlib.Path) -> None:
   """

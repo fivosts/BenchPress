@@ -92,29 +92,18 @@ class GrewePredictive(DownstreamTask):
     self.data_generator = data_generator.ListTrainDataloader(self.dataset)
 
     ## Setup random seed np random stuff
-    self.seed_generator = np.random
-    self.seed_generator.seed(random_seed)
-    self.rand_generators = {}
-    max_fval = {
-      'comp'      : 300,
-      'rational'  : 50,
-      'mem'       : 50,
-      'localmem'  : 50,
-      'coalesced' : 10,
-      'atomic'    : 10,
-      'transferred_bytes': 31, # 2**pow,
-      'local_size': 8, # 2**pow,
+    self.rand_generator = np.random
+    self.rand_generator.seed(random_seed)
+    self.gen_bounds = {
+      'comp'             : (1, 300),
+      'rational'         : (0, 50),
+      'mem'              : (1, 50),
+      'localmem'         : (0, 50),
+      'coalesced'        : (0, 10),
+      'atomic'           : (0, 10),
+      'transferred_bytes': (1, 31), # 2**pow,
+      'local_size'       : (1, 8),  # 2**pow,
     }
-    for fk in grewe.KEYS:
-      if fk not in {"F2:coalesced/mem", "F4:comp/mem"}:
-        seed = self.seed_generator.randint(0, 2**32-1)
-        rgen = np.random
-        rgen.seed(seed)
-        low_bound = 1 if fk in {"comp", "mem"} else 0
-        up_bound  = max_fval[fk]
-        self.rand_generators[fk] = lambda: rgen.randint(low_bound, up_bound)
-    self.rand_generators['transferred_bytes'] = lambda: 2**rgen.randint(1, 31)
-    self.rand_generators['local_size']        = lambda: 2**rgen.randint(1, 8)
     return
 
   def __repr__(self) -> str:
@@ -228,7 +217,7 @@ class GrewePredictive(DownstreamTask):
     new_samples = self.CollectRuntimeFeatures(new_samples, top_k, tokenizer)
     updated_dataset = [
       (
-        self.InputtoEncodedVector(feats,
+        self.InputtoEncodedVector(entry.features,
                                   entry.runtime_features['transferred_bytes'],
                                   entry.runtime_features['local_size']
                                   ),
@@ -255,7 +244,7 @@ class GrewePredictive(DownstreamTask):
     samples = []
     for x in range(num_samples):
       fvec = {
-        k: self.rand_generators[k]()
+        k: self.rand_generator.randint(self.gen_bounds[k][0], self.gen_bounds[k][1])
         for k in grewe.KEYS if k not in {"F2:coalesced/mem", "F4:comp/mem"}
       }
       try:
@@ -266,8 +255,8 @@ class GrewePredictive(DownstreamTask):
         fvec['F4:comp/mem'] = fvec['comp'] / fvec['mem']      
       except ZeroDivisionError:
         fvec['F4:comp/mem'] = 0.0
-      transferred_bytes = self.rand_generators['transferred_bytes']()
-      local_size        = self.rand_generators['local_size']()
+      transferred_bytes = 2**self.rand_generator.randint(self.gen_bounds['transferred_bytes'][0], self.gen_bounds['transferred_bytes'][1])
+      local_size        = 2**self.rand_generator.randint(self.gen_bounds['local_size'][0], self.gen_bounds['local_size'][1])
       samples.append(
         {
           'static_features'  : self.StaticFeatDictToVec(fvec),
