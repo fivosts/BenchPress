@@ -1,82 +1,61 @@
+import socket
+import pickle
 import portpicker
-import json
-import typing
-import multiprocessing
-import flask
 
-# from deeplearning.clgen.util import logging as l
+from deeplearning.clgen.util import logging as l
 
-app = flask.Flask(__name__)
+MAX_PAYLOAD_SIZE = 65535
 
-class FlaskHandler(object):
-  def __init__(self):
-    self.in_queue  = None
-    self.out_queue = None
-    self.backlog   = None
-    return
-
-  def set_queues(self, in_queue, out_queue):
-    self.in_queue  = in_queue
-    self.out_queue = out_queue
-    self.backlog   = []
-    return
-
-handler = FlaskHandler()
-
-@app.route('/send_message', methods=['PUT'])
-def send_message() -> None:
+def listen_in_queue() -> None:
   """
-  Collect a serialized bytes message and place to input queue.
-
-  Example command:
-    curl -X PUT http://localhost:PORT/send_message \
-         --data "some_serialized string object"
-         # Maybe also check --data_binary
+  Keep a socket connection open, listen to incoming traffic
+  and populate in_queue queue.
   """
-  msg = flask.request.data
-  handler.in_queue.put(msg)
-  return 'OK\n', 200
+  try:
+    HOST = 'localhost'
+    PORT = 8080
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind((HOST, PORT))
+    s.listen(2**32)
 
-@app.route('/receive_message', methods = ['GET'])
-def receive_message() -> bytes:
-  """
-  Send one element from the output queue.
+    while True:
+      conn, addr = s.accept()
+      data = conn.recv(MAX_PAYLOAD_SIZE)
+      in_queue.put(data)
+      conn.close()
+  except Exception as e:
+    if conn:
+      conn.close()
+    s.close()
+    raise e
+  s.close()
+  return
 
-  Example command:
-    curl -X GET http://localhost:PORT/receive_message
+def send_out_queue() -> None:
   """
-  if not handler.out_queue.empty():
-    msg = handler.out_queue.get()
-    handler.backlog.append(msg)
-    return msg, 200
-  else:
-    return "", 404
+  Keep scanning for new unpublished data in out_queue.
+  Fetch them and send them over to the out socket connection.
+  """
+  try:
+    HOST = 'localhost'
+    PORT = 8085
+    # Create a socket connection.
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    while True:
+      try:
+        s.connect((HOST, PORT))
+        break
+      except Exception:
+        pass
 
-@app.route('/receive_all_message', methods = ['GET'])
-def receive_all_message() -> typing.List[bytes]:
-  """
-  Publish all results from the output queue.
-
-  Example command:
-    curl -X GET http://localhost:PORT/receive_message
-  """
-  msg = []
-  while not handler.out_queue.empty():
-    cur = handler.out_queue.get()
-    handler.backlog.append(cur)
-    msg.append(cur)
-  return bytes(json.dumps(msg), encoding = "utf-8"), 200
-
-@app.route('/get_backlog', methods = ['GET'])
-def get_backlog():
-  """
-  In case a client side error has occured, proactively I have stored
-  the whole backlog in memory. To retrieve it, call this method.
-
-  Example command:
-    curl -X GET http://localhost:PORT/get_backlog
-  """
-  return bytes(json.dumps(handler.backlog), encoding = "utf-8"), 200
+    while True:
+      cur = out_queue.get()
+      s.send(cur)
+  except Exception e:
+    s.close()
+    raise e
+  s.close()
+  return
 
 def serve(in_queue: multiprocessing.Queue, out_queue: multiprocessing.Queue, port: int = None):
   """
