@@ -147,6 +147,7 @@ def client():
     cur = iiq.get()
     obj = pickle.loads(cur)
     print(obj.x)
+    ooq.put(pickle.dumps(obj.add(1)))
 
   return
 
