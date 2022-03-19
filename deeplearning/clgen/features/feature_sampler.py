@@ -149,6 +149,12 @@ class FeatureSampler(object):
       candidates = unique_candidates
     return self.topK_candidates(candidates, search_width, dropout_prob = dropout_prob)
 
+  def step_generation(self, candidates: typing.List['ActiveSample']) -> None:
+    """
+    End of LM generation's epoch hook.
+    """
+    return
+
   def iter_benchmark(self, *unused_args, **unused_kwargs) -> None:
     """
     Override this method to set how new parts of the feature space are going to
@@ -321,6 +327,13 @@ class ActiveSampler(FeatureSampler):
     upd_samples, upd_loader = self.active_learner.downstream_task.UpdateDataGenerator(target_samples, top_k, self.tokenizer)
     self.active_learner.UpdateLearn(upd_loader)
     self.active_learner.downstream_task.UpdateTrainDataset(upd_samples)
+    return
+
+  def step_generation(self, candidates: typing.List['ActiveSample']) -> None:
+    """
+    End of LM generation's epoch hook.
+    """
+    self.active_learner.downstream_task.step_generation(candidates)
     return
 
   def iter_benchmark(self,
