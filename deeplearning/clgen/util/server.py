@@ -29,6 +29,7 @@ def listen_in_queue(in_queue: multiprocessing.Queue,
         conn.close()
       except Exception as e:
         conn.close()
+        raise e
   except Exception as e:
     s.close()
     raise e
