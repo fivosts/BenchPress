@@ -44,6 +44,9 @@ class DownstreamTask(object):
     self.random_seed = random_seed
     return
 
+  def step_generation(self, candidates: typing.List['ActiveSample']) -> None:
+    return
+
   def saveCheckpoint(self) -> None:
     raise NotImplementedError("Abstract Class")
 
@@ -265,6 +268,12 @@ class GrewePredictive(DownstreamTask):
         }
       )
     return data_generator.DictPredictionDataloader(samples)
+
+  def step_generation(self, candidates: typing.List['ActiveSample']) -> None:
+    """
+    End of LM generation's epoch hook.
+    """
+    raise NotImplementedError("Set-up the server here and feed the in_queue, get back from out_queue etc. Probably some initialization must have happened already.")
 
   def StaticFeatDictToVec(self, static_feats: typing.Dict[str, float]) -> typing.List[float]:
     """
