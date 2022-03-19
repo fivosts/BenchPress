@@ -101,7 +101,7 @@ def serve(in_queue    : multiprocessing.Queue,
 
     while True:
       cur = in_queue.get()
-      print(cur)
+      print(in_queue.qsize(), cur)
       out_queue.put(cur)
 
     lp.join()
