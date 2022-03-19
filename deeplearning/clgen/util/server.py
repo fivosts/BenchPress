@@ -4,7 +4,29 @@ import portpicker
 import multiprocessing
 import time
 
-# from deeplearning.clgen.util import logging as l
+from absl, import flags
+
+from deeplearning.clgen.util import logging as l
+
+FLAGS = flags.FLAGS
+
+FLAGS.DEFINE_string(
+  "target_host",
+  None,
+  "Define IP Address of target socket server."
+)
+
+FLAGS.DEFINE_integer(
+  "listen_port",
+  None,
+  "Define port this current server listens to."
+)
+
+FLAGS.DEFINE_integer(
+  "send_port",
+  None,
+  "Define port this current server listens to."
+)
 
 MAX_PAYLOAD_SIZE = 65535
 
@@ -85,17 +107,18 @@ def send_out_queue(out_queue: multiprocessing.Queue,
     raise e
   return
 
-def serve(in_queue    : multiprocessing.Queue,
-          out_queue   : multiprocessing.Queue,
-          status_bit  : multiprocessing.Value,
-          target_host : str,
-          listen_port : int = None,
-          send_port   : int = None,
+def serve(in_queue   : multiprocessing.Queue,
+          out_queue  : multiprocessing.Queue,
+          status_bit : multiprocessing.Value,
           ):
   """
   A standalone daemon process executes this function and serves.
   It's purpose is to populate input queue and publish out queue.
   """
+  target_host = FLAGS.target_host
+  listen_port = FLAGS.listen_port
+  send_port   = FLAGS.send_port
+
   try:
     if listen_port is None:
       listen_port = portpicker.pick_unused_port()
