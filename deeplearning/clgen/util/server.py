@@ -18,7 +18,7 @@ def listen_in_queue(in_queue: multiprocessing.Queue,
   """
   try:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((host, port))
+    s.bind(('0.0.0.0', port))
     s.listen(2**16)
     print("Connected for listen!")
     while True:
