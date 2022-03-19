@@ -18,7 +18,7 @@ def listen_in_queue(in_queue: multiprocessing.Queue,
   """
   try:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(("0.0.0.0", port))
+    s.bind((host, port))
     s.listen(2**16)
     print("Connected for listen!")
     while True:
@@ -135,7 +135,7 @@ def client():
     kwargs = {
       'in_queue': iiq,
       'out_queue': ooq,
-      'target_host': "http://cc3.inf.ed.ac.uk",
+      'target_host': "129.215.164.86",
       'listen_port': 8085,
       'send_port': 8080,
     }
@@ -152,4 +152,4 @@ def client():
 
 def server():
   iq, oq = multiprocessing.Queue(), multiprocessing.Queue()
-  serve(iq, oq, "http://cc1.inf.ed.ac.uk", 8080, 8085)
+  serve(iq, oq, "129.215.164.120", 8080, 8085)
