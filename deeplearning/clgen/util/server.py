@@ -23,18 +23,33 @@ def listen_in_queue(in_queue: multiprocessing.Queue,
     # Set listen settings
     s.listen(2**16)
     # Block until connection is established.
-    conn, addr = s.accept()
-    while status.value:
-      data = conn.recv(MAX_PAYLOAD_SIZE)
-      if len(data) > 0:
-        in_queue.put(data)
-    conn.close()
+    try:
+      conn, addr = s.accept()
+      while status.value:
+        data = conn.recv(MAX_PAYLOAD_SIZE)
+        if len(data) > 0:
+          in_queue.put(data)
+        else:
+          break
+      conn.close()
+    except KeyboardInterrupt:
+      try:
+        conn.close()
+      except Exception:
+        pass
+      raise KeyboardInterrupt
+    except Exception as e:
+      try:
+        conn.close()
+      except Exception:
+        pass
+      raise e
+    s.close()
+  except KeyboardInterrupt:
     s.close()
   except Exception as e:
-    conn.close()
     s.close()
     raise e
-  print("Listener exiting")
   return
 
 def send_out_queue(out_queue: multiprocessing.Queue,
@@ -53,25 +68,26 @@ def send_out_queue(out_queue: multiprocessing.Queue,
       try:
         s.connect((host, port))
         break
-      except Exception as e:
-        time.sleep(3)
-        print(e)
+      except Exception:
+        time.sleep(1)
 
-    print("Connected to send!")
     while status.value:
-      print("IDLE to collect")
       cur = out_queue.get()
-      print("Sending message")
-      s.send(cur)
+      try:
+        s.send(cur)
+      except BrokenPipeError:
+        break
+    s.close()
+  except KeyboardInterrupt:
     s.close()
   except Exception as e:
     s.close()
     raise e
-  print("Sender exiting")
   return
 
 def serve(in_queue    : multiprocessing.Queue,
           out_queue   : multiprocessing.Queue,
+          status_bit  : multiprocessing.Value,
           target_host : str,
           listen_port : int = None,
           send_port   : int = None,
@@ -86,13 +102,12 @@ def serve(in_queue    : multiprocessing.Queue,
     if send_port is None:
       send_port = portpicker.pick_unused_port()
 
-    status = multiprocessing.Value(bool, True)
     lp = multiprocessing.Process(
       target = listen_in_queue, 
       kwargs = {
         'in_queue' : in_queue,
         'port'     : listen_port,
-        'status'   : status,
+        'status'   : status_bit,
       }
     )
     sp = multiprocessing.Process(
@@ -101,71 +116,95 @@ def serve(in_queue    : multiprocessing.Queue,
         'out_queue' : out_queue,
         'host'      : target_host,
         'port'      : send_port,
-        'status'    : status,
+        'status'    : status_bit,
       }
     )
     lp.start()
     sp.start()
 
-    while True:
-      cur = in_queue.get()
-      print(in_queue.qsize(), cur)
-      out_queue.put(cur)
+    while status_bit.value:
+      time.sleep(1)
 
-    lp.join()
-    sp.join()
-  except KeyboardInterrupt:
-    status.value = False
     lp.join(timeout = 20)
     sp.join(timeout = 20)
+
+    lp.terminate()
+    sp.terminate()
+  except KeyboardInterrupt:
+    status_bit.value = False
+
+    lp.join(timeout = 20)
+    sp.join(timeout = 20)
+
     lp.terminate()
     sp.terminate()
   except Exception as e:
-    status.value = False
+    status_bit.value = False
+
     lp.join(timeout = 20)
     sp.join(timeout = 20)
+
     lp.terminate()
     sp.terminate()
     raise e
   return
 
-
-class foo():
-  def __init__(self, x):
-    self.x = x
-  def add(self, x):
-    return foo(self.x + x)
-import pickle
-
 def client():
 
-
-  a = foo(20)
-  ser = pickle.dumps(a)
-
   iiq, ooq = multiprocessing.Queue(), multiprocessing.Queue()
+
+  status_bit = multiprocessing.Value('i', True)
 
   p = multiprocessing.Process(
     target = serve,
     kwargs = {
       'in_queue': iiq,
       'out_queue': ooq,
-      'target_host': "129.215.164.86",
-      'listen_port': 8085,
-      'send_port': 8080,
+      'status_bit': status_bit,
+      'target_host': "localhost",
+      'listen_port': 8088,
+      'send_port': 8083,
     }
   )
   p.start()
 
-  ooq.put(ser)
   while True:
     cur = iiq.get()
     obj = pickle.loads(cur)
     print(obj.x)
+    time.sleep(0.1)
     ooq.put(pickle.dumps(obj.add(1)))
 
   return
 
 def server():
-  iq, oq = multiprocessing.Queue(), multiprocessing.Queue()
-  serve(iq, oq, "129.215.164.120", 8080, 8085)
+  iiq, ooq = multiprocessing.Queue(), multiprocessing.Queue()
+
+  status_bit = multiprocessing.Value('i', True)
+
+  p = multiprocessing.Process(
+    target = serve,
+    kwargs = {
+      'in_queue': iiq,
+      'out_queue': ooq,
+      'status_bit': status_bit,
+      'target_host': "localhost",
+      'listen_port': 8083,
+      'send_port': 8088,
+    }
+  )
+  p.start()
+
+  a = foo(20)
+  ser = pickle.dumps(a)
+  ooq.put(ser)
+
+  counter = 0
+  while counter < 100:
+    cur = iiq.get()
+    obj = pickle.loads(cur)
+    print(obj.x)
+    time.sleep(0.1)
+    ooq.put(pickle.dumps(obj.add(1)))
+    counter += 1
+  status_bit.value = False
