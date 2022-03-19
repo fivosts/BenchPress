@@ -110,7 +110,7 @@ def send_out_queue(out_queue: multiprocessing.Queue,
 def serve(in_queue   : multiprocessing.Queue,
           out_queue  : multiprocessing.Queue,
           status_bit : multiprocessing.Value,
-          ):
+          ) -> None:
   """
   A standalone daemon process executes this function and serves.
   It's purpose is to populate input queue and publish out queue.
