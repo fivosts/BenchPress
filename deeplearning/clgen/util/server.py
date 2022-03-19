@@ -119,12 +119,14 @@ def serve(in_queue   : multiprocessing.Queue,
   listen_port = FLAGS.listen_port
   send_port   = FLAGS.send_port
 
-  try:
-    if listen_port is None:
-      listen_port = portpicker.pick_unused_port()
-    if send_port is None:
-      send_port = portpicker.pick_unused_port()
+  if listen_port is None:
+    raise ValueError("You have to define listen_port to use the socket server.")
+  if send_port is None:
+    raise ValueError("You have to define send_port to use the socket server.")
+  if target_host is None:
+    raise ValueError("You have to define the IP of the target server to use the socket server.")
 
+  try:
     lp = multiprocessing.Process(
       target = listen_in_queue, 
       kwargs = {
