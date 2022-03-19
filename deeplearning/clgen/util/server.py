@@ -68,6 +68,7 @@ def send_out_queue(out_queue: multiprocessing.Queue,
 
 def serve(in_queue    : multiprocessing.Queue,
           out_queue   : multiprocessing.Queue,
+          target_host : str,
           listen_port : int = None,
           send_port   : int = None,
           ):
@@ -85,7 +86,7 @@ def serve(in_queue    : multiprocessing.Queue,
       target = listen_in_queue, 
       kwargs = {
         'in_queue' : in_queue,
-        'host'     : 'localhost',
+        'host'     : target_host,
         'port'     : listen_port
       }
     )
@@ -93,7 +94,7 @@ def serve(in_queue    : multiprocessing.Queue,
       target = send_out_queue,  
       kwargs = {
         'out_queue' : out_queue,
-        'host'     : 'localhost',
+        'host'     : target_host,
         'port'      : send_port
       }
     )
@@ -134,6 +135,7 @@ def client():
     kwargs = {
       'in_queue': iiq,
       'out_queue': ooq,
+      'target_host': "ft3.inf.ed.ac.uk",
       'listen_port': 8085,
       'send_port': 8080,
     }
@@ -150,4 +152,4 @@ def client():
 
 def server():
   iq, oq = multiprocessing.Queue(), multiprocessing.Queue()
-  serve(iq, oq, 8080, 8085)
+  serve(iq, oq, "ft1.inf.ed.ac.uk", 8080, 8085)
