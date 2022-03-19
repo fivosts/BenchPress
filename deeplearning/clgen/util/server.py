@@ -20,17 +20,13 @@ def listen_in_queue(in_queue: multiprocessing.Queue,
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(('0.0.0.0', port))
     s.listen(2**16)
+    conn, addr = s.accept()
     print("Connected for listen!")
     while True:
-      try:
-        conn, addr = s.accept()
-        data = conn.recv(MAX_PAYLOAD_SIZE)
-        in_queue.put(data)
-        conn.close()
-      except Exception as e:
-        conn.close()
-        raise e
+      data = conn.recv(MAX_PAYLOAD_SIZE)
+      in_queue.put(data)
   except Exception as e:
+    conn.close()
     s.close()
     raise e
   s.close()
