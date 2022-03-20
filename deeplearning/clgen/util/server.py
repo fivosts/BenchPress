@@ -30,9 +30,10 @@ FLAGS.DEFINE_integer(
 
 MAX_PAYLOAD_SIZE = 65535
 
-def listen_in_queue(in_queue: multiprocessing.Queue,
-                    port    : int,
-                    status  : multiprocessing.Value,
+def listen_in_queue(in_queue      : multiprocessing.Queue,
+                    port          : int,
+                    status        : multiprocessing.Value,
+                    listen_status : multiprocessing.Value,
                     ) -> None:
   """
   Keep a socket connection open, listen to incoming traffic
@@ -72,12 +73,14 @@ def listen_in_queue(in_queue: multiprocessing.Queue,
   except Exception as e:
     s.close()
     raise e
+  listen_status.value = False
   return
 
-def send_out_queue(out_queue: multiprocessing.Queue,
-                   host    : str,
-                   port    : int,
-                   status  : multiprocessing.Value,
+def send_out_queue(out_queue   : multiprocessing.Queue,
+                   host        : str,
+                   port        : int,
+                   status      : multiprocessing.Value,
+                   send_status : multiprocessing.Value,
                    ) -> None:
   """
   Keep scanning for new unpublished data in out_queue.
@@ -105,11 +108,14 @@ def send_out_queue(out_queue: multiprocessing.Queue,
   except Exception as e:
     s.close()
     raise e
+  send_status.value = False
   return
 
-def serve(in_queue   : multiprocessing.Queue,
-          out_queue  : multiprocessing.Queue,
-          status_bit : multiprocessing.Value,
+def serve(in_queue      : multiprocessing.Queue,
+          out_queue     : multiprocessing.Queue,
+          status_bit    : multiprocessing.Value,
+          listen_status : multiprocessing.Value,
+          send_status   : multiprocessing.Value,
           ) -> None:
   """
   A standalone daemon process executes this function and serves.
@@ -130,18 +136,20 @@ def serve(in_queue   : multiprocessing.Queue,
     lp = multiprocessing.Process(
       target = listen_in_queue, 
       kwargs = {
-        'in_queue' : in_queue,
-        'port'     : listen_port,
-        'status'   : status_bit,
+        'in_queue'      : in_queue,
+        'port'          : listen_port,
+        'status'        : status_bit,
+        'listen_status' : listen_status,
       }
     )
     sp = multiprocessing.Process(
       target = send_out_queue,  
       kwargs = {
-        'out_queue' : out_queue,
-        'host'      : target_host,
-        'port'      : send_port,
-        'status'    : status_bit,
+        'out_queue'   : out_queue,
+        'host'        : target_host,
+        'port'        : send_port,
+        'status'      : status_bit,
+        'send_status' : send_status,
       }
     )
     lp.start()
