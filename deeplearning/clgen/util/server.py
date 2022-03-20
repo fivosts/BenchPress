@@ -345,9 +345,9 @@ def start_thread_process():
   elements needed to control the server.
   """
   rq, wq = multiprocessing.Queue(), multiprocessing.Queue()
-  sb, rb, wb = multiprocessing.Value('i', True), multiprocessing.Value('i', True), multiprocessing.Value('i', True)
 
   if FLAGS.use_server == 'socket':
+    sb, rb, wb = multiprocessing.Value('i', True), multiprocessing.Value('i', True), multiprocessing.Value('i', True)
     th = threading.Thread(
       target = serve,
       kwargs = {
@@ -357,15 +357,19 @@ def start_thread_process():
         'listen_status' : rb,
         'send_status'   : wb,
       },
-      # daemon = True
     )
     th.start()
-  else:
-    p = multiprocessing.Process(
+    return p, sb, (rq, rb), (wq, wb)
+  elif FLAGS.use_server == 'http':
+    th = threading.Thread(
       target = http_serve,
       kwargs = {
         'read_queue'  : rq,
         'write_queue' : wq,
-      }
+      },
+      daemon = True
     )
-  return th, sb, (rq, rb), (wq, wb)
+    th.start()
+    return None, None, (rq, None), (wq, None)
+  else:
+    raise ValueError(FLAGS.use_server)
