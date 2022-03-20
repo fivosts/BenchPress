@@ -15,25 +15,25 @@ from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
-FLAGS.DEFINE_string(
+flags.DEFINE_string(
   "use_server",
   None,
   "Select to use socket server in the app. If you set to True, the app will know how to use it with respect to the requested task. Choices are 'socket' and 'http'."
 )
 
-FLAGS.DEFINE_string(
+flags.DEFINE_string(
   "target_host",
   None,
   "Define IP Address of target socket server."
 )
 
-FLAGS.DEFINE_integer(
+flags.DEFINE_integer(
   "listen_port",
   None,
   "Define port this current server listens to."
 )
 
-FLAGS.DEFINE_integer(
+flags.DEFINE_integer(
   "send_port",
   None,
   "Define port this current server listens to."
@@ -108,8 +108,8 @@ def status():
   Read the workload status of the http server.
   """
   status = {
-    'read_queue'      : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY'
-    'write_queue'     : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY'
+    'read_queue'      : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
+    'write_queue'     : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY',
     'read_queue_size' : handler.read_queue.qtsize(),
     'write_queue_size': handler.write_queue.qtsize(),
   }
