@@ -10,6 +10,12 @@ from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
+FLAGS.DEFINE_boolean(
+  "use_socketserver",
+  False,
+  "Select to use socket server in the app. If you set to True, the app will know how to use it with respect to the requested task."
+)
+
 FLAGS.DEFINE_string(
   "target_host",
   None,
