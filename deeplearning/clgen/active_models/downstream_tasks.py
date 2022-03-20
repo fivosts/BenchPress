@@ -18,8 +18,14 @@ from deeplearning.clgen.experiments import cldrive
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import grewe
 from deeplearning.clgen.util import distributions
+from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import server
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import logging as l
+
+from absl import flags
+
+FLAGS = flags.FLAGS
 
 def ExtractorWorker(cldrive_entry: cldrive.CLDriveSample, fspace: str):
   """
@@ -107,10 +113,26 @@ class GrewePredictive(DownstreamTask):
       'transferred_bytes': (1, 31), # 2**pow,
       'local_size'       : (1, 8),  # 2**pow,
     }
+    if FLAGS.use_socketserver and environment.WORLD_RANK == 0:
+      self.cl_proc, self.my_status, read, write = server.start_server_process()
+      self.read_queue, self.read_status = read
+      self.write_queue, self.write_status = write
     return
 
   def __repr__(self) -> str:
     return "GrewePredictive"
+
+  def cleanup(self) -> None:
+    """
+    Cleanup object in case you have any pending processes/threads.
+    """
+    if environment.WORLD_RANK == 0:
+      self.my_status.value    = False
+      self.read_status.value  = False
+      self.write_status.value = False
+      self.cl_proc.join(timeout = 30)
+      self.cl_proc.terminate()
+    return
 
   def setup_dataset(self) -> None:
     """
@@ -142,6 +164,77 @@ class GrewePredictive(DownstreamTask):
     # pool.terminate()
     return
 
+  def CollectSingleRuntimeFeature(self,
+                                  sample: 'ActiveSample',
+                                  tokenizer: 'tokenizers.TokenizerBase'
+                                  ) -> 'ActiveSample':
+    """
+    Overloaded function to compute runtime features for a single instance.
+    """
+    exp_tr_bytes = sample.runtime_features['transferred_bytes']
+    local_size   = sample.runtime_features['local_size']
+    found        = False
+    gsize        = max(1, math.log2(local_size))
+    prev         = math.inf
+    code         = tokenizer.ArrayToCode(sample.sample)
+    while not found and gsize <= 20:
+      sha256 = crypto.sha256_str(code + "BenchPress" + str(2**gsize) + str(local_size))
+      if sha256 in self.corpus_db.status_cache:
+        cached = self.corpus_db.get_entry(code, "BenchPress", 2**gsize, local_size)
+      else:
+        cached = self.corpus_db.update_and_get(
+          code,
+          "BenchPress",
+          global_size = 2**gsize,
+          local_size  = local_size,
+          num_runs    = 10,
+          timeout     = 15,
+        )
+      if cached.status in {"CPU", "GPU"}:
+        tr_bytes = cached.transferred_bytes
+      else:
+        tr_bytes = None
+      if tr_bytes:
+        if tr_bytes < exp_tr_bytes:
+          gsize += 1
+          prev = tr_bytes
+        else:
+          found = True
+          if abs(exp_tr_bytes - tr_bytes) > abs(exp_tr_bytes - prev):
+            gsize -= 1
+            tr_bytes  = abs(exp_tr_bytes - prev)
+          else:
+            tr_bytes  = abs(exp_tr_bytes - tr_bytes)
+      else:
+        gsize += 1
+    new_runtime_feats = sample.runtime_features
+    new_runtime_feats['transferred_bytes'] = tr_bytes if found else exp_tr_bytes
+    new_runtime_feats['global_size'] = 2**gsize
+    cached = self.corpus_db.update_and_get(
+      code,
+      "BenchPress",
+      global_size = new_runtime_feats['global_size'],
+      local_size  = new_runtime_feats['local_size'],
+      num_runs    = 1000,
+      timeout     = 60,
+    )
+    new_runtime_feats['label'] = cached.status
+    return sample._replace(runtime_features = new_runtime_feats)
+
+  def ServeRuntimeFeatures(self, tokenizer: 'tokenizers.TokenizerBase') -> None:
+    """
+    In server mode, listen to the read queue, collect runtime features,
+    append to local cache and publish to write queue for the client to fetch.
+    """
+    while self.my_status.value:
+      if not self.read_status.value:
+        l.logger().warn("Local socket reader has died. Exiting.")
+      if not self.write_status.value:
+        l.logger().warn("Local socket writer has died. Exiting.")
+      sample = self.read_queue.get()
+      ret    = self.CollectSingleRuntimeFeature(sample, tokenizer)
+      self.write_queue.put(sample)
+
   def CollectRuntimeFeatures(self,
                              samples   : typing.List['ActiveSample'],
                              top_k     : int,
@@ -154,56 +247,8 @@ class GrewePredictive(DownstreamTask):
     new_samples = []
     total = 0
     for sample in sorted(samples, key = lambda x: x.score):
-      exp_tr_bytes = sample.runtime_features['transferred_bytes']
-      local_size   = sample.runtime_features['local_size']
-      found        = False
-      gsize        = max(1, math.log2(local_size))
-      prev         = math.inf
-      code         = tokenizer.ArrayToCode(sample.sample)
-      while not found and gsize <= 20:
-        sha256 = crypto.sha256_str(code + "BenchPress" + str(2**gsize) + str(local_size))
-        if sha256 in self.corpus_db.status_cache:
-          cached = self.corpus_db.get_entry(code, "BenchPress", 2**gsize, local_size)
-        else:
-          cached = self.corpus_db.update_and_get(
-            code,
-            "BenchPress",
-            global_size = 2**gsize,
-            local_size  = local_size,
-            num_runs    = 10,
-            timeout     = 15,
-          )
-        if cached.status in {"CPU", "GPU"}:
-          tr_bytes = cached.transferred_bytes
-        else:
-          tr_bytes = None
-        if tr_bytes:
-          if tr_bytes < exp_tr_bytes:
-            gsize += 1
-            prev = tr_bytes
-          else:
-            found = True
-            if abs(exp_tr_bytes - tr_bytes) > abs(exp_tr_bytes - prev):
-              gsize -= 1
-              tr_bytes  = abs(exp_tr_bytes - prev)
-            else:
-              tr_bytes  = abs(exp_tr_bytes - tr_bytes)
-        else:
-          gsize += 1
-      if found:
-        new_runtime_feats = sample.runtime_features
-        new_runtime_feats['transferred_bytes'] = tr_bytes
-        new_runtime_feats['global_size'] = 2**gsize
-        cached = self.corpus_db.update_and_get(
-          code,
-          "BenchPress",
-          global_size = new_runtime_feats['global_size'],
-          local_size  = new_runtime_feats['local_size'],
-          num_runs    = 1000,
-          timeout     = 60,
-        )
-        new_runtime_feats['label'] = cached.status
-        new_samples.append(sample._replace(runtime_features = new_runtime_feats))
+      ret = self.CollectSingleRuntimeFeature(sample, tokenizer)
+      if ret.status in {"CPU", "GPU"}:
         total += 1
       if top_k != -1 and total >= top_k:
         break
@@ -370,3 +415,16 @@ class GrewePredictive(DownstreamTask):
 TASKS = {
   "GrewePredictive": GrewePredictive,
 }
+
+def main(*args, **kwargs) -> None:
+  corpus_cache_path = pathlib.Path("somewhere").resolve()
+  tokenizer_path    = pathlib.Path("somewhere").resolve()
+  tokenizers.TokenizerBase.FromPath(tokenizer_path)
+  task = DownstreamTasks.FromTask("GrewePredictive", corpus_cache_path)
+  task.ServeRuntimeFeatures(tokenizer)
+  task.cleanup()
+  return
+
+if __name__ == "__main__":
+  app.run(main)
+  exit()
