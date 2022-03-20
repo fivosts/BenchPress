@@ -30,14 +30,14 @@ FLAGS.DEFINE_integer(
 
 MAX_PAYLOAD_SIZE = 65535
 
-def listen_in_queue(in_queue      : multiprocessing.Queue,
-                    port          : int,
-                    status        : multiprocessing.Value,
-                    listen_status : multiprocessing.Value,
-                    ) -> None:
+def listen_read_queue(read_queue    : multiprocessing.Queue,
+                      port          : int,
+                      status        : multiprocessing.Value,
+                      listen_status : multiprocessing.Value,
+                      ) -> None:
   """
   Keep a socket connection open, listen to incoming traffic
-  and populate in_queue queue.
+  and populate read_queue queue.
   """
   try:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -51,7 +51,7 @@ def listen_in_queue(in_queue      : multiprocessing.Queue,
       while status.value:
         data = conn.recv(MAX_PAYLOAD_SIZE)
         if len(data) > 0:
-          in_queue.put(data)
+          read_queue.put(data)
         else:
           break
       conn.close()
@@ -76,14 +76,14 @@ def listen_in_queue(in_queue      : multiprocessing.Queue,
   listen_status.value = False
   return
 
-def send_out_queue(out_queue   : multiprocessing.Queue,
-                   host        : str,
-                   port        : int,
-                   status      : multiprocessing.Value,
-                   send_status : multiprocessing.Value,
-                   ) -> None:
+def send_write_queue(write_queue : multiprocessing.Queue,
+                     host        : str,
+                     port        : int,
+                     status      : multiprocessing.Value,
+                     send_status : multiprocessing.Value,
+                     ) -> None:
   """
-  Keep scanning for new unpublished data in out_queue.
+  Keep scanning for new unpublished data in write_queue.
   Fetch them and send them over to the out socket connection.
   """
   try:
@@ -97,7 +97,7 @@ def send_out_queue(out_queue   : multiprocessing.Queue,
         time.sleep(1)
 
     while status.value:
-      cur = out_queue.get()
+      cur = write_queue.get()
       try:
         s.send(cur)
       except BrokenPipeError:
@@ -111,8 +111,8 @@ def send_out_queue(out_queue   : multiprocessing.Queue,
   send_status.value = False
   return
 
-def serve(in_queue      : multiprocessing.Queue,
-          out_queue     : multiprocessing.Queue,
+def serve(read_queue    : multiprocessing.Queue,
+          write_queue   : multiprocessing.Queue,
           status_bit    : multiprocessing.Value,
           listen_status : multiprocessing.Value,
           send_status   : multiprocessing.Value,
@@ -126,26 +126,35 @@ def serve(in_queue      : multiprocessing.Queue,
   send_port   = FLAGS.send_port
 
   if listen_port is None:
+    status_bit.value    = False
+    listen_status.value = False
+    send_status.value   = False
     raise ValueError("You have to define listen_port to use the socket server.")
   if send_port is None:
+    status_bit.value    = False
+    listen_status.value = False
+    send_status.value   = False
     raise ValueError("You have to define send_port to use the socket server.")
   if target_host is None:
+    status_bit.value    = False
+    listen_status.value = False
+    send_status.value   = False
     raise ValueError("You have to define the IP of the target server to use the socket server.")
 
   try:
     lp = multiprocessing.Process(
-      target = listen_in_queue, 
+      target = listen_read_queue, 
       kwargs = {
-        'in_queue'      : in_queue,
+        'read_queue'    : read_queue,
         'port'          : listen_port,
         'status'        : status_bit,
         'listen_status' : listen_status,
       }
     )
     sp = multiprocessing.Process(
-      target = send_out_queue,  
+      target = send_write_queue,  
       kwargs = {
-        'out_queue'   : out_queue,
+        'write_queue' : write_queue,
         'host'        : target_host,
         'port'        : send_port,
         'status'      : status_bit,
@@ -182,62 +191,48 @@ def serve(in_queue      : multiprocessing.Queue,
     raise e
   return
 
-def client():
-
-  iiq, ooq = multiprocessing.Queue(), multiprocessing.Queue()
-
-  status_bit = multiprocessing.Value('i', True)
-
-  p = multiprocessing.Process(
-    target = serve,
-    kwargs = {
-      'in_queue': iiq,
-      'out_queue': ooq,
-      'status_bit': status_bit,
-      'target_host': "localhost",
-      'listen_port': 8088,
-      'send_port': 8083,
-    }
-  )
-  p.start()
-
-  while True:
-    cur = iiq.get()
-    obj = pickle.loads(cur)
-    print(obj.x)
-    time.sleep(0.1)
-    ooq.put(pickle.dumps(obj.add(1)))
-
-  return
-
-def server():
-  iiq, ooq = multiprocessing.Queue(), multiprocessing.Queue()
-
-  status_bit = multiprocessing.Value('i', True)
+def start_server_process():
+  """
+  This is an easy wrapper to start server from parent routine.
+  Starts a new process or thread and returns all the multiprocessing
+  elements needed to control the server.
+  """
+  rq, wq = multiprocessing.Queue(), multiprocessing.Queue()
+  sb, rb, wb = multiprocessing.Value('i', True), multiprocessing.Value('i', True), multiprocessing.Value('i', True)
 
   p = multiprocessing.Process(
     target = serve,
     kwargs = {
-      'in_queue': iiq,
-      'out_queue': ooq,
-      'status_bit': status_bit,
-      'target_host': "localhost",
-      'listen_port': 8083,
-      'send_port': 8088,
+      'read_queue'    : rq,
+      'write_queue'   : wq,
+      'status_bit'    : sb,
+      'listen_status' : rb,
+      'send_status'   : wb,
     }
   )
+  # p.daemon = True
   p.start()
+  return p, sb, (rq, rb), (wq, wb)
 
-  a = foo(20)
-  ser = pickle.dumps(a)
-  ooq.put(ser)
+def start_thread_process():
+  """
+  This is an easy wrapper to start server from parent routine.
+  Starts a new process or thread and returns all the multiprocessing
+  elements needed to control the server.
+  """
+  rq, wq = multiprocessing.Queue(), multiprocessing.Queue()
+  sb, rb, wb = multiprocessing.Value('i', True), multiprocessing.Value('i', True), multiprocessing.Value('i', True)
 
-  counter = 0
-  while counter < 100:
-    cur = iiq.get()
-    obj = pickle.loads(cur)
-    print(obj.x)
-    time.sleep(0.1)
-    ooq.put(pickle.dumps(obj.add(1)))
-    counter += 1
-  status_bit.value = False
+  th = threading.Thread(
+    target = serve,
+    kwargs = {
+      'read_queue'    : rq,
+      'write_queue'   : wq,
+      'status_bit'    : sb,
+      'listen_status' : rb,
+      'send_status'   : wb,
+    },
+    # daemon = True
+  )
+  th.start()
+  return th, sb, (rq, rb), (wq, wb)
