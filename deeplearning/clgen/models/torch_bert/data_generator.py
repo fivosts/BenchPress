@@ -132,7 +132,7 @@ def ActiveSample_to_JSON(f: ActiveSample) -> typing.Dict[str, typing.Any]:
   Convert NamedTuple to JSON serializable dictionary.
   """
   return {
-    'sample_feed'      : ActiveSampleFeed_to_JSON(f.sample_feed)
+    'sample_feed'      : ActiveSampleFeed_to_JSON(f.sample_feed),
     'input_ids'        : list(f.input_ids),
     'hole_lengths'     : f.hole_lengths,
     'sample'           : list(f.sample),
