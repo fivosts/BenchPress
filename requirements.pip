@@ -110,6 +110,7 @@ tqdm==4.38.0
 Twisted==20.3.0
 typeguard==2.10.0
 urllib3==1.25.11
+waitress==2.1.1
 w3lib==1.22.0
 Werkzeug==1.0.1
 wrapt==1.12.1
