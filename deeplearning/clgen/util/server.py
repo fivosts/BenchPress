@@ -113,7 +113,15 @@ def status():
     'read_queue_size' : handler.read_queue.qtsize(),
     'write_queue_size': handler.write_queue.qtsize(),
   }
-  return bytes(json.dumps(status), encoding = 'utf-8'), 200
+
+  if status['read_queue'] == 'EMPTY' and status['write_queue'] == 'EMPTY':
+    return bytes(json.dumps(status), encoding = 'utf-8'), 203
+  elif status['read_queue'] == 'EMPTY' and status['write_queue'] == 'NOT_EMPTY':
+    return bytes(json.dumps(status), encoding = 'utf-8'), 202
+  elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'EMPTY':
+    return bytes(json.dumps(status), encoding = 'utf-8'), 201
+  elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'NOT_EMPTY':
+    return bytes(json.dumps(status), encoding = 'utf-8'), 200
 
 def listen_read_queue(read_queue    : multiprocessing.Queue,
                       port          : int,
@@ -312,7 +320,7 @@ def start_server_process():
   if FLAGS.use_server == 'socket':
     sb, rb, wb = multiprocessing.Value('i', True), multiprocessing.Value('i', True), multiprocessing.Value('i', True)
     p = multiprocessing.Process(
-      target = serve,
+      target = socket_serve,
       kwargs = {
         'read_queue'    : rq,
         'write_queue'   : wq,
@@ -334,7 +342,7 @@ def start_server_process():
     )
     p.daemon = True
     p.start()
-    return None, None, (rq, None), (wq, None)
+    return p, None, (rq, None), (wq, None)
   else:
     raise ValueError(FLAGS.use_server)
 
@@ -349,7 +357,7 @@ def start_thread_process():
   if FLAGS.use_server == 'socket':
     sb, rb, wb = multiprocessing.Value('i', True), multiprocessing.Value('i', True), multiprocessing.Value('i', True)
     th = threading.Thread(
-      target = serve,
+      target = socket_serve,
       kwargs = {
         'read_queue'    : rq,
         'write_queue'   : wq,
@@ -359,7 +367,7 @@ def start_thread_process():
       },
     )
     th.start()
-    return p, sb, (rq, rb), (wq, wb)
+    return None, sb, (rq, rb), (wq, wb)
   elif FLAGS.use_server == 'http':
     th = threading.Thread(
       target = http_serve,
