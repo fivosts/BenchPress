@@ -22,6 +22,8 @@ from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import server
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import logging as l
+from deeplearning.clgen.models.torch_bert.data_generator import JSON_to_ActiveSample
+from deeplearning.clgen.models.torch_bert.data_generator import ActiveSample_to_JSON
 
 from absl import flags
 
@@ -94,7 +96,10 @@ class GrewePredictive(DownstreamTask):
   def feature_space(self) -> str:
     return "GreweFeatures"
 
-  def __init__(self, corpus_path: pathlib.Path, random_seed: int) -> None:
+  def __init__(self,
+               corpus_path: pathlib.Path,
+               random_seed: int,
+               ) -> None:
     super(GrewePredictive, self).__init__("GrewePredictive", random_seed)
     self.corpus_path    = corpus_path
     self.setup_dataset()
@@ -113,25 +118,19 @@ class GrewePredictive(DownstreamTask):
       'transferred_bytes': (1, 31), # 2**pow,
       'local_size'       : (1, 8),  # 2**pow,
     }
-    if FLAGS.use_socketserver and environment.WORLD_RANK == 0:
-      self.cl_proc, self.my_status, read, write = server.start_server_process()
-      self.read_queue, self.read_status = read
-      self.write_queue, self.write_status = write
     return
 
   def __repr__(self) -> str:
     return "GrewePredictive"
 
-  def cleanup(self) -> None:
+  def setup_server(self) -> None:
     """
-    Cleanup object in case you have any pending processes/threads.
+    In server mode, initialize the serving process.
     """
-    if environment.WORLD_RANK == 0:
-      self.my_status.value    = False
-      self.read_status.value  = False
-      self.write_status.value = False
-      self.cl_proc.join(timeout = 30)
-      self.cl_proc.terminate()
+    if FLAGS.use_server and environment.WORLD_RANK == 0 and i_am_server:
+      self.cl_proc, _, read, write = server.start_server_process()
+      self.read_queue,  _ = read
+      self.write_queue, _ = write
     return
 
   def setup_dataset(self) -> None:
@@ -225,15 +224,18 @@ class GrewePredictive(DownstreamTask):
     """
     In server mode, listen to the read queue, collect runtime features,
     append to local cache and publish to write queue for the client to fetch.
+    This has been easily implemented only for HTTP server and not socket.
     """
-    while self.my_status.value:
-      if not self.read_status.value:
-        l.logger().warn("Local socket reader has died. Exiting.")
-      if not self.write_status.value:
-        l.logger().warn("Local socket writer has died. Exiting.")
-      sample = self.read_queue.get()
-      ret    = self.CollectSingleRuntimeFeature(sample, tokenizer)
-      self.write_queue.put(sample)
+    while True:
+      if not self.read_queue.empty():
+        serialized = self.read_queue.get()
+        sample     = JSON_to_ActiveSample(serialized)
+        ret        = self.CollectSingleRuntimeFeature(sample, tokenizer)
+        serialized = ActiveSample_to_JSON(ret)
+        self.write_queue.put(serialized)
+      else:
+        time.sleep(1)
+    return
 
   def CollectRuntimeFeatures(self,
                              samples   : typing.List['ActiveSample'],
@@ -244,15 +246,24 @@ class GrewePredictive(DownstreamTask):
     Collect the top_k samples that can run on CLDrive and set their global size
     to the appropriate value so it can match the transferred bytes.
     """
-    new_samples = []
-    total = 0
-    for sample in sorted(samples, key = lambda x: x.score):
-      ret = self.CollectSingleRuntimeFeature(sample, tokenizer)
-      if ret.status in {"CPU", "GPU"}:
-        total += 1
-      if top_k != -1 and total >= top_k:
-        break
-    return new_samples
+    if FLAGS.use_server:
+      new_samples = []
+      while self.client_status_request()[1] != "202":
+        batch = server.client_get_request()
+        for ser in batch:
+          obj = JSON_to_ActiveSample(ser)
+          new_samples.append(obj)
+      return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)[:top_k]
+    else:
+      new_samples = []
+      total = 0
+      for sample in sorted(samples, key = lambda x: x.score):
+        ret = self.CollectSingleRuntimeFeature(sample, tokenizer)
+        if ret.runtime_features['label'] in {"CPU", "GPU"}:
+          total += 1
+        if top_k != -1 and total >= top_k:
+          break
+      return new_samples
 
   def UpdateDataGenerator(self,
                           new_samples: typing.List['ActiveSample'],
@@ -318,7 +329,14 @@ class GrewePredictive(DownstreamTask):
     """
     End of LM generation's epoch hook.
     """
-    raise NotImplementedError("Set-up the server here and feed the in_queue, get back from out_queue etc. Probably some initialization must have happened already.")
+    if FLAGS.use_server:
+      serialized = []
+      for cand in candidates:
+        serialized.append(
+          ActiveSample_to_JSON(cand)
+        )
+      server.client_put_request(serialized)
+    return
 
   def StaticFeatDictToVec(self, static_feats: typing.Dict[str, float]) -> typing.List[float]:
     """
