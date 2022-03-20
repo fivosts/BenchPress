@@ -85,6 +85,23 @@ class ActiveSampleFeed(typing.NamedTuple):
   # Depth increases when a valid inference sample is fed back as an input.
   gen_id           : int
 
+def ActiveSampleFeed_to_JSON(f: ActiveSampleFeed) -> typing.Dict[str, typing.Any]:
+  """
+  Convert NamedTuple to JSON serializable dictionary.
+  """
+  return {
+    'input_feed'     : list(f.input_feed),
+    'input_features' : f.input_features,
+    'input_score'    : input_score,
+    'gen_id'         : gen_id,
+  }
+
+def JSON_to_ActiveSampleFeed(d: typing.Dict[str, typing.Any]) -> ActiveSampleFeed:
+  """
+  JSON serializable dictionary to ActiveSampleFeed.
+  """
+  return ActiveSample(**d)
+
 class ActiveSample(typing.NamedTuple):
   """
   Representation of an active learning sample.
@@ -109,6 +126,36 @@ class ActiveSample(typing.NamedTuple):
   score            : typing.Union[bool, float]
   # Active batch timestep where sample was acquired.
   # timestep       : int
+
+def ActiveSample_to_JSON(f: ActiveSample) -> typing.Dict[str, typing.Any]:
+  """
+  Convert NamedTuple to JSON serializable dictionary.
+  """
+  return {
+    'sample_feed'      : ActiveSampleFeed_to_JSON(f.sample_feed)
+    'input_ids'        : list(f.input_ids),
+    'hole_lengths'     : f.hole_lengths,
+    'sample'           : list(f.sample),
+    'sample_indices'   : list(f.sample_indices),
+    'features'         : f.features,
+    'runtime_features' : f.runtime_features,
+    'score'            : score,
+  }
+
+def JSON_to_ActiveSample(d: typing.Dict[str, typing.Any]) -> ActiveSample:
+  """
+  JSON serializable dictionary to ActiveSampleFeed.
+  """
+  return ActiveSample(
+    sample_feed      = JSON_to_ActiveSampleFeed(d['sample_feed']),
+    input_ids        = d['input_ids'],
+    hole_lengths     = d['hole_lengths'],
+    sample           = d['sample'],
+    sample_indices   = d['sample_indices'],
+    features         = d['features'],
+    runtime_features = d['runtime_features'],
+    score            = d['score']
+  )
 
 def IR_candidate_worker(sample                  : np.array,
                         feature_space           : str,
