@@ -326,7 +326,7 @@ class ActiveSampler(FeatureSampler):
     """
     upd_samples, upd_loader = self.active_learner.downstream_task.UpdateDataGenerator(target_samples, top_k, self.tokenizer)
     self.active_learner.UpdateLearn(upd_loader)
-    self.active_learner.downstream_task.UpdateTrainDataset(upd_samples)
+    self.active_learner.downstream_task.UpdateTrainDataset(upd_loader)
     return
 
   def step_generation(self, candidates: typing.List['ActiveSample']) -> None:
