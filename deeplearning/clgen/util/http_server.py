@@ -128,7 +128,7 @@ def index():
     'read_queue_size' : handler.read_queue.qsize(),
     'write_queue_size': handler.write_queue.qsize(),
   }
-  return '\n'.join(["{}: {}".format(k, v) for k, v in status.items()]), 200
+  return '\n\n'.join(["{}: {}".format(k, v) for k, v in status.items()]), 200
 
 def http_serve(read_queue: multiprocessing.Queue, write_queue: multiprocessing.Queue):
   """
