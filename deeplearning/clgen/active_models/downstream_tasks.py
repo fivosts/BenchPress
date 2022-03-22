@@ -154,7 +154,7 @@ class GrewePredictive(DownstreamTask):
     Fetch data and preprocess into corpus for Grewe's predictive model.
     """
     self.dataset = []
-    self.corpus_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True, check_same_thread = False)
+    self.corpus_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
     data = [x for x in self.corpus_db.get_valid_data(dataset = "GitHub")]
     pool = multiprocessing.Pool()
     it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = "GreweFeatures"), data)
