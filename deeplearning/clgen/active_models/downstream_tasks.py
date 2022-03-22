@@ -476,7 +476,7 @@ def main(*args, **kwargs) -> None:
   if not cldrive_cache.exists():
     raise FileNotFoundError(cldrive_cache)
   tokenizers.TokenizerBase.FromFile(tokenizer_path)
-  task = DownstreamTasks.FromTask("GrewePredictive", cldrive_cache)
+  task = DownstreamTask.FromTask("GrewePredictive", cldrive_cache)
   task.ServeRuntimeFeatures(tokenizer)
   task.cleanup()
   return
