@@ -40,9 +40,10 @@ class FlaskHandler(object):
     self.backlog   = None
     return
 
-  def set_queues(self, read_queue, write_queue):
+  def set_params(self, read_queue, write_queue, work_flag):
     self.read_queue  = read_queue
     self.write_queue = write_queue
+    self.work_flag   = work_flag
     self.backlog   = []
     return
 
@@ -100,18 +101,19 @@ def status():
   status = {
     'read_queue'      : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
     'write_queue'     : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY',
+    'work_flag'       : 'WORKING' if handler.work_flag else 'IDLE'
     'read_queue_size' : handler.read_queue.qsize(),
     'write_queue_size': handler.write_queue.qsize(),
   }
 
   if status['read_queue'] == 'EMPTY' and status['write_queue'] == 'EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 203
+    return bytes(json.dumps(status), encoding = 'utf-8'), 203 + (100 if handler.work_flag else 0)
   elif status['read_queue'] == 'EMPTY' and status['write_queue'] == 'NOT_EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 202
+    return bytes(json.dumps(status), encoding = 'utf-8'), 202 + (100 if handler.work_flag else 0)
   elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 201
+    return bytes(json.dumps(status), encoding = 'utf-8'), 201 + (100 if handler.work_flag else 0)
   elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'NOT_EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 200
+    return bytes(json.dumps(status), encoding = 'utf-8'), 200 + (100 if handler.work_flag else 0)
 
 @app.route('/', methods = ['GET', 'POST', 'PUT'])
 def index():
@@ -130,7 +132,10 @@ def index():
   }
   return '\n\n'.join(["{}: {}".format(k, v) for k, v in status.items()]), 200
 
-def http_serve(read_queue: multiprocessing.Queue, write_queue: multiprocessing.Queue):
+def http_serve(read_queue  : multiprocessing.Queue,
+               write_queue : multiprocessing.Queue,
+               work_flag   : multiprocessing.Value
+               ):
   """
   Run http server for read and write workload queues.
   """
@@ -138,7 +143,7 @@ def http_serve(read_queue: multiprocessing.Queue, write_queue: multiprocessing.Q
     port = FLAGS.http_port
     if port is None:
       port = portpicker.pick_unused_port()
-    handler.set_queues(read_queue, write_queue)
+    handler.set_params(read_queue, write_queue, work_flag)
     hostname = subprocess.check_output(
       ["hostname", "-i"],
       stderr = subprocess.STDOUT,
@@ -190,11 +195,13 @@ def start_server_process():
   elements needed to control the server.
   """
   rq, wq = multiprocessing.Queue(), multiprocessing.Queue()
+  wf     = multiprocessing.Value('i', False)
   p = multiprocessing.Process(
     target = http_serve,
     kwargs = {
       'read_queue'  : rq,
       'write_queue' : wq,
+      'work_flag'   : wf
     }
   )
   p.daemon = True
@@ -208,11 +215,13 @@ def start_thread_process():
   elements needed to control the server.
   """
   rq, wq = multiprocessing.Queue(), multiprocessing.Queue()
+  wf     = multiprocessing.Value('i', False)
   th = threading.Thread(
     target = http_serve,
     kwargs = {
       'read_queue'  : rq,
       'write_queue' : wq,
+      'work_flag'   : wf
     },
     daemon = True
   )
