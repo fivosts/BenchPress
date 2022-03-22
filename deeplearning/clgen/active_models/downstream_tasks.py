@@ -11,6 +11,7 @@ import functools
 import typing
 import tqdm
 import multiprocessing
+import time
 import numpy as np
 
 from deeplearning.clgen.active_models import data_generator
