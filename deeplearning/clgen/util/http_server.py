@@ -136,7 +136,7 @@ def http_serve(read_queue: multiprocessing.Queue, write_queue: multiprocessing.Q
   """
   try:
     port = FLAGS.http_port
-    if http_port is None:
+    if port is None:
       port = portpicker.pick_unused_port()
     handler.set_queues(read_queue, write_queue)
     hostname = subprocess.check_output(
