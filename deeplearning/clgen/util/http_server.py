@@ -147,7 +147,7 @@ def http_serve(read_queue: multiprocessing.Queue, write_queue: multiprocessing.Q
       ips = "ipv4: {}, ipv6: {}".format(hostname[1], hostname[0])
     else:
       ips = "ipv4: {}".format(hostname[0])
-    l.getLogger().warn("Server Public IP: {}".format(ips))
+    l.logger().warn("Server Public IP: {}".format(ips))
     waitress.serve(app, host = '0.0.0.0', port = port)
   except KeyboardInterrupt:
     return
