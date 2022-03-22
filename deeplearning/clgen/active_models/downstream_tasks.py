@@ -256,7 +256,7 @@ class GrewePredictive(DownstreamTask):
     append to local cache and publish to write queue for the client to fetch.
     This has been easily implemented only for HTTP server and not socket.
     """
-    while True:
+    while self.cl_proc.is_alive():
       if not self.read_queue.empty():
         serialized = self.read_queue.get()
         sample     = JSON_to_ActiveSample(serialized)
