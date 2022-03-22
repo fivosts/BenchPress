@@ -17,6 +17,7 @@ from deeplearning.clgen.active_models import data_generator
 from deeplearning.clgen.experiments import cldrive
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import grewe
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import http_server
@@ -474,7 +475,7 @@ def main(*args, **kwargs) -> None:
     raise FileNotFoundError(tokenizer_path)
   if not cldrive_cache.exists():
     raise FileNotFoundError(cldrive_cache)
-  tokenizers.TokenizerBase.FromPath(tokenizer_path)
+  tokenizers.TokenizerBase.FromFile(tokenizer_path)
   task = DownstreamTasks.FromTask("GrewePredictive", cldrive_cache)
   task.ServeRuntimeFeatures(tokenizer)
   task.cleanup()
