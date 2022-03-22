@@ -19,7 +19,7 @@ from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import grewe
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import server
+from deeplearning.clgen.util import http_server
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.models.torch_bert.data_generator import JSON_to_ActiveSample
@@ -140,7 +140,7 @@ class GrewePredictive(DownstreamTask):
     In server mode, initialize the serving process.
     """
     if FLAGS.use_server and environment.WORLD_RANK == 0 and i_am_server:
-      self.cl_proc, _, read, write = server.start_server_process()
+      self.cl_proc, _, read, write = http_server.start_server_process()
       self.read_queue,  _ = read
       self.write_queue, _ = write
     return
@@ -276,7 +276,7 @@ class GrewePredictive(DownstreamTask):
     if FLAGS.use_server:
       new_samples = []
       while self.client_status_request()[1] != "202":
-        batch = server.client_get_request()
+        batch = http_server.client_get_request()
         for ser in batch:
           obj = JSON_to_ActiveSample(ser)
           new_samples.append(obj)
@@ -364,7 +364,7 @@ class GrewePredictive(DownstreamTask):
         serialized.append(
           ActiveSample_to_JSON(cand)
         )
-      server.client_put_request(serialized)
+      http_server.client_put_request(serialized)
     return
 
   def StaticFeatDictToVec(self, static_feats: typing.Dict[str, float]) -> typing.List[float]:
