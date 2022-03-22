@@ -26,7 +26,7 @@ flags.DEFINE_integer(
 
 flags.DEFINE_string(
   "http_server_ip_address",
-  None,
+  "cc1.inf.ed.ac.uk",
   "Set the target IP address of the host http server."
 )
 
@@ -48,7 +48,7 @@ class FlaskHandler(object):
 handler = FlaskHandler()
 
 @app.route('/write_message', methods=['PUT'])
-def write_message():
+def write_message(): # Expects serialized json file, one list of dictionaries..
   """
   Collect a json file with data and send to computation..
 
@@ -156,15 +156,30 @@ def http_serve(read_queue: multiprocessing.Queue, write_queue: multiprocessing.Q
 
 def client_get_request() -> typing.List[typing.Dict]:
   """
-  Helper function to perform get request at /read_message of ActiveSamples.
+  Helper function to perform get request at /read_message of http target host.
   """
-  if FLAGS.http_server_ip_address is None:
-    raise ValueError("Please define --http_server_ip_address")
-  r = requests.get("http://{}:{}/read_message".format(FLAGS.http_server_ip_address, FLAGS.http_port))
+  try:
+    r = requests.get("http://{}:{}/read_message".format(FLAGS.http_server_ip_address, FLAGS.http_port))
+  except Exception as e:
+    l.logger().error("GET Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
+    raise e
   if r.status_code == 200:
     return r.json()
   else:
-    l.logger().warn("Error code {} in read_message request.".format(r.status_code))
+    l.logger().error("Error code {} in read_message request.".format(r.status_code))
+  return None
+
+def client_put_request(msg: typing.List[bytes]) -> None:
+  """
+  Helper function to perform put at /write_message of http target host.
+  """
+  try:
+    r = requests.put("http://{}:{}/write_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), data = msg)
+  except Exception as e:
+    l.logger().error("PUT Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
+    raise e
+  if r.status_code != 200:
+    l.logger().error("Error code {} in write_message request.".format(r.status_code))
   return
 
 def start_server_process():
