@@ -62,7 +62,7 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
   if not isinstance(data, list):
     return "ERROR: JSON Input has to be a list of dictionaries. One for each entry.\n", 400
   for entry in data:
-    handler.read_queue.put(bytes(json.dumps(entry), encoding = "utf-8"))
+    handler.read_queue.put(entry)
   return 'OK\n', 200
 
 @app.route('/read_message', methods = ['GET'])
@@ -77,7 +77,7 @@ def read_message() -> bytes:
   ret = []
   while not handler.write_queue.empty():
     cur = handler.write_queue.get()
-    ret.append(json.loads(cur))
+    ret.append(cur)
   handler.backlog += ret
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
