@@ -92,8 +92,8 @@ def ActiveSampleFeed_to_JSON(f: ActiveSampleFeed) -> typing.Dict[str, typing.Any
   return {
     'input_feed'     : list(f.input_feed),
     'input_features' : f.input_features,
-    'input_score'    : input_score,
-    'gen_id'         : gen_id,
+    'input_score'    : f.input_score,
+    'gen_id'         : f.gen_id,
   }
 
 def JSON_to_ActiveSampleFeed(d: typing.Dict[str, typing.Any]) -> ActiveSampleFeed:
