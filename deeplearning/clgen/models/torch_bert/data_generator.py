@@ -90,10 +90,10 @@ def ActiveSampleFeed_to_JSON(f: ActiveSampleFeed) -> typing.Dict[str, typing.Any
   Convert NamedTuple to JSON serializable dictionary.
   """
   return {
-    'input_feed'     : list(f.input_feed),
-    'input_features' : f.input_features,
-    'input_score'    : f.input_score,
-    'gen_id'         : f.gen_id,
+    'input_feed'     : list([int(x) for x in f.input_feed]),
+    'input_features' : {k: float(v) for k, v in f.input_features.items()},
+    'input_score'    : float(f.input_score),
+    'gen_id'         : int(f.gen_id),
   }
 
 def JSON_to_ActiveSampleFeed(d: typing.Dict[str, typing.Any]) -> ActiveSampleFeed:
@@ -133,13 +133,13 @@ def ActiveSample_to_JSON(f: ActiveSample) -> typing.Dict[str, typing.Any]:
   """
   return {
     'sample_feed'      : ActiveSampleFeed_to_JSON(f.sample_feed),
-    'input_ids'        : list(f.input_ids),
-    'hole_lengths'     : f.hole_lengths,
-    'sample'           : list(f.sample),
-    'sample_indices'   : list(f.sample_indices),
-    'features'         : f.features,
-    'runtime_features' : f.runtime_features,
-    'score'            : score,
+    'input_ids'        : list([int(x) for x in f.input_ids]),
+    'hole_lengths'     : list([int(x) for x in f.hole_lengths]),
+    'sample'           : list([int(x) for x in f.sample]),
+    'sample_indices'   : list([int(x) for x in f.sample_indices]),
+    'features'         : {k: float(v) for k, v in f.features.items()},
+    'runtime_features' : {k: int(v) for k, v in f.runtime_features.items()},
+    'score'            : float(f.score),
   }
 
 def JSON_to_ActiveSample(d: typing.Dict[str, typing.Any]) -> ActiveSample:
