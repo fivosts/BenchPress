@@ -25,7 +25,7 @@ from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.models.torch_bert.data_generator import JSON_to_ActiveSample
 from deeplearning.clgen.models.torch_bert.data_generator import ActiveSample_to_JSON
 
-from absl import flags
+from absl import app, flags
 
 FLAGS = flags.FLAGS
 
