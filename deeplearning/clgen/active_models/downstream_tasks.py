@@ -485,7 +485,6 @@ def main(*args, **kwargs) -> None:
   tokenizer = tokenizers.TokenizerBase.FromFile(tokenizer_path)
   task = DownstreamTask.FromTask("GrewePredictive", cldrive_cache, 0)
   task.ServeRuntimeFeatures(tokenizer)
-  task.cleanup()
   return
 
 if __name__ == "__main__":
