@@ -288,7 +288,7 @@ def Train(feat_vecs):
     for batch in tqdm.tqdm(train_loader, total = len(train_loader), desc = "Batch", leave = False):
       inp, att, target = batch['inputs'], batch['padding_mask'], batch['target']
 
-      output = model(inp.to(device), target.to(device) ) #, src_key_padding_mask = att.to(device))
+      output = model(inp.to(device), target.to(device), src_key_padding_mask = att.to(device))
       loss = loss_fn(output.view(-1, len(train_dataset.feat_tokenizer)), target.to(device).view(-1))
 
       opt.zero_grad()
@@ -297,16 +297,16 @@ def Train(feat_vecs):
       opt.step()
       scheduler.step()
 
-      train_hook.step(loss = loss.item())
-    train_hook.end_epoch()
+      train_hook.step(total_loss = loss.item())
     l.logger().info("Epoch {} loss {}".format(ep, train_hook.epoch_loss))
+    train_hook.end_epoch()
 
     model.eval()
 
     for batch in tqdm.tqdm(train_loader, total = len(train_loader), desc = "Val Train Batch", leave = False):
       inp, att, target = batch['inputs'], batch['padding_mask'], batch['target']
 
-      output = model(inp.to(device), target.to(device) ) #, src_key_padding_mask = att.to(device))
+      output = model(inp.to(device), target.to(device), src_key_padding_mask = att.to(device))
       loss = loss_fn(output.view(-1, len(train_dataset.feat_tokenizer)), target.to(device).view(-1))
 
       euclids = []
@@ -319,7 +319,7 @@ def Train(feat_vecs):
         for vi in range(len(targ)):
           dist += (targ[vi] - raw_out[vi])**2
         euclids.append(math.sqrt(dist))
-        accuracy.append(len(torch.where(targ == raw_out)[0]))
+        accuracy.append(len(torch.where(targ == raw_out)[0]) / len(targ))
       mean_dist = sum(euclids) / len(euclids)
       mean_accuracy = sum(accuracy) / len(accuracy)
       val_hook.step(val_train_loss = loss.item(), val_train_dist = mean_dist, val_train_accuracy = mean_accuracy)
@@ -340,7 +340,7 @@ def Train(feat_vecs):
         for vi in range(len(targ)):
           dist += (targ[vi] - raw_out[vi])**2
         euclids.append(math.sqrt(dist))
-        accuracy.append(len(torch.where(targ == raw_out)[0]))
+        accuracy.append(len(torch.where(targ == raw_out)[0]) / len(targ))
 
       mean_dist = sum(euclids) / len(euclids)
       mean_accuracy = sum(accuracy) / len(accuracy)
