@@ -118,6 +118,8 @@ class GrewePredictive(DownstreamTask):
     self.corpus_path    = corpus_path
     if FLAGS.use_http_server:
       self.setup_server()
+    else:
+      self.setup_dataset()
       self.data_generator = data_generator.ListTrainDataloader(self.dataset)
       ## Setup random seed np random stuff
       self.rand_generator = np.random
@@ -132,8 +134,6 @@ class GrewePredictive(DownstreamTask):
         'transferred_bytes': (1, 31), # 2**pow,
         'local_size'       : (1, 8),  # 2**pow,
       }
-    else:
-      self.setup_dataset()
     return
 
   def __repr__(self) -> str:
