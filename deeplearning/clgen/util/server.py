@@ -123,6 +123,23 @@ def status():
   elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'NOT_EMPTY':
     return bytes(json.dumps(status), encoding = 'utf-8'), 200
 
+@app.route('/', methods = ['GET', 'POST', 'PUT'])
+def index():
+  """
+  In case a client side error has occured, proactively I have stored
+  the whole backlog in memory. To retrieve it, call this method.
+
+  Example command:
+    curl -X GET http://localhost:PORT/get_backlog
+  """
+  status = {
+    'read_queue'      : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
+    'write_queue'     : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY',
+    'read_queue_size' : handler.read_queue.qtsize(),
+    'write_queue_size': handler.write_queue.qtsize(),
+  }
+  return '\n'.join(["{}: {}".format(k, v) for k, v in status.items()]), 200
+
 def listen_read_queue(read_queue    : multiprocessing.Queue,
                       port          : int,
                       status        : multiprocessing.Value,
