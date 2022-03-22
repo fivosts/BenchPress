@@ -3,6 +3,7 @@ import multiprocessing
 import waitress
 import subprocess
 import json
+import requests
 import flask
 
 from absl import flags
@@ -19,8 +20,14 @@ flags.DEFINE_boolean(
 
 flags.DEFINE_integer(
   "http_port",
-  None,
+  40822,
   "Define port this current server listens to."
+)
+
+flags.DEFINE_string(
+  "http_server_ip_address",
+  None,
+  "Set the target IP address of the host http server."
 )
 
 app = flask.Flask(__name__)
@@ -58,7 +65,7 @@ def write_message():
   return 'OK\n', 200
 
 @app.route('/read_message', methods = ['GET'])
-def read_message():
+def read_message() -> bytes:
   """
   Publish all the predicted results of the write_queue.
   Before flushing the write_queue, save them into the backlog.
@@ -74,7 +81,7 @@ def read_message():
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
 @app.route('/get_backlog', methods = ['GET'])
-def get_backlog():
+def get_backlog() -> bytes:
   """
   In case a client side error has occured, proactively I have stored
   the whole backlog in memory. To retrieve it, call this method.
@@ -145,6 +152,19 @@ def http_serve(read_queue: multiprocessing.Queue, write_queue: multiprocessing.Q
     return
   except Exception as e:
     raise e
+  return
+
+def client_get_request() -> typing.List[typing.Dict]:
+  """
+  Helper function to perform get request at /read_message of ActiveSamples.
+  """
+  if FLAGS.http_server_ip_address is None:
+    raise ValueError("Please define --http_server_ip_address")
+  r = requests.get("http://{}:{}/read_message".format(FLAGS.http_server_ip_address, FLAGS.http_port))
+  if r.status_code == 200:
+    return r.json()
+  else:
+    l.logger().warn("Error code {} in read_message request.".format(r.status_code))
   return
 
 def start_server_process():
