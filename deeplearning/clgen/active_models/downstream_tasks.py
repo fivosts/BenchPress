@@ -476,6 +476,8 @@ def main(*args, **kwargs) -> None:
     raise FileNotFoundError(tokenizer_path)
   if not cldrive_cache.exists():
     raise FileNotFoundError(cldrive_cache)
+  if not FLAGS.use_http_server or not FLAGS.use_socket_server:
+    raise ValueError("This booting point is supposed to work as server. Set your flags appropriately.")
   tokenizer = tokenizers.TokenizerBase.FromFile(tokenizer_path)
   task = DownstreamTask.FromTask("GrewePredictive", cldrive_cache, 0)
   task.ServeRuntimeFeatures(tokenizer)
