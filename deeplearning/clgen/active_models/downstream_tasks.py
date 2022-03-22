@@ -115,7 +115,10 @@ class GrewePredictive(DownstreamTask):
                ) -> None:
     super(GrewePredictive, self).__init__("GrewePredictive", random_seed)
     self.corpus_path    = corpus_path
-    self.setup_dataset()
+    if FLAGS.http_server:
+      self.setup_server()
+    else:
+      self.setup_dataset()
     self.data_generator = data_generator.ListTrainDataloader(self.dataset)
 
     ## Setup random seed np random stuff
@@ -140,10 +143,8 @@ class GrewePredictive(DownstreamTask):
     """
     In server mode, initialize the serving process.
     """
-    if FLAGS.use_server and environment.WORLD_RANK == 0 and i_am_server:
-      self.cl_proc, _, read, write = http_server.start_server_process()
-      self.read_queue,  _ = read
-      self.write_queue, _ = write
+    if environment.WORLD_RANK == 0:
+      self.cl_proc, self.read_queue, self.write_queue = http_server.start_server_process()
     return
 
   def setup_dataset(self) -> None:
@@ -274,7 +275,7 @@ class GrewePredictive(DownstreamTask):
     Collect the top_k samples that can run on CLDrive and set their global size
     to the appropriate value so it can match the transferred bytes.
     """
-    if FLAGS.use_server:
+    if FLAGS.http_server:
       new_samples = []
       while self.client_status_request()[1] != "202":
         batch = http_server.client_get_request()
@@ -359,7 +360,7 @@ class GrewePredictive(DownstreamTask):
     """
     End of LM generation's epoch hook.
     """
-    if FLAGS.use_server:
+    if FLAGS.http_server:
       serialized = []
       for cand in candidates:
         serialized.append(
@@ -475,7 +476,7 @@ def main(*args, **kwargs) -> None:
     raise FileNotFoundError(tokenizer_path)
   if not cldrive_cache.exists():
     raise FileNotFoundError(cldrive_cache)
-  tokenizers.TokenizerBase.FromFile(tokenizer_path)
+  tokenizer = tokenizers.TokenizerBase.FromFile(tokenizer_path)
   task = DownstreamTask.FromTask("GrewePredictive", cldrive_cache, 0)
   task.ServeRuntimeFeatures(tokenizer)
   task.cleanup()
