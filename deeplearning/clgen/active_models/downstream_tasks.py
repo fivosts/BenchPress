@@ -170,12 +170,28 @@ class GrewePredictive(DownstreamTask):
     """
     Overloaded function to compute runtime features for a single instance.
     """
+    def create_sample(s: 'ActiveSample', code: str, trb: int, gs: int) -> typing.List['ActiveSample']:
+      nrfeats = s.runtime_features
+      nrfeats['transferred_bytes'] = trb
+      nrfeats['global_size'] = 2**gs
+      cached = self.corpus_db.update_and_get(
+        code,
+        "BenchPress",
+        global_size = nrfeats['global_size'],
+        local_size  = nrfeats['local_size'],
+        num_runs    = 1000,
+        timeout     = 60,
+      )
+      nrfeats['label'] = cached.status
+      return s._replace(runtime_features = nrfeats)
+
     exp_tr_bytes = sample.runtime_features['transferred_bytes']
     local_size   = sample.runtime_features['local_size']
     found        = False
     gsize        = max(1, math.log2(local_size))
     prev         = math.inf
     code         = tokenizer.ArrayToCode(sample.sample)
+    new_samples  = []
     while not found and gsize <= 20:
       sha256 = crypto.sha256_str(code + "BenchPress" + str(2**gsize) + str(local_size))
       if sha256 in self.corpus_db.status_cache:
@@ -191,6 +207,15 @@ class GrewePredictive(DownstreamTask):
         )
       if cached.status in {"CPU", "GPU"}:
         tr_bytes = cached.transferred_bytes
+        if not FLAGS.only_optimal_gsize:
+          new_samples.append(
+            create_sample(
+              s    = sample,
+              code = code,
+              trb  = tr_bytes,
+              gs   = gsize
+            )
+          )
       else:
         tr_bytes = None
       if tr_bytes:
@@ -206,19 +231,9 @@ class GrewePredictive(DownstreamTask):
             tr_bytes  = abs(exp_tr_bytes - tr_bytes)
       else:
         gsize += 1
-    new_runtime_feats = sample.runtime_features
-    new_runtime_feats['transferred_bytes'] = tr_bytes if found else exp_tr_bytes
-    new_runtime_feats['global_size'] = 2**gsize
-    cached = self.corpus_db.update_and_get(
-      code,
-      "BenchPress",
-      global_size = new_runtime_feats['global_size'],
-      local_size  = new_runtime_feats['local_size'],
-      num_runs    = 1000,
-      timeout     = 60,
-    )
-    new_runtime_feats['label'] = cached.status
-    return sample._replace(runtime_features = new_runtime_feats)
+    if FLAGS.only_optimal_gsize:
+      new_samples = [create_sample(sample, code, tr_bytes if found else exp_tr_bytes, gsize)]
+    return new_samples
 
   def ServeRuntimeFeatures(self, tokenizer: 'tokenizers.TokenizerBase') -> None:
     """
@@ -231,8 +246,8 @@ class GrewePredictive(DownstreamTask):
         serialized = self.read_queue.get()
         sample     = JSON_to_ActiveSample(serialized)
         ret        = self.CollectSingleRuntimeFeature(sample, tokenizer)
-        serialized = ActiveSample_to_JSON(ret)
-        self.write_queue.put(serialized)
+        for x in ret:
+          self.write_queue.put(ActiveSample_to_JSON(x))
       else:
         time.sleep(1)
     return
@@ -259,10 +274,12 @@ class GrewePredictive(DownstreamTask):
       total = 0
       for sample in sorted(samples, key = lambda x: x.score):
         ret = self.CollectSingleRuntimeFeature(sample, tokenizer)
-        if ret.runtime_features['label'] in {"CPU", "GPU"}:
-          total += 1
-        if top_k != -1 and total >= top_k:
-          break
+        for s in ret:
+          if s.runtime_features['label'] in {"CPU", "GPU"}:
+            total += 1
+            new_samples.append(s)
+          if top_k != -1 and total >= top_k:
+            return new_samples
       return new_samples
 
   def UpdateDataGenerator(self,
