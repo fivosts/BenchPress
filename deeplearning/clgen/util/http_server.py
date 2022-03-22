@@ -101,19 +101,19 @@ def status():
   status = {
     'read_queue'      : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
     'write_queue'     : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY',
-    'work_flag'       : 'WORKING' if handler.work_flag else 'IDLE',
+    'work_flag'       : 'WORKING' if handler.work_flag.value else 'IDLE',
     'read_queue_size' : handler.read_queue.qsize(),
     'write_queue_size': handler.write_queue.qsize(),
   }
 
   if status['read_queue'] == 'EMPTY' and status['write_queue'] == 'EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 203 + (100 if handler.work_flag else 0)
+    return bytes(json.dumps(status), encoding = 'utf-8'), 203 + (100 if handler.work_flag.value else 0)
   elif status['read_queue'] == 'EMPTY' and status['write_queue'] == 'NOT_EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 202 + (100 if handler.work_flag else 0)
+    return bytes(json.dumps(status), encoding = 'utf-8'), 202 + (100 if handler.work_flag.value else 0)
   elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 201 + (100 if handler.work_flag else 0)
+    return bytes(json.dumps(status), encoding = 'utf-8'), 201 + (100 if handler.work_flag.value else 0)
   elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'NOT_EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 200 + (100 if handler.work_flag else 0)
+    return bytes(json.dumps(status), encoding = 'utf-8'), 200 + (100 if handler.work_flag.value else 0)
 
 @app.route('/', methods = ['GET', 'POST', 'PUT'])
 def index():
@@ -127,6 +127,7 @@ def index():
   status = {
     'read_queue'      : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
     'write_queue'     : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY',
+    'work_flag'       : 'WORKING' if handler.work_flag.value else 'IDLE',
     'read_queue_size' : handler.read_queue.qsize(),
     'write_queue_size': handler.write_queue.qsize(),
   }
@@ -206,7 +207,7 @@ def start_server_process():
   )
   p.daemon = True
   p.start()
-  return p, rq, wq
+  return p, wf, rq, wq
 
 def start_thread_process():
   """
@@ -226,4 +227,4 @@ def start_thread_process():
     daemon = True
   )
   th.start()
-  return p, rq, wq
+  return p, wf, rq, wq
