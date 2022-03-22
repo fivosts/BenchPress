@@ -100,8 +100,8 @@ def status():
   status = {
     'read_queue'      : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
     'write_queue'     : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY',
-    'read_queue_size' : handler.read_queue.qtsize(),
-    'write_queue_size': handler.write_queue.qtsize(),
+    'read_queue_size' : handler.read_queue.qsize(),
+    'write_queue_size': handler.write_queue.qsize(),
   }
 
   if status['read_queue'] == 'EMPTY' and status['write_queue'] == 'EMPTY':
@@ -125,8 +125,8 @@ def index():
   status = {
     'read_queue'      : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
     'write_queue'     : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY',
-    'read_queue_size' : handler.read_queue.qtsize(),
-    'write_queue_size': handler.write_queue.qtsize(),
+    'read_queue_size' : handler.read_queue.qsize(),
+    'write_queue_size': handler.write_queue.qsize(),
   }
   return '\n'.join(["{}: {}".format(k, v) for k, v in status.items()]), 200
 
