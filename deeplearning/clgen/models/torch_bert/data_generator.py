@@ -100,7 +100,7 @@ def JSON_to_ActiveSampleFeed(d: typing.Dict[str, typing.Any]) -> ActiveSampleFee
   """
   JSON serializable dictionary to ActiveSampleFeed.
   """
-  return ActiveSample(**d)
+  return ActiveSampleFeed(**d)
 
 class ActiveSample(typing.NamedTuple):
   """
@@ -132,14 +132,15 @@ def ActiveSample_to_JSON(f: ActiveSample) -> typing.Dict[str, typing.Any]:
   Convert NamedTuple to JSON serializable dictionary.
   """
   return {
-    'sample_feed'      : ActiveSampleFeed_to_JSON(f.sample_feed),
-    'input_ids'        : list([int(x) for x in f.input_ids]),
-    'hole_lengths'     : list([int(x) for x in f.hole_lengths]),
-    'sample'           : list([int(x) for x in f.sample]),
-    'sample_indices'   : list([int(x) for x in f.sample_indices]),
-    'features'         : {k: float(v) for k, v in f.features.items()},
-    'runtime_features' : {k: int(v) for k, v in f.runtime_features.items()},
-    'score'            : float(f.score),
+    'sample_feed'         : ActiveSampleFeed_to_JSON(f.sample_feed),
+    'input_ids'           : list([int(x) for x in f.input_ids]),
+    'hole_lengths'        : list([int(x) for x in f.hole_lengths]),
+    'sample'              : list([int(x) for x in f.sample]),
+    'sample_indices'      : list([int(x) for x in f.sample_indices]),
+    'sample_indices_size' : list([int(x) for x in f.sample_indices]),
+    'features'            : {k: float(v) for k, v in f.features.items()},
+    'runtime_features'    : {k: int(v) if k != "label" else str(v) for k, v in f.runtime_features.items() },
+    'score'               : float(f.score),
   }
 
 def JSON_to_ActiveSample(d: typing.Dict[str, typing.Any]) -> ActiveSample:
@@ -147,14 +148,15 @@ def JSON_to_ActiveSample(d: typing.Dict[str, typing.Any]) -> ActiveSample:
   JSON serializable dictionary to ActiveSampleFeed.
   """
   return ActiveSample(
-    sample_feed      = JSON_to_ActiveSampleFeed(d['sample_feed']),
-    input_ids        = d['input_ids'],
-    hole_lengths     = d['hole_lengths'],
-    sample           = d['sample'],
-    sample_indices   = d['sample_indices'],
-    features         = d['features'],
-    runtime_features = d['runtime_features'],
-    score            = d['score']
+    sample_feed         = JSON_to_ActiveSampleFeed(d['sample_feed']),
+    input_ids           = d['input_ids'],
+    hole_lengths        = d['hole_lengths'],
+    sample              = d['sample'],
+    sample_indices      = d['sample_indices'],
+    sample_indices_size = d['sample_indices_size'],
+    features            = d['features'],
+    runtime_features    = d['runtime_features'],
+    score               = d['score']
   )
 
 def IR_candidate_worker(sample                  : np.array,
