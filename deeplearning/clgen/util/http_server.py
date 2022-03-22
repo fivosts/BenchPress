@@ -170,12 +170,12 @@ def client_get_request() -> typing.List[typing.Dict]:
     l.logger().error("Error code {} in read_message request.".format(r.status_code))
   return None
 
-def client_put_request(msg: typing.List[bytes]) -> None:
+def client_put_request(msg: typing.List[typing.Dict]) -> None:
   """
   Helper function to perform put at /write_message of http target host.
   """
   try:
-    r = requests.put("http://{}:{}/write_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), data = msg)
+    r = requests.put("http://{}:{}/write_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), data = json.dumps(msg), headers = {"Content-Type": "application/json"})
   except Exception as e:
     l.logger().error("PUT Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
     raise e
