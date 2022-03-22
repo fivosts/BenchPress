@@ -29,6 +29,18 @@ from absl import flags
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_string(
+  "server_tokenizer",
+  None,
+  "Set path for tokenizer to be used by downstream server."
+)
+
+flags.DEFINE_string(
+  "server_cldrive_cache",
+  None,
+  "Set path for cldrive_cache to be used by downstream server."
+)
+
 def ExtractorWorker(cldrive_entry: cldrive.CLDriveSample, fspace: str):
   """
   Worker that extracts features and buffers cldrive entry, to maintain consistency
@@ -452,10 +464,18 @@ TASKS = {
 }
 
 def main(*args, **kwargs) -> None:
-  corpus_cache_path = pathlib.Path("somewhere").resolve()
-  tokenizer_path    = pathlib.Path("somewhere").resolve()
+  if FLAGS.server_tokenizer is None:
+    raise ValueError("Please define --server_tokenizer")
+  if FLAGS.server_cldrive_cache is None:
+    raise ValueError("Please define --server_cldrive_cache")
+  tokenizer_path = pathlib.Path(FLAGS.server_tokenizer).resolve()
+  cldrive_cache  = pathlib.Path(FLAGS.server_cldrive_cache).resolve()
+  if not tokenizer_path.exists():
+    raise FileNotFoundError(tokenizer_path)
+  if not cldrive_cache.exists():
+    raise FileNotFoundError(cldrive_cache)
   tokenizers.TokenizerBase.FromPath(tokenizer_path)
-  task = DownstreamTasks.FromTask("GrewePredictive", corpus_cache_path)
+  task = DownstreamTasks.FromTask("GrewePredictive", cldrive_cache)
   task.ServeRuntimeFeatures(tokenizer)
   task.cleanup()
   return
