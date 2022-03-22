@@ -1,13 +1,9 @@
-import socket
-import pickle
 import portpicker
 import multiprocessing
-import time
 import waitress
 import subprocess
 import json
 import flask
-import waitress
 
 from absl import flags
 
@@ -15,31 +11,17 @@ from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string(
-  "use_server",
-  None,
-  "Select to use socket server in the app. If you set to True, the app will know how to use it with respect to the requested task. Choices are 'socket' and 'http'."
-)
-
-flags.DEFINE_string(
-  "target_host",
-  None,
-  "Define IP Address of target socket server."
+flags.DEFINE_boolean(
+  "use_http_server",
+  False,
+  "Select to use http server in the app. If you set to True, the app will know how to use it with respect to the requested task."
 )
 
 flags.DEFINE_integer(
-  "listen_port",
+  "http_port",
   None,
   "Define port this current server listens to."
 )
-
-flags.DEFINE_integer(
-  "send_port",
-  None,
-  "Define port this current server listens to."
-)
-
-MAX_PAYLOAD_SIZE = 65535
 
 app = flask.Flask(__name__)
 
@@ -145,8 +127,8 @@ def http_serve(read_queue: multiprocessing.Queue, write_queue: multiprocessing.Q
   Run http server for read and write workload queues.
   """
   try:
-    port = FLAGS.listen_port
-    if listen_port is None:
+    port = FLAGS.http_port
+    if http_port is None:
       port = portpicker.pick_unused_port()
     handler.set_queues(read_queue, write_queue)
     hostname = subprocess.check_output(
