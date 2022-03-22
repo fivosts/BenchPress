@@ -126,9 +126,9 @@ sampler {
           downstream_task: "GrewePredictive"
           training_corpus: "/var/foivos/results/full_results/cldrive_cache.db"
         }
-        active_limit_per_feed: 128
-        active_search_depth: 100
-        active_search_width: 8
+        active_search_depth: 40
+        active_search_width: 16
+        active_dropout_prob: 0.25
         batch_size_per_feed: 2
         feature_space: "GreweFeatures"
       }
