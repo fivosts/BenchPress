@@ -44,6 +44,12 @@ flags.DEFINE_string(
   "Set path for cldrive_cache to be used by downstream server."
 )
 
+flags.DEFINE_boolean(
+  "only_optimal_gsize",
+  False,
+  "If True, only the best matching global size to transferred_bytes will be executed. Otherwise, everything."
+)
+
 def ExtractorWorker(cldrive_entry: cldrive.CLDriveSample, fspace: str):
   """
   Worker that extracts features and buffers cldrive entry, to maintain consistency
@@ -117,7 +123,8 @@ class GrewePredictive(DownstreamTask):
                use_as_server : bool = False,
                ) -> None:
     super(GrewePredictive, self).__init__("GrewePredictive", random_seed)
-    self.corpus_path    = corpus_path
+    self.corpus_path = corpus_path
+    self.corpus_db   = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
     if use_as_server:
       self.setup_server()
     else:
@@ -154,7 +161,6 @@ class GrewePredictive(DownstreamTask):
     Fetch data and preprocess into corpus for Grewe's predictive model.
     """
     self.dataset = []
-    self.corpus_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
     data = [x for x in self.corpus_db.get_valid_data(dataset = "GitHub")]
     pool = multiprocessing.Pool()
     it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = "GreweFeatures"), data)
