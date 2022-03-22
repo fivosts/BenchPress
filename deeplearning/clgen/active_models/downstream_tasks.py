@@ -225,7 +225,7 @@ class GrewePredictive(DownstreamTask):
           global_size = 2**gsize,
           local_size  = local_size,
           num_runs    = 10,
-          timeout     = 15,
+          timeout     = 60,
         )
       if cached.status in {"CPU", "GPU"}:
         tr_bytes = cached.transferred_bytes
