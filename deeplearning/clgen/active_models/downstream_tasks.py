@@ -59,8 +59,8 @@ class DownstreamTask(object):
   Downstream Task generic class.
   """
   @classmethod
-  def FromTask(cls, task: str, corpus_path: pathlib.Path, random_seed: int) -> "DownstreamTask":
-    return TASKS[task](corpus_path, random_seed)
+  def FromTask(cls, task: str, corpus_path: pathlib.Path, random_seed: int, **kwargs) -> "DownstreamTask":
+    return TASKS[task](corpus_path, random_seed, kwargs)
 
   def __init__(self, name: str, random_seed: int) -> None:
     self.name        = name
@@ -112,12 +112,13 @@ class GrewePredictive(DownstreamTask):
     return "GreweFeatures"
 
   def __init__(self,
-               corpus_path: pathlib.Path,
-               random_seed: int,
+               corpus_path   : pathlib.Path,
+               random_seed   : int,
+               use_as_server : bool = False,
                ) -> None:
     super(GrewePredictive, self).__init__("GrewePredictive", random_seed)
     self.corpus_path    = corpus_path
-    if FLAGS.use_http_server:
+    if use_as_server:
       self.setup_server()
     else:
       self.setup_dataset()
@@ -483,7 +484,7 @@ def main(*args, **kwargs) -> None:
   if not FLAGS.use_http_server and not FLAGS.use_socket_server:
     raise ValueError("This booting point is supposed to work as server. Set your flags appropriately.")
   tokenizer = tokenizers.TokenizerBase.FromFile(tokenizer_path)
-  task = DownstreamTask.FromTask("GrewePredictive", cldrive_cache, 0)
+  task = DownstreamTask.FromTask("GrewePredictive", cldrive_cache, 0, use_as_server = True)
   task.ServeRuntimeFeatures(tokenizer)
   return
 
