@@ -101,7 +101,7 @@ def status():
   status = {
     'read_queue'      : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
     'write_queue'     : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY',
-    'work_flag'       : 'WORKING' if handler.work_flag else 'IDLE'
+    'work_flag'       : 'WORKING' if handler.work_flag else 'IDLE',
     'read_queue_size' : handler.read_queue.qsize(),
     'write_queue_size': handler.write_queue.qsize(),
   }
