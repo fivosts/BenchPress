@@ -115,7 +115,7 @@ class GrewePredictive(DownstreamTask):
                ) -> None:
     super(GrewePredictive, self).__init__("GrewePredictive", random_seed)
     self.corpus_path    = corpus_path
-    if FLAGS.http_server:
+    if FLAGS.use_http_server:
       self.setup_server()
     else:
       self.setup_dataset()
@@ -275,7 +275,7 @@ class GrewePredictive(DownstreamTask):
     Collect the top_k samples that can run on CLDrive and set their global size
     to the appropriate value so it can match the transferred bytes.
     """
-    if FLAGS.http_server:
+    if FLAGS.use_http_server:
       new_samples = []
       while self.client_status_request()[1] != "202":
         batch = http_server.client_get_request()
@@ -360,7 +360,7 @@ class GrewePredictive(DownstreamTask):
     """
     End of LM generation's epoch hook.
     """
-    if FLAGS.http_server:
+    if FLAGS.use_http_server:
       serialized = []
       for cand in candidates:
         serialized.append(
