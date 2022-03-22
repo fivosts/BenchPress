@@ -21,6 +21,7 @@ from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import http_server
+from deeplearning.clgen.util import socket_server
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.models.torch_bert.data_generator import JSON_to_ActiveSample
