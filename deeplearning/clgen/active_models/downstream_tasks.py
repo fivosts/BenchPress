@@ -196,7 +196,7 @@ class GrewePredictive(DownstreamTask):
     def create_sample(s: 'ActiveSample', code: str, trb: int, gs: int) -> typing.List['ActiveSample']:
       nrfeats = s.runtime_features
       nrfeats['transferred_bytes'] = trb
-      nrfeats['global_size'] = 2**gs
+      nrfeats['global_size'] = int(2**gs)
       cached = self.corpus_db.update_and_get(
         code,
         "BenchPress",
