@@ -226,7 +226,7 @@ class GrewePredictive(DownstreamTask):
           "BenchPress",
           global_size = int(2**gsize),
           local_size  = int(local_size),
-          num_runs    = 10,
+          num_runs    = 1000,
           timeout     = 60,
         )
       if cached.status in {"CPU", "GPU"}:
