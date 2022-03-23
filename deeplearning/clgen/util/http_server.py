@@ -35,15 +35,17 @@ app = flask.Flask(__name__)
 
 class FlaskHandler(object):
   def __init__(self):
-    self.read_queue  = None
-    self.write_queue = None
+    self.read_queue   = None
+    self.write_queue  = None
+    self.reject_queue = None
     self.backlog   = None
     return
 
-  def set_params(self, read_queue, write_queue, work_flag):
-    self.read_queue  = read_queue
-    self.write_queue = write_queue
-    self.work_flag   = work_flag
+  def set_params(self, read_queue, write_queue, reject_queue, work_flag):
+    self.read_queue   = read_queue
+    self.write_queue  = write_queue
+    self.work_flag    = work_flag
+    self.reject_queue = reject_queue
     self.backlog   = []
     return
 
@@ -82,6 +84,22 @@ def read_message() -> bytes:
   handler.backlog += ret
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
+@app.route('/read_rejects', methods = ['GET'])
+def read_rejects() -> bytes:
+  """
+  Publish all the predicted results of the write_queue.
+  Before flushing the write_queue, save them into the backlog.
+
+  Example command:
+    curl -X GET http://localhost:PORT/read_rejects
+  """
+  ret = []
+  while not handler.reject_queue.empty():
+    cur = handler.reject_queue.get()
+    ret.append(cur)
+  handler.backlog += ret
+  return bytes(json.dumps(ret), encoding="utf-8"), 200
+
 @app.route('/get_backlog', methods = ['GET'])
 def get_backlog() -> bytes:
   """
@@ -99,11 +117,13 @@ def status():
   Read the workload status of the http server.
   """
   status = {
-    'read_queue'      : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
-    'write_queue'     : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY',
-    'work_flag'       : 'WORKING' if handler.work_flag.value else 'IDLE',
-    'read_queue_size' : handler.read_queue.qsize(),
-    'write_queue_size': handler.write_queue.qsize(),
+    'read_queue'        : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
+    'write_queue'       : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY',
+    'reject_queue'      : 'EMPTY' if handler.reject_queue.empty() else 'NOT_EMPTY',
+    'work_flag'         : 'WORKING' if handler.work_flag.value else 'IDLE',
+    'read_queue_size'   : handler.read_queue.qsize(),
+    'write_queue_size'  : handler.write_queue.qsize(),
+    'reject_queue_size' : handler.reject_queue.qsize(),
   }
 
   if status['read_queue'] == 'EMPTY' and status['write_queue'] == 'EMPTY':
@@ -125,17 +145,20 @@ def index():
     curl -X GET http://localhost:PORT/get_backlog
   """
   status = {
-    'read_queue'      : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
-    'write_queue'     : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY',
-    'work_flag'       : 'WORKING' if handler.work_flag.value else 'IDLE',
-    'read_queue_size' : handler.read_queue.qsize(),
-    'write_queue_size': handler.write_queue.qsize(),
+    'read_queue'        : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
+    'write_queue'       : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY',
+    'reject_queue'      : 'EMPTY' if handler.reject_queue.empty() else 'NOT_EMPTY',
+    'work_flag'         : 'WORKING' if handler.work_flag.value else 'IDLE',
+    'read_queue_size'   : handler.read_queue.qsize(),
+    'write_queue_size'  : handler.write_queue.qsize(),
+    'reject_queue_size' : handler.reject_queue.qsize(),
   }
   return '\n\n'.join(["{}: {}".format(k, v) for k, v in status.items()]), 200
 
-def http_serve(read_queue  : multiprocessing.Queue,
-               write_queue : multiprocessing.Queue,
-               work_flag   : multiprocessing.Value
+def http_serve(read_queue   : multiprocessing.Queue,
+               write_queue  : multiprocessing.Queue,
+               reject_queue : multiprocessing.Queue,
+               work_flag    : multiprocessing.Value
                ):
   """
   Run http server for read and write workload queues.
@@ -144,7 +167,7 @@ def http_serve(read_queue  : multiprocessing.Queue,
     port = FLAGS.http_port
     if port is None:
       port = portpicker.pick_unused_port()
-    handler.set_params(read_queue, write_queue, work_flag)
+    handler.set_params(read_queue, write_queue, reject_queue, work_flag)
     hostname = subprocess.check_output(
       ["hostname", "-i"],
       stderr = subprocess.STDOUT,
@@ -195,19 +218,20 @@ def start_server_process():
   Starts a new process or thread and returns all the multiprocessing
   elements needed to control the server.
   """
-  rq, wq = multiprocessing.Queue(), multiprocessing.Queue()
+  rq, wq, rjq = multiprocessing.Queue(), multiprocessing.Queue(), multiprocessing.Queue()
   wf     = multiprocessing.Value('i', False)
   p = multiprocessing.Process(
     target = http_serve,
     kwargs = {
-      'read_queue'  : rq,
-      'write_queue' : wq,
-      'work_flag'   : wf
+      'read_queue'   : rq,
+      'write_queue'  : wq,
+      'reject_queue' : rjq,
+      'work_flag'    : wf
     }
   )
   p.daemon = True
   p.start()
-  return p, wf, rq, wq
+  return p, wf, rq, wq, rjq
 
 def start_thread_process():
   """
@@ -220,11 +244,12 @@ def start_thread_process():
   th = threading.Thread(
     target = http_serve,
     kwargs = {
-      'read_queue'  : rq,
-      'write_queue' : wq,
-      'work_flag'   : wf
+      'read_queue'   : rq,
+      'write_queue'  : wq,
+      'reject_queue' : rjq,
+      'work_flag'    : wf
     },
     daemon = True
   )
   th.start()
-  return p, wf, rq, wq
+  return p, wf, rq, wq, rjq
