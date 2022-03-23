@@ -18,6 +18,8 @@ from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import sqlutil
+from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import distrib
 
 FLAGS = flags.FLAGS
 
@@ -224,8 +226,29 @@ class ActiveFeed(Base, sqlutil.ProtoBackedMixin):
 class ActiveFeedDatabase(sqlutil.Database):
   """A database monitoring search-based generation process."""
 
-  def __init__(self, url: str, must_exist: bool = False):
-    super(ActiveFeedDatabase, self).__init__(url, Base, must_exist = must_exist)
+  def __init__(self, url: str, must_exist: bool = False, is_replica = False):
+    if environment.WORLD_RANK == 0 or is_replica:
+      super(ActiveFeedDatabase, self).__init__(url, Base, must_exist = must_exist)
+    if environment.WORLD_SIZE > 1 and not is_replica:
+      # Conduct engine connections to replicated preprocessed chunks.
+      self.base_path = pathlib.Path(url.replace("sqlite:///", "")).resolve().parent
+      hash_id = self.base_path.name
+      try:
+        tdir = pathlib.Path(FLAGS.local_filesystem).resolve() / hash_id / "node_active_feed"
+      except Exception:
+        tdir = pathlib.Path("/tmp").resolve() / hash_id / "node_active_feed"
+      distrib.lock()
+      tdir.mkdir(parents = True, exist_ok = True)
+      distrib.unlock()
+      self.replicated_path = tdir / "active_feeds_{}.db".format(environment.WORLD_RANK)
+      self.replicated = PreprocessedContentFiles(
+        url = "sqlite:///{}".format(str(self.replicated_path)),
+        must_exist = must_exist,
+        is_replica = True
+      )
+      distrib.barrier()
+    return
+
 
   @property
   def input_count(self):
