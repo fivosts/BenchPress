@@ -219,13 +219,13 @@ class GrewePredictive(DownstreamTask):
     while not found and gsize <= 20:
       sha256 = crypto.sha256_str(code + "BenchPress" + str(2**gsize) + str(local_size))
       if sha256 in self.corpus_db.status_cache:
-        cached = self.corpus_db.get_entry(code, "BenchPress", 2**gsize, local_size)
+        cached = self.corpus_db.get_entry(code, "BenchPress", int(2**gsize), int(local_size))
       else:
         cached = self.corpus_db.update_and_get(
           code,
           "BenchPress",
-          global_size = 2**gsize,
-          local_size  = local_size,
+          global_size = int(2**gsize),
+          local_size  = int(local_size),
           num_runs    = 10,
           timeout     = 60,
         )
