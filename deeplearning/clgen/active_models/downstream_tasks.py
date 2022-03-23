@@ -153,7 +153,7 @@ class GrewePredictive(DownstreamTask):
     In server mode, initialize the serving process.
     """
     if environment.WORLD_RANK == 0:
-      self.cl_proc, self.work_flag, self.read_queue, self.write_queue = http_server.start_server_process()
+      self.cl_proc, self.work_flag, self.read_queue, self.write_queue, self.reject_queue = http_server.start_server_process()
     return
 
   def setup_dataset(self) -> None:
@@ -187,8 +187,9 @@ class GrewePredictive(DownstreamTask):
 
   def CollectSingleRuntimeFeature(self,
                                   sample: 'ActiveSample',
-                                  tokenizer: 'tokenizers.TokenizerBase'
-                                  ) -> 'ActiveSample':
+                                  tokenizer: 'tokenizers.TokenizerBase',
+                                  store_rejects: bool = False,
+                                  ) -> typing.Tuple[typing.List['ActiveSample'], typing.List['ActiveSample']]:
     """
     Overloaded function to compute runtime features for a single instance.
     """
@@ -214,6 +215,7 @@ class GrewePredictive(DownstreamTask):
     prev         = math.inf
     code         = tokenizer.ArrayToCode(sample.sample)
     new_samples  = []
+    rejects      = []
     while not found and gsize <= 20:
       sha256 = crypto.sha256_str(code + "BenchPress" + str(2**gsize) + str(local_size))
       if sha256 in self.corpus_db.status_cache:
@@ -239,6 +241,15 @@ class GrewePredictive(DownstreamTask):
             )
           )
       else:
+        if store_rejects:
+          rejects.append(
+            create_sample(
+              s    = sample,
+              code = code,
+              trb  = exp_tr_bytes,
+              gs   = gsize,
+            )
+          )
         tr_bytes = None
       if tr_bytes:
         if tr_bytes < exp_tr_bytes:
@@ -255,7 +266,7 @@ class GrewePredictive(DownstreamTask):
         gsize += 1
     if FLAGS.only_optimal_gsize:
       new_samples = [create_sample(sample, code, tr_bytes if found else exp_tr_bytes, gsize)]
-    return new_samples
+    return new_samples, rejects
 
   def ServeRuntimeFeatures(self, tokenizer: 'tokenizers.TokenizerBase') -> None:
     """
@@ -269,9 +280,11 @@ class GrewePredictive(DownstreamTask):
           self.work_flag.value = True
           serialized = self.read_queue.get()
           sample     = JSON_to_ActiveSample(serialized)
-          ret        = self.CollectSingleRuntimeFeature(sample, tokenizer)
+          ret, rej   = self.CollectSingleRuntimeFeature(sample, tokenizer, store_rejects = True)
           for x in ret:
             self.write_queue.put(ActiveSample_to_JSON(x))
+          for x in rej:
+            self.reject_queue.put(ActiveSample_to_JSON(x))
           self.work_flag.value = False
         else:
           time.sleep(1)
