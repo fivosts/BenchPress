@@ -799,7 +799,7 @@ class torchBert(backends.BackendBase):
         ## If a workload is specified, then after you pad to the dimension of GPU or num processes
         ## Divide the size by GPU size or num processes size.
         padded_wsize = (
-          (workload_size // (self.pytorch.num_gpus * sampler.batch_size)) * self.pytorch.num_gpus
+          (max(1, workload_size // (self.pytorch.num_gpus * sampler.batch_size))) * self.pytorch.num_gpus
           if environment.WORLD_SIZE == 1
           else (workload_size // (self.pytorch.num_nodes * sampler.batch_size)) * self.pytorch.num_nodes)
       self.step_inputs = {
