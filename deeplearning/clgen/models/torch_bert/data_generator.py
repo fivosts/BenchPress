@@ -417,7 +417,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       # Active sampling attributes.
       d.active_db = active_feed_database.ActiveFeedDatabase(
         url = "sqlite:///{}".format(d.sampler.corpus_directory / "active_feeds.db"),
-        is_replica = False if environment.WORLD_RANK == 0 else True,
       )
       d.samples_cache_obs = sample_observers.SamplesDatabaseObserver(
         path = d.sampler.corpus_directory / "samples_cache.db",
