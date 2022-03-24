@@ -833,7 +833,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             best_cands = [better_found]
 
         # Monitor the new better candidate(s), if any.
-        if best_cands:
+        if best_cands and environment.WORLD_RANK == 0:
           self.candidate_monitor.register(
             {str(best_cands[0].sample_feed.gen_id): [c.score for c in best_cands]}
           )
