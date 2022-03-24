@@ -309,7 +309,7 @@ class QueryByCommittee(backends.BackendBase):
             if self.is_world_process_zero():
               train_hook.step(
                 train_step = current_step,
-                total_loss = total_loss.mean().item(),
+                total_loss = sum([tl.mean().item() for tl in total_loss]) / len(total_loss),
               )
             model.zero_grad()
             if current_step == 0:
