@@ -252,28 +252,38 @@ class ActiveFeedDatabase(sqlutil.Database):
   @property
   def input_count(self):
     """Number of input feeds in DB."""
-    with self.Session() as s:
+    with self.get_session() as s:
       count = s.query(ActiveInput).count()
     return count
 
   @property
   def get_data(self):
     """Return all database in list format"""
-    with self.Session() as s:
+    with self.get_session() as s:
       return s.query(ActiveFeed).all()
 
   @property
   def get_features(self):
     """Return all feature vectors of compiling samples."""
-    with self.Session() as s:
+    with self.get_session() as s:
       return [x.output_features for x in s.query(ActiveFeed).yield_per(1000)]
 
   @property
   def active_count(self):
     """Number of active samples in DB."""
-    with self.Session() as s:
+    with self.get_session() as s:
       count = s.query(ActiveFeed).count()
     return count
+
+  @property
+  def get_session(self):
+    """
+    get proper DB session.
+    """
+    if environment.WORLD_SIZE == 1 or environment.WORLD_RANK == 0:
+      return self.Session
+    else:
+      return self.replicated.Session
 
 def merge_databases(dbs: typing.List[ActiveFeedDatabase], out_db: ActiveFeedDatabase) -> None:
   """
