@@ -8,6 +8,8 @@ import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 
 from deeplearning.clgen.util import crypto
+from deeplearning.clgen.util import distrib
+from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import logging as l
 
@@ -118,8 +120,28 @@ class CommitteeSample(Base, sqlutil.ProtoBackedMixin):
 class CommitteeSamples(sqlutil.Database):
   """A database of Query-by-Committee samples."""
 
-  def __init__(self, url: str, must_exist: bool = False):
-    super(CommitteeSamples, self).__init__(url, Base, must_exist = must_exist)
+  def __init__(self, url: str, must_exist: bool = False, is_replica: bool = False):
+    if environment.WORLD_RANK == 0 or is_replica:
+      super(CommitteeSamples, self).__init__(url, Base, must_exist = must_exist)
+    if environment.WORLD_SIZE > 1 and not is_replica:
+      # Conduct engine connections to replicated preprocessed chunks.
+      self.base_path = pathlib.Path(url.replace("sqlite:///", "")).resolve().parent
+      hash_id = self.base_path.name
+      try:
+        tdir = pathlib.Path(FLAGS.local_filesystem).resolve() / hash_id / "node_committee_samples"
+      except Exception:
+        tdir = pathlib.Path("/tmp").resolve() / hash_id / "node_committee_samples"
+      distrib.lock()
+      tdir.mkdir(parents = True, exist_ok = True)
+      distrib.unlock()
+      self.replicated_path = tdir / "samples_{}.db".format(environment.WORLD_RANK)
+      self.replicated = CommitteeSamples(
+        url = "sqlite:///{}".format(str(self.replicated_path)),
+        must_exist = must_exist,
+        is_replica = True
+      )
+      distrib.barrier()
+    return
 
   @property
   def member_count(self):
