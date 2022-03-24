@@ -233,7 +233,7 @@ class QueryByCommittee(backends.BackendBase):
         sampler = self.torch.utils.data.RandomSampler(data_generator, replacement = False)
       else:
         sampler = self.torch.utils.data.DistributedSampler(
-          dataset,
+          data_generator,
           num_replicas = self.pytorch.num_nodes,
           rank = pytorch.torch.distributed.get_rank()
         )
@@ -415,10 +415,18 @@ class QueryByCommittee(backends.BackendBase):
       l.logger().info("Loaded {} checkpoint step {}".format("{}-{}".format(member.config.name, member.model.id), current_step))
     current_step = max(0, current_step)
 
+    if self.torch.distributed.get_world_size() <= 1:
+      sampler = self.torch.utils.data.RandomSampler(sample_set, replacement = False)
+    else:
+      sampler = self.torch.utils.data.DistributedSampler(
+        sample_set,
+        num_replicas = self.pytorch.num_nodes,
+        rank = pytorch.torch.distributed.get_rank()
+      )
     loader = self.torch.utils.data.dataloader.DataLoader(
       dataset    = sample_set,
       batch_size = member.training_opts.train_batch_size,
-      sampler    = (self.torch.utils.data.RandomSampler(sample_set, replacement = False)
+      sampler    = (sampler
         if self.pytorch.num_nodes <= 1 or not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
         else self.torch.utils.data.distributed.DistributedSampler(
           dataset      = sample_set,
