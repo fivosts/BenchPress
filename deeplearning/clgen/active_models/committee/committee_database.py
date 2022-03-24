@@ -2,6 +2,7 @@
 import datetime
 import typing
 import progressbar
+import pathlib
 import sqlite3
 
 import sqlalchemy as sql
