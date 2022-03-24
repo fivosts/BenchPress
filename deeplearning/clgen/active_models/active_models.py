@@ -87,8 +87,8 @@ class Model(object):
     # Validate config options.
     self.config.CopyFrom(AssertConfigIsValid(config))
 
+    self.cache_path = cache_path / "active_model"
     if environment.WORLD_RANK == 0:
-      self.cache_path = cache_path / "active_model"
       self.cache_path.mkdir(exist_ok = True, parents = True)
       (self.cache_path / "samples").mkdir(exist_ok = True)
     distrib.barrier()
