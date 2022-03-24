@@ -147,28 +147,38 @@ class CommitteeSamples(sqlutil.Database):
   @property
   def member_count(self):
     """Number of committee members in DB."""
-    with self.Session() as s:
+    with self.get_session() as s:
       count = s.query(CommitteeConfig).count()
     return count
 
   @property
   def sample_count(self):
     """Number of samples in DB."""
-    with self.Session() as s:
+    with self.get_session() as s:
       count = s.query(CommitteeSample).count()
     return count
 
   @property
   def get_data(self):
     """Return all database in list format"""
-    with self.Session() as s:
+    with self.get_session() as s:
       return s.query(CommitteeSample).all()
+
+  @property
+  def get_session(self):
+    """
+    get proper DB session.
+    """
+    if environment.WORLD_SIZE == 1 or environment.WORLD_RANK == 0:
+      return self.Session
+    else:
+      return self.replicated.Session
 
   def add_member(self, member_id: int, member_name: str, type: str, configuration: str) -> None:
     """
     Add committee member if not exists.
     """
-    with self.Session(commit = True) as s:
+    with self.get_session(commit = True) as s:
       exists = s.query(CommitteeConfig).filter_by(member_id = member_id).first()
       if not exists:
         s.add(CommitteeConfig.FromArgs(self.member_count, member_id, member_name, type, configuration))
@@ -181,7 +191,7 @@ class CommitteeSamples(sqlutil.Database):
     """
     hash_cache = set()
     offset_idx = 0
-    with self.Session(commit = True) as s:
+    with self.get_session(commit = True) as s:
       for sample in samples:
         sample_entry = CommitteeSample.FromArgs(
           id                 = self.sample_count + offset_idx,
