@@ -241,7 +241,7 @@ class ActiveFeedDatabase(sqlutil.Database):
       tdir.mkdir(parents = True, exist_ok = True)
       distrib.unlock()
       self.replicated_path = tdir / "active_feeds_{}.db".format(environment.WORLD_RANK)
-      self.replicated = PreprocessedContentFiles(
+      self.replicated = ActiveFeedDatabase(
         url = "sqlite:///{}".format(str(self.replicated_path)),
         must_exist = must_exist,
         is_replica = True
