@@ -235,7 +235,7 @@ class QueryByCommittee(backends.BackendBase):
         sampler = self.torch.utils.data.DistributedSampler(
           data_generator,
           num_replicas = self.pytorch.num_nodes,
-          rank = pytorch.torch.distributed.get_rank()
+          rank         = self.pytorch.torch.distributed.get_rank()
         )
       loader = self.torch.utils.data.dataloader.DataLoader(
         dataset    = data_generator,
@@ -421,7 +421,7 @@ class QueryByCommittee(backends.BackendBase):
       sampler = self.torch.utils.data.DistributedSampler(
         sample_set,
         num_replicas = self.pytorch.num_nodes,
-        rank = pytorch.torch.distributed.get_rank()
+        rank         = self.pytorch.torch.distributed.get_rank()
       )
     loader = self.torch.utils.data.dataloader.DataLoader(
       dataset    = sample_set,
