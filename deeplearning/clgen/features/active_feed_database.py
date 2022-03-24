@@ -249,7 +249,6 @@ class ActiveFeedDatabase(sqlutil.Database):
       distrib.barrier()
     return
 
-
   @property
   def input_count(self):
     """Number of input feeds in DB."""
