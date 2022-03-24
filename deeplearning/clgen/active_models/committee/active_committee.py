@@ -229,10 +229,18 @@ class QueryByCommittee(backends.BackendBase):
           * (self.torch.distributed.get_world_size() if self.pytorch.num_nodes > 1 else 1)
         )
 
+      if self.torch.distributed.get_world_size() <= 1:
+        sampler = self.torch.utils.data.RandomSampler(data_generator, replacement = False)
+      else:
+        sampler = self.torch.utils.data.DistributedSampler(
+          dataset,
+          num_replicas = self.pytorch.num_nodes,
+          rank = pytorch.torch.distributed.get_rank()
+        )
       loader = self.torch.utils.data.dataloader.DataLoader(
         dataset    = data_generator,
         batch_size = member.training_opts.train_batch_size,
-        sampler    = (self.torch.utils.data.RandomSampler(data_generator, replacement = False)
+        sampler    = (sampler
           if self.pytorch.num_nodes <= 1 or not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
           else self.torch.utils.data.distributed.DistributedSampler(
             dataset      = data_generator,
