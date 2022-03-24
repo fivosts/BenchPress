@@ -97,6 +97,8 @@ def read_rejects() -> bytes:
   while not handler.reject_queue.empty():
     cur = handler.reject_queue.get()
     ret.append(cur)
+  for c in ret:
+    handler.reject_queue.put(c)
   handler.backlog += ret
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
