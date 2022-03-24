@@ -22,6 +22,7 @@ from deeplearning.clgen.active_models.committee import models
 from deeplearning.clgen.active_models.committee import config
 from deeplearning.clgen.active_models.committee import committee_database
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import logging as l
 
 from absl import flags
