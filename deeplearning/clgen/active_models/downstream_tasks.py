@@ -166,7 +166,8 @@ class GrewePredictive(DownstreamTask):
     it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = "GreweFeatures"), data)
     idx = 0
     try:
-      for dp in tqdm.tqdm(it, total = len(data), desc = "Grewe corpus setup", leave = False):
+      loop = tqdm.tqdm(it, total = len(data), desc = "Grewe corpus setup", leave = False) if environment.WORLD_RANK == 0 else it
+      for dp in loop:
         if dp:
           feats, entry = dp
           self.dataset.append(
