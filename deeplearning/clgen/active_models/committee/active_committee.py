@@ -95,7 +95,6 @@ class QueryByCommittee(backends.BackendBase):
     self.committee_samples = committee_database.CommitteeSamples(
       url        = "sqlite:///{}".format(str(self.sample_path / "samples.db")),
       must_exist = False,
-      is_replica = False if self.is_world_process_zero() else True,
     )
     l.logger().info("Active Committee config initialized in {}".format(self.cache_path))
     return
