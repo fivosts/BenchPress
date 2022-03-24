@@ -463,12 +463,8 @@ class CompilationSampler(object):
     for p_idx, (seq_idx, el_idx) in enumerate(zip(idxs.flip(dims = (0,)), targets.flip(dims = (0,)))):
       # seq_idx -> indices within the batch
       # el_idx  -> element index within a sequence
-      if int(predictions[idxs.size(0) - 1 - p_idx]) in self.tokenizer.metaTokenValues:
-        # Close hole, shift left one position, add pad to the end.
-        batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], batch[seq_idx][el_idx+1:], torch.LongTensor([self.tokenizer.padToken]).to(device)), 0)
-      else:
-        # Casually replace the [MASK] with the single predicted token.
-        batch[seq_idx][el_idx] = predictions[idxs.size(0) - 1 - p_idx]
+      # Casually replace the [MASK] with the single predicted token.
+      batch[seq_idx][el_idx] = predictions[idxs.size(0) - 1 - p_idx]
       q_idx = batch_idxs[seq_idx]
       sample_indices[q_idx][el_idx] = predictions[idxs.size(0) - 1 - p_idx]
       if indices_lengths is not None:
