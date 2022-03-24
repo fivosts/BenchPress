@@ -155,7 +155,7 @@ class SamplesDatabaseObserver(SampleObserver):
       self.flush_queue.append(db_sample)
       self.visited.add(db_sample.sha256)
 
-    if len(self.flush_queue) > 1000:
+    if len(self.flush_queue) >= 1000:
       with self.db.Session(commit = True) as s:
         for sample in self.flush_queue:
           s.add(sample)
