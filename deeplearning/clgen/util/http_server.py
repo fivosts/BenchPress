@@ -99,8 +99,28 @@ def read_rejects() -> bytes:
     ret.append(cur)
   for c in ret:
     handler.reject_queue.put(c)
-  handler.backlog += ret
   return bytes(json.dumps(ret), encoding="utf-8"), 200
+
+@app.route('/read_reject_labels', methods = ['GET'])
+def read_reject_labels() -> bytes:
+  """
+  Get labels of rejected OpenCL kernels.
+
+  Example command:
+    curl -X GET http://localhost:PORT/read_reject_labels
+  """
+  ret = []
+  labels = {}
+  while not handler.reject_queue.empty():
+    cur = handler.reject_queue.get()
+    ret.append(cur)
+  for c in ret:
+    if c['runtime_features']['label'] not in labels:
+      labels[c['runtime_features']['label']] = 1
+    else:
+      labels[c['runtime_features']['label']] += 1
+    handler.reject_queue.put(c)
+  return bytes(json.dumps(labels), encoding="utf-8"), 200
 
 @app.route('/get_backlog', methods = ['GET'])
 def get_backlog() -> bytes:
