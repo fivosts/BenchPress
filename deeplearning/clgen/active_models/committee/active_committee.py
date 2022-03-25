@@ -464,10 +464,10 @@ class QueryByCommittee(backends.BackendBase):
           )
 
     if self.pytorch.num_nodes > 1:
-      static_features  = [self.torch.zeros((len(loader), self.downstream_task.static_features_size),  dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-      runtime_features = [self.torch.zeros((len(loader), self.downstream_task.runtime_features_size), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-      input_ids        = [self.torch.zeros((len(loader), self.downstream_task.input_size),            dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-      output_label     = [self.torch.zeros((len(loader), 1),                                          dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      static_features  = [self.torch.zeros(tuple(predictions['static_features'].shape),  dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      runtime_features = [self.torch.zeros(tuple(predictions['runtime_features'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      input_ids        = [self.torch.zeros(tuple(predictions['input_ids'].shape),        dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      output_label     = [self.torch.zeros(tuple(predictions['predictions'].shape),      dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       self.torch.distributed.all_gather(static_features,  predictions["static_features"].to(self.pytorch.device))
       self.torch.distributed.all_gather(runtime_features, predictions["runtime_features"].to(self.pytorch.device))
       self.torch.distributed.all_gather(input_ids,    predictions["input_ids"].to(self.pytorch.device))
