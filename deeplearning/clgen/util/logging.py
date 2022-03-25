@@ -151,6 +151,8 @@ class Logger:
            ddp_nodes : bool = False
            ) -> None:
     if self.rank == 0 or ddp_nodes:
+      if ddp_nodes:
+        message = "N{}: ".format(self.rank)
       if color:
         message = output(message, bold, cyan)
       if self.mail_client:
