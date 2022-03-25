@@ -472,10 +472,10 @@ class QueryByCommittee(backends.BackendBase):
       self.torch.distributed.all_gather(runtime_features, predictions["runtime_features"].to(self.pytorch.device))
       self.torch.distributed.all_gather(input_ids,    predictions["input_ids"].to(self.pytorch.device))
       self.torch.distributed.all_gather(output_label, predictions["predictions"])
-      predictions['static_features']  = static_features
-      predictions['runtime_features'] = runtime_features
-      predictions['input_ids']        = input_ids
-      predictions['predictions']      = output_label
+      predictions['static_features']  = self.torch.cat(static_features)
+      predictions['runtime_features'] = self.torch.cat(runtime_features)
+      predictions['input_ids']        = self.torch.cat(input_ids)
+      predictions['predictions']      = self.torch.cat(output_label)
     for key in set(predictions.keys()) - set({'train_step'}):
       if key == 'predictions':
         predictions[key] = [self.downstream_task.TargetIDtoLabels(int(x)) for x in predictions[key].cpu().numpy()]
