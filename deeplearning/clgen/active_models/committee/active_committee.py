@@ -454,11 +454,12 @@ class QueryByCommittee(backends.BackendBase):
     for batch in tqdm.tqdm(loader, total = len(loader), desc = "Sammple member", leave = False):
       out = self.model_step(model, batch, is_sampling = True)
       for key in set(predictions.keys()) - set({'train_step'}):
+        r = batch[key] if key != "predictions" else out['output_label']
         if predictions[key] is None:
-          predictions[key] = batch[key] if key != "predictions" else out['output_label']
+          predictions[key] = r
         else:
           predictions[key] = self.torch.cat(
-            (predictions[key], batch[key]),
+            (predictions[key], r),
             0
           )
 
