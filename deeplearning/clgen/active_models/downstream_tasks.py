@@ -383,7 +383,7 @@ class GrewePredictive(DownstreamTask):
         fvec['F4:comp/mem'] = 0.0
       transferred_bytes = 2**self.rand_generator.randint(self.gen_bounds['transferred_bytes'][0], self.gen_bounds['transferred_bytes'][1])
       local_size        = 2**self.rand_generator.randint(self.gen_bounds['local_size'][0], self.gen_bounds['local_size'][1])
-      inp_ids = self.InputtoEncodedVector(fvec, transferred_bytes, local_size)
+      inp_ids           = self.InputtoEncodedVector(fvec, transferred_bytes, local_size)
       if inp_ids not in samples_hash:
         samples.append(
           {
