@@ -139,7 +139,7 @@ class Logger:
             ) -> None:
     if self.rank == 0 or ddp_nodes:
       if ddp_nodes:
-        message = "N{}: ".format(self.rank)
+        message = "N{}: {}".format(self.rank, message)
       if color:
         message = output(message, bold, green)
       if self.mail_client:
@@ -154,7 +154,7 @@ class Logger:
            ) -> None:
     if self.rank == 0 or ddp_nodes:
       if ddp_nodes:
-        message = "N{}: ".format(self.rank)
+        message = "N{}: {}".format(self.rank, message)
       if color:
         message = output(message, bold, cyan)
       if self.mail_client:
@@ -169,7 +169,7 @@ class Logger:
               ) -> None:
     if self.rank == 0 or ddp_nodes:
       if ddp_nodes:
-        message = "N{}: ".format(self.rank)
+        message = "N{}: {}".format(self.rank, message)
       if color:
         message = output(message, bold, yellow)
       if self.mail_client:
@@ -184,7 +184,7 @@ class Logger:
            ) -> None:
     if self.rank == 0 or ddp_nodes:
       if ddp_nodes:
-        message = "N{}: ".format(self.rank)
+        message = "N{}: {}".format(self.rank, message)
       if color:
         message = output(message, bold, yellow)
       if self.mail_client:
@@ -199,7 +199,7 @@ class Logger:
             ) -> None:
     if self.rank == 0 or ddp_nodes:
       if ddp_nodes:
-        message = "N{}: ".format(self.rank)
+        message = "N{}: {}".format(self.rank, message)
       if color:
         message = output(message, bold, red)
       if self.mail_client:
@@ -214,7 +214,7 @@ class Logger:
                ) -> None:
     if self.rank == 0 or ddp_nodes:
       if ddp_nodes:
-        message = "N{}: ".format(self.rank)
+        message = "N{}: {}".format(self.rank, message)
       if color:
         message = output(message, bold, underline, red)
       if self.mail_client:
