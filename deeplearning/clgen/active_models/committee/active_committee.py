@@ -476,9 +476,9 @@ class QueryByCommittee(backends.BackendBase):
       predictions['runtime_features'] = runtime_features
       predictions['input_ids']        = input_ids
       predictions['predictions']      = output_label
-    for k in set(predictions.keys()) - set({'train_step'}):
-      if k == 'predictions':
-        predictions[key] = [self.downstream_task.TargetIDtoLabels(int(x.cpu().numpy())) for x in predictions[key]]
+    for key in set(predictions.keys()) - set({'train_step'}):
+      if key == 'predictions':
+        predictions[key] = [self.downstream_task.TargetIDtoLabels(int(x)) for x in predictions[key].cpu().numpy()]
       else:
         predictions[key] = [[int(y) for y in x.cpu().numpy()] for x in predictions[key]]
     return predictions
