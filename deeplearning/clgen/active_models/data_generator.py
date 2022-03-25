@@ -114,7 +114,7 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
     Batch the whole dataset by keys and return it.
     """
     return {
-      'idx'              : np.asarray([x['idx'].numpy() for x in self.dataset])
+      'idx'              : np.asarray([x['idx'].numpy() for x in self.dataset]),
       'static_features'  : np.asarray([x['static_features'].numpy() for x in self.dataset]),
       'runtime_features' : np.asarray([x['runtime_features'].numpy() for x in self.dataset]),
       'input_ids'        : np.asarray([x['input_ids'].numpy() for x in self.dataset]),
