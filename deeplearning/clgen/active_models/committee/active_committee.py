@@ -468,9 +468,9 @@ class QueryByCommittee(backends.BackendBase):
       runtime_features = [self.torch.zeros((len(loader), self.downstream_task.runtime_features_size), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       input_ids        = [self.torch.zeros((len(loader), self.downstream_task.input_size),            dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       output_label     = [self.torch.zeros((len(loader), 1),                                          dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-      self.torch.distributed.all_gather(static_features,  predictions["static_features"])
-      self.torch.distributed.all_gather(runtime_features, predictions["runtime_features"])
-      self.torch.distributed.all_gather(input_ids,    predictions["input_ids"])
+      self.torch.distributed.all_gather(static_features,  predictions["static_features"].to(self.pytorch.device))
+      self.torch.distributed.all_gather(runtime_features, predictions["runtime_features"].to(self.pytorch.device))
+      self.torch.distributed.all_gather(input_ids,    predictions["input_ids"].to(self.pytorch.device))
       self.torch.distributed.all_gather(output_label, predictions["predictions"])
       predictions['static_features']  = static_features
       predictions['runtime_features'] = runtime_features
