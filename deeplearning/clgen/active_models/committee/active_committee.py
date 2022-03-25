@@ -415,7 +415,7 @@ class QueryByCommittee(backends.BackendBase):
       l.logger().info("Loaded {} checkpoint step {}".format("{}-{}".format(member.config.name, member.model.id), current_step))
     current_step = max(0, current_step)
 
-    if self.torch.distributed.get_world_size() <= 1:
+    if self.pytorch.num_nodes <= 1:
       sampler = self.torch.utils.data.RandomSampler(sample_set, replacement = False)
     else:
       sampler = self.torch.utils.data.DistributedSampler(
