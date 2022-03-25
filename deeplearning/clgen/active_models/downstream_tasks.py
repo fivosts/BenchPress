@@ -384,7 +384,7 @@ class GrewePredictive(DownstreamTask):
       transferred_bytes = 2**self.rand_generator.randint(self.gen_bounds['transferred_bytes'][0], self.gen_bounds['transferred_bytes'][1])
       local_size        = 2**self.rand_generator.randint(self.gen_bounds['local_size'][0], self.gen_bounds['local_size'][1])
       inp_ids           = self.InputtoEncodedVector(fvec, transferred_bytes, local_size)
-      if inp_ids not in samples_hash:
+      if str(inp_ids) not in samples_hash:
         samples.append(
           {
             'static_features'  : self.StaticFeatDictToVec(fvec),
@@ -392,7 +392,7 @@ class GrewePredictive(DownstreamTask):
             'input_ids'        : inp_ids,
           }
         )
-        samples_hash.add(inp_ids)
+        samples_hash.add(str(inp_ids))
     return data_generator.DictPredictionDataloader(samples)
 
   def step_generation(self, candidates: typing.List['ActiveSample']) -> None:
