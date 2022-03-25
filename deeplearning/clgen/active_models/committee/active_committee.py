@@ -446,6 +446,7 @@ class QueryByCommittee(backends.BackendBase):
     model.eval()
     predictions = {
       'train_step'      : current_step,
+      'idx'             : None,
       'static_features' : None,
       'runtime_features': None,
       'input_ids'       : None,
@@ -464,14 +465,17 @@ class QueryByCommittee(backends.BackendBase):
           )
 
     if self.pytorch.num_nodes > 1:
+      idx              = [self.torch.zeros(tuple(predictions['idx'].shape),              dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       static_features  = [self.torch.zeros(tuple(predictions['static_features'].shape),  dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       runtime_features = [self.torch.zeros(tuple(predictions['runtime_features'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       input_ids        = [self.torch.zeros(tuple(predictions['input_ids'].shape),        dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       output_label     = [self.torch.zeros(tuple(predictions['predictions'].shape),      dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      self.torch.distributed.all_gather(idx,              predictions["idx"].to(self.pytorch.device))
       self.torch.distributed.all_gather(static_features,  predictions["static_features"].to(self.pytorch.device))
       self.torch.distributed.all_gather(runtime_features, predictions["runtime_features"].to(self.pytorch.device))
       self.torch.distributed.all_gather(input_ids,        predictions["input_ids"].to(self.pytorch.device))
       self.torch.distributed.all_gather(output_label,     predictions["predictions"])
+      predictions['idx']              = self.torch.cat(idx)
       predictions['static_features']  = self.torch.cat(static_features)
       predictions['runtime_features'] = self.torch.cat(runtime_features)
       predictions['input_ids']        = self.torch.cat(input_ids)
@@ -479,11 +483,11 @@ class QueryByCommittee(backends.BackendBase):
     for key in set(predictions.keys()) - set({'train_step'}):
       if key == 'predictions':
         predictions[key] = [self.downstream_task.TargetIDtoLabels(int(x)) for x in predictions[key].cpu().numpy()]
-      elif key == "runtime_features":
+      elif key == "runtime_features" or key == "idx":
         predictions[key] = [[int(y) for y in x.cpu().numpy()] for x in predictions[key]]
       else:
         predictions[key] = [[float(y) for y in x.cpu().numpy()] for x in predictions[key]]
-    return predictions
+    return sorted(predictions, key = lambda x: x['idx'])
 
   def SampleUnsupervisedMember(self,
                                member     : 'QueryByCommittee.CommitteeEstimator',
@@ -509,6 +513,7 @@ class QueryByCommittee(backends.BackendBase):
     )
     predictions = {
       'train_step'      : current_step,
+      'idx'             : sample_dataset['idx'],
       'static_features' : sample_dataset['static_features'],
       'runtime_features': sample_dataset['runtime_features'],
       'input_ids'       : sample_dataset['input_ids'],
@@ -548,6 +553,8 @@ class QueryByCommittee(backends.BackendBase):
     for nsample in range(len(sample_set)):
       # Get the feature vectors for each sample.
       for model, samples in committee_predictions.items():
+        if nsample != samples['idx'][nsample]:
+          raise ValueError("{} Mismatch in sample output: Expected {} but had {}".format(model, nsample, samples['idx'][nsample]))
         static_feats = self.downstream_task.VecToStaticFeatDict(samples['static_features'][nsample])
         run_feats    = self.downstream_task.VecToRuntimeFeatDict(samples['runtime_features'][nsample])
         input_feats  = self.downstream_task.VecToInputFeatDict(samples['input_ids'][nsample])
