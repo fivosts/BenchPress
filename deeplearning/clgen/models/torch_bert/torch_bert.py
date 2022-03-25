@@ -361,10 +361,33 @@ class torchBert(backends.BackendBase):
         ),
         bar = bar,
       )
-      outputs['generated_samples'] = list(samples.detach().cpu().numpy())
-      outputs['sample_indices']    = list(sample_indices.detach().cpu().numpy())
-      outputs['input_ids']         = list(self.torch.reshape(inputs['input_ids'].cpu(), tuple(samples.shape)).numpy())
-      outputs['masked_lm_lengths'] = list(self.torch.reshape(inputs['masked_lm_lengths'].cpu(), (samples.shape[0], -1)).numpy())
+      outputs['generated_samples'] = samples.detach()
+      outputs['sample_indices']    = sample_indices.detach()
+      outputs['input_ids']         = self.torch.reshape(inputs['input_ids'], tuple(samples.shape))
+      outputs['masked_lm_lengths'] = self.torch.reshape(inputs['masked_lm_lengths'], (samples.shape[0], -1))
+
+      if self.pytorch.num_nodes > 1:
+        generated_samples = [self.torch.zeros(tuple(outputs['generated_samples'].shape), dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+        sample_indices    = [self.torch.zeros(tuple(outputs['sample_indices'].shape),    dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+        input_ids         = [self.torch.zeros(tuple(outputs['input_ids'].shape),         dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+        masked_lm_lengths = [self.torch.zeros(tuple(outputs['masked_lm_lengths'].shape), dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+
+        self.torch.distributed.all_gather(generated_samples, outputs["generated_samples"])
+        self.torch.distributed.all_gather(sample_indices,    outputs["sample_indices"])
+        self.torch.distributed.all_gather(input_ids,         outputs["input_ids"])
+        self.torch.distributed.all_gather(masked_lm_lengths, outputs["masked_lm_lengths"])
+
+        outputs['generated_samples'] = self.torch.cat(generated_samples)
+        outputs['sample_indices']    = self.torch.cat(sample_indices)
+        outputs['input_ids']         = self.torch.cat(input_ids)
+        outputs['masked_lm_lengths'] = self.torch.cat(masked_lm_lengths)
+
+
+      outputs['generated_samples'] = list(outputs['generated_samples'].cpu().numpy())
+      outputs['sample_indices']    = list(outputs['sample_indices'].cpu().numpy())
+      outputs['input_ids']         = list(outputs['input_ids'].cpu().numpy())
+      outputs['masked_lm_lengths'] = list(outputs['masked_lm_lengths'].cpu().numpy())
+
     else:
       raise NotImplementedError ("Haven't implemented live sampling.")
       inputs = self.to_device(inputs)
