@@ -312,7 +312,7 @@ class GrewePredictive(DownstreamTask):
     """
     if FLAGS.use_http_server:
       new_samples = []
-      while self.client_status_request()[1] != "202":
+      while int(self.client_status_request()[1]) != 200:
         batch = http_server.client_get_request()
         for ser in batch:
           obj = JSON_to_ActiveSample(ser)
