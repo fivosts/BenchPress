@@ -1148,7 +1148,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     """
     If not exists, add current sample state to database
     """
-    with self.active_db.Session(commit = True) as session:
+    with self.active_db.get_session(commit = True) as session:
       exists = session.query(
         type(db_input)
       ).filter(type(db_input).sha256 == db_input.sha256).scalar() is not None
