@@ -515,7 +515,7 @@ class QueryByCommittee(backends.BackendBase):
     )
     predictions = {
       'train_step'      : current_step,
-      'idx'             : sample_dataset['idx'],
+      'idx'             : [int(x) for x in sample_dataset['idx']],
       'static_features' : sample_dataset['static_features'],
       'runtime_features': sample_dataset['runtime_features'],
       'input_ids'       : sample_dataset['input_ids'],
