@@ -478,9 +478,9 @@ class QueryByCommittee(backends.BackendBase):
       predictions['predictions']      = output_label
     for k in set(predictions.keys()) - set({'train_step'}):
       if k == 'predictions':
-        predictions[key] = [self.downstream_task.TargetIDtoLabels(x.cpu().numpy()) for x in predictions[key]]
+        predictions[key] = [self.downstream_task.TargetIDtoLabels(int(x.cpu().numpy())) for x in predictions[key]]
       else:
-        predictions[key] = [x.cpu().numpy() for x in predictions[key]]
+        predictions[key] = [[int(y) for y in x.cpu().numpy()] for x in predictions[key]]
     return predictions
 
   def SampleUnsupervisedMember(self,
