@@ -470,8 +470,8 @@ class QueryByCommittee(backends.BackendBase):
       output_label     = [self.torch.zeros(tuple(predictions['predictions'].shape),      dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       self.torch.distributed.all_gather(static_features,  predictions["static_features"].to(self.pytorch.device))
       self.torch.distributed.all_gather(runtime_features, predictions["runtime_features"].to(self.pytorch.device))
-      self.torch.distributed.all_gather(input_ids,    predictions["input_ids"].to(self.pytorch.device))
-      self.torch.distributed.all_gather(output_label, predictions["predictions"])
+      self.torch.distributed.all_gather(input_ids,        predictions["input_ids"].to(self.pytorch.device))
+      self.torch.distributed.all_gather(output_label,     predictions["predictions"])
       predictions['static_features']  = self.torch.cat(static_features)
       predictions['runtime_features'] = self.torch.cat(runtime_features)
       predictions['input_ids']        = self.torch.cat(input_ids)
