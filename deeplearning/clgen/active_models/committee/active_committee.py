@@ -446,18 +446,40 @@ class QueryByCommittee(backends.BackendBase):
     model.eval()
     predictions = {
       'train_step'      : current_step,
-      'static_features' : [],
-      'runtime_features': [],
-      'input_ids'       : [],
-      'predictions'     : [],
+      'static_features' : None,
+      'runtime_features': None,
+      'input_ids'       : None,
+      'predictions'     : None,
     }
     for batch in tqdm.tqdm(loader, total = len(loader), desc = "Sammple member", leave = False):
-      predictions['static_features']  += list(batch['static_features'].cpu().numpy())
-      predictions['runtime_features'] += list(batch['runtime_features'].cpu().numpy())
-      predictions['input_ids']        += list(batch['input_ids'].cpu().numpy())
+      for key in set(predictions.keys()) - set({'train_step'}):
+        if predictions[key] is None:
+          predictions[key] = batch[key]
+        else:
+          predictions[key] = self.torch.cat(
+            (predictions[key], batch[key]),
+            0
+          )
       out = self.model_step(model, batch, is_sampling = True)
-      cur = batch
-      predictions['predictions'] += [self.downstream_task.TargetIDtoLabels(i) for i in out['output_label'].cpu().numpy()]
+
+    if self.pytorch.num_nodes > 1:
+      static_features  = [self.torch.zeros((len(loader), self.downstream_task.static_features_size),  dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      runtime_features = [self.torch.zeros((len(loader), self.downstream_task.runtime_features_size), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      input_ids        = [self.torch.zeros((len(loader), self.downstream_task.input_size),            dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      output_label     = [self.torch.zeros((len(loader), 1),                                          dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      self.torch.distributed.all_gather(static_features,  predictions["static_features"])
+      self.torch.distributed.all_gather(runtime_features, predictions["runtime_features"])
+      self.torch.distributed.all_gather(input_ids,    predictions["input_ids"])
+      self.torch.distributed.all_gather(output_label, predictions["predictions"])
+      predictions['static_features']  = static_features
+      predictions['runtime_features'] = runtime_features
+      predictions['input_ids']        = input_ids
+      predictions['predictions']      = output_label
+    for k in set(predictions.keys()) - set({'train_step'}):
+      if k == 'predictions':
+        predictions[key] = [self.downstream_task.TargetIDtoLabels(x.cpu().numpy()) for x in predictions[key]]
+      else:
+        predictions[key] = [x.cpu().numpy() for x in predictions[key]]
     return predictions
 
   def SampleUnsupervisedMember(self,
