@@ -101,7 +101,7 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
     for idx, dp in enumerate(dataset):
       self.dataset.append(
         {
-          'idx'              : torch.LongTensor(idx),
+          'idx'              : torch.LongTensor([idx]),
           'static_features'  : torch.FloatTensor(dp['static_features']),
           'runtime_features' : torch.LongTensor(dp['runtime_features']),
           'input_ids'        : torch.FloatTensor(dp['input_ids']),
