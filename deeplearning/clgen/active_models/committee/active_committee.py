@@ -416,12 +416,14 @@ class QueryByCommittee(backends.BackendBase):
     current_step = max(0, current_step)
 
     if self.pytorch.num_nodes <= 1:
-      sampler = self.torch.utils.data.RandomSampler(sample_set, replacement = False)
+      sampler = self.torch.utils.data.SequentialSampler(sample_set)
     else:
       sampler = self.torch.utils.data.DistributedSampler(
         sample_set,
         num_replicas = self.pytorch.num_nodes,
-        rank         = self.pytorch.torch.distributed.get_rank()
+        rank         = self.pytorch.torch.distributed.get_rank(),
+        shuffle      = False,
+        drop_last    = False,
       )
     loader = self.torch.utils.data.dataloader.DataLoader(
       dataset    = sample_set,
@@ -487,7 +489,7 @@ class QueryByCommittee(backends.BackendBase):
         predictions[key] = [[int(y) for y in x.cpu().numpy()] for x in predictions[key]]
       else:
         predictions[key] = [[float(y) for y in x.cpu().numpy()] for x in predictions[key]]
-    return sorted(predictions, key = lambda x: x['idx'])
+    return predictions
 
   def SampleUnsupervisedMember(self,
                                member     : 'QueryByCommittee.CommitteeEstimator',
