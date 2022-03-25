@@ -93,6 +93,14 @@ class GrewePredictive(DownstreamTask):
     return 4
   
   @property
+  def static_features_size(self) -> int:
+    return len(grewe.KEYS)
+
+  @property
+  def runtime_features_size(self) -> int:
+    return 2
+
+  @property
   def input_labels(self) -> typing.List[str]:
     return [
       "tr_bytes/(comp+mem)",

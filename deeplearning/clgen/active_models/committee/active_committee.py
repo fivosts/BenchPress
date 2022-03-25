@@ -452,15 +452,15 @@ class QueryByCommittee(backends.BackendBase):
       'predictions'     : None,
     }
     for batch in tqdm.tqdm(loader, total = len(loader), desc = "Sammple member", leave = False):
+      out = self.model_step(model, batch, is_sampling = True)
       for key in set(predictions.keys()) - set({'train_step'}):
         if predictions[key] is None:
-          predictions[key] = batch[key]
+          predictions[key] = batch[key] if key != "predictions" else out['output_label']
         else:
           predictions[key] = self.torch.cat(
             (predictions[key], batch[key]),
             0
           )
-      out = self.model_step(model, batch, is_sampling = True)
 
     if self.pytorch.num_nodes > 1:
       static_features  = [self.torch.zeros((len(loader), self.downstream_task.static_features_size),  dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
