@@ -149,13 +149,13 @@ def status():
   }
 
   if status['read_queue'] == 'EMPTY' and status['write_queue'] == 'EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 203 + (100 if handler.work_flag.value else 0)
-  elif status['read_queue'] == 'EMPTY' and status['write_queue'] == 'NOT_EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 202 + (100 if handler.work_flag.value else 0)
-  elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 201 + (100 if handler.work_flag.value else 0)
-  elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'NOT_EMPTY':
     return bytes(json.dumps(status), encoding = 'utf-8'), 200 + (100 if handler.work_flag.value else 0)
+  elif status['read_queue'] == 'EMPTY' and status['write_queue'] == 'NOT_EMPTY':
+    return bytes(json.dumps(status), encoding = 'utf-8'), 201 + (100 if handler.work_flag.value else 0)
+  elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'EMPTY':
+    return bytes(json.dumps(status), encoding = 'utf-8'), 202 + (100 if handler.work_flag.value else 0)
+  elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'NOT_EMPTY':
+    return bytes(json.dumps(status), encoding = 'utf-8'), 203 + (100 if handler.work_flag.value else 0)
 
 @app.route('/', methods = ['GET', 'POST', 'PUT'])
 def index():
@@ -205,6 +205,17 @@ def http_serve(read_queue   : multiprocessing.Queue,
   except Exception as e:
     raise e
   return
+
+def client_status_request() -> typing.Tuple:
+  """
+  Get status of http server.
+  """
+  try:
+    r = requests.get("http://{}:{}/status".format(FLAGS.http_server_ip_address, FLAGS.http_port))
+  except Exception as e:
+    l.logger().error("GET status Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
+    raise e
+  return r.json(), r.status_code
 
 def client_get_request() -> typing.List[typing.Dict]:
   """
