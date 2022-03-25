@@ -435,7 +435,7 @@ class QueryByCommittee(backends.BackendBase):
         )
       ),
       num_workers = 0,
-      drop_last   = True if environment.WORLD_SIZE > 1 else False,
+      drop_last   = False # True if environment.WORLD_SIZE > 1 else False,
     )
     # Set dataloader in case of TPU training.
     if self.torch_tpu_available:
