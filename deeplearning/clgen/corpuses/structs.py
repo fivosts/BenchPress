@@ -187,7 +187,7 @@ def CollectStructsBQ(db, session):
           if not exists and struct.sha256 not in flush_queue:
             session.add(struct)
             flush_queue.add(struct.sha256)
-          if wall_time_end - last_commit > 10:
+          if wall_time_end - last_commit > 100:
             session.commit()
             flush_queue = set()
             last_commit = wall_time_end
