@@ -364,6 +364,9 @@ class torchBert(backends.BackendBase):
         ),
         bar = bar,
       )
+      if self.pytorch.num_nodes > 1:
+        bar.finalize(wload_size - bar.n)
+
       outputs['generated_samples'] = samples.detach()
       outputs['sample_indices']    = sample_indices.detach()
       outputs['input_ids']         = self.torch.reshape(inputs['input_ids'], tuple(samples.shape))
