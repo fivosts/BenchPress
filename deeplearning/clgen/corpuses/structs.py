@@ -17,6 +17,7 @@ from sqlalchemy.ext import declarative
 
 from deeplearning.clgen.preprocessors import clang
 from deeplearning.clgen.preprocessors import c
+from deeplearning.clgen.github import bigQuery_database as bqdb
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import distrib
@@ -77,7 +78,7 @@ class Struct(Base, sqlutil.ProtoBackedMixin):
   # Repo ref.
   ref           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Wall time
-  wall_time_ms  : int = sql.Column(sqlutil.Integer, nullable = False)
+  wall_time_ms  : int = sql.Column(sql.Integer, nullable = False)
   # Date
   date_added : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
@@ -190,7 +191,7 @@ def CollectStructsBQ(db, session):
   if environment.WORLD_SIZE > 1:
     bar.finalize(idx)
 
-def main():
+def main(*args, **kwargs):
   try:
     tdir = FLAGS.local_filesystem
   except Exception:
