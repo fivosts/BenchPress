@@ -38,11 +38,11 @@ def mish(x):
   return x * torch.tanh(torch.nn.functional.softplus(x))
 
 ACT2FN = {
-  "gelu"     : activations.gelu,
-  "relu"     : torch.nn.functional.relu,
-  "swish"    : activations.swish,
-  "gelu_new" : activations.gelu_new,
-  "mish"     : mish
+  "gelu": activations.gelu,
+  "relu": torch.nn.functional.relu,
+  "swish": activations.swish,
+  "gelu_new": activations.gelu_new,
+  "mish": mish
 }
 
 class BertEmbeddings(torch.nn.Module):
@@ -53,7 +53,7 @@ class BertEmbeddings(torch.nn.Module):
     super().__init__()
     self.word_embeddings = torch.nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
     self.position_embeddings = torch.nn.Embedding(config.max_position_embeddings, config.hidden_size)
-    # self.token_type_embeddings = torch.nn.Embedding(config.type_vocab_size, config.hidden_size)
+    self.token_type_embeddings = torch.nn.Embedding(config.type_vocab_size, config.hidden_size)
 
     # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
     # any TensorFlow checkpoint file
@@ -80,9 +80,9 @@ class BertEmbeddings(torch.nn.Module):
     if inputs_embeds is None:
       inputs_embeds = self.word_embeddings(input_ids)
     position_embeddings = self.position_embeddings(position_ids)
-    # token_type_embeddings = self.token_type_embeddings(token_type_ids)
+    token_type_embeddings = self.token_type_embeddings(token_type_ids)
 
-    embeddings = inputs_embeds + position_embeddings # + token_type_embeddings
+    embeddings = inputs_embeds + position_embeddings + token_type_embeddings
     embeddings = self.LayerNorm(embeddings)
     embeddings = self.dropout(embeddings)
     return embeddings
@@ -550,9 +550,9 @@ class BertOnlyMLMHead(torch.nn.Module):
     super().__init__()
     self.predictions = BertLMPredictionHead(config)
 
-  def forward(self, sequence_output, features):
+  def forward(self, sequence_output):
     prediction_scores = self.predictions(sequence_output)
-    return prediction_scores, None
+    return prediction_scores
 
 class BertOnlyNSPHead(torch.nn.Module):
   def __init__(self, config):
@@ -754,10 +754,7 @@ class BertForPreTraining(BertPreTrainedModel):
     super().__init__(config)
 
     self.bert = BertModel(config)
-    if self.config.feature_encoder:
-      self.cls        = BertMLMFeatureHead(config)
-    else:
-      self.cls = BertOnlyMLMHead(config)
+    self.cls = BertPreTrainingHeads(config)
 
     if self.config.reward_compilation >= 0 or self.config.is_sampling:
       self.compile_sampler = compiler.CompilationSampler(
@@ -772,16 +769,16 @@ class BertForPreTraining(BertPreTrainedModel):
     return self.cls.predictions.decoder
 
   def get_output(self,
-                 input_ids,
-                 attention_mask,
-                 position_ids,
-                 input_features       = None,
-                 token_type_ids       = None,
-                 head_mask            = None,
-                 inputs_embeds        = None,
-                 output_attentions    = None,
-                 output_hidden_states = None,
-                 ) -> typing.Tuple[torch.FloatTensor, torch.FloatTensor]:
+                    input_ids,
+                    attention_mask,
+                    position_ids,
+                    input_features       = None,
+                    token_type_ids       = None,
+                    head_mask            = None,
+                    inputs_embeds        = None,
+                    output_attentions    = None,
+                    output_hidden_states = None,
+                    ) -> typing.Tuple[torch.FloatTensor, torch.FloatTensor]:
     outputs = self.bert(
       input_ids            = input_ids,
       attention_mask       = attention_mask,
@@ -793,8 +790,8 @@ class BertForPreTraining(BertPreTrainedModel):
       output_hidden_states = output_hidden_states,
     )
     sequence_output, pooled_output = outputs[:2]
-    prediction_scores, encoded_features = self.cls(sequence_output, input_features)
-    return prediction_scores, encoded_features, outputs[0], outputs[1]
+    prediction_scores, _ = self.cls(sequence_output, pooled_output)
+    return prediction_scores, None, outputs[0], outputs[1]
 
   def forward(
     self,
@@ -853,7 +850,7 @@ class BertForPreTraining(BertPreTrainedModel):
 
     if workload is not None:
       prediction_scores, encoded_features, hidden_states, attentions = self.get_output(
-        input_ids[0], attention_mask[0], position_ids[0], input_features[0] if input_features else None,
+        input_ids[0], attention_mask[0], position_ids[0], input_features[0] if self.config.feature_encoder else None
       )
       bar = kwargs.get('bar', None)
       return self.compile_sampler.generateSampleWorkload(
@@ -877,7 +874,7 @@ class BertForPreTraining(BertPreTrainedModel):
         self,
         device,
         input_ids.cpu(),
-        input_features.cpu(),
+        input_features.cpu() if self.config.feature_encoder else None,
         prediction_scores.cpu(),
         torch.clone(position_ids),
         masked_lm_labels.cpu().numpy(),
