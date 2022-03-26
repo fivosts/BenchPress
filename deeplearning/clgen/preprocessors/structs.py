@@ -99,8 +99,15 @@ class DatatypeDB(sqlutil.Database):
 def FromBQ(entry: bqdb.bqMainFile):
   start_time = time.time()
   try:
-    input_text = entry.content
-    structs = preprocessors.Preprocess(input_text, preprocessors_)
+    structs = entry.content
+    preprocessors_ = [
+      c.StripIncludes
+      c.ClangPreprocess
+      c.ExtractStructs
+      c.ClangFormat
+    ]
+    for p in preprocessors_:
+      structs = p(structs)
   except Exception as e:
     raise("Unexpected exception: {}".format(e))
 
