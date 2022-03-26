@@ -9,6 +9,7 @@ import sqlite3
 import pathlib
 import typing
 import multiprocessing
+import hashlib
 # import clang.cindex
 
 import sqlalchemy as sql
