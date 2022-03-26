@@ -749,7 +749,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             bdrejected_cands = distrib.consistent_read(is_bytes = True)
             rejected_candidates = []
             for chunk in bdrejected_cands.values():
-              rejected_candidates += pickle.loads(chunk)
+              try;
+                rejected_candidates += pickle.loads(chunk)
+              except EOFError:
+                ## rejected_candidates is empty, so skip.
+                pass
 
           ## Register good offsprings, along with step candidates in tsne monitor.
           if not FLAGS.evolutionary_search and better_found and environment.WORLD_RANK == 0:
