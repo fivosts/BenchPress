@@ -719,6 +719,126 @@ def ExtractFunctions(src: str,
       token = next_token(tokiter)
   return functions
 
+def ExtractStructs(src: str,
+                   suffix: str,
+                   cflags: typing.List[str]
+                   ) -> typing.List:
+  """Splits translation unit into separate structs.
+
+  Args:
+    src: The source code to compile.
+    suffix: The suffix to append to the source code temporary file. E.g. '.c'
+      for a C program.
+    cflags: A list of flags to be passed to clang.
+
+  Returns:
+    List of separate string structs.
+  """
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
+  with tempfile.NamedTemporaryFile(
+    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir
+  ) as f:
+    try:
+      unit = clang.cindex.TranslationUnit.from_source(f.name, args = cflags, unsaved_files = [(f.name, src)])#, args = args + builtin_cflags)
+    except clang.cindex.TranslationUnitLoadError as e:
+      raise ValueError(e)
+
+  def next_token(token_iter):
+    """Return None if iterator is consumed."""
+    try:
+      return next(token_iter)
+    except StopIteration:
+      return None
+
+  def parse_struct(unit, token, it, is_typedef = False):
+    """
+    Token is starting point of struct. Accept the rest.
+    """
+    cur = clang.cindex.Cursor.from_location(unit, token.extent.start)
+    if is_typedef:
+      if token.spelling != "typedef":
+        return None
+      token = next_token(it)
+      cur   = clang.cindex.Cursor.from_location(unit, token.extent.start)
+      if token.spelling != "struct":
+        return None
+    else:
+      if cur.kind != clang.cindex.CursorKind.STRUCT_DECL:
+        return None
+    token  = next_token(it)
+    cur = clang.cindex.Cursor.from_location(unit, token.extent.start)
+    if cur.kind != clang.cindex.CursorKind.STRUCT_DECL:
+      return None
+    if token.kind != clang.cindex.TokenKind.IDENTIFIER:
+      raise TypeError(token.kind)
+    text   = ["struct", token.spelling]
+    if is_typedef:
+      text = ["typedef"] + text
+    name   = token.spelling
+    fields = []
+
+    token     = next_token(it)
+    cur       = clang.cindex.Cursor.from_location(unit, token.extent.start)
+    cur_field = []
+    cur_type  = None
+    while cur.kind in {clang.cindex.CursorKind.STRUCT_DECL, clang.cindex.CursorKind.FIELD_DECL}:
+      if cur.kind == clang.cindex.CursorKind.FIELD_DECL or token.spelling == ";":
+        if cur_type is None:
+          assert token.kind == clang.cindex.TokenKind.KEYWORD
+          cur_type = token.spelling
+        if token.spelling == ",":
+          cur_field.append(";")
+          fields.append(cur_field)
+          text += cur_field
+          cur_field = []
+          token = next_token(it)
+          cur   = clang.cindex.Cursor.from_location(unit, token.extent.start)
+          cur_field += [cur_type, token.spelling]
+        elif token.spelling == ";":
+          cur_field.append(token.spelling)
+          fields.append(cur_field)
+          text += cur_field
+          cur_field = []
+          cur_type  = None
+        else:
+          cur_field.append(token.spelling)
+      else:
+        text.append(token.spelling)
+      token = next_token(it)
+      cur   = clang.cindex.Cursor.from_location(unit, token.extent.start)
+
+    if is_typedef:
+      assert cur.kind == clang.cindex.CursorKind.TYPEDEF_DECL
+      text.append(token.spelling)
+      name  = token.spelling
+      token = next_token(it)
+      cur   = clang.cindex.Cursor.from_location(unit, token.extent.start)
+    assert token.spelling in {";", "="}
+    text.append(";")
+    return {
+      'text': text,
+      'name': name,
+      'fields': fields,
+    }
+
+  structs = []
+  tokiter = unit.get_tokens(extent = unit.cursor.extent)
+  token = next_token(tokiter)
+
+  while token:
+    struct = None
+    if token.spelling == "struct":
+      struct = parse_struct(unit, token, tokiter)
+    elif token.spelling == "typedef":
+      struct = parse_struct(unit, token, tokiter, is_typedef = True)
+    if struct:
+      structs.append(struct)
+    token = next_token(tokiter)
+  return structs
+
 def DeriveSourceVocab(src: str,
                       token_list: typing.Set[str],
                       suffix: str,
