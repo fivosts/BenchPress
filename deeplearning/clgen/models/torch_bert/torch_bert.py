@@ -367,10 +367,11 @@ class torchBert(backends.BackendBase):
       outputs['masked_lm_lengths'] = self.torch.reshape(inputs['masked_lm_lengths'], (samples.shape[0], -1))
 
       if self.pytorch.num_nodes > 1:
-        generated_samples = [self.torch.zeros(tuple(outputs['generated_samples'].shape), dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-        sample_indices    = [self.torch.zeros(tuple(outputs['sample_indices'].shape),    dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-        input_ids         = [self.torch.zeros(tuple(outputs['input_ids'].shape),         dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-        masked_lm_lengths = [self.torch.zeros(tuple(outputs['masked_lm_lengths'].shape), dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+        self.torch.distributed.barrier()
+        generated_samples = [self.torch.zeros(tuple(outputs['generated_samples'].shape), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+        sample_indices    = [self.torch.zeros(tuple(outputs['sample_indices'].shape),    dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+        input_ids         = [self.torch.zeros(tuple(outputs['input_ids'].shape),         dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+        masked_lm_lengths = [self.torch.zeros(tuple(outputs['masked_lm_lengths'].shape), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
 
         self.torch.distributed.all_gather(generated_samples, outputs["generated_samples"])
         self.torch.distributed.all_gather(sample_indices,    outputs["sample_indices"])
@@ -534,6 +535,7 @@ class torchBert(backends.BackendBase):
 
             ## Collect tensors for logging.
             if self.pytorch.num_nodes > 1:
+              self.torch.distributed.barrier()
               total_loss         = [self.torch.zeros(tuple(step_out['total_loss'        ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
               masked_lm_loss     = [self.torch.zeros(tuple(step_out['masked_lm_loss'    ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
               # next_sentence_loss = [self.torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
@@ -728,6 +730,7 @@ class torchBert(backends.BackendBase):
             val_hook.step(inputs, step_out)
 
           if self.pytorch.num_nodes > 1:
+            self.torch.distributed.barrier()
             masked_lm_loss     = [self.torch.zeros(tuple(step_out['masked_lm_loss'    ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
             # next_sentence_loss = [self.torch.zeros(tuple(step_out['next_sentence_loss'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
             self.torch.distributed.all_gather(masked_lm_loss,     step_out["masked_lm_loss"])
@@ -864,6 +867,7 @@ class torchBert(backends.BackendBase):
             is_live = self.sampler.is_live
         )
         if self.pytorch.num_nodes > 1:
+          self.torch.distributed.barrier()
           generated_samples = [self.torch.zeros(tuple(step_out['generated_samples'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
           sample_indices    = [self.torch.zeros(tuple(step_out['sample_indices'   ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
           self.torch.distributed.all_gather(generated_samples, step_out["generated_samples"])
@@ -876,6 +880,7 @@ class torchBert(backends.BackendBase):
         if self.sampler.is_live and input("Show logits figure ? [y/!y]") == "y":
           if self.pytorch.num_nodes > 1:
             prediction_scores = [self.torch.zeros(tuple(step_out['prediction_scores'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+            self.torch.distributed.barrier()
             self.torch.distributed.all_gather(prediction_scores, step_out["prediction_scores"])
           else:
             prediction_scores = step_out['prediction_scores'].cpu()
