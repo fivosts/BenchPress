@@ -14,8 +14,26 @@ import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import logging as l
+from deeplearning.clgen.preprocessors import c
+
+from absl import app, flags
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string(
+  "datatypes_bq_db",
+  None,
+  "Set path for BQ database to parse datatypes."
+)
+
+flags.DEFINE_string(
+  "datatypes_db",
+  None,
+  "Set path for output datatypes database."
+)
 
 Base = declarative.declarative_base()
 
@@ -33,21 +51,23 @@ class Struct(Base, sqlutil.ProtoBackedMixin):
   """
   __tablename__    = "structs"
   # entry id.
-  id         : int = sql.Column(sql.Integer, primary_key = True)
+  id            : int = sql.Column(sql.Integer, primary_key = True)
   # unique, indexable content has of struct.
-  sha256     : str = sql.Column(sql.String(64), nullable = False, index = True)
+  sha256        : str = sql.Column(sql.String(64), nullable = False, index = True)
+  # Relative path of original bq entry.
+  input_relpath : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Struct contents.
-  contents   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  contents      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Struct name.
-  name       : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  name          : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Struct fields.
-  fields     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  fields        : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Number of fields a struct has.
-  num_fields : int = sql.Column(sql.Integer, nullable = False)
+  num_fields    : int = sql.Column(sql.Integer, nullable = False)
   # Repo name where struct was found.
-  repo_name  : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  repo_name     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Repo ref.
-  ref        : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  ref           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Date
   date_added : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
@@ -61,8 +81,76 @@ class Struct(Base, sqlutil.ProtoBackedMixin):
                ) -> 'Struct':
     return Struct
 
-class DatatypeDirectory(sqlutil.Database):
+class DatatypeDB(sqlutil.Database):
   """A database directory of C/OpenCL composite types and functions."""
-  def __init__(self, url: str, must_exist: bool = False):
-    super(DatatypeDirectory, self).__init__(url, Base, must_exist = must_exist)
+  @classmethod
+  def FromBQ(entry):
     return
+
+  def __init__(self, url: str, must_exist: bool = False):
+    super(DatatypeDB, self).__init__(url, Base, must_exist = must_exist)
+    return
+
+def CollectStructsBQ(db, session):
+  total = db.mainfile_count                        # Total number of files in BQ database.
+  total_per_node = total // environment.WORLD_SIZE # In distributed nodes, this is the total files to be processed per node.
+  if total == 0:
+    raise ValueError("Input BQ database {} is empty!".format(contentfile_root))
+
+  # Set of IDs that have been completed.
+  done = set(
+    [x[0].replace("main_files/", "") for x in session.query(Struct.input_relpath)]
+  )
+
+  chunk, idx = min(total_per_node, 100000), environment.WORLD_RANK * total_per_node
+  limit = (environment.WORLD_RANK + 1) * total_per_node + (total % total_per_node if environment.WORLD_RANK == environment.WORLD_SIZE - 1 else 0)
+
+  if environment.WORLD_SIZE > 1:
+    bar = distrib.ProgressBar(total = total, offset = idx, decs = "Preprocessing DB")
+  else:
+    bar = tqdm.tqdm(total = total, desc = "Preprocessing DB", leave = True)
+
+  last_commit     = time.time()
+  wall_time_start = time.time()
+
+  while idx < limit:
+    try:
+      chunk = min(chunk, limit - idx) # This is equivalent to l447/l448 but needed for last node that gets a bit more.
+      batch = db.main_files_batch(chunk, idx, exclude_id = done)
+      idx += chunk - len(batch) # This difference will be the number of already done files.
+      pool = multiprocessing.Pool()
+      for structs_list in pool.imap_unordered(DatatypeDB.FromBQ, batch):
+        for struct in structs_list:
+          wall_time_end = time.time()
+          struct.wall_time_ms = int(
+            (wall_time_end - wall_time_start) * 1000
+          )
+          wall_time_start = wall_time_end
+          session.add(struct)
+          if wall_time_end - last_commit > 10:
+            session.commit()
+            last_commit = wall_time_end
+        idx += 1
+        bar.update(idx - bar.n)
+      pool.close()
+    except KeyboardInterrupt as e:
+      pool.terminate()
+      raise e
+    except Exception as e:
+      l.logger().error(e, ddp_nodes = True)
+      pool.terminate()
+      raise e
+  session.commit()
+  if environment.WORLD_SIZE > 1:
+    bar.finalize(idx)
+
+def main():
+  distrib.init()
+  db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root), must_exist = True)
+  structs_db = DatatypeDB
+  with structs_db.get_session(commit = True) as session:
+    CollectStructsBQ(db, session)
+
+if __name__ == "__main__":
+  app.run(main)
+  exit()
