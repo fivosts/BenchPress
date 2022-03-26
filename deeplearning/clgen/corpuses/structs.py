@@ -111,9 +111,26 @@ def FromBQ(entry: bqdb.bqMainFile):
       c.ClangFormat,
     ]
     for p in preprocessors_:
-      structs = p(structs)
+      try:
+        structs = p(structs)
+      except ValueError:
+        return None
   except Exception as e:
     raise("Unexpected exception: {}".format(e))
+
+  structs_code = []
+  for struct in structs:
+    try:
+      c.Compile(' '.join(struct['text']))
+      structs_code.append(
+        True,
+        structs
+      )
+    except ValueError:
+      structs_code.append(
+        False,
+        structs
+      )
 
   end_time = time.time()
   preprocess_time_ms = int((end_time - start_time) * 1000)
@@ -131,8 +148,7 @@ def FromBQ(entry: bqdb.bqMainFile):
     ref                     = entry.ref,
     wall_time_ms            = preprocess_time_ms,
     date_added              = datetime.datetime.utcnow(),
-  ) for (struct, success) in structs]
-  return
+  ) for (struct, success) in structs_code]
 
 def CollectStructsBQ(db, session):
   total = db.mainfile_count                        # Total number of files in BQ database.
