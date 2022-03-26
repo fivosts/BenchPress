@@ -707,7 +707,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         while not better_found and cmp_rate[1] < threshold:
           ## Pre-process inputs
           # workload size: how many batches of sequences you need.
-          wsize = FLAGS.sample_workload_size // self.sample_batch_size
+          wsize = (FLAGS.sample_workload_size // environment.WORLD_SIZE) // self.sample_batch_size
           if FLAGS.evolutionary_search and feeds[0].gen_id == 0 and len(feeds) == 1:
             wsize = wsize * active_search_width
           # Give the input feed and some specs, get the tensor ready to feed.
