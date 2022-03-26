@@ -351,7 +351,10 @@ class torchBert(backends.BackendBase):
     if not is_live:
       wload_size = len(inputs['input_ids']) * len(inputs['input_ids'][0])
       inputs = self.to_device(inputs)
-      bar = tqdm.auto.trange(wload_size, desc=desc, leave = False, position = 0)
+      if self.pytorch.num_nodes <= 1:
+        bar = tqdm.auto.trange(wload_size, desc=desc, leave = False, position = 0)
+      else:
+        bar = distrib.ProgressBar(total = wload_size * self.torch.distributed.get_world_size(), offset = 0, desc = desc)
       samples, sample_indices = model(
         workload = (
           inputs['input_ids'],
