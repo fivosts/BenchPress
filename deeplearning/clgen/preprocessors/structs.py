@@ -92,11 +92,9 @@ class DatatypeDB(sqlutil.Database):
   @classmethod
   def FromBQ(entry: bqdb.bqMainFile):
     start_time = time.time()
-    preprocessing_succeeded = False
     try:
       input_text = entry.content
       structs = preprocessors.Preprocess(input_text, preprocessors_)
-      # preprocessing_succeeded = True
     except Exception as e:
       raise("Unexpected exception: {}".format(e))
 
