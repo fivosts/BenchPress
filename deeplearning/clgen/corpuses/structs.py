@@ -12,6 +12,7 @@ import pathlib
 import typing
 import multiprocessing
 import hashlib
+import tqdm
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
@@ -162,7 +163,7 @@ def CollectStructsBQ(db, session):
       idx += chunk - len(batch) # This difference will be the number of already done files.
       flush_queue = set()
       pool = multiprocessing.Pool()
-      for structs_list in pool.imap_unordered(DatatypeDB.FromBQ, batch):
+      for structs_list in pool.imap_unordered(FromBQ, batch):
         for struct in structs_list:
           wall_time_end = time.time()
           struct.wall_time_ms = int(
