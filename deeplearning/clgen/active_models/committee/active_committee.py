@@ -491,20 +491,20 @@ class QueryByCommittee(backends.BackendBase):
       static_features  = self.torch.zeros(tuple(predictions['static_features' ].shape), dtype = self.torch.int64).to(self.pytorch.device)
       runtime_features = self.torch.zeros(tuple(predictions['runtime_features'].shape), dtype = self.torch.int64).to(self.pytorch.device)
       input_ids        = self.torch.zeros(tuple(predictions['input_ids'       ].shape), dtype = self.torch.int64).to(self.pytorch.device)
-      predictions      = self.torch.zeros(tuple(predictions['predictions'     ].shape), dtype = self.torch.int64).to(self.pytorch.device)
+      output_label     = self.torch.zeros(tuple(predictions['predictions'     ].shape), dtype = self.torch.int64).to(self.pytorch.device)
 
       for x, i in enumerate(predictions['idx']):
         idx             [int(i)] = predictions['idx']             [x]
         static_features [int(i)] = predictions['static_features'] [x]
         runtime_features[int(i)] = predictions['runtime_features'][x]
         input_ids       [int(i)] = predictions['input_ids']       [x]
-        predictions     [int(i)] = predictions['predictions']     [x]
+        output_label    [int(i)] = predictions['predictions']     [x]
 
       predictions['idx']              = idx
       predictions['static_features']  = static_features
       predictions['runtime_features'] = runtime_features
       predictions['input_ids']        = input_ids
-      predictions['predictions']      = predictions
+      predictions['predictions']      = output_label
 
     for key in set(predictions.keys()) - set({'train_step'}):
       if key == 'predictions':
