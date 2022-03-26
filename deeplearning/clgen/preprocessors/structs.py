@@ -8,7 +8,8 @@ import datetime
 import sqlite3
 import pathlib
 import typing
-import clang.cindex
+import multiprocessing
+# import clang.cindex
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
@@ -86,7 +87,7 @@ class Struct(Base, sqlutil.ProtoBackedMixin):
 class DatatypeDB(sqlutil.Database):
   """A database directory of C/OpenCL composite types and functions."""
   @classmethod
-  def FromBQ(entry):
+  def FromBQ(entry: bqdb.bqMainFile):
     return
 
   def __init__(self, url: str, must_exist: bool = False):
@@ -147,11 +148,23 @@ def CollectStructsBQ(db, session):
     bar.finalize(idx)
 
 def main():
-  distrib.init()
-  db  = bqdb.bqDatabase("sqlite:///{}".format(contentfile_root), must_exist = True)
-  structs_db = DatatypeDB
-  with structs_db.get_session(commit = True) as session:
-    CollectStructsBQ(db, session)
+  try:
+    tdir = FLAGS.local_filesystem
+  except Exception:
+    tdir = None
+
+  if FLAGS.datatypes_bq_db is None:
+    raise ValueError("Set path for BQ database.")
+  if FLAGS.datatypes_db is None:
+    raise ValueError("Set path for output datatypes database.")
+
+  with tempfile.TemporaryDirectory(prefix="locks_", dir = tdir) as d:
+    distrib.init(str(d))
+    db  = bqdb.bqDatabase("sqlite:///{}".format(str(pathlib.Path(FLAGS.datatypes_bq_db).resolve())), must_exist = True)
+    structs_db = DatatypeDB("sqlite:///{}".format(str(pathlib.Path(FLAGS.datatypes_db).resolve())), must_exist = False)
+    with structs_db.get_session(commit = True) as session:
+      CollectStructsBQ(db, session)
+  return
 
 if __name__ == "__main__":
   app.run(main)
