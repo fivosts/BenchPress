@@ -207,7 +207,7 @@ class BenchmarkSampler(FeatureSampler):
       if self.target_benchmark is None:
         self.benchmarks.pop(0)
         self.target_benchmark = self.benchmarks.pop(0)
-        l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
+        # l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     except IndexError:
       self.target_benchmark = None
     return
@@ -221,7 +221,7 @@ class BenchmarkSampler(FeatureSampler):
     del unused_kwargs
     try:
       self.target_benchmark = self.benchmarks.pop(0)
-      l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
+      # l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     except IndexError:
       self.target_benchmark = None
     self.saveCheckpoint()
@@ -298,7 +298,7 @@ class ActiveSampler(FeatureSampler):
       if self.target_benchmark is None:
         self.benchmarks.pop(0)
         self.target_benchmark = self.benchmarks.pop(0)
-        l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
+        # l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     except IndexError:
       self.benchmarks = self.sample_active_learner()
       self.target_benchmark = self.benchmarks.pop(0)
@@ -354,7 +354,7 @@ class ActiveSampler(FeatureSampler):
       self.teach_active_learner(target_samples, top_k)
     try:
       self.target_benchmark = self.benchmarks.pop(0)
-      l.logger().info("Target fetures: {}".format(self.target_benchmark.features))
+      # l.logger().info("Target fetures: {}".format(self.target_benchmark.features))
     except IndexError:
       l.logger().warn("Implement a termination criteria here.")
       self.benchmarks = self.sample_active_learner()
