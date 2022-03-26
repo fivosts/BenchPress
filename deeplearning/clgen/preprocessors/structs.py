@@ -117,7 +117,7 @@ def CollectStructsBQ(db, session):
 
   while idx < limit:
     try:
-      chunk = min(chunk, limit - idx) # This is equivalent to l447/l448 but needed for last node that gets a bit more.
+      chunk = min(chunk, limit - idx)
       batch = db.main_files_batch(chunk, idx, exclude_id = done)
       idx += chunk - len(batch) # This difference will be the number of already done files.
       pool = multiprocessing.Pool()
