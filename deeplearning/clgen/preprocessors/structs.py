@@ -93,7 +93,7 @@ class DatatypeDB(sqlutil.Database):
     start_time = time.time()
     preprocessing_succeeded = False
     try:
-      input_text = file.content
+      input_text = entry.content
       structs = preprocessors.Preprocess(input_text, preprocessors_)
       # preprocessing_succeeded = True
     except Exception as e:
@@ -103,8 +103,8 @@ class DatatypeDB(sqlutil.Database):
     preprocess_time_ms = int((end_time - start_time) * 1000)
     input_text_stripped = input_text.strip()
     return [ Struct(
-      input_relpath           = "main_files/{}".format(file.id),
-      input_sha256            = file.id,
+      input_relpath           = "main_files/{}".format(entry.id),
+      input_sha256            = entry.id,
       sha256                  = hashlib.sha256(struct['text'].encode("utf-8")).hexdigest(),
       contents                = struct['text'],
       name                    = struct['name'],
