@@ -468,21 +468,25 @@ class QueryByCommittee(backends.BackendBase):
 
     if self.pytorch.num_nodes > 1:
       self.torch.distributed.barrier()
+
       idx              = [self.torch.zeros(tuple(predictions['idx'].shape),              dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       static_features  = [self.torch.zeros(tuple(predictions['static_features'].shape),  dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       runtime_features = [self.torch.zeros(tuple(predictions['runtime_features'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       input_ids        = [self.torch.zeros(tuple(predictions['input_ids'].shape),        dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       output_label     = [self.torch.zeros(tuple(predictions['predictions'].shape),      dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+
       self.torch.distributed.all_gather(idx,              predictions["idx"].to(self.pytorch.device))
       self.torch.distributed.all_gather(static_features,  predictions["static_features"].to(self.pytorch.device))
       self.torch.distributed.all_gather(runtime_features, predictions["runtime_features"].to(self.pytorch.device))
       self.torch.distributed.all_gather(input_ids,        predictions["input_ids"].to(self.pytorch.device))
       self.torch.distributed.all_gather(output_label,     predictions["predictions"])
+
       predictions['idx']              = self.torch.cat(idx)
       predictions['static_features']  = self.torch.cat(static_features)
       predictions['runtime_features'] = self.torch.cat(runtime_features)
       predictions['input_ids']        = self.torch.cat(input_ids)
       predictions['predictions']      = self.torch.cat(output_label)
+
     for key in set(predictions.keys()) - set({'train_step'}):
       if key == 'predictions':
         predictions[key] = [self.downstream_task.TargetIDtoLabels(int(x)) for x in predictions[key].cpu().numpy()]
