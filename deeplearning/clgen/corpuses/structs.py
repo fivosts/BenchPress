@@ -6,6 +6,7 @@ dependencies found during raw corpus preprocessing.
 """
 import datetime
 import time
+import tempfile
 import sqlite3
 import pathlib
 import typing
