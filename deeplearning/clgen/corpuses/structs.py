@@ -74,7 +74,7 @@ class Struct(Base, sqlutil.ProtoBackedMixin):
   # Number of fields a struct has.
   num_fields    : int = sql.Column(sql.Integer, nullable = False)
   # Flag indicating if compilation works on this struct.
-  preprocessing_succeeded : sql.Column(sql.Integer, nullable = False)
+  preprocessing_succeeded : int = sql.Column(sql.Integer, nullable = False)
   # Repo name where struct was found.
   repo_name     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Repo ref.
@@ -108,37 +108,34 @@ def FromBQ(entry: bqdb.bqMainFile):
       c.StripIncludes,
       c.ClangPreprocess,
       c.ExtractStructs,
-      c.ClangFormat,
     ]
     for p in preprocessors_:
       try:
         structs = p(structs)
       except ValueError:
-        return None
+        return []
   except Exception as e:
     raise("Unexpected exception: {}".format(e))
 
   structs_code = []
   for struct in structs:
     try:
-      c.Compile(' '.join(struct['text']))
+      _ = c.Compile(' '.join(struct['text']))
       structs_code.append(
-        True,
-        structs
+        (True,
+        struct)
       )
-    except ValueError:
+    except ValueError as e:
       structs_code.append(
-        False,
-        structs
+        (False,
+        struct)
       )
-
   end_time = time.time()
   preprocess_time_ms = int((end_time - start_time) * 1000)
-  input_text_stripped = input_text.strip()
   return [ Struct(
     input_relpath           = "main_files/{}".format(entry.id),
     input_sha256            = entry.id,
-    sha256                  = hashlib.sha256(struct['text'].encode("utf-8")).hexdigest(),
+    sha256                  = hashlib.sha256(''.join(struct['text']).encode("utf-8")).hexdigest(),
     contents                = c.ClangFormat(' '.join(struct['text'])),
     name                    = struct['name'],
     fields                  = '\n'.join([','.join(field) for field in struct['fields']]),
@@ -148,7 +145,7 @@ def FromBQ(entry: bqdb.bqMainFile):
     ref                     = entry.ref,
     wall_time_ms            = preprocess_time_ms,
     date_added              = datetime.datetime.utcnow(),
-  ) for (struct, success) in structs_code]
+  ) for (success, struct) in structs_code]
 
 def CollectStructsBQ(db, session):
   total = db.mainfile_count                        # Total number of files in BQ database.
@@ -186,7 +183,7 @@ def CollectStructsBQ(db, session):
             (wall_time_end - wall_time_start) * 1000
           )
           wall_time_start = wall_time_end
-          exists = session.query(Struct).filter_by(Struct.sha256 == struct.sha256).first()
+          exists = session.query(Struct).filter(Struct.sha256 == struct.sha256).first()
           if not exists and struct.sha256 not in flush_queue:
             session.add(struct)
             flush_queue.add(struct.sha256)
