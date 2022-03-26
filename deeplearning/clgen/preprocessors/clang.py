@@ -822,14 +822,11 @@ def ExtractStructs(src: str,
       return None
 
     if is_typedef:
-      if cur.kind != clang.cindex.CursorKind.TYPEDEF_DECL:
-        raise TypeError("found {}, {} struct:\n{}, \n{}".format(cur.kind, token.spelling, text, src))
-
-      assert cur.kind == clang.cindex.CursorKind.TYPEDEF_DECL
-      text.append(token.spelling)
-      name  = token.spelling
-      token = next_token(it)
-      cur   = clang.cindex.Cursor.from_location(unit, token.extent.start)
+      if token.spelling != ";":
+        text.append(token.spelling)
+        name  = token.spelling
+        token = next_token(it)
+        cur   = clang.cindex.Cursor.from_location(unit, token.extent.start)
     if token.spelling not in {";", "="}:
       return None
       raise TypeError("Expected ';' or '=' but found {} src:\n{}".format(token.spelling, src))
