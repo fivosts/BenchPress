@@ -68,6 +68,8 @@ class Struct(Base, sqlutil.ProtoBackedMixin):
   fields        : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Number of fields a struct has.
   num_fields    : int = sql.Column(sql.Integer, nullable = False)
+  # Flag indicating if compilation works on this struct.
+  preprocessing_succeeded : sql.Column(sql.Integer, nullable = False)
   # Repo name where struct was found.
   repo_name     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Repo ref.
