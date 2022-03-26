@@ -370,7 +370,7 @@ class torchBert(backends.BackendBase):
       outputs['generated_samples'] = samples.detach()
       outputs['sample_indices']    = sample_indices.detach()
       outputs['input_ids']         = self.torch.reshape(inputs['input_ids'], tuple(samples.shape))
-      outputs['masked_lm_lengths'] = self.torch.reshape(inputs['masked_lm_lengths'], (samples.shape[0], -1))
+      outputs['masked_lm_lengths'] = self.torch.reshape(inputs['masked_lm_lengths'].to(self.pytorch.device), (samples.shape[0], -1))
 
       if self.pytorch.num_nodes > 1:
         self.torch.distributed.barrier()
