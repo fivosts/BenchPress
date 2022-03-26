@@ -26,6 +26,7 @@ from deeplearning.clgen.util.pytorch import torch
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import monitors
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import distrib
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.features import extractor
