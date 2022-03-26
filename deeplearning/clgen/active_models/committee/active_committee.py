@@ -454,7 +454,7 @@ class QueryByCommittee(backends.BackendBase):
       'input_ids'       : None,
       'predictions'     : None,
     }
-    for batch in tqdm.tqdm(loader, total = len(loader), desc = "Sammple member", leave = False):
+    for batch in tqdm.tqdm(loader, total = len(loader), desc = "Sample member", leave = False):
       out = self.model_step(model, batch, is_sampling = True)
       for key in set(predictions.keys()) - set({'train_step'}):
         r = batch[key] if key != "predictions" else out['output_label']
@@ -467,11 +467,12 @@ class QueryByCommittee(backends.BackendBase):
           )
 
     if self.pytorch.num_nodes > 1:
-      idx              = [self.torch.zeros(tuple(predictions['idx'].shape),              dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      self.torch.distributed.barrier()
+      idx              = [self.torch.zeros(tuple(predictions['idx'].shape),              dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       static_features  = [self.torch.zeros(tuple(predictions['static_features'].shape),  dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       runtime_features = [self.torch.zeros(tuple(predictions['runtime_features'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       input_ids        = [self.torch.zeros(tuple(predictions['input_ids'].shape),        dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-      output_label     = [self.torch.zeros(tuple(predictions['predictions'].shape),      dtype = self.torch.int32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      output_label     = [self.torch.zeros(tuple(predictions['predictions'].shape),      dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       self.torch.distributed.all_gather(idx,              predictions["idx"].to(self.pytorch.device))
       self.torch.distributed.all_gather(static_features,  predictions["static_features"].to(self.pytorch.device))
       self.torch.distributed.all_gather(runtime_features, predictions["runtime_features"].to(self.pytorch.device))
