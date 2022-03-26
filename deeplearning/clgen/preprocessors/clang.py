@@ -772,8 +772,11 @@ def ExtractStructs(src: str,
     cur = clang.cindex.Cursor.from_location(unit, token.extent.start)
     if cur.kind != clang.cindex.CursorKind.STRUCT_DECL:
       return None
+    if not cur.is_definition():
+      return None
     if token.kind != clang.cindex.TokenKind.IDENTIFIER:
-      raise TypeError(token.kind)
+      # For now accept only 'struct name {', although 'struct {} name;' exists as well.
+      return None
     text   = ["struct", token.spelling]
     if is_typedef:
       text = ["typedef"] + text
@@ -784,10 +787,9 @@ def ExtractStructs(src: str,
     cur       = clang.cindex.Cursor.from_location(unit, token.extent.start)
     cur_field = []
     cur_type  = None
-    while cur.kind in {clang.cindex.CursorKind.STRUCT_DECL, clang.cindex.CursorKind.FIELD_DECL}:
+    while cur.kind in {clang.cindex.CursorKind.STRUCT_DECL, clang.cindex.CursorKind.FIELD_DECL, clang.cindex.CursorKind.TYPE_REF}:
       if cur.kind == clang.cindex.CursorKind.FIELD_DECL or token.spelling == ";":
         if cur_type is None:
-          assert token.kind == clang.cindex.TokenKind.KEYWORD
           cur_type = token.spelling
         if token.spelling == ",":
           cur_field.append(";")
@@ -811,12 +813,17 @@ def ExtractStructs(src: str,
       cur   = clang.cindex.Cursor.from_location(unit, token.extent.start)
 
     if is_typedef:
+      if cur.kind != clang.cindex.CursorKind.TYPEDEF_DECL:
+        raise TypeError("found {}, {} struct:\n{}".format(cur.kind, token.spelling, text))
+
       assert cur.kind == clang.cindex.CursorKind.TYPEDEF_DECL
       text.append(token.spelling)
       name  = token.spelling
       token = next_token(it)
       cur   = clang.cindex.Cursor.from_location(unit, token.extent.start)
-    assert token.spelling in {";", "="}
+    if token.spelling not in {";", "="}:
+      return None
+      raise TypeError("Expected ';' or '=' but found {} src:\n{}".format(token.spelling, src))
     text.append(";")
     return {
       'text': text,
