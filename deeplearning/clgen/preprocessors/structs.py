@@ -150,6 +150,7 @@ def CollectStructsBQ(db, session):
       chunk = min(chunk, limit - idx)
       batch = db.main_files_batch(chunk, idx, exclude_id = done)
       idx += chunk - len(batch) # This difference will be the number of already done files.
+      flush_queue = set()
       pool = multiprocessing.Pool()
       for structs_list in pool.imap_unordered(DatatypeDB.FromBQ, batch):
         for struct in structs_list:
@@ -158,9 +159,13 @@ def CollectStructsBQ(db, session):
             (wall_time_end - wall_time_start) * 1000
           )
           wall_time_start = wall_time_end
-          session.add(struct)
+          exists = session.query(Struct).filter_by(Struct.sha256 == struct.sha256).first()
+          if not exists and struct.sha256 not in flush_queue:
+            session.add(struct)
+            flush_queue.add(struct.sha256)
           if wall_time_end - last_commit > 10:
             session.commit()
+            flush_queue = set()
             last_commit = wall_time_end
         idx += 1
         bar.update(idx - bar.n)
@@ -173,6 +178,7 @@ def CollectStructsBQ(db, session):
       pool.terminate()
       raise e
   session.commit()
+  flush_queue = set()
   if environment.WORLD_SIZE > 1:
     bar.finalize(idx)
 
