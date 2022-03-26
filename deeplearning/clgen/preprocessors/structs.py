@@ -53,10 +53,12 @@ class Struct(Base, sqlutil.ProtoBackedMixin):
   __tablename__    = "structs"
   # entry id.
   id            : int = sql.Column(sql.Integer, primary_key = True)
-  # unique, indexable content has of struct.
-  sha256        : str = sql.Column(sql.String(64), nullable = False, index = True)
   # Relative path of original bq entry.
   input_relpath : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Sha256 of input bq entry
+  input_sha256  : str = sql.Column(sql.String(64), nullable = False)
+  # unique, indexable content has of struct.
+  sha256        : str = sql.Column(sql.String(64), nullable = False, index = True)
   # Struct contents.
   contents      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Struct name.
@@ -88,6 +90,32 @@ class DatatypeDB(sqlutil.Database):
   """A database directory of C/OpenCL composite types and functions."""
   @classmethod
   def FromBQ(entry: bqdb.bqMainFile):
+    start_time = time.time()
+    preprocessing_succeeded = False
+    try:
+      input_text = file.content
+      structs = preprocessors.Preprocess(input_text, preprocessors_)
+      # preprocessing_succeeded = True
+    except Exception as e:
+      raise("Unexpected exception: {}".format(e))
+
+    end_time = time.time()
+    preprocess_time_ms = int((end_time - start_time) * 1000)
+    input_text_stripped = input_text.strip()
+    return [ Struct(
+      input_relpath           = "main_files/{}".format(file.id),
+      input_sha256            = file.id,
+      sha256                  = hashlib.sha256(struct['text'].encode("utf-8")).hexdigest(),
+      contents                = struct['text'],
+      name                    = struct['name'],
+      fields                  = struct['fields'],
+      num_fields              = len(struct['fields']),
+      preprocessing_succeeded = success,
+      repo_name               = entry.repo_name,
+      ref                     = entry.ref,
+      wall_time_ms            = preprocess_time_ms,
+      date_added              = datetime.datetime.utcnow(),
+    ) for (struct, success) in structs]
     return
 
   def __init__(self, url: str, must_exist: bool = False):
