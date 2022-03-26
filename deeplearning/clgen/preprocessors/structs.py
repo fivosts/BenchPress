@@ -68,6 +68,8 @@ class Struct(Base, sqlutil.ProtoBackedMixin):
   repo_name     : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Repo ref.
   ref           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Wall time
+  wall_time_ms  : int = sql.Column(Integer, nullable = False)
   # Date
   date_added : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
