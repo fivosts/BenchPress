@@ -207,7 +207,7 @@ def main(*args, **kwargs):
     distrib.init(str(d))
     db  = bqdb.bqDatabase("sqlite:///{}".format(str(pathlib.Path(FLAGS.datatypes_bq_db).resolve())), must_exist = True)
     structs_db = DatatypeDB("sqlite:///{}".format(str(pathlib.Path(FLAGS.datatypes_db).resolve())), must_exist = False)
-    with structs_db.get_session(commit = True) as session:
+    with structs_db.Session(commit = True) as session:
       CollectStructsBQ(db, session)
   return
 
