@@ -11,16 +11,16 @@ import pathlib
 import typing
 import multiprocessing
 import hashlib
-# import clang.cindex
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 
+from deeplearning.clgen.preprocessors import clang
+from deeplearning.clgen.preprocessors import c
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import logging as l
-from deeplearning.clgen.preprocessors import c
 
 from absl import app, flags
 
@@ -101,10 +101,10 @@ def FromBQ(entry: bqdb.bqMainFile):
   try:
     structs = entry.content
     preprocessors_ = [
-      c.StripIncludes
-      c.ClangPreprocess
-      c.ExtractStructs
-      c.ClangFormat
+      c.StripIncludes,
+      c.ClangPreprocess,
+      c.ExtractStructs,
+      c.ClangFormat,
     ]
     for p in preprocessors_:
       structs = p(structs)
