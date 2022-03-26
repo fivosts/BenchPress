@@ -389,12 +389,6 @@ class torchBert(backends.BackendBase):
         outputs['input_ids']         = self.torch.cat(input_ids)
         outputs['masked_lm_lengths'] = self.torch.cat(masked_lm_lengths)
 
-
-      outputs['generated_samples'] = list(outputs['generated_samples'].cpu().numpy())
-      outputs['sample_indices']    = list(outputs['sample_indices'].cpu().numpy())
-      outputs['input_ids']         = list(outputs['input_ids'].cpu().numpy())
-      outputs['masked_lm_lengths'] = list(outputs['masked_lm_lengths'].cpu().numpy())
-
       outputs['generated_samples'] = list(self.torch.reshape(outputs['generated_samples'], (-1, outputs['generated_samples'].size(-1))).cpu().numpy())
       outputs['sample_indices']    = list(self.torch.reshape(outputs['sample_indices'],    (-1, outputs['sample_indices'   ].size(-1))).cpu().numpy())
       outputs['input_ids']         = list(self.torch.reshape(outputs['input_ids'],         (-1, outputs['input_ids'        ].size(-1))).cpu().numpy())
