@@ -232,7 +232,7 @@ class CompilationSampler(object):
     """
     batch_size, sequence_length = tuple(input_ids.shape)
     input_idxs = torch.arange(batch_size).to(device)
-    sample_indices = torch.full((batch_size, sequence_length), self.tokenizer.padToken).to(device)
+    sample_indices = torch.full((batch_size, sequence_length), self.tokenizer.padToken, dtype = torch.int64).to(device)
 
     res_idx = 0
     samples = torch.zeros_like(input_ids)
@@ -301,10 +301,10 @@ class CompilationSampler(object):
     else:
       input_features = None
     # sample indices array that will be returned.
-    sample_indices = torch.full((nseq, sequence_length), self.tokenizer.padToken).to(device)
+    sample_indices = torch.full((nseq, sequence_length), self.tokenizer.padToken, dtype = torch.int64).to(device)
 
     if FLAGS.sample_indices_limit is not None:
-      sidx_length = torch.full((batch_size, 1), 0).to(device)
+      sidx_length = torch.full((batch_size, 1), 0, dtype = torch.int64).to(device)
 
     # Workload of input_ids and attention_mask pairs.
     # queue input_idxs ensure direct ordering from inputs -> outputs.
@@ -315,7 +315,7 @@ class CompilationSampler(object):
       queue_input_features = torch.reshape(workload_input_features, (1, nseq, sequence_length)).squeeze()
 
     #! This is the return queue [nseq x sequence_length].
-    queue = torch.zeros(tuple(queue_input_ids.shape)).to(device)
+    queue = torch.zeros(tuple(queue_input_ids.shape), dtype = torch.int64).to(device)
 
     new_holes = self.step_batch(
       input_ids,
@@ -348,7 +348,7 @@ class CompilationSampler(object):
       if input_features is not None:
         input_features = torch.cat((input_features, queue_input_features[w_idx: w_idx + res]), 0)
       if FLAGS.sample_indices_limit:
-        sidx_length  = torch.cat((sidx_length, torch.full((res, 1), 0).to(device)), 0)
+        sidx_length  = torch.cat((sidx_length, torch.full((res, 1), 0, dtype = torch.int64).to(device)), 0)
       w_idx += res
 
     while w_idx < nseq or torch.any(new_holes):
@@ -391,7 +391,7 @@ class CompilationSampler(object):
         if input_features is not None:
           input_features = torch.cat((input_features, queue_input_features[w_idx: w_idx + res]), 0)
         if FLAGS.sample_indices_limit:
-          sidx_length  = torch.cat((sidx_length, torch.full((res, 1), 0).to(device)), 0)
+          sidx_length  = torch.cat((sidx_length, torch.full((res, 1), 0, dtype = torch.int64).to(device)), 0)
         w_idx += res
     return queue, sample_indices
 
