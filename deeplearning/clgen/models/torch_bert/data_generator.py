@@ -662,7 +662,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                   self.feat_sampler.target_benchmark.name
                                 )
                               )
-    l.logger().info("{}Target features: {}".format("Target benchmark: {}\n".format(self.target_benchmark.name) if self.target_benchmark.name != "" else "", self.target_benchmark.features))
+    l.logger().info("{}Target features: {}".format("Target benchmark: {}\n".format(self.feat_sampler.target_benchmark.name) if self.feat_sampler.target_benchmark.name != "" else "", self.feat_sampler.target_benchmark.features))
     try:
       ## BFS style. While you have jobs, keep going.
       while self.feed_queue:
