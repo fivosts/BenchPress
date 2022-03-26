@@ -787,34 +787,43 @@ def ExtractStructs(src: str,
     cur       = clang.cindex.Cursor.from_location(unit, token.extent.start)
     cur_field = []
     cur_type  = None
-    while cur.kind in {clang.cindex.CursorKind.STRUCT_DECL, clang.cindex.CursorKind.FIELD_DECL, clang.cindex.CursorKind.TYPE_REF}:
-      if cur.kind == clang.cindex.CursorKind.FIELD_DECL or token.spelling == ";":
-        if cur_type is None:
-          cur_type = token.spelling
-        if token.spelling == ",":
-          cur_field.append(";")
-          fields.append(cur_field)
-          text += cur_field
-          cur_field = []
-          token = next_token(it)
-          cur   = clang.cindex.Cursor.from_location(unit, token.extent.start)
-          cur_field += [cur_type, token.spelling]
-        elif token.spelling == ";":
-          cur_field.append(token.spelling)
-          fields.append(cur_field)
-          text += cur_field
-          cur_field = []
-          cur_type  = None
+    lbc, rbc  = 0, 0
+    # while cur.kind in {clang.cindex.CursorKind.STRUCT_DECL, clang.cindex.CursorKind.FIELD_DECL, clang.cindex.CursorKind.TYPE_REF}:
+    try:
+      while lbc + rbc == 0 or lbc != rbc:
+        if token.spelling == "{":
+          lbc += 1
+        if token.spelling == "}":
+          rbc += 1
+        if cur.kind == clang.cindex.CursorKind.FIELD_DECL or token.spelling == ";":
+          if cur_type is None:
+            cur_type = token.spelling
+          if token.spelling == ",":
+            cur_field.append(";")
+            fields.append(cur_field)
+            text += cur_field
+            cur_field = []
+            token = next_token(it)
+            cur   = clang.cindex.Cursor.from_location(unit, token.extent.start)
+            cur_field += [cur_type, token.spelling]
+          elif token.spelling == ";":
+            cur_field.append(token.spelling)
+            fields.append(cur_field)
+            text += cur_field
+            cur_field = []
+            cur_type  = None
+          else:
+            cur_field.append(token.spelling)
         else:
-          cur_field.append(token.spelling)
-      else:
-        text.append(token.spelling)
-      token = next_token(it)
-      cur   = clang.cindex.Cursor.from_location(unit, token.extent.start)
+          text.append(token.spelling)
+        token = next_token(it)
+        cur   = clang.cindex.Cursor.from_location(unit, token.extent.start)
+    except AttributeError:
+      return None
 
     if is_typedef:
       if cur.kind != clang.cindex.CursorKind.TYPEDEF_DECL:
-        raise TypeError("found {}, {} struct:\n{}".format(cur.kind, token.spelling, text))
+        raise TypeError("found {}, {} struct:\n{}, \n{}".format(cur.kind, token.spelling, text, src))
 
       assert cur.kind == clang.cindex.CursorKind.TYPEDEF_DECL
       text.append(token.spelling)
