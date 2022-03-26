@@ -252,6 +252,20 @@ def ExtractFunctions(text: str) -> str:
   """
   return clang.ExtractFunctions(text, ".c", [])
 
+def ExtractStructs(text: str) -> typing.List[typing.Dict[str, typing.List]]:
+  """Splits translation unit into separate structs.
+
+  Args:
+    src: The source code to compile.
+    suffix: The suffix to append to the source code temporary file. E.g. '.c'
+      for a C program.
+    cflags: A list of flags to be passed to clang.
+
+  Returns:
+    List of separate string structs.
+  """
+  return clang.ExtractStructs(text, ".c", CLANG_ARGS)
+
 @public.clgen_preprocessor
 def MinimumStatement1(text: str) -> str:
   """Check that file contains at least one statement.
