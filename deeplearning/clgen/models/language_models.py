@@ -448,7 +448,7 @@ class Model(object):
     start_time = datetime.datetime.utcnow()
     seq_count  = 0
     compiled   = 0
-    self.backend.InitSampleBatch(sampler, workload_size = FLAGS.sample_workload_size)
+    self.backend.InitSampleBatch(sampler, workload_size = FLAGS.sample_workload_size // environment.WORLD_SIZE)
     try:
       org_inputs, input_ids, samples, indices = self.backend.SampleNextIndices(sampler)
     except StopIteration:
