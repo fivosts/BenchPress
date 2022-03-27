@@ -20,6 +20,7 @@ class BackendBase(object):
     self.config          = config
     self.cache_path      = cache_path
     self.downstream_task = downstream_task
+    self.downstream_task.setup_dataset(num_train_steps = self.config.num_train_steps)
     return
 
   def Train(self, **extra_kwargs) -> None:
