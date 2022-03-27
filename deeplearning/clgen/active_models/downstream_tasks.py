@@ -136,8 +136,6 @@ class GrewePredictive(DownstreamTask):
     if use_as_server:
       self.setup_server()
     else:
-      self.setup_dataset()
-      self.data_generator = data_generator.ListTrainDataloader(self.dataset)
       ## Setup random seed np random stuff
       self.rand_generator = np.random
       self.rand_generator.seed(random_seed)
@@ -164,7 +162,7 @@ class GrewePredictive(DownstreamTask):
       self.cl_proc, self.work_flag, self.read_queue, self.write_queue, self.reject_queue = http_server.start_server_process()
     return
 
-  def setup_dataset(self) -> None:
+  def setup_dataset(self, num_train_steps: int = None) -> None:
     """
     Fetch data and preprocess into corpus for Grewe's predictive model.
     """
@@ -192,6 +190,10 @@ class GrewePredictive(DownstreamTask):
       pool.terminate()
       raise e
     # pool.terminate()
+    if num_train_steps:
+      self.data_generator = data_generator.ListTrainDataloader(self.dataset[:num_train_steps])
+    else:
+      self.data_generator = data_generator.ListTrainDataloader(self.dataset)
     return
 
   def CollectSingleRuntimeFeature(self,
