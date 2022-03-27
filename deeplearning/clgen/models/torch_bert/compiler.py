@@ -5,6 +5,7 @@ import concurrent.futures
 
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.corpuses import tokenizers
+from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
 from absl import flags
@@ -332,7 +333,10 @@ class CompilationSampler(object):
       queue[input_idxs[i]] = input_ids[i]
       if bar:
         total_closed += 1
-        bar.update(total_closed - bar.n)
+        if environment.WORLD_SIZE > 1:
+          bar.update(total_closed - bar.n)
+        else:
+          bar.update(1)
 
     input_ids      = torch.index_select(input_ids, 0, open_holes)
     input_idxs     = torch.index_select(input_idxs, 0, open_holes)
@@ -375,7 +379,10 @@ class CompilationSampler(object):
         queue[input_idxs[i]] = input_ids[i]
         if bar:
           total_closed += 1
-          bar.update(total_closed - bar.n)
+          if environment.WORLD_SIZE > 1:
+            bar.update(total_closed - bar.n)
+          else:
+            bar.update(1)
     
       input_ids      = torch.index_select(input_ids, 0, open_holes)
       input_idxs     = torch.index_select(input_idxs, 0, open_holes)
