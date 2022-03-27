@@ -79,7 +79,7 @@ message Linear {
 
 // Dropout Specs.
 message Dropout {
-  optional float dropout_prob = 1;
+  optional float p = 1;
 }
 
 // LayerNorm specs.
