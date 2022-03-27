@@ -229,7 +229,7 @@ class QueryByCommittee(backends.BackendBase):
           * (self.torch.distributed.get_world_size() if self.pytorch.num_nodes > 1 else 1)
         )
 
-      if self.torch.distributed.get_world_size() <= 1:
+      if self.pytorch.num_nodes <= 1:
         sampler = self.torch.utils.data.RandomSampler(data_generator, replacement = False)
       else:
         sampler = self.torch.utils.data.DistributedSampler(
