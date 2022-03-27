@@ -140,7 +140,7 @@ sampler {
               }
               layer {
                 dropout {
-                  dropout_prob: 0.15
+                  p: 0.15
                 }
               }
               layer {
@@ -168,7 +168,7 @@ sampler {
               }
               layer {
                 dropout {
-                  dropout_prob: 0.15
+                  p: 0.15
                 }
               }
               layer {
@@ -185,7 +185,7 @@ sampler {
               }
               layer {
                 dropout {
-                  dropout_prob: 0.15
+                  p: 0.15
                 }
               }
               layer {
