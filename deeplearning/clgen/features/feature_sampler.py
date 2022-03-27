@@ -296,13 +296,13 @@ class ActiveSampler(FeatureSampler):
     self.loadCheckpoint()
     try:
       if self.target_benchmark is None:
-        self.benchmarks.pop(0)
         self.target_benchmark = self.benchmarks.pop(0)
         # l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     except IndexError:
       self.benchmarks = self.sample_active_learner()
       self.target_benchmark = self.benchmarks.pop(0)
     self.tokenizer = tokenizer
+    self.saveCheckpoint()
     return
 
   def sample_active_learner(self,
@@ -384,7 +384,8 @@ class ActiveSampler(FeatureSampler):
       self.benchmarks       = state_dict['benchmarks']
       self.target_benchmark = state_dict['target_benchmark']
     else:
-      self.benchmarks = self.sample_active_learner()
+      self.benchmarks = []
+      self.target_benchmark = None
     if (self.workspace / "downstream_task_dg.pkl").exists():
       with open(self.workspace / "downstream_task_dg.pkl", 'rb') as infile:
         self.active_learner.downstream_task.data_generator = pickle.load(infile)
