@@ -90,10 +90,11 @@ class ModelConfig(object):
   @classmethod
   def FromConfig(cls,
                  config: active_learning_pb2.Committee,
-                 downstream_task: downstream_tasks.DownstreamTask
+                 downstream_task: downstream_tasks.DownstreamTask,
+                 num_train_steps: int,
                  ) -> typing.List["ModelConfig"]:
     model_configs = []
-    nts = config.num_train_steps
+    nts = num_train_steps
     for m in config.mlp:
       model_configs.append(NNModelConfig(m, downstream_task, nts))
     for m in config.k_means:
