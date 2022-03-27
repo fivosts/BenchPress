@@ -749,7 +749,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             bdrejected_cands = distrib.consistent_read(is_bytes = True)
             rejected_candidates = []
             for chunk in bdrejected_cands.values():
-              try;
+              try:
                 rejected_candidates += pickle.loads(chunk)
               except EOFError:
                 ## rejected_candidates is empty, so skip.
