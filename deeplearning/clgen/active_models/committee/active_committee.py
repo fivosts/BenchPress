@@ -275,17 +275,10 @@ class QueryByCommittee(backends.BackendBase):
           if self.pytorch.num_nodes > 1:
             loader.sampler.set_epoch(epoch)
 
-          batch_iter = tqdm.auto.trange(member.training_opts.steps_per_epoch, desc="Batch", leave = False) if self.is_world_process_zero() else range(member.training_opts.steps_per_epoch)
-          for step in batch_iter:
+          batch_iter = tqdm.tqdm(batch_iterator, desc="Batch", leave = False) if self.is_world_process_zero() else batch_iterator
+          for inputs in batch_iter:
             if self.is_world_process_zero():
               start = datetime.datetime.utcnow()
-            try:
-              inputs = next(batch_iterator)
-            except StopIteration:
-              # dataloader has different len() than steps_per_epoch.
-              # This is the easiest way to infinite-loop dataloaders in pytorch.
-              batch_iterator = iter(loader)
-              inputs = next(batch_iterator)
 
             # Run model step on inputs
             step_out = self.model_step(model, inputs)
@@ -454,7 +447,8 @@ class QueryByCommittee(backends.BackendBase):
       'input_ids'       : None,
       'predictions'     : None,
     }
-    for batch in tqdm.tqdm(loader, total = len(loader), desc = "Sample member", leave = False):
+    it = tqdm.tqdm(loader, desc="Sample member", leave = False) if self.is_world_process_zero() else loader
+    for batch in it:
       out = self.model_step(model, batch, is_sampling = True)
       for key in set(predictions.keys()) - set({'train_step'}):
         r = batch[key] if key != "predictions" else out['output_label']
