@@ -189,6 +189,7 @@ class QueryByCommittee(backends.BackendBase):
     update_dataloader = kwargs.get('update_dataloader', None)
 
     model           = member.model.to(self.pytorch.offset_device)
+    model_name      = "{}-{}".format(member.config.name, member.model.id)
     data_generator  = (
       member.data_generator
       if update_dataloader is None
@@ -216,7 +217,7 @@ class QueryByCommittee(backends.BackendBase):
     if self.pytorch.num_gpus > 0:
       self.torch.cuda.empty_cache()
     if current_step >= 0:
-      l.logger().info("Loaded {} checkpoint step {}".format("{}-{}".format(member.config.name, member.model.id), current_step))
+      l.logger().info("{}: Loaded {} checkpoint step {}".format("{}-{}".format(model_name, member.config.name, member.model.id), current_step))
     current_step = max(0, current_step)
     num_train_steps = member.training_opts.num_train_steps if update_dataloader is None else member.training_opts.num_train_steps + current_step
 
@@ -309,7 +310,7 @@ class QueryByCommittee(backends.BackendBase):
               )
             model.zero_grad()
             if current_step == 0:
-              l.logger().info("Starting Loss: {}".format(sum([tl.mean().item() for tl in total_loss]) / len(total_loss)))
+              l.logger().info("{}: Starting Loss: {}".format(model_name, sum([tl.mean().item() for tl in total_loss]) / len(total_loss)))
             current_step += 1
           # End of epoch
           self.saveCheckpoint(
@@ -323,7 +324,7 @@ class QueryByCommittee(backends.BackendBase):
             loader.sampler.set_epoch(epoch)
 
           if self.is_world_process_zero():
-            l.logger().info("Epoch {} Loss: {}".format(current_step // member.training_opts.steps_per_epoch, train_hook.epoch_loss))
+            l.logger().info("{}: Epoch {} Loss: {}".format(model_name, current_step // member.training_opts.steps_per_epoch, train_hook.epoch_loss))
             train_hook.end_epoch()
 
           if self.torch_tpu_available:
@@ -339,6 +340,7 @@ class QueryByCommittee(backends.BackendBase):
     update_dataloader = kwargs.get('update_dataloader', None)
 
     model          = member.model
+    model_name     = "{}-{}".format(member.config.name, member.model.id)
     data_generator = member.data_generator + update_dataloader
     train_dataset  = data_generator.get_batched_dataset()
 
@@ -347,7 +349,7 @@ class QueryByCommittee(backends.BackendBase):
 
     current_step = self.loadCheckpoint(model, member_path)
     if current_step >= 0:
-      l.logger().info("Loaded {} checkpoint step {}".format("{}-{}".format(member.config.name, member.model.id), current_step))
+      l.logger().info("{}: Loaded {} checkpoint step {}".format(model_name, "{}-{}".format(member.config.name, member.model.id), current_step))
     if current_step < 0 or update_dataloader is not None:
       current_step = max(0, current_step)
       outputs = model(
@@ -360,6 +362,7 @@ class QueryByCommittee(backends.BackendBase):
         member_path,
         step = current_step + 1,
       )
+      l.logger().info("{}: Trained with {} instances".format(model_name, len(train_dataset['input_ids'])))
     return
 
   def Train(self, **kwargs) -> None:
@@ -368,7 +371,8 @@ class QueryByCommittee(backends.BackendBase):
     """
     # Configure committee members.
     update_dataloader = kwargs.get('update_dataloader', None)
-
+    if update_dataloader is None:
+      l.logger().info("Initial committee training.")
     self._ConfigModelParams(self.downstream_task.data_generator)
     if not self.is_trained or update_dataloader is not None:
       for member in self.committee:
