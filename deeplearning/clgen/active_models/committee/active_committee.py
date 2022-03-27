@@ -395,6 +395,7 @@ class QueryByCommittee(backends.BackendBase):
     Sample member of committee. Return predicted label.
     """
     model           = member.model.to(self.pytorch.offset_device)
+    model_name      = "{}-{}".format(member.config.name, member.model.id)
     member_path     = self.ckpt_path / member.sha256
     member_log_path = self.logfile_path / member.sha256
 
@@ -411,8 +412,8 @@ class QueryByCommittee(backends.BackendBase):
     current_step = self.loadCheckpoint(model, member_path)
     if self.pytorch.num_gpus > 0:
       self.torch.cuda.empty_cache()
-    if current_step >= 0:
-      l.logger().info("Loaded {} checkpoint step {}".format("{}-{}".format(member.config.name, member.model.id), current_step))
+    if current_step < 0:
+      l.logger().warn("{}: You are trying to sample an untrained model.".format(model_name))
     current_step = max(0, current_step)
 
     if self.pytorch.num_nodes <= 1:
@@ -526,16 +527,16 @@ class QueryByCommittee(backends.BackendBase):
     Sample non-NeuralNetwork based architectures, such as DecisionTrees or KMeans.
     """
     model          = member.model
+    model_name     = "{}-{}".format(member.config.name, member.model.id)
     sample_dataset = sample_set.get_batched_dataset()
 
     member_path     = self.ckpt_path / member.sha256
     member_log_path = self.logfile_path / member.sha256
 
     current_step = self.loadCheckpoint(model, member_path)
-    if current_step >= 0:
-      l.logger().info("Loaded {} checkpoint step {}".format("{}-{}".format(member.config.name, member.model.id), current_step))
+    if current_step < 0:
+      l.logger().warn("{}: You are trying to sample an untrained model.".format(model_name))
     current_step = max(0, current_step)
-
     outputs = model(
       input_ids   = sample_dataset['input_ids'],
       is_sampling = True,
