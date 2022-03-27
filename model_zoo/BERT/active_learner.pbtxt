@@ -179,7 +179,7 @@ sampler {
               }
               layer {
                 layer_norm{
-                  normalized_shape: 256
+                  normalized_shape: 512
                   eps: 1e-5
                 }
               }
