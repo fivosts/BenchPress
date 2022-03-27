@@ -194,6 +194,7 @@ class QueryByCommittee(backends.BackendBase):
            + member.data_generator.get_random_subset(
                max(0, abs(len(update_dataloader) - member.training_opts.num_train_steps)))
     )
+    l.logger().warn("Make sure the above statement is sensible.")
     optimizer       = member.optimizer
     scheduler       = member.scheduler
     member_path     = self.ckpt_path / member.sha256
