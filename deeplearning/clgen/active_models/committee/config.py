@@ -13,6 +13,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
   """
   tm = 0
   pbutil.AssertFieldIsSet(config, "training_corpus")
+  pbutil.AssertFieldIsSet(config, "num_train_steps")
   pbutil.AssertFieldIsSet(config, "random_seed")
   p = pathlib.Path(config.training_corpus).resolve()
   if not p.exists():
@@ -22,7 +23,6 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
     tl = 0
     pbutil.AssertFieldIsSet(nn, "initial_learning_rate_micros")
     pbutil.AssertFieldIsSet(nn, "batch_size")
-    pbutil.AssertFieldIsSet(nn, "num_train_steps")
     pbutil.AssertFieldIsSet(nn, "num_warmup_steps")
     for l in nn.layer:
       if l.HasField("embedding"):
@@ -158,10 +158,10 @@ class NNModelConfig(ModelConfig):
     super(NNModelConfig, self).__init__("MLP", config, downstream_task)
 
     ## NN-specific attributes
-    self.num_train_steps  = config.num_train_steps
+    self.num_train_steps  = (config.num_train_steps + config.batch_size) // config.batch_size
     self.num_warmup_steps = config.num_warmup_steps
     self.num_epochs       = 1
-    self.steps_per_epoch  = config.num_train_steps
+    self.steps_per_epoch  = self.num_train_steps
     self.batch_size       = config.batch_size
 
     self.learning_rate    = config.initial_learning_rate_micros / 1e6
@@ -235,12 +235,13 @@ class KMeansModelConfig(ModelConfig):
     super(KMeansModelConfig, self).__init__("KMeans", config, downstream_task)
 
     ## KMeans-specific attributes.
-    self.n_clusters = self.config.n_clusters
-    self.init       = self.config.init
-    self.n_init     = self.config.n_init
-    self.max_iter   = self.config.max_iter
-    self.tol        = self.config.tol
-    self.algorithm  = self.config.algorithm
+    self.n_clusters      = self.config.n_clusters
+    self.init            = self.config.init
+    self.n_init          = self.config.n_init
+    self.max_iter        = self.config.max_iter
+    self.tol             = self.config.tol
+    self.algorithm       = self.config.algorithm
+    self.num_train_steps = self.config.num_train_steps
     return
 
 class KNNModelConfig(ModelConfig):
@@ -254,9 +255,10 @@ class KNNModelConfig(ModelConfig):
     super(KNNModelConfig, self).__init__("KNN", config, downstream_task)
 
     ## KMeans-specific attributes.
-    self.n_neighbors = self.config.n_neighbors
-    self.weights     = self.config.weights
-    self.algorithm   = self.config.algorithm
-    self.leaf_size   = self.config.leaf_size
-    self.p           = self.config.p
+    self.n_neighbors     = self.config.n_neighbors
+    self.weights         = self.config.weights
+    self.algorithm       = self.config.algorithm
+    self.leaf_size       = self.config.leaf_size
+    self.p               = self.config.p
+    self.num_train_steps = self.config.num_train_steps
     return
