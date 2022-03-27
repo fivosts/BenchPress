@@ -93,12 +93,13 @@ class ModelConfig(object):
                  downstream_task: downstream_tasks.DownstreamTask
                  ) -> typing.List["ModelConfig"]:
     model_configs = []
+    nts = config.num_train_steps
     for m in config.mlp:
-      model_configs.append(NNModelConfig(m, downstream_task))
+      model_configs.append(NNModelConfig(m, downstream_task, nts))
     for m in config.k_means:
-      model_configs.append(KMeansModelConfig(m, downstream_task))
+      model_configs.append(KMeansModelConfig(m, downstream_task, nts))
     for m in config.knn:
-      model_configs.append(KNNModelConfig(m, downstream_task))
+      model_configs.append(KNNModelConfig(m, downstream_task, nts))
     return model_configs
 
   @property
@@ -154,11 +155,12 @@ class NNModelConfig(ModelConfig):
   def __init__(self,
                config          : active_learning_pb2.MLP,
                downstream_task : downstream_tasks.DownstreamTask,
+               num_train_steps : int
                ) -> "ModelConfig":
     super(NNModelConfig, self).__init__("MLP", config, downstream_task)
 
     ## NN-specific attributes
-    self.num_train_steps  = (config.num_train_steps + config.batch_size) // config.batch_size
+    self.num_train_steps  = (num_train_steps + config.batch_size) // config.batch_size
     self.num_warmup_steps = config.num_warmup_steps
     self.num_epochs       = 1
     self.steps_per_epoch  = self.num_train_steps
@@ -231,6 +233,7 @@ class KMeansModelConfig(ModelConfig):
   def __init__(self,
                config          : active_learning_pb2.KMeans,
                downstream_task : downstream_tasks.DownstreamTask,
+               num_train_steps : int
                ) -> "ModelConfig":
     super(KMeansModelConfig, self).__init__("KMeans", config, downstream_task)
 
@@ -241,7 +244,7 @@ class KMeansModelConfig(ModelConfig):
     self.max_iter        = self.config.max_iter
     self.tol             = self.config.tol
     self.algorithm       = self.config.algorithm
-    self.num_train_steps = self.config.num_train_steps
+    self.num_train_steps = num_train_steps
     return
 
 class KNNModelConfig(ModelConfig):
@@ -251,6 +254,7 @@ class KNNModelConfig(ModelConfig):
   def __init__(self,
                config          : active_learning_pb2.KMeans,
                downstream_task : downstream_tasks.DownstreamTask,
+               num_train_steps : int
                ) -> "ModelConfig":
     super(KNNModelConfig, self).__init__("KNN", config, downstream_task)
 
@@ -260,5 +264,5 @@ class KNNModelConfig(ModelConfig):
     self.algorithm       = self.config.algorithm
     self.leaf_size       = self.config.leaf_size
     self.p               = self.config.p
-    self.num_train_steps = self.config.num_train_steps
+    self.num_train_steps = num_train_steps
     return
