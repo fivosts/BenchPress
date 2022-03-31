@@ -96,7 +96,7 @@ class tensorMonitorHook(object):
     if self.delay_checkpoint:
       self.delay_checkpoint = False
       return False
-    if (self.current_step) % self.step_freq == 0 or self.current_step - 1 == 0:
+    if (self.current_step) % self.step_freq == 0 or (self.current_step - 1 == 0 and self.step_freq != 1):
       return True
     return False
 
