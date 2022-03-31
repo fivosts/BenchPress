@@ -1,4 +1,5 @@
 import portpicker
+import queue
 import multiprocessing
 import waitress
 import subprocess
@@ -66,9 +67,9 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
   if source is None:
     return "Source address not provided.", 404
   if source not in handler.write_queues:
-    handler.write_queues[source] = multiprocessing.Queue()
+    handler.write_queues[source] = queue.Queue()
   if source not in handler.reject_queues:
-    handler.reject_queues[source] = multiprocessing.Queue()
+    handler.reject_queues[source] = queue.Queue()
   data = flask.request.json
   if not isinstance(data, list):
     return "ERROR: JSON Input has to be a list of dictionaries. One for each entry.\n", 400
