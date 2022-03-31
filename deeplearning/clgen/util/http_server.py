@@ -62,7 +62,7 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
          --header "Content-Type: application/json" \
          -d @/path/to/json/file.json
   """
-  source = flask.headers.get("Server-Name")
+  source = flask.request.headers.get("Server-Name")
   if source is None:
     return "Source address not provided.", 404
   if source not in handler.write_queues:
@@ -85,7 +85,7 @@ def read_message() -> bytes:
   Example command:
     curl -X GET http://localhost:PORT/read_message
   """
-  source = flask.headers.get("Server-Name")
+  source = flask.request.headers.get("Server-Name")
   ret = []
   while not handler.write_queues[source].empty():
     cur = handler.write_queues[source].get()
@@ -120,7 +120,7 @@ def read_reject_labels() -> bytes:
   """
   ret = []
   labels = {}
-  source = flask.headers.get("Server-Name")
+  source = flask.request.headers.get("Server-Name")
   while not handler.reject_queues[source].empty():
     cur = handler.reject_queues[source].get()
     ret.append(cur)
