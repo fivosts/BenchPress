@@ -250,7 +250,7 @@ class GrewePredictive(DownstreamTask):
               trb  = tr_bytes,
               gs   = gsize
             )
-          if s['runtime_features']['label'] in {"CPU", "GPU"}:
+          if s.runtime_features['label'] in {"CPU", "GPU"}:
             new_samples.append(s)
           elif store_rejects:
             rejects.append(s)
@@ -282,7 +282,7 @@ class GrewePredictive(DownstreamTask):
     if FLAGS.only_optimal_gsize:
       if found_bytes:
         s = create_sample(sample, code, found_bytes, opt_gsize)
-        if s['runtime_features']['label'] in {"CPU", "GPU"}:
+        if s.runtime_features['label'] in {"CPU", "GPU"}:
           new_samples = [s]
         elif store_rejects:
           rejects.append(s)
