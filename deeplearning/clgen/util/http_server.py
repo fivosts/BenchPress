@@ -187,8 +187,8 @@ def index():
   return json.dumps(multi_status), 200
 
 def http_serve(read_queue    : multiprocessing.Queue,
-               write_queues  : multiprocessing.Queue,
-               reject_queues : multiprocessing.Queue,
+               write_queues  : 'multiprocessing.Dict',
+               reject_queues : 'multiprocessing.Dict',
                work_flag     : multiprocessing.Value
                ):
   """
