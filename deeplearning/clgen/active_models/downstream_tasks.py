@@ -159,7 +159,7 @@ class GrewePredictive(DownstreamTask):
     In server mode, initialize the serving process.
     """
     if environment.WORLD_RANK == 0:
-      self.cl_proc, self.work_flag, self.read_queue, self.write_queue, self.reject_queue = http_server.start_server_process()
+      self.cl_proc, self.work_flag, self.read_queue, self.write_queues, self.reject_queues = http_server.start_server_process()
     return
 
   def setup_dataset(self, num_train_steps: int = None) -> None:
@@ -289,13 +289,13 @@ class GrewePredictive(DownstreamTask):
       while self.cl_proc.is_alive():
         if not self.read_queue.empty():
           self.work_flag.value = True
-          serialized = self.read_queue.get()
-          sample     = JSON_to_ActiveSample(serialized)
-          ret, rej   = self.CollectSingleRuntimeFeature(sample, tokenizer, store_rejects = True)
+          source, serialized   = self.read_queue.get()
+          sample   = JSON_to_ActiveSample(serialized)
+          ret, rej = self.CollectSingleRuntimeFeature(sample, tokenizer, store_rejects = True)
           for x in ret:
-            self.write_queue.put(ActiveSample_to_JSON(x))
+            self.write_queues[source].put(ActiveSample_to_JSON(x))
           for x in rej:
-            self.reject_queue.put(ActiveSample_to_JSON(x))
+            self.reject_queues[source].put(ActiveSample_to_JSON(x))
           self.work_flag.value = False
         else:
           time.sleep(1)
