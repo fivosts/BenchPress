@@ -69,6 +69,8 @@ class CommitteeSample(Base, sqlutil.ProtoBackedMixin):
   id                     : int = sql.Column(sql.Integer,    primary_key = True)
   # unique hash of sample text
   sha256                 : str = sql.Column(sql.String(64), nullable = False, index = True)
+  # Sample step iteration ID.
+  sample_epoch           : int = sql.Column(sql.Integer, nullable = False, index = True)
   # model's train step that generated the sample
   train_step             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Original input where the feed came from
@@ -87,6 +89,7 @@ class CommitteeSample(Base, sqlutil.ProtoBackedMixin):
   @classmethod
   def FromArgs(cls,
                id                 : int,
+               sample_epoch       : int,
                train_step         : typing.Dict[str, int],
                static_features    : typing.Dict[str, float],
                runtime_features   : typing.Dict[str, float],
@@ -109,6 +112,7 @@ class CommitteeSample(Base, sqlutil.ProtoBackedMixin):
     return CommitteeSample(
       id                 = id,
       sha256             = sha256,
+      sample_epoch       = sample_epoch,
       train_step         = str_train_step,
       static_features    = str_static_features,
       runtime_features   = str_runtime_features,
@@ -165,6 +169,15 @@ class CommitteeSamples(sqlutil.Database):
       return s.query(CommitteeSample).all()
 
   @property
+  def cur_sample_epoch(self):
+    """Return the most recent checkpointed current sample step."""
+    if self.sample_count > 0:
+      with self.get_session() as s:
+        return max(s.query(CommitteeSample.sample_epoch).all())
+    else:
+      return 0
+
+  @property
   def get_session(self):
     """
     get proper DB session.
@@ -185,7 +198,7 @@ class CommitteeSamples(sqlutil.Database):
         s.commit()
     return
 
-  def add_samples(self, samples: typing.Dict[str, typing.Any]) -> None:
+  def add_samples(self, sample_epoch: int, samples: typing.Dict[str, typing.Any]) -> None:
     """
     If not exists, add sample to Samples table.
     """
@@ -195,6 +208,7 @@ class CommitteeSamples(sqlutil.Database):
       for sample in samples:
         sample_entry = CommitteeSample.FromArgs(
           id                 = self.sample_count + offset_idx,
+          sample_epoch       = sample_epoch
           train_step         = sample['train_step'],
           static_features    = sample['static_features'],
           runtime_features   = sample['runtime_features'],
