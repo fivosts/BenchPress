@@ -1,6 +1,7 @@
 """This module handles application's environment variables"""
 import os
 import ifcfg
+import subprocess
 
 def check_path_exists(path, must_exist = True):
   if not os.path.exists(path):
@@ -44,6 +45,7 @@ try:
   LOCAL_RANK          = int(os.environ.get("LOCAL_RANK", os.environ.get("SLURM_LOCALID", 0)))
   WORLD_RANK          = int(os.environ.get("RANK", os.environ.get("SLURM_PROCID", 0)))
   WORLD_SIZE          = int(os.environ.get("WORLD_SIZE", os.environ.get("SLURM_NTASKS", 1)))
+  HOSTNAME            = subprocess.check_output("hostname -A".split(), stderr = subprocess.STDOUT).decode().split()[0]
   if "GLOO_SOCKET_IFNAME" not in os.environ:
     os.environ["GLOO_SOCKET_IFNAME"] = ifcfg.default_interface()['device']
   if "NCCL_SOCKET_IFNAME" not in os.environ:
