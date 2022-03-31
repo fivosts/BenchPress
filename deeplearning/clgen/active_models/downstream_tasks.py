@@ -319,7 +319,7 @@ class GrewePredictive(DownstreamTask):
         for ser in batch:
           obj = JSON_to_ActiveSample(ser)
           new_samples.append(obj)
-        time.sleep(5)
+        time.sleep(1)
       if top_k != -1:
         return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)[:top_k]
       else:
