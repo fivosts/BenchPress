@@ -208,7 +208,7 @@ class CommitteeSamples(sqlutil.Database):
       for sample in samples:
         sample_entry = CommitteeSample.FromArgs(
           id                 = self.sample_count + offset_idx,
-          sample_epoch       = sample_epoch
+          sample_epoch       = sample_epoch,
           train_step         = sample['train_step'],
           static_features    = sample['static_features'],
           runtime_features   = sample['runtime_features'],
