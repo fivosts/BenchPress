@@ -67,9 +67,9 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
   if source is None:
     return "Source address not provided.", 404
   if source not in handler.write_queues:
-    handler.write_queues[source] = queue.Queue()
+    handler.write_queues[source] = []
   if source not in handler.reject_queues:
-    handler.reject_queues[source] = queue.Queue()
+    handler.reject_queues[source] = []
   data = flask.request.json
   if not isinstance(data, list):
     return "ERROR: JSON Input has to be a list of dictionaries. One for each entry.\n", 400
@@ -87,10 +87,7 @@ def read_message() -> bytes:
     curl -X GET http://localhost:PORT/read_message
   """
   source = flask.request.headers.get("Server-Name")
-  ret = []
-  while not handler.write_queues[source].empty():
-    cur = handler.write_queues[source].get()
-    ret.append(cur)
+  ret = [r for r in handler.write_queues[source]]
   handler.backlog += [[source, r] for r in ret]
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
@@ -103,10 +100,7 @@ def read_rejects() -> bytes:
   Example command:
     curl -X GET http://localhost:PORT/read_rejects
   """
-  ret = []
-  while not handler.reject_queues[source].empty():
-    cur = handler.reject_queues[source].get()
-    ret.append(cur)
+  ret = [r for r in handler.reject_queues[source]]
   for c in ret:
     handler.reject_queues[source].put(c)
   return bytes(json.dumps(ret), encoding="utf-8"), 200
@@ -119,18 +113,14 @@ def read_reject_labels() -> bytes:
   Example command:
     curl -X GET http://localhost:PORT/read_reject_labels
   """
-  ret = []
   labels = {}
   source = flask.request.headers.get("Server-Name")
-  while not handler.reject_queues[source].empty():
-    cur = handler.reject_queues[source].get()
-    ret.append(cur)
+  ret = [r for r in handler.reject_queues[source]]
   for c in ret:
     if c['runtime_features']['label'] not in labels:
       labels[c['runtime_features']['label']] = 1
     else:
       labels[c['runtime_features']['label']] += 1
-    handler.reject_queues[source].put(c)
   return bytes(json.dumps(labels), encoding="utf-8"), 200
 
 @app.route('/get_backlog', methods = ['GET'])
@@ -158,10 +148,10 @@ def status():
   it.update(set(handler.reject_queues.keys()))
   for hn in it:
     status = {
-      'write_queue'       : 'EMPTY' if hn in handler.write_queues and handler.write_queues[hn].empty() else 'NOT_EMPTY',
-      'reject_queue'      : 'EMPTY' if hn in handler.reject_queues and handler.reject_queues[hn].empty() else 'NOT_EMPTY',
-      'write_queue_size'  : handler.write_queues[hn].qsize() if hn in handler.reject_queues else 0,
-      'reject_queue_size' : handler.reject_queues[hn].qsize() if hn in handler.reject_queues else 0,
+      'write_queue'       : 'EMPTY' if hn in handler.write_queues and len(handler.write_queues[hn]) > 0 else 'NOT_EMPTY',
+      'reject_queue'      : 'EMPTY' if hn in handler.reject_queues and len(handler.reject_queues[hn]) > 0 else 'NOT_EMPTY',
+      'write_queue_size'  : len(handler.write_queues[hn]) if hn in handler.reject_queues else 0,
+      'reject_queue_size' : len(handler.reject_queues[hn]) if hn in handler.reject_queues else 0,
     }
     multi_status[hn] = status
 
@@ -188,10 +178,10 @@ def index():
   it.update(set(handler.reject_queues.keys()))
   for hn in it:
     status = {
-      'write_queue'       : 'EMPTY' if hn in handler.write_queues and handler.write_queues[hn].empty() else 'NOT_EMPTY',
-      'reject_queue'      : 'EMPTY' if hn in handler.reject_queues and handler.reject_queues[hn].empty() else 'NOT_EMPTY',
-      'write_queue_size'  : handler.write_queues[hn].qsize() if hn in handler.reject_queues else 0,
-      'reject_queue_size' : handler.reject_queues[hn].qsize() if hn in handler.reject_queues else 0,
+      'write_queue'       : 'EMPTY' if hn in handler.write_queues and len(handler.write_queues[hn]) > 0 else 'NOT_EMPTY',
+      'reject_queue'      : 'EMPTY' if hn in handler.reject_queues and len(handler.reject_queues[hn]) > 0 else 'NOT_EMPTY',
+      'write_queue_size'  : len(handler.write_queues[hn]) if hn in handler.reject_queues else 0,
+      'reject_queue_size' : len(handler.reject_queues[hn]) if hn in handler.reject_queues else 0,
     }
     multi_status[hn] = status
   return json.dumps(multi_status), 200
