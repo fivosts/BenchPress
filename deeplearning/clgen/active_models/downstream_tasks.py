@@ -296,8 +296,8 @@ class GrewePredictive(DownstreamTask):
             self.write_queues[source].append(ActiveSample_to_JSON(x))
           for x in rej:
             self.reject_queues[source].append(ActiveSample_to_JSON(x))
-          self.work_flag.value = False
         else:
+          self.work_flag.value = False
           time.sleep(1)
     except KeyboardInterrupt:
       pass
@@ -314,6 +314,8 @@ class GrewePredictive(DownstreamTask):
     """
     if FLAGS.use_http_server:
       new_samples = []
+      while int(http_server.client_status_request()[1]) >= 300: # While the backend is WORKING
+        time.sleep(2)
       while int(http_server.client_status_request()[1]) != 200:
         batch = http_server.client_get_request()
         for ser in batch:
