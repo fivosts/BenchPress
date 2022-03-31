@@ -153,7 +153,9 @@ def status():
     'read_queue_size' : handler.read_queue.qsize(),
     'work_flag'       : 'WORKING' if handler.work_flag.value else 'IDLE',
   }
-  for hn in set(handler.write_queues.keys()).update(set(handler.reject_queues.keys())):
+  it = set(handler.write_queues.keys())
+  it.update(set(handler.reject_queues.keys()))
+  for hn in it:
     status = {
       'write_queue'       : 'EMPTY' if hn in handler.write_queues and handler.write_queues[hn].empty() else 'NOT_EMPTY',
       'reject_queue'      : 'EMPTY' if hn in handler.reject_queues and handler.reject_queues[hn].empty() else 'NOT_EMPTY',
@@ -181,7 +183,9 @@ def index():
     'read_queue_size' : handler.read_queue.qsize(),
     'work_flag'       : 'WORKING' if handler.work_flag.value else 'IDLE',
   }
-  for hn in set(handler.write_queues.keys()).update(set(handler.reject_queues.keys())):
+  it = set(handler.write_queues.keys())
+  it.update(set(handler.reject_queues.keys()))
+  for hn in it:
     status = {
       'write_queue'       : 'EMPTY' if hn in handler.write_queues and handler.write_queues[hn].empty() else 'NOT_EMPTY',
       'reject_queue'      : 'EMPTY' if hn in handler.reject_queues and handler.reject_queues[hn].empty() else 'NOT_EMPTY',
