@@ -12,6 +12,7 @@ import pathlib
 import pickle
 import copy
 import math
+import copy
 import numpy as np
 
 from deeplearning.clgen.models.torch_bert import optimizer
@@ -146,7 +147,7 @@ class QueryByCommittee(backends.BackendBase):
         self.committee.append(
           QueryByCommittee.CommitteeEstimator(
             model          = cm,
-            data_generator = data_generator,
+            data_generator = copy.deepcopy(data_generator),
             optimizer      = opt,
             scheduler      = lr_scheduler,
             training_opts  = training_opts,
@@ -195,8 +196,8 @@ class QueryByCommittee(backends.BackendBase):
       member.data_generator
       if update_dataloader is None
       else update_dataloader
-           + member.data_generator.get_random_subset(
-               max(0, abs(len(update_dataloader) - member.training_opts.num_train_steps)))
+           # + member.data_generator.get_random_subset(
+               # max(0, abs(len(update_dataloader) - member.training_opts.num_train_steps)))
     )
     l.logger().warn("Make sure the above statement is sensible.")
     optimizer       = member.optimizer
