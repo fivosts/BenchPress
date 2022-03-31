@@ -220,7 +220,7 @@ class QueryByCommittee(backends.BackendBase):
     if current_step >= 0:
       l.logger().info("{}: Loaded checkpoint step {}".format(model_name, current_step))
     current_step = max(0, current_step)
-    num_train_steps = member.training_opts.num_train_steps if update_dataloader is None else member.training_opts.num_train_steps + current_step
+    num_train_steps = member.training_opts.num_train_steps if update_dataloader is None else ((len(update_dataloader) + member.training_opts.train_batch_size) // member.training_opts.train_batch_size) + current_step
 
     if current_step < num_train_steps:
       model.zero_grad()
