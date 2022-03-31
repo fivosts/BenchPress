@@ -148,8 +148,8 @@ def status():
   it.update(set(handler.reject_queues.keys()))
   for hn in it:
     status = {
-      'write_queue'       : 'EMPTY' if hn in handler.write_queues and len(handler.write_queues[hn]) > 0 else 'NOT_EMPTY',
-      'reject_queue'      : 'EMPTY' if hn in handler.reject_queues and len(handler.reject_queues[hn]) > 0 else 'NOT_EMPTY',
+      'write_queue'       : 'EMPTY' if hn in handler.write_queues and len(handler.write_queues[hn]) == 0 else 'NOT_EMPTY',
+      'reject_queue'      : 'EMPTY' if hn in handler.reject_queues and len(handler.reject_queues[hn]) == 0 else 'NOT_EMPTY',
       'write_queue_size'  : len(handler.write_queues[hn]) if hn in handler.reject_queues else 0,
       'reject_queue_size' : len(handler.reject_queues[hn]) if hn in handler.reject_queues else 0,
     }
@@ -178,8 +178,8 @@ def index():
   it.update(set(handler.reject_queues.keys()))
   for hn in it:
     status = {
-      'write_queue'       : 'EMPTY' if hn in handler.write_queues and len(handler.write_queues[hn]) > 0 else 'NOT_EMPTY',
-      'reject_queue'      : 'EMPTY' if hn in handler.reject_queues and len(handler.reject_queues[hn]) > 0 else 'NOT_EMPTY',
+      'write_queue'       : 'EMPTY' if hn in handler.write_queues and len(handler.write_queues[hn]) == 0 else 'NOT_EMPTY',
+      'reject_queue'      : 'EMPTY' if hn in handler.reject_queues and len(handler.reject_queues[hn]) == 0 else 'NOT_EMPTY',
       'write_queue_size'  : len(handler.write_queues[hn]) if hn in handler.reject_queues else 0,
       'reject_queue_size' : len(handler.reject_queues[hn]) if hn in handler.reject_queues else 0,
     }
