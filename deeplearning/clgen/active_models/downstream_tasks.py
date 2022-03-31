@@ -222,8 +222,9 @@ class GrewePredictive(DownstreamTask):
     exp_tr_bytes = sample.runtime_features['transferred_bytes']
     local_size   = sample.runtime_features['local_size']
     found        = False
-    gsize        = max(1, math.log2(local_size))
-    prev         = math.inf
+    found_bytes  = None
+    gsize        = int(max(1, math.log2(local_size)))
+    opt_gsize    = gsize
     code         = tokenizer.ArrayToCode(sample.sample)
     new_samples  = []
     rejects      = []
@@ -262,21 +263,23 @@ class GrewePredictive(DownstreamTask):
             )
           )
         tr_bytes = None
-      if tr_bytes:
-        if tr_bytes < exp_tr_bytes:
-          gsize += 1
-          prev = tr_bytes
-        else:
-          found = True
-          if abs(exp_tr_bytes - tr_bytes) > abs(exp_tr_bytes - prev):
-            gsize -= 1
-            tr_bytes  = abs(exp_tr_bytes - prev)
+      if FLAGS.only_optimal_gsize:
+        if tr_bytes:
+          if tr_bytes < exp_tr_bytes:
+            opt_gsize   = gsize
+            found_bytes = tr_bytes
           else:
-            tr_bytes  = abs(exp_tr_bytes - tr_bytes)
-      else:
-        gsize += 1
+            found = True
+            if abs(exp_tr_bytes - tr_bytes) > abs(exp_tr_bytes - found_bytes):
+              opt_gsize   = gsize - 1
+              found_bytes = abs(exp_tr_bytes - found_bytes)
+            else:
+              opt_gsize   = gsize
+              found_bytes = abs(exp_tr_bytes - tr_bytes)
+      gsize += 1
     if FLAGS.only_optimal_gsize:
-      new_samples = [create_sample(sample, code, tr_bytes if found else exp_tr_bytes, gsize)]
+      if found_bytes:
+        new_samples = [create_sample(sample, code, found_bytes, opt_gsize)]
     return new_samples, rejects
 
   def ServeRuntimeFeatures(self, tokenizer: 'tokenizers.TokenizerBase') -> None:
