@@ -271,10 +271,10 @@ def start_server_process():
   p = multiprocessing.Process(
     target = http_serve,
     kwargs = {
-      'read_queue'   : rq,
-      'write_queues' : wqs,
-      'reject_queue' : rjqs,
-      'work_flag'    : wf
+      'read_queue'    : rq,
+      'write_queues'  : wqs,
+      'reject_queues' : rjqs,
+      'work_flag'     : wf
     }
   )
   p.daemon = True
