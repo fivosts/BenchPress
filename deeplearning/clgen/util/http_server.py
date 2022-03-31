@@ -102,6 +102,7 @@ def read_rejects() -> bytes:
   Example command:
     curl -X GET http://localhost:PORT/read_rejects
   """
+  source = flask.request.headers.get("Server-Name")
   ret = [r for r in handler.reject_queues[source]]
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
