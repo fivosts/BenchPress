@@ -97,6 +97,7 @@ class QueryByCommittee(backends.BackendBase):
       url        = "sqlite:///{}".format(str(self.sample_path / "samples.db")),
       must_exist = False,
     )
+    self.sample_epoch = self.committee_samples.cur_sample_epoch
     l.logger().info("Active Committee config initialized in {}".format(self.cache_path))
     return
 
@@ -601,7 +602,8 @@ class QueryByCommittee(backends.BackendBase):
         'entropy'            : ent,
       })
     # Add everything to database.
-    self.committee_samples.add_samples(space_samples)
+    self.committee_samples.add_samples(self.sample_epoch, space_samples)
+    self.sample_epoch += 1
     return sorted(space_samples, key = lambda x: x['entropy'], reverse = True)
 
   def entropy(self, labels, base=None):
