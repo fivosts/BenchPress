@@ -43,11 +43,12 @@ class FlaskHandler(object):
     self.backlog      = None
     return
 
-  def set_params(self, read_queue, write_queues, reject_queues, work_flag):
+  def set_params(self, read_queue, write_queues, reject_queues, manager, work_flag):
     self.read_queue    = read_queue
     self.write_queues  = write_queues
     self.work_flag     = work_flag
     self.reject_queues = reject_queues
+    self.manager       = manager
     self.backlog       = []
     return
 
@@ -67,9 +68,9 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
   if source is None:
     return "Source address not provided.", 404
   if source not in handler.write_queues:
-    handler.write_queues[source] = []
+    handler.write_queues[source] = handler.manager.list()
   if source not in handler.reject_queues:
-    handler.reject_queues[source] = []
+    handler.reject_queues[source] = handler.manager.list()
   data = flask.request.json
   if not isinstance(data, list):
     return "ERROR: JSON Input has to be a list of dictionaries. One for each entry.\n", 400
@@ -188,7 +189,8 @@ def index():
 def http_serve(read_queue    : multiprocessing.Queue,
                write_queues  : 'multiprocessing.Dict',
                reject_queues : 'multiprocessing.Dict',
-               work_flag     : multiprocessing.Value
+               work_flag     : multiprocessing.Value,
+               manager       : multiprocessing.Manager,
                ):
   """
   Run http server for read and write workload queues.
@@ -197,7 +199,7 @@ def http_serve(read_queue    : multiprocessing.Queue,
     port = FLAGS.http_port
     if port is None:
       port = portpicker.pick_unused_port()
-    handler.set_params(read_queue, write_queues, reject_queues, work_flag)
+    handler.set_params(read_queue, write_queues, reject_queues, manager, work_flag)
     hostname = subprocess.check_output(
       ["hostname", "-i"],
       stderr = subprocess.STDOUT,
@@ -268,7 +270,8 @@ def start_server_process():
       'read_queue'    : rq,
       'write_queues'  : wqs,
       'reject_queues' : rjqs,
-      'work_flag'     : wf
+      'work_flag'     : wf,
+      'manager'       : m,
     }
   )
   p.daemon = True
