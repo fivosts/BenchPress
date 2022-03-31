@@ -293,9 +293,9 @@ class GrewePredictive(DownstreamTask):
           sample   = JSON_to_ActiveSample(serialized)
           ret, rej = self.CollectSingleRuntimeFeature(sample, tokenizer, store_rejects = True)
           for x in ret:
-            self.write_queues[source].put(ActiveSample_to_JSON(x))
+            self.write_queues[source].append(ActiveSample_to_JSON(x))
           for x in rej:
-            self.reject_queues[source].put(ActiveSample_to_JSON(x))
+            self.reject_queues[source].append(ActiveSample_to_JSON(x))
           self.work_flag.value = False
         else:
           time.sleep(1)
