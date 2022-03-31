@@ -10,6 +10,7 @@ import flask
 from absl import flags
 
 from deeplearning.clgen.util import logging as l
+from deeplearning.clgen.util import environment
 
 FLAGS = flags.FLAGS
 
@@ -36,17 +37,17 @@ app = flask.Flask(__name__)
 class FlaskHandler(object):
   def __init__(self):
     self.read_queue   = None
-    self.write_queue  = None
+    self.write_queues = None
     self.reject_queue = None
-    self.backlog   = None
+    self.backlog      = None
     return
 
-  def set_params(self, read_queue, write_queue, reject_queue, work_flag):
-    self.read_queue   = read_queue
-    self.write_queue  = write_queue
-    self.work_flag    = work_flag
-    self.reject_queue = reject_queue
-    self.backlog   = []
+  def set_params(self, read_queue, write_queues, reject_queues, work_flag):
+    self.read_queue    = read_queue
+    self.write_queues  = write_queues
+    self.work_flag     = work_flag
+    self.reject_queues = reject_queues
+    self.backlog       = []
     return
 
 handler = FlaskHandler()
@@ -61,11 +62,18 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
          --header "Content-Type: application/json" \
          -d @/path/to/json/file.json
   """
+  source = flask.headers.get("Server-Name")
+  if source is None:
+    return "Source address not provided.", 404
+  if source not in handler.write_queues:
+    handler.write_queues[source] = multiprocessing.Queue()
+  if source not in handler.reject_queues:
+    handler.reject_queues[source] = multiprocessing.Queue()
   data = flask.request.json
   if not isinstance(data, list):
     return "ERROR: JSON Input has to be a list of dictionaries. One for each entry.\n", 400
   for entry in data:
-    handler.read_queue.put(entry)
+    handler.read_queue.put([source, entry])
   return 'OK\n', 200
 
 @app.route('/read_message', methods = ['GET'])
@@ -77,11 +85,12 @@ def read_message() -> bytes:
   Example command:
     curl -X GET http://localhost:PORT/read_message
   """
+  source = flask.headers.get("Server-Name")
   ret = []
-  while not handler.write_queue.empty():
-    cur = handler.write_queue.get()
+  while not handler.write_queues[source].empty():
+    cur = handler.write_queues[source].get()
     ret.append(cur)
-  handler.backlog += ret
+  handler.backlog += [[source, r] for r in ret]
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
 @app.route('/read_rejects', methods = ['GET'])
@@ -94,11 +103,11 @@ def read_rejects() -> bytes:
     curl -X GET http://localhost:PORT/read_rejects
   """
   ret = []
-  while not handler.reject_queue.empty():
-    cur = handler.reject_queue.get()
+  while not handler.reject_queues[source].empty():
+    cur = handler.reject_queues[source].get()
     ret.append(cur)
   for c in ret:
-    handler.reject_queue.put(c)
+    handler.reject_queues[source].put(c)
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
 @app.route('/read_reject_labels', methods = ['GET'])
@@ -111,15 +120,16 @@ def read_reject_labels() -> bytes:
   """
   ret = []
   labels = {}
-  while not handler.reject_queue.empty():
-    cur = handler.reject_queue.get()
+  source = flask.headers.get("Server-Name")
+  while not handler.reject_queues[source].empty():
+    cur = handler.reject_queues[source].get()
     ret.append(cur)
   for c in ret:
     if c['runtime_features']['label'] not in labels:
       labels[c['runtime_features']['label']] = 1
     else:
       labels[c['runtime_features']['label']] += 1
-    handler.reject_queue.put(c)
+    handler.reject_queues[source].put(c)
   return bytes(json.dumps(labels), encoding="utf-8"), 200
 
 @app.route('/get_backlog', methods = ['GET'])
@@ -138,24 +148,24 @@ def status():
   """
   Read the workload status of the http server.
   """
-  status = {
-    'read_queue'        : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
-    'write_queue'       : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY',
-    'reject_queue'      : 'EMPTY' if handler.reject_queue.empty() else 'NOT_EMPTY',
-    'work_flag'         : 'WORKING' if handler.work_flag.value else 'IDLE',
-    'read_queue_size'   : handler.read_queue.qsize(),
-    'write_queue_size'  : handler.write_queue.qsize(),
-    'reject_queue_size' : handler.reject_queue.qsize(),
+  multi_status = {
+    'read_queue'      : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
+    'read_queue_size' : handler.read_queue.qsize(),
+    'work_flag'       : 'WORKING' if handler.work_flag.value else 'IDLE',
   }
+  for hn in set(handler.write_queues.keys()).update(set(handler.reject_queues.keys())):
+    status = {
+      'write_queue'       : 'EMPTY' if hn in handler.write_queues and handler.write_queues[hn].empty() else 'NOT_EMPTY',
+      'reject_queue'      : 'EMPTY' if hn in handler.reject_queues and handler.reject_queues[hn].empty() else 'NOT_EMPTY',
+      'write_queue_size'  : handler.write_queues[hn].qsize() if hn in handler.reject_queues else 0,
+      'reject_queue_size' : handler.reject_queues[hn].qsize() if hn in handler.reject_queues else 0,
+    }
+    multi_status[hn] = status
 
-  if status['read_queue'] == 'EMPTY' and status['write_queue'] == 'EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 200 + (100 if handler.work_flag.value else 0)
-  elif status['read_queue'] == 'EMPTY' and status['write_queue'] == 'NOT_EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 201 + (100 if handler.work_flag.value else 0)
-  elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 202 + (100 if handler.work_flag.value else 0)
-  elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'NOT_EMPTY':
-    return bytes(json.dumps(status), encoding = 'utf-8'), 203 + (100 if handler.work_flag.value else 0)
+  if multi_status['read_queue'] == 'EMPTY':
+    return bytes(json.dumps(multi_status), encoding = 'utf-8'), 200 + (100 if handler.work_flag.value else 0)
+  else:
+    return bytes(json.dumps(multi_status), encoding = 'utf-8'), 250 + (100 if handler.work_flag.value else 0)
 
 @app.route('/', methods = ['GET', 'POST', 'PUT'])
 def index():
@@ -166,21 +176,25 @@ def index():
   Example command:
     curl -X GET http://localhost:PORT/get_backlog
   """
-  status = {
-    'read_queue'        : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
-    'write_queue'       : 'EMPTY' if handler.write_queue.empty() else 'NOT_EMPTY',
-    'reject_queue'      : 'EMPTY' if handler.reject_queue.empty() else 'NOT_EMPTY',
-    'work_flag'         : 'WORKING' if handler.work_flag.value else 'IDLE',
-    'read_queue_size'   : handler.read_queue.qsize(),
-    'write_queue_size'  : handler.write_queue.qsize(),
-    'reject_queue_size' : handler.reject_queue.qsize(),
+  multi_status = {
+    'read_queue'      : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
+    'read_queue_size' : handler.read_queue.qsize(),
+    'work_flag'       : 'WORKING' if handler.work_flag.value else 'IDLE',
   }
-  return '\n\n'.join(["{}: {}".format(k, v) for k, v in status.items()]), 200
+  for hn in set(handler.write_queues.keys()).update(set(handler.reject_queues.keys())):
+    status = {
+      'write_queue'       : 'EMPTY' if hn in handler.write_queues and handler.write_queues[hn].empty() else 'NOT_EMPTY',
+      'reject_queue'      : 'EMPTY' if hn in handler.reject_queues and handler.reject_queues[hn].empty() else 'NOT_EMPTY',
+      'write_queue_size'  : handler.write_queues[hn].qsize() if hn in handler.reject_queues else 0,
+      'reject_queue_size' : handler.reject_queues[hn].qsize() if hn in handler.reject_queues else 0,
+    }
+    multi_status[hn] = status
+  return json.dumps(multi_status), 200
 
-def http_serve(read_queue   : multiprocessing.Queue,
-               write_queue  : multiprocessing.Queue,
-               reject_queue : multiprocessing.Queue,
-               work_flag    : multiprocessing.Value
+def http_serve(read_queue    : multiprocessing.Queue,
+               write_queues  : multiprocessing.Queue,
+               reject_queues : multiprocessing.Queue,
+               work_flag     : multiprocessing.Value
                ):
   """
   Run http server for read and write workload queues.
@@ -189,7 +203,7 @@ def http_serve(read_queue   : multiprocessing.Queue,
     port = FLAGS.http_port
     if port is None:
       port = portpicker.pick_unused_port()
-    handler.set_params(read_queue, write_queue, reject_queue, work_flag)
+    handler.set_params(read_queue, write_queues, reject_queues, work_flag)
     hostname = subprocess.check_output(
       ["hostname", "-i"],
       stderr = subprocess.STDOUT,
@@ -211,7 +225,7 @@ def client_status_request() -> typing.Tuple:
   Get status of http server.
   """
   try:
-    r = requests.get("http://{}:{}/status".format(FLAGS.http_server_ip_address, FLAGS.http_port))
+    r = requests.get("http://{}:{}/status".format(FLAGS.http_server_ip_address, FLAGS.http_port), headers = {"Server-Name": environment.HOSTNAME})
   except Exception as e:
     l.logger().error("GET status Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
     raise e
@@ -222,7 +236,7 @@ def client_get_request() -> typing.List[typing.Dict]:
   Helper function to perform get request at /read_message of http target host.
   """
   try:
-    r = requests.get("http://{}:{}/read_message".format(FLAGS.http_server_ip_address, FLAGS.http_port))
+    r = requests.get("http://{}:{}/read_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), headers = {"Server-Name": environment.HOSTNAME})
   except Exception as e:
     l.logger().error("GET Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
     raise e
@@ -237,7 +251,7 @@ def client_put_request(msg: typing.List[typing.Dict]) -> None:
   Helper function to perform put at /write_message of http target host.
   """
   try:
-    r = requests.put("http://{}:{}/write_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), data = json.dumps(msg), headers = {"Content-Type": "application/json"})
+    r = requests.put("http://{}:{}/write_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), data = json.dumps(msg), headers = {"Content-Type": "application/json", "Server-Name": environment.HOSTNAME})
   except Exception as e:
     l.logger().error("PUT Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
     raise e
@@ -251,38 +265,18 @@ def start_server_process():
   Starts a new process or thread and returns all the multiprocessing
   elements needed to control the server.
   """
-  rq, wq, rjq = multiprocessing.Queue(), multiprocessing.Queue(), multiprocessing.Queue()
-  wf     = multiprocessing.Value('i', False)
+  m = multiprocessing.Manager()
+  rq, wqs, rjqs = multiprocessing.Queue(), m.dict(), m.dict()
+  wf = multiprocessing.Value('i', False)
   p = multiprocessing.Process(
     target = http_serve,
     kwargs = {
       'read_queue'   : rq,
-      'write_queue'  : wq,
-      'reject_queue' : rjq,
+      'write_queues' : wqs,
+      'reject_queue' : rjqs,
       'work_flag'    : wf
     }
   )
   p.daemon = True
   p.start()
-  return p, wf, rq, wq, rjq
-
-def start_thread_process():
-  """
-  This is an easy wrapper to start server from parent routine.
-  Starts a new process or thread and returns all the multiprocessing
-  elements needed to control the server.
-  """
-  rq, wq = multiprocessing.Queue(), multiprocessing.Queue()
-  wf     = multiprocessing.Value('i', False)
-  th = threading.Thread(
-    target = http_serve,
-    kwargs = {
-      'read_queue'   : rq,
-      'write_queue'  : wq,
-      'reject_queue' : rjq,
-      'work_flag'    : wf
-    },
-    daemon = True
-  )
-  th.start()
-  return p, wf, rq, wq, rjq
+  return p, wf, rq, wqs, rjqs
