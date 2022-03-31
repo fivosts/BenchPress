@@ -70,7 +70,7 @@ class CommitteeSample(Base, sqlutil.ProtoBackedMixin):
   # unique hash of sample text
   sha256                 : str = sql.Column(sql.String(64), nullable = False, index = True)
   # Sample step iteration ID.
-  sample_epoch           : int = sql.Column(sql.Integer, nullable = False, index = True)
+  sample_epoch           : int = sql.Column(sql.Integer, nullable = False)
   # model's train step that generated the sample
   train_step             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Original input where the feed came from
