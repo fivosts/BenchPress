@@ -139,26 +139,25 @@ def status():
   """
   Read the workload status of the http server.
   """
-  multi_status = {
-    'read_queue'      : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
-    'read_queue_size' : handler.read_queue.qsize(),
-    'work_flag'       : 'WORKING' if handler.work_flag.value else 'IDLE',
+  source = flask.request.headers.get("Server-Name")
+  status = {
+    'read_queue'        : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
+    'write_queue'       : 'EMPTY' if len(handler.write_queues[source]) == 0 else 'NOT_EMPTY',
+    'reject_queue'      : 'EMPTY' if len(handler.reject_queues[source]) == 0 else 'NOT_EMPTY',
+    'work_flag'         : 'WORKING' if handler.work_flag.value else 'IDLE',
+    'read_queue_size'   : handler.read_queue.qsize(),
+    'write_queue_size'  : len(handler.write_queues[source]),
+    'reject_queue_size' : len(handler.reject_queues[source]),
   }
-  it = set(handler.write_queues.keys())
-  it.update(set(handler.reject_queues.keys()))
-  for hn in it:
-    status = {
-      'write_queue'       : 'EMPTY' if hn in handler.write_queues and len(handler.write_queues[hn]) == 0 else 'NOT_EMPTY',
-      'reject_queue'      : 'EMPTY' if hn in handler.reject_queues and len(handler.reject_queues[hn]) == 0 else 'NOT_EMPTY',
-      'write_queue_size'  : len(handler.write_queues[hn]) if hn in handler.reject_queues else 0,
-      'reject_queue_size' : len(handler.reject_queues[hn]) if hn in handler.reject_queues else 0,
-    }
-    multi_status[hn] = status
 
-  if multi_status['read_queue'] == 'EMPTY':
-    return bytes(json.dumps(multi_status), encoding = 'utf-8'), 200 + (100 if handler.work_flag.value else 0)
-  else:
-    return bytes(json.dumps(multi_status), encoding = 'utf-8'), 250 + (100 if handler.work_flag.value else 0)
+  if status['read_queue'] == 'EMPTY' and status['write_queue'] == 'EMPTY':
+    return bytes(json.dumps(status), encoding = 'utf-8'), 200 + (100 if handler.work_flag.value else 0)
+  elif status['read_queue'] == 'EMPTY' and status['write_queue'] == 'NOT_EMPTY':
+    return bytes(json.dumps(status), encoding = 'utf-8'), 201 + (100 if handler.work_flag.value else 0)
+  elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'EMPTY':
+    return bytes(json.dumps(status), encoding = 'utf-8'), 202 + (100 if handler.work_flag.value else 0)
+  elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'NOT_EMPTY':
+    return bytes(json.dumps(status), encoding = 'utf-8'), 203 + (100 if handler.work_flag.value else 0)
 
 @app.route('/', methods = ['GET', 'POST', 'PUT'])
 def index():
