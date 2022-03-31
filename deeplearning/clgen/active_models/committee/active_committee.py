@@ -266,7 +266,7 @@ class QueryByCommittee(backends.BackendBase):
       batch_iterator = iter(loader)
       if self.is_world_process_zero():
         train_hook = hooks.tensorMonitorHook(
-          member_log_path, current_step, min(len(data_generator), member.training_opts.steps_per_epoch, 50)
+          member_log_path, current_step, min((len(data_generator) + member.training_opts.train_batch_size) // member.training_opts.train_batch_size, member.training_opts.steps_per_epoch, 50)
         )
       try:
         with self.torch.enable_grad():
