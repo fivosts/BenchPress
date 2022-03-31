@@ -89,6 +89,7 @@ def read_message() -> bytes:
   """
   source = flask.request.headers.get("Server-Name")
   ret = [r for r in handler.write_queues[source]]
+  handler.write_queues[source] = handler.manager.list()
   handler.backlog += [[source, r] for r in ret]
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
@@ -102,8 +103,6 @@ def read_rejects() -> bytes:
     curl -X GET http://localhost:PORT/read_rejects
   """
   ret = [r for r in handler.reject_queues[source]]
-  for c in ret:
-    handler.reject_queues[source].put(c)
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
 @app.route('/read_reject_labels', methods = ['GET'])
