@@ -437,11 +437,7 @@ def mkdir(*components, **kwargs):
   """
   _path = path(*components)
   if not isdir(_path):
-    try:
-      os.makedirs(_path, **kwargs)
-    except FileExistsError:
-      ## This happens in asynchronous distributed filesystems.
-      pass
+    os.makedirs(_path, **kwargs)
   return _path
 
 
