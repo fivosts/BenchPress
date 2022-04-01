@@ -133,9 +133,7 @@ class SamplesDatabaseObserver(SampleObserver):
     plot_sample_status = False,
     commit_sample_frequency: int = 1024,
   ):
-    distrib.lock()
     self.db = samples_database.SamplesDatabase("sqlite:///{}".format(str(path)), must_exist = must_exist)
-    distrib.unlock()
     self.sample_id   = self.db.count
     self.visited     = set(self.db.get_hash_entries)
     self.flush_queue = []
