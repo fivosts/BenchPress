@@ -571,7 +571,7 @@ class QueryByCommittee(backends.BackendBase):
     the usefulness of parts of the feature space.
     """
     # Collect random space samples.
-    sample_set            = self.downstream_task.sample_space(num_samples = 512)
+    sample_set            = self.downstream_task.sample_space(num_samples = num_samples)
     # Ask the committee for their predictions.
     committee_predictions = self.SampleCommittee(sample_set)
     space_samples = []
