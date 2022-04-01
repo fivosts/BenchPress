@@ -15,6 +15,7 @@ from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.corpuses import benchmarks
 from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.util import distrib
+from deeplearning.clgen.util import environment
 
 from absl import flags
 
