@@ -161,11 +161,11 @@ class NNModelConfig(ModelConfig):
     super(NNModelConfig, self).__init__("MLP", config, downstream_task)
 
     ## NN-specific attributes
-    self.num_train_steps  = (num_train_steps + config.batch_size) // config.batch_size
-    self.num_warmup_steps = config.num_warmup_steps
+    self.batch_size       = config.batch_size // environment.WORLD_SIZE
+    self.num_train_steps  = ((num_train_steps + self.batch_size) // self.batch_size) // environment.WORLD_SIZE
+    self.num_warmup_steps = (config.num_warmup_steps // self.batch_size) // environment.WORLD_SIZE
     self.num_epochs       = 1
     self.steps_per_epoch  = self.num_train_steps
-    self.batch_size       = config.batch_size
 
     self.learning_rate    = config.initial_learning_rate_micros / 1e6
     self.max_grad_norm    = 1.0
