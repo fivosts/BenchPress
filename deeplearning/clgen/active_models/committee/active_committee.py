@@ -205,14 +205,14 @@ class QueryByCommittee(backends.BackendBase):
     member_path     = self.ckpt_path / member.sha256
     member_log_path = self.logfile_path / member.sha256
 
-    if self.pytorch.num_nodes > 1:
-      distrib.barrier()
-      model = self.torch.nn.parallel.DistributedDataParallel(
-        model,
-        device_ids    = [self.pytorch.offset_device],
-        output_device = self.pytorch.offset_device,
-      )
-    elif self.pytorch.num_gpus > 1:
+    # if self.pytorch.num_nodes > 1:
+    #   distrib.barrier()
+    #   model = self.torch.nn.parallel.DistributedDataParallel(
+    #     model,
+    #     device_ids    = [self.pytorch.offset_device],
+    #     output_device = self.pytorch.offset_device,
+    #   )
+    if self.pytorch.num_gpus > 1:
       model = self.torch.nn.DataParallel(model)
 
     current_step = self.loadCheckpoint(model, member_path, optimizer, scheduler)
@@ -226,28 +226,19 @@ class QueryByCommittee(backends.BackendBase):
     if current_step < num_train_steps:
       model.zero_grad()
 
-      ## Set batch size in case of TPU training or distributed training.
-      if self.torch_tpu_available:
-        total_train_batch_size = self.train_batch_size * self.pytorch.torch_xla.xrt_world_size()
-      else:
-        total_train_batch_size = (
-          member.training_opts.train_batch_size
-          * (self.torch.distributed.get_world_size() if self.pytorch.num_nodes > 1 else 1)
-        )
-
-      if self.pytorch.num_nodes <= 1:
-        sampler = self.torch.utils.data.RandomSampler(data_generator, replacement = False)
-      else:
-        sampler = self.torch.utils.data.DistributedSampler(
-          data_generator,
-          num_replicas = self.pytorch.num_nodes,
-          rank         = self.pytorch.torch.distributed.get_rank()
-        )
+      # if self.pytorch.num_nodes <= 1:
+      sampler = self.torch.utils.data.RandomSampler(data_generator, replacement = False)
+      # else:
+      #   sampler = self.torch.utils.data.DistributedSampler(
+      #     data_generator,
+      #     num_replicas = self.pytorch.num_nodes,
+      #     rank         = self.pytorch.torch.distributed.get_rank()
+      #   )
       loader = self.torch.utils.data.dataloader.DataLoader(
         dataset    = data_generator,
         batch_size = member.training_opts.train_batch_size,
         sampler    = (sampler
-          if self.pytorch.num_nodes <= 1 or not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
+          if not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
           else self.torch.utils.data.distributed.DistributedSampler(
             dataset      = data_generator,
             num_replicas = self.pytorch.num_nodes if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.xrt_world_size(),
@@ -255,7 +246,7 @@ class QueryByCommittee(backends.BackendBase):
           )
         ),
         num_workers = 0,
-        drop_last   = True if environment.WORLD_SIZE > 1 else False,
+        drop_last   = False # if environment.WORLD_SIZE == 1 else True,
       )
       # Set dataloader in case of TPU training.
       if self.torch_tpu_available:
@@ -278,8 +269,9 @@ class QueryByCommittee(backends.BackendBase):
           # the beginning of each epoch before creating the DataLoader iterator
           # is necessary to make shuffling work properly across multiple epochs.
           # Otherwise, the same ordering will be always used.
-          if self.pytorch.num_nodes > 1:
-            loader.sampler.set_epoch(epoch)
+
+          # if self.pytorch.num_nodes > 1:
+          #   loader.sampler.set_epoch(epoch)
 
           batch_iter = tqdm.tqdm(batch_iterator, desc="Batch", leave = False) if self.is_world_process_zero() else batch_iterator
           for inputs in batch_iter:
@@ -300,11 +292,11 @@ class QueryByCommittee(backends.BackendBase):
             scheduler.step()
 
             ## Collect tensors for logging.
-            if self.pytorch.num_nodes > 1:
-              total_loss = [self.torch.zeros(tuple(step_out['total_loss'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-              self.torch.distributed.all_gather(total_loss, step_out["total_loss"])
-            else:
-              total_loss = step_out['total_loss'].unsqueeze(0).cpu()
+            # if self.pytorch.num_nodes > 1:
+            #   total_loss = [self.torch.zeros(tuple(step_out['total_loss'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+            #   self.torch.distributed.all_gather(total_loss, step_out["total_loss"])
+            # else:
+            total_loss = step_out['total_loss'].unsqueeze(0).cpu()
             if self.is_world_process_zero():
               train_hook.step(
                 train_step = current_step,
@@ -322,8 +314,8 @@ class QueryByCommittee(backends.BackendBase):
             scheduler = scheduler,
             step = current_step
           )
-          if self.pytorch.num_nodes > 1:
-            loader.sampler.set_epoch(epoch)
+          # if self.pytorch.num_nodes > 1:
+          #   loader.sampler.set_epoch(epoch)
 
           if self.is_world_process_zero():
             l.logger().info("{}: Epoch {} Loss: {}".format(model_name, current_step // member.training_opts.steps_per_epoch, train_hook.epoch_loss))
@@ -377,9 +369,12 @@ class QueryByCommittee(backends.BackendBase):
       l.logger().info("Initial committee training.")
     self._ConfigModelParams(self.downstream_task.data_generator)
     if not self.is_trained or update_dataloader is not None:
-      for member in self.committee:
-        member.train_fn(member, update_dataloader = update_dataloader)
+      if self.is_world_process_zero():
+        for member in self.committee:
+          member.train_fn(member, update_dataloader = update_dataloader)
     self.is_trained = True
+    if self.pytorch.num_nodes > 1:
+      self.torch.distributed.barrier()
     return
 
   def Validate(self) -> None:
