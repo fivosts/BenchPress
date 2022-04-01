@@ -207,11 +207,11 @@ class CommitteeSamples(sqlutil.Database):
     If not exists, add sample to Samples table.
     """
     hash_cache = set()
-    offset_idx = 0
+    offset_idx = self.sample_count
     with self.get_session(commit = True) as s:
       for sample in samples:
         sample_entry = CommitteeSample.FromArgs(
-          id                 = self.sample_count + offset_idx,
+          id                 = offset_idx,
           sample_epoch       = sample_epoch,
           train_step         = sample['train_step'],
           static_features    = sample['static_features'],
