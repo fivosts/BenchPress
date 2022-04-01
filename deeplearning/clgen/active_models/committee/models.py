@@ -151,12 +151,12 @@ class KMeans(CommitteeModels):
                ) -> None:
     if not is_sampling:
       ## Create a map for labels from target ids, and cluster IDS.
-      self.cluster_map = {}
+      self.cluster_map = {
+        cluster_id: [0] * self.config.num_labels for cluster_id in self.config.n_clusters
+      }
       self.classifier  = self.kmeans.fit(input_ids)
 
       for cluster_id, target_id in zip(self.classifier.labels_, target_ids):
-        if cluster_id not in self.cluster_map:
-          self.cluster_map[cluster_id] = [0] * self.config.num_labels
         self.cluster_map[cluster_id][int(target_id)] += 1
       return {
         'cluster_map'    : self.cluster_map,
