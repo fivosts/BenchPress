@@ -428,7 +428,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           url = "sqlite:///{}".format(d.sampler.corpus_directory / "evaluated_candidates.db"),
           must_exist = False,
         )
-      distrib.lock()
       if corpus_config.active.HasField("target"):
         d.feat_sampler = feature_sampler.BenchmarkSampler(
           workspace     = d.sampler.corpus_directory,
@@ -443,7 +442,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           active_learner = d.sampler.active_learner,
           tokenizer      = d.tokenizer,
         )
-      distrib.unlock()
       d.candidate_monitor = monitors.CategoricalDistribMonitor.loadCheckpoint(
         d.sampler.corpus_directory, "feature_distance"
       )
