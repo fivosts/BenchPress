@@ -14,6 +14,7 @@ from deeplearning.clgen.features import normalizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.corpuses import benchmarks
 from deeplearning.clgen.util import logging as l
+from deeplearning.clgen.util import distrib
 
 from absl import flags
 
@@ -173,8 +174,9 @@ class FeatureSampler(object):
       'benchmarks'       : self.benchmarks,
       'target_benchmark' : self.target_benchmark,
     }
-    with open(self.workspace / "feature_sampler_state.pkl", 'wb') as outf:
-      pickle.dump(state_dict, outf)
+    if environment.WORLD_RANK == 0:
+      with open(self.workspace / "feature_sampler_state.pkl", 'wb') as outf:
+        pickle.dump(state_dict, outf)
     return
 
   def loadCheckpoint(self) -> None:
@@ -237,8 +239,10 @@ class BenchmarkSampler(FeatureSampler):
     Load feature sampler state.
     """
     if (self.workspace / "feature_sampler_state.pkl").exists():
+      distrib.lock()
       with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
         state_dict = pickle.load(infile)
+      distrib.unlock()
       self.benchmarks       = state_dict['benchmarks']
       self.target_benchmark = state_dict['target_benchmark']
     else:
@@ -371,9 +375,10 @@ class ActiveSampler(FeatureSampler):
     return False
 
   def saveCheckpoint(self) -> None:
-    super(ActiveSampler, self).saveCheckpoint()
-    with open(self.workspace / "downstream_task_dg.pkl", 'wb') as outf:
-      pickle.dump(self.active_learner.downstream_task.data_generator, outf)
+    if environment.WORLD_RANK == 0:
+      super(ActiveSampler, self).saveCheckpoint()
+      with open(self.workspace / "downstream_task_dg.pkl", 'wb') as outf:
+        pickle.dump(self.active_learner.downstream_task.data_generator, outf)
     return
 
   def loadCheckpoint(self) -> None:
@@ -381,6 +386,7 @@ class ActiveSampler(FeatureSampler):
     Load pickled list of benchmarks, if exists.
     Otherwise, ask the first batch of features from the active learner.
     """
+    distrib.lock()
     if (self.workspace / "feature_sampler_state.pkl").exists():
       with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
         state_dict = pickle.load(infile)
@@ -393,4 +399,5 @@ class ActiveSampler(FeatureSampler):
       with open(self.workspace / "downstream_task_dg.pkl", 'rb') as infile:
         self.active_learner.downstream_task.data_generator = pickle.load(infile)
     l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
+    distrib.unlock()
     return
