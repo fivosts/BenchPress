@@ -172,61 +172,61 @@ class SamplesDatabase(sqlutil.Database):
   @property
   def count(self):
     """Number of samples in DB."""
-    with self.Session() as s:
+    with self.get_session() as s:
       count = s.query(Sample).count()
     return count
 
   @property
   def get_data(self):
     """Return all database in list format"""
-    with self.Session() as s:
+    with self.get_session() as s:
       return s.query(Sample).all()
 
   @property
   def get_hash_entries(self):
     """Return all unique hash entries found in DB."""
-    with self.Session() as s:
+    with self.get_session() as s:
       return s.query(Sample.sha256).all()
 
   @property
   def samples(self) -> typing.List[Sample]:
     """Get a list of all files in database."""
-    with self.Session() as s:
+    with self.get_session() as s:
       return s.query(Sample).yield_per(1000)
 
   @property
   def correct_samples(self) -> typing.Set[str]:
     """Get samples that compile from SamplesDatabase."""
-    with self.Session() as s:
+    with self.get_session() as s:
       return s.query(Sample).filter(Sample.compile_status == True).yield_per(1000).enable_eagerloads(False)
 
   @property
   def get_features(self) -> typing.List[typing.Dict[str, float]]:
     """Return all feature vectors of compiling samples."""
-    with self.Session() as s:
+    with self.get_session() as s:
       return [x.feature_vector for x in s.query(Sample).filter(Sample.compile_status == True).yield_per(1000)]
 
   @property
   def get_data_features(self) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
     """Return tuple of code + feature vectors"""
-    with self.Session() as s:
+    with self.get_session() as s:
       return [(x.text, x.feature_vector) for x in s.query(Sample).filter(Sample.compile_status == True).yield_per(1000)]
 
   @property
   def get_samples_features(self) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
     """Return compiling samples with feature vectors"""
-    with self.Session() as s:
+    with self.get_session() as s:
       return [(x.text, extractor.RawToDictFeats(x.feature_vector)) for x in s.query(Sample).filter(Sample.compile_status == True).yield_per(1000)]
 
   @property
   def get_compilable_num_tokens(self) -> typing.List[int]:
     """Return num_tokens column."""
-    with self.Session() as s:
+    with self.get_session() as s:
       return [int(x[0]) for x in s.query(Sample.num_tokens).filter(Sample.compile_status == True)]
 
   def get_by_ids(self, ids):
     """Index and return sample by ID."""
-    with self.Session() as s:
+    with self.get_session() as s:
       return [s.query(Sample).filter(Sample.id == i).first() for i in ids]
 
 def merge_databases(dbs: typing.List[SamplesDatabase], out_db: SamplesDatabase) -> None:
