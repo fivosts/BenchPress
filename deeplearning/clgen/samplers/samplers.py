@@ -21,7 +21,6 @@ import os
 import datetime
 import typing
 import pathlib
-import time
 import pickle
 from absl import flags
 from sqlalchemy.ext import declarative
@@ -446,7 +445,6 @@ class Sampler(object):
     # Create the necessary cache directories.
     distrib.lock()
     self.cache = cache.mkcache("sampler", self.hash)
-    time.sleep(1)
     distrib.unlock()
     self.samples_directory = self.cache.path / "samples"
     if environment.WORLD_RANK == 0:
