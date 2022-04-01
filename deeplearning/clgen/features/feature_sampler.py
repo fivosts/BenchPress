@@ -178,6 +178,7 @@ class FeatureSampler(object):
     if environment.WORLD_RANK == 0:
       with open(self.workspace / "feature_sampler_state.pkl", 'wb') as outf:
         pickle.dump(state_dict, outf)
+    distrib.barrier()
     return
 
   def loadCheckpoint(self) -> None:
@@ -380,6 +381,7 @@ class ActiveSampler(FeatureSampler):
       super(ActiveSampler, self).saveCheckpoint()
       with open(self.workspace / "downstream_task_dg.pkl", 'wb') as outf:
         pickle.dump(self.active_learner.downstream_task.data_generator, outf)
+    distrib.barrier()
     return
 
   def loadCheckpoint(self) -> None:
