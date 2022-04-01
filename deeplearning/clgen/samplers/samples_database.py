@@ -160,6 +160,16 @@ class SamplesDatabase(sqlutil.Database):
       distrib.barrier()
 
   @property
+  def get_session(self):
+    """
+    get proper DB session.
+    """
+    if environment.WORLD_SIZE == 1 or environment.WORLD_RANK == 0:
+      return self.Session
+    else:
+      return self.replicated.Session
+
+  @property
   def count(self):
     """Number of samples in DB."""
     with self.Session() as s:
