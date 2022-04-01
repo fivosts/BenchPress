@@ -177,7 +177,7 @@ class CommitteeSamples(sqlutil.Database):
     """Return the most recent checkpointed current sample step."""
     if self.sample_count > 0:
       with self.get_session() as s:
-        return max([int(x) for x in s.query(CommitteeSample.sample_epoch).all()])
+        return max([int(x.sample_epoch) for x in s.query(CommitteeSample).all()])
     else:
       return 0
 
