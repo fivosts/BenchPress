@@ -145,7 +145,7 @@ class SamplesDatabaseObserver(SampleObserver):
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback."""
 
-    # with self.db.Session(commit = True) as session:
+    # with self.db.get_session(commit = True) as session:
     db_sample = samples_database.Sample(
       **samples_database.Sample.FromProto(self.sample_id + len(self.flush_queue), sample)
     )
@@ -154,7 +154,7 @@ class SamplesDatabaseObserver(SampleObserver):
       self.visited.add(db_sample.sha256)
 
     if len(self.flush_queue) >= 1000:
-      with self.db.Session(commit = True) as s:
+      with self.db.get_session(commit = True) as s:
         for sample in self.flush_queue:
           s.add(sample)
           if self.plot_sample_status:
@@ -168,7 +168,7 @@ class SamplesDatabaseObserver(SampleObserver):
   def endSample(self) -> None:
     """Write final summed data about sampling session."""
     ## Flush final queue, if exists.
-    with self.db.Session(commit = True) as s:
+    with self.db.get_session(commit = True) as s:
       for sample in self.flush_queue:
         s.add(sample)
         if self.plot_sample_status:
@@ -204,7 +204,7 @@ class SamplesDatabaseObserver(SampleObserver):
     for mon in feature_monitors.values():
       mon.plot()
 
-    with self.db.Session() as session:
+    with self.db.get_session() as session:
       compiled_count = session.query(samples_database.Sample.compile_status).filter_by(compile_status = 1).count()
     try:
       r = [
@@ -218,7 +218,7 @@ class SamplesDatabaseObserver(SampleObserver):
         'total compilable samples: {}'.format(compiled_count),
         'average feature vector: \n{}'.format('\n'.join(["{}:\n{}".format(ft, fm.getStrData()) for ft, fm in feature_monitors.items()]))
       ]
-    with self.db.Session(commit = True) as session:
+    with self.db.get_session(commit = True) as session:
       exists  = session.query(samples_database.SampleResults.key).filter_by(key = "meta").scalar() is not None
       if exists:
         entry = session.query(samples_database.SampleResults    ).filter_by(key = "meta").first()
