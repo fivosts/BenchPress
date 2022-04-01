@@ -166,7 +166,7 @@ class KMeans(CommitteeModels):
       cluster_labels = self.classifier.predict(input_ids)
       target_labels = []
       for x in cluster_labels:
-        p = [y / sum(self.cluster_map[x]) for y in self.cluster_map[x] if sum(self.cluster_map[x]) else 0.5]
+        p = [(y / sum(self.cluster_map[x]) if sum(self.cluster_map[x]) else 0.5) for y in self.cluster_map[x]]
         p = p / np.array(p).sum()
         target_labels.append(
           a = np.random.choice(a = np.arange(len(self.cluster_map[x]))),
