@@ -6,6 +6,7 @@ from deeplearning.clgen.active_models import downstream_tasks
 from deeplearning.clgen.proto import active_learning_pb2
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import crypto
+from deeplearning.clgen.util import environment
 
 def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_learning_pb2.ActiveLearner:
   """
