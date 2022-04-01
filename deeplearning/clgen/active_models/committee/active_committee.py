@@ -470,7 +470,7 @@ class QueryByCommittee(backends.BackendBase):
 
       idx              = [self.torch.zeros(tuple(predictions['idx'             ].shape), dtype = self.torch.int64).to(self.pytorch.device)   for _ in range(self.torch.distributed.get_world_size())]
       static_features  = [self.torch.zeros(tuple(predictions['static_features' ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-      runtime_features = [self.torch.zeros(tuple(predictions['runtime_features'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      runtime_features = [self.torch.zeros(tuple(predictions['runtime_features'].shape), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       input_ids        = [self.torch.zeros(tuple(predictions['input_ids'       ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       output_label     = [self.torch.zeros(tuple(predictions['predictions'     ].shape), dtype = self.torch.int64).to(self.pytorch.device)   for _ in range(self.torch.distributed.get_world_size())]
 
@@ -479,7 +479,6 @@ class QueryByCommittee(backends.BackendBase):
       self.torch.distributed.all_gather(runtime_features, predictions["runtime_features"].to(self.pytorch.device))
       self.torch.distributed.all_gather(input_ids,        predictions["input_ids"       ].to(self.pytorch.device))
       self.torch.distributed.all_gather(output_label,     predictions["predictions"     ])
-
       predictions['idx']              = self.torch.cat(idx)
       predictions['static_features']  = self.torch.cat(static_features)
       predictions['runtime_features'] = self.torch.cat(runtime_features)
@@ -487,9 +486,9 @@ class QueryByCommittee(backends.BackendBase):
       predictions['predictions']      = self.torch.cat(output_label)
 
       idx              = self.torch.zeros(tuple(predictions['idx'             ].shape), dtype = self.torch.int64).to(self.pytorch.device)
-      static_features  = self.torch.zeros(tuple(predictions['static_features' ].shape), dtype = self.torch.int64).to(self.pytorch.device)
+      static_features  = self.torch.zeros(tuple(predictions['static_features' ].shape), dtype = self.torch.float32).to(self.pytorch.device)
       runtime_features = self.torch.zeros(tuple(predictions['runtime_features'].shape), dtype = self.torch.int64).to(self.pytorch.device)
-      input_ids        = self.torch.zeros(tuple(predictions['input_ids'       ].shape), dtype = self.torch.int64).to(self.pytorch.device)
+      input_ids        = self.torch.zeros(tuple(predictions['input_ids'       ].shape), dtype = self.torch.float32).to(self.pytorch.device)
       output_label     = self.torch.zeros(tuple(predictions['predictions'     ].shape), dtype = self.torch.int64).to(self.pytorch.device)
 
       for x, i in enumerate(predictions['idx']):
@@ -498,7 +497,6 @@ class QueryByCommittee(backends.BackendBase):
         runtime_features[int(i)] = predictions['runtime_features'][x]
         input_ids       [int(i)] = predictions['input_ids']       [x]
         output_label    [int(i)] = predictions['predictions']     [x]
-
       predictions['idx']              = idx
       predictions['static_features']  = static_features
       predictions['runtime_features'] = runtime_features
