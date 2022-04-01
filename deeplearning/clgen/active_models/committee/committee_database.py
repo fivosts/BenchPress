@@ -14,6 +14,10 @@ from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import logging as l
 
+from absl import flags
+
+FLAGS = flags.FLAGS
+
 Base = declarative.declarative_base()
 
 class QBCResults(Base):
