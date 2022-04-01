@@ -18,6 +18,7 @@ from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.util import crypto
+from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import logging as l
 
@@ -135,8 +136,27 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
 class SamplesDatabase(sqlutil.Database):
   """A database of CLgen samples."""
 
-  def __init__(self, url: str, must_exist: bool = False):
-    super(SamplesDatabase, self).__init__(url, Base, must_exist = must_exist)
+  def __init__(self, url: str, must_exist: bool = False, is_replica: bool = False):
+    if environment.WORLD_RANK == 0 or is_replica:
+      super(SamplesDatabase, self).__init__(url, Base, must_exist = must_exist)
+    if environment.WORLD_SIZE > 1 and not is_replica:
+      # Conduct engine connections to replicated preprocessed chunks.
+      self.base_path = pathlib.Path(url.replace("sqlite:///", "")).resolve().parent
+      hash_id = self.base_path.name
+      try:
+        tdir = pathlib.Path(FLAGS.local_filesystem).resolve() / hash_id / "lm_samples"
+      except Exception:
+        tdir = pathlib.Path("/tmp").resolve() / hash_id / "lm_samples"
+      distrib.lock()
+      tdir.mkdir(parents = True, exist_ok = True)
+      distrib.unlock()
+      self.replicated_path = tdir / "samples_{}.db".format(environment.WORLD_RANK)
+      self.replicated = SamplesDatabase(
+        url = "sqlite:///{}".format(str(self.replicated_path)),
+        must_exist = must_exist,
+        is_replica = True
+      )
+      distrib.barrier()
 
   @property
   def count(self):
