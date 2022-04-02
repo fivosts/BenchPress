@@ -116,6 +116,8 @@ def read_reject_labels() -> bytes:
   """
   labels = {}
   source = flask.request.headers.get("Server-Name")
+  if source is None:
+    return "Server-Name is undefined", 404
   ret = [r for r in handler.reject_queues[source]]
   for c in ret:
     if c['runtime_features']['label'] not in labels:
@@ -142,7 +144,7 @@ def status():
   """
   source = flask.request.headers.get("Server-Name")
   if source is None:
-    return "Server-Name not found", 404
+    return "Server-Name is undefined", 404
   status = {
     'read_queue'        : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
     'write_queue'       : 'EMPTY' if len(handler.write_queues[source]) == 0 else 'NOT_EMPTY',
