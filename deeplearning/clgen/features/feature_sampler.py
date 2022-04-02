@@ -369,6 +369,7 @@ class ActiveSampler(FeatureSampler):
       self.iter_benchmark()
       return
     self.saveCheckpoint()
+    distrib.barrier()
     return
 
   def is_terminated(self) -> bool:
@@ -391,6 +392,7 @@ class ActiveSampler(FeatureSampler):
       distrib.lock()
       with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
         state_dict = pickle.load(infile)
+        infile.close()
       self.benchmarks       = state_dict['benchmarks']
       self.target_benchmark = state_dict['target_benchmark']
       distrib.unlock()
@@ -401,6 +403,7 @@ class ActiveSampler(FeatureSampler):
       distrib.lock()
       with open(self.workspace / "downstream_task_dg.pkl", 'rb') as infile:
         self.active_learner.downstream_task.data_generator = pickle.load(infile)
+        infile.close()
       distrib.unlock()
     l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     return
