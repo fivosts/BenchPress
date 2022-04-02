@@ -141,6 +141,8 @@ def status():
   Read the workload status of the http server.
   """
   source = flask.request.headers.get("Server-Name")
+  if source is None:
+    return "Server-Name not found", 404
   status = {
     'read_queue'        : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
     'write_queue'       : 'EMPTY' if len(handler.write_queues[source]) == 0 else 'NOT_EMPTY',
