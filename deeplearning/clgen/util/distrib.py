@@ -169,6 +169,7 @@ def consistent_read(is_bytes: bool = False) -> typing.Dict[int, typing.Union[str
     if dc > 200:
       raise OSError("I'm stuck here!")
 
+  barrier()
   data = {}
   while len(data.keys()) < WORLD_SIZE:
     for i in range(WORLD_SIZE):
