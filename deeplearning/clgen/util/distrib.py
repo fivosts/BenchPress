@@ -121,12 +121,12 @@ def write_broadcast(msg: str, is_bytes = False) -> None:
     with open(PATH / "msg-{}".format(x), 'wb' if is_bytes else 'w') as outf:
       outf.write(msg)
       outf.flush()
-  msg = read_broadcast(is_bytes = True)
+  msg = read_broadcast(is_bytes = is_bytes, read_fn = read_fn)
   while len(glob.glob(str(PATH / "msg-*"))) > 0:
     time.sleep(0.5)
   return
 
-def read_broadcast(d: int = 0, is_bytes = False) -> str:
+def read_broadcast(d: int = 0, is_bytes = False, read_fn = None) -> str:
   """
   All nodes read broadcasted message.
   """
@@ -138,8 +138,12 @@ def read_broadcast(d: int = 0, is_bytes = False) -> str:
     try:
       with open(PATH / "msg-{}".format(WORLD_RANK), 'rb' if is_bytes else 'r') as inf:
         msg = inf.read()
+        if read_fn is not None:
+          msg = read_fn(msg)
     except FileNotFoundError:
-      return read_broadcast(d = d+1, is_bytes = is_bytes)
+      return read_broadcast(d = d+1, is_bytes = is_bytes, read_fn = read_fn)
+    except EOFError:
+      return read_broadcast(d = d+1, is_bytes = is_bytes, read_fn = read_fn)
     if msg != '':
       break
     time.sleep(0.5)
