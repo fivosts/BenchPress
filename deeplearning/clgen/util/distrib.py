@@ -130,7 +130,7 @@ def read_broadcast(d: int = 0, is_bytes = False, read_fn = None) -> str:
   """
   All nodes read broadcasted message.
   """
-  if d > 10:
+  if d > 20:
     raise FileNotFoundError(str(PATH / "msg-{}".format(WORLD_RANK)))
   while not (PATH / "msg-{}".format(WORLD_RANK)).exists():
     time.sleep(0.5)
