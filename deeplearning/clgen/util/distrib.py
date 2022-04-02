@@ -121,7 +121,7 @@ def write_broadcast(msg: str, is_bytes = False) -> None:
     with open(PATH / "msg-{}".format(x), 'wb' if is_bytes else 'w') as outf:
       outf.write(msg)
       outf.flush()
-  msg = read_broadcast()
+  msg = read_broadcast(is_bytes = True)
   while len(glob.glob(str(PATH / "msg-*"))) > 0:
     time.sleep(0.5)
   return
