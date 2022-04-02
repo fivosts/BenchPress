@@ -111,7 +111,7 @@ def unlock() -> None:
     time.sleep(0.5)
   return
 
-def write_broadcast(msg: str, is_bytes = False) -> None:
+def write_broadcast(msg: str, is_bytes = False, read_fn = None) -> None:
   """
   Node broadcasts a message to all other nodes.
   This function is not process-safe. User must ensure one node calls it
