@@ -154,6 +154,8 @@ def consistent_write(msg: typing.Union[str, bytes], is_bytes: bool = False) -> N
   with open(PATH / "msg-{}".format(WORLD_RANK), 'wb' if is_bytes else 'w') as outf:
     outf.write(msg)
     outf.flush()
+  while not (PATH / "msg-{}".format(WORLD_RANK)).exists():
+    time.sleep(1)
   return
 
 def consistent_read(is_bytes: bool = False) -> typing.Dict[int, typing.Union[str, bytes]]:
