@@ -111,14 +111,14 @@ def unlock() -> None:
     time.sleep(0.5)
   return
 
-def write_broadcast(msg: str) -> None:
+def write_broadcast(msg: str, is_bytes = False) -> None:
   """
   Node broadcasts a message to all other nodes.
   This function is not process-safe. User must ensure one node calls it
   and all reads have been complete before re-writing.
   """
   for x in range(WORLD_SIZE):
-    with open(PATH / "msg-{}".format(x), 'w') as outf:
+    with open(PATH / "msg-{}".format(x), 'wb' if is_bytes else 'w') as outf:
       outf.write(msg)
       outf.flush()
   msg = read_broadcast()
@@ -126,7 +126,7 @@ def write_broadcast(msg: str) -> None:
     time.sleep(0.5)
   return
 
-def read_broadcast(d:int=0) -> str:
+def read_broadcast(d: int = 0, is_bytes = False) -> str:
   """
   All nodes read broadcasted message.
   """
@@ -136,10 +136,10 @@ def read_broadcast(d:int=0) -> str:
     time.sleep(0.5)
   while True:
     try:
-      with open(PATH / "msg-{}".format(WORLD_RANK), 'r') as inf:
+      with open(PATH / "msg-{}".format(WORLD_RANK), 'rb' if is_bytes else 'r') as inf:
         msg = inf.read()
     except FileNotFoundError:
-      return read_broadcast(d = d+1)
+      return read_broadcast(d = d+1, is_bytes = is_bytes)
     if msg != '':
       break
     time.sleep(0.5)
@@ -175,7 +175,7 @@ def consistent_read(is_bytes: bool = False) -> typing.Dict[int, typing.Union[str
     for i in range(WORLD_SIZE):
       if i not in data and (PATH / "msg-{}".format(i)).exists():
         try:
-          with open(PATH / "msg-{}".format(i), 'rb' if is_bytes else False) as inf:        
+          with open(PATH / "msg-{}".format(i), 'rb' if is_bytes else 'r') as inf:        
             msg = inf.read()
           if msg != '':
             data[i] = msg
