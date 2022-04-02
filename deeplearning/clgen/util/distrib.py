@@ -143,6 +143,7 @@ def read_broadcast(d: int = 0, is_bytes = False, read_fn = None) -> str:
     except FileNotFoundError:
       return read_broadcast(d = d+1, is_bytes = is_bytes, read_fn = read_fn)
     except EOFError:
+      time.sleep(2)
       return read_broadcast(d = d+1, is_bytes = is_bytes, read_fn = read_fn)
     if msg != '':
       break
