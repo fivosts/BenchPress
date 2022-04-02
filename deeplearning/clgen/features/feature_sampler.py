@@ -178,7 +178,6 @@ class FeatureSampler(object):
     if environment.WORLD_RANK == 0:
       with open(self.workspace / "feature_sampler_state.pkl", 'wb') as outf:
         pickle.dump(state_dict, outf)
-    distrib.barrier()
     return
 
   def loadCheckpoint(self) -> None:
@@ -381,7 +380,6 @@ class ActiveSampler(FeatureSampler):
       super(ActiveSampler, self).saveCheckpoint()
       with open(self.workspace / "downstream_task_dg.pkl", 'wb') as outf:
         pickle.dump(self.active_learner.downstream_task.data_generator, outf)
-    distrib.barrier()
     return
 
   def loadCheckpoint(self) -> None:
@@ -389,18 +387,20 @@ class ActiveSampler(FeatureSampler):
     Load pickled list of benchmarks, if exists.
     Otherwise, ask the first batch of features from the active learner.
     """
-    distrib.lock()
     if (self.workspace / "feature_sampler_state.pkl").exists():
+      distrib.lock()
       with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
         state_dict = pickle.load(infile)
       self.benchmarks       = state_dict['benchmarks']
       self.target_benchmark = state_dict['target_benchmark']
+      distrib.unlock()
     else:
       self.benchmarks = []
       self.target_benchmark = None
     if (self.workspace / "downstream_task_dg.pkl").exists():
+      distrib.lock()
       with open(self.workspace / "downstream_task_dg.pkl", 'rb') as infile:
         self.active_learner.downstream_task.data_generator = pickle.load(infile)
+      distrib.unlock()
     l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
-    distrib.unlock()
     return
