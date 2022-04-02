@@ -1137,10 +1137,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     Load checkpointed feed queue, if exists.
     """
     if (self.sampler.corpus_directory / "gen_state.pkl").exists():
+      distrib.lock()
       with open(self.sampler.corpus_directory / "gen_state.pkl", 'rb') as infile:
         checkpoint = pickle.load(infile)
         self.feed_queue = checkpoint['feed_queue']
         self.bench_idx  = checkpoint['bench_idx']
+      distrib.unlock()
     else:
       self.feed_queue = []
       self.bench_idx  = 1
