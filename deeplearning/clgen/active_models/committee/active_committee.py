@@ -548,6 +548,7 @@ class QueryByCommittee(backends.BackendBase):
       distrib.write_broadcast(pickle.dumps(predictions), is_bytes = True, read_fn = lambda x: pickle.loads(x))
     else:
       predictions = distrib.read_broadcast(is_bytes = True, read_fn = lambda x: pickle.loads(x))
+    distrib.barrier()
     return predictions
 
   def SampleCommittee(self,
