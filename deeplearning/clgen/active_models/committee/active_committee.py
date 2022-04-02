@@ -532,18 +532,23 @@ class QueryByCommittee(backends.BackendBase):
     if current_step < 0:
       l.logger().warn("{}: You are trying to sample an untrained model.".format(model_name))
     current_step = max(0, current_step)
-    outputs = model(
-      input_ids   = sample_dataset['input_ids'],
-      is_sampling = True,
-    )
-    predictions = {
-      'train_step'      : current_step,
-      'idx'             : [int(x) for x in sample_dataset['idx']],
-      'static_features' : sample_dataset['static_features'],
-      'runtime_features': sample_dataset['runtime_features'],
-      'input_ids'       : sample_dataset['input_ids'],
-      'predictions'     : [self.downstream_task.TargetIDtoLabels(i) for i in outputs['predicted_labels']],
-    }
+    if self.is_world_process_zero():
+      outputs = model(
+        input_ids   = sample_dataset['input_ids'],
+        is_sampling = True,
+      )
+      predictions = {
+        'train_step'      : current_step,
+        'idx'             : [int(x) for x in sample_dataset['idx']],
+        'static_features' : sample_dataset['static_features'],
+        'runtime_features': sample_dataset['runtime_features'],
+        'input_ids'       : sample_dataset['input_ids'],
+        'predictions'     : [self.downstream_task.TargetIDtoLabels(i) for i in outputs['predicted_labels']],
+      }
+      distrib.consistent_write(pickle.dumps(predictions), is_bytes = True)
+      _ = distrib.consistent_read(is_bytes = True)
+    else:
+      predictions = pickle.loads(distrib.consistent_read(is_bytes = True))
     return predictions
 
   def SampleCommittee(self,
