@@ -322,15 +322,19 @@ class GrewePredictive(DownstreamTask):
     to the appropriate value so it can match the transferred bytes.
     """
     if FLAGS.use_http_server:
-      new_samples = []
-      while int(http_server.client_status_request()[1]) >= 300: # While the backend is WORKING
-        time.sleep(2)
-      while int(http_server.client_status_request()[1]) != 200:
-        batch = http_server.client_get_request()
-        for ser in batch:
-          obj = JSON_to_ActiveSample(ser)
-          new_samples.append(obj)
-        time.sleep(1)
+      if environment.WORLD_RANK == 0:
+        new_samples = []
+        while int(http_server.client_status_request()[1]) >= 300: # While the backend is WORKING
+          time.sleep(2)
+        while int(http_server.client_status_request()[1]) != 200:
+          new_samples += http_server.client_get_request()
+          time.sleep(1)
+        if environment.WORLD_SIZE > 0:
+          distrib.write_broadcast(pickle.dumps(new_samples), is_bytes = True, read_fn = lambda x: pickle.loads(x))
+      else:
+        new_samples = distrib.read_broadcast(is_bytes = True, read_fn = lambda x: pickle.loads(x))
+      distrib.barrier()
+      new_samples = [JSON_to_ActiveSample(x) for x in new_samples]
       if top_k != -1:
         return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)[:top_k]
       else:
