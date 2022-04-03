@@ -273,7 +273,7 @@ class GrewePredictive(DownstreamTask):
             found_bytes = tr_bytes
           else:
             found = True
-            if abs(exp_tr_bytes - tr_bytes) < abs(exp_tr_bytes - found_bytes):
+            if found_bytes is None or abs(exp_tr_bytes - tr_bytes) < abs(exp_tr_bytes - found_bytes):
               opt_gsize   = gsize
               found_bytes = abs(exp_tr_bytes - tr_bytes)
       gsize += 1
