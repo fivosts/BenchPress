@@ -21,6 +21,7 @@ from deeplearning.clgen.features import grewe
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import http_server
 from deeplearning.clgen.util import socket_server
 from deeplearning.clgen.util import crypto
