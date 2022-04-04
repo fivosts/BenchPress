@@ -601,8 +601,8 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       # Generic fields
       pbutil.AssertFieldIsSet(config, "workspace")
       # CSV groups
-      pbutil.AssertFieldIsSet(config, "grewe_baseline")
-      p = pathlib.Path(config.grewe_baseline)
+      pbutil.AssertFieldIsSet(ev.train_grewe, "grewe_baseline")
+      p = pathlib.Path(ev.train_grewe.grewe_baseline)
       if not p.exists():
         raise FileNotFoundError(p)
       for c in ev.train_grewe.csv:
