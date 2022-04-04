@@ -265,12 +265,8 @@ def TrainGrewe(**kwargs) -> None:
 
   csv_contents = open(grewe_baseline, 'r').read()
   for group in csv_groups:
-    with tempfile.NamedTemporaryFile("w", prefix="grewe_csv_", suffix='.csv', dir = tdir) as f:
-      gfd = open(group['path'], 'r').readlines()
-      f.write(csv_contents + '\n'.join([x for x in gfd[1:]]))
-      f.flush()
-      preamble.plot_speedups_with_clgen(
-        open(grewe_baseline, 'r'),
-        f
-      )
+    preamble.plot_speedups_with_clgen(
+      open(grewe_baseline, 'r'),
+      open(group['path'], 'r')
+    )
   return
