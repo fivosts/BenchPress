@@ -439,7 +439,7 @@ def leave_one_benchmark_out(clf, get_features, D, benchmark, synthetics = False,
   # the test benchmark.
   test_mask = D["benchmark"].str.contains(r"^" + benchmark)
   if synthetics:
-    train_mask = D["benchmark"].str.contains(".cl-A")
+    train_mask = D["benchmark"].str.contains(".cl")
   else:
     train_mask = ~test_mask
 
