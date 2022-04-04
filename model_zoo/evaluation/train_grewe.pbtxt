@@ -1,0 +1,23 @@
+workspace: "/var/foivos/results/full_results/grewe_workspace"
+tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
+evaluator {
+  train_grewe {
+    grewe_baseline: "/home/foivos/nvidia_baseline.csv"
+    csv {
+      name: "BenchPress"
+      path: "/home/foivos/grewe_workspace/BenchPress.csv"
+    }
+    csv {
+      name: "CLgen"
+      path: "/home/foivos/grewe_workspace/CLgen.csv"
+    }
+    csv {
+      name: "GitHub"
+      path: "/home/foivos/grewe_workspace/GitHub.csv"
+    }
+    csv {
+      name: "GitHub-768"
+      path: "/home/foivos/grewe_workspace/GitHub-768.csv"
+    }
+  }
+}
