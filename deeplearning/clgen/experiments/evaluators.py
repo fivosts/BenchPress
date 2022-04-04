@@ -642,6 +642,7 @@ def main(config: evaluator_pb2.Evaluation):
     evaluator_pb2.GenerateCLSmith         : clsmith.GenerateCLSmith,
     evaluator_pb2.GreweTopKCSV            : grewe_api.GreweTopKCSV,
     evaluator_pb2.GreweCSV                : grewe_api.GreweCSV,
+    evaluator_pb2.TrainGrewe              : grewe_api.TrainGrewe,
   }
   db_cache       = {}
   target_cache   = {}
