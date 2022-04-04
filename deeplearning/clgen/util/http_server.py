@@ -126,6 +126,16 @@ def read_reject_labels() -> bytes:
       labels[c['runtime_features']['label']] += 1
   return bytes(json.dumps(labels), encoding="utf-8"), 200
 
+@app.route('/read_queue_size', methods = ['GET'])
+def read_queue_size() -> bytes:
+  """
+  Get labels of rejected OpenCL kernels.
+
+  Example command:
+    curl -X GET http://localhost:PORT/read_reject_labels
+  """
+  return handler.read_queue.qsize(), 200
+
 @app.route('/get_backlog', methods = ['GET'])
 def get_backlog() -> bytes:
   """
