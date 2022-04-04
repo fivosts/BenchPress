@@ -287,7 +287,7 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
     s["p_speedup"] = s_p_runtime / s[zeror_runtime]
     bs["p_speedup"] = bs_p_runtime / bs[zeror_runtime]
 
-    print(b_p_runtime, s_p_runtime, bs_p_runtime, b[zeror_runtime], s[zeror_runtime], bs[zeror_runtime])
+    # print(b_p_runtime, s_p_runtime, bs_p_runtime, b[zeror_runtime], s[zeror_runtime], bs[zeror_runtime])
 
     if "training" in benchmarks_data:
       # $benchmark
