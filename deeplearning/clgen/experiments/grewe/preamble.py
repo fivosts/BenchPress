@@ -731,10 +731,10 @@ def plot_speedups_extended_model(benchmarks_data, clgen_data):
   Finalize(figsize=(7, 3.7), tight=True)
   return speedup
 
-plot_speedups_with_clgen(
-  open("/var/foivos/results/clgen_paper_artifacts/nvidia-benchmarks.csv", 'r'),
-  open("/var/foivos/results/clgen_paper_artifacts/nvidia-clgen.csv", 'r')
-)
+# plot_speedups_with_clgen(
+#   open("/var/foivos/results/clgen_paper_artifacts/nvidia-benchmarks.csv", 'r'),
+#   open("/var/foivos/results/clgen_paper_artifacts/nvidia-clgen.csv", 'r')
+# )
 
 # if __name__ == "__main__":
 #   plot_speedups_with_clgen(
