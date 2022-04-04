@@ -606,8 +606,8 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       if not p.exists():
         raise FileNotFoundError(p)
       for c in ev.train_grewe.csv:
-        pbutil.AssertFieldIsSet(c.name)
-        pbutil.AssertFieldIsSet(c.path)
+        pbutil.AssertFieldIsSet(c, "name")
+        pbutil.AssertFieldIsSet(c, "path")
         p = pathlib.Path(c.path)
         if not p.exists():
           raise FileNotFoundError(p)
