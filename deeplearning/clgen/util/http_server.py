@@ -129,10 +129,7 @@ def read_reject_labels() -> bytes:
 @app.route('/read_queue_size', methods = ['GET'])
 def read_queue_size() -> bytes:
   """
-  Get labels of rejected OpenCL kernels.
-
-  Example command:
-    curl -X GET http://localhost:PORT/read_reject_labels
+  Read size of pending workload in read_queue.
   """
   return handler.read_queue.qsize(), 200
 
