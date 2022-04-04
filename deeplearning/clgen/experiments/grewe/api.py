@@ -91,15 +91,15 @@ def ToDataFrameRow(name                 : str,
     (grewe_feats['localmem'] / grewe_feats['mem']) * local_size,
     grewe_feats["F4:comp/mem"],
     label,
-    min(cpu_transfer_time_ns + cpu_kernel_time_ns, gpu_transfer_time_ns + gpu_kernel_time_ns) / (10**9),
-    max(cpu_transfer_time_ns + cpu_kernel_time_ns / gpu_transfer_time_ns + gpu_kernel_time_ns, gpu_transfer_time_ns + gpu_kernel_time_ns / cpu_transfer_time_ns + cpu_kernel_time_ns) / (10**9),
-    min(cpu_transfer_time_ns + cpu_kernel_time_ns / gpu_transfer_time_ns + gpu_kernel_time_ns, gpu_transfer_time_ns + gpu_kernel_time_ns / cpu_transfer_time_ns + cpu_kernel_time_ns) / (10**9),
-    (cpu_transfer_time_ns + cpu_kernel_time_ns) / 10**9,
-    cpu_transfer_time_ns / 10**9,
-    cpu_kernel_time_ns / 10**9,
-    (gpu_transfer_time_ns + gpu_kernel_time_ns) / 10**9,
-    gpu_transfer_time_ns / 10**9,
-    gpu_kernel_time_ns / 10**9,
+    min(cpu_transfer_time_ns + cpu_kernel_time_ns, gpu_transfer_time_ns + gpu_kernel_time_ns) / (10**6),
+    max(cpu_transfer_time_ns + cpu_kernel_time_ns / gpu_transfer_time_ns + gpu_kernel_time_ns, gpu_transfer_time_ns + gpu_kernel_time_ns / cpu_transfer_time_ns + cpu_kernel_time_ns) / (10**6),
+    min(cpu_transfer_time_ns + cpu_kernel_time_ns / gpu_transfer_time_ns + gpu_kernel_time_ns, gpu_transfer_time_ns + gpu_kernel_time_ns / cpu_transfer_time_ns + cpu_kernel_time_ns) / (10**6),
+    (cpu_transfer_time_ns + cpu_kernel_time_ns) / 10**6,
+    cpu_transfer_time_ns / 10**6,
+    cpu_kernel_time_ns / 10**6,
+    (gpu_transfer_time_ns + gpu_kernel_time_ns) / 10**6,
+    gpu_transfer_time_ns / 10**6,
+    gpu_kernel_time_ns / 10**6,
     0,
     0
   ]
@@ -263,10 +263,15 @@ def TrainGrewe(**kwargs) -> None:
   except Exception:
     tdir = None
 
-  csv_contents = open(grewe_baseline, 'r').read()
+  csv_contents = open(grewe_baseline, 'r').readlines()
   for group in csv_groups:
-    preamble.plot_speedups_with_clgen(
-      open(grewe_baseline, 'r'),
-      open(group['path'], 'r')
-    )
+    with tempfile.NamedTemporaryFile("w", prefix="grewe_csv_", suffix='.csv', dir = tdir) as f:
+      # gfd = open(group['path'], 'r').readlines()
+      # f.write('\n'.join(csv_contents + [x for x in gfd[1:]]))
+      # f.flush()
+      preamble.plot_speedups_with_clgen(
+        open(grewe_baseline, 'r'),
+        # open(f.name, 'r')
+        open(group['path'], 'r')
+      )
   return
