@@ -267,7 +267,7 @@ def TrainGrewe(**kwargs) -> None:
   for group in csv_groups:
     preamble.plot_speedups_with_clgen(
       open(grewe_baseline, 'r'),
-      # open(f.name, 'r')
-      open(group['path'], 'r')
+      open(group['path'], 'r'),
+      synth_bench_name = group['name'],
     )
   return
