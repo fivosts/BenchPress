@@ -234,7 +234,7 @@ def get_nearest_neighbour_distance(F1, F2):
   distances, indices = nbrs.kneighbors(F1)
   return distances
 
-def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
+def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CLgen", suite=""):
   """
   Plot speedups of predictive models trained with and without clgen.
 
@@ -283,9 +283,13 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
 
     # speedup is the ratio of runtime using the predicted device
     # over runtime using ZeroR device
-    b["p_speedup"] = b_p_runtime / b[zeror_runtime]
-    s["p_speedup"] = s_p_runtime / s[zeror_runtime]
-    bs["p_speedup"] = bs_p_runtime / bs[zeror_runtime]
+    b["p_speedup"] =  b[zeror_runtime] / b_p_runtime
+    s["p_speedup"] = s[zeror_runtime] / s_p_runtime
+    bs["p_speedup"] = bs[zeror_runtime] / bs_p_runtime
+
+    b["opt_runtime"] = b_p_runtime
+    s["opt_runtime"] = s_p_runtime
+    bs["opt_runtime"] = bs_p_runtime
 
     # print(b_p_runtime, s_p_runtime, bs_p_runtime, b[zeror_runtime], s[zeror_runtime], bs[zeror_runtime])
 
@@ -302,8 +306,8 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
 
     # set the training data type
     b["training"] = "Grewe et al."
-    s["training"] = "Only CLgen"
-    bs["training"] = "w. CLgen"
+    s["training"] = "Only {}".format(synth_bench_name)
+    bs["training"] = "w. {}".format(synth_bench_name)
 
     R_out.append(b)
     R_out.append(s)
@@ -312,12 +316,16 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
   R = pd.DataFrame(R_out)
 
   b_mask = R["training"] == "Grewe et al."
-  s_mask = R["training"] == "Only CLgen"
-  bs_mask = R["training"] == "w. CLgen"
+  s_mask = R["training"] == "Only {}".format(synth_bench_name)
+  bs_mask = R["training"] == "w. {}".format(synth_bench_name)
 
   B_speedup = mean(R[b_mask].groupby(["group"])["p_speedup"].mean())
   S_speedup = mean(R[s_mask].groupby(["group"])["p_speedup"].mean())
   BS_speedup = mean(R[bs_mask].groupby(["group"])["p_speedup"].mean())
+
+  B_runtimes = R[b_mask]["opt_runtime"].mean()
+  S_runtimes = R[s_mask]["opt_runtime"].mean()
+  BS_runtimes = R[bs_mask]["opt_runtime"].mean()
 
   groups = {
     "Benchmarks": {},
@@ -347,6 +355,10 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
   print(len(R[b_mask]["p_speedup"]))
   print(len(R[s_mask]["p_speedup"]))
   print(len(R[bs_mask]["p_speedup"]))
+
+  print("Only bench: {}".format(B_runtimes))
+  print("Only ML: {}".format(S_runtimes))
+  print("Bench + ML: {}".format(BS_runtimes))
 
   for x in R[b_mask]["p_speedup"]:
     x = int(x)
@@ -402,11 +414,11 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
   print("  ZeroR device:                    {}".format(zeror))
   print()
   print("  Speedup of Grewe et al.:         {:.2f} x".format(B_speedup))
-  print("  Speedup w. CLgen:                {:.2f} x".format(BS_speedup))
-  print("  Speedup Only CLgen:              {:.2f} x".format(S_speedup))
+  print("  Speedup w. {}:                {:.2f} x".format(synth_bench_name, BS_speedup))
+  print("  Speedup Only {}:              {:.2f} x".format(synth_bench_name, S_speedup))
   # print("  Speedup of Grewe et al.:         {:.2f} x".format(model.geomean([x for x in R[b_mask]["p_speedup"]])))
-  # print("  Speedup w. CLgen:                {:.2f} x".format(model.geomean([x for x in R[bs_mask]["p_speedup"]])))
-  # print("  Speedup Only CLgen:              {:.2f} x".format(model.geomean([x for x in R[s_mask]["p_speedup"]])))
+  # print("  Speedup w. {}:                {:.2f} x".format(synth_bench_name, model.geomean([x for x in R[bs_mask]["p_speedup"]])))
+  # print("  Speedup Only {}:              {:.2f} x".format(synth_bench_name, model.geomean([x for x in R[s_mask]["p_speedup"]])))
 
   bft = [x.p_speedup for idx, x in R[b_mask].iterrows() if x.group == "FT.B"]
   sft = [x.p_speedup for idx, x in R[s_mask].iterrows() if x.group == "FT.B"]
@@ -417,8 +429,11 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
   print()
 
   print("FT.B Grewe: {}".format(sum(bft) / len(bft)))
-  print("FT.B w Clgen: {}".format(sum(bsft) / len(bsft)))
-  print("FT.B Only Clgen: {}".format(sum(sft) / len(sft)))
+  print("FT.B w {}: {}".format(synth_bench_name, sum(bsft) / len(bsft)))
+  print("FT.B Only {}: {}".format(synth_bench_name, sum(sft) / len(sft)))
+
+  print("Total execution times:")
+  print()
 
   R = R.append({  # average bars
     "group": "Average",
@@ -428,7 +443,7 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, suite="npb"):
   R = R.append({
     "group": "Average",
     "p_speedup": BS_speedup,
-    "training": "w. CLgen"
+    "training": "w. {}".format(synth_bench_name)
   }, ignore_index=True)
 
   R["p_speedup"] -= 1  # negative offset so that bars start at 1
