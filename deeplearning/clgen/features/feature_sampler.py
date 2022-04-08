@@ -395,6 +395,8 @@ class ActiveSampler(FeatureSampler):
         infile.close()
       self.benchmarks       = state_dict['benchmarks']
       self.target_benchmark = state_dict['target_benchmark']
+      while not infile.closed:
+        time.sleep(1)
       distrib.unlock()
     else:
       self.benchmarks = []
@@ -404,6 +406,8 @@ class ActiveSampler(FeatureSampler):
       with open(self.workspace / "downstream_task_dg.pkl", 'rb') as infile:
         self.active_learner.downstream_task.data_generator = pickle.load(infile)
         infile.close()
+      while not infile.closed:
+        time.sleep(1)
       distrib.unlock()
     l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     return
