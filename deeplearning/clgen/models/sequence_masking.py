@@ -455,7 +455,12 @@ def HoleSequence(seq: np.array,
   # Total masks placed so far.
   total_predictions = 0
   while total_predictions < holes_to_predict:
-    pos_index = np.random.RandomState().randint(0, actual_length) # Fixed seed doesn't work!
+    try:
+      pos_index = np.random.RandomState().randint(0, actual_length) # Fixed seed doesn't work!
+    except ValueError as e:
+      l.logger().error(actual_length)
+      l.logger().error(tokenizer.tokensToString(seq))
+      raise e
     # Element in processed array can be found in its original index +/- offset
     input_id_idx = pos_index + offset_idxs[pos_index]
     if total_predictions >= holes_to_predict:
