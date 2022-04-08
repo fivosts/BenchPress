@@ -91,6 +91,13 @@ def lock() -> None:
     if WORLD_RANK != min_id:
       unlock()
       lock()
+    else:
+      it = 0
+      while len(glob.glob(str(PATH / "critical-lock-*"))) > 1:
+        time.sleep(1)
+        it += 1
+        if it > 100:
+          raise OSError("I have waited to really get the lock for too long!")
   return
 
 def unlock() -> None:
