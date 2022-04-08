@@ -395,6 +395,7 @@ class ActiveSampler(FeatureSampler):
         infile.close()
       self.benchmarks       = state_dict['benchmarks']
       self.target_benchmark = state_dict['target_benchmark']
+      time.sleep(10)
       while not infile.closed:
         time.sleep(1)
       distrib.unlock()
@@ -408,6 +409,7 @@ class ActiveSampler(FeatureSampler):
         infile.close()
       while not infile.closed:
         time.sleep(1)
+      time.sleep(10)
       distrib.unlock()
     l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     return
