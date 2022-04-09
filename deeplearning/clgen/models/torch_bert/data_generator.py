@@ -939,6 +939,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             cached_samples[idx][-1] = self.feat_sampler.calculate_distance(cs[1])
           sorted_cache_samples = sorted(cached_samples, key = lambda x: x[-1])
           for scs in sorted_cache_samples[:self.sampler.config.sample_corpus.corpus_config.active.active_search_width]:
+            l.logger().info(srcs[0])
+            l.logger().info(self.tokenizer.TokenizeString(srcs[0]))
+            l.logger().info(self._addStartEndToken(self.tokenizer.TokenizeString(srcs[0])))
+            l.logger().info(self._padToMaxPosition(self._addStartEndToken(self.tokenizer.TokenizeString(srcs[0]))))
             encoded = self._padToMaxPosition(self._addStartEndToken(self.tokenizer.TokenizeString(scs[0])))
             self.feed_queue.append(
               ActiveSampleFeed(
