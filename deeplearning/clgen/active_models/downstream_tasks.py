@@ -169,7 +169,7 @@ class GrewePredictive(DownstreamTask):
     """
     Fetch data and preprocess into corpus for Grewe's predictive model.
     """
-    checkpointed = self.loadCheckpoint():
+    checkpointed = self.loadCheckpoint()
     if not checkpointed:
       self.dataset = []
       data = [x for x in self.corpus_db.get_valid_data(dataset = "GitHub")]
