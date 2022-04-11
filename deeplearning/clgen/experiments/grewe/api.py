@@ -6,6 +6,7 @@ This API is used to convert modernized database groups
 to the expected csv files by the script and also fill in
 missing cldrive data.
 """
+import sys
 import pathlib
 import tempfile
 import typing
@@ -23,6 +24,9 @@ from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.experiments.grewe import preamble
+
+from absl import app, flags
+
 """
 1. You may insert database groups as usual to convert to csv
 2. You need to introduce a systematic way to insert the amd/nvidia/clgen csv's from clgen's artifacts.
@@ -143,7 +147,7 @@ def DriveSource(src        : str,
         else:
           yield None
       else:
-        df, label = opencl.CLDriveDataFrame(src, num_runs = 100, gsize = gsize, lsize = lsize, timeout = 60)
+        df, label = opencl.CLDriveDataFrame(src, num_runs = 1000, gsize = gsize, lsize = lsize, timeout = 60)
         cldrive_db.add_entry(src, group_name, label, gsize, lsize, df)
         if label not in {"CPU", "GPU"}:
           yield None
@@ -286,52 +290,30 @@ def fetch_gpgpu_cummins_benchmarks(gpgpu_path: pathlib.Path, cldrive_path: pathl
   if isinstance(out_path, str):
     out_path = pathlib.Path(out_path)
 
-  queue   = [([], gpgpu_path)]
-  kernels = []
+  kernels = benchmarks.yield_cl_kernels(gpgpu_path)
 
-  while queue:
-    pref, cur = queue.pop(0)
-    try:
-      for f in cur.iterdir():
-        if f.is_symlink():
-          continue
-        elif f.is_file():
-          if f.suffix in {'.cl'}:
-            base_name = "-".join(pref + [f.stem]),
-            cur_kernels = benchmarks.benchmark_worker((f, open(f, 'r').read(), None), "GreweFeatures")
-            if len(cur_kernels) > 1:
-              for idx, k in enumerate(cur_kernels):
-                cur_kernels[idx] = k._replace(name = base_name + "-{}.cl".format(idx))
-            else:
-              cur_kernels[idx] = k._replace(name = base_name + ".cl")
-            kernels += cur_kernels
-        elif f.is_dir():
-          queue.append((pref + [cur.stem], f))
-        else:
-          continue
-    except PermissionError:
-      pass
-    except NotADirectoryError:
-      pass
-    except FileNotFoundError:
-      pass
-    except OSError:
-      pass
-
-  benchmarks = []
+  gpgpu_benchmarks = []
   for k in kernels:
     try:
-      _ = opencl.Compile(k.contents)
-      benchmarks.append(k)
+      b = benchmarks.benchmark_worker(k, "GreweFeatures")
+      gpgpu_benchmarks.append(b)
     except ValueError:
       pass
 
-  l.logger().info("Fetched {} GPGPU benchmarks. {} compiled successfully.".format(len(kernels), len(benchmarks)))
+  l.logger().info("Fetched {} GPGPU benchmarks. {} compiled successfully.".format(len(kernels), len(gpgpu_benchmarks)))
 
   cldrive_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(pathlib.Path(cldrive_path).resolve()), must_exist = False)
-  for k in benchmarks:
+  for k in gpgpu_benchmarks:
     for row in DriveSource(k.contents, "GPGPU_benchmarks", k.features, cldrive_db):
       datapoints.append(row)
   frame = pd.DataFrame(datapoints, columns = DataFrameSchema())
   frame.to_csv(out_path)
   return
+
+def main(*args, **kwargs):
+  fetch_gpgpu_cummins_benchmarks(sys.argv[1], sys.argv[2], sys.argv[3])
+  return
+
+if __name__ == "__main__":
+  app.run(main)
+  exit(0)
