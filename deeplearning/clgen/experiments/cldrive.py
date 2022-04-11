@@ -81,7 +81,7 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
                status               : str,
                ) -> typing.Dict[str, typing.Any]:
     return CLDriveSample(**{
-      "id"                   : id,
+      # "id"                   : id,
       "sha256"               : crypto.sha256_str(source + dataset + str(global_size) + str(local_size)),
       "global_size"          : global_size,
       "local_size"           : local_size,
