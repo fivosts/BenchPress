@@ -380,8 +380,6 @@ class ActiveSampler(FeatureSampler):
   def saveCheckpoint(self) -> None:
     if environment.WORLD_RANK == 0:
       super(ActiveSampler, self).saveCheckpoint()
-      with open(self.workspace / "downstream_task_dg.pkl", 'wb') as outf:
-        pickle.dump(self.active_learner.downstream_task.data_generator, outf)
     return
 
   def loadCheckpoint(self) -> None:
@@ -403,14 +401,5 @@ class ActiveSampler(FeatureSampler):
     else:
       self.benchmarks = []
       self.target_benchmark = None
-    if (self.workspace / "downstream_task_dg.pkl").exists():
-      distrib.lock()
-      with open(self.workspace / "downstream_task_dg.pkl", 'rb') as infile:
-        self.active_learner.downstream_task.data_generator = pickle.load(infile)
-        infile.close()
-      while not infile.closed:
-        time.sleep(1)
-      time.sleep(10)
-      distrib.unlock()
     l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     return
