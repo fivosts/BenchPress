@@ -48,7 +48,7 @@ def preprocessor_worker(contentfile_batch):
     kernel_batch.append((p, k, h))
   return kernel_batch
 
-def benchmark_worker(benchmark, feature_space, reduced_git_corpus):
+def benchmark_worker(benchmark, feature_space, reduced_git_corpus = None):
   p, k, h = benchmark
   features = extractor.ExtractFeatures(
     k,
@@ -56,9 +56,13 @@ def benchmark_worker(benchmark, feature_space, reduced_git_corpus):
     header_file = h,
     use_aux_headers = False
   )
-  closest_git = sorted([(cf, calculate_distance(fts, features[feature_space], feature_space)) for cf, fts in reduced_git_corpus], key = lambda x: x[1])[0]
-  if features[feature_space] and closest_git[1] > 0:
-    return Benchmark(p, p.name, k, features[feature_space])
+  if closest_git:
+    closest_git = sorted([(cf, calculate_distance(fts, features[feature_space], feature_space)) for cf, fts in reduced_git_corpus], key = lambda x: x[1])[0]
+    if features[feature_space] and closest_git[1] > 0:
+      return Benchmark(p, p.name, k, features[feature_space])
+  else:
+    if features[feature_space]:
+      return Benchmark(p, p.name, k, features[feature_space])
 
 @contextlib.contextmanager
 def GetContentFileRoot(path: pathlib.Path) -> typing.Iterator[pathlib.Path]:
@@ -99,7 +103,7 @@ def GetContentFileRoot(path: pathlib.Path) -> typing.Iterator[pathlib.Path]:
     l.logger().info("Unpacked benchmark suite {}".format(str(d)))
     yield pathlib.Path(d)
 
-def iter_cl_files(path: pathlib.Path) -> typing.List[str]:
+def iter_cl_files(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Path, str]]:
   """
   Iterate base path and yield the contents of all .cl files.
   """
@@ -156,3 +160,41 @@ def resolve_benchmark_names(benchmarks: typing.List["Benchmark"]) -> typing.List
         name = "{}-{}".format(benchmark.name, renaming[benchmark.name][0])
       )
   return sorted(benchmarks, key = lambda x: x.name)
+
+def fetch_gpgpu_cummins_benchmarks(root_path: pathlib.Path) -> None:
+  """
+  Parse GPGPU folder, isolate and collect all kernel instances.
+  """
+  if isinstance(root_path, str):
+    root_path = pathlib.Path(root_path)
+
+  queue    = [([], root_path)]
+  kernel_files  = []
+
+  while queue:
+    pref, cur = queue.pop(0)
+    try:
+      for f in cur.iterdir():
+        if f.is_symlink():
+          continue
+        elif f.is_file():
+          if f.suffix in {'.c', '.cl'}:
+            kernel_files.append(
+              {
+                'name': "-".join(pref + [f.name]),
+                'src' : open(f, 'r').read(),
+              }
+            )
+            kernel_files.append(open(f, 'r').read())
+        elif f.is_dir():
+          queue.append((pref + [cur.stem], f))
+        else:
+          continue
+    except PermissionError:
+      pass
+    except NotADirectoryError:
+      pass
+    except FileNotFoundError:
+      pass
+    except OSError:
+      pass
