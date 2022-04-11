@@ -66,8 +66,8 @@ class DownstreamTask(object):
   Downstream Task generic class.
   """
   @classmethod
-  def FromTask(cls, task: str, corpus_path: pathlib.Path, random_seed: int, **kwargs) -> "DownstreamTask":
-    return TASKS[task](corpus_path, random_seed, kwargs)
+  def FromTask(cls, task: str, corpus_path: pathlib.Path, cache_path: pathlib.Path, random_seed: int, **kwargs) -> "DownstreamTask":
+    return TASKS[task](corpus_path, cache_path, random_seed, kwargs)
 
   def __init__(self, name: str, random_seed: int) -> None:
     self.name        = name
@@ -128,12 +128,14 @@ class GrewePredictive(DownstreamTask):
 
   def __init__(self,
                corpus_path   : pathlib.Path,
+               cache_path    : pathlib.Path,
                random_seed   : int,
                use_as_server : bool = False,
                ) -> None:
     super(GrewePredictive, self).__init__("GrewePredictive", random_seed)
     self.corpus_path = corpus_path
     self.corpus_db   = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
+    self.cache_path  = cache_path
     if use_as_server:
       self.setup_server()
     else:
@@ -167,34 +169,37 @@ class GrewePredictive(DownstreamTask):
     """
     Fetch data and preprocess into corpus for Grewe's predictive model.
     """
-    self.dataset = []
-    data = [x for x in self.corpus_db.get_valid_data(dataset = "GitHub")]
-    pool = multiprocessing.Pool()
-    it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = "GreweFeatures"), data)
-    idx = 0
-    try:
-      loop = tqdm.tqdm(it, total = len(data), desc = "Grewe corpus setup", leave = False) if environment.WORLD_RANK == 0 else it
-      for dp in loop:
-        if dp:
-          feats, entry = dp
-          self.dataset.append(
-            (
-              self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.local_size),
-              [self.TargetLabeltoID(entry.status)]
+    checkpointed = self.loadCheckpoint():
+    if not checkpointed:
+      self.dataset = []
+      data = [x for x in self.corpus_db.get_valid_data(dataset = "GitHub")]
+      pool = multiprocessing.Pool()
+      it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = "GreweFeatures"), data)
+      idx = 0
+      try:
+        loop = tqdm.tqdm(it, total = len(data), desc = "Grewe corpus setup", leave = False) if environment.WORLD_RANK == 0 else it
+        for dp in loop:
+          if dp:
+            feats, entry = dp
+            self.dataset.append(
+              (
+                self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.local_size),
+                [self.TargetLabeltoID(entry.status)]
+              )
             )
-          )
-          idx += 1
-        # if idx >= 100:
-          # break
-      pool.close()
-    except Exception as e:
-      pool.terminate()
-      raise e
-    # pool.terminate()
-    if num_train_steps:
-      self.data_generator = data_generator.ListTrainDataloader(self.dataset[:num_train_steps])
-    else:
-      self.data_generator = data_generator.ListTrainDataloader(self.dataset)
+            idx += 1
+          # if idx >= 100:
+            # break
+        pool.close()
+      except Exception as e:
+        pool.terminate()
+        raise e
+      # pool.terminate()
+      if num_train_steps:
+        self.data_generator = data_generator.ListTrainDataloader(self.dataset[:num_train_steps])
+      else:
+        self.data_generator = data_generator.ListTrainDataloader(self.dataset)
+      self.saveCheckpoint()
     return
 
   def CollectSingleRuntimeFeature(self,
@@ -378,6 +383,7 @@ class GrewePredictive(DownstreamTask):
     After active learner has been updated, store updated samples to original train dataset.
     """
     self.data_generator = self.data_generator + updated_dataloader
+    self.saveCheckpoint()
     return
 
   def sample_space(self, num_samples: int = 512) -> data_generator.DictPredictionDataloader:
@@ -518,7 +524,26 @@ class GrewePredictive(DownstreamTask):
     """
     Store data generator.
     """
+    if environment.WORLD_RANK == 0:
+      with open(self.cache_path / "downstream_task_dg.pkl", 'wb') as outf:
+        pickle.dump(self.data_generator, outf)
     return
+
+  def loadCheckpoint(self) -> 'torch.Dataset':
+    """
+    Load state of downstream task.
+    """
+    if (self.cache_path / "downstream_task_dg.pkl").exists():
+      distrib.lock()
+      with open(self.cache_path / "downstream_task_dg.pkl", 'rb') as infile:
+        infile.close()
+      while not infile.closed:
+        time.sleep(1)
+      time.sleep(10)
+      distrib.unlock()
+      return pickle.load(infile)
+    else:
+      return None
 
 TASKS = {
   "GrewePredictive": GrewePredictive,
