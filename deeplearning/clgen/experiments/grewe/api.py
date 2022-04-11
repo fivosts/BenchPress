@@ -14,6 +14,7 @@ import tqdm
 import pandas as pd
 
 from deeplearning.clgen.corpuses import encoded
+from deeplearning.clgen.corpuses import benchmarks
 from deeplearning.clgen.experiments import public
 from deeplearning.clgen.experiments import workers
 from deeplearning.clgen.experiments import cldrive
@@ -108,6 +109,7 @@ def DriveSource(src        : str,
                 group_name : str,
                 feats      : typing.Dict[str, float],
                 cldrive_db : cldrive.CLDriveExecutions,
+                name       : str = None
                 ) -> typing.Generator:
   """
   For a given source code, drive to CLDrive and return a ready row.
@@ -127,7 +129,7 @@ def DriveSource(src        : str,
         cached = cldrive_db.get_entry(src, group_name, gsize, lsize)
         if cached.status in {"CPU", "GPU"}:
           yield ToDataFrameRow(
-            name                 = "{}.cl".format(sha),
+            name                 = "{}.cl".format(sha) if name is None else name,
             grewe_feats          = feats,
             transferred_bytes    = cached.transferred_bytes,
             global_size          = gsize,
@@ -154,7 +156,7 @@ def DriveSource(src        : str,
             except ValueError:
               idx += 1
           yield ToDataFrameRow(
-            name                 = "{}.cl".format(sha),
+            name                 = "{}.cl".format(sha) if name is None else name,
             grewe_feats          = feats,
             transferred_bytes    = transferred_bytes,
             global_size          = gsize,
@@ -272,14 +274,19 @@ def TrainGrewe(**kwargs) -> None:
     )
   return
 
-def fetch_gpgpu_cummins_benchmarks(root_path: pathlib.Path) -> typing.List['Benchmark']:
+def fetch_gpgpu_cummins_benchmarks(gpgpu_path: pathlib.Path, cldrive_path: pathlib.Path, out_path: pathlib.Path) -> None:
   """
   Parse GPGPU folder, isolate and collect all kernel instances.
+  Save to DataFrame.
   """
-  if isinstance(root_path, str):
-    root_path = pathlib.Path(root_path)
+  if isinstance(gpgpu_path, str):
+    gpgpu_path = pathlib.Path(gpgpu_path)
+  if isinstance(cldrive_path, str):
+    cldrive_path = pathlib.Path(cldrive_path)
+  if isinstance(out_path, str):
+    out_path = pathlib.Path(out_path)
 
-  queue   = [([], root_path)]
+  queue   = [([], gpgpu_path)]
   kernels = []
 
   while queue:
@@ -291,7 +298,7 @@ def fetch_gpgpu_cummins_benchmarks(root_path: pathlib.Path) -> typing.List['Benc
         elif f.is_file():
           if f.suffix in {'.cl'}:
             base_name = "-".join(pref + [f.stem]),
-            cur_kernels = benchmark_worker((f, open(f, 'r').read(), None), "GreweFeatures")
+            cur_kernels = benchmarks.benchmark_worker((f, open(f, 'r').read(), None), "GreweFeatures")
             if len(cur_kernels) > 1:
               for idx, k in enumerate(cur_kernels):
                 cur_kernels[idx] = k._replace(name = base_name + "-{}.cl".format(idx))
@@ -310,4 +317,11 @@ def fetch_gpgpu_cummins_benchmarks(root_path: pathlib.Path) -> typing.List['Benc
       pass
     except OSError:
       pass
-  return kernels
+
+  cldrive_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(pathlib.Path(cldrive_path).resolve()), must_exist = False)
+  for k in kernels:
+    for row in DriveSource(k.contents, "GPGPU_benchmarks", k.features, cldrive_db):
+      datapoints.append(row)
+  frame = pd.DataFrame(datapoints, columns = DataFrameSchema())
+  frame.to_csv(out_path)
+  return
