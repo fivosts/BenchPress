@@ -46,13 +46,16 @@ class Benchmark(typing.NamedTuple):
 def preprocessor_worker(contentfile_batch):
   kernel_batch = []
   p, cf = contentfile_batch
-  ks = opencl.ExtractSingleKernelsHeaders(
-       opencl.InvertKernelSpecifier(
-       opencl.StripDoubleUnderscorePrefixes(
-       opencl.ClangPreprocessWithShim(
-       c.StripIncludes(cf)))))
-  for k, h in ks:
-    kernel_batch.append((p, k, h))
+  try:
+    ks = opencl.ExtractSingleKernelsHeaders(
+         opencl.InvertKernelSpecifier(
+         opencl.StripDoubleUnderscorePrefixes(
+         opencl.ClangPreprocessWithShim(
+         c.StripIncludes(cf)))))
+    for k, h in ks:
+      kernel_batch.append((p, k, h))
+  except ValueError:
+    pass
   return kernel_batch
 
 def benchmark_worker(benchmark, feature_space, reduced_git_corpus = None):
@@ -63,13 +66,13 @@ def benchmark_worker(benchmark, feature_space, reduced_git_corpus = None):
     header_file = h,
     use_aux_headers = False
   )
-  if closest_git:
+  if reduced_git_corpus:
     closest_git = sorted([(cf, calculate_distance(fts, features[feature_space], feature_space)) for cf, fts in reduced_git_corpus], key = lambda x: x[1])[0]
     if features[feature_space] and closest_git[1] > 0:
-      return Benchmark(p, p.name, k, features[feature_space])
+      return Benchmark(p, p.name, k, features[feature_space], {})
   else:
     if features[feature_space]:
-      return Benchmark(p, p.name, k, features[feature_space])
+      return Benchmark(p, p.name, k, features[feature_space], {})
 
 @contextlib.contextmanager
 def GetContentFileRoot(path: pathlib.Path) -> typing.Iterator[pathlib.Path]:
@@ -81,7 +84,9 @@ def GetContentFileRoot(path: pathlib.Path) -> typing.Iterator[pathlib.Path]:
     The path of a directory containing content files.
   """
   if not (path.parent / "benchmarks_registry.json").exists():
-    raise FileNotFoundError("benchmarks_registry.json file not found.")
+    l.logger().warn("benchmarks_registry.json file not found. Assuming provided path is the benchmarks root path.")
+    yield pathlib.Path(path)
+    return
 
   with open(path.parent / "benchmarks_registry.json", 'r') as js:
     reg = json.load(js)
@@ -124,8 +129,11 @@ def iter_cl_files(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Path, 
       elif c.is_dir():
         file_queue += [p for p in c.iterdir()]
       elif c.is_file() and c.suffix == ".cl":
-        with open(c, 'r') as inf:
-          contentfiles.append((c, inf.read()))
+        try:
+          with open(c, 'r') as inf:
+            contentfiles.append((c, inf.read()))
+        except UnicodeDecodeError:
+          continue
   l.logger().info("Scanned \'.cl\' files in {}".format(str(path)))
   return contentfiles
 
