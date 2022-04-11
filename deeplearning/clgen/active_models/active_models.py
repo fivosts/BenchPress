@@ -96,6 +96,7 @@ class Model(object):
     self.downstream_task = downstream_tasks.DownstreamTask.FromTask(
       self.config.downstream_task,
       pathlib.Path(self.config.training_corpus).resolve(),
+      self.cache_path,
       self.config.random_seed,
     )
 
