@@ -543,7 +543,8 @@ class GrewePredictive(DownstreamTask):
         infile.close()
       while not infile.closed:
         time.sleep(1)
-      time.sleep(10)
+      if environment.WORLD_SIZE > 1:
+        time.sleep(30)
       distrib.unlock()
       return data
     else:
