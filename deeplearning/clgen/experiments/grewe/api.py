@@ -318,8 +318,18 @@ def fetch_gpgpu_cummins_benchmarks(gpgpu_path: pathlib.Path, cldrive_path: pathl
     except OSError:
       pass
 
-  cldrive_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(pathlib.Path(cldrive_path).resolve()), must_exist = False)
+  benchmarks = []
   for k in kernels:
+    try:
+      _ = opencl.Compile(k.contents)
+      benchmarks.append(k)
+    except ValueError:
+      pass
+
+  l.logger().info("Fetched {} GPGPU benchmarks. {} compiled successfully.".format(len(kernels), len(benchmarks)))
+
+  cldrive_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(pathlib.Path(cldrive_path).resolve()), must_exist = False)
+  for k in benchmarks:
     for row in DriveSource(k.contents, "GPGPU_benchmarks", k.features, cldrive_db):
       datapoints.append(row)
   frame = pd.DataFrame(datapoints, columns = DataFrameSchema())
