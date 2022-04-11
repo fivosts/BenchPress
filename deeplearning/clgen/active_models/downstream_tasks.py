@@ -336,6 +336,7 @@ class GrewePredictive(DownstreamTask):
       if top_k != -1:
         return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)[:top_k]
       else:
+        l.logger().warn("Collected {} new samples from http server".format(len(new_samples)))
         return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)
     else:
       new_samples = []
