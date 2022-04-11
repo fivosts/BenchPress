@@ -93,10 +93,11 @@ class Model(object):
       (self.cache_path / "samples").mkdir(exist_ok = True)
     distrib.barrier()
 
+    (self.cache_path / "downstream_task").mkdir(exist_ok = True, parents = True)
     self.downstream_task = downstream_tasks.DownstreamTask.FromTask(
       self.config.downstream_task,
       pathlib.Path(self.config.training_corpus).resolve(),
-      self.cache_path,
+      self.cache_path / "downstream_task",
       self.config.random_seed,
     )
 
