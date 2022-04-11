@@ -295,6 +295,7 @@ def fetch_gpgpu_cummins_benchmarks(gpgpu_path: pathlib.Path, cldrive_path: pathl
   gpgpu_benchmarks = []
   for k in kernels:
     try:
+      _ = opencl.Compile(k[1])
       b = benchmarks.benchmark_worker(k, "GreweFeatures")
       gpgpu_benchmarks.append(b)
     except ValueError:
