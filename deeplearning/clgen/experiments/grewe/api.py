@@ -271,3 +271,43 @@ def TrainGrewe(**kwargs) -> None:
       synth_bench_name = group['name'],
     )
   return
+
+def fetch_gpgpu_cummins_benchmarks(root_path: pathlib.Path) -> typing.List['Benchmark']:
+  """
+  Parse GPGPU folder, isolate and collect all kernel instances.
+  """
+  if isinstance(root_path, str):
+    root_path = pathlib.Path(root_path)
+
+  queue   = [([], root_path)]
+  kernels = []
+
+  while queue:
+    pref, cur = queue.pop(0)
+    try:
+      for f in cur.iterdir():
+        if f.is_symlink():
+          continue
+        elif f.is_file():
+          if f.suffix in {'.cl'}:
+            base_name = "-".join(pref + [f.stem]),
+            cur_kernels = benchmark_worker((f, open(f, 'r').read(), None), "GreweFeatures")
+            if len(cur_kernels) > 1:
+              for idx, k in enumerate(cur_kernels):
+                cur_kernels[idx] = k._replace(name = base_name + "-{}.cl".format(idx))
+            else:
+              cur_kernels[idx] = k._replace(name = base_name + ".cl")
+            kernels += cur_kernels
+        elif f.is_dir():
+          queue.append((pref + [cur.stem], f))
+        else:
+          continue
+    except PermissionError:
+      pass
+    except NotADirectoryError:
+      pass
+    except FileNotFoundError:
+      pass
+    except OSError:
+      pass
+  return kernels
