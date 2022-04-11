@@ -536,12 +536,13 @@ class GrewePredictive(DownstreamTask):
     if (self.cache_path / "downstream_task_dg.pkl").exists():
       distrib.lock()
       with open(self.cache_path / "downstream_task_dg.pkl", 'rb') as infile:
+        data = pickle.load(infile)
         infile.close()
       while not infile.closed:
         time.sleep(1)
       time.sleep(10)
       distrib.unlock()
-      return pickle.load(infile)
+      return data
     else:
       return None
 
