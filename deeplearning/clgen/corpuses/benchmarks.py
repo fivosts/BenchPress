@@ -36,6 +36,13 @@ targets = {
   'grid_walk'    : '',
 }
 
+class Benchmark(typing.NamedTuple):
+  path             : pathlib.Path
+  name             : str
+  contents         : str
+  features         : typing.Dict[str, float]
+  runtime_features : typing.Dict[str, float]
+
 def preprocessor_worker(contentfile_batch):
   kernel_batch = []
   p, cf = contentfile_batch
@@ -160,41 +167,3 @@ def resolve_benchmark_names(benchmarks: typing.List["Benchmark"]) -> typing.List
         name = "{}-{}".format(benchmark.name, renaming[benchmark.name][0])
       )
   return sorted(benchmarks, key = lambda x: x.name)
-
-def fetch_gpgpu_cummins_benchmarks(root_path: pathlib.Path) -> None:
-  """
-  Parse GPGPU folder, isolate and collect all kernel instances.
-  """
-  if isinstance(root_path, str):
-    root_path = pathlib.Path(root_path)
-
-  queue    = [([], root_path)]
-  kernel_files  = []
-
-  while queue:
-    pref, cur = queue.pop(0)
-    try:
-      for f in cur.iterdir():
-        if f.is_symlink():
-          continue
-        elif f.is_file():
-          if f.suffix in {'.c', '.cl'}:
-            kernel_files.append(
-              {
-                'name': "-".join(pref + [f.name]),
-                'src' : open(f, 'r').read(),
-              }
-            )
-            kernel_files.append(open(f, 'r').read())
-        elif f.is_dir():
-          queue.append((pref + [cur.stem], f))
-        else:
-          continue
-    except PermissionError:
-      pass
-    except NotADirectoryError:
-      pass
-    except FileNotFoundError:
-      pass
-    except OSError:
-      pass
