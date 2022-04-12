@@ -1,6 +1,0 @@
-tokenizer: "backup_tokenizer.pkl"
-evaluator {
-  generate_clsmith {
-    clsmith_db: "samples.db"
-  }
-}
