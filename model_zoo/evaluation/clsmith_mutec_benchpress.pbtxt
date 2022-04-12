@@ -15,7 +15,7 @@ evaluator {
       database: "/disk/scratch/s1879742/clsmith.db"
     }
     db_group {
-      group_name: "Mutec"
+      group_name: "CLSmith+Mutec"
       db_type: "SamplesDatabase"
       database: "/disk/scratch/s1879742/Mutec/clsmith_mutants.db"
     }
@@ -36,7 +36,7 @@ evaluator {
       database: "/disk/scratch/s1879742/clsmith.db"
     }
     db_group {
-      group_name: "Mutec"
+      group_name: "CLSmith+Mutec"
       db_type: "SamplesDatabase"
       database: "/disk/scratch/s1879742/Mutec/clsmith_mutants.db"
     }
@@ -57,7 +57,7 @@ evaluator {
       database: "/disk/scratch/s1879742/clsmith.db"
     }
     db_group {
-      group_name: "Mutec"
+      group_name: "CLSmith+Mutec"
       db_type: "SamplesDatabase"
       database: "/disk/scratch/s1879742/Mutec/clsmith_mutants.db"
     }
