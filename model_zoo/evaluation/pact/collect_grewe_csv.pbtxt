@@ -1,4 +1,4 @@
-workspace: "/var/foivos/results/full_results/grewe_workspace"
+workspace: "/var/foivos/results/full_results/grewe_rodinia_workspace"
 tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
 evaluator {
   grewe_top_k_csv {
