@@ -4,6 +4,17 @@ evaluator {
   min_score {
     target: "rodinia"
     feature_space: "AutophaseFeatures"
+    plot_config {
+      title: ""
+      x_name: ""
+      y_name: "Relative distance"
+      showline: True
+      showgrid: False
+      legend_x: 0.9
+      legend_y: 0.9
+      height: 102
+      width: 1024
+    }
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
@@ -31,6 +42,17 @@ evaluator {
   min_score {
     target: "rodinia"
     feature_space: "InstCountFeatures"
+    plot_config {
+      title: ""
+      x_name: ""
+      y_name: "Relative distance"
+      showline: True
+      showgrid: False
+      legend_x: 0.9
+      legend_y: 0.9
+      height: 102
+      width: 1024
+    }
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
@@ -58,6 +80,17 @@ evaluator {
   min_score {
     target: "rodinia"
     feature_space: "GreweFeatures"
+    plot_config {
+      title: ""
+      x_name: ""
+      y_name: "Relative distance"
+      showline: True
+      showgrid: False
+      legend_x: 0.9
+      legend_y: 0.9
+      height: 102
+      width: 1024
+    }
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
