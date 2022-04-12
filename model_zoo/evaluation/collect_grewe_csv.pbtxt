@@ -2,7 +2,7 @@ workspace: "/var/foivos/results/full_results/grewe_workspace"
 tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
 evaluator {
   grewe_top_k_csv {
-    top_k: 5
+    top_k: 1
     cldrive_cache: "/var/foivos/results/full_results/cldrive_cache.db"
     target: "rodinia"
     db_group {
@@ -26,31 +26,15 @@ evaluator {
       database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
       size_limit: 768
     }
-  }
-}
-evaluator {
-  grewe_csv {
-    cldrive_cache: "/var/foivos/results/full_results/cldrive_cache.db"
     db_group {
-      group_name: "BenchPress"
+      group_name: "CLSmith"
+      db_type: "CLSmithDatabase"
+      database: "/var/foivos/results/full_results/clsmith.db"
+    }
+    db_group {
+      group_name: "CLSmith+Mutec"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/pldi_results/BERT/Fixed_input/unique_samples.db"
-    }
-    db_group {
-      group_name: "CLgen"
-      db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/CLgen/unique_merged_samples.db"
-    }
-    db_group {
-      group_name: "GitHub"
-      db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
-    }
-    db_group {
-      group_name: "GitHub-768"
-      db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
-      size_limit: 768
+      database: "/var/foivos/results/full_results/clsmith_mutants.db"
     }
   }
 }
