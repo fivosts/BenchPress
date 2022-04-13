@@ -250,7 +250,7 @@ class GrewePredictive(DownstreamTask):
           num_runs    = 100,
           timeout     = 60,
         )
-      if cached.status in {"CPU", "GPU"}:
+      if cached is not None and cached.status in {"CPU", "GPU"}:
         tr_bytes = cached.transferred_bytes
         if not FLAGS.only_optimal_gsize:
           s = create_sample(
