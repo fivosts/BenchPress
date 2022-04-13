@@ -139,8 +139,8 @@ class CLDriveExecutions(sqlutil.Database):
   def __init__(self, url: str, must_exist: bool = False):
     super(CLDriveExecutions, self).__init__(url, Base, must_exist = must_exist)
     self._status_cache = None
-    if FLAGS.remote_cldrive_cache is not None:
-      self.remote_session = cldrive_server.RemoteSession(FLAGS.remote_cldrive_cache)
+    # if FLAGS.remote_cldrive_cache is not None:
+      # self.remote_session = cldrive_server.RemoteSession(FLAGS.remote_cldrive_cache)
 
   def add_entry(self, src: str, dataset: str, status: str, global_size: int, local_size: int, df: pd.DataFrame) -> None:
     """
