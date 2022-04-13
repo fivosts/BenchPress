@@ -197,35 +197,6 @@ def index():
     multi_status[hn] = status
   return json.dumps(multi_status), 200
 
-def http_serve(read_queue    : multiprocessing.Queue,
-               write_queues  : 'multiprocessing.Dict',
-               reject_queues : 'multiprocessing.Dict',
-               work_flag     : multiprocessing.Value,
-               manager       : multiprocessing.Manager,
-               ):
-  """
-  Run http server for read and write workload queues.
-  """
-  try:
-    port = FLAGS.http_port
-    if port is None:
-      port = portpicker.pick_unused_port()
-    handler.set_params(read_queue, write_queues, reject_queues, manager, work_flag)
-    hostname = subprocess.check_output(
-      ["hostname", "-i"],
-      stderr = subprocess.STDOUT,
-    ).decode("utf-8").replace("\n", "").split(' ')
-    if len(hostname) == 2:
-      ips = "ipv4: {}, ipv6: {}".format(hostname[1], hostname[0])
-    else:
-      ips = "ipv4: {}".format(hostname[0])
-    l.logger().warn("Server Public IP: {}".format(ips))
-    waitress.serve(app, host = '0.0.0.0', port = port)
-  except KeyboardInterrupt:
-    return
-  except Exception as e:
-    raise e
-  return
 
 def client_status_request() -> typing.Tuple:
   """
@@ -266,25 +237,80 @@ def client_put_request(msg: typing.List[typing.Dict]) -> None:
     l.logger().error("Error code {} in write_message request.".format(r.status_code))
   return
 
-def start_server_process():
+class CLDriveServer(object):
   """
-  This is an easy wrapper to start server from parent routine.
-  Starts a new process or thread and returns all the multiprocessing
-  elements needed to control the server.
+  Abstract class for cldrive server handling,
   """
-  m = multiprocessing.Manager()
-  rq, wqs, rjqs = multiprocessing.Queue(), m.dict(), m.dict()
-  wf = multiprocessing.Value('i', False)
-  p = multiprocessing.Process(
-    target = http_serve,
-    kwargs = {
-      'read_queue'    : rq,
-      'write_queues'  : wqs,
-      'reject_queues' : rjqs,
-      'work_flag'     : wf,
-      'manager'       : m,
-    }
-  )
-  p.daemon = True
-  p.start()
-  return p, wf, rq, wqs, rjqs
+  def __init__(self) -> None:
+    return
+
+  def http_serve(self,
+                 read_queue    : multiprocessing.Queue,
+                 write_queues  : 'multiprocessing.Dict',
+                 reject_queues : 'multiprocessing.Dict',
+                 work_flag     : multiprocessing.Value,
+                 manager       : multiprocessing.Manager,
+                 ):
+    """
+    Run http server for read and write workload queues.
+    """
+    try:
+      port = FLAGS.http_port
+      if port is None:
+        port = portpicker.pick_unused_port()
+      handler.set_params(read_queue, write_queues, reject_queues, manager, work_flag)
+      hostname = subprocess.check_output(
+        ["hostname", "-i"],
+        stderr = subprocess.STDOUT,
+      ).decode("utf-8").replace("\n", "").split(' ')
+      if len(hostname) == 2:
+        ips = "ipv4: {}, ipv6: {}".format(hostname[1], hostname[0])
+      else:
+        ips = "ipv4: {}".format(hostname[0])
+      l.logger().warn("Server Public IP: {}".format(ips))
+      waitress.serve(app, host = '0.0.0.0', port = port)
+    except KeyboardInterrupt:
+      return
+    except Exception as e:
+      raise e
+    return
+
+  def start_server_process(self):
+    """
+    This is an easy wrapper to start server from parent routine.
+    Starts a new process or thread and returns all the multiprocessing
+    elements needed to control the server.
+    """
+    m = multiprocessing.Manager()
+    rq, wqs, rjqs = multiprocessing.Queue(), m.dict(), m.dict()
+    wf = multiprocessing.Value('i', False)
+    p = multiprocessing.Process(
+      target = http_serve,
+      kwargs = {
+        'read_queue'    : rq,
+        'write_queues'  : wqs,
+        'reject_queues' : rjqs,
+        'work_flag'     : wf,
+        'manager'       : m,
+      }
+    )
+    p.daemon = True
+    p.start()
+    return p, wf, rq, wqs, rjqs
+
+
+
+class WorkloadServer(object):
+  """
+  Server that
+  a) computes a given source load and
+  b) Caches it locally (or maybe not) in the cldrive cache.
+  """
+  def __init__(self, is_client: bool = False) -> None:
+    self.is_client = is_client
+    if not is_client:
+      self.start_server_process()
+    return
+
+  def http_serve(self) -> None:
+    raise NotImplementedError("TODO")
