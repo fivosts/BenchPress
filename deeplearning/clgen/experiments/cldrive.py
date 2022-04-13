@@ -175,7 +175,9 @@ class CLDriveExecutions(sqlutil.Database):
                   status               = status,
                 )
               )
-            except ValueError:
+            except ValueError as e:
+              l.logger().warn(e)
+              l.logger().warn("Skip adding entry,")
               pass
           else:
             session.add(
