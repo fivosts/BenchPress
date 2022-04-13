@@ -307,7 +307,8 @@ def fetch_gpgpu_cummins_benchmarks(gpgpu_path: pathlib.Path, cldrive_path: pathl
   cldrive_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(pathlib.Path(cldrive_path).resolve()), must_exist = False)
   for k in gpgpu_benchmarks:
     for row in DriveSource(k.contents, "GPGPU_benchmarks", k.features, cldrive_db):
-      datapoints.append(row)
+      if row:
+        datapoints.append(row)
   frame = pd.DataFrame(datapoints, columns = DataFrameSchema())
   frame.to_csv(out_path)
   return
