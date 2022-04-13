@@ -34,7 +34,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string(
   "remote_cldrive_cache",
   None,
-  "Set reachable address of cldrive cache. If None, cldrive cache is considered to reside in the local machine.",
+  "Set reachable address of cldrive cache. If None, cldrive cache is considered to reside in the local machine."
   "If set, computation happens in local machine, caching in get is de-activated and computed samples are sent to remote."
 )
 
