@@ -568,7 +568,7 @@ def main(*args, **kwargs) -> None:
   if not FLAGS.use_http_server and not FLAGS.use_socket_server:
     raise ValueError("This booting point is supposed to work as server. Set your flags appropriately.")
   tokenizer = tokenizers.TokenizerBase.FromFile(tokenizer_path)
-  task = DownstreamTask.FromTask("GrewePredictive", cldrive_cache, 0, use_as_server = True)
+  task = DownstreamTask.FromTask("GrewePredictive", "/tmp/", cldrive_cache, 0, use_as_server = True)
   task.ServeRuntimeFeatures(tokenizer)
   return
 
