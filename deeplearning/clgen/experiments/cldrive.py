@@ -20,7 +20,7 @@ from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import distributions
-from deeplearning.clgen.util import cldrive_server
+# from deeplearning.clgen.util import cldrive_server
 from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.experiments import workers
 from deeplearning.clgen.experiments import public
@@ -31,12 +31,12 @@ Base = declarative.declarative_base()
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string(
-  "remote_cldrive_cache",
-  None,
-  "Set reachable address of cldrive cache. If None, cldrive cache is considered to reside in the local machine."
-  "If set, computation happens in local machine, caching in get is de-activated and computed samples are sent to remote."
-)
+# flags.DEFINE_string(
+#   "remote_cldrive_cache",
+#   None,
+#   "Set reachable address of cldrive cache. If None, cldrive cache is considered to reside in the local machine."
+#   "If set, computation happens in local machine, caching in get is de-activated and computed samples are sent to remote."
+# )
 
 class Data(Base):
   __tablename__ = "sampling_results"
@@ -126,15 +126,15 @@ class CLDriveExecutions(sqlutil.Database):
         self._status_cache = {f.sha256: f.status for f in s.query(CLDriveSample).yield_per(1000)}
     return self._status_cache
 
-  @property
-  def get_session(self):
-    """
-    Return the correct session for the cache.
-    """
-    if FLAGS.remote_cldrive_cache is None:
-      return self.Session
-    else:
-      return self.remote_session
+  # @property
+  # def get_session(self):
+  #   """
+  #   Return the correct session for the cache.
+  #   """
+  #   if FLAGS.remote_cldrive_cache is None:
+  #     return self.Session
+  #   else:
+  #     return self.remote_session
 
   def __init__(self, url: str, must_exist: bool = False):
     super(CLDriveExecutions, self).__init__(url, Base, must_exist = must_exist)
