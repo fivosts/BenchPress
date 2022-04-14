@@ -238,6 +238,7 @@ class CLDriveExecutions(sqlutil.Database):
                      num_runs    : int,
                      timeout     : int = 0,
                      include     : str = "",
+                     extra_args  : typing.List[str] = [],
                      ) -> "CLDriveSample":
     """
     Add or update incoming entry by running CLDrive and pinging the database.
@@ -248,6 +249,7 @@ class CLDriveExecutions(sqlutil.Database):
       num_runs    = num_runs,
       gsize       = global_size,
       lsize       = local_size,
+      extra_args  = extra_args,
       timeout     = timeout,
     )
     self.add_entry(include + src, dataset, label, global_size, local_size, df)
