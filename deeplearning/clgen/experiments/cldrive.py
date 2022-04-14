@@ -142,11 +142,11 @@ class CLDriveExecutions(sqlutil.Database):
     # if FLAGS.remote_cldrive_cache is not None:
       # self.remote_session = cldrive_server.RemoteSession(FLAGS.remote_cldrive_cache)
 
-  def add_entry(self, src: str, dataset: str, status: str, global_size: int, local_size: int, df: pd.DataFrame) -> None:
+  def add_entry(self, src: str, dataset: str, status: str, global_size: int, local_size: int, df: pd.DataFrame, include: str = "") -> None:
     """
     Adds execution entries from pandas dataframe.
     """
-    sha = crypto.sha256_str(src + dataset + str(global_size) + str(local_size))
+    sha = crypto.sha256_str(include + src + dataset + str(global_size) + str(local_size))
     try:
       with self.Session(commit = True) as session:
         entry = session.query(CLDriveSample).filter_by(sha256 = sha).first()
@@ -165,7 +165,7 @@ class CLDriveExecutions(sqlutil.Database):
                   id          = self.count,
                   global_size = global_size,
                   local_size  = local_size,
-                  source      = src,
+                  source      = include + src,
                   dataset     = dataset,
                   cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
                   cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
@@ -185,7 +185,7 @@ class CLDriveExecutions(sqlutil.Database):
                 id          = self.count,
                 global_size = global_size,
                 local_size  = local_size,
-                source      = src,
+                source      = include + src,
                 dataset     = dataset,
                 cpu_transfer_time_ns = [],
                 cpu_kernel_time_ns   = [],
@@ -212,12 +212,13 @@ class CLDriveExecutions(sqlutil.Database):
                 src         : str,
                 dataset     : str,
                 global_size : int,
-                local_size  : int
+                local_size  : int,
+                include     : str = "",
                 ) -> "CLDriveSample":
     """
     Fetch row from DB, if exists.
     """
-    sha = crypto.sha256_str(src + dataset + str(global_size) + str(local_size))
+    sha = crypto.sha256_str(include + src + dataset + str(global_size) + str(local_size))
     try:
       with self.Session() as session:
         entry = session.query(CLDriveSample).filter_by(sha256 = sha).first()
@@ -236,18 +237,20 @@ class CLDriveExecutions(sqlutil.Database):
                      local_size  : int,
                      num_runs    : int,
                      timeout     : int = 0,
+                     include     : str = "",
                      ) -> "CLDriveSample":
     """
     Add or update incoming entry by running CLDrive and pinging the database.
     """
     df, label = opencl.CLDriveDataFrame(
       src,
-      num_runs = num_runs,
-      gsize    = global_size,
-      lsize    = local_size,
-      timeout  = timeout,
+      header_file = include,
+      num_runs    = num_runs,
+      gsize       = global_size,
+      lsize       = local_size,
+      timeout     = timeout,
     )
-    self.add_entry(src, dataset, label, global_size, local_size, df)
+    self.add_entry(include + src, dataset, label, global_size, local_size, df)
     return self.get_entry(src, dataset, global_size, local_size)
 
   def get_valid_data(self, dataset: str = None) -> typing.List[CLDriveSample]:
