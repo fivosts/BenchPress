@@ -110,6 +110,7 @@ def ToDataFrameRow(name                 : str,
   ]
 
 def DriveSource(src        : str,
+                include    : str,
                 group_name : str,
                 feats      : typing.Dict[str, float],
                 cldrive_db : cldrive.CLDriveExecutions,
@@ -128,9 +129,9 @@ def DriveSource(src        : str,
       if lsize > gsize:
         continue
 
-      sha = crypto.sha256_str(src + group_name + str(gsize) + str(lsize))
+      sha = crypto.sha256_str(include + src + group_name + str(gsize) + str(lsize))
       if sha in cldrive_db.status_cache:
-        cached = cldrive_db.get_entry(src, group_name, gsize, lsize)
+        cached = cldrive_db.get_entry(src, group_name, gsize, lsize, include = include)
         if cached.status in {"CPU", "GPU"}:
           yield ToDataFrameRow(
             name                 = "{}.cl".format(sha) if name is None else name,
@@ -147,8 +148,8 @@ def DriveSource(src        : str,
         else:
           yield None
       else:
-        df, label = opencl.CLDriveDataFrame(src, num_runs = 1000, gsize = gsize, lsize = lsize, timeout = 60)
-        cldrive_db.add_entry(src, group_name, label, gsize, lsize, df)
+        df, label = opencl.CLDriveDataFrame(src, header_file = include, num_runs = 1000, gsize = gsize, lsize = lsize, timeout = 60)
+        cldrive_db.add_entry(src, group_name, label, gsize, lsize, df, include = include)
         if label not in {"CPU", "GPU"}:
           yield None
         else:
@@ -205,9 +206,9 @@ def GreweTopKCSV(**kwargs) -> None:
     for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
       top_k_idx = 0
       top_k_bar = tqdm.tqdm(total = top_k, desc = "Top K cands", leave = False)
-      for (src, _, feats, dist) in tqdm.tqdm(workers.SortedSrcFeatsDistances(get_data(), benchmark.features, "GreweFeatures"), desc = "Sorted Data", leave = False):
+      for (src, incl, feats, dist) in tqdm.tqdm(workers.SortedSrcFeatsDistances(get_data(), benchmark.features, "GreweFeatures"), desc = "Sorted Data", leave = False):
         toggle = False
-        for row in DriveSource(src, dbg.group_name, feats, cldrive_db):
+        for row in DriveSource(src, incl, dbg.group_name, feats, cldrive_db):
           if row:
             toggle = True
             datapoints.append(row)
@@ -246,8 +247,8 @@ def GreweCSV(**kwargs) -> None:
     else:
       get_data = lambda: dbg.get_data_features("GreweFeatures", use_mp = False)
 
-    for (src, inc, feats) in tqdm.tqdm(get_data(), desc = "Src", leave = True):
-      for row in DriveSource(src, dbg.group_name, feats, cldrive_db):
+    for (src, incl, feats) in tqdm.tqdm(get_data(), desc = "Src", leave = True):
+      for row in DriveSource(src, incl, dbg.group_name, feats, cldrive_db):
         if row:
           datapoints.append(row)
     frame = pd.DataFrame(datapoints, columns = DataFrameSchema())
@@ -307,7 +308,7 @@ def fetch_gpgpu_cummins_benchmarks(gpgpu_path: pathlib.Path, cldrive_path: pathl
   cldrive_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(pathlib.Path(cldrive_path).resolve()), must_exist = False)
   for k in gpgpu_benchmarks:
     name = '-'.join(str(k.path).split("gpgpu/")[-1].split('/'))
-    for row in DriveSource(k.contents, "GPGPU_benchmarks", k.features, cldrive_db, name = name):
+    for row in DriveSource(k.contents, "", "GPGPU_benchmarks", k.features, cldrive_db, name = name):
       if row:
         datapoints.append(row)
   frame = pd.DataFrame(datapoints, columns = DataFrameSchema())
