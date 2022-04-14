@@ -318,8 +318,22 @@ class QueryByCommittee(backends.BackendBase):
           #   loader.sampler.set_epoch(epoch)
 
           if self.is_world_process_zero():
-            l.logger().info("{}: Epoch {} Loss: {}".format(model_name, current_step // member.training_opts.steps_per_epoch, train_hook.epoch_loss))
-            train_hook.end_epoch()
+            try:
+              l.logger().info("{}: Epoch {} Loss: {}".format(model_name, current_step // member.training_opts.steps_per_epoch, train_hook.epoch_loss))
+              train_hook.end_epoch()
+            except ZeroDivisionError:
+              l.logger().error(
+                "Hook has crashed again: current_step: {}, step_freq: {}, flush_freq: {}, train_step: {}".format(
+                  train_hook.current_step, train_hook.step_freq, train_hook.flush_freq,
+                  current_step
+                )
+              )
+
+
+               current_step: int, 
+               step_freq: int,
+               flush_freq: int = None,
+
 
           if self.torch_tpu_available:
             self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
