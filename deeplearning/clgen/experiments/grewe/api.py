@@ -249,7 +249,7 @@ def GreweCSV(**kwargs) -> None:
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
 
     if dbg.db_type == clsmith.CLSmithDatabase:
-      extra_args = ["-include{}".format(pathlib.Path(clsmith.CLSMITH_INCLUDE) / "CLSmith.h")]
+      extra_args = ["-I{}".format(pathlib.Path(clsmith.CLSMITH_INCLUDE))]
     else:
       extra_args = []
 
