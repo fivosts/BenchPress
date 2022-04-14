@@ -320,7 +320,6 @@ class QueryByCommittee(backends.BackendBase):
           if self.is_world_process_zero():
             try:
               l.logger().info("{}: Epoch {} Loss: {}".format(model_name, current_step // member.training_opts.steps_per_epoch, train_hook.epoch_loss))
-              train_hook.end_epoch()
             except ZeroDivisionError:
               l.logger().error(
                 "Hook has crashed again: current_step: {}, step_freq: {}, flush_freq: {}, train_step: {}".format(
@@ -328,13 +327,7 @@ class QueryByCommittee(backends.BackendBase):
                   current_step
                 )
               )
-
-
-               current_step: int, 
-               step_freq: int,
-               flush_freq: int = None,
-
-
+            train_hook.end_epoch()
           if self.torch_tpu_available:
             self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
       except KeyboardInterrupt:
