@@ -115,7 +115,8 @@ def DriveSource(src        : str,
                 group_name : str,
                 feats      : typing.Dict[str, float],
                 cldrive_db : cldrive.CLDriveExecutions,
-                name       : str = None
+                name       : str = None,
+                extra_args : typing.List[str] = [],
                 ) -> typing.Generator:
   """
   For a given source code, drive to CLDrive and return a ready row.
@@ -132,7 +133,7 @@ def DriveSource(src        : str,
 
       sha = crypto.sha256_str(include + src + group_name + str(gsize) + str(lsize))
       if sha in cldrive_db.status_cache:
-        cached = cldrive_db.get_entry(src, group_name, gsize, lsize, include = include)
+        cached = cldrive_db.get_entry(src, group_name, gsize, lsize, include = include, extra_args = extra_args)
         if cached.status in {"CPU", "GPU"}:
           yield ToDataFrameRow(
             name                 = "{}.cl".format(sha) if name is None else name,
@@ -149,8 +150,8 @@ def DriveSource(src        : str,
         else:
           yield None
       else:
-        df, label = opencl.CLDriveDataFrame(src, header_file = include, num_runs = 1000, gsize = gsize, lsize = lsize, timeout = 60)
-        cldrive_db.add_entry(src, group_name, label, gsize, lsize, df, include = include)
+        df, label = opencl.CLDriveDataFrame(src, header_file = include, num_runs = 1000, gsize = gsize, lsize = lsize, extra_args = extra_args, timeout = 60)
+        cldrive_db.add_entry(src, group_name, label, gsize, lsize, df, include = include, extra_args = extra_args)
         if label not in {"CPU", "GPU"}:
           yield None
         else:
@@ -194,6 +195,11 @@ def GreweTopKCSV(**kwargs) -> None:
     if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
 
+    if dbg.db_type == clsmith.CLSmithDatabase:
+      extra_args = ["-include{}".format(pathlib.Path(clsmith.CLSMITH_INCLUDE) / "CLSmith.h")]
+    else:
+      extra_args = []
+
     datapoints = []
     out_path = workspace / "{}.csv".format(dbg.group_name)
 
@@ -209,7 +215,7 @@ def GreweTopKCSV(**kwargs) -> None:
       top_k_bar = tqdm.tqdm(total = top_k, desc = "Top K cands", leave = False)
       for (src, incl, feats, dist) in tqdm.tqdm(workers.SortedSrcFeatsDistances(get_data(), benchmark.features, "GreweFeatures"), desc = "Sorted Data", leave = False):
         toggle = False
-        for row in DriveSource(src, incl, dbg.group_name, feats, cldrive_db):
+        for row in DriveSource(src, incl, dbg.group_name, feats, cldrive_db, extra_args = extra_args):
           if row:
             toggle = True
             datapoints.append(row)
@@ -240,6 +246,11 @@ def GreweCSV(**kwargs) -> None:
     if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles or dbg.db_type == clsmith.CLSmithDatabase):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
 
+    if dbg.db_type == clsmith.CLSmithDatabase:
+      extra_args = ["-include{}".format(pathlib.Path(clsmith.CLSMITH_INCLUDE) / "CLSmith.h")]
+    else:
+      extra_args = []
+
     datapoints = []
     out_path = workspace / "{}.csv".format(dbg.group_name)
 
@@ -249,7 +260,7 @@ def GreweCSV(**kwargs) -> None:
       get_data = lambda: dbg.get_data_features("GreweFeatures", use_mp = False)
 
     for (src, incl, feats) in tqdm.tqdm(get_data(), desc = "Src", leave = True):
-      for row in DriveSource(src, incl, dbg.group_name, feats, cldrive_db):
+      for row in DriveSource(src, incl, dbg.group_name, feats, cldrive_db, extra_args = extra_args):
         if row:
           datapoints.append(row)
     frame = pd.DataFrame(datapoints, columns = DataFrameSchema())
