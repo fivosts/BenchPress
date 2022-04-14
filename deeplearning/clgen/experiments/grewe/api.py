@@ -19,6 +19,7 @@ from deeplearning.clgen.corpuses import benchmarks
 from deeplearning.clgen.experiments import public
 from deeplearning.clgen.experiments import workers
 from deeplearning.clgen.experiments import cldrive
+from deeplearning.clgen.experiments import clsmith
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import crypto
@@ -236,7 +237,7 @@ def GreweCSV(**kwargs) -> None:
   cldrive_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(pathlib.Path(cldrive_cache).resolve()), must_exist = False)
 
   for dbg in tqdm.tqdm(db_groups, desc = "DB Groups", leave = True):
-    if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles):
+    if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles or dbg.db_type == clsmith.CLSmithDatabase):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
 
     datapoints = []
