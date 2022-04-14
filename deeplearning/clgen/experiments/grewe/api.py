@@ -133,7 +133,7 @@ def DriveSource(src        : str,
 
       sha = crypto.sha256_str(include + src + group_name + str(gsize) + str(lsize))
       if sha in cldrive_db.status_cache:
-        cached = cldrive_db.get_entry(src, group_name, gsize, lsize, include = include, extra_args = extra_args)
+        cached = cldrive_db.get_entry(src, group_name, gsize, lsize, include = include)
         if cached.status in {"CPU", "GPU"}:
           yield ToDataFrameRow(
             name                 = "{}.cl".format(sha) if name is None else name,
@@ -151,7 +151,7 @@ def DriveSource(src        : str,
           yield None
       else:
         df, label = opencl.CLDriveDataFrame(src, header_file = include, num_runs = 1000, gsize = gsize, lsize = lsize, extra_args = extra_args, timeout = 60)
-        cldrive_db.add_entry(src, group_name, label, gsize, lsize, df, include = include, extra_args = extra_args)
+        cldrive_db.add_entry(src, group_name, label, gsize, lsize, df, include = include)
         if label not in {"CPU", "GPU"}:
           yield None
         else:
