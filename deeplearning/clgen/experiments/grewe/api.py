@@ -215,6 +215,8 @@ def GreweTopKCSV(**kwargs) -> None:
       top_k_bar = tqdm.tqdm(total = top_k, desc = "Top K cands", leave = False)
       for (src, incl, feats, dist) in tqdm.tqdm(workers.SortedSrcFeatsDistances(get_data(), benchmark.features, "GreweFeatures"), desc = "Sorted Data", leave = False):
         toggle = False
+        if dbg.db_type == clsmith.CLSmithDatabase:
+          src = "#include \"CLSmith.h\"\n" + src
         for row in DriveSource(src, incl, dbg.group_name, feats, cldrive_db, extra_args = extra_args):
           if row:
             toggle = True
@@ -260,6 +262,8 @@ def GreweCSV(**kwargs) -> None:
       get_data = lambda: dbg.get_data_features("GreweFeatures", use_mp = False)
 
     for (src, incl, feats) in tqdm.tqdm(get_data(), desc = "Src", leave = True):
+      if dbg.db_type == clsmith.CLSmithDatabase:
+        src = "#include \"CLSmith.h\"\n" + src
       for row in DriveSource(src, incl, dbg.group_name, feats, cldrive_db, extra_args = extra_args):
         if row:
           datapoints.append(row)
