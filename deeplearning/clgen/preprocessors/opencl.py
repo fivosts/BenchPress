@@ -212,11 +212,12 @@ def IRContentHash(src: str, header_file = None, use_aux_headers: bool = True) ->
   return crypto.sha256_str(''.join(bc.split('\n')[2:]))
 
 def RunCLDrive(src: str,
-               header_file = None,
-               num_runs: int = 1000,
-               gsize: int = 4096,
-               lsize: int = 1024,
-               timeout: int = 0
+               header_file: str = None,
+               num_runs   : int = 1000,
+               gsize      : int = 4096,
+               lsize      : int = 1024,
+               extra_args : typing.List[str] = [],
+               timeout    : int = 0
                ) -> str:
   """
   If CLDrive executable exists, run it over provided source code.
@@ -242,12 +243,13 @@ def RunCLDrive(src: str,
         hf.write(header_file)
         hf.flush()
         proc = subprocess.Popen(
-          "{} {} --srcs={} --cl_build_opt=\"-I{}\" --num_runs={} --gsize={} --lsize={} --envs={},{}"
+          "{} {} --srcs={} --cl_build_opt=\"-I{}{}\" --num_runs={} --gsize={} --lsize={} --envs={},{}"
             .format(
               "timeout -s9 {}".format(timeout) if timeout > 0 else "",
               CLDRIVE,
               f.name,
               pathlib.Path(hf.name).resolve().parent,
+              ",{}".format(",".join(extra_args)) if len(extra_args) > 0 else "",
               num_runs,
               gsize,
               lsize,
@@ -268,6 +270,7 @@ def RunCLDrive(src: str,
             "timeout -s9 {}".format(timeout) if timeout > 0 else "",
             CLDRIVE,
             f.name,
+            "--cl_build_opt={}".format(",".join(extra_args)) if len(extra_args) > 0 else "",
             num_runs,
             gsize,
             lsize,
@@ -363,16 +366,17 @@ def CLDrivePretty(src: str,
   return stdout, stderr
 
 def CLDriveDataFrame(src: str,
-                     header_file = None,
-                     num_runs: int = 5,
-                     gsize: int = 4096,
-                     lsize: int = 1024,
-                     timeout: int = 0
+                     header_file: str = None,
+                     num_runs   : int = 5,
+                     gsize      : int = 4096,
+                     lsize      : int = 1024,
+                     extra_args : typing.List[str] = [],
+                     timeout    : int = 0
                      ) -> typing.Tuple[pd.DataFrame, str]:
   """
   Run CLDrive with given configuration and return pandas dataframe along with collected label.
   """
-  stdout, stderr = RunCLDrive(src, header_file = header_file, num_runs = num_runs, gsize = gsize, lsize = lsize, timeout = timeout)
+  stdout, stderr = RunCLDrive(src, header_file = header_file, num_runs = num_runs, gsize = gsize, lsize = lsize, extra_args = extra_args, timeout = timeout)
   try:
     df = pd.read_csv(io.StringIO(stdout), sep = ",")
   except Exception as e:
