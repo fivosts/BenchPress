@@ -48,12 +48,17 @@ class ListTrainDataloader(torch.utils.data.Dataset):
       'target_ids' : np.asarray([x['target_ids'].numpy() for x in self.dataset]),
     }
 
-  def get_random_subset(self, num: int) -> 'ListTrainDataloader':
+  def get_random_subset(self, num: int, seed: int = None) -> 'ListTrainDataloader':
     """
     Get a sample of num random samples from dataset.
     """
     ret  = ListTrainDataloader([], lazy = True)
     num  = min(num, len(self.dataset))
+    if seed:
+      generator = torch.Generator()
+      generator.manual_seed(seed)
+    else:
+      generator = None
     rand = set(torch.randperm(len(self.dataset), generator = None).tolist()[:num])
     ret.dataset = [x for idx, x in enumerate(self.dataset) if idx in rand]
     return ret
