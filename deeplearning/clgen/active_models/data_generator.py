@@ -120,13 +120,18 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
       'input_ids'        : np.asarray([x['input_ids'].numpy() for x in self.dataset]),
     }
 
-  def get_random_subset(self, num: int) -> 'DictPredictionDataloader':
+  def get_random_subset(self, num: int, seed: int = None) -> 'DictPredictionDataloader':
     """
     Get a sample of num random samples from dataset.
     """
     ret  = DictPredictionDataloader([], lazy = True)
     num  = min(num, len(self.dataset))
-    rand = set(torch.randperm(len(self.dataset), generator = None).tolist()[:num])
+    if seed:
+      generator = torch.Generator()
+      generator.manual_seed(seed)
+    else:
+      generator = None
+    rand = set(torch.randperm(len(self.dataset), generator = generator).tolist()[:num])
     ret.dataset = [x for idx, x in enumerate(self.dataset) if idx in rand]
     return ret
 
