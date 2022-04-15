@@ -150,7 +150,7 @@ class Model(object):
     sample_set = self.downstream_task.sample_space(num_samples = num_samples)
     if FLAGS.disable_active_learning:
       l.logger().warn("Active learning has been disabled. Skip update training.")
-      return sample_set.get_random_subset(num = len(sample_set))
+      return sample_set.get_random_subset(num = len(sample_set), seed = self.config.random_seed)
     else:
       return self.backend.Sample(sample_set = sample_set)
 
