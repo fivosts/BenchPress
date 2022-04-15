@@ -25,15 +25,5 @@ evaluator {
       database: "/var/foivos/results/full_results/GitHub/unique_encoded.db"
       size_limit: 768
     }
-    db_group {
-      group_name: "CLSmith"
-      db_type: "CLSmithDatabase"
-      database: "/var/foivos/results/full_results/clsmith.db"
-    }
-    db_group {
-      group_name: "CLSmith+Mutec"
-      db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/clsmith_mutants.db"
-    }
   }
 }
