@@ -576,14 +576,12 @@ class QueryByCommittee(backends.BackendBase):
       committee_predictions[key] = member.sample_fn(member, sample_set)
     return committee_predictions
 
-  def Sample(self, num_samples: int = 512) -> typing.List[typing.Dict[str, float]]:
+  def Sample(self, sample_set: 'torch.Dataset') -> typing.List[typing.Dict[str, float]]:
     """
     Active learner sampling.
     This method queries all committee members and measures their cross-entropy to validate
     the usefulness of parts of the feature space.
     """
-    # Collect random space samples.
-    sample_set            = self.downstream_task.sample_space(num_samples = num_samples)
     # Ask the committee for their predictions.
     committee_predictions = self.SampleCommittee(sample_set)
     space_samples = []
