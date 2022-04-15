@@ -153,9 +153,9 @@ class Model(object):
       return [
         {
           'idx'             : int(x['idx']),
-          'static_features' : self.downstream_task.VecToStaticFeatDict(x['static_features']),
-          'runtime_features': self.downstream_task.VecToRuntimeFeatDict(x['runtime_features']),
-          'input_features'  : self.downstream_task.VecToInputFeatDict(x['input_ids']),
+          'static_features' : self.downstream_task.VecToStaticFeatDict(x['static_features'].numpy()),
+          'runtime_features': self.downstream_task.VecToRuntimeFeatDict(x['runtime_features'].numpy()),
+          'input_features'  : self.downstream_task.VecToInputFeatDict(x['input_ids'].numpy()),
         } for x in
         sample_set.get_random_subset(num = len(sample_set), seed = self.config.random_seed).dataset
       ]
