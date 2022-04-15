@@ -43,6 +43,13 @@ from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_boolean(
+  "disable_active_learning",
+  False,
+  "Set True to disable active learner from learning feature space."
+  "All candidate feature vectors have equal likelihood of being important"
+)
+
 def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_learning_pb2.ActiveLearner:
   """
   Parse proto description and check for validity.
@@ -118,14 +125,20 @@ class Model(object):
       UnableToAcquireLockError: If the model is locked (i.e. there is another
         process currently modifying the model).
     """
-    self.backend.Train(**kwargs)
+    if FLAGS.disable_active_learning:
+      l.logger().warn("Active learning has been disabled. Skip training.")
+    else:
+      self.backend.Train(**kwargs)
     return self
 
   def UpdateLearn(self, update_dataloader: 'torch.utils.data.Dataset') -> None:
     """
     Train-update active learner with new generated datapoints.
     """
-    self.Train(update_dataloader = update_dataloader)
+    if FLAGS.disable_active_learning:
+      l.logger().warn("Active learning has been disabled. Skip update training.")
+    else:
+      self.Train(update_dataloader = update_dataloader)
     return
 
   def Sample(self, num_samples: int = 512) -> typing.List[typing.Dict[str, float]]:
@@ -134,7 +147,12 @@ class Model(object):
     Knowing a downstream task, the active learning model samples
     and returns the datapoints that are deemed valuable.
     """
-    return self.backend.Sample(num_samples = num_samples)
+    sample_set = self.downstream_task.sample_space(num_samples = num_samples)
+    if FLAGS.disable_active_learning:
+      l.logger().warn("Active learning has been disabled. Skip update training.")
+      return sample_set.get_random_subset(num = len(sample_set))
+    else:
+      return self.backend.Sample(sample_set = sample_set)
 
   def SamplerCache(self, sampler: 'samplers.Sampler') -> pathlib.Path:
     """Get the path to a sampler cache.
