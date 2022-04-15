@@ -150,7 +150,15 @@ class Model(object):
     sample_set = self.downstream_task.sample_space(num_samples = num_samples)
     if FLAGS.disable_active_learning:
       l.logger().warn("Active learning has been disabled. Skip update training.")
-      return sample_set.get_random_subset(num = len(sample_set), seed = self.config.random_seed).dataset
+      return [
+        {
+          'idx'             : int(x['idx']),
+          'static_features' : self.downstream_task.VecToStaticFeatDict(x['static_features']),
+          'runtime_features': self.downstream_task.VecToRuntimeFeatDict(x['runtime_features']),
+          'input_features'  : self.downstream_task.VecToInputFeatDict(x['input_ids']),
+        } for x in
+        sample_set.get_random_subset(num = len(sample_set), seed = self.config.random_seed).dataset
+      ]
     else:
       return self.backend.Sample(sample_set = sample_set)
 
