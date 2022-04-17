@@ -345,6 +345,14 @@ class MaskLMDataGenerator(object):
     self.config                  = model_opts.data_generator
     self.rngen                   = np.random
     self.sample_batch_size       = sample_batch_size
+    if sampler.is_active and FLAGS.sample_workload_size < (self.sample_batch_size * environment.WORLD_SIZE):
+      throttled_batch_size = int(FLAGS.sample_workload_size // environment.WORLD_SIZE)
+      l.logger().warn("Too many GPU devices for workload size. Throttling batch size from {} to {}".format(
+          self.sample_batch_size,
+          throttled_batch_size,
+        )
+      )
+      self.sample_batch_size = throttled_batch_size
     self.max_position_embeddings = max_position_embeddings
 
     self.feature_encoder         = feature_encoder
