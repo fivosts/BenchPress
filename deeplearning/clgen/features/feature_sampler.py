@@ -299,7 +299,7 @@ class ActiveSampler(FeatureSampler):
                ):
     super(ActiveSampler, self).__init__(workspace, feature_space, str(active_learner.downstream_task))
     self.active_learner = active_learner
-    self.loadCheckpoint()fz
+    self.loadCheckpoint()
     try:
       if self.target_benchmark is None:
         self.target_benchmark = self.benchmarks.pop(0)
