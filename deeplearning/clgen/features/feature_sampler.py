@@ -299,7 +299,7 @@ class ActiveSampler(FeatureSampler):
                ):
     super(ActiveSampler, self).__init__(workspace, feature_space, str(active_learner.downstream_task))
     self.active_learner = active_learner
-    self.loadCheckpoint()
+    self.loadCheckpoint()fz
     try:
       if self.target_benchmark is None:
         self.target_benchmark = self.benchmarks.pop(0)
@@ -370,7 +370,6 @@ class ActiveSampler(FeatureSampler):
       self.iter_benchmark()
       return
     self.saveCheckpoint()
-    distrib.barrier()
     return
 
   def is_terminated(self) -> bool:
