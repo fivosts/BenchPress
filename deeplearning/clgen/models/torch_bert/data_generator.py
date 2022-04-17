@@ -862,6 +862,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             if nc.score == 0.0 and FLAGS.evolutionary_search:
               found_match = True
             if not found_match and 1+nc.sample_feed.gen_id <= active_search_depth and (FLAGS.evolutionary_search or 0 < nc.score < feed.input_score):
+              assert nc.sample[0] == self.tokenizer.padToken, nc.sample
               self.feed_queue.append(
                 ActiveSampleFeed(
                   input_feed       = nc.sample,
@@ -953,6 +954,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               l.logger().error(w_start_end)
               l.logger().error(padded)
             encoded = self._padToMaxPosition(self._addStartEndToken([int(x) for x in tokenized]))[:self.sampler.sequence_length]
+            assert encoded[0] == self.tokenizer.padToken, encoded
             self.feed_queue.append(
               ActiveSampleFeed(
                 input_feed     = encoded,
@@ -974,6 +976,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           self.loader = iter(self.dataloader)
           cf = next(self.loader).squeeze(0)
         cf = [int(x) for x in cf]
+        assert cf[0] == self.tokenizer.padToken, cf
         self.feed_queue.append(
           ActiveSampleFeed(
             input_feed     = cf,
