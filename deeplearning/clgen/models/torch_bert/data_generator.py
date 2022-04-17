@@ -952,7 +952,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               l.logger().error(tokenized)
               l.logger().error(w_start_end)
               l.logger().error(padded)
-            encoded = self._padToMaxPosition(self._addStartEndToken(tokenized))
+            encoded = self._padToMaxPosition(self._addStartEndToken([int(x) for x in tokenized]))[:self.sampler.sequence_length]
             self.feed_queue.append(
               ActiveSampleFeed(
                 input_feed     = encoded,
