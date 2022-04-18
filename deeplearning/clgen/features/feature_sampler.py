@@ -391,14 +391,18 @@ class ActiveSampler(FeatureSampler):
     """
     if (self.workspace / "feature_sampler_state.pkl").exists():
       distrib.lock()
-      with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
-        state_dict = pickle.load(infile)
-        infile.close()
-      self.benchmarks       = state_dict['benchmarks']
-      self.target_benchmark = state_dict['target_benchmark']
-      time.sleep(10)
-      while not infile.closed:
-        time.sleep(1)
+      try:
+        with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
+          state_dict = pickle.load(infile)
+          infile.close()
+        self.benchmarks       = state_dict['benchmarks']
+        self.target_benchmark = state_dict['target_benchmark']
+        while not infile.closed:
+          time.sleep(1)
+      except EOFError:
+        distrib.unlock()
+        self.loadCheckpoint()
+        return
       distrib.unlock()
     else:
       self.benchmarks = []
