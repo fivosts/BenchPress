@@ -18,7 +18,7 @@ example_formats = """
   plot_bgcolor = 'rgba(0,0,0,0)' or "#000fff" # Sets the background color of the plot
 """
 
-def _get_generic_layout(**kwargs) -> go.Layout:
+def _get_generic_figure(**kwargs) -> go.Layout:
   """
   Constructor of a basic plotly layout.
   All keyword arguments are compatible with plotly documentation
@@ -32,19 +32,20 @@ def _get_generic_layout(**kwargs) -> go.Layout:
   y_name = kwargs.get('y_name', "")
 
   # Font sizes
-  titlefont = kwargs.get('titlefont', 38)
-  axisfont  = kwargs.get('axisfont', 38)
-  tickfont  = kwargs.get('tickfont', 32)
+  titlefont   = kwargs.get('titlefont', 38)
+  axisfont    = kwargs.get('axisfont', 38)
+  tickfont    = kwargs.get('tickfont', 32)
 
   # Plot line and axis options
-  showline  = kwargs.get('showline',  True)
-  linecolor = kwargs.get('linecolor', 'black')
-  gridcolor = kwargs.get('gridcolor', "#eee")
-  mirror    = kwargs.get('mirror',    False)
-  showgrid  = kwargs.get('showgrid',  True)
-  linewidth = kwargs.get('linewidth', 2)
-  gridwidth = kwargs.get('gridwidth', 1)
-  margin    = kwargs.get('margin', {'l': 80, 'r': 80, 't': 100, 'b': 80})
+  showline    = kwargs.get('showline',  True)
+  linecolor   = kwargs.get('linecolor', 'black')
+  gridcolor   = kwargs.get('gridcolor', "#eee")
+  mirror      = kwargs.get('mirror',    False)
+  showgrid    = kwargs.get('showgrid',  True)
+  linewidth   = kwargs.get('linewidth', 2)
+  gridwidth   = kwargs.get('gridwidth', 1)
+  margin      = kwargs.get('margin', {'l': 40, 'r': 45, 't': 75, 'b': 0})
+  x_tickangle = kwargs.get('x_tickangle', None)
 
   # Legend
   legend_x   = kwargs.get('legend_x', 1.02)
@@ -73,9 +74,9 @@ def _get_generic_layout(**kwargs) -> go.Layout:
             showline  = showline, linecolor = linecolor,
             mirror    = mirror,   linewidth = linewidth,
             tickfont  = dict(size = tickfont),
-            titlefont = dict(size = axisfont)
+            titlefont = dict(size = axisfont),
           )
-  return go.Layout(
+  layout = go.Layout(
     plot_bgcolor = plot_bgcolor,
     margin       = margin,
     legend       = dict(x = legend_x, y = legend_y, traceorder = traceorder, font = dict(size = legendfont)),
@@ -85,6 +86,11 @@ def _get_generic_layout(**kwargs) -> go.Layout:
     violingap    = violingap,
     violinmode   = violinmode,
   )
+  fig = go.Figure(layout = layout)
+  if x_tickangle:
+    fig.update_xaxes(tickangle = 45)
+  fig.update_yaxes(automargin = True)
+  return fig
 
 def _write_figure(fig       : go.Figure,
                   plot_name : str,
@@ -117,8 +123,7 @@ def SingleScatterLine(x         : np.array,
                       **kwargs,
                       ) -> None:
   """Plot a single line, with scatter points at datapoints."""
-  layout = _get_generic_layout(**kwargs)
-  fig = go.Figure(layout = layout)
+  fig = _get_generic_figure(**kwargs)
   fig.add_trace(
     go.Scatter(
       x = x, y = y,
@@ -142,8 +147,7 @@ def MultiScatterLine(x         : typing.List[np.array],
   """
   Implementation of a simple, ungroupped 2D plot of multiple scatter lines.
   """
-  layout = _get_generic_layout(**kwargs)
-  fig = go.Figure(layout = layout)
+  fig = _get_generic_figure(**kwargs)
   for xx, yy, n in zip(x, y, names):
     fig.add_trace(
       go.Scatter(
@@ -175,8 +179,7 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
     }
   }
   """
-  layout = _get_generic_layout(**kwargs)
-  fig = go.Figure(layout = layout)
+  fig = _get_generic_figure(**kwargs)
   if marker_style:
     if len(marker_style) != len(groups.keys()):
       raise ValueError("Mismatch between markers styles and number of groups")
@@ -209,8 +212,7 @@ def FrequencyBars(x         : np.array,
                   **kwargs,
                   ) -> None:
   """Plot frequency bars based on key."""
-  layout = _get_generic_layout(**kwargs)
-  fig = go.Figure(layout = layout)
+  fig = _get_generic_figure(**kwargs)
   fig.add_trace(
     go.Bar(
       x = x,
@@ -235,8 +237,7 @@ def LogitsStepsDistrib(x              : typing.List[np.array],
   vocab_size number of groups. Groups are as many as prediction steps.
   Used to plot the probability distribution of BERT's token selection. 
   """
-  layout = _get_generic_layout(**kwargs)
-  fig = go.Figure(layout = layout)
+  fig = _get_generic_figure(**kwargs)
 
   for pred, name in zip(x, sample_indices):
     fig.add_trace(
@@ -265,8 +266,7 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
   }
   """
   # colors
-  layout = _get_generic_layout(**kwargs)
-  fig = go.Figure(layout = layout)
+  fig = _get_generic_figure(**kwargs)
 
   palette = itertools.cycle(px.colors.qualitative.T10)
   for group, (x, y) in groups.items():
@@ -277,9 +277,9 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
         y = [(0.2+i if i == 0 else i) for i in y],
         marker_color = next(palette),
         textposition = kwargs.get('textposition', 'inside'),
-        text = text,
-        # text = ["" if i < 100 else "*" for i in y],
-        textfont = dict(color = "white", size = 100),
+        # text = text,
+        text = ["" if i < 100 else "*" for i in y],
+        textfont = dict(color = "white", size = 140),
       )
     )
   _write_figure(fig, plot_name, path, **kwargs)
@@ -292,8 +292,7 @@ def CumulativeHistogram(x         : np.array,
                         **kwargs,
                         ) -> None:
   """Plot percent cumulative histogram."""
-  layout = _get_generic_layout(**kwargs)
-  fig = go.Figure(layout = layout)
+  fig = _get_generic_figure(**kwargs)
   fig.add_trace(
     go.Histogram(
       x = x,
@@ -317,8 +316,7 @@ def NormalizedRadar(r         : np.array,
                     **kwargs,
                     ) -> None:
   """Radar chart for feature plotting"""
-  layout = _get_generic_layout(**kwargs)
-  fig = go.Figure(layout = layout)
+  fig = _get_generic_figure(**kwargs)
   fig.add_trace(
     go.Scatterpolar(
       r = r,
@@ -337,8 +335,7 @@ def CategoricalViolin(x         : np.array,
                       **kwargs,
                       ) -> None:
   """Plot percent cumulative histogram."""
-  layout = _get_generic_layout(**kwargs)
-  fig = go.Figure(layout = layout)
+  fig = _get_generic_figure(**kwargs)
   for xel, yel in zip(x, y):
     fig.add_trace(
       go.Violin(
