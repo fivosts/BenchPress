@@ -330,6 +330,8 @@ class ActiveSampler(FeatureSampler):
     """
     Update active learner with targetted generated samples by the language model.
     """
+    if FLAGS.disable_active_learning:
+      return
     upd_samples, upd_loader = self.active_learner.downstream_task.UpdateDataGenerator(target_samples, top_k, self.tokenizer)
     if len(upd_loader) > 0:
       self.active_learner.UpdateLearn(upd_loader)
