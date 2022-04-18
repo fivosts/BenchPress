@@ -381,6 +381,7 @@ class ActiveSampler(FeatureSampler):
   def saveCheckpoint(self) -> None:
     if environment.WORLD_RANK == 0:
       super(ActiveSampler, self).saveCheckpoint()
+    distrib.barrier()
     return
 
   def loadCheckpoint(self) -> None:
