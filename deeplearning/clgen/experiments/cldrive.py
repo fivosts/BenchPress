@@ -61,6 +61,8 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
   local_size           : int = sql.Column(sql.Integer,   nullable = False)
   # Executed source code
   source               : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Code features, possibly directly derived from extractos.
+  features             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Name of dataset where this sample comes from.
   dataset              : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # cpu transfer time of kernel
@@ -84,6 +86,7 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
                global_size          : int,
                local_size           : int,
                source               : str,
+               grewe_features       : typing.Dict[str, float],
                dataset              : str,
                cpu_transfer_time_ns : typing.List[int],
                cpu_kernel_time_ns   : typing.List[int],
@@ -93,11 +96,11 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
                status               : str,
                ) -> typing.Dict[str, typing.Any]:
     return CLDriveSample(**{
-      # "id"                   : id,
       "sha256"               : crypto.sha256_str(source + dataset + str(global_size) + str(local_size)),
       "global_size"          : global_size,
       "local_size"           : local_size,
       "source"               : source,
+      "features"             : grewe_features,
       "dataset"              : dataset,
       "cpu_transfer_time_ns" : '\n'.join([str(int(x)) for x in cpu_transfer_time_ns if x != 'nan']),
       "cpu_kernel_time_ns"   : '\n'.join([str(int(x)) for x in cpu_kernel_time_ns if x != 'nan']),
@@ -142,7 +145,16 @@ class CLDriveExecutions(sqlutil.Database):
     # if FLAGS.remote_cldrive_cache is not None:
       # self.remote_session = cldrive_server.RemoteSession(FLAGS.remote_cldrive_cache)
 
-  def add_entry(self, src: str, dataset: str, status: str, global_size: int, local_size: int, df: pd.DataFrame, include: str = "") -> None:
+  def add_entry(self,
+                src            : str,
+                grewe_features : typing.Dict[str, float],
+                dataset        : str,
+                status         : str,
+                global_size    : int,
+                local_size     : int,
+                df             : pd.DataFrame,
+                include        : str = ""
+                ) -> None:
     """
     Adds execution entries from pandas dataframe.
     """
@@ -166,6 +178,7 @@ class CLDriveExecutions(sqlutil.Database):
                   global_size = global_size,
                   local_size  = local_size,
                   source      = include + src,
+                  features    = grewe_features,
                   dataset     = dataset,
                   cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
                   cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
@@ -186,6 +199,7 @@ class CLDriveExecutions(sqlutil.Database):
                 global_size = global_size,
                 local_size  = local_size,
                 source      = include + src,
+                features    = grewe_features,
                 dataset     = dataset,
                 cpu_transfer_time_ns = [],
                 cpu_kernel_time_ns   = [],
@@ -231,14 +245,15 @@ class CLDriveExecutions(sqlutil.Database):
     return
 
   def update_and_get(self,
-                     src         : str,
-                     dataset     : str,
-                     global_size : int,
-                     local_size  : int,
-                     num_runs    : int,
-                     timeout     : int = 0,
-                     include     : str = "",
-                     extra_args  : typing.List[str] = [],
+                     src            : str,
+                     grewe_features : typing.Dict[str, float],
+                     dataset        : str,
+                     global_size    : int,
+                     local_size     : int,
+                     num_runs       : int,
+                     timeout        : int = 0,
+                     include        : str = "",
+                     extra_args     : typing.List[str] = [],
                      ) -> "CLDriveSample":
     """
     Add or update incoming entry by running CLDrive and pinging the database.
@@ -252,7 +267,7 @@ class CLDriveExecutions(sqlutil.Database):
       extra_args  = extra_args,
       timeout     = timeout,
     )
-    self.add_entry(include + src, dataset, label, global_size, local_size, df)
+    self.add_entry(include + src, grewe_features, dataset, label, global_size, local_size, df)
     return self.get_entry(src, dataset, global_size, local_size)
 
   def get_valid_data(self, dataset: str = None) -> typing.List[CLDriveSample]:
@@ -370,7 +385,7 @@ def TopKCLDrive(**kwargs) -> None:
           except TimeoutError:
             pass
 
-          cldrive_db.add_entry(benchmark.contents, target.target, benchmark_label, gs, ls, df)
+          cldrive_db.add_entry(benchmark.contents, {}, target.target, benchmark_label, gs, ls, df)
           if benchmark_label not in {"CPU", "GPU"}:
             continue
 
@@ -413,7 +428,7 @@ def TopKCLDrive(**kwargs) -> None:
               df, label = opencl.CLDriveDataFrame(incl + src, num_runs = c_runs, gsize = gs, lsize = ls, timeout = 200)
             except TimeoutError:
               pass
-            cldrive_db.add_entry(incl + src, dbg.group_name, label, gs, ls, df)
+            cldrive_db.add_entry(incl + src, {}, dbg.group_name, label, gs, ls, df)
 
             if label not in {"CPU", "GPU"}:
               continue
