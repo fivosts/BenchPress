@@ -1,116 +1,245 @@
-workspace: "/home/foivos/pact"
-tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
-evaluator {
-  min_score {
-    target: "rodinia"
-    feature_space: "AutophaseFeatures"
-    plot_config {
-      title: ""
-      x_name: ""
-      y_name: "Relative distance"
-      showline: True
-      showgrid: False
-      legend_x: 0.9
-      legend_y: 0.9
-      height: 102
-      width: 1024
-    }
-    db_group {
-      group_name: "BenchPress"
-      db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Autophase/merged_samples.db"
-    }
-    db_group {
-      group_name: "CLgen"
-      db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/CLgen/updated_clgen_samples.db"
-    }
-    db_group {
-      group_name: "GitHub"
-      db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/encoded.db"
-    }
-    db_group {
-      group_name: "GitHub-768"
-      db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/encoded.db"
-      size_limit: 768
-    }
-  }
-}
-evaluator {
-  min_score {
-    target: "rodinia"
-    feature_space: "InstCountFeatures"
-    plot_config {
-      title: ""
-      x_name: ""
-      y_name: "Relative distance"
-      showline: True
-      showgrid: False
-      legend_x: 0.9
-      legend_y: 0.9
-      height: 102
-      width: 1024
-    }
-    db_group {
-      group_name: "BenchPress"
-      db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/InstCount/merged_samples.db"
-    }
-    db_group {
-      group_name: "CLgen"
-      db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/CLgen/updated_clgen_samples.db"
-    }
-    db_group {
-      group_name: "GitHub"
-      db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/encoded.db"
-    }
-    db_group {
-      group_name: "GitHub-768"
-      db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/encoded.db"
-      size_limit: 768
-    }
-  }
-}
+workspace: "/home/fivosts/pact_db/workspace"
+tokenizer: "/home/fivosts/pact_db/backup_tokenizer.pkl"
+# evaluator {
+#   min_score {
+#     target: "rodinia"
+#     feature_space: "AutophaseFeatures"
+#     plot_config {
+#       title: "Autophase Features"
+#       x_name: ""
+#       y_name: "Relative distance"
+#       showline: True
+#       showgrid: True
+#       height: 600
+#       width: 2600
+#       x_tickangle: 45
+#       legend_x: 1.0
+#     }
+#     db_group {
+#       group_name: "BenchPress"
+#       db_type: "SamplesDatabase"
+#       database: "/home/fivosts/pact_db/full_autophase.db"
+#     }
+#     db_group {
+#       group_name: "GitHub"
+#       db_type: "EncodedContentFiles"
+#       database: "/home/fivosts/pact_db/github.db"
+#     }
+#     db_group {
+#       group_name: "GitHub-768"
+#       db_type: "EncodedContentFiles"
+#       database: "/home/fivosts/pact_db/github.db"
+#       size_limit: 768
+#     }
+#     db_group {
+#       group_name: "GitHub+SRCIROR "
+#       db_type: "SamplesDatabase"
+#       database: "/home/fivosts/pact_db/github_mutants.db"
+#     }
+#   }
+# }
+# evaluator {
+#   min_score {
+#     target: "rodinia"
+#     feature_space: "InstCountFeatures"
+#     plot_config {
+#       title: "InstCount Features"
+#       x_name: ""
+#       y_name: "Relative distance"
+#       showline: True
+#       showgrid: True
+#       height: 600
+#       width: 2600
+#       x_tickangle: 60
+#       legend_x: 1.0
+#     }
+#     db_group {
+#       group_name: "BenchPress"
+#       db_type: "SamplesDatabase"
+#       database: "/home/fivosts/pact_db/full_instcount.db"
+#     }
+#     db_group {
+#       group_name: "GitHub"
+#       db_type: "EncodedContentFiles"
+#       database: "/home/fivosts/pact_db/github.db"
+#     }
+#     db_group {
+#       group_name: "GitHub-768"
+#       db_type: "EncodedContentFiles"
+#       database: "/home/fivosts/pact_db/github.db"
+#       size_limit: 768
+#     }
+#     db_group {
+#       group_name: "GitHub+SRCIROR "
+#       db_type: "SamplesDatabase"
+#       database: "/home/fivosts/pact_db/github_mutants.db"
+#     }
+#   }
+# }
 evaluator {
   min_score {
     target: "rodinia"
     feature_space: "GreweFeatures"
     plot_config {
-      title: ""
+      title: "Grewe Features"
       x_name: ""
       y_name: "Relative distance"
       showline: True
-      showgrid: False
-      legend_x: 0.9
-      legend_y: 0.9
-      height: 102
-      width: 1024
+      showgrid: True
+      height: 600
+      width: 2600
+      x_tickangle: 60
+      legend_x: 1.0
     }
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Grewe/merged_samples.db"
-    }
-    db_group {
-      group_name: "CLgen"
-      db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/CLgen/updated_clgen_samples.db"
+      database: "/home/fivosts/pact_db/full_grewe.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/encoded.db"
+      database: "/home/fivosts/pact_db/github.db"
     }
     db_group {
       group_name: "GitHub-768"
       db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/encoded.db"
+      database: "/home/fivosts/pact_db/github.db"
       size_limit: 768
+    }
+    db_group {
+      group_name: "GitHub+SRCIROR "
+      db_type: "SamplesDatabase"
+      database: "/home/fivosts/pact_db/github_mutants.db"
+    }
+  }
+}
+# evaluator {
+#   min_score {
+#     target: "rodinia"
+#     feature_space: "AutophaseFeatures"
+#     plot_config {
+#       title: "Autophase Features"
+#       x_name: ""
+#       y_name: "Relative distance"
+#       showline: True
+#       showgrid: True
+#       height: 600
+#       width: 2600
+#       x_tickangle: 45
+#       legend_x: 1.0
+#     }
+#     db_group {
+#       group_name: "BenchPress"
+#       db_type: "SamplesDatabase"
+#       database: "/home/fivosts/pact_db/full_autophase.db"
+#     }
+#     db_group {
+#       group_name: "CLgen"
+#       db_type: "SamplesDatabase"
+#       database: "/home/fivosts/pact_db/clgen.db"
+#     }
+#     db_group {
+#       group_name: "GitHub-768-inactive"
+#       db_type: "EncodedContentFiles"
+#       database: "/home/fivosts/pact_db/github.db"
+#       size_limit: 768
+#     }
+#     db_group {
+#       group_name: "CLSmith"
+#       db_type: "CLSmithDatabase"
+#       database: "/home/fivosts/pact_db/clsmith_lite.db"
+#     }
+#     db_group {
+#       group_name: "CLSmith+SRCIROR"
+#       db_type: "SamplesDatabase"
+#       database: "/home/fivosts/pact_db/clsmith_mutants.db"
+#     }
+#   }
+# }
+# evaluator {
+#   min_score {
+#     target: "rodinia"
+#     feature_space: "InstCountFeatures"
+#     plot_config {
+#       title: "InstCount Features"
+#       x_name: ""
+#       y_name: "Relative distance"
+#       showline: True
+#       showgrid: True
+#       height: 600
+#       width: 2600
+#       x_tickangle: 60
+#       legend_x: 1.0
+#     }
+#     db_group {
+#       group_name: "BenchPress"
+#       db_type: "SamplesDatabase"
+#       database: "/home/fivosts/pact_db/full_instcount.db"
+#     }
+#     db_group {
+#       group_name: "CLgen"
+#       db_type: "SamplesDatabase"
+#       database: "/home/fivosts/pact_db/clgen.db"
+#     }
+#     db_group {
+#       group_name: "GitHub-768-inactive"
+#       db_type: "EncodedContentFiles"
+#       database: "/home/fivosts/pact_db/github.db"
+#       size_limit: 768
+#     }
+#     db_group {
+#       group_name: "CLSmith"
+#       db_type: "CLSmithDatabase"
+#       database: "/home/fivosts/pact_db/clsmith_lite.db"
+#     }
+#     db_group {
+#       group_name: "CLSmith+SRCIROR"
+#       db_type: "SamplesDatabase"
+#       database: "/home/fivosts/pact_db/clsmith_mutants.db"
+#     }
+#   }
+# }
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "GreweFeatures"
+    plot_config {
+      title: "Grewe Features"
+      x_name: ""
+      y_name: "Relative distance"
+      showline: True
+      showgrid: True
+      height: 600
+      width: 2600
+      x_tickangle: 60
+      legend_x: 1.0
+    }
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/home/fivosts/pact_db/full_grewe.db"
+    }
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "/home/fivosts/pact_db/clgen.db"
+    }
+    db_group {
+      group_name: "GitHub-768-inactive"
+      db_type: "EncodedContentFiles"
+      database: "/home/fivosts/pact_db/github.db"
+      size_limit: 768
+    }
+    db_group {
+      group_name: "CLSmith"
+      db_type: "CLSmithDatabase"
+      database: "/home/fivosts/pact_db/clsmith_lite.db"
+    }
+    db_group {
+      group_name: "CLSmith+SRCIROR"
+      db_type: "SamplesDatabase"
+      database: "/home/fivosts/pact_db/clsmith_mutants.db"
     }
   }
 }
