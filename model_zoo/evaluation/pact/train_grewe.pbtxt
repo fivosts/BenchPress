@@ -1,31 +1,27 @@
-workspace: "/var/foivos/results/full_results/grewe_workspace"
-tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
+workspace: "/home/fivosts/pact_grewe_csv/grewe_workspace"
+tokenizer: "/home/fivosts/pact_grewe_csv/backup_tokenizer.pkl"
 evaluator {
   train_grewe {
-    grewe_baseline: "/home/foivos/nvidia_baseline.csv"
+    grewe_baseline: "/home/fivosts/pact_grewe_csv/baseline/gpgpu_benchmarks_cc1.csv"
     csv {
       name: "BenchPress"
-      path: "/home/foivos/grewe_workspace/BenchPress.csv"
+      path: "/home/fivosts/pact_grewe_csv/me/BenchPress_AL.csv"
+    }
+    csv {
+      name: "BenchPress_passive"
+      path: "/home/fivosts/pact_grewe_csv/me/BenchPress_AL.csv"
     }
     csv {
       name: "CLgen"
-      path: "/home/foivos/grewe_workspace/CLgen.csv"
+      path: "/home/fivosts/pact_grewe_csv/others/CLgen.csv"
     }
     csv {
       name: "GitHub"
-      path: "/home/foivos/grewe_workspace/GitHub.csv"
+      path: "/home/fivosts/pact_grewe_csv/others/GitHub.csv"
     }
     csv {
-      name: "GitHub-768"
-      path: "/home/foivos/grewe_workspace/GitHub-768.csv"
-    }
-    csv {
-      name: "CLSmith"
-      path: "/home/foivos/grewe_workspace/CLSmith.csv"
-    }
-    csv {
-      name: "CLSmith+Mutec"
-      path: "/home/foivos/grewe_workspace/CLSmith+Mutec.csv"
+      name: "GitHub-extended"
+      path: "/home/fivosts/pact_grewe_csv/others/GitHub-extended.csv"
     }
   }
 }
