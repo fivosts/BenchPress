@@ -221,10 +221,28 @@ class TargetBenchmarks(object):
               ], key = lambda x: x[1])[0]
             if closest_git[1] == 0:
               continue
+          ## Benchmark name shortener.
+          benchmark_name = p.name.replace(
+            ".cl", ""
+          ).replace(
+            "_kernels", ""
+          ).replace(
+            "_kernel", ""
+          ).replace(
+            "kernel_", ""
+          ).replace(
+            "particle", "prtcl"
+          ).replace(
+            "1024", ""
+          ).replace(
+            "track_", ""
+          ).replace(
+            "_opencl", ""
+          )
           self.benchmarks[feature_space].append(
             Benchmark(
                 p,
-                p.name,
+                benchmark_name,
                 k,
                 features[feature_space],
               )
