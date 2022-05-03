@@ -14,6 +14,7 @@ import multiprocessing
 
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import normalizers
+from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.preprocessors import c
 from deeplearning.clgen.util import logging as l
@@ -67,7 +68,7 @@ def benchmark_worker(benchmark, feature_space, reduced_git_corpus = None):
     use_aux_headers = False
   )
   if reduced_git_corpus:
-    closest_git = sorted([(cf, calculate_distance(fts, features[feature_space], feature_space)) for cf, fts in reduced_git_corpus], key = lambda x: x[1])[0]
+    closest_git = sorted([(cf, feature_sampler.calculate_distance(fts, features[feature_space], feature_space)) for cf, fts in reduced_git_corpus], key = lambda x: x[1])[0]
     if features[feature_space] and closest_git[1] > 0:
       return Benchmark(p, p.name, k, features[feature_space], {})
   else:

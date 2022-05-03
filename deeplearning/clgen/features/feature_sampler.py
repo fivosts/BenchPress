@@ -330,6 +330,8 @@ class ActiveSampler(FeatureSampler):
     """
     Update active learner with targetted generated samples by the language model.
     """
+    if FLAGS.disable_active_learning:
+      return
     upd_samples, upd_loader = self.active_learner.downstream_task.UpdateDataGenerator(target_samples, top_k, self.tokenizer)
     if len(upd_loader) > 0:
       self.active_learner.UpdateLearn(upd_loader)
@@ -370,7 +372,6 @@ class ActiveSampler(FeatureSampler):
       self.iter_benchmark()
       return
     self.saveCheckpoint()
-    distrib.barrier()
     return
 
   def is_terminated(self) -> bool:
@@ -380,6 +381,7 @@ class ActiveSampler(FeatureSampler):
   def saveCheckpoint(self) -> None:
     if environment.WORLD_RANK == 0:
       super(ActiveSampler, self).saveCheckpoint()
+    distrib.barrier()
     return
 
   def loadCheckpoint(self) -> None:
@@ -389,14 +391,18 @@ class ActiveSampler(FeatureSampler):
     """
     if (self.workspace / "feature_sampler_state.pkl").exists():
       distrib.lock()
-      with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
-        state_dict = pickle.load(infile)
-        infile.close()
-      self.benchmarks       = state_dict['benchmarks']
-      self.target_benchmark = state_dict['target_benchmark']
-      time.sleep(10)
-      while not infile.closed:
-        time.sleep(1)
+      try:
+        with open(self.workspace / "feature_sampler_state.pkl", 'rb') as infile:
+          state_dict = pickle.load(infile)
+          infile.close()
+        self.benchmarks       = state_dict['benchmarks']
+        self.target_benchmark = state_dict['target_benchmark']
+        while not infile.closed:
+          time.sleep(1)
+      except EOFError:
+        distrib.unlock()
+        self.loadCheckpoint()
+        return
       distrib.unlock()
     else:
       self.benchmarks = []

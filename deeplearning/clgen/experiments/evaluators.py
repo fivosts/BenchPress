@@ -25,6 +25,7 @@ from deeplearning.clgen.proto import evaluator_pb2
 from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.features import extractor
+from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.features import active_feed_database
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.preprocessors import clang
@@ -204,7 +205,7 @@ class TargetBenchmarks(object):
     l.logger().info("Loaded {} {} benchmarks".format(len(self.benchmark_cfs), self.target))
     return
 
-  def get_benchmarks(self, feature_space: str):
+  def get_benchmarks(self, feature_space: str, reduced_git_corpus = None):
     """
     Get or set and get benchmarks with their features for a feature space.
     """
@@ -212,6 +213,14 @@ class TargetBenchmarks(object):
       for p, k, h in self.benchmark_cfs:
         features = extractor.ExtractFeatures(k, [feature_space], header_file = h, use_aux_headers = False)
         if features[feature_space]:
+          if reduced_git_corpus:
+            closest_git = sorted(
+              [
+                (cf, feature_sampler.calculate_distance(fts, features[feature_space], feature_space))
+                for cf, _, fts in reduced_git_corpus
+              ], key = lambda x: x[1])[0]
+            if closest_git[1] == 0:
+              continue
           self.benchmarks[feature_space].append(
             Benchmark(
                 p,
@@ -678,7 +687,7 @@ def main(config: evaluator_pb2.Evaluation):
         kw_args['feature_space'] = sev.feature_space
       # Gather plotter configuration
       if sev.HasField("plot_config"):
-        kw_args['plot_config'] = sev.plot_config
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
 
     elif ev.HasField("min_score"):
       sev = ev.min_score
@@ -704,7 +713,7 @@ def main(config: evaluator_pb2.Evaluation):
         kw_args['feature_space'] = sev.feature_space
       # Gather plotter configuration
       if sev.HasField("plot_config"):
-        kw_args['plot_config'] = sev.plot_config
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
 
     elif ev.HasField("analyze_target"):
       sev = ev.analyze_target
@@ -730,7 +739,7 @@ def main(config: evaluator_pb2.Evaluation):
         kw_args['feature_space'] = sev.feature_space
       # Gather plotter configuration
       if sev.HasField("plot_config"):
-        kw_args['plot_config'] = sev.plot_config
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
 
     elif ev.HasField("log_file"):
       sev = ev.log_file
@@ -756,7 +765,7 @@ def main(config: evaluator_pb2.Evaluation):
         kw_args['feature_space'] = sev.feature_space
       # Gather plotter configuration
       if sev.HasField("plot_config"):
-        kw_args['plot_config'] = sev.plot_config
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
 
     elif ev.HasField("comp_mem_grewe"):
       sev = ev.comp_mem_grewe
@@ -782,7 +791,7 @@ def main(config: evaluator_pb2.Evaluation):
         kw_args['feature_space'] = sev.feature_space
       # Gather plotter configuration
       if sev.HasField("plot_config"):
-        kw_args['plot_config'] = sev.plot_config
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
 
     elif ev.HasField("topk_cldrive"):
       sev = ev.topk_cldrive
@@ -810,7 +819,7 @@ def main(config: evaluator_pb2.Evaluation):
         kw_args['feature_space'] = sev.feature_space
       # Gather plotter configuration
       if sev.HasField("plot_config"):
-        kw_args['plot_config'] = sev.plot_config
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
 
     elif ev.HasField("mutec_vs_benchpress"):
       sev = ev.mutec_vs_benchpress
@@ -839,7 +848,7 @@ def main(config: evaluator_pb2.Evaluation):
         kw_args['feature_space'] = sev.feature_space
       # Gather plotter configuration
       if sev.HasField("plot_config"):
-        kw_args['plot_config'] = sev.plot_config
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
 
     elif ev.HasField("srciror_src_vs_benchpress") or ev.HasField("srciror_ir_vs_benchpress"):
       if ev.HasField("srciror_src_vs_benchpress"):
@@ -876,7 +885,7 @@ def main(config: evaluator_pb2.Evaluation):
         kw_args['feature_space'] = sev.feature_space
       # Gather plotter configuration
       if sev.HasField("plot_config"):
-        kw_args['plot_config'] = sev.plot_config
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
 
     elif ev.HasField("generate_clsmith"):
       sev = ev.generate_clsmith
@@ -920,7 +929,7 @@ def main(config: evaluator_pb2.Evaluation):
     elif ev.HasField("train_grewe"):
       sev = ev.train_grewe
       if sev.HasField("plot_config"):
-        kw_args['plot_config'] = sev.plot_config
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
       kw_args['grewe_baseline'] = pathlib.Path(sev.grewe_baseline).resolve()
       kw_args['csv_groups'] = []
       for c in sev.csv:
