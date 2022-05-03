@@ -11,8 +11,6 @@ from plotly import graph_objs as go
 import plotly.figure_factory as ff
 import plotly.express as px
 
-from deeplearning.clgen.util import logging as l
-
 example_formats = """
   margin = {'l': 0, 'r': 0, 't': 0, 'b': 0}   # Eliminates excess background around the plot (Can hide the title)
   plot_bgcolor = 'rgba(0,0,0,0)' or "#000fff" # Sets the background color of the plot
@@ -31,64 +29,70 @@ def _get_generic_figure(**kwargs) -> go.Layout:
   x_name = kwargs.get('x_name', "")
   y_name = kwargs.get('y_name', "")
 
-  # Font sizes
+  # # Font sizes
   titlefont   = kwargs.get('titlefont', 38)
   axisfont    = kwargs.get('axisfont', 38)
   tickfont    = kwargs.get('tickfont', 32)
 
-  # Plot line and axis options
+  # # Plot line and axis options
   showline    = kwargs.get('showline',  True)
   linecolor   = kwargs.get('linecolor', 'black')
-  gridcolor   = kwargs.get('gridcolor', "#eee")
-  mirror      = kwargs.get('mirror',    False)
+  # gridcolor   = kwargs.get('gridcolor', "#eee")
+  # mirror      = kwargs.get('mirror',    False)
   showgrid    = kwargs.get('showgrid',  True)
-  linewidth   = kwargs.get('linewidth', 2)
-  gridwidth   = kwargs.get('gridwidth', 1)
-  margin      = kwargs.get('margin', {'l': 40, 'r': 45, 't': 75, 'b': 0})
-  x_tickangle = kwargs.get('x_tickangle', None)
+  # linewidth   = kwargs.get('linewidth', 2)
+  # gridwidth   = kwargs.get('gridwidth', 1)
+  margin      = kwargs.get('margin', {'l': 0, 'r': 0, 't': 0, 'b': 0})
+  # x_tickangle = kwargs.get('x_tickangle', None)
 
-  # Legend
-  legend_x   = kwargs.get('legend_x', 1.02)
-  legend_y   = kwargs.get('legend_y', 1.0)
+  # # Legend
+  legend_x   = kwargs.get('legend_x', 0.54)
+  legend_y   = kwargs.get('legend_y', 0.07)
   traceorder = kwargs.get('traceorder', "normal")
-  legendfont = kwargs.get('legendfont', 24)
+  legendfont = kwargs.get('legendfont', 32)
 
   # Background
-  plot_bgcolor = kwargs.get('plot_bgcolor', "#fff")
+  # plot_bgcolor = kwargs.get('plot_bgcolor', "#fff")
 
   # Violin options
   violingap  = kwargs.get('violingap', 0)
   violinmode = kwargs.get('violinmode', 'overlay')
 
-  title = dict(text = title, font = dict(size = titlefont))
+  # title = dict(text = title, font = dict(size = titlefont))
   yaxis = dict(
              title     = y_name,   showgrid = showgrid,
              showline  = showline, linecolor = linecolor,
-             mirror    = mirror,   linewidth = linewidth,
-             gridwidth = gridwidth,
+  #            mirror    = mirror,   linewidth = linewidth,
+  #            gridwidth = gridwidth,
              tickfont  = dict(size = tickfont),
-             titlefont = dict(size = axisfont)
+             titlefont = dict(size = axisfont),
+              tickmode = 'linear',
+              tick0 = -0.2,
+              dtick = 0.05,
           )
   xaxis = dict(
             title     = x_name,   showgrid = showgrid,
             showline  = showline, linecolor = linecolor,
-            mirror    = mirror,   linewidth = linewidth,
+  #           mirror    = mirror,   linewidth = linewidth,
             tickfont  = dict(size = tickfont),
             titlefont = dict(size = axisfont),
+              tickmode = 'linear',
+              tick0 = 0,
+              dtick = 2,
           )
   layout = go.Layout(
-    plot_bgcolor = plot_bgcolor,
+    # plot_bgcolor = plot_bgcolor,
     margin       = margin,
     legend       = dict(x = legend_x, y = legend_y, traceorder = traceorder, font = dict(size = legendfont)),
-    title        = title,
+    # title        = title,
     xaxis        = xaxis,
     yaxis        = yaxis,
-    violingap    = violingap,
-    violinmode   = violinmode,
+    # violingap    = violingap,
+    # violinmode   = violinmode,
   )
   fig = go.Figure(layout = layout)
-  if x_tickangle:
-    fig.update_xaxes(tickangle = 45)
+  # if x_tickangle:
+    # fig.update_xaxes(tickangle = 45)
   fig.update_yaxes(automargin = True)
   return fig
 
@@ -107,11 +111,13 @@ def _write_figure(fig       : go.Figure,
     try:
       fig.write_html (outf("html"))
     except ValueError:
-      l.logger().warn("HTML plot failed", ddp_nodes = True)
+      # l.logger().warn("HTML plot failed", ddp_nodes = True)
+      print("HTML plot failed")
     try:
       fig.write_image(outf("png"), width = kwargs.get('width'), height = kwargs.get('height'))
     except ValueError:
-      l.logger().warn("PNG plot failed", ddp_nodes = True)
+      print("PNG plot failed")
+      # l.logger().warn("PNG plot failed", ddp_nodes = True)
   else:
     fig.show()
   return
@@ -156,7 +162,8 @@ def MultiScatterLine(x         : typing.List[np.array],
         name = n,
         mode = kwargs.get('mode', 'lines+markers'),
         showlegend = kwargs.get('showlegend', True),
-        opacity = kwargs.get('opacity', 0.75),
+        opacity = kwargs.get('opacity', 0.45),
+        fill = 'tozeroy',
       )
     )
     _write_figure(fig, plot_name, path, **kwargs)
