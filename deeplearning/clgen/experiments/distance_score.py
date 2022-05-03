@@ -26,14 +26,24 @@ def KAverageScore(**kwargs) -> None:
   workspace_path = kwargs.get('workspace_path')
   groups = {}
 
-  benchmarks = target.get_benchmarks(feature_space)
+  # You need this if you want to have the same (github) baseline but when github is not plotted.
+  reduced_git = None
+  for dbg in db_groups:
+    if dbg.group_name == "GitHub-768-inactive" or dbg.group_name == "GitHub-768":
+      reduced_git = dbg.get_data_features(feature_space)
+      break
+
+  benchmarks = target.get_benchmarks(feature_space, reduced_git_corpus = reduced_git)
   target_origin_dists = {}
   for dbg in db_groups:
+    if dbg.group_name == "GitHub-768-inactive":
+      # Skip baseline DB group.
+      continue
     if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles or dbg.db_type == clsmith.CLSmithDatabase):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
     groups[dbg.group_name] = ([], [])
     for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
-      groups[dbg.group_name][0].append(benchmark.name)
+      groups[dbg.group_name][0].append(benchmark_name)
       # Find shortest distances.
       if unique_code:
         get_data = lambda x: dbg.get_unique_data_features(x)
@@ -44,12 +54,11 @@ def KAverageScore(**kwargs) -> None:
       # Compute target's distance from O(0,0)
       assert len(distances) != 0, "Sorted src list for {} is empty!".format(dbg.group_name)
       avg_dist = sum(distances[:top_k]) / top_k
-      if benchmark.name in target_origin_dists:
-        target_origin_dists[benchmark.name] = max(target_origin_dists[benchmark.name], avg_dist)
+      if benchmark_name in target_origin_dists:
+        target_origin_dists[benchmark_name] = max(target_origin_dists[benchmark_name], avg_dist)
       else:
-        target_origin_dists[benchmark.name] = max(math.sqrt(sum([x**2 for x in benchmark.features.values()])), avg_dist)
+        target_origin_dists[benchmark_name] = max(math.sqrt(sum([x**2 for x in benchmark.features.values()])), avg_dist)
 
-      # groups[dbg.group_name][1].append(100 * ((target_origin_dist - avg_dist) / target_origin_dist))
       groups[dbg.group_name][1].append(avg_dist)
 
   for group_name, tup in groups.items():
@@ -60,7 +69,6 @@ def KAverageScore(**kwargs) -> None:
   plotter.GrouppedBars(
     groups = groups,
     plot_name = "avg_{}_dist_{}_{}".format(top_k, feature_space.replace("Features", " Features"), '-'.join([dbg.group_name for dbg in db_groups])),
-    title = "{}".format(feature_space.replace("Features", " Features")),
     path = workspace_path,
     **plot_config if plot_config else {},
   )
