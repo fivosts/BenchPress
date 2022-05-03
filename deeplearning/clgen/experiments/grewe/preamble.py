@@ -319,6 +319,23 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CL
   s_mask = R["training"] == "Only {}".format(synth_bench_name)
   bs_mask = R["training"] == "w. {}".format(synth_bench_name)
 
+  b_gpu = (len(R[b_mask][R[b_mask]["oracle"] == "GPU"]), len(R[b_mask][R[b_mask]["oracle"] == "GPU"][R[b_mask]["p"] == "GPU"]), len(R[b_mask][R[b_mask]["oracle"] == "GPU"][R[b_mask]["p"] == "CPU"]))
+  b_cpu = (len(R[b_mask][R[b_mask]["oracle"] == "CPU"]), len(R[b_mask][R[b_mask]["oracle"] == "CPU"][R[b_mask]["p"] == "GPU"]), len(R[b_mask][R[b_mask]["oracle"] == "CPU"][R[b_mask]["p"] == "CPU"]))
+
+  s_gpu = (len(R[s_mask][R[s_mask]["oracle"] == "GPU"]), len(R[s_mask][R[s_mask]["oracle"] == "GPU"][R[s_mask]["p"] == "GPU"]), len(R[s_mask][R[s_mask]["oracle"] == "GPU"][R[s_mask]["p"] == "CPU"]))
+  s_cpu = (len(R[s_mask][R[s_mask]["oracle"] == "CPU"]), len(R[s_mask][R[s_mask]["oracle"] == "CPU"][R[s_mask]["p"] == "GPU"]), len(R[s_mask][R[s_mask]["oracle"] == "CPU"][R[s_mask]["p"] == "CPU"]))
+
+  bs_gpu = (len(R[bs_mask][R[bs_mask]["oracle"] == "GPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "GPU"][R[bs_mask]["p"] == "GPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "GPU"][R[bs_mask]["p"] == "CPU"]))
+  bs_cpu = (len(R[bs_mask][R[bs_mask]["oracle"] == "CPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "CPU"][R[bs_mask]["p"] == "GPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "CPU"][R[bs_mask]["p"] == "CPU"]))
+
+  print("{} GPU Oracle Grewe: {} GPU / {} CPU".format(b_gpu[0], b_gpu[1], b_gpu[2]))
+  print("{} GPU Oracle Only {}: {} GPU / {} CPU".format(s_gpu[0], synth_bench_name, s_gpu[1], s_gpu[2]))
+  print("{} GPU Oracle Grewe + {}: {} GPU / {} CPU".format(bs_gpu[0], synth_bench_name, bs_gpu[1], bs_gpu[2]))
+  print()
+  print("{} CPU Oracle Grewe: {} GPU / {} CPU".format(b_cpu[0], b_cpu[1], b_cpu[2]))
+  print("{} CPU Oracle Only {}: {} GPU / {} CPU".format(s_cpu[0], synth_bench_name, s_cpu[1], s_cpu[2]))
+  print("{} CPU Oracle Grewe + {}: {} GPU / {} CPU".format(bs_cpu[0], synth_bench_name, bs_cpu[1], bs_cpu[2]))
+
   B_speedup = mean(R[b_mask].groupby(["group"])["p_speedup"].mean())
   S_speedup = mean(R[s_mask].groupby(["group"])["p_speedup"].mean())
   BS_speedup = mean(R[bs_mask].groupby(["group"])["p_speedup"].mean())
@@ -351,10 +368,6 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CL
   # print(bench_times)
   # print(benchsynth_times)
   # print(synth_times)
-
-  print(len(R[b_mask]["p_speedup"]))
-  print(len(R[s_mask]["p_speedup"]))
-  print(len(R[bs_mask]["p_speedup"]))
 
   print("Only bench: {}".format(B_runtimes))
   print("Only ML: {}".format(S_runtimes))
