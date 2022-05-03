@@ -280,12 +280,15 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CL
     b_p_runtime = b["runtime_" + b["p"].lower()]
     s_p_runtime = s["runtime_" + s["p"].lower()]
     bs_p_runtime = bs["runtime_" + bs["p"].lower()]
+    best_possible_p = b["runtime_" + b["oracle"].lower()]
 
     # speedup is the ratio of runtime using the predicted device
     # over runtime using ZeroR device
     b["p_speedup"] =  b[zeror_runtime] / b_p_runtime
     s["p_speedup"] = s[zeror_runtime] / s_p_runtime
     bs["p_speedup"] = bs[zeror_runtime] / bs_p_runtime
+
+    b["best_p_speedup"] = b[zeror_runtime] / best_possible_p
 
     b["opt_runtime"] = b_p_runtime
     s["opt_runtime"] = s_p_runtime
@@ -299,7 +302,7 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CL
     else:
       # $benchmark.$dataset
       group = re.sub(r"[^-]+-[0-9\.]+-([^-]+)-.+", r"\1",
-                     b["benchmark"]) + "." + b["dataset"]
+                     b["benchmark"]) + "." + str(b["dataset"])
     b["group"] = group
     s["group"] = group
     bs["group"] = group
@@ -318,6 +321,23 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CL
   b_mask = R["training"] == "Grewe et al."
   s_mask = R["training"] == "Only {}".format(synth_bench_name)
   bs_mask = R["training"] == "w. {}".format(synth_bench_name)
+
+  b_gpu = (len(R[b_mask][R[b_mask]["oracle"] == "GPU"]), len(R[b_mask][R[b_mask]["oracle"] == "GPU"][R[b_mask]["p"] == "GPU"]), len(R[b_mask][R[b_mask]["oracle"] == "GPU"][R[b_mask]["p"] == "CPU"]))
+  b_cpu = (len(R[b_mask][R[b_mask]["oracle"] == "CPU"]), len(R[b_mask][R[b_mask]["oracle"] == "CPU"][R[b_mask]["p"] == "GPU"]), len(R[b_mask][R[b_mask]["oracle"] == "CPU"][R[b_mask]["p"] == "CPU"]))
+
+  s_gpu = (len(R[s_mask][R[s_mask]["oracle"] == "GPU"]), len(R[s_mask][R[s_mask]["oracle"] == "GPU"][R[s_mask]["p"] == "GPU"]), len(R[s_mask][R[s_mask]["oracle"] == "GPU"][R[s_mask]["p"] == "CPU"]))
+  s_cpu = (len(R[s_mask][R[s_mask]["oracle"] == "CPU"]), len(R[s_mask][R[s_mask]["oracle"] == "CPU"][R[s_mask]["p"] == "GPU"]), len(R[s_mask][R[s_mask]["oracle"] == "CPU"][R[s_mask]["p"] == "CPU"]))
+
+  bs_gpu = (len(R[bs_mask][R[bs_mask]["oracle"] == "GPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "GPU"][R[bs_mask]["p"] == "GPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "GPU"][R[bs_mask]["p"] == "CPU"]))
+  bs_cpu = (len(R[bs_mask][R[bs_mask]["oracle"] == "CPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "CPU"][R[bs_mask]["p"] == "GPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "CPU"][R[bs_mask]["p"] == "CPU"]))
+
+  print("{} GPU Oracle Grewe: {} GPU / {} CPU".format(b_gpu[0], b_gpu[1], b_gpu[2]))
+  print("{} GPU Oracle Only {}: {} GPU / {} CPU".format(s_gpu[0], synth_bench_name, s_gpu[1], s_gpu[2]))
+  print("{} GPU Oracle Grewe + {}: {} GPU / {} CPU".format(bs_gpu[0], synth_bench_name, bs_gpu[1], bs_gpu[2]))
+  print()
+  print("{} CPU Oracle Grewe: {} GPU / {} CPU".format(b_cpu[0], b_cpu[1], b_cpu[2]))
+  print("{} CPU Oracle Only {}: {} GPU / {} CPU".format(s_cpu[0], synth_bench_name, s_cpu[1], s_cpu[2]))
+  print("{} CPU Oracle Grewe + {}: {} GPU / {} CPU".format(bs_cpu[0], synth_bench_name, bs_cpu[1], bs_cpu[2]))
 
   B_speedup = mean(R[b_mask].groupby(["group"])["p_speedup"].mean())
   S_speedup = mean(R[s_mask].groupby(["group"])["p_speedup"].mean())
@@ -351,10 +371,6 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CL
   # print(bench_times)
   # print(benchsynth_times)
   # print(synth_times)
-
-  print(len(R[b_mask]["p_speedup"]))
-  print(len(R[s_mask]["p_speedup"]))
-  print(len(R[bs_mask]["p_speedup"]))
 
   print("Only bench: {}".format(B_runtimes))
   print("Only ML: {}".format(S_runtimes))
@@ -416,21 +432,22 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CL
   print("  Speedup of Grewe et al.:         {:.2f} x".format(B_speedup))
   print("  Speedup w. {}:                {:.2f} x".format(synth_bench_name, BS_speedup))
   print("  Speedup Only {}:              {:.2f} x".format(synth_bench_name, S_speedup))
-  # print("  Speedup of Grewe et al.:         {:.2f} x".format(model.geomean([x for x in R[b_mask]["p_speedup"]])))
-  # print("  Speedup w. {}:                {:.2f} x".format(synth_bench_name, model.geomean([x for x in R[bs_mask]["p_speedup"]])))
-  # print("  Speedup Only {}:              {:.2f} x".format(synth_bench_name, model.geomean([x for x in R[s_mask]["p_speedup"]])))
+  print("  Geo Speedup of Grewe et al.:         {:.2f} x".format(model.geomean([x for x in R[b_mask]["p_speedup"]])))
+  print("  Geo Speedup w. {}:                {:.2f} x".format(synth_bench_name, model.geomean([x for x in R[bs_mask]["p_speedup"]])))
+  print("  Geo Speedup Only {}:              {:.2f} x".format(synth_bench_name, model.geomean([x for x in R[s_mask]["p_speedup"]])))
+  print("  Best speedup {}:              {:.2f} x".format("Best", model.geomean([x for x in R[b_mask]["best_p_speedup"]])))
 
-  bft = [x.p_speedup for idx, x in R[b_mask].iterrows() if x.group == "FT.B"]
-  sft = [x.p_speedup for idx, x in R[s_mask].iterrows() if x.group == "FT.B"]
-  bsft = [x.p_speedup for idx, x in R[bs_mask].iterrows() if x.group == "FT.B"]
+  # bft = [x.p_speedup for idx, x in R[b_mask].iterrows() if x.group == "FT.B"]
+  # sft = [x.p_speedup for idx, x in R[s_mask].iterrows() if x.group == "FT.B"]
+  # bsft = [x.p_speedup for idx, x in R[bs_mask].iterrows() if x.group == "FT.B"]
 
   print()
   print()
   print()
 
-  print("FT.B Grewe: {}".format(sum(bft) / len(bft)))
-  print("FT.B w {}: {}".format(synth_bench_name, sum(bsft) / len(bsft)))
-  print("FT.B Only {}: {}".format(synth_bench_name, sum(sft) / len(sft)))
+  # print("FT.B Grewe: {}".format(sum(bft) / len(bft)))
+  # print("FT.B w {}: {}".format(synth_bench_name, sum(bsft) / len(bsft)))
+  # print("FT.B Only {}: {}".format(synth_bench_name, sum(sft) / len(sft)))
 
   print("Total execution times:")
   print()
@@ -746,10 +763,10 @@ def plot_speedups_extended_model(benchmarks_data, clgen_data):
   Finalize(figsize=(7, 3.7), tight=True)
   return speedup
 
-# plot_speedups_with_clgen(
-#   open("/var/foivos/results/clgen_paper_artifacts/nvidia-benchmarks.csv", 'r'),
-#   open("/var/foivos/results/clgen_paper_artifacts/nvidia-clgen.csv", 'r')
-# )
+plot_speedups_with_clgen(
+  open("/home/fivosts/pact_grewe_csv/baseline/gpgpu_benchmarks_cc1.csv", 'r'),
+  open("/home/fivosts/pact_grewe_csv/me/BenchPress_passive.csv", 'r')
+)
 
 # if __name__ == "__main__":
 #   plot_speedups_with_clgen(
