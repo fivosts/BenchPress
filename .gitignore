@@ -13,6 +13,7 @@
 # Build files
 *pyc
 *_pb2.py
+*DS_Store
 
 # Working folders
 /workspace
