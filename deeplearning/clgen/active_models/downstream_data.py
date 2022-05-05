@@ -8,6 +8,7 @@ import sqlite3
 import pathlib
 import pickle
 import math
+import datetime
 import functools
 import typing
 import tqdm
@@ -57,67 +58,134 @@ def GreweDataScheme() -> typing.List[str]:
     "kernel_size"
   ]
 
-class GrewePredictive(Base, sqlutil.ProtoBackedMixin):
+class GrewePredictiveInstance(Base, sqlutil.ProtoBackedMixin):
   """
   A database row representation for Grewe heuristic model training instance.
   """
-  __tablename__    = "cldrive_samples"
+  __tablename__    = "grewe_training_instances"
   # entry id
-  id                   : int = sql.Column(sql.Integer,    primary_key = True)
-  # unique hash of cldrive execution.
-  sha256               : str = sql.Column(sql.String(64), nullable = False, index = True)
-  # Global size of execution
-  global_size          : int = sql.Column(sql.Integer,   nullable = False)
-  # Local size of execution
-  local_size           : int = sql.Column(sql.Integer,   nullable = False)
-  # Executed source code
-  source               : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  # Code features, possibly directly derived from extractos.
-  features             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  # Name of dataset where this sample comes from.
-  dataset              : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  # cpu transfer time of kernel
-  cpu_transfer_time_ns : str = sql.Column(sql.Integer,   nullable = False)
-  # cpu execution time of kernel
-  cpu_kernel_time_ns   : str = sql.Column(sql.Integer,   nullable = False)
-  # gpu transfer time of kernel
-  gpu_transfer_time_ns : str = sql.Column(sql.Integer,   nullable = False)
-  # gpu execution time of kernel
-  gpu_kernel_time_ns   : str = sql.Column(sql.Integer,   nullable = False)
-  # amount of transferred bytes
-  transferred_bytes    : int = sql.Column(sql.Integer,   nullable = False)
-  # Whether cldrive executes correctly or not.
-  status               : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  # Date
-  date_added           : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
+  id             : int = sql.Column(sql.Integer,    primary_key = True)
+  # Indexable hash
+  sha256         : str = sql.Column(sql.String(64), nullable = False, index = True)
+  # source code of the first occurence that created this row.
+  src            : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Sampling epoch where training instance was first collected.
+  sampling_epoch : int = sql.Column(sql.Integer,   nullable = False)
+  # Name of benchmark.
+  benchmark      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # For some reason, this is the global size.
+  dataset        : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # #comp instructions.
+  comp           : int = sql.Column(sql.Integer,   nullable = False)
+  # #rational instructions.
+  rational       : int = sql.Column(sql.Integer,   nullable = False)
+  # #mem instructions.
+  mem            : int = sql.Column(sql.Integer,   nullable = False)
+  # #localmem instructions.
+  localmem       : int = sql.Column(sql.Integer,   nullable = False)
+  # #coalesced instructions.
+  coalesced      : int = sql.Column(sql.Integer,   nullable = False)
+  # #atomic instructions.
+  atomic         : int = sql.Column(sql.Integer,   nullable = False)
+  # amount of transferred bytes.
+  transfer       : int = sql.Column(sql.Integer,   nullable = False)
+  # work-group size as in local size.
+  wgsize         : int = sql.Column(sql.Integer,   nullable = False)
+  # F1:transfer/(comp+mem) score
+  F1             : float = sql.Column(sql.Float, nullable = False)
+  # F2:coalesced/mem
+  F2             : float = sql.Column(sql.Float, nullable = False)
+  # F3:(localmem/mem)*avgws
+  F3             : float = sql.Column(sql.Float, nullable = False)
+  # F4:comp/mem
+  F4             : float = sql.Column(sql.Float, nullable = False)
+  # Is CPU or GPU the best place to run this instance?
+  oracle         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Total execution time for optimal device
+  runtime        : float = sql.Column(sql.Float, nullable = False)
+  # How much faster is the faster device from the slower
+  speedup        : float = sql.Column(sql.Float, nullable = False)
+  # The inverse of speedup
+  penalty        : float = sql.Column(sql.Float, nullable = False)
+  # The runtime of CPU.
+  runtime_cpu    : int = sql.Integer(sql.Integer, nullable = False)
+  # transfer time of CPU.
+  ci_cpu         : int = sql.Integer(sql.Integer, nullable = False)
+  # kernel time of CPU.
+  ci_mean_cpu    : int = sql.Integer(sql.Integer, nullable = False)
+  # The runtime of GPU.
+  runtime_gpu    : int = sql.Integer(sql.Integer, nullable = False)
+  # transfer time of GPU.
+  ci_gpu         : int = sql.Integer(sql.Integer, nullable = False)
+  # kernel time of GPU.
+  ci_mean_gpu    : int = sql.Integer(sql.Integer, nullable = False)
+  # Number of source code lines of kernel.
+  kernel_nlines  : int = sql.Integer(sql.Integer, nullable = False)
+  # Size of kernel in number of tokens
+  kernel_size    : int = sql.Integer(sql.Integer, nullable = False)
+  # Date added
+  date_added     : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
   def FromArgs(cls,
-               id                   : int,
-               global_size          : int,
-               local_size           : int,
-               source               : str,
-               grewe_features       : typing.Dict[str, float],
-               dataset              : str,
-               cpu_transfer_time_ns : typing.List[int],
-               cpu_kernel_time_ns   : typing.List[int],
-               gpu_transfer_time_ns : typing.List[int],
-               gpu_kernel_time_ns   : typing.List[int],
-               transferred_bytes    : int,
-               status               : str,
+               src               : str,
+               sampling_epoch    : int,
+               benchmark         : str,
+               global_size       : str,
+               grewe_feats       : typing.Dict[str, float],
+               transferred_bytes : int,
+               local_size        : int,
+               oracle            : str,
+               cpu_transfer_ns   : int,
+               cpu_kernel_ns     : int,
+               gpu_transfer_ns   : int,
+               gpu_kernel_ns     : int,
+               kernel_nlines     : int,
+               kernel_size       : int,
                ) -> typing.Dict[str, typing.Any]:
-    return CLDriveSample(**{
-      "sha256"               : crypto.sha256_str(source + dataset + str(global_size) + str(local_size)),
-      "global_size"          : global_size,
-      "local_size"           : local_size,
-      "source"               : source,
-      "features"             : grewe_features,
-      "dataset"              : dataset,
-      "cpu_transfer_time_ns" : '\n'.join([str(int(x)) for x in cpu_transfer_time_ns if x != 'nan']),
-      "cpu_kernel_time_ns"   : '\n'.join([str(int(x)) for x in cpu_kernel_time_ns if x != 'nan']),
-      "gpu_transfer_time_ns" : '\n'.join([str(int(x)) for x in gpu_transfer_time_ns if x != 'nan']),
-      "gpu_kernel_time_ns"   : '\n'.join([str(int(x)) for x in gpu_kernel_time_ns if x != 'nan']),
-      "transferred_bytes"    : transferred_bytes,
-      "status"               : status,
-      "date_added"           : datetime.datetime.utcnow(),
+    sha = crypto.sha256_str(
+      src,
+      + str(grewe_feats),
+      + str(transferred_bytes),
+      + str(local_size),
+      + str(global_size),
+      + str(oracle),
+    )
+    return GrewePredictiveInstance(**{
+      "src"            : src,
+      "sampling_epoch" : sampling_epoch,
+      "sha256"         : sha,
+      "benchmark" : benchmark,
+      "dataset"   : global_size,
+      "comp"      : grewe_feats['comp'],
+      "rational"  : grewe_feats['rational'],
+      "mem"       : grewe_feats['mem'],
+      "localmem"  : grewe_feats['localmem'],
+      "coalesced" : grewe_feats['coalesced'],
+      "atomic"    : grewe_feats['atomic'],
+      "transfer"  : transferred_bytes,
+      "wgsize"    : local_size,
+      "F1:transfer/(comp+mem)"  : transferred_bytes / (grewe_feats['comp'] + grewe_feats['mem']),
+      "F2:coalesced/mem"        : grewe_feats["F2:coalesced/mem"],
+      "F3:(localmem/mem)*avgws" : (grewe_feats['localmem'] / grewe_feats['mem']) * local_size,
+      "F4:comp/mem"             : grewe_feats["F4:comp/mem"],
+      "oracle"        : oracle,
+      "runtime"       : min(cpu_transfer_ns + cpu_kernel_ns, gpu_transfer_ns + gpu_kernel_ns),
+      "speedup"       : max(cpu_transfer_ns + cpu_kernel_ns / gpu_transfer_ns + gpu_kernel_ns, gpu_transfer_ns + gpu_kernel_ns / cpu_transfer_ns + cpu_kernel_ns),
+      "penalty"       : min(cpu_transfer_ns + cpu_kernel_ns / gpu_transfer_ns + gpu_kernel_ns, gpu_transfer_ns + gpu_kernel_ns / cpu_transfer_ns + cpu_kernel_ns),
+      "runtime_cpu"   : cpu_kernel_ns + cpu_transfer_ns,
+      "ci_cpu"        : cpu_transfer_ns,
+      "ci_mean_cpu"   : cpu_kernel_ns,
+      "runtime_gpu"   : gpu_kernel_ns + gpu_transfer_ns,
+      "ci_gpu"        : gpu_transfer_ns,
+      "ci_mean_gpu"   : gpu_kernel_ns,
+      "kernel_nlines" : kernel_nlines,
+      "kernel_size"   : kernel_size,
+      "date_added"    : datetime.datetime.utcnow(),
     })
+
+class DownstreamData(sqlutil.Database):
+  """Database for downstream task yielded data."""
+  def __init__(self, url: str, must_exist: bool = False):
+    super(DownstreamData, self).__init__(url, Base, must_exist = must_exist)
+    return
