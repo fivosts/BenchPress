@@ -189,3 +189,40 @@ class DownstreamData(sqlutil.Database):
   def __init__(self, url: str, must_exist: bool = False):
     super(DownstreamData, self).__init__(url, Base, must_exist = must_exist)
     return
+
+  def add_entry(self,
+                src               : str,
+                sampling_epoch    : int,
+                benchmark         : str,
+                global_size       : str,
+                grewe_feats       : typing.Dict[str, float],
+                transferred_bytes : int,
+                local_size        : int,
+                oracle            : str,
+                cpu_transfer_ns   : int,
+                cpu_kernel_ns     : int,
+                gpu_transfer_ns   : int,
+                gpu_kernel_ns     : int,
+                kernel_nlines     : int,
+                kernel_size       : int,
+                ) -> None:
+    instance = GrewePredictiveInstance.FromArgs(
+      src               = src,
+      sampling_epoch    = sampling_epoch,
+      benchmark         = benchmark,
+      global_size       = global_size,
+      grewe_feats       = grewe_feats,
+      transferred_bytes = transferred_bytes,
+      local_size        = local_size,
+      oracle            = oracle,
+      cpu_transfer_ns   = cpu_transfer_ns,
+      cpu_kernel_ns     = cpu_kernel_ns,
+      gpu_transfer_ns   = gpu_transfer_ns,
+      gpu_kernel_ns     = gpu_kernel_ns,
+      kernel_nlines     = kernel_nlines,
+      kernel_size       = kernel_size,
+    )
+    with self.Session() as ses:
+      entry = ses.query(GrewePredictiveInstance).filter_by(sha256 = sha).first()
+      if entry is None:
+        ses.add
