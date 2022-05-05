@@ -15,6 +15,7 @@ import time
 import numpy as np
 
 from deeplearning.clgen.active_models import data_generator
+from deeplearning.clgen.active_models import downstream_data
 from deeplearning.clgen.experiments import cldrive
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import grewe
