@@ -239,6 +239,10 @@ class GrewePredictive(DownstreamTask):
         timeout     = 60,
       )
       nrfeats['label'] = cached.status
+      nrfeats['cpu_transfer_ns'] = sum([int(float(x)) for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan']) // len([x for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan'])
+      nrfeats['cpu_kernel_ns']   = sum([int(float(x)) for x in cached.cpu_kernel_ns.split('\n') if x != 'nan'])        // len([x for x in cached.cpu_kernel_ns.split('\n') if x != 'nan'])
+      nrfeats['gpu_transfer_ns'] = sum([int(float(x)) for x in cached.gpu_transfer_ns.split('\n') if x != 'nan'])      // len([x for x in cached.gpu_transfer_ns.split('\n') if x != 'nan'])
+      nrfeats['gpu_kernel_ns']   = sum([int(float(x)) for x in cached.gpu_kernel_ns.split('\n') if x != 'nan'])        // len([x for x in cached.gpu_kernel_ns.split('\n') if x != 'nan'])
       return s._replace(runtime_features = nrfeats)
 
     exp_tr_bytes = sample.runtime_features['transferred_bytes']
@@ -372,13 +376,13 @@ class GrewePredictive(DownstreamTask):
             return new_samples
       return new_samples
 
-  def UpdateDatabase(self, new_samples: typing.List[typing.Dict[str, typing.Any]]) -> None:
+  def UpdateDatabase(self, new_samples: typing.List[typing.Dict[str, typing.Any]], tokenizer) -> None:
     """
     Update exported database of downstream task.
     """
     if environment.WORLD_RANK == 0:
       cur_sample_ep = self.downstream_data.sampling_epoch
-      self.downstream_data.add_epoch(new_samples)
+      self.downstream_data.add_epoch(new_samples, cur_sample_ep, tokenizer)
     distrib.barrier()
     return
 
@@ -391,6 +395,7 @@ class GrewePredictive(DownstreamTask):
     Collect new generated samples, find their runtime features and processs to a torch dataset.
     """
     new_samples = self.CollectRuntimeFeatures(new_samples, top_k, tokenizer)
+    self.UpdateDatabase(new_samples, tokenizer)
     updated_dataset = [
       (
         self.InputtoEncodedVector(entry.features,
