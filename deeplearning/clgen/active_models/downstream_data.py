@@ -130,13 +130,12 @@ class GrewePredictiveInstance(Base, sqlutil.ProtoBackedMixin):
 
   @classmethod
   def FromArgs(cls,
-               src               : str,
                sampling_epoch    : int,
-               benchmark         : str,
-               global_size       : str,
+               src               : str,
                grewe_feats       : typing.Dict[str, float],
-               transferred_bytes : int,
+               global_size       : int,
                local_size        : int,
+               transferred_bytes : int,
                oracle            : str,
                cpu_transfer_ns   : int,
                cpu_kernel_ns     : int,
@@ -157,7 +156,7 @@ class GrewePredictiveInstance(Base, sqlutil.ProtoBackedMixin):
       "src"            : src,
       "sampling_epoch" : sampling_epoch,
       "sha256"         : sha,
-      "benchmark" : benchmark,
+      "benchmark" : sha,
       "dataset"   : global_size,
       "comp"      : grewe_feats['comp'],
       "rational"  : grewe_feats['rational'],
@@ -215,41 +214,30 @@ class DownstreamData(sqlutil.Database):
     return
 
   def add_epoch(self,
-                src               : str,
-                sampling_epoch    : int,
-                benchmark         : str,
-                global_size       : str,
-                grewe_feats       : typing.Dict[str, float],
-                transferred_bytes : int,
-                local_size        : int,
-                oracle            : str,
-                cpu_transfer_ns   : int,
-                cpu_kernel_ns     : int,
-                gpu_transfer_ns   : int,
-                gpu_kernel_ns     : int,
-                kernel_nlines     : int,
-                kernel_size       : int,
+                batch: typing.List[typing.Dict],
+                sampling_epoch : int,
+                tokenizer,
                 ) -> None:
     """
     Add new row entry in downstream data DB.
     """
     with self.Session(commit = True) as ses:
       for sample in batch:
+        src = tokenizer.ArrayToCode(sample.sample)
         instance = self.type.FromArgs(
           src               = src,
           sampling_epoch    = sampling_epoch,
-          benchmark         = benchmark,
-          global_size       = global_size,
-          grewe_feats       = grewe_feats,
-          transferred_bytes = transferred_bytes,
-          local_size        = local_size,
-          oracle            = oracle,
-          cpu_transfer_ns   = cpu_transfer_ns,
-          cpu_kernel_ns     = cpu_kernel_ns,
-          gpu_transfer_ns   = gpu_transfer_ns,
-          gpu_kernel_ns     = gpu_kernel_ns,
-          kernel_nlines     = kernel_nlines,
-          kernel_size       = kernel_size,
+          global_size       = sample.runtime_features['global_size'],
+          grewe_feats       = sample.features,
+          transferred_bytes = sample.runtime_features['transferred_bytes'],
+          local_size        = sample.runtime_features['local_size'],
+          oracle            = sample.runtime_features['label'],
+          cpu_transfer_ns   = sample.runtime_features['cpu_transfer_ns'],
+          cpu_kernel_ns     = sample.runtime_features['cpu_kernel_ns'],
+          gpu_transfer_ns   = sample.runtime_features['gpu_transfer_ns'],
+          gpu_kernel_ns     = sample.runtime_features['gpu_kernel_ns'],
+          kernel_nlines     = len(src.split('\n')),
+          kernel_size       = len(src.split(' ')),
         )
         entry = ses.query(self.task_type).filter_by(sha256 = instance.sha256).first()
         if entry is None:
