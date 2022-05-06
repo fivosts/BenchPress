@@ -374,8 +374,7 @@ class GrewePredictive(DownstreamTask):
     """
     if environment.WORLD_RANK == 0:
       cur_sample_ep = self.downstream_data.sampling_epoch
-
-
+      self.downstream_data.add_epoch(new_samples)
     distrib.barrier()
     return
 
