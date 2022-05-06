@@ -110,21 +110,21 @@ class GrewePredictiveInstance(Base, sqlutil.ProtoBackedMixin):
   # The inverse of speedup
   penalty        : float = sql.Column(sql.Float, nullable = False)
   # The runtime of CPU.
-  runtime_cpu    : int = sql.Integer(sql.Integer, nullable = False)
+  runtime_cpu    : int = sql.Column(sql.Integer, nullable = False)
   # transfer time of CPU.
-  ci_cpu         : int = sql.Integer(sql.Integer, nullable = False)
+  ci_cpu         : int = sql.Column(sql.Integer, nullable = False)
   # kernel time of CPU.
-  ci_mean_cpu    : int = sql.Integer(sql.Integer, nullable = False)
+  ci_mean_cpu    : int = sql.Column(sql.Integer, nullable = False)
   # The runtime of GPU.
-  runtime_gpu    : int = sql.Integer(sql.Integer, nullable = False)
+  runtime_gpu    : int = sql.Column(sql.Integer, nullable = False)
   # transfer time of GPU.
-  ci_gpu         : int = sql.Integer(sql.Integer, nullable = False)
+  ci_gpu         : int = sql.Column(sql.Integer, nullable = False)
   # kernel time of GPU.
-  ci_mean_gpu    : int = sql.Integer(sql.Integer, nullable = False)
+  ci_mean_gpu    : int = sql.Column(sql.Integer, nullable = False)
   # Number of source code lines of kernel.
-  kernel_nlines  : int = sql.Integer(sql.Integer, nullable = False)
+  kernel_nlines  : int = sql.Column(sql.Integer, nullable = False)
   # Size of kernel in number of tokens
-  kernel_size    : int = sql.Integer(sql.Integer, nullable = False)
+  kernel_size    : int = sql.Column(sql.Integer, nullable = False)
   # Date added
   date_added     : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
