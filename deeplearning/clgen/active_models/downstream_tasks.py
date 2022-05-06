@@ -32,10 +32,6 @@ from deeplearning.clgen.models.torch_bert.data_generator import ActiveSample_to_
 
 from absl import app, flags
 
-TASKS = {
-  "GrewePredictive": GrewePredictive,
-}
-
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
@@ -577,6 +573,10 @@ class GrewePredictive(DownstreamTask):
       return data
     else:
       return None
+
+TASKS = {
+  "GrewePredictive": GrewePredictive,
+}
 
 def main(*args, **kwargs) -> None:
   if FLAGS.server_tokenizer is None:
