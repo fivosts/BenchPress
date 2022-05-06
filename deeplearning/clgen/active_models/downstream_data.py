@@ -194,7 +194,7 @@ class DownstreamData(sqlutil.Database):
     Count the number of rows in given table.
     """
     with self.Session() as s:
-      return s.query(self.type).count()
+      return s.query(self.task_type).count()
 
   @property
   def sampling_epoch(self) -> int:
@@ -211,10 +211,10 @@ class DownstreamData(sqlutil.Database):
 
   def __init__(self, url: str, task_type: typing.Callable, must_exist: bool = False):
     super(DownstreamData, self).__init__(url, Base, must_exist = must_exist)
-    self.type = type
+    self.task_type = task_type
     return
 
-  def add_entry(self,
+  def add_epoch(self,
                 src               : str,
                 sampling_epoch    : int,
                 benchmark         : str,
@@ -230,23 +230,29 @@ class DownstreamData(sqlutil.Database):
                 kernel_nlines     : int,
                 kernel_size       : int,
                 ) -> None:
-    instance = GrewePredictiveInstance.FromArgs(
-      src               = src,
-      sampling_epoch    = sampling_epoch,
-      benchmark         = benchmark,
-      global_size       = global_size,
-      grewe_feats       = grewe_feats,
-      transferred_bytes = transferred_bytes,
-      local_size        = local_size,
-      oracle            = oracle,
-      cpu_transfer_ns   = cpu_transfer_ns,
-      cpu_kernel_ns     = cpu_kernel_ns,
-      gpu_transfer_ns   = gpu_transfer_ns,
-      gpu_kernel_ns     = gpu_kernel_ns,
-      kernel_nlines     = kernel_nlines,
-      kernel_size       = kernel_size,
-    )
-    with self.Session() as ses:
-      entry = ses.query(GrewePredictiveInstance).filter_by(sha256 = sha).first()
-      if entry is None:
-        ses.add
+    """
+    Add new row entry in downstream data DB.
+    """
+    with self.Session(commit = True) as ses:
+      for sample in batch:
+        instance = self.type.FromArgs(
+          src               = src,
+          sampling_epoch    = sampling_epoch,
+          benchmark         = benchmark,
+          global_size       = global_size,
+          grewe_feats       = grewe_feats,
+          transferred_bytes = transferred_bytes,
+          local_size        = local_size,
+          oracle            = oracle,
+          cpu_transfer_ns   = cpu_transfer_ns,
+          cpu_kernel_ns     = cpu_kernel_ns,
+          gpu_transfer_ns   = gpu_transfer_ns,
+          gpu_kernel_ns     = gpu_kernel_ns,
+          kernel_nlines     = kernel_nlines,
+          kernel_size       = kernel_size,
+        )
+        entry = ses.query(self.task_type).filter_by(sha256 = instance.sha256).first()
+        if entry is None:
+          ses.add(instance)
+      ses.commit()
+    return
