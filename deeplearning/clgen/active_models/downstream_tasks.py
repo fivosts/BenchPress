@@ -228,7 +228,7 @@ class GrewePredictive(DownstreamTask):
       nrfeats['global_size'] = int(2**gs)
       cached = self.corpus_db.update_and_get(
         code,
-        ("BenchPress_AL_Grewe" if not FLAGS.disable_active_learning else "BenchPress_passive_Grewe"),
+        "BenchPress",
         global_size = nrfeats['global_size'],
         local_size  = nrfeats['local_size'],
         num_runs    = 1000,
@@ -251,13 +251,13 @@ class GrewePredictive(DownstreamTask):
     new_samples  = []
     rejects      = []
     while not found and gsize <= 20:
-      sha256 = crypto.sha256_str(code + ("BenchPress_AL_Grewe" if not FLAGS.disable_active_learning else "BenchPress_passive_Grewe") + str(2**gsize) + str(local_size))
+      sha256 = crypto.sha256_str(code + "BenchPress" + str(2**gsize) + str(local_size))
       if sha256 in self.corpus_db.status_cache:
-        cached = self.corpus_db.get_entry(code, ("BenchPress_AL_Grewe" if not FLAGS.disable_active_learning else "BenchPress_passive_Grewe"), int(2**gsize), int(local_size))
+        cached = self.corpus_db.get_entry(code, "BenchPress", int(2**gsize), int(local_size))
       else:
         cached = self.corpus_db.update_and_get(
           code,
-          ("BenchPress_AL_Grewe" if not FLAGS.disable_active_learning else "BenchPress_passive_Grewe"),
+          "BenchPress",
           global_size = int(2**gsize),
           local_size  = int(local_size),
           num_runs    = 1000,
