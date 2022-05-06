@@ -188,8 +188,30 @@ class GrewePredictiveInstance(Base, sqlutil.ProtoBackedMixin):
 
 class DownstreamData(sqlutil.Database):
   """Database for downstream task yielded data."""
-  def __init__(self, url: str, must_exist: bool = False):
+  @property
+  def count(self) -> int:
+    """
+    Count the number of rows in given table.
+    """
+    with self.Session() as s:
+      return s.query(self.type).count()
+
+  @property
+  def sampling_epoch(self) -> int:
+    """
+    Return the current sample epoch.
+    If DB is empty then this is 0. Otherwise it is the max+1,
+    given a full sample epoch is populated at the same time.
+    """
+    if self.count == 0:
+      return 0
+    else:
+      with self.Session() as s:
+        return 1 + max([int(x.sampling_epoch) for x in s.query(self.task_type).all()])
+
+  def __init__(self, url: str, task_type: typing.Callable, must_exist: bool = False):
     super(DownstreamData, self).__init__(url, Base, must_exist = must_exist)
+    self.type = type
     return
 
   def add_entry(self,
