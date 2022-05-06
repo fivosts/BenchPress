@@ -70,9 +70,15 @@ class DownstreamTask(object):
   def FromTask(cls, task: str, corpus_path: pathlib.Path, cache_path: pathlib.Path, random_seed: int, **kwargs) -> "DownstreamTask":
     return TASKS[task](corpus_path, cache_path, random_seed, kwargs)
 
-  def __init__(self, name: str, random_seed: int) -> None:
-    self.name        = name
-    self.random_seed = random_seed
+  def __init__(self, name: str, cache_path: pathlib.Path, random_seed: int) -> None:
+    self.name            = name
+    self.random_seed     = random_seed
+    self.cache_path      = cache_path
+    if environment.WORLD_RANK == 0:
+      self.downstream_data = downstream_data.DownstreamData(
+        "sqlite:///{}".format(cache_path),
+        must_exist = False,
+      )
     return
 
   def step_generation(self, candidates: typing.List['ActiveSample']) -> None:
@@ -133,10 +139,9 @@ class GrewePredictive(DownstreamTask):
                random_seed   : int,
                use_as_server : bool = False,
                ) -> None:
-    super(GrewePredictive, self).__init__("GrewePredictive", random_seed)
-    self.corpus_path = corpus_path
-    self.corpus_db   = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
-    self.cache_path  = cache_path
+    super(GrewePredictive, self).__init__("GrewePredictive", cache_path, random_seed)
+    self.corpus_path     = corpus_path
+    self.corpus_db       = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
     if use_as_server:
       self.setup_server()
     else:
