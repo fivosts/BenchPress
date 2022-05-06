@@ -32,6 +32,10 @@ from deeplearning.clgen.models.torch_bert.data_generator import ActiveSample_to_
 
 from absl import app, flags
 
+TASKS = {
+  "GrewePredictive": GrewePredictive,
+}
+
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
@@ -256,7 +260,7 @@ class GrewePredictive(DownstreamTask):
           ("BenchPress_AL_Grewe" if not FLAGS.disable_active_learning else "BenchPress_passive_Grewe"),
           global_size = int(2**gsize),
           local_size  = int(local_size),
-          num_runs    = 100,
+          num_runs    = 1000,
           timeout     = 60,
         )
       if cached is not None and cached.status in {"CPU", "GPU"}:
@@ -368,7 +372,7 @@ class GrewePredictive(DownstreamTask):
             return new_samples
       return new_samples
 
-  def UpdateDatabase(self, new_samples: typing.List['ActiveSample']) -> None:
+  def UpdateDatabase(self, new_samples: typing.List[typing.Dict[str, typing.Any]]) -> None:
     """
     Update exported database of downstream task.
     """
@@ -568,10 +572,6 @@ class GrewePredictive(DownstreamTask):
       return data
     else:
       return None
-
-TASKS = {
-  "GrewePredictive": GrewePredictive,
-}
 
 def main(*args, **kwargs) -> None:
   if FLAGS.server_tokenizer is None:
