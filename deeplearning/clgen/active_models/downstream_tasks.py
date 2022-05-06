@@ -70,13 +70,14 @@ class DownstreamTask(object):
   def FromTask(cls, task: str, corpus_path: pathlib.Path, cache_path: pathlib.Path, random_seed: int, **kwargs) -> "DownstreamTask":
     return TASKS[task](corpus_path, cache_path, random_seed, kwargs)
 
-  def __init__(self, name: str, cache_path: pathlib.Path, random_seed: int) -> None:
+  def __init__(self, name: str, cache_path: pathlib.Path, task_type: typing.Callable, random_seed: int) -> None:
     self.name            = name
     self.random_seed     = random_seed
     self.cache_path      = cache_path
     if environment.WORLD_RANK == 0:
       self.downstream_data = downstream_data.DownstreamData(
         "sqlite:///{}".format(cache_path),
+        task_type = task_type,
         must_exist = False,
       )
     return
@@ -139,7 +140,9 @@ class GrewePredictive(DownstreamTask):
                random_seed   : int,
                use_as_server : bool = False,
                ) -> None:
-    super(GrewePredictive, self).__init__("GrewePredictive", cache_path, random_seed)
+    super(GrewePredictive, self).__init__(
+      "GrewePredictive", cache_path, downstream_data.GrewePredictiveInstance, random_seed
+    )
     self.corpus_path     = corpus_path
     self.corpus_db       = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
     if use_as_server:
@@ -364,6 +367,17 @@ class GrewePredictive(DownstreamTask):
           if top_k != -1 and total >= top_k:
             return new_samples
       return new_samples
+
+  def UpdateDatabase(self, new_samples: typing.List['ActiveSample']) -> None:
+    """
+    Update exported database of downstream task.
+    """
+    if environment.WORLD_RANK == 0:
+      cur_sample_ep = self.downstream_data.sampling_epoch
+
+
+    distrib.barrier()
+    return
 
   def UpdateDataGenerator(self,
                           new_samples: typing.List['ActiveSample'],
