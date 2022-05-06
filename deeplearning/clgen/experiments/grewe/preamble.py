@@ -763,10 +763,10 @@ def plot_speedups_extended_model(benchmarks_data, clgen_data):
   Finalize(figsize=(7, 3.7), tight=True)
   return speedup
 
-plot_speedups_with_clgen(
-  open("/home/fivosts/pact_grewe_csv/baseline/gpgpu_benchmarks_cc1.csv", 'r'),
-  open("/home/fivosts/pact_grewe_csv/me/BenchPress_passive.csv", 'r')
-)
+# plot_speedups_with_clgen(
+#   open("/home/fivosts/pact_grewe_csv/baseline/gpgpu_benchmarks_cc1.csv", 'r'),
+#   open("/home/fivosts/pact_grewe_csv/me/BenchPress_passive.csv", 'r')
+# )
 
 # if __name__ == "__main__":
 #   plot_speedups_with_clgen(
