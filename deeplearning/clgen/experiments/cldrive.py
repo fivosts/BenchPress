@@ -174,12 +174,12 @@ class CLDriveExecutions(sqlutil.Database):
             try:
               session.add(
                 CLDriveSample.FromArgs(
-                  id          = self.count,
-                  global_size = global_size,
-                  local_size  = local_size,
-                  source      = include + src,
-                  features    = grewe_features,
-                  dataset     = dataset,
+                  id             = self.count,
+                  global_size    = global_size,
+                  local_size     = local_size,
+                  source         = include + src,
+                  grewe_features = grewe_features,
+                  dataset        = dataset,
                   cpu_transfer_time_ns = list(df[df['device'].str.contains("CPU")].transfer_time_ns),
                   cpu_kernel_time_ns   = list(df[df['device'].str.contains("CPU")].kernel_time_ns),
                   gpu_transfer_time_ns = list(df[df['device'].str.contains("GPU")].transfer_time_ns),
@@ -195,12 +195,12 @@ class CLDriveExecutions(sqlutil.Database):
           else:
             session.add(
               CLDriveSample.FromArgs(
-                id          = self.count,
-                global_size = global_size,
-                local_size  = local_size,
-                source      = include + src,
-                features    = grewe_features,
-                dataset     = dataset,
+                id             = self.count,
+                global_size    = global_size,
+                local_size     = local_size,
+                source         = include + src,
+                grewe_features = grewe_features,
+                dataset        = dataset,
                 cpu_transfer_time_ns = [],
                 cpu_kernel_time_ns   = [],
                 gpu_transfer_time_ns = [],
