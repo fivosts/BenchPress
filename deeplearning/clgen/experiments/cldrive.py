@@ -100,7 +100,7 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
       "global_size"          : global_size,
       "local_size"           : local_size,
       "source"               : source,
-      "features"             : grewe_features,
+      "features"             : "GreweFeatures:\n{}".format('\n'.join(["{}:{}".format(k,v) for k, v in grewe_features.items()])),
       "dataset"              : dataset,
       "cpu_transfer_time_ns" : '\n'.join([str(int(x)) for x in cpu_transfer_time_ns if x != 'nan']),
       "cpu_kernel_time_ns"   : '\n'.join([str(int(x)) for x in cpu_kernel_time_ns if x != 'nan']),
