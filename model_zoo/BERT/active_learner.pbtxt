@@ -301,7 +301,7 @@ sampler {
             }
           }
           random_seed: 12345
-          num_train_steps: 1000
+          num_train_steps: 0
           downstream_task: "GrewePredictive"
           training_corpus: "/home/foivos/cldrive_cache.db"
         }
