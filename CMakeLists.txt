@@ -197,7 +197,7 @@ function(install_external_deps)
       SOURCE_DIR        ${THIRD_PARTY}/cldrive
       INSTALL_DIR       ${LOCAL}
       CONFIGURE_COMMAND cd ${THIRD_PARTY}/cldrive
-      BUILD_COMMAND     cd ${THIRD_PARTY}/cldrive && bazel build -c opt //gpu/cldrive
+      BUILD_COMMAND     cd ${THIRD_PARTY}/cldrive && export USE_BAZEL_VERSION=3.0.0 && bazel build -c opt //gpu/cldrive
       INSTALL_COMMAND   ln -sf ${THIRD_PARTY}/cldrive/bazel-bin/gpu/cldrive/cldrive ${LOCAL}/bin/cldrive
     )
     set(CLDRIVE          ${LOCAL}/bin/cldrive PARENT_SCOPE)
