@@ -372,7 +372,7 @@ class GrewePredictive(DownstreamTask):
             return new_samples
       return new_samples
 
-  def UpdateDatabase(self, new_samples: typing.List[typing.Dict[str, typing.Any]], tokenizer) -> None:
+  def UpdateDownstreamDatabase(self, new_samples: typing.List[typing.Dict[str, typing.Any]], tokenizer) -> None:
     """
     Update exported database of downstream task.
     """
@@ -391,7 +391,7 @@ class GrewePredictive(DownstreamTask):
     Collect new generated samples, find their runtime features and processs to a torch dataset.
     """
     new_samples = self.CollectRuntimeFeatures(new_samples, top_k, tokenizer)
-    self.UpdateDatabase(new_samples, tokenizer)
+    self.UpdateDownstreamDatabase(new_samples, tokenizer)
     updated_dataset = [
       (
         self.InputtoEncodedVector(entry.features,
