@@ -228,6 +228,7 @@ class GrewePredictive(DownstreamTask):
       nrfeats['global_size'] = int(2**gs)
       cached = self.corpus_db.update_and_get(
         code,
+        s.features,
         "BenchPress",
         global_size = nrfeats['global_size'],
         local_size  = nrfeats['local_size'],
@@ -257,6 +258,7 @@ class GrewePredictive(DownstreamTask):
       else:
         cached = self.corpus_db.update_and_get(
           code,
+          sample.features,
           "BenchPress",
           global_size = int(2**gsize),
           local_size  = int(local_size),
