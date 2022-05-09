@@ -265,7 +265,7 @@ def RunCLDrive(src: str,
       f.write(src)
       f.flush()
       proc = subprocess.Popen(
-        "{} {} --srcs={} --num_runs={} --gsize={} --lsize={} --envs={},{}"
+        "{} {} --srcs={} {} --num_runs={} --gsize={} --lsize={} --envs={},{}"
           .format(
             "timeout -s9 {}".format(timeout) if timeout > 0 else "",
             CLDRIVE,
