@@ -70,11 +70,11 @@ class DownstreamTask(object):
   def FromTask(cls, task: str, corpus_path: pathlib.Path, cache_path: pathlib.Path, random_seed: int, **kwargs) -> "DownstreamTask":
     return TASKS[task](corpus_path, cache_path, random_seed, kwargs)
 
-  def __init__(self, name: str, cache_path: pathlib.Path, task_type: typing.Callable, random_seed: int) -> None:
+  def __init__(self, name: str, cache_path: pathlib.Path, task_type: typing.Callable, random_seed: int, use_as_server: bool) -> None:
     self.name            = name
     self.random_seed     = random_seed
     self.cache_path      = cache_path
-    if environment.WORLD_RANK == 0:
+    if environment.WORLD_RANK == 0 and not use_as_server:
       self.downstream_data = downstream_data.DownstreamData(
         "sqlite:///{}".format(cache_path),
         task_type = task_type,
@@ -141,7 +141,7 @@ class GrewePredictive(DownstreamTask):
                use_as_server : bool = False,
                ) -> None:
     super(GrewePredictive, self).__init__(
-      "GrewePredictive", cache_path, downstream_data.GrewePredictiveInstance, random_seed
+      "GrewePredictive", cache_path, downstream_data.GrewePredictiveInstance, random_seed, use_as_server
     )
     self.corpus_path     = corpus_path
     self.corpus_db       = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
