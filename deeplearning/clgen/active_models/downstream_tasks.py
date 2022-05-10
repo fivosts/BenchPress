@@ -144,7 +144,7 @@ class GrewePredictive(DownstreamTask):
       "GrewePredictive", cache_path, downstream_data.GrewePredictiveInstance, random_seed, use_as_server
     )
     self.corpus_path     = corpus_path
-    self.corpus_db       = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
+    self.corpus_db       = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)))
     if use_as_server:
       self.setup_server()
     else:
