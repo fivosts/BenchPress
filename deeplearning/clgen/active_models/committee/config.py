@@ -16,7 +16,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
   pbutil.AssertFieldIsSet(config, "num_train_steps")
   pbutil.AssertFieldIsSet(config, "random_seed")
   p = pathlib.Path(config.training_corpus).resolve()
-  if not p.exists():
+  if not p.exists() and config.num_train_steps > 0:
     raise FileNotFoundError(p)
   ## Parse all MLPs.
   for nn in config.committee.mlp:
