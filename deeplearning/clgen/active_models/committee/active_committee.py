@@ -199,7 +199,8 @@ class QueryByCommittee(backends.BackendBase):
            # + member.data_generator.get_random_subset(
                # max(0, abs(len(update_dataloader) - member.training_opts.num_train_steps)))
     )
-    l.logger().warn("Make sure the above statement is sensible.")
+    if len(data_generator) == 0:
+      return
     optimizer       = member.optimizer
     scheduler       = member.scheduler
     member_path     = self.ckpt_path / member.sha256
@@ -343,6 +344,8 @@ class QueryByCommittee(backends.BackendBase):
     model          = member.model
     model_name     = "{}-{}".format(member.config.name, member.model.id)
     data_generator = member.data_generator + update_dataloader
+    if len(data_generator) == 0:
+      return
     train_dataset  = data_generator.get_batched_dataset()
 
     member_path     = self.ckpt_path / member.sha256
