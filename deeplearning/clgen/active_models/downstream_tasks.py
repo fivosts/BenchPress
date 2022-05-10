@@ -76,7 +76,7 @@ class DownstreamTask(object):
     self.cache_path      = cache_path
     if environment.WORLD_RANK == 0 and not use_as_server:
       self.downstream_data = downstream_data.DownstreamData(
-        "sqlite:///{}".format(cache_path),
+        "sqlite:///{}/downstream_data.db".format(cache_path),
         task_type = task_type,
         must_exist = False,
       )
@@ -144,7 +144,7 @@ class GrewePredictive(DownstreamTask):
       "GrewePredictive", cache_path, downstream_data.GrewePredictiveInstance, random_seed, use_as_server
     )
     self.corpus_path     = corpus_path
-    self.corpus_db       = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path / "downstream_data.db")), must_exist = True)
+    self.corpus_db       = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)), must_exist = True)
     if use_as_server:
       self.setup_server()
     else:
