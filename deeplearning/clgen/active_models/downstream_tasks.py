@@ -365,7 +365,7 @@ class GrewePredictive(DownstreamTask):
       new_samples = []
       total = 0
       for sample in sorted(samples, key = lambda x: x.score):
-        ret = self.CollectSingleRuntimeFeature(sample, tokenizer)
+        ret, rej = self.CollectSingleRuntimeFeature(sample, tokenizer)
         for s in ret:
           if s.runtime_features['label'] in {"CPU", "GPU"}:
             total += 1
