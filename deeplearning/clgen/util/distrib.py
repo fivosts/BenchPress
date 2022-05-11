@@ -118,6 +118,8 @@ def write_broadcast(msg: str, is_bytes = False, read_fn = None) -> None:
   This function is not process-safe. User must ensure one node calls it
   and all reads have been complete before re-writing.
   """
+  if environment.WORLD_SIZE == 1:
+    return
   for x in range(WORLD_SIZE):
     with open(PATH / "msg-{}".format(x), 'wb' if is_bytes else 'w') as outf:
       outf.write(msg)
@@ -131,6 +133,8 @@ def read_broadcast(d: int = 0, is_bytes = False, read_fn = None) -> str:
   """
   All nodes read broadcasted message.
   """
+  if environment.WORLD_SIZE == 1:
+    return
   if d > 20:
     raise FileNotFoundError(str(PATH / "msg-{}".format(WORLD_RANK)))
   while not (PATH / "msg-{}".format(WORLD_RANK)).exists():
@@ -160,6 +164,8 @@ def consistent_write(msg: typing.Union[str, bytes], is_bytes: bool = False) -> N
   All nodes become consistent on a set of discrete chunks of data.
   All nodes must get updated with the same merged blob.
   """
+  if environment.WORLD_SIZE == 1:
+    return
   with open(PATH / "msg-{}".format(WORLD_RANK), 'wb' if is_bytes else 'w') as outf:
     outf.write(msg)
     outf.flush()
@@ -171,6 +177,8 @@ def consistent_read(is_bytes: bool = False) -> typing.Dict[int, typing.Union[str
   """
   Nodes read other nodes' data and become consistent.
   """
+  if environment.WORLD_SIZE == 1:
+    return
   dc = 0
   while len(glob.glob(str(PATH / "msg-*"))) < WORLD_SIZE:
     time.sleep(0.5)

@@ -24,7 +24,7 @@ Flask==1.1.2
 Flask-SQLAlchemy==2.4.4
 future==0.18.2
 gast==0.3.3
-gdown==3.12.2
+gdown==4.4.0
 gitpython==3.1.14
 google-api-core==1.23.0
 google-auth==1.23.0

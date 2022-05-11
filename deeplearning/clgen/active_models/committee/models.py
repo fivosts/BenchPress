@@ -163,18 +163,28 @@ class KMeans(CommitteeModels):
         'cluster_labels' : self.classifier.labels_,
       }
     else:
-      cluster_labels = self.classifier.predict(input_ids)
       target_labels = []
-      for x in cluster_labels:
-        p = [(y / sum(self.cluster_map[x]) if sum(self.cluster_map[x]) else 0.5) for y in self.cluster_map[x]]
-        p = p / np.array(p).sum()
-        target_labels.append(
-          np.random.choice(a = np.arange(self.config.num_labels), p = p)
-        )
-      return {
-        'cluster_labels'   : cluster_labels,
-        'predicted_labels' : target_labels,
-      }
+      if not self.classifier:
+        for idx, _ in enumerate(input_ids):
+          target_labels.append(
+            np.random.choice(a = np.arange(self.config.num_labels))
+          )
+        return {
+          'cluster_labels'   : [],
+          'predicted_labels' : target_labels,
+        }
+      else:
+        cluster_labels = self.classifier.predict(input_ids)
+        for x in cluster_labels:
+          p = [(y / sum(self.cluster_map[x]) if sum(self.cluster_map[x]) else 0.5) for y in self.cluster_map[x]]
+          p = p / np.array(p).sum()
+          target_labels.append(
+            np.random.choice(a = np.arange(self.config.num_labels), p = p)
+          )
+        return {
+          'cluster_labels'   : cluster_labels,
+          'predicted_labels' : target_labels,
+        }
 
   def get_checkpoint_state(self) -> typing.Dict[str, typing.Any]:
     """
@@ -221,10 +231,15 @@ class KNN(CommitteeModels):
       self.classifier = self.knn.fit(input_ids, target_ids)
       return {}
     else:
-      labels = self.classifier.predict(input_ids)
-      return {
-        'predicted_labels' : [int(round(float(x) + sys.float_info.epsilon)) for x in labels]
-      }
+      if not self.classifier:
+        return {
+          'predicted_labels' : [np.random.choice(a = np.arange(self.config.num_labels)) for x in input_ids]
+        }
+      else:
+        labels = self.classifier.predict(input_ids)
+        return {
+          'predicted_labels' : [int(round(float(x) + sys.float_info.epsilon)) for x in labels]
+        }
 
   def get_checkpoint_state(self) -> typing.Dict[str, typing.Any]:
     """

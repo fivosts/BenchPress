@@ -7,6 +7,7 @@ import numpy as np
 
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
+from deeplearning.clgen.util import logging as l
 
 class ListTrainDataloader(torch.utils.data.Dataset):
   """
@@ -20,7 +21,7 @@ class ListTrainDataloader(torch.utils.data.Dataset):
     ## The dataset here should be a list, and each entry
     ## must be a tuple containing the input and the target vector.
     if len(dataset) <= 0 and not lazy:
-      raise ValueError("Predictive model dataset seems empty.")
+      l.logger().warn("Active learning committee dataset is empty. Make sure this is expected behavior.")
     self.compute_dataset(dataset)
     return
 
