@@ -372,6 +372,7 @@ function(setup_python)
   if (PYTHON_FROM_SOURCE)
     file(MAKE_DIRECTORY ${LOCAL}/lib/python)
     add_custom_target(requirements ALL
+      COMMAND ${PYTHON} -m pip install virtualenv
       COMMAND ${PYTHON} -m virtualenv ${LOCAL}/env
       COMMAND ${PYTHON_ENV} -m pip install wheel setuptools==53.1.0
       COMMAND ${PYTHON_ENV} -m pip install --upgrade pip==21.0.1
@@ -381,6 +382,7 @@ function(setup_python)
     )
   else ()
     add_custom_target(requirements ALL
+      COMMAND ${PYTHON} -m pip install virtualenv
       COMMAND ${PYTHON} -m virtualenv ${LOCAL}/env
       COMMAND ${PYTHON_ENV} -m pip install wheel setuptools==53.1.0
       COMMAND ${PYTHON_ENV} -m pip install --upgrade pip==21.0.1
