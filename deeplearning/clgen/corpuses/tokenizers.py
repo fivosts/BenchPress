@@ -914,7 +914,8 @@ class IncoderTokenizer(TokenizerBase):
   Wrapper representation of Incoder's huggingface tokenizer.
   """
   def __init__(self, incoder: str):
-    self._tokenizer = transformers.AutoTokenizer.from_pretrained(incoder, use_auth_token=True)
+    self._tokenizer   = transformers.AutoTokenizer.from_pretrained(incoder)
+    self.vocab_size   = self._tokenizer.vocab_size
     self.startToken   = "<|endoftext|>"
     self.endToken     = "<|endoftext|>"
     self.padToken     = self._tokenizer.pad_token
