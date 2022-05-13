@@ -78,101 +78,104 @@ def AssertIsBuildable(config: model_pb2.Model) -> model_pb2.Model:
         "TrainingOptions.num_epochs must be > 0",
       )
     elif config.architecture.backend == model_pb2.NetworkArchitecture.TENSORFLOW_BERT\
-      or config.architecture.backend == model_pb2.NetworkArchitecture.TORCH_BERT:
+      or config.architecture.backend == model_pb2.NetworkArchitecture.TORCH_BERT\
+      or config.architecture.backend == model_pb2.NetworkArchitecture.INCODER_1B\
+      or config.architecture.backend == model_pb2.NetworkArchitecture.INCODER_6B:
       # Data generator is needed when using bert.
       pbutil.AssertFieldIsSet(config.training, "data_generator")
       # Parse data_generator params.
       _ = lm_data_generator.AssertConfigIsValid(config.training.data_generator)
-      ## .architecture params
-      pbutil.AssertFieldIsSet(
-        config.architecture,
-        "hidden_size",
-      )
-      pbutil.AssertFieldIsSet(
-        config.architecture,
-        "num_hidden_layers",
-      )
-      pbutil.AssertFieldIsSet(
-        config.architecture,
-        "num_attention_heads",
-      )
-      pbutil.AssertFieldIsSet(
-        config.architecture,
-        "intermediate_size",
-      )
-      pbutil.AssertFieldConstraint(
-        config.architecture,
-        "hidden_size",
-        lambda x: x % config.architecture.num_attention_heads == 0,
-        "The hidden size is not a multiple of the number of attention "
-        "heads."
-      )
-      pbutil.AssertFieldIsSet(
-        config.architecture,
-        "hidden_act",
-      )
-      pbutil.AssertFieldIsSet(
-        config.architecture,
-        "hidden_dropout_prob",
-      )
-      pbutil.AssertFieldIsSet(
-        config.architecture,
-        "attention_probs_dropout_prob",
-      )
-      pbutil.AssertFieldIsSet(
-        config.architecture,
-        "type_vocab_size",
-      )
-      pbutil.AssertFieldIsSet(
-        config.architecture,
-        "initializer_range",
-      )
-      pbutil.AssertFieldIsSet(
-        config.architecture,
-        "layer_norm_eps",
-      )
-      ## Optional feature encoder attributes
-      if config.architecture.HasField("feature_encoder") and config.architecture.feature_encoder == True:
+      if config.architecture.backend != model_pb2.NetworkArchitecture.INCODER_1B and config.architecture.backend != model_pb2.NetworkArchitecture.INCODER_6B:
+        ## .architecture params
         pbutil.AssertFieldIsSet(
           config.architecture,
-          "feature_sequence_length"
+          "hidden_size",
         )
         pbutil.AssertFieldIsSet(
           config.architecture,
-          "feature_embedding_size"
+          "num_hidden_layers",
         )
         pbutil.AssertFieldIsSet(
           config.architecture,
-          "feature_dropout_prob"
+          "num_attention_heads",
         )
         pbutil.AssertFieldIsSet(
           config.architecture,
-          "feature_singular_token_thr"
+          "intermediate_size",
+        )
+        pbutil.AssertFieldConstraint(
+          config.architecture,
+          "hidden_size",
+          lambda x: x % config.architecture.num_attention_heads == 0,
+          "The hidden size is not a multiple of the number of attention "
+          "heads."
         )
         pbutil.AssertFieldIsSet(
           config.architecture,
-          "feature_max_value_token"
+          "hidden_act",
         )
         pbutil.AssertFieldIsSet(
           config.architecture,
-          "feature_token_range"
+          "hidden_dropout_prob",
         )
         pbutil.AssertFieldIsSet(
           config.architecture,
-          "feature_num_attention_heads"
+          "attention_probs_dropout_prob",
         )
         pbutil.AssertFieldIsSet(
           config.architecture,
-          "feature_transformer_feedforward"
+          "type_vocab_size",
         )
         pbutil.AssertFieldIsSet(
           config.architecture,
-          "feature_layer_norm_eps"
+          "initializer_range",
         )
         pbutil.AssertFieldIsSet(
           config.architecture,
-          "feature_num_hidden_layers"
+          "layer_norm_eps",
         )
+        ## Optional feature encoder attributes
+        if config.architecture.HasField("feature_encoder") and config.architecture.feature_encoder == True:
+          pbutil.AssertFieldIsSet(
+            config.architecture,
+            "feature_sequence_length"
+          )
+          pbutil.AssertFieldIsSet(
+            config.architecture,
+            "feature_embedding_size"
+          )
+          pbutil.AssertFieldIsSet(
+            config.architecture,
+            "feature_dropout_prob"
+          )
+          pbutil.AssertFieldIsSet(
+            config.architecture,
+            "feature_singular_token_thr"
+          )
+          pbutil.AssertFieldIsSet(
+            config.architecture,
+            "feature_max_value_token"
+          )
+          pbutil.AssertFieldIsSet(
+            config.architecture,
+            "feature_token_range"
+          )
+          pbutil.AssertFieldIsSet(
+            config.architecture,
+            "feature_num_attention_heads"
+          )
+          pbutil.AssertFieldIsSet(
+            config.architecture,
+            "feature_transformer_feedforward"
+          )
+          pbutil.AssertFieldIsSet(
+            config.architecture,
+            "feature_layer_norm_eps"
+          )
+          pbutil.AssertFieldIsSet(
+            config.architecture,
+            "feature_num_hidden_layers"
+          )
       ## .training params
       pbutil.AssertFieldIsSet(
         config.training,
