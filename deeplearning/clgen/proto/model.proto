@@ -47,6 +47,8 @@ message NetworkArchitecture {
     TENSORFLOW_BERT = 1;
     TORCH_BERT      = 2;
     KERAS_SEQ       = 3;
+    INCODER_1B      = 4;
+    INCODER_6B      = 5;
   }
   enum NeuronType {
     LSTM = 0;
