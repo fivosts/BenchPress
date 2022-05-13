@@ -17,6 +17,7 @@
 An tokenizer converts a block of text into a sequence of vocbulary tokens.
 """
 import pathlib
+import os
 import pickle
 import typing
 import transformers
@@ -914,6 +915,7 @@ class IncoderTokenizer(TokenizerBase):
   Wrapper representation of Incoder's huggingface tokenizer.
   """
   def __init__(self, incoder: str):
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
     self._tokenizer   = transformers.AutoTokenizer.from_pretrained(incoder)
 
     self.vocab_size = self._tokenizer.vocab_size
