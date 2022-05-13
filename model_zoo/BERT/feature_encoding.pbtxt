@@ -49,7 +49,7 @@ model {
     initializer_range: 0.02
     feature_encoder: true
     feature_sequence_length: 256
-    feature_embedding_size: 256
+    feature_embedding_size: 512
     feature_dropout_prob: 0.15
     feature_singular_token_thr: 512
     feature_max_value_token: 32768
@@ -57,13 +57,13 @@ model {
     feature_num_attention_heads: 4
     feature_transformer_feedforward: 2048
     feature_layer_norm_eps: 1e-5
-    feature_num_hidden_layers: 2
+    feature_num_hidden_layers: 4
   }
   training {
-    num_train_steps: 5000000
-    num_warmup_steps: 20000
+    num_train_steps: 20000000
+    num_warmup_steps: 1000000
     sequence_length: 768
-    batch_size: 32
+    batch_size: 512
     max_predictions_per_seq: 1
     dupe_factor: 1
     masked_lm_prob: 0.4
@@ -74,7 +74,7 @@ model {
       datapoint_time: "online"
       use_start_end : true
       truncate_large_kernels: true
-      steps_per_epoch: 100000
+      steps_per_epoch: 500000
       validation_split: 0
       hole {
         relative_length: 1.0
@@ -114,10 +114,10 @@ sampler {
     corpus_config {
       active {
         target: "rodinia"
-        active_limit_per_feed: 2000
         active_search_depth: 100
         active_search_width: 32
         batch_size_per_feed: 2
+        active_dropout_prob: 0.1
         feature_space: "GreweFeatures"
       }
       max_predictions_per_seq: 1
@@ -129,7 +129,7 @@ sampler {
     }
     start_text: "[START]kernel void [HOLE]}[END]"
   }
-  batch_size: 64
+  batch_size: 512
   sequence_length: 768
   temperature_micros: 700000  # = 0.8 real value
   termination_criteria {
