@@ -692,7 +692,7 @@ class MaskLMDataGenerator(object):
           encoded_features = []
           for dp, fvec in zip(encoded_corpus, training_features):
             for fspace in extractor.extractors.keys():
-              if fspace in fvec:
+              if fspace in fvec and fvec[fspace]:
                 expanded_corpus.append(dp)
                 encoded_features.append(self.feature_tokenizer.TokenizeFeatureVector(fvec[fspace], fspace, self.feature_sequence_length))
           shaped_corpus = [[src, feats] for src, feats in zip(expanded_corpus, encoded_features)]
