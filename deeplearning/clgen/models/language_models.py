@@ -15,9 +15,7 @@
 """The CLgen language model."""
 import os
 import time
-import socket
 import shutil
-import getpass
 import pathlib
 import typing
 import datetime
@@ -26,26 +24,22 @@ import humanize
 import numpy as np
 
 from deeplearning.clgen.samplers import sample_observers as sample_observers_lib
-from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import commit
-from deeplearning.clgen.util import sqlutil
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.models import builders
-from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.models.keras_sequential import keras_sequential
 from deeplearning.clgen.models.tf_sequential import tf_sequential
 from deeplearning.clgen.models.tf_bert import tf_bert
 from deeplearning.clgen.models.torch_bert import torch_bert
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.proto import telemetry_pb2
 from deeplearning.clgen.preprocessors import opencl
 from absl import flags
 
