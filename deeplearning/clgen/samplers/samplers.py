@@ -553,8 +553,8 @@ class Sampler(object):
     sampler. Each sampler holds a directory of all models it has 
     sampled with symbolic links created in this function.
     """
-    assert os.path.isdir(db_path), "Parent path of database is not an existing path!"
     if environment.WORLD_RANK == 0:
+      assert os.path.isdir(db_path), "Parent path of database is not an existing path!"
       (self.samples_directory / model_hash).mkdir(exist_ok = True)
 
       for file in db_path.iterdir():
@@ -567,6 +567,7 @@ class Sampler(object):
             ),
             symlink
           )
+    distrib.barrier()
     return
 
   def symlinkSampleCorpus(self,
