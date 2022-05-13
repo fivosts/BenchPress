@@ -225,14 +225,14 @@ class Incoder1B(Incoder):
   """
   Specified class for 'small' 1B parameter Incoder.
   """
-  def __init__(self):
-    super(Incoder1B, self).__init__(incoder_version = "facebook/incoder-1B")
+  def __init__(self, *args, **kwargs):
+    super(Incoder1B, self).__init__(*args, **kwargs, incoder_version = "facebook/incoder-1B")
     return
 
 class Incoder6B(Incoder):
   """
   Specified class for regular 6B parameter Incoder.
   """
-  def __init__(self):
-    super(Incoder6B, self).__init__(incoder_version = "facebook/incoder-6B")
+  def __init__(self, *args, **kwargs):
+    super(Incoder6B, self).__init__(*args, **kwargs, incoder_version = "facebook/incoder-6B")
     return
