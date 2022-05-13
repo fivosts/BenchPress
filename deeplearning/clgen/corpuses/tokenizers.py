@@ -915,7 +915,11 @@ class IncoderTokenizer(TokenizerBase):
   """
   def __init__(self, incoder: str):
     self._tokenizer   = transformers.AutoTokenizer.from_pretrained(incoder)
-    self.vocab_size   = self._tokenizer.vocab_size
+
+    self.vocab_size = self._tokenizer.vocab_size
+    self.vocab      = self._tokenizer.vocab
+    self.decoder    = {value: key for key, value in self.vocab.items()}
+
     self.startToken   = "<|endoftext|>"
     self.endToken     = "<|endoftext|>"
     self.padToken     = self._tokenizer.pad_token
@@ -930,7 +934,7 @@ class IncoderTokenizer(TokenizerBase):
       return self._tokenizer.decode(encoded)
     
   def TokenizeString(self, text: str) -> np.array:
-      return self._tokenizer(text)
+      return self._tokenizer(text).input_ids
 
   def AtomizeString(self, text: str) -> typing.List[str]:
     return [str(self._tokenizer.decode(x)) for x in self._tokenizer(text)]
