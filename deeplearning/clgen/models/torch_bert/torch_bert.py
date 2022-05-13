@@ -1078,12 +1078,20 @@ class torchBert(backends.BackendBase):
     else:
       return True
 
+  def count_parameters(self, model) -> int:
+    """
+    Count and print the number of trainable parameters for the model.
+    """
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
   def GetShortSummary(self) -> str:
 
     return (
       "\n"
       f"{model_pb2.NetworkArchitecture.Backend.Name(self.config.architecture.backend)} "
       "network: "
+      "\n"
+      f" Total trainable parameters: {self.count_parameters(self.train.model)}"
       "\n"
       f"  hidden_size: {self.config.architecture.hidden_size}"
       "\n"
