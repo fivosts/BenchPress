@@ -1,15 +1,19 @@
 {
 	"corpus_250.tar.bz2": {
 		"url": "1PqJfkuPtKIhu2_cZ27xl65m7BMg8NCCg"
+		"hash": "3eacde994e6369155a110c3bc4ea4b2c3eacde99"
 	},
 	"corpus_1000.tar.bz2": {
 		"url": "13XyLjKoIlVzn3hLKEYDhUdv0tY5cqnc6"
+		"hash": "5f47641363898adccc921b080f60aa375f476413"
 	},
 	"github_opencl_2019.tar.bz2": {
 		"url": "1McZbkT3iPt7n7M7yGzZOR89j61bsEWvT"
+		"hash": "5bf64e6a1354d3ad7c55ea33e33537195bf64e6a"
 	},
 	"corpus_17k.tar.bz2": {
 		"url": "1gMQNXT7fTIB1PrZ9oAB2ezbjZw-rIly7"
+		"hash": "be9701a5be8f5d8dccc5910c799dd79abe9701a5"
 	},
 	"ultimate_corpus.tar.bz2": {
 		"url": "1eOoakcOnq-G9NcfioFHmGg2HAsf2KXCa",
