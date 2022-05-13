@@ -5,12 +5,11 @@ from __future__ import print_function
 
 import os
 import shutil
-import glob
+import humanize
 import typing
 import pathlib
 import datetime
 import time
-import threading
 import numpy as np
 from absl import flags
 import tqdm
@@ -1091,7 +1090,7 @@ class torchBert(backends.BackendBase):
       f"{model_pb2.NetworkArchitecture.Backend.Name(self.config.architecture.backend)} "
       "network: "
       "\n"
-      f" Total trainable parameters: {self.count_parameters(self.train.model)}"
+      f" Total trainable parameters: {humanize.intcomma(self.count_parameters(self.train.model))}"
       "\n"
       f"  hidden_size: {self.config.architecture.hidden_size}"
       "\n"
