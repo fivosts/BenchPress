@@ -38,6 +38,7 @@ from deeplearning.clgen.models.keras_sequential import keras_sequential
 from deeplearning.clgen.models.tf_sequential import tf_sequential
 from deeplearning.clgen.models.tf_bert import tf_bert
 from deeplearning.clgen.models.torch_bert import torch_bert
+from deeplearning.clgen.models.incoder import incoder
 from deeplearning.clgen.proto import internal_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.preprocessors import opencl
@@ -219,6 +220,8 @@ class Model(object):
       model_pb2.NetworkArchitecture.KERAS_SEQ: keras_sequential.kerasSequential,
       model_pb2.NetworkArchitecture.TENSORFLOW_BERT: tf_bert.tfBert,
       model_pb2.NetworkArchitecture.TORCH_BERT: torch_bert.torchBert,
+      model_pb2.NetworkArchitecture.INCODER_1B: incoder.Incoder1B,
+      model_pb2.NetworkArchitecture.INCODER_6B: incoder.Incoder6B,
     }[config.architecture.backend](self.config, self.cache, self.hash)
     l.logger().info("Initialized {} in {}".format(self.backend, self.cache.path))
     return
