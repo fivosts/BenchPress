@@ -19,6 +19,7 @@ An tokenizer converts a block of text into a sequence of vocbulary tokens.
 import pathlib
 import pickle
 import typing
+import transformers
 import json
 import multiprocessing
 import progressbar
