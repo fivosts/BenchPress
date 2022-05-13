@@ -10,7 +10,7 @@
 working_dir: "AST" ## This path is relative to "workspace_dir", which is an app FLAG
 model {
   corpus {
-    local_tar_archive: "$PWD/../corpus/ultimate_corpus.tar.bz2"
+    local_tar_archive: "$PWD/../corpus/corpus_250.tar.bz2"
     tokenizer {
       token_type: "ast"
       token_list: "deeplearning/clgen/corpuses/token_lists.json"
@@ -103,9 +103,9 @@ sampler {
     corpus_config {
       active {
         target: "rodinia"
-        active_limit_per_feed: 2000
         active_search_depth: 100
         active_search_width: 32
+        active_dropout_prob: 0.1
         batch_size_per_feed: 2
         feature_space: "GreweFeatures"
       }
