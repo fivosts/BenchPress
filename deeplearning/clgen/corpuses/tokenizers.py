@@ -57,6 +57,10 @@ def FromText(config, contentfile_separator: str, corpus_txt: str):
     else:
       token_set = set()
     return ASTokenizer.FromText(corpus_txt, token_set, contentfile_separator, mask_tokens)
+  elif config.token_type == "incoder-1b":
+    return IncoderTokenizer("facebook/incoder-1b")
+  elif config.token_type == "incoder-6b":
+    return IncoderTokenizer("facebook/incoder-6b")
   else:
     raise NotImplementedError
 
@@ -903,3 +907,28 @@ class FeatureTokenizer(TokenizerBase):
                          locations: typing.List[typing.Tuple[int, int]],
                          ) -> typing.List[int]:
     raise TypeError("Operation not supported for FeatureTokenizer")
+
+class IncoderTokenizer(TokenizerBase):
+  """
+  Wrapper representation of Incoder's huggingface tokenizer.
+  """
+  def __init__(self, incoder: str):
+    self._tokenizer = transformers.AutoTokenizer.from_pretrained(incoder)
+    self.startToken   = "<|endoftext|>"
+    self.endToken     = "<|endoftext|>"
+    self.padToken     = self._tokenizer.pad_token
+    self.holeToken    = "<|mask:0|>"
+    self.endholeToken = "<|endofmask|>"
+    return
+  
+  def tokensToString(self, encoded: np.array, **unused_kwargs) -> str:
+    return self._tokenizer.decode(encoded)
+
+  def ArrayToCode(self, encoded: np.array, **unused_kwargs) -> str:
+      return self._tokenizer.decode(encoded)
+    
+  def TokenizeString(self, text: str) -> np.array:
+      return self._tokenizer(text)
+
+  def AtomizeString(self, text: str) -> typing.List[str]:
+    return [str(self._tokenizer.decode(x)) for x in self._tokenizer(text)]
