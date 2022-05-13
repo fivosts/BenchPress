@@ -18,6 +18,7 @@ class BackendBase(object):
     fs_cache: cache.FSCache,
     hash: str,
     tokenizer: tokenizers.TokenizerBase = None,
+    **kwargs,
   ):
     self.config = config
     self.cache = fs_cache
