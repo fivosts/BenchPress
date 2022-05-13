@@ -59,9 +59,9 @@ def FromText(config, contentfile_separator: str, corpus_txt: str):
       token_set = set()
     return ASTokenizer.FromText(corpus_txt, token_set, contentfile_separator, mask_tokens)
   elif config.token_type == "incoder-1b":
-    return IncoderTokenizer("facebook/incoder-1b")
+    return IncoderTokenizer("facebook/incoder-1B")
   elif config.token_type == "incoder-6b":
-    return IncoderTokenizer("facebook/incoder-6b")
+    return IncoderTokenizer("facebook/incoder-6B")
   else:
     raise NotImplementedError
 
@@ -914,7 +914,7 @@ class IncoderTokenizer(TokenizerBase):
   Wrapper representation of Incoder's huggingface tokenizer.
   """
   def __init__(self, incoder: str):
-    self._tokenizer = transformers.AutoTokenizer.from_pretrained(incoder)
+    self._tokenizer = transformers.AutoTokenizer.from_pretrained(incoder, use_auth_token=True)
     self.startToken   = "<|endoftext|>"
     self.endToken     = "<|endoftext|>"
     self.padToken     = self._tokenizer.pad_token
