@@ -6,6 +6,7 @@ import typing
 import pathlib
 import datetime
 import time
+import transformers
 import numpy as np
 from absl import flags
 import tqdm
@@ -23,6 +24,7 @@ from deeplearning.clgen.features import extractor
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.preprocessors import opencl
+from deeplearning.clgen.models.torch_bert.data_generator import torchLMDataGenerator
 
 from deeplearning.clgen.util import logging as l
 
@@ -111,7 +113,9 @@ class Incoder(backends.BackendBase):
           torch_dtype=torch.float16,
           low_cpu_mem_usage=True,
       )
-    m = AutoModelForCausalLM.from_pretrained(model_name, **kwargs).to(self.pytorch.offset_device)
+    m = transformers.AutoModelForCausalLM.from_pretrained(
+      self.incoder_version, **kwargs
+    ).to(self.pytorch.offset_device)
 
     if self.pytorch.num_nodes > 1:
       m = self.torch.nn.parallel.DistributedDataParallel(
@@ -146,7 +150,6 @@ class Incoder(backends.BackendBase):
     """This is called only once. Performs basic initialization of sampling"""
     sample_batch_size = sampler.batch_size
     ##! TODO: Replace with incoder data generator
-    raise NotImplementedError
     data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
                        self.config.training, sampler, self.tokenizer, seed, sample_batch_size,
                        self.config.architecture.max_position_embeddings, self.cache.path, corpus,
@@ -155,7 +158,6 @@ class Incoder(backends.BackendBase):
                       #  self.feature_sequence_length,
                      )
     ##! TODO: Maybe initialize inline here instead of elaborating in separate function.
-    raise NotImplementedError
     self._ConfigSampleParams(data_generator, sampler)
     if self.pytorch.num_gpus > 0:
       self.torch.cuda.empty_cache()
