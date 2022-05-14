@@ -75,7 +75,57 @@ class Incoder(backends.BackendBase):
     self.trained           = False
     l.logger().info("{} initialized".format(self.incoder_version))
     return
-  
+
+  def _ConfigModelParams(self, is_sampling):
+    """General model hyperparameters initialization."""
+    ##! Placeholder for now. If need be, will be populated.
+    return
+
+  def _ConfigSampleParams(self,
+                          data_generator: torchLMDataGenerator,
+                          sampler: samplers.Sampler,
+                          ) -> None:
+    """
+    Model parameter initialization for inference.
+    """
+    self._ConfigModelParams(is_sampling = True)
+    self.sampler = sampler
+    self.temperature = sampler.temperature
+
+    # if sampler.sequence_length > self.bertAttrs['max_position_embeddings']:
+    #   raise ValueError(
+    #       "Cannot use sequence length %d because the BERT model "
+    #       "was only trained up to sequence length %d" %
+    #       (sampler.sequence_length, self.bertAttrs['max_position_embeddings']))
+
+    kwargs = {}
+    if self.incoder_version == "facebook/incoder-6B":
+      # the arguments added below will load a half precision version of the model,
+      # which requires less RAM than loading the full float32 version.  this 
+      # should fit in ~16GB of RAM
+      # NOTE: half precision should *not* be used if you plan to fine-tune the
+      # model. You'll need full precision and a lot of GPU memory. We have not
+      # tested fine-tuning in `transformers` (the model was trained in fairseq)
+      kwargs = dict(
+          revision="float16", 
+          torch_dtype=torch.float16,
+          low_cpu_mem_usage=True,
+      )
+    m = AutoModelForCausalLM.from_pretrained(model_name, **kwargs).to(self.pytorch.offset_device)
+
+    if self.pytorch.num_nodes > 1:
+      m = self.torch.nn.parallel.DistributedDataParallel(
+        m,
+        device_ids = [self.pytorch.offset_device],
+        output_device = self.pytorch.offset_device,
+      )
+    elif self.pytorch.num_gpus > 1:
+      m = self.torch.nn.DataParallel(m)
+
+    self.sample = torchBert.SampleBertEstimator(m, data_generator)
+    l.logger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
+    return
+
   def PreTrain(self, *args, **kwargs) -> None:
     l.logger().warn("Pre-training is not supported yet for Incoder. Moving on.")
     return
