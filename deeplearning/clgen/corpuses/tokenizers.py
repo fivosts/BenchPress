@@ -939,4 +939,4 @@ class IncoderTokenizer(TokenizerBase):
       return self._tokenizer(text).input_ids
 
   def AtomizeString(self, text: str) -> typing.List[str]:
-    return [str(self._tokenizer.decode(x)) for x in self._tokenizer(text)]
+    return [str(self._tokenizer.decode(x)) for x in self._tokenizer(text).input_ids]
