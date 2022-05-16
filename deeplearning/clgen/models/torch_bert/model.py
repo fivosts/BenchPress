@@ -755,7 +755,7 @@ class BertForPreTraining(BertPreTrainedModel):
 
     self.bert = BertModel(config)
     if self.config.feature_encoder:
-      self.cls        = BertMLMFeatureHead(config)
+      self.cls = BertMLMFeatureHead(config)
     else:
       self.cls = BertOnlyMLMHead(config)
 
