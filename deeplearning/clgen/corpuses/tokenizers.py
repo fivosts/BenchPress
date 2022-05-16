@@ -922,21 +922,22 @@ class IncoderTokenizer(TokenizerBase):
     self.vocab      = self._tokenizer.vocab
     self.decoder    = {value: key for key, value in self.vocab.items()}
 
-    self.startToken   = "<|endoftext|>"
-    self.endToken     = "<|endoftext|>"
+    self.startToken   = self._tokenizer("<|endoftext|>").input_ids
+    self.endToken     = self._tokenizer("<|endoftext|>").input_ids
     self.padToken     = self._tokenizer.pad_token
-    self.holeToken    = "<|mask:0|>"
-    self.endholeToken = "<|endofmask|>"
+    self.holeToken    = self._tokenizer("<|mask:0|>").input_ids
+    self.maskToken    = self._tokenizer("<|mask:0|>").input_ids
+    self.endholeToken = self._tokenizer("<|endofmask|>").input_ids
     return
   
   def tokensToString(self, encoded: np.array, **unused_kwargs) -> str:
     return self._tokenizer.decode(encoded)
 
   def ArrayToCode(self, encoded: np.array, **unused_kwargs) -> str:
-      return self._tokenizer.decode(encoded)
+      return self.tokensToString(encoded)
     
   def TokenizeString(self, text: str) -> np.array:
-      return self._tokenizer(text).input_ids
+      return [self._tokenizer.convert_tokens_to_ids(x) for x in self.AtomizeString(text)]
 
   def AtomizeString(self, text: str) -> typing.List[str]:
-    return [str(self._tokenizer.decode(x)) for x in self._tokenizer(text).input_ids]
+    return self._tokenizer.tokenize(text)
