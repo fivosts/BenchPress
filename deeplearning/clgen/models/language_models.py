@@ -391,7 +391,7 @@ class Model(object):
     self.backend.InitSampling(sampler, seed, self.corpus)
     [obs.Specialize(self, sampler) for obs in sample_observers]
 
-    if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert):
+    if isinstance(self.backend, tf_bert.tfBert) or isinstance(self.backend, torch_bert.torchBert) or isinstance(self.backend, incoder.Incoder):
       sample_batch = lambda : self._SampleLMBatch(sampler, tokenizer, sample_observers, epoch)
     elif isinstance(self.backend, tf_sequential.tfSequential) or isinstance(self.backend, keras_sequential.kerasSequential):
       sample_batch = lambda : self._SampleSeqBatch(sampler, tokenizer, sample_observers, epoch)
