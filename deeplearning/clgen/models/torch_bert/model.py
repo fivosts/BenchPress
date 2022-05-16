@@ -927,7 +927,6 @@ class BertForPreTraining(BertPreTrainedModel):
         'total_loss'        : total_loss,
         'prediction_logits' : prediction_scores,
         'hidden_states'     : hidden_states,
-        'attentions'        : attentions,
       }
 
 class BertForPreTrainingTRT(BertForPreTraining):
