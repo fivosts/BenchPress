@@ -32,6 +32,18 @@ class Incoder(backends.BackendBase):
   """
   API Class for incoder collected from huggingface.
   """
+  class TrainEstimator(typing.NamedTuple):
+    """Named tuple to wrap Incoder pipeline."""
+    model          : typing.TypeVar('nn.Module')
+    data_generator : torchLMDataGenerator
+    optimizer      : typing.Any
+    scheduler      : typing.Any
+
+  class SampleEstimator(typing.NamedTuple):
+    """Named tuple for sampling Incoder."""
+    model          : typing.List[typing.TypeVar('nn.Module')]
+    data_generator : torchLMDataGenerator
+
   def __init__(self, *args, **kwargs):
     super(Incoder, self).__init__(*args, **kwargs)
 
@@ -124,11 +136,72 @@ class Incoder(backends.BackendBase):
         output_device = self.pytorch.offset_device,
       )
     elif self.pytorch.num_gpus > 1:
-      m = self.torch.nn.DataParallel(m)
+      l.logger().warn("HuggingFace 'generate' function does not support model.generate. If you want multi-GPU sampling, go to DDP.")
 
-    self.sample = torchBert.SampleBertEstimator(m, data_generator)
+    self.sample = Incoder.SampleEstimator(m, data_generator)
     l.logger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
     return
+
+  def model_step(self) -> 'torch.Tensor':
+    raise NotImplementedError
+    return
+  
+  def sample_model_step(self,
+                        model     : typing.List[typing.TypeVar('torch.nn.Module')],
+                        inputs    : typing.Dict[str, typing.TypeVar('torch.Tensor')],
+                        is_live   : bool = False,
+                        iteration : int = None,
+                        ) -> typing.Dict[str, typing.List[typing.List[int]]]:
+    """
+    Specialized forward function.
+    Dispatches model replicas across all GPUs, one process each.
+
+    Inputs must be three-dimensional:
+    workload_size x batch_size x sequence_length
+    """
+    start = time.time()
+    outputs = {
+      'generated_samples': [], 'sample_indices': [],
+      'input_ids': [], 'masked_lm_lengths': []
+    }
+    if iteration is not None:
+      desc = "Sampling iteration: {}".format(iteration)
+    else:
+      desc = "Sampling"
+
+    batched_inputs = inputs['input_ids'].to(self.pytorch.device)
+    for input_ids in tqdm.tqdm(batched_inputs, total = len(batched_inputs), desc = desc):
+      batch = model.generate(input_ids=input_ids, do_sample=True, top_p=0.95, temperature=0.7, max_length=768)
+      outputs['generated_samples'] += [[int(y) for y in x] for x in batch.cpu().numpy()]
+
+    outputs['sample_indices']    = [-1] * len(outputs['generated_samples'])
+    outputs['input_ids']         = inputs['input_ids'].flatten()
+    outputs['masked_lm_lengths'] = inputs['masked_lm_lengths'].flatten()
+
+    if self.pytorch.num_nodes > 1:
+      self.torch.distributed.barrier()
+      generated_samples = [self.torch.zeros(tuple(outputs['generated_samples'].shape), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      # sample_indices    = [self.torch.zeros(tuple(outputs['sample_indices'].shape),    dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      # input_ids         = [self.torch.zeros(tuple(outputs['input_ids'].shape),         dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      # masked_lm_lengths = [self.torch.zeros(tuple(outputs['masked_lm_lengths'].shape), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+
+      self.torch.distributed.all_gather(generated_samples, outputs["generated_samples"])
+      # self.torch.distributed.all_gather(sample_indices,    outputs["sample_indices"])
+      # self.torch.distributed.all_gather(input_ids,         outputs["input_ids"])
+      # self.torch.distributed.all_gather(masked_lm_lengths, outputs["masked_lm_lengths"])
+
+      # outputs['generated_samples'] = self.torch.cat(generated_samples)
+      # outputs['sample_indices']    = self.torch.cat(sample_indices)
+      # outputs['input_ids']         = self.torch.cat(input_ids)
+      # outputs['masked_lm_lengths'] = self.torch.cat(masked_lm_lengths)
+
+    # outputs['generated_samples'] = list(outputs['generated_samples'].cpu().numpy())
+    # outputs['sample_indices']    = list(outputs['sample_indices'].cpu().numpy())
+    # outputs['input_ids']         = list(outputs['input_ids'].cpu().numpy())
+    # outputs['masked_lm_lengths'] = list(outputs['masked_lm_lengths'].cpu().numpy())
+
+    end = time.time()
+    return outputs, end-start
 
   def PreTrain(self, *args, **kwargs) -> None:
     l.logger().warn("Pre-training is not supported yet for Incoder. Moving on.")
@@ -281,6 +354,9 @@ class Incoder1B(Incoder):
     kwargs["incoder_version"] = "facebook/incoder-1B"
     super(Incoder1B, self).__init__(*args, **kwargs)
     return
+  
+  def __repr__(self) -> str:
+    return "Incoder1B"
 
 class Incoder6B(Incoder):
   """
@@ -290,3 +366,6 @@ class Incoder6B(Incoder):
     kwargs["incoder_version"] = "facebook/incoder-6B"
     super(Incoder6B, self).__init__(*args, **kwargs)
     return
+
+  def __repr__(self) -> str:
+    return "Incoder6B"
