@@ -87,7 +87,6 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
             "batch_size_per_feed",
             lambda x : config.batch_size % x == 0,
             "batch_size {} must be a multiple of batch_size_per_feed".format(
-              config.sample_corpus.corpus_config.active,
               config.batch_size
             )
           )
