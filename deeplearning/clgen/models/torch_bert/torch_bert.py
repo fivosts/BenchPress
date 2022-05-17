@@ -218,6 +218,7 @@ class torchBert(backends.BackendBase):
         m,
         device_ids    = [self.pytorch.offset_device],
         output_device = self.pytorch.offset_device,
+        find_unused_parameters = True,
       )
     elif self.pytorch.num_gpus > 1:
       m = self.torch.nn.DataParallel(m)
@@ -270,6 +271,7 @@ class torchBert(backends.BackendBase):
         m,
         device_ids = [self.pytorch.offset_device],
         output_device = self.pytorch.offset_device,
+        find_unused_parameters = True,
       )
     elif self.pytorch.num_gpus > 1:
       m = self.torch.nn.DataParallel(m)
