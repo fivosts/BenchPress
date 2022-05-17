@@ -1081,6 +1081,20 @@ class torchBert(backends.BackendBase):
     """
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
+  def find_unused_parameters(self, model: 'torch.nn.Module') -> None:
+    """
+    Find parameters that are unused for loss computation.
+    """
+    param_names = []
+    for name, param in model.named_parameters():
+      if param.grad is None:
+        param_names.append(name)
+    if param_names:
+      l.logger().warn("Unused parameters:\n{}".format('\n'.join(param_names)))
+    else:
+      l.logger().info("No unused parameters found for grad computation.")
+    return
+
   def GetShortSummary(self) -> str:
 
     return (
