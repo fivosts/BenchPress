@@ -915,19 +915,18 @@ class IncoderTokenizer(TokenizerBase):
   Wrapper representation of Incoder's huggingface tokenizer.
   """
   def __init__(self, incoder: str):
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
     self._tokenizer   = transformers.AutoTokenizer.from_pretrained(incoder)
 
     self.vocab_size = self._tokenizer.vocab_size
     self.vocab      = self._tokenizer.vocab
     self.decoder    = {value: key for key, value in self.vocab.items()}
 
-    self.startToken   = self._tokenizer("<|endoftext|>").input_ids
-    self.endToken     = self._tokenizer("<|endoftext|>").input_ids
-    self.padToken     = self._tokenizer.pad_token
-    self.holeToken    = self._tokenizer("<|mask:0|>").input_ids
-    self.maskToken    = self._tokenizer("<|mask:0|>").input_ids
-    self.endholeToken = self._tokenizer("<|endofmask|>").input_ids
+    self.startToken   = self._tokenizer.convert_tokens_to_ids("<|endoftext|>")
+    self.endToken     = self._tokenizer.convert_tokens_to_ids("<|endoftext|>")
+    self.padToken     = self._tokenizer.convert_tokens_to_ids("<|endoftext|>")
+    self.holeToken    = self._tokenizer.convert_tokens_to_ids("<|mask:0|>")
+    self.maskToken    = self._tokenizer.convert_tokens_to_ids("<|mask:0|>")
+    self.endholeToken = self._tokenizer.convert_tokens_to_ids("<|endofmask|>")
     return
   
   def tokensToString(self, encoded: np.array, **unused_kwargs) -> str:

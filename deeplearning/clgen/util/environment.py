@@ -3,6 +3,8 @@ import os
 import ifcfg
 import subprocess
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 def check_path_exists(path, must_exist = True):
   if not os.path.exists(path):
     if must_exist:
