@@ -922,9 +922,9 @@ class IncoderTokenizer(TokenizerBase):
     self.decoder    = {value: key for key, value in self.vocab.items()}
 
     self.startToken   = self._tokenizer.convert_tokens_to_ids("<|endoftext|>")
-    self.endToken     = self._tokenizer.convert_tokens_to_ids("<|endoftext|>")
+    self.endToken     = self._tokenizer.convert_tokens_to_ids("<|mask:0|>")
     self.padToken     = self._tokenizer.convert_tokens_to_ids("<|endoftext|>")
-    self.holeToken    = self._tokenizer.convert_tokens_to_ids("<|mask:0|>")
+    self.holeToken    = self._tokenizer.convert_tokens_to_ids("<insert>")
     self.maskToken    = self._tokenizer.convert_tokens_to_ids("<|mask:0|>")
     self.endholeToken = self._tokenizer.convert_tokens_to_ids("<|endofmask|>")
     return
