@@ -174,7 +174,7 @@ class Incoder(backends.BackendBase):
       batch = model.generate(input_ids=input_ids, do_sample=True, top_p=0.95, temperature=0.7, max_length=768)
       outputs['generated_samples'] += [[int(y) for y in x] for x in batch.cpu().numpy()]
 
-    outputs['sample_indices']    = [-1] * len(outputs['generated_samples'])
+    outputs['sample_indices']    = [[-1]] * len(outputs['generated_samples'])
     outputs['input_ids']         = inputs['input_ids'].flatten()
     outputs['masked_lm_lengths'] = inputs['masked_lm_lengths'].flatten()
 
