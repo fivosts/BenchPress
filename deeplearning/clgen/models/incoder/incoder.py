@@ -158,10 +158,10 @@ class Incoder(backends.BackendBase):
     inference_time = 0.0
     decoding_time = 0.0
     s_idx = 0
-    l.logger().warn(inputs['input_ids'].shape, ddp_nodes = True)
     for batch in tqdm.tqdm(inputs['input_ids'], total = len(inputs['input_ids']), desc = desc):
       for seq in batch:
         t1 = time.time()
+        seq = [x for x in seq if x != self.tokenizer.padToken]
         if seq[-1] == self.tokenizer.holeToken:
           incode = self.tokenizer.ArrayToCode(seq[:-1])
         else:
@@ -173,7 +173,7 @@ class Incoder(backends.BackendBase):
           model,
           incode,
           self.tokenizer.get_hf_tokenizer(),
-          max_to_generate = max_to_generate - (np.where(seq == self.tokenizer.padToken)[0][0] if self.tokenizer.padToken in seq else 0),
+          max_to_generate = max_to_generate - len(seq),
           temperature     = self.temperature,
           extra_sentinel  = True,
           max_retries     = 1,
@@ -186,7 +186,7 @@ class Incoder(backends.BackendBase):
         sample += [self.tokenizer.padToken] * (self.sampler.sequence_length - len(sample))
         sample  = self.torch.LongTensor(sample).to(self.pytorch.device)
 
-        indices  = self.tokenizer.TokenizeString(incoded['infills'][0])
+        indices  = self.tokenizer.TokenizeString(incoded['infills'][0])[:max_to_generate]
         indices += [self.tokenizer.padToken] * (max_to_generate - len(indices))
         indices  = self.torch.LongTensor(indices).to(self.pytorch.device)
 
