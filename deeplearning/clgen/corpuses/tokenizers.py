@@ -923,17 +923,23 @@ class IncoderTokenizer(TokenizerBase):
 
     self.startToken   = self._tokenizer.convert_tokens_to_ids("<|endoftext|>")
     self.endToken     = self._tokenizer.convert_tokens_to_ids("<|mask:0|>")
-    self.padToken     = self._tokenizer.convert_tokens_to_ids("<|endoftext|>")
-    self.holeToken    = self._tokenizer.convert_tokens_to_ids("<insert>")
+    self.padToken     = 1 # self._tokenizer.convert_tokens_to_ids("<|endoftext|>")
+    self.holeToken    = self._tokenizer.convert_tokens_to_ids("<|mask:0|>")
     self.maskToken    = self._tokenizer.convert_tokens_to_ids("<|mask:0|>")
     self.endholeToken = self._tokenizer.convert_tokens_to_ids("<|endofmask|>")
     return
   
-  def tokensToString(self, encoded: np.array, **unused_kwargs) -> str:
-    return self._tokenizer.decode(encoded)
+  def get_hf_tokenizer(self) -> 'transformers.AutoTokenizer':
+    """
+    Getter for Hugging-Face AutoTokenizer.
+    """
+    return self._tokenizer
+
+  def tokensToString(self, encoded: np.array, ignore_token: int = None, **unused_kwargs) -> str:
+    return self._tokenizer.decode([x for x in encoded if x != ignore_token])
 
   def ArrayToCode(self, encoded: np.array, **unused_kwargs) -> str:
-      return self.tokensToString(encoded)
+      return self.tokensToString([x for x in encoded if x != self.padToken])
     
   def TokenizeString(self, text: str) -> np.array:
       return [self._tokenizer.convert_tokens_to_ids(x) for x in self.AtomizeString(text)]
