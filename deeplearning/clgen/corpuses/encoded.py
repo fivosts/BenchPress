@@ -272,7 +272,7 @@ class EncodedContentFiles(sqlutil.Database):
     """
     if environment.WORLD_SIZE > 1:
       if environment.WORLD_RANK == 0:
-        with self.Session() as session:
+        with self.get_session() as session:
           status = self.IsDone(session)
           distrib.write_broadcast(str(status))
           if status:
@@ -318,9 +318,19 @@ class EncodedContentFiles(sqlutil.Database):
     return
 
   @property
+  def get_session(self):
+    """
+    get proper DB session.
+    """
+    if environment.WORLD_SIZE == 1 or environment.WORLD_RANK == 0:
+      return self.Session
+    else:
+      return self.replicated.Session
+
+  @property
   def size(self):
     """Return the total number of files in the encoded corpus."""
-    with self.Session() as session:
+    with self.get_session() as session:
       if session.query(EncodedContentFileStats).first():
         stats = session.query(EncodedContentFileStats).first()
         return stats.file_count
@@ -335,7 +345,7 @@ class EncodedContentFiles(sqlutil.Database):
 
     This excludes the EOF markers which are appended to each encoded text.
     """
-    with self.Session() as session:
+    with self.get_session() as session:
       return session.query(func.sum(EncodedContentFile.tokencount)).scalar()
 
   def IsDone(self, session: sqlutil.Session):
@@ -526,7 +536,7 @@ class EncodedContentFiles(sqlutil.Database):
     """
     Get the indices array of encoded contentfiles.
     """
-    with self.Session() as session:
+    with self.get_session() as session:
       if sequence_length:
         return [x.indices_array for x in session.query(EncodedContentFile).filter(EncodedContentFile.tokencount <= sequence_length).all()]
       else:
@@ -536,7 +546,7 @@ class EncodedContentFiles(sqlutil.Database):
     """
     Get feature vectors of training instances within the specified sequence length.
     """
-    with self.Session() as session:
+    with self.get_session() as session:
       if sequence_length:
         return [x.feature_vector for x in session.query(EncodedContentFile).filter(EncodedContentFile.tokencount <= sequence_length).all()]
       else:
@@ -546,7 +556,7 @@ class EncodedContentFiles(sqlutil.Database):
     """
     Collect list of source with features
     """
-    with self.Session() as session:
+    with self.get_session() as session:
       if sequence_length:
         return [(tokenizer.ArrayToCode(x.indices_array, with_formatting = False), x.feature_vector) for x in session.query(EncodedContentFile).filter(EncodedContentFile.tokencount <= sequence_length).all()]
       else:

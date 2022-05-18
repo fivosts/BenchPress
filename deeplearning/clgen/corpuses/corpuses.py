@@ -295,7 +295,7 @@ class Corpus(object):
       return self.config.contentfile_separator.join([x[0] for x in query])
 
   def GetTrainingDataGenerator(self, offset: int = None) -> typing.Generator:
-    with self.encoded.Session() as session:
+    with self.encoded.get_session() as session:
       if offset is None:
         for x in session.query(encoded.EncodedContentFile).yield_per(1000000):
           yield list(x.indices_array)
@@ -318,7 +318,7 @@ class Corpus(object):
       The encoded corpus.
     """
     if self._indices_arrays is None:
-      with self.encoded.Session() as session:
+      with self.encoded.get_session() as session:
         if sequence_length:
           query = session.query(encoded.EncodedContentFile).filter(encoded.EncodedContentFile.tokencount <= sequence_length).yield_per(1000000)
         else:
@@ -343,7 +343,7 @@ class Corpus(object):
     Returns:
       The encoded corpus.
     """
-    with self.encoded.Session() as session:
+    with self.encoded.get_session() as session:
       if sequence_length:
         data = [[x.indices_array, x.features] for x in session.query(encoded.EncodedContentFile).filter(encoded.EncodedContentFile.tokencount <= sequence_length).yield_per(1000000)]
       else:
@@ -356,7 +356,7 @@ class Corpus(object):
     """
     Get feature vectors of training instances within the specified sequence length.
     """
-    with self.encoded.Session() as session:
+    with self.encoded.get_session() as session:
       query = session.query(encoded.EncodedContentFile).filter(encoded.EncodedContentFile.tokencount <= sequence_length)
       return [x.features for x in query]
 
@@ -364,7 +364,7 @@ class Corpus(object):
     """
     Get tuple of contents accompanied by feature vectors.
     """
-    with self.encoded.Session() as session:
+    with self.encoded.get_session() as session:
       if sequence_length:
         query = session.query(encoded.EncodedContentFile).filter(encoded.EncodedContentFile.tokencount <= sequence_length)
       else:
@@ -434,7 +434,7 @@ class Corpus(object):
   @property
   def size(self) -> int:
     """Return the size of the atomized corpus."""
-    with self.encoded.Session() as session:
+    with self.encoded.get_session() as session:
       return session.query(
         sql.func.sum(encoded.EncodedContentFile.tokencount)
       ).one()
