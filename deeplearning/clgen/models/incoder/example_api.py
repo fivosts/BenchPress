@@ -59,6 +59,23 @@ def infill(model, inp: str, tokenizer, max_to_generate: int=128, temperature: fl
     ## (1) build the prompt
     if len(parts) == 1:
       prompt = parts[0]
+      completion = generate(model, prompt, tokenizer, max_to_generate, temperature)
+      completion = completion[len(prompt):]
+      if EOM not in completion:
+        completion += EOM
+      completion = completion[:completion.index(EOM) + len(EOM)]
+      infilled = completion[:-len(EOM)]
+      infills.append(infilled)
+      complete.append(infilled)
+      prompt += completion
+      complete.append(parts[-1])
+      text = ''.join(complete)
+      return {
+          'text': text, # str, the completed document (with infills inserted)
+          'parts': parts, # List[str], length N. Same as passed to the method
+          'infills': infills, # List[str], length N-1. The list of infills generated
+          'retries_attempted': retries_attempted, # number of retries used (if max_retries > 1)
+      }
     else:
       prompt = ""
       # encode parts separated by sentinel
