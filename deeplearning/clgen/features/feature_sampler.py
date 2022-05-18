@@ -108,7 +108,8 @@ class FeatureSampler(object):
       sorted_cands = sorted(candidates, key = lambda x: x.score)  # [:K]
       if dropout_prob > 0.0:
         rng = default_rng()
-        for kidx in range(max(K, len(sorted_cands))):
+        # for kidx in range(max(K, len(sorted_cands))): # if K > len(sorted_cands) because your LM's compilation rate sucks, this will give you an IndexError.
+        for kidx in range(min(K, len(sorted_cands))): # if K > len(sorted_cands) because your LM's compilation rate sucks, this will give you an IndexError.
           rep = np.random.RandomState().rand()
           visited = set()
           if rep <= dropout_prob and len(visited) < len(sorted_cands):
