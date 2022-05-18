@@ -21,6 +21,7 @@ def generate(model: torch.nn.Module, inp: str, tokenizer, max_to_generate: int=1
   if max_length > 2048:
     print("warning: max_length {} is greater than the context window {}".format(max_length, 2048))
   with torch.no_grad():
+    print(input_ids)
     output = model.generate(input_ids=input_ids, do_sample=True, top_p=0.95, temperature=temperature, max_length=max_length)
   detok_hypo_str = tokenizer.decode(output.flatten())
   if detok_hypo_str.startswith(BOS):
@@ -55,23 +56,21 @@ def infill(model, inp: str, tokenizer, max_to_generate: int=128, temperature: fl
 
   while (not done) and (retries_attempted < max_retries):
     retries_attempted += 1
-    
+    infills = []
+    complete = []
+  
     ## (1) build the prompt
     if len(parts) == 1:
       prompt = parts[0]
       completion = generate(model, prompt, tokenizer, max_to_generate, temperature)
-      completion = completion[len(prompt):]
+      # completion = completion[len(prompt):]
       if EOM not in completion:
         completion += EOM
       completion = completion[:completion.index(EOM) + len(EOM)]
       infilled = completion[:-len(EOM)]
       infills.append(infilled)
-      complete.append(infilled)
-      prompt += completion
-      complete.append(parts[-1])
-      text = ''.join(complete)
       return {
-          'text': text, # str, the completed document (with infills inserted)
+          'text': completion, # str, the completed document (with infills inserted)
           'parts': parts, # List[str], length N. Same as passed to the method
           'infills': infills, # List[str], length N-1. The list of infills generated
           'retries_attempted': retries_attempted, # number of retries used (if max_retries > 1)
@@ -83,11 +82,7 @@ def infill(model, inp: str, tokenizer, max_to_generate: int=128, temperature: fl
           prompt += part
           if extra_sentinel or (sentinel_ix < len(parts) - 1):
               prompt += make_sentinel(sentinel_ix)
-  
-    infills = []
-    complete = []
     done = True
-
     ## (2) generate infills
     for sentinel_ix, part in enumerate(parts[:-1]):
       complete.append(part)
