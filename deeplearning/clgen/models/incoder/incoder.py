@@ -1,29 +1,18 @@
 """API Calls to FAIR-Incoder."""
-import os
-import shutil
-import humanize
 import typing
-import pathlib
-import datetime
 import time
+import tqdm
 import transformers
 import numpy as np
 from absl import flags
-import tqdm
 
-from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.samplers import samplers
-from deeplearning.clgen.samplers import sample_observers
-from deeplearning.clgen.util import pbutil
+from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.util import plotter
-from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import environment
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.proto import sampler_pb2
-from deeplearning.clgen.features import extractor
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import telemetry
-from deeplearning.clgen.preprocessors import opencl
+from deeplearning.clgen.models.incoder import example_api
 from deeplearning.clgen.models.torch_bert.data_generator import torchLMDataGenerator
 
 from deeplearning.clgen.util import logging as l
@@ -59,10 +48,6 @@ class Incoder(backends.BackendBase):
     self.torch.cuda.manual_seed_all(self.config.training.random_seed)
 
     self.incoder_version   = kwargs.pop("incoder_version")
-
-    # self.bertAttrs         = {}
-    # self.featureAttrs      = {}
-    # self.bert_config       = None
 
     self.train             = None
     self.sample            = None
@@ -106,12 +91,6 @@ class Incoder(backends.BackendBase):
     self.sampler = sampler
     self.temperature = sampler.temperature
 
-    # if sampler.sequence_length > self.bertAttrs['max_position_embeddings']:
-    #   raise ValueError(
-    #       "Cannot use sequence length %d because the BERT model "
-    #       "was only trained up to sequence length %d" %
-    #       (sampler.sequence_length, self.bertAttrs['max_position_embeddings']))
-
     kwargs = {}
     if self.incoder_version == "facebook/incoder-6B":
       # the arguments added below will load a half precision version of the model,
@@ -136,16 +115,19 @@ class Incoder(backends.BackendBase):
         output_device = self.pytorch.offset_device,
       )
     elif self.pytorch.num_gpus > 1:
-      l.logger().warn("HuggingFace 'generate' function does not support model.generate. If you want multi-GPU sampling, go to DDP.")
+      l.logger().warn("HuggingFace 'generate' function does not support DataParallel. If you want multi-GPU sampling, go to DDP.")
 
     self.sample = Incoder.SampleEstimator(m, data_generator)
     l.logger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
     return
 
+  def samplesWithCategorical(self):
+    return True
+
   def model_step(self) -> 'torch.Tensor':
     raise NotImplementedError
     return
-  
+
   def sample_model_step(self,
                         model     : typing.List[typing.TypeVar('torch.nn.Module')],
                         inputs    : typing.Dict[str, typing.TypeVar('torch.Tensor')],
@@ -160,47 +142,93 @@ class Incoder(backends.BackendBase):
     workload_size x batch_size x sequence_length
     """
     start = time.time()
+    total_seqs = len(inputs['input_ids']) * self.sampler.batch_size
     outputs = {
-      'generated_samples': [], 'sample_indices': [],
+      'generated_samples': self.torch.zeros((total_seqs, self.sampler.sequence_length), dtype = self.torch.int64).to(self.pytorch.device),
+      'sample_indices': [],
       'input_ids': [], 'masked_lm_lengths': []
     }
     if iteration is not None:
       desc = "Sampling iteration: {}".format(iteration)
     else:
       desc = "Sampling"
+    encoding_time = 0.0
+    inference_time = 0.0
+    decoding_time = 0.0
+    s_idx = 0
+    for batch in tqdm.tqdm(inputs['input_ids'], total = len(inputs['input_ids']), desc = desc):
+      for seq in batch:
+        t1 = time.time()
+        if seq[-1] == self.tokenizer.holeToken:
+          incode = self.tokenizer.ArrayToCode(seq[:-1])
+        else:
+          incode = self.tokenizer.ArrayToCode(seq).replace("<|mask:0|>", "<insert>") # This is a text where pad has been stripped off.
+        t2 = time.time()
+        encoding_time += t2 - t1
+        max_to_generate = self.sampler.sequence_length - 3
+        if self.tokenizer.padToken in seq:
+          max_to_generate -= np.where(seq == self.tokenizer.padToken)[0][0]
+        incoded = example_api.infill(
+          model,
+          incode,
+          self.tokenizer.get_hf_tokenizer(),
+          max_to_generate = max_to_generate,
+          temperature     = self.temperature,
+          extra_sentinel  = True,
+          max_retries     = 1,
+        )
+        t3 = time.time()
+        inference_time += t3 - t2
 
-    batched_inputs = inputs['input_ids'].to(self.pytorch.device)
-    for input_ids in tqdm.tqdm(batched_inputs, total = len(batched_inputs), desc = desc):
-      batch = model.generate(input_ids=input_ids, do_sample=True, top_p=0.95, temperature=0.7, max_length=768)
-      outputs['generated_samples'] += [[int(y) for y in x] for x in batch.cpu().numpy()]
+        text    = opencl.ExtractSingleKernels(incoded['text'])[0] # Collect only the first kernel generated, ignore the rest.
+        sample  = self.tokenizer.TokenizeString(text)
+        sample += [self.tokenizer.padToken] * (len(sample) - self.sampler.sequence_length)
+        sample  = self.torch.LongTensor(sample).to(self.pytorch.device)
 
-    outputs['sample_indices']    = [[-1]] * len(outputs['generated_samples'])
-    outputs['input_ids']         = inputs['input_ids'].flatten()
-    outputs['masked_lm_lengths'] = inputs['masked_lm_lengths'].flatten()
+        indices  = self.tokenizer.TokenizeString(incoded['infills'][0])
+        indices += [self.tokenizer.padToken] * (max_to_generate - len(indices))
+        indices  = self.torch.LongTensor(indices).to(self.pytorch.device)
+
+        l.logger().warn("LEN samples: {} sindices: {}".format(len(sample), len(indices)))
+
+        outputs['generated_samples'][s_idx] = sample
+        outputs['sample_indices'][s_idx]    = indices
+        s_idx += 1
+        t4 = time.time()
+        decoding_time += t4 - t3
+
+    t5 = time.time()
+    outputs['input_ids']         = inputs['input_ids'].reshape(-1, self.sampler.sequence_length).to(self.pytorch.device)
+    outputs['masked_lm_lengths'] = inputs['masked_lm_lengths'].reshape(-1, 1).to(self.pytorch.device)
 
     if self.pytorch.num_nodes > 1:
       self.torch.distributed.barrier()
       generated_samples = [self.torch.zeros(tuple(outputs['generated_samples'].shape), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-      # sample_indices    = [self.torch.zeros(tuple(outputs['sample_indices'].shape),    dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-      # input_ids         = [self.torch.zeros(tuple(outputs['input_ids'].shape),         dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-      # masked_lm_lengths = [self.torch.zeros(tuple(outputs['masked_lm_lengths'].shape), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      sample_indices    = [self.torch.zeros(tuple(outputs['sample_indices'].shape),    dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      input_ids         = [self.torch.zeros(tuple(outputs['input_ids'].shape),         dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      masked_lm_lengths = [self.torch.zeros(tuple(outputs['masked_lm_lengths'].shape), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
 
       self.torch.distributed.all_gather(generated_samples, outputs["generated_samples"])
-      # self.torch.distributed.all_gather(sample_indices,    outputs["sample_indices"])
-      # self.torch.distributed.all_gather(input_ids,         outputs["input_ids"])
-      # self.torch.distributed.all_gather(masked_lm_lengths, outputs["masked_lm_lengths"])
+      self.torch.distributed.all_gather(sample_indices,    outputs["sample_indices"])
+      self.torch.distributed.all_gather(input_ids,         outputs["input_ids"])
+      self.torch.distributed.all_gather(masked_lm_lengths, outputs["masked_lm_lengths"])
 
-      # outputs['generated_samples'] = self.torch.cat(generated_samples)
-      # outputs['sample_indices']    = self.torch.cat(sample_indices)
-      # outputs['input_ids']         = self.torch.cat(input_ids)
-      # outputs['masked_lm_lengths'] = self.torch.cat(masked_lm_lengths)
+      outputs['generated_samples'] = self.torch.cat(generated_samples)
+      outputs['sample_indices']    = self.torch.cat(sample_indices)
+      outputs['input_ids']         = self.torch.cat(input_ids)
+      outputs['masked_lm_lengths'] = self.torch.cat(masked_lm_lengths)
 
-    # outputs['generated_samples'] = list(outputs['generated_samples'].cpu().numpy())
-    # outputs['sample_indices']    = list(outputs['sample_indices'].cpu().numpy())
-    # outputs['input_ids']         = list(outputs['input_ids'].cpu().numpy())
-    # outputs['masked_lm_lengths'] = list(outputs['masked_lm_lengths'].cpu().numpy())
+    outputs['generated_samples'] = list(outputs['generated_samples'].cpu().numpy())
+    outputs['sample_indices']    = list(outputs['sample_indices'].cpu().numpy())
+    outputs['input_ids']         = list(outputs['input_ids'].cpu().numpy())
+    outputs['masked_lm_lengths'] = list(outputs['masked_lm_lengths'].cpu().numpy())
 
     end = time.time()
+    post_process_time = end - t5
+    l.logger().warn("Profiling times:\n\tencoding_time: {}\n\tinference_time: {}\n\tdecoding_time: {}\n\tpost_process_time: {}".format(
+      encoding_time, inference_time, decoding_time, post_process_time,
+      )
+    )
     return outputs, end-start
 
   def PreTrain(self, *args, **kwargs) -> None:
@@ -225,7 +253,7 @@ class Incoder(backends.BackendBase):
     ##! TODO: Replace with incoder data generator
     data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
                        self.config.training, sampler, self.tokenizer, seed, sample_batch_size,
-                       self.config.architecture.max_position_embeddings, self.cache.path, corpus,
+                       sampler.sequence_length, self.cache.path, corpus,
                       #  self.feature_encoder,
                       #  self.feature_tokenizer,
                       #  self.feature_sequence_length,
@@ -306,7 +334,6 @@ class Incoder(backends.BackendBase):
           raise StopIteration
       else:
         ##!TODO: just call model's forward function. No need to do more.
-        raise NotImplementedError
         step_out, time = self.sample_model_step(
             self.sample.model,
             self.step_inputs,
