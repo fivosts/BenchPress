@@ -109,11 +109,12 @@ class Incoder(backends.BackendBase):
     ).to(self.pytorch.offset_device)
 
     if self.pytorch.num_nodes > 1:
-      m = self.torch.nn.parallel.DistributedDataParallel(
-        m,
-        device_ids = [self.pytorch.offset_device],
-        output_device = self.pytorch.offset_device,
-      )
+      # m = self.torch.nn.parallel.DistributedDataParallel(
+      #   m,
+      #   device_ids = [self.pytorch.offset_device],
+      #   output_device = self.pytorch.offset_device,
+      # )
+      pass
     elif self.pytorch.num_gpus > 1:
       l.logger().warn("HuggingFace 'generate' function does not support DataParallel. If you want multi-GPU sampling, go to DDP.")
 
@@ -143,9 +144,10 @@ class Incoder(backends.BackendBase):
     """
     start = time.time()
     total_seqs = len(inputs['input_ids']) * self.sampler.batch_size
+    max_to_generate = self.sampler.sequence_length - 3
     outputs = {
       'generated_samples': self.torch.zeros((total_seqs, self.sampler.sequence_length), dtype = self.torch.int64).to(self.pytorch.device),
-      'sample_indices': [],
+      'sample_indices': self.torch.zeros((total_seqs, max_to_generate), dtype = self.torch.int64).to(self.pytorch.device),
       'input_ids': [], 'masked_lm_lengths': []
     }
     if iteration is not None:
@@ -156,6 +158,7 @@ class Incoder(backends.BackendBase):
     inference_time = 0.0
     decoding_time = 0.0
     s_idx = 0
+    l.logger().warn(inputs['input_ids'].shape, ddp_nodes = True)
     for batch in tqdm.tqdm(inputs['input_ids'], total = len(inputs['input_ids']), desc = desc):
       for seq in batch:
         t1 = time.time()
@@ -165,14 +168,12 @@ class Incoder(backends.BackendBase):
           incode = self.tokenizer.ArrayToCode(seq).replace("<|mask:0|>", "<insert>") # This is a text where pad has been stripped off.
         t2 = time.time()
         encoding_time += t2 - t1
-        max_to_generate = self.sampler.sequence_length - 3
-        if self.tokenizer.padToken in seq:
-          max_to_generate -= np.where(seq == self.tokenizer.padToken)[0][0]
+
         incoded = example_api.infill(
           model,
           incode,
           self.tokenizer.get_hf_tokenizer(),
-          max_to_generate = max_to_generate,
+          max_to_generate = max_to_generate - (np.where(seq == self.tokenizer.padToken)[0][0] if self.tokenizer.padToken in seq else 0),
           temperature     = self.temperature,
           extra_sentinel  = True,
           max_retries     = 1,
@@ -182,14 +183,12 @@ class Incoder(backends.BackendBase):
 
         text    = opencl.ExtractSingleKernels(incoded['text'])[0] # Collect only the first kernel generated, ignore the rest.
         sample  = self.tokenizer.TokenizeString(text)
-        sample += [self.tokenizer.padToken] * (len(sample) - self.sampler.sequence_length)
+        sample += [self.tokenizer.padToken] * (self.sampler.sequence_length - len(sample))
         sample  = self.torch.LongTensor(sample).to(self.pytorch.device)
 
         indices  = self.tokenizer.TokenizeString(incoded['infills'][0])
         indices += [self.tokenizer.padToken] * (max_to_generate - len(indices))
         indices  = self.torch.LongTensor(indices).to(self.pytorch.device)
-
-        l.logger().warn("LEN samples: {} sindices: {}".format(len(sample), len(indices)))
 
         outputs['generated_samples'][s_idx] = sample
         outputs['sample_indices'][s_idx]    = indices
