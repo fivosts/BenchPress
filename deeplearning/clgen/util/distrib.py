@@ -107,7 +107,7 @@ def unlock() -> None:
       os.remove(PATH / "critical-lock-{}".format(WORLD_RANK))
     except FileNotFoundError as e:
       exc_counter += 1
-      if exc_counter > 50:
+      if exc_counter > 500:
         raise e
     time.sleep(0.5)
   return
