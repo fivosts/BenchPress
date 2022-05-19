@@ -17,6 +17,8 @@ from deeplearning.clgen.models.torch_bert.data_generator import torchLMDataGener
 
 from deeplearning.clgen.util import logging as l
 
+transformers.set_seed(np.random.RandomState().randint(0, 2**32-1) % (1 + environment.WORLD_RANK))
+
 class Incoder(backends.BackendBase):
   """
   API Class for incoder collected from huggingface.
@@ -182,7 +184,7 @@ class Incoder(backends.BackendBase):
         inference_time += t3 - t2
 
         text    = opencl.ExtractSingleKernels(incoded['text'])[0] # Collect only the first kernel generated, ignore the rest.
-        sample  = self.tokenizer.TokenizeString(text)
+        sample  = self.tokenizer.TokenizeString(text)[:self.sampler.sequence_length]
         sample += [self.tokenizer.padToken] * (self.sampler.sequence_length - len(sample))
         sample  = self.torch.LongTensor(sample).to(self.pytorch.device)
 
