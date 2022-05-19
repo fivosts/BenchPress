@@ -12,6 +12,7 @@ from deeplearning.clgen.util import plotter
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import telemetry
+from deeplearning.clgen.util import distrib
 from deeplearning.clgen.models.incoder import example_api
 from deeplearning.clgen.models.torch_bert.data_generator import torchLMDataGenerator
 
@@ -46,8 +47,8 @@ class Incoder(backends.BackendBase):
     self.torch               = pytorch.torch
     self.torch_tpu_available = pytorch.torch_tpu_available
 
-    self.torch.manual_seed(self.config.training.random_seed)
-    self.torch.cuda.manual_seed_all(self.config.training.random_seed)
+    self.torch.manual_seed(np.random.RandomState().randint(0, 2**32-1) % (1 + environment.WORLD_RANK))
+    self.torch.cuda.manual_seed_all(np.random.RandomState().randint(0, 2**32-1) % (1 + environment.WORLD_RANK))
 
     self.incoder_version   = kwargs.pop("incoder_version")
 
@@ -203,7 +204,7 @@ class Incoder(backends.BackendBase):
     outputs['masked_lm_lengths'] = inputs['masked_lm_lengths'].reshape(-1, 1).to(self.pytorch.device)
 
     if self.pytorch.num_nodes > 1:
-      self.torch.distributed.barrier()
+      distrib.barrier()
       generated_samples = [self.torch.zeros(tuple(outputs['generated_samples'].shape), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       sample_indices    = [self.torch.zeros(tuple(outputs['sample_indices'].shape),    dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       input_ids         = [self.torch.zeros(tuple(outputs['input_ids'].shape),         dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
@@ -341,7 +342,7 @@ class Incoder(backends.BackendBase):
             is_live = self.sampler.is_live
         )
         if self.pytorch.num_nodes > 1:
-          self.torch.distributed.barrier()
+          distrib.barrier()
           generated_samples = [self.torch.zeros(tuple(step_out['generated_samples'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
           sample_indices    = [self.torch.zeros(tuple(step_out['sample_indices'   ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
           self.torch.distributed.all_gather(generated_samples, step_out["generated_samples"])
@@ -354,7 +355,7 @@ class Incoder(backends.BackendBase):
         if self.sampler.is_live and input("Show logits figure ? [y/!y]") == "y":
           if self.pytorch.num_nodes > 1:
             prediction_scores = [self.torch.zeros(tuple(step_out['prediction_scores'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-            self.torch.distributed.barrier()
+            distrib.barrier()
             self.torch.distributed.all_gather(prediction_scores, step_out["prediction_scores"])
           else:
             prediction_scores = step_out['prediction_scores'].cpu()
