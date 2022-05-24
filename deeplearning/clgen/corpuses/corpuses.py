@@ -404,8 +404,8 @@ class Corpus(object):
         while not self.tokenizer_path.is_file():
           time.sleep(5)
           kill_counter += 1
-          if kill_counter > 100:
-            raise TimeoutError("NFS just won't write the tokenizer file in time! I waited for {} seconds!".format(humanize.intcomma(counter * 5)))
+          if kill_counter > 200:
+            raise TimeoutError("NFS just won't write the tokenizer file in time! I waited for {} seconds!".format(humanize.intcomma(kill_counter * 5)))
         distrib.barrier()
         if environment.WORLD_RANK != 0:
           self._tokenizer = tokenizers.TokenizerBase.FromFile(self.tokenizer_path)
