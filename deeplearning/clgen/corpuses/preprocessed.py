@@ -742,23 +742,22 @@ def compiling_text_to_huggingface_json(db_path: str, json_out: str) -> None:
   db = PreprocessedContentFiles(url = "sqlite:///{}".format(str(p)), must_exist = True)
   with db.Session() as s:
     data = [x for x in s.query(PreprocessedContentFile).all() if x.preprocessing_succeeded == True]
-    for dp in data:
-      out_data.append(
-        {
-          'file_name'         : "{}.cl".format(dp.sha256),
-          'github_id'         : str(dp.sha256),
-          'id'                : dp.id,
-          'license'           : "mit",
-          'path'              : dp.input_relpath,
-          'repo_and_filename' : "",
-          'repo_name'         : "",
-          'signature'         : "",
-          'size'              : dp.charcount,
-          'text'              : dp.text
-        }
-      )
-  with open(str(out_p), 'w') as outf:
-    json.dump(out_data, outf, indent = 2, sort_keys = True)
+    with open(str(out_p), 'w') as outf:
+      for dp in data:
+        json_el = json.dumps({
+            'file_name'         : "{}.cl".format(dp.sha256),
+            'github_id'         : str(dp.sha256),
+            'id'                : dp.id,
+            'license'           : "mit",
+            'path'              : dp.input_relpath,
+            'repo_and_filename' : "",
+            'repo_name'         : "",
+            'signature'         : "",
+            'size'              : dp.charcount,
+            'text'              : dp.text
+          })
+        outf.write(json_el)
+        outf.write('\n')
   return
 
 def initMain(*args, **kwargs):
