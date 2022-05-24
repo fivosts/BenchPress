@@ -1014,12 +1014,17 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     Returns:
       The tensor inputs dictionary filled for BERT.
     """
+    if self.feature_encoder:
+      target_features = torch.LongTensor(self.feature_tokenizer.TokenizeFeatureVector(self.feat_sampler.target_benchmark.features, self.feat_sampler.feature_space, self.feature_sequence_length))
+
     if self.tokenizer.maskToken in feed[0] or self.tokenizer.holeToken in feed[0]:
       inputs = sequence_masking.MaskedSeqToBlob(
         feed[0], self.tokenizer,
         self.sampler.sequence_length,
         self.max_position_embeddings
       )
+      if self.feature_encoder:
+        inputs["input_features"] = target_features
       inputs = {
         k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(self.sample_batch_size, dim = 0).unsqueeze(0).repeat_interleave(wload_size, dim = 0) 
         for k, v in inputs.items()
@@ -1029,6 +1034,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         'input_ids': [], 'input_mask': [], 'position_ids': [],
         'mask_labels': [], 'masked_lm_lengths': [], 'next_sentence_labels': []
       }
+      if self.feature_encoder:
+        inputs["input_features"] = []
       try:
         pool = multiprocessing.Pool()
         for batch in pool.imap_unordered(
@@ -1044,6 +1051,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               k: torch.from_numpy(v).unsqueeze(0)
               for (k, v) in batch[0].items()
             }
+            if self.feature_encoder:
+              out["input_features"] = target_features
             for f in batch[1:]:
               for k, v in f.items():
                 nt = torch.from_numpy(v).unsqueeze(0)
