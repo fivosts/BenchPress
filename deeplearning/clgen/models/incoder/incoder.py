@@ -183,8 +183,11 @@ class Incoder(backends.BackendBase):
         )
         t3 = time.time()
         inference_time += t3 - t2
-
-        text    = opencl.ExtractSingleKernels(incoded['text'])[0] # Collect only the first kernel generated, ignore the rest.
+        try:
+          text    = opencl.ExtractSingleKernels(incoded['text'])[0] # Collect only the first kernel generated, ignore the rest.
+        except IndexError:
+          l.logger().warn(incoded['text'])
+          text = incoded['text']
         sample  = self.tokenizer.TokenizeString(text)[:self.sampler.sequence_length]
         sample += [self.tokenizer.padToken] * (self.sampler.sequence_length - len(sample))
         sample  = self.torch.LongTensor(sample).to(self.pytorch.device)
