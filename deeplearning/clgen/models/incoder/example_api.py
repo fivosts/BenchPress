@@ -21,7 +21,7 @@ def generate(model: torch.nn.Module, inp: str, tokenizer, max_to_generate: int=1
   if max_length > 2048:
     print("warning: max_length {} is greater than the context window {}".format(max_length, 2048))
   with torch.no_grad():
-    output = model.generate(input_ids=input_ids, do_sample=True, top_p = 1.0, temperature=temperature, max_length=max_length)
+    output = model.generate(input_ids=input_ids, do_sample=True, top_p = 0.95, temperature=temperature, max_length=max_length)
   detok_hypo_str = tokenizer.decode(output.flatten())
   if detok_hypo_str.startswith(BOS):
     detok_hypo_str = detok_hypo_str[len(BOS):]
