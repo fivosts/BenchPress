@@ -16,6 +16,7 @@
 import contextlib
 import datetime
 import hashlib
+import json
 import multiprocessing
 import os
 import glob
@@ -449,7 +450,7 @@ class PreprocessedContentFiles(sqlutil.Database):
         limit = (environment.WORLD_RANK + 1) * total_per_node + (total % total_per_node if environment.WORLD_RANK == environment.WORLD_SIZE - 1 else 0)
 
         if environment.WORLD_SIZE > 1:
-          bar = distrib.ProgressBar(total = total, offset = idx, decs = "Preprocessing DB")
+          bar = distrib.ProgressBar(total = total, offset = idx, desc = "Preprocessing DB")
         else:
           bar = tqdm.tqdm(total = total, desc = "Preprocessing DB", leave = True)
 
@@ -726,6 +727,38 @@ def merge_db(dbs: typing.List[PreprocessedContentFiles], out_db: typing.List[Pre
   with out_db.Session() as ses:
     out_db.SetDone(ses)
     ses.commit()
+  return
+
+def compiling_text_to_huggingface_json(db_path: str, json_out: str) -> None:
+  """
+  Converts preprocessed.db into json file with compiling samples
+  that can be read by huggingface Datasets.
+  """
+  out_data = []
+  p = pathlib.Path(db_path).resolve()
+  out_p = pathlib.Path(json_out).resolve()
+  if not p.exists():
+    raise FileNotFoundError("{} does not exist!".format(db_path))
+  db = PreprocessedContentFiles(url = "sqlite:///{}".format(str(p)), must_exist = True)
+  with db.Session() as s:
+    data = [x for x in s.query(PreprocessedContentFile).all() if x.preprocessing_succeeded == True]
+    for dp in data:
+      out_data.append(
+        {
+          'file_name'         : "{}.cl".format(dp.sha256),
+          'github_id'         : str(dp.sha256),
+          'id'                : dp.id,
+          'license'           : "mit",
+          'path'              : dp.input_relpath,
+          'repo_and_filename' : "",
+          'repo_name'         : "",
+          'signature'         : "",
+          'size'              : dp.charcount,
+          'text'              : dp.text
+        }
+      )
+  with open(str(out_p), 'w') as outf:
+    json.dump(out_data, outf, indent = 2, sort_keys = True)
   return
 
 def initMain(*args, **kwargs):
