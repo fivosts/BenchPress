@@ -60,6 +60,7 @@ def infill(model, inp: str, tokenizer, max_to_generate: int=128, temperature: fl
   
     ## (1) build the prompt
     if len(parts) == 1:
+      raise OSError
       prompt = parts[0]
       completion = generate(model, prompt, tokenizer, max_to_generate, temperature)
       # completion = completion[len(prompt):]
