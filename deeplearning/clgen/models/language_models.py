@@ -264,6 +264,8 @@ class Model(object):
       hash_list = [pre_train_corpus_.hash, corpus_.hash, config_to_hash.SerializeToString()]
     else:
       hash_list = [corpus_.hash, config_to_hash.SerializeToString()]
+    if FLAGS.custom_incoder_ckpt is not None:
+      hash_list.append(FLAGS.custom_incoder_ckpt)
     return crypto.sha1_list(hash_list)
 
   def Create(self) -> bool:
