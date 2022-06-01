@@ -4,6 +4,7 @@ import pathlib
 import datetime
 import typing
 import progressbar
+import tqdm
 import sqlite3
 from google.cloud import bigquery
 
@@ -12,6 +13,7 @@ from sqlalchemy.ext import declarative
 from deeplearning.clgen.util import sqlutil
 
 from absl import app, flags
+from deeplearning.clgen.util import monitors
 from deeplearning.clgen.util import logging as l
 
 FLAGS = flags.FLAGS
@@ -249,12 +251,25 @@ def chunkify_db(bq_db: bqDatabase, chunks: int, prefix: str) -> None:
       s.commit()
   return
 
+def file_size_distribution(db: bqDatabase) -> None:
+  """
+  Plot the distribution of size of each entry.
+  """
+  m = monitors.FrequencyMonitor(".", "bq_size_distrib")
+  with db.Session() as s:
+    for x in tqdm.tqdm(s.query(bqMainFile.size).all(), total = db.mainfile_count):
+      y = int(str(x[0]))
+      m.register(y)
+  print(distrib)
+  return
 
 def initMain(*args, **kwargs):
   """
   Setup module's operations.
   """
   l.initLogger(name = "bigQuery_database")
+  file_size_distribution(bqDatabase(url = "sqlite:///{}".format("/private/home/foivos/clgen_c_github.db", must_exist = True)))
+  return
   if FLAGS.chunkify or FLAGS.chunkify < 2:
     if not FLAGS.bq_database:
       raise ValueError("You must set a path for bq_database")
