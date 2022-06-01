@@ -108,7 +108,7 @@ class Incoder(backends.BackendBase):
           low_cpu_mem_usage=True,
       )
     m = transformers.AutoModelForCausalLM.from_pretrained(
-      self.incoder_version, **kwargs
+      "/checkpoint/foivos/unsharded_checkpoints/incoder1B_m2.fp16.transformer_lm_gpt.adam.beta0.9_0.98.wd0.01.clip1.0.lr0.0008.warmup1500.sampletok2048.breakeos_blocked.bs8.updatefreq1.seed3.ngpu128", **kwargs
     ).to(self.pytorch.offset_device)
 
     if self.pytorch.num_nodes > 1:
@@ -165,18 +165,18 @@ class Incoder(backends.BackendBase):
       for seq in batch:
         t1 = time.time()
         seq = [x for x in seq if x != self.tokenizer.padToken]
-        if seq[-1] == self.tokenizer.holeToken:
-          incode = self.tokenizer.ArrayToCode(seq[:-1])
-        else:
-          incode = self.tokenizer.ArrayToCode(seq).replace("<|mask:0|>", "<insert>") # This is a text where pad has been stripped off.
+        # if seq[-1] == self.tokenizer.holeToken:
+          # incode = self.tokenizer.ArrayToCode(seq[:-1])
+        # else:
+        incode = self.tokenizer.ArrayToCode(seq).replace("<|mask:0|>", "<insert>") # This is a text where pad has been stripped off.
+        incode = "<| file ext=.cl |>\n{}\n<|/ file |>".format(incode[incode.index("kernel void"):])
         t2 = time.time()
         encoding_time += t2 - t1
-
         incoded = example_api.infill(
           model,
           incode,
           self.tokenizer.get_hf_tokenizer(),
-          max_to_generate = max_to_generate - len(seq),
+          max_to_generate = max_to_generate - len(seq) - 13,
           temperature     = self.temperature,
           extra_sentinel  = True,
           max_retries     = 1,
@@ -188,6 +188,7 @@ class Incoder(backends.BackendBase):
         except IndexError:
           l.logger().warn(incoded['text'])
           text = incoded['text']
+        text = text.replace("<| file ext=.cl |>\n", "").replace("\n<|/ file |>", "")
         sample  = self.tokenizer.TokenizeString(text)[:self.sampler.sequence_length]
         sample += [self.tokenizer.padToken] * (self.sampler.sequence_length - len(sample))
         sample  = self.torch.LongTensor(sample).to(self.pytorch.device)
