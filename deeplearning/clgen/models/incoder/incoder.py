@@ -20,6 +20,14 @@ from deeplearning.clgen.util import logging as l
 
 transformers.set_seed(np.random.RandomState().randint(0, 2**32-1) % (1 + environment.WORLD_RANK))
 
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string(
+  "custom_incoder_ckpt",
+  None,
+  "Select your own path to Incoder version instead of using the standard HF ones."
+)
+
 class Incoder(backends.BackendBase):
   """
   API Class for incoder collected from huggingface.
@@ -108,7 +116,7 @@ class Incoder(backends.BackendBase):
           low_cpu_mem_usage=True,
       )
     m = transformers.AutoModelForCausalLM.from_pretrained(
-      "/checkpoint/foivos/unsharded_checkpoints/incoder1B_m2.fp16.transformer_lm_gpt.adam.beta0.9_0.98.wd0.01.clip1.0.lr0.0008.warmup1500.sampletok2048.breakeos_blocked.bs8.updatefreq1.seed3.ngpu128", **kwargs
+      self.incoder_version if FLAGS.custom_incoder_ckpt is None else FLAGS.custom_incoder_ckpt, **kwargs
     ).to(self.pytorch.offset_device)
 
     if self.pytorch.num_nodes > 1:
