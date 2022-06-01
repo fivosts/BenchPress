@@ -116,6 +116,7 @@ class TokenizerBase(object):
     self.metaTokens = metaTokens
     self._UpdateVocabulary()
     self.metaTokenValues = set(value for key, value in self.__dict__.items() if key in self.metaTokens)
+    self.requires_mask = True
 
   def __len__(self):
     """
@@ -927,6 +928,7 @@ class IncoderTokenizer(TokenizerBase):
     self.holeToken    = self._tokenizer.convert_tokens_to_ids("<|mask:0|>")
     self.maskToken    = self._tokenizer.convert_tokens_to_ids("<|mask:0|>")
     self.endholeToken = self._tokenizer.convert_tokens_to_ids("<|endofmask|>")
+    self.requires_mask = False
     return
   
   def get_hf_tokenizer(self) -> 'transformers.AutoTokenizer':
