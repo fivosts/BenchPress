@@ -729,7 +729,8 @@ def MaskedSeqToBlob(enc_text: np.array,
                  np.count_nonzero(input_sample == tokenizer.holeToken))
 
   assert np.ndim(input_sample) == 1, "Input samples have to be one-dimensional. {} given.".format(input_sample.shape)
-  assert len(target_idx)       != 0, "No target prediction in sample text"
+  if tokenizer.requires_mask:
+    assert len(target_idx)       != 0, "No target prediction in sample text"
 
   seen_in_training     = np.zeros([1], dtype = np.int32)
   original_input       = np.full((1), tokenizer.padToken, dtype = np.int64)
