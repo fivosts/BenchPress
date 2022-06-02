@@ -115,9 +115,15 @@ class Incoder(backends.BackendBase):
           torch_dtype=torch.float16,
           low_cpu_mem_usage=True,
       )
-    m = transformers.AutoModelForCausalLM.from_pretrained(
-      self.incoder_version if FLAGS.custom_incoder_ckpt is None else FLAGS.custom_incoder_ckpt, **kwargs
-    ).to(self.pytorch.offset_device)
+    if FLAGS.custom_incoder_ckpt is None:
+      m = transformers.AutoModelForCausalLM.from_pretrained(
+        self.incoder_version, **kwargs
+      ).to(self.pytorch.offset_device)
+    else:
+      l.logger().warn("Using custom Incoder checkpoint at {}".format(FLAGS.custom_ckpt_path))
+      m = transformers.AutoModelForCausalLM.from_pretrained(
+        FLAGS.custom_incoder_ckpt, **kwargs
+      ).to(self.pytorch.offset_device)
 
     if self.pytorch.num_nodes > 1:
       # m = self.torch.nn.parallel.DistributedDataParallel(
