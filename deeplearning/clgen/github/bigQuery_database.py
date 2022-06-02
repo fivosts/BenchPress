@@ -258,8 +258,11 @@ def file_size_distribution(db: bqDatabase) -> None:
   m = monitors.FrequencyMonitor(".", "bq_size_distrib")
   with db.Session() as s:
     for x in tqdm.tqdm(s.query(bqMainFile.size).all(), total = db.mainfile_count):
-      y = int(str(x[0]))
-      m.register(y)
+      try:
+        y = int(str(x[0]))
+        m.register(y)
+      except Exception:
+        pass
   print(distrib)
   return
 
