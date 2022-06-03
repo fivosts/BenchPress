@@ -194,11 +194,16 @@ class PreprocessedContentFile(Base):
     start_time = time.time()
     preprocessing_succeeded = False
     try:
-      input_text = file.content
-      text_generator = preprocessors.Preprocess(input_text, preprocessors_)
-      # preprocessing_succeeded = True
+      if file.size is not None and int(str(file.size)) < 20*(10**6):
+        input_text = file.content
+        text_generator = preprocessors.Preprocess(input_text, preprocessors_)
+        # preprocessing_succeeded = True
+      else:
+        input_text = "<Redacted due to massive size>"
+        text_generator = [("File is exceptionally large", 0)]
     except Exception as e:
-      raise("Unexpected exception: {}".format(e))
+      l.logger().warn("Unexpected exception: {}".format(e), ddp_nodes = True)
+      return []
 
     end_time = time.time()
     preprocess_time_ms = int((end_time - start_time) * 1000)
@@ -446,7 +451,7 @@ class PreprocessedContentFiles(sqlutil.Database):
           [x[0].replace("main_files/", "") for x in session.query(PreprocessedContentFile.input_relpath)]
         )
 
-        chunk, idx = min(total_per_node, 100000), environment.WORLD_RANK * total_per_node
+        chunk, idx = min(total_per_node, 10**8), environment.WORLD_RANK * total_per_node
         limit = (environment.WORLD_RANK + 1) * total_per_node + (total % total_per_node if environment.WORLD_RANK == environment.WORLD_SIZE - 1 else 0)
 
         if environment.WORLD_SIZE > 1:
