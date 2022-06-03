@@ -263,7 +263,8 @@ def file_size_distribution(db: bqDatabase) -> None:
         m.register(y)
       except Exception:
         pass
-  print(distrib)
+  m.plot()
+  print(m.getData())
   return
 
 def initMain(*args, **kwargs):
