@@ -1,12 +1,12 @@
 working_dir: "Base_BERT" ## This path is relative to "workspace_dir", which is an app FLAG
 model {
   pre_train_corpus {
-    bq_database: ""
+    bq_database: "/private/home/foivos/clgen_c_github.db"
     contentfile_separator: "\n\n\n\n"
     preprocessor: "deeplearning.clgen.preprocessors.c:StripIncludes"
     preprocessor: "deeplearning.clgen.preprocessors.c:ClangPreprocess"
     preprocessor: "deeplearning.clgen.preprocessors.c:ExtractFunctions"
-    preprocessor: "deeplearning.clgen.preprocessors.c:Parse"
+    preprocessor: "deeplearning.clgen.preprocessors.c:Compile"
     preprocessor: "deeplearning.clgen.preprocessors.c:NormalizeIdentifiers"
     preprocessor: "deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes"
     preprocessor: "deeplearning.clgen.preprocessors.c:ClangFormat"
