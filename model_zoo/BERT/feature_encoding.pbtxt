@@ -61,9 +61,9 @@ model {
   }
   training {
     num_train_steps: 20000000
-    num_warmup_steps: 1000000
+    num_warmup_steps: 500000
     sequence_length: 768
-    batch_size: 512
+    batch_size: 8
     max_predictions_per_seq: 1
     dupe_factor: 1
     masked_lm_prob: 0.4
@@ -74,7 +74,7 @@ model {
       datapoint_time: "online"
       use_start_end : true
       truncate_large_kernels: true
-      steps_per_epoch: 500000
+      steps_per_epoch: 100000
       validation_split: 0
       hole {
         relative_length: 1.0
@@ -129,7 +129,7 @@ sampler {
     }
     start_text: "[START]kernel void [HOLE]}[END]"
   }
-  batch_size: 512
+  batch_size: 8
   sequence_length: 768
   temperature_micros: 700000  # = 0.8 real value
   termination_criteria {
