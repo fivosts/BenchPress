@@ -175,7 +175,12 @@ class Incoder(backends.BackendBase):
     inference_time = 0.0
     decoding_time = 0.0
     s_idx = 0
-    for batch in tqdm.tqdm(inputs['input_ids'], total = len(inputs['input_ids']), desc = desc):
+    # batch_it =  if environment.WORLD_RANK == 0 else inputs['input_ids']
+    if environment.WORLD_RANK == 0:
+      bar = tqdm.tqdm(total = total_seqs * environment.WORLD_SIZE, desc = desc)
+    else:
+      bar = None
+    for batch in inputs['input_ids']:
       for seq in batch:
         t1 = time.time()
         seq = [x for x in seq if x != self.tokenizer.padToken]
@@ -183,9 +188,12 @@ class Incoder(backends.BackendBase):
           # incode = self.tokenizer.ArrayToCode(seq[:-1])
         # else:
         incode = self.tokenizer.ArrayToCode(seq).replace("<|mask:0|>", "<insert>") # This is a text where pad has been stripped off.
-        incode = "<| file ext=.cl |>\n{}\n<|/ file |>".format(incode[incode.index("kernel void"):])
+        incode = "<| file ext=.cl |>\n{}\n<|/ file |>".format(incode)
         t2 = time.time()
         encoding_time += t2 - t1
+        print("##########")
+        print("\'{}\'".format(incode))
+        print("##########")
         incoded = example_api.infill(
           model,
           incode,
@@ -200,9 +208,13 @@ class Incoder(backends.BackendBase):
         try:
           text    = opencl.ExtractSingleKernels(incoded['text'])[0] # Collect only the first kernel generated, ignore the rest.
         except IndexError:
-          l.logger().warn(incoded['text'])
+          l.logger().warn(incoded['text'], ddp_nodes = True)
           text = incoded['text']
         text = text.replace("<| file ext=.cl |>\n", "").replace("\n<|/ file |>", "")
+        while "\n\n" in text:
+          text = text.replace("\n\n", "\n")
+        while text[-1] == "\n":
+          text = text[:-1]
         sample  = self.tokenizer.TokenizeString(text)[:self.sampler.sequence_length]
         sample += [self.tokenizer.padToken] * (self.sampler.sequence_length - len(sample))
         sample  = self.torch.LongTensor(sample).to(self.pytorch.device)
@@ -216,6 +228,8 @@ class Incoder(backends.BackendBase):
         s_idx += 1
         t4 = time.time()
         decoding_time += t4 - t3
+        if environment.WORLD_RANK == 0:
+          bar.update(environment.WORLD_SIZE)
 
     t5 = time.time()
     outputs['input_ids']         = inputs['input_ids'].reshape(-1, self.sampler.sequence_length).to(self.pytorch.device)
