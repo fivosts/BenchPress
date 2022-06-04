@@ -194,7 +194,7 @@ class PreprocessedContentFile(Base):
     start_time = time.time()
     preprocessing_succeeded = False
     try:
-      if file.size is not None and int(str(file.size)) < 20*(10**6):
+      if file.size is not None and int(str(file.size)) < (10**7):
         input_text = file.content
         text_generator = preprocessors.Preprocess(input_text, preprocessors_)
         # preprocessing_succeeded = True
