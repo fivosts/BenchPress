@@ -43,17 +43,27 @@ class Models(object):
     if environment.WORLD_RANK == 0:
       ## Store current commit
       commit.saveCommit(self.cache_path)
+
+    self.env = env.Environment()
+    self.agent = agent.Agent()
     return
 
   def Train(self) -> None:
     """
     Train the RL-Agent.
     """
-    raise NotImplementedError("This should happen after LM pretraining-fine-tuning, and needs to be bound to the target features")
+    for ep in range(num_episodes):
+      self.env.reset()
+      self.env.init_state(target_features)
+      term = False
+      while not term:
+        action = self.agent.make_action(self.env.current_state)
+        reward = self.env.step(action)
+        self.agent.update(reward)
     return
   
   def Sample(self, backend: backends.BackendBase) -> None:
     """
-    Instead of callid Model's sample, this sample will be called, acting as a backend (BERT) wrapper.
+    Instead of calling Model's sample, this sample will be called, acting as a backend (BERT) wrapper.
     """
     return
