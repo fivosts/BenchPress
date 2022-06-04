@@ -181,10 +181,11 @@ def consistent_read(is_bytes: bool = False) -> typing.Dict[int, typing.Union[str
     return
   dc = 0
   while len(glob.glob(str(PATH / "msg-*"))) < WORLD_SIZE:
-    time.sleep(0.5)
+    time.sleep(2)
     dc += 1
-    if dc > 2000:
-      raise OSError("I'm stuck here!")
+    if dc > 8000:
+      l.logger().error("I am stuck at consistent_read", ddp_nodes = True)
+      dc = 0
 
   barrier()
   data = {}
