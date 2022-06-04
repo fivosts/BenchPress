@@ -6,6 +6,7 @@
 *build/
 /build*/
 *env/
+core
 
 # Temp protobufs outside model zoo or workbench
 /*.pbtxt
