@@ -4,27 +4,53 @@ Agents module for reinforcement learning.
 import typing
 import numpy as np
 
-ACTION_TYPE_SPACE = {
-  'ADD' : 0,
-  'REM' : 1,
-  'COMP': 2, 
-}
+from deeplearning.clgen.reinforcement_learning import interactions
+from deeplearning.clgen.reinforcement_learning import model
 
-class Action(typing.NamedTuple):
+class Policy(object):
   """
-  Agent action representation.
+  The policy selected over Q-Values
   """
-  action_type         : int      # Your policy function picks the best action type.
-  action_type_logits  : np.array # This must be a distribution vector over action space.
-  action_index        : int      # Your policy function picks the best index to apply the policy.
-  action_index_logits : np.array # Distribution vector over size of input code (or max length).
-  token_type          : int      # Your policy function picks the best token.
-  token_type_logits   : np.array # Distribution vector over possible tokens.
+  def __init__(self):
+    return
 
 class Agent(object):
   """
   Benchmark generation RL-Agent.
   """
   def __init__(self):
-    raise NotImplementedError("TODO")
+    self.q_values = model.QValuesModel()
+    self.policy   = Policy()
     return
+
+  def make_action(self, state: interactions.State) -> interactions.Action:
+    """
+    Agent collects the current state by the environment
+    and picks the right action.
+    """
+    action_type_logits  = self.q_values.predict_action_type(state)
+    action_type         = self.policy.select_action_type(action_type_logits)
+
+    if action_type != interactions.ACTION_SPACE['COMP']:
+      action_index_logits = self.q_values.predict_action_index(state, action_type)
+      action_index        = self.policy.select_action_index(action_index_logits)
+      if action_type == interactions.ACTION_SPACE['ADD']:
+        token_logits        = self.q_values.predict_token(state)
+        token               = self.policy.select_token(token_logits)
+      else:
+        token_logits      = None
+        token             = None
+    else:
+      action_index        = None
+      action_index_logits = None
+      token_logits        = None
+      token               = None
+
+    return interactions.Action(
+      action_type         = action_type,
+      action_type_logits  = action_type_logits,
+      action_index        = action_index,
+      action_index_logits = action_index_logits,
+      token_type          = token,
+      token_type_logits   = token_logits,
+    )
