@@ -8,16 +8,15 @@ import pathlib
 import gdown
 import json
 import tqdm
-import math
 import subprocess
 import multiprocessing
 
 from deeplearning.clgen.features import extractor
-from deeplearning.clgen.features import normalizers
 from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.preprocessors import c
 from deeplearning.clgen.util import logging as l
+from deeplearning.clgen.util import environment
 
 from absl import flags
 
@@ -153,7 +152,11 @@ def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Pat
   contentfiles = iter_cl_files(path)
   kernels = []
   pool = multiprocessing.Pool()
-  for kernel_batch in tqdm.tqdm(pool.map(preprocessor_worker, contentfiles), total = len(contentfiles), desc = "Yield {} benchmarks".format(path.stem)):
+  if environment.WORLD_RANK == 0:
+    it = tqdm.tqdm(pool.map(preprocessor_worker, contentfiles), total = len(contentfiles), desc = "Yield {} benchmarks".format(path.stem))
+  else:
+    it = pool.map(preprocessor_worker, contentfiles)
+  for kernel_batch in it:
     kernels += kernel_batch
   l.logger().info("Pre-processed {} OpenCL benchmarks".format(len(kernels)))
   pool.close()
