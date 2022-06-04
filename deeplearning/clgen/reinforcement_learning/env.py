@@ -76,3 +76,14 @@ class Environment(object):
     Get the current state of the environment.
     """
     raise NotImplementedError
+
+class Memory(object):
+  """
+  Replay buffer of previous states and actions.
+  """
+  def __init__(self):
+    return
+  
+  def add(self, action, state, reward):
+    raise NotImplementedError("TODO")
+    return
