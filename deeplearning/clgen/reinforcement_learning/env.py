@@ -4,6 +4,7 @@ RL Environment for the task of targeted benchmark generation.
 import pathlib
 import numpy as np
 
+from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.reinforcement_learning import agent
 
 from absl import flags
