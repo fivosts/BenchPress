@@ -17,6 +17,7 @@
 
 # Working folders
 /workspace
+/.vscode
 
 # Large corpus files
 /model_zoo/corpus/*.tar
