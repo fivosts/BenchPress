@@ -6,6 +6,9 @@ import numpy as np
 
 from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.reinforcement_learning import model
+from deeplearning.clgen.util import pytorch
+
+torch = pytorch.torch
 
 class Policy(object):
   """
@@ -13,6 +16,27 @@ class Policy(object):
   """
   def __init__(self):
     return
+
+  def predict_action_type(self, action_type_logits: torch.FloatTensor) -> int:
+    """
+    Get the Q-Values for action types and apply policy on it.
+    """
+    raise NotImplementedError
+    return action_type
+
+  def predict_action_index(self, action_index_logits: torch.FloatTensor) -> int:
+    """
+    Get the Q-Values for action index and apply policy on it.
+    """
+    raise NotImplementedError
+    return action_index
+
+  def select_token(self, token_logits: torch.FloatTensor) -> int:
+    """
+    Get logit predictions for token and apply policy on it.
+    """
+    raise NotImplementedError
+    return token
 
 class Agent(object):
   """
@@ -54,3 +78,10 @@ class Agent(object):
       token_type          = token,
       token_type_logits   = token_logits,
     )
+
+  def update_agent(self) -> None:
+    """
+    Train the agent on the new episodes.
+    """
+    raise NotImplementedError
+    return
