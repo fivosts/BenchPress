@@ -293,7 +293,7 @@ class EncodedContentFiles(sqlutil.Database):
         session.commit()
 
     if environment.WORLD_SIZE > 1:
-      self.MergeReplicas()
+      self.MergeReplicas(p)
 
       # Logging output.
     #   num_files = session.query(EncodedContentFile).count()
@@ -487,14 +487,14 @@ class EncodedContentFiles(sqlutil.Database):
         bar.finalize(idx)
     return
 
-  def MergeReplicas(self) -> None:
+  def MergeReplicas(self, preprocessed_db: preprocessed.PreprocessedContentFiles) -> None:
     """
     When distributed nodes work for the same encoded DB
     this function moves finalized encoded chunks back into the AFS
     and master node merges them into the final encodeddb
     """
     shutil.copy(
-      self.replicated.url.replace("sqlite:///", ""), self.base_path / "encoded_{}.db".format(environment.WORLD_RANK)
+      self.replicated_path, self.base_path / "encoded_{}.db".format(environment.WORLD_RANK)
     )
     distrib.barrier()
     if environment.WORLD_RANK == 0:
@@ -503,6 +503,15 @@ class EncodedContentFiles(sqlutil.Database):
       merge_db(dbs, self)
       for p in db_chunks:
         os.remove(p)
+    # Cleanup the local mess inside the local temp filesystem.
+    if (self.replicated_path).exists():
+      os.remove(self.replicated_path)
+    else:
+      l.logger().warn("I didn't find my local encoded DB at {}".format(self.replicated_path), ddp_nodes = True)
+    if preprocessed_db.replicated_path.exists():
+      os.remove(preprocessed_db.replicated_path)
+    else:
+      l.logger().warn("I didn't find my local preprocessed DB at {}".format(preprocessed_db.replicated_path), ddp_nodes = True)
     distrib.barrier()
     return
 
