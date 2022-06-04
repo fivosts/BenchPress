@@ -505,7 +505,7 @@ class PreprocessedContentFiles(sqlutil.Database):
     and master node merges them into the final preprocessed.db
     """
     shutil.copy(
-      self.replicated.url.replace("sqlite:///", ""), self.base_path / "preprocessed_{}.db".format(environment.WORLD_RANK)
+      self.replicated_path, self.base_path / "preprocessed_{}.db".format(environment.WORLD_RANK)
     )
     distrib.barrier()
     if environment.WORLD_RANK == 0:
@@ -514,6 +514,11 @@ class PreprocessedContentFiles(sqlutil.Database):
       merge_db(dbs, self)
       for p in db_chunks:
         os.remove(p)
+    # Once merging has been complete, cleanup the mess left at local clusters' filesystems.
+    if (self.replicated_path.parent / "bq_database_replica_{}.db".format(environment.WORLD_RANK)).exists():
+      os.remove(self.replicated_path.parent / "bq_database_replica_{}.db".format(environment.WORLD_RANK))
+    else:
+      l.logger().warn("I didn't find my local BQ replica at {}".format(self.replicated_path.parent / "bq_database_replica_{}.db".format(environment.WORLD_RANK)), ddp_nodes = True)
     distrib.barrier()
     return
 
