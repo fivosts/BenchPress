@@ -27,3 +27,6 @@
 /model_zoo/benchmarks/*.tar
 /model_zoo/benchmarks/*.tar.bz2
 /model_zoo/corpus/*.db
+
+# Cluster logs and temp scripts
+/slurm_logs
