@@ -1119,7 +1119,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         )
       t = 0
       # l.logger().warn("Pool opened")
-      for idx, batch in tqdm.tqdm((enumerate(pool.map(candidate_worker, it))), desc = "Register Output Data", leave = False):
+      for idx, batch in tqdm.tqdm((enumerate(pool.map(candidate_worker, it))), total = len(outputs['generated_samples']), desc = "Register Output Data", leave = False):
         t = idx
         if batch[0]:
           cm_rate[0] += 1
