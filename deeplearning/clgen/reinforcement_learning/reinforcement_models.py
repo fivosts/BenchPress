@@ -19,10 +19,9 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
   raise NotImplementedError("TODO")
   return config
 
-class Models(object):
+class RLModel(object):
   """
-  Manager class of Reinforcement Learning pipeline
-  for benchmark generation
+  Manager class of Reinforcement Learning pipeline for benchmark generation.
   """
   def __init__(self, config: reinforcement_learning_pb2.RLModel, cache_path: pathlib.Path):
     """
@@ -43,6 +42,13 @@ class Models(object):
     if environment.WORLD_RANK == 0:
       ## Store current commit
       commit.saveCommit(self.cache_path)
+
+    """
+    How do you target features during training ?
+    1) Active learner - downstream task <- Sampler
+    2) Random feasible vectors (collected from OpenCL corpus ?) <- Sampler ?
+    3) Got from benchmark suites ? <- Sampler
+    """
 
     self.env = env.Environment()
     self.agent = agent.Agent()
