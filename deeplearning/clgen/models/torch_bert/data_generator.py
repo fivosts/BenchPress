@@ -1118,7 +1118,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           target_benchmark        = self.feat_sampler.target_benchmark,
         )
       t = 0
-      # l.logger().warn("Pool opened")
       for idx, batch in tqdm.tqdm((enumerate(pool.map(candidate_worker, it))), total = len(outputs['generated_samples']), desc = "Register Output Data", leave = False):
         t = idx
         if batch[0]:
