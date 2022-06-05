@@ -101,3 +101,4 @@ class Memory(object):
   
   def saveCheckpoint(self) -> None:
     """Save Checkpoint state."""
+    return
