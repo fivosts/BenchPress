@@ -54,12 +54,15 @@ class Models(object):
     """
     for ep in range(num_episodes):
       self.env.reset()
+      target_features = self.feature_sampler.sample()
       self.env.init_state(target_features)
-      term = False
-      while not term:
-        action = self.agent.make_action(self.env.current_state)
+      is_term = False
+      while not is_term:
+        state  = self.env.get_state()
+        action = self.agent.make_action(state)
         reward = self.env.step(action)
-        self.agent.update(reward)
+        self.memory.add(state, action, reward)
+        self.agent.update(self.memory.sample())
     return
   
   def Sample(self, backend: backends.BackendBase) -> None:
