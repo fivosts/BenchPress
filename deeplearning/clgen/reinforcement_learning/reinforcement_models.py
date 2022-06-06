@@ -4,6 +4,7 @@ RL Environment for the task of targeted benchmark generation.
 import pathlib
 
 from deeplearning.clgen.corpuses import tokenizers
+from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import language_models
 from deeplearning.clgen.proto import reinforcement_learning_pb2
@@ -36,6 +37,25 @@ class RLModel(object):
   @property
   def tokenizer(self) -> tokenizers.TokenizerBase:
     return self.language_model.tokenizer
+
+  @property
+  def corpus(self) -> corpuses.Corpus:
+    return self.language_model.corpus
+  
+  @property
+  def pre_train_corpus(self) -> corpuses.Corpus:
+    return self.language_model.pre_train_corpus
+
+  @staticmethod
+  def _ComputeHash(language_model: language_models.Model, config: reinforcement_learning_pb2.RLModel) -> str:
+    """
+    Compute unique hash of model specifications.
+    """
+    lm_hash = language_model.hash
+    config_to_hash = reinforcement_learning_pb2.RLModel()
+    config_to_hash.CopyFrom(config)
+    config_to_hash.ClearField("language_model")
+    return crypto.sha1_list[lm_hash, config_to_hash.SerializeToString()]
 
   def __init__(self, config: reinforcement_learning_pb2.RLModel, cache_path: pathlib.Path):
     """
