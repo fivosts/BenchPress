@@ -106,17 +106,6 @@ class Model(object):
     if FLAGS.num_epochs:
       self.config.training.num_epochs = FLAGS.num_epochs
 
-    # Initialize distrib lock path.
-    if environment.WORLD_SIZE > 1:
-      if environment.WORLD_RANK == 0:
-        lock_cache = cache.mkcache("locks")
-        lock_cache.path.mkdir(exist_ok = True)
-      else:
-        while not cache.cachepath("locks").exists():
-          time.sleep(0.5)
-        lock_cache = cache.mkcache("locks")
-      distrib.init(lock_cache.path)
-
     # Initialize corpuses
     self.corpus           = corpuses.Corpus(config.corpus)
     self.pre_train_corpus = None
