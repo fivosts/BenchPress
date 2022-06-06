@@ -275,7 +275,7 @@ def reduce_database_by_size(db: bqDatabase, out_db: bqDatabase) -> None:
     data = []
     for x in s.query(bqMainFile).all():
       try:
-        if int(str(x.size)) < 2*(10**6):
+        if int(str(x.size)) < 10**6:
           data.append(x)
       except ValueError:
         pass
@@ -284,9 +284,9 @@ def reduce_database_by_size(db: bqDatabase, out_db: bqDatabase) -> None:
     for dp in data:
       s.add(bqMainFile(
           id = dp.id,
-          repo_name = dp.repo_name,
-          ref = dp.ref,
-          path = dp.path,
+          repo_name = "",
+          ref = "",
+          path = "",
           size = dp.size,
           content = dp.content,
           date_added = datetime.datetime.utcnow(),
@@ -303,7 +303,7 @@ def initMain(*args, **kwargs):
   # file_size_distribution(bqDatabase(url = "sqlite:///{}".format("/private/home/foivos/clgen_c_github.db", must_exist = True)))
   reduce_database_by_size(
     bqDatabase(url = "sqlite:///{}".format("/private/home/foivos/clgen_c_github.db", must_exist = True)),
-    bqDatabase(url = "sqlite:///{}".format("/private/home/foivos/reduced2M_clgen_c_github.db", must_exist = False)),
+    bqDatabase(url = "sqlite:///{}".format("/private/home/foivos/reduced1M_clgen_c_github.db", must_exist = False)),
   )
   return
   if FLAGS.chunkify or FLAGS.chunkify < 2:
