@@ -275,13 +275,23 @@ def reduce_database_by_size(db: bqDatabase, out_db: bqDatabase) -> None:
     data = []
     for x in s.query(bqMainFile).all():
       try:
-        data.append(int(str(x.size)))
+        if int(str(x.size)) < 2*(10**6):
+          data.append(x)
       except ValueError:
         pass
   l.logger().info("BQ Database reduced from {} to {} files".format(db.mainfile_count, len(data)))
   with out_db.Session(commit = True) as s:
     for dp in data:
-      s.add(bqFile(**dp.ToJSONDict()))
+      s.add(bqMainFile(
+          id = dp.id,
+          repo_name = dp.repo_name,
+          ref = dp.ref,
+          path = dp.path,
+          size = dp.size,
+          content = dp.content,
+          date_added = datetime.datetime.utcnow(),
+        )
+      )
     s.commit()
   return
 
