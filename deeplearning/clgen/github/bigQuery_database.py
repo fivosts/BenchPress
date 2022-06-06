@@ -272,7 +272,12 @@ def reduce_database_by_size(db: bqDatabase, out_db: bqDatabase) -> None:
   Reduce BQ database by files that are too massive anyway.
   """
   with db.Session() as s:
-    data = [x for x in s.query(bqMainFile).yield_per(100000) if int(str(x.size)) < 2 * (10**6) if x is not None and x.size is not None and str(x.size) is not None]
+    data = []
+    for x in s.query(bqMainFile).all():
+      try:
+        data.append(int(str(x.size)))
+      except ValueError:
+        pass
   l.logger().info("BQ Database reduced from {} to {} files".format(db.mainfile_count, len(data)))
   with out_db.Session(commit = True) as s:
     for dp in data:
