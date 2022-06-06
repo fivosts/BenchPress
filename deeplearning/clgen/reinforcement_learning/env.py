@@ -87,7 +87,7 @@ class Memory(object):
     self.reward_buffer = []
     self.loadCheckpoint()
     return
-  
+
   def add(self, action, state, reward) -> None:
     """Add single step to memory buffers."""
     self.action_buffer.append(action)
