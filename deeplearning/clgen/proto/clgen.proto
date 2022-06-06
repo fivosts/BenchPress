@@ -25,6 +25,7 @@ option java_outer_classname = "ClgenProto";
 option java_package = "com.clgen";
 
 import "deeplearning/clgen/proto/model.proto";
+import "deeplearning/clgen/proto/reinforcement_learning.proto";
 import "deeplearning/clgen/proto/sampler.proto";
 import "deeplearning/clgen/proto/github.proto";
 
@@ -41,11 +42,12 @@ message Instance {
   // or the path to a pretrained_model, as created by --export_tf_model option
   // of clgen.
   oneof model_specification {
-    Model model = 3;
-    string pretrained_model = 4;
+    Model   model = 3;
+    RLModel rl_model = 4;
+    string  pretrained_model = 5;
   }
   // The sampler specification.
-  optional Sampler sampler = 5;
+  optional Sampler sampler = 6;
 }
 
 // A collection of instances.
