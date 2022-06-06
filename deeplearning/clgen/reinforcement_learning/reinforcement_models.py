@@ -5,6 +5,7 @@ import pathlib
 
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import corpuses
+from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import language_models
 from deeplearning.clgen.proto import reinforcement_learning_pb2
@@ -190,6 +191,18 @@ class RLModel(object):
     Instead of calling Model's sample, this sample will be called, acting as a backend (BERT) wrapper.
     """
     return
+
+  def SamplerCache(self, sampler: samplers.Sampler) -> pathlib.Path:
+    """Get the path to a sampler cache.
+
+    Args:
+      sampler: A Sampler instance.
+
+    Returns:
+      A path to a directory. Note that this directory may not exist - it is
+      created only after a call to Sample().
+    """
+    return self.cache.path / "samples" / sampler.hash
 
   def _WriteMetafile(self) -> None:
     pbutil.ToFile(self.meta, pathlib.Path(self.cache.keypath("META.pbtxt")))
