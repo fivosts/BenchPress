@@ -12,6 +12,8 @@ from deeplearning.clgen.util import environment
 
 from absl import flags
 
+from deeplearning.clgen.util.cache import mkcache
+
 def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforcement_learning_pb2.RLModel:
   """
   Check validity of RL Model config.
@@ -25,19 +27,26 @@ class RLModel(object):
   """
   def __init__(self, config: reinforcement_learning_pb2.RLModel, cache_path: pathlib.Path):
     """
-    Initialize RL manager.
+    A Reinforcement Learning model, wrapping a Language Model backend.
     """
     # Error early, so that a cache isn't created.
     if not isinstance(config, reinforcement_learning_pb2.RLModel):
       t = type(config).__name__
       raise TypeError(f"Config must be an RLModel proto. Received: '{t}'")
 
-    self.config = AssertConfigIsValid(config)
+    self.config = reinforcement_learning_pb2.RLModel()
+    self.config.CopyFrom(AssertConfigIsValid(config))
+
     self.cache_path = cache_path / "reinforcement_learning"
 
     if environment.WORLD_RANK == 0:
+      raise NotImplementedError
+      self.cache = mkcache
       self.cache_path.mkdir(exist_ok = True, parents = True)
     distrib.barrier()
+
+    raise NotImplementedError
+    corpus, pre_train_corpus, SamplerCache(), hash
 
     if environment.WORLD_RANK == 0:
       ## Store current commit
@@ -53,6 +62,12 @@ class RLModel(object):
     self.env = env.Environment()
     self.agent = agent.Agent()
     return
+
+  def Create(self):
+    raise NotImplementedError
+
+  def PreTrain(self):
+    raise NotImplementedError
 
   def Train(self) -> None:
     """
