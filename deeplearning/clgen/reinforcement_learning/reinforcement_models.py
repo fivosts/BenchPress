@@ -60,7 +60,7 @@ class RLModel(object):
     config_to_hash.ClearField("language_model")
     return crypto.sha1_list[lm_hash, config_to_hash.SerializeToString()]
 
-  def __init__(self, config: reinforcement_learning_pb2.RLModel, cache_path: pathlib.Path):
+  def __init__(self, config: reinforcement_learning_pb2.RLModel):
     """
     A Reinforcement Learning model, wrapping a Language Model backend.
     """
