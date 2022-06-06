@@ -42,7 +42,7 @@ message Instance {
   // or the path to a pretrained_model, as created by --export_tf_model option
   // of clgen.
   oneof model_specification {
-    Model   model            = 3;
+    Model   language_model   = 3;
     RLModel rl_model         = 4;
     string  pretrained_model = 5;
   }
