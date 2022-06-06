@@ -152,12 +152,13 @@ class Instance(object):
 
     # Initialize distrib lock path temporarily. The language model or RL will specialize the locks path.
     if environment.WORLD_SIZE > 1:
-      lock_cache = pathlib.Path("{}/locks/".format(FLAGS.local_filesystem))
       if environment.WORLD_RANK == 0:
-        lock_cache.mkdir(exist_ok = True)
+        lock_cache = cache.mkcache("locks")
+        lock_cache.path.mkdir(exist_ok = True)
       else:
-        while not lock_cache.exists():
+        while not cache.cachepath("locks").exists():
           time.sleep(0.5)
+        lock_cache = cache.mkcache("locks")
       distrib.init(lock_cache)
 
     # Enter a session so that the cache paths are set relative to any requested
