@@ -16,10 +16,10 @@ class Environment(object):
     self.feature_space = feature_space
     return
   
-  def compute_reward(self, action) -> Reward:
+  def compute_reward(self, action) -> interactions.Reward:
     """Compute an action's reward."""
     if action.action_type == interactions.ACTION_TYPE_SPACE['ADD'] or action.action_type == interactions.ACTION_TYPE_SPACE['REM']:
-      return Reward(
+      return interactions.Reward(
         action   = action,
         value    = 0.0,
         distance = None,
@@ -34,7 +34,7 @@ class Environment(object):
       except ValueError:
         compiles = False
       if not compiles:
-        return Reward(
+        return interactions.Reward(
           action   = action,
           value    = -1,
           distance = None,
@@ -43,14 +43,14 @@ class Environment(object):
       else:
         dist = feature_sampler.euclidean_distance(feats, self.current_state.target_features)
         if dist == 0:
-          return Reward(
+          return interactions.Reward(
             action   = action,
             value    = 1.0,
             distance = dist,
             comment  = "[COMPILE] led to dropping distance to 0, reward is +1!"
           )
         else:
-          return Reward(
+          return interactions.Reward(
             action = action,
             value  = 1.0 / (dist),
             distance = dist,
@@ -59,7 +59,7 @@ class Environment(object):
     else:
       raise ValueError("Action type {} does not exist.".format(action.action_type))
 
-  def step(self, action) -> Reward:
+  def step(self, action) -> interactions.Reward:
     """
     Collect an action from an agent and compute its reward.
     """
@@ -71,7 +71,7 @@ class Environment(object):
     """
     raise NotImplementedError
   
-  def get(self) -> State:
+  def get(self) -> interactions.State:
     """
     Get the current state of the environment.
     """
