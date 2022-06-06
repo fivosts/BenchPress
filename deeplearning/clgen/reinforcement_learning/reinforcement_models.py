@@ -15,6 +15,8 @@ from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import commit
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import pbutil
+from deeplearning.clgen.reinforcement_learning import env
+from deeplearning.clgen.reinforcement_learning import agent
 
 from absl import flags
 
@@ -74,6 +76,7 @@ class RLModel(object):
     self.language_model = language_models.Model(self.config.language_model)
  
     self.hash = self._ComputeHash(self.language_model, self.config)
+    self._created = False
 
     distrib.lock()
     self.cache = cache.mkcache("rl_model", self.hash)
@@ -145,34 +148,42 @@ class RLModel(object):
       commit.saveCommit(self.cache.path)
     l.logger().info("Initialized RL Pipeline in {}".format(self.cache.path))
 
-    raise NotImplementedError
-    corpus, pre_train_corpus, SamplerCache(), hash
-
-    if environment.WORLD_RANK == 0:
-      ## Store current commit
-      commit.saveCommit(self.cache_path)
-
     """
     How do you target features during training ?
     1) Active learner - downstream task <- Sampler
     2) Random feasible vectors (collected from OpenCL corpus ?) <- Sampler ?
     3) Got from benchmark suites ? <- Sampler
     """
-
-    self.env = env.Environment()
-    self.agent = agent.Agent()
     return
 
-  def Create(self):
-    raise NotImplementedError
+  def Create(self) -> bool:
+    """
+    Create the LM and RL environment.
+    """
+    _ = self.language_model.Create()
+    if self._created:
+      return False
+    self._created = True
+    self.env = env.Environment()
+    self.agent = agent.Agent()
+    return True
 
-  def PreTrain(self):
-    raise NotImplementedError
+  def PreTrain(self, **kwargs) -> 'RLModel':
+    """
+    Pre-train wrapper for Language model.
+    No-pretraining is supported for RL model.
+    """
+    self.language_model.PreTrain(**kwargs)
+    return self
 
-  def Train(self) -> None:
+  def Train(self, **kwargs) -> None:
     """
     Train the RL-Agent.
     """
+    ## First, train the Language model backend.
+    self.language_model.Train(**kwargs)
+
+    ## Start the RL training pipeline.
     for ep in range(num_episodes):
       self.env.reset()
       target_features = self.feature_sampler.sample()
