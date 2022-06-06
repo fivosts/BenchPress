@@ -8,7 +8,7 @@
 # 7. Holes can be up to 10 tokens long.
 # 8. Learning rate increased to 45 from 40.
 working_dir: "AST" ## This path is relative to "workspace_dir", which is an app FLAG
-model {
+language_model {
   corpus {
     local_tar_archive: "$PWD/../corpus/ultimate_corpus.tar.bz2"
     tokenizer {
