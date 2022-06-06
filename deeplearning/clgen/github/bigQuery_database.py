@@ -267,12 +267,29 @@ def file_size_distribution(db: bqDatabase) -> None:
   print(m.getData())
   return
 
+def reduce_database_by_size(db: bqDatabase, out_db: bqDatabase) -> None:
+  """
+  Reduce BQ database by files that are too massive anyway.
+  """
+  with db.Session() as s:
+    data = [x for x in s.query(bqMainFile).yield_per(100000) if int(str(x.size)) < 2 * (10**6) if x is not None and x.size is not None and str(x.size) is not None]
+  l.logger().info("BQ Database reduced from {} to {} files".format(db.mainfile_count, len(data)))
+  with out_db.Session(commit = True) as s:
+    for dp in data:
+      s.add(bqFile(**dp.ToJSONDict()))
+    s.commit()
+  return
+
 def initMain(*args, **kwargs):
   """
   Setup module's operations.
   """
   l.initLogger(name = "bigQuery_database")
-  file_size_distribution(bqDatabase(url = "sqlite:///{}".format("/private/home/foivos/clgen_c_github.db", must_exist = True)))
+  # file_size_distribution(bqDatabase(url = "sqlite:///{}".format("/private/home/foivos/clgen_c_github.db", must_exist = True)))
+  reduce_database_by_size(
+    bqDatabase(url = "sqlite:///{}".format("/private/home/foivos/clgen_c_github.db", must_exist = True)),
+    bqDatabase(url = "sqlite:///{}".format("/private/home/foivos/reduced2M_clgen_c_github.db", must_exist = False)),
+  )
   return
   if FLAGS.chunkify or FLAGS.chunkify < 2:
     if not FLAGS.bq_database:
