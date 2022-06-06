@@ -1,0 +1,19 @@
+// This files defines the specification of the reinforcement learning model.
+syntax = "proto2";
+
+package clgen;
+
+option go_package = "clgenpb";
+option java_multiple_files = true;
+option java_outer_classname = "ReinforcementLearningProto";
+option java_package = "com.clgen";
+
+import "deeplearning/clgen/proto/model.proto";
+
+message RLModel {
+  oneof target_features {
+    bool train_set = 1;
+    bool random    = 2;
+  }
+  optional Model language_model = 3;
+}
