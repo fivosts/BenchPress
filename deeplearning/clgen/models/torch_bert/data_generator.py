@@ -1015,7 +1015,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       The tensor inputs dictionary filled for BERT.
     """
     if self.feature_encoder:
-      target_features = torch.LongTensor(self.feature_tokenizer.TokenizeFeatureVector(self.feat_sampler.target_benchmark.features, self.feat_sampler.feature_space, self.feature_sequence_length))
+      target_features = self.feature_tokenizer.TokenizeFeatureVector(self.feat_sampler.target_benchmark.features, self.feat_sampler.feature_space, self.feature_sequence_length)
 
     if self.tokenizer.maskToken in feed[0] or self.tokenizer.holeToken in feed[0]:
       inputs = sequence_masking.MaskedSeqToBlob(
