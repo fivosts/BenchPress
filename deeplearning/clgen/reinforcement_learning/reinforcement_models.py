@@ -29,7 +29,7 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
   ## Just check if language_model exists, later the language_models class will check the pbtxt.
   pbutil.AssertFieldIsSet(config, "language_model")
 
-  if not (pbutil.HasField("train_set") or pbutil.HasField("random")):
+  if not (config.HasField("train_set") or config.HasField("random")):
     raise ValueError("You haven't specified the target features dataloader for RL-training:\n{}".format(str(config)))
   return config
 
