@@ -1,5 +1,5 @@
 working_dir: "Base_BERT" ## This path is relative to "workspace_dir", which is an app FLAG
-model {
+language_model {
   pre_train_corpus {
     bq_database: "/private/home/foivos/clgen_c_github.db"
     contentfile_separator: "\n\n\n\n"
