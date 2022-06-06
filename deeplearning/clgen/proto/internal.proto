@@ -26,6 +26,7 @@ option java_package = "com.clgen";
 
 import "deeplearning/clgen/proto/corpus.proto";
 import "deeplearning/clgen/proto/model.proto";
+import "deeplearning/clgen/proto/reinforcement_learning.proto";
 import "deeplearning/clgen/proto/sampler.proto";
 
 // The schema for a corpus metafile. An instance of this proto is created with
@@ -39,6 +40,12 @@ message CorpusMeta {
 // name META.pbtxt in the cache directory of each model.
 message ModelMeta {
   optional Model config = 1;
+}
+
+// The schema for a model metafile. An instance of this proto is created with
+// name META.pbtxt in the cache directory of each model.
+message RLModelMeta {
+  optional RLModel config = 1;
 }
 
 // The schema for a sampler metafile. An instance of this proto is created with
