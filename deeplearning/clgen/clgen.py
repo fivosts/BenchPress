@@ -16,7 +16,7 @@ import contextlib
 import cProfile
 import os
 import pathlib
-import shutil
+import time
 import sys
 import typing
 import datetime
@@ -28,6 +28,8 @@ from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import memory
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import cache
+from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.dashboard import dashboard
 from deeplearning.clgen.models import language_models
@@ -147,6 +149,17 @@ class Instance(object):
       self.working_dir: pathlib.Path = pathlib.Path(
         os.path.join(FLAGS.workspace_dir, config.working_dir)
       ).expanduser().resolve()
+
+    # Initialize distrib lock path temporarily. The language model or RL will specialize the locks path.
+    if environment.WORLD_SIZE > 1:
+      lock_cache = pathlib.Path("{}/locks/".format(FLAGS.local_filesystem))
+      if environment.WORLD_RANK == 0:
+        lock_cache.mkdir(exist_ok = True)
+      else:
+        while not lock_cache.exists():
+          time.sleep(0.5)
+      distrib.init(lock_cache)
+
     # Enter a session so that the cache paths are set relative to any requested
     # working directory.
     with self.Session():
@@ -154,6 +167,24 @@ class Instance(object):
         self.model: language_models.Model = language_models.Model(config.language_model)
       elif config.HasField("rl_model"):
         self.model: reinforcement_models.RLModel = reinforcement_models.RLModel(config.rl_model)
+
+      ## Specialize 'locks' folder.
+      if environment.WORLD_SIZE > 1:
+        distrib.cleanup()
+        lock_cache = pathlib.Path(self.model.cache.path / "locks")
+        if environment.WORLD_RANK == 0:
+          lock_cache.mkdir(exist_ok = True)
+        else:
+          while not lock_cache.exists():
+            time.sleep(0.5)
+        distrib.init(lock_cache)
+        old_locks  = pathlib.Path("{}/locks/".format(FLAGS.local_filesystem))
+        try:
+          os.rmdir(old_locks)
+        except OSError as e:
+          l.logger().error("Old lock directory {} is not empty!".format(str(old_locks)))
+          raise e
+
       if config.HasField("sampler"):
         self.sampler: samplers.Sampler = samplers.Sampler(config.sampler)
 
