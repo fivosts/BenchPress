@@ -164,8 +164,9 @@ class RLModel(object):
     if self._created:
       return False
     self._created = True
-    self.env = env.Environment()
-    self.agent = agent.Agent()
+    self.env    = env.Environment()
+    self.agent  = agent.Agent()
+    self.memory = env.Memory()
     return True
 
   def PreTrain(self, **kwargs) -> 'RLModel':
@@ -183,6 +184,7 @@ class RLModel(object):
     ## First, train the Language model backend.
     self.language_model.Train(**kwargs)
 
+    raise NotImplementedError("TODO: Time to train the RL!!")
     ## Start the RL training pipeline.
     for ep in range(num_episodes):
       self.env.reset()
@@ -201,6 +203,7 @@ class RLModel(object):
     """
     Instead of calling Model's sample, this sample will be called, acting as a backend (BERT) wrapper.
     """
+    raise NotImplementedError("Here you must sample your RL-Model.")
     return
 
   def SamplerCache(self, sampler: samplers.Sampler) -> pathlib.Path:
