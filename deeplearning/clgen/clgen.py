@@ -150,8 +150,8 @@ class Instance(object):
     # Enter a session so that the cache paths are set relative to any requested
     # working directory.
     with self.Session():
-      if config.HasField("model"):
-        self.model: language_models.Model = language_models.Model(config.model)
+      if config.HasField("language_model"):
+        self.model: language_models.Model = language_models.Model(config.language_model)
       elif config.HasField("rl_model"):
         self.model: reinforcement_models.RLModel = reinforcement_models.RLModel(config.rl_model)
       if config.HasField("sampler"):
@@ -227,8 +227,8 @@ class Instance(object):
     """Get the proto config for the instance."""
     config = clgen_pb2.Instance()
     config.working_dir = str(self.working_dir)
-    if config.HasField("model"):
-      config.model.CopyFrom(self.model.config)
+    if config.HasField("language_model"):
+      config.language_model.CopyFrom(self.model.config)
     elif config.HasField("rl_model"):
       config.rl_model.CopyFrom(self.model.config)
     config.sampler.CopyFrom(self.sampler.config)
