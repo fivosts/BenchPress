@@ -31,6 +31,7 @@ from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import logging as l
 from deeplearning.clgen.dashboard import dashboard
 from deeplearning.clgen.models import language_models
+from deeplearning.clgen.reinforcement_learning import reinforcement_models
 from deeplearning.clgen.proto import clgen_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
@@ -151,6 +152,8 @@ class Instance(object):
     with self.Session():
       if config.HasField("model"):
         self.model: language_models.Model = language_models.Model(config.model)
+      elif config.HasField("rl_model"):
+        self.model: reinforcement_models.RLModel = reinforcement_models.RLModel(config.rl_model)
       if config.HasField("sampler"):
         self.sampler: samplers.Sampler = samplers.Sampler(config.sampler)
 
@@ -172,7 +175,7 @@ class Instance(object):
       self.model.Create()
 
   def PreTrain(self, *args, **kwargs) -> None:
-    if self.config.model.HasField("pre_train_corpus"):
+    if self.model.pre_train_corpus:
       with self.Session():
         test_sampler = None
         if not self.sampler.is_active:
@@ -224,7 +227,10 @@ class Instance(object):
     """Get the proto config for the instance."""
     config = clgen_pb2.Instance()
     config.working_dir = str(self.working_dir)
-    config.model.CopyFrom(self.model.config)
+    if config.HasField("model"):
+      config.model.CopyFrom(self.model.config)
+    elif config.HasField("rl_model"):
+      config.rl_model.CopyFrom(self.model.config)
     config.sampler.CopyFrom(self.sampler.config)
     return config
 
