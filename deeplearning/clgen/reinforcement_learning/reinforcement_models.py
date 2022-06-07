@@ -56,7 +56,7 @@ class RLModel(object):
     config_to_hash = reinforcement_learning_pb2.RLModel()
     config_to_hash.CopyFrom(config)
     config_to_hash.ClearField("language_model")
-    return crypto.sha1_list[lm_hash, config_to_hash.SerializeToString()]
+    return crypto.sha1_list([lm_hash, config_to_hash.SerializeToString()])
 
   def __init__(self, config: reinforcement_learning_pb2.RLModel):
     """
