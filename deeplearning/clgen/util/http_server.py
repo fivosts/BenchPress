@@ -232,7 +232,10 @@ def client_status_request() -> typing.Tuple:
   Get status of http server.
   """
   try:
-    r = requests.get("http://{}:{}/status".format(FLAGS.http_server_ip_address, FLAGS.http_port), headers = {"Server-Name": environment.HOSTNAME})
+    if FLAGS.http_port == -1:
+      r = requests.get("http://{}/status".format(FLAGS.http_server_ip_address), headers = {"Server-Name": environment.HOSTNAME})
+    else:
+      r = requests.get("http://{}:{}/status".format(FLAGS.http_server_ip_address, FLAGS.http_port), headers = {"Server-Name": environment.HOSTNAME})
   except Exception as e:
     l.logger().error("GET status Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
     raise e
@@ -243,7 +246,10 @@ def client_get_request() -> typing.List[typing.Dict]:
   Helper function to perform get request at /read_message of http target host.
   """
   try:
-    r = requests.get("http://{}:{}/read_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), headers = {"Server-Name": environment.HOSTNAME})
+    if FLAGS.http_port == -1:
+      r = requests.get("http://{}/status".format(FLAGS.http_server_ip_address), headers = {"Server-Name": environment.HOSTNAME})
+    else:
+      r = requests.get("http://{}:{}/read_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), headers = {"Server-Name": environment.HOSTNAME})
   except Exception as e:
     l.logger().error("GET Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
     raise e
@@ -258,7 +264,10 @@ def client_put_request(msg: typing.List[typing.Dict]) -> None:
   Helper function to perform put at /write_message of http target host.
   """
   try:
-    r = requests.put("http://{}:{}/write_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), data = json.dumps(msg), headers = {"Content-Type": "application/json", "Server-Name": environment.HOSTNAME})
+    if FLAGS.http_port == -1:
+      r = requests.get("http://{}/status".format(FLAGS.http_server_ip_address), headers = {"Server-Name": environment.HOSTNAME})
+    else:
+      r = requests.put("http://{}:{}/write_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), data = json.dumps(msg), headers = {"Content-Type": "application/json", "Server-Name": environment.HOSTNAME})
   except Exception as e:
     l.logger().error("PUT Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
     raise e
