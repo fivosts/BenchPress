@@ -239,7 +239,7 @@ def client_status_request() -> typing.Tuple:
   """
   try:
     if FLAGS.http_port == -1:
-      r = requests.get("http://{}/status".format(FLAGS.http_server_ip_address), headers = {"Server-Name": environment.HOSTNAME})
+      r = requests.get("{}/status".format(FLAGS.http_server_ip_address), headers = {"Server-Name": environment.HOSTNAME})
     else:
       r = requests.get("http://{}:{}/status".format(FLAGS.http_server_ip_address, FLAGS.http_port), headers = {"Server-Name": environment.HOSTNAME})
   except Exception as e:
@@ -253,7 +253,7 @@ def client_get_request() -> typing.List[typing.Dict]:
   """
   try:
     if FLAGS.http_port == -1:
-      r = requests.get("http://{}/status".format(FLAGS.http_server_ip_address), headers = {"Server-Name": environment.HOSTNAME})
+      r = requests.get("{}/read_message".format(FLAGS.http_server_ip_address), headers = {"Server-Name": environment.HOSTNAME})
     else:
       r = requests.get("http://{}:{}/read_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), headers = {"Server-Name": environment.HOSTNAME})
   except Exception as e:
@@ -271,7 +271,7 @@ def client_put_request(msg: typing.List[typing.Dict]) -> None:
   """
   try:
     if FLAGS.http_port == -1:
-      r = requests.get("http://{}/status".format(FLAGS.http_server_ip_address), headers = {"Server-Name": environment.HOSTNAME})
+      r = requests.put("{}/write_message".format(FLAGS.http_server_ip_address), data = json.dumps(msg), headers = {"Content-Type": "application/json", "Server-Name": environment.HOSTNAME})
     else:
       r = requests.put("http://{}:{}/write_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), data = json.dumps(msg), headers = {"Content-Type": "application/json", "Server-Name": environment.HOSTNAME})
   except Exception as e:
