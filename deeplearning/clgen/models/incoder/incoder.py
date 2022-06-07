@@ -175,7 +175,7 @@ class Incoder(backends.BackendBase):
     inference_time = 0.0
     decoding_time = 0.0
     s_idx = 0
-    # batch_it =  if environment.WORLD_RANK == 0 else inputs['input_ids']
+
     if environment.WORLD_RANK == 0:
       bar = tqdm.tqdm(total = total_seqs * environment.WORLD_SIZE, desc = desc)
     else:
@@ -210,7 +210,7 @@ class Incoder(backends.BackendBase):
           opening = lambda x: "<| file ext=.cl |>\n{}void".format(x)
           if opening("") in incoded['text']:
             incoded['text'] = opening("kernel ") + incoded['text'][len(opening()):]
-          text    = opencl.ExtractSingleKernels(incoded['text'])[0] # Collect only the first kernel generated, ignore the rest.
+          text = opencl.ExtractSingleKernels(incoded['text'])[0] # Collect only the first kernel generated, ignore the rest.
         except IndexError:
           l.logger().warn(incoded['text'], ddp_nodes = True)
           text = incoded['text']
