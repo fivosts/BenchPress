@@ -102,10 +102,10 @@ class CLDriveSample(Base, sqlutil.ProtoBackedMixin):
       "source"               : source,
       "features"             : "GreweFeatures:\n{}".format('\n'.join(["{}:{}".format(k,v) for k, v in grewe_features.items()])),
       "dataset"              : dataset,
-      "cpu_transfer_time_ns" : '\n'.join([str(int(x)) for x in cpu_transfer_time_ns if x != 'nan']),
-      "cpu_kernel_time_ns"   : '\n'.join([str(int(x)) for x in cpu_kernel_time_ns if x != 'nan']),
-      "gpu_transfer_time_ns" : '\n'.join([str(int(x)) for x in gpu_transfer_time_ns if x != 'nan']),
-      "gpu_kernel_time_ns"   : '\n'.join([str(int(x)) for x in gpu_kernel_time_ns if x != 'nan']),
+      "cpu_transfer_time_ns" : '\n'.join([str(int(x)) for x in cpu_transfer_time_ns if x != 'nan' and x != '']),
+      "cpu_kernel_time_ns"   : '\n'.join([str(int(x)) for x in cpu_kernel_time_ns if x != 'nan' and x != '']),
+      "gpu_transfer_time_ns" : '\n'.join([str(int(x)) for x in gpu_transfer_time_ns if x != 'nan' and x != '']),
+      "gpu_kernel_time_ns"   : '\n'.join([str(int(x)) for x in gpu_kernel_time_ns if x != 'nan' and x != '']),
       "transferred_bytes"    : transferred_bytes,
       "status"               : status,
       "date_added"           : datetime.datetime.utcnow(),
@@ -213,10 +213,10 @@ class CLDriveExecutions(sqlutil.Database):
             assert sha not in self._status_cache, "{} should not be in DB".format(sha)
             self._status_cache[sha] = status
         elif status in {"CPU", "GPU"}:
-          entry.cpu_transfer_time_ns = entry.cpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].transfer_time_ns if x != 'nan'])
-          entry.cpu_kernel_time_ns   = entry.cpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].kernel_time_ns if x != 'nan'])
-          entry.gpu_transfer_time_ns = entry.gpu_transfer_time_ns + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].transfer_time_ns if x != 'nan'])
-          entry.gpu_kernel_time_ns   = entry.gpu_kernel_time_ns   + "\n" + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].kernel_time_ns if x != 'nan'])
+          entry.cpu_transfer_time_ns = (entry.cpu_transfer_time_ns + "\n" if entry.cpu_transfer_time_ns != '' else '') + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].transfer_time_ns if x != 'nan' and x != ''])
+          entry.cpu_kernel_time_ns   = (entry.cpu_kernel_time_ns   + "\n" if entry.cpu_kernel_time_ns != '' else '') + '\n'.join([str(x) for x in df[df['device'].str.contains("CPU")].kernel_time_ns if x != 'nan' and x != ''])
+          entry.gpu_transfer_time_ns = (entry.gpu_transfer_time_ns + "\n" if entry.gpu_transfer_time_ns != '' else '') + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].transfer_time_ns if x != 'nan' and x != ''])
+          entry.gpu_kernel_time_ns   = (entry.gpu_kernel_time_ns   + "\n" if entry.gpu_kernel_tim_ns != '' else '') + '\n'.join([str(x) for x in df[df['device'].str.contains("GPU")].kernel_time_ns if x != 'nan' and x != ''])
         session.commit()
     except Exception as e:
       raise e
