@@ -180,11 +180,13 @@ class Instance(object):
           while not lock_cache.exists():
             time.sleep(0.5)
         distrib.init(lock_cache)
-        try:
-          os.rmdir(temp_lock_cache.path)
-        except OSError as e:
-          l.logger().error("Old lock directory {} is not empty!".format(str(temp_lock_cache.path)))
-          raise e
+        if environment.WORLD_RANK == 0:
+          try:
+            os.rmdir(temp_lock_cache.path)
+          except OSError as e:
+            l.logger().error("Old lock directory {} is not empty!".format(str(temp_lock_cache.path)))
+            raise e
+        distrib.barrier()
 
       if config.HasField("sampler"):
         self.sampler: samplers.Sampler = samplers.Sampler(config.sampler)
