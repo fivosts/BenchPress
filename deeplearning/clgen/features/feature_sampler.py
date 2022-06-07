@@ -6,7 +6,7 @@ import pathlib
 import pickle
 import math
 import functools
-import multiprocessing
+# import multiprocessing
 import time
 import numpy as np
 from numpy.random import default_rng
@@ -266,17 +266,21 @@ class BenchmarkSampler(FeatureSampler):
       else:
         if environment.WORLD_RANK == 0:
           kernels = benchmarks.yield_cl_kernels(self.path)
-          pool = multiprocessing.Pool()
-          for benchmark in pool.map(
-                            functools.partial(
-                              benchmarks.benchmark_worker,
-                              feature_space = self.feature_space,
-                              reduced_git_corpus = self.reduced_git_corpus
-                            ), kernels
-                          ):
+          # pool = multiprocessing.Pool()
+          # for benchmark in pool.map(
+          #                   functools.partial(
+          #                     benchmarks.benchmark_worker,
+          #                     feature_space = self.feature_space,
+          #                     reduced_git_corpus = self.reduced_git_corpus
+          #                   ), kernels
+          #                 ):
+          #   if benchmark:
+          #     self.benchmarks.append(benchmark)
+          # pool.close()
+          for kernel in kernels:
+            benchmark = benchmarks.preprocessor_worker(kernel, self.feature_space, self.reduced_git_corpus)
             if benchmark:
               self.benchmarks.append(benchmark)
-          pool.close()
           benchmarks.resolve_benchmark_names(self.benchmarks)
           self.benchmarks = sorted(self.benchmarks, key = lambda b: b.name)
           distrib.write_broadcast(pickle.dumps(self.benchmarks), is_bytes = True)

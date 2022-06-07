@@ -9,7 +9,7 @@ import gdown
 import json
 import tqdm
 import subprocess
-import multiprocessing
+# import multiprocessing
 
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
@@ -151,15 +151,16 @@ def yield_cl_kernels(path: pathlib.Path) -> typing.List[typing.Tuple[pathlib.Pat
   """
   contentfiles = iter_cl_files(path)
   kernels = []
-  pool = multiprocessing.Pool()
-  if environment.WORLD_RANK == 0:
-    it = tqdm.tqdm(pool.map(preprocessor_worker, contentfiles), total = len(contentfiles), desc = "Yield {} benchmarks".format(path.stem))
-  else:
-    it = pool.map(preprocessor_worker, contentfiles)
-  for kernel_batch in it:
+  # pool = multiprocessing.Pool()
+  # if environment.WORLD_RANK == 0:
+  #   it = tqdm.tqdm(pool.map(preprocessor_worker, contentfiles), total = len(contentfiles), desc = "Yield {} benchmarks".format(path.stem))
+  # else:
+  #   it = pool.map(preprocessor_worker, contentfiles)
+  for batch in contentfiles:
+    kernel_batch = preprocessor_worker(batch)
     kernels += kernel_batch
   l.logger().info("Pre-processed {} OpenCL benchmarks".format(len(kernels)))
-  pool.close()
+  # pool.close()
   return kernels
 
 def resolve_benchmark_names(benchmarks: typing.List["Benchmark"]) -> typing.List["Benchmark"]:
