@@ -157,7 +157,8 @@ class Instance(object):
       # Initialize distrib lock path temporarily. The language model or RL will specialize the locks path.
       if environment.WORLD_SIZE > 1:
         if environment.WORLD_RANK == 0:
-          temp_lock_cache = cache.mkcache("locks_{}".format(datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S_%f")))
+          # temp_lock_cache = cache.mkcache("locks_{}".format(datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S_%f")))
+          temp_lock_cache = cache.mkcache("locks_")
           temp_lock_cache.path.mkdir(exist_ok = True)
         else:
           while not cache.cachepath("locks").exists():
