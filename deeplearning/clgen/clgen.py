@@ -153,13 +153,13 @@ class Instance(object):
     # Initialize distrib lock path temporarily. The language model or RL will specialize the locks path.
     if environment.WORLD_SIZE > 1:
       if environment.WORLD_RANK == 0:
-        lock_cache = cache.mkcache("locks")
-        lock_cache.path.mkdir(exist_ok = True)
+        temp_lock_cache = cache.mkcache("locks")
+        temp_lock_cache.path.mkdir(exist_ok = True)
       else:
         while not cache.cachepath("locks").exists():
           time.sleep(0.5)
-        lock_cache = cache.mkcache("locks")
-      distrib.init(lock_cache.path)
+        temp_lock_cache = cache.mkcache("locks")
+      distrib.init(temp_lock_cache.path)
 
     # Enter a session so that the cache paths are set relative to any requested
     # working directory.
@@ -179,9 +179,8 @@ class Instance(object):
           while not lock_cache.exists():
             time.sleep(0.5)
         distrib.init(lock_cache)
-        old_locks  = pathlib.Path("{}/locks/".format(FLAGS.local_filesystem))
         try:
-          os.rmdir(old_locks)
+          os.rmdir(temp_lock_cache.path)
         except OSError as e:
           l.logger().error("Old lock directory {} is not empty!".format(str(old_locks)))
           raise e
