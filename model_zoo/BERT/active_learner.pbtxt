@@ -303,7 +303,7 @@ sampler {
           random_seed: 12345
           num_train_steps: 0
           downstream_task: "GrewePredictive"
-          training_corpus: "/home/foivos/cldrive_cache.db"
+          training_corpus: "/private/home/foivos/cldrive_cache.db"
         }
         active_search_depth: 60
         active_search_width: 32
@@ -320,7 +320,7 @@ sampler {
     }
     start_text: "[START]kernel void [HOLE]}[END]"
   }
-  batch_size: 32
+  batch_size: 64
   sequence_length: 768
   temperature_micros: 700000  # = 0.8 real value
   termination_criteria {
