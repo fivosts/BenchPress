@@ -150,20 +150,21 @@ class Instance(object):
         os.path.join(FLAGS.workspace_dir, config.working_dir)
       ).expanduser().resolve()
 
-    # Initialize distrib lock path temporarily. The language model or RL will specialize the locks path.
-    if environment.WORLD_SIZE > 1:
-      if environment.WORLD_RANK == 0:
-        temp_lock_cache = cache.mkcache("locks")
-        temp_lock_cache.path.mkdir(exist_ok = True)
-      else:
-        while not cache.cachepath("locks").exists():
-          time.sleep(0.5)
-        temp_lock_cache = cache.mkcache("locks")
-      distrib.init(temp_lock_cache.path)
-
     # Enter a session so that the cache paths are set relative to any requested
     # working directory.
     with self.Session():
+
+      # Initialize distrib lock path temporarily. The language model or RL will specialize the locks path.
+      if environment.WORLD_SIZE > 1:
+        if environment.WORLD_RANK == 0:
+          temp_lock_cache = cache.mkcache("locks")
+          temp_lock_cache.path.mkdir(exist_ok = True)
+        else:
+          while not cache.cachepath("locks").exists():
+            time.sleep(0.5)
+          temp_lock_cache = cache.mkcache("locks")
+        distrib.init(temp_lock_cache.path)
+
       if config.HasField("language_model"):
         self.model: language_models.Model = language_models.Model(config.language_model)
       elif config.HasField("rl_model"):
@@ -182,7 +183,7 @@ class Instance(object):
         try:
           os.rmdir(temp_lock_cache.path)
         except OSError as e:
-          l.logger().error("Old lock directory {} is not empty!".format(str(old_locks)))
+          l.logger().error("Old lock directory {} is not empty!".format(str(temp_lock_cache.path)))
           raise e
 
       if config.HasField("sampler"):
