@@ -278,7 +278,7 @@ class BenchmarkSampler(FeatureSampler):
           #     self.benchmarks.append(benchmark)
           # pool.close()
           for kernel in kernels:
-            benchmark = benchmarks.preprocessor_worker(kernel, self.feature_space, self.reduced_git_corpus)
+            benchmark = benchmarks.benchmark_worker(kernel, self.feature_space, self.reduced_git_corpus)
             if benchmark:
               self.benchmarks.append(benchmark)
           benchmarks.resolve_benchmark_names(self.benchmarks)
