@@ -132,7 +132,7 @@ class RLModel(object):
         if cached_to_compare.language_model.training.HasField("data_generator"):
           cached_to_compare.language_model.training.data_generator.ClearField("steps_per_epoch")
           cached_to_compare.language_model.training.data_generator.ClearField("validation_set")
-        if cached_to_compare.language_model.training.sequence_length != config_to_compare.training.sequence_length:
+        if cached_to_compare.language_model.training.sequence_length != config_to_compare.language_model.training.sequence_length:
           l.logger().warning("Mismatch between pre-trained and current config sequence_length!\
             This can only be intended in BERT model!")
         cached_to_compare.language_model.training.ClearField("sequence_length")
