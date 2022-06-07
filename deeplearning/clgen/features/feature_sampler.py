@@ -277,6 +277,7 @@ class BenchmarkSampler(FeatureSampler):
             self.benchmarks.append(benchmark)
         pool.close()
         benchmarks.resolve_benchmark_names(self.benchmarks)
+        self.benchmarks = sorted(self.benchmarks, key = lambda b: b.name)
     l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     l.logger().info(', '.join([x for x in set([x.name for x in self.benchmarks])]))
     return
