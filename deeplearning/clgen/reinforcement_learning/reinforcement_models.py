@@ -16,6 +16,7 @@ from deeplearning.clgen.util import commit
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.util import crypto
+from deeplearning.clgen.util import cache
 from deeplearning.clgen.reinforcement_learning import env
 from deeplearning.clgen.reinforcement_learning import agent
 
