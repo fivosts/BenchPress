@@ -15,6 +15,7 @@ from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import commit
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import pbutil
+from deeplearning.clgen.util import crypto
 from deeplearning.clgen.reinforcement_learning import env
 from deeplearning.clgen.reinforcement_learning import agent
 
@@ -28,9 +29,6 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
   """
   ## Just check if language_model exists, later the language_models class will check the pbtxt.
   pbutil.AssertFieldIsSet(config, "language_model")
-
-  if not (config.HasField("train_set") or config.HasField("random")):
-    raise ValueError("You haven't specified the target features dataloader for RL-training:\n{}".format(str(config)))
   return config
 
 class RLModel(object):
