@@ -264,20 +264,25 @@ class BenchmarkSampler(FeatureSampler):
           )
         self.saveCheckpoint()
       else:
-        kernels = benchmarks.yield_cl_kernels(self.path)
-        pool = multiprocessing.Pool()
-        for benchmark in pool.map(
-                          functools.partial(
-                            benchmarks.benchmark_worker,
-                            feature_space = self.feature_space,
-                            reduced_git_corpus = self.reduced_git_corpus
-                          ), kernels
-                        ):
-          if benchmark:
-            self.benchmarks.append(benchmark)
-        pool.close()
-        benchmarks.resolve_benchmark_names(self.benchmarks)
-        self.benchmarks = sorted(self.benchmarks, key = lambda b: b.name)
+        if environment.WORLD_RANK == 0:
+          kernels = benchmarks.yield_cl_kernels(self.path)
+          pool = multiprocessing.Pool()
+          for benchmark in pool.map(
+                            functools.partial(
+                              benchmarks.benchmark_worker,
+                              feature_space = self.feature_space,
+                              reduced_git_corpus = self.reduced_git_corpus
+                            ), kernels
+                          ):
+            if benchmark:
+              self.benchmarks.append(benchmark)
+          pool.close()
+          benchmarks.resolve_benchmark_names(self.benchmarks)
+          self.benchmarks = sorted(self.benchmarks, key = lambda b: b.name)
+          distrib.write_broadcast(pickle.dumps(self.benchmarks), is_bytes = True)
+        else:
+          self.benchmarks = pickle.loads(distrib.read_broadcast(is_bytes = True))
+        distrib.barrier()
     l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     l.logger().info(', '.join([x for x in set([x.name for x in self.benchmarks])]))
     return
