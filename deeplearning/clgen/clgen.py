@@ -159,7 +159,7 @@ class Instance(object):
         while not cache.cachepath("locks").exists():
           time.sleep(0.5)
         lock_cache = cache.mkcache("locks")
-      distrib.init(lock_cache)
+      distrib.init(lock_cache.path)
 
     # Enter a session so that the cache paths are set relative to any requested
     # working directory.
