@@ -743,8 +743,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           )
           tcs += cs
           ts  =  s
-
           if environment.WORLD_SIZE > 1:
+            distrib.barrier()
             ## Become consistent with step_candidates
             distrib.consistent_write(pickle.dumps(step_candidates), is_bytes = True)
             bdstep_cands    = distrib.consistent_read(is_bytes = True)
