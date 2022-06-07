@@ -270,6 +270,7 @@ class Incoder(backends.BackendBase):
       encoding_time, inference_time, decoding_time, post_process_time,
       )
     )
+    distrib.barrier()
     return outputs, end-start
 
   def PreTrain(self, *args, **kwargs) -> None:
