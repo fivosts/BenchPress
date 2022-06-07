@@ -33,6 +33,12 @@ flags.DEFINE_string(
   "Set the target IP address of the host http server."
 )
 
+flags.DEFINE_string(
+  "host_address",
+  "localhost",
+  "Specify address where http server will be set."
+)
+
 app = flask.Flask(__name__)
 
 class FlaskHandler(object):
@@ -220,7 +226,7 @@ def http_serve(read_queue    : multiprocessing.Queue,
     else:
       ips = "ipv4: {}".format(hostname[0])
     l.logger().warn("Server Public IP: {}".format(ips))
-    waitress.serve(app, host = '0.0.0.0', port = port)
+    waitress.serve(app, host = FLAGS.host_address, port = port)
   except KeyboardInterrupt:
     return
   except Exception as e:
