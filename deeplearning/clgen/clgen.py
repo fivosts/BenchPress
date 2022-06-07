@@ -173,6 +173,7 @@ class Instance(object):
 
       ## Specialize 'locks' folder.
       if environment.WORLD_SIZE > 1:
+        distrib.barrier()
         distrib.cleanup()
         lock_cache = pathlib.Path(self.model.cache.path / "locks")
         if environment.WORLD_RANK == 0:
