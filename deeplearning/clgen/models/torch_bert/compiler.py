@@ -285,6 +285,9 @@ class CompilationSampler(object):
     """
     # [workload_size x batch_size x sequence_length]
     wload_size, batch_size, sequence_length = tuple(workload_input_ids.shape)
+    # Also compute feature embeddings sequence length.
+    if workload_input_features is not None:
+      _, _, feature_sequence_length = tuple(workload_input_features.shape)
     # Number of sequences
     nseq  = wload_size * batch_size
     # Iteration idx of workload
@@ -313,7 +316,7 @@ class CompilationSampler(object):
     queue_input_idxs     = torch.arange(nseq).to(device)
     queue_attention_mask = torch.reshape(workload_attention_mask, (1, nseq, sequence_length)).squeeze()
     if workload_input_features is not None:
-      queue_input_features = torch.reshape(workload_input_features, (1, nseq, sequence_length)).squeeze()
+      queue_input_features = torch.reshape(workload_input_features, (1, nseq, feature_sequence_length)).squeeze()
 
     #! This is the return queue [nseq x sequence_length].
     queue = torch.zeros(tuple(queue_input_ids.shape), dtype = torch.int64).to(device)
