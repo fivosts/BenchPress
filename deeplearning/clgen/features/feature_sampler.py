@@ -57,8 +57,8 @@ def calculate_distance(infeat: typing.Dict[str, float],
   d = 0
   for key in tarfeat.keys():
     n = 1# tarfeat[key] if tarfeat[key] != 0 and key != "F2:coalesced/mem" and key != "F4:comp/mem" else 1# normalizers.normalizer[feature_space][key]
-    i = infeat[key] / n
-    t = tarfeat[key] / n
+    i = float(infeat[key] / n)
+    t = float(tarfeat[key] / n)
     d += abs((t**2) - (i**2))
   return math.sqrt(d)
 
