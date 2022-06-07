@@ -853,7 +853,7 @@ class BertForPreTraining(BertPreTrainedModel):
 
     if workload is not None:
       prediction_scores, encoded_features, hidden_states, attentions = self.get_output(
-        input_ids[0], attention_mask[0], position_ids[0], input_features[0] if input_features else None,
+        input_ids[0], attention_mask[0], position_ids[0], input_features[0] if input_features is not None else None,
       )
       bar = kwargs.get('bar', None)
       return self.compile_sampler.generateSampleWorkload(
