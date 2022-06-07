@@ -160,7 +160,7 @@ class Incoder(backends.BackendBase):
     workload_size x batch_size x sequence_length
     """
     start = time.time()
-    total_seqs = len(inputs['input_ids']) * self.sampler.batch_size
+    total_seqs = inputs['input_ids'].shape[0] * inputs['input_ids'].shape[1]
     max_to_generate = self.sampler.sequence_length - 3
     outputs = {
       'generated_samples': self.torch.zeros((total_seqs, self.sampler.sequence_length), dtype = self.torch.int64).to(self.pytorch.device),
