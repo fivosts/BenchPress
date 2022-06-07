@@ -34,6 +34,12 @@ from absl import flags
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_boolean(
+  "verbose_cldrive",
+  False,
+  "Select to print verbose command messages for cldrive."
+)
+
 # LibCLC
 LIBCLC         = environment.LIBCLC
 # OpenCL standard headers
@@ -242,20 +248,22 @@ def RunCLDrive(src: str,
         f.flush()
         hf.write(header_file)
         hf.flush()
+        cmd = "{} {} --srcs={} --cl_build_opt=\"-I{}{}\" --num_runs={} --gsize={} --lsize={} --envs={},{}".format(
+                "timeout -s9 {}".format(timeout) if timeout > 0 else "",
+                CLDRIVE,
+                f.name,
+                pathlib.Path(hf.name).resolve().parent,
+                ",{}".format(",".join(extra_args)) if len(extra_args) > 0 else "",
+                num_runs,
+                gsize,
+                lsize,
+                CL_PLATFORMS['CPU'],
+                CL_PLATFORMS['GPU']
+              )
+        if FLAGS.verbose_cldrive:
+          print(cmd)
         proc = subprocess.Popen(
-          "{} {} --srcs={} --cl_build_opt=\"-I{}{}\" --num_runs={} --gsize={} --lsize={} --envs={},{}"
-            .format(
-              "timeout -s9 {}".format(timeout) if timeout > 0 else "",
-              CLDRIVE,
-              f.name,
-              pathlib.Path(hf.name).resolve().parent,
-              ",{}".format(",".join(extra_args)) if len(extra_args) > 0 else "",
-              num_runs,
-              gsize,
-              lsize,
-              CL_PLATFORMS['CPU'],
-              CL_PLATFORMS['GPU']
-            ).split(),
+          cmd.split(),
           stdout = subprocess.PIPE,
           stderr = subprocess.PIPE,
           universal_newlines = True,
@@ -264,19 +272,21 @@ def RunCLDrive(src: str,
     else:
       f.write(src)
       f.flush()
+      cmd = "{} {} --srcs={} {} --num_runs={} --gsize={} --lsize={} --envs={},{}".format(
+              "timeout -s9 {}".format(timeout) if timeout > 0 else "",
+              CLDRIVE,
+              f.name,
+              "--cl_build_opt={}".format(",".join(extra_args)) if len(extra_args) > 0 else "",
+              num_runs,
+              gsize,
+              lsize,
+              CL_PLATFORMS['CPU'],
+              CL_PLATFORMS['GPU']
+            )
+      if FLAGS.verbose_cldrive:
+        print(cmd)
       proc = subprocess.Popen(
-        "{} {} --srcs={} {} --num_runs={} --gsize={} --lsize={} --envs={},{}"
-          .format(
-            "timeout -s9 {}".format(timeout) if timeout > 0 else "",
-            CLDRIVE,
-            f.name,
-            "--cl_build_opt={}".format(",".join(extra_args)) if len(extra_args) > 0 else "",
-            num_runs,
-            gsize,
-            lsize,
-            CL_PLATFORMS['CPU'],
-            CL_PLATFORMS['GPU']
-          ).split(),
+        cmd.split(),
         stdout = subprocess.PIPE,
         stderr = subprocess.PIPE,
         universal_newlines = True,
