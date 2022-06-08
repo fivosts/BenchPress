@@ -121,6 +121,7 @@ class Incoder(backends.BackendBase):
       ).to(self.pytorch.offset_device)
     else:
       l.logger().warn("Using custom Incoder checkpoint at {}".format(FLAGS.custom_incoder_ckpt))
+      print(FLAGS.custom_incoder_ckpt)
       m = transformers.AutoModelForCausalLM.from_pretrained(
         FLAGS.custom_incoder_ckpt, **kwargs
       ).to(self.pytorch.offset_device)
