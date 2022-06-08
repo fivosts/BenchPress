@@ -463,12 +463,12 @@ class PreprocessedContentFiles(sqlutil.Database):
         last_commit     = time.time()
         wall_time_start = time.time()
 
-        while idx < limit:
-          try:
+        pool = multiprocessing.Pool(maxtasksperchild = 2048)
+        try:
+          while idx < limit:
             chunk = min(chunk, limit - idx) # This is equivalent to l447/l448 but needed for last node that gets a bit more.
             batch = db.main_files_batch(chunk, idx, exclude_id = done)
             idx += chunk - len(batch) # This difference will be the number of already done files.
-            pool = multiprocessing.Pool()
             for preprocessed_list in pool.imap_unordered(
                                       functools.partial(
                                         BQPreprocessorWorker,
@@ -486,14 +486,14 @@ class PreprocessedContentFiles(sqlutil.Database):
                   last_commit = wall_time_end
               idx += 1
               bar.update(idx - bar.n)
-            pool.close()
-          except KeyboardInterrupt as e:
-            pool.terminate()
-            raise e
-          except Exception as e:
-            l.logger().error(e, ddp_nodes = True)
-            pool.terminate()
-            raise e
+          pool.close()
+        except KeyboardInterrupt as e:
+          pool.terminate()
+          raise e
+        except Exception as e:
+          l.logger().error(e, ddp_nodes = True)
+          pool.terminate()
+          raise e
         session.commit()
         if environment.WORLD_SIZE > 1:
           bar.finalize(idx)
