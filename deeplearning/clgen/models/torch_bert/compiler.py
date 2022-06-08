@@ -293,9 +293,6 @@ class CompilationSampler(object):
     # Iteration idx of workload
     w_idx = batch_size
 
-    # Stupid counter because my distrib bar sucks.
-    total_closed = 0
-
     # Get current input_ids - attention mask.
     input_ids      = workload_input_ids[0]
     input_idxs     = torch.arange(batch_size).to(device)
@@ -335,11 +332,7 @@ class CompilationSampler(object):
     for i in closed_holes:
       queue[input_idxs[i]] = input_ids[i]
       if bar:
-        total_closed += 1
-        if environment.WORLD_SIZE > 1:
-          bar.update(total_closed - bar.n)
-        else:
-          bar.update(1)
+        bar.update(1)
 
     input_ids      = torch.index_select(input_ids, 0, open_holes)
     input_idxs     = torch.index_select(input_idxs, 0, open_holes)
@@ -381,11 +374,7 @@ class CompilationSampler(object):
       for i in closed_holes:
         queue[input_idxs[i]] = input_ids[i]
         if bar:
-          total_closed += 1
-          if environment.WORLD_SIZE > 1:
-            bar.update(total_closed - bar.n)
-          else:
-            bar.update(1)
+          bar.update(1)
     
       input_ids      = torch.index_select(input_ids, 0, open_holes)
       input_idxs     = torch.index_select(input_idxs, 0, open_holes)
