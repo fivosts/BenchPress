@@ -18,6 +18,7 @@ A Sampler is an object which, when passed to a mode's Sample() method,
 determines the shape of the generated samples.
 """
 import os
+import time
 import datetime
 import typing
 import pathlib
