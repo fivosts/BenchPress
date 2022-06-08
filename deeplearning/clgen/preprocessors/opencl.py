@@ -262,6 +262,7 @@ def RunCLDrive(src: str,
               )
         if FLAGS.verbose_cldrive:
           print(cmd)
+          print(src)
         proc = subprocess.Popen(
           cmd.split(),
           stdout = subprocess.PIPE,
@@ -285,6 +286,7 @@ def RunCLDrive(src: str,
             )
       if FLAGS.verbose_cldrive:
         print(cmd)
+        print(src)
       proc = subprocess.Popen(
         cmd.split(),
         stdout = subprocess.PIPE,
