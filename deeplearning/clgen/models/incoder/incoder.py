@@ -171,9 +171,6 @@ class Incoder(backends.BackendBase):
       desc = "Sampling iteration: {}".format(iteration)
     else:
       desc = "Sampling"
-    encoding_time = 0.0
-    inference_time = 0.0
-    decoding_time = 0.0
     s_idx = 0
 
     if environment.WORLD_RANK == 0:
@@ -182,15 +179,12 @@ class Incoder(backends.BackendBase):
       bar = None
     for batch in inputs['input_ids']:
       for seq in batch:
-        t1 = time.time()
         seq = [x for x in seq if x != self.tokenizer.padToken]
         # if seq[-1] == self.tokenizer.holeToken:
           # incode = self.tokenizer.ArrayToCode(seq[:-1])
         # else:
         incode = self.tokenizer.ArrayToCode(seq).replace("<|mask:0|>", "<insert>") # This is a text where pad has been stripped off.
         incode = "<| file ext=.cl |>\n{}\n<|/ file |>".format(incode)
-        t2 = time.time()
-        encoding_time += t2 - t1
         print("##########")
         print("\'{}\'".format(incode))
         print("##########")
@@ -203,8 +197,6 @@ class Incoder(backends.BackendBase):
           extra_sentinel  = True,
           max_retries     = 1,
         )
-        t3 = time.time()
-        inference_time += t3 - t2
         try:
           # Dis a proper hack right here.
           opening = lambda x: "<| file ext=.cl |>\n{}void".format(x)
@@ -230,12 +222,9 @@ class Incoder(backends.BackendBase):
         outputs['generated_samples'][s_idx] = sample
         outputs['sample_indices'][s_idx]    = indices
         s_idx += 1
-        t4 = time.time()
-        decoding_time += t4 - t3
         if environment.WORLD_RANK == 0:
           bar.update(environment.WORLD_SIZE)
 
-    t5 = time.time()
     outputs['input_ids']         = inputs['input_ids'].reshape(-1, self.sampler.sequence_length).to(self.pytorch.device)
     outputs['masked_lm_lengths'] = inputs['masked_lm_lengths'].reshape(-1, 1).to(self.pytorch.device)
 
@@ -265,11 +254,6 @@ class Incoder(backends.BackendBase):
     outputs['masked_lm_lengths'] = list(outputs['masked_lm_lengths'].cpu().numpy())
 
     end = time.time()
-    post_process_time = end - t5
-    l.logger().warn("Profiling times:\n\tencoding_time: {}\n\tinference_time: {}\n\tdecoding_time: {}\n\tpost_process_time: {}".format(
-      encoding_time, inference_time, decoding_time, post_process_time,
-      )
-    )
     distrib.barrier()
     return outputs, end-start
 
