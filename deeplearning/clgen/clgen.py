@@ -38,6 +38,7 @@ from deeplearning.clgen.proto import clgen_pb2
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.proto import sampler_pb2
 from deeplearning.clgen.github import miner
+from deeplearning.clgen.util import pytorch
 
 from eupy.hermes import client
 
@@ -164,6 +165,7 @@ class Instance(object):
           while not cache.cachepath("locks").exists():
             time.sleep(0.5)
           temp_lock_cache = cache.mkcache("locks")
+        pytorch.initPytorch()
         distrib.init(temp_lock_cache.path)
 
       if config.HasField("language_model"):
