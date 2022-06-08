@@ -348,7 +348,8 @@ class torchBert(backends.BackendBase):
     if not is_live:
       wload_size = len(inputs['input_ids']) * len(inputs['input_ids'][0])
       inputs = self.to_device(inputs)
-      bar = tqdm.auto.trange(wload_size, desc=desc, leave = False, position = 0)
+      if environment.WORLD_RANK == 0:
+        bar = tqdm.auto.trange(wload_size, desc=desc, leave = False, position = 0)
       samples, sample_indices = model(
         workload = (
           inputs['input_ids'],
