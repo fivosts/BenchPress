@@ -115,9 +115,13 @@ class Model(object):
     self.hash = self._ComputeHash(self.pre_train_corpus, self.corpus, self.config)
     self._created = False
 
-    distrib.lock()
-    self.cache = cache.mkcache("model", self.hash)
-    distrib.unlock()
+    if environment.WORLD_RANK == 0:
+      self.cache = cache.mkcache("model", self.hash)
+      self.cache.path.mkdir(exist_ok = True, parents = True)
+    else:
+      while not cache.cachepath("model", self.hash).exists():
+        time.sleep(0.5)
+      self.cache = cache.mkcache("model", self.hash)
 
     if environment.WORLD_RANK == 0:
       # Create the necessary cache directories.
