@@ -833,6 +833,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         if FLAGS.evolutionary_search:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width, active_dropout_prob)
           l.logger().info("Top-{} ({} unique) samples of generation {}: {}".format(active_search_width, len(best_cands), feeds[0].gen_id, ', '.join([str(round(c.score, 3)) for c in best_cands])))
+          for x in best_cands[:10]:
+            l.logger().info(self.tokenizer.ArrayToCode(x.sample, with_formatting = True))
         elif feeds[0].gen_id == 0:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width, active_dropout_prob)
           l.logger().info("Starting scores: {}".format(', '.join([str(round(c.score, 3)) for c in best_cands])))
@@ -1051,12 +1053,12 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               k: torch.from_numpy(v).unsqueeze(0)
               for (k, v) in batch[0].items()
             }
-            if self.feature_encoder:
-              out["input_features"] = target_features
             for f in batch[1:]:
               for k, v in f.items():
                 nt = torch.from_numpy(v).unsqueeze(0)
                 out[k] = torch.cat((out[k], nt), 0)
+            if self.feature_encoder:
+              out["input_features"] = torch.from_numpy(target_features).unsqueeze(0).repeat_interleave(out['input_ids'].shape[0], dim = 0)
             for k in inputs.keys():
               inputs[k].append(out[k])
         for k, v in inputs.items():
