@@ -833,7 +833,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         if FLAGS.evolutionary_search:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width, active_dropout_prob)
           l.logger().info("Top-{} ({} unique) samples of generation {}: {}".format(active_search_width, len(best_cands), feeds[0].gen_id, ', '.join([str(round(c.score, 3)) for c in best_cands])))
-          for x in best_cands[:10]:
+          for x in best_cands[:3]:
             l.logger().info(self.tokenizer.ArrayToCode(x.sample, with_formatting = True))
         elif feeds[0].gen_id == 0:
           best_cands = self.feat_sampler.sample_from_set(step_candidates, active_search_width, active_dropout_prob)
