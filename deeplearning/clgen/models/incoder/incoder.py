@@ -254,7 +254,6 @@ class Incoder(backends.BackendBase):
     outputs['masked_lm_lengths'] = list(outputs['masked_lm_lengths'].cpu().numpy())
 
     end = time.time()
-    distrib.barrier()
     return outputs, end-start
 
   def PreTrain(self, *args, **kwargs) -> None:
