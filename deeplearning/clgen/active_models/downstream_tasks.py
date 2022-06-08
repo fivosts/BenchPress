@@ -236,10 +236,10 @@ class GrewePredictive(DownstreamTask):
         timeout     = 60,
       )
       nrfeats['label'] = cached.status
-      nrfeats['cpu_transfer_ns'] = sum([int(float(x)) for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan']) // len([x for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan'])
-      nrfeats['cpu_kernel_ns']   = sum([int(float(x)) for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan'])   // len([x for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan'])
-      nrfeats['gpu_transfer_ns'] = sum([int(float(x)) for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan']) // len([x for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan'])
-      nrfeats['gpu_kernel_ns']   = sum([int(float(x)) for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan'])   // len([x for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan'])
+      nrfeats['cpu_transfer_ns'] = sum([int(float(x)) for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan']) // len([x for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan' and x != ''])
+      nrfeats['cpu_kernel_ns']   = sum([int(float(x)) for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan'])   // len([x for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan' and x != ''])
+      nrfeats['gpu_transfer_ns'] = sum([int(float(x)) for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan']) // len([x for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan' and x != ''])
+      nrfeats['gpu_kernel_ns']   = sum([int(float(x)) for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan'])   // len([x for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan' and x != ''])
       return s._replace(runtime_features = nrfeats)
 
     exp_tr_bytes = sample.runtime_features['transferred_bytes']
