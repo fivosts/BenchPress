@@ -751,7 +751,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             step_candidates = []
             for chunk in bdstep_cands.values():
               step_candidates += pickle.loads(chunk)
-
+            distrib.barrier()
             ## Become consistent with rejected_candidates
             distrib.consistent_write(pickle.dumps(rejected_candidates), is_bytes = True)
             bdrejected_cands = distrib.consistent_read(is_bytes = True)
