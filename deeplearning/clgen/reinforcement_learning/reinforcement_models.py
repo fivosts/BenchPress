@@ -3,6 +3,7 @@ RL Environment for the task of targeted benchmark generation.
 """
 import pathlib
 import os
+import time
 import typing
 
 from deeplearning.clgen.corpuses import tokenizers
@@ -79,9 +80,13 @@ class RLModel(object):
     self.hash = self._ComputeHash(self.language_model, self.config)
     self._created = False
 
-    distrib.lock()
-    self.cache = cache.mkcache("rl_model", self.hash)
-    distrib.unlock()
+    if environment.WORLD_RANK == 0:
+      self.cache = cache.mkcache("rl_model", self.hash)
+      self.cache.path.mkdir(exist_ok = True, parents = True)
+    else:
+      while not cache.cachepath("rl_model", self.hash).exists():
+        time.sleep(0.5)
+      self.cache = cache.mkcache("rl_model", self.hash)
 
     if environment.WORLD_RANK == 0:
       # Create the necessary cache directories.
