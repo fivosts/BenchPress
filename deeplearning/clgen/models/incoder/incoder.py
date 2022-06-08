@@ -202,7 +202,7 @@ class Incoder(backends.BackendBase):
           # Dis a proper hack right here.
           opening = lambda x: "<| file ext=.cl |>\n{}void".format(x)
           if opening("") in incoded['text']:
-            incoded['text'] = opening("kernel ") + incoded['text'][len(opening()):]
+            incoded['text'] = opening("kernel ") + incoded['text'][len(opening("")):]
           text = opencl.ExtractSingleKernels(incoded['text'])[0] # Collect only the first kernel generated, ignore the rest.
         except IndexError:
           l.logger().warn(incoded['text'], ddp_nodes = True)
