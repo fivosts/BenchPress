@@ -38,7 +38,7 @@ def barrier(fn: typing.Callable = None) -> None:
   """
 
   if environment.WORLD_SIZE > 1:
-    torch.distributed.barrier(device_ids = environment.LOCAL_RANK)
+    torch.distributed.barrier(device_ids = [environment.LOCAL_RANK])
     return
   else:
     return
