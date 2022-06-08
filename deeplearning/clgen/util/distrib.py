@@ -11,6 +11,9 @@ import tqdm
 
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import logging as l
+from deeplearning.clgen.util import pytorch
+
+torch = pytorch.torch
 
 MASTER_PORT = environment.MASTER_PORT
 MASTER_ADDR = environment.MASTER_ADDR
@@ -25,7 +28,7 @@ LOCK_TYPES = [
   'barrier-escape-',
   'critical-lock-',
   'index-',
-  'msg*'
+  'msg-'
 ]
 
 def barrier(fn: typing.Callable = None) -> None:
@@ -33,36 +36,43 @@ def barrier(fn: typing.Callable = None) -> None:
   Node processes are blocked until all nodes have reached this checkpoint.
   !!Warning!!: This function must not be called under a child process or thread.
   """
-  if WORLD_SIZE > 1:
-    if PATH is None:
-      raise FileNotFoundError("Distributed env path has not been set!")
-    with open(PATH / "barrier-lock-{}".format(WORLD_RANK), 'w') as outf:
-      outf.write("{}\n".format(WORLD_RANK))
-      outf.flush()
 
-    barriers = glob.glob(str(PATH / "barrier-lock-*"))
+  if environment.WORLD_SIZE > 1:
+    torch.distributed.barrier(device_ids = environment.LOCAL_RANK)
+    return
+  else:
+    return
 
-    while len(barriers) < WORLD_SIZE:
-      if fn:
-        fn()
-      time.sleep(0.5)
-      barriers = glob.glob(str(PATH / "barrier-lock-*"))
+  # if WORLD_SIZE > 1:
+  #   if PATH is None:
+  #     raise FileNotFoundError("Distributed env path has not been set!")
+  #   with open(PATH / "barrier-lock-{}".format(WORLD_RANK), 'w') as outf:
+  #     outf.write("{}\n".format(WORLD_RANK))
+  #     outf.flush()
 
-    with open(PATH / "barrier-escape-{}".format(WORLD_RANK), 'w') as outf:
-      outf.write("{}\n".format(WORLD_RANK))
-      outf.flush()
+  #   barriers = glob.glob(str(PATH / "barrier-lock-*"))
 
-    while len(barriers) > 0:
-      barriers = glob.glob(str(PATH / "barrier-lock-*"))
-      escapes  = glob.glob(str(PATH / "barrier-escape-*"))
-      if WORLD_RANK == 0 and len(escapes) == WORLD_SIZE:
-        for be in escapes:
-          os.remove(str(be))
-        for b in barriers:
-          os.remove(str(b))
-      else:
-        time.sleep(0.2)
-    time.sleep(0.5)
+  #   while len(barriers) < WORLD_SIZE:
+  #     if fn:
+  #       fn()
+  #     time.sleep(0.5)
+  #     barriers = glob.glob(str(PATH / "barrier-lock-*"))
+
+  #   with open(PATH / "barrier-escape-{}".format(WORLD_RANK), 'w') as outf:
+  #     outf.write("{}\n".format(WORLD_RANK))
+  #     outf.flush()
+
+  #   while len(barriers) > 0:
+  #     barriers = glob.glob(str(PATH / "barrier-lock-*"))
+  #     escapes  = glob.glob(str(PATH / "barrier-escape-*"))
+  #     if WORLD_RANK == 0 and len(escapes) == WORLD_SIZE:
+  #       for be in escapes:
+  #         os.remove(str(be))
+  #       for b in barriers:
+  #         os.remove(str(b))
+  #     else:
+  #       time.sleep(0.2)
+  #   time.sleep(0.5)
   return
 
 def lock() -> None:
