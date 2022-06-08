@@ -140,9 +140,10 @@ class CommitteeSamples(sqlutil.Database):
         tdir = pathlib.Path(FLAGS.local_filesystem).resolve() / hash_id / "node_committee_samples"
       except Exception:
         tdir = pathlib.Path("/tmp").resolve() / hash_id / "node_committee_samples"
-      distrib.lock()
-      tdir.mkdir(parents = True, exist_ok = True)
-      distrib.unlock()
+      try:
+        tdir.mkdir(parents = True, exist_ok = True)
+      except Exception:
+        pass
       self.replicated_path = tdir / "samples_{}.db".format(environment.WORLD_RANK)
       self.replicated = CommitteeSamples(
         url = "sqlite:///{}".format(str(self.replicated_path)),
