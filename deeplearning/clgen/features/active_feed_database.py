@@ -237,9 +237,10 @@ class ActiveFeedDatabase(sqlutil.Database):
         tdir = pathlib.Path(FLAGS.local_filesystem).resolve() / hash_id / "node_active_feed"
       except Exception:
         tdir = pathlib.Path("/tmp").resolve() / hash_id / "node_active_feed"
-      distrib.lock()
-      tdir.mkdir(parents = True, exist_ok = True)
-      distrib.unlock()
+      try:
+        tdir.mkdir(parents = True, exist_ok = True)
+      except Exception:
+        pass
       self.replicated_path = tdir / "active_feeds_{}.db".format(environment.WORLD_RANK)
       self.replicated = ActiveFeedDatabase(
         url = "sqlite:///{}".format(str(self.replicated_path)),
