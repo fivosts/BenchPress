@@ -155,18 +155,8 @@ class Instance(object):
     # working directory.
     with self.Session():
 
-      # Initialize distrib lock path temporarily. The language model or RL will specialize the locks path.
-      if environment.WORLD_SIZE > 1:
-        if environment.WORLD_RANK == 0:
-          # temp_lock_cache = cache.mkcache("locks_{}".format(datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S_%f")))
-          temp_lock_cache = cache.mkcache("locks")
-          temp_lock_cache.path.mkdir(exist_ok = True)
-        else:
-          while not cache.cachepath("locks").exists():
-            time.sleep(0.5)
-          temp_lock_cache = cache.mkcache("locks")
-        pytorch.initPytorch()
-        distrib.init(temp_lock_cache.path)
+      # Initialize pytorch to make distributed barrier accessible.
+      pytorch.initPytorch()
 
       if config.HasField("language_model"):
         self.model: language_models.Model = language_models.Model(config.language_model)
@@ -175,8 +165,6 @@ class Instance(object):
 
       ## Specialize 'locks' folder.
       if environment.WORLD_SIZE > 1:
-        distrib.barrier()
-        distrib.cleanup()
         lock_cache = pathlib.Path(self.model.cache.path / "locks")
         if environment.WORLD_RANK == 0:
           lock_cache.mkdir(exist_ok = True)
@@ -184,13 +172,6 @@ class Instance(object):
           while not lock_cache.exists():
             time.sleep(0.5)
         distrib.init(lock_cache)
-        if environment.WORLD_RANK == 0:
-          try:
-            os.rmdir(temp_lock_cache.path)
-          except OSError as e:
-            l.logger().error("Old lock directory {} is not empty!".format(str(temp_lock_cache.path)))
-            raise e
-        distrib.barrier()
 
       if config.HasField("sampler"):
         self.sampler: samplers.Sampler = samplers.Sampler(config.sampler)
