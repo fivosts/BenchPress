@@ -622,7 +622,6 @@ def ResolveEncodedId(content_id: str,
     content_id, config_without_contentfiles.SerializeToString()
   )
 
-
 def GetHashOfArchiveContents(archive: pathlib.Path) -> str:
   """Compute the checksum of the contents of a directory.
 
