@@ -442,9 +442,14 @@ class Sampler(object):
     self.sample_db_name = sample_db_name
 
     # Create the necessary cache directories.
-    distrib.lock()
-    self.cache = cache.mkcache("sampler", self.hash)
-    distrib.unlock()
+    if environment.WORLD_RANK == 0:
+      self.cache = cache.mkcache("sampler", self.hash)
+      self.cache.path.mkdir(exist_ok = True, parents = True)
+    else:
+      while not cache.cachepath("sampler", self.hash).exists():
+        time.sleep(0.5)
+      self.cache = cache.mkcache("sampler", self.hash)
+
     self.samples_directory = self.cache.path / "samples"
     if environment.WORLD_RANK == 0:
       self.samples_directory.mkdir(exist_ok = True)
