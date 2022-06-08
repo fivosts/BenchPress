@@ -244,10 +244,12 @@ class GrewePredictive(DownstreamTask):
           return False
 
       nrfeats['label'] = cached.status
-      nrfeats['cpu_transfer_ns'] = sum([int(float(x)) for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)]) // len([x for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)])
-      nrfeats['cpu_kernel_ns']   = sum([int(float(x)) for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])   // len([x for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])
-      nrfeats['gpu_transfer_ns'] = sum([int(float(x)) for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)]) // len([x for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)])
-      nrfeats['gpu_kernel_ns']   = sum([int(float(x)) for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])   // len([x for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])
+      if nrfeats['label'] in {"CPU", "GPU"}:
+        nrfeats['cpu_transfer_ns'] = sum([int(float(x)) for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)]) // len([x for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)])
+        nrfeats['cpu_kernel_ns']   = sum([int(float(x)) for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])   // len([x for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])
+        nrfeats['gpu_transfer_ns'] = sum([int(float(x)) for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)]) // len([x for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)])
+        nrfeats['gpu_kernel_ns']   = sum([int(float(x)) for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])   // len([x for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])
+
       return s._replace(runtime_features = nrfeats)
 
     exp_tr_bytes = sample.runtime_features['transferred_bytes']
