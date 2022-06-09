@@ -337,6 +337,8 @@ class CompilationSampler(object):
     input_ids      = torch.index_select(input_ids, 0, open_holes)
     input_idxs     = torch.index_select(input_idxs, 0, open_holes)
     attention_mask = (input_ids != self.tokenizer.padToken)
+    if input_features is not None:
+      input_features = torch.index_select(input_features, 0, open_holes)
     if FLAGS.sample_indices_limit:
       sidx_length  = torch.index_select(sidx_length, 0, open_holes)
 
@@ -379,6 +381,8 @@ class CompilationSampler(object):
       input_ids      = torch.index_select(input_ids, 0, open_holes)
       input_idxs     = torch.index_select(input_idxs, 0, open_holes)
       attention_mask = (input_ids != self.tokenizer.padToken)
+      if input_features is not None:
+        input_features = torch.index_select(input_features, 0, open_holes)
       if FLAGS.sample_indices_limit:
         sidx_length  = torch.index_select(sidx_length, 0, open_holes)
 
@@ -387,11 +391,11 @@ class CompilationSampler(object):
         input_ids      = torch.cat((input_ids, queue_input_ids[w_idx: w_idx + res]), 0)
         input_idxs     = torch.cat((input_idxs, queue_input_idxs[w_idx: w_idx + res]), 0)
         attention_mask = torch.cat((attention_mask, queue_attention_mask[w_idx: w_idx + res]), 0)
+        if input_features is not None:
+          input_features = torch.cat((input_features, queue_input_features[w_idx: w_idx + res]), 0)
         if FLAGS.sample_indices_limit:
           sidx_length  = torch.cat((sidx_length, torch.full((res, 1), 0, dtype = torch.int64).to(device)), 0)
         w_idx += res
-      if input_features is not None:
-        input_features = input_features[:input_ids.shape[0]]
     return queue, sample_indices
 
   def StepHoleSeq(self,
