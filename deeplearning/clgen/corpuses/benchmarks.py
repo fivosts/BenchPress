@@ -22,6 +22,12 @@ from absl import flags
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_boolean(
+  "filter_benchmarks_by_git",
+  False,
+  "Select to filter out benchmarks for which github-seq len has 0 distanced samples."
+)
+
 targets = {
   'rodinia'      : './model_zoo/benchmarks/rodinia_3.1.tar.bz2',
   'BabelStream'  : './model_zoo/benchmarks/BabelStream.tar.bz2',
@@ -66,7 +72,7 @@ def benchmark_worker(benchmark, feature_space, reduced_git_corpus = None):
     header_file = h,
     use_aux_headers = False
   )
-  if reduced_git_corpus:
+  if reduced_git_corpus and FLAGS.filter_benchmarks_by_git:
     closest_git = sorted([(cf, feature_sampler.calculate_distance(fts, features[feature_space], feature_space)) for cf, fts in reduced_git_corpus], key = lambda x: x[1])[0]
     if features[feature_space] and closest_git[1] > 0:
       return Benchmark(p, p.name, k, features[feature_space], {})
