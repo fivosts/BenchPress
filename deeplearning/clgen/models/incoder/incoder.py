@@ -175,7 +175,7 @@ class Incoder(backends.BackendBase):
     s_idx = 0
 
     if environment.WORLD_RANK == 0:
-      bar = tqdm.tqdm(total = total_seqs * environment.WORLD_SIZE, desc = desc)
+      bar = tqdm.tqdm(total = total_seqs, desc = desc)
     else:
       bar = None
     for batch in inputs['input_ids']:
@@ -224,7 +224,7 @@ class Incoder(backends.BackendBase):
         outputs['sample_indices'][s_idx]    = indices
         s_idx += 1
         if environment.WORLD_RANK == 0:
-          bar.update(environment.WORLD_SIZE)
+          bar.update(1)
 
     outputs['input_ids']         = inputs['input_ids'].reshape(-1, self.sampler.sequence_length).to(self.pytorch.device)
     outputs['masked_lm_lengths'] = inputs['masked_lm_lengths'].reshape(-1, 1).to(self.pytorch.device)
