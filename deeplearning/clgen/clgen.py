@@ -174,7 +174,7 @@ class Instance(object):
         distrib.init(lock_cache)
 
       if config.HasField("sampler"):
-        self.sampler: samplers.Sampler = samplers.Sampler(config.sampler)
+        self.sampler: samplers.Sampler = samplers.Sampler(config.sampler, model_hash = self.model.hash)
 
     if environment.WORLD_RANK == 0:
       self.dashboard = dashboard.Launch()
