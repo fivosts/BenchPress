@@ -415,7 +415,7 @@ class Sampler(object):
             self.config.HasField("sample_corpus")
           )
 
-  def __init__(self, config: sampler_pb2.Sampler, sample_db_name = "samples.db"):
+  def __init__(self, config: sampler_pb2.Sampler, sample_db_name = "samples.db", model_hash = None):
     """Instantiate a sampler.
 
     Args:
@@ -430,7 +430,7 @@ class Sampler(object):
       raise TypeError(f"Config must be a Sampler proto. Received: '{t}'")
     self.config = sampler_pb2.Sampler()
     self.config.CopyFrom(AssertConfigIsValid(config))
-    self.hash = self._ComputeHash(self.config)
+    self.hash = self._ComputeHash(self.config, model_hash)
     self.terminators = GetTerminationCriteria(self.config.termination_criteria)
     if config.HasField("start_text"):
       self.start_text = self.config.start_text
@@ -607,13 +607,13 @@ class Sampler(object):
     return any(t.SampleIsComplete(sample_in_progress) for t in self.terminators)
 
   @staticmethod
-  def _ComputeHash(config: sampler_pb2.Sampler) -> str:
+  def _ComputeHash(config: sampler_pb2.Sampler, model_hash: str = None) -> str:
     """Compute sampler hash.
 
     The hash is computed from the serialized representation of the config
     proto.
     """
-    return crypto.sha1(config.SerializeToString())
+    return crypto.sha1(config.SerializeToString() + (model_hash.encode('utf-8') if model_hash is not None else "".encode('utf-8')))
 
   def __eq__(self, rhs) -> bool:
     if not isinstance(rhs, Sampler):
