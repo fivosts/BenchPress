@@ -69,7 +69,7 @@ flags.DEFINE_integer(
 flags.DEFINE_integer(
   "sample_workload_size",
   2048,
-  "Select size of workload samples for single sample step."
+  "Select size of workload samples for single sample step, per node."
 )
 
 class Model(object):
