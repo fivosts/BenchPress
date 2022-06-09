@@ -746,6 +746,15 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           tcs += cs
           ts  =  s
           if environment.WORLD_SIZE > 1:
+            """
+            output = [None for _ in environment.WORLD_SIZE]
+            torch.distributed.all_gather_object(output, [step_candidates])
+            step_candidates = [cand for rank_cands in step_candidates for cand in rank_cands]
+
+            output = [None for _ in environment.WORLD_SIZE]
+            torch.distributed.all_gather_object(output, [rejected_candidates])
+            rejected_candidates = [cand for rank_cands in rejected_candidates for cand in rejected_candidates]
+            """
             distrib.barrier()
             ## Become consistent with step_candidates
             distrib.consistent_write(pickle.dumps(step_candidates), is_bytes = True)
