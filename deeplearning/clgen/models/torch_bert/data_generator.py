@@ -748,13 +748,13 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           if environment.WORLD_SIZE > 1:
             
             l.logger().info("Length before: {}".format(len(step_candidates)), ddp_nodes = True)
-            output = [None for _ in environment.WORLD_SIZE]
+            output = [None for _ in range(environment.WORLD_SIZE)]
             torch.distributed.all_gather_object(output, [step_candidates])
             step_candidates = [cand for rank_cands in step_candidates for cand in rank_cands]
 
             l.logger().info("Length after: {}".format(len(step_candidates)), ddp_nodes = True)
 
-            output = [None for _ in environment.WORLD_SIZE]
+            output = [None for _ in range(environment.WORLD_SIZE)]
             torch.distributed.all_gather_object(output, [rejected_candidates])
             rejected_candidates = [cand for rank_cands in rejected_candidates for cand in rejected_candidates]
             """
