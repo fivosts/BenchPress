@@ -13,12 +13,6 @@ flags.DEFINE_boolean(
   "Do not use GPU/TPU in pytorch session."
 )
 
-flags.DEFINE_string(
-  "DDP_backend",
-  "nccl",
-  "Select backend for Distributed Data Parallel. Valid choices are \'nccl\' and \'gloo\'"
-)
-
 import torch
 
 try:
@@ -77,6 +71,8 @@ def initPytorch() -> None:
     # Initializes the distributed backend which will take care of sychronizing nodes/GPUs.
     # This branch will trigger DistributedDataParalel instead of simple DP.
     # Distributed training prohibits manual selection of GPUs and takes for granted that cuda is available.
+    ddp_backend = "nccl" if torch.cuda.is_available() else "gloo"
+
     tcp_store = torch.distributed.TCPStore(
       environment.MASTER_ADDR,
       environment.MASTER_PORT,
@@ -84,7 +80,7 @@ def initPytorch() -> None:
       environment.WORLD_RANK == 0
     )
     torch.distributed.init_process_group(
-      backend    = FLAGS.DDP_backend,
+      backend    = ddp_backend,
       store      = tcp_store,
       rank       = environment.WORLD_RANK,
       world_size = environment.WORLD_SIZE,
