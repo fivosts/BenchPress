@@ -54,7 +54,7 @@ def initPytorch() -> None:
   elif torch_tpu_available:
     device = torch_xla.xla_device()
     num_gpus = 0
-  elif environment.WORLD_SIZE == 1:
+  elif environment.WORLD_SIZE == 1 and torch.cuda.is_available():
     # if num_gpus is > 1 we'll use nn.DataParallel.
     # If you only want to use a specific subset of GPUs use `CUDA_VISIBLE_DEVICES=0`
     # Explicitly set CUDA to the first (index 0) CUDA device, otherwise `set_device` will
