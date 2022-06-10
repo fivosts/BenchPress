@@ -463,7 +463,7 @@ class PreprocessedContentFiles(sqlutil.Database):
         last_commit     = time.time()
         wall_time_start = time.time()
 
-        pool = multiprocessing.Pool(maxtasksperchild = 2048)
+        pool = multiprocessing.Pool(maxtasksperchild = 8192)
         try:
           while idx < limit:
             chunk = min(chunk, limit - idx) # This is equivalent to l447/l448 but needed for last node that gets a bit more.
