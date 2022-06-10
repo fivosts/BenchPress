@@ -62,7 +62,7 @@ def initPytorch() -> None:
     # GPUs available in the environment, so `CUDA_VISIBLE_DEVICES=1,2` with `cuda:0`
     # will use the first GPU in that env, i.e. GPU#1
     offset_device = torch.device("cuda:0")
-    device  = torch.device("cuda:0") # = torch.device("cuda:{}".format(str(available_gpus[0]['id'])) if torch.cuda.is_available() and available_gpus else "cpu")
+    device  = torch.device("cuda:0")
 
     available_gpus = gpu.getGPUID()
     devices = ["cuda:{}".format(str(x['id'])) for x in available_gpus]
