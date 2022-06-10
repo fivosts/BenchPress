@@ -66,7 +66,7 @@ rl_model {
         truncate_large_kernels: true
         steps_per_epoch: 50000
         validation_split: 0
-        mask_seq {
+        hole {
           relative_length: 1.0
           uniform_distribution: true
           stage_training: false
