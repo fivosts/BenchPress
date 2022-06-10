@@ -86,7 +86,7 @@ def initPytorch() -> None:
       world_size = environment.WORLD_SIZE,
     )
     num_nodes = torch.distributed.get_world_size()
-    num_gpus  = torch.cuda.device_count() # TODO ?
+    num_gpus  = torch.cuda.device_count()
 
     if num_gpus == 0:
       device = torch.device('cpu', environment.LOCAL_RANK)
