@@ -742,7 +742,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             rejected_candidates,
           )
           distrib.barrier()
-          l.logger().info("Registered output data.")
           tcs += cs
           ts  =  s
           if environment.WORLD_SIZE > 1:
