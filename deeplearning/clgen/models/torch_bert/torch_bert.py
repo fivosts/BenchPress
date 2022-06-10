@@ -765,6 +765,14 @@ class torchBert(backends.BackendBase):
                    ) -> None:
     """This is called only once. Performs basic initialization of sampling"""
     sample_batch_size = sampler.batch_size
+    if self.pytorch.num_nodes == 1 and self.pytorch.num_gpus > 1 and sample_batch_size < self.pytorch.num_gpus:
+      l.logger().warn("Sampler's batch size {}, too small for {} GPUs. Increasing to {}".format(
+          sample_batch_size,
+          self.pytorch.num_gpus,
+          self.pytorch.num_gpus
+        )
+      )
+      sample_batch_size = self.pytorch.num_gpus
     data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
                        self.config.training, sampler, self.tokenizer, seed, sample_batch_size,
                        self.config.architecture.max_position_embeddings, self.cache.path, corpus,
