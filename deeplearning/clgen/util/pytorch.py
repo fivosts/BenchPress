@@ -47,7 +47,7 @@ def initPytorch() -> None:
   global num_gpus
   global num_nodes
   global initialized
-  if FLAGS.pt_cpu_only or not torch.cuda.is_available():
+  if FLAGS.pt_cpu_only:
     device = torch.device("cpu")
     num_gpus  = 0
     num_nodes = 1
