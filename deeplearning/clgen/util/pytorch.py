@@ -61,7 +61,7 @@ def initPytorch() -> None:
     # trigger an error that a device index is missing. Index 0 takes into account the
     # GPUs available in the environment, so `CUDA_VISIBLE_DEVICES=1,2` with `cuda:0`
     # will use the first GPU in that env, i.e. GPU#1
-    offset_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    offset_device = torch.device("cuda:0")
     device  = torch.device("cuda:0") # = torch.device("cuda:{}".format(str(available_gpus[0]['id'])) if torch.cuda.is_available() and available_gpus else "cpu")
 
     available_gpus = gpu.getGPUID()
