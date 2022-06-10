@@ -65,7 +65,7 @@ language_model {
       truncate_large_kernels: true
       steps_per_epoch: 20000
       validation_split: 0
-      mask_seq {
+      hole {
         relative_length: 1.0
         uniform_distribution: true
 		    stage_training: false
@@ -89,7 +89,7 @@ language_model {
 # }
 sampler {
   start_text: "[START]kernel void [HOLE]}[END]"
-  batch_size: 4
+  batch_size: 8
   sequence_length: 1024
   temperature_micros: 700000  # = 0.8 real value
   termination_criteria {
