@@ -276,11 +276,11 @@ class PreprocessedContentFiles(sqlutil.Database):
         ## If done, broadcast true message and return.
         with self.Session() as session:
           status = self.IsDone(session)
-          distrib.write_broadcast(str(status))
+          _ = distrib.broadcast(str(status))
           if status:
             return
       else:
-        status = distrib.read_broadcast()
+        status = distrib.broadcast()
         if status == "True":
           return
         if status != "False":
