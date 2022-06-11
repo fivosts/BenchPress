@@ -77,6 +77,7 @@ def barrier(fn: typing.Callable = None) -> None:
 
 def lock() -> None:
   """
+  #####!!!! DEPRECATED. WILL BE REMOVED SOON.
   Acquire lockfile to proceed to critical section.
   """
   ## Corner-case where no DDP is used.
@@ -105,6 +106,7 @@ def lock() -> None:
 
 def unlock() -> None:
   """
+  #####!!!! DEPRECATED. WILL BE REMOVED SOON.
   Release node lock.
   """
   if WORLD_SIZE == 1:
@@ -144,38 +146,6 @@ def get_consistent(msg: typing.Any) -> typing.Any:
   consistent_array = [None for _ in range(environment.WORLD_SIZE)]
   torch.distributed.all_gather_object(consistent_array, [msg])
   return [i for rank in consistent_array for i in rank[0]]
-
-def consistent_read(is_bytes: bool = False) -> typing.Dict[int, typing.Union[str, bytes]]:
-  """
-  ############ DEPRECATED ###############
-  Nodes read other nodes' data and become consistent.
-  """
-  if environment.WORLD_SIZE == 1:
-    return
-  dc = 0
-  while len(glob.glob(str(PATH / "msg-*"))) < WORLD_SIZE:
-    time.sleep(2)
-    dc += 1
-    if dc > 8000:
-      l.logger().error("I am stuck at consistent_read", ddp_nodes = True)
-      dc = 0
-
-  barrier()
-  data = {}
-  while len(data.keys()) < WORLD_SIZE:
-    for i in range(WORLD_SIZE):
-      if i not in data and (PATH / "msg-{}".format(i)).exists():
-        try:
-          with open(PATH / "msg-{}".format(i), 'rb' if is_bytes else 'r') as inf:        
-            msg = inf.read()
-          if msg != '':
-            data[i] = msg
-        except FileNotFoundError:
-          pass
-  barrier()
-  while (PATH / "msg-{}".format(WORLD_RANK)).exists():
-    os.remove(str(PATH / "msg-{}".format(WORLD_RANK)))
-  return data
 
 def init(path: pathlib.Path) -> None:
   """
