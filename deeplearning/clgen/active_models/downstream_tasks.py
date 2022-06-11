@@ -361,9 +361,9 @@ class GrewePredictive(DownstreamTask):
           new_samples += http_server.client_get_request()
           time.sleep(1)
         if environment.WORLD_SIZE > 1:
-          distrib.write_broadcast(pickle.dumps(new_samples), is_bytes = True, read_fn = lambda x: pickle.loads(x))
+          distrib.broadcast(new_samples)
       else:
-        new_samples = distrib.read_broadcast(is_bytes = True, read_fn = lambda x: pickle.loads(x))
+        new_samples = distrib.broadcast()
       distrib.barrier()
       new_samples = [JSON_to_ActiveSample(x) for x in new_samples]
       if top_k != -1:
