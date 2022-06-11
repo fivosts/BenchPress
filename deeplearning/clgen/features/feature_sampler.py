@@ -283,9 +283,9 @@ class BenchmarkSampler(FeatureSampler):
               self.benchmarks.append(benchmark)
           benchmarks.resolve_benchmark_names(self.benchmarks)
           self.benchmarks = sorted(self.benchmarks, key = lambda b: b.name)
-          distrib.write_broadcast(pickle.dumps(self.benchmarks), is_bytes = True)
+          distrib.broadcast(self.benchmarks)
         else:
-          self.benchmarks = pickle.loads(distrib.read_broadcast(is_bytes = True))
+          self.benchmarks = distrib.broadcast()
         distrib.barrier()
     l.logger().info("Loaded {}, {} benchmarks".format(self.target, len(self.benchmarks)))
     l.logger().info(', '.join([x for x in set([x.name for x in self.benchmarks])]))
