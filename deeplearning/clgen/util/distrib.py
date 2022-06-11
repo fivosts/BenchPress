@@ -122,69 +122,31 @@ def unlock() -> None:
     time.sleep(0.5)
   return
 
-def write_broadcast(msg: str, is_bytes = False, read_fn = None) -> None:
+def broadcast(msg: str = None) -> None:
   """
   Node broadcasts a message to all other nodes.
   This function is not process-safe. User must ensure one node calls it
   and all reads have been complete before re-writing.
   """
   if environment.WORLD_SIZE == 1:
-    return
-  for x in range(WORLD_SIZE):
-    with open(PATH / "msg-{}".format(x), 'wb' if is_bytes else 'w') as outf:
-      outf.write(msg)
-      outf.flush()
-  msg = read_broadcast(is_bytes = is_bytes, read_fn = read_fn)
-  while len(glob.glob(str(PATH / "msg-*"))) > 0:
-    time.sleep(0.5)
-  return
+    return msg
+  torch.distributed.broadcast_object_list([msg], src = environment.WORLD_RANK)
+  return msg[0]
 
-def read_broadcast(d: int = 0, is_bytes = False, read_fn = None) -> str:
-  """
-  All nodes read broadcasted message.
-  """
-  if environment.WORLD_SIZE == 1:
-    return
-  if d > 20:
-    raise FileNotFoundError(str(PATH / "msg-{}".format(WORLD_RANK)))
-  while not (PATH / "msg-{}".format(WORLD_RANK)).exists():
-    time.sleep(0.5)
-  while True:
-    try:
-      with open(PATH / "msg-{}".format(WORLD_RANK), 'rb' if is_bytes else 'r') as inf:
-        msg = inf.read()
-        if read_fn is not None:
-          msg = read_fn(msg)
-    except FileNotFoundError:
-      return read_broadcast(d = d+1, is_bytes = is_bytes, read_fn = read_fn)
-    except EOFError:
-      time.sleep(2)
-      return read_broadcast(d = d+1, is_bytes = is_bytes, read_fn = read_fn)
-    except pickle.UnpicklingError:
-      time.sleep(2)
-      return read_broadcast(d = d+1, is_bytes = is_bytes, read_fn = read_fn)
-    if msg != '':
-      break
-    time.sleep(0.5)
-  os.remove(str(PATH / "msg-{}".format(WORLD_RANK)))
-  return msg
-
-def consistent_write(msg: typing.Union[str, bytes], is_bytes: bool = False) -> None:
+def get_consistent(msg: typing.Any) -> typing.Any:
   """
   All nodes become consistent on a set of discrete chunks of data.
   All nodes must get updated with the same merged blob.
   """
   if environment.WORLD_SIZE == 1:
-    return
-  with open(PATH / "msg-{}".format(WORLD_RANK), 'wb' if is_bytes else 'w') as outf:
-    outf.write(msg)
-    outf.flush()
-  while not (PATH / "msg-{}".format(WORLD_RANK)).exists():
-    time.sleep(1)
-  return
+    return msg
+  consistent_array = [None for _ in range(environment.WORLD_SIZE)]
+  torch.distributed.all_gather_object(consistent_array, [msg])
+  return [i for rank in consistent_array for i in rank[0]]
 
 def consistent_read(is_bytes: bool = False) -> typing.Dict[int, typing.Union[str, bytes]]:
   """
+  ############ DEPRECATED ###############
   Nodes read other nodes' data and become consistent.
   """
   if environment.WORLD_SIZE == 1:
