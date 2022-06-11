@@ -555,9 +555,9 @@ class QueryByCommittee(backends.BackendBase):
         'input_ids'       : sample_dataset['input_ids'],
         'predictions'     : [self.downstream_task.TargetIDtoLabels(i) for i in outputs['predicted_labels']],
       }
-      distrib.write_broadcast(pickle.dumps(predictions), is_bytes = True, read_fn = lambda x: pickle.loads(x))
+      distrib.broadcast(predictions)
     else:
-      predictions = distrib.read_broadcast(is_bytes = True, read_fn = lambda x: pickle.loads(x))
+      predictions = distrib.broadcast()
     distrib.barrier()
     return predictions
 
