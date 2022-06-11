@@ -130,7 +130,8 @@ def broadcast(msg: str = None) -> None:
   """
   if environment.WORLD_SIZE == 1:
     return msg
-  torch.distributed.broadcast_object_list([msg], src = environment.WORLD_RANK)
+  msg = [msg] * environment.WORLD_SIZE
+  torch.distributed.broadcast_object_list(msg, src = 0)
   return msg[0]
 
 def get_consistent(msg: typing.Any) -> typing.Any:
