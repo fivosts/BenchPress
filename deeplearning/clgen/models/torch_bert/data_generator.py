@@ -744,37 +744,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           distrib.barrier()
           tcs += cs
           ts  =  s
-          if environment.WORLD_SIZE > 1:
-            
-            # l.logger().info("Length before: {}".format(len(step_candidates)), ddp_nodes = True)
-            output = [None for _ in range(environment.WORLD_SIZE)]
-            torch.distributed.all_gather_object(output, [step_candidates])
-            step_candidates = [cand for rank_cands in output for cand in rank_cands[0]]
-            # l.logger().info("Length after: {}".format(len(step_candidates)), ddp_nodes = True)
-
-            output = [None for _ in range(environment.WORLD_SIZE)]
-            torch.distributed.all_gather_object(output, [rejected_candidates])
-            rejected_candidates = [cand for rank_cands in output for cand in rank_cands[0]]
-            """
-            distrib.barrier()
-            ## Become consistent with step_candidates
-            distrib.consistent_write(pickle.dumps(step_candidates), is_bytes = True)
-            bdstep_cands    = distrib.consistent_read(is_bytes = True)
-            step_candidates = []
-            for chunk in bdstep_cands.values():
-              step_candidates += pickle.loads(chunk)
-            distrib.barrier()
-            ## Become consistent with rejected_candidates
-            distrib.consistent_write(pickle.dumps(rejected_candidates), is_bytes = True)
-            bdrejected_cands = distrib.consistent_read(is_bytes = True)
-            rejected_candidates = []
-            for chunk in bdrejected_cands.values():
-              try:
-                rejected_candidates += pickle.loads(chunk)
-              except EOFError:
-                ## rejected_candidates is empty, so skip.
-                pass
-            """
+          # l.logger().info("Length before: {}".format(len(step_candidates)), ddp_nodes = True)
+          step_candidates = distrib.get_consistent(step_candidates)
+          rejected_candidates = distrib.get_consistent(rejected_candidates)
+          # l.logger().info("Length after: {}".format(len(step_candidates)), ddp_nodes = True)
 
           ## Register good offsprings, along with step candidates in tsne monitor.
           if not FLAGS.evolutionary_search and better_found and environment.WORLD_RANK == 0:
