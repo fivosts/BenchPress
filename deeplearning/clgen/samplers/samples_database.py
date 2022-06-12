@@ -165,7 +165,10 @@ class SamplesDatabase(sqlutil.Database):
     """
     Return Database URL
     """
-    if environment.
+    if environment.WORLD_RANK == 0:
+      return self.url
+    else:
+      return self.replicated.url
 
   @property
   def get_session(self):
