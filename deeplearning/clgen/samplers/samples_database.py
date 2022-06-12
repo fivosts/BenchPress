@@ -161,11 +161,18 @@ class SamplesDatabase(sqlutil.Database):
       distrib.barrier()
 
   @property
+  def url(self):
+    """
+    Return Database URL
+    """
+    if environment.
+
+  @property
   def get_session(self):
     """
     get proper DB session.
     """
-    if environment.WORLD_SIZE == 1 or environment.WORLD_RANK == 0:
+    if environment.WORLD_RANK == 0:
       return self.Session
     else:
       return self.replicated.Session
