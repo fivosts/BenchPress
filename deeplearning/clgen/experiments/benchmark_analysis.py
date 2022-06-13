@@ -61,7 +61,7 @@ def FeaturesDistribution(**kwargs) -> None:
       ret = workers.SortedSrcFeatsDistances(get_data(feature_space), benchmark.features, feature_space)[:top_k]
       for _, _, fvec, _ in ret:
         for k, v in fvec.items():
-          if k in data[dbg.group_name]:
+          if k not in data[dbg.group_name]:
             data[dbg.group_name] = [v]
           else:
             data[dbg.group_name][k].append(v)
