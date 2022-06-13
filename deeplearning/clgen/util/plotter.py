@@ -352,6 +352,33 @@ def CategoricalViolin(x         : np.array,
   _write_figure(fig, plot_name, path, **kwargs)
   return
 
+def GrouppedViolins(data      : typing.Dict[str, typing.Dict[str, typing.List[int]]],
+                    plot_name : str,
+                    path      : pathlib.Path = None,
+                    **kwargs,
+                    ) -> None:
+  """
+  Plot groupped violins. Inputs must be:
+  data = {
+    'group_name': {
+      'feat_1': [v1, v2, v3...],
+      'feat_2': [v1, v2, v3...],
+    }
+  } etc.
+  """
+  fig = _get_generic_figure(**kwargs)
+  for group in data.keys():
+    fig.add_trace(
+      go.Violin(
+        x = [x for y in [[x]*len(data[group][x]) for x in data[group].keys()] for x in y],
+        y = [x for y in data[group].values() for x in y],
+        legendgroup = group,
+        scalegroup  = group,
+        name        = group,
+      )
+    )
+  return
+
 def RelativeDistribution(x         : np.array,
                          y         : typing.List[np.array],
                          plot_name : str,
