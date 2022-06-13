@@ -695,6 +695,7 @@ def main(config: evaluator_pb2.Evaluation):
     evaluator_pb2.KAverageScore           : distance_score.KAverageScore,
     evaluator_pb2.MinScore                : distance_score.MinScore,
     evaluator_pb2.AnalyzeTarget           : benchmark_analysis.AnalyzeTarget,
+    evaluator_pb2.FeaturesDistribution    : benchmark_analysis.FeaturesDistribution,
     evaluator_pb2.CompMemGrewe            : comp_vs_mem.CompMemGrewe,
     evaluator_pb2.TopKCLDrive             : cldrive.TopKCLDrive,
     evaluator_pb2.MutecVsBenchPress       : mutec.MutecVsBenchPress,
@@ -769,6 +770,33 @@ def main(config: evaluator_pb2.Evaluation):
 
     elif ev.HasField("analyze_target"):
       sev = ev.analyze_target
+      # Gather target benchmarks and cache them
+      if isinstance(sev.target, list):
+        kw_args["targets"] = []
+        for t in sev.target:
+          if t not in target_cache:
+            target_cache[t] = TargetBenchmarks(t)
+          kw_args["targets"].append(target_cache[t])
+      else:
+        if sev.target not in target_cache:
+          target_cache[sev.target] = TargetBenchmarks(sev.target)
+        kw_args["targets"] = target_cache[sev.target]
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
+      # Gather feature spaces if applicable.
+      if sev.HasField("feature_space"):
+        kw_args['feature_space'] = sev.feature_space
+      # Gather plotter configuration
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
+
+    elif ev.HasField("features_distribution"):
+      sev = ev.features_distribution
+      kw_args['top_k'] = sev.top_k
       # Gather target benchmarks and cache them
       if isinstance(sev.target, list):
         kw_args["targets"] = []
