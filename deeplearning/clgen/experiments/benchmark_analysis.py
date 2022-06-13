@@ -58,7 +58,7 @@ def FeaturesDistribution(**kwargs) -> None:
         get_data = lambda x: dbg.get_data_features(x)
 
       if idx == 0:
-        if targe.targett not in data:
+        if target.target not in data:
           data[target.target] = {}
         for k, v in benchmark.features.items():
           if k not in data[target.target]:
