@@ -337,6 +337,40 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       # Specialized fields.
       for target in ev.analyze_target.targets:
         assert target in benchmarks.targets, target
+    elif ev.HasField("features_distribution"):
+      ### KAverageScore
+      # Generic Fields
+      pbutil.AssertFieldIsSet(config, "workspace")
+      pbutil.AssertFieldIsSet(config, "tokenizer")
+      if not pathlib.Path(config.tokenizer).resolve().exists():
+        raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
+      # DB groups
+      for dbs in ev.features_distribution.db_group:
+        for db in dbs.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
+      # Specialized fields.
+      pbutil.AssertFieldConstraint(
+        ev.features_distribution,
+        "target",
+        lambda x: x in benchmarks.targets,
+        "target {} not found".format(ev.features_distribution.target),
+      )
+      pbutil.AssertFieldIsSet(ev.features_distribution, "feature_space")
+      pbutil.AssertFieldConstraint(
+        ev.features_distribution,
+        "top_k",
+        lambda x: x > 0,
+        "top-K factor must be positive",
+      )
     elif ev.HasField("log_file"):
       ### LogFile
       # DB groups
