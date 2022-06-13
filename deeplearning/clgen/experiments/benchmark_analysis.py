@@ -1,7 +1,14 @@
 """
 Target benchmark analysis evaluator.
 """
+import tqdm
+
 from deeplearning.clgen.experiments import public
+from deeplearning.clgen.experiments import clsmith
+from deeplearning.clgen.experiments import workers
+from deeplearning.clgen.samplers import samples_database
+from deeplearning.clgen.corpuses import encoded
+from deeplearning.clgen.util import plotter
 
 @public.evaluator
 def AnalyzeTarget(**kwargs) -> None:
