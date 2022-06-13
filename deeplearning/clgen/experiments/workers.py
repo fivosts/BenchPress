@@ -94,7 +94,7 @@ def SortedDistances(data: typing.List[typing.Tuple[str, str, typing.Dict[str, fl
                     feature_space: str
                     ) -> typing.List[float]:
   """
-  Return list of pairs of source with respective euclidean distances from target features in ascending order.
+  Return list of euclidean distances from target features in ascending order.
   """
   return sorted([feature_sampler.calculate_distance(dp, target_features, feature_space) for _, _, dp in data])
 
@@ -103,7 +103,7 @@ def SortedSrcDistances(data: typing.List[typing.Tuple[str, typing.Dict[str, floa
                        feature_space: str
                        ) -> typing.List[typing.Tuple[str, str, float]]:
   """
-  Return list of euclidean distances from target features in ascending order.
+  Return list of pairs of euclidean distances from target features with source code in ascending order.
   """
   return sorted([(src, include, feature_sampler.calculate_distance(dp, target_features, feature_space)) for src, include, dp in data], key = lambda x: x[2])
 
@@ -112,6 +112,6 @@ def SortedSrcFeatsDistances(data: typing.List[typing.Tuple[str, typing.Dict[str,
                             feature_space: str
                             ) -> typing.List[typing.Tuple[str, str, typing.Dict[str, float], float]]:
   """
-  Return list of euclidean distances from target features in ascending order.
+  Return list of pairs of euclidean distances from target features with source code and features in ascending order.
   """
   return sorted([(src, include, dp, feature_sampler.calculate_distance(dp, target_features, feature_space)) for src, include, dp in data], key = lambda x: x[3])
