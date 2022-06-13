@@ -43,7 +43,7 @@ def FeaturesDistribution(**kwargs) -> None:
       break
 
   benchmarks = target.get_benchmarks(feature_space, reduced_git_corpus = reduced_git)
-  for dbg in db_groups:
+  for idx, dbg in enumerate(db_groups):
     if dbg.group_name == "GitHub-768-inactive":
       # Skip baseline DB group.
       continue
@@ -56,6 +56,15 @@ def FeaturesDistribution(**kwargs) -> None:
         get_data = lambda x: dbg.get_unique_data_features(x)
       else:
         get_data = lambda x: dbg.get_data_features(x)
+
+      if idx == 0:
+        if targe.targett not in data:
+          data[target.target] = {}
+        for k, v in benchmark.features.items():
+          if k not in data[target.target]:
+            data[target.target][k] = [v]
+          else:
+            data[target.target][k].append(v)
 
       ret = workers.SortedSrcFeatsDistances(get_data(feature_space), benchmark.features, feature_space)[:top_k]
       for _, _, fvec, _ in ret:
