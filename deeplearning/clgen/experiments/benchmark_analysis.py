@@ -43,7 +43,6 @@ def FeaturesDistribution(**kwargs) -> None:
       break
 
   benchmarks = target.get_benchmarks(feature_space, reduced_git_corpus = reduced_git)
-  target_origin_dists = {}
   for dbg in db_groups:
     if dbg.group_name == "GitHub-768-inactive":
       # Skip baseline DB group.
@@ -62,7 +61,7 @@ def FeaturesDistribution(**kwargs) -> None:
       for _, _, fvec, _ in ret:
         for k, v in fvec.items():
           if k not in data[dbg.group_name]:
-            data[dbg.group_name] = [v]
+            data[dbg.group_name][k] = [v]
           else:
             data[dbg.group_name][k].append(v)
 
