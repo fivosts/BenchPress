@@ -29,15 +29,16 @@ message evaluators {
     KAverageScore           k_average_score           = 2;
     MinScore                min_score                 = 3;
     AnalyzeTarget           analyze_target            = 4;
-    CompMemGrewe            comp_mem_grewe            = 5;
-    TopKCLDrive             topk_cldrive              = 6;
-    MutecVsBenchPress       mutec_vs_benchpress       = 7;
-    SRCIROR_srcVsBenchPress srciror_src_vs_benchpress = 8;
-    SRCIROR_IRVsBenchPress  srciror_ir_vs_benchpress  = 9;
-    GenerateCLSmith         generate_clsmith          = 10;
-    GreweTopKCSV            grewe_top_k_csv           = 11;
-    GreweCSV                grewe_csv                 = 12;
-    TrainGrewe              train_grewe               = 13;
+    FeaturesDistribution    features_distribution     = 5;
+    CompMemGrewe            comp_mem_grewe            = 6;
+    TopKCLDrive             topk_cldrive              = 7;
+    MutecVsBenchPress       mutec_vs_benchpress       = 8;
+    SRCIROR_srcVsBenchPress srciror_src_vs_benchpress = 9;
+    SRCIROR_IRVsBenchPress  srciror_ir_vs_benchpress  = 10;
+    GenerateCLSmith         generate_clsmith          = 11;
+    GreweTopKCSV            grewe_top_k_csv           = 12;
+    GreweCSV                grewe_csv                 = 13;
+    TrainGrewe              train_grewe               = 14;
   }
 }
 
