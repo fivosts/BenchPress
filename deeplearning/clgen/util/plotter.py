@@ -377,6 +377,7 @@ def GrouppedViolins(data      : typing.Dict[str, typing.Dict[str, typing.List[in
         name        = group,
       )
     )
+  _write_figure(fig, plot_name, path, **kwargs)
   return
 
 def RelativeDistribution(x         : np.array,
