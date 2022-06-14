@@ -344,6 +344,7 @@ class MaskLMDataGenerator(object):
     self.tokenizer               = tokenizer
     self.config                  = model_opts.data_generator
     self.rngen                   = np.random
+    self.seed                    = seed
     self.sample_batch_size       = sample_batch_size
     if sampler.is_active and FLAGS.sample_workload_size < (self.sample_batch_size * environment.WORLD_SIZE):
       throttled_batch_size = int(FLAGS.sample_workload_size // environment.WORLD_SIZE)
