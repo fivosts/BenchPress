@@ -220,4 +220,5 @@ message PlotterConfiguration {
   optional int32 width       = 21;
 
   optional int32 x_tickangle = 22;
+  optional string violinmode = 23;
 }
