@@ -186,9 +186,6 @@ class Incoder(backends.BackendBase):
         # else:
         incode = self.tokenizer.ArrayToCode(seq).replace("<|mask:0|>", "<insert>") # This is a text where pad has been stripped off.
         incode = "<| file ext=.cl |>\n{}\n<|/ file |>".format(incode)
-        print("##########")
-        print("\'{}\'".format(incode))
-        print("##########")
         incoded = example_api.infill(
           model,
           incode,
