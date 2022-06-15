@@ -650,6 +650,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     active_dropout_prob   = self.sampler.config.sample_corpus.corpus_config.active.active_dropout_prob
     sample_batch_per_feed = self.sampler.config.sample_corpus.corpus_config.active.batch_size_per_feed
 
+    if sample_batch_per_feed > self.sample_batch_size:
+      l.logger().warn("Throttling sample batch per feed to ({}), equal to batch size".format(self.sample_batch_size))
+      sample_batch_per_feed = min(sample_batch_per_feed, self.sample_batch_size)
+
     # Initialize feed queue
     org_inp = self.initOrGetQueue(self.feat_sampler.target_benchmark.features)
     org_ids = copy.copy(org_inp)
