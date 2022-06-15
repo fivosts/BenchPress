@@ -5,8 +5,6 @@ import typing
 import pathlib
 import pickle
 import math
-import functools
-# import multiprocessing
 import time
 import numpy as np
 from numpy.random import default_rng
@@ -81,12 +79,14 @@ class FeatureSampler(object):
                workspace     : pathlib.Path,
                feature_space : str,
                target        : str,
+               seed          : int = None,
                ):
     self.workspace        = workspace
     self.feature_space    = feature_space
     self.target           = target
     self.benchmarks       = []
     self.target_benchmark = None
+    self.rng              = default_rng(seed)
     return
 
   def calculate_distance(self, infeat: typing.Dict[str, float]) -> float:
@@ -107,13 +107,11 @@ class FeatureSampler(object):
     if FLAGS.randomize_selection is None:
       sorted_cands = sorted(candidates, key = lambda x: x.score)  # [:K]
       if dropout_prob > 0.0:
-        rng = default_rng()
         # for kidx in range(max(K, len(sorted_cands))): # if K > len(sorted_cands) because your LM's compilation rate sucks, this will give you an IndexError.
         for kidx in range(min(K, len(sorted_cands))): # if K > len(sorted_cands) because your LM's compilation rate sucks, this will give you an IndexError.
-          rep = np.random.RandomState().rand()
           visited = set()
-          if rep <= dropout_prob and len(visited) < len(sorted_cands):
-            swap_idx = rng.choice(list(set(range(len(sorted_cands))) - visited))
+          if self.rng.random() <= dropout_prob and len(visited) < len(sorted_cands) and sorted_cands[kidx].score > 0.0:
+            swap_idx = self.rng.choice(list(set(range(K, len(sorted_cands))) - visited))
             sorted_cands[kidx], sorted_cands[swap_idx] = sorted_cands[swap_idx], sorted_cands[kidx]
             visited.add(swap_idx)
       return sorted_cands[:K]
@@ -122,7 +120,6 @@ class FeatureSampler(object):
         raise ValueError("randomize_selection, {}, cannot be 0.".format(FLAGS.randomize_selection))
       l.logger().warn("Randomized generation selection has been activated. You must know what you are doing!")
       kf = min(FLAGS.randomize_selection, len(candidates))
-      rng = default_rng()
       indices = set(rng.choice(len(candidates), size = kf, replace = False))
       return [c for idx, c in enumerate(candidates) if idx in indices]
 
@@ -198,8 +195,9 @@ class BenchmarkSampler(FeatureSampler):
                feature_space : str,
                target        : str,
                git_corpus    : corpuses.Corpus = None,
+               seed          : int = None,
                ):
-    super(BenchmarkSampler, self).__init__(workspace, feature_space, target)
+    super(BenchmarkSampler, self).__init__(workspace, feature_space, target, seed)
     if self.target  != "grid_walk":
       self.path        = pathlib.Path(benchmarks.targets[target]).resolve()
     self.reduced_git_corpus = [
@@ -307,8 +305,9 @@ class ActiveSampler(FeatureSampler):
                feature_space  : str,
                active_learner : 'active_models.Model',
                tokenizer      : 'tokenizers.TokenizerBase',
+               seed           : int = None,
                ):
-    super(ActiveSampler, self).__init__(workspace, feature_space, str(active_learner.downstream_task))
+    super(ActiveSampler, self).__init__(workspace, feature_space, str(active_learner.downstream_task), seed)
     self.active_learner = active_learner
     self.loadCheckpoint()
     try:
