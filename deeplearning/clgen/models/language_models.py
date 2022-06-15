@@ -540,8 +540,6 @@ class Model(object):
 
         for index in indices[i]:
           samples_in_progress[i].append(tokenizer.decoder[index])
-          step_ind             = ""
-          encoded_step_indices = ""
 
           if sampler.SampleIsComplete(samples_in_progress[i]):
             end_time       = datetime.datetime.utcnow()
