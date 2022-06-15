@@ -435,7 +435,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           workspace     = d.sampler.corpus_directory,
           feature_space = corpus_config.active.feature_space,
           target        = corpus_config.active.target,
-          git_corpus    = corpus
+          git_corpus    = corpus,
+          seed          = d.seed,
         )
       else:
         d.feat_sampler = feature_sampler.ActiveSampler(
@@ -443,6 +444,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           feature_space  = corpus_config.active.feature_space,
           active_learner = d.sampler.active_learner,
           tokenizer      = d.tokenizer,
+          seed           = d.seed,
         )
       d.candidate_monitor = monitors.CategoricalDistribMonitor.loadCheckpoint(
         d.sampler.corpus_directory, "feature_distance"
@@ -675,7 +677,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     try:
       ## BFS style. While you have jobs, keep going.
       while self.feed_queue:
-
         ## Pop the feed that will probide a sample workload.
         if FLAGS.evolutionary_search:
           try:
@@ -713,7 +714,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         # Iterate until you get a better sample or surpass the limit.
         better_found, it, threshold = None, 0, 160000
 
-        l.logger().info("Current input feed scores: {}".format(', '.join([str(round(feed.input_score, 3)) for feed in feeds])))
         while not better_found and cmp_rate[1] < threshold:
           ## Pre-process inputs
           # workload size: how many batches of sequences you need.
@@ -741,13 +741,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             step_candidates,
             rejected_candidates,
           )
-          distrib.barrier()
           tcs += cs
           ts  =  s
           # l.logger().info("Length before: {}".format(len(step_candidates)), ddp_nodes = True)
           step_candidates = distrib.get_consistent(step_candidates)
           rejected_candidates = distrib.get_consistent(rejected_candidates)
-          # l.logger().info("Length after: {}".format(len(step_candidates)), ddp_nodes = True)
 
           ## Register good offsprings, along with step candidates in tsne monitor.
           if not FLAGS.evolutionary_search and better_found and environment.WORLD_RANK == 0:
@@ -892,6 +890,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       self.bench_idx += 1
       if environment.WORLD_RANK == 0:
         self.saveCheckpoint()
+      distrib.barrier()
       self.feat_sampler.iter_benchmark(target_samples = total_cand, top_k = -1)
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
