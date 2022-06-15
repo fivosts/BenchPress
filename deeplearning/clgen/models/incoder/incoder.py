@@ -229,26 +229,6 @@ class Incoder(backends.BackendBase):
     outputs['input_ids']         = inputs['input_ids'].reshape(-1, self.sampler.sequence_length).to(self.pytorch.device)
     outputs['masked_lm_lengths'] = inputs['masked_lm_lengths'].reshape(-1, 1).to(self.pytorch.device)
 
-    #!
-    #! NO need to gather. This is why you have `consistend_read`...
-    #!
-    # if self.pytorch.num_nodes > 1:
-    #   distrib.barrier()
-    #   generated_samples = [self.torch.zeros(tuple(outputs['generated_samples'].shape), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-    #   sample_indices    = [self.torch.zeros(tuple(outputs['sample_indices'].shape),    dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-    #   input_ids         = [self.torch.zeros(tuple(outputs['input_ids'].shape),         dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-    #   masked_lm_lengths = [self.torch.zeros(tuple(outputs['masked_lm_lengths'].shape), dtype = self.torch.int64).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-
-    #   self.torch.distributed.all_gather(generated_samples, outputs["generated_samples"])
-    #   self.torch.distributed.all_gather(sample_indices,    outputs["sample_indices"])
-    #   self.torch.distributed.all_gather(input_ids,         outputs["input_ids"])
-    #   self.torch.distributed.all_gather(masked_lm_lengths, outputs["masked_lm_lengths"])
-
-    #   outputs['generated_samples'] = self.torch.cat(generated_samples)
-    #   outputs['sample_indices']    = self.torch.cat(sample_indices)
-    #   outputs['input_ids']         = self.torch.cat(input_ids)
-    #   outputs['masked_lm_lengths'] = self.torch.cat(masked_lm_lengths)
-
     outputs['generated_samples'] = list(outputs['generated_samples'].cpu().numpy())
     outputs['sample_indices']    = list(outputs['sample_indices'].cpu().numpy())
     outputs['input_ids']         = list(outputs['input_ids'].cpu().numpy())
