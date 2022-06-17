@@ -42,6 +42,8 @@ def FeaturesDistribution(**kwargs) -> None:
       reduced_git = dbg.get_data_features(feature_space)
       break
 
+  radar_groups = {}
+  max_fvals    = {}
   benchmarks = target.get_benchmarks(feature_space, reduced_git_corpus = reduced_git)
   for idx, dbg in enumerate(db_groups):
     if dbg.group_name == "GitHub-768-inactive":
@@ -65,6 +67,17 @@ def FeaturesDistribution(**kwargs) -> None:
             data[target.target][k] = [v]
           else:
             data[target.target][k].append(v)
+          if k not in max_fvals:
+            max_fvals[k] = v
+          else:
+            max_fvals[k] = max(max_fvals[k], v)
+
+      if "{}_{}".format(benchmark.name, feature_space) not in radar_groups:
+        radar_groups["{}_{}".format(benchmark.name, feature_space)] = {}
+        if target.target not in radar_groups["{}_{}".format(benchmark.name, feature_space)]:
+          keys, vals = zip(*sorted(zip(list(benchmark.features.keys()), list(benchmark.features.values()))))
+          keys, vals = list(keys), list(vals)
+          radar_groups["{}_{}".format(benchmark.name, feature_space)][target.target] = [vals, keys]
 
       ret = workers.SortedSrcFeatsDistances(get_data(feature_space), benchmark.features, feature_space)[:top_k]
       for _, _, fvec, _ in ret:
@@ -73,6 +86,15 @@ def FeaturesDistribution(**kwargs) -> None:
             data[dbg.group_name][k] = [v]
           else:
             data[dbg.group_name][k].append(v)
+          if k not in max_fvals:
+            max_fvals[k] = v
+          else:
+            max_fvals[k] = max(max_fvals[k], v)
+
+        keys, vals = zip(*sorted(zip(list(fvec.keys()), list(fvec.values()))))
+        keys, vals = list(keys), list(vals)
+        if dbg.group_name not in radar_groups["{}_{}".format(benchmark.name, feature_space)]:
+          radar_groups["{}_{}".format(benchmark.name, feature_space)][dbg.group_name] = [vals, keys]
 
   plotter.GrouppedViolins(
     data = data,
@@ -80,4 +102,18 @@ def FeaturesDistribution(**kwargs) -> None:
     path = workspace_path,
     **plot_config if plot_config else {},
   )
+
+  for benchmark, groups in radar_groups.items():
+    for k, (values, thetas) in groups.items():
+      for idx, (val, theta) in enumerate(zip(values, thetas)):
+        if max_fvals[theta] > 0:
+          radar_groups[benchmark][k][0][idx] = radar_groups[benchmark][k][0][idx] / max_fvals[theta]
+        else:
+          radar_groups[benchmark][k][0][idx] = 1.0
+    plotter.GrouppedRadar(
+      groups,
+      plot_name = "radar_{}_{}_{}".format(benchmark, feature_space, '-'.join([dbg.group_name for dbg in db_groups])),
+      path      = workspace_path,
+      title     = "{}".format(benchmark)
+    )
   return
