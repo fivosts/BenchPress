@@ -481,7 +481,7 @@ class PreprocessedContentFiles(sqlutil.Database):
                 )
                 wall_time_start = wall_time_end
                 session.add(preprocessed_cf)
-                if wall_time_end - last_commit > 10:
+                if wall_time_end - last_commit > 1000:
                   session.commit()
                   last_commit = wall_time_end
               idx += 1
