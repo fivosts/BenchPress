@@ -38,7 +38,10 @@ def barrier(fn: typing.Callable = None) -> None:
   """
 
   if environment.WORLD_SIZE > 1:
-    torch.distributed.barrier(device_ids = [environment.LOCAL_RANK])
+    if pytorch.num_gpus > 0:
+      torch.distributed.barrier(device_ids = [environment.LOCAL_RANK])
+    else:
+      torch.distributed.barrier()
     return
   else:
     return
