@@ -138,6 +138,7 @@ class SamplesDatabase(sqlutil.Database):
   """A database of CLgen samples."""
 
   def __init__(self, url: str, must_exist: bool = False, is_replica: bool = False):
+    self.base_url = url
     if environment.WORLD_RANK == 0 or is_replica:
       super(SamplesDatabase, self).__init__(url, Base, must_exist = must_exist)
     if environment.WORLD_SIZE > 1 and not is_replica:
@@ -166,9 +167,9 @@ class SamplesDatabase(sqlutil.Database):
     Return Database URL
     """
     if environment.WORLD_RANK == 0:
-      return self._url
+      return self.base_url
     else:
-      return self.replicated._url
+      return self.replicated.base_url
 
   @property
   def get_session(self):
