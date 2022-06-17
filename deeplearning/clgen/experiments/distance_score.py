@@ -114,7 +114,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
 
   benchmarks = target.get_benchmarks(feature_space)
   for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
-    keys, vals = feats_to_list(benchmark.features())
+    keys, vals = feats_to_list(benchmark.features)
     radar_features[benchmark.name] = [
       vals,
       keys,
@@ -123,8 +123,8 @@ def AnalyzeBeamSearch(**kwargs) -> None:
     for dbg in db_groups:
       if not dbg.db_type == active_feed_database.ActiveFeedDatabase:
         raise ValueError("Beam search analysis requires ActiveFeedDatabase, but received {}", dbg.db_type)
-      data = dbg.data
-      keys, vals = feats_to_list(extractor.RawToDictFeats(sorted(data, key = lambda dp: dp.sample_quality)[0].output_features, feature_space = feature_space))
+      data = dbg.get_data
+      keys, vals = feats_to_list(extractor.RawToDictFeats(sorted(data, key = lambda dp: dp.sample_quality)[0].output_features, feature_space = feature_space)[feature_space])
       radar_features[dbg.group_name] = [
         [vals],
         [keys]
