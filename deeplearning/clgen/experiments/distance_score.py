@@ -10,10 +10,11 @@ from deeplearning.clgen.features import active_feed_database
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.samplers import samples_database
-from deeplearning.clgen.util import plotter
 from deeplearning.clgen.experiments import public
 from deeplearning.clgen.experiments import clsmith
 from deeplearning.clgen.experiments import workers
+from deeplearning.clgen.util import plotter
+from deeplearning.clgen.util import logging as l
 
 @public.evaluator
 def KAverageScore(**kwargs) -> None:
@@ -47,7 +48,7 @@ def KAverageScore(**kwargs) -> None:
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
     groups[dbg.group_name] = ([], [])
     for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
-      groups[dbg.group_name][0].append(benchmark_name)
+      groups[dbg.group_name][0].append(benchmark.name)
       # Find shortest distances.
       if unique_code:
         get_data = lambda x: dbg.get_unique_data_features(x)
@@ -58,10 +59,10 @@ def KAverageScore(**kwargs) -> None:
       # Compute target's distance from O(0,0)
       assert len(distances) != 0, "Sorted src list for {} is empty!".format(dbg.group_name)
       avg_dist = sum(distances[:top_k]) / top_k
-      if benchmark_name in target_origin_dists:
-        target_origin_dists[benchmark_name] = max(target_origin_dists[benchmark_name], avg_dist)
+      if benchmark.name in target_origin_dists:
+        target_origin_dists[benchmark.name] = max(target_origin_dists[benchmark.name], avg_dist)
       else:
-        target_origin_dists[benchmark_name] = max(math.sqrt(sum([x**2 for x in benchmark.features.values()])), avg_dist)
+        target_origin_dists[benchmark.name] = max(math.sqrt(sum([x**2 for x in benchmark.features.values()])), avg_dist)
 
       groups[dbg.group_name][1].append(avg_dist)
 
@@ -124,7 +125,10 @@ def AnalyzeBeamSearch(**kwargs) -> None:
     for dbg in db_groups:
       if not dbg.db_type == active_feed_database.ActiveFeedDatabase:
         raise ValueError("Beam search analysis requires ActiveFeedDatabase, but received {}", dbg.db_type)
-      data = dbg.get_data
+      data = [dp for dp in dbg.get_data if target.shorten_benchmark_name(dp.target_benchmark.split('\n')[0]) == "// {}".format(benchmark.name)]
+      if len(data) == 0:
+        l.logger().warn("{} not found in {}, here are the features: {}".format(benchmark.name, dbg.group_name, benchmark.features))
+        continue
       closest = sorted(data, key = lambda dp: dp.sample_quality)[0]
       dict_feats = {''.join(l.split(':')[:-1]) : float(l.split(':')[-1]) for l in closest.output_features.split('\n')}
       keys, vals = feats_to_list(dict_feats)
@@ -138,7 +142,10 @@ def AnalyzeBeamSearch(**kwargs) -> None:
           score_gens[dp.generation_id] = dp.sample_quality
         else:
           score_gens[dp.generation_id] = min(score_gens[dp.generation_id], dp.sample_quality)
-      generations_score[dbg.group_name] = score_gens
+      generations_score[dbg.group_name] = {
+        'data': [[idx, v] for idx, v in score_gens.items()],
+        'names': [x for x, _ in score_gens.items()]
+      }
     plotter.GrouppedRadar(
       groups    = radar_features,
       plot_name = "feeds_radar_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name for dbg in db_groups])),
