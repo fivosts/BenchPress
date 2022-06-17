@@ -328,6 +328,45 @@ def NormalizedRadar(r         : np.array,
   _write_figure(fig, plot_name, path, **kwargs)
   return
 
+def GrouppedRadar(groups    : typing.Dict[str, typing.Tuple[typing.List[float], typing.List[str]]],
+                  plot_name : str,
+                  path      : pathlib.Path = None,
+                  **kwargs,
+                  ) -> None:
+  """
+  Plot multiple groups within the same radar.
+  Input format of groups:
+  groups = {
+    'group1': [
+      [v1, v2, v3], # float values
+      [th1, th2, th3] # axis names
+    ]
+  }
+  """
+  # fig = _get_generic_figure(**kwargs)
+  fig = go.Figure(
+    layout = go.Layout(title = kwargs.get('title'))
+  )
+  for group, (vals, thetas) in groups.items():
+    fig.add_trace(
+      go.Scatterpolar(
+        r = vals + [vals[0]],
+        theta = thetas + [thetas[0]],
+        name = group,
+      )
+    )
+  # fig = px.line_polar(df, r='r', theta='theta', line_close=True)
+  fig.update_layout(
+    polar=dict(
+      radialaxis=dict(
+        visible=True,
+        range=[0, 1]
+      )),
+        showlegend=True
+  )
+  _write_figure(fig, plot_name, path, width = 1800, height = 1800, **kwargs)
+  return
+
 def CategoricalViolin(x         : np.array,
                       y         : typing.List[np.array],
                       plot_name : str,
@@ -367,6 +406,7 @@ def GrouppedViolins(data      : typing.Dict[str, typing.Dict[str, typing.List[in
   } etc.
   """
   fig = _get_generic_figure(**kwargs)
+  # fig = go.Figure(layout = go.Layout(violinmode = 'group'))
   for group in data.keys():
     fig.add_trace(
       go.Violin(
