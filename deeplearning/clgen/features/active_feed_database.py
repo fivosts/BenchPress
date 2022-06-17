@@ -74,7 +74,7 @@ class ActiveSamplingSpecs(Base):
 
 class ActiveInput(Base, sqlutil.ProtoBackedMixin):
   """
-  A database for all original inputs used for active learning.
+  A database for all original inputs used for beam search sampling.
   """
   __tablename__    = "input_feeds"
   # entry id
