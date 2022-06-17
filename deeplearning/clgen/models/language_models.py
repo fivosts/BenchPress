@@ -413,8 +413,9 @@ class Model(object):
     except Exception as e:
       raise e
 
-    for obs in sample_observers:
-      obs.endSample()
+    if environment.WORLD_RANK == 0:
+      for obs in sample_observers:
+        obs.endSample()
     if isinstance(self.backend, torch_bert.torchBert) and sampler.is_active:
       self.backend.sample.data_generator.samples_cache_obs.endSample()
 
