@@ -1,6 +1,7 @@
 """
 Top-K or min distance of database groups against target benchmark suites.
 """
+from numpy import extract
 import tqdm
 import typing
 import math
@@ -124,7 +125,9 @@ def AnalyzeBeamSearch(**kwargs) -> None:
       if not dbg.db_type == active_feed_database.ActiveFeedDatabase:
         raise ValueError("Beam search analysis requires ActiveFeedDatabase, but received {}", dbg.db_type)
       data = dbg.get_data
-      keys, vals = feats_to_list(extractor.RawToDictFeats(sorted(data, key = lambda dp: dp.sample_quality)[0].output_features, feature_space = feature_space)[feature_space])
+      closest = sorted(data, key = lambda dp: dp.sample_quality)[0]
+      dict_feats = {''.join(l.split(':')[:-1]) : float(l.split(':')[-1]) for l in closest.output_features.split('\n')}
+      keys, vals = feats_to_list(dict_feats)
       radar_features[dbg.group_name] = [
         [vals],
         [keys]
@@ -132,9 +135,9 @@ def AnalyzeBeamSearch(**kwargs) -> None:
       score_gens = {}
       for dp in data:
         if dp.generation_id not in score_gens:
-          score_gens[dp.generation_id] = dp.score_quality
+          score_gens[dp.generation_id] = dp.sample_quality
         else:
-          score_gens[dp.generation_id] = min(score_gens[dp.generation_id], dp.score_quality)
+          score_gens[dp.generation_id] = min(score_gens[dp.generation_id], dp.sample_quality)
       generations_score[dbg.group_name] = score_gens
     plotter.GrouppedRadar(
       groups    = radar_features,
