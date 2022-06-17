@@ -64,7 +64,7 @@ class DBGroup(object):
   Class representation of a group of databases evaluated.
   """
   @property
-  def data(self) -> typing.List[str]:
+  def get_data(self) -> typing.List[str]:
     """
     Get concatenated data of all databases.
     """
@@ -1045,6 +1045,8 @@ def main(config: evaluator_pb2.Evaluation):
 
     elif ev.HasField("analyze_beam_search"):
       sev = ev.analyze_beam_search
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
       # Gather target benchmarks and cache them
       if isinstance(sev.target, list):
         kw_args["targets"] = []
@@ -1056,11 +1058,15 @@ def main(config: evaluator_pb2.Evaluation):
         if sev.target not in target_cache:
           target_cache[sev.target] = TargetBenchmarks(sev.target)
         kw_args["targets"] = target_cache[sev.target]
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
       # Gather feature spaces if applicable.
       if sev.HasField("feature_space"):
         kw_args['feature_space'] = sev.feature_space
-      if sev.HasField("plot_config"):
-        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
     else:
       raise NotImplementedError(ev)
 
