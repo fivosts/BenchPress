@@ -39,6 +39,7 @@ message evaluators {
     GreweTopKCSV            grewe_top_k_csv           = 12;
     GreweCSV                grewe_csv                 = 13;
     TrainGrewe              train_grewe               = 14;
+    AnalyzeBeamSearch       analyze_beam_search       = 15;
   }
 }
 
@@ -173,6 +174,14 @@ message TrainGrewe {
   optional string               grewe_baseline = 1;
   repeated GreweCSVGroup        csv            = 2;
   optional PlotterConfiguration plot_config    = 3;
+}
+
+// 15
+message AnalyzeBeamSearch {
+  optional string               target        = 1;
+  optional string               feature_space = 2;
+  repeated DatabasesGroups      db_group      = 3;
+  optional PlotterConfiguration plot_config   = 4;
 }
 
 // Define a group of Databases that will be considered jointly.
