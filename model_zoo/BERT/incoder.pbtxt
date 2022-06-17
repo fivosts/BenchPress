@@ -94,11 +94,11 @@ sampler {
     start_text: "kernel void A<|mask:0|>"
   }
   batch_size: 16
-  sequence_length: 1400
+  sequence_length: 1900
   temperature_micros: 900000  # = 0.8 real value
   termination_criteria {
     maxlen {
-      maximum_tokens_in_sample: 2048
+      maximum_tokens_in_sample: 1900
     }
   }
 }
