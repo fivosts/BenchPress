@@ -681,9 +681,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     try:
       ## BFS style. While you have jobs, keep going.
       while self.feed_queue:
-        ## Pop the feed that will probide a sample workload.
+        ## Pop the feed that will provide a sample workload.
         if FLAGS.evolutionary_search:
           try:
+            # Evolutionary search will create a workload out of all current generation
             init_feed = self.feed_queue.pop(0)
             feeds = [init_feed]
             cur_gen = init_feed.gen_id
@@ -692,6 +693,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           except Exception:
             pass
         else:
+          # Non-evolutionary search will do a small workload per feed and will not give up if it doesn't further reduce distance.
+          # p.s.: It doesn't work.
           feeds = [self.feed_queue.pop(0)]
           if self.skip_first_queue:
             self.skip_first_queue = False
@@ -843,6 +846,16 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           self.candidate_monitor.plot()
         # Add them back to queue and to active feed database.
         found_match = False
+        if len(best_cands) == 0:
+          for feed in feeds:
+            self.feed_queue.append(
+              ActiveSampleFeed(
+                input_feed     = feed.input_feed,
+                input_features = feed.input_features,
+                input_score    = feed.input_score,
+                gen_id         = 1 + feed.gen_id,
+              )
+            )
         for nc in best_cands:
           if FLAGS.evolutionary_search and environment.WORLD_RANK == 0:
             self.tsne_monitor.register((nc.features, "gen_{}_accepted".format(str(feeds[0].gen_id))))
