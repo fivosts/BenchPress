@@ -92,6 +92,7 @@ class DBGroup(object):
     self.unique_data_features = {ext: None for ext in extractor.extractors.keys()}
     self.tokenizer            = tokenizer
     self.size_limit           = size_limit
+    self.data                 = None
     return
 
   def get_features(self, feature_space: str) -> typing.List[typing.Dict[str, float]]:
