@@ -2,8 +2,11 @@
 Top-K or min distance of database groups against target benchmark suites.
 """
 import tqdm
+import typing
 import math
 
+from deeplearning.clgen.features import active_feed_database
+from deeplearning.clgen.features import extractor
 from deeplearning.clgen.corpuses import encoded
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import plotter
@@ -84,3 +87,65 @@ def MinScore(**kwargs) -> None:
     del kwargs['top_k']
   KAverageScore(top_k = 1, unique_code = False, **kwargs)
   return
+
+@public.evaluator
+def AnalyzeBeamSearch(**kwargs) -> None:
+  """
+  Analyze active feed databases and provide statistics
+  on distance convergence from target.
+
+  Two types of plots are exported:
+    1. For each target benchmark, a radar plot with its features, along with the closest candidate per db group.
+    2. For each target benchmark, a convergence line per generation for all db groups is shown.
+  Also, a final converge distribution line per db group is exported for all target benchmarks.
+  """
+  db_groups      = kwargs.get('db_groups')
+  target         = kwargs.get('targets')
+  feature_space  = kwargs.get('feature_space')
+  plot_config    = kwargs.get('plot_config')
+  workspace_path = kwargs.get('workspace_path')
+  radar_features = {}
+
+  def feats_to_list(feats: typing.Dict[str, float]) -> typing.Tuple[typing.List, typing.List]:
+    k, v = list(feats.keys()), list(feats.values())
+    k, v = zip(*sorted(zip(k, v)))
+    k, v = list(k), list(v)
+    return k, v
+
+  benchmarks = target.get_benchmarks(feature_space)
+  for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
+    keys, vals = feats_to_list(benchmark.features())
+    radar_features[benchmark.name] = [
+      vals,
+      keys,
+    ]
+    generations_score = {}
+    for dbg in db_groups:
+      if not dbg.db_type == active_feed_database.ActiveFeedDatabase:
+        raise ValueError("Beam search analysis requires ActiveFeedDatabase, but received {}", dbg.db_type)
+      data = dbg.data
+      keys, vals = feats_to_list(extractor.RawToDictFeats(sorted(data, key = lambda dp: dp.sample_quality)[0].output_features, feature_space = feature_space))
+      radar_features[dbg.group_name] = [
+        [vals],
+        [keys]
+      ]
+      score_gens = {}
+      for dp in data:
+        if dp.generation_id not in score_gens:
+          score_gens[dp.generation_id] = dp.score_quality
+        else:
+          score_gens[dp.generation_id] = min(score_gens[dp.generation_id], dp.score_quality)
+      generations_score[dbg.group_name] = score_gens
+    plotter.GrouppedRadar(
+      groups    = radar_features,
+      plot_name = "feeds_radar_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name for dbg in db_groups])),
+      path      = workspace_path,
+      **plot_config if plot_config else {},
+    )
+    plotter.GroupScatterPlot(
+      groups = generations_score,
+      plot_name = "Beam_generation_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name for dbg in db_groups])),
+    )
+
+  return
+
