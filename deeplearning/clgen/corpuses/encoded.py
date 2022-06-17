@@ -455,7 +455,7 @@ class EncodedContentFiles(sqlutil.Database):
                   for key, value in dict_features.items():
                     self.feature_monitors[key].register(value)
             wall_time_start = wall_time_end
-            if wall_time_end - last_commit > 10:
+            if wall_time_end - last_commit > 1000:
               session.commit()
               last_commit = wall_time_end
             idx += 1
