@@ -143,8 +143,10 @@ def AnalyzeBeamSearch(**kwargs) -> None:
       **plot_config if plot_config else {},
     )
     plotter.GroupScatterPlot(
-      groups = generations_score,
+      groups    = generations_score,
       plot_name = "Beam_generation_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name for dbg in db_groups])),
+      path      = workspace_path,
+      **plot_config if plot_config else {},
     )
 
   return
