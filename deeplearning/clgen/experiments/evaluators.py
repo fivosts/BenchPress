@@ -77,6 +77,7 @@ class DBGroup(object):
           self.data += db.get_data(self.size_limit)
         else:
           self.data += db.get_data
+      return self.data
 
   def __init__(self, group_name: str, db_type: str, databases: typing.List[pathlib.Path], tokenizer = None, size_limit: int = None):
     self.group_name = group_name
