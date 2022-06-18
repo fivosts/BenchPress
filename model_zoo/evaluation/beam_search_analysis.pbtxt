@@ -1,0 +1,17 @@
+workspace: "/private/home/foivos/tinyfeatured_vs_basenormal"
+evaluator {
+  analyze_beam_search {
+    target: "rodinia"
+    feature_space: "GreweFeatures"
+    db_group {
+      group_name: "Tiny_feature_encoder"
+      db_type: "ActiveFeedDatabase"
+      database: "/checkpoint/foivos/feature_head/AST/sampler/953f8bef8ce74fa6fce1ee4907ca7f80aadfac51/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "Base"
+      db_type: "ActiveFeedDatabase"
+      database: "/checkpoint/foivos/base_opencl/AST/sampler/6237d2a012cedcd7b177350433b495a76c18097d/sample_corpus/active_feeds.db"
+    }
+  }
+}
