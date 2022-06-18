@@ -360,7 +360,7 @@ def GrouppedRadar(groups    : typing.Dict[str, typing.Tuple[typing.List[float], 
     polar=dict(
       radialaxis=dict(
         visible=True,
-        range=[0, 1]
+        # range=[0, 1]
       )),
         showlegend=True
   )
