@@ -200,6 +200,26 @@ class TargetBenchmarks(object):
   """
   Class representation of target benchmarks.
   """
+  @classmethod
+  def shorten_benchmark_name(cls, benchmark_name: str) -> str:
+    return benchmark_name.replace(
+      ".cl", ""
+    ).replace(
+      "_kernels", ""
+    ).replace(
+      "_kernel", ""
+    ).replace(
+      "kernel_", ""
+    ).replace(
+      "particle", "prtcl"
+    ).replace(
+      "1024", ""
+    ).replace(
+      "track_", ""
+    ).replace(
+      "_opencl", ""
+    )
+
   def __init__(self, target: str):
     self.target        = target
     self.benchmark_cfs = benchmarks.yield_cl_kernels(pathlib.Path(benchmarks.targets[self.target]).resolve())
@@ -224,23 +244,8 @@ class TargetBenchmarks(object):
             if closest_git[1] == 0:
               continue
           ## Benchmark name shortener.
-          benchmark_name = p.name.replace(
-            ".cl", ""
-          ).replace(
-            "_kernels", ""
-          ).replace(
-            "_kernel", ""
-          ).replace(
-            "kernel_", ""
-          ).replace(
-            "particle", "prtcl"
-          ).replace(
-            "1024", ""
-          ).replace(
-            "track_", ""
-          ).replace(
-            "_opencl", ""
-          )
+          benchmark_name = self.shorten_benchmark_name(p.name)
+
           self.benchmarks[feature_space].append(
             Benchmark(
                 p,
