@@ -116,6 +116,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
   benchmarks = target.get_benchmarks(feature_space)
   for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
     keys, vals = feats_to_list(benchmark.features)
+
     radar_features = {}
     generations_score = {}
     radar_features[benchmark.name] = [
@@ -130,11 +131,11 @@ def AnalyzeBeamSearch(**kwargs) -> None:
         l.logger().warn("{} not found in {}, here are the features: {}".format(benchmark.name, dbg.group_name, benchmark.features))
         continue
       closest = sorted(data, key = lambda dp: dp.sample_quality)[0]
-      dict_feats = {''.join(l.split(':')[:-1]) : float(l.split(':')[-1]) for l in closest.output_features.split('\n')}
+      dict_feats = {':'.join(l.split(':')[:-1]) : float(l.split(':')[-1]) for l in closest.output_features.split('\n')}
       keys, vals = feats_to_list(dict_feats)
       radar_features[dbg.group_name] = [
-        [vals],
-        [keys]
+        vals,
+        keys
       ]
       score_gens = {}
       for dp in data:
@@ -150,14 +151,16 @@ def AnalyzeBeamSearch(**kwargs) -> None:
       groups    = radar_features,
       plot_name = "feeds_radar_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name for dbg in db_groups])),
       path      = workspace_path,
+      title     = benchmark.name,
       **plot_config if plot_config else {},
     )
     plotter.GroupScatterPlot(
       groups    = generations_score,
       plot_name = "Beam_generation_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name for dbg in db_groups])),
       path      = workspace_path,
+      mode      = "lines+markers",
+      title     = benchmark.name,
       **plot_config if plot_config else {},
     )
 
   return
-
