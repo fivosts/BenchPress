@@ -739,11 +739,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           # Keep step_candidates and evaluate them. Keep rejected candidates only for eval_cand database.
           step_candidates, rejected_candidates = [], []
           tcs, ts = 0, 0
-          # outputs = torch.reshape(outputs.unsqueeze(0), (len(feeds), -1, 768))
-          # for idx, feed in enumerate(feeds):
           (cs, s), better_found = self.registerOutputData(
             outputs,
-            # (idx*wsize*self.sample_batch_size, (idx+1)*wsize*self.sample_batch_size),
             [feeds[idx] for fidx, _ in enumerate(feeds) for idx in [fidx]*wsize*self.sample_batch_size],
             step_candidates,
             rejected_candidates,
@@ -781,10 +778,8 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
           ## Write all candidates to eval_cand DB.
           if FLAGS.evaluate_candidates and environment.WORLD_RANK == 0:
-            # l.logger().warn("Before join: {}".format(write_eval_proc))
             if write_eval_proc:
               write_eval_proc.join()
-            # l.logger().warn("After join: {}".format(write_eval_proc))
             write_eval_proc = multiprocessing.Process(
               target = write_eval_db,
               kwargs = {
@@ -797,7 +792,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               }
             )
             write_eval_proc.start()
-            # l.logger().warn("Started process")
 
           if not FLAGS.evolutionary_search and better_found and feeds[0].gen_id > 0:
             l.logger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
