@@ -286,7 +286,6 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
                   gen_id    : int,
                   ) -> None:
   objs = {}
-  # l.logger().warn("Before prep loop in eval db")
   for sample in samples:
     try:
       _ = opencl.Compile(tokenizer.ArrayToCode(sample.sample))
@@ -316,7 +315,6 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
       objs[sobj.sha256][1] += 1
     else:
       objs[sobj.sha256] = [sobj, 1]
-  # l.logger().warn(eval_db.count)
   with eval_db.Session(commit = True) as session:
     offset_idx = 0
     for sha, obj in objs.items():
