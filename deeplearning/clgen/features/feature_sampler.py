@@ -107,7 +107,6 @@ class FeatureSampler(object):
     if FLAGS.randomize_selection is None:
       sorted_cands = sorted(candidates, key = lambda x: x.score)  # [:K]
       if dropout_prob > 0.0:
-        # for kidx in range(max(K, len(sorted_cands))): # if K > len(sorted_cands) because your LM's compilation rate sucks, this will give you an IndexError.
         for kidx in range(min(K, len(sorted_cands))): # if K > len(sorted_cands) because your LM's compilation rate sucks, this will give you an IndexError.
           visited = set()
           if self.rng.random() <= dropout_prob and len(visited) < len(sorted_cands) and sorted_cands[kidx].score > 0.0:
