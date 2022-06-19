@@ -423,10 +423,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         must_exist = False,
       )
       if FLAGS.evaluate_candidates:
-        d.eval_db = evaluate_cand_database.SearchCandidateDatabase(
-          url = "sqlite:///{}".format(d.sampler.corpus_directory / "evaluated_candidates.db"),
-          must_exist = False,
-        )
+        if environment.WORLD_RANK == 0:
+          d.eval_db = evaluate_cand_database.SearchCandidateDatabase(
+            url = "sqlite:///{}".format(d.sampler.corpus_directory / "evaluated_candidates.db"),
+            must_exist = False,
+          )
       if corpus_config.active.HasField("target"):
         d.feat_sampler = feature_sampler.BenchmarkSampler(
           workspace     = d.sampler.corpus_directory,
