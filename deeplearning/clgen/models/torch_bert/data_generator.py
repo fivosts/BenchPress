@@ -339,7 +339,6 @@ def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
         l.logger().error("count: {}".format(eval_db.count))
         l.logger().error("offset_idx: {}".format(offset_idx))
         print(e)
-  # l.logger().warn("Finished eval_DB thread")
   return
 
 class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
