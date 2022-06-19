@@ -120,7 +120,7 @@ class FeatureSampler(object):
         raise ValueError("randomize_selection, {}, cannot be 0.".format(FLAGS.randomize_selection))
       l.logger().warn("Randomized generation selection has been activated. You must know what you are doing!")
       kf = min(FLAGS.randomize_selection, len(candidates))
-      indices = set(rng.choice(len(candidates), size = kf, replace = False))
+      indices = set(self.rng.choice(len(candidates), size = kf, replace = False))
       return [c for idx, c in enumerate(candidates) if idx in indices]
 
   def sample_from_set(self, 
