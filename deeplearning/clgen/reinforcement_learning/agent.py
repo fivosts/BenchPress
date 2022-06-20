@@ -1,12 +1,14 @@
 """
 Agents module for reinforcement learning.
 """
+import pathlib
 import typing
 import numpy as np
 
 from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.reinforcement_learning import model
 from deeplearning.clgen.util import pytorch
+from deeplearning.clgen.util import environment
 
 torch = pytorch.torch
 
@@ -14,7 +16,11 @@ class Policy(object):
   """
   The policy selected over Q-Values
   """
-  def __init__(self):
+  def __init__(self, cache_path: pathlib.Path):
+    
+    self.cache_path = cache_path / "agent"
+    if environment.WORLD_RANK == 0:
+      self.cache_path.mkdir(exists_ok = True, parents = True)
     return
 
   def predict_action_type(self, action_type_logits: torch.FloatTensor) -> int:
