@@ -54,13 +54,23 @@ class QValuesModel(object):
       self.cache_path.mkdir(exists_ok = True, parents = True)
     return
 
-  def train(self, input_ids: typing.Dict[str, torch.Tensor]) -> None:
+  def Train(self, input_ids: typing.Dict[str, torch.Tensor]) -> None:
     """Update the Q-Networks with some memories."""
     raise NotImplementedError
     return
 
-  def predict(self, input_ids: typing.Dict[str, torch.Tensor]) -> interactions.Action:
+  def SampleActionType(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
     """Predict the next action given an input state."""
+    raise NotImplementedError
+    return
+  
+  def SampleActionIndex(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
+    """Predict Action index"""
+    raise NotImplementedError
+    return
+  
+  def SampleTokenType(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
+    """Predict token type"""
     raise NotImplementedError
     return
 
