@@ -44,13 +44,13 @@ class Agent(object):
   """
   Benchmark generation RL-Agent.
   """
-  def __init__(self, cache_path: pathlib.Path):
+  def __init__(self, config, cache_path: pathlib.Path):
 
     self.cache_path = cache_path / "agent"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exists_ok = True, parents = True)
 
-    self.q_model = model.QValuesModel()
+    self.q_model = model.QValuesModel(config, self.cache_path)
     self.policy  = Policy()
 
     self.loadCheckpoint()
@@ -93,7 +93,6 @@ class Agent(object):
     Train the agent on the new episodes.
     """
     self.q_model.Train(input_ids)
-    raise NotImplementedError
     return
 
   def saveCheckpoint(self) -> None:
