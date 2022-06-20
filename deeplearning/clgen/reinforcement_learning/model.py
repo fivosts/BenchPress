@@ -52,6 +52,10 @@ class QValuesModel(object):
     self.cache_path = cache_path / "DQ_model"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exists_ok = True, parents = True)
+
+    self.action_type_qv  = ActionTypeQV()
+    self.action_index_qv = ActionIndexQV()
+    self.token_type_qv   = TokenTypeQV()
     return
 
   def Train(self, input_ids: typing.Dict[str, torch.Tensor]) -> None:
