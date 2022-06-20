@@ -53,7 +53,17 @@ class QValuesModel(object):
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exists_ok = True, parents = True)
     return
-  
+
+  def train(self, input_ids: typing.Dict[str, torch.Tensor]) -> None:
+    """Update the Q-Networks with some memories."""
+    raise NotImplementedError
+    return
+
+  def predict(self, input_ids: typing.Dict[str, torch.Tensor]) -> interactions.Action:
+    """Predict the next action given an input state."""
+    raise NotImplementedError
+    return
+
   def saveCheckpoint(self) -> None:
     """Checkpoint Deep Q-Nets."""
     raise NotImplementedError
