@@ -195,13 +195,11 @@ class RLModel(object):
     num_episodes = 10
     ## Start the RL training pipeline.
     for ep in range(num_episodes):
-      raise NotImplementedError("TODO: Time to train the RL!!")
       self.env.reset()
-      target_features = self.feature_sampler.sample()
-      self.env.init_state(target_features)
       is_term = False
       while not is_term:
         state  = self.env.get_state()
+        raise NotImplementedError("TODO: Time to train the RL!!")
         action = self.agent.make_action(state)
         reward = self.env.step(action)
         self.memory.add(state, action, reward)
