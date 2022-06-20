@@ -7,6 +7,9 @@ import pickle
 from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
+from deeplearning.clgen.util import pytorch
+
+torch = pytorch.torch
 
 class Memory(object):
   """
@@ -35,7 +38,13 @@ class Memory(object):
     self.state_buffer.append(state)
     self.reward_buffer.append(reward)
     return
-  
+
+  def sample(self) -> typing.Dict[str, torch.Tensor]:
+    """
+    Sample memories to update the RL agent.
+    """
+    return
+
   def loadCheckpoint(self) -> None:
     """Fetch memory's latest state."""
     if (self.cache_path / "memory.pkl").exists():
