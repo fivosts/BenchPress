@@ -66,6 +66,7 @@ class QValuesModel(object):
   def Train(self, input_ids: typing.Dict[str, torch.Tensor]) -> None:
     """Update the Q-Networks with some memories."""
     raise NotImplementedError
+    self.saveCheckpoint()
     return
 
   def SampleActionType(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
