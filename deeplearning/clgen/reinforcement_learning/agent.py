@@ -51,7 +51,7 @@ class Agent(object):
       self.cache_path.mkdir(exists_ok = True, parents = True)
 
     self.q_model = model.QValuesModel()
-    self.policy   = Policy()
+    self.policy  = Policy()
 
     self.loadCheckpoint()
     return
