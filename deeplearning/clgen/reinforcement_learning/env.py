@@ -17,12 +17,15 @@ class Environment(object):
   """
   Environment representation for RL Agents.
   """
-  def __init__(self, cache_path: pathlib.Path) -> None:
+  def __init__(self,
+               cache_path: pathlib.Path,
+               feature_sampler : feature_sampler.FeatureSampler
+               ) -> None:
 
     self.cache_path = cache_path
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exists_ok = True, parents = True)
-    self.feature_space = feature_space
+    self.feature_sampler = feature_sampler
     return
 
   def step(self, action: interactions.Action) -> interactions.Reward:
@@ -36,8 +39,9 @@ class Environment(object):
     """
     Reset the state of the environment.
     """
+    self.feature_sampler.iter()
     self.current_state = interactions.State(
-      target_features = target_feats,
+      target_features = self.feature_sampler.target_benchmark.features,
       code            = self.tokenizer.TokenizeString("")
     )
     return
