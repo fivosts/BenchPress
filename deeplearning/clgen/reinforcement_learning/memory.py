@@ -1,3 +1,6 @@
+from code import interact
+from deeplearning.clgen.reinforcement_learning import interactions
+
 class Memory(object):
   """
   Replay buffer of previous states and actions.
@@ -9,7 +12,11 @@ class Memory(object):
     self.loadCheckpoint()
     return
 
-  def add(self, action, state, reward) -> None:
+  def add(self,
+          action : interactions.Action,
+          state  : interactions.State,
+          reward : interactions.Reward
+          ) -> None:
     """Add single step to memory buffers."""
     self.action_buffer.append(action)
     self.state_buffer.append(state)
