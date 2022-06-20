@@ -65,7 +65,7 @@ class Environment(object):
     """
     Collect an action from an agent and compute its reward.
     """
-
+    self.make_action(action) # This is where you apply the action. e.g. compile, add token, remove token etc.
     raise NotImplementedError
   
   def reset(self) -> None:
