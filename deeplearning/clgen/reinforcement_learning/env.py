@@ -7,6 +7,7 @@ from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.reinforcement_learning import interactions
+from deeplearning.clgen.reinforcement_learning import memory
 
 from absl import flags
 
@@ -29,7 +30,11 @@ class Environment(object):
     """
     Reset the state of the environment.
     """
-    raise NotImplementedError
+    self.current_state = interactions.State(
+      target_features = target_feats,
+      code            = self.tokenizer.TokenizeString("")
+    )
+    return
   
   def get_state(self) -> interactions.State:
     """
@@ -79,3 +84,10 @@ class Environment(object):
           )
     else:
       raise ValueError("Action type {} does not exist.".format(action.action_type))
+
+  def make_action(self, action: interactions.Action) -> None:
+    """
+    Collect an agent's action and proceed with it into the current state.
+    """
+
+    return
