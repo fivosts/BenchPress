@@ -73,7 +73,7 @@ class Environment(object):
     """
     raise NotImplementedError
   
-  def get(self) -> interactions.State:
+  def get_state(self) -> interactions.State:
     """
     Get the current state of the environment.
     """
