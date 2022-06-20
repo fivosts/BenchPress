@@ -104,17 +104,17 @@ class Environment(object):
     """
     return
 
-def loadCheckpoint(self) -> None:
-  """
-  Load environment checkpoint.
-  """
-  if (self.cache_path / "environment.pkl").exists():
-    distrib.lock()
-    with open(self.cache_path / "environment.pkl", 'rb') as inf:
-      self.current_state = pickle.load(inf)
-    distrib.unlock()
-    distrib.barrier()
-  return
+  def loadCheckpoint(self) -> None:
+    """
+    Load environment checkpoint.
+    """
+    if (self.cache_path / "environment.pkl").exists():
+      distrib.lock()
+      with open(self.cache_path / "environment.pkl", 'rb') as inf:
+        self.current_state = pickle.load(inf)
+      distrib.unlock()
+      distrib.barrier()
+    return
 
   def saveCheckpoint(self) -> None:
     """
