@@ -4,6 +4,7 @@ RL Environment for the task of targeted benchmark generation.
 import numpy as np
 
 from deeplearning.clgen.features import extractor
+from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.reinforcement_learning import interactions
 
