@@ -186,7 +186,7 @@ class FeatureSampler(object):
 
 class BenchmarkSampler(FeatureSampler):
   """
-  This is a shitty experimental class to work with benchmark comparison.
+  This is a shitty experimental class to work with benchmark targeting.
   Will be refactored obviously.
   """
   def __init__(self,
