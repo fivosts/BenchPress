@@ -16,11 +16,7 @@ class Policy(object):
   """
   The policy selected over Q-Values
   """
-  def __init__(self, cache_path: pathlib.Path):
-    
-    self.cache_path = cache_path / "agent"
-    if environment.WORLD_RANK == 0:
-      self.cache_path.mkdir(exists_ok = True, parents = True)
+  def __init__(self):
     return
 
   def predict_action_type(self, action_type_logits: torch.FloatTensor) -> int:
