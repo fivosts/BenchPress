@@ -25,7 +25,7 @@ from deeplearning.clgen.reinforcement_learning import agent
 
 from absl import flags
 
-from deeplearning.clgen.util.cache import mkcache
+from deeplearning.clgen.util import cache
 
 def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforcement_learning_pb2.RLModel:
   """
