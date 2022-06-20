@@ -61,18 +61,15 @@ class QValuesModel(object):
 
   def SampleActionType(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
     """Predict the next action given an input state."""
-    raise NotImplementedError
-    return
+    return self.action_type_qv(input_ids)
   
   def SampleActionIndex(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
     """Predict Action index"""
-    raise NotImplementedError
-    return
+    return self.action_index_qv(input_ids)
   
   def SampleTokenType(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
     """Predict token type"""
-    raise NotImplementedError
-    return
+    return self.token_type_qv(input_ids)
 
   def saveCheckpoint(self) -> None:
     """Checkpoint Deep Q-Nets."""
