@@ -1,4 +1,3 @@
-from code import interact
 from deeplearning.clgen.reinforcement_learning import interactions
 
 class Memory(object):
