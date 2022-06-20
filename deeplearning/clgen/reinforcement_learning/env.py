@@ -17,7 +17,26 @@ class Environment(object):
   def __init__(self) -> None:
     self.feature_space = feature_space
     return
+
+  def step(self, action: interactions.Action) -> interactions.Reward:
+    """
+    Collect an action from an agent and compute its reward.
+    """
+    self.make_action(action) # This is where you apply the action. e.g. compile, add token, remove token etc.
+    raise NotImplementedError
   
+  def reset(self) -> None:
+    """
+    Reset the state of the environment.
+    """
+    raise NotImplementedError
+  
+  def get_state(self) -> interactions.State:
+    """
+    Get the current state of the environment.
+    """
+    return self.current_state
+
   def compute_reward(self, action) -> interactions.Reward:
     """Compute an action's reward."""
     if action.action_type == interactions.ACTION_TYPE_SPACE['ADD'] or action.action_type == interactions.ACTION_TYPE_SPACE['REM']:
@@ -60,22 +79,3 @@ class Environment(object):
           )
     else:
       raise ValueError("Action type {} does not exist.".format(action.action_type))
-
-  def step(self, action: interactions.Action) -> interactions.Reward:
-    """
-    Collect an action from an agent and compute its reward.
-    """
-    self.make_action(action) # This is where you apply the action. e.g. compile, add token, remove token etc.
-    raise NotImplementedError
-  
-  def reset(self) -> None:
-    """
-    Reset the state of the environment.
-    """
-    raise NotImplementedError
-  
-  def get_state(self) -> interactions.State:
-    """
-    Get the current state of the environment.
-    """
-    return self.current_state
