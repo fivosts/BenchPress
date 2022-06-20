@@ -13,8 +13,9 @@ torch = pytorch.torch
 
 class ActionTypeQV(torch.nn.Module):
   """Deep Q-Values for Action type prediction."""
-  def __init__(self):
+  def __init__(self, config):
     super(ActionTypeQV, self).__init__()
+    self.config = config
     return
   
   def forward(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
@@ -24,8 +25,9 @@ class ActionTypeQV(torch.nn.Module):
 
 class ActionIndexQV(torch.nn.Module):
   """Deep Q-Values for Action index prediction."""
-  def __init__(self):
+  def __init__(self, config):
     super(ActionIndexQV, self).__init__()
+    self.config = config
     return
   
   def forward(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
@@ -35,8 +37,9 @@ class ActionIndexQV(torch.nn.Module):
 
 class TokenTypeQV(torch.nn.Module):
   """Deep Q-Values for Token type prediction."""
-  def __init__(self):
+  def __init__(self, config):
     super(TokenTypeQV, self).__init__()
+    self.config = config
     return
   
   def forward(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
@@ -48,14 +51,14 @@ class QValuesModel(object):
   """
   Handler of Deep-QNMs for program synthesis.
   """
-  def __init__(self, cache_path: pathlib.Path) -> None:
+  def __init__(self, cache_path: pathlib.Path, config) -> None:
     self.cache_path = cache_path / "DQ_model"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exists_ok = True, parents = True)
 
-    self.action_type_qv  = ActionTypeQV()
-    self.action_index_qv = ActionIndexQV()
-    self.token_type_qv   = TokenTypeQV()
+    self.action_type_qv  = ActionTypeQV(config)
+    self.action_index_qv = ActionIndexQV(config)
+    self.token_type_qv   = TokenTypeQV(config)
     return
 
   def Train(self, input_ids: typing.Dict[str, torch.Tensor]) -> None:
