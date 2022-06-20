@@ -46,7 +46,7 @@ class Agent(object):
   """
   def __init__(self, cache_path: pathlib.Path):
 
-    self.cache_path = cache_path
+    self.cache_path = cache_path / "agent"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exists_ok = True, parents = True)
 
