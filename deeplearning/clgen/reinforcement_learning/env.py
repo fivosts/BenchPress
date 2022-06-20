@@ -61,10 +61,11 @@ class Environment(object):
     else:
       raise ValueError("Action type {} does not exist.".format(action.action_type))
 
-  def step(self, action) -> interactions.Reward:
+  def step(self, action: interactions.Action) -> interactions.Reward:
     """
     Collect an action from an agent and compute its reward.
     """
+
     raise NotImplementedError
   
   def reset(self) -> None:
