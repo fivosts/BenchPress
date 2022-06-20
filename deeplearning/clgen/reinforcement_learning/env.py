@@ -39,7 +39,7 @@ class Environment(object):
     """
     Reset the state of the environment.
     """
-    self.feature_sampler.iter()
+    self.feature_sampler.iter_benchmark()
     self.current_state = interactions.State(
       target_features = self.feature_sampler.target_benchmark.features,
       code            = self.tokenizer.TokenizeString("")
