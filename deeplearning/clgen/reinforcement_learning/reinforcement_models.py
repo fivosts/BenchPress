@@ -201,12 +201,11 @@ class RLModel(object):
         state  = self.env.get_state()           # Get current state.
         action = self.agent.make_action(state)  # Predict the action given the state.
         reward = self.env.step(action)          # Step the action into the environment and face the consequences.
-        raise NotImplementedError("TODO: Time to train the RL!!")
-        self.memory.add(state, action, reward)
-        self.agent.update(self.memory.sample())
+        self.memory.add(state, action, reward)  # Add to replay buffer the episode.
+        self.agent.update(self.memory.sample()) # Train the agent on a pool of memories.
     return
   
-  def Sample(self, backend: backends.BackendBase) -> None:
+  def Sample(self, sampler: samplers.Sampler) -> None:
     """
     Instead of calling Model's sample, this sample will be called, acting as a backend (BERT) wrapper.
     """
