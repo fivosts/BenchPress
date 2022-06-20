@@ -2,6 +2,7 @@
 Memory replay buffer for reinforcement learning training.
 """
 import pathlib
+import typing
 import pickle
 
 from deeplearning.clgen.reinforcement_learning import interactions
