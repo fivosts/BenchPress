@@ -3,6 +3,7 @@ RL Environment for the task of targeted benchmark generation.
 """
 import numpy as np
 
+from deeplearning.clgen.features import extractor
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.reinforcement_learning import interactions
 
@@ -29,7 +30,7 @@ class Environment(object):
       source = self.tokenizer.ArrayToCode(self.current_state.code)
       try:
         _ = opencl.Compile(source)
-        feats = extractors.ExtractFeatures(source, [self.feature_space])
+        feats = extractor.ExtractFeatures(source, [self.feature_space])
         compiles = True
       except ValueError:
         compiles = False
