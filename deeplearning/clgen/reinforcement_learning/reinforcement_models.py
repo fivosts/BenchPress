@@ -22,6 +22,7 @@ from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import cache
 from deeplearning.clgen.reinforcement_learning import env
 from deeplearning.clgen.reinforcement_learning import agent
+from deeplearning.clgen.reinforcement_learning import memory
 
 from absl import flags
 
@@ -172,7 +173,7 @@ class RLModel(object):
     self._created = True
     self.env    = env.Environment()
     self.agent  = agent.Agent()
-    self.memory = env.Memory()
+    self.memory = memory.Memory()
     return True
 
   def PreTrain(self, **kwargs) -> 'RLModel':
@@ -190,9 +191,10 @@ class RLModel(object):
     ## First, train the Language model backend.
     self.language_model.Train(**kwargs)
 
-    raise NotImplementedError("TODO: Time to train the RL!!")
+    num_episodes = 10
     ## Start the RL training pipeline.
     for ep in range(num_episodes):
+      raise NotImplementedError("TODO: Time to train the RL!!")
       self.env.reset()
       target_features = self.feature_sampler.sample()
       self.env.init_state(target_features)
