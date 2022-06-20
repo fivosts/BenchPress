@@ -22,6 +22,17 @@ class ActionTypeQV(torch.nn.Module):
     raise NotImplementedError
     return
 
+class ActionIndexQV(torch.nn.Module):
+  """Deep Q-Values for Action index prediction."""
+  def __init__(self):
+    super(ActionIndexQV, self).__init__()
+    return
+  
+  def forward(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
+    """Action index forward function."""
+    raise NotImplementedError
+    return
+
 class QValuesModel(object):
   """
   Handler of Deep-QNMs for program synthesis.
