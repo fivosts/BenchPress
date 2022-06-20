@@ -92,6 +92,7 @@ class RLModel(object):
     if environment.WORLD_RANK == 0:
       # Create the necessary cache directories.
       (self.cache.path / "checkpoints").mkdir(exist_ok = True)
+      (self.cache.path / "feature_sampler").mkdir(exist_ok = True)
       (self.cache.path / "samples").mkdir(exist_ok = True)
       # Create symlink to language model.
       symlink = self.cache.path / "language_model"
@@ -171,7 +172,7 @@ class RLModel(object):
     if self._created:
       return False
     self._created = True
-    self.env    = env.Environment(self.cache.path)
+    self.env    = env.Environment(self.cache.path, self.feature_sampler)
     self.agent  = agent.Agent(self.cache.path)
     self.memory = memory.Memory(self.cache.path)
     return True
