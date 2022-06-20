@@ -51,14 +51,16 @@ class QValuesModel(object):
   """
   Handler of Deep-QNMs for program synthesis.
   """
-  def __init__(self, cache_path: pathlib.Path, config) -> None:
+  def __init__(self, config, cache_path: pathlib.Path) -> None:
     self.cache_path = cache_path / "DQ_model"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exists_ok = True, parents = True)
 
+    self.config = config
     self.action_type_qv  = ActionTypeQV(config)
     self.action_index_qv = ActionIndexQV(config)
     self.token_type_qv   = TokenTypeQV(config)
+    self.loadCheckpoint()
     return
 
   def Train(self, input_ids: typing.Dict[str, torch.Tensor]) -> None:
