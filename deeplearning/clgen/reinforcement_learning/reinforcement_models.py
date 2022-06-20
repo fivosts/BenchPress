@@ -198,10 +198,10 @@ class RLModel(object):
       self.env.reset()
       is_term = False
       while not is_term:
-        state  = self.env.get_state()
+        state  = self.env.get_state()           # Get current state.
+        action = self.agent.make_action(state)  # Predict the action given the state.
+        reward = self.env.step(action)          # Step the action into the environment and face the consequences.
         raise NotImplementedError("TODO: Time to train the RL!!")
-        action = self.agent.make_action(state)
-        reward = self.env.step(action)
         self.memory.add(state, action, reward)
         self.agent.update(self.memory.sample())
     return
