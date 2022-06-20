@@ -3,8 +3,8 @@ Modeling for reinforcement learning program synthesis.
 """
 import pathlib
 import typing
-from deeplearning.clgen.reinforcement_learning.interactions import Action
 
+from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import pytorch
