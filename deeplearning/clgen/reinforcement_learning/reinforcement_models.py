@@ -202,7 +202,8 @@ class RLModel(object):
         action = self.agent.make_action(state)  # Predict the action given the state.
         reward = self.env.step(action)          # Step the action into the environment and face the consequences.
         self.memory.add(state, action, reward)  # Add to replay buffer the episode.
-        self.agent.update(self.memory.sample()) # Train the agent on a pool of memories.
+      self.agent.update(self.memory.sample()) # Train the agent on a pool of memories.
+      self.saveCheckpoint()
     return
   
   def Sample(self, sampler: samplers.Sampler) -> None:
@@ -226,3 +227,23 @@ class RLModel(object):
 
   def _WriteMetafile(self) -> None:
     pbutil.ToFile(self.meta, pathlib.Path(self.cache.keypath("META.pbtxt")))
+
+  def saveCheckpoint(self) -> None:
+    """
+    Save current state of RL pipeline.
+    """
+    self.feature_sampler.saveCheckpoint()
+    self.env.saveCheckpoint()
+    self.agent.saveCheckpoint()
+    self.memory.saveCheckpoint()
+    return
+  
+  def loadCheckpoint(self) -> None:
+    """
+    Load RL pipeline checkpoint.
+    """
+    self.feature_sampler.loadCheckpoint()
+    self.env.loadCheckpoint()
+    self.agent.loadCheckpoint()
+    self.memory.loadCheckpoint()
+    return
