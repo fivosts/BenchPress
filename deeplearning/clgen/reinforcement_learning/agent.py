@@ -85,7 +85,7 @@ class Agent(object):
       token_type_logits   = token_logits,
     )
 
-  def update_agent(self) -> None:
+  def update_agent(self, input_ids) -> None:
     """
     Train the agent on the new episodes.
     """
