@@ -171,9 +171,9 @@ class RLModel(object):
     if self._created:
       return False
     self._created = True
-    self.env    = env.Environment()
-    self.agent  = agent.Agent()
-    self.memory = memory.Memory()
+    self.env    = env.Environment(self.cache.path)
+    self.agent  = agent.Agent(self.cache.path)
+    self.memory = memory.Memory(self.cache.path)
     return True
 
   def PreTrain(self, **kwargs) -> 'RLModel':
