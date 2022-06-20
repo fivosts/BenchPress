@@ -2,6 +2,7 @@
 RL Environment for the task of targeted benchmark generation.
 """
 import pathlib
+import pickle
 import numpy as np
 
 from deeplearning.clgen.features import extractor
@@ -10,6 +11,7 @@ from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.reinforcement_learning import memory
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import distrib
 
 from absl import flags
 
@@ -22,10 +24,11 @@ class Environment(object):
                feature_sampler : feature_sampler.FeatureSampler
                ) -> None:
 
-    self.cache_path = cache_path
+    self.cache_path = cache_path / "environment"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exists_ok = True, parents = True)
     self.feature_sampler = feature_sampler
+    self.loadCheckpoint()
     return
 
   def step(self, action: interactions.Action) -> interactions.Reward:
@@ -99,5 +102,26 @@ class Environment(object):
     """
     Collect an agent's action and proceed with it into the current state.
     """
+    return
 
+def loadCheckpoint(self) -> None:
+  """
+  Load environment checkpoint.
+  """
+  if (self.cache_path / "environment.pkl").exists():
+    distrib.lock()
+    with open(self.cache_path / "environment.pkl", 'rb') as inf:
+      self.current_state = pickle.load(inf)
+    distrib.unlock()
+    distrib.barrier()
+  return
+
+  def saveCheckpoint(self) -> None:
+    """
+    Save environment state.
+    """
+    if environment.WORLD_RANK == 0:
+      with open(self.cache_path / "environment.pkl", 'wb') as outf:
+        pickle.dump(self.current_state, outf)
+    distrib.barrier()
     return
