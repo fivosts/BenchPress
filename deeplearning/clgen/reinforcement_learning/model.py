@@ -33,6 +33,17 @@ class ActionIndexQV(torch.nn.Module):
     raise NotImplementedError
     return
 
+class TokenTypeQV(torch.nn.Module):
+  """Deep Q-Values for Token type prediction."""
+  def __init__(self):
+    super(TokenTypeQV, self).__init__()
+    return
+  
+  def forward(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
+    """Token type forward function."""
+    raise NotImplementedError
+    return
+
 class QValuesModel(object):
   """
   Handler of Deep-QNMs for program synthesis.
