@@ -16,8 +16,10 @@ class StateEncoderDecoder(torch.nn.Module):
   """Transformer-Encoder architecture for encoding states."""
   def __init__(self, config):
     super().__init__()
+    ## Dimensional variables.
     self.encoder_embedding_size = config.feature_vocab_size
     self.decoder_embedding_size = config.vocab_size
+    ## Feature vector encoder.
     self.encoder_embedding = torch.nn.Embedding(
       num_embeddings = config.feature_vocab_size,
       embedding_dim  = config.hidden_size,
@@ -39,6 +41,12 @@ class StateEncoderDecoder(torch.nn.Module):
       encoder_layer = encoder_layers,
       num_layers    = config.num_hidden_layers,
       norm          = encoder_norm,
+    )
+    ## Source code decoder.
+    self.decoder_embedding = torch.nn.Embedding(
+      num_embeddings = config.vocab_size,
+      embedding_dim  = config.hidden_size,
+      padding_idx    = config.pad_token_id
     )
     return
   
