@@ -129,7 +129,7 @@ class ActionQV(torch.nn.Module):
 
   def forward(self,
               input_ids                        : torch.LongTensor,
-              target_features                  : torch.LongTenor,
+              target_features                  : torch.LongTensor,
               input_ids_mask                   : torch.ByteTensor,
               input_ids_key_padding_mask       : torch.ByteTensor,
               target_features_mask             : torch.ByteTensor,
