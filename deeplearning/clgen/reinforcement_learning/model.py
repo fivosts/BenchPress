@@ -61,7 +61,7 @@ class StateEncoderDecoder(torch.nn.Module):
       norm          = decoder_norm,
     )
     return
-  
+
   def forward(self,
               input_ids                       : torch.LongTensor,
               input_features                  : torch.LongTensor,
