@@ -106,7 +106,7 @@ class ActionHead(torch.nn.Module):
     super().__init__()
     return
 
-  def forward(self, input_ids):
+  def forward(self, decoder_out):
     return
 
 class IndexHead(torch.nn.Module):
@@ -115,7 +115,7 @@ class IndexHead(torch.nn.Module):
     super().__init__()
     return
 
-  def forward(self, input_ids):
+  def forward(self, decoder_out, action_logits):
     return
 
 class ActionQV(torch.nn.Module):
@@ -127,9 +127,23 @@ class ActionQV(torch.nn.Module):
     self.index_head      = IndexHead(config)
     return
   
-  def forward(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
+  def forward(self,
+              input_ids                        : torch.LongTensor,
+              target_features                  : torch.LongTenor,
+              input_ids_mask                   : torch.ByteTensor,
+              input_ids_key_padding_mask       : torch.ByteTensor,
+              target_features_mask             : torch.ByteTensor,
+              target_features_key_padding_mask : torch.ByteTensor,
+              ) -> typing.Dict[str, torch.Tensor]:
     """Action type forward function."""
-    raise NotImplementedError
+    encoded_features = self.feature_encoder(
+      target_features, target_features_mask, target_features_key_padding_mask
+    )
+    decoded_source = self.source_decoder(
+      input_ids, encoded_features, input_ids_mask, input_ids_key_padding_mask,
+    )
+    action_logits = self.action_head(decoded_source)
+    index_logits  = self.index_head(decoded_source, action_logits)
     return
 
 class TokenTypeQV(torch.nn.Module):
