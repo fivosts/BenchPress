@@ -91,7 +91,7 @@ class Environment(object):
         else:
           return interactions.Reward(
             action = action,
-            value  = 1.0 / (dist),
+            value  = 1.0 / (1 + dist),
             distance = dist,
             comment = "[COMPILE] succeeded, reward is {}, new distance is {}".format(1.0 / dist, dist)
           )
