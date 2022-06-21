@@ -144,7 +144,7 @@ class ActionQV(torch.nn.Module):
     )
     action_logits = self.action_head(decoded_source)
     index_logits  = self.index_head(decoded_source, action_logits)
-    return
+    return action_logits, index_logits
 
 class TokenTypeQV(torch.nn.Module):
   """Deep Q-Values for Token type prediction."""
