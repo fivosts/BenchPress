@@ -126,7 +126,7 @@ class ActionQV(torch.nn.Module):
     self.action_head     = ActionHead(config)
     self.index_head      = IndexHead(config)
     return
-  
+
   def forward(self,
               input_ids                        : torch.LongTensor,
               target_features                  : torch.LongTenor,
