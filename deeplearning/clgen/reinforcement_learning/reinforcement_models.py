@@ -214,7 +214,7 @@ class RLModel(object):
       self.agent.update(self.memory.sample()) # Train the agent on a pool of memories.
       self.saveCheckpoint()
     return
-  
+
   def Sample(self, sampler: samplers.Sampler) -> None:
     """
     Instead of calling Model's sample, this sample will be called, acting as a backend (BERT) wrapper.
