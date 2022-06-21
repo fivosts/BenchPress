@@ -16,6 +16,9 @@ class ActionTypeQV(torch.nn.Module):
   def __init__(self, config):
     super(ActionTypeQV, self).__init__()
     self.config = config
+    self.encoder_embedding = torch.nn.Embedding(
+      
+    )
     return
   
   def forward(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
@@ -66,7 +69,6 @@ class QValuesModel(object):
   def Train(self, input_ids: typing.Dict[str, torch.Tensor]) -> None:
     """Update the Q-Networks with some memories."""
     raise NotImplementedError
-    self.saveCheckpoint()
     return
 
   def SampleActionType(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
