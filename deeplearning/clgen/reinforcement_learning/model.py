@@ -3,11 +3,11 @@ Modeling for reinforcement learning program synthesis.
 """
 import pathlib
 import typing
+import math
 
 from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.models.torch_bert import model
 from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import pytorch
 
 torch = pytorch.torch
@@ -16,6 +16,8 @@ class FeatureEncoder(torch.nn.Module):
   """Transformer-Encoder architecture for target features."""
   def __init__(self, config):
     super().__init__()
+    self.encoder_embedding_size = config.feature_vocab_size
+    self.decoder_embedding_size = config.vocab_size
     self.encoder_embedding = torch.nn.Embedding(
       num_embeddings = config.feature_vocab_size,
       embedding_dim  = config.hidden_size,
@@ -40,9 +42,34 @@ class FeatureEncoder(torch.nn.Module):
     )
     return
   
-  def forward(self, input_ids):
-
-    return
+  def forward(self,
+              input_ids                       : torch.LongTensor,
+              input_features                  : torch.LongTensor,
+              input_features_mask             : torch.ByteTensor,
+              input_features_key_padding_mask : torch.ByteTensor,
+              input_ids_mask                  : torch.ByteTensor,
+              input_ids_key_padding_mask      : torch.ByteTensor,
+              ) -> torch.Tensor:
+    ## Run the encoder transformer over the features.
+    enc_embed = self.encoder_embedding(input_features) * math.sqrt(self.encoder_embedding_size)
+    pos_enc_embed = self.encoder_pos_encoder(enc_embed)
+    encoded = self.encoder_transformer(
+      pos_enc_embed,
+      mask = input_features_mask,
+      src_key_padding_mask = input_features_key_padding_mask,
+    )
+    ## Run the decoder over the source code.
+    dec_embed = self.decoder_embedding(input_ids) * math.sqrt(self.decoder_embedding_size)
+    pos_dec_embed = self.decoder_pos_encoder(dec_embed)
+    decoded = self.decoder_transformer(
+      pos_dec_embed,
+      memory = encoded,
+      tgt_mask = input_ids_mask,
+      # memory_mask = None, ??
+      tgt_key_padding_mask = input_ids_key_padding_mask,
+      # memory_key_padding_mask = None, ??
+    )
+    return decoded
 
 class SourceDecoder(torch.nn.Module):
   """Source code decoder for action prediction."""
