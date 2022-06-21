@@ -170,14 +170,11 @@ class RLModel(object):
     """
     _ = self.language_model.Create()
     self.tokenizer = self.language_model.tokenizer
-    if self.language_model.backend.feature_encoder:
-      self.feature_tokenizer = self.language_model.backend.feature_tokenizer
-    else:
-      self.feature_tokenizer = tokenizers.FeatureTokenizer.FromArgs(
-        self.config.architecture.qv_architecture.feature_singular_token_thr,
-        self.config.architecture.qv_architecture.feature_max_value_token,
-        self.config.architecture.qv_architecture.feature_token_range
-      )
+    self.feature_tokenizer = tokenizers.FeatureTokenizer.FromArgs(
+      self.config.architecture.deep_qv.feature_singular_token_thr,
+      self.config.architecture.deep_qv.feature_max_value_token,
+      self.config.architecture.deep_qv.feature_token_range
+    )
     if self._created:
       return False
     self._created = True
