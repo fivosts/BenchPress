@@ -12,8 +12,8 @@ from deeplearning.clgen.util import pytorch
 
 torch = pytorch.torch
 
-class FeatureEncoder(torch.nn.Module):
-  """Transformer-Encoder architecture for target features."""
+class StateEncoderDecoder(torch.nn.Module):
+  """Transformer-Encoder architecture for encoding states."""
   def __init__(self, config):
     super().__init__()
     self.encoder_embedding_size = config.feature_vocab_size
@@ -123,7 +123,7 @@ class IndexHead(torch.nn.Module):
 class ActionQV(torch.nn.Module):
   """Deep Q-Values for Action type prediction."""
   def __init__(self, config):
-    self.feature_encoder = FeatureEncoder(config)
+    self.feature_encoder = StateEncoderDecoder(config)
     self.source_decoder  = SourceDecoder(config)
     self.action_head     = ActionHead(config)
     self.index_head      = IndexHead(config)
