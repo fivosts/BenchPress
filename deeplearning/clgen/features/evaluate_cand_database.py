@@ -140,7 +140,7 @@ class SearchCandidate(Base, sqlutil.ProtoBackedMixin):
       target_benchmark  = "// {}\n{}".format(target_benchmark[0], target_benchmark[1]),
       target_features   = '\n'.join(["{}:{}".format(k, v) for k, v in target_features.items()]) if target_features else "None",
       compile_status    = compile_status,
-      score_delta       = (sample_score - input_score) / input_score if not math.isinf(input_score) else math.inf,
+      score_delta       = (sample_score - input_score) / input_score if not math.isinf(input_score) and input_score > 0 else math.inf,
       features_delta    = '\n'.join(["{}:{}".format(k, output_features[k] - input_features[k]) for k in input_features.keys() if (output_features[k] - input_features[k] != 0)]) if input_features and output_features else math.inf,
       date_added        = datetime.datetime.utcnow(),
     )
