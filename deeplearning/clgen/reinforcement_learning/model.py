@@ -30,12 +30,12 @@ class StateEncoderDecoder(torch.nn.Module):
       d_model         = config.hidden_size,
       nhead           = config.num_attention_heads,
       dim_feedforward = config.intermediate_size,
-      dropout         = config.dropout_prob,
+      dropout         = config.hidden_dropout_prob,
       batch_first     = True
     )
     encoder_norm = torch.nn.LayerNorm(
       config.hidden_size,
-      eps = config.feature_layer_norm_eps
+      eps = config.layer_norm_eps
     )
     self.encoder_transformer = torch.nn.TransformerEncoder(
       encoder_layer = encoder_layers,
@@ -43,10 +43,22 @@ class StateEncoderDecoder(torch.nn.Module):
       norm          = encoder_norm,
     )
     ## Source code decoder.
-    self.decoder_embedding = torch.nn.Embedding(
-      num_embeddings = config.vocab_size,
-      embedding_dim  = config.hidden_size,
-      padding_idx    = config.pad_token_id
+    self.decoder_embedding = model.BertEmbeddings(config)
+    decoder_layers = torch.nn.TransformerDecoderLayer(
+      d_model         = config.hidden_size,
+      nhead           = config.num_attention_heads,
+      dim_feedforward = config.intermediate_size,
+      dropout         = config.hidden_dropout_prob,
+      batch_first     = True,
+    )
+    decoder_norm = torch.nn.LayerNorm(
+      config.hidden_size,
+      eps = config.layer_norm_eps,
+    )
+    self.decoder_transformer = torch.nn.TransformerDecoder(
+      decoder_layer = decoder_layers,
+      num_layers    = config.num_hidden_layers,
+      norm          = decoder_norm,
     )
     return
   
