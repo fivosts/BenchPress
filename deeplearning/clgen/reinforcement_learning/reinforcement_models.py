@@ -169,6 +169,15 @@ class RLModel(object):
     Create the LM and RL environment.
     """
     _ = self.language_model.Create()
+    self.tokenizer = self.language_model.tokenizer
+    if self.language_model.backend.feature_encoder:
+      self.feature_tokenizer = self.language_model.backend.feature_tokenizer
+    else:
+      self.feature_tokenizer = tokenizers.FeatureTokenizer.FromArgs(
+        self.config.architecture.qv_architecture.feature_singular_token_thr,
+        self.config.architecture.qv_architecture.feature_max_value_token,
+        self.config.architecture.qv_architecture.feature_token_range
+      )
     if self._created:
       return False
     self._created = True
