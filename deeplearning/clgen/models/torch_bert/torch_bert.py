@@ -654,6 +654,10 @@ class torchBert(backends.BackendBase):
       _ = self.Validate(pre_train = pre_train)
     return
 
+  def TrainBatch(self, inputs) -> None:
+    raise NotImplementedError
+    return
+
   def Validate(self, per_epoch = False, pre_train = False) -> float:
     """
     Validation function for torch BERT.
@@ -889,6 +893,10 @@ class torchBert(backends.BackendBase):
           generated_samples,
           sample_indices
         )
+
+  def SampleBatch(self, batch) -> typing.Tuple[np.array, np.array]:
+    raise NotImplementedError
+    return
 
   def _getTestSampler(self, test_sampler, sequence_length):
     if test_sampler is None or test_sampler.is_live or test_sampler.is_active:
