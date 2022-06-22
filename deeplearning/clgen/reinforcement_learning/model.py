@@ -104,10 +104,16 @@ class ActionHead(torch.nn.Module):
   """Classification head for action prediction."""
   def __init__(self, config):
     super().__init__()
+    self.transform = model.BertPredictionHeadTransform(config)
+    self.decoder   = torch.nn.Linear(config.hidden_size, len(interactions.ACTION_TYPE_SPACE), bias = False)
+    self.bias      = torch.nn.Parameter(torch.zeros(len(interactions.ACTION_TYPE_SPACE)))
+    self.decoder.bias = self.bias
     return
 
-  def forward(self, decoder_out):
-    return
+  def forward(self, decoder_out: torch.FloatTensor) -> torch.FloatTensor:
+    transformed = self.transform(decoder_out)
+    action_logits = self.decoder(transformed)
+    return action_logits
 
 class IndexHead(torch.nn.Module):
   """Classification head for token index prediction."""
