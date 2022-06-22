@@ -23,7 +23,8 @@ class QValuesConfig(object):
       'max_position_embeddings' : config.deep_qv.max_position_embeddings,
 
     }
-    return QValuesConfig()
+    return QValuesConfig(**dict)
 
-  def __init__(self, config):
+  def __init__(self, **attrs):
+    self.__dict__.update(attrs)
     return
