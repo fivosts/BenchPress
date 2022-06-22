@@ -7,7 +7,7 @@ import numpy as np
 
 from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.reinforcement_learning import model
-from deeplearning.clgen.reinforcement_learning.config import from_config
+from deeplearning.clgen.reinforcement_learning.config import QValuesConfig
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util import environment
 
@@ -52,7 +52,7 @@ class Agent(object):
       self.cache_path.mkdir(exists_ok = True, parents = True)
 
     self.config = config
-    self.qv_config = from_config(self.config)
+    self.qv_config = QValuesConfig.from_config(self.config)
     self.q_model = model.QValuesModel(self.qv_config, self.cache_path)
     self.policy  = Policy()
 
