@@ -152,30 +152,34 @@ class ActionQV(torch.nn.Module):
     index_logits  = self.index_head(decoded_source, action_logits)
     return action_logits, index_logits
 
-class TokenTypeQV(torch.nn.Module):
+class LanguageModelQV(object):
   """Deep Q-Values for Token type prediction."""
-  def __init__(self, config):
-    super(TokenTypeQV, self).__init__()
+  def __init__(self, language_model, config):
+    super(LanguageModelQV, self).__init__()
+    self.language_model = language_model
     self.config = config
     return
   
-  def forward(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
-    """Token type forward function."""
-    raise NotImplementedError
+  def TrainBatch(self, input_ids: typing.Dict[str, torch.Tensor]):
+    self.language_model.Trainbatch(input_ids)
+    return
+
+  def SampleBatch(self, input_ids: typing.Dict[str, torch.Tensor]):
+    self.language_model.SampleBatch(input_ids)
     return
 
 class QValuesModel(object):
   """
   Handler of Deep-QNMs for program synthesis.
   """
-  def __init__(self, config, cache_path: pathlib.Path) -> None:
+  def __init__(self, language_model, config, cache_path: pathlib.Path) -> None:
     self.cache_path = cache_path / "DQ_model"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exists_ok = True, parents = True)
 
     self.config = config
-    self.action_type_qv  = ActionQV(config)
-    self.token_type_qv   = TokenTypeQV(config)
+    self.action_type_qv = ActionQV(config)
+    self.token_type_qv  = LanguageModelQV(language_model, config)
     self.loadCheckpoint()
     return
 
