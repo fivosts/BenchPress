@@ -35,17 +35,21 @@ class BackendBase(object):
 
   def Train(self, corpus: "Corpus", **extra_kwargs) -> None:
     """Train the backend."""
-    raise NotImplementedError
+    raise NotImplementedError("Abstract Class.")
+
+  def TrainBatch(self, batch) -> None:
+    """Incrementally train language model on a batch of data."""
+    raise NotImplementedError("Abstract Class.")
 
   def InitSampling(
     self, sampler: 'samplers.Sampler', seed: typing.Optional[int] = None
   ) -> None:
     """Initialize backend for sampling."""
-    raise NotImplementedError
+    raise NotImplementedError("Abstract Class.")
 
   def InitSampleBatch(self, sampler: 'samplers.Sampler') -> None:
     """Begin a new sampling batch. Only called after InitSampling()."""
-    raise NotImplementedError
+    raise NotImplementedError("Abstract Class.")
 
   def SampleNextIndices(
     self, sampler: 'samplers.Sampler', done: np.ndarray, tokenizer = None
@@ -55,4 +59,8 @@ class BackendBase(object):
     Returns:
       A numpy array of int32 values with shape (batch_size,).
     """
-    raise NotImplementedError
+    raise NotImplementedError("Abstract Class.")
+
+  def SampleBatch(self, batch) -> np.ndarray:
+    """Specifically sample a requested batch of data."""
+    raise NotImplementedError("Abstract Class.")
