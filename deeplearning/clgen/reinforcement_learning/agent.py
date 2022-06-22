@@ -7,6 +7,7 @@ import numpy as np
 
 from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.reinforcement_learning import model
+from deeplearning.clgen.reinforcement_learning.config import from_config
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util import environment
 
@@ -50,7 +51,9 @@ class Agent(object):
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exists_ok = True, parents = True)
 
-    self.q_model = model.QValuesModel(config, self.cache_path)
+    self.config = config
+    self.qv_config = from_config(self.config)
+    self.q_model = model.QValuesModel(self.qv_config, self.cache_path)
     self.policy  = Policy()
 
     self.loadCheckpoint()
