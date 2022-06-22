@@ -178,8 +178,8 @@ class RLModel(object):
     if self._created:
       return False
     self._created = True
-    self.env    = env.Environment(self.cache.path, self.feature_sampler)
-    self.agent  = agent.Agent(self.cache.path)
+    self.env    = env.Environment(self.feature_sampler, self.cache.path)
+    self.agent  = agent.Agent(self.config, self.cache.path)
     self.memory = memory.Memory(self.cache.path)
     return True
 
