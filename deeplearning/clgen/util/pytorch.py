@@ -1,6 +1,7 @@
 """A wrapper module to include tensorflow with some options"""
 from absl import flags
 import os
+import datetime
 
 from deeplearning.clgen.util import gpu
 from deeplearning.clgen.util import environment
@@ -84,6 +85,7 @@ def initPytorch() -> None:
       store      = tcp_store,
       rank       = environment.WORLD_RANK,
       world_size = environment.WORLD_SIZE,
+      timeout    = datetime.timedelta(minutes = 60)
     )
     num_nodes = torch.distributed.get_world_size()
     num_gpus  = torch.cuda.device_count()
