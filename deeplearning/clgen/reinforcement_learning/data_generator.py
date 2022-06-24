@@ -14,7 +14,7 @@ torch = pytorch.torch
 def from_config(config            : reinforcement_learning_pb2.RLModel,
                 feature_tokenizer : tokenizers.FeatureTokenizer,
                 corpus            : corpuses.Corpus,
-                ) -> "FeatureLoader":
+                ) -> torch.utils.Dataset:
   """
   Return the right torch dataloader based on configuration.
   """
