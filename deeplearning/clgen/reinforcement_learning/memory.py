@@ -20,7 +20,7 @@ class Memory(object):
 
     self.cache_path = cache_path / "memory"
     if environment.WORLD_RANK == 0:
-      self.cache_path.mkdir(exists_ok = True, parents = True)
+      self.cache_path.mkdir(exist_ok = True, parents = True)
 
     self.action_buffer = []
     self.state_buffer  = []
