@@ -169,7 +169,6 @@ class RLModel(object):
     Create the LM and RL environment.
     """
     _ = self.language_model.Create()
-    self.tokenizer = self.language_model.tokenizer
     self.feature_tokenizer = tokenizers.FeatureTokenizer.FromArgs(
       self.config.architecture.deep_qv.feature_singular_token_thr,
       self.config.architecture.deep_qv.feature_max_value_token,
