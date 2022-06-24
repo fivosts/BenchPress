@@ -10,6 +10,8 @@ from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.reinforcement_learning import memory
+from deeplearning.clgen.reinforcement_learning import data_generator
+from deeplearning.clgen.proto import reinforcement_learning_pb2
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
 
@@ -20,14 +22,14 @@ class Environment(object):
   Environment representation for RL Agents.
   """
   def __init__(self,
+               config    : reinforcement_learning_pb2.RLModel,
                cache_path: pathlib.Path,
-               feature_sampler : feature_sampler.FeatureSampler
                ) -> None:
-
+    self.config = config
     self.cache_path = cache_path / "environment"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exists_ok = True, parents = True)
-    self.feature_sampler = feature_sampler
+    self.feature_loader = data_generator.FeatureLoader(self.config)
     self.loadCheckpoint()
     return
 
