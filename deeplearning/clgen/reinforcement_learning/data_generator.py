@@ -67,7 +67,7 @@ class RandomFeatureLoader(torch.utils.data.Dataset):
   """
   def __init__(self,
                config            : reinforcement_learning_pb2.RLModel,
-               feature_tokenizer : tokenizers.FeatureTokenizer
+               feature_tokenizer : tokenizers.FeatureTokenizer,
                ):
     self.config = config
     self.feature_tokenizer = feature_tokenizer
