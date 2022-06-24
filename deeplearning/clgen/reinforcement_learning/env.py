@@ -22,14 +22,17 @@ class Environment(object):
   Environment representation for RL Agents.
   """
   def __init__(self,
-               config    : reinforcement_learning_pb2.RLModel,
-               cache_path: pathlib.Path,
+               feature_tokenizer : tokenizers.FeatureTokenizer,
+               corpus            : corpuses.Corpus,
+               config            : reinforcement_learning_pb2.RLModel,
+              cache_path         : pathlib.Path,
                ) -> None:
+    self.feature_tokenizer = feature_tokenizer
     self.config = config
     self.cache_path = cache_path / "environment"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exist_ok = True, parents = True)
-    self.feature_loader = data_generator.FeatureLoader(self.config)
+    self.feature_loader = data_generator.from_config(self.config, self.feature_tokenizer, corpus)
     self.loadCheckpoint()
     return
 
