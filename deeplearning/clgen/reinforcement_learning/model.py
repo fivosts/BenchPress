@@ -175,7 +175,7 @@ class QValuesModel(object):
   def __init__(self, language_model, config, cache_path: pathlib.Path) -> None:
     self.cache_path = cache_path / "DQ_model"
     if environment.WORLD_RANK == 0:
-      self.cache_path.mkdir(exists_ok = True, parents = True)
+      self.cache_path.mkdir(exist_ok = True, parents = True)
 
     self.config = config
     self.action_type_qv = ActionQV(config)
