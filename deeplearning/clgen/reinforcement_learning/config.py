@@ -24,7 +24,7 @@ class QValuesConfig(object):
       'num_hidden_layers'       : config.agent.action_qv.num_hidden_layers,
       'layer_norm_eps'          : config.agent.action_qv.layer_norm_eps,
       'max_position_embeddings' : config.agent.action_qv.max_position_embeddings,
-
+      'feature_encoder'         : False,
     }
     return QValuesConfig(**dict)
 
