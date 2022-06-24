@@ -49,7 +49,7 @@ class Agent(object):
 
     self.cache_path = cache_path / "agent"
     if environment.WORLD_RANK == 0:
-      self.cache_path.mkdir(exists_ok = True, parents = True)
+      self.cache_path.mkdir(exist_ok = True, parents = True)
 
     self.config = config
     self.qv_config = QValuesConfig.from_config(self.config)
