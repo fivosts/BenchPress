@@ -13,7 +13,7 @@ class QValuesConfig(object):
       'vocab_size'              : tokenizer.vocab_size,
       'feature_vocab_size'      : feature_tokenizer.vocab_size,
       'feature_pad_idx'         : feature_tokenizer.padToken,
-      'pad_idx'                 : tokenizer.padToken,
+      'pad_token_id'            : tokenizer.padToken,
       'hidden_dropout_prob'     : config.agent.action_qv.hidden_dropout_prob,
       'feature_dropout_prob'    : config.agent.action_qv.hidden_dropout_prob,
       'hidden_size'             : config.agent.action_qv.hidden_size,
