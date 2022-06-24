@@ -188,6 +188,7 @@ class RLModel(object):
     Pre-train wrapper for Language model.
     No-pretraining is supported for RL model.
     """
+    self.Create()
     self.language_model.PreTrain(**kwargs)
     return self
 
@@ -195,6 +196,7 @@ class RLModel(object):
     """
     Train the RL-Agent.
     """
+    self.Create()
     ## First, train the Language model backend.
     self.language_model.Train(**kwargs)
 
