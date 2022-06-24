@@ -207,10 +207,10 @@ class QValuesModel(object):
 
   def saveCheckpoint(self) -> None:
     """Checkpoint Deep Q-Nets."""
-    raise NotImplementedError
+    l.logger().error("Save checkpoint for QV Model has not been implemented.")
     return
 
   def loadCheckpoint(self) -> None:
     """Load Deep Q-Nets."""
-    raise NotImplementedError
+    l.logger().error("Load checkpoint for QV Model has not been implemented.")
     return
