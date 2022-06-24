@@ -28,6 +28,7 @@ message RLAgent {
 message FeatureTokenizer {
   optional int32 feature_max_value_token    = 1;
   optional int32 feature_singular_token_thr = 2;
+  optional int32 feature_token_range        = 3;
 }
 
 message ActionQV {
