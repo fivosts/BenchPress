@@ -5,6 +5,7 @@ import pathlib
 import pickle
 import numpy as np
 
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.preprocessors import opencl
