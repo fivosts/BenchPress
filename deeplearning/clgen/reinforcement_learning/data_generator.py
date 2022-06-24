@@ -72,3 +72,10 @@ class RandomFeatureLoader(torch.utils.data.Dataset):
     self.config = config
     self.feature_tokenizer = feature_tokenizer
     return
+
+  def __len__(self) -> int:
+    return len(self.dataset)
+
+  def __getitem__(self, idx: int) -> typing.Dict[str, torch.Tensor]:
+    return
+  
