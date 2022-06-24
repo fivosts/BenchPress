@@ -183,7 +183,7 @@ class RLModel(object):
     if self._created:
       return False
     self._created = True
-    self.env    = env.Environment(self.feature_sampler, self.cache.path)
+    self.env    = env.Environment(self.config, self.cache.path)
     self.agent  = agent.Agent(self.config, self.cache.path)
     self.memory = memory.Memory(self.cache.path)
     return True
@@ -245,7 +245,7 @@ class RLModel(object):
     """
     Save current state of RL pipeline.
     """
-    self.feature_sampler.saveCheckpoint()
+    self.feature_loader.saveCheckpoint()
     self.env.saveCheckpoint()
     self.agent.saveCheckpoint()
     self.memory.saveCheckpoint()
@@ -255,7 +255,7 @@ class RLModel(object):
     """
     Load RL pipeline checkpoint.
     """
-    self.feature_sampler.loadCheckpoint()
+    self.feature_loader.loadCheckpoint()
     self.env.loadCheckpoint()
     self.agent.loadCheckpoint()
     self.memory.loadCheckpoint()
