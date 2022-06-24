@@ -8,6 +8,7 @@ import numpy as np
 from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.reinforcement_learning import model
 from deeplearning.clgen.reinforcement_learning.config import QValuesConfig
+from deeplearning.clgen.models import language_models
 from deeplearning.clgen.proto import reinforcement_learning_pb2
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.util import pytorch
@@ -49,6 +50,7 @@ class Agent(object):
   """
   def __init__(self,
               config            : reinforcement_learning_pb2.RLModel,
+              language_model    : language_models.Model,
               tokenizer         : tokenizers.TokenizerBase,
               feature_tokenizer : tokenizers.FeatureTokenizer,
               cache_path: pathlib.Path
@@ -62,7 +64,7 @@ class Agent(object):
     self.tokenizer = tokenizer
     self.feature_tokenizer = feature_tokenizer
     self.qv_config = QValuesConfig.from_config(self.config, self.tokenizer, self.feature_tokenizer)
-    self.q_model = model.QValuesModel(self.qv_config, self.cache_path)
+    self.q_model = model.QValuesModel(self.language_model, self.qv_config, self.cache_path)
     self.policy  = Policy()
 
     self.loadCheckpoint()
