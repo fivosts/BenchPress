@@ -8,6 +8,8 @@ import numpy as np
 from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.reinforcement_learning import model
 from deeplearning.clgen.reinforcement_learning.config import QValuesConfig
+from deeplearning.clgen.proto import reinforcement_learning_pb2
+from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util import environment
 
@@ -45,14 +47,21 @@ class Agent(object):
   """
   Benchmark generation RL-Agent.
   """
-  def __init__(self, config, cache_path: pathlib.Path):
+  def __init__(self,
+              config            : reinforcement_learning_pb2.RLModel,
+              tokenizer         : tokenizers.TokenizerBase,
+              feature_tokenizer : tokenizers.FeatureTokenizer,
+              cache_path: pathlib.Path
+              ):
 
     self.cache_path = cache_path / "agent"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exist_ok = True, parents = True)
 
     self.config = config
-    self.qv_config = QValuesConfig.from_config(self.config)
+    self.tokenizer = tokenizer
+    self.feature_tokenizer = feature_tokenizer
+    self.qv_config = QValuesConfig.from_config(self.config, self.tokenizer, self.feature_tokenizer)
     self.q_model = model.QValuesModel(self.qv_config, self.cache_path)
     self.policy  = Policy()
 
