@@ -127,6 +127,7 @@ class IndexHead(torch.nn.Module):
 class ActionQV(torch.nn.Module):
   """Deep Q-Values for Action type prediction."""
   def __init__(self, config):
+    super().__init__()
     self.feature_encoder = FeatureEncoder(config)
     self.source_decoder  = SourceDecoder(config)
     self.action_head     = ActionHead(config)
