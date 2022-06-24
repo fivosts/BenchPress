@@ -4,6 +4,8 @@ Memory replay buffer for reinforcement learning training.
 import typing
 
 from deeplearning.clgen.corpuses import tokenizers
+from deeplearning.clgen.corpuses import corpuses
+from deeplearning.clgen.features import extractor
 from deeplearning.clgen.models import language_models
 from deeplearning.clgen.proto import reinforcement_learning_pb2
 from deeplearning.clgen.util import pytorch
@@ -28,7 +30,7 @@ class CorpusFeatureLoader(torch.utils.Dataset):
   Dataloading from language model's training corpus.
   """
   def __init__(self, corpus: corpuses.Corpus, feature_tokenizer: tokenizers.FeatureTokenizer):
-    self.data = corpus.get_features()
+    self.data = corpus.GetTrainingFeatures()
     self.feature_tokenizer = feature_tokenizer
     return
 
