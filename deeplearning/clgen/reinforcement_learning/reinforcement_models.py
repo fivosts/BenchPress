@@ -170,9 +170,9 @@ class RLModel(object):
     """
     _ = self.language_model.Create()
     self.feature_tokenizer = tokenizers.FeatureTokenizer.FromArgs(
-      self.config.agent.feature_singular_token_thr,
-      self.config.agent.feature_max_value_token,
-      self.config.agent.feature_token_range
+      self.config.agent.feature_tokenizer.feature_singular_token_thr,
+      self.config.agent.feature_tokenizer.feature_max_value_token,
+      self.config.agent.feature_tokenizer.feature_token_range
     )
     if self._created:
       return False
