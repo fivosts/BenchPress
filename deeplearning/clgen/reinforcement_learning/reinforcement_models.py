@@ -34,6 +34,12 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
   """
   ## Just check if language_model exists, later the language_models class will check the pbtxt.
   pbutil.AssertFieldIsSet(config, "language_model")
+  ## Now check the specialized agent attributes.
+  pbutil.AssertFieldIsSet(config, "target_features")
+  pbutil.AssertFieldIsSet(config, "agent")
+  pbutil.AssertFieldIsSet(config.agent, "feature_tokenizer")
+  pbutil.AssertFieldIsSet(config.agent, "action_qv")
+  pbutil.AssertFieldIsSet(config.agent, "action_lm")
   return config
 
 class RLModel(object):
