@@ -1021,6 +1021,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       )
       if self.feature_encoder:
         inputs["input_features"] = target_features
+        inputs['features_key_padding_mask'] = [(True if x!=self.feature_tokenizer.padToken else False) for x in target_features]
       inputs = {
         k: torch.from_numpy(v).unsqueeze(0).repeat_interleave(self.sample_batch_size, dim = 0).unsqueeze(0).repeat_interleave(wload_size, dim = 0) 
         for k, v in inputs.items()
@@ -1032,6 +1033,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       }
       if self.feature_encoder:
         inputs["input_features"] = []
+        inputs["features_key_padding_mask"] = []
       try:
         pool = multiprocessing.Pool()
         for batch in pool.imap_unordered(
@@ -1053,6 +1055,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                 out[k] = torch.cat((out[k], nt), 0)
             if self.feature_encoder:
               out["input_features"] = torch.from_numpy(target_features).unsqueeze(0).repeat_interleave(out['input_ids'].shape[0], dim = 0)
+              out["features_key_padding_mask"] = torch.from_numpy([(True if x!=self.feature_tokenizer.padToken else False) for x in target_features]).unsqueeze(0).repeat_interleave(out['input_ids'].shape[0], dim = 0)
             for k in inputs.keys():
               inputs[k].append(out[k])
         for k, v in inputs.items():
