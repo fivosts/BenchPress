@@ -55,8 +55,8 @@ class CorpusFeatureLoader(torch.utils.Dataset):
         self.dataset.append(
           {
             'input_features': torch.LongTensor(fvec),
-            'input_features_mask': torch.LongTensor(fvec != self.feature_tokenizer.padToken),
-            'input_features_key_padding_mask': None,
+            # 'input_features_mask': torch.LongTensor(fvec != self.feature_tokenizer.padToken),
+            # 'input_features_key_padding_mask': None,
           }
         )
     return
