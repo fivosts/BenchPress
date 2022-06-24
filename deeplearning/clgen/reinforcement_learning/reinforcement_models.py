@@ -23,6 +23,7 @@ from deeplearning.clgen.util import cache
 from deeplearning.clgen.reinforcement_learning import env
 from deeplearning.clgen.reinforcement_learning import agent
 from deeplearning.clgen.reinforcement_learning import memory
+from deeplearning.clgen.models.torch_bert import model as bert_model
 
 from absl import flags
 
@@ -37,9 +38,40 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
   ## Now check the specialized agent attributes.
   pbutil.AssertFieldIsSet(config, "target_features")
   pbutil.AssertFieldIsSet(config, "agent")
-  pbutil.AssertFieldIsSet(config.agent, "feature_tokenizer")
   pbutil.AssertFieldIsSet(config.agent, "action_qv")
   pbutil.AssertFieldIsSet(config.agent, "action_lm")
+  ## Parse FeatureTokenizer fields.
+  pbutil.AssertFieldIsSet(config.agent, "feature_tokenizer")
+  ## Parse ActionQV fields.
+  pbutil.AssertFieldIsSet(config.agent.action_qv, "feature_sequence_length")
+  pbutil.AssertFieldIsSet(config.agent.action_qv, "max_position_embeddings")
+  pbutil.AssertFieldIsSet(config.agent.action_qv, "hidden_size")
+  pbutil.AssertFieldConstraint(
+    config.agent.action_qv,
+    "num_attention_heads",
+    lambda x: x > 0,
+    "#Attention heads must be at least 1."
+  )
+  pbutil.AssertFieldIsSet(config.agent.action_qv, "intermediate_size")
+  pbutil.AssertFieldConstraint(
+    config.agent.action_qv,
+    "num_hidden_layers",
+    lambda x: x > 0,
+    "#hidden layers must be at least 1."
+  )
+  pbutil.AssertFieldIsSet(config.agent.action_qv, "layer_norm_eps")
+  pbutil.AssertFieldConstraint(
+    config.agent.action_qv,
+    "hidden_dropout_prob",
+    lambda x: 0.0 < x < 1.0,
+    "Dropout probability must be between 0.0 and 1.0."
+  )
+  pbutil.AssertFieldConstraint(
+    config.agent.action_qv,
+    "hidden_act",
+    lambda x: x in set(bert_model.ACT2FN.keys()),
+    "Invalid choice for hidden_act"
+  )
   return config
 
 class RLModel(object):
