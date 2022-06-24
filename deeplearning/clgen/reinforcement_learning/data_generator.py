@@ -1,16 +1,11 @@
 """
 Memory replay buffer for reinforcement learning training.
 """
-import pathlib
 import typing
-import pickle
 
-from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.models import language_models
 from deeplearning.clgen.proto import reinforcement_learning_pb2
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import pytorch
 
 torch = pytorch.torch
