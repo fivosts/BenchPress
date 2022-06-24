@@ -25,7 +25,7 @@ class Environment(object):
                feature_tokenizer : tokenizers.FeatureTokenizer,
                corpus            : corpuses.Corpus,
                config            : reinforcement_learning_pb2.RLModel,
-              cache_path         : pathlib.Path,
+               cache_path         : pathlib.Path,
                ) -> None:
     self.feature_tokenizer = feature_tokenizer
     self.config = config
