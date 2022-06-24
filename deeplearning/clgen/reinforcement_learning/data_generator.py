@@ -24,9 +24,26 @@ def from_config(config: reinforcement_learning_pb2.RLModel,
   """
   if config.HasField("train_set"):
     return CorpusFeatureLoader(language_model.corpus, feature_tokenizer)
+  elif config.HasField("random"):
+    return RandomFeatureLoader(feature_tokenizer)
   return
 
-class FeatureLoader(torch.utils.data.Dataset):
+class CorpusFeatureLoader(torch.utils.Dataset):
+  """
+  Dataloading from language model's training corpus.
+  """
+  def __init__(self, corpus: corpuses.Corpus, feature_tokenizer: tokenizers.FeatureTokenizer):
+    self.data = corpus.get_features()
+    self.feature_tokenizer = feature_tokenizer
+    return
+
+  def __len__(self) -> int:
+    return len(self.dataset)
+  
+  def __getitem__(self, idx: int) -> typing.Dict[str, torch.Tensor]:
+    return
+
+class RandomFeatureLoader(torch.utils.data.Dataset):
   """
   Torch-based dataloading class for target feature vectors.
   """
