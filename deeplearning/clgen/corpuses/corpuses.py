@@ -352,12 +352,15 @@ class Corpus(object):
       random.shuffle(data)
     return data
 
-  def GetTrainingFeatures(self, sequence_length: int) -> typing.List[typing.Dict[str, typing.Dict[str, float]]]:
+  def GetTrainingFeatures(self, sequence_length: int = None) -> typing.List[typing.Dict[str, typing.Dict[str, float]]]:
     """
     Get feature vectors of training instances within the specified sequence length.
     """
     with self.encoded.get_session() as session:
-      query = session.query(encoded.EncodedContentFile).filter(encoded.EncodedContentFile.tokencount <= sequence_length)
+      if sequence_length:
+        query = session.query(encoded.EncodedContentFile).filter(encoded.EncodedContentFile.tokencount <= sequence_length)
+      else:
+        query = session.query(encoded.EncodedContentFile)
       return [x.features for x in query]
 
   def getFeaturesContents(self, sequence_length: int = None) -> typing.List[typing.Tuple[np.array, typing.Dict[str, float]]]:
