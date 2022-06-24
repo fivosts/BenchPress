@@ -60,8 +60,9 @@ class Agent(object):
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exist_ok = True, parents = True)
 
-    self.config = config
-    self.tokenizer = tokenizer
+    self.config            = config
+    self.language_model    = language_model
+    self.tokenizer         = tokenizer
     self.feature_tokenizer = feature_tokenizer
     self.qv_config = QValuesConfig.from_config(self.config, self.tokenizer, self.feature_tokenizer)
     self.q_model = model.QValuesModel(self.language_model, self.qv_config, self.cache_path)
