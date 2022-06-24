@@ -215,8 +215,12 @@ class RLModel(object):
     if self._created:
       return False
     self._created = True
-    self.env    = env.Environment(self.config, self.cache.path)
-    self.agent  = agent.Agent(self.config, self.language_model, self.tokenizer, self.feature_tokenizer, self.cache.path)
+    self.env    = env.Environment(
+      self.feature_tokenizer, self.language_model.corpus, self.config, self.cache.path
+    )
+    self.agent  = agent.Agent(
+      self.config, self.language_model, self.tokenizer, self.feature_tokenizer, self.cache.path
+    )
     self.memory = memory.Memory(self.cache.path)
     return True
 
