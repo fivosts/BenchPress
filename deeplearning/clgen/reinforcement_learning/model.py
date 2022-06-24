@@ -9,6 +9,7 @@ from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.models.torch_bert import model
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import pytorch
+from deeplearning.clgen.util import logging as l
 
 torch = pytorch.torch
 
