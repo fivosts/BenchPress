@@ -152,10 +152,10 @@ class ActionQV(torch.nn.Module):
     index_logits  = self.index_head(decoded_source, action_logits)
     return action_logits, index_logits
 
-class LanguageModelQV(object):
+class ActionLanguageModelQV(object):
   """Deep Q-Values for Token type prediction."""
   def __init__(self, language_model, config):
-    super(LanguageModelQV, self).__init__()
+    super(ActionLanguageModelQV, self).__init__()
     self.language_model = language_model
     self.config = config
     return
@@ -179,7 +179,7 @@ class QValuesModel(object):
 
     self.config = config
     self.action_type_qv = ActionQV(config)
-    self.token_type_qv  = LanguageModelQV(language_model, config)
+    self.token_type_qv  = ActionLanguageModelQV(language_model, config)
     self.loadCheckpoint()
     return
 
