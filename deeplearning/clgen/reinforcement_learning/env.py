@@ -28,7 +28,7 @@ class Environment(object):
     self.config = config
     self.cache_path = cache_path / "environment"
     if environment.WORLD_RANK == 0:
-      self.cache_path.mkdir(exists_ok = True, parents = True)
+      self.cache_path.mkdir(exist_ok = True, parents = True)
     self.feature_loader = data_generator.FeatureLoader(self.config)
     self.loadCheckpoint()
     return
