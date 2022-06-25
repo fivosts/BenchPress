@@ -46,7 +46,6 @@ class FeatureEncoder(torch.nn.Module):
 
   def forward(self,
               input_features                  : torch.LongTensor,
-              input_features_mask             : torch.ByteTensor,
               input_features_key_padding_mask : torch.ByteTensor,
               ) -> torch.Tensor:
     ## Run the encoder transformer over the features.
@@ -54,7 +53,6 @@ class FeatureEncoder(torch.nn.Module):
     pos_enc_embed = self.encoder_pos_encoder(enc_embed)
     encoded = self.encoder_transformer(
       pos_enc_embed,
-      mask = input_features_mask,
       src_key_padding_mask = input_features_key_padding_mask,
     )
     return encoded
