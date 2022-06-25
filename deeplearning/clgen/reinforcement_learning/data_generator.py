@@ -14,7 +14,7 @@ torch = pytorch.torch
 def from_config(config            : reinforcement_learning_pb2.RLModel,
                 feature_tokenizer : tokenizers.FeatureTokenizer,
                 corpus            : corpuses.Corpus,
-                ) -> torch.utils.Dataset:
+                ) -> torch.utils.data.Dataset:
   """
   Return the right torch dataloader based on configuration.
   """
@@ -24,7 +24,7 @@ def from_config(config            : reinforcement_learning_pb2.RLModel,
     return RandomFeatureLoader(config, feature_tokenizer)
   return
 
-class CorpusFeatureLoader(torch.utils.Dataset):
+class CorpusFeatureLoader(torch.utils.data.Dataset):
   """
   Dataloading from language model's training corpus.
   """
