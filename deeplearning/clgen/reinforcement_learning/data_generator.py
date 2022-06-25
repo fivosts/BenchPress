@@ -50,13 +50,14 @@ class CorpusFeatureLoader(torch.utils.data.Dataset):
     self.dataset = []
     for dp in self.data:
       for k, v in dp.items():
-        fvec = self.feature_tokenizer.TokenizeFeatureVector(v, k, self.config.agent.action_qv.feature_sequence_length)
-        self.dataset.append(
-          {
-            'input_features': torch.LongTensor(fvec),
-            'input_features_key_padding_mask': torch.LongTensor(fvec != self.feature_tokenizer.padToken),
-          }
-        )
+        if v:
+          fvec = self.feature_tokenizer.TokenizeFeatureVector(v, k, self.config.agent.action_qv.feature_sequence_length)
+          self.dataset.append(
+            {
+              'input_features': torch.LongTensor(fvec),
+              'input_features_key_padding_mask': torch.LongTensor(fvec != self.feature_tokenizer.padToken),
+            }
+          )
     return
 
 class RandomFeatureLoader(torch.utils.data.Dataset):
