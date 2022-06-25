@@ -49,14 +49,12 @@ class CorpusFeatureLoader(torch.utils.data.Dataset):
     """Process raw feature vectors to processed dataset."""
     self.dataset = []
     for dp in self.data:
-      feats = extractor.RawToDictFeats(dp)
-      for k, v in feats.items():
-        fvec = self.feature_tokenizer.TokenizeFeatureVector(v, k, self.config.feature_sequence_length)
+      for k, v in dp.items():
+        fvec = self.feature_tokenizer.TokenizeFeatureVector(v, k, self.config.agent.action_qv.feature_sequence_length)
         self.dataset.append(
           {
             'input_features': torch.LongTensor(fvec),
-            # 'input_features_mask': torch.LongTensor(fvec != self.feature_tokenizer.padToken),
-            # 'input_features_key_padding_mask': None,
+            'input_features_key_padding_mask': torch.LongTensor(fvec != self.feature_tokenizer.padToken),
           }
         )
     return
