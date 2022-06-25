@@ -205,10 +205,18 @@ class QValuesModel(object):
 
   def SampleActionType(self, state: interactions.State) -> typing.Dict[str, torch.Tensor]:
     """Predict the next action given an input state."""
-    input_ids = torch.LongTensor(state.code)
+    input_ids          = torch.LongTensor(state.code)
     input_ids_pad_mask = input_ids != self.tokenizer.padToken
-    feature_ids = self.feature_tokenizer(state.target_features, state.feature_space, self.feature_sequence_length)
-    return self.action_type_qv(ids, feats, ids_pad_mask, feats_pad_mask)
+    feature_ids        = torch.LongTensor(
+      self.feature_tokenizer(state.target_features, state.feature_space, self.feature_sequence_length)
+    )
+    feature_ids_pad_mask = feature_ids != self.feature_tokenizer.padToken
+    return self.action_type_qv(
+      input_ids.to(pytorch.device),
+      input_ids_pad_mask.to(pytorch.device),
+      feature_ids.to(pytorch.device),
+      feature_ids_pad_mask.to(pytorch.device),
+    )
   
   def SampleActionIndex(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
     """Predict Action index"""
