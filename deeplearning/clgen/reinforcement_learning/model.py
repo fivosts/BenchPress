@@ -178,10 +178,11 @@ class QValuesModel(object):
   Handler of Deep-QNMs for program synthesis.
   """
   def __init__(self,
-               language_model    : language_models.Model,
-               feature_tokenizer : tokenizers.FeatureTokenizer,
-               config            : config.QValuesConfig,
-               cache_path        : pathlib.Path
+               language_model          : language_models.Model,
+               feature_tokenizer       : tokenizers.FeatureTokenizer,
+               config                  : config.QValuesConfig,
+               feature_sequence_length : int,
+               cache_path              : pathlib.Path
                ) -> None:
     self.cache_path = cache_path / "DQ_model"
     if environment.WORLD_RANK == 0:
@@ -190,6 +191,8 @@ class QValuesModel(object):
     self.config = config
     self.tokenizer = language_model.tokenizer
     self.feature_tokenizer = feature_tokenizer
+    self.feature_sequence_length = feature_sequence_length
+
     self.action_type_qv = ActionQV(config)
     self.token_type_qv  = ActionLanguageModelQV(language_model, config)
     self.loadCheckpoint()
@@ -202,7 +205,9 @@ class QValuesModel(object):
 
   def SampleActionType(self, state: interactions.State) -> typing.Dict[str, torch.Tensor]:
     """Predict the next action given an input state."""
-
+    input_ids = torch.LongTensor(state.code)
+    input_ids_pad_mask = input_ids != self.tokenizer.padToken
+    feature_ids = self.feature_tokenizer(state.target_features, state.feature_space, self.feature_sequence_length)
     return self.action_type_qv(ids, feats, ids_pad_mask, feats_pad_mask)
   
   def SampleActionIndex(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
