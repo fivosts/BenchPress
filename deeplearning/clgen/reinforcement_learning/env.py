@@ -27,11 +27,13 @@ class Environment(object):
   Environment representation for RL Agents.
   """
   def __init__(self,
-               feature_tokenizer : tokenizers.FeatureTokenizer,
-               corpus            : corpuses.Corpus,
                config            : reinforcement_learning_pb2.RLModel,
-               cache_path         : pathlib.Path,
+               corpus            : corpuses.Corpus,
+               tokenizer         : tokenizers.TokenizerBase,
+               feature_tokenizer : tokenizers.FeatureTokenizer,
+               cache_path        : pathlib.Path,
                ) -> None:
+    self.tokenizer = tokenizer
     self.feature_tokenizer = feature_tokenizer
     self.config = config
     self.cache_path = cache_path / "environment"
@@ -63,9 +65,9 @@ class Environment(object):
     """
     Reset the state of the environment.
     """
-    curr = next(self.dataloader)
+    next = self.feature_dataset.pop(0)
     self.current_state = interactions.State(
-      target_features = curr['input_features'],
+      target_features = next,
       code            = self.tokenizer.TokenizeString("")
     )
     return
