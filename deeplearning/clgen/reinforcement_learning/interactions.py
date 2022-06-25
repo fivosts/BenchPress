@@ -27,6 +27,7 @@ class State(typing.NamedTuple):
   Environment's state representation.
   """
   target_features : typing.Dict[str, float]
+  feature_space   : str
   code            : np.array
 
 class Reward(typing.NamedTuple):
