@@ -16,6 +16,9 @@ from deeplearning.clgen.reinforcement_learning import data_generator
 from deeplearning.clgen.proto import reinforcement_learning_pb2
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
+from deeplearning.clgen.util import pytorch
+
+torch = pytorch.torch
 
 from absl import flags
 
@@ -34,7 +37,18 @@ class Environment(object):
     self.cache_path = cache_path / "environment"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exist_ok = True, parents = True)
-    self.feature_loader = data_generator.from_config(self.config, self.feature_tokenizer, corpus)
+
+    self.feature_dataset = []  
+    if self.config.HasField("train_set"):
+      data = corpus.GetTrainingFeatures()
+      for dp in data:
+        for k, v in dp.items():
+          if v:
+            self.feature_dataset.append({k: v})
+    elif self.config.HasField("random"):
+      self.feature_dataset = []
+
+
     self.loadCheckpoint()
     return
 
@@ -49,9 +63,9 @@ class Environment(object):
     """
     Reset the state of the environment.
     """
-    self.feature_sampler.iter_benchmark()
+    curr = next(self.dataloader)
     self.current_state = interactions.State(
-      target_features = self.feature_sampler.target_benchmark.features,
+      target_features = curr['input_features'],
       code            = self.tokenizer.TokenizeString("")
     )
     return
