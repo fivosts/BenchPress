@@ -46,7 +46,7 @@ class Environment(object):
       for dp in data:
         for k, v in dp.items():
           if v:
-            self.feature_dataset.append({k: v})
+            self.feature_dataset.append((k, v))
     elif self.config.HasField("random"):
       self.feature_dataset = []
 
@@ -67,7 +67,8 @@ class Environment(object):
     """
     next = self.feature_dataset.pop(0)
     self.current_state = interactions.State(
-      target_features = next,
+      feature_space   = next[0],
+      target_features = next[1],
       code            = self.tokenizer.TokenizeString("")
     )
     return
