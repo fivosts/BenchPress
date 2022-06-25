@@ -84,7 +84,6 @@ class SourceDecoder(torch.nn.Module):
   def forward(self,
               input_ids                  : torch.LongTensor,
               encoded_features           : torch.FloatTensor,
-              input_ids_mask             : torch.ByteTensor,
               input_ids_key_padding_mask : torch.ByteTensor,
               ) -> torch.Tensor:
     ## Run the decoder over the source code.
@@ -136,19 +135,17 @@ class ActionQV(torch.nn.Module):
   def forward(self,
               input_ids                        : torch.LongTensor,
               target_features                  : torch.LongTensor,
-              input_ids_mask                   : torch.ByteTensor,
               input_ids_key_padding_mask       : torch.ByteTensor,
-              target_features_mask             : torch.ByteTensor,
               target_features_key_padding_mask : torch.ByteTensor,
               ) -> typing.Dict[str, torch.Tensor]:
     """Action type forward function."""
     ## Encode feature vector.
     encoded_features = self.feature_encoder(
-      target_features, target_features_mask, target_features_key_padding_mask
+      target_features, target_features_key_padding_mask
     )
     ## Run source code over transformer decoder and insert Transformer encoder's memory.
     decoded_source = self.source_decoder(
-      input_ids, encoded_features, input_ids_mask, input_ids_key_padding_mask,
+      input_ids, encoded_features, input_ids_key_padding_mask,
     )
     ## Predict the action logits.
     action_logits = self.action_head(decoded_source)
