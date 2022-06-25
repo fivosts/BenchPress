@@ -3,6 +3,7 @@ Memory replay buffer for reinforcement learning training.
 """
 import typing
 
+from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.features import extractor
