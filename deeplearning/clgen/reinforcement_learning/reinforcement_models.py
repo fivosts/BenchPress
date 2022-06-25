@@ -202,11 +202,15 @@ class RLModel(object):
     """
     return
 
-  def Create(self) -> bool:
+  def Create(self, **kwargs) -> bool:
     """
     Create the LM and RL environment.
     """
     _ = self.language_model.Create()
+    if self.language_model.pre_train_corpus:
+      self.language_model.PreTrain(**kwargs)
+    self.language_model.Train(**kwargs)
+
     self.feature_tokenizer = tokenizers.FeatureTokenizer.FromArgs(
       self.config.agent.feature_tokenizer.feature_singular_token_thr,
       self.config.agent.feature_tokenizer.feature_max_value_token,
@@ -216,7 +220,7 @@ class RLModel(object):
       return False
     self._created = True
     self.env    = env.Environment(
-      self.feature_tokenizer, self.language_model.corpus, self.config, self.cache.path
+      self.config, self.language_model.corpus, self.tokenizer, self.feature_tokenizer, self.cache.path
     )
     self.agent  = agent.Agent(
       self.config, self.language_model, self.tokenizer, self.feature_tokenizer, self.cache.path
@@ -229,17 +233,15 @@ class RLModel(object):
     Pre-train wrapper for Language model.
     No-pretraining is supported for RL model.
     """
-    self.Create()
-    self.language_model.PreTrain(**kwargs)
+    self.Create(**kwargs)
     return self
 
   def Train(self, **kwargs) -> None:
     """
     Train the RL-Agent.
     """
-    self.Create()
+    self.Create(**kwargs)
     ## First, train the Language model backend.
-    self.language_model.Train(**kwargs)
 
     num_episodes = 10
     ## Start the RL training pipeline.
