@@ -52,13 +52,18 @@ def calculate_distance(infeat: typing.Dict[str, float],
   Euclidean distance between sample feature vector
   and current target benchmark.
   """
-  d = 0
-  for key in tarfeat.keys():
-    n = 1.0 # tarfeat[key] if tarfeat[key] != 0 and key != "F2:coalesced/mem" and key != "F4:comp/mem" else 1# normalizers.normalizer[feature_space][key]
-    i = float(infeat[key]) / n
-    t = float(tarfeat[key]) / n
-    d += abs((t**2) - (i**2))
-  return math.sqrt(d)
+  try:
+    d = 0
+    for key in tarfeat.keys():
+      n = 1.0 # tarfeat[key] if tarfeat[key] != 0 and key != "F2:coalesced/mem" and key != "F4:comp/mem" else 1# normalizers.normalizer[feature_space][key]
+      i = float(infeat[key]) / n
+      t = float(tarfeat[key]) / n
+      d += abs((t**2) - (i**2))
+    return math.sqrt(d)
+  except KeyError as e:
+    l.logger().error("InFeats: {}".format(infeat))
+    l.logger().error("TargetFeats: {}".format(tarfeat))
+    raise e
 
 class Benchmark(typing.NamedTuple):
   path             : pathlib.Path
