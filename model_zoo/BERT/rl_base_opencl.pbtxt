@@ -9,6 +9,7 @@
 # 8. Learning rate increased to 45 from 40.
 working_dir: "AST" ## This path is relative to "workspace_dir", which is an app FLAG
 rl_model {
+  train_set: true
   agent {
     feature_tokenizer {
       feature_max_value_token: 32768
@@ -18,10 +19,13 @@ rl_model {
     action_qv {
       hidden_size: 768
       num_attention_heads: 12
+      num_hidden_layers: 2
       intermediate_size: 1024
+      feature_sequence_length: 256
       max_position_embeddings: 1024
       layer_norm_eps: 1e-12
       hidden_dropout_prob: 0.1
+      hidden_act: "gelu"
     }
     action_lm {
 
