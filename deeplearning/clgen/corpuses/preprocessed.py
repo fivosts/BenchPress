@@ -258,6 +258,11 @@ class PreprocessedContentFiles(sqlutil.Database):
       except Exception:
         pass
       self.replicated_path = tdir / "preprocessed_{}.db".format(environment.WORLD_RANK)
+      if environment.WORLD_RANK == 0:
+        with self.Session() as s:
+          if self.IsDone(s):
+            self.RechunkDB()
+      distrib.barrier()
       self.replicated = PreprocessedContentFiles(
         url = "sqlite:///{}".format(str(self.replicated_path)),
         must_exist = must_exist,
@@ -686,6 +691,39 @@ class PreprocessedContentFiles(sqlutil.Database):
       for batch in p.imap_unordered(path_worker, queue):
         find_output += batch
     return find_output
+
+  def RechunkDB(self) -> None:
+    """
+    When encoder is initialized after pre-processed DB has been created,
+    re-chunk preprocessed DB to replicas.
+    """
+    ## Get all data from main DB.
+    with self.Session() as session:
+      query = session.query(PreprocessedContentFile).filter(
+        PreprocessedContentFile.preprocessing_succeeded == True,
+      )
+      total = query.count()
+      data = query.all()
+    ## Calculate chunk size
+    chunk_size = total // environment.WORLD_SIZE
+    for db_idx in tqdm.tqdm(range(environment.WORLD_SIZE), total = environment.WORLD_SIZE, desc = "Re-chunk DBs"):
+      replica = PreprocessedContentFiles(
+        url = "sqlite:///{}".format(self.replicated_path.parent / "preprocessed_{}.db".format(str(db_idx))),
+        must_exist = False,
+        is_replica = True
+      )
+      ## If replica already is already done, skip.
+      with replica.Session() as s:
+        if self.IsDone(s):
+          continue
+      with replica.Session(commit = True) as s:
+        lb = chunk_size * db_idx
+        ub = chunk_size * (db_idx + 1) if environment.WORLD_RANK < environment.WORLD_SIZE - 1 else total
+        for dp in data[lb: ub]:
+          s.add(PreprocessedContentFile.FromPreprocessedContentFile(dp))
+        s.commit()
+        self.SetDone(s)
+    return
 
 def path_worker(base_path) -> typing.List[str]:
   paths = []
