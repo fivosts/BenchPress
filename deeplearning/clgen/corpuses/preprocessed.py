@@ -515,6 +515,7 @@ class PreprocessedContentFiles(sqlutil.Database):
       merge_db(dbs, self)
       for p in db_chunks:
         os.remove(p)
+    distrib.barrier()
     # Once merging has been complete, cleanup the mess left at local clusters' filesystems.
     if (self.replicated_path.parent / "bq_database_replica_{}.db".format(environment.WORLD_RANK)).exists():
       os.remove(self.replicated_path.parent / "bq_database_replica_{}.db".format(environment.WORLD_RANK))
