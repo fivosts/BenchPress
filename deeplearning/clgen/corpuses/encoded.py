@@ -160,7 +160,7 @@ class EncodedContentFile(Base):
     try:
       data = tokenizer.TokenizeString(preprocessed_cf.text)
     except ValueError as e:
-      l.logger().warn(e)
+      l.logger().warn(e, ddp_nodes=True)
       return None
     ####
     # TODO kernel analytics
