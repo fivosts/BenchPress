@@ -378,7 +378,6 @@ class PreprocessedContentFiles(sqlutil.Database):
     if session.query(Meta).filter(Meta.key == "done").first():
       return True
     elif FLAGS.override_preprocessing:
-      l.logger().warn("Overriding incomplete pre-processed DB.")
       return True
     else:
       return False
