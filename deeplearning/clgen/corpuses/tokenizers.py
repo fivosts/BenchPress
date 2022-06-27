@@ -682,7 +682,7 @@ class ASTokenizer(TokenizerBase):
     try:
       return [self.decoder[self.vocab[t]] for t in opencl.AtomizeSource(text, set(self.vocab.keys()))]
     except KeyError:
-      raise ValueError("String index out of vocabulary")
+      raise ValueError("String index out of vocabulary: \n{}".format(text))
 
   def tokensToString(self,
                      encoded: np.array,
