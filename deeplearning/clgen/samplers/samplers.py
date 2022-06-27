@@ -457,6 +457,7 @@ class Sampler(object):
     self.corpus_directory = None
     self.sample_corpus    = None
     if self.config.HasField("sample_corpus"):
+      l.logger().warn("This path not having a model hash, prohibits the sampler with working with multiple models.")
       self.corpus_directory = self.cache.path / "sample_corpus"
       if environment.WORLD_RANK == 0:
         self.corpus_directory.mkdir(exist_ok = True)
