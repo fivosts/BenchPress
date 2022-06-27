@@ -85,7 +85,7 @@ def initPytorch() -> None:
       store      = tcp_store,
       rank       = environment.WORLD_RANK,
       world_size = environment.WORLD_SIZE,
-      timeout    = datetime.timedelta(minutes = 60)
+      timeout    = datetime.timedelta(days = 3)
     )
     num_nodes = torch.distributed.get_world_size()
     num_gpus  = torch.cuda.device_count()
