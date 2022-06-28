@@ -68,7 +68,7 @@ class Environment(object):
     self.current_state = interactions.State(
       target_features  = next[1],
       feature_space    = next[0],
-      encoded_features = self.feature_tokenizer.TokenizeFeatureVector(next[1]),
+      encoded_features = self.feature_tokenizer.TokenizeFeatureVector(next[1], next[0], self.config.agent.action_qv.feature_sequence_length),
       code             = self.tokenizer.TokenizeString(""),
       encoded_code     = [self.tokenizer.startToken, self.tokenizer.padToken] + ([self.tokenizer.padToken] * self.config.agent.action_qv.max_position_embeddings),
     )
