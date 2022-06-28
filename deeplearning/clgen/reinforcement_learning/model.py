@@ -258,7 +258,7 @@ class QValuesModel(object):
     input_ids_pad_mask   = input_ids   != self.tokenizer.padToken
     feature_ids_pad_mask = feature_ids != self.feature_tokenizer.padToken
 
-    return self.qvalues.action_type_q(
+    return self.sample_qvalues.action_type_q(
       input_ids.to(pytorch.device),
       feature_ids.to(pytorch.device),
       input_ids_pad_mask.to(pytorch.device),
@@ -267,11 +267,11 @@ class QValuesModel(object):
   
   def SampleActionIndex(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
     """Predict Action index"""
-    return self.qvalues.action_type_q(input_ids)
+    return self.sample_qvalues.action_type_q(input_ids)
   
   def SampleTokenType(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
     """Predict token type"""
-    return self.qvalues.token_type_q(input_ids)
+    return self.sample_qvalues.token_type_q(input_ids)
 
   def saveCheckpoint(self) -> None:
     """Checkpoint Deep Q-Nets."""
