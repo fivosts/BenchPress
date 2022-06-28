@@ -29,6 +29,7 @@ from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.corpuses import tokenizers
+from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.features import active_feed_database
@@ -163,7 +164,7 @@ def JSON_to_ActiveSample(d: typing.Dict[str, typing.Any]) -> ActiveSample:
 def IR_candidate_worker(sample                  : np.array,
                         feature_space           : str,
                         target_benchmark        : feature_sampler.Benchmark,
-                        tokenizer               : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
+                        tokenizer               : tokenizers.TokenizerBase,
                         ) -> ActiveSample:
   # sample, indices, input_ids, masked_lm_lengths = sample_out
   sample, sample_indices, input_ids, mlm_lengths, feed = sample
@@ -202,7 +203,7 @@ def IR_candidate_worker(sample                  : np.array,
 def text_candidate_worker(sample                  : np.array,
                           feature_space           : str,
                           target_benchmark        : feature_sampler.Benchmark,
-                          tokenizer               : typing.TypeVar('corpuses.tokenizers.TokenizerBase'),
+                          tokenizer               : tokenizers.TokenizerBase,
                           ) -> ActiveSample:
   sample, sample_indices, input_ids, mlm_lengths, feed = sample
   assert sample[0] != tokenizer.padToken, sample
@@ -251,7 +252,7 @@ def dataload_worker(x              : int,
     raise e
 
 def write_samples_cache(db_sample_obs : sample_observers.SamplesDatabaseObserver,
-                        tokenizer     : "tokenizers.TokenizerBase",
+                        tokenizer     : tokenizers.TokenizerBase,
                         samples       : typing.List[ActiveSample]
                         ) -> None:
   for sample in samples:
@@ -279,7 +280,7 @@ def write_samples_cache(db_sample_obs : sample_observers.SamplesDatabaseObserver
   return
 
 def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
-                  tokenizer : "tokenizers.TokenizerBase",
+                  tokenizer : tokenizers.TokenizerBase,
                   samples   : typing.List[ActiveSample],
                   target_benchmark : typing.Tuple[str, str],
                   target_features  : typing.Dict[str, float],
@@ -343,7 +344,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
   """Data generator subclass designed for PyTorch BERT model."""
   @classmethod
   def TrainMaskLMBatchGenerator(cls,
-                               corpus: "corpuses.Corpus",
+                               corpus: corpuses.Corpus,
                                training_opts: model_pb2.TrainingOptions,
                                cache_path,
                                num_train_steps: int = None,
@@ -351,7 +352,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                feature_encoder         : bool                        = False,
                                feature_tokenizer       : tokenizers.FeatureTokenizer = None,
                                feature_sequence_length : int                         = None,
-                               ) -> "data_generator.MaskLMBatchGenerator":
+                               ) -> lm_data_generator.MaskLMDataGenerator:
     """Initializes data generator for training."""
     d = super(torchLMDataGenerator, torchLMDataGenerator()).TrainMaskLMBatchGenerator(
                 corpus, training_opts, cache_path, num_train_steps, pre_train,
@@ -369,11 +370,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                  sample_batch_size: int,
                                  max_position_embeddings: int,
                                  cache_path,
-                                 corpus: "corpuses.Corpus" = None,
+                                 corpus: corpuses.Corpus = None,
                                  feature_encoder         : bool                        = False,
                                  feature_tokenizer       : tokenizers.FeatureTokenizer = None,
                                  feature_sequence_length : int                         = None,
-                                 ) -> "data_generator.MaskLMBatchGenerator":
+                                 ) -> lm_data_generator.MaskLMDataGenerator:
     """Initializes data generator for inference."""
     d = super(torchLMDataGenerator, torchLMDataGenerator()).SampleMaskLMBatchGenerator(
               model_opts, sampler, tokenizer, seed,
