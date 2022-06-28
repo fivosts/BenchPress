@@ -58,7 +58,6 @@ class Environment(object):
     """
     Collect an action from an agent and compute its reward.
     """
-    self.make_action(action) # This is where you apply the action. e.g. compile, add token, remove token etc.
     raise NotImplementedError
   
   def reset(self) -> None:
@@ -121,12 +120,6 @@ class Environment(object):
           )
     else:
       raise ValueError("Action type {} does not exist.".format(action.action_type))
-
-  def make_action(self, action: interactions.Action) -> None:
-    """
-    Collect an agent's action and proceed with it into the current state.
-    """
-    return
 
   def loadCheckpoint(self) -> None:
     """
