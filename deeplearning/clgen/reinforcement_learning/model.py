@@ -207,7 +207,7 @@ class QValuesModel(object):
     input_ids          = torch.LongTensor(state.code)
     input_ids_pad_mask = input_ids != self.tokenizer.padToken
     feature_ids        = torch.LongTensor(
-      self.feature_tokenizer(state.target_features, state.feature_space, self.feature_sequence_length)
+      self.feature_tokenizer.TokenizeFeatureVector(state.target_features, state.feature_space, self.feature_sequence_length)
     )
     feature_ids_pad_mask = feature_ids != self.feature_tokenizer.padToken
     return self.action_type_qv(
