@@ -26,6 +26,13 @@ class Environment(object):
   """
   Environment representation for RL Agents.
   """
+  @property
+  def init_code_state(self) -> np.array:
+    return np.array(
+      [self.tokenizer.startToken, self.tokenizer.endToken]
+      + ([self.tokenizer.padToken] * self.max_position_embeddings - 2)
+    )
+
   def __init__(self,
                config            : reinforcement_learning_pb2.RLModel,
                corpus            : corpuses.Corpus,
@@ -33,9 +40,12 @@ class Environment(object):
                feature_tokenizer : tokenizers.FeatureTokenizer,
                cache_path        : pathlib.Path,
                ) -> None:
-    self.tokenizer = tokenizer
+    self.config            = config
+    self.tokenizer         = tokenizer
     self.feature_tokenizer = feature_tokenizer
-    self.config = config
+    self.max_position_embeddings = self.config.agent.action_qv.max_position_embeddings
+    self.feature_sequence_length = self.config.agent.action_qv.feature_sequence_length
+
     self.cache_path = cache_path / "environment"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exist_ok = True, parents = True)
@@ -68,9 +78,9 @@ class Environment(object):
     self.current_state = interactions.State(
       target_features  = next[1],
       feature_space    = next[0],
-      encoded_features = self.feature_tokenizer.TokenizeFeatureVector(next[1], next[0], self.config.agent.action_qv.feature_sequence_length),
-      code             = self.tokenizer.TokenizeString(""),
-      encoded_code     = [self.tokenizer.startToken, self.tokenizer.padToken] + ([self.tokenizer.padToken] * self.config.agent.action_qv.max_position_embeddings),
+      encoded_features = self.feature_tokenizer.TokenizeFeatureVector(next[1], next[0], self.feature_sequence_length),
+      code             = "",
+      encoded_code     = self.init_code_state,
     )
     return
   
