@@ -53,6 +53,8 @@ class FeatureEncoder(torch.nn.Module):
               input_features_key_padding_mask : torch.ByteTensor,
               ) -> torch.Tensor:
     ## Run the encoder transformer over the features.
+    print(input_features)
+    print(type(input_features))
     enc_embed = self.encoder_embedding(input_features) * math.sqrt(self.encoder_embedding_size)
     pos_enc_embed = self.encoder_pos_encoder(enc_embed)
     encoded = self.encoder_transformer(
@@ -95,7 +97,7 @@ class SourceDecoder(torch.nn.Module):
     decoded = self.decoder_transformer(
       dec_embed,
       memory = encoded_features,
-      tgt_mask = input_ids_mask,
+      # tgt_mask = input_ids_mask,
       # memory_mask = None, ??
       tgt_key_padding_mask = input_ids_key_padding_mask,
       # memory_key_padding_mask = None, ??
@@ -177,6 +179,11 @@ class QValuesModel(object):
   """
   Handler of Deep-QNMs for program synthesis.
   """
+  class QValuesEstimator(typing.NamedTuple):
+    """Torch model wrapper for Deep Q-Values."""
+    action_type_q : torch.nn.Module
+    token_type_q  : torch.nn.Module
+
   def __init__(self,
                language_model          : language_models.Model,
                feature_tokenizer       : tokenizers.FeatureTokenizer,
@@ -188,42 +195,79 @@ class QValuesModel(object):
       self.cache_path.mkdir(exist_ok = True, parents = True)
 
     self.config                  = config
+    self.language_model          = language_model
     self.tokenizer               = language_model.tokenizer
     self.feature_tokenizer       = feature_tokenizer
     self.feature_sequence_length = self.config.feature_sequence_length
+    return
 
-    self.action_type_qv = ActionQV(config)
-    self.token_type_qv  = ActionLanguageModelQV(language_model, config)
-    self.loadCheckpoint()
+  def _ConfigModelParams(self) -> None:
+    """Initialize model parameters."""
+    actm = ActionQV(self.config).to(pytorch.offset_device)
+    tokm = ActionLanguageModelQV(self.language_model, self.config).to(pytorch.offset_device)
+
+    if pytorch.num_nodes > 1:
+      actm = torch.nn.parallel.DistributedDataParallel(
+        actm,
+        device_ids = [pytorch.offset_device],
+        output_device = pytorch.offset_device,
+        find_unused_parameters = True,
+      )
+      tokm = torch.nn.parallel.DistributedDataParallel(
+        tokm,
+        device_ids = [pytorch.offset_device],
+        output_device = pytorch.offset_device,
+        find_unused_parameters = True,
+      )
+    elif pytorch.num_gpus > 1:
+      actm = torch.nn.DataParallel(actm)
+      tokm = torch.nn.DataParallel(tokm)
+
+    self.qvalues = QValuesModel.QValuesEstimator(
+      action_type_q = actm, token_type_q = tokm
+    )
+    return
+
+  def _ConfigTrainParams(self) -> None:
+    """Initialize Training parameters for model."""
+    self._ConfigModelParams()
+    return
+  
+  def _ConfigSampleParams(self) -> None:
+    """Initialize sampling parameters for model."""
+    self._ConfigModelParams()
     return
 
   def Train(self, input_ids: typing.Dict[str, torch.Tensor]) -> None:
     """Update the Q-Networks with some memories."""
+    self._ConfigTrainParams()
+    self.loadCheckpoint()
     raise NotImplementedError
     return
 
   def SampleActionType(self, state: interactions.State) -> typing.Dict[str, torch.Tensor]:
     """Predict the next action given an input state."""
+    self._ConfigSampleParams()
     input_ids          = torch.LongTensor(state.code)
     input_ids_pad_mask = input_ids != self.tokenizer.padToken
     feature_ids        = torch.LongTensor(
       self.feature_tokenizer.TokenizeFeatureVector(state.target_features, state.feature_space, self.feature_sequence_length)
     )
     feature_ids_pad_mask = feature_ids != self.feature_tokenizer.padToken
-    return self.action_type_qv(
+    return self.qvalues.action_type_q(
       input_ids.to(pytorch.device),
-      input_ids_pad_mask.to(pytorch.device),
       feature_ids.to(pytorch.device),
+      input_ids_pad_mask.to(pytorch.device),
       feature_ids_pad_mask.to(pytorch.device),
     )
   
   def SampleActionIndex(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
     """Predict Action index"""
-    return self.action_index_qv(input_ids)
+    return self.qvalues.action_type_q(input_ids)
   
   def SampleTokenType(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
     """Predict token type"""
-    return self.token_type_qv(input_ids)
+    return self.qvalues.token_type_q(input_ids)
 
   def saveCheckpoint(self) -> None:
     """Checkpoint Deep Q-Nets."""
