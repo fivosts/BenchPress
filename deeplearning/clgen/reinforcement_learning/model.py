@@ -64,12 +64,12 @@ class FeatureEncoder(torch.nn.Module):
 class PredictionHeadTransform(torch.nn.Module):
   def __init__(self, config, dense_size):
     super().__init__()
-    self.dense = torch.nn.Linear(dense_size, dense_size)
+    self.dense = torch.nn.Linear(dense_size, config.hidden_size)
     if isinstance(config.hidden_act, str):
       self.transform_act_fn = model.ACT2FN[config.hidden_act]
     else:
       self.transform_act_fn = config.hidden_act
-    self.LayerNorm = torch.nn.LayerNorm(dense_size, eps=config.layer_norm_eps)
+    self.LayerNorm = torch.nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
   def forward(self, hidden_states):
     hidden_states = self.dense(hidden_states)
