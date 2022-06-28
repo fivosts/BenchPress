@@ -111,9 +111,9 @@ class Incoder(backends.BackendBase):
       # model. You'll need full precision and a lot of GPU memory. We have not
       # tested fine-tuning in `transformers` (the model was trained in fairseq)
       kwargs = dict(
-          revision="float16", 
-          torch_dtype=torch.float16,
-          low_cpu_mem_usage=True,
+          revision          = "float16", 
+          torch_dtype       = self.torch.float16,
+          low_cpu_mem_usage = True,
       )
     if FLAGS.custom_incoder_ckpt is None:
       m = transformers.AutoModelForCausalLM.from_pretrained(
