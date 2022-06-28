@@ -6,34 +6,19 @@ provides Python Generator classes for use by a sequential Keras model's
 fit_generator() method to stream batches of training data.
 """
 import typing
-import copy
-import sklearn
-import pickle
-import functools
 import numpy as np
-import multiprocessing
 import math
-import tqdm
 import pathlib
 
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
-from deeplearning.clgen.util import distributions
-from deeplearning.clgen.util import monitors
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
 from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.features import extractor
-from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.features import active_feed_database
-from deeplearning.clgen.features import evaluate_cand_database
-from deeplearning.clgen.models import sequence_masking
-from deeplearning.clgen.models.torch_bert import datasets
 from deeplearning.clgen.models.torch_bert import data_generator as torch_data_generator
-from deeplearning.clgen.samplers import sample_observers
 from absl import flags
 from deeplearning.clgen.util import logging as l
 
