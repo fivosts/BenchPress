@@ -181,17 +181,16 @@ class QValuesModel(object):
                language_model          : language_models.Model,
                feature_tokenizer       : tokenizers.FeatureTokenizer,
                config                  : config.QValuesConfig,
-               feature_sequence_length : int,
                cache_path              : pathlib.Path
                ) -> None:
     self.cache_path = cache_path / "DQ_model"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exist_ok = True, parents = True)
 
-    self.config = config
-    self.tokenizer = language_model.tokenizer
-    self.feature_tokenizer = feature_tokenizer
-    self.feature_sequence_length = feature_sequence_length
+    self.config                  = config
+    self.tokenizer               = language_model.tokenizer
+    self.feature_tokenizer       = feature_tokenizer
+    self.feature_sequence_length = self.config.agent.action_qv.feature_sequence_length
 
     self.action_type_qv = ActionQV(config)
     self.token_type_qv  = ActionLanguageModelQV(language_model, config)
