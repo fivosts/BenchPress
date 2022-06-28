@@ -91,7 +91,6 @@ class IncoderDataGenerator(torch_data_generator.torchLMDataGenerator):
           sorted_cache_samples = sorted(cached_samples, key = lambda x: x[-1])
           for scs in sorted_cache_samples[:self.sampler.config.sample_corpus.corpus_config.active.active_search_width]:
             tokenized = self.tokenizer.TokenizeString(scs[0])
-            w_start_end = self._addStartEndToken(tokenized)
             padded = self._padToMaxPosition(w_start_end)[:self.sampler.sequence_length]
             if padded[0] == self.tokenizer.padToken:
               l.logger().error("Pad token was found again at the beginning of the sequence.")
@@ -99,7 +98,7 @@ class IncoderDataGenerator(torch_data_generator.torchLMDataGenerator):
               l.logger().error(tokenized)
               l.logger().error(w_start_end)
               l.logger().error(padded)
-            encoded = self._padToMaxPosition(self._addStartEndToken([int(x) for x in tokenized]))[:self.sampler.sequence_length]
+            encoded = self._padToMaxPosition([int(x) for x in tokenized])[:self.sampler.sequence_length]
             assert encoded[0] != self.tokenizer.padToken, encoded
             self.feed_queue.append(
               ActiveSampleFeed(
