@@ -369,7 +369,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                feature_sequence_length : int = None,
                                ) -> lm_data_generator.MaskLMDataGenerator:
     """Initializes data generator for training."""
-    d = super(torchLMDataGenerator, torchLMDataGenerator()).TrainMaskLMBatchGenerator(
+    d = super(torchLMDataGenerator, cls()).TrainMaskLMBatchGenerator(
                 corpus, training_opts, cache_path, num_train_steps, pre_train,
                 feature_encoder, feature_tokenizer, feature_sequence_length,
         )
@@ -391,7 +391,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                  feature_sequence_length : int                         = None,
                                  ) -> lm_data_generator.MaskLMDataGenerator:
     """Initializes data generator for inference."""
-    d = super(torchLMDataGenerator, torchLMDataGenerator()).SampleMaskLMBatchGenerator(
+    d = super(torchLMDataGenerator, cls()).SampleMaskLMBatchGenerator(
               model_opts, sampler, tokenizer, seed,
               sample_batch_size, max_position_embeddings, cache_path,
               feature_encoder, feature_tokenizer, feature_sequence_length
