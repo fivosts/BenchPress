@@ -37,7 +37,6 @@ from deeplearning.clgen.features import evaluate_cand_database
 from deeplearning.clgen.models import lm_data_generator
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.models.torch_bert import datasets
-from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.samplers import sample_observers
 from deeplearning.clgen.preprocessors import opencl
 from absl import flags
@@ -380,7 +379,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
   @classmethod
   def SampleMaskLMBatchGenerator(cls,
                                  model_opts              : model_pb2.TrainingOptions,
-                                 sampler                 : samplers.Sampler,
+                                 sampler                 : 'samplers.Sampler',
                                  tokenizer               : tokenizers.TokenizerBase,
                                  seed                    : int,
                                  sample_batch_size       : int,
