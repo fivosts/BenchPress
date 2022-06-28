@@ -138,7 +138,7 @@ class IndexHead(torch.nn.Module):
   def __init__(self, config):
     super().__init__()
     self.transform = PredictionHeadTransform(config, dense_size = config.hidden_size + len(interactions.ACTION_TYPE_SPACE))
-    self.decoder   = torch.nn.Linear(config.hidden_size, len(config.max_position_embeddings), bias = False)
+    self.decoder   = torch.nn.Linear(config.hidden_size, config.max_position_embeddings, bias = False)
     self.bias      = torch.nn.Parameter(torch.zeros(len(config.max_position_embeddings)))
     self.decoder.bias = self.bias
     return
