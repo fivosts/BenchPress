@@ -37,6 +37,7 @@ from deeplearning.clgen.features import evaluate_cand_database
 from deeplearning.clgen.models import lm_data_generator
 from deeplearning.clgen.models import sequence_masking
 from deeplearning.clgen.models.torch_bert import datasets
+from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.samplers import sample_observers
 from deeplearning.clgen.preprocessors import opencl
 from absl import flags
@@ -109,25 +110,23 @@ class ActiveSample(typing.NamedTuple):
   Representation of an active learning sample.
   """
   # ActiveSampleFeed instance of model input
-  sample_feed    : typing.TypeVar("ActiveSamplingGenerator.ActiveSampleFeed")
+  sample_feed         : typing.TypeVar("ActiveSamplingGenerator.ActiveSampleFeed")
   # Input ids that led to this prediction
-  input_ids      : np.array
+  input_ids           : np.array
   # hole lengths and positions of input ids.
-  hole_lengths : typing.List[sequence_masking.MaskedLmInstance]
+  hole_lengths        : typing.List[sequence_masking.MaskedLmInstance]
   # Model prediction
-  sample         : np.array
+  sample              : np.array
   # Sample indices of given prediction.
-  sample_indices : np.array
+  sample_indices      : np.array
   # number of tokens the model filled holes with.
   sample_indices_size : int
   # Output features of sample
-  features         : typing.Dict[str, float]
+  features            : typing.Dict[str, float]
   # Runtime features of ActiveSample (will be populated lazily.)
-  runtime_features : typing.Dict[str, float]
+  runtime_features    : typing.Dict[str, float]
   # Score of sample based on active learning search.
-  score            : typing.Union[bool, float]
-  # Active batch timestep where sample was acquired.
-  # timestep       : int
+  score               : typing.Union[bool, float]
 
 def ActiveSample_to_JSON(f: ActiveSample) -> typing.Dict[str, typing.Any]:
   """
@@ -161,12 +160,14 @@ def JSON_to_ActiveSample(d: typing.Dict[str, typing.Any]) -> ActiveSample:
     score               = d['score']
   )
 
-def IR_candidate_worker(sample                  : np.array,
-                        feature_space           : str,
-                        target_benchmark        : feature_sampler.Benchmark,
-                        tokenizer               : tokenizers.TokenizerBase,
+def IR_candidate_worker(sample           : np.array,
+                        feature_space    : str,
+                        target_benchmark : feature_sampler.Benchmark,
+                        tokenizer        : tokenizers.TokenizerBase,
                         ) -> ActiveSample:
-  # sample, indices, input_ids, masked_lm_lengths = sample_out
+  """
+  ActiveSample worker for LLVM-IR feature spaces.
+  """
   sample, sample_indices, input_ids, mlm_lengths, feed = sample
   assert sample[0] != tokenizer.padToken, sample
   try:
@@ -200,11 +201,14 @@ def IR_candidate_worker(sample                  : np.array,
     score            = math.inf,
   ))
 
-def text_candidate_worker(sample                  : np.array,
-                          feature_space           : str,
-                          target_benchmark        : feature_sampler.Benchmark,
-                          tokenizer               : tokenizers.TokenizerBase,
+def text_candidate_worker(sample           : np.array,
+                          feature_space    : str,
+                          target_benchmark : feature_sampler.Benchmark,
+                          tokenizer        : tokenizers.TokenizerBase,
                           ) -> ActiveSample:
+  """
+  ActiveSample worker for text-based feature spaces.
+  """
   sample, sample_indices, input_ids, mlm_lengths, feed = sample
   assert sample[0] != tokenizer.padToken, sample
   try:
@@ -241,20 +245,25 @@ def text_candidate_worker(sample                  : np.array,
 
 def dataload_worker(x              : int,
                     feed           : typing.List[np.array],
-                    func           : typing.TypeVar('sequence_masking.MaskingFunction'),
+                    func           : sequence_masking.MaskingFunction,
                     batch          : int,
                     batch_per_feed : int,
                     ) -> typing.Dict[str, np.array]:
+  """
+  Masking input feed worker.
+  """
   try:
-    # return [f for _ in range(batch // batch_per_feed) for f in [func(fd) for fd in feed] * batch_per_feed]
     return [f for _ in range(batch // batch_per_feed) for f in [func(fd) for fd in feed * batch_per_feed]]
   except Exception as e:
     raise e
 
 def write_samples_cache(db_sample_obs : sample_observers.SamplesDatabaseObserver,
                         tokenizer     : tokenizers.TokenizerBase,
-                        samples       : typing.List[ActiveSample]
+                        samples       : typing.List[ActiveSample],
                         ) -> None:
+  """
+  Candidate logging/caching worker.
+  """
   for sample in samples:
     try:
       s = model_pb2.Sample(
@@ -279,13 +288,16 @@ def write_samples_cache(db_sample_obs : sample_observers.SamplesDatabaseObserver
       pass
   return
 
-def write_eval_db(eval_db   : evaluate_cand_database.SearchCandidateDatabase,
-                  tokenizer : tokenizers.TokenizerBase,
-                  samples   : typing.List[ActiveSample],
+def write_eval_db(eval_db          : evaluate_cand_database.SearchCandidateDatabase,
+                  tokenizer        : tokenizers.TokenizerBase,
+                  samples          : typing.List[ActiveSample],
                   target_benchmark : typing.Tuple[str, str],
                   target_features  : typing.Dict[str, float],
                   gen_id    : int,
                   ) -> None:
+  """
+  Evaluated step and rejected candidates monitoring/caching.
+  """
   objs = {}
   for sample in samples:
     try:
@@ -344,14 +356,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
   """Data generator subclass designed for PyTorch BERT model."""
   @classmethod
   def TrainMaskLMBatchGenerator(cls,
-                               corpus: corpuses.Corpus,
-                               training_opts: model_pb2.TrainingOptions,
-                               cache_path,
-                               num_train_steps: int = None,
-                               pre_train: bool = False,
-                               feature_encoder         : bool                        = False,
+                               corpus                  : corpuses.Corpus,
+                               training_opts           : model_pb2.TrainingOptions,
+                               cache_path              : pathlib.Path,
+                               num_train_steps         : int  = None,
+                               pre_train               : bool = False,
+                               feature_encoder         : bool = False,
                                feature_tokenizer       : tokenizers.FeatureTokenizer = None,
-                               feature_sequence_length : int                         = None,
+                               feature_sequence_length : int = None,
                                ) -> lm_data_generator.MaskLMDataGenerator:
     """Initializes data generator for training."""
     d = super(torchLMDataGenerator, torchLMDataGenerator()).TrainMaskLMBatchGenerator(
@@ -363,14 +375,14 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
   @classmethod
   def SampleMaskLMBatchGenerator(cls,
-                                 model_opts,
-                                 sampler,
-                                 tokenizer,
-                                 seed: int,
-                                 sample_batch_size: int,
-                                 max_position_embeddings: int,
-                                 cache_path,
-                                 corpus: corpuses.Corpus = None,
+                                 model_opts              : model_pb2.TrainingOptions,
+                                 sampler                 : samplers.Sampler,
+                                 tokenizer               : tokenizers.TokenizerBase,
+                                 seed                    : int,
+                                 sample_batch_size       : int,
+                                 max_position_embeddings : int,
+                                 cache_path              : pathlib.Path,
+                                 corpus                  : corpuses.Corpus             = None,
                                  feature_encoder         : bool                        = False,
                                  feature_tokenizer       : tokenizers.FeatureTokenizer = None,
                                  feature_sequence_length : int                         = None,
@@ -481,24 +493,23 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
 
   def __init__(self):
     super(torchLMDataGenerator, self).__init__("pt_record")
-    self.dataloader = None
-    ## Active learning attributes initialization.
-    self.loader     = None
-    self.comp_rate  = {}
-    self.exec_time  = {}
-    self.feed_queue = []
-    self.active_db  = None
-    self.samples_cache_obs = None
-    self.eval_db           = None
-    self.feat_sampler      = None
-    self.candidate_monitor = None
-    self.tsne_monitor      = None
-    self.comp_rate_mon     = None
-    self.exec_time_mon     = None
+    self.dataloader          = None
+    self.loader              = None
+    self.comp_rate           = {}
+    self.exec_time           = {}
+    self.feed_queue          = []
+    self.active_db           = None
+    self.samples_cache_obs   = None
+    self.eval_db             = None
+    self.feat_sampler        = None
+    self.candidate_monitor   = None
+    self.tsne_monitor        = None
+    self.comp_rate_mon       = None
+    self.exec_time_mon       = None
     self.raised_keyboard_int = None
-    self.raised_exception  = None
-    self.skip_first_queue  = None
-    self.bench_idx         = None
+    self.raised_exception    = None
+    self.skip_first_queue    = None
+    self.bench_idx           = None
     return
 
   def train_dataloader(self, set_name = 'train_dataset', is_train = True) -> torch.utils.data.dataloader:
@@ -511,9 +522,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     eval_dataloaders sets set_name to reuse the function for all different sets.
     """
     if self.config.datapoint_time == "pre":
+      # Pre-computed dataset with system of files. [DEPRECATED].
       dataset = datasets.LazyConcatDataset([x for x in self.dataset[set_name]['file']])
       sampler = datasets.LazyRandomSampler(dataset, replacement = False)
     elif self.config.datapoint_time == "online":
+      # Online masking of training instances.
       if self.pre_train:
         dataset = datasets.LazyOnlineDataset(self, is_train)
         sampler = datasets.LazyRandomSampler(dataset, replacement = False)
@@ -761,22 +774,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           cmp_rate[1] += ts
           exec_time   += time
 
-          # ## Write to samples cache DB.
-          # if write_cache_proc:
-          #   write_cache_proc.join()
-          # self.samples_cache_obs.sample_id = self.samples_cache_obs.db.count
-          # write_cache_proc = multiprocessing.Process(
-          #   target = write_samples_cache,
-          #   kwargs = {
-          #     'db_sample_obs' : self.samples_cache_obs,
-          #     'tokenizer'     : self.tokenizer,
-          #     'samples'       : step_candidates,
-          #   }
-          # )
-          # write_cache_proc.start()
 
-          ## Write all candidates to eval_cand DB.
+
           if FLAGS.evaluate_candidates and environment.WORLD_RANK == 0:
+            ## Write all candidates to eval_cand DB.
             if write_eval_proc:
               write_eval_proc.join()
             write_eval_proc = multiprocessing.Process(
@@ -791,6 +792,19 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               }
             )
             write_eval_proc.start()
+            ## Write to samples cache DB.
+            if write_cache_proc:
+              write_cache_proc.join()
+            self.samples_cache_obs.sample_id = self.samples_cache_obs.db.count
+            write_cache_proc = multiprocessing.Process(
+              target = write_samples_cache,
+              kwargs = {
+                'db_sample_obs' : self.samples_cache_obs,
+                'tokenizer'     : self.tokenizer,
+                'samples'       : step_candidates,
+              }
+            )
+            write_cache_proc.start()
 
           if not FLAGS.evolutionary_search and better_found and feeds[0].gen_id > 0:
             l.logger().info("Improved score {} -> {} in {} iterations".format(round(feed.input_score, 3), round(better_found.score, 3), it))
@@ -994,10 +1008,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     return self.feed_queue[0].input_feed
 
   def collateInputData(self,
-                       feed: typing.List[np.array],
-                       wload_size: int,
-                       sample_batch_per_feed: int,
-                       ) -> typing.Dict[str, typing.TypeVar('torch.Tensor')]:
+                       feed                  : typing.List[np.array],
+                       wload_size            : int,
+                       sample_batch_per_feed : int,
+                       ) -> typing.Dict[str, torch.Tensor]:
     """
     Create a full generation workload out of a sample feed.
     If feed is already masked, then just repeat it across the whole workload.
@@ -1068,11 +1082,10 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     return inputs
 
   def registerOutputData(self,
-                         outputs    : typing.Dict[str, typing.List[np.array]],
-                         # rng        : typing.Tuple[int, int],
-                         feeds      : ActiveSampleFeed,
-                         candidates : typing.List[ActiveSample],
-                         rejected_candidates: typing.List[ActiveSample],
+                         outputs             : typing.Dict[str, typing.List[np.array]],
+                         feeds               : ActiveSampleFeed,
+                         candidates          : typing.List[ActiveSample],
+                         rejected_candidates : typing.List[ActiveSample],
                          ) -> typing.List[int]:
     """
     Gets workload output from model.
@@ -1090,7 +1103,6 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                1st el: Total samples.
     """
     cm_rate = [0, 0]
-    # l.logger().warn("Opening pool")
     pool = multiprocessing.Pool()
     cm_rate[1] += len(outputs['generated_samples'])
     better_found = None
@@ -1189,7 +1201,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
         session.add(db_input)
     return
 
-  def _saveCorpusRecord(self, masked_corpus: typing.Dict) -> None:
+  def _saveCorpusRecord(self, masked_corpus: typing.Dict[str, np.array]) -> None:
     """Converts corpus nparrays to torch tensors and stores corpus to pt_record"""
 
     torch.save(
