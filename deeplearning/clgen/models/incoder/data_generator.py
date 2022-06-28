@@ -14,6 +14,7 @@ import numpy as np
 import multiprocessing
 import math
 import tqdm
+import pathlib
 
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util.pytorch import torch
@@ -21,7 +22,9 @@ from deeplearning.clgen.util import distributions
 from deeplearning.clgen.util import monitors
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import distrib
+from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.proto import model_pb2
+from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
@@ -40,15 +43,15 @@ class IncoderDataGenerator(torch_data_generator.torchLMDataGenerator):
   """Data generator subclass designed for Incoder model."""
   @classmethod
   def TrainMaskLMBatchGenerator(cls,
-                               corpus: "corpuses.Corpus",
-                               training_opts: model_pb2.TrainingOptions,
-                               cache_path,
-                               num_train_steps: int = None,
-                               pre_train: bool = False,
+                               corpus                  : corpuses.Corpus,
+                               training_opts           : model_pb2.TrainingOptions,
+                               cache_path              : pathlib.Path,
+                               num_train_steps         : int  = None,
+                               pre_train               : bool = False,
                                feature_encoder         : bool                        = False,
                                feature_tokenizer       : tokenizers.FeatureTokenizer = None,
                                feature_sequence_length : int                         = None,
-                               ) -> "data_generator.MaskLMBatchGenerator":
+                               ) -> torch_data_generator.MaskLMBatchGenerator:
     """Initializes data generator for training."""
     d = super(IncoderDataGenerator, IncoderDataGenerator()).TrainMaskLMBatchGenerator(
                 corpus, training_opts, cache_path, num_train_steps, pre_train,
@@ -58,18 +61,18 @@ class IncoderDataGenerator(torch_data_generator.torchLMDataGenerator):
 
   @classmethod
   def SampleMaskLMBatchGenerator(cls,
-                                 model_opts,
-                                 sampler,
-                                 tokenizer,
-                                 seed: int,
-                                 sample_batch_size: int,
-                                 max_position_embeddings: int,
-                                 cache_path,
-                                 corpus: "corpuses.Corpus" = None,
-                                 feature_encoder         : bool                        = False,
+                                 model_opts              : model_pb2.TrainingOptions,
+                                 sampler                 : samplers.Sampler,
+                                 tokenizer               : tokenizers.TokenizerBase,
+                                 seed                    : int,
+                                 sample_batch_size       : int,
+                                 max_position_embeddings : int,
+                                 cache_path              : pathlib.Path,
+                                 corpus                  : corpuses.Corpus = None,
+                                 feature_encoder         : bool            = False,
                                  feature_tokenizer       : tokenizers.FeatureTokenizer = None,
-                                 feature_sequence_length : int                         = None,
-                                 ) -> "data_generator.MaskLMBatchGenerator":
+                                 feature_sequence_length : int = None,
+                                 ) -> torch_data_generator.MaskLMBatchGenerator:
     """Initializes data generator for inference."""
     d = super(IncoderDataGenerator, IncoderDataGenerator()).SampleMaskLMBatchGenerator(
               model_opts, sampler, tokenizer, seed,
