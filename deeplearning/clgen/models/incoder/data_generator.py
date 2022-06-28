@@ -79,7 +79,6 @@ class IncoderDataGenerator(torch_data_generator.torchLMDataGenerator):
     Returns:
       Starting input feed of sampling.
     """
-    raise NotImplementedError
     if not self.feed_queue:
       if FLAGS.start_from_cached and target_features is not None:
         cached_samples = [[x.sample, {':'.join(f.split(':')[:-1]): float(f.split(':')[-1]) for f in x.output_features.split('\n')}, -1] for x in self.active_db.get_data]
