@@ -30,7 +30,7 @@ class Environment(object):
   def init_code_state(self) -> np.array:
     return np.array(
       [self.tokenizer.startToken, self.tokenizer.endToken]
-      + ([self.tokenizer.padToken] * self.max_position_embeddings - 2)
+      + ([self.tokenizer.padToken] * (self.max_position_embeddings - 2))
     )
 
   def __init__(self,
