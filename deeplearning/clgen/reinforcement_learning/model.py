@@ -53,8 +53,6 @@ class FeatureEncoder(torch.nn.Module):
               input_features_key_padding_mask : torch.ByteTensor,
               ) -> torch.Tensor:
     ## Run the encoder transformer over the features.
-    print(input_features)
-    print(type(input_features))
     enc_embed = self.encoder_embedding(input_features) * math.sqrt(self.encoder_embedding_size)
     pos_enc_embed = self.encoder_pos_encoder(enc_embed)
     encoded = self.encoder_transformer(
@@ -62,6 +60,22 @@ class FeatureEncoder(torch.nn.Module):
       src_key_padding_mask = input_features_key_padding_mask,
     )
     return encoded
+
+class PredictionHeadTransform(torch.nn.Module):
+  def __init__(self, config, dense_size):
+    super().__init__()
+    self.dense = torch.nn.Linear(dense_size, dense_size)
+    if isinstance(config.hidden_act, str):
+      self.transform_act_fn = model.ACT2FN[config.hidden_act]
+    else:
+      self.transform_act_fn = config.hidden_act
+    self.LayerNorm = torch.nn.LayerNorm(dense_size, eps=config.layer_norm_eps)
+
+  def forward(self, hidden_states):
+    hidden_states = self.dense(hidden_states)
+    hidden_states = self.transform_act_fn(hidden_states)
+    hidden_states = self.LayerNorm(hidden_states)
+    return hidden_states
 
 class SourceDecoder(torch.nn.Module):
   """Source code decoder for action prediction."""
@@ -108,7 +122,7 @@ class ActionHead(torch.nn.Module):
   """Classification head for action prediction."""
   def __init__(self, config):
     super().__init__()
-    self.transform = model.BertPredictionHeadTransform(config)
+    self.transform = PredictionHeadTransform(config, dense_size = config.hidden_size)
     self.decoder   = torch.nn.Linear(config.hidden_size, len(interactions.ACTION_TYPE_SPACE), bias = False)
     self.bias      = torch.nn.Parameter(torch.zeros(len(interactions.ACTION_TYPE_SPACE)))
     self.decoder.bias = self.bias
@@ -123,10 +137,17 @@ class IndexHead(torch.nn.Module):
   """Classification head for token index prediction."""
   def __init__(self, config):
     super().__init__()
+    self.transform = model.BertPredictionHeadTransform(config, dense_size = config.hidden_size + len(interactions.ACTION_TYPE_SPACE))
+    self.decoder   = torch.nn.Linear(config.hidden_size, len(config.max_position_embeddings), bias = False)
+    self.bias      = torch.nn.Parameter(torch.zeros(len(config.max_position_embeddings)))
+    self.decoder.bias = self.bias
     return
 
   def forward(self, decoder_out, action_logits):
-    return
+    decoded_with_action = torch.cat((decoder_out, action_logits), -1)
+    transformed = self.transform(decoded_with_action)
+    action_logits = self.decoder(transformed)
+    return action_logits
 
 class ActionQV(torch.nn.Module):
   """Deep Q-Values for Action type prediction."""
@@ -157,6 +178,10 @@ class ActionQV(torch.nn.Module):
     action_logits = self.action_head(decoded_source)
     ## Predict the index logits.
     index_logits  = self.index_head(decoded_source, action_logits)
+    print(action_logits)
+    print(index_logits)
+    print(action_logits.shape)
+    print(index_logits.shape)
     return action_logits, index_logits
 
 class ActionLanguageModelQV(torch.nn.Module):
@@ -227,7 +252,8 @@ class QValuesModel(object):
       tokm = torch.nn.DataParallel(tokm)
 
     return QValuesModel.QValuesEstimator(
-      action_type_q = actm, token_type_q = tokm
+      action_type_q = actm,
+      token_type_q  = tokm,
     )
 
   def _ConfigTrainParams(self) -> None:
