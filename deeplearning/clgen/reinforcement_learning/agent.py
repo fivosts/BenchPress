@@ -23,21 +23,21 @@ class Policy(object):
   def __init__(self):
     return
 
-  def predict_action_type(self, action_type_logits: torch.FloatTensor) -> int:
+  def SelectActionType(self, action_type_logits: torch.FloatTensor) -> int:
     """
     Get the Q-Values for action types and apply policy on it.
     """
     raise NotImplementedError
     return action_type
 
-  def predict_action_index(self, action_index_logits: torch.FloatTensor) -> int:
+  def SampleActionIndex(self, action_index_logits: torch.FloatTensor) -> int:
     """
     Get the Q-Values for action index and apply policy on it.
     """
     raise NotImplementedError
     return action_index
 
-  def select_token(self, token_logits: torch.FloatTensor) -> int:
+  def SampleTokenType(self, token_logits: torch.FloatTensor) -> int:
     """
     Get logit predictions for token and apply policy on it.
     """
@@ -79,14 +79,14 @@ class Agent(object):
     and picks the right action.
     """
     action_type_logits  = self.q_model.SampleActionType(state)
-    action_type         = self.policy.select_action_type(action_type_logits)
+    action_type         = self.policy.SelectActionType(action_type_logits)
 
     if action_type != interactions.ACTION_SPACE['COMP']:
       action_index_logits = self.q_model.SampleActionIndex(state, action_type)
-      action_index        = self.policy.select_action_index(action_index_logits)
+      action_index        = self.policy.SelectActionIndex(action_index_logits)
       if action_type == interactions.ACTION_SPACE['ADD']:
         token_logits        = self.q_model.SampleTokenType(state)
-        token               = self.policy.select_token(token_logits)
+        token               = self.policy.SelectToken(token_logits)
       else:
         token_logits      = None
         token             = None
