@@ -27,6 +27,7 @@ class Policy(object):
     """
     Get the Q-Values for action types and apply policy on it.
     """
+    return 0
     raise NotImplementedError
     return action_type
 
@@ -34,6 +35,7 @@ class Policy(object):
     """
     Get the Q-Values for action index and apply policy on it.
     """
+    return 0
     raise NotImplementedError
     return action_index
 
@@ -41,6 +43,7 @@ class Policy(object):
     """
     Get logit predictions for token and apply policy on it.
     """
+    return 54
     raise NotImplementedError
     return token
 
@@ -81,10 +84,10 @@ class Agent(object):
     action_type_logits  = self.q_model.SampleActionType(state)
     action_type         = self.policy.SelectActionType(action_type_logits)
 
-    if action_type != interactions.ACTION_SPACE['COMP']:
+    if action_type != interactions.ACTION_TYPE_SPACE['COMP']:
       action_index_logits = self.q_model.SampleActionIndex(state, action_type)
       action_index        = self.policy.SelectActionIndex(action_index_logits)
-      if action_type == interactions.ACTION_SPACE['ADD']:
+      if action_type == interactions.ACTION_TYPE_SPACE['ADD']:
         token_logits        = self.q_model.SampleTokenType(state)
         token               = self.policy.SelectToken(token_logits)
       else:
