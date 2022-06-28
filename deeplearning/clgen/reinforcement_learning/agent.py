@@ -65,7 +65,9 @@ class Agent(object):
     self.tokenizer         = tokenizer
     self.feature_tokenizer = feature_tokenizer
     self.qv_config = QValuesConfig.from_config(self.config, self.tokenizer, self.feature_tokenizer)
-    self.q_model = model.QValuesModel(self.language_model, self.qv_config, self.cache_path)
+    self.q_model = model.QValuesModel(
+      self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path
+    )
     self.policy  = Policy()
 
     self.loadCheckpoint()
