@@ -253,8 +253,8 @@ class QValuesModel(object):
     """Predict the next action given an input state."""
     self._ConfigSampleParams()
 
-    input_ids            = torch.LongTensor(state.encoded_code,     dtype = torch.int64).unsqueeze(0)
-    feature_ids          = torch.LongTensor(state.encoded_features, dtype = torch.int64).unsqueeze(0)
+    input_ids            = torch.LongTensor(state.encoded_code).unsqueeze(0)
+    feature_ids          = torch.LongTensor(state.encoded_features).unsqueeze(0)
     input_ids_pad_mask   = input_ids   != self.tokenizer.padToken
     feature_ids_pad_mask = feature_ids != self.feature_tokenizer.padToken
 
