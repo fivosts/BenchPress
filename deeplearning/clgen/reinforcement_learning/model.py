@@ -190,7 +190,7 @@ class QValuesModel(object):
     self.config                  = config
     self.tokenizer               = language_model.tokenizer
     self.feature_tokenizer       = feature_tokenizer
-    self.feature_sequence_length = self.config.agent.action_qv.feature_sequence_length
+    self.feature_sequence_length = self.config.feature_sequence_length
 
     self.action_type_qv = ActionQV(config)
     self.token_type_qv  = ActionLanguageModelQV(language_model, config)
