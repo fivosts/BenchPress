@@ -248,7 +248,7 @@ def dataload_worker(x              : int,
                     func           : typing.Union[
                                        sequence_masking.HoleSequence,
                                        sequence_masking.HoleSequenceSeqMasks,
-                                       sequence_masking.MaskSequence
+                                       'sequence_masking.MaskSequence'
                                      ],
                     batch          : int,
                     batch_per_feed : int,
@@ -422,7 +422,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                               tokenizer       = d.tokenizer,
                             )
       elif corpus_config.HasField("mask"):
-        d.func = functools.partial(sequence_masking.MaskSequence,
+        d.func = functools.partial('sequence_masking.MaskSequence',
                               train_set         = False,
                               max_predictions   = corpus_config.max_predictions_per_seq,
                               masked_lm_prob    = corpus_config.masked_lm_prob,
