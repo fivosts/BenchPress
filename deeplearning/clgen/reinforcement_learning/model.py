@@ -199,9 +199,12 @@ class QValuesModel(object):
     self.tokenizer               = language_model.tokenizer
     self.feature_tokenizer       = feature_tokenizer
     self.feature_sequence_length = self.config.feature_sequence_length
+
+    self.train_qvalues  = None
+    self.sample_qvalues = None
     return
 
-  def _ConfigModelParams(self) -> None:
+  def _ConfigModelParams(self) -> QValuesEstimator:
     """Initialize model parameters."""
     actm = ActionQV(self.config).to(pytorch.offset_device)
     tokm = ActionLanguageModelQV(self.language_model, self.config).to(pytorch.offset_device)
@@ -223,19 +226,20 @@ class QValuesModel(object):
       actm = torch.nn.DataParallel(actm)
       tokm = torch.nn.DataParallel(tokm)
 
-    self.qvalues = QValuesModel.QValuesEstimator(
+    return QValuesModel.QValuesEstimator(
       action_type_q = actm, token_type_q = tokm
     )
-    return
 
   def _ConfigTrainParams(self) -> None:
     """Initialize Training parameters for model."""
-    self._ConfigModelParams()
+    if not self.train_qvalues:
+      self.train_qvalues = self._ConfigModelParams()
     return
   
   def _ConfigSampleParams(self) -> None:
     """Initialize sampling parameters for model."""
-    self._ConfigModelParams()
+    if not self.sample_qvalues:
+      self.sample_qvalues = self._ConfigModelParams()
     return
 
   def Train(self, input_ids: typing.Dict[str, torch.Tensor]) -> None:
@@ -248,12 +252,12 @@ class QValuesModel(object):
   def SampleActionType(self, state: interactions.State) -> typing.Dict[str, torch.Tensor]:
     """Predict the next action given an input state."""
     self._ConfigSampleParams()
-    input_ids          = torch.LongTensor(state.code)
-    input_ids_pad_mask = input_ids != self.tokenizer.padToken
-    feature_ids        = torch.LongTensor(
-      self.feature_tokenizer.TokenizeFeatureVector(state.target_features, state.feature_space, self.feature_sequence_length)
-    )
+
+    input_ids            = torch.LongTensor(state.encoded_code,     dtype = torch.int64).unsqueeze(0)
+    feature_ids          = torch.LongTensor(state.encoded_features, dtype = torch.int64).unsqueeze(0)
+    input_ids_pad_mask   = input_ids   != self.tokenizer.padToken
     feature_ids_pad_mask = feature_ids != self.feature_tokenizer.padToken
+
     return self.qvalues.action_type_q(
       input_ids.to(pytorch.device),
       feature_ids.to(pytorch.device),
