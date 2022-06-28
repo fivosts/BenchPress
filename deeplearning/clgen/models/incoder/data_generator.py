@@ -100,7 +100,7 @@ class IncoderDataGenerator(torch_data_generator.torchLMDataGenerator):
             encoded = self._padToMaxPosition([int(x) for x in tokenized])[:self.sampler.sequence_length]
             assert encoded[0] != self.tokenizer.padToken, encoded
             self.feed_queue.append(
-              ActiveSampleFeed(
+              torch_data_generator.ActiveSampleFeed(
                 input_feed     = encoded,
                 input_features = scs[1],
                 input_score    = scs[-1],
@@ -122,7 +122,7 @@ class IncoderDataGenerator(torch_data_generator.torchLMDataGenerator):
         cf = [int(x) for x in cf]
         assert cf[0] != self.tokenizer.padToken, cf
         self.feed_queue.append(
-          ActiveSampleFeed(
+          torch_data_generator.ActiveSampleFeed(
             input_feed     = cf,
             input_features = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(cf), [self.feat_sampler.feature_space])[self.feat_sampler.feature_space],
             input_score    = math.inf,
