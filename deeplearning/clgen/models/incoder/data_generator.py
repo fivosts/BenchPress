@@ -36,7 +36,7 @@ class IncoderDataGenerator(torch_data_generator.torchLMDataGenerator):
                                feature_encoder         : bool                        = False,
                                feature_tokenizer       : tokenizers.FeatureTokenizer = None,
                                feature_sequence_length : int                         = None,
-                               ) -> torch_data_generator.torchLMDataGenerator:
+                               ) -> 'IncoderDataGenerator':
     """Initializes data generator for training."""
     d = super(IncoderDataGenerator, IncoderDataGenerator()).TrainMaskLMBatchGenerator(
                 corpus, training_opts, cache_path, num_train_steps, pre_train,
@@ -57,7 +57,7 @@ class IncoderDataGenerator(torch_data_generator.torchLMDataGenerator):
                                  feature_encoder         : bool            = False,
                                  feature_tokenizer       : tokenizers.FeatureTokenizer = None,
                                  feature_sequence_length : int = None,
-                                 ) -> torch_data_generator.torchLMDataGenerator:
+                                 ) -> 'IncoderDataGenerator':
     """Initializes data generator for inference."""
     d = super(IncoderDataGenerator, IncoderDataGenerator()).SampleMaskLMBatchGenerator(
               model_opts, sampler, tokenizer, seed,
