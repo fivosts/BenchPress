@@ -14,7 +14,7 @@ from deeplearning.clgen.models import backends
 from deeplearning.clgen.models import telemetry
 from deeplearning.clgen.util import distrib
 from deeplearning.clgen.models.incoder import example_api
-from deeplearning.clgen.models.torch_bert.data_generator import torchLMDataGenerator
+from deeplearning.clgen.models.incoder.data_generator import IncoderDataGenerator
 
 from deeplearning.clgen.util import logging as l
 
@@ -35,14 +35,14 @@ class Incoder(backends.BackendBase):
   class TrainEstimator(typing.NamedTuple):
     """Named tuple to wrap Incoder pipeline."""
     model          : typing.TypeVar('nn.Module')
-    data_generator : torchLMDataGenerator
+    data_generator : IncoderDataGenerator
     optimizer      : typing.Any
     scheduler      : typing.Any
 
   class SampleEstimator(typing.NamedTuple):
     """Named tuple for sampling Incoder."""
     model          : typing.List[typing.TypeVar('nn.Module')]
-    data_generator : torchLMDataGenerator
+    data_generator : IncoderDataGenerator
 
   def __init__(self, *args, **kwargs):
     super(Incoder, self).__init__(*args, **kwargs)
@@ -92,7 +92,7 @@ class Incoder(backends.BackendBase):
     return
 
   def _ConfigSampleParams(self,
-                          data_generator: torchLMDataGenerator,
+                          data_generator: IncoderDataGenerator,
                           sampler: samplers.Sampler,
                           ) -> None:
     """
@@ -126,21 +126,14 @@ class Incoder(backends.BackendBase):
         FLAGS.custom_incoder_ckpt, **kwargs
       ).to(self.pytorch.offset_device)
 
-    if self.pytorch.num_nodes > 1:
-      # m = self.torch.nn.parallel.DistributedDataParallel(
-      #   m,
-      #   device_ids = [self.pytorch.offset_device],
-      #   output_device = self.pytorch.offset_device,
-      # )
-      pass
-    elif self.pytorch.num_gpus > 1:
+    if self.pytorch.num_nodes == 1 and self.pytorch.num_gpus > 1:
       l.logger().warn("HuggingFace 'generate' function does not support DataParallel. If you want multi-GPU sampling, go to DDP.")
 
     self.sample = Incoder.SampleEstimator(m, data_generator)
     l.logger().info("Initialized model sampler in {}".format(self.sampler.cache.path))
     return
 
-  def samplesWithCategorical(self):
+  def samplesWithCategorical(self) -> bool:
     return True
 
   def model_step(self) -> 'torch.Tensor':
@@ -181,9 +174,6 @@ class Incoder(backends.BackendBase):
     for batch in inputs['input_ids']:
       for seq in batch:
         seq = [x for x in seq if x != self.tokenizer.padToken]
-        # if seq[-1] == self.tokenizer.holeToken:
-          # incode = self.tokenizer.ArrayToCode(seq[:-1])
-        # else:
         incode = self.tokenizer.ArrayToCode(seq).replace("<|mask:0|>", "<insert>") # This is a text where pad has been stripped off.
         incode = "<| file ext=.cl |>\n{}\n<|/ file |>".format(incode)
         incoded = example_api.infill(
@@ -254,7 +244,7 @@ class Incoder(backends.BackendBase):
     """This is called only once. Performs basic initialization of sampling"""
     sample_batch_size = sampler.batch_size
     ##! TODO: Replace with incoder data generator
-    data_generator = torchLMDataGenerator.SampleMaskLMBatchGenerator(
+    data_generator = IncoderDataGenerator.SampleMaskLMBatchGenerator(
                        self.config.training, sampler, self.tokenizer, seed, sample_batch_size,
                        sampler.sequence_length, self.cache.path, corpus,
                       #  self.feature_encoder,
