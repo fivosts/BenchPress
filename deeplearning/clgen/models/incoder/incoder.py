@@ -246,11 +246,7 @@ class Incoder(backends.BackendBase):
     ##! TODO: Replace with incoder data generator
     data_generator = IncoderDataGenerator.SampleMaskLMBatchGenerator(
                        self.config.training, sampler, self.tokenizer, seed, sample_batch_size,
-                       sampler.sequence_length, self.cache.path, corpus,
-                      #  self.feature_encoder,
-                      #  self.feature_tokenizer,
-                      #  self.feature_sequence_length,
-                     )
+                       sampler.sequence_length, self.cache.path, corpus)
     ##! TODO: Maybe initialize inline here instead of elaborating in separate function.
     self._ConfigSampleParams(data_generator, sampler)
     if self.pytorch.num_gpus > 0:
