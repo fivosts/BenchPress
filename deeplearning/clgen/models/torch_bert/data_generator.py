@@ -245,7 +245,11 @@ def text_candidate_worker(sample           : np.array,
 
 def dataload_worker(x              : int,
                     feed           : typing.List[np.array],
-                    func           : sequence_masking.MaskingFunction,
+                    func           : typing.Union[
+                                       sequence_masking.HoleSequence,
+                                       sequence_masking.HoleSequenceSeqMasks,
+                                       sequence_masking.MaskSequence
+                                     ],
                     batch          : int,
                     batch_per_feed : int,
                     ) -> typing.Dict[str, np.array]:
