@@ -31,7 +31,7 @@ class Policy(object):
     raise NotImplementedError
     return action_type
 
-  def SampleTokenType(self, token_logits: torch.FloatTensor) -> int:
+  def SampleToken(self, token_logits: torch.FloatTensor) -> int:
     """
     Get logit predictions for token and apply policy on it.
     """
