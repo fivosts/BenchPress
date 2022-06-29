@@ -23,21 +23,13 @@ class Policy(object):
   def __init__(self):
     return
 
-  def SelectActionType(self, action_type_logits: torch.FloatTensor) -> int:
+  def SelectAction(self, type_logits: torch.FloatTensor, index_logits: torch.Tensor) -> typing.Tuple[int, int]:
     """
-    Get the Q-Values for action types and apply policy on it.
+    Get the Q-Values for action and apply policy on it.
     """
-    return 0
+    return 0, 0
     raise NotImplementedError
     return action_type
-
-  def SampleActionIndex(self, action_index_logits: torch.FloatTensor) -> int:
-    """
-    Get the Q-Values for action index and apply policy on it.
-    """
-    return 0
-    raise NotImplementedError
-    return action_index
 
   def SampleTokenType(self, token_logits: torch.FloatTensor) -> int:
     """
