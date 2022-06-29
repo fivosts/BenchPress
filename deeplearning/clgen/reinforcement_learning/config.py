@@ -25,6 +25,7 @@ class QValuesConfig(object):
       'layer_norm_eps'          : config.agent.action_qv.layer_norm_eps,
       'max_position_embeddings' : config.agent.action_qv.max_position_embeddings,
       'hidden_act'              : config.agent.action_qv.hidden_act,
+      'temperature_micros'      : config.agent.action_lm.temperature_micros / 1e6,
       'feature_encoder'         : False,
     }
     return QValuesConfig(**dict)
