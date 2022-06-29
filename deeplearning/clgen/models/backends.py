@@ -3,6 +3,8 @@ import typing
 import numpy as np
 
 from deeplearning.clgen.corpuses import tokenizers
+from deeplearning.clgen.corpuses import corpuses
+from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.util import cache
 
@@ -29,11 +31,11 @@ class BackendBase(object):
   def Create(self, tokenizer: tokenizers.TokenizerBase) -> None:
     self.tokenizer = tokenizer
 
-  def PreTrain(self, corpus: "Corpus", **extra_kwargs) -> None:
+  def PreTrain(self, corpus: corpuses.Corpus, **extra_kwargs) -> None:
     """Pre-train the backend"""
     raise NotImplementedError("pre-training is only supported in PyTorch BERT.")
 
-  def Train(self, corpus: "Corpus", **extra_kwargs) -> None:
+  def Train(self, corpus: corpuses.Corpus, **extra_kwargs) -> None:
     """Train the backend."""
     raise NotImplementedError("Abstract Class.")
 
@@ -42,17 +44,17 @@ class BackendBase(object):
     raise NotImplementedError("Abstract Class.")
 
   def InitSampling(
-    self, sampler: 'samplers.Sampler', seed: typing.Optional[int] = None
+    self, sampler: samplers.Sampler, seed: typing.Optional[int] = None
   ) -> None:
     """Initialize backend for sampling."""
     raise NotImplementedError("Abstract Class.")
 
-  def InitSampleBatch(self, sampler: 'samplers.Sampler') -> None:
+  def InitSampleBatch(self, sampler: samplers.Sampler) -> None:
     """Begin a new sampling batch. Only called after InitSampling()."""
     raise NotImplementedError("Abstract Class.")
 
   def SampleNextIndices(
-    self, sampler: 'samplers.Sampler', done: np.ndarray, tokenizer = None
+    self, sampler: samplers.Sampler, done: np.ndarray, tokenizer = None
   ) -> np.ndarray:
     """Sample the next indices for the current sample batch.
 
