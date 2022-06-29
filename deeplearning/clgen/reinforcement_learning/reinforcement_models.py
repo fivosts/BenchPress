@@ -46,6 +46,7 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
   pbutil.AssertFieldIsSet(config.agent.action_qv, "feature_sequence_length")
   pbutil.AssertFieldIsSet(config.agent.action_qv, "max_position_embeddings")
   pbutil.AssertFieldIsSet(config.agent.action_qv, "hidden_size")
+  pbutil.AssertFieldIsSet(config.agent.action_lm, "temperature_micros")
   pbutil.AssertFieldConstraint(
     config.agent.action_qv,
     "num_attention_heads",
