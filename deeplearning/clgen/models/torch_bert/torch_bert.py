@@ -287,9 +287,29 @@ class torchBert(backends.BackendBase):
   def samplesWithCategorical(self):
     return FLAGS.categorical_sampling
 
-  def GetModule(self) -> 'torch.nn.Module':
-    """Return BERT auto-encoder."""
-    return
+  def GetModule(self, with_checkpoint: bool = True) -> 'torch.nn.Module':
+    """Return internal BERT auto-encoder module."""
+    generic_config = config.BertConfig.from_dict(
+      self.bertAttrs,
+      **self.featureAttrs,
+      xla_device         = self.torch_tpu_available,
+      reward_compilation = -1,
+      # This is hard-coded to True to allow compile sampler to be initialized. This does not prohibit proper re-train.
+      is_sampling        = True,
+    )
+    m = model.BertForPreTraining(
+              generic_config,
+              tokenizer       = self.tokenizer,
+              use_categorical = FLAGS.categorical_sampling,
+              temperature     = self.temperature,
+              target_lm       = "hole" if self.config.training.data_generator.HasField("hole") else "mask"
+            )
+    if with_checkpoint:
+      temp_estimator = torchBert.SampleBertEstimator(m, data_generator)
+      self.loadCheckpoint(temp_estimator)
+      return temp_estimator.model
+    else:
+      return m
 
   def to_device(self, inputs) -> 'torch.Tensor':
     """
