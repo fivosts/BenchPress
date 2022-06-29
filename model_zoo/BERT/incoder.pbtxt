@@ -95,7 +95,7 @@ sampler {
   }
   batch_size: 16
   sequence_length: 1900
-  temperature_micros: 900000  # = 0.8 real value
+  temperature_micros: 1000000  # = 0.8 real value
   termination_criteria {
     maxlen {
       maximum_tokens_in_sample: 1900
