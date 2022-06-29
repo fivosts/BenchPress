@@ -287,7 +287,7 @@ class torchBert(backends.BackendBase):
   def samplesWithCategorical(self):
     return FLAGS.categorical_sampling
 
-  def GetModule(self, with_checkpoint: bool = True) -> 'torch.nn.Module':
+  def GetSamplingModule(self, temperature: int, with_checkpoint: bool = True) -> 'torch.nn.Module':
     """Return internal BERT auto-encoder module."""
     generic_config = config.BertConfig.from_dict(
       self.bertAttrs,
@@ -301,7 +301,7 @@ class torchBert(backends.BackendBase):
               generic_config,
               tokenizer       = self.tokenizer,
               use_categorical = FLAGS.categorical_sampling,
-              temperature     = self.temperature,
+              temperature     = temperature,
               target_lm       = "hole" if self.config.training.data_generator.HasField("hole") else "mask"
             )
     if with_checkpoint:
