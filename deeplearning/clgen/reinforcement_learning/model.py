@@ -186,12 +186,11 @@ class ActionQV(torch.nn.Module):
 
 class ActionLanguageModelQV(torch.nn.Module):
   """Deep Q-Values for Token type prediction."""
-  def __init__(self, language_model, config):
+  def __init__(self, language_model: language_models.Model, config: config.QValuesConfig):
     super(ActionLanguageModelQV, self).__init__()
-    self.language_model = language_model
-    self.config = config
+    self.language_model = language_model.backend.GetModule(with_checkpoint = True)
     return
-  
+
   def TrainBatch(self, input_ids: typing.Dict[str, torch.Tensor]):
     self.language_model.Trainbatch(input_ids)
     return
