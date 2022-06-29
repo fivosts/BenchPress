@@ -7,6 +7,9 @@ from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.proto import model_pb2
 from deeplearning.clgen.util import cache
+from deeplearning.clgen.util import pytorch
+
+torch = pytorch.torch
 
 class BackendBase(object):
   """The base class for a language model backend.
@@ -66,3 +69,7 @@ class BackendBase(object):
   def SampleBatch(self, batch) -> np.ndarray:
     """Specifically sample a requested batch of data."""
     raise NotImplementedError("Abstract Class.")
+
+  def GetModule(self) -> torch.nn.Module:
+    """Return the internal torch module of an architecture."""
+    raise NotImplementedError("Abstract class")
