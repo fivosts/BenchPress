@@ -81,29 +81,20 @@ class Agent(object):
     Agent collects the current state by the environment
     and picks the right action.
     """
-    action_type_logits  = self.q_model.SampleActionType(state)
-    action_type         = self.policy.SelectActionType(action_type_logits)
+    type_logits, index_logits  = self.q_model.SampleAction(state)
+    action_type, action_index  = self.policy.SelectAction(type_logits, index_logits)
 
-    if action_type != interactions.ACTION_TYPE_SPACE['COMP']:
-      action_index_logits = self.q_model.SampleActionIndex(state, action_type)
-      action_index        = self.policy.SelectActionIndex(action_index_logits)
-      if action_type == interactions.ACTION_TYPE_SPACE['ADD']:
-        token_logits        = self.q_model.SampleTokenType(state)
-        token               = self.policy.SelectToken(token_logits)
-      else:
-        token_logits      = None
-        token             = None
+    if action_type == interactions.ACTION_TYPE_SPACE['ADD']:
+      token_logits = self.q_model.SampleToken(state)
+      token        = self.policy.SelectToken(token_logits)
     else:
-      action_index        = None
-      action_index_logits = None
-      token_logits        = None
-      token               = None
+      token_logits, token = None, None
 
     return interactions.Action(
       action_type         = action_type,
-      action_type_logits  = action_type_logits,
+      action_type_logits  = type_logits,
       action_index        = action_index,
-      action_index_logits = action_index_logits,
+      action_index_logits = index_logits,
       token_type          = token,
       token_type_logits   = token_logits,
     )
