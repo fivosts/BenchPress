@@ -53,5 +53,6 @@ message ActionQV {
 }
 
 message ActionLM {
-
+  // Temperature for Language model when working as an agent.
+  optional int32 temperature_micros = 1;
 }
