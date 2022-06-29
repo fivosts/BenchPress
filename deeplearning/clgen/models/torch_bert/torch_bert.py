@@ -305,7 +305,7 @@ class torchBert(backends.BackendBase):
               target_lm       = "hole" if self.config.training.data_generator.HasField("hole") else "mask"
             )
     if with_checkpoint:
-      temp_estimator = torchBert.SampleBertEstimator(m, data_generator)
+      temp_estimator = torchBert.SampleBertEstimator(m, None)
       self.loadCheckpoint(temp_estimator)
       return temp_estimator.model
     else:
