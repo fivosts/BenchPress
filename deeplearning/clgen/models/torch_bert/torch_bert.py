@@ -210,7 +210,7 @@ class torchBert(backends.BackendBase):
           self.bert_config,
           tokenizer = self.tokenizer,
           target_lm = "hole" if self.config.training.data_generator.HasField("hole") else "mask"
-          ).to(self.pytorch.offset_device)
+        ).to(self.pytorch.offset_device)
 
     if self.pytorch.num_nodes > 1:
       distrib.barrier()
@@ -259,12 +259,12 @@ class torchBert(backends.BackendBase):
       mdl = model.BertForPreTraining
 
     m = mdl(
-      self.bert_config,
-      tokenizer       = self.tokenizer,
-      use_categorical = FLAGS.categorical_sampling,
-      temperature     = self.temperature,
-      target_lm       = "hole" if self.config.training.data_generator.HasField("hole") else "mask"
-    ).to(self.pytorch.offset_device)
+          self.bert_config,
+          tokenizer       = self.tokenizer,
+          use_categorical = FLAGS.categorical_sampling,
+          temperature     = self.temperature,
+          target_lm       = "hole" if self.config.training.data_generator.HasField("hole") else "mask"
+        ).to(self.pytorch.offset_device)
 
     if self.pytorch.num_nodes > 1:
       m = self.torch.nn.parallel.DistributedDataParallel(
@@ -286,6 +286,10 @@ class torchBert(backends.BackendBase):
 
   def samplesWithCategorical(self):
     return FLAGS.categorical_sampling
+
+  def GetModule(self) -> 'torch.nn.Module':
+    """Return BERT auto-encoder."""
+    return
 
   def to_device(self, inputs) -> 'torch.Tensor':
     """
