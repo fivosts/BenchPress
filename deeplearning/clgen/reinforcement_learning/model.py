@@ -206,8 +206,8 @@ class QValuesModel(object):
   """
   class QValuesEstimator(typing.NamedTuple):
     """Torch model wrapper for Deep Q-Values."""
-    action_type_q : torch.nn.Module
-    token_type_q  : torch.nn.Module
+    action_qv : torch.nn.Module
+    token_qv  : torch.nn.Module
 
   def __init__(self,
                language_model          : language_models.Model,
@@ -252,8 +252,8 @@ class QValuesModel(object):
       tokm = torch.nn.DataParallel(tokm)
 
     return QValuesModel.QValuesEstimator(
-      action_type_q = actm,
-      token_type_q  = tokm,
+      action_qv = actm,
+      token_qv  = tokm,
     )
 
   def _ConfigTrainParams(self) -> None:
@@ -275,7 +275,7 @@ class QValuesModel(object):
     raise NotImplementedError
     return
 
-  def SampleActionType(self, state: interactions.State) -> typing.Dict[str, torch.Tensor]:
+  def SampleAction(self, state: interactions.State) -> typing.Dict[str, torch.Tensor]:
     """Predict the next action given an input state."""
     self._ConfigSampleParams()
 
@@ -284,20 +284,16 @@ class QValuesModel(object):
     input_ids_pad_mask   = input_ids   != self.tokenizer.padToken
     feature_ids_pad_mask = feature_ids != self.feature_tokenizer.padToken
 
-    return self.sample_qvalues.action_type_q(
+    return self.sample_qvalues.action_qv(
       input_ids.to(pytorch.device),
       feature_ids.to(pytorch.device),
       input_ids_pad_mask.to(pytorch.device),
       feature_ids_pad_mask.to(pytorch.device),
     )
   
-  def SampleActionIndex(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
-    """Predict Action index"""
-    return self.sample_qvalues.action_type_q(input_ids)
-  
-  def SampleTokenType(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
+  def SampleToken(self, input_ids: typing.Dict[str, torch.Tensor]) -> typing.Dict[str, torch.Tensor]:
     """Predict token type"""
-    return self.sample_qvalues.token_type_q(input_ids)
+    return self.sample_qvalues.token_qv(input_ids)
 
   def saveCheckpoint(self) -> None:
     """Checkpoint Deep Q-Nets."""
