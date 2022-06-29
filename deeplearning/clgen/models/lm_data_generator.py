@@ -597,6 +597,7 @@ class MaskLMDataGenerator(object):
           bar  = tqdm.tqdm(total = self.corpus.encoded.size, desc = "Chunk pre-train corpus")
           pool = multiprocessing.Pool()
           l.logger().info("Processing pre-train corpus chunks...")
+          l.logger().warn("The routine below does not provide the features.")
           for dp in pool.imap_unordered(
                               functools.partial(
                                 _addStartEndPadToken,
