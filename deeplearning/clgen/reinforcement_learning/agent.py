@@ -77,7 +77,9 @@ class Agent(object):
     action_type, action_index  = self.policy.SelectAction(type_logits, index_logits)
 
     if action_type == interactions.ACTION_TYPE_SPACE['ADD']:
-      token_logits = self.q_model.SampleToken(state)
+      token_logits = self.q_model.SampleToken(
+        state, action_index, self.tokenizer, self.feature_tokenizer
+      )
       token        = self.policy.SelectToken(token_logits)
     else:
       token_logits, token = None, None
