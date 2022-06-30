@@ -321,7 +321,7 @@ class torchBert(backends.BackendBase):
     attrs['pad_token_id']            = pad_token_id
     attrs['vocab_size']              = vocab_size
     generic_config = config.BertConfig.from_dict(
-      attrs
+      attrs,
       xla_device         = self.torch_tpu_available,
       reward_compilation = -1,
       # This is hard-coded to True to allow compile sampler to be initialized. This does not prohibit proper re-train.
