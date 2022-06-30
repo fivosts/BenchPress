@@ -4,6 +4,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import copy
 import shutil
 import humanize
 import typing
@@ -287,29 +288,51 @@ class torchBert(backends.BackendBase):
   def samplesWithCategorical(self):
     return FLAGS.categorical_sampling
 
-  def GetSamplingModule(self, temperature: int, with_checkpoint: bool = True) -> 'torch.nn.Module':
-    """Return internal BERT auto-encoder module."""
+  def GetEncoderModule(self, with_checkpoint = False) -> 'torch.nn.Module':
+    """Initialize BERT as decoder."""
     generic_config = config.BertConfig.from_dict(
       self.bertAttrs,
       **self.featureAttrs,
       xla_device         = self.torch_tpu_available,
       reward_compilation = -1,
       # This is hard-coded to True to allow compile sampler to be initialized. This does not prohibit proper re-train.
-      is_sampling        = True,
+      is_sampling        = False,
     )
     m = model.BertForPreTraining(
-              generic_config,
-              tokenizer       = self.tokenizer,
-              use_categorical = FLAGS.categorical_sampling,
-              temperature     = temperature,
-              target_lm       = "hole" if self.config.training.data_generator.HasField("hole") else "mask"
-            )
+          generic_config,
+          tokenizer = self.tokenizer,
+          target_lm = "hole" if self.config.training.data_generator.HasField("hole") else "mask"
+        )
     if with_checkpoint:
       temp_estimator = torchBert.SampleBertEstimator(m, None)
       self.loadCheckpoint(temp_estimator)
       return temp_estimator.model
     else:
       return m
+
+  def GetDecoderModule(self,
+                       max_position_embeddings: int,
+                       vocab_size             : int,
+                       pad_token_id           : int,
+                       ) -> 'torch.nn.Module':
+    """Return internal BERT auto-encoder module."""
+    attrs = copy.copy(self.bertAttrs)
+    attrs['max_position_embeddings'] = max_position_embeddings
+    attrs['pad_token_id']            = pad_token_id
+    attrs['vocab_size']              = vocab_size
+    generic_config = config.BertConfig.from_dict(
+      attrs
+      xla_device         = self.torch_tpu_available,
+      reward_compilation = -1,
+      # This is hard-coded to True to allow compile sampler to be initialized. This does not prohibit proper re-train.
+      is_sampling        = False,
+      is_decoder         = True,
+    )
+    return model.BertForPreTraining(
+          generic_config,
+          tokenizer = self.tokenizer,
+          target_lm = "hole" if self.config.training.data_generator.HasField("hole") else "mask"
+        )
 
   def to_device(self, inputs) -> 'torch.Tensor':
     """
