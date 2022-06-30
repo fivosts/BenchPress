@@ -2,6 +2,7 @@
 Memory replay buffer for reinforcement learning training.
 """
 import typing
+import numpy as np
 
 from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.corpuses import tokenizers
@@ -49,11 +50,11 @@ def StateToTokenTensor(state         : interactions.State,
   """
   Pre-process state to 
   """
-  seq_len = len(state.encoded_code)
+  seq_len      = len(state.encoded_code)
   feat_seq_len = len(state.encoded_features)
 
-  masked_code = state.encoded_code[:mask_idx+1] + [maskToken] + state.encoded_code[mask_idx+1:]
-  masked_code = torch.LongTensor(masked_code[:seq_len]).unsqueeze(0)
+  masked_code  = np.concatenate((state.encoded_code[:mask_idx+1], [maskToken], state.encoded_code[mask_idx+1:]))
+  masked_code  = torch.LongTensor(masked_code[:seq_len]).unsqueeze(0)
   enc_features = torch.LongTensor(state.encoded_features).unsqueeze(0)
 
   return {
