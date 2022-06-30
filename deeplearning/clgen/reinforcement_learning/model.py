@@ -149,6 +149,21 @@ class IndexHead(torch.nn.Module):
     action_logits = self.decoder(transformed)
     return action_logits
 
+class TokenHead(torch.nn.Module):
+  """Feature-extended token prediction head."""
+  def __init__(self, config):
+    super().__init__()
+    self.transform = PredictionHeadTransform(config, dense_size = config.vocab_size + config.feature_sequence_length)
+    self.decoder   = torch.nn.Linear(config.vocab_size + config.feature_sequence_length, config.vocab_size, bias = False)
+    self.bias      = torch.nn.Parameter(torch.zeros(config.vocab_size))
+    self.decoder.bias = self.bias
+    return
+
+  def forward(self, decoder_out: torch.FloatTensor) -> torch.FloatTensor:
+    transformed = self.transform(decoder_out)
+    token_logits = self.decoder(transformed)
+    return token_logits
+
 class ActionQV(torch.nn.Module):
   """Deep Q-Values for Action type prediction."""
   def __init__(self, config):
@@ -188,8 +203,37 @@ class ActionLanguageModelQV(torch.nn.Module):
   """Deep Q-Values for Token type prediction."""
   def __init__(self, language_model: language_models.Model, config: config.QValuesConfig):
     super(ActionLanguageModelQV, self).__init__()
-    self.language_model = language_model.backend.GetSamplingModule(config.temperature, with_checkpoint = True)
+    ## Pre-trained Encoder LM.
+    self.language_model = language_model.backend.GetEncoderModule(with_checkpoint = True)
+    ## Decoder for token prediction, given features and source code encoded memory.
+    self.decoder = language_model.backend.GetDecoderModule(
+      config.feature_sequence_length, config.vocab_size, config.feature_pad_idx
+    )
     return
+
+  def forward(self,
+              encoder_input_ids,
+              encoder_input_mask,
+              encoder_position_ids,
+              decoder_feature_ids,
+              decoder_feature_mask,
+              decoder_position_ids,
+              encoder_input_features = None,
+              ):
+    encoder_out = self.language_model(
+      input_ids      = encoder_input_ids,
+      input_mask     = encoder_input_mask,
+      position_ids   = encoder_position_ids,
+      input_features = encoder_input_features,
+    )
+    encoder_memory = encoder_out['hidden_states']
+    decoder_out = self.decoder(
+      input_ids             = decoder_feature_ids,
+      input_mask            = decoder_feature_mask,
+      position_ids          = decoder_position_ids,
+      encoder_hidden_states = encoder_memory,
+    )
+    return decoder_out
 
   def TrainBatch(self, input_ids: typing.Dict[str, torch.Tensor]):
     self.language_model.Trainbatch(input_ids)
