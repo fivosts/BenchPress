@@ -193,10 +193,6 @@ class ActionQV(torch.nn.Module):
     action_logits = self.action_head(decoded_source)
     ## Predict the index logits.
     index_logits  = self.index_head(decoded_source, action_logits)
-    print(action_logits)
-    print(index_logits)
-    print(action_logits.shape)
-    print(index_logits.shape)
     return action_logits, index_logits
 
 class ActionLanguageModelQV(torch.nn.Module):
