@@ -70,6 +70,10 @@ class BackendBase(object):
     """Specifically sample a requested batch of data."""
     raise NotImplementedError("Abstract Class.")
 
-  def GetSamplingModule(self, temperature: int, **kwargs) -> torch.nn.Module:
+  def GetEncoderModule(self, **kwargs) -> torch.nn.Module:
     """Return the internal torch module of an architecture."""
+    raise NotImplementedError("Abstract class")
+
+  def GetDecoderModule(self, **kwargs) -> torch.nn.Module:
+    """Return a decoder version of LM's decoder."""
     raise NotImplementedError("Abstract class")
