@@ -918,9 +918,12 @@ class BertForPreTraining(BertPreTrainedModel):
           'sample_indices'   : sample_indices,
         }
     else:
-      loss_fct = torch.nn.CrossEntropyLoss()
-      masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
-      total_loss = masked_lm_loss
+      if masked_lm_labels is not None:
+        loss_fct = torch.nn.CrossEntropyLoss()
+        masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
+        total_loss = masked_lm_loss
+      else:
+        masked_lm_loss, total_loss = None, None
 
       return {
         'masked_lm_loss'    : masked_lm_loss,
