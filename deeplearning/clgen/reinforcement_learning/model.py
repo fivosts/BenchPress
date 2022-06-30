@@ -328,10 +328,20 @@ class QValuesModel(object):
       **{k: v.to(pytorch.device) for k, v in inputs.items()}
     )
   
-  def SampleToken(self, state: interactions.State, mask_idx: int) -> typing.Dict[str, torch.Tensor]:
+  def SampleToken(self,
+                  state          : interactions.State,
+                  mask_idx       : int,
+                  tokenizer      : tokenizers.TokenizerBase,
+                  feat_tokenizer : tokenizers.FeatureTokenizer,
+                  ) -> typing.Dict[str, torch.Tensor]:
     """Predict token type"""
-
-    return self.sample_qvalues.token_qv(input_ids)
+    self._ConfigSampleParams()
+    inputs = data_generator.StateToTokenTensor(
+      state, mask_idx, tokenizer.holeToken, tokenizer.padToken, feat_tokenizer.padToken
+    )
+    return self.sample_qvalues.action_lm(
+      **{k: v.to(pytorch.device) for k, v in inputs.items()}
+    )
 
   def saveCheckpoint(self) -> None:
     """Checkpoint Deep Q-Nets."""
