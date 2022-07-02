@@ -26,19 +26,30 @@ def from_config(config            : reinforcement_learning_pb2.RLModel,
     return RandomFeatureLoader(config, feature_tokenizer)
   return
 
-def StateToActionTensor(state: interactions.State, padToken: int, feat_padToken: int) -> typing.Dict[str, torch.Tensor]:
+def StateToActionTensor(state         : interactions.State,
+                        padToken      : int,
+                        feat_padToken : int
+                        ) -> typing.Dict[str, torch.Tensor]:
   """
   Pre-process state to tensor inputs for Action Deep QValues.
   """
-  ids               = torch.LongTensor(state.encoded_code).unsqueeze(0)
-  feat_ids          = torch.LongTensor(state.encoded_features).unsqueeze(0)
-  ids_pad_mask      = ids      != padToken
-  feat_ids_pad_mask = feat_ids != feat_padToken
+  seq_len      = len(state.encoded_code)
+  feat_seq_len = len(state.encoded_features)
+
+  src_ids  = torch.LongTensor(state.encoded_code).unsqueeze(0)
+  src_mask = src_ids != padToken
+  src_pos  = torch.arange(seq_len, dtype = torch.int64).unsqueeze(0)
+
+  feat_ids  = torch.LongTensor(state.encoded_features).unsqueeze(0)
+  feat_mask = feat_ids != feat_padToken
+  feat_pos  = torch.arange(feat_seq_len, dtype = torch.int64).unsqueeze(0)
   return {
-    'input_ids'                        : ids,
-    'target_features'                  : feat_ids,
-    'input_ids_key_padding_mask'       : ids_pad_mask,
-    'target_features_key_padding_mask' : feat_ids_pad_mask,
+    'encoder_feature_ids'  : feat_ids,
+    'encoder_feature_mask' : feat_mask,
+    'encoder_position_ids' : feat_pos,
+    'decoder_input_ids'    : src_ids,
+    'decoder_input_mask'   : src_mask,
+    'decoder_position_ids' : src_pos,
   }
 
 def StateToTokenTensor(state         : interactions.State,
