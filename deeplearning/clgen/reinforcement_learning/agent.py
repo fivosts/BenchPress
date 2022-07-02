@@ -59,7 +59,12 @@ class Agent(object):
     self.language_model    = language_model
     self.tokenizer         = tokenizer
     self.feature_tokenizer = feature_tokenizer
-    self.qv_config = QValuesConfig.from_config(self.config, self.tokenizer, self.feature_tokenizer)
+    self.qv_config = QValuesConfig.from_config(
+      self.config,
+      self.language_model.backend.architecture.max_position_embeddings,
+      self.tokenizer,
+      self.feature_tokenizer,
+    )
     self.q_model = model.QValuesModel(
       self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path
     )
