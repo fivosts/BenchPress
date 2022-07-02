@@ -14,7 +14,7 @@ class QValuesConfig(object):
       'feature_vocab_size'             : feature_tokenizer.vocab_size,
       'feature_pad_idx'                : feature_tokenizer.padToken,
       'pad_token_id'                   : tokenizer.padToken,
-      'feature_sequence_length'        : config.feature_tokenizer.feature_sequence_length,
+      'feature_sequence_length'        : config.agent.feature_tokenizer.feature_sequence_length,
       'action_hidden_dropout_prob'     : config.agent.action_qv.hidden_dropout_prob,
       'action_feature_dropout_prob'    : config.agent.action_qv.hidden_dropout_prob,
       'action_hidden_size'             : config.agent.action_qv.hidden_size,
