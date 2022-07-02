@@ -283,7 +283,7 @@ class ActionLanguageModelQV(torch.nn.Module):
       input_features = encoder_input_features,
     )
     encoder_memory = encoder_out['hidden_states']
-    decoder_out = self.decoder(
+    decoder_out = self.language_model(
       input_ids             = decoder_input_ids,
       input_mask            = decoder_input_mask,
       position_ids          = decoder_position_ids,
