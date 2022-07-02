@@ -26,61 +26,66 @@ message RLAgent {
 }
 
 message FeatureTokenizer {
+  // Max value that can be tokenized. Anything above that is UNK.
   optional int32 feature_max_value_token    = 1;
+  // Threshold of values being singularly tokenized (not represented as range).
   optional int32 feature_singular_token_thr = 2;
+  // Range width of tokenized values after singularity threshold
   optional int32 feature_token_range        = 3;
+  // Sequence length of tokenized feature vectors.
+  optional int32 feature_sequence_length    = 4;
 }
 
 message ActionQV {
   // Transformer Encoder's length for feature vectors.
-  optional int32 feature_sequence_length      = 1;
+  // optional int32 feature_sequence_length      = 1;
   // Transformer Decoder's sequence length for source code.
-  optional int32 max_position_embeddings      = 2;
+  optional int32 max_position_embeddings      = 1;
   // Hidden size of Transformers.
-  optional int32 hidden_size                  = 3;
+  optional int32 hidden_size                  = 2;
   // # Attention Heads for transformers.
-  optional int32 num_attention_heads          = 4;
+  optional int32 num_attention_heads          = 3;
   // Intermediate size for transformers.
-  optional int32 intermediate_size            = 5;
+  optional int32 intermediate_size            = 4;
   // Number of transformer hidden layers.
-  optional int32 num_hidden_layers            = 6;
+  optional int32 num_hidden_layers            = 5;
   // Layer normalization epsilon.
-  optional float layer_norm_eps               = 7;
+  optional float layer_norm_eps               = 6;
   // Dropout probability.
-  optional float hidden_dropout_prob          = 8;
+  optional float hidden_dropout_prob          = 7;
   // Hidden act for action prediction head.
-  optional string hidden_act                  = 9;
+  optional string hidden_act                  = 8;
   // Dropout probs of attention_heads
-  optional float attention_probs_dropout_prob = 10;
+  optional float attention_probs_dropout_prob = 9;
   // type_vocab size
-  optional int32 type_vocab_size              = 11;
+  optional int32 type_vocab_size              = 10;
   // initializer_range
-  optional float initializer_range            = 12;
+  optional float initializer_range            = 11;
 }
 
 message ActionLM {
   // Transformer Encoder's length for feature vectors.
-  optional int32 feature_sequence_length      = 1;
+  // optional int32 feature_sequence_length      = 1;
   // Transformer Decoder's sequence length for source code.
-  optional int32 max_position_embeddings      = 2;
+  optional int32 max_position_embeddings      = 1;
   // Hidden size of Transformers.
-  optional int32 hidden_size                  = 3;
+  optional int32 hidden_size                  = 2;
   // # Attention Heads for transformers.
-  optional int32 num_attention_heads          = 4;
+  optional int32 num_attention_heads          = 3;
   // Intermediate size for transformers.
-  optional int32 intermediate_size            = 5;
+  optional int32 intermediate_size            = 4;
   // Number of transformer hidden layers.
-  optional int32 num_hidden_layers            = 6;
+  optional int32 num_hidden_layers            = 5;
   // Layer normalization epsilon.
-  optional float layer_norm_eps               = 7;
+  optional float layer_norm_eps               = 6;
   // Dropout probability.
-  optional float hidden_dropout_prob          = 8;
+  optional float hidden_dropout_prob          = 7;
   // Hidden act for action prediction head.
-  optional string hidden_act                  = 9;
+  optional string hidden_act                  = 8;
   // Dropout probs of attention_heads
-  optional float attention_probs_dropout_prob = 10;
+  optional float attention_probs_dropout_prob = 9;
   // type_vocab size
-  optional int32 type_vocab_size              = 11;
+  optional int32 type_vocab_size              = 10;
   // initializer_range
-  optional float initializer_range            = 12;
+  optional float initializer_range            = 11;
 }
