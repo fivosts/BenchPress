@@ -17,59 +17,62 @@ from deeplearning.clgen.util import logging as l
 
 torch = pytorch.torch
 
-class FeatureEncoder(torch.nn.Module):
-  """Transformer-Encoder architecture for encoding states."""
-  def __init__(self, config):
-    super().__init__()
-    ## Dimensional variables.
-    self.encoder_embedding_size = config.feature_vocab_size
-    ## Feature vector encoder.
-    self.encoder_embedding = torch.nn.Embedding(
-      num_embeddings = config.feature_vocab_size,
-      embedding_dim  = config.hidden_size,
-      padding_idx    = config.feature_pad_idx
-    )
-    self.encoder_pos_encoder = model.FeaturePositionalEncoding(config)
-    encoder_layers = torch.nn.TransformerEncoderLayer(
-      d_model         = config.hidden_size,
-      nhead           = config.num_attention_heads,
-      dim_feedforward = config.intermediate_size,
-      dropout         = config.hidden_dropout_prob,
-      batch_first     = True
-    )
-    encoder_norm = torch.nn.LayerNorm(
-      config.hidden_size,
-      eps = config.layer_norm_eps
-    )
-    self.encoder_transformer = torch.nn.TransformerEncoder(
-      encoder_layer = encoder_layers,
-      num_layers    = config.num_hidden_layers,
-      norm          = encoder_norm,
-    )
-    return
+# class FeatureEncoder(torch.nn.Module):
+#   """Transformer-Encoder architecture for encoding states."""
+#   def __init__(self, config):
+#     super().__init__()
+#     ## Dimensional variables.
+#     self.encoder_embedding_size = config.feature_vocab_size
+#     ## Feature vector encoder.
+#     self.encoder_embedding = torch.nn.Embedding(
+#       num_embeddings = config.feature_vocab_size,
+#       embedding_dim  = config.hidden_size,
+#       padding_idx    = config.feature_pad_idx
+#     )
+#     self.encoder_pos_encoder = model.FeaturePositionalEncoding(config)
+#     encoder_layers = torch.nn.TransformerEncoderLayer(
+#       d_model         = config.hidden_size,
+#       nhead           = config.num_attention_heads,
+#       dim_feedforward = config.intermediate_size,
+#       dropout         = config.hidden_dropout_prob,
+#       batch_first     = True
+#     )
+#     encoder_norm = torch.nn.LayerNorm(
+#       config.hidden_size,
+#       eps = config.layer_norm_eps
+#     )
+#     self.encoder_transformer = torch.nn.TransformerEncoder(
+#       encoder_layer = encoder_layers,
+#       num_layers    = config.num_hidden_layers,
+#       norm          = encoder_norm,
+#     )
+#     return
 
-  def forward(self,
-              input_features                  : torch.LongTensor,
-              input_features_key_padding_mask : torch.ByteTensor,
-              ) -> torch.Tensor:
-    ## Run the encoder transformer over the features.
-    enc_embed = self.encoder_embedding(input_features) * math.sqrt(self.encoder_embedding_size)
-    pos_enc_embed = self.encoder_pos_encoder(enc_embed)
-    encoded = self.encoder_transformer(
-      pos_enc_embed,
-      src_key_padding_mask = input_features_key_padding_mask,
-    )
-    return encoded
+  # def forward(self,
+  #             input_features                  : torch.LongTensor,
+  #             input_features_key_padding_mask : torch.ByteTensor,
+  #             ) -> torch.Tensor:
+  #   ## Run the encoder transformer over the features.
+  #   enc_embed = self.encoder_embedding(input_features) * math.sqrt(self.encoder_embedding_size)
+  #   pos_enc_embed = self.encoder_pos_encoder(enc_embed)
+  #   encoded = self.encoder_transformer(
+  #     pos_enc_embed,
+  #     src_key_padding_mask = input_features_key_padding_mask,
+  #   )
+  #   return encoded
 
 class PredictionHeadTransform(torch.nn.Module):
-  def __init__(self, config, dense_size):
+  def __init__(self,
+               config     : config.QValuesConfig,
+               dense_size : int
+               ):
     super().__init__()
-    self.dense = torch.nn.Linear(dense_size, config.hidden_size)
-    if isinstance(config.hidden_act, str):
-      self.transform_act_fn = model.ACT2FN[config.hidden_act]
+    self.dense = torch.nn.Linear(dense_size, config.action_hidden_size)
+    if isinstance(config.action_hidden_act, str):
+      self.transform_act_fn = model.ACT2FN[config.action_hidden_act]
     else:
-      self.transform_act_fn = config.hidden_act
-    self.LayerNorm = torch.nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+      self.transform_act_fn = config.action_hidden_act
+    self.LayerNorm = torch.nn.LayerNorm(config.action_hidden_size, eps=config.action_layer_norm_eps)
 
   def forward(self, hidden_states):
     hidden_states = self.dense(hidden_states)
@@ -77,53 +80,53 @@ class PredictionHeadTransform(torch.nn.Module):
     hidden_states = self.LayerNorm(hidden_states)
     return hidden_states
 
-class SourceDecoder(torch.nn.Module):
-  """Source code decoder for action prediction."""
-  def __init__(self, config):
-    super().__init__()
-    ## Source code decoder.
-    self.decoder_embedding = model.BertEmbeddings(config)
-    decoder_layers = torch.nn.TransformerDecoderLayer(
-      d_model         = config.hidden_size,
-      nhead           = config.num_attention_heads,
-      dim_feedforward = config.intermediate_size,
-      dropout         = config.hidden_dropout_prob,
-      batch_first     = True,
-    )
-    decoder_norm = torch.nn.LayerNorm(
-      config.hidden_size,
-      eps = config.layer_norm_eps,
-    )
-    self.decoder_transformer = torch.nn.TransformerDecoder(
-      decoder_layer = decoder_layers,
-      num_layers    = config.num_hidden_layers,
-      norm          = decoder_norm,
-    )
-    return
+# class SourceDecoder(torch.nn.Module):
+#   """Source code decoder for action prediction."""
+#   def __init__(self, config):
+#     super().__init__()
+#     ## Source code decoder.
+#     self.decoder_embedding = model.BertEmbeddings(config)
+#     decoder_layers = torch.nn.TransformerDecoderLayer(
+#       d_model         = config.hidden_size,
+#       nhead           = config.num_attention_heads,
+#       dim_feedforward = config.intermediate_size,
+#       dropout         = config.hidden_dropout_prob,
+#       batch_first     = True,
+#     )
+#     decoder_norm = torch.nn.LayerNorm(
+#       config.hidden_size,
+#       eps = config.layer_norm_eps,
+#     )
+#     self.decoder_transformer = torch.nn.TransformerDecoder(
+#       decoder_layer = decoder_layers,
+#       num_layers    = config.num_hidden_layers,
+#       norm          = decoder_norm,
+#     )
+#     return
 
-  def forward(self,
-              input_ids                  : torch.LongTensor,
-              encoded_features           : torch.FloatTensor,
-              input_ids_key_padding_mask : torch.ByteTensor,
-              ) -> torch.Tensor:
-    ## Run the decoder over the source code.
-    dec_embed = self.decoder_embedding(input_ids)
-    decoded = self.decoder_transformer(
-      dec_embed,
-      memory = encoded_features,
-      # tgt_mask = input_ids_mask,
-      # memory_mask = None, ??
-      tgt_key_padding_mask = input_ids_key_padding_mask,
-      # memory_key_padding_mask = None, ??
-    )
-    return decoded
+  # def forward(self,
+  #             input_ids                  : torch.LongTensor,
+  #             encoded_features           : torch.FloatTensor,
+  #             input_ids_key_padding_mask : torch.ByteTensor,
+  #             ) -> torch.Tensor:
+  #   ## Run the decoder over the source code.
+  #   dec_embed = self.decoder_embedding(input_ids)
+  #   decoded = self.decoder_transformer(
+  #     dec_embed,
+  #     memory = encoded_features,
+  #     # tgt_mask = input_ids_mask,
+  #     # memory_mask = None, ??
+  #     tgt_key_padding_mask = input_ids_key_padding_mask,
+  #     # memory_key_padding_mask = None, ??
+  #   )
+  #   return decoded
 
 class ActionHead(torch.nn.Module):
   """Classification head for action prediction."""
   def __init__(self, config):
     super().__init__()
-    self.transform = PredictionHeadTransform(config, dense_size = config.hidden_size)
-    self.decoder   = torch.nn.Linear(config.hidden_size, len(interactions.ACTION_TYPE_SPACE), bias = False)
+    self.transform = PredictionHeadTransform(config, dense_size = config.action_hidden_size)
+    self.decoder   = torch.nn.Linear(config.action_hidden_size, len(interactions.ACTION_TYPE_SPACE), bias = False)
     self.bias      = torch.nn.Parameter(torch.zeros(len(interactions.ACTION_TYPE_SPACE)))
     self.decoder.bias = self.bias
     return
@@ -135,11 +138,11 @@ class ActionHead(torch.nn.Module):
 
 class IndexHead(torch.nn.Module):
   """Classification head for token index prediction."""
-  def __init__(self, config):
+  def __init__(self, config: config.QValuesConfig):
     super().__init__()
-    self.transform = PredictionHeadTransform(config, dense_size = config.hidden_size + len(interactions.ACTION_TYPE_SPACE))
-    self.decoder   = torch.nn.Linear(config.hidden_size, config.max_position_embeddings, bias = False)
-    self.bias      = torch.nn.Parameter(torch.zeros(config.max_position_embeddings))
+    self.transform = PredictionHeadTransform(config, dense_size = config.action_hidden_size + len(interactions.ACTION_TYPE_SPACE))
+    self.decoder   = torch.nn.Linear(config.action_hidden_size, config.action_max_position_embeddings, bias = False)
+    self.bias      = torch.nn.Parameter(torch.zeros(config.action_max_position_embeddings))
     self.decoder.bias = self.bias
     return
 
@@ -149,20 +152,20 @@ class IndexHead(torch.nn.Module):
     action_logits = self.decoder(transformed)
     return action_logits
 
-class TokenHead(torch.nn.Module):
-  """Feature-extended token prediction head."""
-  def __init__(self, config):
-    super().__init__()
-    self.transform = PredictionHeadTransform(config, dense_size = config.vocab_size + config.feature_sequence_length)
-    self.decoder   = torch.nn.Linear(config.vocab_size + config.feature_sequence_length, config.vocab_size, bias = False)
-    self.bias      = torch.nn.Parameter(torch.zeros(config.vocab_size))
-    self.decoder.bias = self.bias
-    return
+# class TokenHead(torch.nn.Module):
+#   """Feature-extended token prediction head."""
+#   def __init__(self, config):
+#     super().__init__()
+#     self.transform = PredictionHeadTransform(config, dense_size = config.vocab_size + config.feature_sequence_length)
+#     self.decoder   = torch.nn.Linear(config.vocab_size + config.feature_sequence_length, config.vocab_size, bias = False)
+#     self.bias      = torch.nn.Parameter(torch.zeros(config.vocab_size))
+#     self.decoder.bias = self.bias
+#     return
 
-  def forward(self, decoder_out: torch.FloatTensor) -> torch.FloatTensor:
-    transformed = self.transform(decoder_out)
-    token_logits = self.decoder(transformed)
-    return token_logits
+#   def forward(self, decoder_out: torch.FloatTensor) -> torch.FloatTensor:
+#     transformed = self.transform(decoder_out)
+#     token_logits = self.decoder(transformed)
+#     return token_logits
 
 class ActionQV(torch.nn.Module):
   """Deep Q-Values for Action type prediction."""
@@ -170,8 +173,20 @@ class ActionQV(torch.nn.Module):
     super().__init__()
     ## Pre-trained Encoder LM.
     self.feature_encoder = language_model.backend.GetEncoderModule(
-      #### Add new parameters here.
-      config.feature_sequence_length, config.vocab_size, config.feature_pad_idx,
+      vocab_size                   = config.feature_vocab_size,
+      hidden_size                  = config.action_hidden_size,
+      num_hidden_layers            = config.action_num_hidden_layers,
+      num_attention_heads          = config.action_num_attention_heads,
+      intermediate_size            = config.action_intermediate_size,
+      hidden_act                   = config.action_hidden_act,
+      hidden_dropout_prob          = config.action_hidden_dropout_prob,
+      attention_probs_dropout_prob = config.action_attention_probs_dropout_prob,
+      max_position_embeddings      = config.feature_sequence_length,
+      type_vocab_size              = config.action_type_vocab_size,
+      initializer_range            = config.action_initializer_range,
+      layer_norm_eps               = config.action_layer_norm_eps,
+      pad_token_id                 = config.feature_pad_idx,
+      with_checkpoint              = False,
     )
     ## Decoder for token prediction, given features and source code encoded memory.
     self.source_decoder = language_model.backend.GetDecoderModule(with_checkpoint = True)
@@ -231,33 +246,46 @@ class ActionLanguageModelQV(torch.nn.Module):
   """Deep Q-Values for Token type prediction."""
   def __init__(self, language_model: language_models.Model, config: config.QValuesConfig):
     super(ActionLanguageModelQV, self).__init__()
-    ## Pre-trained Encoder LM.
-    self.language_model = language_model.backend.GetEncoderModule(with_checkpoint = True)
-    ## Decoder for token prediction, given features and source code encoded memory.
-    self.decoder = language_model.backend.GetDecoderModule(
-      config.feature_sequence_length, config.vocab_size, config.feature_pad_idx
+    ## Feature-Encoder.
+    self.encoder = language_model.backend.GetEncoderModule(
+      vocab_size                   = config.feature_vocab_size,
+      hidden_size                  = config.token_hidden_size,
+      num_hidden_layers            = config.token_num_hidden_layers,
+      num_attention_heads          = config.token_num_attention_heads,
+      intermediate_size            = config.token_intermediate_size,
+      hidden_act                   = config.token_hidden_act,
+      hidden_dropout_prob          = config.token_hidden_dropout_prob,
+      attention_probs_dropout_prob = config.token_attention_probs_dropout_prob,
+      max_position_embeddings      = config.feature_sequence_length,
+      type_vocab_size              = config.token_type_vocab_size,
+      initializer_range            = config.token_initializer_range,
+      layer_norm_eps               = config.token_layer_norm_eps,
+      pad_token_id                 = config.feature_pad_idx,
+      with_checkpoint              = False,
     )
+    ## Decoder for token prediction, given features memory and source code.
+    self.language_model = language_model.backend.GetDecoderModule(with_checkpoint = True)
     return
 
   def forward(self,
-              encoder_input_ids    : torch.LongTensor,
-              encoder_input_mask   : torch.LongTensor,
+              encoder_feature_ids  : torch.LongTensor,
+              encoder_feature_mask : torch.LongTensor,
               encoder_position_ids : torch.LongTensor,
-              decoder_feature_ids  : torch.LongTensor,
-              decoder_feature_mask : torch.LongTensor,
+              decoder_input_ids    : torch.LongTensor,
+              decoder_input_mask   : torch.LongTensor,
               decoder_position_ids : torch.LongTensor,
               encoder_input_features = None,
               ):
     encoder_out = self.language_model(
-      input_ids      = encoder_input_ids,
-      input_mask     = encoder_input_mask,
+      input_ids      = encoder_feature_ids,
+      input_mask     = encoder_feature_mask,
       position_ids   = encoder_position_ids,
       input_features = encoder_input_features,
     )
     encoder_memory = encoder_out['hidden_states']
     decoder_out = self.decoder(
-      input_ids             = decoder_feature_ids,
-      input_mask            = decoder_feature_mask,
+      input_ids             = decoder_input_ids,
+      input_mask            = decoder_input_mask,
       position_ids          = decoder_position_ids,
       encoder_hidden_states = encoder_memory,
     )
