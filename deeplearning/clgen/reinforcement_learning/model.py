@@ -172,6 +172,16 @@ class ActionQV(torch.nn.Module):
     self.source_decoder  = SourceDecoder(config)
     self.action_head     = ActionHead(config)
     self.index_head      = IndexHead(config)
+
+
+    """
+    ## Pre-trained Encoder LM.
+    self.feature_encoder = language_model.backend.GetEncoderModule(
+      #### Add new parameters here.
+    )
+    ## Decoder for token prediction, given features and source code encoded memory.
+    self.source_decoder = language_model.backend.GetDecoderModule(with_checkpoint = True)
+    """
     return
 
   def forward(self,
@@ -179,6 +189,7 @@ class ActionQV(torch.nn.Module):
               target_features                  : torch.LongTensor,
               input_ids_key_padding_mask       : torch.ByteTensor,
               target_features_key_padding_mask : torch.ByteTensor,
+
               ) -> typing.Dict[str, torch.Tensor]:
     """Action type forward function."""
     ## Encode feature vector.
@@ -193,6 +204,27 @@ class ActionQV(torch.nn.Module):
     action_logits = self.action_head(decoded_source)
     ## Predict the index logits.
     index_logits  = self.index_head(decoded_source, action_logits)
+
+    """
+    ## Run BERT-Encoder in target feature vector.
+    encoded_features = self.feature_encoder(
+      input_ids      = encoder_feature_ids,
+      input_mask     = encoder_feature_mask,
+      position_ids   = encoder_position_ids,
+      input_features = None,
+    )
+    ## Run source code over pre-trained BERT decoder.
+    decoded_source = self.source_decoder(
+      input_ids      = decoder_input_ids,
+      input_mask     = decoder_input_mask,
+      position_ids   = decoder_position_ids,
+      input_features = None,
+    )
+    ## Predict action type logits.
+    action_logits = self.action_head(decoded_source)
+    ## Predict index logits | action type logits.
+    index_logits = self.index_head(decoded_source, action_logits)
+    """
     return action_logits, index_logits
 
 class ActionLanguageModelQV(torch.nn.Module):
