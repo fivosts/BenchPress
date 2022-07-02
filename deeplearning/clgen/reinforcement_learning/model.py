@@ -166,46 +166,43 @@ class TokenHead(torch.nn.Module):
 
 class ActionQV(torch.nn.Module):
   """Deep Q-Values for Action type prediction."""
-  def __init__(self, config):
+  def __init__(self, language_model: language_models.Model):
     super().__init__()
-    self.feature_encoder = FeatureEncoder(config)
-    self.source_decoder  = SourceDecoder(config)
-    self.action_head     = ActionHead(config)
-    self.index_head      = IndexHead(config)
+    # self.feature_encoder = FeatureEncoder(config)
+    # self.source_decoder  = SourceDecoder(config)
+    # self.action_head     = ActionHead(config)
+    # self.index_head      = IndexHead(config)
 
-
-    """
     ## Pre-trained Encoder LM.
     self.feature_encoder = language_model.backend.GetEncoderModule(
       #### Add new parameters here.
     )
     ## Decoder for token prediction, given features and source code encoded memory.
     self.source_decoder = language_model.backend.GetDecoderModule(with_checkpoint = True)
-    """
     return
 
   def forward(self,
-              input_ids                        : torch.LongTensor,
-              target_features                  : torch.LongTensor,
-              input_ids_key_padding_mask       : torch.ByteTensor,
-              target_features_key_padding_mask : torch.ByteTensor,
-
+              encoder_feature_ids  : torch.LongTensor,
+              encoder_feature_mask : torch.LongTensor,
+              encoder_position_ids : torch.LongTensor,
+              decoder_input_ids    : torch.LongTensor,
+              decoder_input_mask   : torch.LongTensor,
+              decoder_position_ids : torch.LongTensor,
               ) -> typing.Dict[str, torch.Tensor]:
     """Action type forward function."""
-    ## Encode feature vector.
-    encoded_features = self.feature_encoder(
-      target_features, target_features_key_padding_mask
-    )
-    ## Run source code over transformer decoder and insert Transformer encoder's memory.
-    decoded_source = self.source_decoder(
-      input_ids, encoded_features, input_ids_key_padding_mask,
-    )
-    ## Predict the action logits.
-    action_logits = self.action_head(decoded_source)
-    ## Predict the index logits.
-    index_logits  = self.index_head(decoded_source, action_logits)
+    # ## Encode feature vector.
+    # encoded_features = self.feature_encoder(
+    #   target_features, target_features_key_padding_mask
+    # )
+    # ## Run source code over transformer decoder and insert Transformer encoder's memory.
+    # decoded_source = self.source_decoder(
+    #   input_ids, encoded_features, input_ids_key_padding_mask,
+    # )
+    # ## Predict the action logits.
+    # action_logits = self.action_head(decoded_source)
+    # ## Predict the index logits.
+    # index_logits  = self.index_head(decoded_source, action_logits)
 
-    """
     ## Run BERT-Encoder in target feature vector.
     encoded_features = self.feature_encoder(
       input_ids      = encoder_feature_ids,
@@ -224,8 +221,10 @@ class ActionQV(torch.nn.Module):
     action_logits = self.action_head(decoded_source)
     ## Predict index logits | action type logits.
     index_logits = self.index_head(decoded_source, action_logits)
-    """
-    return action_logits, index_logits
+    return {
+      'action_logits': action_logits,
+      'index_logits' : index_logits,
+    }
 
 class ActionLanguageModelQV(torch.nn.Module):
   """Deep Q-Values for Token type prediction."""
