@@ -204,19 +204,21 @@ class ActionQV(torch.nn.Module):
     # index_logits  = self.index_head(decoded_source, action_logits)
 
     ## Run BERT-Encoder in target feature vector.
-    encoded_features = self.feature_encoder(
+    encoder_out = self.feature_encoder(
       input_ids      = encoder_feature_ids,
       input_mask     = encoder_feature_mask,
       position_ids   = encoder_position_ids,
       input_features = None,
     )
+    encoder_memory = encoder_out['hidden_states']
     ## Run source code over pre-trained BERT decoder.
-    decoded_source = self.source_decoder(
+    decoder_out = self.source_decoder(
       input_ids      = decoder_input_ids,
       input_mask     = decoder_input_mask,
       position_ids   = decoder_position_ids,
       input_features = None,
     )
+    decoded_source = decoder_out['hidden_states']
     ## Predict action type logits.
     action_logits = self.action_head(decoded_source)
     ## Predict index logits | action type logits.
