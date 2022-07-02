@@ -274,8 +274,13 @@ class RLModel(object):
     if self._created:
       return False
     self._created = True
-    self.env    = env.Environment(
-      self.config, self.language_model.corpus, self.tokenizer, self.feature_tokenizer, self.cache.path
+    self.env = env.Environment(
+      self.config,
+      self.language_model.backend.config.architecture.max_position_embeddings,
+      self.language_model.corpus,
+      self.tokenizer,
+      self.feature_tokenizer,
+      self.cache.path,
     )
     self.agent  = agent.Agent(
       self.config, self.language_model, self.tokenizer, self.feature_tokenizer, self.cache.path
