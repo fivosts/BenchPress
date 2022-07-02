@@ -213,10 +213,11 @@ class ActionQV(torch.nn.Module):
     encoder_memory = encoder_out['hidden_states']
     ## Run source code over pre-trained BERT decoder.
     decoder_out = self.source_decoder(
-      input_ids      = decoder_input_ids,
-      input_mask     = decoder_input_mask,
-      position_ids   = decoder_position_ids,
-      input_features = None,
+      input_ids             = decoder_input_ids,
+      input_mask            = decoder_input_mask,
+      position_ids          = decoder_position_ids,
+      encoder_hidden_states = encoder_memory,
+      input_features        = None,
     )
     decoded_source = decoder_out['hidden_states']
     ## Predict action type logits.
