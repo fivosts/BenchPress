@@ -117,3 +117,49 @@ def FeaturesDistribution(**kwargs) -> None:
       title     = "{}".format(benchmark)
     )
   return
+
+@public.evaluator
+def HumanLikeness(**kwargs) -> None:
+  """
+  Show the top-k candidate codes per target for each DB group,
+  to compare how human likely it looks.
+  """
+  db_groups      = kwargs.get('db_groups')
+  target         = kwargs.get('targets')
+  feature_space  = kwargs.get('feature_space')
+  top_k          = kwargs.get('top_k')
+  unique_code    = kwargs.get('unique_code', False)
+  plot_config    = kwargs.get('plot_config')
+  workspace_path = kwargs.get('workspace_path')
+  data = {}
+
+  # You need this if you want to have the same (github) baseline but when github is not plotted.
+  reduced_git = None
+  for dbg in db_groups:
+    if dbg.group_name == "GitHub-768-inactive" or dbg.group_name == "GitHub-768":
+      reduced_git = dbg.get_data_features(feature_space)
+      break
+
+  benchmarks = target.get_benchmarks(feature_space, reduced_git_corpus = reduced_git)
+  for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
+    for idx, dbg in enumerate(db_groups):
+      if dbg.group_name == "GitHub-768-inactive":
+        # Skip baseline DB group.
+        continue
+      if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles or dbg.db_type == clsmith.CLSmithDatabase):
+        raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
+      # Find shortest distances.
+      if unique_code:
+        get_data = lambda x: dbg.get_unique_data_features(x)
+      else:
+        get_data = lambda x: dbg.get_data_features(x)
+
+      if benchmark.name not in data:
+        data[benchmark.name] = {
+          target.target: benchmark.contents
+        }
+      data[benchmark.name][dbg.group_name] = [
+        src for src, _, _, _
+        in workers.SortedSrcFeatsDistances(get_data(feature_space), benchmark.features, feature_space)[:top_k]
+      ]
+  return
