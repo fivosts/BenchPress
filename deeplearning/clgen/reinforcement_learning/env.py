@@ -44,7 +44,7 @@ class Environment(object):
     self.config            = config
     self.tokenizer         = tokenizer
     self.feature_tokenizer = feature_tokenizer
-    self.max_position_embeddings = max_position_embeddings,
+    self.max_position_embeddings = max_position_embeddings
     self.feature_sequence_length = self.config.agent.feature_tokenizer.feature_sequence_length
 
     self.cache_path = cache_path / "environment"
