@@ -76,7 +76,7 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
   )
   pbutil.AssertFieldIsSet(config.agent.action_qv, 'type_vocab_size')
   pbutil.AssertFieldConstraint(
-    config.agent.action_qv.initializer_range,
+    config.agent.action_qv,
     "initializer_range",
     lambda x: x >= 0.0,
     "Initializer range must be non-negative float."
@@ -116,7 +116,7 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
   )
   pbutil.AssertFieldIsSet(config.agent.action_lm, 'type_vocab_size')
   pbutil.AssertFieldConstraint(
-    config.agent.action_lm.initializer_range,
+    config.agent.action_lm,
     "initializer_range",
     lambda x: x >= 0.0,
     "Initializer range must be non-negative float."
