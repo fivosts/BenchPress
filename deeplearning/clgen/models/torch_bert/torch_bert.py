@@ -288,8 +288,20 @@ class torchBert(backends.BackendBase):
   def samplesWithCategorical(self):
     return FLAGS.categorical_sampling
 
-  def GetEncoderModule(self, with_checkpoint = False) -> 'torch.nn.Module':
+  def GetEncoderModule(self,
+                       max_position_embeddings : int  = None,
+                       vocab_size              : int  = None,
+                       pad_token_id            : int  = None,
+                       with_checkpoint         : bool = False
+                       ) -> 'torch.nn.Module':
     """Initialize BERT as decoder."""
+    attrs = copy.copy(self.bertAttrs)
+    if not with_checkpoint:
+      attrs['max_position_embeddings'] = max_position_embeddings
+      attrs['pad_token_id']            = pad_token_id
+      attrs['vocab_size']              = vocab_size
+    elif max_position_embeddings or vocab_size or pad_token_id:
+      l.logger().warn("Encoder module with_checkpoint will not override max position embeddings, pad and vocab size!")
     generic_config = config.BertConfig.from_dict(
       self.bertAttrs,
       **self.featureAttrs,
@@ -311,15 +323,19 @@ class torchBert(backends.BackendBase):
       return m
 
   def GetDecoderModule(self,
-                       max_position_embeddings: int,
-                       vocab_size             : int,
-                       pad_token_id           : int,
+                       max_position_embeddings : int  = None,
+                       vocab_size              : int  = None,
+                       pad_token_id            : int  = None,
+                       with_checkpoint         : bool = False,
                        ) -> 'torch.nn.Module':
     """Return internal BERT auto-encoder module."""
     attrs = copy.copy(self.bertAttrs)
-    attrs['max_position_embeddings'] = max_position_embeddings
-    attrs['pad_token_id']            = pad_token_id
-    attrs['vocab_size']              = vocab_size
+    if not with_checkpoint:
+      attrs['max_position_embeddings'] = max_position_embeddings
+      attrs['pad_token_id']            = pad_token_id
+      attrs['vocab_size']              = vocab_size
+    elif max_position_embeddings or vocab_size or pad_token_id:
+      l.logger().warn("Decoder module with_checkpoint will not override max position embeddings, pad and vocab size!")
     generic_config = config.BertConfig.from_dict(
       attrs,
       xla_device          = self.torch_tpu_available,
@@ -329,11 +345,17 @@ class torchBert(backends.BackendBase):
       is_decoder          = True,
       add_cross_attention = True,
     )
-    return model.BertForPreTraining(
+    m = model.BertForPreTraining(
           generic_config,
           tokenizer = self.tokenizer,
           target_lm = "hole" if self.config.training.data_generator.HasField("hole") else "mask"
         )
+    if with_checkpoint:
+      temp_estimator = torchBert.SampleBertEstimator(m, None)
+      self.loadCheckpoint(temp_estimator)
+      return temp_estimator.model
+    else:
+      return m
 
   def to_device(self, inputs) -> 'torch.Tensor':
     """
