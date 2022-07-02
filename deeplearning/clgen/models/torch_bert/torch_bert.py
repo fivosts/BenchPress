@@ -492,6 +492,8 @@ class torchBert(backends.BackendBase):
     )
 
     if FLAGS.only_sample:
+      del self.train
+      self.train = None
       return
       
     self.current_step = self.loadCheckpoint(self.train, pre_train = pre_train)
@@ -722,6 +724,8 @@ class torchBert(backends.BackendBase):
 
     if FLAGS.force_eval and not self.is_validated:
       _ = self.Validate(pre_train = pre_train)
+    del self.train
+    self.train = None
     return
 
   def TrainBatch(self, inputs) -> None:
