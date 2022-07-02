@@ -45,7 +45,7 @@ class Environment(object):
     self.tokenizer         = tokenizer
     self.feature_tokenizer = feature_tokenizer
     self.max_position_embeddings = max_position_embeddings,
-    self.feature_sequence_length = self.config.agent.action_qv.feature_sequence_length
+    self.feature_sequence_length = self.config.feature_tokenizer.feature_sequence_length
 
     self.cache_path = cache_path / "environment"
     if environment.WORLD_RANK == 0:
