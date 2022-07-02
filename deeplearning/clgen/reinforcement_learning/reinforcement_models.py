@@ -46,7 +46,6 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
   pbutil.AssertFieldIsSet(config.agent.action_qv, "feature_sequence_length")
   pbutil.AssertFieldIsSet(config.agent.action_qv, "max_position_embeddings")
   pbutil.AssertFieldIsSet(config.agent.action_qv, "hidden_size")
-  pbutil.AssertFieldIsSet(config.agent.action_lm, "temperature_micros")
   pbutil.AssertFieldConstraint(
     config.agent.action_qv,
     "num_attention_heads",
@@ -69,6 +68,61 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
   )
   pbutil.AssertFieldConstraint(
     config.agent.action_qv,
+    "attention_probs_dropout_prob",
+    lambda x: 0.0 < x < 1.0,
+    "Attention Dropout probability must be between 0.0 and 1.0."
+  )
+  pbutil.AssertFieldIsSet(config.agent.action_qv, 'type_vocab_size')
+  pbutil.AssertFieldConstraint(
+    config.agent.initializer_range,
+    "initializer_range",
+    lambda x: x >= 0.0,
+    "Initializer range must be non-negative float."
+  )
+  pbutil.AssertFieldConstraint(
+    config.agent.action_qv,
+    "hidden_act",
+    lambda x: x in set(bert_model.ACT2FN.keys()),
+    "Invalid choice for hidden_act"
+  )
+  pbutil.AssertFieldIsSet(config.agent.action_lm, "feature_sequence_length")
+  pbutil.AssertFieldIsSet(config.agent.action_lm, "max_position_embeddings")
+  pbutil.AssertFieldIsSet(config.agent.action_lm, "hidden_size")
+  pbutil.AssertFieldConstraint(
+    config.agent.action_lm,
+    "num_attention_heads",
+    lambda x: x > 0,
+    "#Attention heads must be at least 1."
+  )
+  pbutil.AssertFieldIsSet(config.agent.action_lm, "intermediate_size")
+  pbutil.AssertFieldConstraint(
+    config.agent.action_lm,
+    "num_hidden_layers",
+    lambda x: x > 0,
+    "#hidden layers must be at least 1."
+  )
+  pbutil.AssertFieldIsSet(config.agent.action_lm, "layer_norm_eps")
+  pbutil.AssertFieldConstraint(
+    config.agent.action_lm,
+    "hidden_dropout_prob",
+    lambda x: 0.0 < x < 1.0,
+    "Dropout probability must be between 0.0 and 1.0."
+  )
+  pbutil.AssertFieldConstraint(
+    config.agent.action_lm,
+    "attention_probs_dropout_prob",
+    lambda x: 0.0 < x < 1.0,
+    "Attention Dropout probability must be between 0.0 and 1.0."
+  )
+  pbutil.AssertFieldIsSet(config.agent.action_lm, 'type_vocab_size')
+  pbutil.AssertFieldConstraint(
+    config.agent.initializer_range,
+    "initializer_range",
+    lambda x: x >= 0.0,
+    "Initializer range must be non-negative float."
+  )
+  pbutil.AssertFieldConstraint(
+    config.agent.action_lm,
     "hidden_act",
     lambda x: x in set(bert_model.ACT2FN.keys()),
     "Invalid choice for hidden_act"
