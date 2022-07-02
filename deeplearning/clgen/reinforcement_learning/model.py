@@ -166,19 +166,17 @@ class TokenHead(torch.nn.Module):
 
 class ActionQV(torch.nn.Module):
   """Deep Q-Values for Action type prediction."""
-  def __init__(self, language_model: language_models.Model):
+  def __init__(self, language_model: language_models.Model, config: config.QValuesConfig):
     super().__init__()
-    # self.feature_encoder = FeatureEncoder(config)
-    # self.source_decoder  = SourceDecoder(config)
-    # self.action_head     = ActionHead(config)
-    # self.index_head      = IndexHead(config)
-
     ## Pre-trained Encoder LM.
     self.feature_encoder = language_model.backend.GetEncoderModule(
       #### Add new parameters here.
+      config.feature_sequence_length, config.vocab_size, config.feature_pad_idx,
     )
     ## Decoder for token prediction, given features and source code encoded memory.
     self.source_decoder = language_model.backend.GetDecoderModule(with_checkpoint = True)
+    self.action_head     = ActionHead(config)
+    self.index_head      = IndexHead(config)
     return
 
   def forward(self,
@@ -304,7 +302,7 @@ class QValuesModel(object):
 
   def _ConfigModelParams(self) -> QValuesEstimator:
     """Initialize model parameters."""
-    actm = ActionQV(self.config).to(pytorch.offset_device)
+    actm = ActionQV(self.language_model, self.config).to(pytorch.offset_device)
     tokm = ActionLanguageModelQV(self.language_model, self.config).to(pytorch.offset_device)
 
     if pytorch.num_nodes > 1:
