@@ -289,22 +289,20 @@ class torchBert(backends.BackendBase):
     return FLAGS.categorical_sampling
 
   def GetEncoderModule(self,
-                       max_position_embeddings : int  = None,
-                       vocab_size              : int  = None,
-                       pad_token_id            : int  = None,
-                       with_checkpoint         : bool = False
+                       with_checkpoint : bool = False,
+                       **kwargs,
                        ) -> 'torch.nn.Module':
     """Initialize BERT as decoder."""
     attrs = copy.copy(self.bertAttrs)
     if not with_checkpoint:
-      attrs['max_position_embeddings'] = max_position_embeddings
-      attrs['pad_token_id']            = pad_token_id
-      attrs['vocab_size']              = vocab_size
-    elif max_position_embeddings or vocab_size or pad_token_id:
+      attrs = {
+        k: v for k, v in kwargs.items()
+      }
+    elif len(kwargs.keys()) > 0:
       l.logger().warn("Encoder module with_checkpoint will not override max position embeddings, pad and vocab size!")
     generic_config = config.BertConfig.from_dict(
-      self.bertAttrs,
-      **self.featureAttrs,
+      attrs,
+      # **self.featureAttrs,
       xla_device         = self.torch_tpu_available,
       reward_compilation = -1,
       # This is hard-coded to True to allow compile sampler to be initialized. This does not prohibit proper re-train.
@@ -323,18 +321,16 @@ class torchBert(backends.BackendBase):
       return m
 
   def GetDecoderModule(self,
-                       max_position_embeddings : int  = None,
-                       vocab_size              : int  = None,
-                       pad_token_id            : int  = None,
-                       with_checkpoint         : bool = False,
+                       with_checkpoint : bool = False,
+                       **kwargs,
                        ) -> 'torch.nn.Module':
     """Return internal BERT auto-encoder module."""
     attrs = copy.copy(self.bertAttrs)
     if not with_checkpoint:
-      attrs['max_position_embeddings'] = max_position_embeddings
-      attrs['pad_token_id']            = pad_token_id
-      attrs['vocab_size']              = vocab_size
-    elif max_position_embeddings or vocab_size or pad_token_id:
+      attrs = {
+        k: v for k, v in kwargs.items()
+      }
+    elif len(kwargs.keys()) > 0:
       l.logger().warn("Decoder module with_checkpoint will not override max position embeddings, pad and vocab size!")
     generic_config = config.BertConfig.from_dict(
       attrs,
