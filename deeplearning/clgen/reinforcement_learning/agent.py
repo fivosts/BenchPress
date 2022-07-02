@@ -61,7 +61,7 @@ class Agent(object):
     self.feature_tokenizer = feature_tokenizer
     self.qv_config = QValuesConfig.from_config(
       self.config,
-      self.language_model.backend.architecture.max_position_embeddings,
+      self.language_model.backend.config.architecture.max_position_embeddings,
       self.tokenizer,
       self.feature_tokenizer,
     )
