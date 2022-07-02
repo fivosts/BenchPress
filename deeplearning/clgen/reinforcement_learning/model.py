@@ -241,12 +241,12 @@ class ActionLanguageModelQV(torch.nn.Module):
     return
 
   def forward(self,
-              encoder_input_ids,
-              encoder_input_mask,
-              encoder_position_ids,
-              decoder_feature_ids,
-              decoder_feature_mask,
-              decoder_position_ids,
+              encoder_input_ids    : torch.LongTensor,
+              encoder_input_mask   : torch.LongTensor,
+              encoder_position_ids : torch.LongTensor,
+              decoder_feature_ids  : torch.LongTensor,
+              decoder_feature_mask : torch.LongTensor,
+              decoder_position_ids : torch.LongTensor,
               encoder_input_features = None,
               ):
     encoder_out = self.language_model(
