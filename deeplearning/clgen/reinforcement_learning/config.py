@@ -39,7 +39,6 @@ class QValuesConfig(object):
       'token_attention_probs_dropout_prob'  : config.agent.action_lm.attention_probs_dropout_prob,
       'token_type_vocab_size'               : config.agent.action_lm.type_vocab_size,
       'token_initializer_range'             : config.agent.action_lm.initializer_range,
-      'temperature'                         : config.agent.action_lm.temperature_micros / 1e6,
       'feature_encoder'                     : False,
     }
     return QValuesConfig(**dict)
