@@ -42,8 +42,11 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
   pbutil.AssertFieldIsSet(config.agent, "action_lm")
   ## Parse FeatureTokenizer fields.
   pbutil.AssertFieldIsSet(config.agent, "feature_tokenizer")
+  pbutil.AssertFieldIsSet(config.agent.feature_tokenizer, "feature_max_value_token")
+  pbutil.AssertFieldIsSet(config.agent.feature_tokenizer, "feature_singular_token_thr")
+  pbutil.AssertFieldIsSet(config.agent.feature_tokenizer, "feature_token_range")
+  pbutil.AssertFieldIsSet(config.agent.feature_tokenizer, "feature_sequence_length")
   ## Parse ActionQV fields.
-  pbutil.AssertFieldIsSet(config.agent.action_qv, "feature_sequence_length")
   pbutil.AssertFieldIsSet(config.agent.action_qv, "max_position_embeddings")
   pbutil.AssertFieldIsSet(config.agent.action_qv, "hidden_size")
   pbutil.AssertFieldConstraint(
@@ -85,7 +88,6 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
     lambda x: x in set(bert_model.ACT2FN.keys()),
     "Invalid choice for hidden_act"
   )
-  pbutil.AssertFieldIsSet(config.agent.action_lm, "feature_sequence_length")
   pbutil.AssertFieldIsSet(config.agent.action_lm, "max_position_embeddings")
   pbutil.AssertFieldIsSet(config.agent.action_lm, "hidden_size")
   pbutil.AssertFieldConstraint(
