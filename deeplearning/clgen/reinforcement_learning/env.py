@@ -34,16 +34,17 @@ class Environment(object):
     )
 
   def __init__(self,
-               config            : reinforcement_learning_pb2.RLModel,
-               corpus            : corpuses.Corpus,
-               tokenizer         : tokenizers.TokenizerBase,
-               feature_tokenizer : tokenizers.FeatureTokenizer,
-               cache_path        : pathlib.Path,
+               config                  : reinforcement_learning_pb2.RLModel,
+               max_position_embeddings : int,
+               corpus                  : corpuses.Corpus,
+               tokenizer               : tokenizers.TokenizerBase,
+               feature_tokenizer       : tokenizers.FeatureTokenizer,
+               cache_path              : pathlib.Path,
                ) -> None:
     self.config            = config
     self.tokenizer         = tokenizer
     self.feature_tokenizer = feature_tokenizer
-    self.max_position_embeddings = self.config.agent.action_qv.max_position_embeddings
+    self.max_position_embeddings = max_position_embeddings,
     self.feature_sequence_length = self.config.agent.action_qv.feature_sequence_length
 
     self.cache_path = cache_path / "environment"
@@ -60,7 +61,6 @@ class Environment(object):
     elif self.config.HasField("random"):
       self.feature_dataset = []
 
-
     self.loadCheckpoint()
     return
 
@@ -68,7 +68,15 @@ class Environment(object):
     """
     Collect an action from an agent and compute its reward.
     """
-    raise NotImplementedError
+    if action.action_type == interactions.ACTION_TYPE_SPACE['COMP']:
+      code = self.tokenizer.ArrayToCode(self.current_state.encoded_code)
+      try:
+        _ = opencl.Compile(code)
+        features = extractor.ExtractFeatures(code, fspace = self.current_state.feature_space)
+      except ValueError:
+        compiles = False
+        features = None
+
   
   def reset(self) -> None:
     """
