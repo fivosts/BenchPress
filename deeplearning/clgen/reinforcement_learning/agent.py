@@ -13,6 +13,7 @@ from deeplearning.clgen.proto import reinforcement_learning_pb2
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import logging as l
 
 torch = pytorch.torch
 
@@ -78,20 +79,22 @@ class Agent(object):
     Agent collects the current state by the environment
     and picks the right action.
     """
-    type_logits, index_logits  = self.q_model.SampleAction(state)
-    action_type, action_index  = self.policy.SelectAction(type_logits, index_logits)
+    logits = self.q_model.SampleAction(state)
+    action_logits = logits['action_logits'].cpu()
+    index_logits = logits['index_logits'].cpu()
+    action_type, action_index  = self.policy.SelectAction(action_logits, index_logits)
 
     if action_type == interactions.ACTION_TYPE_SPACE['ADD']:
-      token_logits = self.q_model.SampleToken(
+      logits = self.q_model.SampleToken(
         state, action_index, self.tokenizer, self.feature_tokenizer
       )
+      token_logits = logits['prediction_logits'].cpu()
       token        = self.policy.SelectToken(token_logits)
     else:
       token_logits, token = None, None
-
     return interactions.Action(
       action_type         = action_type,
-      action_type_logits  = type_logits,
+      action_type_logits  = action_logits,
       action_index        = action_index,
       action_index_logits = index_logits,
       token_type          = token,
