@@ -380,9 +380,12 @@ class QValuesModel(object):
     inputs = data_generator.StateToActionTensor(
       state, self.tokenizer.padToken, self.feature_tokenizer.padToken
     )
-    return self.sample_qvalues.action_qv(
-      **{k: v.to(pytorch.device) for k, v in inputs.items()}
-    )
+    with torch.no_grad():
+      inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
+      outputs = self.sample_qvalues.action_qv(
+        **inputs
+      )
+    return outputs
   
   def SampleToken(self,
                   state          : interactions.State,
@@ -395,9 +398,12 @@ class QValuesModel(object):
     inputs = data_generator.StateToTokenTensor(
       state, mask_idx, tokenizer.holeToken, tokenizer.padToken, feat_tokenizer.padToken
     )
-    return self.sample_qvalues.token_qv(
-      **{k: v.to(pytorch.device) for k, v in inputs.items()}
-    )
+    with torch.no_grad():
+      inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
+      outputs = self.sample_qvalues.token_qv(
+        **inputs
+      )
+    return outputs
 
   def saveCheckpoint(self) -> None:
     """Checkpoint Deep Q-Nets."""
