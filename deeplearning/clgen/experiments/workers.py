@@ -6,7 +6,9 @@ import pathlib
 
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
+from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.util import environment
+from deeplearning.clgen.util import logging as l
 
 def ContentHash(db_feat: typing.Tuple[str, str]) -> typing.Tuple[str, typing.Dict[str, float]]:
   """
