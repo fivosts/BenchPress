@@ -44,7 +44,12 @@ def KAverageScore(**kwargs) -> None:
     if dbg.group_name == "GitHub-768-inactive":
       # Skip baseline DB group.
       continue
-    if not (dbg.db_type == samples_database.SamplesDatabase or dbg.db_type == encoded.EncodedContentFiles or dbg.db_type == clsmith.CLSmithDatabase):
+    if not (
+        dbg.db_type == samples_database.SamplesDatabase or
+        dbg.db_type == encoded.EncodedContentFiles or
+        dbg.db_type == clsmith.CLSmithDatabase or
+        dbg.db_type == active_feed_database.ActiveFeedDatabase
+      ):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
     groups[dbg.group_name] = ([], [])
     for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
