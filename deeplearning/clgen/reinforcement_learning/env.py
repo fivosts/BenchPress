@@ -1,6 +1,7 @@
 """
 RL Environment for the task of targeted benchmark generation.
 """
+import gym
 import pathlib
 import pickle
 import numpy as np
@@ -22,10 +23,14 @@ torch = pytorch.torch
 
 from absl import flags
 
-class Environment(object):
+class Environment(gym.Env):
   """
   Environment representation for RL Agents.
   """
+  metadata = {
+    'render_modes' : ['human'],
+    'render_fps'   : 4,
+  }
   @property
   def init_code_state(self) -> np.array:
     return np.array(
@@ -64,10 +69,13 @@ class Environment(object):
     self.loadCheckpoint()
     return
 
-  def step(self, action: interactions.Action) -> interactions.Reward:
+  def step(self,
+           action: interactions.Action
+           ) -> typing.Tuple[interactions.State, interactions.Reward, bool, typing.Any]:
     """
     Collect an action from an agent and compute its reward.
     """
+    super().reset()
     if action.action_type == interactions.ACTION_TYPE_SPACE['COMP']:
       code = self.tokenizer.ArrayToCode(self.current_state.encoded_code)
       try:
@@ -76,7 +84,30 @@ class Environment(object):
       except ValueError:
         compiles = False
         features = None
+    elif action.action_type == interactions.ACTION_TYPE_SPACE['REM']:
+      new_enc_code = self.current_state.encoded_code[:action.action_index] + self.current_state.encoded_code[action.action_index+1:]
+      new_state = interactions.State(
+        target_features  = self.current_state.target_features,
+        feature_space    = self.current_state.feature_space,
+        encoded_features = self.current_state.encoded_features,
+        code             = self.tokenizer.ArrayToCode(new_enc_code),
+        encoded_code     = new_enc_code,
+      )
+      self.current_state = new_state
+    elif action.action_type == interactions.ACTION_TYPE_SPACE['COMP']:
+      new_enc_code = self.current_state.encoded_code[:action.action_index] + action.token_type + self.current_state.encoded_code[action.action_index:]
+      new_state = interactions.State(
+        target_features  = self.current_state.target_features,
+        feature_space    = self.current_state.feature_space,
+        encoded_features = self.current_state.encoded_features,
+        code             = self.tokenizer.ArrayToCode(new_enc_code),
+        encoded_code     = new_enc_code,
+      )
+      self.current_state = new_state
+    else:
+      raise ValueError("Invalid action: {}".format(action.action_type))
 
+    return self.current_state, reward, done, info
   
   def reset(self) -> None:
     """
@@ -90,7 +121,7 @@ class Environment(object):
       code             = "",
       encoded_code     = self.init_code_state,
     )
-    return
+    return self.current_state
   
   def get_state(self) -> interactions.State:
     """
