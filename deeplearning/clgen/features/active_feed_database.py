@@ -270,6 +270,12 @@ class ActiveFeedDatabase(sqlutil.Database):
       return [x.output_features for x in s.query(ActiveFeed).yield_per(1000)]
 
   @property
+  def get_data_features(self) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
+    """Return tuple of code + feature vectors"""
+    with self.get_session() as s:
+      return [(x.sample, self.DictToRawFeats(x.output_features)) for x in s.query(ActiveFeed).yield_per(1000)]
+
+  @property
   def active_count(self):
     """Number of active samples in DB."""
     with self.get_session() as s:
@@ -285,6 +291,26 @@ class ActiveFeedDatabase(sqlutil.Database):
       return self.Session
     else:
       return self.replicated.Session
+
+  def DictToRawFeats(self, dict_feats: str) -> str:
+    """Convert dict based feats to Raw feats"""
+    lines = dict_feats.split('\n')
+    grewe = ["GreweFeatures:"]
+    autophase = ["AutophaseFeatures:"]
+    instcount = ["InstCountFeatures:"]
+    if len(lines) == 8:
+      grewe.append("file,kernel,comp,rational,mem,localmem,coalesced,atomic,F2:coalesced/mem,F4:comp/mem")
+      feats = "temp.cl,A"
+      for l in lines:
+        feats += "," + l.split(':')[-1]
+      grewe.append(feats)
+    elif len(lines) == 70:
+      instcount += lines
+    elif len(lines) == 56:
+      autophase += lines
+    else:
+      raise ValueError(dict_feats)
+    return '\n'.join(grewe + instcount + autophase)
 
 def merge_databases(dbs: typing.List[ActiveFeedDatabase], out_db: ActiveFeedDatabase) -> None:
   """
