@@ -80,15 +80,15 @@ class Agent(object):
     and picks the right action.
     """
     logits = self.q_model.SampleAction(state)
-    action_logits = logits['action_logits'].cpu()
-    index_logits = logits['index_logits'].cpu()
+    action_logits = logits['action_logits'].cpu().numpy()
+    index_logits = logits['index_logits'].cpu().numpy()
     action_type, action_index  = self.policy.SelectAction(action_logits, index_logits)
 
     if action_type == interactions.ACTION_TYPE_SPACE['ADD']:
       logits = self.q_model.SampleToken(
         state, action_index, self.tokenizer, self.feature_tokenizer
       )
-      token_logits = logits['prediction_logits'].cpu()
+      token_logits = logits['prediction_logits'].cpu().numpy()
       token        = self.policy.SelectToken(token_logits)
     else:
       token_logits, token = None, None
