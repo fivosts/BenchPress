@@ -77,6 +77,7 @@ class Environment(gym.Env):
     Collect an action from an agent and compute its reward.
     """
     super().reset()
+    done = False
     if action.action_type == interactions.ACTION_TYPE_SPACE['COMP']:
       code = self.tokenizer.ArrayToCode(self.current_state.encoded_code)
       try:
@@ -85,6 +86,22 @@ class Environment(gym.Env):
       except ValueError:
         compiles = False
         features = None
+      cur_dist = benchmarks.whateva(features, self.current_state.target_features)
+      if cur_dist == 0:
+        done = True
+      if compiles:
+        reward = interactions.Reward(
+          action   = action,
+          value    = (1 / cur_dist if cur_dist > 0 else +1.0),
+          distance = cur_dist,
+        )
+      else:
+        reward = interactions.Reward(
+          action = action,
+          value    = -1.0,
+          distance = None,
+          comment  = "[COMPILE] action failed."
+        )
     elif action.action_type == interactions.ACTION_TYPE_SPACE['REM']:
       new_enc_code = self.current_state.encoded_code[:action.action_index] + self.current_state.encoded_code[action.action_index+1:]
       new_state = interactions.State(
