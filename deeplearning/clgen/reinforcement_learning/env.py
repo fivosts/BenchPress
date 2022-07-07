@@ -86,7 +86,11 @@ class Environment(gym.Env):
       except ValueError:
         compiles = False
         features = None
-      cur_dist = benchmarks.whateva(features, self.current_state.target_features)
+      cur_dist = feature_sampler.calculate_distance(
+        self.current_state.feature_space,
+        features,
+        self.current_state.target_features,
+      )
       if cur_dist == 0:
         done = True
       if compiles:
