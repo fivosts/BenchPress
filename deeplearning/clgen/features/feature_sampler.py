@@ -46,7 +46,7 @@ def grid_walk_generator(feature_space: str) -> typing.Iterator[typing.Dict[str, 
 
 def calculate_distance(infeat: typing.Dict[str, float],
                        tarfeat: typing.Dict[str, float],
-                       feature_space: str,
+                       feature_space: str = None,
                        ) -> float:
   """
   Euclidean distance between sample feature vector
