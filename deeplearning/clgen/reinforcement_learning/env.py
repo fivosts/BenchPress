@@ -2,6 +2,7 @@
 RL Environment for the task of targeted benchmark generation.
 """
 import gym
+import typing
 import pathlib
 import pickle
 import numpy as np
