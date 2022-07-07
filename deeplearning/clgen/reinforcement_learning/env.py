@@ -94,6 +94,7 @@ class Environment(gym.Env):
           action   = action,
           value    = (1 / cur_dist if cur_dist > 0 else +1.0),
           distance = cur_dist,
+          comment  = "[COMPILE] succeded. Distance: {}".format(cur_dist)
         )
       else:
         reward = interactions.Reward(
@@ -111,6 +112,12 @@ class Environment(gym.Env):
         code             = self.tokenizer.ArrayToCode(new_enc_code),
         encoded_code     = new_enc_code,
       )
+      reward = interactions.Reward(
+        action   = action,
+        value    = 0.0,
+        distance = None,
+        comment  = "Removed {} from idx {}".format(self.tokenizer.ArrayToCode([self.current_state.encoded_code[action.action_index]]), action.action_index)
+      )
       self.current_state = new_state
     elif action.action_type == interactions.ACTION_TYPE_SPACE['COMP']:
       new_enc_code = self.current_state.encoded_code[:action.action_index] + action.token_type + self.current_state.encoded_code[action.action_index:]
@@ -121,10 +128,17 @@ class Environment(gym.Env):
         code             = self.tokenizer.ArrayToCode(new_enc_code),
         encoded_code     = new_enc_code,
       )
+      reward = interactions.Reward(
+        action   = action,
+        value    = 0.0,
+        distance = None,
+        comment  = "Added {} to idx {}".format(self.tokenizer.ArrayToCode([action.token_type]), action.action_index)
+      )
       self.current_state = new_state
     else:
       raise ValueError("Invalid action: {}".format(action.action_type))
 
+    info = None
     return self.current_state, reward, done, info
   
   def reset(self) -> None:
