@@ -141,7 +141,7 @@ class Environment(gym.Env):
     info = None
     return self.current_state, reward, done, info
   
-  def reset(self) -> None:
+  def reset(self) -> interactions.State:
     """
     Reset the state of the environment.
     """
