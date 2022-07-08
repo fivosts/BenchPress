@@ -27,6 +27,8 @@ from deeplearning.clgen.models.torch_bert import model as bert_model
 
 from absl import flags
 
+FLAGS = flags.FLAGS
+
 from deeplearning.clgen.util import cache
 
 def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforcement_learning_pb2.RLModel:
@@ -273,6 +275,7 @@ class RLModel(object):
     )
     if self._created:
       return False
+    FLAGS.sample_indices_limit = 1 # Force BERT-LM on one prediction per hole.
     self._created = True
     self.env = env.Environment(
       self.config,
