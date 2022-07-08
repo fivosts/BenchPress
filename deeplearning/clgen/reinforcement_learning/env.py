@@ -78,7 +78,7 @@ class Environment(gym.Env):
     """
     super().reset()
     done = False
-    if action.action_type == interactions.ACTION_TYPE_SPACE['ADD']:
+    if action.action_type == interactions.ACTION_TYPE_SPACE['COMP']:
       code = self.tokenizer.ArrayToCode(self.current_state.encoded_code)
       try:
         _ = opencl.Compile(code)
@@ -125,7 +125,7 @@ class Environment(gym.Env):
         comment  = "Removed {} from idx {}".format(self.tokenizer.ArrayToCode([self.current_state.encoded_code[action.action_index]]), action.action_index)
       )
       self.current_state = new_state
-    elif action.action_type == interactions.ACTION_TYPE_SPACE['COMP']:
+    elif action.action_type == interactions.ACTION_TYPE_SPACE['ADD']:
       new_enc_code = self.current_state.encoded_code[:action.action_index] + action.token_type + self.current_state.encoded_code[action.action_index:]
       new_state = interactions.State(
         target_features  = self.current_state.target_features,
