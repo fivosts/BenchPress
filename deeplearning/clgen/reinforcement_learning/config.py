@@ -29,6 +29,8 @@ class QValuesConfig(object):
       'action_attention_probs_dropout_prob' : config.agent.action_qv.attention_probs_dropout_prob,
       'action_type_vocab_size'              : config.agent.action_qv.type_vocab_size,
       'action_initializer_range'            : config.agent.action_qv.initializer_range,
+      'action_type_temperature'             : config.agent.action_qv.action_type_temperature_micros / 10e6,
+      'action_index_temperature'            : config.agent.action_qv.action_index_temperature_micros / 10e6,
       'token_hidden_dropout_prob'           : config.agent.action_lm.hidden_dropout_prob,
       'token_feature_dropout_prob'          : config.agent.action_lm.hidden_dropout_prob,
       'token_hidden_size'                   : config.agent.action_lm.hidden_size,
@@ -40,7 +42,8 @@ class QValuesConfig(object):
       'token_hidden_act'                    : config.agent.action_lm.hidden_act,
       'token_attention_probs_dropout_prob'  : config.agent.action_lm.attention_probs_dropout_prob,
       'token_type_vocab_size'               : config.agent.action_lm.type_vocab_size,
-      'token_initializer_range'             : config.agent.action_lm.initializer_range,
+      'token_initializer_range'             : config.agent.action_lm.initializer_range_micros / 10e6,
+      'token_temperature'                   : config.agent.action_lm.token_temperature,
       'feature_encoder'                     : False,
     }
     return QValuesConfig(**dict)
