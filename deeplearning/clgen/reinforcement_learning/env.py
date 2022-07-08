@@ -78,21 +78,23 @@ class Environment(gym.Env):
     """
     super().reset()
     done = False
-    if action.action_type == interactions.ACTION_TYPE_SPACE['COMP']:
+    if action.action_type == interactions.ACTION_TYPE_SPACE['ADD']:
       code = self.tokenizer.ArrayToCode(self.current_state.encoded_code)
       try:
         _ = opencl.Compile(code)
-        features = extractor.ExtractFeatures(code, fspace = self.current_state.feature_space)
+        features = extractor.ExtractFeatures(code, ext = [self.current_state.feature_space])
+        compiles = True
       except ValueError:
         compiles = False
         features = None
-      cur_dist = feature_sampler.calculate_distance(
-        features,
-        self.current_state.target_features,
-      )
-      if cur_dist == 0:
-        done = True
+
       if compiles:
+        cur_dist = feature_sampler.calculate_distance(
+          features[self.current_state.feature_space],
+          self.current_state.target_features,
+        )
+        if cur_dist == 0:
+          done = True
         reward = interactions.Reward(
           action   = action,
           value    = (1 / cur_dist if cur_dist > 0 else +1.0),
@@ -114,6 +116,7 @@ class Environment(gym.Env):
         encoded_features = self.current_state.encoded_features,
         code             = self.tokenizer.ArrayToCode(new_enc_code),
         encoded_code     = new_enc_code,
+        comment          = "State: \nCode:\n{}\nFeatures:\n{}".format(self.tokenizer.ArrayToCode(new_enc_code), self.current_state.target_features),
       )
       reward = interactions.Reward(
         action   = action,
@@ -130,6 +133,7 @@ class Environment(gym.Env):
         encoded_features = self.current_state.encoded_features,
         code             = self.tokenizer.ArrayToCode(new_enc_code),
         encoded_code     = new_enc_code,
+        comment          = "State: \nCode:\n{}\nFeatures:\n{}".format(self.tokenizer.ArrayToCode(new_enc_code), self.current_state.target_features),
       )
       reward = interactions.Reward(
         action   = action,
@@ -155,6 +159,7 @@ class Environment(gym.Env):
       encoded_features = self.feature_tokenizer.TokenizeFeatureVector(next[1], next[0], self.feature_sequence_length),
       code             = "",
       encoded_code     = self.init_code_state,
+      comment          = "State: \nCode:\n\nFeatures:\n{}".format(self.current_state.target_features),
     )
     return self.current_state
   
