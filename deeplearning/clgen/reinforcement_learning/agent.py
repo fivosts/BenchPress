@@ -21,7 +21,10 @@ class Policy(object):
   """
   The policy selected over Q-Values
   """
-  def __init__(self):
+  def __init__(self, action_temp: float, idx_temp: float, token_temp: float):
+    self.action_temperature = action_temp
+    self.index_temperature  = idx_temp
+    self.token_temperature  = token_temp
     return
 
   def SelectAction(self, type_logits: torch.FloatTensor, index_logits: torch.Tensor) -> typing.Tuple[int, int]:
@@ -36,7 +39,12 @@ class Policy(object):
     """
     Get logit predictions for token and apply policy on it.
     """
-    return np.random.randint(20, 1000)
+    ct = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
+        temperature = self.temperature if self.temperature is not None else 1.0,
+        logits = t,
+        validate_args = False if "1.9." in torch.__version__ else None,
+      ).sample()
+
     raise NotImplementedError
     return token
 
@@ -45,12 +53,12 @@ class Agent(object):
   Benchmark generation RL-Agent.
   """
   def __init__(self,
-              config            : reinforcement_learning_pb2.RLModel,
-              language_model    : language_models.Model,
-              tokenizer         : tokenizers.TokenizerBase,
-              feature_tokenizer : tokenizers.FeatureTokenizer,
-              cache_path: pathlib.Path
-              ):
+               config            : reinforcement_learning_pb2.RLModel,
+               language_model    : language_models.Model,
+               tokenizer         : tokenizers.TokenizerBase,
+               feature_tokenizer : tokenizers.FeatureTokenizer,
+               cache_path        : pathlib.Path
+               ):
 
     self.cache_path = cache_path / "agent"
     if environment.WORLD_RANK == 0:
@@ -69,8 +77,11 @@ class Agent(object):
     self.q_model = model.QValuesModel(
       self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path
     )
-    self.policy  = Policy()
-
+    self.policy  = Policy(
+      action_temp = self.config.agent.action_qv.action_type_temperature_micros / 10e6,
+      idx_temp    = self.config.agent.action_qv.action_index_temperature_micros / 10e6,
+      token_temp  = self.config.agent.action_lm.token_temperature_micros / 10e6,
+    )
     self.loadCheckpoint()
     return
 
