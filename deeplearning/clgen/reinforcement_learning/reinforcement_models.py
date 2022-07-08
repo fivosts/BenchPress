@@ -311,8 +311,8 @@ class RLModel(object):
       while not is_term:
         state  = self.env.get_state()           # Get current state.
         action = self.agent.make_action(state)  # Predict the action given the state.
-        reward = self.env.step(action)          # Step the action into the environment and face the consequences.
-        self.memory.add(state, action, reward)  # Add to replay buffer the episode.
+        _st, reward, done, info = self.env.step(action)          # Step the action into the environment and face the consequences.
+        self.memory.add(state, action, reward, done, info)  # Add to replay buffer the episode.
       self.agent.update(self.memory.sample()) # Train the agent on a pool of memories.
       self.saveCheckpoint()
     return
