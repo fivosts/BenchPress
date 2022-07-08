@@ -159,7 +159,7 @@ class Environment(gym.Env):
       encoded_features = self.feature_tokenizer.TokenizeFeatureVector(next[1], next[0], self.feature_sequence_length),
       code             = "",
       encoded_code     = self.init_code_state,
-      comment          = "State: \nCode:\n\nFeatures:\n{}".format(self.current_state.target_features),
+      comment          = "State: \nCode:\n\nFeatures:\n{}".format(next.target_features),
     )
     return self.current_state
   
