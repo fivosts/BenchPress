@@ -36,7 +36,7 @@ class Policy(object):
     """
     Get logit predictions for token and apply policy on it.
     """
-    return 54
+    return np.random.randint(20, 1000)
     raise NotImplementedError
     return token
 
@@ -92,7 +92,7 @@ class Agent(object):
       )
       token_logits = logits['prediction_logits'].cpu().numpy()
       token        = self.policy.SelectToken(token_logits)
-      comment      += ", index: {}, token: {}".format(action_index, self.tokenizer.tokensToString([token]))
+      comment      += ", index: {}, token: '{}'".format(action_index, self.tokenizer.decoder[token])
     elif action_type == interactions.ACTION_TYPE_SPACE['REM']:
       token_logits, token = None, None
       comment += ", index: {}".format(action_index)
