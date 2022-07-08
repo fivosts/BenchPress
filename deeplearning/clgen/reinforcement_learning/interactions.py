@@ -11,6 +11,10 @@ ACTION_TYPE_SPACE = {
   'COMP': 2, 
 }
 
+ACTION_TYPE_MAP = {
+  v: k for v, k in ACTION_TYPE_SPACE.items()
+}
+
 class Action(typing.NamedTuple):
   """
   Agent action representation.
@@ -21,6 +25,7 @@ class Action(typing.NamedTuple):
   action_index_logits : np.array   # Distribution vector over size of input code (or max length).
   token_type          : int        # Your policy function picks the best token.
   token_type_logits   : np.array   # Distribution vector over possible tokens.
+  comment             : str        # Add action description.
 
 class State(typing.NamedTuple):
   """
@@ -31,6 +36,7 @@ class State(typing.NamedTuple):
   encoded_features : np.array
   code             : str
   encoded_code     : np.array
+  comment          : str
 
 class Reward(typing.NamedTuple):
   """
