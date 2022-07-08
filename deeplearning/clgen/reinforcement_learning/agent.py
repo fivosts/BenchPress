@@ -84,14 +84,23 @@ class Agent(object):
     index_logits = logits['index_logits'].cpu().numpy()
     action_type, action_index  = self.policy.SelectAction(action_logits, index_logits)
 
+    comment = "Action: {}".format(interactions.ACTION_TYPE_MAP[action_type])
+
     if action_type == interactions.ACTION_TYPE_SPACE['ADD']:
       logits = self.q_model.SampleToken(
         state, action_index, self.tokenizer, self.feature_tokenizer
       )
       token_logits = logits['prediction_logits'].cpu().numpy()
       token        = self.policy.SelectToken(token_logits)
-    else:
+      comment      += ", index: {}, token: {}".format(action_index, self.tokenizer.tokensToString([token]))
+    elif action_type == interactions.ACTION_TYPE_SPACE['REM']:
       token_logits, token = None, None
+      comment += ", index: {}".format(action_index)
+    elif action_type == interactions.ACTION_TYPE_SPACE['COMP']:
+      token_logits, token = None, None
+    else:
+      raise ValueError("Invalid action_type: {}".format(action_type))
+
     return interactions.Action(
       action_type         = action_type,
       action_type_logits  = action_logits,
@@ -99,6 +108,7 @@ class Agent(object):
       action_index_logits = index_logits,
       token_type          = token,
       token_type_logits   = token_logits,
+      comment             = comment,
     )
 
   def update_agent(self, input_ids: typing.Dict[str, torch.Tensor]) -> None:
