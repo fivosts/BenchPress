@@ -126,7 +126,8 @@ class Environment(gym.Env):
       )
       self.current_state = new_state
     elif action.action_type == interactions.ACTION_TYPE_SPACE['ADD']:
-      new_enc_code = self.current_state.encoded_code[:action.action_index] + action.token_type + self.current_state.encoded_code[action.action_index:]
+      new_enc_code = list(self.current_state.encoded_code[:action.action_index]) + [action.token_type] + list(self.current_state.encoded_code[action.action_index:])
+      new_enc_code = np.array(new_enc_code[:len(self.current_state.encoded_code)])
       new_state = interactions.State(
         target_features  = self.current_state.target_features,
         feature_space    = self.current_state.feature_space,
