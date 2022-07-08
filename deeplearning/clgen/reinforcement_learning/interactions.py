@@ -12,7 +12,7 @@ ACTION_TYPE_SPACE = {
 }
 
 ACTION_TYPE_MAP = {
-  v: k for v, k in ACTION_TYPE_SPACE.items()
+  v: k for k, v in ACTION_TYPE_SPACE.items()
 }
 
 class Action(typing.NamedTuple):
