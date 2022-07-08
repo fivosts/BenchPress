@@ -81,7 +81,7 @@ class Agent(object):
     """
     logits = self.q_model.SampleAction(state)
     action_logits = logits['action_logits'].cpu().numpy()
-    index_logits = logits['index_logits'].cpu().numpy()
+    index_logits  = logits['index_logits'].cpu().numpy()
     action_type, action_index  = self.policy.SelectAction(action_logits, index_logits)
 
     comment = "Action: {}".format(interactions.ACTION_TYPE_MAP[action_type])
