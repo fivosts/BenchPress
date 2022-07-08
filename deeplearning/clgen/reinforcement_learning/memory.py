@@ -25,6 +25,8 @@ class Memory(object):
     self.action_buffer = []
     self.state_buffer  = []
     self.reward_buffer = []
+    self.done_buffer   = []
+    self.info_buffer   = []
 
     self.loadCheckpoint()
     return
@@ -32,12 +34,16 @@ class Memory(object):
   def add(self,
           action : interactions.Action,
           state  : interactions.State,
-          reward : interactions.Reward
+          reward : interactions.Reward,
+          done   : bool,
+          info   : str,
           ) -> None:
     """Add single step to memory buffers."""
     self.action_buffer.append(action)
     self.state_buffer.append(state)
     self.reward_buffer.append(reward)
+    self.done_buffer.append(done)
+    self.info_buffer.append(info)
     return
 
   def sample(self) -> typing.Dict[str, torch.Tensor]:
