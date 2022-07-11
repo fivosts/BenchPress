@@ -310,8 +310,9 @@ class torchBert(backends.BackendBase):
     )
     m = model.BertForPreTraining(
           generic_config,
-          tokenizer = self.tokenizer,
-          target_lm = "hole" if self.config.training.data_generator.HasField("hole") else "mask"
+          tokenizer  = self.tokenizer,
+          target_lm  = "hole" if self.config.training.data_generator.HasField("hole") else "mask",
+          without_label_head = True,
         )
     if with_checkpoint:
       temp_estimator = torchBert.SampleBertEstimator(m, None)
@@ -321,7 +322,8 @@ class torchBert(backends.BackendBase):
       return m
 
   def GetDecoderModule(self,
-                       with_checkpoint : bool = False,
+                       with_checkpoint    : bool = False,
+                       without_label_head : bool = False,
                        **kwargs,
                        ) -> 'torch.nn.Module':
     """Return internal BERT auto-encoder module."""
@@ -343,8 +345,9 @@ class torchBert(backends.BackendBase):
     )
     m = model.BertForPreTraining(
           generic_config,
-          tokenizer = self.tokenizer,
-          target_lm = "hole" if self.config.training.data_generator.HasField("hole") else "mask"
+          tokenizer  = self.tokenizer,
+          target_lm  = "hole" if self.config.training.data_generator.HasField("hole") else "mask",
+          without_label_head = without_label_head,
         )
     if with_checkpoint:
       temp_estimator = torchBert.SampleBertEstimator(m, None)
