@@ -123,11 +123,13 @@ class PredictionHeadTransform(torch.nn.Module):
 
 class ActionHead(torch.nn.Module):
   """Classification head for action prediction."""
-  def __init__(self, config):
+  def __init__(self, config, output_dim: int = None):
     super().__init__()
+    if output_dim is None:
+      output_dim = len(interactions.ACTION_TYPE_SPACE)
     self.transform = PredictionHeadTransform(config, dense_size = config.action_hidden_size)
-    self.decoder   = torch.nn.Linear(config.action_hidden_size, len(interactions.ACTION_TYPE_SPACE), bias = False)
-    self.bias      = torch.nn.Parameter(torch.zeros(len(interactions.ACTION_TYPE_SPACE)))
+    self.decoder   = torch.nn.Linear(config.action_hidden_size, output_dim, bias = False)
+    self.bias      = torch.nn.Parameter(torch.zeros(output_dim))
     self.decoder.bias = self.bias
     return
 
@@ -138,8 +140,10 @@ class ActionHead(torch.nn.Module):
 
 class IndexHead(torch.nn.Module):
   """Classification head for token index prediction."""
-  def __init__(self, config: config.QValuesConfig):
+  def __init__(self, config: config.QValuesConfig, output_dim: int = None):
     super().__init__()
+    if output_dim is None:
+      output_dim = config.max_position_embeddings
     self.transform = PredictionHeadTransform(config, dense_size = config.action_hidden_size + len(interactions.ACTION_TYPE_SPACE))
     self.decoder   = torch.nn.Linear(config.action_hidden_size, config.max_position_embeddings, bias = False)
     self.bias      = torch.nn.Parameter(torch.zeros(config.max_position_embeddings))
@@ -169,7 +173,11 @@ class IndexHead(torch.nn.Module):
 
 class ActionQV(torch.nn.Module):
   """Deep Q-Values for Action type prediction."""
-  def __init__(self, language_model: language_models.Model, config: config.QValuesConfig):
+  def __init__(self,
+               language_model : language_models.Model,
+               config         : config.QValuesConfig,
+               is_critic      : bool = False
+               ):
     super().__init__()
     ## Pre-trained Encoder LM.
     self.feature_encoder = language_model.backend.GetEncoderModule(
@@ -193,8 +201,11 @@ class ActionQV(torch.nn.Module):
       with_checkpoint    = True,
       without_label_head = True,
     )
-    self.action_head     = ActionHead(config)
-    self.index_head      = IndexHead(config)
+    output_dim = None
+    if is_critic:
+      output_dim = 1
+    self.action_head     = ActionHead(config, output_dim = output_dim)
+    self.index_head      = IndexHead(config, output_dim = output_dim)
     return
 
   def forward(self,
@@ -247,7 +258,11 @@ class ActionQV(torch.nn.Module):
 
 class ActionLanguageModelQV(torch.nn.Module):
   """Deep Q-Values for Token type prediction."""
-  def __init__(self, language_model: language_models.Model, config: config.QValuesConfig):
+  def __init__(self,
+               language_model : language_models.Model,
+               config         : config.QValuesConfig,
+               is_critic      : bool = False,
+               ):
     super(ActionLanguageModelQV, self).__init__()
     ## Feature-Encoder.
     self.encoder = language_model.backend.GetEncoderModule(
@@ -267,7 +282,12 @@ class ActionLanguageModelQV(torch.nn.Module):
       with_checkpoint              = False,
     )
     ## Decoder for token prediction, given features memory and source code.
-    self.language_model = language_model.backend.GetDecoderModule(with_checkpoint = True)
+    output_dim = None
+    if is_critic:
+      output_dim = 1
+    self.language_model = language_model.backend.GetDecoderModule(
+      with_checkpoint = True, output_dim = output_dim
+    )
     return
 
   def forward(self,
