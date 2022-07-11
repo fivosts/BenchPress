@@ -747,17 +747,21 @@ class BertForPreTraining(BertPreTrainedModel):
   def __init__(self,
                config,
                tokenizer = None,
-               use_categorical : bool = False,
-               temperature     : int = None,
-               target_lm       : str = "hole"
+               use_categorical    : bool = False,
+               temperature        : int = None,
+               target_lm          : str = "hole",
+               without_label_head : bool = False,
                ):
     super().__init__(config)
 
     self.bert = BertModel(config)
-    if self.config.feature_encoder:
-      self.cls = BertMLMFeatureHead(config)
+    if without_label_head is False:
+      if self.config.feature_encoder:
+        self.cls = BertMLMFeatureHead(config)
+      else:
+        self.cls = BertOnlyMLMHead(config)
     else:
-      self.cls = BertOnlyMLMHead(config)
+      self.cls = None
 
     if self.config.reward_compilation >= 0 or self.config.is_sampling:
       self.compile_sampler = compiler.CompilationSampler(
@@ -769,7 +773,10 @@ class BertForPreTraining(BertPreTrainedModel):
     self.init_weights()
 
   def get_output_embeddings(self):
-    return self.cls.predictions.decoder
+    if self.cls is not None:
+      return self.cls.predictions.decoder
+    else:
+      return None
 
   def get_output(self,
                  input_ids,
@@ -793,7 +800,10 @@ class BertForPreTraining(BertPreTrainedModel):
       output_hidden_states = output_hidden_states,
     )
     sequence_output, pooled_output = outputs[:2]
-    prediction_scores, encoded_features = self.cls(sequence_output, input_features)
+    if self.cls is not None:
+      prediction_scores, encoded_features = self.cls(sequence_output, input_features)
+    else:
+      prediction_scores, encoded_features = None, None
     return prediction_scores, encoded_features, outputs[0], outputs[1]
 
   def forward(
@@ -847,11 +857,13 @@ class BertForPreTraining(BertPreTrainedModel):
     """
     if workload is not None:
       input_ids, attention_mask, position_ids, input_features = workload
-    
+
     device = input_ids.get_device()
     device = device if device >= 0 else 'cpu'
 
     if workload is not None:
+      if self.cls is None:
+        raise ValueError("This mode requires a classification head.")
       prediction_scores, encoded_features, hidden_states, attentions = self.get_output(
         input_ids[0], attention_mask[0], position_ids[0], input_features[0] if input_features is not None else None,
       )
@@ -873,6 +885,8 @@ class BertForPreTraining(BertPreTrainedModel):
       output_attentions, output_hidden_states 
     )
     if not is_validation and self.compile_sampler and step >= self.config.reward_compilation and not self.config.is_sampling:
+      if self.cls is None:
+        raise ValueError("This mode requires a classification head.")
       samples, compile_flag, masked_lm_labels = self.compile_sampler.generateTrainingBatch(
         self,
         device,
@@ -897,6 +911,8 @@ class BertForPreTraining(BertPreTrainedModel):
         # 'sample_indices'          : [0],
       }
     elif not is_validation and self.compile_sampler and self.config.is_sampling:
+      if self.cls is None:
+        raise ValueError("This mode requires a classification head.")
       samples, sample_indices, scores_history = self.compile_sampler.generateSampleBatch(
         self,
         device,
