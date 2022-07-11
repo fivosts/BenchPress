@@ -189,7 +189,10 @@ class ActionQV(torch.nn.Module):
       with_checkpoint              = False,
     )
     ## Decoder for token prediction, given features and source code encoded memory.
-    self.source_decoder = language_model.backend.GetDecoderModule(with_checkpoint = True)
+    self.source_decoder = language_model.backend.GetDecoderModule(
+      with_checkpoint    = True,
+      without_label_head = True,
+    )
     self.action_head     = ActionHead(config)
     self.index_head      = IndexHead(config)
     return
