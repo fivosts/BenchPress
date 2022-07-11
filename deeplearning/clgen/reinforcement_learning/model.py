@@ -431,12 +431,43 @@ class QValuesModel(object):
       )
     return outputs
   
+  def SampleActionCritic(self, state: interactions.State) -> typing.Dict[str, torch.Tensor]:
+    """Predict the next action given an input state."""
+    self._ConfigSampleParams()
+    inputs = data_generator.StateToActionTensor(
+      state, self.tokenizer.padToken, self.feature_tokenizer.padToken
+    )
+    with torch.no_grad():
+      inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
+      outputs = self.sample_qvalues.action_qv(
+        **inputs
+      )
+    return outputs
+
   def SampleToken(self,
                   state          : interactions.State,
                   mask_idx       : int,
                   tokenizer      : tokenizers.TokenizerBase,
                   feat_tokenizer : tokenizers.FeatureTokenizer,
                   ) -> typing.Dict[str, torch.Tensor]:
+    """Predict token type"""
+    self._ConfigSampleParams()
+    inputs = data_generator.StateToTokenTensor(
+      state, mask_idx, tokenizer.holeToken, tokenizer.padToken, feat_tokenizer.padToken
+    )
+    with torch.no_grad():
+      inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
+      outputs = self.sample_qvalues.token_qv(
+        **inputs
+      )
+    return outputs
+
+  def SampleTokenCritic(self,
+                        state          : interactions.State,
+                        mask_idx       : int,
+                        tokenizer      : tokenizers.TokenizerBase,
+                        feat_tokenizer : tokenizers.FeatureTokenizer,
+                        ) -> typing.Dict[str, torch.Tensor]:
     """Predict token type"""
     self._ConfigSampleParams()
     inputs = data_generator.StateToTokenTensor(
