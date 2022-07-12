@@ -42,8 +42,8 @@ class QValuesConfig(object):
       'token_hidden_act'                    : config.agent.action_lm.hidden_act,
       'token_attention_probs_dropout_prob'  : config.agent.action_lm.attention_probs_dropout_prob,
       'token_type_vocab_size'               : config.agent.action_lm.type_vocab_size,
-      'token_initializer_range'             : config.agent.action_lm.token_temperature_micros / 10e6,
-      'token_temperature'                   : config.agent.action_lm.token_temperature,
+      'token_initializer_range'             : config.agent.action_lm.initializer_range,
+      'token_temperature'                   : config.agent.action_lm.token_temperature_micros / 10e6,
       'feature_encoder'                     : False,
     }
     return QValuesConfig(**dict)
