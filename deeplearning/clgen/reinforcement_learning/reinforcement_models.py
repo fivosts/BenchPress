@@ -313,9 +313,8 @@ class RLModel(object):
 
     self.agent.Train(
       env        = self.env,
-      num_epochs = 10,
+      num_epochs = num_epochs,
     )
-
 
     ## Start the RL training pipeline.
     # for ep in range(num_epochs):
