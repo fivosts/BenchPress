@@ -332,10 +332,11 @@ class QValuesModel(object):
     token  : torch.nn.Module
 
   def __init__(self,
-               language_model          : language_models.Model,
-               feature_tokenizer       : tokenizers.FeatureTokenizer,
-               config                  : config.QValuesConfig,
-               cache_path              : pathlib.Path
+               language_model    : language_models.Model,
+               feature_tokenizer : tokenizers.FeatureTokenizer,
+               config            : config.QValuesConfig,
+               cache_path        : pathlib.Path,
+               is_critic         : bool,
                ) -> None:
     self.cache_path = cache_path / "DQ_model"
     if environment.WORLD_RANK == 0:
@@ -346,6 +347,7 @@ class QValuesModel(object):
     self.tokenizer               = language_model.tokenizer
     self.feature_tokenizer       = feature_tokenizer
     self.feature_sequence_length = self.config.feature_sequence_length
+    self.is_critic               = is_critic
 
     self.train_qvalues  = None
     self.sample_qvalues = None
@@ -353,8 +355,8 @@ class QValuesModel(object):
 
   def _ConfigModelParams(self) -> QValuesEstimator:
     """Initialize model parameters."""
-    actm    = ActionQV(self.language_model, self.config).to(pytorch.offset_device)
-    tokm    = ActionLanguageModelQV(self.language_model, self.config).to(pytorch.offset_device)
+    actm    = ActionQV(self.language_model, self.config, self.is_critic).to(pytorch.offset_device)
+    tokm    = ActionLanguageModelQV(self.language_model, self.config, self.is_critic).to(pytorch.offset_device)
     if pytorch.num_nodes > 1:
       actm = torch.nn.parallel.DistributedDataParallel(
         actm,
