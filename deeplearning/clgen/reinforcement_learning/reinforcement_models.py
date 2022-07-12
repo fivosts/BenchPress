@@ -131,7 +131,7 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
     lambda x: x in set(bert_model.ACT2FN.keys()),
     "Invalid choice for hidden_act"
   )
-  pbutil.AssertFieldIsSet(config.agent.action_qv, "token_temperature")
+  pbutil.AssertFieldIsSet(config.agent.action_qv, "token_temperature_micros")
   return config
 
 class RLModel(object):
