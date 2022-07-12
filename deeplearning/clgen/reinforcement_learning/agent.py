@@ -177,12 +177,16 @@ class Agent(object):
       batch_lens - the lengths of each episode this batch. Shape: (number of episodes)
     """
     # Batch data. For more details, check function header.
-    batch_obs       = []
-    batch_acts      = []
-    batch_log_probs = []
-    batch_rews      = []
-    batch_rtgs      = []
-    batch_lens      = []
+    batch_states      = []
+    batch_act_types   = []
+    batch_type_logs   = []
+    batch_act_idxs    = []
+    batch_idxs_logs   = []
+    batch_act_tokens  = []
+    batch_tokens_logs = []
+    batch_rews        = []
+    batch_rtgs        = []
+    batch_lens        = []
 
     # Episodic data. Keeps track of rewards per episode, will get cleared
     # upon each new episode
@@ -195,7 +199,7 @@ class Agent(object):
       ep_rews = [] # rewards collected per episode
 
       # Reset the environment. sNote that obs is short for observation. 
-      obs = env.reset()
+      state = env.reset()
       done = False
 
       # Run an episode for a maximum of max_timesteps_per_episode timesteps
@@ -203,12 +207,12 @@ class Agent(object):
         t += 1 # Increment timesteps ran this batch so far
 
         # Track observations in this batch
-        batch_obs.append(obs)
+        batch_states.append(state)
 
         # Calculate action and make a step in the env. 
         # Note that rew is short for reward.
-        action = self.make_action(obs)
-        obs, rew, done, _ = env.step(action)
+        action = self.make_action(state)
+        state, rew, done, _ = env.step(action)
 
         # Track recent reward, action, and action log probability
         ep_rews.append(rew)
@@ -224,7 +228,7 @@ class Agent(object):
       batch_rews.append(ep_rews)
 
     # Reshape data as tensors in the shape specified in function description, before returning
-    batch_obs = torch.tensor(batch_obs, dtype=torch.float)
+    batch_states = torch.tensor(batch_states, dtype=torch.float)
     batch_acts = torch.tensor(batch_acts, dtype=torch.float)
     batch_log_probs = torch.tensor(batch_log_probs, dtype=torch.float)
     batch_rtgs = self.compute_rtgs(batch_rews)                                                              # ALG STEP 4
@@ -233,7 +237,7 @@ class Agent(object):
     self.logger['batch_rews'] = batch_rews
     self.logger['batch_lens'] = batch_lens
 
-    return batch_obs, batch_acts, batch_log_probs, batch_rtgs, batch_lens
+    return batch_states, batch_acts, batch_log_probs, batch_rtgs, batch_lens
 
   def evaluate_policy(self, states, actions) -> typing.Tuple[torch.Tensor, torch.Tensor]:
     """
