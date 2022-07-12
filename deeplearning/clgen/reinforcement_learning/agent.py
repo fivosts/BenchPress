@@ -7,6 +7,7 @@ import numpy as np
 
 from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.reinforcement_learning import model
+from deeplearning.clgen.reinforcement_learning import env
 from deeplearning.clgen.reinforcement_learning.config import QValuesConfig
 from deeplearning.clgen.models import language_models
 from deeplearning.clgen.proto import reinforcement_learning_pb2
@@ -78,7 +79,7 @@ class Agent(object):
       self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path
     )
     self.critic_model = model.QValuesModel(
-      self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path
+      self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path, is_critic = True
     )
     self.policy  = Policy(
       action_temp = self.config.agent.action_qv.action_type_temperature_micros / 10e6,
@@ -87,6 +88,22 @@ class Agent(object):
     )
     self.loadCheckpoint()
     return
+
+  def Train(self, env: env.Environment, num_epochs: int) -> None:
+    """
+    Run PPO over policy and train the agent.
+    """
+    for ep in range(num_epochs):
+      batch_states, batch_actions, batch_logits, batch_rtgs, batch_lens = self.rollout()
+    return
+
+  def rollout(self) -> typing.Tuple:
+    """
+    Play a number of episodes and collect batched data.
+    """
+    batch_states, batch_actions, batch_logits, batch_rtgs, batch_lens = [], [], [], [], []
+    raise NotImplementedError
+    return batch_states, batch_actions, batch_logits, batch_rtgs, batch_lens
 
   def make_action(self, state: interactions.State) -> interactions.Action:
     """
