@@ -89,6 +89,8 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
     lambda x: x in set(bert_model.ACT2FN.keys()),
     "Invalid choice for hidden_act"
   )
+  pbutil.AssertFieldIsSet(config.agent.action_qv, "action_type_temperature_micros")
+  pbutil.AssertFieldIsSet(config.agent.action_qv, "action_index_temperature_micros")
   pbutil.AssertFieldIsSet(config.agent.action_lm, "hidden_size")
   pbutil.AssertFieldConstraint(
     config.agent.action_lm,
@@ -129,6 +131,7 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
     lambda x: x in set(bert_model.ACT2FN.keys()),
     "Invalid choice for hidden_act"
   )
+  pbutil.AssertFieldIsSet(config.agent.action_qv, "token_temperature")
   return config
 
 class RLModel(object):
@@ -306,18 +309,32 @@ class RLModel(object):
     self.Create(**kwargs)
     ## First, train the Language model backend.
 
-    num_episodes = 10
+    num_epochs = 10
+
+    self.agent.Train(
+      env        = self.env,
+      num_epochs = 10,
+    )
+
+
     ## Start the RL training pipeline.
-    for ep in range(num_episodes):
-      self.env.reset()
-      is_term = False
-      while not is_term:
-        state  = self.env.get_state()           # Get current state.
-        action = self.agent.make_action(state)  # Predict the action given the state.
-        _st, reward, done, info = self.env.step(action)          # Step the action into the environment and face the consequences.
-        self.memory.add(state, action, reward, done, info)  # Add to replay buffer the episode.
-      self.agent.update(self.memory.sample()) # Train the agent on a pool of memories.
-      self.saveCheckpoint()
+    # for ep in range(num_epochs):
+
+
+      # self.env.reset()
+      # is_term = False
+      # while not is_term:
+      #   state  = self.env.get_state()           # Get current state.
+      #   print(state.comment)
+      #   action = self.agent.make_action(state)  # Predict the action given the state.
+      #   print(action.comment)
+      #   _st, reward, done, info = self.env.step(action)          # Step the action into the environment and face the consequences.
+      #   print(_st.comment)
+      #   print(reward.comment)
+      #   self.memory.add(state, action, reward, done, info)  # Add to replay buffer the episode.
+      #   input()
+      # self.agent.update(self.memory.sample()) # Train the agent on a pool of memories.
+      # self.saveCheckpoint()
     return
 
   def Sample(self, sampler: samplers.Sampler) -> None:
