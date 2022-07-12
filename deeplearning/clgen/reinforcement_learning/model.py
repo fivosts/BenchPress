@@ -328,10 +328,8 @@ class QValuesModel(object):
   """
   class QValuesEstimator(typing.NamedTuple):
     """Torch model wrapper for Deep Q-Values."""
-    action_qv     : torch.nn.Module
-    action_critic : torch.nn.Module
-    token_qv      : torch.nn.Module
-    token_critic  : torch.nn.Module
+    action : torch.nn.Module
+    token  : torch.nn.Module
 
   def __init__(self,
                language_model          : language_models.Model,
@@ -356,20 +354,10 @@ class QValuesModel(object):
   def _ConfigModelParams(self) -> QValuesEstimator:
     """Initialize model parameters."""
     actm    = ActionQV(self.language_model, self.config).to(pytorch.offset_device)
-    actm_cr = ActionQV(self.language_model, self.config, is_critic = True).to(pytorch.offset_device)
-
     tokm    = ActionLanguageModelQV(self.language_model, self.config).to(pytorch.offset_device)
-    tokm_cr = ActionLanguageModelQV(self.language_model, self.config, is_critic = True).to(pytorch.offset_device)
-
     if pytorch.num_nodes > 1:
       actm = torch.nn.parallel.DistributedDataParallel(
         actm,
-        device_ids = [pytorch.offset_device],
-        output_device = pytorch.offset_device,
-        find_unused_parameters = True,
-      )
-      actm_cr = torch.nn.parallel.DistributedDataParallel(
-        actm_cr,
         device_ids = [pytorch.offset_device],
         output_device = pytorch.offset_device,
         find_unused_parameters = True,
@@ -380,23 +368,13 @@ class QValuesModel(object):
         output_device = pytorch.offset_device,
         find_unused_parameters = True,
       )
-      tokm_cr = torch.nn.parallel.DistributedDataParallel(
-        tokm_cr,
-        device_ids = [pytorch.offset_device],
-        output_device = pytorch.offset_device,
-        find_unused_parameters = True,
-      )
     elif pytorch.num_gpus > 1:
       actm    = torch.nn.DataParallel(actm)
-      actm_cr = torch.nn.DataParallel(actm_cr)
       tokm    = torch.nn.DataParallel(tokm)
-      tokm_cr = torch.nn.DataParallel(tokm_cr)
 
     return QValuesModel.QValuesEstimator(
-      action_qv     = actm,
-      action_critic = actm_cr,
-      token_qv      = tokm,
-      token_critic  = tokm_cr,
+      action = actm,
+      token  = tokm,
     )
 
   def _ConfigTrainParams(self) -> None:
@@ -426,20 +404,7 @@ class QValuesModel(object):
     )
     with torch.no_grad():
       inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
-      outputs = self.sample_qvalues.action_qv(
-        **inputs
-      )
-    return outputs
-  
-  def SampleActionCritic(self, state: interactions.State) -> typing.Dict[str, torch.Tensor]:
-    """Predict the next action given an input state."""
-    self._ConfigSampleParams()
-    inputs = data_generator.StateToActionTensor(
-      state, self.tokenizer.padToken, self.feature_tokenizer.padToken
-    )
-    with torch.no_grad():
-      inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
-      outputs = self.sample_qvalues.action_qv(
+      outputs = self.sample_qvalues.action(
         **inputs
       )
     return outputs
@@ -457,25 +422,7 @@ class QValuesModel(object):
     )
     with torch.no_grad():
       inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
-      outputs = self.sample_qvalues.token_qv(
-        **inputs
-      )
-    return outputs
-
-  def SampleTokenCritic(self,
-                        state          : interactions.State,
-                        mask_idx       : int,
-                        tokenizer      : tokenizers.TokenizerBase,
-                        feat_tokenizer : tokenizers.FeatureTokenizer,
-                        ) -> typing.Dict[str, torch.Tensor]:
-    """Predict token type"""
-    self._ConfigSampleParams()
-    inputs = data_generator.StateToTokenTensor(
-      state, mask_idx, tokenizer.holeToken, tokenizer.padToken, feat_tokenizer.padToken
-    )
-    with torch.no_grad():
-      inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
-      outputs = self.sample_qvalues.token_qv(
+      outputs = self.sample_qvalues.token(
         **inputs
       )
     return outputs
