@@ -310,10 +310,12 @@ class RLModel(object):
     ## First, train the Language model backend.
 
     num_epochs = 10
+    num_updates_per_batch = 100
 
     self.agent.Train(
       env        = self.env,
       num_epochs = num_epochs,
+      num_updates_per_batch = num_updates_per_batch,
     )
 
     ## Start the RL training pipeline.
