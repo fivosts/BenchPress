@@ -53,8 +53,7 @@ class Policy(object):
         logits = token_logits,
         validate_args = False if "1.9." in torch.__version__ else None,
       ).sample()
-
-    return token
+    return torch.argmax(ct, dim = -1)
 
 class Agent(object):
   """
@@ -208,7 +207,7 @@ class Agent(object):
 
         # Calculate action and make a step in the env. 
         # Note that rew is short for reward.
-        action, log_prob = self.make_action(obs)
+        action = self.make_action(obs)
         obs, rew, done, _ = env.step(action)
 
         # Track recent reward, action, and action log probability
@@ -285,10 +284,10 @@ class Agent(object):
       logits = self.q_model.SampleToken(
         state, action_index, self.tokenizer, self.feature_tokenizer
       )
-      token_logits = logits['prediction_logits']
-      token        = self.policy.SelectToken(token_logits, self.qv_config.token_temperature)
+      token_logits = logits['prediction_logits'][:,action_index]
+      token        = self.policy.SelectToken(token_logits, self.qv_config.token_temperature).cpu().numpy()
       token_logits = token_logits.cpu().numpy()
-      comment      += ", index: {}, token: '{}'".format(action_index, self.tokenizer.decoder[token])
+      comment      += ", index: {}, token: '{}'".format(action_index, self.tokenizer.decoder[int(token)])
     elif action_type == interactions.ACTION_TYPE_SPACE['REM']:
       token_logits, token = None, None
       comment += ", index: {}".format(action_index)
