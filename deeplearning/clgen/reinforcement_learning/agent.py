@@ -89,12 +89,61 @@ class Agent(object):
     self.loadCheckpoint()
     return
 
-  def Train(self, env: env.Environment, num_epochs: int) -> None:
+  def Train(self,
+            env                   : env.Environment,
+            num_epochs            : int,
+            num_updates_per_batch : int,
+            ) -> None:
     """
     Run PPO over policy and train the agent.
     """
     for ep in range(num_epochs):
+      # Run a batch of episodes.
       batch_states, batch_actions, batch_logits, batch_rtgs, batch_lens = self.rollout()
+
+      # Compute Advantage at k_th iteration.
+      Val, _ = self.evaluate_policy(batch_states, batch_actions)
+      A_k = batch_rtgs - Val.detach()
+
+			# Normalizing advantages isn't theoretically necessary, but in practice it decreases the variance of 
+			# our advantages and makes convergence much more stable and faster. I added this because
+			# solving some environments was too unstable without it.
+      A_k = (A_k - A_k.mean()) / (A_k.std() + 1e-10)
+
+      for i in range(num_updates_per_batch):
+				# Calculate V_phi and pi_theta(a_t | s_t)
+        Val, log_probs = self.evaluate(batch_states, batch_actions)
+
+        # Calculate the ratio pi_theta(a_t | s_t) / pi_theta_k(a_t | s_t)
+        # NOTE: we just subtract the logs, which is the same as
+        # dividing the values and then canceling the log with e^log.
+        # For why we use log probabilities instead of actual probabilities,
+        # here's a great explanation: 
+        # https://cs.stackexchange.com/questions/70518/why-do-we-use-the-log-in-gradient-based-reinforcement-algorithms
+        # TL;DR makes gradient ascent easier behind the scenes.
+        ratios = torch.exp(log_probs - batch_logits)
+
+        # Calculate surrogate losses.
+        surr1 = ratios * A_k
+        surr2 = torch.clamp(ratios, 1 - self.clip, 1 + self.clip) * A_k
+
+        # Calculate actor and critic losses.
+        # NOTE: we take the negative min of the surrogate losses because we're trying to maximize
+        # the performance function, but Adam minimizes the loss. So minimizing the negative
+        # performance function maximizes it.
+        actor_loss = (-torch.min(surr1, surr2)).mean()
+        critic_loss = torch.nn.MSELoss()(V, batch_rtgs)
+
+        raise NotImplementedError
+        # Calculate gradients and perform backward propagation for actor network
+        self.actor_optim.zero_grad()
+        actor_loss.backward(retain_graph=True)
+        self.actor_optim.step()
+
+        # Calculate gradients and perform backward propagation for critic network
+        self.critic_optim.zero_grad()
+        critic_loss.backward()
+        self.critic_optim.step()
     return
 
   def rollout(self) -> typing.Tuple:
@@ -104,6 +153,35 @@ class Agent(object):
     batch_states, batch_actions, batch_logits, batch_rtgs, batch_lens = [], [], [], [], []
     raise NotImplementedError
     return batch_states, batch_actions, batch_logits, batch_rtgs, batch_lens
+
+  def evaluate_policy(self, states, actions) -> typing.Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Estimate the values of each observation, and the log probs of
+    each action in the most recent batch with the most recent
+    iteration of the actor network. Should be called from learn.
+
+    Parameters:
+      batch_obs - the observations from the most recently collected batch as a tensor.
+            Shape: (number of timesteps in batch, dimension of observation)
+      batch_acts - the actions from the most recently collected batch as a tensor.
+            Shape: (number of timesteps in batch, dimension of action)
+
+    Return:
+      V - the predicted values of batch_obs
+      log_probs - the log probabilities of the actions taken in batch_acts given batch_obs
+    """
+    # Query critic network for a value V for each batch_obs. Shape of V should be same as batch_rtgs
+    V = self.critic(states).squeeze()
+
+    # Calculate the log probabilities of batch actions using most recent actor network.
+    # This segment of code is similar to that in get_action()
+    mean = self.actor(states)
+    dist = torch.distributions.MultivariateNormal(mean, self.cov_mat)
+    log_probs = dist.log_prob(actions)
+
+    # Return the value vector V of each observation in the batch
+    # and log probabilities log_probs of each action in the batch
+    return V, log_probs
 
   def make_action(self, state: interactions.State) -> interactions.Action:
     """
