@@ -77,6 +77,9 @@ class Agent(object):
     self.q_model = model.QValuesModel(
       self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path
     )
+    self.critic_model = model.QValuesModel(
+      self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path
+    )
     self.policy  = Policy(
       action_temp = self.config.agent.action_qv.action_type_temperature_micros / 10e6,
       idx_temp    = self.config.agent.action_qv.action_index_temperature_micros / 10e6,
