@@ -28,7 +28,12 @@ class Policy(object):
     self.token_temperature  = token_temp
     return
 
-  def SelectAction(self, type_logits: torch.FloatTensor, index_logits: torch.Tensor) -> typing.Tuple[int, int]:
+  def SelectAction(self,
+                   type_logits        : torch.FloatTensor,
+                   index_logits       : torch.Tensor,
+                   action_temperature : float,
+                   index_temperature  : float,
+                   ) -> typing.Tuple[int, int]:
     """
     Get the Q-Values for action and apply policy on it.
     """
@@ -36,13 +41,16 @@ class Policy(object):
     raise NotImplementedError
     return action_type
 
-  def SelectToken(self, token_logits: torch.FloatTensor) -> int:
+  def SelectToken(self,
+                  token_logits : torch.FloatTensor,
+                  temperature  : float,
+                  ) -> int:
     """
     Get logit predictions for token and apply policy on it.
     """
     ct = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
-        temperature = self.temperature if self.temperature is not None else 1.0,
-        logits = t,
+        temperature = temperature if temperature is not None else 1.0,
+        logits = token_logits,
         validate_args = False if "1.9." in torch.__version__ else None,
       ).sample()
 
@@ -93,13 +101,17 @@ class Agent(object):
             env                   : env.Environment,
             num_epochs            : int,
             num_updates_per_batch : int,
+            timesteps_per_batch   : int,
+            max_timesteps_per_episode : int,
             ) -> None:
     """
     Run PPO over policy and train the agent.
     """
     for ep in range(num_epochs):
       # Run a batch of episodes.
-      batch_states, batch_actions, batch_logits, batch_rtgs, batch_lens = self.rollout()
+      batch_states, batch_actions, batch_logits, batch_rtgs, batch_lens = self.rollout(
+        env, timesteps_per_batch, max_timesteps_per_episode
+      )
 
       # Compute Advantage at k_th iteration.
       Val, _ = self.evaluate_policy(batch_states, batch_actions)
@@ -146,7 +158,11 @@ class Agent(object):
         self.critic_optim.step()
     return
 
-  def rollout(self, env: env.Environment) -> typing.Tuple:
+  def rollout(self,
+              env: env.Environment,
+              timesteps_per_batch : int,
+              max_timesteps_per_episode : int,
+              ) -> typing.Tuple:
     """
     Too many transformers references, I'm sorry. This is where we collect the batch of data
     from simulation. Since this is an on-policy algorithm, we'll need to collect a fresh batch
@@ -177,15 +193,15 @@ class Agent(object):
     t = 0 # Keeps track of how many timesteps we've run so far this batch
 
     # Keep simulating until we've run more than or equal to specified timesteps per batch
-    while t < self.timesteps_per_batch:
+    while t < timesteps_per_batch:
       ep_rews = [] # rewards collected per episode
 
       # Reset the environment. sNote that obs is short for observation. 
-      obs = self.env.reset()
+      obs = env.reset()
       done = False
 
       # Run an episode for a maximum of max_timesteps_per_episode timesteps
-      for ep_t in range(self.max_timesteps_per_episode):
+      for ep_t in range(max_timesteps_per_episode):
         t += 1 # Increment timesteps ran this batch so far
 
         # Track observations in this batch
@@ -258,7 +274,11 @@ class Agent(object):
     logits = self.q_model.SampleAction(state)
     action_logits = logits['action_logits'].cpu().numpy()
     index_logits  = logits['index_logits'].cpu().numpy()
-    action_type, action_index  = self.policy.SelectAction(action_logits, index_logits)
+    action_type, action_index  = self.policy.SelectAction(
+      action_logits, index_logits,
+      self.qv_config.action_type_temperature,
+      self.qv_config.action_index_temperature,
+    )
 
     comment = "Action: {}".format(interactions.ACTION_TYPE_MAP[action_type])
 
@@ -267,7 +287,7 @@ class Agent(object):
         state, action_index, self.tokenizer, self.feature_tokenizer
       )
       token_logits = logits['prediction_logits'].cpu().numpy()
-      token        = self.policy.SelectToken(token_logits)
+      token        = self.policy.SelectToken(token_logits, self.qv_config.token_temperature)
       comment      += ", index: {}, token: '{}'".format(action_index, self.tokenizer.decoder[token])
     elif action_type == interactions.ACTION_TYPE_SPACE['REM']:
       token_logits, token = None, None
