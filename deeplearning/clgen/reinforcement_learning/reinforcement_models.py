@@ -309,13 +309,17 @@ class RLModel(object):
     self.Create(**kwargs)
     ## First, train the Language model backend.
 
-    num_epochs = 10
-    num_updates_per_batch = 100
+    num_epochs              = 10
+    num_updates_per_batch   = 100
+    timesteps_per_batch     = 4800
+    max_timesteps_per_episode = 1600
 
     self.agent.Train(
       env        = self.env,
       num_epochs = num_epochs,
       num_updates_per_batch = num_updates_per_batch,
+      timesteps_per_batch = timesteps_per_batch,
+      max_timesteps_per_episode = max_timesteps_per_episode,
     )
 
     ## Start the RL training pipeline.
