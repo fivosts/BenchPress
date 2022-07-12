@@ -54,7 +54,6 @@ class Policy(object):
         validate_args = False if "1.9." in torch.__version__ else None,
       ).sample()
 
-    raise NotImplementedError
     return token
 
 class Agent(object):
@@ -286,8 +285,9 @@ class Agent(object):
       logits = self.q_model.SampleToken(
         state, action_index, self.tokenizer, self.feature_tokenizer
       )
-      token_logits = logits['prediction_logits'].cpu().numpy()
+      token_logits = logits['prediction_logits']
       token        = self.policy.SelectToken(token_logits, self.qv_config.token_temperature)
+      token_logits = token_logits.cpu().numpy()
       comment      += ", index: {}, token: '{}'".format(action_index, self.tokenizer.decoder[token])
     elif action_type == interactions.ACTION_TYPE_SPACE['REM']:
       token_logits, token = None, None
