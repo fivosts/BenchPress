@@ -179,7 +179,7 @@ class Agent(object):
     # Batch data. For more details, check function header.
     batch_states      = []
     batch_act_types   = []
-    batch_type_logs   = []
+    batch_types_logs  = []
     batch_act_idxs    = []
     batch_idxs_logs   = []
     batch_act_tokens  = []
@@ -216,8 +216,13 @@ class Agent(object):
 
         # Track recent reward, action, and action log probability
         ep_rews.append(rew)
-        batch_acts.append(action)
-        batch_log_probs.append(log_prob)
+        raise NotImplementedError
+        batch_act_types.append(action.action_type)
+        batch_types_logs.append(action.action_type_logits)
+        batch_act_idxs.append(action.action_index)
+        batch_idxs_logs.append(action.action_index_logits)
+        batch_act_tokens.append(action.token_type)
+        batch_tokens_logs.append(action.token_type_logits)
 
         # If the environment tells us the episode is terminated, break
         if done:
@@ -228,16 +233,25 @@ class Agent(object):
       batch_rews.append(ep_rews)
 
     # Reshape data as tensors in the shape specified in function description, before returning
-    batch_states = torch.tensor(batch_states, dtype=torch.float)
-    batch_acts = torch.tensor(batch_acts, dtype=torch.float)
-    batch_log_probs = torch.tensor(batch_log_probs, dtype=torch.float)
-    batch_rtgs = self.compute_rtgs(batch_rews)                                                              # ALG STEP 4
+    batch_states      = torch.tensor(batch_states, dtype=torch.float)
+    batch_act_types   = torch.tensor(batch_act_types, dtype=torch.float)
+    batch_types_logs  = torch.tensor(batch_types_logs, dtype=torch.float)
+    batch_act_idxs    = torch.tensor(batch_act_idxs, dtype=torch.float)
+    batch_idxs_logs   = torch.tensor(batch_idxs_logs, dtype=torch.float)
+    batch_act_tokens  = torch.tensor(batch_act_tokens, dtype=torch.float)
+    batch_tokens_logs = torch.tensor(batch_tokens_logs, dtype=torch.float)
+    batch_rtgs        = self.compute_rtgs(batch_rews) # ALG STEP 4
 
     # Log the episodic returns and episodic lengths in this batch.
     self.logger['batch_rews'] = batch_rews
     self.logger['batch_lens'] = batch_lens
 
-    return batch_states, batch_acts, batch_log_probs, batch_rtgs, batch_lens
+    return (batch_states, batch_act_types,
+            batch_types_logs, batch_act_idxs,
+            batch_idxs_logs, batch_act_tokens,
+            batch_tokens_logs, batch_rtgs,
+            batch_lens
+            )
 
   def evaluate_policy(self, states, actions) -> typing.Tuple[torch.Tensor, torch.Tensor]:
     """
