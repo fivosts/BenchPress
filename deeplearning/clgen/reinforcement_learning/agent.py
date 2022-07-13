@@ -1,6 +1,7 @@
 """
 Agents module for reinforcement learning.
 """
+from code import interact
 import pathlib
 import typing
 import numpy as np
@@ -110,7 +111,7 @@ class Agent(object):
     """
     for ep in range(num_epochs):
       # Run a batch of episodes.
-      batch_states, batch_actions, batch_logits, batch_rtgs, batch_lens = self.rollout(
+      batch_states, batch_actions, batch_rtgs, batch_lens = self.rollout(
         env, timesteps_per_batch, max_timesteps_per_episode, gamma,
       )
 
@@ -188,16 +189,11 @@ class Agent(object):
       batch_lens - the lengths of each episode this batch. Shape: (number of episodes)
     """
     # Batch data. For more details, check function header.
-    batch_states      = []
-    batch_act_types   = []
-    batch_types_logs  = []
-    batch_act_idxs    = []
-    batch_idxs_logs   = []
-    batch_act_tokens  = []
-    batch_tokens_logs = []
-    batch_rews        = []
-    batch_rtgs        = []
-    batch_lens        = []
+    batch_states  = []
+    batch_actions = []
+    batch_rews    = []
+    batch_rtgs    = []
+    batch_lens    = []
 
     # Episodic data. Keeps track of rewards per episode, will get cleared
     # upon each new episode
@@ -216,7 +212,6 @@ class Agent(object):
       # Run an episode for a maximum of max_timesteps_per_episode timesteps
       for ep_t in range(max_timesteps_per_episode):
         t += 1 # Increment timesteps ran this batch so far
-
         # Track observations in this batch
         batch_states.append(state)
 
@@ -227,12 +222,7 @@ class Agent(object):
 
         # Track recent reward, action, and action log probability
         ep_rews.append(rew)
-        batch_act_types.append(action.action_type)
-        batch_types_logs.append(action.action_type_logits)
-        batch_act_idxs.append(action.action_index)
-        batch_idxs_logs.append(action.action_index_logits)
-        batch_act_tokens.append(action.token_type)
-        batch_tokens_logs.append(action.token_type_logits)
+        batch_actions.append(action)
 
         # If the environment tells us the episode is terminated, break
         if done:
@@ -242,25 +232,12 @@ class Agent(object):
       batch_lens.append(ep_t + 1)
       batch_rews.append(ep_rews)
 
-    # Reshape data as tensors in the shape specified in function description, before returning
-    batch_states      = torch.tensor(batch_states, dtype=torch.float)
-    batch_act_types   = torch.tensor(batch_act_types, dtype=torch.float)
-    batch_types_logs  = torch.tensor(batch_types_logs, dtype=torch.float)
-    batch_act_idxs    = torch.tensor(batch_act_idxs, dtype=torch.float)
-    batch_idxs_logs   = torch.tensor(batch_idxs_logs, dtype=torch.float)
-    batch_act_tokens  = torch.tensor(batch_act_tokens, dtype=torch.float)
-    batch_tokens_logs = torch.tensor(batch_tokens_logs, dtype=torch.float)
-    batch_rtgs        = self.compute_rtgs(batch_rews, gamma) # ALG STEP 4
+    return batch_states, batch_actions, batch_rtgs, batch_lens
 
-    return (
-      batch_states, batch_act_types,
-      batch_types_logs, batch_act_idxs,
-      batch_idxs_logs, batch_act_tokens,
-      batch_tokens_logs, batch_rtgs,
-      batch_lens
-    )
-
-  def evaluate_policy(self, states, actions) -> typing.Tuple[torch.Tensor, torch.Tensor]:
+  def evaluate_policy(self,
+                      states  : typing.List[interactions.State], 
+                      actions : typing.List[interactions.Action]
+                      ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
     """
     Estimate the values of each observation, and the log probs of
     each action in the most recent batch with the most recent
