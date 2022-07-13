@@ -114,9 +114,9 @@ class Environment(gym.Env):
         target_features  = self.current_state.target_features,
         feature_space    = self.current_state.feature_space,
         encoded_features = self.current_state.encoded_features,
-        code             = self.tokenizer.ArrayToCode(new_enc_code),
+        code             = self.tokenizer.ArrayToCode([int(x) for x in new_enc_code]),
         encoded_code     = new_enc_code,
-        comment          = "State: \nCode:\n{}\nFeatures:\n{}".format(self.tokenizer.ArrayToCode(new_enc_code), self.current_state.target_features),
+        comment          = "State: \nCode:\n{}\nFeatures:\n{}".format(self.tokenizer.ArrayToCode([int(x) for x in new_enc_code]), self.current_state.target_features),
       )
       reward = interactions.Reward(
         action   = action,
@@ -126,21 +126,21 @@ class Environment(gym.Env):
       )
       self.current_state = new_state
     elif action.action_type == interactions.ACTION_TYPE_SPACE['ADD']:
-      new_enc_code = list(self.current_state.encoded_code[:action.action_index]) + [action.token_type] + list(self.current_state.encoded_code[action.action_index:])
-      new_enc_code = np.array(new_enc_code[:len(self.current_state.encoded_code)])
+      new_enc_code = list(self.current_state.encoded_code[:action.action_index]) + [int(action.token_type)] + list(self.current_state.encoded_code[action.action_index:])
+      new_enc_code = new_enc_code[:len(self.current_state.encoded_code)]
       new_state = interactions.State(
         target_features  = self.current_state.target_features,
         feature_space    = self.current_state.feature_space,
         encoded_features = self.current_state.encoded_features,
-        code             = self.tokenizer.ArrayToCode(new_enc_code),
+        code             = self.tokenizer.ArrayToCode([int(x) for x in new_enc_code]),
         encoded_code     = new_enc_code,
-        comment          = "State: \nCode:\n{}\nFeatures:\n{}".format(self.tokenizer.ArrayToCode(new_enc_code), self.current_state.target_features),
+        comment          = "State: \nCode:\n{}\nFeatures:\n{}".format(self.tokenizer.ArrayToCode([int(x) for x in new_enc_code]), self.current_state.target_features),
       )
       reward = interactions.Reward(
         action   = action,
         value    = 0.0,
         distance = None,
-        comment  = "Added {} to idx {}".format(self.tokenizer.ArrayToCode([action.token_type]), action.action_index)
+        comment  = "Added {} to idx {}".format(self.tokenizer.ArrayToCode([int(action.token_type)]), action.action_index)
       )
       self.current_state = new_state
     else:
