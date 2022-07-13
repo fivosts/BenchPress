@@ -44,6 +44,7 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
   pbutil.AssertFieldIsSet(config.agent, "action_lm")
   ## Parse FeatureTokenizer fields.
   pbutil.AssertFieldIsSet(config.agent, "feature_tokenizer")
+  pbutil.AssertFieldIsSet(config.agent, "batch_size")
   pbutil.AssertFieldIsSet(config.agent.feature_tokenizer, "feature_max_value_token")
   pbutil.AssertFieldIsSet(config.agent.feature_tokenizer, "feature_singular_token_thr")
   pbutil.AssertFieldIsSet(config.agent.feature_tokenizer, "feature_token_range")
