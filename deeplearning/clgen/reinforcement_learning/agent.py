@@ -96,11 +96,14 @@ class Agent(object):
     return
 
   def Train(self,
-            env                   : env.Environment,
-            num_epochs            : int,
-            num_updates_per_batch : int,
-            timesteps_per_batch   : int,
+            env                       : env.Environment,
+            num_epochs                : int,
+            num_updates_per_batch     : int,
+            timesteps_per_batch       : int,
             max_timesteps_per_episode : int,
+            gamma                     : float,
+            clip                      : float,
+            lr                        : float,
             ) -> None:
     """
     Run PPO over policy and train the agent.
@@ -108,7 +111,7 @@ class Agent(object):
     for ep in range(num_epochs):
       # Run a batch of episodes.
       batch_states, batch_actions, batch_logits, batch_rtgs, batch_lens = self.rollout(
-        env, timesteps_per_batch, max_timesteps_per_episode
+        env, timesteps_per_batch, max_timesteps_per_episode, gamma,
       )
 
       # Compute Advantage at k_th iteration.
@@ -157,9 +160,10 @@ class Agent(object):
     return
 
   def rollout(self,
-              env: env.Environment,
-              timesteps_per_batch : int,
+              env                       : env.Environment,
+              timesteps_per_batch       : int,
               max_timesteps_per_episode : int,
+              gamma                     : float,
               ) -> typing.Tuple:
     """
     Too many transformers references, I'm sorry. This is where we collect the batch of data
@@ -216,7 +220,6 @@ class Agent(object):
 
         # Track recent reward, action, and action log probability
         ep_rews.append(rew)
-        raise NotImplementedError
         batch_act_types.append(action.action_type)
         batch_types_logs.append(action.action_type_logits)
         batch_act_idxs.append(action.action_index)
@@ -240,7 +243,7 @@ class Agent(object):
     batch_idxs_logs   = torch.tensor(batch_idxs_logs, dtype=torch.float)
     batch_act_tokens  = torch.tensor(batch_act_tokens, dtype=torch.float)
     batch_tokens_logs = torch.tensor(batch_tokens_logs, dtype=torch.float)
-    batch_rtgs        = self.compute_rtgs(batch_rews) # ALG STEP 4
+    batch_rtgs        = self.compute_rtgs(batch_rews, gamma) # ALG STEP 4
 
     # Log the episodic returns and episodic lengths in this batch.
     self.logger['batch_rews'] = batch_rews
@@ -324,7 +327,7 @@ class Agent(object):
       comment             = comment,
     )
 
-  def compute_rtgs(self, batch_rews):
+  def compute_rtgs(self, batch_rews, gamma):
     """
     Compute the Reward-To-Go of each timestep in a batch given the rewards.
 
@@ -346,7 +349,7 @@ class Agent(object):
       # Iterate through all rewards in the episode. We go backwards for smoother calculation of each
       # discounted return (think about why it would be harder starting from the beginning)
       for rew in reversed(ep_rews):
-        discounted_reward = rew + discounted_reward * self.gamma
+        discounted_reward = rew + discounted_reward * gamma
         batch_rtgs.insert(0, discounted_reward)
 
     # Convert the rewards-to-go into a tensor
