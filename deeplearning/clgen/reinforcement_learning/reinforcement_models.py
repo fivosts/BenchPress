@@ -313,6 +313,9 @@ class RLModel(object):
     num_updates_per_batch   = 100
     timesteps_per_batch     = 4800
     max_timesteps_per_episode = 1600
+    gamma = 0.95
+    clip  = 0.2
+    lr    = 0.005
 
     self.agent.Train(
       env        = self.env,
@@ -320,6 +323,9 @@ class RLModel(object):
       num_updates_per_batch = num_updates_per_batch,
       timesteps_per_batch = timesteps_per_batch,
       max_timesteps_per_episode = max_timesteps_per_episode,
+      gamma = gamma,
+      clip  = clip,
+      lr    = lr,
     )
 
     ## Start the RL training pipeline.
