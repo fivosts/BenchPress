@@ -45,6 +45,7 @@ class QValuesConfig(object):
       'token_initializer_range'             : config.agent.action_lm.initializer_range,
       'token_temperature'                   : config.agent.action_lm.token_temperature_micros / 10e6,
       'feature_encoder'                     : False,
+      'batch_size'                          : config.agent.batch_size
     }
     return QValuesConfig(**dict)
 
