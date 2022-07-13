@@ -23,6 +23,7 @@ message RLAgent {
   optional FeatureTokenizer feature_tokenizer = 1;
   optional ActionQV         action_qv         = 2;
   optional ActionLM         action_lm         = 3;
+  optional int32            batch_size        = 4;
 }
 
 message FeatureTokenizer {
