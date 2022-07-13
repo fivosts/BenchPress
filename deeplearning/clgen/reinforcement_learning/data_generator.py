@@ -28,7 +28,8 @@ def from_config(config            : reinforcement_learning_pb2.RLModel,
 
 def StateToActionTensor(state         : interactions.State,
                         padToken      : int,
-                        feat_padToken : int
+                        feat_padToken : int,
+                        batch_size    : int,
                         ) -> typing.Dict[str, torch.Tensor]:
   """
   Pre-process state to tensor inputs for Action Deep QValues.
@@ -36,13 +37,13 @@ def StateToActionTensor(state         : interactions.State,
   seq_len      = len(state.encoded_code)
   feat_seq_len = len(state.encoded_features)
 
-  src_ids  = torch.LongTensor(state.encoded_code).unsqueeze(0)
+  src_ids  = torch.LongTensor(state.encoded_code).unsqueeze(0).repeat(batch_size, 1)
   src_mask = src_ids != padToken
-  src_pos  = torch.arange(seq_len, dtype = torch.int64).unsqueeze(0)
+  src_pos  = torch.arange(seq_len, dtype = torch.int64).unsqueeze(0).repeat(batch_size, 1)
 
-  feat_ids  = torch.LongTensor(state.encoded_features).unsqueeze(0)
+  feat_ids  = torch.LongTensor(state.encoded_features).unsqueeze(0).repeat(batch_size, 1)
   feat_mask = feat_ids != feat_padToken
-  feat_pos  = torch.arange(feat_seq_len, dtype = torch.int64).unsqueeze(0)
+  feat_pos  = torch.arange(feat_seq_len, dtype = torch.int64).unsqueeze(0).repeat(batch_size, 1)
   return {
     'encoder_feature_ids'  : feat_ids,
     'encoder_feature_mask' : feat_mask,
@@ -57,6 +58,7 @@ def StateToTokenTensor(state         : interactions.State,
                        maskToken     : int,
                        padToken      : int,
                        feat_padToken : int,
+                       batch_size     : int,
                        ) -> typing.Dict[str, torch.Tensor]:
   """
   Pre-process state to 
@@ -65,16 +67,16 @@ def StateToTokenTensor(state         : interactions.State,
   feat_seq_len = len(state.encoded_features)
 
   masked_code  = np.concatenate((state.encoded_code[:mask_idx+1], [maskToken], state.encoded_code[mask_idx+1:]))
-  masked_code  = torch.LongTensor(masked_code[:seq_len]).unsqueeze(0)
-  enc_features = torch.LongTensor(state.encoded_features).unsqueeze(0)
+  masked_code  = torch.LongTensor(masked_code[:seq_len]).unsqueeze(0).repeat(batch_size, 1)
+  enc_features = torch.LongTensor(state.encoded_features).unsqueeze(0).repeat(batch_size, 1)
 
   return {
     'encoder_feature_ids'    : enc_features,
     'encoder_feature_mask'   : enc_features != feat_padToken,
-    'encoder_position_ids'   : torch.arange(feat_seq_len, dtype = torch.int64).unsqueeze(0),
+    'encoder_position_ids'   : torch.arange(feat_seq_len, dtype = torch.int64).unsqueeze(0).repeat(batch_size, 1),
     'decoder_input_ids'      : masked_code,
     'decoder_input_mask'     : masked_code != padToken,
-    'decoder_position_ids'   : torch.arange(seq_len, dtype = torch.int64).unsqueeze(0),
+    'decoder_position_ids'   : torch.arange(seq_len, dtype = torch.int64).unsqueeze(0).repeat(batch_size, 1),
   }
 
 class CorpusFeatureLoader(torch.utils.data.Dataset):
