@@ -348,6 +348,7 @@ class QValuesModel(object):
     self.feature_tokenizer       = feature_tokenizer
     self.feature_sequence_length = self.config.feature_sequence_length
     self.is_critic               = is_critic
+    self.batch_size              = self.config.batch_size
 
     self.train_qvalues  = None
     self.sample_qvalues = None
@@ -402,7 +403,7 @@ class QValuesModel(object):
     """Predict the next action given an input state."""
     self._ConfigSampleParams()
     inputs = data_generator.StateToActionTensor(
-      state, self.tokenizer.padToken, self.feature_tokenizer.padToken
+      state, self.tokenizer.padToken, self.feature_tokenizer.padToken, self.batch_size
     )
     with torch.no_grad():
       inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
@@ -420,7 +421,7 @@ class QValuesModel(object):
     """Predict token type"""
     self._ConfigSampleParams()
     inputs = data_generator.StateToTokenTensor(
-      state, mask_idx, tokenizer.holeToken, tokenizer.padToken, feat_tokenizer.padToken
+      state, mask_idx, tokenizer.holeToken, tokenizer.padToken, feat_tokenizer.padToken, self.batch_size
     )
     with torch.no_grad():
       inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
