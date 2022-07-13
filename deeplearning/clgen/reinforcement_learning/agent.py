@@ -125,7 +125,7 @@ class Agent(object):
 
       for i in range(num_updates_per_batch):
 				# Calculate V_phi and pi_theta(a_t | s_t)
-        Val, log_probs = self.evaluate(batch_states, batch_actions)
+        Val, log_probs = self.evaluate_policy(batch_states, batch_actions)
 
         # Calculate the ratio pi_theta(a_t | s_t) / pi_theta_k(a_t | s_t)
         # NOTE: we just subtract the logs, which is the same as
@@ -245,16 +245,13 @@ class Agent(object):
     batch_tokens_logs = torch.tensor(batch_tokens_logs, dtype=torch.float)
     batch_rtgs        = self.compute_rtgs(batch_rews, gamma) # ALG STEP 4
 
-    # Log the episodic returns and episodic lengths in this batch.
-    self.logger['batch_rews'] = batch_rews
-    self.logger['batch_lens'] = batch_lens
-
-    return (batch_states, batch_act_types,
-            batch_types_logs, batch_act_idxs,
-            batch_idxs_logs, batch_act_tokens,
-            batch_tokens_logs, batch_rtgs,
-            batch_lens
-            )
+    return (
+      batch_states, batch_act_types,
+      batch_types_logs, batch_act_idxs,
+      batch_idxs_logs, batch_act_tokens,
+      batch_tokens_logs, batch_rtgs,
+      batch_lens
+    )
 
   def evaluate_policy(self, states, actions) -> typing.Tuple[torch.Tensor, torch.Tensor]:
     """
