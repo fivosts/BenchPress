@@ -114,9 +114,16 @@ class Agent(object):
         env, timesteps_per_batch, max_timesteps_per_episode, gamma,
       )
 
+      print("Back from rollout. printing some samples:")
+      print(batch_states)
+
+      input()
       # Compute Advantage at k_th iteration.
       Val, _ = self.evaluate_policy(batch_states, batch_actions)
       A_k = batch_rtgs - Val.detach()
+
+      print("Back from eval policy.")
+      print(A_k)
 
 			# Normalizing advantages isn't theoretically necessary, but in practice it decreases the variance of 
 			# our advantages and makes convergence much more stable and faster. I added this because
