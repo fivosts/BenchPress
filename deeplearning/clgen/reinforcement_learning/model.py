@@ -462,7 +462,7 @@ class QValuesModel(object):
                   feat_tokenizer : tokenizers.FeatureTokenizer,
                   ) -> typing.Dict[str, torch.Tensor]:
     """Predict token type"""
-    self._ConfigSampleParams()
+    self._ConfigModelParams()
     inputs = data_generator.StateToTokenTensor(
       state, mask_idx, tokenizer.holeToken, tokenizer.padToken, feat_tokenizer.padToken, self.batch_size
     )
