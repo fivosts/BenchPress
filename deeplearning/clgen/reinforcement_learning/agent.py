@@ -85,7 +85,7 @@ class Agent(object):
     self.actor = model.QValuesModel(
       self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path, is_critic = False,
     )
-    self.critic_model = model.QValuesModel(
+    self.critic = model.QValuesModel(
       self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path, is_critic = True
     )
     self.policy  = Policy(
