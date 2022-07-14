@@ -332,10 +332,14 @@ class QValuesModel(object):
     Return all gradient parameters for model involved in action decision.
     """
     if self.model:
+      if isinstance(self.model, torch.nn.DataParallel):
+        module = self.model.action.module
+      else:
+        module = self.model.action
       return (
-        self.model.action.feature_encoder.parameters() +
-        self.model.action.source_decoder.parameters() +
-        self.model.action.action_head.parameters()
+        [x for x in module.feature_encoder.parameters()] +
+        [x for x in module.source_decoder.parameters()] +
+        [x for x in module.action_head.parameters()]
       )
     else:
       return None
@@ -346,10 +350,14 @@ class QValuesModel(object):
     Return all gradient parameters for model involved in action decision.
     """
     if self.model:
+      if isinstance(self.model, torch.nn.DataParallel):
+        module = self.model.action.module
+      else:
+        module = self.model.action
       return (
-        self.model.action.feature_encoder.parameters() +
-        self.model.action.source_decoder.parameters() +
-        self.model.action.index_head.parameters()
+        module.feature_encoder.parameters() +
+        module.source_decoder.parameters() +
+        module.index_head.parameters()
       )
     else:
       return None
@@ -360,9 +368,13 @@ class QValuesModel(object):
     Return all gradient parameters for model involved in action decision.
     """
     if self.model:
+      if isinstance(self.model, torch.nn.DataParallel):
+        module = self.model.token.module
+      else:
+        module = self.model.token
       return (
-        self.model.token.encoder.parameters() +
-        self.model.token.language_model.parameters()
+        module.encoder.parameters() +
+        module.language_model.parameters()
       )
     else:
       return None
