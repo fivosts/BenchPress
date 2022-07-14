@@ -320,7 +320,7 @@ class Agent(object):
 
     for state, action in zip(states, actions):
 
-      critic_logits = self.critic.SampleAction(state, actor_action_logits = action.action_type_logits)
+      critic_logits = self.critic.SampleAction(state, actor_action_logits = torch.FloatTensor(action.action_type_logits))
       V_actions.append(critic_logits['action_logits'])
       V_indexs.append(critic_logits['index_logits'])
       # Calculate the log probabilities of batch actions using most recent actor network.
