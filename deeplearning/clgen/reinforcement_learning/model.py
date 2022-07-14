@@ -179,6 +179,7 @@ class ActionQV(torch.nn.Module):
                is_critic      : bool = False
                ):
     super().__init__()
+    self.is_critic = is_critic
     ## Pre-trained Encoder LM.
     self.feature_encoder = language_model.backend.GetEncoderModule(
       vocab_size                   = config.feature_vocab_size,
@@ -202,7 +203,7 @@ class ActionQV(torch.nn.Module):
       without_label_head = True,
     )
     output_dim = None
-    if is_critic:
+    if self.is_critic:
       output_dim = 1
     self.action_head     = ActionHead(config, output_dim = output_dim)
     self.index_head      = IndexHead(config, output_dim = output_dim)
