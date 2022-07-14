@@ -354,6 +354,19 @@ class QValuesModel(object):
     else:
       return None
 
+  @property
+  def index_parameters(self) -> torch.Tensor:
+    """
+    Return all gradient parameters for model involved in action decision.
+    """
+    if self.model:
+      return (
+        self.model.tokm.encoder.parameters() +
+        self.model.tokm.language_model.parameters()
+      )
+    else:
+      return None
+
   class QValuesEstimator(typing.NamedTuple):
     """Torch model wrapper for Deep Q-Values."""
     action : torch.nn.Module
