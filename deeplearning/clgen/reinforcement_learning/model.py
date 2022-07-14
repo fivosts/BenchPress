@@ -347,9 +347,9 @@ class QValuesModel(object):
     """
     if self.model:
       return (
-        self.model.actm.feature_encoder.parameters() +
-        self.model.actm.source_decoder.parameters() +
-        self.model.actm.index_head.parameters()
+        self.model.action.feature_encoder.parameters() +
+        self.model.action.source_decoder.parameters() +
+        self.model.action.index_head.parameters()
       )
     else:
       return None
@@ -361,7 +361,7 @@ class QValuesModel(object):
     """
     if self.model:
       return (
-        self.model.action.encoder.parameters() +
+        self.model.token.encoder.parameters() +
         self.model.token.language_model.parameters()
       )
     else:
