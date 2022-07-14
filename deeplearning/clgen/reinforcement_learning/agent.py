@@ -122,13 +122,13 @@ class Agent(object):
       'token' : torch.optim.Adam(self.critic.token_parameters,  lr = lr),
     }
 
-    self.action_cov_var = torch.full(size = len(interactions.ACTION_TYPE_SPACE), fill_value = 0.5)
+    self.action_cov_var = torch.full(size = (len(interactions.ACTION_TYPE_SPACE),), fill_value = 0.5)
     self.action_cov_mat = torch.diag(self.action_cov_var)
 
-    self.index_cov_var = torch.full(size = self.qv_config.max_position_embeddings, fill_value = 0.5)
+    self.index_cov_var = torch.full(size = (self.qv_config.max_position_embeddings,), fill_value = 0.5)
     self.index_cov_mat = torch.diag(self.index_cov_var)
 
-    self.token_cov_var = torch.full(size = self.tokenizer.vocab_size, fill_value = 0.5)
+    self.token_cov_var = torch.full(size = (self.tokenizer.vocab_size,), fill_value = 0.5)
     self.token_cov_mat = torch.diag(self.token_cov_var)
 
     for ep in range(num_epochs):
@@ -320,7 +320,7 @@ class Agent(object):
 
     for state, action in zip(states, actions):
 
-      critic_logits = self.critic.SampleAction(state)
+      critic_logits = self.critic.SampleAction(state, actor_action_logits = action.action_type_logits)
       V_actions.append(critic_logits['action_logits'])
       V_indexs.append(critic_logits['index_logits'])
       # Calculate the log probabilities of batch actions using most recent actor network.
@@ -335,10 +335,13 @@ class Agent(object):
       index_log_probs.append(dist_index.log_prob(action.action_index_logits))
 
       if action.token_type_logits is not None:
-        critic_logits = self.critic.SampleToken(state)
+        critic_logits = self.critic.SampleToken(
+          state, action.action_index, self.tokenizer, self.feature_tokenizer,
+        )
         V_tokens.append(critic_logits['token_logits'])
-
-        actor_logits = self.actor.SampleToken(state)
+        actor_logits = self.actor.SampleToken(
+          state, action.action_index, self.tokenizer, self.feature_tokenizer,
+        )
         mean_token = actor_logits['token_logits']
         dist_token = torch.distributions.MultivariateNormal(mean_token, self.cov_mat)
         token_log_probs.append(dist_token.log_prob(action.token_type_logits))
@@ -411,7 +414,7 @@ class Agent(object):
       # Iterate through all rewards in the episode. We go backwards for smoother calculation of each
       # discounted return (think about why it would be harder starting from the beginning)
       for rew in reversed(ep_rews):
-        discounted_reward = rew + discounted_reward * gamma
+        discounted_reward = rew.value + discounted_reward * gamma
         batch_rtgs.insert(0, discounted_reward)
 
     # Convert the rewards-to-go into a tensor
