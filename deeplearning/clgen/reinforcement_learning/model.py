@@ -355,7 +355,7 @@ class QValuesModel(object):
       return None
 
   @property
-  def index_parameters(self) -> torch.Tensor:
+  def token_parameters(self) -> torch.Tensor:
     """
     Return all gradient parameters for model involved in action decision.
     """
