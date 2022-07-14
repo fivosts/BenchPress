@@ -120,20 +120,29 @@ class Agent(object):
 
       input()
       # Compute Advantage at k_th iteration.
-      Val, _ = self.evaluate_policy(batch_states, batch_actions)
-      A_k = batch_rtgs - Val.detach()
+      (V_act, _), (V_idx, _), (V_tok, _) = self.evaluate_policy(batch_states, batch_actions)
+
+      A_k_action, A_k_index, A_k_token = batch_rtgs - V_act.detach(), batch_rtgs - V_idx.detach(), batch_rtgs - V_tok.detach()
 
       print("Back from eval policy.")
-      print(A_k)
+      print(A_k_action)
+      print(A_k_index)
+      print(A_k_token)
 
 			# Normalizing advantages isn't theoretically necessary, but in practice it decreases the variance of 
 			# our advantages and makes convergence much more stable and faster. I added this because
 			# solving some environments was too unstable without it.
-      A_k = (A_k - A_k.mean()) / (A_k.std() + 1e-10)
+      A_k_action = (A_k_action - A_k_action.mean()) / (A_k_action.std() + 1e-10)
+      A_k_index  = (A_k_index - A_k_index.mean())   / (A_k_index.std() + 1e-10)
+      A_k_token  = (A_k_token - A_k_token.mean())   / (A_k_token.std() + 1e-10)
+
+      batch_act_probs = [a.action_type_logits for a in batch_actions]
+      batch_idx_probs = [a.action_index_logits for a in batch_actions]
+      batch_tok_probs = [a.token_type_logits for a in batch_actions]
 
       for i in range(num_updates_per_batch):
 				# Calculate V_phi and pi_theta(a_t | s_t)
-        Vals, log_probs = self.evaluate_policy(batch_states, batch_actions)
+        (V_act, act_log_probs), (V_idx, idx_log_probs), (V_tok, tok_log_probs) = self.evaluate_policy(batch_states, batch_actions)
 
         # Calculate the ratio pi_theta(a_t | s_t) / pi_theta_k(a_t | s_t)
         # NOTE: we just subtract the logs, which is the same as
@@ -142,29 +151,58 @@ class Agent(object):
         # here's a great explanation: 
         # https://cs.stackexchange.com/questions/70518/why-do-we-use-the-log-in-gradient-based-reinforcement-algorithms
         # TL;DR makes gradient ascent easier behind the scenes.
-        ratios = torch.exp(log_probs - batch_logits)
+        act_ratios = torch.exp(act_log_probs - batch_act_probs)
+        idx_ratios = torch.exp(idx_log_probs - batch_idx_probs)
+        tok_ratios = torch.exp(tok_log_probs - batch_tok_probs)
 
         # Calculate surrogate losses.
-        surr1 = ratios * A_k
-        surr2 = torch.clamp(ratios, 1 - self.clip, 1 + self.clip) * A_k
+        act_surr1 = act_ratios * A_k_action
+        act_surr2 = torch.clamp(act_surr1, 1 - self.clip, 1 + self.clip) * A_k_action
+
+        idx_surr1 = idx_ratios * A_k_index
+        idx_surr2 = torch.clamp(idx_surr1, 1 - self.clip, 1 + self.clip) * A_k_index
+
+        tok_surr1 = tok_ratios * A_k_token
+        tok_surr2 = torch.clamp(tok_surr1, 1 - self.clip, 1 + self.clip) * A_k_token
 
         # Calculate actor and critic losses.
         # NOTE: we take the negative min of the surrogate losses because we're trying to maximize
         # the performance function, but Adam minimizes the loss. So minimizing the negative
         # performance function maximizes it.
-        actor_loss = (-torch.min(surr1, surr2)).mean()
-        critic_loss = torch.nn.MSELoss()(Val, batch_rtgs)
+        action_loss = (-torch.min(act_surr1, act_surr2)).mean()
+        index_loss  = (-torch.min(idx_surr1, idx_surr2)).mean()
+        token_loss  = (-torch.min(tok_surr1, tok_surr2)).mean()
 
-        raise NotImplementedError
+        act_critic_loss = torch.nn.MSELoss()(V_act, batch_rtgs)
+        idx_critic_loss = torch.nn.MSELoss()(V_idx, batch_rtgs)
+        tok_critic_loss = torch.nn.MSELoss()(V_tok, batch_rtgs)
+
         # Calculate gradients and perform backward propagation for actor network
-        self.actor_optim.zero_grad()
-        actor_loss.backward(retain_graph=True)
-        self.actor_optim.step()
+        self.actor_optim['action'].zero_grad()
+        action_loss.backward(retain_graph = True)
+        self.actor_optim['action'].step()
 
-        # Calculate gradients and perform backward propagation for critic network
-        self.critic_optim.zero_grad()
-        critic_loss.backward()
-        self.critic_optim.step()
+        self.actor_optim['index'].zero_grad()
+        index_loss.backward(retain_graph = True)
+        self.actor_optim['index'].step()
+
+        self.actor_optim['token'].zero_grad()
+        token_loss.backward()
+        self.actor_optim['token'].step()
+
+        # Calculate gradients and perform backward propagation for critic network      
+        self.critic_optim['action'].zero_grad()
+        act_critic_loss.backward(retain_graph = True)
+        self.critic_optim['action'].step()
+
+        self.critic_optim['index'].zero_grad()
+        idx_critic_loss.backward(retain_graph = True)
+        self.critic_optim['index'].step()
+
+        self.critic_optim['token'].zero_grad()
+        tok_critic_loss.backward()
+        self.critic_optim['token'].step()
+
     return
 
   def rollout(self,
@@ -205,7 +243,7 @@ class Agent(object):
     while t < timesteps_per_batch:
       ep_rews = [] # rewards collected per episode
 
-      # Reset the environment. sNote that obs is short for observation. 
+      # Reset the environment. sNote that obs is short for observation.
       state = env.reset()
       done = False
 
@@ -285,7 +323,7 @@ class Agent(object):
 
     # Return the value vector V of each observation in the batch
     # and log probabilities log_probs of each action in the batch
-    return (V_actions, V_indexs, V_tokens), (action_log_probs, index_log_probs, token_log_probs)
+    return (V_actions, action_log_probs), (V_indexs, index_log_probs), (V_tokens, token_log_probs)
 
   def make_action(self, state: interactions.State) -> interactions.Action:
     """
