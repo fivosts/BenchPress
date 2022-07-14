@@ -392,6 +392,7 @@ class QValuesModel(object):
     self.batch_size              = self.config.batch_size
 
     self.model = None
+    self._ConfigModelParams()
     return
 
   def _ConfigModelParams(self) -> QValuesEstimator:
