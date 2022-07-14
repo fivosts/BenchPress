@@ -82,7 +82,7 @@ class Agent(object):
       self.tokenizer,
       self.feature_tokenizer,
     )
-    self.q_model = model.QValuesModel(
+    self.actor = model.QValuesModel(
       self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path, is_critic = False,
     )
     self.critic_model = model.QValuesModel(
@@ -133,7 +133,7 @@ class Agent(object):
 
       for i in range(num_updates_per_batch):
 				# Calculate V_phi and pi_theta(a_t | s_t)
-        Val, log_probs = self.evaluate_policy(batch_states, batch_actions)
+        Vals, log_probs = self.evaluate_policy(batch_states, batch_actions)
 
         # Calculate the ratio pi_theta(a_t | s_t) / pi_theta_k(a_t | s_t)
         # NOTE: we just subtract the logs, which is the same as
@@ -255,24 +255,44 @@ class Agent(object):
       log_probs - the log probabilities of the actions taken in batch_acts given batch_obs
     """
     # Query critic network for a value V for each batch_obs. Shape of V should be same as batch_rtgs
-    V = self.critic(states).squeeze()
+    V_actions, V_indexs, V_tokens = [], [], []
+    action_log_probs, index_log_probs, token_log_probs = [], [], []
 
-    # Calculate the log probabilities of batch actions using most recent actor network.
-    # This segment of code is similar to that in get_action()
-    mean = self.actor(states)
-    dist = torch.distributions.MultivariateNormal(mean, self.cov_mat)
-    log_probs = dist.log_prob(actions)
+    for state, action in zip(states, actions):
+
+      critic_logits = self.critic.SampleAction(state)
+      V_actions.append(critic_logits['action_logits'])
+      V_indexs.append(critic_logits['index_logits'])
+      # Calculate the log probabilities of batch actions using most recent actor network.
+      # This segment of code is similar to that in get_action()
+      # mean = self.actor.SampleAction(states)
+      actor_logits = self.actor.SampleAction(state)
+      mean_action, mean_index = actor_logits['action_logits'], actor_logits['index_logits']
+
+      dist_action = torch.distributions.MultivariateNormal(mean_action, self.cov_mat)
+      dist_index = torch.distributions.MultivariateNormal(mean_index, self.cov_mat)
+      action_log_probs.append(dist_action.log_prob(action.action_type_logits))
+      index_log_probs.append(dist_index.log_prob(action.action_index_logits))
+
+      if action.token_type_logits is not None:
+        critic_logits = self.critic.SampleToken(state)
+        V_tokens.append(critic_logits['token_logits'])
+
+        actor_logits = self.actor.SampleToken(state)
+        mean_token = actor_logits['token_logits']
+        dist_token = torch.distributions.MultivariateNormal(mean_token, self.cov_mat)
+        token_log_probs.append(dist_token.log_prob(action.token_type_logits))
 
     # Return the value vector V of each observation in the batch
     # and log probabilities log_probs of each action in the batch
-    return V, log_probs
+    return (V_actions, V_indexs, V_tokens), (action_log_probs, index_log_probs, token_log_probs)
 
   def make_action(self, state: interactions.State) -> interactions.Action:
     """
     Agent collects the current state by the environment
     and picks the right action.
     """
-    logits = self.q_model.SampleAction(state)
+    logits = self.actor.SampleAction(state)
     action_logits = logits['action_logits'].cpu().numpy()
     index_logits  = logits['index_logits'].cpu().numpy()
     action_type, action_index  = self.policy.SelectAction(
@@ -284,7 +304,7 @@ class Agent(object):
     comment = "Action: {}".format(interactions.ACTION_TYPE_MAP[action_type])
 
     if action_type == interactions.ACTION_TYPE_SPACE['ADD']:
-      logits = self.q_model.SampleToken(
+      logits = self.actor.SampleToken(
         state, action_index, self.tokenizer, self.feature_tokenizer
       )
       token_logits = logits['prediction_logits'][:,action_index]
