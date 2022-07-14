@@ -111,15 +111,15 @@ class Agent(object):
     Run PPO over policy and train the agent.
     """
     actor_optim = {
-      'action': torch.optim.Adam(self.actor.action_params, lr = lr),
-      'index' : torch.optim.Adam(self.actor.index_params,  lr = lr),
-      'token' : torch.optim.Adam(self.actor.token_params,  lr = lr),
+      'action': torch.optim.Adam(self.actor.action_parameters, lr = lr),
+      'index' : torch.optim.Adam(self.actor.index_parameters,  lr = lr),
+      'token' : torch.optim.Adam(self.actor.token_parameters,  lr = lr),
     }
 
     critic_optim = {
-      'action': torch.optim.Adam(self.critic.action_params, lr = lr),
-      'index' : torch.optim.Adam(self.critic.index_params,  lr = lr),
-      'token' : torch.optim.Adam(self.critic.token_params,  lr = lr),
+      'action': torch.optim.Adam(self.critic.action_parameters, lr = lr),
+      'index' : torch.optim.Adam(self.critic.index_parameters,  lr = lr),
+      'token' : torch.optim.Adam(self.critic.token_parameters,  lr = lr),
     }
 
     self.action_cov_var = torch.full(size = len(interactions.ACTION_TYPE_SPACE), fill_value = 0.5)
