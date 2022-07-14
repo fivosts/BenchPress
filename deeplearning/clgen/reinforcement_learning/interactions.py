@@ -46,3 +46,13 @@ class Reward(typing.NamedTuple):
   value    : float
   distance : float
   comment  : str
+
+class Memory(typing.NamedTuple):
+  """
+  A memory representation used for agent training.
+  """
+  state  : State   # Input state for memory.
+  action : Action  # Action taken by agent.
+  reward : Reward  # Isolated reward of that action.
+  rtg    : float   # Reward-to-go from trajectory.
+  length : int     # Current index within the trajectory.
