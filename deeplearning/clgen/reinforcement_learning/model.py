@@ -331,7 +331,14 @@ class QValuesModel(object):
     """
     Return all gradient parameters for model involved in action decision.
     """
-    if 
+    if self.model:
+      return (
+        self.model.actm.feature_encoder.parameters() +
+        self.model.actm.source_decoder.parameters() +
+        self.model.actm.action_head.parameters()
+      )
+    else:
+      return None
 
   class QValuesEstimator(typing.NamedTuple):
     """Torch model wrapper for Deep Q-Values."""
