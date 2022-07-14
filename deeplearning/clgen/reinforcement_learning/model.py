@@ -396,7 +396,7 @@ class QValuesModel(object):
 
   def _ConfigModelParams(self) -> QValuesEstimator:
     """Initialize model parameters."""
-    if not self.qvalues:
+    if not self.model:
       actm    = ActionQV(self.language_model, self.config, self.is_critic).to(pytorch.offset_device)
       tokm    = ActionLanguageModelQV(self.language_model, self.config, self.is_critic).to(pytorch.offset_device)
       if pytorch.num_nodes > 1:
