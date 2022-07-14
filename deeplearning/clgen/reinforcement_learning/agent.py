@@ -93,6 +93,7 @@ class Agent(object):
       idx_temp    = self.config.agent.action_qv.action_index_temperature_micros / 10e6,
       token_temp  = self.config.agent.action_lm.token_temperature_micros / 10e6,
     )
+
     self.loadCheckpoint()
     return
 
@@ -109,6 +110,27 @@ class Agent(object):
     """
     Run PPO over policy and train the agent.
     """
+    actor_optim = {
+      'action': torch.optim.Adam(self.actor_model.action_params, lr = lr),
+      'index' : torch.optim.Adam(self.actor_model.index_params,  lr = lr),
+      'token' : torch.optim.Adam(self.actor_model.token_params,  lr = lr),
+    }
+
+    critic_optim = {
+      'action': torch.optim.Adam(self.actor_model.action_params, lr = lr),
+      'index' : torch.optim.Adam(self.actor_model.index_params,  lr = lr),
+      'token' : torch.optim.Adam(self.actor_model.token_params,  lr = lr),
+    }
+
+    self.action_cov_var = torch.full(size = len(interactions.ACTION_TYPE_SPACE), fill_value = 0.5)
+    self.action_cov_mat = torch.diag(self.action_cov_var)
+
+    self.index_cov_var = torch.full(size = self.qv_config.max_position_embeddings, fill_value = 0.5)
+    self.index_cov_mat = torch.diag(self.index_cov_var)
+
+    self.token_cov_var = torch.full(size = self.tokenizer.vocab_size, fill_value = 0.5)
+    self.token_cov_mat = torch.diag(self.token_cov_var)
+
     for ep in range(num_epochs):
       # Run a batch of episodes.
       batch_states, batch_actions, batch_rtgs, batch_lens = self.rollout(
@@ -178,30 +200,30 @@ class Agent(object):
         tok_critic_loss = torch.nn.MSELoss()(V_tok, batch_rtgs)
 
         # Calculate gradients and perform backward propagation for actor network
-        self.actor_optim['action'].zero_grad()
+        actor_optim['action'].zero_grad()
         action_loss.backward(retain_graph = True)
-        self.actor_optim['action'].step()
+        actor_optim['action'].step()
 
-        self.actor_optim['index'].zero_grad()
+        actor_optim['index'].zero_grad()
         index_loss.backward(retain_graph = True)
-        self.actor_optim['index'].step()
+        actor_optim['index'].step()
 
-        self.actor_optim['token'].zero_grad()
+        actor_optim['token'].zero_grad()
         token_loss.backward()
-        self.actor_optim['token'].step()
+        actor_optim['token'].step()
 
         # Calculate gradients and perform backward propagation for critic network      
-        self.critic_optim['action'].zero_grad()
+        critic_optim['action'].zero_grad()
         act_critic_loss.backward(retain_graph = True)
-        self.critic_optim['action'].step()
+        critic_optim['action'].step()
 
-        self.critic_optim['index'].zero_grad()
+        critic_optim['index'].zero_grad()
         idx_critic_loss.backward(retain_graph = True)
-        self.critic_optim['index'].step()
+        critic_optim['index'].step()
 
-        self.critic_optim['token'].zero_grad()
+        critic_optim['token'].zero_grad()
         tok_critic_loss.backward()
-        self.critic_optim['token'].step()
+        critic_optim['token'].step()
 
     return
 
