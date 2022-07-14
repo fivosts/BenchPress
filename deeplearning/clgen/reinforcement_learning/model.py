@@ -145,8 +145,8 @@ class IndexHead(torch.nn.Module):
     if output_dim is None:
       output_dim = config.max_position_embeddings
     self.transform = PredictionHeadTransform(config, dense_size = config.action_hidden_size + len(interactions.ACTION_TYPE_SPACE))
-    self.decoder   = torch.nn.Linear(config.action_hidden_size, config.max_position_embeddings, bias = False)
-    self.bias      = torch.nn.Parameter(torch.zeros(config.max_position_embeddings))
+    self.decoder   = torch.nn.Linear(config.action_hidden_size, output_dim, bias = False)
+    self.bias      = torch.nn.Parameter(torch.zeros(output_dim))
     self.decoder.bias = self.bias
     return
 
@@ -215,6 +215,7 @@ class ActionQV(torch.nn.Module):
               decoder_input_ids    : torch.LongTensor,
               decoder_input_mask   : torch.LongTensor,
               decoder_position_ids : torch.LongTensor,
+              actor_action_logits  : torch.LongTensor = None,
               ) -> typing.Dict[str, torch.Tensor]:
     """Action type forward function."""
     # ## Encode feature vector.
@@ -250,6 +251,10 @@ class ActionQV(torch.nn.Module):
     ## Predict action type logits.
     action_logits = self.action_head(decoded_source)
     ## Predict index logits | action type logits.
+    if self.is_critic:
+      if actor_action_logits is None:
+        raise ValueError("Aux action_logits from actor must not be None when model is critic!")
+      action_logits = actor_action_logits
     index_logits = self.index_head(decoded_source, action_logits)
     return {
       'action_logits': action_logits,
@@ -442,12 +447,17 @@ class QValuesModel(object):
     raise NotImplementedError
     return
 
-  def SampleAction(self, state: interactions.State) -> typing.Dict[str, torch.Tensor]:
+  def SampleAction(self,
+                   state               : interactions.State,
+                   actor_action_logits : torch.FloatTensor = None,
+                   ) -> typing.Dict[str, torch.Tensor]:
     """Predict the next action given an input state."""
     self._ConfigModelParams()
     inputs = data_generator.StateToActionTensor(
       state, self.tokenizer.padToken, self.feature_tokenizer.padToken, self.batch_size
     )
+    if actor_action_logits is not None:
+      inputs['actor_action_logits'] = actor_action_logits
     with torch.no_grad():
       inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
       outputs = self.model.action(
