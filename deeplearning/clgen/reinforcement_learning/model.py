@@ -361,8 +361,8 @@ class QValuesModel(object):
     """
     if self.model:
       return (
-        self.model.tokm.encoder.parameters() +
-        self.model.tokm.language_model.parameters()
+        self.model.action.encoder.parameters() +
+        self.model.token.language_model.parameters()
       )
     else:
       return None
