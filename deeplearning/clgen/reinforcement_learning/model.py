@@ -326,6 +326,13 @@ class QValuesModel(object):
   """
   Handler of Deep-QNMs for program synthesis.
   """
+  @property
+  def action_parameters(self) -> torch.Tensor:
+    """
+    Return all gradient parameters for model involved in action decision.
+    """
+    if 
+
   class QValuesEstimator(typing.NamedTuple):
     """Torch model wrapper for Deep Q-Values."""
     action : torch.nn.Module
@@ -350,64 +357,53 @@ class QValuesModel(object):
     self.is_critic               = is_critic
     self.batch_size              = self.config.batch_size
 
-    self.train_qvalues  = None
-    self.sample_qvalues = None
+    self.model = None
     return
 
   def _ConfigModelParams(self) -> QValuesEstimator:
     """Initialize model parameters."""
-    actm    = ActionQV(self.language_model, self.config, self.is_critic).to(pytorch.offset_device)
-    tokm    = ActionLanguageModelQV(self.language_model, self.config, self.is_critic).to(pytorch.offset_device)
-    if pytorch.num_nodes > 1:
-      actm = torch.nn.parallel.DistributedDataParallel(
-        actm,
-        device_ids = [pytorch.offset_device],
-        output_device = pytorch.offset_device,
-        find_unused_parameters = True,
-      )
-      tokm = torch.nn.parallel.DistributedDataParallel(
-        tokm,
-        device_ids = [pytorch.offset_device],
-        output_device = pytorch.offset_device,
-        find_unused_parameters = True,
-      )
-    elif pytorch.num_gpus > 1:
-      actm    = torch.nn.DataParallel(actm)
-      tokm    = torch.nn.DataParallel(tokm)
+    if not self.qvalues:
+      actm    = ActionQV(self.language_model, self.config, self.is_critic).to(pytorch.offset_device)
+      tokm    = ActionLanguageModelQV(self.language_model, self.config, self.is_critic).to(pytorch.offset_device)
+      if pytorch.num_nodes > 1:
+        actm = torch.nn.parallel.DistributedDataParallel(
+          actm,
+          device_ids = [pytorch.offset_device],
+          output_device = pytorch.offset_device,
+          find_unused_parameters = True,
+        )
+        tokm = torch.nn.parallel.DistributedDataParallel(
+          tokm,
+          device_ids = [pytorch.offset_device],
+          output_device = pytorch.offset_device,
+          find_unused_parameters = True,
+        )
+      elif pytorch.num_gpus > 1:
+        actm    = torch.nn.DataParallel(actm)
+        tokm    = torch.nn.DataParallel(tokm)
 
-    return QValuesModel.QValuesEstimator(
-      action = actm,
-      token  = tokm,
-    )
-
-  def _ConfigTrainParams(self) -> None:
-    """Initialize Training parameters for model."""
-    if not self.train_qvalues:
-      self.train_qvalues = self._ConfigModelParams()
-    return
-  
-  def _ConfigSampleParams(self) -> None:
-    """Initialize sampling parameters for model."""
-    if not self.sample_qvalues:
-      self.sample_qvalues = self._ConfigModelParams()
+        self.model = QValuesModel.QValuesEstimator(
+          action = actm,
+          token  = tokm,
+        )
     return
 
   def Train(self, input_ids: typing.Dict[str, torch.Tensor]) -> None:
     """Update the Q-Networks with some memories."""
-    self._ConfigTrainParams()
+    self._ConfigModelParams()
     self.loadCheckpoint()
     raise NotImplementedError
     return
 
   def SampleAction(self, state: interactions.State) -> typing.Dict[str, torch.Tensor]:
     """Predict the next action given an input state."""
-    self._ConfigSampleParams()
+    self._ConfigModelParams()
     inputs = data_generator.StateToActionTensor(
       state, self.tokenizer.padToken, self.feature_tokenizer.padToken, self.batch_size
     )
     with torch.no_grad():
       inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
-      outputs = self.sample_qvalues.action(
+      outputs = self.model.action(
         **inputs
       )
     return outputs
@@ -425,7 +421,7 @@ class QValuesModel(object):
     )
     with torch.no_grad():
       inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
-      outputs = self.sample_qvalues.token(
+      outputs = self.model.token(
         **inputs
       )
     return outputs
