@@ -17,50 +17,6 @@ from deeplearning.clgen.util import logging as l
 
 torch = pytorch.torch
 
-# class FeatureEncoder(torch.nn.Module):
-#   """Transformer-Encoder architecture for encoding states."""
-#   def __init__(self, config):
-#     super().__init__()
-#     ## Dimensional variables.
-#     self.encoder_embedding_size = config.feature_vocab_size
-#     ## Feature vector encoder.
-#     self.encoder_embedding = torch.nn.Embedding(
-#       num_embeddings = config.feature_vocab_size,
-#       embedding_dim  = config.hidden_size,
-#       padding_idx    = config.feature_pad_idx
-#     )
-#     self.encoder_pos_encoder = model.FeaturePositionalEncoding(config)
-#     encoder_layers = torch.nn.TransformerEncoderLayer(
-#       d_model         = config.hidden_size,
-#       nhead           = config.num_attention_heads,
-#       dim_feedforward = config.intermediate_size,
-#       dropout         = config.hidden_dropout_prob,
-#       batch_first     = True
-#     )
-#     encoder_norm = torch.nn.LayerNorm(
-#       config.hidden_size,
-#       eps = config.layer_norm_eps
-#     )
-#     self.encoder_transformer = torch.nn.TransformerEncoder(
-#       encoder_layer = encoder_layers,
-#       num_layers    = config.num_hidden_layers,
-#       norm          = encoder_norm,
-#     )
-#     return
-
-  # def forward(self,
-  #             input_features                  : torch.LongTensor,
-  #             input_features_key_padding_mask : torch.ByteTensor,
-  #             ) -> torch.Tensor:
-  #   ## Run the encoder transformer over the features.
-  #   enc_embed = self.encoder_embedding(input_features) * math.sqrt(self.encoder_embedding_size)
-  #   pos_enc_embed = self.encoder_pos_encoder(enc_embed)
-  #   encoded = self.encoder_transformer(
-  #     pos_enc_embed,
-  #     src_key_padding_mask = input_features_key_padding_mask,
-  #   )
-  #   return encoded
-
 class PredictionHeadTransform(torch.nn.Module):
   def __init__(self,
                config     : config.QValuesConfig,
@@ -80,106 +36,23 @@ class PredictionHeadTransform(torch.nn.Module):
     hidden_states = self.LayerNorm(hidden_states)
     return hidden_states
 
-# class SourceDecoder(torch.nn.Module):
-#   """Source code decoder for action prediction."""
-#   def __init__(self, config):
-#     super().__init__()
-#     ## Source code decoder.
-#     self.decoder_embedding = model.BertEmbeddings(config)
-#     decoder_layers = torch.nn.TransformerDecoderLayer(
-#       d_model         = config.hidden_size,
-#       nhead           = config.num_attention_heads,
-#       dim_feedforward = config.intermediate_size,
-#       dropout         = config.hidden_dropout_prob,
-#       batch_first     = True,
-#     )
-#     decoder_norm = torch.nn.LayerNorm(
-#       config.hidden_size,
-#       eps = config.layer_norm_eps,
-#     )
-#     self.decoder_transformer = torch.nn.TransformerDecoder(
-#       decoder_layer = decoder_layers,
-#       num_layers    = config.num_hidden_layers,
-#       norm          = decoder_norm,
-#     )
-#     return
-
-  # def forward(self,
-  #             input_ids                  : torch.LongTensor,
-  #             encoded_features           : torch.FloatTensor,
-  #             input_ids_key_padding_mask : torch.ByteTensor,
-  #             ) -> torch.Tensor:
-  #   ## Run the decoder over the source code.
-  #   dec_embed = self.decoder_embedding(input_ids)
-  #   decoded = self.decoder_transformer(
-  #     dec_embed,
-  #     memory = encoded_features,
-  #     # tgt_mask = input_ids_mask,
-  #     # memory_mask = None, ??
-  #     tgt_key_padding_mask = input_ids_key_padding_mask,
-  #     # memory_key_padding_mask = None, ??
-  #   )
-  #   return decoded
-
 class ActionHead(torch.nn.Module):
   """Classification head for action prediction."""
   def __init__(self, config, output_dim: int = None):
     super().__init__()
     if output_dim is None:
-      output_dim = len(interactions.ACTION_TYPE_SPACE)
+      output_dim = len(interactions.ACTION_TYPE_SPACE) * config.max_position_embeddings
     self.transform = PredictionHeadTransform(config, dense_size = config.action_hidden_size)
-    self.decoder   = torch.nn.Linear(config.action_hidden_size, 1, bias = False)
-    self.bias      = torch.nn.Parameter(torch.zeros(1))
+    self.decoder   = torch.nn.Linear(config.action_hidden_size * config.max_position_embeddings, output_dim, bias = False)
+    self.bias      = torch.nn.Parameter(torch.zeros(output_dim))
     self.decoder.bias = self.bias
-
-    self.output      = torch.nn.Linear(config.max_position_embeddings, output_dim, bias = False)
-    self.out_bias    = torch.nn.Parameter(torch.zeros(output_dim))
-    self.output.bias = self.out_bias
     return
 
   def forward(self, decoder_out: torch.FloatTensor) -> torch.FloatTensor:
     transformed = self.transform(decoder_out)
-    per_token_logits = self.decoder(transformed).squeeze(-1)
-    action_logits = self.output(per_token_logits)
+    flat = transformed.reshape((transformed.shape[0], -1))
+    action_logits = self.decoder(flat)
     return action_logits
-
-class IndexHead(torch.nn.Module):
-  """Classification head for token index prediction."""
-  def __init__(self, config: config.QValuesConfig, output_dim: int = None):
-    super().__init__()
-    if output_dim is None:
-      output_dim = config.max_position_embeddings
-    self.transform = PredictionHeadTransform(config, dense_size = config.action_hidden_size + len(interactions.ACTION_TYPE_SPACE))
-    self.decoder   = torch.nn.Linear(config.action_hidden_size, 1, bias = False)
-    self.bias      = torch.nn.Parameter(torch.zeros(1))
-    self.decoder.bias = self.bias
-
-    self.output      = torch.nn.Linear(config.max_position_embeddings, output_dim, bias = False)
-    self.out_bias    = torch.nn.Parameter(torch.zeros(output_dim))
-    self.output.bias = self.out_bias
-    return
-
-  def forward(self, decoder_out, action_logits):
-    decoded_with_action = torch.cat((decoder_out, action_logits), -1)
-    transformed = self.transform(decoded_with_action)
-    per_token_logits = self.decoder(transformed).squeeze(-1)
-    index_logits = self.output(per_token_logits)
-    return index_logits
-
-# class TokenHead(torch.nn.Module):
-#   """Feature-extended token prediction head."""
-#   def __init__(self, config):
-#     super().__init__()
-#     self.transform = PredictionHeadTransform(config, dense_size = config.vocab_size + config.feature_sequence_length)
-#     self.decoder   = torch.nn.Linear(config.vocab_size + config.feature_sequence_length, config.vocab_size, bias = False)
-#     self.bias      = torch.nn.Parameter(torch.zeros(config.vocab_size))
-#     self.decoder.bias = self.bias
-#     return
-
-#   def forward(self, decoder_out: torch.FloatTensor) -> torch.FloatTensor:
-#     transformed = self.transform(decoder_out)
-#     token_logits = self.decoder(transformed)
-#     return token_logits
 
 class ActionQV(torch.nn.Module):
   """Deep Q-Values for Action type prediction."""
@@ -216,7 +89,6 @@ class ActionQV(torch.nn.Module):
     if self.is_critic:
       output_dim = 1
     self.action_head     = ActionHead(config, output_dim = output_dim)
-    self.index_head      = IndexHead(config, output_dim = output_dim)
     return
 
   def forward(self,
@@ -226,22 +98,9 @@ class ActionQV(torch.nn.Module):
               decoder_input_ids    : torch.LongTensor,
               decoder_input_mask   : torch.LongTensor,
               decoder_position_ids : torch.LongTensor,
-              actor_action_logits  : torch.LongTensor = None,
+              # actor_action_logits  : torch.LongTensor = None,
               ) -> typing.Dict[str, torch.Tensor]:
     """Action type forward function."""
-    # ## Encode feature vector.
-    # encoded_features = self.feature_encoder(
-    #   target_features, target_features_key_padding_mask
-    # )
-    # ## Run source code over transformer decoder and insert Transformer encoder's memory.
-    # decoded_source = self.source_decoder(
-    #   input_ids, encoded_features, input_ids_key_padding_mask,
-    # )
-    # ## Predict the action logits.
-    # action_logits = self.action_head(decoded_source)
-    # ## Predict the index logits.
-    # index_logits  = self.index_head(decoded_source, action_logits)
-
     ## Run BERT-Encoder in target feature vector.
     encoder_out = self.feature_encoder(
       input_ids      = encoder_feature_ids,
@@ -261,15 +120,8 @@ class ActionQV(torch.nn.Module):
     decoded_source = decoder_out['hidden_states']
     ## Predict action type logits.
     action_logits = self.action_head(decoded_source)
-    ## Predict index logits | action type logits.
-    if self.is_critic:
-      if actor_action_logits is None:
-        raise ValueError("Aux action_logits from actor must not be None when model is critic!")
-      action_logits = actor_action_logits
-    index_logits = self.index_head(decoded_source, action_logits)
     return {
       'action_logits': action_logits,
-      'index_logits' : index_logits,
     }
 
 class ActionLanguageModelQV(torch.nn.Module):
@@ -460,15 +312,12 @@ class QValuesModel(object):
 
   def SampleAction(self,
                    state               : interactions.State,
-                   actor_action_logits : torch.FloatTensor = None,
                    ) -> typing.Dict[str, torch.Tensor]:
     """Predict the next action given an input state."""
     self._ConfigModelParams()
     inputs = data_generator.StateToActionTensor(
       state, self.tokenizer.padToken, self.feature_tokenizer.padToken, self.batch_size
     )
-    if actor_action_logits is not None:
-      inputs['actor_action_logits'] = actor_action_logits
     with torch.no_grad():
       inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
       outputs = self.model.action(
