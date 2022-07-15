@@ -128,14 +128,19 @@ class ActionHead(torch.nn.Module):
     if output_dim is None:
       output_dim = len(interactions.ACTION_TYPE_SPACE)
     self.transform = PredictionHeadTransform(config, dense_size = config.action_hidden_size)
-    self.decoder   = torch.nn.Linear(config.action_hidden_size, output_dim, bias = False)
-    self.bias      = torch.nn.Parameter(torch.zeros(output_dim))
+    self.decoder   = torch.nn.Linear(config.action_hidden_size, 1, bias = False)
+    self.bias      = torch.nn.Parameter(torch.zeros(1))
     self.decoder.bias = self.bias
+
+    self.output      = torch.nn.Linear(config.max_position_embeddings, output_dim, bias = False)
+    self.out_bias    = torch.nn.Parameter(torch.zeros(output_dim))
+    self.output.bias = self.out_bias
     return
 
   def forward(self, decoder_out: torch.FloatTensor) -> torch.FloatTensor:
     transformed = self.transform(decoder_out)
-    action_logits = self.decoder(transformed)
+    per_token_logits = self.decoder(transformed).squeeze(-1)
+    action_logits = self.output(per_token_logits)
     return action_logits
 
 class IndexHead(torch.nn.Module):
@@ -145,16 +150,21 @@ class IndexHead(torch.nn.Module):
     if output_dim is None:
       output_dim = config.max_position_embeddings
     self.transform = PredictionHeadTransform(config, dense_size = config.action_hidden_size + len(interactions.ACTION_TYPE_SPACE))
-    self.decoder   = torch.nn.Linear(config.action_hidden_size, output_dim, bias = False)
-    self.bias      = torch.nn.Parameter(torch.zeros(output_dim))
+    self.decoder   = torch.nn.Linear(config.action_hidden_size, 1, bias = False)
+    self.bias      = torch.nn.Parameter(torch.zeros(1))
     self.decoder.bias = self.bias
+
+    self.output      = torch.nn.Linear(config.max_position_embeddings, output_dim, bias = False)
+    self.out_bias    = torch.nn.Parameter(torch.zeros(output_dim))
+    self.output.bias = self.out_bias
     return
 
   def forward(self, decoder_out, action_logits):
     decoded_with_action = torch.cat((decoder_out, action_logits), -1)
     transformed = self.transform(decoded_with_action)
-    action_logits = self.decoder(transformed)
-    return action_logits
+    per_token_logits = self.decoder(transformed).squeeze(-1)
+    index_logits = self.output(per_token_logits)
+    return index_logits
 
 # class TokenHead(torch.nn.Module):
 #   """Feature-extended token prediction head."""
