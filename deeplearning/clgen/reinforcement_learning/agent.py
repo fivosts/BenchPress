@@ -29,15 +29,12 @@ class Policy(object):
     self.token_temperature  = token_temp
     return
 
-  def SelectAction(self,
-                   action_logits      : torch.FloatTensor,
-                   action_temperature : float,
-                   ) -> typing.Tuple[int, int]:
+  def SelectAction(self, action_logits: torch.FloatTensor) -> typing.Tuple[int, int]:
     """
     Get the Q-Values for action and apply policy on it.
     """
     ct = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
-        temperature = action_temperature if action_temperature is not None else 1.0,
+        temperature = self.action_temperature if self.action_temperature is not None else 1.0,
         logits = action_logits,
         validate_args = False if "1.9." in torch.__version__ else None,
       ).sample()
@@ -45,15 +42,12 @@ class Policy(object):
     action, index = likely % len(interactions.ACTION_TYPE_SPACE), likely // len(interactions.ACTION_TYPE_SPACE),
     return action, index
 
-  def SelectToken(self,
-                  token_logits : torch.FloatTensor,
-                  temperature  : float,
-                  ) -> int:
+  def SelectToken(self, token_logits: torch.FloatTensor) -> int:
     """
     Get logit predictions for token and apply policy on it.
     """
     ct = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
-        temperature = temperature if temperature is not None else 1.0,
+        temperature = self.token_temperature if self.token_temperature is not None else 1.0,
         logits = token_logits,
         validate_args = False if "1.9." in torch.__version__ else None,
       ).sample()
@@ -92,9 +86,8 @@ class Agent(object):
       self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path, is_critic = True
     )
     self.policy  = Policy(
-      action_temp = self.config.agent.action_qv.action_type_temperature_micros / 10e6,
-      idx_temp    = self.config.agent.action_qv.action_index_temperature_micros / 10e6,
-      token_temp  = self.config.agent.action_lm.token_temperature_micros / 10e6,
+      action_temp = self.qv_config.action_temperature,
+      token_temp  = self.qv_config.token_temperature,
     )
 
     self.loadCheckpoint()
@@ -330,10 +323,7 @@ class Agent(object):
     """
     output = self.actor.SampleAction(state)
     action_logits = output['action_logits'].cpu()
-    action_type, action_index = self.policy.SelectAction(
-      action_logits,
-      self.qv_config.action_type_temperature,
-    )
+    action_type, action_index = self.policy.SelectAction(action_logits)
     action_logits = action_logits.numpy()
     comment = "Action: {}".format(interactions.ACTION_TYPE_MAP[action_type])
 
@@ -342,7 +332,7 @@ class Agent(object):
         state, action_index, self.tokenizer, self.feature_tokenizer
       )
       token_logits = logits['prediction_logits'][:,action_index]
-      token        = self.policy.SelectToken(token_logits, self.qv_config.token_temperature).cpu().numpy()
+      token        = self.policy.SelectToken(token_logits).cpu().numpy()
       token_logits = token_logits.cpu().numpy()
       comment      += ", index: {}, token: '{}'".format(action_index, self.tokenizer.decoder[int(token)])
     elif action_type == interactions.ACTION_TYPE_SPACE['REM']:
