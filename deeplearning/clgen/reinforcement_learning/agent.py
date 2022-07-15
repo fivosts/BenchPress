@@ -38,8 +38,8 @@ class Policy(object):
         validate_args = False if "1.9." in torch.__version__ else None,
       ).sample()
     likely = torch.argmax(ct, dim = -1)
-    action, index = likely % len(interactions.ACTION_TYPE_SPACE), likely // len(interactions.ACTION_TYPE_SPACE),
-    return action, index
+    action, index = likely % len(interactions.ACTION_TYPE_SPACE), likely // len(interactions.ACTION_TYPE_SPACE)
+    return int(action), int(index)
 
   def SelectToken(self, token_logits: torch.FloatTensor) -> int:
     """
