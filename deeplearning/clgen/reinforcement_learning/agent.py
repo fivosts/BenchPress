@@ -30,9 +30,8 @@ class Policy(object):
     return
 
   def SelectAction(self,
-                   type_logits             : torch.FloatTensor,
-                   action_temperature      : float,
-                   max_position_embeddings : int,
+                   type_logits        : torch.FloatTensor,
+                   action_temperature : float,
                    ) -> typing.Tuple[int, int]:
     """
     Get the Q-Values for action and apply policy on it.
