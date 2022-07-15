@@ -38,9 +38,17 @@ class Policy(object):
     """
     Get the Q-Values for action and apply policy on it.
     """
-    return 0, 0
-    raise NotImplementedError
-    return action_type
+    ct = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
+        temperature = action_temperature if action_temperature is not None else 1.0,
+        logits = type_logits,
+        validate_args = False if "1.9." in torch.__version__ else None,
+      ).sample()
+    ci = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
+        temperature = index_temperature if index_temperature is not None else 1.0,
+        logits = index_logits,
+        validate_args = False if "1.9." in torch.__version__ else None,
+      ).sample()
+    return torch.argmax(ct, dim = -1), torch.argmax(ci, dim = -1)
 
   def SelectToken(self,
                   token_logits : torch.FloatTensor,
