@@ -30,10 +30,9 @@ class Policy(object):
     return
 
   def SelectAction(self,
-                   type_logits        : torch.FloatTensor,
-                   index_logits       : torch.Tensor,
-                   action_temperature : float,
-                   index_temperature  : float,
+                   type_logits             : torch.FloatTensor,
+                   action_temperature      : float,
+                   max_position_embeddings : int,
                    ) -> typing.Tuple[int, int]:
     """
     Get the Q-Values for action and apply policy on it.
@@ -43,12 +42,9 @@ class Policy(object):
         logits = type_logits,
         validate_args = False if "1.9." in torch.__version__ else None,
       ).sample()
-    ci = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
-        temperature = index_temperature if index_temperature is not None else 1.0,
-        logits = index_logits,
-        validate_args = False if "1.9." in torch.__version__ else None,
-      ).sample()
-    return torch.argmax(ct, dim = -1), torch.argmax(ci, dim = -1)
+    likely = torch.argmax(ct, dim = -1)
+    action, index = likely % len(interactions.ACTION_TYPE_SPACE), likely // len(interactions.ACTION_TYPE_SPACE),
+    return action, index
 
   def SelectToken(self,
                   token_logits : torch.FloatTensor,
@@ -358,11 +354,10 @@ class Agent(object):
     Agent collects the current state by the environment
     and picks the right action.
     """
-    logits = self.actor.SampleAction(state)
-    action_logits = logits['action_logits'].cpu()
-    index_logits  = logits['index_logits'].cpu()
-    action_type, action_index  = self.policy.SelectAction(
-      action_logits, index_logits,
+    output = self.actor.SampleAction(state)
+    action_logits = output['action_logits'].cpu()
+    action_type, action_index = self.policy.SelectAction(
+      action_logits,
       self.qv_config.action_type_temperature,
       self.qv_config.action_index_temperature,
     )
