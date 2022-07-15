@@ -30,7 +30,7 @@ class Policy(object):
     return
 
   def SelectAction(self,
-                   type_logits        : torch.FloatTensor,
+                   action_logits      : torch.FloatTensor,
                    action_temperature : float,
                    ) -> typing.Tuple[int, int]:
     """
@@ -38,7 +38,7 @@ class Policy(object):
     """
     ct = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
         temperature = action_temperature if action_temperature is not None else 1.0,
-        logits = type_logits,
+        logits = action_logits,
         validate_args = False if "1.9." in torch.__version__ else None,
       ).sample()
     likely = torch.argmax(ct, dim = -1)
@@ -358,9 +358,8 @@ class Agent(object):
     action_type, action_index = self.policy.SelectAction(
       action_logits,
       self.qv_config.action_type_temperature,
-      self.qv_config.action_index_temperature,
     )
-    action_logits, index_logits = action_logits.numpy(), index_logits.numpy()
+    action_logits = action_logits.numpy()
     comment = "Action: {}".format(interactions.ACTION_TYPE_MAP[action_type])
 
     if action_type == interactions.ACTION_TYPE_SPACE['ADD']:
@@ -380,13 +379,12 @@ class Agent(object):
       raise ValueError("Invalid action_type: {}".format(action_type))
 
     return interactions.Action(
-      action_type         = action_type,
-      action_type_logits  = action_logits,
-      action_index        = action_index,
-      action_index_logits = index_logits,
-      token_type          = token,
-      token_type_logits   = token_logits,
-      comment             = comment,
+      action        = action_type,
+      index         = action_index,
+      action_logits = action_logits,
+      token         = token,
+      token_logits  = token_logits,
+      comment       = comment,
     )
 
   def compute_rtgs(self, batch_rews, gamma):
