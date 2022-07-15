@@ -90,8 +90,7 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
     lambda x: x in set(bert_model.ACT2FN.keys()),
     "Invalid choice for hidden_act"
   )
-  pbutil.AssertFieldIsSet(config.agent.action_qv, "action_type_temperature_micros")
-  pbutil.AssertFieldIsSet(config.agent.action_qv, "action_index_temperature_micros")
+  pbutil.AssertFieldIsSet(config.agent.action_qv, "action_temperature_micros")
   pbutil.AssertFieldIsSet(config.agent.action_lm, "hidden_size")
   pbutil.AssertFieldConstraint(
     config.agent.action_lm,
@@ -312,8 +311,8 @@ class RLModel(object):
 
     num_epochs              = 10
     num_updates_per_batch   = 100
-    timesteps_per_batch     = 4800
-    max_timesteps_per_episode = 1600
+    timesteps_per_batch     = 200
+    max_timesteps_per_episode = 100
     gamma = 0.95
     clip  = 0.2
     lr    = 0.005
