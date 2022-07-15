@@ -19,13 +19,12 @@ class Action(typing.NamedTuple):
   """
   Agent action representation.
   """
-  action_type         : int        # Your policy function picks the best action type.
-  action_type_logits  : np.array   # This must be a distribution vector over action space.
-  action_index        : int        # Your policy function picks the best index to apply the policy.
-  action_index_logits : np.array   # Distribution vector over size of input code (or max length).
-  token_type          : int        # Your policy function picks the best token.
-  token_type_logits   : np.array   # Distribution vector over possible tokens.
-  comment             : str        # Add action description.
+  action        : int        # Selected action
+  index         : int        # At selected index
+  action_logits : np.array   # ACTION_SPACE * SEQ_LEN logits array.
+  token         : int        # Your policy function picks the best token.
+  token_logits  : np.array   # Distribution vector over possible tokens.
+  comment       : str        # Add action description.
 
 class State(typing.NamedTuple):
   """
