@@ -10,8 +10,8 @@
 working_dir: "AST" ## This path is relative to "workspace_dir", which is an app FLAG
 rl_model {
   train_set: true
-  batch_size: 4
   agent {
+    batch_size: 4
     feature_tokenizer {
       feature_max_value_token: 32768
       feature_singular_token_thr: 512
