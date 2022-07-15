@@ -109,30 +109,39 @@ class Environment(gym.Env):
           comment  = "[COMPILE] action failed."
         )
     elif action.action_type == interactions.ACTION_TYPE_SPACE['REM']:
-      new_enc_code = self.current_state.encoded_code[:action.action_index] + self.current_state.encoded_code[action.action_index+1:]
-      new_state = interactions.State(
-        target_features  = self.current_state.target_features,
-        feature_space    = self.current_state.feature_space,
-        encoded_features = self.current_state.encoded_features,
-        code             = self.tokenizer.ArrayToCode([int(x) for x in new_enc_code]),
-        encoded_code     = new_enc_code,
-        comment          = "State: \nCode:\n{}\nFeatures:\n{}".format(self.tokenizer.ArrayToCode([int(x) for x in new_enc_code]), self.current_state.target_features),
-      )
-      reward = interactions.Reward(
-        action   = action,
-        value    = 0.0,
-        distance = None,
-        comment  = "Removed {} from idx {}".format(self.tokenizer.ArrayToCode([self.current_state.encoded_code[action.action_index]]), action.action_index)
-      )
-      self.current_state = new_state
+      actual_length = np.where(np.array(self.current_state.encoded_code) == self.tokenizer.endToken)[0][0]
+      if action.action_index >= actual_length:
+        reward = interactions.Reward(
+          action   = action,
+          value    = -1.0,
+          distance = None,
+          comment  = "Trying to remove idx {} but [END] token is at index {}".format(action.action_index, actual_length)
+        )
+      else:
+        new_enc_code = self.current_state.encoded_code[:action.action_index] + self.current_state.encoded_code[action.action_index+1:]
+        new_state = interactions.State(
+          target_features  = self.current_state.target_features,
+          feature_space    = self.current_state.feature_space,
+          encoded_features = self.current_state.encoded_features,
+          code             = self.tokenizer.ArrayToCode([int(x) for x in new_enc_code]),
+          encoded_code     = new_enc_code,
+          comment          = "State: \nCode:\n{}\nFeatures:\n{}".format(self.tokenizer.ArrayToCode([int(x) for x in new_enc_code]), self.current_state.target_features),
+        )
+        reward = interactions.Reward(
+          action   = action,
+          value    = 0.0,
+          distance = None,
+          comment  = "Removed {} from idx {}".format(self.tokenizer.ArrayToCode([self.current_state.encoded_code[action.action_index]]), action.action_index)
+        )
+        self.current_state = new_state
     elif action.action_type == interactions.ACTION_TYPE_SPACE['ADD']:
       actual_length = np.where(np.array(self.current_state.encoded_code) == self.tokenizer.endToken)[0][0]
       if action.action_index >= actual_length:
         reward = interactions.Reward(
-          action = action,
-          value  = -1.0,
+          action   = action,
+          value    = -1.0,
           distance = None,
-          comment = "Added {} to idx {} but [END] token is at index {}".format(self.tokenizer.ArrayToCode([int(action.token_type)]), action.action_index, actual_length)
+          comment  = "Trying to add {} to idx {} but [END] token is at index {}".format(self.tokenizer.ArrayToCode([int(action.token_type)]), action.action_index, actual_length)
         )
       else:
         new_enc_code = list(self.current_state.encoded_code[:action.action_index + 1]) + [int(action.token_type)] + list(self.current_state.encoded_code[action.action_index + 1:])
