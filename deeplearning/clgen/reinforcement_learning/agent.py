@@ -359,14 +359,14 @@ class Agent(object):
     and picks the right action.
     """
     logits = self.actor.SampleAction(state)
-    action_logits = logits['action_logits'].cpu().numpy()
-    index_logits  = logits['index_logits'].cpu().numpy()
+    action_logits = logits['action_logits'].cpu()
+    index_logits  = logits['index_logits'].cpu()
     action_type, action_index  = self.policy.SelectAction(
       action_logits, index_logits,
       self.qv_config.action_type_temperature,
       self.qv_config.action_index_temperature,
     )
-
+    action_logits, index_logits = action_logits.numpy(), index_logits.numpy()
     comment = "Action: {}".format(interactions.ACTION_TYPE_MAP[action_type])
 
     if action_type == interactions.ACTION_TYPE_SPACE['ADD']:
