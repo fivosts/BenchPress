@@ -115,21 +115,16 @@ class Agent(object):
     """
     actor_optim = {
       'action': torch.optim.Adam(self.actor.action_parameters, lr = lr),
-      'index' : torch.optim.Adam(self.actor.index_parameters,  lr = lr),
       'token' : torch.optim.Adam(self.actor.token_parameters,  lr = lr),
     }
 
     critic_optim = {
       'action': torch.optim.Adam(self.critic.action_parameters, lr = lr),
-      'index' : torch.optim.Adam(self.critic.index_parameters,  lr = lr),
       'token' : torch.optim.Adam(self.critic.token_parameters,  lr = lr),
     }
 
     self.action_cov_var = torch.full(size = (len(interactions.ACTION_TYPE_SPACE),), fill_value = 0.5)
     self.action_cov_mat = torch.diag(self.action_cov_var)
-
-    self.index_cov_var = torch.full(size = (self.qv_config.max_position_embeddings,), fill_value = 0.5)
-    self.index_cov_mat = torch.diag(self.index_cov_var)
 
     self.token_cov_var = torch.full(size = (self.tokenizer.vocab_size,), fill_value = 0.5)
     self.token_cov_mat = torch.diag(self.token_cov_var)
@@ -140,29 +135,26 @@ class Agent(object):
         env, timesteps_per_batch, max_timesteps_per_episode, gamma,
       )
       # Compute Advantage at k_th iteration.
-      (V_act, _), (V_idx, _), (V_tok, _) = self.evaluate_policy(batch_states, batch_actions)
+      (V_act, _), (V_tok, _) = self.evaluate_policy(batch_states, batch_actions)
 
-      A_k_action, A_k_index, A_k_token = batch_rtgs - V_act.detach(), batch_rtgs - V_idx.detach(),  - V_tok.detach()
+      A_k_action, A_k_token = batch_rtgs - V_act.detach, batch_rtgs - V_tok.detach()
 
       print("Back from eval policy.")
       print(A_k_action)
-      print(A_k_index)
       print(A_k_token)
 
 			# Normalizing advantages isn't theoretically necessary, but in practice it decreases the variance of 
 			# our advantages and makes convergence much more stable and faster. I added this because
 			# solving some environments was too unstable without it.
       A_k_action = (A_k_action - A_k_action.mean()) / (A_k_action.std() + 1e-10)
-      A_k_index  = (A_k_index - A_k_index.mean())   / (A_k_index.std() + 1e-10)
       A_k_token  = (A_k_token - A_k_token.mean())   / (A_k_token.std() + 1e-10)
 
       batch_act_probs = [a.action_type_logits for a in batch_actions]
-      batch_idx_probs = [a.action_index_logits for a in batch_actions]
       batch_tok_probs = [a.token_type_logits for a in batch_actions]
 
       for i in range(num_updates_per_batch):
 				# Calculate V_phi and pi_theta(a_t | s_t)
-        (V_act, act_log_probs), (V_idx, idx_log_probs), (V_tok, tok_log_probs) = self.evaluate_policy(batch_states, batch_actions)
+        (V_act, act_log_probs), (V_tok, tok_log_probs) = self.evaluate_policy(batch_states, batch_actions)
 
         # Calculate the ratio pi_theta(a_t | s_t) / pi_theta_k(a_t | s_t)
         # NOTE: we just subtract the logs, which is the same as
@@ -172,15 +164,11 @@ class Agent(object):
         # https://cs.stackexchange.com/questions/70518/why-do-we-use-the-log-in-gradient-based-reinforcement-algorithms
         # TL;DR makes gradient ascent easier behind the scenes.
         act_ratios = torch.exp(act_log_probs - batch_act_probs)
-        idx_ratios = torch.exp(idx_log_probs - batch_idx_probs)
         tok_ratios = torch.exp(tok_log_probs - batch_tok_probs)
 
         # Calculate surrogate losses.
         act_surr1 = act_ratios * A_k_action
         act_surr2 = torch.clamp(act_surr1, 1 - self.clip, 1 + self.clip) * A_k_action
-
-        idx_surr1 = idx_ratios * A_k_index
-        idx_surr2 = torch.clamp(idx_surr1, 1 - self.clip, 1 + self.clip) * A_k_index
 
         tok_surr1 = tok_ratios * A_k_token
         tok_surr2 = torch.clamp(tok_surr1, 1 - self.clip, 1 + self.clip) * A_k_token
@@ -190,21 +178,15 @@ class Agent(object):
         # the performance function, but Adam minimizes the loss. So minimizing the negative
         # performance function maximizes it.
         action_loss = (-torch.min(act_surr1, act_surr2)).mean()
-        index_loss  = (-torch.min(idx_surr1, idx_surr2)).mean()
         token_loss  = (-torch.min(tok_surr1, tok_surr2)).mean()
 
         act_critic_loss = torch.nn.MSELoss()(V_act, batch_rtgs)
-        idx_critic_loss = torch.nn.MSELoss()(V_idx, batch_rtgs)
         tok_critic_loss = torch.nn.MSELoss()(V_tok, batch_rtgs)
 
         # Calculate gradients and perform backward propagation for actor network
         actor_optim['action'].zero_grad()
         action_loss.backward(retain_graph = True)
         actor_optim['action'].step()
-
-        actor_optim['index'].zero_grad()
-        index_loss.backward(retain_graph = True)
-        actor_optim['index'].step()
 
         actor_optim['token'].zero_grad()
         token_loss.backward()
@@ -214,10 +196,6 @@ class Agent(object):
         critic_optim['action'].zero_grad()
         act_critic_loss.backward(retain_graph = True)
         critic_optim['action'].step()
-
-        critic_optim['index'].zero_grad()
-        idx_critic_loss.backward(retain_graph = True)
-        critic_optim['index'].step()
 
         critic_optim['token'].zero_grad()
         tok_critic_loss.backward()
