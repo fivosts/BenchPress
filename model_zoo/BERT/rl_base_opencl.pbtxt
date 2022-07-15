@@ -29,6 +29,8 @@ rl_model {
       attention_probs_dropout_prob: 0.1
       type_vocab_size: 16
       initializer_range: 0.02
+      action_type_temperature_micros: 700000
+      action_index_temperature_micros: 700000
     }
     action_lm {
       # Fresh BERT-Encoder collecting features.
@@ -42,6 +44,7 @@ rl_model {
       attention_probs_dropout_prob: 0.1
       type_vocab_size: 16
       initializer_range: 0.02
+      token_temperature_micros: 700000
     }
   }
   language_model{
