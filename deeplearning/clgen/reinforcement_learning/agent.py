@@ -23,9 +23,8 @@ class Policy(object):
   """
   The policy selected over Q-Values
   """
-  def __init__(self, action_temp: float, idx_temp: float, token_temp: float):
+  def __init__(self, action_temp: float, token_temp: float):
     self.action_temperature = action_temp
-    self.index_temperature  = idx_temp
     self.token_temperature  = token_temp
     return
 
