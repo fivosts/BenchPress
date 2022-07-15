@@ -78,7 +78,7 @@ class Environment(gym.Env):
     """
     super().reset()
     done = False
-    if action.action_type == interactions.ACTION_TYPE_SPACE['COMP']:
+    if action.action == interactions.ACTION_TYPE_SPACE['COMP']:
       code = self.tokenizer.ArrayToCode(self.current_state.encoded_code)
       try:
         _ = opencl.Compile(code)
@@ -108,17 +108,17 @@ class Environment(gym.Env):
           distance = None,
           comment  = "[COMPILE] action failed."
         )
-    elif action.action_type == interactions.ACTION_TYPE_SPACE['REM']:
+    elif action.action == interactions.ACTION_TYPE_SPACE['REM']:
       actual_length = np.where(np.array(self.current_state.encoded_code) == self.tokenizer.endToken)[0][0]
-      if action.action_index >= actual_length:
+      if action.index >= actual_length:
         reward = interactions.Reward(
           action   = action,
           value    = -1.0,
           distance = None,
-          comment  = "Trying to remove idx {} but [END] token is at index {}".format(action.action_index, actual_length)
+          comment  = "Trying to remove idx {} but [END] token is at index {}".format(action.index, actual_length)
         )
       else:
-        new_enc_code = self.current_state.encoded_code[:action.action_index] + self.current_state.encoded_code[action.action_index+1:]
+        new_enc_code = self.current_state.encoded_code[:action.index] + self.current_state.encoded_code[action.index+1:]
         new_state = interactions.State(
           target_features  = self.current_state.target_features,
           feature_space    = self.current_state.feature_space,
@@ -131,20 +131,20 @@ class Environment(gym.Env):
           action   = action,
           value    = 0.0,
           distance = None,
-          comment  = "Removed {} from idx {}".format(self.tokenizer.ArrayToCode([self.current_state.encoded_code[action.action_index]]), action.action_index)
+          comment  = "Removed {} from idx {}".format(self.tokenizer.ArrayToCode([self.current_state.encoded_code[action.index]]), action.index)
         )
         self.current_state = new_state
-    elif action.action_type == interactions.ACTION_TYPE_SPACE['ADD']:
+    elif action.action == interactions.ACTION_TYPE_SPACE['ADD']:
       actual_length = np.where(np.array(self.current_state.encoded_code) == self.tokenizer.endToken)[0][0]
-      if action.action_index >= actual_length:
+      if action.index >= actual_length:
         reward = interactions.Reward(
           action   = action,
           value    = -1.0,
           distance = None,
-          comment  = "Trying to add {} to idx {} but [END] token is at index {}".format(self.tokenizer.ArrayToCode([int(action.token_type)]), action.action_index, actual_length)
+          comment  = "Trying to add {} to idx {} but [END] token is at index {}".format(self.tokenizer.ArrayToCode([int(action.token)]), action.index, actual_length)
         )
       else:
-        new_enc_code = list(self.current_state.encoded_code[:action.action_index + 1]) + [int(action.token_type)] + list(self.current_state.encoded_code[action.action_index + 1:])
+        new_enc_code = list(self.current_state.encoded_code[:action.index + 1]) + [int(action.token)] + list(self.current_state.encoded_code[action.index + 1:])
         new_enc_code = new_enc_code[:len(self.current_state.encoded_code)]
         new_state = interactions.State(
           target_features  = self.current_state.target_features,
@@ -158,11 +158,11 @@ class Environment(gym.Env):
           action   = action,
           value    = 0.0,
           distance = None,
-          comment  = "Added {} to idx {}".format(self.tokenizer.ArrayToCode([int(action.token_type)]), action.action_index)
+          comment  = "Added {} to idx {}".format(self.tokenizer.ArrayToCode([int(action.token)]), action.index)
         )
         self.current_state = new_state
     else:
-      raise ValueError("Invalid action: {}".format(action.action_type))
+      raise ValueError("Invalid action: {}".format(action.action))
 
     info = None
     return self.current_state, reward, done, info
@@ -190,14 +190,14 @@ class Environment(gym.Env):
 
   def compute_reward(self, action) -> interactions.Reward:
     """Compute an action's reward."""
-    if action.action_type == interactions.ACTION_TYPE_SPACE['ADD'] or action.action_type == interactions.ACTION_TYPE_SPACE['REM']:
+    if action.action == interactions.ACTION_TYPE_SPACE['ADD'] or action.action == interactions.ACTION_TYPE_SPACE['REM']:
       return interactions.Reward(
         action   = action,
         value    = 0.0,
         distance = None,
         comment  = "[ADD] action, reward is +0."
       )
-    elif action.action_type == interactions.ACTION_TYPE_SPACE['COMP']:
+    elif action.action == interactions.ACTION_TYPE_SPACE['COMP']:
       source = self.tokenizer.ArrayToCode(self.current_state.code)
       try:
         _ = opencl.Compile(source)
@@ -229,7 +229,7 @@ class Environment(gym.Env):
             comment = "[COMPILE] succeeded, reward is {}, new distance is {}".format(1.0 / dist, dist)
           )
     else:
-      raise ValueError("Action type {} does not exist.".format(action.action_type))
+      raise ValueError("Action type {} does not exist.".format(action.action))
 
   def loadCheckpoint(self) -> None:
     """
