@@ -188,49 +188,6 @@ class Environment(gym.Env):
     """
     return self.current_state
 
-  def compute_reward(self, action) -> interactions.Reward:
-    """Compute an action's reward."""
-    if action.action == interactions.ACTION_TYPE_SPACE['ADD'] or action.action == interactions.ACTION_TYPE_SPACE['REM']:
-      return interactions.Reward(
-        action   = action,
-        value    = 0.0,
-        distance = None,
-        comment  = "[ADD] action, reward is +0."
-      )
-    elif action.action == interactions.ACTION_TYPE_SPACE['COMP']:
-      source = self.tokenizer.ArrayToCode(self.current_state.code)
-      try:
-        _ = opencl.Compile(source)
-        feats = extractor.ExtractFeatures(source, [self.feature_space])
-        compiles = True
-      except ValueError:
-        compiles = False
-      if not compiles:
-        return interactions.Reward(
-          action   = action,
-          value    = -1,
-          distance = None,
-          comment  = "[COMPILE] action failed and reward is -1.",
-        )
-      else:
-        dist = feature_sampler.euclidean_distance(feats, self.current_state.target_features)
-        if dist == 0:
-          return interactions.Reward(
-            action   = action,
-            value    = 1.0,
-            distance = dist,
-            comment  = "[COMPILE] led to dropping distance to 0, reward is +1!"
-          )
-        else:
-          return interactions.Reward(
-            action = action,
-            value  = 1.0 / (1 + dist),
-            distance = dist,
-            comment = "[COMPILE] succeeded, reward is {}, new distance is {}".format(1.0 / dist, dist)
-          )
-    else:
-      raise ValueError("Action type {} does not exist.".format(action.action))
-
   def loadCheckpoint(self) -> None:
     """
     Load environment checkpoint.
