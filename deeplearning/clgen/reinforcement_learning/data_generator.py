@@ -53,12 +53,13 @@ def StateToActionTensor(state         : interactions.State,
     'decoder_position_ids' : src_pos,
   }
 
-def StateToTokenTensor(state         : interactions.State,
-                       mask_idx      : int,
-                       maskToken     : int,
-                       padToken      : int,
-                       feat_padToken : int,
+def StateToTokenTensor(state          : interactions.State,
+                       mask_idx       : int,
+                       maskToken      : int,
+                       padToken       : int,
+                       feat_padToken  : int,
                        batch_size     : int,
+                       replace_token  : bool = False,
                        ) -> typing.Dict[str, torch.Tensor]:
   """
   Pre-process state to 
@@ -66,7 +67,11 @@ def StateToTokenTensor(state         : interactions.State,
   seq_len      = len(state.encoded_code)
   feat_seq_len = len(state.encoded_features)
 
-  masked_code  = np.concatenate((state.encoded_code[:mask_idx+1], [maskToken], state.encoded_code[mask_idx+1:]))
+  if replace_token:
+    masked_code = state.encoded_code
+    masked_code[mask_idx] = maskToken
+  else:
+    masked_code = np.concatenate((state.encoded_code[:mask_idx+1], [maskToken], state.encoded_code[mask_idx+1:]))
   masked_code  = torch.LongTensor(masked_code[:seq_len]).unsqueeze(0).repeat(batch_size, 1)
   enc_features = torch.LongTensor(state.encoded_features).unsqueeze(0).repeat(batch_size, 1)
 
