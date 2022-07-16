@@ -6,9 +6,10 @@ import typing
 import numpy as np
 
 ACTION_TYPE_SPACE = {
-  'ADD' : 0,
-  'REM' : 1,
-  'COMP': 2, 
+  'ADD'     : 0,
+  'REM'     : 1,
+  'COMP'    : 2,
+  'REPLACE' : 3,
 }
 
 ACTION_TYPE_MAP = {
