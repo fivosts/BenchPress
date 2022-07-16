@@ -125,13 +125,13 @@ class Environment(gym.Env):
           encoded_features = self.current_state.encoded_features,
           code             = self.tokenizer.ArrayToCode([int(x) for x in new_enc_code]),
           encoded_code     = new_enc_code,
-          comment          = "State: \nCode:\n{}\nFeatures:\n{}".format(self.tokenizer.ArrayToCode([int(x) for x in new_enc_code]), self.current_state.target_features),
+          comment          = "State: \nCode:\n{}\nFeatures:\n{}".format(self.tokenizer.tokensToString([int(x) for x in new_enc_code]), self.current_state.target_features),
         )
         reward = interactions.Reward(
           action   = action,
           value    = 0.0,
           distance = None,
-          comment  = "Removed {} from idx {}".format(self.tokenizer.ArrayToCode([self.current_state.encoded_code[action.index]]), action.index)
+          comment  = "Removed {} from idx {}".format(self.tokenizer.tokensToString([self.current_state.encoded_code[action.index]]), action.index)
         )
         self.current_state = new_state
     elif action.action == interactions.ACTION_TYPE_SPACE['ADD']:
@@ -141,7 +141,7 @@ class Environment(gym.Env):
           action   = action,
           value    = -1.0,
           distance = None,
-          comment  = "Trying to add {} to idx {} but [END] token is at index {}".format(self.tokenizer.ArrayToCode([int(action.token)]), action.index, actual_length)
+          comment  = "Trying to add {} to idx {} but [END] token is at index {}".format(self.tokenizer.tokensToString([int(action.token)]), action.index, actual_length)
         )
       else:
         new_enc_code = list(self.current_state.encoded_code[:action.index + 1]) + [int(action.token)] + list(self.current_state.encoded_code[action.index + 1:])
@@ -152,13 +152,40 @@ class Environment(gym.Env):
           encoded_features = self.current_state.encoded_features,
           code             = self.tokenizer.ArrayToCode([int(x) for x in new_enc_code]),
           encoded_code     = new_enc_code,
-          comment          = "State: \nCode:\n{}\nFeatures:\n{}".format(self.tokenizer.ArrayToCode([int(x) for x in new_enc_code]), self.current_state.target_features),
+          comment          = "State: \nCode:\n{}\nFeatures:\n{}".format(self.tokenizer.tokensToString([int(x) for x in new_enc_code]), self.current_state.target_features),
         )
         reward = interactions.Reward(
           action   = action,
           value    = 0.0,
           distance = None,
-          comment  = "Added {} to idx {}".format(self.tokenizer.ArrayToCode([int(action.token)]), action.index)
+          comment  = "Added {} to idx {}".format(self.tokenizer.tokensToString([int(action.token)]), action.index)
+        )
+        self.current_state = new_state
+    elif action.action == interactions.ACTION_TYPE_SPACE['REPLACE']:
+      actual_length = np.where(np.array(self.current_state.encoded_code) == self.tokenizer.endToken)[0][0]
+      if action.index >= actual_length:
+        reward = interactions.Reward(
+          action   = action,
+          value    = -1.0,
+          distance = None,
+          comment  = "Trying to add {} to idx {} but [END] token is at index {}".format(self.tokenizer.tokensToString([int(action.token)]), action.index, actual_length)
+        )
+      else:
+        new_enc_code = list(self.current_state.encoded_code[:action.index + 1]) + [int(action.token)] + list(self.current_state.encoded_code[action.index + 1:])
+        new_enc_code = new_enc_code[:len(self.current_state.encoded_code)]
+        new_state = interactions.State(
+          target_features  = self.current_state.target_features,
+          feature_space    = self.current_state.feature_space,
+          encoded_features = self.current_state.encoded_features,
+          code             = self.tokenizer.ArrayToCode([int(x) for x in new_enc_code]),
+          encoded_code     = new_enc_code,
+          comment          = "State: \nCode:\n{}\nFeatures:\n{}".format(self.tokenizer.tokensToString([int(x) for x in new_enc_code]), self.current_state.target_features),
+        )
+        reward = interactions.Reward(
+          action   = action,
+          value    = 0.0,
+          distance = None,
+          comment  = "Replaced idx {} from '{}' to '{}'".format(action.index, self.tokenizer.tokensToString([self.current_state.encoded_code[action.index]]), self.tokenizer.tokensToString([int(action.token)]))
         )
         self.current_state = new_state
     else:
