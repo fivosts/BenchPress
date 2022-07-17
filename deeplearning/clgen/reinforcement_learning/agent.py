@@ -4,6 +4,7 @@ Agents module for reinforcement learning.
 from code import interact
 import pathlib
 import typing
+import tqdm
 import numpy as np
 
 from deeplearning.clgen.reinforcement_learning import interactions
@@ -286,7 +287,7 @@ class Agent(object):
     V_actions, V_tokens = [], []
     action_log_probs, token_log_probs = [], []
 
-    for state, action in zip(states, actions):
+    for state, action in tqdm.tqdm(zip(states, actions), total = len(states), desc = "Evaluate Policy"):
 
       critic_logits = self.critic.SampleAction(state)
       V_actions.append(critic_logits['action_logits'].cpu())
@@ -339,6 +340,18 @@ class Agent(object):
       comment += ", index: {}".format(action_index)
     elif action_type == interactions.ACTION_TYPE_SPACE['COMP']:
       token_logits, token = None, None
+    elif action_type == interactions.ACTION_TYPE_SPACE['REPLACE']:
+      logits = self.actor.SampleToken(
+        state,
+        action_index,
+        self.tokenizer,
+        self.feature_tokenizer,
+        replace_token = True,
+      )
+      token_logits = logits['prediction_logits'][:,action_index]
+      token        = self.policy.SelectToken(token_logits).cpu().numpy()
+      token_logits = token_logits.cpu().numpy()
+      comment = ", index: {}, token: '{}' -> '{}'".format(action_index, self.tokenizer.decoder[int(state.encoded_code[action_index])], self.tokenizer.decoder[int(token)])
     else:
       raise ValueError("Invalid action_type: {}".format(action_type))
 
