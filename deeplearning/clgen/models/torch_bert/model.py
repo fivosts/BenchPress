@@ -502,15 +502,13 @@ class BertPredictionHeadTransform(torch.nn.Module):
     return hidden_states
 
 class BertLMPredictionHead(torch.nn.Module):
-  def __init__(self, config, output_dim: int = None):
+  def __init__(self, config):
     super().__init__()
-    if output_dim is None:
-      output_dim = config.vocab_size
     self.transform = BertPredictionHeadTransform(config)
     # The output weights are the same as the input embeddings, but there is
     # an output-only bias for each token.
-    self.decoder = torch.nn.Linear(config.hidden_size, output_dim, bias=False)
-    self.bias = torch.nn.Parameter(torch.zeros(output_dim))
+    self.decoder = torch.nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+    self.bias = torch.nn.Parameter(torch.zeros(config.vocab_size))
     # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
     self.decoder.bias = self.bias
     return
@@ -521,10 +519,8 @@ class BertLMPredictionHead(torch.nn.Module):
     return hidden_states
 
 class BertLMFeaturePredictionHead(torch.nn.Module):
-  def __init__(self, config, output_dim: int = None):
+  def __init__(self, config):
     super().__init__()
-    if output_dim is None:
-      output_dim = config.vocab_size
     # Transformer for raw features encoding.
     self.feature_encoder = FeatureTransformer(config)
     # BERT predictions transformation.
@@ -534,8 +530,8 @@ class BertLMFeaturePredictionHead(torch.nn.Module):
     # The output weights are the same as the input embeddings, but there is
     # an output-only bias for each token.
     ## Decoder maps hidden size to vocabulary size.
-    self.decoder = torch.nn.Linear(config.hidden_size, output_dim, bias=False)
-    self.dbias = torch.nn.Parameter(torch.zeros(output_dim))
+    self.decoder = torch.nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+    self.dbias = torch.nn.Parameter(torch.zeros(config.vocab_size))
     # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
     self.decoder.bias = self.dbias
     return
@@ -550,18 +546,18 @@ class BertLMFeaturePredictionHead(torch.nn.Module):
     return hidden_states, encoded_features
 
 class BertOnlyMLMHead(torch.nn.Module):
-  def __init__(self, config, output_dim: int = None):
+  def __init__(self, config):
     super().__init__()
-    self.predictions = BertLMPredictionHead(config, output_dim = output_dim)
+    self.predictions = BertLMPredictionHead(config)
 
   def forward(self, sequence_output, features):
     prediction_scores = self.predictions(sequence_output)
     return prediction_scores, None
 
 class BertMLMFeatureHead(torch.nn.Module):
-  def __init__(self, config, output_dim: int = None):
+  def __init__(self, config):
     super().__init__()
-    self.predictions = BertLMFeaturePredictionHead(config, output_dim = output_dim)
+    self.predictions = BertLMFeaturePredictionHead(config)
 
   def forward(self, sequence_output, features):
     prediction_scores, encoded_features = self.predictions(sequence_output, features)
@@ -734,16 +730,15 @@ class BertForPreTraining(BertPreTrainedModel):
                temperature        : int  = None,
                target_lm          : str  = "hole",
                without_label_head : bool = False,
-               output_dim         : int  = None,
                ):
     super().__init__(config)
 
     self.bert = BertModel(config)
     if without_label_head is False:
       if self.config.feature_encoder:
-        self.cls = BertMLMFeatureHead(config, output_dim = output_dim)
+        self.cls = BertMLMFeatureHead(config)
       else:
-        self.cls = BertOnlyMLMHead(config, output_dim = output_dim)
+        self.cls = BertOnlyMLMHead(config)
     else:
       self.cls = None
 
