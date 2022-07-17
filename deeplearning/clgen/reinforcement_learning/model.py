@@ -54,6 +54,9 @@ class ActionHead(torch.nn.Module):
     action_logits = self.decoder(flat)
     return action_logits
 
+class TokenHead(torch.nn.Module):
+  """Classification head for token prediction."""
+
 class ActionQV(torch.nn.Module):
   """Deep Q-Values for Action type prediction."""
   def __init__(self,
@@ -87,7 +90,7 @@ class ActionQV(torch.nn.Module):
     output_dim = None
     if is_critic:
       output_dim = 1
-    self.action_head     = ActionHead(config, output_dim = output_dim)
+    self.action_head = ActionHead(config, output_dim = output_dim)
     return
 
   def forward(self,
@@ -149,12 +152,10 @@ class ActionLanguageModelQV(torch.nn.Module):
       with_checkpoint              = False,
     )
     ## Decoder for token prediction, given features memory and source code.
-    output_dim = None
-    if is_critic:
-      output_dim = 1
     self.language_model = language_model.backend.GetDecoderModule(
-      with_checkpoint = True, output_dim = output_dim
+      with_checkpoint = True
     )
+    l.logger().critical(self.language_model.cls.predictions.decoder)
     return
 
   def forward(self,
@@ -180,14 +181,6 @@ class ActionLanguageModelQV(torch.nn.Module):
       encoder_hidden_states = encoder_memory,
     )
     return decoder_out
-
-  def TrainBatch(self, input_ids: typing.Dict[str, torch.Tensor]):
-    self.language_model.Trainbatch(input_ids)
-    return
-
-  def SampleBatch(self, input_ids: typing.Dict[str, torch.Tensor]):
-    self.language_model.SampleBatch(input_ids)
-    return
 
 class QValuesModel(object):
   """
