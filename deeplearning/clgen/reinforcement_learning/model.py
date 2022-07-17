@@ -56,6 +56,18 @@ class ActionHead(torch.nn.Module):
 
 class TokenHead(torch.nn.Module):
   """Classification head for token prediction."""
+  def __init__(self, config, output_dim: int):
+    super().__init__()
+    self.transform = PredictionHeadTransform(config, dense_size = config.hidden_size)
+    self.decoder   = torch.nn.Linear(config.hidden_size, output_dim, bias = False)
+    self.bias      = torch.nn.Parameter(torch.zeros(output_dim))
+    self.decoder.bias = self.bias
+    return
+  
+  def forward(self, decoder_out: torch.FloatTensor) -> torch.FloatTensor:
+    hidden_states = self.transform(decoder_out)
+    token_logits = self.decoder(hidden_states)
+    return token_logits
 
 class ActionQV(torch.nn.Module):
   """Deep Q-Values for Action type prediction."""
@@ -155,7 +167,11 @@ class ActionLanguageModelQV(torch.nn.Module):
     self.language_model = language_model.backend.GetDecoderModule(
       with_checkpoint = True
     )
-    l.logger().critical(self.language_model.cls.predictions.decoder)
+    if is_critic:
+      output_dim = 1
+    else:
+      output_dim = config.vocab_size
+    self.decoder = TokenHead(config, output_dim)
     return
 
   def forward(self,
