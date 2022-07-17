@@ -330,11 +330,18 @@ class QValuesModel(object):
                   mask_idx       : int,
                   tokenizer      : tokenizers.TokenizerBase,
                   feat_tokenizer : tokenizers.FeatureTokenizer,
+                  replace_token  : bool = False,
                   ) -> typing.Dict[str, torch.Tensor]:
     """Predict token type"""
     self._ConfigModelParams()
     inputs = data_generator.StateToTokenTensor(
-      state, mask_idx, tokenizer.holeToken, tokenizer.padToken, feat_tokenizer.padToken, self.batch_size
+      state,
+      mask_idx,
+      tokenizer.holeToken,
+      tokenizer.padToken,
+      feat_tokenizer.padToken,
+      self.batch_size,
+      replace_token = replace_token,
     )
     with torch.no_grad():
       inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
