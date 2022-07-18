@@ -923,7 +923,12 @@ class torchBert(backends.BackendBase):
           }
           for k in input_features.keys():
             if k not in {"F2:coalesced/mem", "F4:comp/mem"}:
-              val = int(input("{}: ".format(k)))
+              prompt = input("{}: ".format(k))
+              if prompt == 0:
+                val = 0
+              else:
+                val = int(prompt)
+              input_features[k] = val
           if feat_space == "GreweFeatures":
             try:
               input_features["F2:coalesced/mem"] = input_features["coalesced"] / input_features["mem"]
