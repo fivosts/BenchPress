@@ -375,7 +375,6 @@ class torchBert(backends.BackendBase):
                  inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
                  is_validation : bool = False,
                  step          : int  = -1,
-                 is_live       : bool = False,
                  ) -> typing.Dict[str, typing.TypeVar('torch.Tensor')]:
     """
     Perform a training step on a batch of inputs.
@@ -388,14 +387,12 @@ class torchBert(backends.BackendBase):
                 masked_lm_labels     = inputs['mask_labels'],
                 is_validation        = is_validation,
                 step                 = step,
-                is_live              = is_live,
               )
     return outputs
 
   def sample_model_step(self,
                         model     : typing.List[typing.TypeVar('torch.nn.Module')],
                         inputs    : typing.Dict[str, typing.TypeVar('torch.Tensor')],
-                        is_live   : bool = False,
                         iteration : int = None,
                         ) -> typing.Dict[str, typing.List[typing.List[int]]]:
     """
@@ -414,46 +411,30 @@ class torchBert(backends.BackendBase):
       desc = "Sampling iteration: {}".format(iteration)
     else:
       desc = "Sampling"
-    if not is_live:
-      wload_size = len(inputs['input_ids']) * len(inputs['input_ids'][0])
-      inputs = self.to_device(inputs)
-      if environment.WORLD_RANK == 0:
-        bar = tqdm.auto.trange(wload_size, desc=desc, leave = False, position = 0)
-      samples, sample_indices = model(
-        workload = (
-          inputs['input_ids'],
-          inputs['input_mask'],
-          inputs['position_ids'],
-          inputs['input_features'],
-        ),
-        bar = bar if environment.WORLD_RANK == 0 else None,
-      )
 
-      outputs['generated_samples'] = samples.detach()
-      outputs['sample_indices']    = sample_indices.detach()
-      outputs['input_ids']         = self.torch.reshape(inputs['input_ids'], tuple(samples.shape))
-      outputs['masked_lm_lengths'] = self.torch.reshape(inputs['masked_lm_lengths'].to(self.pytorch.device), (samples.shape[0], -1))
+    wload_size = len(inputs['input_ids']) * len(inputs['input_ids'][0])
+    inputs = self.to_device(inputs)
+    if environment.WORLD_RANK == 0:
+      bar = tqdm.auto.trange(wload_size, desc=desc, leave = False, position = 0)
+    samples, sample_indices = model(
+      workload = (
+        inputs['input_ids'],
+        inputs['input_mask'],
+        inputs['position_ids'],
+        inputs['input_features'],
+      ),
+      bar = bar if environment.WORLD_RANK == 0 else None,
+    )
 
-      outputs['generated_samples'] = list(outputs['generated_samples'].cpu().numpy())
-      outputs['sample_indices']    = list(outputs['sample_indices'].cpu().numpy())
-      outputs['input_ids']         = list(outputs['input_ids'].cpu().numpy())
-      outputs['masked_lm_lengths'] = list(outputs['masked_lm_lengths'].cpu().numpy())
+    outputs['generated_samples'] = samples.detach()
+    outputs['sample_indices']    = sample_indices.detach()
+    outputs['input_ids']         = self.torch.reshape(inputs['input_ids'], tuple(samples.shape))
+    outputs['masked_lm_lengths'] = self.torch.reshape(inputs['masked_lm_lengths'].to(self.pytorch.device), (samples.shape[0], -1))
 
-    else:
-      raise NotImplementedError ("Haven't implemented live sampling.")
-      inputs = self.to_device(inputs)
-      out = model(
-        input_ids        = inputs['input_ids'],
-        attention_mask   = inputs['input_mask'],
-        position_ids     = inputs['position_ids'],
-        masked_lm_labels = inputs['mask_labels'],
-        is_live          = is_live,
-      )
-      outputs['generated_samples'] += out['generated_samples']
-      outputs['sample_indices']    += out['sample_indices']
-      outputs['input_ids']         += list(inputs['input_ids'].numpy())
-      outputs['masked_lm_lengths'] += list(inputs['masked_lm_lengths'].numpy())
-      return outputs
+    outputs['generated_samples'] = list(outputs['generated_samples'].cpu().numpy())
+    outputs['sample_indices']    = list(outputs['sample_indices'].cpu().numpy())
+    outputs['input_ids']         = list(outputs['input_ids'].cpu().numpy())
+    outputs['masked_lm_lengths'] = list(outputs['masked_lm_lengths'].cpu().numpy())
 
     end = time.time()
     return outputs, end-start
@@ -930,7 +911,6 @@ class torchBert(backends.BackendBase):
         step_out, time = self.sample_model_step(
             self.sample.model,
             self.step_inputs,
-            is_live = self.sampler.is_live
         )
         if self.pytorch.num_nodes > 1:
           self.torch.distributed.barrier()
