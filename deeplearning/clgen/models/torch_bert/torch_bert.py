@@ -371,8 +371,8 @@ class torchBert(backends.BackendBase):
     return inputs
 
   def model_step(self,
-                 model: typing.TypeVar('nn.Module'),
-                 inputs: typing.Dict[str, typing.TypeVar('torch.Tensor')],
+                 model         : 'torch.nn.Module',
+                 inputs        : typing.Dict[str, 'torch.Tensor'],
                  is_validation : bool = False,
                  step          : int  = -1,
                  ) -> typing.Dict[str, typing.TypeVar('torch.Tensor')]:
