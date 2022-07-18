@@ -923,23 +923,6 @@ class torchBert(backends.BackendBase):
           generated_samples = step_out['generated_samples']
           sample_indices    = step_out['sample_indices']
 
-        if self.sampler.is_live and input("Show logits figure ? [y/!y]") == "y":
-          if self.pytorch.num_nodes > 1:
-            prediction_scores = [self.torch.zeros(tuple(step_out['prediction_scores'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
-            self.torch.distributed.barrier()
-            self.torch.distributed.all_gather(prediction_scores, step_out["prediction_scores"])
-          else:
-            prediction_scores = step_out['prediction_scores'].cpu()
-
-          for hole, indcs in zip(prediction_scores, sample_indices):
-            plotter.LogitsStepsDistrib(
-              x = self.torch.nn.Softmax(dim = 1)(self.torch.FloatTensor(hole[:10])).numpy(),
-              atoms = [self.tokenizer.decoder[i] for i in range(self.tokenizer.vocab_size)],
-              sample_indices = [self.tokenizer.decoder[i] for i in indcs[0]][:10],
-              plot_name = "sampling_distrib",
-              title = "Sampling distribution dim 1",
-              x_name = "Probs / sample step",
-            )
         return (
           self.step_inputs['original_input'].cpu().view(-1, self.step_inputs['original_input'].shape[2]).numpy(),
           self.step_inputs['input_ids'].cpu().view(-1, self.sampler.sequence_length).numpy(),
