@@ -908,6 +908,31 @@ class torchBert(backends.BackendBase):
         except StopIteration:
           raise StopIteration
       else:
+        if self.sampler.is_live:
+          feat_space = ""
+          while feat_space not in {"GreweFeatures", "AutophaseFeatures", "InstCountFeatures"}:
+            feat_space = input("Select feature space: [g/a/i]/[GreweFeatures/AutophaseFeatures/InstCountFeatures]:")
+            if feat_space == "a":
+              feat_space = "AutophaseFeatures"
+            elif feat_space == "g":
+              feat_space = "GreweFeatures"
+            elif feat_space == "i":
+              feat_space = "InstCountFeatures"
+          input_features = {
+            k: -1 for extractor.extractors.KEYS[feat_space]
+          }
+          for k in input_features.keys():
+            if k not in {"F2:coalesced/mem", "F4:comp/mem"}:
+              val = int(input("{}: ".format(k)))
+          if feat_space == "GreweFeatures":
+            try:
+              input_features["F2:coalesced/mem"] = input_features["coalesced"] / input_features["mem"]
+            except ZeroDivisionError:
+              input_features["F2:coalesced/mem"] = 0
+            try:
+              input_features["F4:comp/mem"] = input_features["comp"] / input_features["mem"]
+            except ZeroDivisionError:
+              input_features["F4:comp/mem"] = 0
         step_out, time = self.sample_model_step(
             self.sample.model,
             self.step_inputs,
