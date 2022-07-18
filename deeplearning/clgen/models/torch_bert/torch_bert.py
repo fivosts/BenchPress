@@ -938,6 +938,7 @@ class torchBert(backends.BackendBase):
               input_features["F4:comp/mem"] = input_features["comp"] / input_features["mem"]
             except ZeroDivisionError:
               input_features["F4:comp/mem"] = 0
+          self.step_inputs['input_features'] = input_features
         step_out, time = self.sample_model_step(
             self.sample.model,
             self.step_inputs,
