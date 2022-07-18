@@ -375,7 +375,7 @@ class torchBert(backends.BackendBase):
                  inputs        : typing.Dict[str, 'torch.Tensor'],
                  is_validation : bool = False,
                  step          : int  = -1,
-                 ) -> typing.Dict[str, typing.TypeVar('torch.Tensor')]:
+                 ) -> typing.Dict[str, 'torch.Tensor']:
     """
     Perform a training step on a batch of inputs.
     """
