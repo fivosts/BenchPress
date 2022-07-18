@@ -574,6 +574,8 @@ class Model(object):
             continue_sampling &= all(
               [obs.OnSample(sample) for obs in sample_observers]
             )
+            if sampler.is_live and self.backend.feature_encoder:
+              print(sample.feature_vector)
             seq_count += 1
             # Wall sample time is the difference between the end of the previous
             # sample and the end of the current sample.
