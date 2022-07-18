@@ -800,7 +800,6 @@ class BertForPreTraining(BertPreTrainedModel):
     output_attentions    = None,
     output_hidden_states = None,
     is_validation        = False,
-    is_live              = False,
     step                 = -1,
     **kwargs
   ):
@@ -840,6 +839,7 @@ class BertForPreTraining(BertPreTrainedModel):
     device = input_ids.get_device()
     device = device if device >= 0 else 'cpu'
 
+    ## If there is a sampling workload, load it directly to the compiler.
     if workload is not None:
       if self.cls is None:
         raise ValueError("This mode requires a classification head.")
@@ -858,11 +858,13 @@ class BertForPreTraining(BertPreTrainedModel):
         bar = bar,
       )
 
+    ## Otherwise select one other mode.
     prediction_scores, encoded_features, hidden_states, attentions = self.get_output(
       input_ids, attention_mask, position_ids, input_features,
       token_type_ids, head_mask, inputs_embeds,
       output_attentions, output_hidden_states 
     )
+    ## [DEPRECATED]: Training with a compile sampler is proven to not work.
     if not is_validation and self.compile_sampler and step >= self.config.reward_compilation and not self.config.is_sampling:
       if self.cls is None:
         raise ValueError("This mode requires a classification head.")
@@ -889,6 +891,7 @@ class BertForPreTraining(BertPreTrainedModel):
         'batch_compilation_rate' : torch.full((1,), float(sum(compile_flag)) / len(compile_flag), dtype = torch.float).to(device),
         # 'sample_indices'          : [0],
       }
+    ## Sampling without a workload. Not really useful anymore.
     elif not is_validation and self.compile_sampler and self.config.is_sampling:
       if self.cls is None:
         raise ValueError("This mode requires a classification head.")
@@ -912,6 +915,7 @@ class BertForPreTraining(BertPreTrainedModel):
           'generated_samples': samples,
           'sample_indices'   : sample_indices,
         }
+    ## Training mode.
     else:
       if masked_lm_labels is not None:
         loss_fct = torch.nn.CrossEntropyLoss()
