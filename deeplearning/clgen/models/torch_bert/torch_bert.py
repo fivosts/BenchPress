@@ -911,7 +911,7 @@ class torchBert(backends.BackendBase):
         if self.sampler.is_live:
           feat_space = ""
           while feat_space not in {"GreweFeatures", "AutophaseFeatures", "InstCountFeatures"}:
-            feat_space = input("Select feature space: [g/a/i]/[GreweFeatures/AutophaseFeatures/InstCountFeatures]:")
+            feat_space = input("Select feature space: [g/a/i]/[GreweFeatures/AutophaseFeatures/InstCountFeatures]: ")
             if feat_space == "a":
               feat_space = "AutophaseFeatures"
             elif feat_space == "g":
@@ -919,7 +919,7 @@ class torchBert(backends.BackendBase):
             elif feat_space == "i":
               feat_space = "InstCountFeatures"
           input_features = {
-            k: -1 for extractor.extractors.KEYS[feat_space]
+            k: -1 for k in extractor.extractors.KEYS[feat_space]
           }
           for k in input_features.keys():
             if k not in {"F2:coalesced/mem", "F4:comp/mem"}:
@@ -959,10 +959,6 @@ class torchBert(backends.BackendBase):
           generated_samples,
           sample_indices
         )
-
-  def SampleBatch(self, batch) -> typing.Tuple[np.array, np.array]:
-    raise NotImplementedError
-    return
 
   def _getTestSampler(self, test_sampler, sequence_length):
     if test_sampler is None or test_sampler.is_live or test_sampler.is_active:
