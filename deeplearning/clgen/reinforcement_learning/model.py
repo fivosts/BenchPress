@@ -196,7 +196,8 @@ class ActionLanguageModelQV(torch.nn.Module):
       position_ids          = decoder_position_ids,
       encoder_hidden_states = encoder_memory,
     )
-    return decoder_out
+    outputs = self.decoder(decoder_out)
+    return outputs
 
 class QValuesModel(object):
   """
