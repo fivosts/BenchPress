@@ -908,7 +908,7 @@ class torchBert(backends.BackendBase):
         except StopIteration:
           raise StopIteration
       else:
-        if self.sampler.is_live:
+        if self.sampler.is_live and self.feature_encoder:
           feat_space = ""
           while feat_space not in {"GreweFeatures", "AutophaseFeatures", "InstCountFeatures"}:
             feat_space = input("Select feature space: [g/a/i]/[GreweFeatures/AutophaseFeatures/InstCountFeatures]: ")
