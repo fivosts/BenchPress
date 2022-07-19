@@ -89,7 +89,6 @@ class Agent(object):
       action_temp = self.qv_config.action_temperature,
       token_temp  = self.qv_config.token_temperature,
     )
-
     self.loadCheckpoint()
     return
 
