@@ -203,7 +203,7 @@ class Environment(gym.Env):
     """
     Reset the state of the environment.
     """
-    if recycle:
+    if recycle and self.current_state:
       self.feature_dataset.append(
         (self.current_state.feature_space, self.current_state.target_features)
       )
