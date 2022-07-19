@@ -165,7 +165,8 @@ class ActionLanguageModelQV(torch.nn.Module):
     )
     ## Decoder for token prediction, given features memory and source code.
     self.language_model = language_model.backend.GetDecoderModule(
-      with_checkpoint = True
+      with_checkpoint = True,
+      without_label_head = True,
     )
     if is_critic:
       output_dim = 1
@@ -196,7 +197,7 @@ class ActionLanguageModelQV(torch.nn.Module):
       position_ids          = decoder_position_ids,
       encoder_hidden_states = encoder_memory,
     )
-    token_logits = self.decoder(decoder_out['prediction_logits'])
+    token_logits = self.decoder(decoder_out['hidden_states'])
     return {
       'token_logits': token_logits
     }
