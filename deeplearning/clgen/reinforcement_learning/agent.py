@@ -131,11 +131,11 @@ class Agent(object):
       (V_act, _), (V_tok, _) = self.evaluate_policy(batch_states, batch_actions)
 
 
-      if V_act:
+      if V_act is not None:
         A_k_action = action_batch_rtgs - V_act.detach()
       else:
         A_k_action = None
-      if V_tok:
+      if V_tok is not None:
         A_k_token = token_batch_rtgs - V_tok.detach()
       else:
         A_k_token = None
@@ -147,9 +147,9 @@ class Agent(object):
 			# Normalizing advantages isn't theoretically necessary, but in practice it decreases the variance of 
 			# our advantages and makes convergence much more stable and faster. I added this because
 			# solving some environments was too unstable without it.
-      if A_k_action:
+      if A_k_action is not None:
         A_k_action = (A_k_action - A_k_action.mean()) / (A_k_action.std() + 1e-10)
-      if A_k_token:
+      if A_k_token is not None:
         A_k_token  = (A_k_token - A_k_token.mean())   / (A_k_token.std() + 1e-10)
 
       batch_act_probs = torch.FloatTensor([a.action_logits for a in batch_actions if a.action_logits is not None])
