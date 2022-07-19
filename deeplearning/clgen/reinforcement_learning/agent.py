@@ -150,8 +150,8 @@ class Agent(object):
       A_k_action = (A_k_action - A_k_action.mean()) / (A_k_action.std() + 1e-10)
       A_k_token  = (A_k_token - A_k_token.mean())   / (A_k_token.std() + 1e-10)
 
-      batch_act_probs = [a.action_logits for a in batch_actions]
-      batch_tok_probs = [a.token_logits for a in batch_actions]
+      batch_act_probs = torch.FloatTensor([a.action_logits for a in batch_actions])
+      batch_tok_probs = torch.FloatTensor([a.token_logits for a in batch_actions])
 
       for i in range(num_updates_per_batch):
 				# Calculate V_phi and pi_theta(a_t | s_t)
