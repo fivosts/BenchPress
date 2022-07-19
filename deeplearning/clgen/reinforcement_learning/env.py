@@ -59,17 +59,20 @@ class Environment(gym.Env):
       self.cache_path.mkdir(exist_ok = True, parents = True)
       self.ckpt_path.mkdir(exist_ok = True, parents = True)
 
-    self.feature_dataset = []  
-    if self.config.HasField("train_set"):
-      data = corpus.GetTrainingFeatures()
-      for dp in data:
-        for k, v in dp.items():
-          if v:
-            self.feature_dataset.append((k, v))
-    elif self.config.HasField("random"):
-      self.feature_dataset = []
     self.current_state = None
+    self.feature_dataset = None
     self.loadCheckpoint()
+
+    if self.feature_dataset is None:
+      self.feature_dataset = []  
+      if self.config.HasField("train_set"):
+        data = corpus.GetTrainingFeatures()
+        for dp in data:
+          for k, v in dp.items():
+            if v:
+              self.feature_dataset.append((k, v))
+      elif self.config.HasField("random"):
+        self.feature_dataset = []
     return
 
   def step(self,
