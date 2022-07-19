@@ -31,7 +31,7 @@ class QValuesConfig(object):
       'attention_probs_dropout_prob' : language_model.backend.bert_config.attention_probs_dropout_prob,
       'type_vocab_size'              : language_model.backend.bert_config.type_vocab_size,
       'initializer_range'            : language_model.backend.bert_config.initializer_range,
-      'temperature'                  : config.agent.action_temperature_micros / 10e6,
+      'action_temperature'           : config.agent.action_temperature_micros / 10e6,
       'token_temperature'            : config.agent.token_temperature_micros / 10e6,
       'feature_encoder'              : False,
       'batch_size'                   : config.agent.batch_size
