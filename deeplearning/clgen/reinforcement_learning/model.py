@@ -390,7 +390,7 @@ class QValuesModel(object):
 
   def loadCheckpoint(self, prefix = "") -> None:
     """Load Deep Q-Nets."""
-    if not (self.ckpt_path / "{}checkpoint.meta".format(prefix), 'r') as mf:
+    if not (self.ckpt_path / "{}checkpoint.meta".format(prefix)).exists():
       return -1
     with open(self.ckpt_path / "{}checkpoint.meta".format(prefix), 'w') as mf:
       get_step = lambda x: int(x.replace("\n", "").replace("train_step: ", ""))
@@ -402,7 +402,7 @@ class QValuesModel(object):
 
     if isinstance(self.model.action, torch.nn.DataParallel):
       try:
-        self.model.action..module.load_state_dict(torch.load(ckpt_comp("action")))
+        self.model.action.module.load_state_dict(torch.load(ckpt_comp("action")))
       except RuntimeError:
         from collections import OrderedDict
         new_state_dict = OrderedDict()
@@ -412,10 +412,10 @@ class QValuesModel(object):
           else:
             name = "module." + k
           new_state_dict[name] = k
-        self.model.action..module.load_state_dict(new_state_dict)
+        self.model.action.module.load_state_dict(new_state_dict)
     else:
       try:
-        self.model.action..module.load_state_dict(torch.load(ckpt_comp("action")))
+        self.model.action.module.load_state_dict(torch.load(ckpt_comp("action")))
       except RuntimeError:
         from collections import OrderedDict
         new_state_dict = OrderedDict()
@@ -425,7 +425,7 @@ class QValuesModel(object):
           else:
             name = 'module.' + k # Add 'module.'
           new_state_dict[name] = v
-        self.model.action..load_state_dict(new_state_dict)
+        self.model.action.load_state_dict(new_state_dict)
 
     if isinstance(self.model.token, torch.nn.DataParallel):
       try:
