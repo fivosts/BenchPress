@@ -269,8 +269,12 @@ class QValuesModel(object):
                is_critic         : bool,
                ) -> None:
     self.cache_path = cache_path / "DQ_model"
+    self.ckpt_path  = cache_path / "checkpoint"
+    self.log_path   = cache_path / "logs"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exist_ok = True, parents = True)
+      self.ckpt_path.mkdir (exist_ok = True, parents = True)
+      self.log_path.mkdir  (exist_ok = True, parents = True)
 
     self.config                  = config
     self.language_model          = language_model
@@ -359,10 +363,26 @@ class QValuesModel(object):
       )
     return outputs
 
-  def saveCheckpoint(self) -> None:
+  def saveCheckpoint(self, prefix = "") -> None:
     """Checkpoint Deep Q-Nets."""
     l.logger().error("Save checkpoint for QV Model has not been implemented.")
-    if 
+    if self.is_world_process_zero():
+      ckpt_comp = lambda x: self.ckpt_path / "{}model-{}.pt".format("pre_" if pre_train else "", self.current_step)
+      if self.torch_tpu_available:
+        if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
+          self.pytorch.torch_xla_model.save(estimator.model, ckpt_comp("model"))
+        self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
+      else:
+        if isinstance(estimator.model, self.torch.nn.DataParallel):
+          self.torch.save(estimator.model.module.state_dict(), ckpt_comp("model"))
+        else:
+          self.torch.save(estimator.model.state_dict(), ckpt_comp("model"))
+      with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
+        mf.write("{}train_step: {}\n".format("pre_" if pre_train else "", self.current_step))
+
+
+    self.current_step += 1
+    torch.distributed.barrier()
     return
 
   def loadCheckpoint(self) -> None:
