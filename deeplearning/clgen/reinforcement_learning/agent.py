@@ -267,8 +267,8 @@ class Agent(object):
       batch_lens.append(ep_t + 1)
       batch_rews.append(ep_rews)
 
-    batch_rtgs = self.compute_rtgs(batch_rews, gamma) # ALG STEP 4
-    return batch_states, batch_actions, batch_rtgs, batch_lens
+    action_batch_rtgs, token_batch_rtgs = self.compute_rtgs(batch_rews, gamma) # ALG STEP 4
+    return batch_states, batch_actions, action_batch_rtgs, token_batch_rtgs, batch_lens
 
   def evaluate_policy(self,
                       states  : typing.List[interactions.State], 
