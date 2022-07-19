@@ -116,7 +116,7 @@ class Agent(object):
       'token' : torch.optim.Adam(self.critic.token_parameters,  lr = lr),
     }
 
-    self.action_cov_var = torch.full(size = (len(interactions.ACTION_TYPE_SPACE),), fill_value = 0.5)
+    self.action_cov_var = torch.full(size = (self.qv_config.max_position_embeddings * len(interactions.ACTION_TYPE_SPACE),), fill_value = 0.5)
     self.action_cov_mat = torch.diag(self.action_cov_var)
 
     self.token_cov_var = torch.full(size = (self.tokenizer.vocab_size,), fill_value = 0.5)
