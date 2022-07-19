@@ -304,11 +304,11 @@ class Agent(object):
         critic_logits = self.critic.SampleToken(
           state, action.index, self.tokenizer, self.feature_tokenizer,
         )
-        V_tokens.append(critic_logits['prediction_logits'].cpu())
+        V_tokens.append(critic_logits['token_logits'].cpu())
         actor_logits = self.actor.SampleToken(
           state, action.index, self.tokenizer, self.feature_tokenizer,
         )
-        mean_token = actor_logits['prediction_logits'].cpu()
+        mean_token = actor_logits['token_logits'].cpu()
         dist_token = torch.distributions.MultivariateNormal(mean_token, self.token_cov_mat)
         token_log_probs.append(dist_token.log_prob(torch.FloatTensor(action.token_logits)))
 
@@ -331,7 +331,7 @@ class Agent(object):
       logits = self.actor.SampleToken(
         state, action_index, self.tokenizer, self.feature_tokenizer
       )
-      token_logits = logits['prediction_logits'][:,action_index]
+      token_logits = logits['token_logits'][:,action_index]
       token        = self.policy.SelectToken(token_logits).cpu().numpy()
       token_logits = token_logits.cpu().numpy()
       comment      += ", index: {}, token: '{}'".format(action_index, self.tokenizer.decoder[int(token)])
@@ -348,7 +348,7 @@ class Agent(object):
         self.feature_tokenizer,
         replace_token = True,
       )
-      token_logits = logits['prediction_logits'][:,action_index]
+      token_logits = logits['token_logits'][:,action_index]
       token        = self.policy.SelectToken(token_logits).cpu().numpy()
       token_logits = token_logits.cpu().numpy()
       comment = ", index: {}, token: '{}' -> '{}'".format(action_index, self.tokenizer.decoder[int(state.encoded_code[action_index])], self.tokenizer.decoder[int(token)])
