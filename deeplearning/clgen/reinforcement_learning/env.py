@@ -54,8 +54,10 @@ class Environment(gym.Env):
     self.feature_sequence_length = self.config.agent.feature_tokenizer.feature_sequence_length
 
     self.cache_path = cache_path / "environment"
+    self.ckpt_path  = cache_path / "checkpoint"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exist_ok = True, parents = True)
+      self.ckpt_path.mkdir(exist_ok = True, parents = True)
 
     self.feature_dataset = []  
     if self.config.HasField("train_set"):
