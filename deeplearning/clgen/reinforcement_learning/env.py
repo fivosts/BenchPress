@@ -146,7 +146,7 @@ class Environment(gym.Env):
           action   = action,
           value    = -1.0,
           distance = None,
-          comment  = "Trying to add {} to idx {} but [END] token is at index {}".format(self.tokenizer.tokensToString([int(action.token)]), action.index, actual_length)
+          comment  = "Addition to idx {} is out of bounds. [END] token is at index {}".format(action.index, actual_length)
         )
       else:
         new_enc_code = list(self.current_state.encoded_code[:action.index + 1]) + [int(action.token)] + list(self.current_state.encoded_code[action.index + 1:])
