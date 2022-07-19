@@ -1,5 +1,6 @@
 """Modeling configuration for Deep_Q Network"""
 from deeplearning.clgen.corpuses import tokenizers
+from deeplearning.clgen.models import language_models
 from deeplearning.clgen.proto import reinforcement_learning_pb2
 
 class QValuesConfig(object):
@@ -9,6 +10,7 @@ class QValuesConfig(object):
                   max_position_embeddings : int,
                   tokenizer               : tokenizers.TokenizerBase,
                   feature_tokenizer       : tokenizers.FeatureTokenizer,
+                  language_model          : language_models.Model,
                   ) -> 'QValuesConfig':
     dict = {
       'vocab_size'                          : tokenizer.vocab_size,
@@ -42,7 +44,7 @@ class QValuesConfig(object):
       'token_attention_probs_dropout_prob'  : config.agent.action_lm.attention_probs_dropout_prob,
       'token_type_vocab_size'               : config.agent.action_lm.type_vocab_size,
       'token_initializer_range'             : config.agent.action_lm.initializer_range,
-      'token_temperature'                   : config.agent.action_lm.token_temperature_micros / 10e6,
+      'token_temperature'                   : config.agent.token_temperature_micros / 10e6,
       'feature_encoder'                     : False,
       'batch_size'                          : config.agent.batch_size
     }
