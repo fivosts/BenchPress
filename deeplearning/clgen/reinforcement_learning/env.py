@@ -221,10 +221,17 @@ class Environment(gym.Env):
     """
     Load environment checkpoint.
     """
-    if (self.cache_path / "environment.pkl").exists():
+    if (self.ckpt_path / "environment.pkl").exists():
       distrib.lock()
-      with open(self.cache_path / "environment.pkl", 'rb') as inf:
+      with open(self.ckpt_path / "environment.pkl", 'rb') as inf:
         self.current_state = pickle.load(inf)
+      distrib.unlock()
+      distrib.barrier()
+
+    if (self.ckpt_path / "feature_loader.pkl").exists():
+      distrib.lock()
+      with open(self.ckpt_path / "feature_loader.pkl", 'rb') as inf:
+        self.feature_loader = pickle.load(inf)
       distrib.unlock()
       distrib.barrier()
     return
@@ -234,7 +241,9 @@ class Environment(gym.Env):
     Save environment state.
     """
     if environment.WORLD_RANK == 0:
-      with open(self.cache_path / "environment.pkl", 'wb') as outf:
+      with open(self.ckpt_path / "environment.pkl", 'wb') as outf:
         pickle.dump(self.current_state, outf)
+      with open(self.ckpt_path / "feature_loader.pkl", 'wb') as outf:
+        pickle.dump(self.feature_loader, outf)
     distrib.barrier()
     return
