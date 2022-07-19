@@ -54,8 +54,8 @@ rl_model {
     architecture {
       backend: TORCH_BERT
       hidden_size: 768
-      num_hidden_layers: 12
-      num_attention_heads: 2
+      num_hidden_layers: 2
+      num_attention_heads: 12
       intermediate_size: 1024
       hidden_act: "gelu"
       hidden_dropout_prob: 0.1
