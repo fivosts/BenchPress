@@ -124,7 +124,7 @@ class Agent(object):
 
     for ep in range(num_epochs):
       # Run a batch of episodes.
-      batch_states, batch_actions, batch_rtgs, batch_lens = self.rollout(
+      batch_states, batch_actions, action_batch_rtgs, token_batch_rtgs, batch_lens = self.rollout(
         env, timesteps_per_batch, max_timesteps_per_episode, gamma,
       )
       # Compute Advantage at k_th iteration.
@@ -136,7 +136,7 @@ class Agent(object):
       print(V_tok)
       print(V_act.shape)
       print(V_tok.shape)
-      A_k_action, A_k_token = batch_rtgs - V_act.detach(), batch_rtgs - V_tok.detach()
+      A_k_action, A_k_token = action_batch_rtgs - V_act.detach(), token_batch_rtgs - V_tok.detach()
 
       print("Back from eval policy.")
       print(A_k_action)
@@ -179,8 +179,8 @@ class Agent(object):
         action_loss = (-torch.min(act_surr1, act_surr2)).mean()
         token_loss  = (-torch.min(tok_surr1, tok_surr2)).mean()
 
-        act_critic_loss = torch.nn.MSELoss()(V_act, batch_rtgs)
-        tok_critic_loss = torch.nn.MSELoss()(V_tok, batch_rtgs)
+        act_critic_loss = torch.nn.MSELoss()(V_act, action_batch_rtgs)
+        tok_critic_loss = torch.nn.MSELoss()(V_tok, token_batch_rtgs)
 
         # Calculate gradients and perform backward propagation for actor network
         actor_optim['action'].zero_grad()
@@ -227,7 +227,6 @@ class Agent(object):
     batch_states  = []
     batch_actions = []
     batch_rews    = []
-    batch_rtgs    = []
     batch_lens    = []
 
     # Episodic data. Keeps track of rewards per episode, will get cleared
