@@ -398,25 +398,21 @@ class Agent(object):
     # Iterate through each episode
     for ep_rews in reversed(batch_rews):
 
-      print(ep_rews)
-      input()
       action_discounted_reward = 0 # The discounted reward for actions.
       token_discounted_reward  = 0 # The discounted reward for token additions.
 
       # Iterate through all rewards in the episode. We go backwards for smoother calculation of each
       # discounted return (think about why it would be harder starting from the beginning)
       for rew in reversed(ep_rews):
-        print(rew)
-        discounted_reward = rew.value + discounted_reward * gamma
-        print(discounted_reward)
-        print()
-        print()
-        batch_rtgs.insert(0, discounted_reward)
-        input()
-
+        action_discounted_reward = rew.value + action_discounted_reward * gamma
+        action_batch_rtgs.insert(0, action_discounted_reward)
+        if rew.action.token_logits is not None:
+          token_discounted_reward = rew.value + token_discounted_reward * gamma
+          token_batch_rtgs.insert(0, token_discounted_reward)
     # Convert the rewards-to-go into a tensor
-    batch_rtgs = torch.tensor(batch_rtgs, dtype=torch.float)
-    return batch_rtgs
+    action_batch_rtgs = torch.tensor(action_batch_rtgs, dtype=torch.float)
+    token_batch_rtgs = torch.tensor(token_batch_rtgs, dtype=torch.float)
+    return action_batch_rtgs, token_batch_rtgs
 
   def update_agent(self, input_ids: typing.Dict[str, torch.Tensor]) -> None:
     """
