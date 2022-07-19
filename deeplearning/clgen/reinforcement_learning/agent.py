@@ -403,6 +403,8 @@ class Agent(object):
     """
     Save agent state.
     """
+    self.actor.saveCheckpoint(prefix = "actor")
+    self.critic.saveCheckpoint(prefix = "critic")
     return
   
   def loadCheckpoint(self) -> None:
