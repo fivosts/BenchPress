@@ -23,12 +23,12 @@ class PredictionHeadTransform(torch.nn.Module):
                dense_size : int
                ):
     super().__init__()
-    self.dense = torch.nn.Linear(dense_size, config.action_hidden_size)
-    if isinstance(config.action_hidden_act, str):
-      self.transform_act_fn = model.ACT2FN[config.action_hidden_act]
+    self.dense = torch.nn.Linear(dense_size, config.hidden_size)
+    if isinstance(config.hidden_act, str):
+      self.transform_act_fn = model.ACT2FN[config.hidden_act]
     else:
-      self.transform_act_fn = config.action_hidden_act
-    self.LayerNorm = torch.nn.LayerNorm(config.action_hidden_size, eps=config.action_layer_norm_eps)
+      self.transform_act_fn = config.hidden_act
+    self.LayerNorm = torch.nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
   def forward(self, hidden_states):
     hidden_states = self.dense(hidden_states)
@@ -42,8 +42,8 @@ class ActionHead(torch.nn.Module):
     super().__init__()
     if output_dim is None:
       output_dim = len(interactions.ACTION_TYPE_SPACE) * config.max_position_embeddings
-    self.transform = PredictionHeadTransform(config, dense_size = config.action_hidden_size)
-    self.decoder   = torch.nn.Linear(config.action_hidden_size * config.max_position_embeddings, output_dim, bias = False)
+    self.transform = PredictionHeadTransform(config, dense_size = config.hidden_size)
+    self.decoder   = torch.nn.Linear(config.hidden_size * config.max_position_embeddings, output_dim, bias = False)
     self.bias      = torch.nn.Parameter(torch.zeros(output_dim))
     self.decoder.bias = self.bias
     return
@@ -80,17 +80,17 @@ class ActionQV(torch.nn.Module):
     ## Pre-trained Encoder LM.
     self.feature_encoder = language_model.backend.GetEncoderModule(
       vocab_size                   = config.feature_vocab_size,
-      hidden_size                  = config.action_hidden_size,
-      num_hidden_layers            = config.action_num_hidden_layers,
-      num_attention_heads          = config.action_num_attention_heads,
-      intermediate_size            = config.action_intermediate_size,
-      hidden_act                   = config.action_hidden_act,
-      hidden_dropout_prob          = config.action_hidden_dropout_prob,
-      attention_probs_dropout_prob = config.action_attention_probs_dropout_prob,
+      hidden_size                  = config.hidden_size,
+      num_hidden_layers            = config.num_hidden_layers,
+      num_attention_heads          = config.num_attention_heads,
+      intermediate_size            = config.intermediate_size,
+      hidden_act                   = config.hidden_act,
+      hidden_dropout_prob          = config.hidden_dropout_prob,
+      attention_probs_dropout_prob = config.attention_probs_dropout_prob,
       max_position_embeddings      = config.feature_sequence_length,
-      type_vocab_size              = config.action_type_vocab_size,
-      initializer_range            = config.action_initializer_range,
-      layer_norm_eps               = config.action_layer_norm_eps,
+      type_vocab_size              = config.type_vocab_size,
+      initializer_range            = config.initializer_range,
+      layer_norm_eps               = config.layer_norm_eps,
       pad_token_id                 = config.feature_pad_idx,
       with_checkpoint              = False,
     )
