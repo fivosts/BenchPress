@@ -196,8 +196,10 @@ class ActionLanguageModelQV(torch.nn.Module):
       position_ids          = decoder_position_ids,
       encoder_hidden_states = encoder_memory,
     )
-    outputs = self.decoder(decoder_out)
-    return outputs
+    token_logits = self.decoder(decoder_out['prediction_logits'])
+    return {
+      'token_logits': token_logits
+    }
 
 class QValuesModel(object):
   """
