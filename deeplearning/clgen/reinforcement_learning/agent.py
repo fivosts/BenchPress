@@ -319,11 +319,13 @@ class Agent(object):
         token_log_probs.append(torch.FloatTensor(action.token_logits))
 
     if len(action_log_probs) > 0:
+      V_actions        = torch.FloatTensor(V_actions)
       mean_action      = torch.FloatTensor(mean_action)
       action_log_probs = torch.FloatTensor(action_log_probs)
       dist_action      = torch.distributions.MultivariateNormal(mean_action, self.action_cov_mat)
       action_log_probs = dist_action.log_prob(action_log_probs)
     else:
+      V_actions        = None
       action_log_probs = None
     
     if len(token_log_probs) > 0:
@@ -331,9 +333,12 @@ class Agent(object):
       token_log_probs = torch.FloatTensor(token_log_probs)
       dist_token      = torch.distributions.MultivariateNormal(torch.FloatTensor(mean_token), self.token_cov_mat)
       token_log_probs = dist_token.log_prob(token_log_probs)
+    else:
+      V_tokens        = None
+      token_log_probs = None
     # Return the value vector V of each observation in the batch
     # and log probabilities log_probs of each action in the batch
-    return (torch.FloatTensor(V_actions), action_log_probs), (torch.FloatTensor(V_tokens), token_log_probs)
+    return (V_actions, action_log_probs), (V_tokens, token_log_probs)
 
   def make_action(self, state: interactions.State) -> interactions.Action:
     """
