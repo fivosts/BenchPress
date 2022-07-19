@@ -12,17 +12,13 @@ rl_model {
   train_set: true
   agent {
     batch_size: 1
+    action_temperature_micros: 700000
+    token_temperature_micros: 700000
     feature_tokenizer {
       feature_max_value_token: 32768
       feature_singular_token_thr: 512
       feature_token_range: 2048
       feature_sequence_length: 256
-    }
-    action_qv {
-      action_temperature_micros: 700000
-    }
-    action_lm {
-      token_temperature_micros: 700000
     }
   }
   language_model{
