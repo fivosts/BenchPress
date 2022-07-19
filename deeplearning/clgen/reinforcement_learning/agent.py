@@ -410,4 +410,6 @@ class Agent(object):
     """
     Load agent state.
     """
+    self.actor.loadCheckpoint(prefix = "actor")
+    self.critic.loadCheckpoint(prefix = "critic")
     return
