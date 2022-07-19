@@ -130,8 +130,10 @@ class Agent(object):
       # Compute Advantage at k_th iteration.
       (V_act, _), (V_tok, _) = self.evaluate_policy(batch_states, batch_actions)
 
-      print(batch_rtgs)
-      print(batch_rtgs.shape)
+      print(action_batch_rtgs)
+      print(action_batch_rtgs.shape)
+      print(token_batch_rtgs)
+      print(token_batch_rtgs.shape)
       print(V_act)
       print(V_tok)
       print(V_act.shape)
@@ -148,8 +150,8 @@ class Agent(object):
       A_k_action = (A_k_action - A_k_action.mean()) / (A_k_action.std() + 1e-10)
       A_k_token  = (A_k_token - A_k_token.mean())   / (A_k_token.std() + 1e-10)
 
-      batch_act_probs = [a.action_type_logits for a in batch_actions]
-      batch_tok_probs = [a.token_type_logits for a in batch_actions]
+      batch_act_probs = [a.action_logits for a in batch_actions]
+      batch_tok_probs = [a.token_logits for a in batch_actions]
 
       for i in range(num_updates_per_batch):
 				# Calculate V_phi and pi_theta(a_t | s_t)
