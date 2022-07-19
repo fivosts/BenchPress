@@ -196,10 +196,14 @@ class Environment(gym.Env):
     info = None
     return self.current_state, reward, done, info
   
-  def reset(self) -> interactions.State:
+  def reset(self, recycle: bool = True) -> interactions.State:
     """
     Reset the state of the environment.
     """
+    if recycle:
+      self.feature_dataset.append(
+        (self.current_state.feature_space, self.current_state.target_features)
+      )
     next = self.feature_dataset.pop(0)
     self.current_state = interactions.State(
       target_features  = next[1],
