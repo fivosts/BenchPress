@@ -275,6 +275,7 @@ class QValuesModel(object):
       self.cache_path.mkdir(exist_ok = True, parents = True)
       self.ckpt_path.mkdir (exist_ok = True, parents = True)
       self.log_path.mkdir  (exist_ok = True, parents = True)
+    self.ckpt_step = 0
 
     self.config                  = config
     self.language_model          = language_model
@@ -367,21 +368,21 @@ class QValuesModel(object):
     """Checkpoint Deep Q-Nets."""
     l.logger().error("Save checkpoint for QV Model has not been implemented.")
     if self.is_world_process_zero():
-      ckpt_comp = lambda x: self.ckpt_path / "{}model-{}.pt".format("pre_" if pre_train else "", self.current_step)
+      ckpt_comp = lambda x: self.ckpt_path / "{}{}_model-{}.pt".format(prefix, x, self.ckpt_step)
       if self.torch_tpu_available:
         if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
           self.pytorch.torch_xla_model.save(estimator.model, ckpt_comp("model"))
         self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
       else:
         if isinstance(estimator.model, self.torch.nn.DataParallel):
-          self.torch.save(estimator.model.module.state_dict(), ckpt_comp("model"))
+          self.torch.save(self.model.action.model.module.state_dict(), ckpt_comp("action"))
+          self.torch.save(self.model.token.model.module.state_dict(), ckpt_comp("token"))
         else:
-          self.torch.save(estimator.model.state_dict(), ckpt_comp("model"))
+          self.torch.save(self.model.action.model.state_dict(), ckpt_comp("action"))
+          self.torch.save(self.model.token.model.state_dict(), ckpt_comp("token"))
       with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
-        mf.write("{}train_step: {}\n".format("pre_" if pre_train else "", self.current_step))
-
-
-    self.current_step += 1
+        mf.write("train_step: {}\n".format(self.ckpt_step))
+    self.ckpt_step += 1
     torch.distributed.barrier()
     return
 
