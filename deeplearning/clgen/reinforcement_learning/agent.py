@@ -168,7 +168,7 @@ class Agent(object):
         # TL;DR makes gradient ascent easier behind the scenes.
         print(act_log_probs.shape)
         print(batch_act_probs.shape)
-        if act_log_probs:
+        if act_log_probs is not None:
           act_ratios = torch.exp(act_log_probs - batch_act_probs)
           # Calculate surrogate losses.
           act_surr1 = act_ratios * A_k_action
@@ -187,7 +187,7 @@ class Agent(object):
           critic_optim['action'].zero_grad()
           act_critic_loss.backward(retain_graph = True)
           critic_optim['action'].step()
-        if tok_log_probs:
+        if tok_log_probs is not None:
           tok_ratios = torch.exp(tok_log_probs - batch_tok_probs)
           # Calculate surrogate losses.
           tok_surr1 = tok_ratios * A_k_token
