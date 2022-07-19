@@ -902,19 +902,11 @@ class BertForPreTraining(BertPreTrainedModel):
         input_features,
         prediction_scores,
         position_ids,
-        is_live,
       )
-      if is_live:
-        return {
-          'prediction_scores' : scores_history, # This is mainly used for live sampling. Else, watch out!
-          'generated_samples' : samples,
-          'sample_indices'    : sample_indices,
-        }
-      else:
-        return {
-          'generated_samples': samples,
-          'sample_indices'   : sample_indices,
-        }
+      return {
+        'generated_samples': samples,
+        'sample_indices'   : sample_indices,
+      }
     ## Training mode.
     else:
       if masked_lm_labels is not None:
