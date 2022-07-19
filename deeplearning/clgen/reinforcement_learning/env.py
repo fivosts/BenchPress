@@ -68,7 +68,7 @@ class Environment(gym.Env):
             self.feature_dataset.append((k, v))
     elif self.config.HasField("random"):
       self.feature_dataset = []
-
+    self.current_state = None
     self.loadCheckpoint()
     return
 
