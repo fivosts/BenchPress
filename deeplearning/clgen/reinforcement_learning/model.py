@@ -366,7 +366,6 @@ class QValuesModel(object):
 
   def saveCheckpoint(self, prefix = "") -> None:
     """Checkpoint Deep Q-Nets."""
-    l.logger().error("Save checkpoint for QV Model has not been implemented.")
     if self.is_world_process_zero():
       ckpt_comp = lambda x: self.ckpt_path / "{}{}_model-{}.pt".format(prefix, x, self.ckpt_step)
       if self.torch_tpu_available:
@@ -375,21 +374,85 @@ class QValuesModel(object):
         self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
       else:
         if isinstance(estimator.model, self.torch.nn.DataParallel):
-          self.torch.save(self.model.action.model.module.state_dict(), ckpt_comp("action"))
-          self.torch.save(self.model.token.model.module.state_dict(), ckpt_comp("token"))
+          self.torch.save(self.model.action..module.state_dict(), ckpt_comp("action"))
+          self.torch.save(self.model.token.module.state_dict(), ckpt_comp("token"))
         else:
-          self.torch.save(self.model.action.model.state_dict(), ckpt_comp("action"))
-          self.torch.save(self.model.token.model.state_dict(), ckpt_comp("token"))
-      with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
+          self.torch.save(self.model.action..state_dict(), ckpt_comp("action"))
+          self.torch.save(self.model.token.state_dict(), ckpt_comp("token"))
+      with open(self.ckpt_path / "{}checkpoint.meta".format(prefix), 'a') as mf:
         mf.write("train_step: {}\n".format(self.ckpt_step))
     self.ckpt_step += 1
     torch.distributed.barrier()
     return
 
-  def loadCheckpoint(self) -> None:
+  def loadCheckpoint(self, prefix = "") -> None:
     """Load Deep Q-Nets."""
-    l.logger().error("Load checkpoint for QV Model has not been implemented.")
-    return
+    if not (self.ckpt_path / "{}checkpoint.meta".format(prefix), 'r') as mf:
+      return -1
+    with open(self.ckpt_path / "{}checkpoint.meta".format(prefix), 'w') as mf:
+      get_step = lambda x: int(x.replace("\n", "").replace("train_step: ", ""))
+      lines = mf.readlines()
+      entries = set({get_step(x) for x in lines})
+
+    ckpt_step = max(entries)
+    ckpt_comp = lambda x: self.ckpt_path / "{}{}_model-{}.pt".format(prefix, x, ckpt_step)
+
+    if isinstance(self.model.action, torch.nn.DataParallel):
+      try:
+        self.model.action..module.load_state_dict(torch.load(ckpt_comp("action")))
+      except RuntimeError:
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in torch.load(ckpt_comp("action")).items():
+          if k[:7] == "module.":
+            name = k[7:]
+          else:
+            name = "module." + k
+          new_state_dict[name] = k
+        self.model.action..module.load_state_dict(new_state_dict)
+    else:
+      try:
+        self.model.action..module.load_state_dict(torch.load(ckpt_comp("action")))
+      except RuntimeError:
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in self.torch.load(ckpt_comp("action")).items():
+          if k[:7] == 'module.':
+            name = k[7:] # remove `module.`
+          else:
+            name = 'module.' + k # Add 'module.'
+          new_state_dict[name] = v
+        self.model.action..load_state_dict(new_state_dict)
+
+    if isinstance(self.model.token, torch.nn.DataParallel):
+      try:
+        self.model.token.module.load_state_dict(torch.load(ckpt_comp("token")))
+      except RuntimeError:
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in torch.load(ckpt_comp("token")).items():
+          if k[:7] == "module.":
+            name = k[7:]
+          else:
+            name = "module." + k
+          new_state_dict[name] = k
+        self.model.token.module.load_state_dict(new_state_dict)
+    else:
+      try:
+        self.model.token.module.load_state_dict(torch.load(ckpt_comp("token")))
+      except RuntimeError:
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in self.torch.load(ckpt_comp("token")).items():
+          if k[:7] == 'module.':
+            name = k[7:] # remove `module.`
+          else:
+            name = 'module.' + k # Add 'module.'
+          new_state_dict[name] = v
+        self.model.token.load_state_dict(new_state_dict)
+    self.model.action.eval()
+    self.model.token.eval()
+    return ckpt_step
 
   def is_world_process_zero(self) -> bool:
     """
