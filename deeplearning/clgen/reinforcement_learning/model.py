@@ -362,9 +362,22 @@ class QValuesModel(object):
   def saveCheckpoint(self) -> None:
     """Checkpoint Deep Q-Nets."""
     l.logger().error("Save checkpoint for QV Model has not been implemented.")
+    if 
     return
 
   def loadCheckpoint(self) -> None:
     """Load Deep Q-Nets."""
     l.logger().error("Load checkpoint for QV Model has not been implemented.")
     return
+
+  def is_world_process_zero(self) -> bool:
+    """
+    Whether or not this process is the global main process (when training in a distributed fashion on
+    several machines, this is only going to be :obj:`True` for one process).
+    """
+    if torch_tpu_available:
+      return pytorch.torch_xla_model.is_master_ordinal(local=False)
+    elif pytorch.num_nodes > 1:
+      return torch.distributed.get_rank() == 0
+    else:
+      return True
