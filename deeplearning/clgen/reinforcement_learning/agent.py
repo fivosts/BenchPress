@@ -130,15 +130,15 @@ class Agent(object):
       # Compute Advantage at k_th iteration.
       (V_act, _), (V_tok, _) = self.evaluate_policy(batch_states, batch_actions)
 
-      print(action_batch_rtgs)
-      print(action_batch_rtgs.shape)
-      print(token_batch_rtgs)
-      print(token_batch_rtgs.shape)
-      print(V_act)
-      print(V_tok)
-      print(V_act.shape)
-      print(V_tok.shape)
-      A_k_action, A_k_token = action_batch_rtgs - V_act.detach(), token_batch_rtgs - V_tok.detach()
+
+      if V_act:
+        A_k_action = action_batch_rtgs - V_act.detach()
+      else:
+        A_k_action = None
+      if V_tok:
+        A_k_token = token_batch_rtgs - V_tok.detach()
+      else:
+        A_k_token = None
 
       print("Back from eval policy.")
       print(A_k_action)
@@ -147,8 +147,10 @@ class Agent(object):
 			# Normalizing advantages isn't theoretically necessary, but in practice it decreases the variance of 
 			# our advantages and makes convergence much more stable and faster. I added this because
 			# solving some environments was too unstable without it.
-      A_k_action = (A_k_action - A_k_action.mean()) / (A_k_action.std() + 1e-10)
-      A_k_token  = (A_k_token - A_k_token.mean())   / (A_k_token.std() + 1e-10)
+      if A_k_action:
+        A_k_action = (A_k_action - A_k_action.mean()) / (A_k_action.std() + 1e-10)
+      if A_k_token:
+        A_k_token  = (A_k_token - A_k_token.mean())   / (A_k_token.std() + 1e-10)
 
       batch_act_probs = torch.FloatTensor([a.action_logits for a in batch_actions if a.action_logits is not None])
       batch_tok_probs = torch.FloatTensor([a.token_logits for a in batch_actions if a.token_logits is not None])
@@ -166,43 +168,44 @@ class Agent(object):
         # TL;DR makes gradient ascent easier behind the scenes.
         print(act_log_probs.shape)
         print(batch_act_probs.shape)
-        act_ratios = torch.exp(act_log_probs - batch_act_probs)
-        tok_ratios = torch.exp(tok_log_probs - batch_tok_probs)
-
-        # Calculate surrogate losses.
-        act_surr1 = act_ratios * A_k_action
-        act_surr2 = torch.clamp(act_surr1, 1 - self.clip, 1 + self.clip) * A_k_action
-
-        tok_surr1 = tok_ratios * A_k_token
-        tok_surr2 = torch.clamp(tok_surr1, 1 - self.clip, 1 + self.clip) * A_k_token
-
-        # Calculate actor and critic losses.
-        # NOTE: we take the negative min of the surrogate losses because we're trying to maximize
-        # the performance function, but Adam minimizes the loss. So minimizing the negative
-        # performance function maximizes it.
-        action_loss = (-torch.min(act_surr1, act_surr2)).mean()
-        token_loss  = (-torch.min(tok_surr1, tok_surr2)).mean()
-
-        act_critic_loss = torch.nn.MSELoss()(V_act, action_batch_rtgs)
-        tok_critic_loss = torch.nn.MSELoss()(V_tok, token_batch_rtgs)
-
-        # Calculate gradients and perform backward propagation for actor network
-        actor_optim['action'].zero_grad()
-        action_loss.backward(retain_graph = True)
-        actor_optim['action'].step()
-
-        actor_optim['token'].zero_grad()
-        token_loss.backward()
-        actor_optim['token'].step()
-
-        # Calculate gradients and perform backward propagation for critic network      
-        critic_optim['action'].zero_grad()
-        act_critic_loss.backward(retain_graph = True)
-        critic_optim['action'].step()
-
-        critic_optim['token'].zero_grad()
-        tok_critic_loss.backward()
-        critic_optim['token'].step()
+        if act_log_probs:
+          act_ratios = torch.exp(act_log_probs - batch_act_probs)
+          # Calculate surrogate losses.
+          act_surr1 = act_ratios * A_k_action
+          act_surr2 = torch.clamp(act_surr1, 1 - self.clip, 1 + self.clip) * A_k_action
+          # Calculate actor and critic losses.
+          # NOTE: we take the negative min of the surrogate losses because we're trying to maximize
+          # the performance function, but Adam minimizes the loss. So minimizing the negative
+          # performance function maximizes it.
+          action_loss = (-torch.min(act_surr1, act_surr2)).mean()
+          act_critic_loss = torch.nn.MSELoss()(V_act, action_batch_rtgs)
+          # Calculate gradients and perform backward propagation for actor network
+          actor_optim['action'].zero_grad()
+          action_loss.backward(retain_graph = True)
+          actor_optim['action'].step()
+          # Calculate gradients and perform backward propagation for critic network      
+          critic_optim['action'].zero_grad()
+          act_critic_loss.backward(retain_graph = True)
+          critic_optim['action'].step()
+        if tok_log_probs:
+          tok_ratios = torch.exp(tok_log_probs - batch_tok_probs)
+          # Calculate surrogate losses.
+          tok_surr1 = tok_ratios * A_k_token
+          tok_surr2 = torch.clamp(tok_surr1, 1 - self.clip, 1 + self.clip) * A_k_token
+          # Calculate actor and critic losses.
+          # NOTE: we take the negative min of the surrogate losses because we're trying to maximize
+          # the performance function, but Adam minimizes the loss. So minimizing the negative
+          # performance function maximizes it.
+          token_loss  = (-torch.min(tok_surr1, tok_surr2)).mean()
+          tok_critic_loss = torch.nn.MSELoss()(V_tok, token_batch_rtgs)
+          # Calculate gradients and perform backward propagation for actor network
+          actor_optim['token'].zero_grad()
+          token_loss.backward()
+          actor_optim['token'].step()
+          # Calculate gradients and perform backward propagation for critic network      
+          critic_optim['token'].zero_grad()
+          tok_critic_loss.backward()
+          critic_optim['token'].step()
 
     return
 
