@@ -370,14 +370,17 @@ class QValuesModel(object):
       ckpt_comp = lambda x: self.ckpt_path / "{}{}_model-{}.pt".format(prefix, x, self.ckpt_step)
       if self.torch_tpu_available:
         if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
-          self.pytorch.torch_xla_model.save(estimator.model, ckpt_comp("model"))
+          self.pytorch.torch_xla_model.save(self.model.action, ckpt_comp("action"))
+          self.pytorch.torch_xla_model.save(self.model.token, ckpt_comp("token"))
         self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
       else:
-        if isinstance(estimator.model, self.torch.nn.DataParallel):
-          self.torch.save(self.model.action..module.state_dict(), ckpt_comp("action"))
+        if isinstance(self.model.action, self.torch.nn.DataParallel):
+          self.torch.save(self.model.action.module.state_dict(), ckpt_comp("action"))
+        else:
+          self.torch.save(self.model.action.state_dict(), ckpt_comp("action"))
+        if isinstance(self.model.token, self.torch.nn.DataParallel):
           self.torch.save(self.model.token.module.state_dict(), ckpt_comp("token"))
         else:
-          self.torch.save(self.model.action..state_dict(), ckpt_comp("action"))
           self.torch.save(self.model.token.state_dict(), ckpt_comp("token"))
       with open(self.ckpt_path / "{}checkpoint.meta".format(prefix), 'a') as mf:
         mf.write("train_step: {}\n".format(self.ckpt_step))
