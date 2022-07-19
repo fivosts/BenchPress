@@ -130,7 +130,13 @@ class Agent(object):
       # Compute Advantage at k_th iteration.
       (V_act, _), (V_tok, _) = self.evaluate_policy(batch_states, batch_actions)
 
-      A_k_action, A_k_token = batch_rtgs - V_act.detach, batch_rtgs - V_tok.detach()
+      print(batch_rtgs)
+      print(batch_rtgs.shape)
+      print(V_act)
+      print(V_tok)
+      print(V_act.shape)
+      print(V_tok.shape)
+      A_k_action, A_k_token = batch_rtgs - V_act.detach(), batch_rtgs - V_tok.detach()
 
       print("Back from eval policy.")
       print(A_k_action)
@@ -304,11 +310,11 @@ class Agent(object):
         critic_logits = self.critic.SampleToken(
           state, action.index, self.tokenizer, self.feature_tokenizer,
         )
-        V_tokens.append(critic_logits['token_logits'].cpu())
+        V_tokens.append(critic_logits['token_logits'][:,action.index].cpu())
         actor_logits = self.actor.SampleToken(
           state, action.index, self.tokenizer, self.feature_tokenizer,
         )
-        mean_token = actor_logits['token_logits'].cpu()
+        mean_token = actor_logits['token_logits'][:,action.index].cpu()
         dist_token = torch.distributions.MultivariateNormal(mean_token, self.token_cov_mat)
         token_log_probs.append(dist_token.log_prob(torch.FloatTensor(action.token_logits)))
 
@@ -328,30 +334,40 @@ class Agent(object):
     comment = "Action: {}".format(interactions.ACTION_TYPE_MAP[action_type])
 
     if action_type == interactions.ACTION_TYPE_SPACE['ADD']:
-      logits = self.actor.SampleToken(
-        state, action_index, self.tokenizer, self.feature_tokenizer
-      )
-      token_logits = logits['token_logits'][:,action_index]
-      token        = self.policy.SelectToken(token_logits).cpu().numpy()
-      token_logits = token_logits.cpu().numpy()
-      comment      += ", index: {}, token: '{}'".format(action_index, self.tokenizer.decoder[int(token)])
+      actual_length = np.where(np.array(state.encoded_code) == self.tokenizer.endToken)[0][0]
+      if action_index < actual_length:
+        logits = self.actor.SampleToken(
+          state, action_index, self.tokenizer, self.feature_tokenizer
+        )
+        token_logits = logits['token_logits'][:,action_index]
+        token        = self.policy.SelectToken(token_logits).cpu().numpy()
+        token_logits = token_logits.cpu().numpy()
+        comment      += ", index: {}, token: '{}'".format(action_index, self.tokenizer.decoder[int(token)])
+      else:
+        token_logits, token = None, None
+        comment += ", index: {} - out of bounds".format(action_index)
     elif action_type == interactions.ACTION_TYPE_SPACE['REM']:
       token_logits, token = None, None
       comment += ", index: {}".format(action_index)
     elif action_type == interactions.ACTION_TYPE_SPACE['COMP']:
       token_logits, token = None, None
     elif action_type == interactions.ACTION_TYPE_SPACE['REPLACE']:
-      logits = self.actor.SampleToken(
-        state,
-        action_index,
-        self.tokenizer,
-        self.feature_tokenizer,
-        replace_token = True,
-      )
-      token_logits = logits['token_logits'][:,action_index]
-      token        = self.policy.SelectToken(token_logits).cpu().numpy()
-      token_logits = token_logits.cpu().numpy()
-      comment = ", index: {}, token: '{}' -> '{}'".format(action_index, self.tokenizer.decoder[int(state.encoded_code[action_index])], self.tokenizer.decoder[int(token)])
+      actual_length = np.where(np.array(state.encoded_code) == self.tokenizer.endToken)[0][0]
+      if action_index < actual_length:
+        logits = self.actor.SampleToken(
+          state,
+          action_index,
+          self.tokenizer,
+          self.feature_tokenizer,
+          replace_token = True,
+        )
+        token_logits = logits['token_logits'][:,action_index]
+        token        = self.policy.SelectToken(token_logits).cpu().numpy()
+        token_logits = token_logits.cpu().numpy()
+        comment += ", index: {}, token: '{}' -> '{}'".format(action_index, self.tokenizer.decoder[int(state.encoded_code[action_index])], self.tokenizer.decoder[int(token)])
+      else:
+        token_logits, token = None, None
+        comment += ", index {} - out of bounds".format(action_index)
     else:
       raise ValueError("Invalid action_type: {}".format(action_type))
 
@@ -376,18 +392,27 @@ class Agent(object):
     """
     # The rewards-to-go (rtg) per episode per batch to return.
     # The shape will be (num timesteps per episode)
-    batch_rtgs = []
+    action_batch_rtgs = []
+    token_batch_rtgs  = []
 
     # Iterate through each episode
     for ep_rews in reversed(batch_rews):
 
-      discounted_reward = 0 # The discounted reward so far
+      print(ep_rews)
+      input()
+      action_discounted_reward = 0 # The discounted reward for actions.
+      token_discounted_reward  = 0 # The discounted reward for token additions.
 
       # Iterate through all rewards in the episode. We go backwards for smoother calculation of each
       # discounted return (think about why it would be harder starting from the beginning)
       for rew in reversed(ep_rews):
+        print(rew)
         discounted_reward = rew.value + discounted_reward * gamma
+        print(discounted_reward)
+        print()
+        print()
         batch_rtgs.insert(0, discounted_reward)
+        input()
 
     # Convert the rewards-to-go into a tensor
     batch_rtgs = torch.tensor(batch_rtgs, dtype=torch.float)
