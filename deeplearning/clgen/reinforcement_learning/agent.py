@@ -164,6 +164,8 @@ class Agent(object):
         # here's a great explanation: 
         # https://cs.stackexchange.com/questions/70518/why-do-we-use-the-log-in-gradient-based-reinforcement-algorithms
         # TL;DR makes gradient ascent easier behind the scenes.
+        print(act_log_probs.shape)
+        print(batch_act_probs.shape)
         act_ratios = torch.exp(act_log_probs - batch_act_probs)
         tok_ratios = torch.exp(tok_log_probs - batch_tok_probs)
 
@@ -293,19 +295,16 @@ class Agent(object):
     # Query critic network for a value V for each batch_obs. Shape of V should be same as batch_rtgs
     V_actions, V_tokens = [], []
     action_log_probs, token_log_probs = [], []
+    mean_action, mean_token = [], []
 
     for state, action in tqdm.tqdm(zip(states, actions), total = len(states), desc = "Evaluate Policy"):
 
-      critic_logits = self.critic.SampleAction(state)
-      V_actions.append(critic_logits['action_logits'].cpu())
-      # Calculate the log probabilities of batch actions using most recent actor network.
-      # This segment of code is similar to that in get_action()
-      # mean = self.actor.SampleAction(states)
       actor_logits = self.actor.SampleAction(state)
-      mean_action = actor_logits['action_logits'].cpu()
+      critic_logits = self.critic.SampleAction(state)
 
-      dist_action = torch.distributions.MultivariateNormal(mean_action, self.action_cov_mat)
-      action_log_probs.append(dist_action.log_prob(torch.FloatTensor(action.action_logits)))
+      V_actions.append(critic_logits['action_logits'].cpu())
+      mean_action.append([float(x) for x in actor_logits['action_logits'].cpu().squeeze(0)])
+      action_log_probs.append([float(x) for x in torch.FloatTensor(action.action_logits).squeeze(0)])
 
       if action.token_logits is not None:
         critic_logits = self.critic.SampleToken(
@@ -315,13 +314,26 @@ class Agent(object):
         actor_logits = self.actor.SampleToken(
           state, action.index, self.tokenizer, self.feature_tokenizer,
         )
-        mean_token = actor_logits['token_logits'][:,action.index].cpu()
-        dist_token = torch.distributions.MultivariateNormal(mean_token, self.token_cov_mat)
-        token_log_probs.append(dist_token.log_prob(torch.FloatTensor(action.token_logits)))
+        mean_token.append(actor_logits['token_logits'][:,action.index].cpu())
+        # dist_token = torch.distributions.MultivariateNormal(mean_token, self.token_cov_mat)
+        token_log_probs.append(torch.FloatTensor(action.token_logits))
 
+    if len(action_log_probs) > 0:
+      mean_action      = torch.FloatTensor(mean_action)
+      action_log_probs = torch.FloatTensor(action_log_probs)
+      dist_action      = torch.distributions.MultivariateNormal(mean_action, self.action_cov_mat)
+      action_log_probs = dist_action.log_prob(action_log_probs)
+    else:
+      action_log_probs = None
+    
+    if len(token_log_probs) > 0:
+      mean_token      = torch.FloatTensor(mean_token)
+      token_log_probs = torch.FloatTensor(token_log_probs)
+      dist_token      = torch.distributions.MultivariateNormal(torch.FloatTensor(mean_token), self.token_cov_mat)
+      token_log_probs = dist_token.log_prob(token_log_probs)
     # Return the value vector V of each observation in the batch
     # and log probabilities log_probs of each action in the batch
-    return (torch.FloatTensor(V_actions), torch.FloatTensor(action_log_probs)), (torch.FloatTensor(V_tokens), torch.FloatTensor(token_log_probs))
+    return (torch.FloatTensor(V_actions), action_log_probs), (torch.FloatTensor(V_tokens), token_log_probs)
 
   def make_action(self, state: interactions.State) -> interactions.Action:
     """
