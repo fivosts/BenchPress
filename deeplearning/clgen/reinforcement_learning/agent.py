@@ -78,6 +78,7 @@ class Agent(object):
       self.language_model.backend.config.architecture.max_position_embeddings,
       self.tokenizer,
       self.feature_tokenizer,
+      self.language_model,
     )
     self.actor = model.QValuesModel(
       self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path, is_critic = False,
