@@ -321,7 +321,7 @@ class Agent(object):
 
     # Return the value vector V of each observation in the batch
     # and log probabilities log_probs of each action in the batch
-    return (torch.FloatTensor(V_actions), action_log_probs), (torch.FloatTensor(V_tokens), token_log_probs)
+    return (torch.FloatTensor(V_actions), torch.FloatTensor(action_log_probs)), (torch.FloatTensor(V_tokens), torch.FloatTensor(token_log_probs))
 
   def make_action(self, state: interactions.State) -> interactions.Action:
     """
