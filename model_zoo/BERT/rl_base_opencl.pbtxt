@@ -19,31 +19,9 @@ rl_model {
       feature_sequence_length: 256
     }
     action_qv {
-      # Fresh BERT-Encoder collecting features.
-      hidden_size: 768
-      num_attention_heads: 12
-      num_hidden_layers: 2
-      intermediate_size: 1024
-      layer_norm_eps: 1e-12
-      hidden_dropout_prob: 0.1
-      hidden_act: "gelu"
-      attention_probs_dropout_prob: 0.1
-      type_vocab_size: 16
-      initializer_range: 0.02
       action_temperature_micros: 700000
     }
     action_lm {
-      # Fresh BERT-Encoder collecting features.
-      hidden_size: 768
-      num_attention_heads: 12
-      num_hidden_layers: 2
-      intermediate_size: 1024
-      layer_norm_eps: 1e-12
-      hidden_dropout_prob: 0.1
-      hidden_act: "gelu"
-      attention_probs_dropout_prob: 0.1
-      type_vocab_size: 16
-      initializer_range: 0.02
       token_temperature_micros: 700000
     }
   }
