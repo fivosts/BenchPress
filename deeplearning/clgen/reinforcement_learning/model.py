@@ -328,18 +328,17 @@ class QValuesModel(object):
     return
 
   def SampleAction(self,
-                   state               : interactions.State,
+                   state : interactions.State,
                    ) -> typing.Dict[str, torch.Tensor]:
     """Predict the next action given an input state."""
     self._ConfigModelParams()
     inputs = data_generator.StateToActionTensor(
       state, self.tokenizer.padToken, self.feature_tokenizer.padToken, self.batch_size
     )
-    with torch.no_grad():
-      inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
-      outputs = self.model.action(
-        **inputs
-      )
+    inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
+    outputs = self.model.action(
+      **inputs
+    )
     return outputs
 
   def SampleToken(self,
@@ -360,11 +359,10 @@ class QValuesModel(object):
       self.batch_size,
       replace_token = replace_token,
     )
-    with torch.no_grad():
-      inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
-      outputs = self.model.token(
-        **inputs
-      )
+    inputs = {k: v.to(pytorch.device) for k, v in inputs.items()}
+    outputs = self.model.token(
+      **inputs
+    )
     return outputs
 
   def saveCheckpoint(self, prefix = "") -> None:
