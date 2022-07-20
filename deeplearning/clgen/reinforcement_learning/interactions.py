@@ -24,8 +24,10 @@ class Action(typing.NamedTuple):
   index          : int        # At selected index
   indexed_action : int        # Action/Index perplexed id in action head's output.
   action_logits  : np.array   # ACTION_SPACE * SEQ_LEN logits array.
+  action_probs   : np.array   # ACTION_SPACE * SEQ_LEN probability array.
   token          : int        # Your policy function picks the best token.
-  token_logits   : np.array   # Distribution vector over possible tokens.
+  token_logits   : np.array   # Distribution logits over possible tokens.
+  token_probs    : np.array   # Distribution probs over possible tokens.
   comment        : str        # Add action description.
 
 class State(typing.NamedTuple):
