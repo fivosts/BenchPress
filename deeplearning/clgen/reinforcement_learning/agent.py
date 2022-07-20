@@ -152,8 +152,8 @@ class Agent(object):
       if A_k_token is not None:
         A_k_token  = (A_k_token - A_k_token.mean())   / (A_k_token.std() + 1e-10)
 
-      batch_act_probs = torch.FloatTensor([a.action_logits.squeeze(0) for a in batch_actions if a.action_logits is not None])
-      batch_tok_probs = torch.FloatTensor([a.token_logits.squeeze(0) for a in batch_actions if a.token_logits is not None])
+      rollout_act_labels = torch.LongTensor([a.indexed_action for a in batch_actions if a.indexed_action is not None])
+      rollout_tok_labels = torch.LongTensor([a.token for a in batch_actions if a.token is not None])
 
       for i in range(num_updates_per_batch):
 				# Calculate V_phi and pi_theta(a_t | s_t)
@@ -168,14 +168,14 @@ class Agent(object):
         # TL;DR makes gradient ascent easier behind the scenes.
         print("###########")
         print(action_labels.shape)
-        print(batch_act_probs.shape)
+        print(rollout_act_labels.shape)
         print("###########")
         input()
         if action_labels is not None:
-          act_ratios = torch.exp(action_labels - batch_act_probs)
+          act_ratios = torch.exp(action_labels - rollout_act_labels)
           # Calculate surrogate losses.
           act_surr1 = act_ratios * A_k_action
-          act_surr2 = torch.clamp(act_surr1, 1 - self.clip, 1 + self.clip) * A_k_action
+          act_surr2 = torch.clamp(act_surr1, 1 - clip, 1 + clip) * A_k_action
           # Calculate actor and critic losses.
           # NOTE: we take the negative min of the surrogate losses because we're trying to maximize
           # the performance function, but Adam minimizes the loss. So minimizing the negative
@@ -191,10 +191,10 @@ class Agent(object):
           act_critic_loss.backward(retain_graph = True)
           critic_optim['action'].step()
         if token_labels is not None:
-          tok_ratios = torch.exp(token_labels - batch_tok_probs)
+          tok_ratios = torch.exp(token_labels - rollout_tok_labels)
           # Calculate surrogate losses.
           tok_surr1 = tok_ratios * A_k_token
-          tok_surr2 = torch.clamp(tok_surr1, 1 - self.clip, 1 + self.clip) * A_k_token
+          tok_surr2 = torch.clamp(tok_surr1, 1 - clip, 1 + clip) * A_k_token
           # Calculate actor and critic losses.
           # NOTE: we take the negative min of the surrogate losses because we're trying to maximize
           # the performance function, but Adam minimizes the loss. So minimizing the negative
