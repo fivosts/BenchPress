@@ -315,18 +315,18 @@ class Agent(object):
       critic_logits  = self.critic.SampleAction(state)
 
       ## Store a) critic values, b) updated batch action log probs, c) old log probs to batch.
-      V_actions        .append(critic_logits['action_logits'].cpu())
-      action_probs    .append(updated_action.action_probs)
-      old_action_probs.append(action.action_probs)
+      V_actions       .append(critic_logits['action_logits'].cpu())
+      action_probs    .append([float(x) for x in updated_action.action_probs.squeeze(0)])
+      old_action_probs.append([float(x) for x in action.action_probs.squeeze(0)])
 
       ## If there was any meaningful token addition.
       if updated_action.token_logits is not None:
         critic_logits = self.critic.SampleToken(
           state, updated_action.index, self.tokenizer, self.feature_tokenizer,
         )
-        V_tokens        .append(critic_logits['token_logits'][:,updated_action.index].cpu())
-        token_probs    .append(updated_action.token_probs)
-        old_token_probs.append(action.token_probs)
+        V_tokens       .append(critic_logits['token_logits'][:,updated_action.index].cpu())
+        token_probs    .append([float(x) for x in updated_action.token_probs.squeeze(0)])
+        old_token_probs.append([float(x) for x in action.token_probs.squeeze(0)])
 
     if len(old_action_probs) > 0:
       V_actions        = torch.FloatTensor(V_actions)
