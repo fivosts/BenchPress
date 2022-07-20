@@ -329,19 +329,19 @@ class Agent(object):
         old_token_probs.append(action.token_probs)
 
     if len(old_action_probs) > 0:
-      V_actions            = torch.FloatTensor(V_actions)
+      V_actions        = torch.FloatTensor(V_actions)
       action_probs     = torch.FloatTensor(action_probs)
       old_action_probs = torch.FloatTensor(old_action_probs)
     else:
-      V_actions         = None
+      V_actions        = None
       action_probs     = None
       old_action_probs = None
     
     if len(old_token_probs) > 0:
-      token_probs = torch.FloatTensor(token_probs)
-      old_token_probs     = torch.FloatTensor(old_token_probs)
+      token_probs     = torch.FloatTensor(token_probs)
+      old_token_probs = torch.FloatTensor(old_token_probs)
     else:
-      V_tokens         = None
+      V_tokens        = None
       token_probs     = None
       old_token_probs = None
     # Return the value vector V of each observation in the batch
