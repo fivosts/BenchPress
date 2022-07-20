@@ -157,7 +157,7 @@ class Agent(object):
 
       for i in range(num_updates_per_batch):
         # Calculate V_phi and pi_theta(a_t | s_t)
-        (V_act, action_labels, old_act_labels), (V_tok, token_labels, old_tok_labels) = self.evaluate_policy(batch_states, batch_actions)
+        (V_act, action_probs, old_act_labels), (V_tok, token_probs, old_tok_labels) = self.evaluate_policy(batch_states, batch_actions)
 
         # Calculate the ratio pi_theta(a_t | s_t) / pi_theta_k(a_t | s_t)
         # NOTE: we just subtract the logs, which is the same as
@@ -166,8 +166,8 @@ class Agent(object):
         # here's a great explanation: 
         # https://cs.stackexchange.com/questions/70518/why-do-we-use-the-log-in-gradient-based-reinforcement-algorithms
         # TL;DR makes gradient ascent easier behind the scenes.
-        if action_labels is not None:
-          act_ratios = torch.exp(action_labels - rollout_act_labels)
+        if action_probs is not None:
+          act_ratios = torch.exp(action_probs - rollout_act_labels)
           # Calculate surrogate losses.
           act_surr1 = act_ratios * A_k_action
           act_surr2 = torch.clamp(act_surr1, 1 - clip, 1 + clip) * A_k_action
@@ -179,9 +179,9 @@ class Agent(object):
           act_critic_loss = torch.nn.MSELoss()(V_act, action_batch_rtgs)
           action_loss.requires_grad = True
           act_critic_loss.requires_grad = True
-          print(action_labels)
+          print(action_probs)
           print(rollout_act_labels)
-          print(action_labels - rollout_act_labels)
+          print(action_probs - rollout_act_labels)
           print(act_ratios)
           print(act_surr1)
           print(act_surr2)
@@ -195,8 +195,8 @@ class Agent(object):
           critic_optim['action'].zero_grad()
           act_critic_loss.backward(retain_graph = True)
           critic_optim['action'].step()
-        if token_labels is not None:
-          tok_ratios = torch.exp(token_labels - rollout_tok_labels)
+        if token_probs is not None:
+          tok_ratios = torch.exp(token_probs - rollout_tok_labels)
           # Calculate surrogate losses.
           tok_surr1 = tok_ratios * A_k_token
           tok_surr2 = torch.clamp(tok_surr1, 1 - clip, 1 + clip) * A_k_token
@@ -305,8 +305,8 @@ class Agent(object):
     """
     # Query critic network for a value V for each batch_obs. Shape of V should be same as batch_rtgs
     V_actions, V_tokens = [], []
-    old_action_labels, old_token_labels = [], []
-    action_labels, token_labels = [], []
+    old_action_probs, old_token_probs = [], []
+    action_probs, token_probs = [], []
 
     for state, action in tqdm.tqdm(zip(states, actions), total = len(states), desc = "Evaluate Policy"):
 
@@ -316,8 +316,8 @@ class Agent(object):
 
       ## Store a) critic values, b) updated batch action log probs, c) old log probs to batch.
       V_actions        .append(critic_logits['action_logits'].cpu())
-      action_labels    .append(updated_action.indexed_action)
-      old_action_labels.append(action.indexed_action)
+      action_probs    .append(updated_action.action_probs)
+      old_action_probs.append(action.action_probs)
 
       ## If there was any meaningful token addition.
       if updated_action.token_logits is not None:
@@ -325,28 +325,28 @@ class Agent(object):
           state, updated_action.index, self.tokenizer, self.feature_tokenizer,
         )
         V_tokens        .append(critic_logits['token_logits'][:,updated_action.index].cpu())
-        token_labels    .append(updated_action.token)
-        old_token_labels.append(action.token)
+        token_probs    .append(updated_action.token_probs)
+        old_token_probs.append(action.token_probs)
 
-    if len(old_action_labels) > 0:
+    if len(old_action_probs) > 0:
       V_actions            = torch.FloatTensor(V_actions)
-      action_labels     = torch.LongTensor(action_labels)
-      old_action_labels = torch.LongTensor(old_action_labels)
+      action_probs     = torch.FloatTensor(action_probs)
+      old_action_probs = torch.FloatTensor(old_action_probs)
     else:
       V_actions         = None
-      action_labels     = None
-      old_action_labels = None
+      action_probs     = None
+      old_action_probs = None
     
-    if len(old_token_labels) > 0:
-      token_labels = torch.FloatTensor(token_labels)
-      old_token_labels     = torch.LongTensor(old_token_labels)
+    if len(old_token_probs) > 0:
+      token_probs = torch.FloatTensor(token_probs)
+      old_token_probs     = torch.FloatTensor(old_token_probs)
     else:
       V_tokens         = None
-      token_labels     = None
-      old_token_labels = None
+      token_probs     = None
+      old_token_probs = None
     # Return the value vector V of each observation in the batch
     # and log probabilities log_probs of each action in the batch
-    return (V_actions, action_labels, old_action_labels), (V_tokens, token_labels, old_token_labels)
+    return (V_actions, action_probs, old_action_probs), (V_tokens, token_probs, old_token_probs)
 
   def make_action(self, state: interactions.State) -> interactions.Action:
     """
