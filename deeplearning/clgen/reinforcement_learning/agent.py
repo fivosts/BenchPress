@@ -371,13 +371,13 @@ class Agent(object):
         token_logits = token_logits.cpu()
         comment      += ", index: {}, token: '{}'".format(action_index, self.tokenizer.decoder[int(token)])
       else:
-        token_logits, token = None, None
+        token_logits, token, token_probs = None, None, None
         comment += ", index: {} - out of bounds".format(action_index)
     elif action_type == interactions.ACTION_TYPE_SPACE['REM']:
-      token_logits, token = None, None
+      token_logits, token, token_probs = None, None, None
       comment += ", index: {}".format(action_index)
     elif action_type == interactions.ACTION_TYPE_SPACE['COMP']:
-      token_logits, token = None, None
+      token_logits, token, token_probs = None, None, None
     elif action_type == interactions.ACTION_TYPE_SPACE['REPLACE']:
       actual_length = np.where(np.array(state.encoded_code) == self.tokenizer.endToken)[0][0]
       if action_index < actual_length:
@@ -394,7 +394,7 @@ class Agent(object):
         token_logits = token_logits.cpu()
         comment += ", index: {}, token: '{}' -> '{}'".format(action_index, self.tokenizer.decoder[int(state.encoded_code[action_index])], self.tokenizer.decoder[int(token)])
       else:
-        token_logits, token = None, None
+        token_logits, token_probs, token = None, None, None
         comment += ", index {} - out of bounds".format(action_index)
     else:
       raise ValueError("Invalid action_type: {}".format(action_type))
