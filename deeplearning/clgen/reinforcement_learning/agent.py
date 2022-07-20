@@ -144,9 +144,9 @@ class Agent(object):
       print(A_k_action)
       print(A_k_token)
 
-			# Normalizing advantages isn't theoretically necessary, but in practice it decreases the variance of 
-			# our advantages and makes convergence much more stable and faster. I added this because
-			# solving some environments was too unstable without it.
+      # Normalizing advantages isn't theoretically necessary, but in practice it decreases the variance of 
+      # our advantages and makes convergence much more stable and faster. I added this because
+      # solving some environments was too unstable without it.
       if A_k_action is not None:
         A_k_action = (A_k_action - A_k_action.mean()) / (A_k_action.std() + 1e-10)
       if A_k_token is not None:
@@ -156,7 +156,7 @@ class Agent(object):
       rollout_tok_labels = torch.LongTensor([a.token for a in batch_actions if a.token is not None])
 
       for i in range(num_updates_per_batch):
-				# Calculate V_phi and pi_theta(a_t | s_t)
+        # Calculate V_phi and pi_theta(a_t | s_t)
         (V_act, action_labels, old_act_labels), (V_tok, token_labels, old_tok_labels) = self.evaluate_policy(batch_states, batch_actions)
 
         # Calculate the ratio pi_theta(a_t | s_t) / pi_theta_k(a_t | s_t)
