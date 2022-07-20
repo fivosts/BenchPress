@@ -40,7 +40,7 @@ class Policy(object):
       ).sample()
     likely = torch.argmax(ct, dim = -1)
     action, index = likely % len(interactions.ACTION_TYPE_SPACE), likely // len(interactions.ACTION_TYPE_SPACE)
-    return int(action), int(index)
+    return int(action), int(index), int(likely)
 
   def SelectToken(self, token_logits: torch.FloatTensor) -> int:
     """
@@ -152,8 +152,8 @@ class Agent(object):
       if A_k_token is not None:
         A_k_token  = (A_k_token - A_k_token.mean())   / (A_k_token.std() + 1e-10)
 
-      batch_act_probs = torch.FloatTensor([a.action_logits for a in batch_actions if a.action_logits is not None])
-      batch_tok_probs = torch.FloatTensor([a.token_logits for a in batch_actions if a.token_logits is not None])
+      batch_act_probs = torch.FloatTensor([a.action_logits.squeeze(0) for a in batch_actions if a.action_logits is not None])
+      batch_tok_probs = torch.FloatTensor([a.token_logits.squeeze(0) for a in batch_actions if a.token_logits is not None])
 
       for i in range(num_updates_per_batch):
 				# Calculate V_phi and pi_theta(a_t | s_t)
@@ -166,8 +166,11 @@ class Agent(object):
         # here's a great explanation: 
         # https://cs.stackexchange.com/questions/70518/why-do-we-use-the-log-in-gradient-based-reinforcement-algorithms
         # TL;DR makes gradient ascent easier behind the scenes.
+        print("###########")
         print(act_log_probs.shape)
         print(batch_act_probs.shape)
+        print("###########")
+        input()
         if act_log_probs is not None:
           act_ratios = torch.exp(act_log_probs - batch_act_probs)
           # Calculate surrogate losses.
@@ -297,51 +300,48 @@ class Agent(object):
     """
     # Query critic network for a value V for each batch_obs. Shape of V should be same as batch_rtgs
     V_actions, V_tokens = [], []
-    action_log_probs, token_log_probs = [], []
-    mean_action, mean_token = [], []
+    old_action_labels, old_token_labels = [], []
+    action_labels, token_labels = [], []
 
     for state, action in tqdm.tqdm(zip(states, actions), total = len(states), desc = "Evaluate Policy"):
 
-      actor_logits = self.actor.SampleAction(state)
-      critic_logits = self.critic.SampleAction(state)
+      ## Re-collect the action from the updated model.
+      updated_action = self.make_action(state)
+      critic_logits  = self.critic.SampleAction(state)
 
-      V_actions.append(critic_logits['action_logits'].cpu())
-      mean_action.append([float(x) for x in actor_logits['action_logits'].cpu().squeeze(0)])
-      action_log_probs.append([float(x) for x in torch.FloatTensor(action.action_logits).squeeze(0)])
+      ## Store a) critic values, b) updated batch action log probs, c) old log probs to batch.
+      V_actions        .append(critic_logits['action_logits'].cpu())
+      action_labels    .append(updated_action.indexed_action)
+      old_action_labels.append(action.indexed_action)
 
-      if action.token_logits is not None:
+      ## If there was any meaningful token addition.
+      if updated_action.token_logits is not None:
         critic_logits = self.critic.SampleToken(
-          state, action.index, self.tokenizer, self.feature_tokenizer,
+          state, updated_action.index, self.tokenizer, self.feature_tokenizer,
         )
-        V_tokens.append(critic_logits['token_logits'][:,action.index].cpu())
-        actor_logits = self.actor.SampleToken(
-          state, action.index, self.tokenizer, self.feature_tokenizer,
-        )
-        mean_token.append(actor_logits['token_logits'][:,action.index].cpu())
-        # dist_token = torch.distributions.MultivariateNormal(mean_token, self.token_cov_mat)
-        token_log_probs.append(torch.FloatTensor(action.token_logits))
+        V_tokens        .append(critic_logits['token_logits'][:,updated_action.index].cpu())
+        token_labels    .append(updated_action.token)
+        old_token_labels.append(action.token)
 
-    if len(action_log_probs) > 0:
-      V_actions        = torch.FloatTensor(V_actions)
-      mean_action      = torch.FloatTensor(mean_action)
-      action_log_probs = torch.FloatTensor(action_log_probs)
-      dist_action      = torch.distributions.MultivariateNormal(mean_action, self.action_cov_mat)
-      action_log_probs = dist_action.log_prob(action_log_probs)
+    if len(old_action_labels) > 0:
+      V_actions            = torch.FloatTensor(V_actions)
+      action_labels     = torch.LongTensor(action_labels)
+      old_action_labels = torch.LongTensor(old_action_labels)
     else:
-      V_actions        = None
-      action_log_probs = None
+      V_actions         = None
+      action_labels     = None
+      old_action_labels = None
     
-    if len(token_log_probs) > 0:
-      mean_token      = torch.FloatTensor(mean_token)
-      token_log_probs = torch.FloatTensor(token_log_probs)
-      dist_token      = torch.distributions.MultivariateNormal(torch.FloatTensor(mean_token), self.token_cov_mat)
-      token_log_probs = dist_token.log_prob(token_log_probs)
+    if len(old_token_labels) > 0:
+      token_labels = torch.FloatTensor(token_labels)
+      old_token_labels     = torch.LongTensor(old_token_labels)
     else:
-      V_tokens        = None
-      token_log_probs = None
+      V_tokens         = None
+      token_labels     = None
+      old_token_labels = None
     # Return the value vector V of each observation in the batch
     # and log probabilities log_probs of each action in the batch
-    return (V_actions, action_log_probs), (V_tokens, token_log_probs)
+    return (V_actions, action_labels, old_action_labels), (V_tokens, token_labels, old_token_labels)
 
   def make_action(self, state: interactions.State) -> interactions.Action:
     """
@@ -350,7 +350,7 @@ class Agent(object):
     """
     output = self.actor.SampleAction(state)
     action_logits = output['action_logits'].cpu()
-    action_type, action_index = self.policy.SelectAction(action_logits)
+    action_type, action_index, indexed_action = self.policy.SelectAction(action_logits)
     action_logits = action_logits.numpy()
     comment = "Action: {}".format(interactions.ACTION_TYPE_MAP[action_type])
 
@@ -393,12 +393,13 @@ class Agent(object):
       raise ValueError("Invalid action_type: {}".format(action_type))
 
     return interactions.Action(
-      action        = action_type,
-      index         = action_index,
-      action_logits = action_logits,
-      token         = token,
-      token_logits  = token_logits,
-      comment       = comment,
+      action         = action_type,
+      index          = action_index,
+      indexed_action = indexed_action,
+      action_logits  = action_logits,
+      token          = token,
+      token_logits   = token_logits,
+      comment        = comment,
     )
 
   def compute_rtgs(self, batch_rews, gamma):
