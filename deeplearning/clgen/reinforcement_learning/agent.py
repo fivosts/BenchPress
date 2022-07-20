@@ -351,7 +351,7 @@ class Agent(object):
     output = self.actor.SampleAction(state)
     action_logits = output['action_logits'].cpu()
     action_type, action_index, indexed_action = self.policy.SelectAction(action_logits)
-    action_logits = action_logits.numpy()
+    action_logits = action_logits
     comment = "Action: {}".format(interactions.ACTION_TYPE_MAP[action_type])
 
     if action_type == interactions.ACTION_TYPE_SPACE['ADD']:
@@ -361,8 +361,8 @@ class Agent(object):
           state, action_index, self.tokenizer, self.feature_tokenizer
         )
         token_logits = logits['token_logits'][:,action_index]
-        token        = self.policy.SelectToken(token_logits).cpu().numpy()
-        token_logits = token_logits.cpu().numpy()
+        token        = self.policy.SelectToken(token_logits).cpu()
+        token_logits = token_logits.cpu()
         comment      += ", index: {}, token: '{}'".format(action_index, self.tokenizer.decoder[int(token)])
       else:
         token_logits, token = None, None
@@ -383,8 +383,8 @@ class Agent(object):
           replace_token = True,
         )
         token_logits = logits['token_logits'][:,action_index]
-        token        = self.policy.SelectToken(token_logits).cpu().numpy()
-        token_logits = token_logits.cpu().numpy()
+        token        = self.policy.SelectToken(token_logits).cpu()
+        token_logits = token_logits.cpu()
         comment += ", index: {}, token: '{}' -> '{}'".format(action_index, self.tokenizer.decoder[int(state.encoded_code[action_index])], self.tokenizer.decoder[int(token)])
       else:
         token_logits, token = None, None
