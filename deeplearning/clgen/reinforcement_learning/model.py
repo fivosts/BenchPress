@@ -103,6 +103,7 @@ class ActionQV(torch.nn.Module):
     if is_critic:
       output_dim = 1
     self.action_head = ActionHead(config, output_dim = output_dim)
+    self.softmax     = torch.nn.Softmax(dim = -1)
     return
 
   def forward(self,
@@ -134,8 +135,10 @@ class ActionQV(torch.nn.Module):
     decoded_source = decoder_out['hidden_states']
     ## Predict action type logits.
     action_logits = self.action_head(decoded_source)
+    action_probs  = self.softmax(action_logits)
     return {
-      'action_logits': action_logits,
+      'action_logits' : action_logits,
+      'action_probs'  : action_probs,
     }
 
 class ActionLanguageModelQV(torch.nn.Module):
@@ -173,6 +176,7 @@ class ActionLanguageModelQV(torch.nn.Module):
     else:
       output_dim = config.vocab_size
     self.decoder = TokenHead(config, output_dim)
+    self.softmax = torch.nn.Softmax(dim = -1)
     return
 
   def forward(self,
@@ -198,8 +202,10 @@ class ActionLanguageModelQV(torch.nn.Module):
       encoder_hidden_states = encoder_memory,
     )
     token_logits = self.decoder(decoder_out['hidden_states'])
+    token_probs  = self.softmax(token_logits)
     return {
-      'token_logits': token_logits
+      'token_logits' : token_logits,
+      'token_probs'  : token_probs,
     }
 
 class QValuesModel(object):
