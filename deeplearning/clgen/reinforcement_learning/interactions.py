@@ -20,12 +20,13 @@ class Action(typing.NamedTuple):
   """
   Agent action representation.
   """
-  action        : int        # Selected action
-  index         : int        # At selected index
-  action_logits : np.array   # ACTION_SPACE * SEQ_LEN logits array.
-  token         : int        # Your policy function picks the best token.
-  token_logits  : np.array   # Distribution vector over possible tokens.
-  comment       : str        # Add action description.
+  action         : int        # Selected action
+  index          : int        # At selected index
+  indexed_action : int        # Action/Index perplexed id in action head's output.
+  action_logits  : np.array   # ACTION_SPACE * SEQ_LEN logits array.
+  token          : int        # Your policy function picks the best token.
+  token_logits   : np.array   # Distribution vector over possible tokens.
+  comment        : str        # Add action description.
 
 class State(typing.NamedTuple):
   """
