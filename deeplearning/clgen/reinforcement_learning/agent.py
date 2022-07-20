@@ -128,7 +128,7 @@ class Agent(object):
         env, timesteps_per_batch, max_timesteps_per_episode, gamma,
       )
       # Compute Advantage at k_th iteration.
-      (V_act, _), (V_tok, _) = self.evaluate_policy(batch_states, batch_actions)
+      (V_act, _, _), (V_tok, _, _) = self.evaluate_policy(batch_states, batch_actions)
 
 
       if V_act is not None:
@@ -157,7 +157,7 @@ class Agent(object):
 
       for i in range(num_updates_per_batch):
 				# Calculate V_phi and pi_theta(a_t | s_t)
-        (V_act, act_log_probs), (V_tok, tok_log_probs) = self.evaluate_policy(batch_states, batch_actions)
+        (V_act, action_labels, old_act_labels), (V_tok, token_labels, old_tok_labels) = self.evaluate_policy(batch_states, batch_actions)
 
         # Calculate the ratio pi_theta(a_t | s_t) / pi_theta_k(a_t | s_t)
         # NOTE: we just subtract the logs, which is the same as
@@ -167,12 +167,12 @@ class Agent(object):
         # https://cs.stackexchange.com/questions/70518/why-do-we-use-the-log-in-gradient-based-reinforcement-algorithms
         # TL;DR makes gradient ascent easier behind the scenes.
         print("###########")
-        print(act_log_probs.shape)
+        print(action_labels.shape)
         print(batch_act_probs.shape)
         print("###########")
         input()
-        if act_log_probs is not None:
-          act_ratios = torch.exp(act_log_probs - batch_act_probs)
+        if action_labels is not None:
+          act_ratios = torch.exp(action_labels - batch_act_probs)
           # Calculate surrogate losses.
           act_surr1 = act_ratios * A_k_action
           act_surr2 = torch.clamp(act_surr1, 1 - self.clip, 1 + self.clip) * A_k_action
@@ -190,8 +190,8 @@ class Agent(object):
           critic_optim['action'].zero_grad()
           act_critic_loss.backward(retain_graph = True)
           critic_optim['action'].step()
-        if tok_log_probs is not None:
-          tok_ratios = torch.exp(tok_log_probs - batch_tok_probs)
+        if token_labels is not None:
+          tok_ratios = torch.exp(token_labels - batch_tok_probs)
           # Calculate surrogate losses.
           tok_surr1 = tok_ratios * A_k_token
           tok_surr2 = torch.clamp(tok_surr1, 1 - self.clip, 1 + self.clip) * A_k_token
