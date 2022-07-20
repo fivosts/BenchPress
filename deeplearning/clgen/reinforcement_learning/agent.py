@@ -166,11 +166,6 @@ class Agent(object):
         # here's a great explanation: 
         # https://cs.stackexchange.com/questions/70518/why-do-we-use-the-log-in-gradient-based-reinforcement-algorithms
         # TL;DR makes gradient ascent easier behind the scenes.
-        print("###########")
-        print(action_labels.shape)
-        print(rollout_act_labels.shape)
-        print("###########")
-        input()
         if action_labels is not None:
           act_ratios = torch.exp(action_labels - rollout_act_labels)
           # Calculate surrogate losses.
@@ -182,6 +177,16 @@ class Agent(object):
           # performance function maximizes it.
           action_loss = (-torch.min(act_surr1, act_surr2)).mean()
           act_critic_loss = torch.nn.MSELoss()(V_act, action_batch_rtgs)
+          action_loss.requires_grad = True
+          act_critic_loss.requires_grad = True
+          print(action_labels)
+          print(rollout_act_labels)
+          print(action_labels - rollout_act_labels)
+          print(act_ratios)
+          print(act_surr1)
+          print(act_surr2)
+          print(action_loss.item())
+          print(act_critic_loss.item())
           # Calculate gradients and perform backward propagation for actor network
           actor_optim['action'].zero_grad()
           action_loss.backward(retain_graph = True)
@@ -350,6 +355,7 @@ class Agent(object):
     """
     output = self.actor.SampleAction(state)
     action_logits = output['action_logits'].cpu()
+    action_probs  = output['action_probs'].cpu()
     action_type, action_index, indexed_action = self.policy.SelectAction(action_logits)
     action_logits = action_logits
     comment = "Action: {}".format(interactions.ACTION_TYPE_MAP[action_type])
@@ -383,6 +389,7 @@ class Agent(object):
           replace_token = True,
         )
         token_logits = logits['token_logits'][:,action_index]
+        token_probs  = logits['token_probs'][:,action_index]
         token        = self.policy.SelectToken(token_logits).cpu()
         token_logits = token_logits.cpu()
         comment += ", index: {}, token: '{}' -> '{}'".format(action_index, self.tokenizer.decoder[int(state.encoded_code[action_index])], self.tokenizer.decoder[int(token)])
@@ -397,8 +404,10 @@ class Agent(object):
       index          = action_index,
       indexed_action = indexed_action,
       action_logits  = action_logits,
+      action_probs   = action_probs,
       token          = token,
       token_logits   = token_logits,
+      token_probs    = token_probs,
       comment        = comment,
     )
 
