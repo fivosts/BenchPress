@@ -287,6 +287,14 @@ class Agent(object):
     discounted_rewards  = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
     traj_disc_rewards   = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
     done                = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)
+
+    l.logger().warn("First checkpoint.")
+    l.logger().warn(batch_feature_ids.shape)
+    l.logger().warn(batch_input_ids.shape)
+    l.logger().warn(action_predictions.shape)
+    l.logger().warn(token_predictions.shape)
+    l.logger().warn(token_policy_probs.shape)
+    # input()
     ## Run execution loop.
     for step in range(steps_per_episode):
       ## This loop unfolds all batch_size trajectories.
@@ -299,6 +307,15 @@ class Agent(object):
       input_pos    = torch.arange(seq_len, dtype = torch.long).repeat(input_ids.shape[0], 1)
 
       l.logger().warn("Insert apply_normalizer here to state if step > 0")
+
+      l.logger().warn("Second checkpoint: input to action models.")
+      l.logger().warn(feature_ids.shape)
+      l.logger().warn(feature_mask.shape)
+      l.logger().warn(feature_pos.shape)
+      l.logger().warn(input_ids.shape)
+      l.logger().warn(input_mask.shape)
+      l.logger().warn(input_pos.shape)
+      # input()
 
       # Actor model returns logits of action.
       step_action_logits = self.action_actor(
@@ -323,44 +340,62 @@ class Agent(object):
       # Collect the probability of said selected action, per episode.
       step_action_probs = torch.index_select(step_action_logits, -1, step_actions)
 
+      l.logger().warn("Third checkpoint: model outputs.")
+      l.logger().warn(step_action_logits.shape)
+      l.logger().warn(step_action_values.shape)
+      l.logger().warn(step_actions.shape)
+      l.logger().warn(step_action_probs.shape)
+      # input()
+
       ## Find which sequences need to sample a token.
       step_use_lm, masked_input_ids = env.intermediate_step(input_ids, step_actions)
       if torch.any(step_use_lm):
         ## If the language model needs to be invoked ('add' or 'replace')
         ## Fix the necessary batch of elements here.
         # Indices of starting tensors that need the LM.
-        lm_indices = torch.where(step_use_lm == True)
+        lm_indices = torch.where(step_use_lm == True)[0]
+
+        l.logger().warn("Fourth checkpoint: LM_indices")
+        l.logger().warn(lm_indices)
 
         # Input tensors.
-        lm_feature_ids  = torch.index_select(feature_ids, -1, lm_indices)
+        lm_feature_ids  = torch.index_select(feature_ids, 0, lm_indices)
         lm_feature_mask = lm_feature_ids != self.feature_tokenizer.padToken
-        lm_pos_ids      = torch.arange(feat_seq_len, dtype = torch.long).repeat(lm_feature_ids.shape[0], 1)
-        lm_input_ids    = torch.index_select(masked_input_ids, -1, lm_indices)
+        lm_feat_pos_ids = torch.arange(feat_seq_len, dtype = torch.long).repeat(lm_feature_ids.shape[0], 1)
+        lm_input_ids    = torch.index_select(masked_input_ids, 0, lm_indices)
         lm_input_mask   = lm_input_ids != self.tokenizer.padToken
         lm_pos_ids      = torch.arange(seq_len, dtype = torch.long).repeat(lm_input_ids.shape[0], 1)
+
+        l.logger().warn("Fifth checkpoint: LM inputs")
+        l.logger().warn(lm_feature_ids.shape)
+        l.logger().warn(lm_feature_mask.shape)
+        l.logger().warn(lm_feat_pos_ids.shape)
+        l.logger().warn(lm_input_ids.shape)
+        l.logger().warn(lm_input_mask.shape)
+        l.logger().warn(lm_pos_ids.shape)
 
         # Run the token actor, get token logits.
         step_token_logits = self.token_actor(
           encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
           encoder_feature_mask = lm_feature_mask.to(pytorch.device),
-          encoder_position_ids = lm_pos_ids.to(pytorch.device),
+          encoder_position_ids = lm_feat_pos_ids.to(pytorch.device),
           decoder_input_ids    = lm_input_ids.to(pytorch.device),
           decoder_input_mask   = lm_input_mask.to(pytorch.device),
           decoder_position_ids = lm_pos_ids.to(pytorch.device),
         )['token_logits']
         # Keep the prediction scores only for the masked token.
-        step_token_logits = torch.index_select(step_token_logits, -1, torch.where(lm_input_ids == self.tokenizer.holeToken))
+        step_token_logits = torch.index_select(step_token_logits, -1, torch.where(lm_input_ids == self.tokenizer.holeToken)[0])
         # Collect value logit from critic.
         step_token_values = self.token_critic(
           encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
           encoder_feature_mask = lm_feature_mask.to(pytorch.device),
-          encoder_position_ids = lm_pos_ids.to(pytorch.device),
+          encoder_position_ids = lm_feat_pos_ids.to(pytorch.device),
           decoder_input_ids    = lm_input_ids.to(pytorch.device),
           decoder_input_mask   = lm_input_mask.to(pytorch.device),
           decoder_position_ids = lm_pos_ids.to(pytorch.device),
         )['token_logits']
         # Get the critic's value only for masked index.
-        step_token_values = torch.index_select(step_token_values, -1, torch.where(lm_input_ids == self.tokenizer.holeToken))
+        step_token_values = torch.index_select(step_token_values, -1, torch.where(lm_input_ids == self.tokenizer.holeToken)[0])
         # According to policy, select the best token.
         step_tokens = self.policy.SampleTokens(step_token_logits)
         # Get probability of said token, per episode.
