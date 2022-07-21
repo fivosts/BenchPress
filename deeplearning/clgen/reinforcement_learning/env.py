@@ -86,7 +86,7 @@ class Environment(gym.Env):
     fed into the language model, if need be.
     """
     num_episodes = step_actions.shape[0]
-    lm_input_ids = torch.zeros((num_episodes), dtype = torch.long)
+    lm_input_ids = torch.zeros(state_code.shape, dtype = torch.long)
     use_lm       = torch.zeros((num_episodes), dtype = torch.bool)
     for idx, (code, action) in enumerate(zip(state_code, step_actions)):
       act_type  = int(action) % len(interactions.ACTION_TYPE_SPACE)
@@ -95,10 +95,12 @@ class Environment(gym.Env):
         new_code = torch.cat(code[:act_index + 1], torch.LongTensor([self.tokenizer.holeToken]), code[act_index + 1:])
         new_code = code[:code.shape[0]]
         lm_input_ids[idx] = new_code
+        use_lm[idx]       = True
       elif act_type == interactions.ACTION_TYPE_SPACE['REPLACE']:
         new_code            = code
         new_code[act_index] = self.tokenizer.holeToken
         lm_input_ids[idx]   = new_code
+        use_lm[idx]         = True
     return use_lm, lm_input_ids
 
   def new_step(self,
