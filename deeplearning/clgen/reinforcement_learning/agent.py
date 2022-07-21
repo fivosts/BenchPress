@@ -92,14 +92,13 @@ class Agent(object):
     return
 
   def Train(self,
-            env                       : env.Environment,
-            num_epochs                : int,
-            num_updates_per_batch     : int,
-            timesteps_per_batch       : int,
-            max_timesteps_per_episode : int,
-            gamma                     : float,
-            clip                      : float,
-            lr                        : float,
+            env               : env.Environment,
+            num_epochs        : int,
+            num_episodes      : int, # Equivalent to batch size
+            steps_per_episode : int, # Depth length of single trajectory.
+            gamma             : float,
+            clip              : float,
+            lr                : float,
             ) -> None:
     """
     Run PPO over policy and train the agent.
@@ -114,17 +113,18 @@ class Agent(object):
       'token' : torch.optim.Adam(self.critic.token_parameters,  lr = lr),
     }
 
-    self.action_cov_var = torch.full(size = (self.qv_config.max_position_embeddings * len(interactions.ACTION_TYPE_SPACE),), fill_value = 0.5)
-    self.action_cov_mat = torch.diag(self.action_cov_var)
+    # self.action_cov_var = torch.full(size = (self.qv_config.max_position_embeddings * len(interactions.ACTION_TYPE_SPACE),), fill_value = 0.5)
+    # self.action_cov_mat = torch.diag(self.action_cov_var)
 
-    self.token_cov_var = torch.full(size = (self.tokenizer.vocab_size,), fill_value = 0.5)
-    self.token_cov_mat = torch.diag(self.token_cov_var)
+    # self.token_cov_var = torch.full(size = (self.tokenizer.vocab_size,), fill_value = 0.5)
+    # self.token_cov_mat = torch.diag(self.token_cov_var)
 
     for ep in range(num_epochs):
       # Run a batch of episodes.
       batch_states, batch_actions, action_batch_rtgs, token_batch_rtgs, batch_lens = self.new_rollout(
-        env, timesteps_per_batch, max_timesteps_per_episode, gamma,
+        env, num_episodes, steps_per_episode, gamma,
       )
+      input()
       # Compute Advantage at k_th iteration.
       (V_act, _, _), (V_tok, _, _) = self.evaluate_policy(batch_states, batch_actions)
 
@@ -242,6 +242,7 @@ class Agent(object):
     ## Reward placeholders.
     rewards             = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
     discounted_rewards  = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
+    traj_disc_rewards   = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
     done                = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)
     ## Run execution loop.
     for step in range(steps_per_episode):
@@ -338,11 +339,13 @@ class Agent(object):
 
       ## Step environment and compute rewards.
       l.logger().warn("Warning, you must also step the states.")
-      reward, discounted_reward, d = env.step(
+      reward, discounted_reward, d = env.new_step(
         input_ids,
         step_actions,
         step_tokens,
-        step_use_lm
+        traj_disc_rewards,
+        step_use_lm,
+        gamma
       )
 
       ## Save data to rollout buffers.
@@ -351,8 +354,21 @@ class Agent(object):
       action_policy_probs[:, step] = step_action_probs.detach().cpu()
       use_lm             [:, step] = step_use_lm
       rewards            [:, step] = reward
-      discounted_rewards [:, step] = discounted_reward
+      traj_disc_rewards            = discounted_reward
+      discounted_rewards [:, step] = traj_disc_rewards
       done               [:, step] = d
+    return (
+      action_values,       # Critic action logits.
+      action_predictions,  # Actor sampled label actions.
+      action_policy_probs, # Actor probabilities of sampled actions.
+      token_values,        # Critic token values.
+      token_predictions,   # Actor sampled label tokens.
+      token_policy_probs,  # Actor probabilities of sampled tokens.
+      use_lm,              # Indices of actions that  required language model.
+      rewards,             # Rewards of each step.
+      discounted_rewards,  # Discounted rewards of each step.
+      done,                # Whether this step concludes the episode.
+    )
 
   def rollout(self,
               env                       : env.Environment,
