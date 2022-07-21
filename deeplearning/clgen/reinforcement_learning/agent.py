@@ -82,15 +82,53 @@ class Agent(object):
       self.feature_tokenizer,
       self.language_model,
     )
-    self.action_actor  = model.ActionQV(self.language_model, self.qv_config)
-    self.action_critic = model.ActionQV(self.language_model, self.qv_config, is_critic = True)
-    self.token_actor   = model.ActionLanguageModelQV(self.language_model, self.qv_config)
-    self.token_critic  = model.ActionLanguageModelQV(self.language_model, self.qv_config, is_critic = True)
     self.policy  = Policy(
       action_temp = self.qv_config.action_temperature,
       token_temp  = self.qv_config.token_temperature,
     )
+    self._ConfigModelParams()
     self.ckpt_step = max(0, self.loadCheckpoint())
+    return
+
+  def _ConfigModelParams(self) -> None:
+    """
+    Initialize torch models and send them to device.
+    """
+    self.action_actor  = model.ActionQV(self.language_model, self.qv_config)
+    self.action_critic = model.ActionQV(self.language_model, self.qv_config, is_critic = True)
+    self.token_actor   = model.ActionLanguageModelQV(self.language_model, self.qv_config)
+    self.token_critic  = model.ActionLanguageModelQV(self.language_model, self.qv_config, is_critic = True)
+    if pytorch.num_nodes > 1:
+      self.action_actor = torch.nn.DistributedDataParallel(
+        self.action_actor,
+        device_ids    = [pytorch.offset_device],
+        output_device = pytorch.offset_device,
+        find_unused_parameters = True,
+      )
+      self.action_critic = torch.nn.DistributedDataParallel(
+        self.action_critic,
+        device_ids    = [pytorch.offset_device],
+        output_device = pytorch.offset_device,
+        find_unused_parameters = True,
+      )
+      self.token_actor = torch.nn.DistributedDataParallel(
+        self.token_actor,
+        device_ids    = [pytorch.offset_device],
+        output_device = pytorch.offset_device,
+        find_unused_parameters = True,
+      )
+      self.token_critic = torch.nn.DistributedDataParallel(
+        self.token_critic,
+        device_ids    = [pytorch.offset_device],
+        output_device = pytorch.offset_device,
+        find_unused_parameters = True,
+      )
+    elif pytorch.num_gpus > 1:
+      self.action_actor  = torch.nn.DataParallel(self.action_actor)
+      self.action_critic = torch.nn.DataParallel(self.action_critic)
+      self.token_actor   = torch.nn.DataParallel(self.token_actor)
+      self.token_critic  = torch.nn.DataParallel(self.token_critic)
+
     return
 
   def Train(self,
@@ -374,244 +412,6 @@ class Agent(object):
       discounted_rewards,  # Discounted rewards of each step.
       done,                # Whether this step concludes the episode.
     )
-
-  def rollout(self,
-              env                       : env.Environment,
-              timesteps_per_batch       : int,
-              max_timesteps_per_episode : int,
-              gamma                     : float,
-              ) -> typing.Tuple:
-    """
-    Too many transformers references, I'm sorry. This is where we collect the batch of data
-    from simulation. Since this is an on-policy algorithm, we'll need to collect a fresh batch
-    of data each time we iterate the actor/critic networks.
-
-    Parameters:
-      None
-
-    Return:
-      batch_obs - the observations collected this batch. Shape: (number of timesteps, dimension of observation)
-      batch_acts - the actions collected this batch. Shape: (number of timesteps, dimension of action)
-      batch_log_probs - the log probabilities of each action taken this batch. Shape: (number of timesteps)
-      batch_rtgs - the Rewards-To-Go of each timestep in this batch. Shape: (number of timesteps)
-      batch_lens - the lengths of each episode this batch. Shape: (number of episodes)
-    """
-    # Batch data. For more details, check function header.
-    batch_states  = []
-    batch_actions = []
-    batch_rews    = []
-    batch_lens    = []
-
-    # Episodic data. Keeps track of rewards per episode, will get cleared
-    # upon each new episode
-    ep_rews = []
-
-    t = 0 # Keeps track of how many timesteps we've run so far this batch
-
-    # Keep simulating until we've run more than or equal to specified timesteps per batch
-    while t < timesteps_per_batch:
-      ep_rews = [] # rewards collected per episode
-
-      # Reset the environment. sNote that obs is short for observation.
-      state = env.reset()
-      done = False
-
-      # Run an episode for a maximum of max_timesteps_per_episode timesteps
-      for ep_t in range(max_timesteps_per_episode):
-        t += 1 # Increment timesteps ran this batch so far
-        # Track observations in this batch
-        batch_states.append(state)
-
-        # Calculate action and make a step in the env. 
-        # Note that rew is short for reward.
-        action = self.make_action(state)
-        state, rew, done, _ = env.step(action)
-
-        # Track recent reward, action, and action log probability
-        ep_rews.append(rew)
-        batch_actions.append(action)
-
-        # If the environment tells us the episode is terminated, break
-        if done:
-          break
-
-      # Track episodic lengths and rewards
-      batch_lens.append(ep_t + 1)
-      batch_rews.append(ep_rews)
-
-    action_batch_rtgs, token_batch_rtgs = self.compute_rtgs(batch_rews, gamma) # ALG STEP 4
-    return batch_states, batch_actions, action_batch_rtgs, token_batch_rtgs, batch_lens
-
-  def evaluate_policy(self,
-                      states  : typing.List[interactions.State], 
-                      actions : typing.List[interactions.Action]
-                      ) -> typing.Tuple[torch.Tensor, torch.Tensor]:
-    """
-    Estimate the values of each observation, and the log probs of
-    each action in the most recent batch with the most recent
-    iteration of the actor network. Should be called from learn.
-
-    Parameters:
-      batch_obs - the observations from the most recently collected batch as a tensor.
-            Shape: (number of timesteps in batch, dimension of observation)
-      batch_acts - the actions from the most recently collected batch as a tensor.
-            Shape: (number of timesteps in batch, dimension of action)
-
-    Return:
-      V - the predicted values of batch_obs
-      log_probs - the log probabilities of the actions taken in batch_acts given batch_obs
-    """
-    # Query critic network for a value V for each batch_obs. Shape of V should be same as batch_rtgs
-    V_actions, V_tokens = [], []
-    old_action_logits, old_token_logits = [], []
-    action_logits, token_logits = [], []
-
-    for state, action in tqdm.tqdm(zip(states, actions), total = len(states), desc = "Evaluate Policy"):
-
-      ## Re-collect the action from the updated model.
-      updated_action = self.make_action(state)
-      critic_logits  = self.critic.SampleAction(state)
-
-      ## Store a) critic values, b) updated batch action log probs, c) old log probs to batch.
-      V_actions        .append(critic_logits['action_logits'].cpu())
-      action_logits    .append([float(x) for x in updated_action.action_logits.squeeze(0)])
-      old_action_logits.append([float(x) for x in action.action_logits.squeeze(0)])
-
-      ## If there was any meaningful token addition.
-      if updated_action.token_logits is not None:
-        critic_logits = self.critic.SampleToken(
-          state, updated_action.index, self.tokenizer, self.feature_tokenizer,
-        )
-        V_tokens       .append(critic_logits['token_logits'][:,updated_action.index].cpu())
-        token_logits    .append([float(x) for x in updated_action.token_logits.squeeze(0)])
-        if action.token_logits is not None:
-          old_token_logits.append([float(x) for x in action.token_logits.squeeze(0)])
-
-    if len(old_action_logits) > 0:
-      V_actions        = torch.FloatTensor(V_actions)
-      action_logits     = torch.FloatTensor(action_logits)
-      old_action_logits = torch.FloatTensor(old_action_logits)
-    else:
-      V_actions        = None
-      action_logits     = None
-      old_action_logits = None
-    
-    if len(old_token_logits) > 0:
-      token_logits     = torch.FloatTensor(token_logits)
-      old_token_logits = torch.FloatTensor(old_token_logits)
-    else:
-      V_tokens        = None
-      token_logits     = None
-      old_token_logits = None
-    print(action_logits.shape)
-    # Return the value vector V of each observation in the batch
-    # and log probabilities log_probs of each action in the batch
-    return (V_actions, action_logits, old_action_logits), (V_tokens, token_logits, old_token_logits)
-
-  def make_action(self, state: interactions.State) -> interactions.Action:
-    """
-    Agent collects the current state by the environment
-    and picks the right action.
-    """
-    output = self.actor.SampleAction(state)
-    action_logits = output['action_logits'].cpu()
-    action_probs  = output['action_probs'].cpu()
-    action_type, action_index, indexed_action = self.policy.SelectAction(action_logits)
-    action_logits = action_logits
-    comment = "Action: {}".format(interactions.ACTION_TYPE_MAP[action_type])
-
-    if action_type == interactions.ACTION_TYPE_SPACE['ADD']:
-      actual_length = np.where(np.array(state.encoded_code) == self.tokenizer.endToken)[0][0]
-      if action_index < actual_length:
-        logits = self.actor.SampleToken(
-          state, action_index, self.tokenizer, self.feature_tokenizer
-        )
-        token_logits = logits['token_logits'][:,action_index]
-        token_probs  = logits['token_probs'][:,action_index]
-        token        = self.policy.SelectToken(token_logits).cpu()
-        token_logits = token_logits.cpu()
-        comment      += ", index: {}, token: '{}'".format(action_index, self.tokenizer.decoder[int(token)])
-      else:
-        token_logits, token, token_probs = None, None, None
-        comment += ", index: {} - out of bounds".format(action_index)
-    elif action_type == interactions.ACTION_TYPE_SPACE['REM']:
-      token_logits, token, token_probs = None, None, None
-      comment += ", index: {}".format(action_index)
-    elif action_type == interactions.ACTION_TYPE_SPACE['COMP']:
-      token_logits, token, token_probs = None, None, None
-    elif action_type == interactions.ACTION_TYPE_SPACE['REPLACE']:
-      actual_length = np.where(np.array(state.encoded_code) == self.tokenizer.endToken)[0][0]
-      if action_index < actual_length:
-        logits = self.actor.SampleToken(
-          state,
-          action_index,
-          self.tokenizer,
-          self.feature_tokenizer,
-          replace_token = True,
-        )
-        token_logits = logits['token_logits'][:,action_index]
-        token_probs  = logits['token_probs'][:,action_index]
-        token        = self.policy.SelectToken(token_logits).cpu()
-        token_logits = token_logits.cpu()
-        comment += ", index: {}, token: '{}' -> '{}'".format(action_index, self.tokenizer.decoder[int(state.encoded_code[action_index])], self.tokenizer.decoder[int(token)])
-      else:
-        token_logits, token_probs, token = None, None, None
-        comment += ", index {} - out of bounds".format(action_index)
-    else:
-      raise ValueError("Invalid action_type: {}".format(action_type))
-
-    return interactions.Action(
-      action         = action_type,
-      index          = action_index,
-      indexed_action = indexed_action,
-      action_probs   = action_probs,
-      action_logits  = action_logits,
-      token          = token,
-      token_probs    = token_probs,
-      token_logits   = token_logits,
-      comment        = comment,
-    )
-
-  def compute_rtgs(self, batch_rews, gamma):
-    """
-    Compute the Reward-To-Go of each timestep in a batch given the rewards.
-
-    Parameters:
-      batch_rews - the rewards in a batch, Shape: (number of episodes, number of timesteps per episode)
-
-    Return:
-      batch_rtgs - the rewards to go, Shape: (number of timesteps in batch)
-    """
-    # The rewards-to-go (rtg) per episode per batch to return.
-    # The shape will be (num timesteps per episode)
-    action_batch_rtgs = []
-    token_batch_rtgs  = []
-
-    # Iterate through each episode
-    for ep_rews in reversed(batch_rews):
-
-      action_discounted_reward = 0 # The discounted reward for actions.
-      token_discounted_reward  = 0 # The discounted reward for token additions.
-
-      # Iterate through all rewards in the episode. We go backwards for smoother calculation of each
-      # discounted return (think about why it would be harder starting from the beginning)
-      for rew in reversed(ep_rews):
-        action_discounted_reward = rew.value + action_discounted_reward * gamma
-        action_batch_rtgs.insert(0, action_discounted_reward)
-        if rew.action.token_logits is not None:
-          token_discounted_reward = rew.value + token_discounted_reward * gamma
-          token_batch_rtgs.insert(0, token_discounted_reward)
-    # Convert the rewards-to-go into a tensor
-    action_batch_rtgs = torch.tensor(action_batch_rtgs, dtype=torch.float)
-    token_batch_rtgs = torch.tensor(token_batch_rtgs, dtype=torch.float)
-    return action_batch_rtgs, token_batch_rtgs
-
-  def update_agent(self, input_ids: typing.Dict[str, torch.Tensor]) -> None:
-    """
-    Train the agent on the new episodes.
-    """
-    self.q_model.Train(input_ids)
-    return
 
   def saveCheckpoint(self) -> None:
     """
