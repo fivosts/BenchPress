@@ -122,7 +122,7 @@ class Agent(object):
 
     for ep in range(num_epochs):
       # Run a batch of episodes.
-      batch_states, batch_actions, action_batch_rtgs, token_batch_rtgs, batch_lens = self.rollout(
+      batch_states, batch_actions, action_batch_rtgs, token_batch_rtgs, batch_lens = self.new_rollout(
         env, timesteps_per_batch, max_timesteps_per_episode, gamma,
       )
       # Compute Advantage at k_th iteration.
