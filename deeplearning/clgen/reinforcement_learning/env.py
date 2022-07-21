@@ -95,17 +95,19 @@ class Environment(gym.Env):
         new_code = torch.cat(code[:act_index + 1], torch.LongTensor([self.tokenizer.holeToken]), code[act_index + 1:])
         new_code = code[:code.shape[0]]
         lm_input_ids[idx] = new_code
-      elif act_type == interactions.interactions.ACTION_TYPE_SPACE['REPLACE']:
+      elif act_type == interactions.ACTION_TYPE_SPACE['REPLACE']:
         new_code            = code
         new_code[act_index] = self.tokenizer.holeToken
         lm_input_ids[idx]   = new_code
     return use_lm, lm_input_ids
 
   def new_step(self,
-               state_code   : torch.LongTensor,
-               step_actions : torch.LongTensor,
-               step_tokens  : torch.LongTensor,
-               use_lm       : torch.BoolTensor
+               state_code        : torch.LongTensor,
+               step_actions      : torch.LongTensor,
+               step_tokens       : torch.LongTensor,
+               traj_disc_rewards : torch.FloatTensor,
+               use_lm            : torch.BoolTensor,
+               gamma             : float,
               ) -> typing.Tuple[torch.Tensor]:
     """
     Step the environment, compute the reward.
@@ -116,7 +118,7 @@ class Environment(gym.Env):
     discounted_reward = torch.zeros((num_episodes), dtype = torch.float32)
     done              = torch.zeros((num_episodes), dtype = torch.bool)
 
-    for idx, (code, act, tok, lm) in enumerate(zip(state_code, step_actions, step_tokens, use_lm)):
+    for idx, (code, act, tok, dr, lm) in enumerate(zip(state_code, step_actions, step_tokens, discounted_reward, use_lm)):
       act_type  = int(act) % len(interactions.ACTION_TYPE_SPACE)
       act_index = int(act) // len(interactions.ACTION_TYPE_SPACE)
       token_id  = int(tok)
@@ -155,6 +157,7 @@ class Environment(gym.Env):
             reward[idx] = 1 / cur_dist
       else:
         raise ValueError("Invalid action type: {}".format(act_type))
+    discounted_reward = traj_disc_rewards * gamma + reward
     return state_code, reward, discounted_reward, done
 
   # def step(self,
