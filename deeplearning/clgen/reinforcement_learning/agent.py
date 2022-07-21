@@ -94,10 +94,10 @@ class Agent(object):
     """
     Initialize torch models and send them to device.
     """
-    self.action_actor  = model.ActionQV(self.language_model, self.qv_config)
-    self.action_critic = model.ActionQV(self.language_model, self.qv_config, is_critic = True)
-    self.token_actor   = model.ActionLanguageModelQV(self.language_model, self.qv_config)
-    self.token_critic  = model.ActionLanguageModelQV(self.language_model, self.qv_config, is_critic = True)
+    self.action_actor  = model.ActionQV(self.language_model, self.qv_config).to(pytorch.device)
+    self.action_critic = model.ActionQV(self.language_model, self.qv_config, is_critic = True).to(pytorch.device)
+    self.token_actor   = model.ActionLanguageModelQV(self.language_model, self.qv_config).to(pytorch.device)
+    self.token_critic  = model.ActionLanguageModelQV(self.language_model, self.qv_config, is_critic = True).to(pytorch.device)
     if pytorch.num_nodes > 1:
       self.action_actor = torch.nn.DistributedDataParallel(
         self.action_actor,
