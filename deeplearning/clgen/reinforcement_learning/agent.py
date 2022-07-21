@@ -384,7 +384,7 @@ class Agent(object):
           decoder_position_ids = lm_input_pos_ids.to(pytorch.device),
         )['token_logits']
         # Keep the prediction scores only for the masked token.
-        step_token_logits = torch.index_select(step_token_logits, -1, torch.where(lm_input_ids == self.tokenizer.holeToken)[0])
+        step_token_logits = torch.index_select(step_token_logits, -1, torch.where(lm_input_ids == self.tokenizer.holeToken)[0].to(pytorch.device))
         # Collect value logit from critic.
         step_token_values = self.token_critic(
           encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
@@ -395,7 +395,7 @@ class Agent(object):
           decoder_position_ids = lm_input_pos_ids.to(pytorch.device),
         )['token_logits']
         # Get the critic's value only for masked index.
-        step_token_values = torch.index_select(step_token_values, -1, torch.where(lm_input_ids == self.tokenizer.holeToken)[0])
+        step_token_values = torch.index_select(step_token_values, -1, torch.where(lm_input_ids == self.tokenizer.holeToken)[0].to(pytorch.device))
         # According to policy, select the best token.
         step_tokens = self.policy.SampleTokens(step_token_logits)
         # Get probability of said token, per episode.
