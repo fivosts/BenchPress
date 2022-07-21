@@ -335,7 +335,7 @@ class Agent(object):
       use_lm             [:, step] = step_use_lm
       rewards            [:, step] = reward
       discounted_rewards [:, step] = discounted_reward
-      done               [:, step] = done
+      done               [:, step] = d
 
   def rollout(self,
               env                       : env.Environment,
