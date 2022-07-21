@@ -89,8 +89,8 @@ class Environment(gym.Env):
     lm_input_ids = torch.zeros((num_episodes), dtype = torch.long)
     use_lm       = torch.zeros((num_episodes), dtype = torch.bool)
     for idx, (code, action) in enumerate(zip(state_code, step_actions)):
-      act_type  = int(act) % len(interactions.ACTION_TYPE_SPACE)
-      act_index = int(act) // len(interactions.ACTION_TYPE_SPACE)
+      act_type  = int(action) % len(interactions.ACTION_TYPE_SPACE)
+      act_index = int(action) // len(interactions.ACTION_TYPE_SPACE)
       if act_type == interactions.ACTION_TYPE_SPACE['ADD']:
         new_code = torch.cat(code[:act_index + 1], torch.LongTensor([self.tokenizer.holeToken]), code[act_index + 1:])
         new_code = code[:code.shape[0]]
