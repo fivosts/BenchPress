@@ -111,7 +111,7 @@ class Environment(gym.Env):
     Step the environment, compute the reward.
     """
     super().reset()
-    num_episodes = step_actions.shape[0]
+    num_episodes      = step_actions.shape[0]
     reward            = torch.zeros((num_episodes), dtype = torch.float32)
     discounted_reward = torch.zeros((num_episodes), dtype = torch.float32)
     done              = torch.zeros((num_episodes), dtype = torch.bool)
