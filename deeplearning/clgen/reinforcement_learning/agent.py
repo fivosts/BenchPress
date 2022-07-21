@@ -80,17 +80,15 @@ class Agent(object):
       self.feature_tokenizer,
       self.language_model,
     )
-    self.actor = model.QValuesModel(
-      self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path, is_critic = False,
-    )
-    self.critic = model.QValuesModel(
-      self.language_model, self.feature_tokenizer, self.qv_config, self.cache_path, is_critic = True
-    )
+    self.action_actor  = model.ActionQV(self.language_model, self.qv_config)
+    self.action_critic = model.ActionQV(self.language_model, self.qv_config, is_critic = True)
+    self.token_actor   = model.ActionLanguageModelQV(self.language_model, self.qv_config)
+    self.token_critic  = model.ActionLanguageModelQV(self.language_model, self.qv_config, is_critic = True)
     self.policy  = Policy(
       action_temp = self.qv_config.action_temperature,
       token_temp  = self.qv_config.token_temperature,
     )
-    self.loadCheckpoint()
+    self.ckpt_step = max(0, self.loadCheckpoint())
     return
 
   def Train(self,
@@ -579,14 +577,164 @@ class Agent(object):
     """
     Save agent state.
     """
-    self.actor.saveCheckpoint(prefix = "actor")
-    self.critic.saveCheckpoint(prefix = "critic")
+    if self.is_world_process_zero():
+      ckpt_comp = lambda prefix, x: self.ckpt_path / "{}{}_model-{}.pt".format(prefix, x, self.ckpt_step)
+      if self.torch_tpu_available:
+        if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
+          self.pytorch.torch_xla_model.save(self.action_actor, ckpt_comp("actor", "action"))
+          self.pytorch.torch_xla_model.save(self.action_critic, ckpt_comp("critic", "action"))
+        self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
+      else:
+        if isinstance(self.action_actor, self.torch.nn.DataParallel):
+          self.torch.save(self.action_actor.module.state_dict(), ckpt_comp("actor", "action"))
+        else:
+          self.torch.save(self.action_actor.state_dict(), ckpt_comp("action", "action"))
+        if isinstance(self.action_critic, self.torch.nn.DataParallel):
+          self.torch.save(self.action_critic.module.state_dict(), ckpt_comp("critic", "action"))
+        else:
+          self.torch.save(self.action_critic.state_dict(), ckpt_comp("critic", "action"))
+        if isinstance(self.token_actor, self.torch.nn.DataParallel):
+          self.torch.save(self.token_actor.module.state_dict(), ckpt_comp("actor", "token"))
+        else:
+          self.torch.save(self.token_actor.state_dict(), ckpt_comp("action", "token"))
+        if isinstance(self.token_critic, self.torch.nn.DataParallel):
+          self.torch.save(self.token_critic.module.state_dict(), ckpt_comp("critic", "token"))
+        else:
+          self.torch.save(self.token_critic.state_dict(), ckpt_comp("critic", "token"))
+
+      with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
+        mf.write("train_step: {}\n".format(self.ckpt_step))
+    self.ckpt_step += 1
+    torch.distributed.barrier()
     return
   
   def loadCheckpoint(self) -> None:
     """
     Load agent state.
     """
-    self.actor.loadCheckpoint(prefix = "actor")
-    self.critic.loadCheckpoint(prefix = "critic")
-    return
+    if not (self.ckpt_path / "checkpoint.meta").exists():
+      return -1
+    with open(self.ckpt_path / "checkpoint.meta", 'w') as mf:
+      get_step = lambda x: int(x.replace("\n", "").replace("train_step: ", ""))
+      lines = mf.readlines()
+      entries = set({get_step(x) for x in lines})
+
+    ckpt_step = max(entries)
+    ckpt_comp = lambda prefix, x: self.ckpt_path / "{}{}_model-{}.pt".format(prefix, x, ckpt_step)
+
+    if isinstance(self.action_actor, torch.nn.DataParallel):
+      try:
+        self.action_actor.module.load_state_dict(torch.load(ckpt_comp("actor", "action")))
+      except RuntimeError:
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in torch.load(ckpt_comp("actor", "action")).items():
+          if k[:7] == "module.":
+            name = k[7:]
+          else:
+            name = "module." + k
+          new_state_dict[name] = k
+        self.action_actor.module.load_state_dict(new_state_dict)
+    else:
+      try:
+        self.action_actor.module.load_state_dict(torch.load(ckpt_comp("actor", "action")))
+      except RuntimeError:
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in self.torch.load(ckpt_comp("actor", "action")).items():
+          if k[:7] == 'module.':
+            name = k[7:] # remove `module.`
+          else:
+            name = 'module.' + k # Add 'module.'
+          new_state_dict[name] = v
+        self.action_actor.load_state_dict(new_state_dict)
+
+
+    if isinstance(self.action_critic, torch.nn.DataParallel):
+      try:
+        self.action_critic.module.load_state_dict(torch.load(ckpt_comp("actor", "critic")))
+      except RuntimeError:
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in torch.load(ckpt_comp("actor", "critic")).items():
+          if k[:7] == "module.":
+            name = k[7:]
+          else:
+            name = "module." + k
+          new_state_dict[name] = k
+        self.action_critic.module.load_state_dict(new_state_dict)
+    else:
+      try:
+        self.action_critic.module.load_state_dict(torch.load(ckpt_comp("actor", "critic")))
+      except RuntimeError:
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in self.torch.load(ckpt_comp("actor", "critic")).items():
+          if k[:7] == 'module.':
+            name = k[7:] # remove `module.`
+          else:
+            name = 'module.' + k # Add 'module.'
+          new_state_dict[name] = v
+        self.action_critic.load_state_dict(new_state_dict)
+
+
+    if isinstance(self.token_actor, torch.nn.DataParallel):
+      try:
+        self.token_actor.module.load_state_dict(torch.load(ckpt_comp("token", "action")))
+      except RuntimeError:
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in torch.load(ckpt_comp("token", "action")).items():
+          if k[:7] == "module.":
+            name = k[7:]
+          else:
+            name = "module." + k
+          new_state_dict[name] = k
+        self.token_actor.module.load_state_dict(new_state_dict)
+    else:
+      try:
+        self.token_actor.module.load_state_dict(torch.load(ckpt_comp("token", "action")))
+      except RuntimeError:
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in self.torch.load(ckpt_comp("token", "action")).items():
+          if k[:7] == 'module.':
+            name = k[7:] # remove `module.`
+          else:
+            name = 'module.' + k # Add 'module.'
+          new_state_dict[name] = v
+        self.token_actor.load_state_dict(new_state_dict)
+
+
+    if isinstance(self.token_critic, torch.nn.DataParallel):
+      try:
+        self.token_critic.module.load_state_dict(torch.load(ckpt_comp("token", "critic")))
+      except RuntimeError:
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in torch.load(ckpt_comp("token", "critic")).items():
+          if k[:7] == "module.":
+            name = k[7:]
+          else:
+            name = "module." + k
+          new_state_dict[name] = k
+        self.token_critic.module.load_state_dict(new_state_dict)
+    else:
+      try:
+        self.token_critic.module.load_state_dict(torch.load(ckpt_comp("token", "critic")))
+      except RuntimeError:
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in self.torch.load(ckpt_comp("token", "critic")).items():
+          if k[:7] == 'module.':
+            name = k[7:] # remove `module.`
+          else:
+            name = 'module.' + k # Add 'module.'
+          new_state_dict[name] = v
+        self.token_critic.load_state_dict(new_state_dict)
+
+    self.action_actor.eval()
+    self.action_critic.eval()
+    self.token_actor.eval()
+    self.token_critic.eval()
+    return ckpt_step
