@@ -76,6 +76,29 @@ class Environment(gym.Env):
         self.feature_dataset = []
     return
 
+  def intermediate_step(self,
+                        state_code   : torch.LongTensor,
+                        step_actions : torch.LongTensor,
+                        ) -> typing.Tuple[torch.Tensor]:
+    """
+    The environment reads the predicted index, and makes
+    necessary transformations to the input ids so they can be
+    fed into the language model, if need be.
+    """
+    num_episodes = step_actions.shape[0]
+    lm_input_ids = torch.zeros((num_episodes), dtype = torch.long)
+    use_lm       = torch.zeros((num_episodes), dtype = torch.bool)
+    for idx, (code, action) in enumerate(zip(state_code, step_actions)):
+      act_type  = int(act) % len(interactions.ACTION_TYPE_SPACE)
+      act_index = int(act) // len(interactions.ACTION_TYPE_SPACE)
+      if act_type == interactions.ACTION_TYPE_SPACE['ADD']:
+        new_code = torch.cat(code[:act_index + 1], torch.LongTensor([self.tokenizer.holeToken]), code[act_index + 1:])
+        new_code = code[:code.shape[0]]
+        lm_input_ids[idx] = new_code
+      elif act_type == interactions.interactions.ACTION_TYPE_SPACE['REPLACE']:
+        lm_input_ids[idx][act_index] = self.tokenizer.holeToken
+    return use_lm, torch.index_select(lm_input_ids, -1, torch.where(use_lm == True))
+
   def new_step(self,
                state_code   : torch.LongTensor,
                step_actions : torch.LongTensor,
