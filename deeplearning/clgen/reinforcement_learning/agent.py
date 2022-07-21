@@ -289,7 +289,7 @@ class Agent(object):
 
         lm_input_mask   = lm_input_ids != self.tokenizer.padToken
         lm_pos_ids      = torch.arange(seq_len, dtype = torch.long).repeat(lm_input_ids.shape[0], 1)
-        l.logger().warn("Make sure this guy returns only the prediction for the requested index.")
+
         step_token_logits = self.token_actor(
           encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
           encoder_feature_mask = lm_feature_mask.to(pytorch.device),
